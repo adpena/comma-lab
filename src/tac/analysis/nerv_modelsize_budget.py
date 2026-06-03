@@ -32,6 +32,16 @@ SCHEMA = "nerv_modelsize_budget.v1"
 HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX = 1
 HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX = 4
 OSS_FLAG_AUDIT_SCHEMA = "nerv_oss_flag_audit.v1"
+MODELSIZE_RATE_AUTHORITY_SURFACE = (
+    "archive_zip_bytes_after_receiver_export_and_inflate_proof"
+)
+MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS = (
+    "nominal_payload_bytes_are_planner_prior_only",
+    "nominal_under_ceiling_is_not_promotion_authority",
+    "receiver_closed_archive_bytes_required_for_under_ceiling_claim",
+    "trained_archive_export_required_for_score_or_rate_claim",
+    "archive_bytes_authority_required",
+)
 
 DEFAULT_HINERV_LATENT_DIMS = (4, 8, 12, 16, 24, 28)
 DEFAULT_HINERV_EMBED_DIMS = (8, 12, 16, 24, 32)
@@ -248,10 +258,11 @@ class HinervModelSizeCandidate:
             ),
             "modelsize_mparams_is_official_upstream_flag": False,
             "modelsize_mparams_caps_archive_zip_bytes": False,
+            **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
+            "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
             "mutates_receiver_visible_architecture": True,
             "mutates_trained_parameter_count": True,
             "hard_byte_ceiling_is_archive_budget_filter": True,
-            "archive_bytes_authority_required": True,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -325,6 +336,8 @@ class SnervModelSizeCandidate:
             ),
             "modelsize_mparams_is_official_upstream_flag": bool(official),
             "modelsize_mparams_caps_archive_zip_bytes": False,
+            **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
+            "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
             "mutates_receiver_visible_architecture": True,
             "mutates_receiver_visible_fc_dim": True,
             "mutates_receiver_visible_temporal_basis": (
@@ -333,7 +346,6 @@ class SnervModelSizeCandidate:
             ),
             "mutates_trained_parameter_count": True,
             "hard_byte_ceiling_is_archive_budget_filter": True,
-            "archive_bytes_authority_required": True,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -836,6 +848,10 @@ def build_hinerv_modelsize_budget_report(
         "budget_math": {
             "contest_rate_score_per_byte": RATE_SCORE_PER_BYTE,
             "nominal_payload_is_not_authority": True,
+            "modelsize_control_contract_required_true_fields": list(
+                MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+            ),
+            "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
             "selection_strategy": (
                 "for each byte ceiling, retain the best byte-plausible point "
                 "from every available decoder codec family before filling with "
@@ -1379,6 +1395,10 @@ def build_snerv_modelsize_budget_report(
         "budget_math": {
             "contest_rate_score_per_byte": RATE_SCORE_PER_BYTE,
             "nominal_payload_is_not_authority": True,
+            "modelsize_control_contract_required_true_fields": list(
+                MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+            ),
+            "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
             "selection_strategy": (
                 "retain diverse DWT levels and LF/step precision points under "
                 "each byte ceiling, then let real SNAR1 archive bytes and "

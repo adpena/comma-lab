@@ -6,6 +6,8 @@ from __future__ import annotations
 import pytest
 
 from tac.analysis.nerv_modelsize_budget import (
+    MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS,
+    MODELSIZE_RATE_AUTHORITY_SURFACE,
     NervModelSizeBudgetError,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
@@ -240,8 +242,17 @@ def test_hinerv_target_modelsize_rows_are_false_authority_nearest_rows() -> None
     )
     assert contract["modelsize_mparams_is_official_upstream_flag"] is False
     assert contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert contract["nominal_payload_bytes_are_planner_prior_only"] is True
+    assert contract["nominal_under_ceiling_is_not_promotion_authority"] is True
+    assert (
+        contract["receiver_closed_archive_bytes_required_for_under_ceiling_claim"]
+        is True
+    )
+    assert contract["trained_archive_export_required_for_score_or_rate_claim"] is True
+    assert contract["rate_authority_surface"] == MODELSIZE_RATE_AUTHORITY_SURFACE
     assert contract["mutates_receiver_visible_architecture"] is True
     assert contract["archive_bytes_authority_required"] is True
+    assert all(contract[key] is True for key in MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS)
 
 
 def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
@@ -289,6 +300,12 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
         "manual_receiver_visible_fc_dim_feature_basis"
     )
     assert row_contract["modelsize_mparams_is_official_upstream_flag"] is False
+    assert row_contract["nominal_payload_bytes_are_planner_prior_only"] is True
+    assert row_contract["nominal_under_ceiling_is_not_promotion_authority"] is True
+    assert (
+        row_contract["receiver_closed_archive_bytes_required_for_under_ceiling_claim"]
+        is True
+    )
     assert row_contract["mutates_receiver_visible_fc_dim"] is True
     assert row_contract["archive_bytes_authority_required"] is True
 
@@ -301,6 +318,12 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     assert report["wavelet"] == "haar"
     assert report["candidate_count"] > report["selected_candidate_count"] > 0
     assert report["budget_math"]["nominal_payload_is_not_authority"] is True
+    assert report["budget_math"]["rate_authority_surface"] == (
+        MODELSIZE_RATE_AUTHORITY_SURFACE
+    )
+    assert report["budget_math"]["modelsize_control_contract_required_true_fields"] == list(
+        MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+    )
     selected = report["selected_candidates"]
     assert all(row["hard_byte_ceiling"] == 178_000 for row in selected)
     assert {row["levels"] for row in selected} >= {3, 4, 5}
@@ -391,8 +414,24 @@ def test_snerv_modelsize_candidate_id_tokens_losslessly_bind_receiver_controls()
     )
     assert official_contract["modelsize_mparams_is_official_upstream_flag"] is True
     assert official_contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert official_contract["nominal_payload_bytes_are_planner_prior_only"] is True
+    assert official_contract["nominal_under_ceiling_is_not_promotion_authority"] is True
+    assert (
+        official_contract[
+            "receiver_closed_archive_bytes_required_for_under_ceiling_claim"
+        ]
+        is True
+    )
+    assert (
+        official_contract["trained_archive_export_required_for_score_or_rate_claim"]
+        is True
+    )
     assert official_contract["mutates_receiver_visible_fc_dim"] is True
     assert official_contract["archive_bytes_authority_required"] is True
+    assert all(
+        official_contract[key] is True
+        for key in MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+    )
     assert snerv_model_size_adapter_id_token(
         SNERV_SPECTRA_PRESERVING_ADAPTER
     ) == "spectra"
