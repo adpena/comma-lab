@@ -775,6 +775,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         pose_distillation_huber_delta=2.0,
         segnet_distillation_objective="kl_t2",
         distillation_device="cpu",
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        coder_qat_c1a_entropy_weight=0.0,
+        score_aware_long_training_pr95_faithful_curriculum=True,
     )
 
     assert captured["segnet_upstream_dir"] == fake_upstream.resolve(strict=False)
@@ -787,10 +791,17 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert report["score_aware_long_training_real_teachers_bound"] is True
     assert report["score_aware_long_training_has_real_segnet_teacher"] is True
     assert report["score_aware_long_training_has_real_posenet_teacher"] is True
+    assert report["score_aware_long_training_coder_qat_bound"] is True
+    assert report["score_aware_long_training_pr95_curriculum_bound"] is True
+    assert report["score_aware_long_training_muon_adamw_partition_bound"] is True
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
     long_training = report["score_aware_long_training"]
     assert long_training["has_real_segnet_teacher"] is True
     assert long_training["has_real_posenet_teacher"] is True
+    assert long_training["coder_aware_qat"]["enabled"] is True
+    assert long_training["coder_aware_qat"]["quant_bits"] == 4
+    assert long_training["pr95_faithful_curriculum_enabled"] is True
+    assert long_training["muon_adamw_partition_bound"] is True
     assert long_training["teacher_binding"]["pose_distillation_loss"] == "huber"
     assert long_training["teacher_binding"]["pose_distillation_huber_delta"] == 2.0
     assert long_training["teacher_binding"]["learnable_student_head_bound"] is True

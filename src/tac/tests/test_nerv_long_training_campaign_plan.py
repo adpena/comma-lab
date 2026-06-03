@@ -44,7 +44,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
-    assert report["launchable_local_row_count"] == 0
+    assert report["launchable_local_row_count"] == 1
     assert report["family_counts"] == {"hi_nerv": 2, "snerv": 1}
     assert report["source_parity_contract"]["schema"] == ("nerv_source_parity_contract.v1")
     assert report["source_parity_required_for_long_training_ready"] is True
@@ -71,11 +71,9 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all(row["optimizer_policy"]["native_mlx_optimizer_expected"] is True for row in hi_rows)
     assert report["optimizer_control_policy"]["applies_to"] == [
         "hi_nerv_shared_mlx_scoreaware_runner_rows",
-        "future_snerv_learned_scoreaware_decoder_rows_after_binding",
+        "snerv_shared_mlx_scoreaware_long_training_rows",
     ]
-    assert report["optimizer_control_policy"]["does_not_apply_to"] == [
-        "snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"
-    ]
+    assert report["optimizer_control_policy"]["does_not_apply_to"] == []
     assert all(
         row["command_argv"][row["command_argv"].index("--hi-nerv-optimizer-policy") + 1] == "native_optimizer"
         for row in hi_rows
@@ -88,18 +86,25 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     )
     assert all(row["command_argv"][row["command_argv"].index("--distillation-device") + 1] == "gpu" for row in hi_rows)
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert snerv["optimizer_kind"] is None
+    assert snerv["optimizer_kind"] == "pact_muon_adamw"
     assert qat_flags.issubset(set(snerv["command_argv"]))
     assert snerv["coder_qat_control"]["quant_bits"] == snerv["quant_bits"]
     assert snerv["coder_qat_control"]["c1a_entropy_weight"] == pytest.approx(1.0e-4)
     assert snerv["coder_qat_control"]["ready_for_exact_eval_dispatch"] is False
-    assert snerv["optimizer_control"]["optimizer_kind"] is None
-    assert snerv["optimizer_control"]["backend"] == (
-        "mlx_target_hydration_numpy_closed_form_decoder_fit_plus_scorer_loop_qat"
-    )
-    assert snerv["optimizer_control"]["pact_muon_adamw_default_inherited"] is False
+    assert snerv["optimizer_control"]["optimizer_kind"] == "pact_muon_adamw"
+    assert snerv["optimizer_control"]["pact_partitioned_muon_adamw"] is True
+    assert snerv["optimizer_control"]["borrowed_from_pr95"] is True
     assert snerv["optimizer_control"]["score_claim"] is False
-    assert "snerv_optimizer_control_requires_learned_scoreaware_training_loop" in snerv["blockers"]
+    assert "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in snerv["blockers"]
+    assert "--snerv-score-aware-long-training-epochs" in snerv["command_argv"]
+    assert snerv["command_argv"][snerv["command_argv"].index("--snerv-score-aware-long-training-epochs") + 1] == "29650"
+    assert snerv["command_argv"][snerv["command_argv"].index("--snerv-score-aware-long-training-optimizer") + 1] == "pact_muon_adamw"
+    assert snerv["command_argv"][snerv["command_argv"].index("--segnet-distillation-weight") + 1] == "1.0"
+    assert snerv["command_argv"][snerv["command_argv"].index("--pose-distillation-weight") + 1] == "1.0"
+    assert "--snerv-score-aware-long-training-eval-roundtrip-ste" in snerv["command_argv"]
+    assert "--snerv-score-aware-long-training-pr95-faithful-curriculum" in snerv["command_argv"]
+    assert snerv["score_aware_long_training_plan"]["coder_aware_qat_bound"] is True
+    assert snerv["score_aware_long_training_plan"]["pr95_faithful_curriculum_bound"] is True
     assert all(
         row["command_argv"][row["command_argv"].index("--mlx-prefilter-scorer-device") + 1] == "gpu" for row in hi_rows
     )
@@ -170,28 +175,25 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is True
     assert snerv_row["score_lowering_gate"]["command_materialized"] is True
-    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
-    assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is False
+    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is True
+    assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is True
     assert snerv_row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
-    assert "snerv_pr95_staged_curriculum_missing" in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
-    assert (
-        "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
-        in snerv_row["score_lowering_gate"]["launch_blockers"]
-    )
     assert (
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority"
-        in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
+        not in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
     )
+    assert "snerv_pr95_staged_curriculum_missing" not in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
+    assert "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in snerv_row["score_lowering_gate"]["launch_blockers"]
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
-    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
-    assert snerv_row["experiment_queue_entry"]["blocked"] is True
+    assert snerv_row["experiment_queue_entry"]["status"] == "queued"
+    assert snerv_row["experiment_queue_entry"]["blocked"] is False
     launch_contract = snerv_row["experiment_queue_entry"]["launch_authority_contract"]
     assert launch_contract["schema"] == ("nerv_long_training_queue_launch_authority_contract.v1")
     assert launch_contract["queue_status_is_local_mlx_plan"] is True
-    assert launch_contract["queue_status_is_runnable_plan"] is False
+    assert launch_contract["queue_status_is_runnable_plan"] is True
     assert (
-        "snerv_optimizer_control_requires_learned_scoreaware_training_loop" in launch_contract["queue_launch_blockers"]
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in launch_contract["queue_launch_blockers"]
     )
     assert launch_contract["queue_status_is_receiver_proof"] is False
     assert launch_contract["queue_status_is_cpu_replay_proof"] is False
@@ -2630,13 +2632,14 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert snerv_exp["steps"][0]["command"][
         snerv_exp["steps"][0]["command"].index("--planner-row-queue-artifact") + 1
     ] == out_json.as_posix()
-    assert snerv_exp["blocked"] is True
+    assert snerv_exp["blocked"] is False
+    assert "--snerv-score-aware-long-training-epochs" in snerv_exp["steps"][0]["command"]
     loaded_queue = load_queue_definition(out_queue)
     assert loaded_queue["schema"] == "experiment_queue.v1"
     loaded_snerv_exp = next(exp for exp in loaded_queue["experiments"] if exp["family"] == "snerv")
-    assert loaded_snerv_exp["status"] == "disabled"
-    assert loaded_snerv_exp["blocked"] is True
-    assert loaded_snerv_exp["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
+    assert loaded_snerv_exp["status"] == "queued"
+    assert loaded_snerv_exp["blocked"] is False
+    assert loaded_snerv_exp["launch_authority_contract"]["queue_status_is_runnable_plan"] is True
     assert loaded_snerv_exp["steps"][0]["resources"]["kind"] == "local_mlx"
     assert out_md.read_text(encoding="utf-8").startswith("# NeRV Long-Training Campaign Plan")
 

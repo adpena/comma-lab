@@ -241,6 +241,9 @@ def build_nerv_long_training_campaign_plan(
             _snerv_campaign_row(
                 candidate=candidate,
                 epochs=int(epochs),
+                batch_pairs=int(batch_pairs),
+                learning_rate=float(learning_rate),
+                optimizer_kind="pact_muon_adamw",
                 output_root=Path(output_root),
                 candidate_feedback_index=candidate_feedback_index,
                 bounded_proof_only=bool(snerv_bounded_proof_only),
@@ -282,9 +285,9 @@ def build_nerv_long_training_campaign_plan(
             "apple_specific_algorithm_claim": False,
             "applies_to": [
                 "hi_nerv_shared_mlx_scoreaware_runner_rows",
-                "future_snerv_learned_scoreaware_decoder_rows_after_binding",
+                "snerv_shared_mlx_scoreaware_long_training_rows",
             ],
-            "does_not_apply_to": ["snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"],
+            "does_not_apply_to": [],
             "optimizer_kinds": list(optimizers),
             "native_mlx_optimizer_kinds": [kind for kind in optimizers if kind != "pact_muon_adamw"],
             "pact_partitioned_optimizer_kinds": [kind for kind in optimizers if kind == "pact_muon_adamw"],
@@ -676,6 +679,9 @@ def _snerv_campaign_row(
     *,
     candidate: Mapping[str, Any],
     epochs: int,
+    batch_pairs: int,
+    learning_rate: float,
+    optimizer_kind: str,
     output_root: Path,
     candidate_feedback_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     bounded_proof_only: bool = False,
@@ -702,6 +708,11 @@ def _snerv_campaign_row(
         8,
         snerv_decoder_codec_nominal_bits(str(candidate.get("decoder_payload_codec"))),
     )
+    optimizer_control = _optimizer_control(optimizer_kind)
+    pr95_curriculum_bound = not bool(bounded_proof_only) and int(execution_epochs) >= 8
+    joint_teacher_bound = not bool(bounded_proof_only)
+    coder_qat_bound = not bool(bounded_proof_only)
+    eval_roundtrip_bound = not bool(bounded_proof_only)
     curriculum = build_snerv_candidate_curriculum_plan(
         candidate=candidate,
         requested_epochs=int(execution_epochs),
@@ -722,6 +733,15 @@ def _snerv_campaign_row(
             feedback.get("native_mlx_scorer_loop_qat_accepted_improvement")
         ),
         native_mlx_scorer_loop_qat_best_materialized=bool(feedback.get("native_mlx_scorer_loop_qat_best_materialized")),
+        native_mlx_real_segnet_teacher_bound=joint_teacher_bound,
+        native_mlx_real_posenet_teacher_bound=joint_teacher_bound,
+        native_mlx_pr95_curriculum_bound=pr95_curriculum_bound,
+        native_mlx_eval_roundtrip_ste_bound=eval_roundtrip_bound,
+        native_mlx_differentiable_pose_preprocess_bound=joint_teacher_bound,
+        native_mlx_coder_qat_bound=coder_qat_bound,
+        native_mlx_muon_adamw_partition_bound=(
+            str(optimizer_kind) == "pact_muon_adamw"
+        ),
         native_mlx_artifact_evidence=_snerv_native_artifact_evidence_from_feedback(feedback),
         receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
         full_video_local_prefilter_attached=bool(feedback.get("full_video_local_prefilter_attached")),
@@ -774,10 +794,24 @@ def _snerv_campaign_row(
         str(int(candidate.get("num_pairs") or 600)),
         "--epochs",
         str(int(execution_epochs)),
+        "--snerv-score-aware-long-training-epochs",
+        str(int(execution_epochs)),
+        "--snerv-score-aware-long-training-lr",
+        _float_token(float(learning_rate)),
+        "--snerv-score-aware-long-training-batch-pairs",
+        str(int(batch_pairs)),
+        "--snerv-score-aware-long-training-optimizer",
+        str(optimizer_kind),
+        "--snerv-score-aware-long-training-eval-roundtrip-ste",
+        "--snerv-score-aware-long-training-pr95-faithful-curriculum",
         "--modelsize-candidate-id",
         candidate_id,
         "--distillation-device",
         "gpu",
+        "--segnet-distillation-weight",
+        "1.0",
+        "--pose-distillation-weight",
+        "1.0",
         "--coder-aware-qat",
         "--coder-qat-quant-bits",
         str(int(quant_bits)),
@@ -838,7 +872,6 @@ def _snerv_campaign_row(
     blockers = _dedupe(
         [
             ("snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" if bounded_proof_only else ""),
-            "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
             *list(prioritized_pair_training.get("blockers") or []),
             (
                 "snerv_nominal_payload_far_over_ceiling_refuse_long_training"
@@ -848,7 +881,6 @@ def _snerv_campaign_row(
             "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes"
             if candidate.get("nominal_under_ceiling") is not True
             else "",
-            "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
             *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
             *list(source_parity["required_blockers"]),
@@ -890,8 +922,8 @@ def _snerv_campaign_row(
         ),
         blockers=blockers,
         extra={
-            "optimizer_kind": None,
-            "optimizer_control": _snerv_optimizer_control_blocker(),
+            "optimizer_kind": str(optimizer_kind),
+            "optimizer_control": optimizer_control,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
@@ -914,6 +946,22 @@ def _snerv_campaign_row(
                 "ridge": float(native_mlx_decoder_train_ridge),
                 "backend": "mlx_metal_full_batch_gradient_descent",
                 "consumed_by_command": True,
+                **FALSE_AUTHORITY,
+            },
+            "score_aware_long_training_plan": {
+                "schema": "snerv_score_aware_long_training_plan.v1",
+                "epochs": int(execution_epochs),
+                "batch_pairs": int(batch_pairs),
+                "learning_rate": float(learning_rate),
+                "optimizer_kind": str(optimizer_kind),
+                "segnet_distillation_weight": 1.0,
+                "pose_distillation_weight": 1.0,
+                "coder_aware_qat_bound": coder_qat_bound,
+                "pr95_faithful_curriculum_bound": pr95_curriculum_bound,
+                "eval_roundtrip_ste_bound": eval_roundtrip_bound,
+                "muon_adamw_partition_bound": (
+                    str(optimizer_kind) == "pact_muon_adamw"
+                ),
                 **FALSE_AUTHORITY,
             },
         },
@@ -1164,8 +1212,6 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted",
         "hinerv_decoder_weight_waterfill_plan_missing",
         "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
-        "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
-        "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
         "snerv_candidate_id_source_bound_controls_mismatch",
         "snerv_candidate_id_source_bound_controls_unparseable",
         "snerv_nominal_payload_far_over_ceiling_refuse_long_training",
