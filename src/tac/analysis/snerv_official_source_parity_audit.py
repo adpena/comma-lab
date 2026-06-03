@@ -750,8 +750,10 @@ def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
         blockers.append("official_portable_output_sha256_mismatch")
     if not (
         _is_sha256_hex(row.get("official_weight_sha256"))
-        or isinstance(row.get("official_weight_keys"), Sequence)
-        and not isinstance(row.get("official_weight_keys"), (str, bytes))
+        or (
+            isinstance(row.get("official_weight_keys"), Sequence)
+            and not isinstance(row.get("official_weight_keys"), (str, bytes))
+        )
     ):
         blockers.append("official_weight_identity_missing")
     return blockers
