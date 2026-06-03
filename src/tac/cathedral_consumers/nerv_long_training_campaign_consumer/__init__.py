@@ -240,6 +240,8 @@ def _local_mlx_ready(experiment: Mapping[str, Any]) -> bool:
         and experiment.get("blocked") is not True
         and contract.get("schema") == LAUNCH_AUTHORITY_CONTRACT_SCHEMA
         and contract.get("queue_status_is_local_mlx_plan") is True
+        and contract.get("queue_status_is_runnable_plan") is True
+        and not _string_list(contract.get("queue_launch_blockers"))
         and contract.get("queue_status_is_receiver_proof") is not True
         and contract.get("queue_status_is_cpu_replay_proof") is not True
         and contract.get("queue_status_is_exact_eval_authority") is not True
@@ -286,6 +288,12 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
             "schema": launch_contract.get("schema"),
             "queue_status_is_local_mlx_plan": (
                 launch_contract.get("queue_status_is_local_mlx_plan") is True
+            ),
+            "queue_status_is_runnable_plan": (
+                launch_contract.get("queue_status_is_runnable_plan") is True
+            ),
+            "queue_launch_blockers": _string_list(
+                launch_contract.get("queue_launch_blockers")
             ),
             "queue_status_is_receiver_proof": (
                 launch_contract.get("queue_status_is_receiver_proof") is True
@@ -378,6 +386,11 @@ def _launch_authority_contract_blockers(
         blockers.append(f"{label}_launch_authority_contract_schema_mismatch")
     if contract.get("queue_status_is_local_mlx_plan") is not True:
         blockers.append(f"{label}_launch_authority_contract_not_local_mlx_plan")
+    if contract.get("queue_status_is_runnable_plan") is not True:
+        blockers.append(f"{label}_launch_authority_contract_not_runnable_plan")
+    launch_blockers = _string_list(contract.get("queue_launch_blockers"))
+    if launch_blockers:
+        blockers.append(f"{label}_launch_authority_contract_has_launch_blockers")
     for key in (
         "queue_status_is_receiver_proof",
         "queue_status_is_cpu_replay_proof",

@@ -3501,7 +3501,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             },
             "snerv_recon_pixel_weight": {
                 "schema": "compact_snerv_recon_pixel_weight_consumption.v1",
-                "enabled": effective_recon_pixel_weight_path is not None,
+                "requested": effective_recon_pixel_weight_path is not None,
+                "enabled": bool(
+                    (
+                        snerv_mlx_native_export.get("recon_pixel_weight") or {}
+                    ).get("selected_packet_consumed")
+                ),
                 "path": (
                     Path(effective_recon_pixel_weight_path).as_posix()
                     if effective_recon_pixel_weight_path is not None
@@ -3509,9 +3514,22 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 ),
                 "normalize": str(recon_pixel_weight_normalize),
                 "auto_discovery": recon_pixel_weight_auto_discovery,
+                "native_export_consumed": bool(
+                    (
+                        snerv_mlx_native_export.get("recon_pixel_weight") or {}
+                    ).get("selected_packet_consumed")
+                ),
+                "native_export_packet_source": snerv_mlx_native_export.get(
+                    "packet_source"
+                ),
                 "native_mlx_export_consumption": snerv_mlx_native_export.get(
                     "recon_pixel_weight"
                 ),
+                "primary_archive_consumed": False,
+                "primary_archive_source": (
+                    "snerv_advisory_archive_packet_not_native_mlx_export"
+                ),
+                "primary_archive_path": archive_path,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,

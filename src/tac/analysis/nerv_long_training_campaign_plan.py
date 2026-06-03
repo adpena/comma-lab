@@ -37,6 +37,7 @@ from tac.analysis.nerv_modelsize_budget import (
     snerv_decoder_codec_nominal_bits,
     snerv_modelsize_candidate_id_from_controls,
 )
+from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_contract
 from tac.optimization.recon_pixel_weight_surface import (
     JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA,
 )
@@ -114,6 +115,10 @@ class NervLongTrainingCampaignPlanError(ValueError):
     """Raised when a long-training campaign plan is malformed."""
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
 def build_nerv_long_training_campaign_plan(
     *,
     hinerv_modelsize_budget: Mapping[str, Any],
@@ -160,6 +165,10 @@ def build_nerv_long_training_campaign_plan(
     decoder_weight_waterfill_index = _decoder_weight_waterfill_index(
         decoder_weight_waterfill_sources
     )
+    source_parity_contract = build_nerv_source_parity_contract(
+        repo_root=_repo_root(),
+        families=("hi_nerv", "snerv"),
+    )
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -185,6 +194,7 @@ def build_nerv_long_training_campaign_plan(
                     joint_recon_weight_artifacts=joint_recon_weight_artifacts,
                     candidate_feedback_index=candidate_feedback_index,
                     decoder_weight_waterfill_index=decoder_weight_waterfill_index,
+                    source_parity_contract=source_parity_contract,
                 )
             )
     for candidate in snerv_candidates:
@@ -196,6 +206,7 @@ def build_nerv_long_training_campaign_plan(
                 candidate_feedback_index=candidate_feedback_index,
                 bounded_proof_only=bool(snerv_bounded_proof_only),
                 bounded_proof_epochs=int(snerv_bounded_proof_epochs),
+                source_parity_contract=source_parity_contract,
             )
         )
 
@@ -285,6 +296,14 @@ def build_nerv_long_training_campaign_plan(
         "decoder_weight_waterfill_unattached_sources": (
             decoder_weight_waterfill_unattached_sources
         ),
+        "source_parity_contract": source_parity_contract,
+        "source_parity_required_for_long_training_ready": bool(
+            source_parity_contract.get("required_for_long_training_ready")
+        ),
+        "source_parity_blockers": list(source_parity_contract.get("blockers") or ()),
+        "source_parity_nonblocking_gaps": list(
+            source_parity_contract.get("nonblocking_gaps") or ()
+        ),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
         "experiment_queue": experiment_queue,
@@ -292,7 +311,10 @@ def build_nerv_long_training_campaign_plan(
         "experiment_queue_id": experiment_queue["queue_id"],
         "experiment_queue_experiment_count": len(experiment_queue["experiments"]),
         "launchable_local_row_count": sum(
-            1 for row in rows if row["local_mlx_launch_command_ready"]
+            1
+            for row in rows
+            if row["experiment_queue_entry"].get("blocked") is not True
+            and row["experiment_queue_entry"].get("status") in {"queued", "ready"}
         ),
         "blocked_row_count": sum(1 for row in rows if row["blockers"]),
         "family_counts": _family_counts(rows),
@@ -380,6 +402,7 @@ def _hinerv_campaign_row(
     decoder_weight_waterfill_index: (
         Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
     ) = None,
+    source_parity_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
@@ -404,6 +427,10 @@ def _hinerv_campaign_row(
     source_faithfulness_controls = _hinerv_source_faithfulness_controls(
         candidate=candidate,
         feedback=feedback,
+    )
+    source_parity = _source_parity_family_report(
+        family="hi_nerv",
+        source_parity_contract=source_parity_contract,
     )
     effective_learning_rate = float(
         launch_feedback_adjustment.get("learning_rate") or learning_rate
@@ -535,6 +562,7 @@ def _hinerv_campaign_row(
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *candidate_authority_blockers,
+        *list(source_parity["required_blockers"]),
         *list(curriculum.get("blockers") or []),
     ]
     if feedback.get("pose_instability_detected") is True and not (
@@ -562,6 +590,7 @@ def _hinerv_campaign_row(
         prelaunch_gate.get("launch_allowed")
         and joint_recon_weight
         and not candidate_authority_blockers
+        and not source_parity["required_blockers"]
     )
     return _row(
         row_id=row_id,
@@ -575,9 +604,13 @@ def _hinerv_campaign_row(
             "selected_candidate_authority_flags_block_launch"
             if candidate_authority_blockers
             else (
-                "shared_mlx_scoreaware_runner_launchable"
-                if launch_ready
-                else "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
+                "source_parity_required_gap_blocks_launch"
+                if source_parity["required_blockers"]
+                else (
+                    "shared_mlx_scoreaware_runner_launchable"
+                    if launch_ready
+                    else "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
+                )
             )
         ),
         blockers=blockers,
@@ -607,6 +640,7 @@ def _hinerv_campaign_row(
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
             "source_faithfulness_controls": source_faithfulness_controls,
+            "source_parity": source_parity,
             "output_dir_basename": output_dir_basename,
             "output_dir_reuse_policy": (
                 "fresh_feedback_mutation_path"
@@ -627,9 +661,14 @@ def _snerv_campaign_row(
     ) = None,
     bounded_proof_only: bool = False,
     bounded_proof_epochs: int = 3,
+    source_parity_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
     source_control_blockers = _snerv_source_bound_control_blockers(candidate)
+    source_parity = _source_parity_family_report(
+        family="snerv",
+        source_parity_contract=source_parity_contract,
+    )
     feedback = _candidate_feedback_for(
         candidate=candidate,
         family="snerv",
@@ -759,12 +798,13 @@ def _snerv_campaign_row(
             "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
             *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
+            *list(source_parity["required_blockers"]),
             *list(curriculum.get("blockers") or []),
         ]
     )
     source_controls_ready = not source_control_blockers and not candidate.get(
         "_candidate_authority_blockers"
-    )
+    ) and not source_parity["required_blockers"]
     launch_ready = bool(
         source_controls_ready
         and (True if bounded_proof_only else bool(rate_plausible_for_long_training))
@@ -804,6 +844,7 @@ def _snerv_campaign_row(
             "snerv_bounded_proof_epochs": int(bounded_proof_epochs),
             "source_bound_capacity_controls": _snerv_source_bound_controls(candidate),
             "source_bound_capacity_control_blockers": source_control_blockers,
+            "source_parity": source_parity,
             "candidate_feedback": feedback or None,
         },
     )
@@ -972,15 +1013,19 @@ def _experiment_for_row(
                     "contains": bounded_blocker,
                 }
             )
+    launch_blockers = _experiment_launch_blockers(blockers)
+    runnable = bool(local_mlx_launch_command_ready) and not launch_blockers
     return {
         "id": _safe_path_token(row_id),
         "family": str(family),
         "priority": int(priority),
-        "status": "queued" if bool(local_mlx_launch_command_ready) else "disabled",
-        "blocked": not bool(local_mlx_launch_command_ready),
+        "status": "queued" if runnable else "disabled",
+        "blocked": not runnable,
         "launch_authority_contract": {
             "schema": "nerv_long_training_queue_launch_authority_contract.v1",
             "queue_status_is_local_mlx_plan": bool(local_mlx_launch_command_ready),
+            "queue_status_is_runnable_plan": runnable,
+            "queue_launch_blockers": list(launch_blockers),
             "queue_status_is_receiver_proof": False,
             "queue_status_is_cpu_replay_proof": False,
             "queue_status_is_exact_eval_authority": False,
@@ -1027,8 +1072,123 @@ def _experiment_for_row(
     }
 
 
+def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
+    """Return blockers that should prevent a row from being runnable."""
+
+    exact_names = {
+        "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
+        "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
+        "snerv_candidate_id_source_bound_controls_mismatch",
+        "snerv_candidate_id_source_bound_controls_unparseable",
+        "snerv_nominal_payload_far_over_ceiling_refuse_long_training",
+    }
+    prefixes = ("snerv_source_bound_control_missing:", "source_parity:")
+    return _dedupe(
+        [
+            str(blocker)
+            for blocker in blockers
+            if str(blocker)
+            and (
+                str(blocker) in exact_names
+                or any(str(blocker).startswith(prefix) for prefix in prefixes)
+            )
+        ]
+    )
+
+
+def _source_parity_family_report(
+    *,
+    family: str,
+    source_parity_contract: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Return row-local source-parity debt without granting score authority."""
+
+    if not isinstance(source_parity_contract, Mapping):
+        return {
+            "schema": "nerv_row_source_parity_binding.v1",
+            "contract_schema": None,
+            "family": str(family),
+            "long_training_ready": False,
+            "required_blockers": ["source_parity:source_parity_contract_missing"],
+            "nonblocking_gaps": [],
+            "feature_status_rows": [],
+            "control_status_rows": [],
+            **FALSE_AUTHORITY,
+        }
+    feature_rows = [
+        row
+        for row in source_parity_contract.get("feature_rows") or ()
+        if isinstance(row, Mapping) and row.get("family") == family
+    ]
+    control_rows = [
+        row
+        for row in source_parity_contract.get("control_rows") or ()
+        if isinstance(row, Mapping) and row.get("family") == family
+    ]
+    required_blockers = _dedupe(
+        [
+            f"source_parity:{blocker}"
+            for row in (*feature_rows, *control_rows)
+            if row.get("required_for_long_training") is True
+            for blocker in row.get("blockers") or ()
+            if str(blocker)
+        ]
+    )
+    nonblocking_gaps = _dedupe(
+        [
+            f"source_parity:{blocker}"
+            for row in (*feature_rows, *control_rows)
+            if row.get("required_for_long_training") is not True
+            for blocker in row.get("blockers") or ()
+            if str(blocker)
+        ]
+    )
+    family_summary = {}
+    for row in source_parity_contract.get("family_rows") or ():
+        if isinstance(row, Mapping) and row.get("family") == family:
+            family_summary = dict(row)
+            break
+    return {
+        "schema": "nerv_row_source_parity_binding.v1",
+        "contract_schema": source_parity_contract.get("schema"),
+        "contract_authority": source_parity_contract.get("authority"),
+        "family": str(family),
+        "long_training_ready": bool(
+            family_summary.get("long_training_ready", not required_blockers)
+        ),
+        "required_blockers": list(required_blockers),
+        "nonblocking_gaps": list(nonblocking_gaps),
+        "feature_status_rows": [
+            {
+                "feature_id": row.get("feature_id"),
+                "status": row.get("status"),
+                "required_for_long_training": bool(
+                    row.get("required_for_long_training")
+                ),
+                "blockers": list(row.get("blockers") or ()),
+            }
+            for row in feature_rows
+        ],
+        "control_status_rows": [
+            {
+                "control_id": row.get("control_id"),
+                "status": row.get("status"),
+                "required_for_long_training": bool(
+                    row.get("required_for_long_training")
+                ),
+                "blockers": list(row.get("blockers") or ()),
+            }
+            for row in control_rows
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
 def _row_output_report_path(command_argv: Sequence[str]) -> str:
-    return (_row_output_dir(command_argv) / "compact_renderer_mlx_spine_runner_report.json").as_posix()
+    return (
+        _row_output_dir(command_argv) / "compact_renderer_mlx_spine_runner_report.json"
+    ).as_posix()
 
 
 def _row_output_dir(command_argv: Sequence[str]) -> Path:

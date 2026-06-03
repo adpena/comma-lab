@@ -419,20 +419,33 @@ def normalize_queue_definition(payload: Mapping[str, Any]) -> dict[str, Any]:
         if duplicate_step_ids:
             duplicates = sorted(duplicate_step_ids)
             raise ExperimentQueueError(f"{experiment_id}.steps contains duplicate step id(s): {duplicates}")
-        normalized_experiments.append(
-            {
-                "id": experiment_id,
-                "status": status,
-                "priority": priority,
-                "lane_id": raw_experiment.get("lane_id"),
-                "tags": _string_list(raw_experiment.get("tags"), f"{experiment_id}.tags"),
-                "metadata": _optional_mapping(
-                    raw_experiment.get("metadata"),
-                    f"{experiment_id}.metadata",
-                ),
-                "steps": steps,
-            }
-        )
+        normalized_experiment = {
+            "id": experiment_id,
+            "status": status,
+            "priority": priority,
+            "lane_id": raw_experiment.get("lane_id"),
+            "family": raw_experiment.get("family"),
+            "tags": _string_list(raw_experiment.get("tags"), f"{experiment_id}.tags"),
+            "metadata": _optional_mapping(
+                raw_experiment.get("metadata"),
+                f"{experiment_id}.metadata",
+            ),
+            "steps": steps,
+        }
+        if "blocked" in raw_experiment:
+            normalized_experiment["blocked"] = bool(raw_experiment.get("blocked"))
+        if "blockers" in raw_experiment:
+            normalized_experiment["blockers"] = _string_list(
+                raw_experiment.get("blockers"),
+                f"{experiment_id}.blockers",
+            )
+        for key in ("score_lowering_gate", "launch_authority_contract"):
+            if key in raw_experiment:
+                normalized_experiment[key] = _optional_mapping(
+                    raw_experiment.get(key),
+                    f"{experiment_id}.{key}",
+                )
+        normalized_experiments.append(normalized_experiment)
     valid_step_keys = {
         (str(experiment["id"]), str(step["id"]))
         for experiment in normalized_experiments

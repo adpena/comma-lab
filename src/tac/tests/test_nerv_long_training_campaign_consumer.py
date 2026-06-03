@@ -13,7 +13,7 @@ from tools import build_nerv_long_training_campaign_consumer_verdict as cli
 
 
 def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authority() -> None:
-    plan = _campaign_plan()
+    plan = _runnable_snerv_queue()
 
     verdict = consumer.consume_candidate(plan)
 
@@ -35,7 +35,6 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
     assert verdict["ready_for_exact_eval_dispatch"] is False
     assert verdict["score_claim"] is False
     assert verdict["promotion_eligible"] is False
-    assert "campaign_plan_is_not_execution" in verdict["blockers"]
     assert (
         "PR95_same_axis_control_replay_required_before_beat_claim"
         in verdict["blocked_exact_dispatch_dependencies"]
@@ -45,17 +44,20 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
     assert "tools/run_compact_renderer_mlx_spine_runner.py" in first["command"]
     assert first["score_lowering_gate"]["receiver_proof_required"] is True
     assert first["score_lowering_gate"]["cpu_replay_ready"] is False
-    assert first["launch_authority_contract"] == {
-        "schema": "nerv_long_training_queue_launch_authority_contract.v1",
-        "queue_status_is_local_mlx_plan": True,
-        "queue_status_is_receiver_proof": False,
-        "queue_status_is_cpu_replay_proof": False,
-        "queue_status_is_exact_eval_authority": False,
-    }
+    launch_contract = first["launch_authority_contract"]
+    assert launch_contract["schema"] == (
+        "nerv_long_training_queue_launch_authority_contract.v1"
+    )
+    assert launch_contract["queue_status_is_local_mlx_plan"] is True
+    assert launch_contract["queue_status_is_runnable_plan"] is True
+    assert launch_contract["queue_launch_blockers"] == []
+    assert launch_contract["queue_status_is_receiver_proof"] is False
+    assert launch_contract["queue_status_is_cpu_replay_proof"] is False
+    assert launch_contract["queue_status_is_exact_eval_authority"] is False
 
 
 def test_long_training_campaign_consumer_requires_launch_authority_contract() -> None:
-    queue = json.loads(json.dumps(_campaign_plan()["experiment_queue"]))
+    queue = _runnable_snerv_queue()
     snerv = next(row for row in queue["experiments"] if row["family"] == "snerv")
     snerv.pop("launch_authority_contract")
 
@@ -74,7 +76,9 @@ def test_long_training_campaign_consumer_preserves_hinerv_supersession_metadata(
 ) -> None:
     plan = _hinerv_official_supersession_campaign_plan()
 
-    verdict = consumer.consume_candidate(plan["experiment_queue"])
+    verdict = consumer.consume_candidate(
+        _runnable_snerv_queue(plan["experiment_queue"])
+    )
 
     assert verdict["family_summary"]["hi_nerv"]["ready_local_mlx_count"] == 0
     assert verdict["family_summary"]["hi_nerv"]["blocked_count"] == 1
@@ -84,7 +88,7 @@ def test_long_training_campaign_consumer_preserves_hinerv_supersession_metadata(
 
 
 def test_long_training_campaign_consumer_accepts_extracted_experiment_queue() -> None:
-    queue = _campaign_plan()["experiment_queue"]
+    queue = _runnable_snerv_queue()
 
     verdict = consumer.consume_candidate(queue)
 
@@ -132,7 +136,7 @@ def test_long_training_campaign_consumer_cli_writes_verdict(tmp_path: Path) -> N
     source = tmp_path / "campaign.json"
     out_json = tmp_path / "verdict.json"
     out_md = tmp_path / "verdict.md"
-    source.write_text(json.dumps(_campaign_plan()), encoding="utf-8")
+    source.write_text(json.dumps(_runnable_snerv_queue()), encoding="utf-8")
 
     rc = cli.main(
         [
@@ -166,6 +170,21 @@ def _campaign_plan() -> dict:
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
         max_candidates_per_family=1,
     )
+
+
+def _runnable_snerv_queue(queue: dict | None = None) -> dict:
+    out = json.loads(json.dumps(queue or _campaign_plan()["experiment_queue"]))
+    snerv = next(row for row in out["experiments"] if row["family"] == "snerv")
+    snerv["status"] = "queued"
+    snerv["blocked"] = False
+    contract = snerv["launch_authority_contract"]
+    contract["queue_status_is_local_mlx_plan"] = True
+    contract["queue_status_is_runnable_plan"] = True
+    contract["queue_launch_blockers"] = []
+    contract["queue_status_is_receiver_proof"] = False
+    contract["queue_status_is_cpu_replay_proof"] = False
+    contract["queue_status_is_exact_eval_authority"] = False
+    return out
 
 
 def _hinerv_official_supersession_campaign_plan() -> dict:

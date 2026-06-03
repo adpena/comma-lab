@@ -14,6 +14,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
+    SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
     SNERV_MLX_NATIVE_REPORT_FILENAME,
     build_snerv_mlx_native_packet_from_numpy_pairs,
     train_export_snerv_mlx_native,
@@ -61,6 +62,9 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     assert decoded.metadata["step_map_coder_mode"] == (
         "waterfill_mlx_native_uniform_importance_bridge"
     )
+    assert decoded.metadata["contest_scorer_distortion_objective"] is False
+    assert decoded.metadata["score_aware_hf_decoder_fit_executed"] is False
+    assert decoded.metadata["score_aware_long_training_executed"] is False
     assert decoded.metadata["step_map_waterfill_bits_per_coeff"] == pytest.approx(0.5)
     assert decoded.metadata["step_map_coder_groups"]
     assert decoded.metadata["lf_payload_codec"] == "auto"
@@ -118,9 +122,11 @@ def test_packet_builder_consumes_joint_recon_pixel_weight_in_decoder_fit() -> No
 
     decoded = unpack_snerv_archive(weighted.packet)
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
+    assert decoded.metadata["contest_scorer_distortion_objective"] is True
     assert decoded.metadata["hf_decoder_fit_mode"] == (
-        "joint_p18_p19_recon_pixel_weighted_least_squares"
+        SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE
     )
+    assert decoded.metadata["exact_pixel_weighted_objective"] is False
     assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(3.0)
     assert decoded.metadata["recon_pixel_weight_metadata"]["schema"] == (
         "unit_joint_weight.v1"
@@ -235,7 +241,7 @@ def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
     )
 
     assert report["packet_source"] == (
-        "mlx_target_hydration_numpy_joint_p18_p19_weighted_decoder_fit"
+        "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
     )
     recon = report["recon_pixel_weight"]
     assert recon["enabled"] is True
@@ -250,11 +256,20 @@ def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["score_aware_hf_decoder_fit_executed"] is True
     assert decoded.metadata["hf_decoder_fit_mode"] == (
-        "joint_p18_p19_recon_pixel_weighted_least_squares"
+        SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE
     )
+    assert decoded.metadata["hf_decoder_weight_domain"] == (
+        "dwt_adjoint_detail_saliency_diagonal"
+    )
+    assert decoded.metadata["exact_pixel_weighted_objective"] is False
     assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(2.5)
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
     assert decoded.metadata["recon_pixel_weight_metadata"]["sha256"] == recon["sha256"]
+    assert recon["producer_manifest_verified"] is False
+    assert (
+        "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export"
+        in report["blockers"]
+    )
 
 
 def test_train_export_refuses_bad_recon_pixel_weight_shape(
@@ -462,6 +477,126 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     ]
     assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]
     assert report["score_claim"] is False
+
+
+def test_train_export_rejects_unweighted_qat_packet_when_recon_weight_bound(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
+
+    pairs = _tiny_pairs(pairs=1)
+    pairs[0, 1, 0, 3:12, 4:13] += 24.0
+    pairs = np.clip(pairs, 0.0, 255.0)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    weight = np.ones((1, 2, 16, 16, 1), dtype=np.float32)
+    weight[:, :, 3:12, 4:13, :] = 16.0
+    weight_path = tmp_path / "joint_p18_p19_weight.npz"
+    np.savez(weight_path, weight=weight)
+    unweighted_best_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs + 1.0,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+    ).packet
+    unweighted_best_sha256 = hashlib.sha256(unweighted_best_packet).hexdigest()
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    class FakeQatResult:
+        best_packet = unweighted_best_packet
+
+        def as_jsonable(self) -> dict:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 1,
+                "decoder_payload_codec": "int8_symmetric",
+                "lf_payload_codec": "portfolio_auto",
+                "scorer_loop_evaluations": 2,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "baseline": {
+                    "archive_bytes": 111,
+                    "archive_sha256": "1" * 64,
+                    "score_linf": 3.0,
+                },
+                "best": {
+                    "archive_bytes": len(unweighted_best_packet),
+                    "archive_sha256": unweighted_best_sha256,
+                    "score_linf": 2.5,
+                },
+                "best_packet_bytes": len(unweighted_best_packet),
+                "best_packet_sha256": unweighted_best_sha256,
+                "component_guard_mode": "pose_seg_hard",
+                "blockers": [
+                    "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        qat_mod,
+        "run_snerv_scorer_loop_decoder_qat_smoke",
+        lambda **_kwargs: FakeQatResult(),
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "export_qat_reject",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "hf_decoder_saliency_gain": 2.5,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        run_scorer_loop_qat=True,
+        scorer_loop_qat_max_trials=1,
+        scorer_loop_qat_component_guard_mode="pose_seg_hard",
+        recon_pixel_weight_path=weight_path,
+        recon_pixel_weight_normalize="mean",
+    )
+
+    scorer_loop = report["scorer_loop_qat"]
+    assert scorer_loop["accepted_improvement"] is True
+    assert scorer_loop["receiver_contract_satisfied"] is True
+    assert scorer_loop["best_packet_materialized"] is True
+    assert scorer_loop["best_packet_path_sha256"] == unweighted_best_sha256
+    assert Path(scorer_loop["best_packet_path"]).read_bytes() == unweighted_best_packet
+    assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is False
+    assert scorer_loop["recon_weight_binding_required"] is True
+    assert scorer_loop["recon_weight_binding_preserved"] is False
+    assert (
+        "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch"
+        in scorer_loop["blockers"]
+    )
+    assert (
+        "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch"
+        in report["blockers"]
+    )
+    assert report["packet_source"] == (
+        "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
+    )
+    assert report["packet_sha256"] != unweighted_best_sha256
+    assert Path(report["packet_path"]).read_bytes() != unweighted_best_packet
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["recon_pixel_weight_consumed"] is True
 
 
 def test_prefilter_profile_is_false_authority_until_component_scores_exist(

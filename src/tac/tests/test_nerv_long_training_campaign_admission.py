@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 def test_nerv_long_training_campaign_admission_builds_storage_gated_queue(
     tmp_path: Path,
 ) -> None:
-    verdict = dict(consume_candidate(_campaign_plan(tmp_path / "ssd")))
+    verdict = _runnable_verdict(tmp_path / "ssd")
     claims = _claims_file(
         tmp_path,
         lane_id="lane_nerv_local_mlx",
@@ -93,7 +93,7 @@ def test_nerv_long_training_campaign_admission_builds_storage_gated_queue(
 def test_nerv_long_training_campaign_admission_blocks_without_active_claim(
     tmp_path: Path,
 ) -> None:
-    verdict = dict(consume_candidate(_campaign_plan(tmp_path / "ssd")))
+    verdict = _runnable_verdict(tmp_path / "ssd")
     claims = tmp_path / "claims.md"
     claims.write_text("# empty\n", encoding="utf-8")
 
@@ -120,7 +120,7 @@ def test_nerv_long_training_campaign_admission_blocks_without_active_claim(
 def test_nerv_long_training_campaign_admission_blocks_non_ssd_output(
     tmp_path: Path,
 ) -> None:
-    verdict = dict(consume_candidate(_campaign_plan(tmp_path / "local_disk")))
+    verdict = _runnable_verdict(tmp_path / "local_disk")
     claims = _claims_file(
         tmp_path,
         lane_id="lane_nerv_local_mlx",
@@ -147,7 +147,7 @@ def test_nerv_long_training_campaign_admission_blocks_non_ssd_output(
 def test_nerv_long_training_campaign_admission_blocks_existing_output_artifacts(
     tmp_path: Path,
 ) -> None:
-    verdict = dict(consume_candidate(_campaign_plan(tmp_path / "ssd")))
+    verdict = _runnable_verdict(tmp_path / "ssd")
     selected = verdict["selected_local_mlx_experiments"][0]
     command = selected["command"]
     out_dir = Path(command[command.index("--output-dir") + 1])
@@ -186,7 +186,7 @@ def test_nerv_long_training_campaign_admission_blocks_existing_output_artifacts(
 def test_nerv_long_training_campaign_admission_blocks_active_local_mlx_process(
     tmp_path: Path,
 ) -> None:
-    verdict = dict(consume_candidate(_campaign_plan(tmp_path / "ssd")))
+    verdict = _runnable_verdict(tmp_path / "ssd")
     claims = _claims_file(
         tmp_path,
         lane_id="lane_nerv_local_mlx",
@@ -236,7 +236,7 @@ def test_nerv_long_training_campaign_admission_cli_writes_artifacts(
     out_md = tmp_path / "admission.md"
     out_queue = tmp_path / "queue.json"
     verdict_path.write_text(
-        json.dumps(dict(consume_candidate(_campaign_plan(tmp_path / "ssd")))),
+        json.dumps(_runnable_verdict(tmp_path / "ssd")),
         encoding="utf-8",
     )
     claims = _claims_file(
@@ -339,6 +339,26 @@ def _campaign_plan(output_root: Path) -> dict:
         output_root=output_root,
         max_candidates_per_family=1,
     )
+
+
+def _runnable_verdict(output_root: Path) -> dict:
+    queue = json.loads(json.dumps(_campaign_plan(output_root)["experiment_queue"]))
+    hi = next(row for row in queue["experiments"] if row["family"] == "hi_nerv")
+    hi["status"] = "queued"
+    hi["blocked"] = False
+    contract = hi["launch_authority_contract"]
+    contract["queue_status_is_local_mlx_plan"] = True
+    contract["queue_status_is_runnable_plan"] = True
+    contract["queue_launch_blockers"] = []
+    contract["queue_status_is_receiver_proof"] = False
+    contract["queue_status_is_cpu_replay_proof"] = False
+    contract["queue_status_is_exact_eval_authority"] = False
+    gate = hi["score_lowering_gate"]
+    gate["local_mlx_executable"] = True
+    gate["prelaunch_allowed"] = True
+    gate["cpu_replay_ready"] = False
+    gate["exact_gate_ready"] = False
+    return dict(consume_candidate(queue))
 
 
 def _claims_file(tmp_path: Path, *, lane_id: str, instance_job_id: str) -> Path:

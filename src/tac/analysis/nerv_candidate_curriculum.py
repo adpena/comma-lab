@@ -349,6 +349,10 @@ def build_snerv_candidate_curriculum_plan(
         and native_mlx_scorer_loop_qat_accepted_improvement
         and native_mlx_scorer_loop_qat_best_materialized
     )
+    standalone_scorer_loop_verified = False
+    effective_scorer_loop_verified = bool(
+        standalone_scorer_loop_verified or native_scorer_loop_verified
+    )
     effective_scorer_loop_attached = bool(
         standalone_scorer_loop_attached or native_scorer_loop_planned
     )
@@ -464,10 +468,10 @@ def build_snerv_candidate_curriculum_plan(
         family="snerv",
         evidence=build_pr95_stack_binding_evidence(
             modelsize_archive_budget=candidate_selected,
-            real_segnet_teacher=effective_scorer_loop_attached,
-            real_posenet_teacher=effective_scorer_loop_attached,
-            qat_forward=effective_scorer_loop_attached,
-            coder_aware_regularizer=effective_scorer_loop_attached,
+            real_segnet_teacher=effective_scorer_loop_verified,
+            real_posenet_teacher=effective_scorer_loop_verified,
+            qat_forward=effective_scorer_loop_verified,
+            coder_aware_regularizer=effective_scorer_loop_verified,
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
             receiver_proof=bool(receiver_proof_attached),
@@ -529,6 +533,10 @@ def build_snerv_candidate_curriculum_plan(
             ),
             "scorer_loop_qat_attached": effective_scorer_loop_attached,
             "standalone_scorer_loop_qat_attached": standalone_scorer_loop_attached,
+            "standalone_scorer_loop_qat_verified": standalone_scorer_loop_verified,
+            "standalone_scorer_loop_qat_requires_receiver_packet_materialization": (
+                standalone_scorer_loop_attached
+            ),
             "scorer_loop_qat_receiver_contract_satisfied": bool(
                 effective_scorer_loop_receiver_contract
             ),

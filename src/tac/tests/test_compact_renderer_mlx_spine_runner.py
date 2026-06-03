@@ -830,7 +830,21 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert campaign_plan["ready_for_exact_eval_dispatch"] is False
     assert campaign_plan["family_counts"]["hi_nerv"] > 0
     assert campaign_plan["family_counts"]["snerv"] > 0
-    assert campaign_plan["launchable_local_row_count"] > 0
+    assert campaign_plan["launchable_local_row_count"] == 0
+    assert any(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_status_is_local_mlx_plan"
+        ]
+        is True
+        for row in campaign_plan["campaign_rows"]
+    )
+    assert all(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_status_is_runnable_plan"
+        ]
+        is False
+        for row in campaign_plan["campaign_rows"]
+    )
     assert campaign_plan["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert campaign_plan["experiment_queue_experiment_count"] == campaign_plan[
         "campaign_row_count"
@@ -4957,6 +4971,14 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["scorer_loop_qat_accepted_improvement"] is True
     assert native["scorer_loop_qat_best_materialized"] is False
     assert Path(native["artifact_report_path"]).is_file()
+    recon_weight = out["snerv_recon_pixel_weight"]
+    assert recon_weight["requested"] is True
+    assert recon_weight["enabled"] is False
+    assert recon_weight["native_export_consumed"] is False
+    assert recon_weight["primary_archive_consumed"] is False
+    assert recon_weight["primary_archive_source"] == (
+        "snerv_advisory_archive_packet_not_native_mlx_export"
+    )
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
     assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is False
     assert (
@@ -4978,8 +5000,11 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
-    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
-    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
+    assert "snerv_qat_forward_missing" in plan["blockers"]
+    assert "snerv_coder_aware_regularizer_missing" in plan["blockers"]
+    assert plan["pr95_stack_binding"]["complete"] is False
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
         "blockers"
     ]
@@ -5266,10 +5291,10 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert plan["training_plan"]["scorer_loop_qat_receiver_contract_satisfied"] is True
     assert plan["training_plan"]["receiver_proof_attached"] is True
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
-    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
-    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
-    assert "snerv_qat_forward_missing" not in plan["blockers"]
-    assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
+    assert "snerv_qat_forward_missing" in plan["blockers"]
+    assert "snerv_coder_aware_regularizer_missing" in plan["blockers"]
     assert "snerv_receiver_proof_missing" not in plan["blockers"]
     assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out[
         "blockers"
@@ -5692,11 +5717,12 @@ def test_snerv_native_export_bypasses_pr95_prelaunch_only_for_local_proof(
     assert "snerv_pr95_staged_curriculum_missing" in out["blockers"]
     assert out["candidate_curriculum_plan"]["training_plan"][
         "native_mlx_long_training_bound"
-    ] is True
+    ] is False
     assert (
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
-        not in out["candidate_curriculum_plan"]["blockers"]
+        in out["candidate_curriculum_plan"]["blockers"]
     )
+    assert out["score_aware_training"]["mlx_native_training_required_next"] is True
     assert out["score_claim"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
 

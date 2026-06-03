@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from comma_lab.scheduler.experiment_queue import load_queue_definition
+from tac.analysis import nerv_long_training_campaign_plan as plan_module
 from tac.analysis.nerv_long_training_campaign_plan import (
     DEFAULT_OPTIMIZER_KINDS,
     HINERV_POSE_INSTABILITY_LOW_LR_FLOOR,
@@ -40,8 +41,15 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
-    assert report["launchable_local_row_count"] == 1
+    assert report["launchable_local_row_count"] == 0
     assert report["family_counts"] == {"hi_nerv": 2, "snerv": 1}
+    assert report["source_parity_contract"]["schema"] == (
+        "nerv_source_parity_contract.v1"
+    )
+    assert report["source_parity_required_for_long_training_ready"] is True
+    assert "snerv_official_mfu_hfr_tub_parity_missing" in report[
+        "source_parity_nonblocking_gaps"
+    ]
 
     hi_rows = [row for row in report["campaign_rows"] if row["family"] == "hi_nerv"]
     assert {row["optimizer_kind"] for row in hi_rows} == {"lion", "adafactor"}
@@ -172,6 +180,8 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         for row in hi_rows
     )
     assert all("hi_nerv_receiver_proof_missing" in row["blockers"] for row in hi_rows)
+    assert all(row["source_parity"]["required_blockers"] == [] for row in hi_rows)
+    assert all(row["source_parity"]["score_claim"] is False for row in hi_rows)
     assert all(
         "hi_nerv_byte_closed_archive_export_missing" in row["promotion_blockers"]
         for row in hi_rows
@@ -232,13 +242,18 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     ]["prelaunch_blockers"]
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
-    assert snerv_row["experiment_queue_entry"]["status"] == "queued"
-    assert snerv_row["experiment_queue_entry"]["blocked"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+    assert snerv_row["experiment_queue_entry"]["blocked"] is True
     launch_contract = snerv_row["experiment_queue_entry"]["launch_authority_contract"]
     assert launch_contract["schema"] == (
         "nerv_long_training_queue_launch_authority_contract.v1"
     )
     assert launch_contract["queue_status_is_local_mlx_plan"] is True
+    assert launch_contract["queue_status_is_runnable_plan"] is False
+    assert (
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
+        in launch_contract["queue_launch_blockers"]
+    )
     assert launch_contract["queue_status_is_receiver_proof"] is False
     assert launch_contract["queue_status_is_cpu_replay_proof"] is False
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
@@ -266,6 +281,11 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         == snerv_row["candidate_id"]
     )
     assert not snerv_row["source_bound_capacity_control_blockers"]
+    assert snerv_row["source_parity"]["required_blockers"] == []
+    assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in snerv_row[
+        "source_parity"
+    ]["nonblocking_gaps"]
+    assert snerv_row["source_parity"]["score_claim"] is False
     assert "--snerv-model-size-adapter" in snerv_row["command_argv"]
     assert (
         snerv_row["command_argv"][
@@ -342,6 +362,69 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert "NeRV Long-Training Campaign Plan" in markdown
     assert "hi_nerv::hinerv_tiny::lion" in markdown
+
+
+def test_long_training_campaign_plan_source_parity_required_blocker_disables_row(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_source_parity_contract(**_: object) -> dict:
+        return {
+            "schema": "nerv_source_parity_contract.v1",
+            "authority": "false_authority_source_parity_no_score_claim",
+            "required_for_long_training_ready": False,
+            "blockers": ["snerv_official_mfu_hfr_tub_parity_missing"],
+            "nonblocking_gaps": [],
+            "family_rows": [
+                {"family": "hi_nerv", "long_training_ready": True, "blockers": []},
+                {
+                    "family": "snerv",
+                    "long_training_ready": False,
+                    "blockers": ["snerv_official_mfu_hfr_tub_parity_missing"],
+                },
+            ],
+            "feature_rows": [
+                {
+                    "family": "snerv",
+                    "feature_id": "snerv_official_mfu_hfr_tub_parity",
+                    "status": "missing_or_partial",
+                    "required_for_long_training": True,
+                    "blockers": ["snerv_official_mfu_hfr_tub_parity_missing"],
+                }
+            ],
+            "control_rows": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        plan_module,
+        "build_nerv_source_parity_contract",
+        fake_source_parity_contract,
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in snerv_row[
+        "blockers"
+    ]
+    assert snerv_row["source_parity"]["required_blockers"] == [
+        "source_parity:snerv_official_mfu_hfr_tub_parity_missing"
+    ]
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+    assert snerv_row["implementation_status"] == (
+        "source_bound_capacity_controls_incomplete"
+    )
 
 
 def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> None:
@@ -1980,10 +2063,22 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert queue == payload["experiment_queue"]
     assert queue["queue_id"] == f"nerv_long_training_campaign_{out_json.stem}.v1"
     assert queue["experiments"][0]["steps"][0]["postconditions"]
+    snerv_exp = next(exp for exp in queue["experiments"] if exp["family"] == "snerv")
+    assert snerv_exp["blocked"] is True
     loaded_queue = load_queue_definition(out_queue)
     assert loaded_queue["schema"] == "experiment_queue.v1"
-    assert loaded_queue["experiments"][0]["status"] == "queued"
-    assert loaded_queue["experiments"][0]["steps"][0]["resources"]["kind"] == "local_mlx"
+    loaded_snerv_exp = next(
+        exp for exp in loaded_queue["experiments"] if exp["family"] == "snerv"
+    )
+    assert loaded_snerv_exp["status"] == "disabled"
+    assert loaded_snerv_exp["blocked"] is True
+    assert (
+        loaded_snerv_exp["launch_authority_contract"][
+            "queue_status_is_runnable_plan"
+        ]
+        is False
+    )
+    assert loaded_snerv_exp["steps"][0]["resources"]["kind"] == "local_mlx"
     assert out_md.read_text(encoding="utf-8").startswith(
         "# NeRV Long-Training Campaign Plan"
     )

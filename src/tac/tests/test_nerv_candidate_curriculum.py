@@ -380,6 +380,13 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
     assert plan["training_plan"]["scorer_loop_qat_receiver_contract_satisfied"] is True
     assert plan["training_plan"]["scorer_loop_qat_ready_for_pose_guard_gate"] is True
     assert plan["training_plan"]["scorer_loop_qat_accepted_improvement"] is True
+    assert plan["training_plan"]["standalone_scorer_loop_qat_verified"] is False
+    assert (
+        plan["training_plan"][
+            "standalone_scorer_loop_qat_requires_receiver_packet_materialization"
+        ]
+        is True
+    )
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_planned"] is False
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_verified"] is False
     assert plan["training_plan"]["receiver_proof_attached"] is True
@@ -388,10 +395,11 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
     assert "snerv_scorer_loop_qat_receiver_contract_failed" not in plan["blockers"]
     assert "snerv_scorer_loop_qat_no_accepted_improvement" not in plan["blockers"]
-    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
-    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
-    assert "snerv_qat_forward_missing" not in plan["blockers"]
-    assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
+    assert "snerv_qat_forward_missing" in plan["blockers"]
+    assert "snerv_coder_aware_regularizer_missing" in plan["blockers"]
+    assert plan["pr95_stack_binding"]["complete"] is False
     assert "snerv_receiver_proof_missing" not in plan["blockers"]
     assert "snerv_full_video_local_prefilter_missing" not in plan["blockers"]
     assert "snerv_local_cpu_replay_gate_missing" not in plan["blockers"]
@@ -523,13 +531,14 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_scorer_loop_without_over
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
     assert "snerv_scorer_loop_qat_receiver_contract_failed" not in plan["blockers"]
     assert "snerv_scorer_loop_qat_no_accepted_improvement" not in plan["blockers"]
-    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
-    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
-    assert "snerv_qat_forward_missing" not in plan["blockers"]
-    assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
+    assert "snerv_qat_forward_missing" in plan["blockers"]
+    assert "snerv_coder_aware_regularizer_missing" in plan["blockers"]
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
         "blockers"
     ]
+    assert plan["pr95_stack_binding"]["complete"] is False
     assert (
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         in plan["blockers"]
