@@ -27,7 +27,7 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import FALSE_AUTHORI
 OFFICIAL_SNERV_T_SOURCE_SHA: Final[str] = "0844a08f9591eea9625f8b961ed91d08030e06d1"
 OFFICIAL_SNERV_T_TUB_SCHEMA: Final[str] = "official_snerv_t_tub_numpy_graph_inputs.v1"
 OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT: Final[str] = (
-    "official_snerv_t_lines_125_136_and_148_150_numpy_tub_input_contract"
+    "official_snerv_t_lines_125_136_148_150_and_requirements_numpy_tub_input_contract"
 )
 
 

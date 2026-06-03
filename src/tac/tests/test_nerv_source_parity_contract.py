@@ -23,6 +23,26 @@ def test_source_parity_contract_is_false_authority_and_family_scoped() -> None:
     assert report["required_for_long_training_ready"] is True
     assert report["blockers"] == ()
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["nonblocking_gaps"]
+    analogue_rows = {row["surface_id"]: row for row in report["analogue_risk_rows"]}
+    assert analogue_rows["snerv_official_mfu_hfr_tub_numeric_primitives"][
+        "insufficient_for"
+    ] == "byte_closed_official_snerv_export_runtime"
+    assert analogue_rows["hi_nerv_mlx_backend_drift"][
+        "insufficient_for"
+    ] == "contest_cpu_cuda_auth_eval_authority"
+    assert analogue_rows["pr95_hnerv_mlx_control_arm"][
+        "insufficient_for"
+    ] == "pr95_source_faithful_control_reproduction"
+    assert all(row["score_claim"] is False for row in analogue_rows.values())
+    analogue_ids = {row["surface_id"] for row in report["analogue_risk_rows"]}
+    assert {
+        "snerv_receiver_safe_mfu_hfr_temporal_adapter",
+        "snerv_official_mfu_hfr_tub_numeric_primitives",
+        "snerv_local_modelsize_analogue",
+        "hi_nerv_local_target_modelsize",
+        "hi_nerv_mlx_backend_drift",
+        "pr95_hnerv_mlx_control_arm",
+    }.issubset(analogue_ids)
 
 
 def test_hinerv_generic_resize_path_is_no_longer_a_source_parity_blocker() -> None:
@@ -86,6 +106,34 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
         "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
         "repack_archive_decoder_codec",
     }.issubset(present_symbols)
+
+
+def test_source_parity_contract_records_insufficient_analogue_surfaces() -> None:
+    report = build_nerv_source_parity_contract(repo_root=REPO_ROOT)
+
+    risks = {row["surface_id"]: row for row in report["analogue_risk_rows"]}
+    assert risks["snerv_receiver_safe_mfu_hfr_temporal_adapter"][
+        "insufficient_for"
+    ] == "official_spectra_preserving_snerv_source_forward"
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in risks[
+        "snerv_receiver_safe_mfu_hfr_temporal_adapter"
+    ]["remaining_blockers"]
+    assert risks["snerv_official_mfu_hfr_tub_numeric_primitives"][
+        "insufficient_for"
+    ] == "byte_closed_official_snerv_export_runtime"
+    assert risks["snerv_local_modelsize_analogue"]["insufficient_for"] == (
+        "official_snerv_modelsize_authority"
+    )
+    assert risks["hi_nerv_local_target_modelsize"]["insufficient_for"] == (
+        "official_hinerv_config_family_authority"
+    )
+    assert risks["hi_nerv_mlx_backend_drift"]["insufficient_for"] == (
+        "contest_cpu_cuda_auth_eval_authority"
+    )
+    assert risks["pr95_hnerv_mlx_control_arm"]["insufficient_for"] == (
+        "pr95_source_faithful_control_reproduction"
+    )
+    assert all(row["score_claim"] is False for row in risks.values())
 
 
 def test_snerv_spectra_preserving_adapter_unblocks_training_but_not_official_parity() -> None:

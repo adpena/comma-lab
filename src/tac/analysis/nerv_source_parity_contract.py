@@ -135,6 +135,7 @@ def build_nerv_source_parity_contract(
         "family_rows": family_rows,
         "feature_rows": feature_rows,
         "control_rows": control_rows,
+        "analogue_risk_rows": _analogue_risk_rows(selected_families),
         "required_for_long_training_ready": not blockers,
         "blockers": blockers,
         "nonblocking_gaps": nonblocking_gaps,
@@ -176,6 +177,12 @@ def render_nerv_source_parity_markdown(report: Mapping[str, Any]) -> str:
         lines.extend(f"- `{gap}`" for gap in nonblocking_gaps)
     else:
         lines.append("- none")
+    lines.extend(["", "## Analogue Risks", ""])
+    for row in report.get("analogue_risk_rows", ()):
+        lines.append(
+            f"- `{row['surface_id']}`: `{row['insufficient_for']}` "
+            f"({', '.join(row.get('remaining_blockers') or ())})"
+        )
     lines.extend(["", "## Next Actions", ""])
     lines.extend(f"- {action}" for action in report.get("next_actions", ()))
     lines.append("")
@@ -788,6 +795,146 @@ def _source_features() -> tuple[SourceFeature, ...]:
             required_for_long_training=False,
         ),
     )
+
+
+def _analogue_risk_rows(families: tuple[str, ...]) -> tuple[dict[str, Any], ...]:
+    rows: list[dict[str, Any]] = []
+    if "snerv" in families:
+        rows.extend(
+            [
+                _analogue_risk_row(
+                    family="snerv",
+                    surface_id="snerv_receiver_safe_mfu_hfr_temporal_adapter",
+                    analogue_surface=(
+                        "receiver-safe NumPy MFU/HFR/SNeRV_T adapter in carrier.py"
+                    ),
+                    insufficient_for="official_spectra_preserving_snerv_source_forward",
+                    why=(
+                        "the local adapter is executable and receiver-safe, but "
+                        "does not consume official MFU/HFR/TUB weights through "
+                        "the upstream neural graph"
+                    ),
+                    remaining_blockers=(
+                        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                        "snerv_official_neural_decoder_payload_grammar_missing",
+                        "snerv_official_receiver_runtime_decode_missing",
+                    ),
+                ),
+                _analogue_risk_row(
+                    family="snerv",
+                    surface_id="snerv_official_mfu_hfr_tub_numeric_primitives",
+                    analogue_surface=(
+                        "portable official MFU/HFR/TUB numeric kernels and shape contracts"
+                    ),
+                    insufficient_for="byte_closed_official_snerv_export_runtime",
+                    why=(
+                        "numeric primitives prove local algebra, not a trained "
+                        "official neural payload, receiver grammar, or source "
+                        "forward replay"
+                    ),
+                    remaining_blockers=(
+                        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+                        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                        "snerv_official_receiver_runtime_decode_missing",
+                    ),
+                ),
+                _analogue_risk_row(
+                    family="snerv",
+                    surface_id="snerv_local_modelsize_analogue",
+                    analogue_surface=(
+                        "fc_dim/emb_size/patch_radius/MFU/HFR receiver-visible "
+                        "capacity controls"
+                    ),
+                    insufficient_for="official_snerv_modelsize_authority",
+                    why=(
+                        "local capacity changes bytes and decoded frames, but "
+                        "official --modelsize authority requires the upstream "
+                        "stride stack and neural graph to consume the solved fc_dim"
+                    ),
+                    remaining_blockers=(
+                        "snerv_official_stride_stack_parity_missing",
+                        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                        "snerv_measured_fc_dim_modelsize_ladder_missing",
+                    ),
+                ),
+            ]
+        )
+    if "hi_nerv" in families:
+        rows.extend(
+            [
+                _analogue_risk_row(
+                    family="hi_nerv",
+                    surface_id="hi_nerv_local_target_modelsize",
+                    analogue_surface=(
+                        "local target modelsize and capacity routing for archive ladders"
+                    ),
+                    insufficient_for="official_hinerv_config_family_authority",
+                    why=(
+                        "local target capacity can price bytes, but official "
+                        "HiNeRV authority requires the upstream config family, "
+                        "hierarchical feature grid, and same-runtime bitstream replay"
+                    ),
+                    remaining_blockers=(
+                        "hi_nerv_official_symbol_parity_map_missing",
+                        "hi_nerv_tiny_forward_parity_against_oss_missing",
+                        "hi_nerv_measured_modelsize_budget_ladder_missing",
+                    ),
+                ),
+                _analogue_risk_row(
+                    family="hi_nerv",
+                    surface_id="hi_nerv_mlx_backend_drift",
+                    analogue_surface="MLX/Metal local archive backend drift rows",
+                    insufficient_for="contest_cpu_cuda_auth_eval_authority",
+                    why=(
+                        "MLX is a high-value development accelerator, but drift "
+                        "rows are still local false-authority until paired contest "
+                        "CPU/CUDA replay closes"
+                    ),
+                    remaining_blockers=(
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                        "receiver_closed_full600_archive_runtime_missing",
+                    ),
+                ),
+            ]
+        )
+    rows.append(
+        _analogue_risk_row(
+            family="cross_stack",
+            surface_id="pr95_hnerv_mlx_control_arm",
+            analogue_surface="PR95-inspired HNeRV/MLX control-arm surfaces",
+            insufficient_for="pr95_source_faithful_control_reproduction",
+            why=(
+                "PR95 is the same-axis control to beat; MLX or HNeRV-inspired "
+                "surfaces remain analogues until PR95's source/runtime/export "
+                "contract is reproduced or explicitly superseded by exact evidence"
+            ),
+            remaining_blockers=(
+                "pr95_hnerv_mlx_archive_export_control_arm_not_pr95_faithful_reproduction",
+                "paired_contest_cpu_cuda_replay_missing",
+            ),
+        )
+    )
+    return tuple(rows)
+
+
+def _analogue_risk_row(
+    *,
+    family: str,
+    surface_id: str,
+    analogue_surface: str,
+    insufficient_for: str,
+    why: str,
+    remaining_blockers: tuple[str, ...],
+) -> dict[str, Any]:
+    return {
+        "family": family,
+        "surface_id": surface_id,
+        "analogue_surface": analogue_surface,
+        "insufficient_for": insufficient_for,
+        "why": why,
+        "remaining_blockers": remaining_blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _control_rows(root: Path, families: tuple[str, ...]) -> list[dict[str, Any]]:
