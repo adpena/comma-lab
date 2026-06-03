@@ -159,12 +159,17 @@ LOCAL_SOURCE_FAITHFULNESS_AUDIT: dict[str, dict[str, Any]] = {
         "local_surfaces": [
             "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
             "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+            "src/tac/analysis/nerv_modelsize_budget.py",
+            "tools/build_nerv_modelsize_budget.py",
             "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
         ],
         "implemented_features": [
             "haar_like_multilevel_dwt_idwt",
             "lf_storage_with_generated_hf_detail",
             "linear_3x3_hf_predictor",
+            "official_modelsize_fc_dim_parameter_budget_solver",
+            "invalid_official_modelsize_rows_preserved_false_authority",
+            "source_bound_modelsize_candidate_ids",
             "local_scorer_loop_decoder_qat_smoke",
             "receiver_archive_proof_surface",
         ],
@@ -173,7 +178,6 @@ LOCAL_SOURCE_FAITHFULNESS_AUDIT: dict[str, dict[str, Any]] = {
             "official_MFU_multi_resolution_fusion_blocks",
             "official_HFR_high_frequency_restoration_heads",
             "official_SNeRV_T_temporal_neighbor_path",
-            "official_modelsize_fc_dim_parameter_budget_solver",
             "official_quantized_checkpoint_payload_replay",
         ],
     },
@@ -182,7 +186,10 @@ LOCAL_SOURCE_FAITHFULNESS_AUDIT: dict[str, dict[str, Any]] = {
         "local_surfaces": [
             "src/tac/substrates/hi_nerv/architecture.py",
             "src/tac/substrates/hi_nerv/archive.py",
+            "src/tac/substrates/hi_nerv/bitstream.py",
+            "src/tac/substrates/hi_nerv/mlx_renderer.py",
             "src/tac/substrates/hi_nerv/score_aware_loss.py",
+            "src/tac/analysis/nerv_decoder_weight_waterfill.py",
             "tools/run_compact_renderer_mlx_spine_runner.py",
         ],
         "implemented_features": [
@@ -190,13 +197,17 @@ LOCAL_SOURCE_FAITHFULNESS_AUDIT: dict[str, dict[str, Any]] = {
             "local_archive_and_receiver_smoke",
             "score_aware_loss_bridge",
             "mlx_prefilter_path",
+            "decoder_waterfill_action_lattice_0_2_4_6_7_8_16_32",
+            "quant_noise_action_lattice_2_4_6_7_8",
+            "receiver_visible_decoder_waterfill_actuation",
+            "train_time_mlx_fake_quant_per_tensor_actions",
         ],
         "missing_source_features": [
             "official_hierarchical_feature_grid_encoding",
             "official_patch_mode_frame_mode_equivalence",
             "official_fast_3d_hierarchical_upsampling",
             "official_config_family_size_sweep_parity",
-            "official_prune_quant_noise_quant_ste_compression_stack",
+            "official_prune_quant_ste_torchac_pipeline_parity",
             "official_bitstream_compress_decompress_roundtrip",
         ],
     },
@@ -252,6 +263,15 @@ def build_nerv_top_priority_stack_seam(
         ]
     )
     exact_blocked = bool(dispatch_blockers)
+    scorer_domain_control_policy = _scorer_domain_control_policy()
+    optimal_modelsize_control_policy = _optimal_modelsize_control_policy()
+    blockers = _unique(
+        [
+            *blockers,
+            *scorer_domain_control_policy["production_blockers"],
+            *optimal_modelsize_control_policy["production_blockers"],
+        ]
+    )
 
     return {
         "schema": SCHEMA,
@@ -277,6 +297,8 @@ def build_nerv_top_priority_stack_seam(
         },
         "source_faithfulness": source_faithfulness,
         "modelsize_archive_budget_policy": _modelsize_archive_budget_policy(),
+        "scorer_domain_control_policy": scorer_domain_control_policy,
+        "optimal_modelsize_control_policy": optimal_modelsize_control_policy,
         "full_stack_priority": _full_stack_priority(),
         "baseline": baseline,
         "carrier_stacks": [_snerv_stack(), _hinerv_stack()],
@@ -438,9 +460,10 @@ def _modelsize_archive_budget_policy() -> dict[str, Any]:
         "why_it_matters": (
             "Official HNeRV/SNeRV expose a parameter-budget knob that can be "
             "inverted into an archive-byte budget once quantization, entropy "
-            "coding, and metadata overhead are measured. Current local stacks "
-            "have width/latent knobs, but not the official modelsize-to-bytes "
-            "solver or a measured score/byte Pareto curve."
+            "coding, and metadata overhead are measured. SNeRV now has a "
+            "source-bound official --modelsize/fc_dim solver, but neither "
+            "top-priority stack has the measured modelsize-to-archive-bytes "
+            "score/byte Pareto curve needed for production authority."
         ),
         "official_controls_to_bind": [
             "--modelsize",
@@ -483,22 +506,292 @@ def _modelsize_archive_budget_policy() -> dict[str, Any]:
         "current_gap": {
             "hi_nerv": (
                 "local compact runner exposes latent_dim/embed_dim/"
-                "decoder_channel, but not the official modelsize solver over "
-                "ks/reduce/lower_width/enc_dim/strides/quant bits"
+                "decoder_channel plus receiver-visible 2/4/6/7/8 quant noise "
+                "and 0/2/4/6/7/8/16/32 decoder-waterfill actions, but not the "
+                "official HiNeRV config-family/prune/QuantNoise/bitstream "
+                "receiver curve"
             ),
             "snerv": (
-                "local adapter exposes LF levels, target bits, and decoder "
-                "payload modes, but not official SNeRV modelsize/fc_dim/"
-                "MFU/HFR/SNeRV_T budget binding"
+                "official SNeRV --modelsize/fc_dim solving is bound and invalid "
+                "official controls are preserved fail-closed, but MFU/HFR/SNeRV_T "
+                "parity and measured SNAR1 archive-byte replay are still missing"
             ),
         },
         "production_blockers": [
             "nerv_modelsize_to_archive_bytes_curve_missing",
-            "official_modelsize_flag_not_bound_to_contest_byte_caps",
+            "official_modelsize_flag_not_receiver_closed_under_contest_byte_caps",
             "quant_bits_not_jointly_optimized_with_score_sensitivity",
             "modelsize_sweep_not_replayed_through_receiver_archive_bytes",
         ],
         "production_hardened_claim": False,
+    }
+
+
+def _scorer_domain_control_policy() -> dict[str, Any]:
+    """Bind contest-scorer anatomy to concrete SNeRV/HiNeRV control points."""
+
+    return {
+        "schema": "nerv_scorer_domain_control_policy.v1",
+        "verdict": (
+            "REQUIRED_TRAIN_EXPORT_BITSTREAM_CONTROL__NOT_FULLY_BOUND_TO_SNERV_HINERV"
+        ),
+        "why_it_matters": (
+            "The contest scorer is a known rate-distortion Lagrangian, not a "
+            "human-fidelity objective. SegNet sees only frame 1 of each pair, "
+            "PoseNet sees frames 0 and 1, and the byte price is fixed by eval.py. "
+            "SNeRV and HiNeRV controls must exploit that pair/frame asymmetry "
+            "at training, representation, quantization, and archive admission."
+        ),
+        "scorer_domains": {
+            "segnet": {
+                "frame_indices_per_pair": [1],
+                "frame_0_score_leverage": "none_direct",
+                "frame_1_score_leverage": "segnet_and_posenet",
+                "input_size_hw": [384, 512],
+                "class_count": 5,
+                "decision_surface": "last-frame 5-class argmax/logit-margin boundary",
+                "score_derivative": 100.0,
+                "control_implication": (
+                    "Protect, refine, or spend bytes on frame-1 boundary/logit "
+                    "regions before visually plausible but scorer-flat pixels."
+                ),
+            },
+            "posenet": {
+                "frame_indices_per_pair": [0, 1],
+                "input_size_hw": [384, 512],
+                "input_channel_contract": "two RGB frames converted to YUV6 pair tensor",
+                "scored_pose_dims": [0, 1, 2, 3, 4, 5],
+                "score_derivative_symbolic": "5 / sqrt(10 * d_pose)",
+                "training_path_requirement": (
+                    "use differentiable eval-roundtrip/YUV6 replacement for "
+                    "PoseNet Jacobian and scorer-aware training"
+                ),
+                "control_implication": (
+                    "Frame 0 can spend only against pose; frame 1 spends against "
+                    "pose plus SegNet. Pair samplers and allocators must encode "
+                    "that asymmetry."
+                ),
+            },
+            "rate": {
+                "byte_price_symbolic": "25 / raw_uncompressed_total_bytes",
+                "water_level_fixed_by_contest": True,
+                "no_lambda_search_required": True,
+                "admission_rule": (
+                    "admit a parameter, atom, packet section, or quantization "
+                    "upgrade only when measured expected non-rate score drop per "
+                    "charged byte exceeds the fixed byte price"
+                ),
+            },
+        },
+        "required_bindings_by_stack": {
+            "snerv": [
+                "pair/frame scorer-domain sampler for LF/HF and temporal controls",
+                "wavelet-group saliency over LF/HF/step-map receiver payloads",
+                "frame-1 SegNet boundary protection for generated HF/SR paths",
+                "PoseNet pair guard for frame-0 and frame-1 temporal residuals",
+                "score-priced intN/zero/RLE/receiver-generation mode assignment",
+                "SNAR1 section-value replay before exact dispatch",
+            ],
+            "hinerv": [
+                "decoder-weight and hierarchical-grid saliency inside the trainer",
+                "frame-1 SegNet margin loss plus pair PoseNet loss in the same schedule",
+                "per-tensor/per-level QuantNoise and pruning driven by scorer deltas",
+                "master-gradient-informed pair sampler and recon-pixel weights",
+                "receiver-visible waterfill actions for int2/int4/int6/int7/int8/fp16/zero",
+                "trained byte-section replay before exact dispatch",
+            ],
+        },
+        "reusable_surfaces_to_consume": [
+            "src/tac/master_gradient.py",
+            "src/tac/master_gradient_consumers.py",
+            "src/tac/master_gradient_wire_in.py",
+            "src/tac/optimization/recon_pixel_weight_surface.py",
+            "src/tac/analysis/score_exact_saliency.py",
+            "src/tac/analysis/nerv_decoder_weight_waterfill.py",
+            "src/tac/analysis/hinerv_latent_linf_allocation.py",
+            "src/tac/substrates/snerv_inverse_steg_carrier/allocation.py",
+            "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
+            "src/tac/cathedral_consumers/pareto_carrier_fit_consumer/__init__.py",
+            "src/tac/cathedral_consumers/pact_nerv_ultimate_composition_selector_consumer/__init__.py",
+            "src/tac/cathedral_consumers/venn_risk_composition_consumer/__init__.py",
+            "src/tac/cathedral_consumers/per_pixel_inverse_steganalysis_real_video_mlx_consumer/__init__.py",
+            "src/tac/xray/segnet_margin_polytope.py",
+            "src/tac/xray/posenet_se3_lie_algebra.py",
+            "src/tac/xray/bilinear_resize_nullspace.py",
+            "src/tac/atom/unified_action_bridge.py",
+            "tools/master_gradient_xray.py",
+            "tools/xray_hardpair_hitlist.py",
+            "tools/build_joint_recon_pixel_weight_surface.py",
+            "tools/cathedral_autopilot.py",
+        ],
+        "train_time_control_points": [
+            "loss component weights and schedules",
+            "hard-pair and frame-domain sampling",
+            "joint P18/P19 recon-pixel-weight manifests",
+            "decoder-weight saliency/waterfill masks",
+            "QAT noise/action bit lattice",
+            "pruning and ablation candidate masks",
+            "EMA/archive candidate selection by scorer deltas",
+        ],
+        "export_and_bitstream_control_points": [
+            "receiver-visible tensor section manifests",
+            "mixed intN/fp16/zero/RLE action packets",
+            "wavelet LF/HF group action maps",
+            "packed-zero and entropy-coded byte sections",
+            "archive-byte oracle rows consumed before queue launch",
+        ],
+        "production_blockers": [
+            "nerv_scorer_domain_controls_not_bound_to_both_snerv_and_hinerv_train_export",
+            "master_gradient_to_nerv_pair_frame_sampler_not_bound",
+            "segnet_frame1_posenet_pair_asymmetry_not_receiver_priced",
+            "nerv_section_value_replay_missing_for_scorer_domain_controls",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _optimal_modelsize_control_policy() -> dict[str, Any]:
+    """Describe a contest-optimal modelsize control beyond off-the-shelf flags."""
+
+    return {
+        "schema": "nerv_optimal_modelsize_control_policy.v1",
+        "verdict": (
+            "MODEL_SIZE_IS_OUTER_CAPACITY_CONTROL__OPTIMALITY_REQUIRES_INNER_"
+            "SCORER_WATERFILL"
+        ),
+        "core_answer": (
+            "A hard modelsize flag only limits parameter count. For this contest, "
+            "a useful modelsize control must also decide which parameters exist, "
+            "which are pruned, which precision they receive, and which receiver "
+            "grammar stores or regenerates them, all under the fixed scorer byte "
+            "price and measured SegNet/PoseNet deltas."
+        ),
+        "shared_optimality_conditions": [
+            "outer loop sweeps byte caps and architecture capacity, not raw params only",
+            "inner loop trains against SegNet frame-1 and PoseNet pair response, not human fidelity",
+            "every kept parameter or packet section has measured marginal score value above byte price",
+            "every pruned or zero-coded region has measured marginal score value below byte price",
+            "quantization bits are selected per tensor/group/atom from scorer deltas and charged bytes",
+            "receiver archive bytes, metadata, and entropy overhead are part of the modelsize decision",
+            "same-axis PR95 control replay is required before any beat claim",
+        ],
+        "same_for_snerv_and_hinerv": {
+            "objective": (
+                "minimize SegNet/PoseNet distortion plus 25*archive_bytes/raw_bytes "
+                "with modelsize as a priced capacity variable"
+            ),
+            "control_loop": [
+                "propose capacity candidate from byte cap",
+                "train with scorer-domain and coder-aware losses",
+                "apply saliency/prune/quant/zero waterfill",
+                "export receiver-visible archive",
+                "measure section bytes and scorer deltas",
+                "update Pareto/cathedral/admission surfaces",
+            ],
+            "not_sufficient": [
+                "parameter count alone",
+                "uniform int8/int4",
+                "visual reconstruction PSNR",
+                "MLX advisory score without receiver archive proof",
+            ],
+        },
+        "fine_grained_component_budget_controls": {
+            "principle": (
+                "Global modelsize is only the outer byte cap; the controller must "
+                "allocate that cap across archive/blob sections and then recurse "
+                "inside each section until every atom has a measured score-per-byte "
+                "reason to exist."
+            ),
+            "shared_sections": [
+                "decoder_weight_sections",
+                "latent_or_feature_sections",
+                "quant_scale_zero_point_sections",
+                "packed_zero_or_rle_sections",
+                "entropy_codebooks_and_headers",
+                "receiver_runtime_metadata",
+            ],
+            "snerv_sections": [
+                "lf_plane_payload",
+                "hf_generator_or_decoder_payload",
+                "wavelet_group_step_maps",
+                "temporal_context_payload",
+                "mfu_hfr_tub_control_payload",
+                "snar1_section_manifest",
+            ],
+            "hinerv_sections": [
+                "hierarchical_feature_grids",
+                "convnext_decoder_blocks",
+                "patch_frame_geometry_tables",
+                "pruning_masks",
+                "quantnoise_level_maps",
+                "torchac_style_bitstream_sections",
+            ],
+            "per_section_actions": [
+                "delete_or_receiver_generate",
+                "zero_or_run_length",
+                "int1_int2_int4_int6_int7_int8",
+                "fp16_protect",
+                "entropy_recode",
+                "increase_capacity",
+            ],
+            "admission_metric": (
+                "expected non-rate score drop from section action divided by "
+                "charged archive-byte delta; admit only above contest byte price"
+            ),
+        },
+        "different_for_snerv": {
+            "primary_capacity_axes": [
+                "fc_dim/emb_size official modelsize adapter",
+                "MFU/HFR/TUB/SNeRV-T source controls",
+                "DWT level and LF/HF representation split",
+                "step-map and decoder payload grammar",
+                "learned LF/HF/SR receiver-side generation capacity",
+            ],
+            "main_risk": (
+                "explicit LF storage can dominate rate; modelsize must choose "
+                "stored-versus-generated LF/HF structure, not merely decoder width"
+            ),
+            "highest_value_control": (
+                "score-preserving receiver-side LF/HF/SR generator with wavelet-group "
+                "waterfill and SNAR1 section-value replay"
+            ),
+        },
+        "different_for_hinerv": {
+            "primary_capacity_axes": [
+                "hierarchical feature-grid depth and resolution",
+                "patch/frame geometry and interpolation mode",
+                "ConvNeXt/depthwise-MLP width",
+                "adaptive pruning ratio and prune weight",
+                "QuantNoise/STE levels and torchac-style bitstream sections",
+            ],
+            "main_risk": (
+                "decoder/grid weights may carry most score leverage; modelsize must "
+                "rank and price decoder-weight sections rather than assume latent "
+                "tweaks will fix distortion"
+            ),
+            "highest_value_control": (
+                "decoder-weight and feature-grid saliency waterfill inside the real "
+                "trainer, followed by measured quantized byte-section export"
+            ),
+        },
+        "smarter_than_off_the_shelf_controls": [
+            "solve modelsize from target archive bytes rather than only target parameters",
+            "split capacity by scorer domain: frame-1 SegNet boundary, pair PoseNet, and rate",
+            "learn per-section marginal utility curves during training",
+            "adapt quant/prune/zero modes recursively after each scorer replay",
+            "bind modelsize rows into cathedral/Pareto/atom consumers for portfolio selection",
+        ],
+        "production_blockers": [
+            "contest_optimal_modelsize_controller_not_yet_bound_to_training_loop",
+            "modelsize_candidate_marginal_utility_curves_missing",
+            "snerv_modelsize_lf_hf_generation_tradeoff_not_receiver_replayed",
+            "hinerv_modelsize_decoder_grid_section_value_not_receiver_replayed",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 

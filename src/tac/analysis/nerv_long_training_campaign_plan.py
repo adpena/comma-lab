@@ -502,6 +502,11 @@ def _hinerv_campaign_row(
     blockers = [
         ("" if joint_recon_weight else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"),
         ("" if decoder_weight_waterfill else "hinerv_decoder_weight_waterfill_plan_missing"),
+        (
+            ""
+            if not decoder_weight_waterfill or decoder_weight_waterfill_runner_admitted
+            else "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted"
+        ),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *candidate_authority_blockers,
@@ -525,9 +530,22 @@ def _hinerv_campaign_row(
     launch_ready = bool(
         prelaunch_gate.get("launch_allowed")
         and joint_recon_weight
+        and decoder_weight_waterfill_runner_admitted
         and not candidate_authority_blockers
         and not source_parity["required_blockers"]
     )
+    if candidate_authority_blockers:
+        implementation_status = "selected_candidate_authority_flags_block_launch"
+    elif source_parity["required_blockers"]:
+        implementation_status = "source_parity_required_gap_blocks_launch"
+    elif decoder_weight_waterfill and not decoder_weight_waterfill_runner_admitted:
+        implementation_status = "decoder_weight_waterfill_plan_advisory_only_blocks_launch"
+    elif not decoder_weight_waterfill:
+        implementation_status = "decoder_weight_waterfill_plan_required_for_launch"
+    elif launch_ready:
+        implementation_status = "shared_mlx_scoreaware_runner_launchable"
+    else:
+        implementation_status = "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
     return _row(
         row_id=row_id,
         family="hi_nerv",
@@ -536,19 +554,7 @@ def _hinerv_campaign_row(
         curriculum_plan=curriculum,
         command_argv=command,
         local_mlx_launch_command_ready=launch_ready,
-        implementation_status=(
-            "selected_candidate_authority_flags_block_launch"
-            if candidate_authority_blockers
-            else (
-                "source_parity_required_gap_blocks_launch"
-                if source_parity["required_blockers"]
-                else (
-                    "shared_mlx_scoreaware_runner_launchable"
-                    if launch_ready
-                    else "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
-                )
-            )
-        ),
+        implementation_status=implementation_status,
         blockers=blockers,
         extra={
             "optimizer_kind": str(optimizer_kind),
@@ -999,6 +1005,8 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
     """Return blockers that should prevent a row from being runnable."""
 
     exact_names = {
+        "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted",
+        "hinerv_decoder_weight_waterfill_plan_missing",
         "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
         "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
@@ -1164,10 +1172,16 @@ def _score_lowering_gate(
             *(f"{family}_{requirement}_missing" for requirement in post_run_missing),
         ]
     )
-    prelaunch_blockers = [str(blocker) for blocker in gate.get("blockers", []) if blocker]
-    local_proof_launch_allowed = bool(local_mlx_launch_command_ready)
+    launch_blockers = _experiment_launch_blockers(blockers)
+    prelaunch_blockers = _dedupe(
+        [
+            *(str(blocker) for blocker in gate.get("blockers", []) if blocker),
+            *launch_blockers,
+        ]
+    )
+    local_proof_launch_allowed = bool(local_mlx_launch_command_ready) and not launch_blockers
     cpu_replay_ready = (
-        bool(local_mlx_launch_command_ready)
+        bool(local_proof_launch_allowed)
         and "receiver_proof" not in post_run_missing
         and "full_video_local_prefilter" not in post_run_missing
         and "local_cpu_replay_gate" not in post_run_missing
@@ -1176,10 +1190,12 @@ def _score_lowering_gate(
     return {
         "schema": SCORE_LOWERING_GATE_SCHEMA,
         "family": str(family),
-        "local_mlx_executable": bool(local_mlx_launch_command_ready),
+        "command_materialized": bool(local_mlx_launch_command_ready),
+        "local_mlx_executable": bool(local_proof_launch_allowed),
         "prelaunch_allowed": bool(local_proof_launch_allowed),
         "promotion_prelaunch_allowed": bool(gate.get("launch_allowed")),
-        "prelaunch_blockers": _dedupe(prelaunch_blockers),
+        "prelaunch_blockers": prelaunch_blockers,
+        "launch_blockers": launch_blockers,
         "post_run_requirements": post_run_requirements,
         "missing_requirement_ids": _dedupe(missing_requirement_ids),
         "post_run_missing_requirement_ids": _dedupe(post_run_missing),

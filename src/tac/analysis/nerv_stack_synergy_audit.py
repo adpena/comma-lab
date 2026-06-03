@@ -59,8 +59,10 @@ HI_NERV_SURFACES = (
     "src/tac/substrates/hi_nerv/mlx_renderer.py",
     "src/tac/substrates/hi_nerv/archive.py",
     "src/tac/substrates/hi_nerv/archive_candidate.py",
+    "src/tac/substrates/hi_nerv/bitstream.py",
     "src/tac/substrates/hi_nerv/inflate.py",
     "src/tac/substrates/hi_nerv/score_aware_loss.py",
+    "src/tac/analysis/nerv_decoder_weight_waterfill.py",
     "src/tac/analysis/hinerv_latent_linf_allocation.py",
     "tools/run_compact_renderer_mlx_spine_runner.py",
     "experiments/train_hinerv_as_renderer.py",
@@ -78,9 +80,11 @@ SNERV_SURFACES = (
     "src/tac/substrates/snerv_inverse_steg_carrier/receiver_proof.py",
     "src/tac/substrates/snerv_inverse_steg_carrier/scorer_loop_decoder_qat.py",
     "src/tac/analysis/snerv_rate_adjudication.py",
+    "src/tac/analysis/nerv_modelsize_budget.py",
     "src/tac/analysis/snerv_pose_guarded_decoder_gate.py",
     "src/tac/analysis/snerv_decoder_mode_assignment_probe.py",
     "src/tac/analysis/snerv_scorer_loop_decoder_qat_contract.py",
+    "tools/build_nerv_modelsize_budget.py",
     "tools/run_snerv_inverse_steg_advisory.py",
     "tools/run_snerv_scorer_loop_decoder_qat_smoke.py",
     "tools/prove_snerv_receiver_archive.py",
@@ -135,7 +139,14 @@ def build_nerv_stack_synergy_audit(
             marker_limit=marker_limit_per_stack,
         ),
     ]
-    blockers = sorted({blocker for row in stacks for blocker in row["blockers"]})
+    blockers = sorted(
+        {
+            blocker
+            for row in stacks
+            for blocker in row["blockers"]
+            if str(blocker)
+        }
+    )
     return {
         "schema": SCHEMA,
         "audit_kind": "hinerv_snerv_full_stack_synergy",
@@ -196,6 +207,7 @@ def _hi_nerv_stack_audit(
             coder_aware_regularizer=True,
         ),
     )
+    quantnoise_binding = _hi_nerv_quantnoise_control_binding(root)
     blockers = [
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle",
         "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid",
@@ -203,7 +215,11 @@ def _hi_nerv_stack_audit(
         "hinerv_official_trilinear_feature_interpolation_path_missing",
         "hinerv_upstream_grid_depth_prune_bitstream_controls_not_executable_atoms",
         "hinerv_official_pruning_control_not_bound_to_planner",
-        "hinerv_official_quantnoise_control_not_bound_to_mlx_trainer",
+        (
+            ""
+            if quantnoise_binding["bound"]
+            else "hinerv_official_quantnoise_control_not_bound_to_mlx_trainer"
+        ),
         "hinerv_torchac_style_bitstream_pipeline_missing",
         "hinerv_decoder_weight_saliency_waterfill_not_in_trainer",
         "hinerv_pr95_c1a_muon_ema_archive_schedule_not_fully_bound_to_real_trainer",
@@ -215,6 +231,7 @@ def _hi_nerv_stack_audit(
     ]
     if markers:
         blockers.append("hinerv_partial_or_stub_markers_present")
+    blockers = [blocker for blocker in blockers if blocker]
     return {
         "schema": "nerv_stack_synergy_stack_row.v1",
         "stack_id": "hi_nerv",
@@ -242,6 +259,7 @@ def _hi_nerv_stack_audit(
         "related_memos": memos,
         "partial_markers": markers,
         "modelsize_budget": budget,
+        "quantnoise_control_binding": quantnoise_binding,
         "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "byte ceiling selects capacity candidate before launch",
@@ -280,6 +298,57 @@ def _hi_nerv_stack_audit(
                 "required_gate": "rate proxy versus packed archive byte oracle drift report",
             },
         ],
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hi_nerv_quantnoise_control_binding(root: Path) -> dict[str, Any]:
+    """Return whether official 6/7-bit QuantNoise controls are actually wired."""
+
+    marker_sources = {
+        "bitstream": root / "src/tac/substrates/hi_nerv/bitstream.py",
+        "mlx_renderer": root / "src/tac/substrates/hi_nerv/mlx_renderer.py",
+        "waterfill": root / "src/tac/analysis/nerv_decoder_weight_waterfill.py",
+        "runner": root / "tools/run_compact_renderer_mlx_spine_runner.py",
+    }
+    required_markers = {
+        "bitstream": (
+            "HI_NERV_QUANT_NOISE_BITS",
+            "HI_NERV_DECODER_WATERFILL_ACTION_BITS",
+            "2, 4, 6, 7, 8",
+        ),
+        "mlx_renderer": ("HI_NERV_DECODER_FAKE_QUANT_ACTION_BITS", "6", "7"),
+        "waterfill": ("DEFAULT_ACTION_BITS", "6", "7"),
+        "runner": ("NERV_DECODER_WEIGHT_WATERFILL_ACTION_BITS", "6", "7"),
+    }
+    rows: list[dict[str, Any]] = []
+    for source_id, path in marker_sources.items():
+        text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+        missing = [marker for marker in required_markers[source_id] if marker not in text]
+        rows.append(
+            {
+                "source_id": source_id,
+                "rel_path": (
+                    path.relative_to(root).as_posix()
+                    if path.is_relative_to(root)
+                    else path.as_posix()
+                ),
+                "present": path.is_file(),
+                "required_markers": list(required_markers[source_id]),
+                "missing_markers": missing,
+            }
+        )
+    blockers = [
+        f"hinerv_quantnoise_binding_marker_missing:{row['source_id']}:{marker}"
+        for row in rows
+        for marker in row["missing_markers"]
+    ]
+    return {
+        "schema": "hinerv_quantnoise_control_binding.v1",
+        "bound": not blockers,
+        "official_quant_levels_6_7_executable": not blockers,
+        "source_rows": rows,
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -327,7 +396,6 @@ def _snerv_stack_audit(
         "snerv_official_snerv_t_temporal_path_missing",
         "snerv_official_haar_j1_parity_missing",
         "snerv_receiver_dwt_custody_missing",
-        "snerv_fc_dim_modelsize_control_not_bound_to_planner",
         "snerv_scorer_loop_qat_is_bounded_smoke_not_production_trainer",
         "snerv_l2_linf_receiver_packet_rate_accounting_not_separated",
         "snerv_learned_scorer_preserving_lf_hf_generation_missing",
@@ -353,7 +421,7 @@ def _snerv_stack_audit(
                 "temporal SNeRV-T/SNeRV-T-2D training path",
                 "official Haar/J=1 mode parity",
                 "receiver DWT custody and source/runtime hash proof",
-                "fc_dim/modelsize capacity control",
+                "measured SNAR1 archive-byte curve for official modelsize candidates",
                 "source-faithful MLX train/export/archive adapter",
             ],
         },
@@ -368,6 +436,7 @@ def _snerv_stack_audit(
         "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "LF level and precision select rate before advisory launch",
+            "official --modelsize/fc_dim candidates are source-bound but still require real SNAR1 archive-byte replay",
             "HF decoder QAT must be trained under PoseNet hard guard",
             "step-map precision must be priced as receiver-visible payload",
             "L2 and L-infinity receiver-packet bytes must be accounted separately",

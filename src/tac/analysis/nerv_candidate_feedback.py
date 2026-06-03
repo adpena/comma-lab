@@ -530,6 +530,8 @@ def build_nerv_training_telemetry_feedback_row(
         blockers.append("hi_nerv_pose_instability_telemetry_feedback")
     if health.get("seg_stagnation_detected"):
         blockers.append("hi_nerv_segnet_stagnation_telemetry_feedback")
+    if health.get("pr95_stage_mismatch_detected"):
+        blockers.append("hi_nerv_pr95_stage_index_mismatch_telemetry")
     if health.get("pr95_final_stage_muon_missing"):
         blockers.append("hi_nerv_pr95_final_stage_muon_missing_telemetry")
     training_stopped = not _is_midrun_feedback_snapshot(stop_reason)
@@ -640,6 +642,15 @@ def build_nerv_training_telemetry_feedback_row(
         ),
         "pr95_curriculum_observed": bool(health.get("pr95_curriculum_observed")),
         "pr95_current_stage_index": health.get("pr95_current_stage_index"),
+        "pr95_canonical_expected_stage_index": health.get(
+            "pr95_canonical_expected_stage_index"
+        ),
+        "pr95_authoritative_stage_index": health.get(
+            "pr95_authoritative_stage_index"
+        ),
+        "pr95_stage_mismatch_detected": bool(
+            health.get("pr95_stage_mismatch_detected")
+        ),
         "pr95_stage_uses_muon_current": health.get(
             "pr95_stage_uses_muon_current"
         ),
@@ -1123,25 +1134,42 @@ def _summarize_training_telemetry_health(
     pr95_curriculum_observed = bool(pr95_stage_indices)
     pact_muon_observed = any(pact_muon_flags)
     pr95_muon_observed = any(pr95_stage_uses_muon_flags)
-    pr95_final_stage_reached = bool(
-        any(stage >= _PR95_FINAL_MUON_STAGE_INDEX for stage in pr95_stage_indices)
-    )
-    pr95_final_stage_muon_expected = bool(
-        current_stage_index is not None
-        and current_stage_index >= _PR95_FINAL_MUON_STAGE_INDEX
-    )
-    pr95_final_stage_muon_missing = bool(
-        pr95_final_stage_muon_expected and current_stage_uses_muon is False
-    )
-    pr95_pre_final_no_muon_expected = bool(
-        current_stage_index is not None
-        and current_stage_index < _PR95_FINAL_MUON_STAGE_INDEX
-        and current_stage_uses_muon is False
-    )
     pr95_stage_status = _canonical_pr95_stage_status(
         current_epoch=last_epoch,
         current_stage_index=current_stage_index,
     )
+    canonical_expected_stage = _int_or_none(
+        pr95_stage_status.get("canonical_expected_stage_index")
+    )
+    authoritative_stage_index = (
+        canonical_expected_stage
+        if canonical_expected_stage is not None
+        else current_stage_index
+    )
+    pr95_stage_mismatch_detected = (
+        pr95_stage_status.get("observed_stage_matches_canonical_epoch") is False
+    )
+    pr95_final_stage_reached = bool(
+        authoritative_stage_index is not None
+        and authoritative_stage_index >= _PR95_FINAL_MUON_STAGE_INDEX
+    )
+    pr95_final_stage_muon_expected = pr95_final_stage_reached
+    pr95_final_stage_muon_missing = bool(
+        pr95_final_stage_muon_expected and current_stage_uses_muon is False
+    )
+    pr95_pre_final_no_muon_expected = bool(
+        authoritative_stage_index is not None
+        and authoritative_stage_index < _PR95_FINAL_MUON_STAGE_INDEX
+        and current_stage_uses_muon is False
+        and not pr95_stage_mismatch_detected
+    )
+    if pr95_stage_mismatch_detected:
+        mutations.extend(
+            [
+                "fix_pr95_stage_telemetry_or_curriculum_epoch_routing",
+                "treat_previous_hi_nerv_run_as_stage_telemetry_failure_not_rate_negative",
+            ]
+        )
     if pr95_final_stage_muon_missing:
         mutations.extend(
             [
@@ -1213,6 +1241,9 @@ def _summarize_training_telemetry_health(
         "pact_muon_adamw_observed": bool(pact_muon_observed),
         "pr95_curriculum_observed": pr95_curriculum_observed,
         "pr95_current_stage_index": current_stage_index,
+        "pr95_canonical_expected_stage_index": canonical_expected_stage,
+        "pr95_authoritative_stage_index": authoritative_stage_index,
+        "pr95_stage_mismatch_detected": pr95_stage_mismatch_detected,
         "pr95_stage_uses_muon_current": current_stage_uses_muon,
         "pr95_final_stage_reached": pr95_final_stage_reached,
         "pr95_final_stage_muon_expected_currently": (

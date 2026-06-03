@@ -166,10 +166,19 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is True
-    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is True
-    assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is True
+    assert snerv_row["score_lowering_gate"]["command_materialized"] is True
+    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
+    assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is False
     assert snerv_row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
     assert "snerv_pr95_staged_curriculum_missing" in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
+    assert (
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
+        in snerv_row["score_lowering_gate"]["launch_blockers"]
+    )
+    assert (
+        "snerv_native_rate_pressure_in_loop_not_yet_training_authority"
+        in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
+    )
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
     assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
@@ -752,7 +761,13 @@ def test_long_training_campaign_plan_attaches_hinerv_decoder_weight_waterfill(
     assert "receiver_proof_not_satisfied" in refusal_reasons
     assert hi["experiment_queue_entry"]["metadata"]["decoder_weight_waterfill_plan"]["attached"] is True
     assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
-    assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" not in hi["blockers"]
+    assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" in hi["blockers"]
+    assert (
+        "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted"
+        in hi["score_lowering_gate"]["launch_blockers"]
+    )
+    assert hi["implementation_status"] == "decoder_weight_waterfill_plan_advisory_only_blocks_launch"
+    assert hi["local_mlx_launch_command_ready"] is False
     assert report["decoder_weight_waterfill_source_count"] == 1
     assert report["decoder_weight_waterfill_attached_row_count"] == 1
     assert hi["score_claim"] is False
@@ -820,6 +835,7 @@ def test_long_training_campaign_plan_attaches_hinerv_waterfill_from_full_row_id(
     assert "hinerv_tiny" in attachment["candidate_keys"]
     assert "lion" not in attachment["candidate_keys"]
     assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
+    assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" in hi["blockers"]
     assert report["decoder_weight_waterfill_attached_row_count"] == 1
     assert report["decoder_weight_waterfill_unattached_source_count"] == 0
 
@@ -853,6 +869,7 @@ def test_long_training_campaign_plan_attaches_hinerv_waterfill_from_group_row_id
     assert "hinerv_tiny" in attachment["candidate_keys"]
     assert "--decoder-weight-waterfill-plan-json" not in hi["command_argv"]
     assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
+    assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" in hi["blockers"]
     assert report["decoder_weight_waterfill_attached_row_count"] == 1
 
 

@@ -96,6 +96,45 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
     assert "nerv_modelsize_to_archive_bytes_curve_missing" in payload[
         "modelsize_archive_budget_policy"
     ]["production_blockers"]
+    assert (
+        "official_modelsize_flag_not_receiver_closed_under_contest_byte_caps"
+        in payload["modelsize_archive_budget_policy"]["production_blockers"]
+    )
+    assert "official SNeRV --modelsize/fc_dim solving is bound" in payload[
+        "modelsize_archive_budget_policy"
+    ]["current_gap"]["snerv"]
+    assert "0/2/4/6/7/8/16/32 decoder-waterfill actions" in payload[
+        "modelsize_archive_budget_policy"
+    ]["current_gap"]["hi_nerv"]
+    scorer_policy = payload["scorer_domain_control_policy"]
+    assert scorer_policy["schema"] == "nerv_scorer_domain_control_policy.v1"
+    assert scorer_policy["scorer_domains"]["segnet"]["frame_indices_per_pair"] == [1]
+    assert scorer_policy["scorer_domains"]["posenet"]["frame_indices_per_pair"] == [
+        0,
+        1,
+    ]
+    assert scorer_policy["scorer_domains"]["rate"]["water_level_fixed_by_contest"] is True
+    assert "src/tac/master_gradient.py" in scorer_policy["reusable_surfaces_to_consume"]
+    assert "tools/cathedral_autopilot.py" in scorer_policy["reusable_surfaces_to_consume"]
+    assert "nerv_scorer_domain_controls_not_bound_to_both_snerv_and_hinerv_train_export" in payload[
+        "blockers"
+    ]
+    modelsize_policy = payload["optimal_modelsize_control_policy"]
+    assert modelsize_policy["schema"] == "nerv_optimal_modelsize_control_policy.v1"
+    component_budgets = modelsize_policy["fine_grained_component_budget_controls"]
+    assert "lf_plane_payload" in component_budgets["snerv_sections"]
+    assert "hierarchical_feature_grids" in component_budgets["hinerv_sections"]
+    assert "decoder_weight_sections" in component_budgets["shared_sections"]
+    assert "int1_int2_int4_int6_int7_int8" in component_budgets["per_section_actions"]
+    assert modelsize_policy["different_for_snerv"]["main_risk"].startswith(
+        "explicit LF storage"
+    )
+    assert modelsize_policy["different_for_hinerv"]["main_risk"].startswith(
+        "decoder/grid weights"
+    )
+    assert "contest_optimal_modelsize_controller_not_yet_bound_to_training_loop" in payload[
+        "blockers"
+    ]
     assert payload["source_faithfulness"]["policy"][
         "bad_scores_from_non_source_faithful_stacks_are_bug_signals"
     ]
@@ -120,10 +159,28 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
     assert "official_MFU_multi_resolution_fusion_blocks" in local_audit["snerv"][
         "missing_source_features"
     ]
+    assert "official_modelsize_fc_dim_parameter_budget_solver" in local_audit[
+        "snerv"
+    ]["implemented_features"]
+    assert "official_modelsize_fc_dim_parameter_budget_solver" not in local_audit[
+        "snerv"
+    ]["missing_source_features"]
+    assert "invalid_official_modelsize_rows_preserved_false_authority" in local_audit[
+        "snerv"
+    ]["implemented_features"]
     assert local_audit["hinerv"]["status"] == "l0_sketch_not_source_faithful"
     assert "official_hierarchical_feature_grid_encoding" in local_audit["hinerv"][
         "missing_source_features"
     ]
+    assert "decoder_waterfill_action_lattice_0_2_4_6_7_8_16_32" in local_audit[
+        "hinerv"
+    ]["implemented_features"]
+    assert "quant_noise_action_lattice_2_4_6_7_8" in local_audit["hinerv"][
+        "implemented_features"
+    ]
+    assert "official_prune_quant_ste_torchac_pipeline_parity" in local_audit[
+        "hinerv"
+    ]["missing_source_features"]
     assert payload["synergy_enhancers"][0]["enhancer_id"] == (
         "sr_nerv_trained_scorer_aware"
     )

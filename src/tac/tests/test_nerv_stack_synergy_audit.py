@@ -62,6 +62,18 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     )
     assert "hinerv_official_convnext_feature_grid_path_missing" in stacks["hi_nerv"]["blockers"]
     assert "hinerv_official_trilinear_feature_interpolation_path_missing" in stacks["hi_nerv"]["blockers"]
+    assert (
+        "hinerv_official_quantnoise_control_not_bound_to_mlx_trainer"
+        not in stacks["hi_nerv"]["blockers"]
+    )
+    quantnoise_binding = stacks["hi_nerv"]["quantnoise_control_binding"]
+    assert quantnoise_binding["schema"] == "hinerv_quantnoise_control_binding.v1"
+    assert quantnoise_binding["bound"] is True
+    assert quantnoise_binding["official_quant_levels_6_7_executable"] is True
+    assert not quantnoise_binding["blockers"]
+    assert {
+        row["source_id"] for row in quantnoise_binding["source_rows"]
+    } == {"bitstream", "mlx_renderer", "runner", "waterfill"}
     assert "hinerv_torchac_style_bitstream_pipeline_missing" in stacks["hi_nerv"]["blockers"]
     assert "hinerv_decoder_weight_saliency_waterfill_not_in_trainer" in stacks["hi_nerv"]["blockers"]
     assert "hi_nerv_real_posenet_teacher_missing" in stacks["hi_nerv"]["blockers"]
@@ -84,6 +96,22 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     assert (
         "snerv_modelsize_candidate_consumption_requires_real_snar1_archive_byte_oracle"
         in stacks["snerv"]["blockers"]
+    )
+    assert "snerv_fc_dim_modelsize_control_not_bound_to_planner" not in stacks[
+        "snerv"
+    ]["blockers"]
+    assert any(
+        row["rel_path"] == "src/tac/analysis/nerv_modelsize_budget.py"
+        and row["present"]
+        for row in stacks["snerv"]["local_surface_files"]
+    )
+    assert (
+        "measured SNAR1 archive-byte curve for official modelsize candidates"
+        in stacks["snerv"]["source_faithfulness"]["missing_upstream_axes"]
+    )
+    assert any(
+        "official --modelsize/fc_dim candidates are source-bound" in item
+        for item in stacks["snerv"]["planner_curriculum_links"]
     )
     assert (
         "snerv_execute_family_does_not_yet_consume_modelsize_candidate_id"
