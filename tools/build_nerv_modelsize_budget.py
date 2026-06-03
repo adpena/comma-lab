@@ -73,6 +73,18 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--target-modelsize-mparams",
+        action="append",
+        type=float,
+        help=(
+            "Shared operator-facing model-size target, in millions of params. "
+            "It expands into the real family controls: HiNeRV nearest local "
+            "receiver-visible capacity search and SNeRV source-faithful "
+            "--modelsize/fc_dim solve. Repeatable; still false-authority until "
+            "archive bytes and receiver proof land."
+        ),
+    )
+    parser.add_argument(
         "--hinerv-target-modelsize-mparams",
         action="append",
         type=float,
@@ -115,8 +127,24 @@ def main(argv: list[str] | None = None) -> int:
     snerv_official_modelsize_mparams = tuple(
         float(value) for value in (args.snerv_official_modelsize_mparams or ())
     )
+    target_modelsize_mparams = tuple(
+        float(value) for value in (args.target_modelsize_mparams or ())
+    )
     hinerv_target_modelsize_mparams = tuple(
-        float(value) for value in (args.hinerv_target_modelsize_mparams or ())
+        _dedupe_float_sequence(
+            [
+                *target_modelsize_mparams,
+                *(args.hinerv_target_modelsize_mparams or ()),
+            ]
+        )
+    )
+    snerv_official_modelsize_mparams = tuple(
+        _dedupe_float_sequence(
+            [
+                *target_modelsize_mparams,
+                *snerv_official_modelsize_mparams,
+            ]
+        )
     )
     hinerv = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=hard_byte_ceilings,
@@ -161,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
             "hard_byte_ceilings": list(hard_byte_ceilings),
             "num_pairs": int(args.num_pairs),
             "per_ceiling_limit": int(args.per_ceiling_limit),
+            "target_modelsize_mparams": list(target_modelsize_mparams),
             "hinerv_target_modelsize_mparams": list(hinerv_target_modelsize_mparams),
             "snerv_fc_dims": list(snerv_fc_dims),
             "snerv_emb_sizes": list(snerv_emb_sizes),
@@ -212,6 +241,18 @@ def _render_markdown(hinerv: dict[str, Any], snerv: dict[str, Any]) -> str:
     lines.extend(["", "## Top SNeRV Candidates", ""])
     lines.extend(_candidate_lines(snerv.get("selected_candidates") or []))
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _dedupe_float_sequence(values: list[float]) -> tuple[float, ...]:
+    out: list[float] = []
+    seen: set[float] = set()
+    for value in values:
+        normalized = float(value)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+    return tuple(out)
 
 
 def _candidate_lines(rows: list[dict[str, Any]]) -> list[str]:

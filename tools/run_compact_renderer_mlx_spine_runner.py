@@ -1852,6 +1852,7 @@ def _resolve_execute_modelsize_candidate(
     candidate_id: str,
     hard_byte_ceilings: tuple[int, ...],
     num_pairs: int = CONTEST_PAIR_COUNT,
+    target_modelsize_mparams: tuple[float, ...] = (),
     hinerv_target_modelsize_mparams: tuple[float, ...] = (),
     snerv_official_modelsize_mparams: tuple[float, ...] = (),
     snerv_official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
@@ -1868,15 +1869,20 @@ def _resolve_execute_modelsize_candidate(
     token = str(candidate_id or "auto").strip()
     if token.lower() in {"none", "manual", "off", "false", "0"}:
         return None
+    shared_targets = tuple(float(value) for value in target_modelsize_mparams)
+    hinerv_targets = _dedupe_float_tuple(
+        (*shared_targets, *tuple(float(v) for v in hinerv_target_modelsize_mparams))
+    )
+    snerv_targets = _dedupe_float_tuple(
+        (*shared_targets, *tuple(float(v) for v in snerv_official_modelsize_mparams))
+    )
     if family == "hi_nerv":
         candidates = [
             row.as_dict()
             for row in enumerate_hinerv_modelsize_candidates(
                 hard_byte_ceilings=hard_byte_ceilings,
                 num_pairs=int(num_pairs),
-                target_modelsize_mparams=tuple(
-                    float(value) for value in hinerv_target_modelsize_mparams
-                ),
+                target_modelsize_mparams=hinerv_targets,
             )
         ]
     elif family == "snerv":
@@ -1885,9 +1891,7 @@ def _resolve_execute_modelsize_candidate(
             for row in enumerate_snerv_modelsize_candidates(
                 hard_byte_ceilings=hard_byte_ceilings,
                 num_pairs=int(num_pairs),
-                official_modelsize_mparams=tuple(
-                    float(value) for value in snerv_official_modelsize_mparams
-                ),
+                official_modelsize_mparams=snerv_targets,
                 official_enc_strds=tuple(int(value) for value in snerv_official_enc_strds),
                 official_dec_strds=tuple(int(value) for value in snerv_official_dec_strds),
             )
@@ -1901,7 +1905,7 @@ def _resolve_execute_modelsize_candidate(
             f"no {family} modelsize candidates were enumerated"
         )
     if token.lower() == "auto":
-        if family == "hi_nerv" and hinerv_target_modelsize_mparams:
+        if family == "hi_nerv" and hinerv_targets:
             target_candidates = [
                 row
                 for row in candidates
@@ -1909,7 +1913,7 @@ def _resolve_execute_modelsize_candidate(
             ]
             if target_candidates:
                 candidates = target_candidates
-        if family == "snerv" and snerv_official_modelsize_mparams:
+        if family == "snerv" and snerv_targets:
             official_candidates = [
                 row
                 for row in candidates
@@ -1923,7 +1927,7 @@ def _resolve_execute_modelsize_candidate(
             tightest_under = [
                 row for row in under if int(row["hard_byte_ceiling"]) == tightest_ceiling
             ]
-            if family == "hi_nerv" and hinerv_target_modelsize_mparams:
+            if family == "hi_nerv" and hinerv_targets:
                 return min(
                     tightest_under,
                     key=lambda row: (
@@ -1967,6 +1971,18 @@ def _resolve_execute_modelsize_candidate(
         f"unknown {family} --modelsize-candidate-id {token!r}; "
         "rerun plan mode and select one of the emitted candidate_id values"
     )
+
+
+def _dedupe_float_tuple(values: tuple[float, ...]) -> tuple[float, ...]:
+    out: list[float] = []
+    seen: set[float] = set()
+    for value in values:
+        normalized = float(value)
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+    return tuple(out)
 
 
 _HINERV_MODEL_SIZE_ID_RE = re.compile(
@@ -9045,6 +9061,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--target-modelsize-mparams",
+        action="append",
+        type=float,
+        help=(
+            "Shared operator-facing model-size target, in millions of params. "
+            "For HiNeRV this selects the nearest local receiver-visible target "
+            "row; for SNeRV this invokes the source-faithful --modelsize/fc_dim "
+            "solve. Repeatable; still false-authority until archive bytes and "
+            "receiver proof land."
+        ),
+    )
+    parser.add_argument(
         "--hinerv-target-modelsize-mparams",
         action="append",
         type=float,
@@ -9617,6 +9645,9 @@ def main(argv: list[str] | None = None) -> int:
             candidate_id=args.modelsize_candidate_id,
             hard_byte_ceilings=ceilings,
             num_pairs=CONTEST_PAIR_COUNT,
+            target_modelsize_mparams=tuple(
+                float(value) for value in (args.target_modelsize_mparams or ())
+            ),
             hinerv_target_modelsize_mparams=tuple(
                 float(value) for value in (args.hinerv_target_modelsize_mparams or ())
             ),

@@ -44,6 +44,7 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "hard_byte_ceilings": [36000],
         "num_pairs": 17,
         "per_ceiling_limit": 2,
+        "target_modelsize_mparams": [],
         "hinerv_target_modelsize_mparams": [],
         "snerv_emb_sizes": [0],
         "snerv_fc_dims": [9],
@@ -107,6 +108,52 @@ def test_build_nerv_modelsize_budget_tool_exposes_hinerv_target_modelsize(
         for row in selected
     )
     assert all(row["score_claim"] is False for row in selected)
+
+
+def test_build_nerv_modelsize_budget_tool_exposes_shared_target_modelsize(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    hinerv = tmp_path / "hinerv.json"
+    snerv = tmp_path / "snerv.json"
+
+    rc = tool.main(
+        [
+            "--output-hinerv-json",
+            str(hinerv),
+            "--output-snerv-json",
+            str(snerv),
+            "--hard-byte-ceiling",
+            "178000",
+            "--num-pairs",
+            "17",
+            "--per-ceiling-limit",
+            "4",
+            "--target-modelsize-mparams",
+            "0.03",
+        ]
+    )
+
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["inputs"]["target_modelsize_mparams"] == [0.03]
+    assert summary["inputs"]["hinerv_target_modelsize_mparams"] == [0.03]
+    assert summary["inputs"]["snerv_official_modelsize_mparams"] == [0.03]
+
+    hinerv_payload = json.loads(hinerv.read_text(encoding="utf-8"))
+    snerv_payload = json.loads(snerv.read_text(encoding="utf-8"))
+    assert any(
+        row["capacity_source"] == "local_hinerv_target_modelsize"
+        and row["target_modelsize_mparams"] == 0.03
+        and row["candidate_id"].endswith("_tgtmp0p03")
+        for row in hinerv_payload["selected_candidates"]
+    )
+    assert any(
+        row["capacity_source"] == "official_snerv_modelsize"
+        and row["modelsize_mparams"] == 0.03
+        and row["official_modelsize_solution"] is not None
+        for row in snerv_payload["selected_candidates"]
+    )
 
 
 def test_build_nerv_modelsize_budget_tool_exposes_official_snerv_modelsize(

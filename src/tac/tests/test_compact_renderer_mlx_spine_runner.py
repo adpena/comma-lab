@@ -1100,6 +1100,35 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert target_hi["modelsize_error_mparams"] is not None
     assert "_tgtmp0p02" in target_hi["candidate_id"]
     assert target_hi["ready_for_exact_eval_dispatch"] is False
+    shared_target_hi = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        num_pairs=17,
+        target_modelsize_mparams=(0.03,),
+    )
+    assert shared_target_hi is not None
+    assert shared_target_hi["family"] == "hi_nerv"
+    assert shared_target_hi["capacity_source"] == "local_hinerv_target_modelsize"
+    assert shared_target_hi["target_modelsize_mparams"] == 0.03
+    assert shared_target_hi["modelsize_error_mparams"] == pytest.approx(
+        abs(shared_target_hi["modelsize_mparams"] - 0.03)
+    )
+    assert shared_target_hi["candidate_id"].endswith("_tgtmp0p03")
+    shared_target_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        target_modelsize_mparams=(0.05,),
+    )
+    assert shared_target_sn is not None
+    assert shared_target_sn["family"] == "snerv"
+    assert shared_target_sn["capacity_source"] == "official_snerv_modelsize"
+    assert shared_target_sn["modelsize_mparams"] == 0.05
+    assert shared_target_sn["official_modelsize_solution"]["fc_dim"] == (
+        shared_target_sn["fc_dim"]
+    )
+    assert shared_target_sn["ready_for_exact_eval_dispatch"] is False
     explicit = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id=hi["candidate_id"],
