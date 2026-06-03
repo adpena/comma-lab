@@ -53,6 +53,9 @@ def write_snerv_contest_runtime(
             "carrier.py",
             "dwt.py",
             "lf_payload_codec.py",
+            "official_hfr.py",
+            "official_mfu.py",
+            "official_tub.py",
         ),
         vendor_extra_tac_subpackages=(
             ("analysis", ("snerv_step_map_coder.py",)),
