@@ -378,6 +378,7 @@ def _hinerv_campaign_row(
         family="hi_nerv",
         index=candidate_feedback_index,
     )
+    feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
     decoder_weight_waterfill = _decoder_weight_waterfill_for(
         candidate=candidate,
         family="hi_nerv",
@@ -512,6 +513,7 @@ def _hinerv_campaign_row(
         *candidate_authority_blockers,
         *list(source_parity["required_blockers"]),
         *list(curriculum.get("blockers") or []),
+        *feedback_evidence_blockers,
     ]
     if feedback.get("pose_instability_detected") is True and not (
         launch_feedback_adjustment.get("applied") or launch_feedback_adjustment.get("pose_protected_pathway_applied")
@@ -578,6 +580,7 @@ def _hinerv_campaign_row(
             ),
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
+            "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
             "source_faithfulness_controls": source_faithfulness_controls,
             "source_parity": source_parity,
             "output_dir_basename": output_dir_basename,
@@ -611,6 +614,7 @@ def _snerv_campaign_row(
         family="snerv",
         index=candidate_feedback_index,
     )
+    feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
     execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
     quant_bits = min(
         8,
@@ -715,6 +719,7 @@ def _snerv_campaign_row(
             *source_control_blockers,
             *list(source_parity["required_blockers"]),
             *list(curriculum.get("blockers") or []),
+            *feedback_evidence_blockers,
         ]
     )
     source_controls_ready = (
@@ -760,6 +765,7 @@ def _snerv_campaign_row(
             "source_bound_capacity_control_blockers": source_control_blockers,
             "source_parity": source_parity,
             "candidate_feedback": feedback or None,
+            "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
         },
     )
 
@@ -1023,6 +1029,24 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
             and (str(blocker) in exact_names or any(str(blocker).startswith(prefix) for prefix in prefixes))
         ]
     )
+
+
+def _candidate_feedback_evidence_blockers(
+    feedback: Mapping[str, Any],
+) -> list[str]:
+    """Carry candidate-feedback evidence debt without making it launch-blocking."""
+
+    if not feedback:
+        return []
+    blockers = [
+        str(blocker)
+        for blocker in feedback.get("sample_generalization_blockers") or []
+        if blocker
+    ]
+    gate = feedback.get("sample_generalization_gate")
+    if isinstance(gate, Mapping):
+        blockers.extend(str(blocker) for blocker in gate.get("blockers") or [])
+    return _dedupe(blockers)
 
 
 def _source_parity_family_report(

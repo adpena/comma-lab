@@ -188,6 +188,152 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_candidate_feedback_flags_small_pair_distortion_as_smoke_only(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    byte_feedback = report["candidate_curriculum_plan"]["byte_oracle_logging"]
+    byte_feedback["measured_num_pairs"] = 4
+    byte_feedback["measured_archive_bytes"] = 12_345
+    report["local_cpu_replay_gate"]["has_full_video_mlx_prefilter"] = False
+    report["local_cpu_replay_gate"]["coverage_valid_for_replay"] = False
+    report["mlx_prefilter_coverage"] = {
+        "schema": "hprc_mlx_prefilter_coverage.v1",
+        "profile_count": 0,
+        "has_full_video_mlx_prefilter": False,
+        "local_replay_mlx_prefilter_passed": False,
+        "blockers": ["full_video_mlx_scorer_replay_not_attached"],
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    gate = row["sample_generalization_gate"]
+    assert gate["schema"] == "nerv_sample_generalization_gate.v1"
+    assert gate["candidate_num_pairs"] == 600
+    assert gate["measured_num_pairs"] == 4
+    assert gate["small_pair_smoke_only"] is True
+    assert gate["representative_distortion_evidence"] is False
+    assert "small_pair_distortion_smoke_only_not_representative" in row[
+        "sample_generalization_blockers"
+    ]
+    assert "full600_or_hardpair_distortion_replay_required" in row["blockers"]
+    assert "segnet_scores_only_last_frame_so_frame1_boundary_coverage_matters" in gate[
+        "why_small_pair_can_look_good"
+    ]
+    assert gate["contest_score_geometry"]["segnet_domain"] == (
+        "last_frame_of_each_pair_only_at_scorer_resize"
+    )
+    assert gate["contest_score_geometry"]["posenet_domain"] == (
+        "both_frames_of_each_pair_at_scorer_resize"
+    )
+    assert gate["contest_score_geometry"]["rate_domain"] == (
+        "single_receiver_archive_zip_bytes"
+    )
+    assert "score_axis_distillation_on_segnet_frame1_and_posenet_pair" in gate[
+        "pr95_distortion_controls_to_bind"
+    ]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_candidate_feedback_keeps_four_pair_rows_profile_only_until_single_archive(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    report["four_pair_byte_rows"] = [
+        {
+            "schema": "nerv_candidate_feedback_row.v1",
+            "candidate_num_pairs": 600,
+            "measured_num_pairs": 4,
+            "measured_archive_bytes": 1_024,
+        },
+        {
+            "schema": "nerv_candidate_feedback_row.v1",
+            "candidate_num_pairs": 600,
+            "measured_num_pairs": 4,
+            "measured_archive_bytes": 2_048,
+        },
+    ]
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    gate = row["sample_generalization_gate"]
+    assert gate["representative_distortion_evidence"] is True
+    assert gate["chunked_micro_rows_profile_only"] is True
+    assert gate["chunked_micro_row_evidence"]["row_count"] == 2
+    assert gate["chunked_micro_row_evidence"]["measured_pair_sum"] == 8
+    assert gate["chunked_micro_row_evidence"]["archive_byte_sum"] == 3_072
+    assert "four_pair_chunk_rows_profile_only_no_rate_arbitrage" in row[
+        "sample_generalization_blockers"
+    ]
+    assert "rate_term_is_total_archive_zip_bytes_not_per_chunk_best_row_bytes" in gate[
+        "why_four_pair_rows_do_not_trick_the_scorer"
+    ]
+
+
+def test_candidate_feedback_does_not_count_candidate_pairs_as_replay_coverage(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    report["local_cpu_replay_summary"] = {
+        "schema": "compact_base_local_replay_summary.v1",
+        "candidate_num_pairs": 600,
+        "measured_num_pairs": 4,
+        "score_claim": False,
+    }
+    report["mlx_prefilter_coverage"] = {
+        "schema": "hprc_mlx_prefilter_coverage.v1",
+        "profile_count": 0,
+        "has_full_video_mlx_prefilter": False,
+        "local_replay_mlx_prefilter_passed": False,
+        "blockers": [],
+    }
+    byte_feedback = report["candidate_curriculum_plan"]["byte_oracle_logging"]
+    byte_feedback["measured_num_pairs"] = 4
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    gate = row["sample_generalization_gate"]
+    assert gate["local_replay_full_video"] is False
+    assert gate["local_replay_num_pairs"] == 4
+    assert gate["small_pair_smoke_only"] is True
+    assert gate["representative_distortion_evidence"] is False
+    assert "full600_or_hardpair_distortion_replay_required" in row["blockers"]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_candidate_feedback_accepts_hard_pair_coverage_as_distortion_gate(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    byte_feedback = report["candidate_curriculum_plan"]["byte_oracle_logging"]
+    byte_feedback["measured_num_pairs"] = 4
+    report["mlx_prefilter_coverage"] = {
+        "schema": "hprc_mlx_prefilter_coverage.v1",
+        "profile_count": 0,
+        "has_full_video_mlx_prefilter": False,
+        "local_replay_mlx_prefilter_passed": False,
+        "blockers": [],
+    }
+    report["xray_hardpair_coverage"] = {
+        "schema": "xray_hardpair_coverage.v1",
+        "hard_pair_count": 48,
+        "score_axis_hard_pair_coverage": True,
+        "verdict": "covers_segnet_frame1_and_posenet_pair_tail",
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    gate = row["sample_generalization_gate"]
+    assert gate["hard_pair_distortion_coverage"] is True
+    assert gate["representative_distortion_evidence"] is True
+    assert gate["small_pair_smoke_only"] is False
+    assert "small_pair_distortion_smoke_only_not_representative" not in row[
+        "sample_generalization_blockers"
+    ]
+
+
 def _snerv_native_runner_report(
     tmp_path: Path,
     *,

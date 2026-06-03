@@ -20,6 +20,7 @@ SCHEMA = "nerv_candidate_feedback_row.v1"
 LEDGER_SCHEMA = "nerv_candidate_byte_feedback_ledger.v1"
 REFRESH_SCHEMA = "nerv_candidate_feedback_refresh.v1"
 TELEMETRY_FEEDBACK_SCHEMA = "nerv_training_telemetry_feedback.v1"
+SAMPLE_GENERALIZATION_GATE_SCHEMA = "nerv_sample_generalization_gate.v1"
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -221,6 +222,22 @@ def build_nerv_candidate_feedback_row(
         "measured_minus_nominal_bytes",
         byte_feedback.get("measured_minus_nominal_bytes"),
     )
+    sample_generalization_gate = _sample_generalization_gate(
+        runner_report=runner_report,
+        curriculum=curriculum,
+        selection=selection,
+        byte_feedback=byte_feedback,
+        candidate_num_pairs=candidate_num_pairs,
+        measured_num_pairs=measured_num_pairs,
+        mlx_prefilter=mlx_prefilter,
+        local_replay=local_replay,
+    )
+    blockers = _dedupe_strings(
+        [
+            *[str(blocker) for blocker in runner_report.get("blockers") or []],
+            *sample_generalization_gate["blockers"],
+        ]
+    )
     return {
         "schema": SCHEMA,
         "created_utc": datetime.now(UTC).isoformat(),
@@ -374,9 +391,296 @@ def build_nerv_candidate_feedback_row(
             mlx_prefilter.get("local_replay_profile_paths") or []
         ),
         "mlx_prefilter_blockers": list(mlx_prefilter.get("blockers") or []),
-        "blockers": list(runner_report.get("blockers") or []),
+        "sample_generalization_gate": sample_generalization_gate,
+        "sample_generalization_gate_schema": sample_generalization_gate["schema"],
+        "sample_generalization_verdict": sample_generalization_gate["verdict"],
+        "sample_generalization_representative_distortion_evidence": (
+            sample_generalization_gate["representative_distortion_evidence"]
+        ),
+        "sample_generalization_small_pair_smoke_only": sample_generalization_gate[
+            "small_pair_smoke_only"
+        ],
+        "sample_generalization_blockers": list(
+            sample_generalization_gate["blockers"]
+        ),
+        "sample_generalization_recommended_next_actions": list(
+            sample_generalization_gate["recommended_next_actions"]
+        ),
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _sample_generalization_gate(
+    *,
+    runner_report: Mapping[str, Any],
+    curriculum: Mapping[str, Any],
+    selection: Mapping[str, Any],
+    byte_feedback: Mapping[str, Any],
+    candidate_num_pairs: Any,
+    measured_num_pairs: Any,
+    mlx_prefilter: Mapping[str, Any],
+    local_replay: Any,
+) -> dict[str, Any]:
+    """Classify whether distortion evidence is representative or smoke-only."""
+
+    candidate_pairs = (
+        _int_or_none(candidate_num_pairs)
+        or _int_or_none(byte_feedback.get("candidate_num_pairs"))
+        or _int_or_none(runner_report.get("num_pairs"))
+        or CONTEST_PAIR_COUNT
+    )
+    measured_pairs = (
+        _int_or_none(measured_num_pairs)
+        or _int_or_none(byte_feedback.get("measured_num_pairs"))
+        or _int_or_none(runner_report.get("measured_num_pairs"))
+        or 0
+    )
+    required_pairs = max(CONTEST_PAIR_COUNT, int(candidate_pairs))
+    full_video_mlx_prefilter = bool(mlx_prefilter.get("has_full_video_mlx_prefilter"))
+    local_replay_pairs = _evidence_pair_count(local_replay)
+    local_replay_full_video = bool(local_replay_pairs >= required_pairs)
+    byte_feedback_full_scope = bool(
+        measured_pairs >= required_pairs
+        and (
+            byte_feedback.get("scope_matches_candidate") is True
+            or str(byte_feedback.get("feedback_scope") or "").startswith("full600")
+        )
+    )
+    hard_pair_coverage = _hard_pair_coverage_evidence(
+        runner_report=runner_report,
+        curriculum=curriculum,
+        selection=selection,
+    )
+    hard_pair_distortion_coverage = bool(
+        hard_pair_coverage.get("representative_distortion_evidence")
+    )
+    representative_distortion = bool(
+        full_video_mlx_prefilter
+        or local_replay_full_video
+        or hard_pair_distortion_coverage
+    )
+    small_pair_smoke_only = bool(
+        measured_pairs > 0
+        and measured_pairs < required_pairs
+        and not representative_distortion
+    )
+    chunked_micro_rows = _chunked_micro_row_evidence(
+        runner_report=runner_report,
+        curriculum=curriculum,
+        selection=selection,
+    )
+    chunked_micro_rows_profile_only = bool(
+        chunked_micro_rows.get("present")
+        and chunked_micro_rows.get("receiver_closed_single_archive") is not True
+    )
+    blockers: list[str] = []
+    recommended_next_actions: list[str] = []
+    if small_pair_smoke_only:
+        blockers.extend(
+            [
+                "small_pair_distortion_smoke_only_not_representative",
+                "full600_or_hardpair_distortion_replay_required",
+            ]
+        )
+        recommended_next_actions.extend(
+            [
+                "run_full600_mlx_scorer_prefilter_before_reading_distortion",
+                "run_xray_hardpair_hitlist_replay_for_segnet_frame1_and_posenet_pair_axes",
+                "keep_partial_pair_rows_as_rate_or_smoke_signal_only",
+            ]
+        )
+        verdict = "small_pair_smoke_only_requires_full600_or_hardpair_distortion_gate"
+    elif representative_distortion:
+        verdict = "representative_distortion_evidence_present"
+    else:
+        blockers.append("representative_distortion_evidence_missing")
+        recommended_next_actions.extend(
+            [
+                "attach_full600_mlx_scorer_prefilter",
+                "attach_local_cpu_replay_gate_after_full_video_prefilter_passes",
+            ]
+        )
+        verdict = "representative_distortion_evidence_missing"
+    if chunked_micro_rows_profile_only:
+        blockers.append("four_pair_chunk_rows_profile_only_no_rate_arbitrage")
+        recommended_next_actions.extend(
+            [
+                "use_four_pair_rows_for_hard_pair_curriculum_and_section_value_profiling",
+                "merge_chunks_only_when_receiver_closed_single_archive_bytes_are_measured",
+                "price_chunked_or_moe_decoders_by_total_archive_zip_bytes_not_per_chunk_smoke_bytes",
+            ]
+        )
+    return {
+        "schema": SAMPLE_GENERALIZATION_GATE_SCHEMA,
+        "candidate_num_pairs": int(candidate_pairs),
+        "measured_num_pairs": int(measured_pairs),
+        "required_pairs": int(required_pairs),
+        "full_video_mlx_prefilter": full_video_mlx_prefilter,
+        "local_replay_full_video": local_replay_full_video,
+        "local_replay_num_pairs": int(local_replay_pairs) if local_replay_pairs else None,
+        "byte_feedback_full_scope": byte_feedback_full_scope,
+        "hard_pair_distortion_coverage": hard_pair_distortion_coverage,
+        "hard_pair_coverage": hard_pair_coverage or None,
+        "chunked_micro_row_evidence": chunked_micro_rows or None,
+        "chunked_micro_rows_profile_only": chunked_micro_rows_profile_only,
+        "representative_distortion_evidence": representative_distortion,
+        "small_pair_smoke_only": small_pair_smoke_only,
+        "verdict": verdict,
+        "why_small_pair_can_look_good": [
+            "easy_or_contiguous_pair_subset_can_miss_full_video_hard_pair_tail",
+            "segnet_scores_only_last_frame_so_frame1_boundary_coverage_matters",
+            "posenet_scores_both_frames_so_pair_geometry_tail_can_dominate",
+            "partial_pair_fit_can_overfit_local_latents_without_decoder_generalization",
+            "local_or_mlx_advisory_evidence_is_false_authority_until_receiver_and_replay_close",
+        ],
+        "why_four_pair_rows_do_not_trick_the_scorer": [
+            "official_eval_scores_one_inflated_full_video_from_one_archive",
+            "rate_term_is_total_archive_zip_bytes_not_per_chunk_best_row_bytes",
+            "multiple_chunk_decoders_pay_combined_weights_sidecars_and_zip_overhead",
+            "chunking_is_useful_only_if_it_learns_shared_receiver_closed_grammar_or_hard_pair_curriculum",
+        ],
+        "contest_score_geometry": {
+            "schema": "nerv_contest_score_geometry.v1",
+            "score_lagrangian": "100*d_seg + sqrt(10*d_pose) + 25*archive_zip_bytes/uncompressed_total_bytes",
+            "segnet_domain": "last_frame_of_each_pair_only_at_scorer_resize",
+            "posenet_domain": "both_frames_of_each_pair_at_scorer_resize",
+            "rate_domain": "single_receiver_archive_zip_bytes",
+            "optimization_basis": (
+                "protect parameters_or_payload_sections whose measured marginal "
+                "nonrate score drop exceeds fixed archive byte price"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        "pr95_distortion_controls_to_bind": [
+            "full600_training_not_tiny_pair_selection",
+            "score_axis_distillation_on_segnet_frame1_and_posenet_pair",
+            "long_pr95_curriculum_through_late_qat_coder_pressure_and_final_muon",
+            "ema_archive_selection_and_parseback_before_score_claim",
+            "coder_aware_regularization_kept_rate_pressure_in_loop_while_fitting_distortion",
+        ],
+        "blockers": _dedupe_strings(blockers),
+        "recommended_next_actions": _dedupe_strings(recommended_next_actions),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _evidence_pair_count(source: Any) -> int:
+    if not isinstance(source, Mapping):
+        return 0
+    candidates: list[int] = []
+    for key in (
+        "n_samples",
+        "num_pairs",
+        "max_pairs",
+        "measured_num_pairs",
+    ):
+        value = _int_or_none(source.get(key))
+        if value is not None:
+            candidates.append(value)
+    for nested_key in ("score_components", "scope_status", "metadata"):
+        nested = source.get(nested_key)
+        if isinstance(nested, Mapping):
+            nested_count = _evidence_pair_count(nested)
+            if nested_count:
+                candidates.append(nested_count)
+    return max(candidates) if candidates else 0
+
+
+def _hard_pair_coverage_evidence(
+    *,
+    runner_report: Mapping[str, Any],
+    curriculum: Mapping[str, Any],
+    selection: Mapping[str, Any],
+) -> dict[str, Any]:
+    for source_key in (
+        "hard_pair_coverage",
+        "xray_hardpair_coverage",
+        "hard_pair_replay_coverage",
+        "sample_generalization_gate",
+    ):
+        for container in (runner_report, curriculum, selection):
+            value = container.get(source_key)
+            if isinstance(value, Mapping):
+                representative = any(
+                    value.get(key) is True
+                    for key in (
+                        "representative_distortion_evidence",
+                        "coverage_valid_for_distortion",
+                        "distortion_representative",
+                        "score_axis_hard_pair_coverage",
+                    )
+                )
+                return {
+                    "schema": "nerv_hard_pair_coverage_evidence.v1",
+                    "source_key": source_key,
+                    "source_schema": value.get("schema"),
+                    "representative_distortion_evidence": representative,
+                    "hard_pair_count": _int_or_none(value.get("hard_pair_count")),
+                    "coverage_verdict": value.get("verdict")
+                    or value.get("coverage_verdict"),
+                    **FALSE_AUTHORITY,
+                }
+    return {}
+
+
+def _chunked_micro_row_evidence(
+    *,
+    runner_report: Mapping[str, Any],
+    curriculum: Mapping[str, Any],
+    selection: Mapping[str, Any],
+) -> dict[str, Any]:
+    for source_key in (
+        "four_pair_byte_rows",
+        "chunked_pair_byte_rows",
+        "pair_chunk_feedback_rows",
+        "micro_pair_rows",
+    ):
+        for container in (runner_report, curriculum, selection):
+            value = container.get(source_key)
+            if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+                continue
+            rows = [row for row in value if isinstance(row, Mapping)]
+            if not rows:
+                continue
+            counts = [_chunk_row_pair_count(row) for row in rows]
+            measured_pair_sum = sum(count for count in counts if count > 0)
+            archive_bytes = [
+                _int_or_none(row.get("measured_archive_bytes") or row.get("archive_bytes"))
+                for row in rows
+            ]
+            receiver_closed_single_archive = any(
+                row.get("receiver_closed_single_archive") is True
+                or row.get("single_archive_receiver_closed") is True
+                for row in rows
+            )
+            return {
+                "schema": "nerv_chunked_micro_row_evidence.v1",
+                "source_key": source_key,
+                "present": True,
+                "row_count": len(rows),
+                "max_row_pairs": max(counts) if counts else None,
+                "measured_pair_sum": int(measured_pair_sum),
+                "archive_byte_sum": sum(
+                    int(value) for value in archive_bytes if value is not None
+                )
+                if any(value is not None for value in archive_bytes)
+                else None,
+                "receiver_closed_single_archive": receiver_closed_single_archive,
+                "scorer_contract": (
+                    "official_scorer_charges_one_full_archive_not_independent_micro_rows"
+                ),
+                **FALSE_AUTHORITY,
+            }
+    return {}
+
+
+def _chunk_row_pair_count(row: Mapping[str, Any]) -> int:
+    for key in ("measured_num_pairs", "n_samples", "num_pairs", "max_pairs"):
+        value = _int_or_none(row.get(key))
+        if value is not None:
+            return max(0, int(value))
+    return 0
 
 
 def _snerv_native_file_backed_byte_feedback(
@@ -1471,6 +1775,7 @@ def _family_key(value: str) -> str:
 __all__ = [
     "LEDGER_SCHEMA",
     "REFRESH_SCHEMA",
+    "SAMPLE_GENERALIZATION_GATE_SCHEMA",
     "SCHEMA",
     "TELEMETRY_FEEDBACK_SCHEMA",
     "build_nerv_candidate_feedback_row",

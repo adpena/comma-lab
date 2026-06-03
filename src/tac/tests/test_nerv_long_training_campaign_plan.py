@@ -1629,7 +1629,12 @@ def test_long_training_campaign_plan_consumes_partial_snerv_runner_feedback() ->
     assert feedback["candidate_id"] == _snerv_candidate_id()
     assert feedback["measured_num_pairs"] == 2
     assert feedback["scope_matches_candidate"] is False
+    assert feedback["sample_generalization_small_pair_smoke_only"] is True
+    assert "small_pair_distortion_smoke_only_not_representative" in snerv[
+        "candidate_feedback_evidence_blockers"
+    ]
     assert "partial_pair_byte_feedback_only" in snerv["blockers"]
+    assert "full600_or_hardpair_distortion_replay_required" in snerv["blockers"]
     assert "snerv_archive_in_loop_byte_oracle_missing" in snerv["blockers"]
     assert "snerv_native_scorer_loop_best_packet_not_materialized" not in snerv["blockers"]
     assert "snerv_scorer_loop_qat_receiver_contract_failed" not in snerv["blockers"]
@@ -1724,6 +1729,13 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert feedback["measured_num_pairs"] == 600
     assert feedback["measured_payload_bytes"] == packet_path.stat().st_size
     assert feedback["measured_archive_bytes"] == archive_path.stat().st_size
+    assert (
+        feedback["sample_generalization_verdict"]
+        == "representative_distortion_evidence_missing"
+    )
+    assert "representative_distortion_evidence_missing" in snerv[
+        "candidate_feedback_evidence_blockers"
+    ]
     training_plan = snerv["curriculum_plan"]["training_plan"]
     assert training_plan["native_mlx_train_export_planned"] is True
     assert training_plan["native_mlx_train_export_verified"] is True
