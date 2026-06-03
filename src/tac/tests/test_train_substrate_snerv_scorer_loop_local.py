@@ -57,6 +57,8 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
             "0.25",
             "--snerv-temporal-context",
             "1",
+            "--snerv-scorer-loop-lf-payload-codec",
+            "auto",
         ]
     )
 
@@ -78,6 +80,7 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
     assert kwargs["snerv_mfu_scales"] == (1, 3)
     assert kwargs["snerv_hfr_gain"] == pytest.approx(0.25)
     assert kwargs["snerv_temporal_context"] == 1
+    assert kwargs["lf_payload_codec"] == "auto"
 
 
 def test_snerv_scorer_loop_trainer_rejects_local_output_without_opt_in(
@@ -144,6 +147,7 @@ def test_snerv_scorer_loop_trainer_builds_false_authority_report(
     assert report["snerv_mfu_scales"] == [1, 3]
     assert report["snerv_hfr_gain"] == pytest.approx(0.25)
     assert report["decoder_feature_count"] == 14
+    assert report["lf_payload_codec"] == "portfolio_auto"
     assert report["component_guard_mode"] == "score_primary"
     assert report["accepted_improvement"] is True
     assert "paired_contest_cpu_cuda_pass_missing" in report["blockers"]
@@ -188,6 +192,8 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
             "1,3",
             "--snerv-hfr-gain",
             "0.25",
+            "--snerv-scorer-loop-lf-payload-codec",
+            "auto",
         ]
     )
 
@@ -198,6 +204,7 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert calls["snerv_spectra_preserving_adapter"] is True
     assert calls["snerv_mfu_scales"] == (1, 3)
     assert calls["snerv_hfr_gain"] == pytest.approx(0.25)
+    assert calls["lf_payload_codec"] == "auto"
     assert calls["component_guard_mode"] == "score_primary"
     payload = json.loads(research_json.read_text(encoding="utf-8"))
     assert payload["schema"] == trainer.TRAINER_SCHEMA
@@ -238,6 +245,7 @@ class _FakeResult:
             "snerv_hfr_gain": 0.25,
             "snerv_temporal_context": 0,
             "decoder_feature_count": 14,
+            "lf_payload_codec": "portfolio_auto",
             "qat_bits": 8,
             "search_mode": "random_signed",
             "component_guard_mode": "score_primary",

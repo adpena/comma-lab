@@ -51,6 +51,98 @@ def test_local_receiver_replay_does_not_unlock_ladder_proof() -> None:
     assert "modelsize_or_fc_dim_missing" in row["harvest_blockers"]
 
 
+def test_path_only_receiver_proof_report_does_not_unlock_full600_row() -> None:
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "snerv_path_only_receiver_report.v1",
+                "axis_tag": "[contest-CPU]",
+                "n_pairs": 600,
+                "rows": [
+                    {
+                        "row_id": "path_only",
+                        "modelsize_mparams": 0.04,
+                        "fc_dim": 16,
+                        "archive_bytes": 42_000,
+                        "archive_sha256": "8" * 64,
+                        "receiver_proof_report_paths": [
+                            "/ssd/receiver_proof_path_only.json"
+                        ],
+                        "d_seg": 0.004,
+                        "d_pose": 0.002,
+                        "accepted": True,
+                    }
+                ],
+            }
+        ],
+        carrier_id="snerv",
+    )
+
+    row = payload["harvested_rows"][0]
+    assert row["sample_scope"] == "full600_or_better"
+    assert row["local_receiver_archive_replay_verified"] is False
+    assert row["receiver_proof_passed"] is False
+    assert row["receiver_closed"] is False
+    assert "receiver_replay_or_contract_missing" in row["harvest_blockers"]
+    assert payload["ladder_candidate_row_count"] == 0
+    assert payload["ready_for_receiver_closed_modelsize_ladder"] is False
+
+
+def test_advisory_axis_full600_rows_do_not_unlock_ladder_candidates() -> None:
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "snerv_advisory_full600.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 600,
+                "rows": [
+                    _full_row("tiny", 0.04, 16, 42_000, 0.004, 0.002, "8"),
+                    _full_row("small", 0.08, 24, 80_000, 0.003, 0.002, "9"),
+                ],
+            }
+        ],
+        carrier_id="snerv",
+    )
+
+    assert payload["status"] == "receiver_closed_ladder_rows_blocked"
+    assert payload["receiver_proof_row_count"] == 0
+    assert payload["ladder_candidate_row_count"] == 0
+    row = payload["harvested_rows"][0]
+    assert row["source_axis_is_advisory_or_projected"] is True
+    assert row["receiver_closed"] is False
+    assert (
+        "source_axis_advisory_or_projected_not_receiver_closed_ladder_authority"
+        in row["harvest_blockers"]
+    )
+
+
+def test_true_authority_flags_block_harvest_candidates() -> None:
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "snerv_authority_leak.v1",
+                "axis_tag": "[contest-CPU]",
+                "n_pairs": 600,
+                "rows": [
+                    {
+                        **_full_row("tiny", 0.04, 16, 42_000, 0.004, 0.002, "8"),
+                        "promotion_eligible": True,
+                    },
+                    _full_row("small", 0.08, 24, 80_000, 0.003, 0.002, "9"),
+                ],
+            }
+        ],
+        carrier_id="snerv",
+    )
+
+    rows = {row["row_id"]: row for row in payload["harvested_rows"]}
+    assert payload["status"] == "receiver_closed_ladder_rows_blocked"
+    assert payload["ladder_candidate_row_count"] == 1
+    assert "source_authority_flag_true:promotion_eligible" in rows["tiny"][
+        "harvest_blockers"
+    ]
+
+
 def test_two_full600_modelsize_rows_are_ready_for_ladder_input() -> None:
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [

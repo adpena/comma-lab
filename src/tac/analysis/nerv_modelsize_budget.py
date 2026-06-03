@@ -108,12 +108,18 @@ def snerv_modelsize_candidate_id_from_controls(
     snerv_model_size_adapter: str,
     decoder_payload_codec: str,
     hard_byte_ceiling: int,
+    official_modelsize_mparams: float | None = None,
 ) -> str:
     """Build the canonical self-describing SNeRV model-size candidate id."""
 
     bits_label = _float_id_token(bits_per_coeff)
     step_label = _float_id_token(step_map_bits_per_coeff)
     hfr_label = _float_id_token(hfr_gain)
+    official_label = (
+        ""
+        if official_modelsize_mparams is None
+        else f"_oms{_float_id_token(float(official_modelsize_mparams))}"
+    )
     wavelet_label = str(wavelet).replace(".", "p").replace("_", "")
     feature_label = f"fc{int(fc_dim)}e{int(emb_size)}"
     mfu_label = "-".join(str(int(value)) for value in mfu_scales)
@@ -123,7 +129,8 @@ def snerv_modelsize_candidate_id_from_controls(
         f"lfb{bits_label}_stepb{step_label}_{feature_label}_"
         f"p{int(patch_radius)}_mfu{mfu_label}_"
         f"hfr{hfr_label}_t{int(temporal_context)}_"
-        f"ad{adapter_label}_{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
+        f"ad{adapter_label}{official_label}_"
+        f"{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
     )
 
 
@@ -847,6 +854,7 @@ def analyze_snerv_modelsize_candidate(
         snerv_model_size_adapter=str(model_size.adapter),
         decoder_payload_codec=str(decoder_payload_codec),
         hard_byte_ceiling=int(hard_byte_ceiling),
+        official_modelsize_mparams=official_modelsize_mparams,
     )
     return SnervModelSizeCandidate(
         schema="snerv_modelsize_candidate.v1",

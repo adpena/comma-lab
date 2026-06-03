@@ -312,6 +312,21 @@ def test_snerv_modelsize_candidate_id_tokens_losslessly_bind_receiver_controls()
         "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_"
         "p3_mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
     )
+    official_row = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=2,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int2_symmetric",
+        official_modelsize_mparams=0.05,
+    )
+    assert "_oms0p05_" in official_row.candidate_id
+    assert official_row.capacity_source == "official_snerv_modelsize"
+    assert official_row.modelsize_mparams == 0.05
+    assert official_row.official_modelsize_solution is not None
     assert snerv_model_size_adapter_id_token(
         SNERV_SPECTRA_PRESERVING_ADAPTER
     ) == "spectra"

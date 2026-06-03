@@ -192,17 +192,33 @@ def _pipeline_custody(planner_ingest: Mapping[str, Any]) -> dict[str, Any]:
     """
 
     producer_tool = str(planner_ingest.get("producer_tool") or "")
+    intermediate_harvest_tool = str(
+        planner_ingest.get("intermediate_harvest_tool") or ""
+    )
     existing_tool_ingress = str(planner_ingest.get("existing_tool_ingress") or "")
     planning_context_tool = str(planner_ingest.get("planning_context_tool") or "")
     section_value_profile_tool = str(
         planner_ingest.get("section_value_profile_tool") or ""
     )
+    downstream_ingest_tools = _string_list(
+        planner_ingest.get("downstream_ingest_tools")
+    )
     canonical_paths = _dedupe_strings(
         [
             producer_tool,
+            intermediate_harvest_tool,
             existing_tool_ingress,
             planning_context_tool,
             section_value_profile_tool,
+            *downstream_ingest_tools,
+        ]
+    )
+    canonical_ingest_sequence = _dedupe_strings(
+        [
+            producer_tool,
+            intermediate_harvest_tool,
+            *downstream_ingest_tools,
+            existing_tool_ingress,
         ]
     )
     has_ingress = bool(canonical_paths or planner_ingest.get("existing_surface_paths"))
@@ -214,6 +230,7 @@ def _pipeline_custody(planner_ingest: Mapping[str, Any]) -> dict[str, Any]:
             else "blocked_until_canonical_ingest_path_exists"
         ),
         "canonical_ingress_paths": canonical_paths,
+        "canonical_ingest_sequence": canonical_ingest_sequence,
         "existing_surface_paths": _string_list(
             planner_ingest.get("existing_surface_paths")
         ),
@@ -240,9 +257,16 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "ingest_kind": "measured_modelsize_ladder_work_order",
             "planner_action": planner_action,
             "producer_tool": "tools/emit_nerv_trained_ladder_row.py",
+            "intermediate_harvest_tool": (
+                "tools/harvest_nerv_receiver_closed_ladder_rows.py"
+            ),
             "existing_tool_ingress": (
                 "tools/build_nerv_receiver_closed_modelsize_ladder.py"
             ),
+            "downstream_ingest_tools": [
+                "tools/harvest_nerv_receiver_closed_ladder_rows.py",
+                "tools/build_nerv_receiver_closed_modelsize_ladder.py",
+            ],
             "planning_context_tool": "tools/build_nerv_modelsize_archive_curve.py",
             "missing_tool_or_proof": (
                 "trained_receiver_closed_archive_byte_ladder_rows"

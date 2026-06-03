@@ -63,9 +63,26 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     )
     assert decoded.metadata["step_map_waterfill_bits_per_coeff"] == pytest.approx(0.5)
     assert decoded.metadata["step_map_coder_groups"]
+    assert decoded.metadata["lf_payload_codec"] == "auto"
     assert frames.shape == (2, 2, 3, 16, 16)
     assert np.isfinite(frames).all()
     assert packet.score_claim is False
+
+
+def test_packet_builder_defaults_to_portfolio_lf_payload_codec() -> None:
+    packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        _tiny_pairs(pairs=1),
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+    )
+
+    decoded = unpack_snerv_archive(packet.packet)
+
+    assert decoded.metadata["lf_payload_codec"] == "portfolio_auto"
+    assert packet.section_bytes["lf_payload"] > 0
 
 
 def test_train_export_hydrates_mlx_targets_and_writes_packet(
@@ -119,6 +136,7 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
         "waterfill_mlx_native_uniform_importance_bridge"
     )
     assert report["step_map_coder_groups"]
+    assert report["lf_payload_codec"] == "portfolio_auto"
     assert report["receiver_proof_passed"] is False
     assert "snerv_mlx_score_aware_long_training_not_executed" in report["blockers"]
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" in report["blockers"]
@@ -201,6 +219,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
                 "axis_tag": "[macOS-CPU advisory]",
                 "n_pairs": 1,
                 "decoder_payload_codec": "int8_symmetric",
+                "lf_payload_codec": "portfolio_auto",
                 "scorer_loop_evaluations": 2,
                 "accepted_improvement": True,
                 "receiver_contract_satisfied": True,
@@ -264,6 +283,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert captured["max_trials"] == 1
     assert captured["qat_bits"] == 4
     assert captured["decoder_payload_codec"] == "int8_symmetric"
+    assert captured["lf_payload_codec"] == "portfolio_auto"
     assert captured["component_guard_mode"] == "pose_seg_hard"
     assert captured["snerv_fc_dim"] == 5
     assert captured["snerv_mfu_scales"] == (1, 2)
@@ -271,6 +291,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["requested"] is True
     assert scorer_loop["executed"] is True
     assert scorer_loop["component_guard_mode"] == "pose_seg_hard"
+    assert scorer_loop["lf_payload_codec"] == "portfolio_auto"
     assert scorer_loop["receiver_contract_satisfied"] is True
     assert scorer_loop["accepted_improvement"] is True
     assert scorer_loop["best_archive_sha256"] == best_packet_sha256

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -112,6 +113,14 @@ def main(argv: list[str] | None = None) -> int:
             .resolve(strict=False)
             .as_posix()
         ),
+        "input_files": {
+            "hinerv_modelsize_budget_json": _file_provenance(
+                args.hinerv_modelsize_budget_json
+            ),
+            "decoder_weight_saliency_json": _file_provenance(
+                args.decoder_weight_saliency_json
+            ),
+        },
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -119,7 +128,6 @@ def main(argv: list[str] | None = None) -> int:
     output = args.output_json.expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
     report["report_path"] = output.as_posix()
-    write_json(output, report)
     if args.output_md is not None:
         md_output = args.output_md.expanduser().resolve(strict=False)
         md_output.parent.mkdir(parents=True, exist_ok=True)
@@ -128,6 +136,7 @@ def main(argv: list[str] | None = None) -> int:
             render_hinerv_archive_size_ladder_markdown(report),
             encoding="utf-8",
         )
+    write_json(output, report)
     print(json.dumps(_summary(report), sort_keys=True))
     return 0
 
@@ -151,6 +160,35 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
 
 def _parse_action_bits(value: str) -> tuple[int, ...]:
     return tuple(int(part) for part in str(value).split(",") if part.strip())
+
+
+def _file_provenance(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    resolved = path.expanduser().resolve(strict=False)
+    if not resolved.is_file():
+        return {
+            "path": resolved.as_posix(),
+            "exists": False,
+            "bytes": None,
+            "sha256": None,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    h = hashlib.sha256()
+    with resolved.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return {
+        "path": resolved.as_posix(),
+        "exists": True,
+        "bytes": resolved.stat().st_size,
+        "sha256": h.hexdigest(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 if __name__ == "__main__":

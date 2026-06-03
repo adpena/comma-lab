@@ -31,7 +31,10 @@ from tac.analysis.nerv_decoder_weight_waterfill import (
     load_saliency_json,
     load_state_npz_from_manifest,
 )
-from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_knobs
+from tac.analysis.nerv_modelsize_budget import (
+    analyze_hinerv_modelsize_candidate,
+    build_hinerv_config_from_size_knobs,
+)
 from tac.analysis.nerv_modelsize_ladder import (
     SCORER_ONLY_OBJECTIVE_AUTHORITY,
     hi_nerv_modelsize_config_rows,
@@ -52,6 +55,15 @@ REQUIRED_ALLOCATOR_BINDINGS: tuple[str, ...] = (
     "waterfill_group_bits_against_fixed_contest_byte_price",
     "inverse_steg_saliency_decoder_weight_binding",
     "packed_zero_and_entropy_coded_low_value_groups",
+)
+_NESTED_AUTHORITY_FIELDS: tuple[str, ...] = (
+    "score_claim",
+    "score_claim_valid",
+    "frontier_score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "production_hardened_claim",
+    "ready_for_exact_eval_dispatch",
 )
 
 
@@ -319,11 +331,21 @@ def _hinerv_modelsize_candidate_spec(
     )
     embed_dim = _positive_int(candidate.get("embed_dim"))
     decoder_channel = _positive_int(candidate.get("decoder_channel"))
-    if not row_id or latent_dim is None or embed_dim is None or decoder_channel is None:
+    hard_byte_ceiling = _positive_int(candidate.get("hard_byte_ceiling"))
+    decoder_codec = str(candidate.get("decoder_codec") or "").strip()
+    if (
+        not row_id
+        or latent_dim is None
+        or embed_dim is None
+        or decoder_channel is None
+        or hard_byte_ceiling is None
+        or not decoder_codec
+    ):
         raise ValueError(
             "hinerv modelsize candidate must include candidate_id, latent_dim, "
-            "embed_dim, and decoder_channel"
+            "embed_dim, decoder_channel, decoder_codec, and hard_byte_ceiling"
         )
+    _reject_true_nested_authority(candidate, row_id=row_id)
     cfg = build_hinerv_config_from_size_knobs(
         num_pairs=int(candidate.get("num_pairs") or num_pairs),
         latent_dim=int(latent_dim),
@@ -345,6 +367,16 @@ def _hinerv_modelsize_candidate_spec(
         ),
     )
     _validate_candidate_config_snapshot(candidate, cfg, row_id=row_id)
+    _validate_hinerv_candidate_id_source_controls(
+        candidate,
+        row_id=row_id,
+        num_pairs=int(candidate.get("num_pairs") or num_pairs),
+        latent_dim=int(latent_dim),
+        embed_dim=int(embed_dim),
+        decoder_channel=int(decoder_channel),
+        decoder_codec=decoder_codec,
+        hard_byte_ceiling=int(hard_byte_ceiling),
+    )
     return {
         "row_id": row_id,
         "modelsize_scale": float(
@@ -353,9 +385,78 @@ def _hinerv_modelsize_candidate_spec(
             or 0.0
         ),
         "config": cfg,
-        "decoder_codec": str(candidate.get("decoder_codec") or "int8_mixed"),
+        "decoder_codec": decoder_codec,
         "modelsize_candidate": dict(candidate),
     }
+
+
+def _reject_true_nested_authority(candidate: Mapping[str, Any], *, row_id: str) -> None:
+    flagged = [
+        field
+        for field in _NESTED_AUTHORITY_FIELDS
+        if _truthy_authority_value(candidate.get(field))
+    ]
+    if flagged:
+        raise ValueError(
+            "hinerv modelsize candidate carries forbidden true authority flags "
+            f"for {row_id}: {flagged}"
+        )
+
+
+def _truthy_authority_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return normalized not in {"", "0", "false", "no", "none", "null"}
+    return bool(value)
+
+
+def _validate_hinerv_candidate_id_source_controls(
+    candidate: Mapping[str, Any],
+    *,
+    row_id: str,
+    num_pairs: int,
+    latent_dim: int,
+    embed_dim: int,
+    decoder_channel: int,
+    decoder_codec: str,
+    hard_byte_ceiling: int,
+) -> None:
+    expected = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=int(hard_byte_ceiling),
+        num_pairs=int(num_pairs),
+        latent_dim=int(latent_dim),
+        embed_dim=int(embed_dim),
+        decoder_channel=int(decoder_channel),
+        decoder_codec=str(decoder_codec),
+        use_hierarchical_feature_grid=bool(
+            candidate.get("use_hierarchical_feature_grid", False)
+        ),
+        use_convnext_blocks=bool(candidate.get("use_convnext_blocks", False)),
+        local_grid_levels=int(candidate.get("local_grid_levels") or 2),
+        local_grid_channels=int(candidate.get("local_grid_channels") or 4),
+        convnext_mlp_ratio=int(candidate.get("convnext_mlp_ratio") or 2),
+        convnext_kernel_size=int(candidate.get("convnext_kernel_size") or 7),
+        mid_injection_block_index=_int_or_default(
+            candidate.get("mid_injection_block_index"), 1
+        ),
+        fine_injection_block_index=_int_or_default(
+            candidate.get("fine_injection_block_index"), 4
+        ),
+    ).candidate_id
+    target = _positive_float(candidate.get("target_modelsize_mparams"))
+    if target is not None:
+        expected = f"{expected}_tgtmp{_float_id_token(target)}"
+    if row_id != expected:
+        raise ValueError(
+            "hinerv modelsize candidate_id source controls mismatch for "
+            f"{row_id}: expected {expected}"
+        )
 
 
 def _validate_candidate_config_snapshot(
@@ -411,6 +512,18 @@ def _normalizable_config_value(value: Any) -> Any:
         return int(value)
     except (TypeError, ValueError):
         return value
+
+
+def _positive_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number > 0.0 else None
+
+
+def _float_id_token(value: float) -> str:
+    return f"{float(value):g}".replace(".", "p")
 
 
 def _decoder_weight_waterfill_summary(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -542,11 +655,12 @@ def render_hinerv_archive_size_ladder_markdown(report: Mapping[str, Any]) -> str
         "",
         f"Schema: `{report.get('schema')}`",
         f"Authority: `{report.get('authority')}`",
+        f"Axis: `{report.get('axis_tag')}`",
         f"Decoder codec: `{report.get('decoder_codec')}`",
         f"Decoder codec policy: `{report.get('decoder_codec_policy')}`",
         f"Modelsize budget schema: `{report.get('hinerv_modelsize_budget_schema')}`",
         "",
-        "| row | params | nominal bytes | archive bytes | measured-minus-nominal | rate score | proof ready |",
+        "| row | params | nominal bytes | archive bytes | measured-minus-nominal | rate score [planning/control] | proof ready |",
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for row in report.get("archive_rows", ()):

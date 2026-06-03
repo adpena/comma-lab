@@ -22,10 +22,11 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
         "route_launchable_local_mlx_campaign_rows_without_exact_dispatch"
     )
     assert verdict["local_mlx_route_recommended"] is True
-    assert verdict["ready_local_mlx_experiment_count"] == 3
-    assert verdict["blocked_experiment_count"] == 0
+    assert verdict["ready_local_mlx_experiment_count"] == 1
+    assert verdict["blocked_experiment_count"] == 2
     assert verdict["gated_experiment_count"] == 3
-    assert verdict["family_summary"]["hi_nerv"]["ready_local_mlx_count"] == 2
+    assert verdict["family_summary"]["hi_nerv"]["ready_local_mlx_count"] == 0
+    assert verdict["family_summary"]["hi_nerv"]["blocked_count"] == 2
     assert verdict["family_summary"]["hi_nerv"]["gated_count"] == 2
     assert verdict["family_summary"]["snerv"]["ready_local_mlx_count"] == 1
     assert verdict["family_summary"]["snerv"]["blocked_count"] == 0
@@ -40,7 +41,7 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
         in verdict["blocked_exact_dispatch_dependencies"]
     )
     first = verdict["selected_local_mlx_experiments"][0]
-    assert first["id"].startswith("hi_nerv_")
+    assert first["id"].startswith("snerv_")
     assert "tools/run_compact_renderer_mlx_spine_runner.py" in first["command"]
     assert first["score_lowering_gate"]["receiver_proof_required"] is True
     assert first["score_lowering_gate"]["cpu_replay_ready"] is False
@@ -52,23 +53,11 @@ def test_long_training_campaign_consumer_preserves_hinerv_supersession_metadata(
 
     verdict = consumer.consume_candidate(plan["experiment_queue"])
 
-    selected = verdict["selected_local_mlx_experiments"][0]
-    metadata = selected["metadata"]
-    assert metadata["schema"] == "nerv_long_training_campaign_consumer_metadata.v1"
-    assert metadata["source_faithfulness_controls"][
-        "source_official_control_superseded"
-    ] is True
-    assert metadata["source_faithfulness_controls"][
-        "target_official_control_score"
-    ] == 2
-    assert metadata["feedback_launch_adjustment"][
-        "official_control_superseded"
-    ] is True
-    assert "switch_to_hinerv_official_feature_grid_convnext_controls" in metadata[
-        "feedback_launch_adjustment"
-    ]["launch_mutations"]
-    assert selected["score_claim"] is False
-    assert selected["ready_for_exact_eval_dispatch"] is False
+    assert verdict["family_summary"]["hi_nerv"]["ready_local_mlx_count"] == 0
+    assert verdict["family_summary"]["hi_nerv"]["blocked_count"] == 1
+    assert verdict["selected_local_mlx_experiment_ids"] == [
+        "snerv_snerv_tiny_native_rate_aware_training"
+    ]
 
 
 def test_long_training_campaign_consumer_accepts_extracted_experiment_queue() -> None:
@@ -80,7 +69,8 @@ def test_long_training_campaign_consumer_accepts_extracted_experiment_queue() ->
     assert verdict["queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert verdict["campaign_row_count"] == 0
     assert verdict["experiment_count"] == 3
-    assert verdict["ready_local_mlx_experiment_count"] == 3
+    assert verdict["ready_local_mlx_experiment_count"] == 1
+    assert verdict["blocked_experiment_count"] == 2
     assert verdict["local_mlx_route_recommended"] is True
     assert verdict["ready_for_exact_eval_dispatch"] is False
 
@@ -135,7 +125,7 @@ def test_long_training_campaign_consumer_cli_writes_verdict(tmp_path: Path) -> N
     assert rc == 0
     verdict = json.loads(out_json.read_text(encoding="utf-8"))
     assert verdict["schema"] == "nerv_long_training_campaign_consumer_result.v1"
-    assert verdict["ready_local_mlx_experiment_count"] == 3
+    assert verdict["ready_local_mlx_experiment_count"] == 1
     assert verdict["score_claim"] is False
     assert out_md.read_text(encoding="utf-8").startswith(
         "# NeRV Long-Training Campaign Consumer Verdict"

@@ -54,6 +54,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--snerv-mfu-scales", default="1,2,4")
     parser.add_argument("--snerv-hfr-gain", type=float, default=0.0)
     parser.add_argument("--snerv-temporal-context", type=int, default=0)
+    parser.add_argument(
+        "--snerv-scorer-loop-lf-payload-codec",
+        default="portfolio_auto",
+    )
     parser.add_argument("--qat-bits", type=int, default=8)
     parser.add_argument("--max-trials", type=int, default=2)
     parser.add_argument(
@@ -110,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
         snerv_hfr_gain=args.snerv_hfr_gain,
         snerv_temporal_context=args.snerv_temporal_context,
+        lf_payload_codec=args.snerv_scorer_loop_lf_payload_codec,
         qat_bits=args.qat_bits,
         max_trials=args.max_trials,
         search_mode=args.search_mode,
@@ -146,6 +151,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  mfu_scales: {list(result.snerv_mfu_scales)}")
     print(f"  hfr_gain: {result.snerv_hfr_gain:g}")
     print(f"  decoder_feature_count: {result.decoder_feature_count}")
+    print(f"  lf_payload_codec: {result.lf_payload_codec}")
     print(f"  baseline_score_linf: {result.baseline.score_linf}")
     print(f"  best_score_linf: {result.best.score_linf}")
     print(f"  component_guard_mode: {result.component_guard_mode}")

@@ -509,6 +509,20 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         for row in modelsize_rows
     )
     assert all(
+        row["planner_ingest"]["intermediate_harvest_tool"]
+        == "tools/harvest_nerv_receiver_closed_ladder_rows.py"
+        for row in modelsize_rows
+    )
+    assert all(
+        row["pipeline_custody"]["canonical_ingest_sequence"]
+        == [
+            "tools/emit_nerv_trained_ladder_row.py",
+            "tools/harvest_nerv_receiver_closed_ladder_rows.py",
+            "tools/build_nerv_receiver_closed_modelsize_ladder.py",
+        ]
+        for row in modelsize_rows
+    )
+    assert all(
         row["planner_ingest"]["planning_context_tool"]
         == "tools/build_nerv_modelsize_archive_curve.py"
         for row in modelsize_rows

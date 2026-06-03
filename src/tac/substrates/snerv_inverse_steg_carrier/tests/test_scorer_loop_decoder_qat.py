@@ -37,6 +37,7 @@ from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     decoder_trial_passes_pose_guard,
     quantize_decoder_for_qat,
     run_snerv_scorer_loop_decoder_qat,
+    run_snerv_scorer_loop_decoder_qat_smoke,
 )
 
 
@@ -72,6 +73,12 @@ def test_first_class_qat_runner_preserves_false_authority_wrapper(monkeypatch) -
 
     assert result == "sentinel_result"
     assert calls == {"n_pairs": 2, "wavelet": "haar"}
+
+
+def test_scorer_loop_smoke_defaults_to_portfolio_lf_payload_codec() -> None:
+    sig = inspect.signature(run_snerv_scorer_loop_decoder_qat_smoke)
+
+    assert sig.parameters["lf_payload_codec"].default == "portfolio_auto"
 
 
 def test_scorer_loop_progress_callback_emits_eval_row() -> None:
@@ -225,6 +232,7 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
         segnet=object(),
         qat_bits=8,
         decoder_payload_codec="int4_symmetric",
+        lf_payload_codec="portfolio_auto",
         label="receiver_priced_eval",
         iteration=1,
         accepted=False,
@@ -233,6 +241,8 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
     )
 
     assert row.receiver_archive_replay_verified is True
+    assert row.lf_payload_codec == "portfolio_auto"
+    assert row.lf_payload_bytes > 0
     assert row.section_value_pressure_ready is True
     assert len(row.section_value_neutralizations) == 2
     assert row.section_value_pressure_linf >= 0.0
@@ -286,6 +296,7 @@ def test_evaluate_decoder_scores_section_value_pressure_during_qat(
         segnet=object(),
         qat_bits=8,
         decoder_payload_codec="int4_symmetric",
+        lf_payload_codec="portfolio_auto",
         label="section_value_bound_eval",
         iteration=1,
         accepted=False,
@@ -335,7 +346,11 @@ def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
         orig_hw=(4, 4),
     )
 
-    archive = _pack_receiver_archive(prepared, HfGenerationDecoder.zeros(1, model_size=cfg))
+    archive = _pack_receiver_archive(
+        prepared,
+        HfGenerationDecoder.zeros(1, model_size=cfg),
+        lf_payload_codec="portfolio_auto",
+    )
 
     assert archive.metadata["snerv_model_size_adapter"] == SNERV_SPECTRA_PRESERVING_ADAPTER
     assert archive.metadata["snerv_spectra_preserving_adapter_enabled"] is True
@@ -343,6 +358,8 @@ def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
     assert archive.metadata["snerv_hfr_gain"] == pytest.approx(0.25)
     assert archive.metadata["snerv_temporal_context"] == 1
     assert archive.metadata["decoder_payload_codec"] == "float32_lzma"
+    assert archive.metadata["lf_payload_codec"] == "portfolio_auto"
+    assert archive.section_bytes["lf_payload"] > 0
     assert archive.metadata["decoder_feature_count"] == cfg.feature_count
 
 
@@ -1060,6 +1077,8 @@ def _eval(
         iteration=0,
         archive_bytes=int(archive_bytes),
         archive_sha256="0" * 64,
+        lf_payload_codec="portfolio_auto",
+        lf_payload_bytes=88,
         d_seg_linf=d_seg,
         d_pose_linf=d_pose,
         score_linf=score,

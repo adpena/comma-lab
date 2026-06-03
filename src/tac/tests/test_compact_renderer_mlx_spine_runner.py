@@ -835,11 +835,18 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert campaign_plan["experiment_queue_experiment_count"] == campaign_plan[
         "campaign_row_count"
     ]
-    assert {
+    ready_families = {
         row["family"]
         for row in campaign_plan["campaign_rows"]
         if row["local_mlx_launch_command_ready"]
-    } == {"hi_nerv", "snerv"}
+    }
+    assert ready_families == {"snerv"}
+    assert any(
+        row["family"] == "hi_nerv"
+        and "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
+        in row["blockers"]
+        for row in campaign_plan["campaign_rows"]
+    )
     snerv_campaign_rows = [
         row for row in campaign_plan["campaign_rows"] if row["family"] == "snerv"
     ]
@@ -1129,6 +1136,18 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         shared_target_sn["fc_dim"]
     )
     assert shared_target_sn["ready_for_exact_eval_dispatch"] is False
+    explicit_shared_target_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=shared_target_sn["candidate_id"],
+        hard_byte_ceilings=(178_000,),
+    )
+    assert explicit_shared_target_sn is not None
+    assert explicit_shared_target_sn["candidate_id"] == shared_target_sn["candidate_id"]
+    assert explicit_shared_target_sn["capacity_source"] == "official_snerv_modelsize"
+    assert explicit_shared_target_sn["modelsize_mparams"] == 0.05
+    assert explicit_shared_target_sn["official_modelsize_solution"]["fc_dim"] == (
+        explicit_shared_target_sn["fc_dim"]
+    )
     explicit = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id=hi["candidate_id"],
@@ -1535,14 +1554,20 @@ def test_active_campaign_lock_allow_duplicate_skips_family_process_refusal(
     assert not (tmp_path / ".active_compact_renderer_campaign_locks").exists()
 
 
-def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:
+@pytest.mark.parametrize(
+    "function_name",
+    ("_run_pact_nerv_vq_mlx_smoke", "_run_pact_nerv_selector_v4_mlx_smoke"),
+)
+def test_pact_compact_runners_forward_optimizer_and_shared_qat_metadata(
+    function_name: str,
+) -> None:
     source = Path(runner_mod.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)
     target_fn = next(
         node
         for node in ast.walk(tree)
         if isinstance(node, ast.FunctionDef)
-        and node.name == "_run_pact_nerv_vq_mlx_smoke"
+        and node.name == function_name
     )
     calls = [
         node
@@ -1556,10 +1581,21 @@ def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:
     assert "pr95_faithful_curriculum_enabled" in kw_names
     assert "pr95_curriculum_total_epochs" in kw_names
     assert "grad_clip_max_norm" in kw_names
+    assert "weight_decay" in kw_names
+    assert "optimizer_kind" in kw_names
+    assert "warmup_epochs" in kw_names
+    assert "warmup_steps_per_epoch" in kw_names
+    assert "cosine_decay_enabled" in kw_names
+    assert "cosine_decay_total_epochs" in kw_names
+    assert "cosine_decay_min_lr_ratio" in kw_names
     target_source = ast.get_source_segment(source, target_fn) or ""
-    assert "c1a_entropy_weight=float(coder_qat_c1a_entropy_weight)" in target_source
-    assert "c1a_sigma=float(coder_qat_c1a_sigma)" in target_source
-    assert "c1a_sample_size=int(coder_qat_c1a_sample_size)" in target_source
+    assert '"optimizer_policy": strip_candidate_curriculum_authority_fields' in (
+        target_source
+    )
+    assert '"optimizer_controls": strip_candidate_curriculum_authority_fields' in (
+        target_source
+    )
+    assert '"coder_aware_qat": coder_qat_metadata_row' in target_source
 
 
 def test_mlx_optimizer_controls_default_to_pact_muon_adamw() -> None:
@@ -1619,6 +1655,34 @@ def test_mlx_optimizer_controls_default_cosine_total_to_run_epochs() -> None:
     assert controls["cosine_decay_total_epochs"] == 128
     assert controls["cosine_decay_total_epochs_defaulted_to_run_epochs"] is True
     assert controls["cosine_decay_min_lr_ratio"] == pytest.approx(5.0e-2)
+
+
+@pytest.mark.parametrize(
+    "execute_fn",
+    (
+        runner_mod.execute_pact_nerv_vq_mlx_smoke_and_adapt,
+        runner_mod.execute_pact_nerv_selector_v4_mlx_smoke_and_adapt,
+    ),
+)
+def test_pact_compact_execute_refuses_unsupported_weight_decay(
+    tmp_path: Path,
+    execute_fn,
+) -> None:
+    with pytest.raises(
+        CompactRendererMlxSpineRunnerError,
+        match="optimizer-weight-decay is only supported",
+    ):
+        execute_fn(
+            output_dir=tmp_path / execute_fn.__name__,
+            num_pairs=1,
+            epochs=1,
+            batch_pair_indices_per_step=1,
+            learning_rate=1e-3,
+            source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+            optimizer_kind="adam",
+            optimizer_weight_decay=1.0e-4,
+            repo_root=REPO_ROOT,
+        )
 
 
 def test_default_source_video_resolves_from_external_upstream(
@@ -1945,6 +2009,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "1.25",
             "--snerv-scorer-loop-section-value-pressure-multiplier",
             "1.75",
+            "--snerv-scorer-loop-lf-payload-codec",
+            "auto",
             "--snerv-scorer-loop-pose-slack",
             "0.001",
             "--snerv-scorer-loop-seg-slack",
@@ -2005,6 +2071,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_scorer_loop_search_mode == "learned_random_subspace"
     assert sn.snerv_scorer_loop_byte_pressure_multiplier == 1.25
     assert sn.snerv_scorer_loop_section_value_pressure_multiplier == 1.75
+    assert sn.snerv_scorer_loop_lf_payload_codec == "auto"
     assert sn.snerv_scorer_loop_pose_slack == 0.001
     assert sn.snerv_scorer_loop_seg_slack == 0.002
     assert sn.snerv_scorer_loop_pair_stride == 3
@@ -2989,6 +3056,91 @@ def test_hinerv_refusal_filters_modelsize_rows_without_nonrate_score(
     assert out["ready_for_exact_eval_dispatch"] is False
 
 
+def test_hinerv_refusal_rejects_raw_modelsize_budget_selected_candidates(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fail_train(**_kwargs):
+        raise AssertionError("raw planning artifact must refuse before training")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+    raw_budget = tmp_path / "nerv_modelsize_budget.json"
+    raw_budget.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_modelsize_budget.v1",
+                "family": "hi_nerv",
+                "selected_candidates": [
+                    {
+                        "candidate_id": "hinerv_np600_ld4_ed8_dc8_int4_mixed_ceil178000",
+                        "archive_bytes": 72_000,
+                        "nonrate_score": 0.21,
+                        "modelsize_mparams": 0.032,
+                        "receiver_closed": True,
+                        "receiver_proof_passed": True,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "selected_candidate_count": 1,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_raw_modelsize_refusal",
+        num_pairs=600,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        modelsize_budget_json_paths=(raw_budget,),
+        repo_root=REPO_ROOT,
+    )
+
+    source = out["modelsize_budget_evidence"]["sources"][0]
+    assert out["mode"] == "hi_nerv_mlx_scoreaware_launch_refused"
+    assert out["training_executed"] is False
+    assert out["modelsize_budget_evidence"]["row_count"] == 0
+    assert source["source_schema"] == "nerv_modelsize_budget.v1"
+    assert source["authority"] == (
+        "planning_artifact_only_not_receiver_closed_ladder_evidence"
+    )
+    assert source["rows_seen"] == 1
+    assert source["rows_added"] == 0
+    assert source["rows_rejected"] == 1
+    assert source["score_claim"] is False
+    assert source["promotion_eligible"] is False
+    assert source["ready_for_exact_eval_dispatch"] is False
+    assert "raw_nerv_modelsize_budget_artifact_not_receiver_closed_ladder" in source[
+        "blockers"
+    ]
+    assert "receiver_closed_modelsize_ladder_schema_required" in source["blockers"]
+    assert source["rejected_rows"][0]["blockers"] == [
+        "selected_candidates_are_planning_rows_not_receiver_closed_ladder",
+        "receiver_closed_byte_proof_missing",
+        "measured_receiver_archive_bytes_missing",
+    ]
+    plan = out["score_aware_carrier_training_plan"]
+    assert plan["modelsize_budget_receiver_closed_ready"] is False
+    assert "receiver_closed_modelsize_budget_ladder_missing" in plan[
+        "dispatch_blockers"
+    ]
+    assert out["score_claim"] is False
+    assert out["promotion_eligible"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
+
+
 def test_hinerv_refusal_rejects_canonical_score_only_modelsize_rows(
     tmp_path: Path,
     monkeypatch,
@@ -3537,7 +3689,7 @@ def test_hinerv_full_coverage_waits_for_mlx_prefilter_before_default_cpu_replay(
     ]
 
 
-def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
+def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -3550,14 +3702,19 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         "family": "hi_nerv",
         "candidate_id": "hinerv-unit-candidate",
         "group_count": 1,
+        "full_video_coverage": True,
+        "receiver_proof_status": "runtime_consumption_proof_ready",
         "rows": [
             {
                 "group_name": "head_rgb_1.bias",
+                "shape": [3],
+                "numel": 3,
                 "selected_bits": 0,
                 "selected_action": "zero_rle",
+                "blockers": [],
             }
         ],
-        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        "blockers": [],
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -3692,11 +3849,23 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     assert captured_train_kwargs["coder_qat_c1a_sigma"] == 0.35
     assert captured_train_kwargs["coder_qat_c1a_sample_size"] == 64
     assert captured_train_kwargs["decoder_weight_waterfill_plan"] == waterfill_plan
+    assert (
+        captured_train_kwargs["decoder_weight_waterfill_plan"][
+            "receiver_proof_status"
+        ]
+        == "runtime_consumption_proof_ready"
+    )
+    assert (
+        captured_train_kwargs["decoder_weight_waterfill_plan"]["full_video_coverage"]
+        is True
+    )
+    assert captured_train_kwargs["decoder_weight_waterfill_plan"]["blockers"] == []
     assert captured_train_kwargs["recon_pixel_weight_path"] == weight_path
     assert captured_train_kwargs["auto_segnet_boundary_recon_weight"] is False
     assert captured_train_kwargs["recon_pixel_weight_tau"] == 0.5
     assert captured_train_kwargs["recon_pixel_weight_normalize"] == "mean"
-    assert out["score_aware_training"]["coder_aware_qat"] == {
+    coder_qat = out["score_aware_training"]["coder_aware_qat"]
+    expected_coder_qat = {
         "schema": "coder_aware_decoder_qat.v1",
         "enabled": True,
         "quant_bits": 4,
@@ -3712,6 +3881,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         ),
         "authority": "false_macos_mlx_research_signal",
     }
+    for key, expected in expected_coder_qat.items():
+        assert coder_qat[key] == expected
     selection = out["modelsize_candidate_selection"]
     assert selection["selection_mode"] == "planner_candidate"
     assert selection["candidate"]["candidate_id"] == "hinerv-unit-candidate"
@@ -3730,6 +3901,18 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     assert waterfill["sha256"] == runner_mod._sha256_file(waterfill_plan_path)
     assert waterfill["source_schema"] == "nerv_decoder_weight_waterfill.v1"
     assert waterfill["row_count"] == 1
+    assert waterfill["source_blockers"] == []
+    assert waterfill["active"] is True
+    assert waterfill["validated"] is True
+    assert waterfill["validated_rows"] == [
+        {
+            "group_name": "head_rgb_1.bias",
+            "expected_shape": [3],
+            "expected_numel": 3,
+            "shape_checked": True,
+            "numel_checked": True,
+        }
+    ]
     assert waterfill["score_claim"] is False
     feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
     assert feedback["candidate_num_pairs"] == 600
@@ -3756,6 +3939,184 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         "p18_segnet": "caller_supplied",
         "p19_posenet": "caller_supplied",
     }
+
+
+def _hinerv_waterfill_modelsize_candidate(
+    candidate_id: str = "hinerv-unit-candidate",
+) -> dict[str, object]:
+    return {
+        "schema": "hinerv_modelsize_candidate.v1",
+        "family": "hi_nerv",
+        "candidate_id": candidate_id,
+        "latent_dim": 12,
+        "embed_dim": 16,
+        "decoder_channel": 6,
+        "mid_injection_block_index": 2,
+        "fine_injection_block_index": 5,
+        "decoder_codec": "int4_mixed",
+        "num_pairs": 600,
+        "hard_byte_ceiling": 178_000,
+        "nominal_total_payload_bytes": 160_000,
+        "nominal_under_ceiling": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _write_hinerv_waterfill_plan(
+    path: Path,
+    *,
+    candidate_id: str = "hinerv-unit-candidate",
+    group_name: str = "head_rgb_1.bias",
+    shape: list[int] | None = None,
+    numel: int | None = None,
+) -> Path:
+    row: dict[str, object] = {
+        "group_name": group_name,
+        "selected_bits": 0,
+        "selected_action": "zero_rle",
+    }
+    if shape is not None:
+        row["shape"] = shape
+    if numel is not None:
+        row["numel"] = numel
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_decoder_weight_waterfill.v1",
+                "family": "hi_nerv",
+                "candidate_id": candidate_id,
+                "group_count": 1,
+                "rows": [row],
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _execute_hinerv_waterfill_validation_probe(
+    tmp_path: Path,
+    monkeypatch,
+    *,
+    plan_path: Path,
+    candidate_id: str = "hinerv-unit-candidate",
+) -> tuple[dict[str, object], dict[str, object]]:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fail_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        raise AssertionError("invalid waterfill plan must refuse before training")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / f"hinerv_waterfill_refusal_{candidate_id}",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        modelsize_candidate=_hinerv_waterfill_modelsize_candidate(candidate_id),
+        decoder_weight_waterfill_plan_json=plan_path,
+        repo_root=REPO_ROOT,
+    )
+    return out, captured_train_kwargs
+
+
+def test_hinerv_waterfill_plan_candidate_mismatch_refuses_before_training(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    plan_path = _write_hinerv_waterfill_plan(
+        tmp_path / "candidate_mismatch_waterfill.json",
+        candidate_id="different-hinerv-candidate",
+        shape=[3],
+        numel=3,
+    )
+
+    out, captured = _execute_hinerv_waterfill_validation_probe(
+        tmp_path,
+        monkeypatch,
+        plan_path=plan_path,
+    )
+
+    assert captured == {}
+    assert out["mode"] == "hi_nerv_decoder_weight_waterfill_plan_launch_refused"
+    assert out["training_executed"] is False
+    waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
+    assert waterfill["attached"] is False
+    assert waterfill["active"] is False
+    assert waterfill["validated"] is False
+    assert "decoder_weight_waterfill_candidate_id_mismatch:different-hinerv-candidate" in (
+        out["blockers"]
+    )
+    assert waterfill["candidate_match"]["matched"] is False
+    assert waterfill["score_claim"] is False
+
+
+def test_hinerv_waterfill_plan_unknown_group_refuses_before_training(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    plan_path = _write_hinerv_waterfill_plan(
+        tmp_path / "unknown_group_waterfill.json",
+        group_name="missing_decoder_group.weight",
+        shape=[1],
+        numel=1,
+    )
+
+    out, captured = _execute_hinerv_waterfill_validation_probe(
+        tmp_path,
+        monkeypatch,
+        plan_path=plan_path,
+    )
+
+    assert captured == {}
+    waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
+    assert waterfill["attached"] is False
+    assert waterfill["active"] is False
+    assert "decoder_weight_waterfill_group_missing:missing_decoder_group.weight" in (
+        out["blockers"]
+    )
+
+
+def test_hinerv_waterfill_plan_shape_mismatch_refuses_before_training(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    plan_path = _write_hinerv_waterfill_plan(
+        tmp_path / "shape_mismatch_waterfill.json",
+        group_name="head_rgb_1.bias",
+        shape=[4],
+        numel=3,
+    )
+
+    out, captured = _execute_hinerv_waterfill_validation_probe(
+        tmp_path,
+        monkeypatch,
+        plan_path=plan_path,
+    )
+
+    assert captured == {}
+    waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
+    assert waterfill["attached"] is False
+    assert waterfill["active"] is False
+    assert "decoder_weight_waterfill_shape_mismatch:head_rgb_1.bias" in out[
+        "blockers"
+    ]
+    assert waterfill["validated_rows"][0]["declared_shape"] == [4]
 
 
 def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
@@ -4516,6 +4877,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["scorer_loop_qat_decoder_payload_codec"] == (
         "int2_symmetric"
     )
+    assert native_calls[0]["scorer_loop_qat_lf_payload_codec"] == "portfolio_auto"
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
     assert native["receiver_proof_passed"] is True
@@ -4750,6 +5112,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
         snerv_scorer_loop_max_trials=5,
         snerv_scorer_loop_search_mode="learned_random_subspace",
         snerv_scorer_loop_step_map_bins=8,
+        snerv_scorer_loop_lf_payload_codec="auto",
         snerv_scorer_loop_perturb_scale=0.03,
         snerv_scorer_loop_byte_pressure_multiplier=1.25,
         snerv_scorer_loop_max_archive_byte_growth=77,
@@ -4789,6 +5152,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["qat_bits"] == 4
     assert captured_qat_kwargs["decoder_payload_codec"] == "int2_symmetric"
+    assert captured_qat_kwargs["lf_payload_codec"] == "auto"
     assert captured_qat_kwargs["max_trials"] == 5
     assert captured_qat_kwargs["search_mode"] == "learned_random_subspace"
     assert captured_qat_kwargs["step_map_bins"] == 8
@@ -4807,6 +5171,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     qat = out["snerv_scorer_loop_qat"]
     assert qat["executed"] is True
     assert qat["component_guard_mode"] == "pose_hard"
+    assert qat["lf_payload_codec"] == "auto"
     assert qat["accepted_improvement"] is True
     assert qat["receiver_contract_satisfied"] is True
     assert qat["ready_for_pose_guard_gate"] is True
@@ -5846,6 +6211,119 @@ def test_pr95_hnerv_execute_arm_uses_real_scorer_binding_blockers(
     assert "requires_exact_cpu_cuda_auth_eval_before_score_claim" in out["blockers"]
 
 
+def test_vq_execute_forwards_optimizer_controls_and_shared_qat_metadata(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive)
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "family": "pact_nerv_vq",
+            },
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_pact_nerv_vq_mlx_smoke", fake_train)
+
+    out = runner_mod.execute_pact_nerv_vq_mlx_smoke_and_adapt(
+        output_dir=tmp_path / "vq_run",
+        num_pairs=2,
+        epochs=5,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-4,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        latent_dim=8,
+        embed_dim=8,
+        codebook_size=16,
+        decoder_channel=8,
+        decoder_codec="int4_scale_bundled",
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0002,
+        coder_qat_c1a_entropy_weight=0.0003,
+        coder_qat_c1a_sigma=0.35,
+        coder_qat_c1a_sample_size=64,
+        optimizer_kind="lion",
+        optimizer_grad_clip_max_norm=0.75,
+        optimizer_weight_decay=2.0e-4,
+        optimizer_warmup_epochs=2,
+        optimizer_warmup_steps_per_epoch=3,
+        optimizer_cosine_decay_enabled=True,
+        optimizer_cosine_decay_total_epochs=5,
+        optimizer_cosine_decay_min_lr_ratio=0.025,
+        allow_overwrite=True,
+        repo_root=REPO_ROOT,
+    )
+
+    optimizer_controls = captured_train_kwargs["optimizer_controls"]
+    assert optimizer_controls["optimizer_kind"] == "lion"
+    assert optimizer_controls["grad_clip_max_norm"] == pytest.approx(0.75)
+    assert optimizer_controls["weight_decay_effective"] == pytest.approx(2.0e-4)
+    assert optimizer_controls["warmup_epochs"] == 2
+    assert optimizer_controls["warmup_steps_per_epoch"] == 3
+    assert optimizer_controls["cosine_decay_enabled"] is True
+    assert optimizer_controls["cosine_decay_total_epochs"] == 5
+    assert optimizer_controls["cosine_decay_min_lr_ratio"] == pytest.approx(0.025)
+    optimizer_policy = captured_train_kwargs["optimizer_policy"]
+    assert optimizer_policy["schema"] == "compact_pact_native_optimizer_policy.v1"
+    assert optimizer_policy["resolved_policy"] == "native_optimizer"
+    assert optimizer_policy["optimizer_kind_consumed_by_native_mlx"] is True
+    assert optimizer_policy["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert optimizer_policy["pr95_faithful_curriculum_enabled"] is False
+    assert captured_train_kwargs["optimizer_kind"] == "lion"
+    assert captured_train_kwargs["coder_aware_qat"] is True
+    assert captured_train_kwargs["coder_qat_quant_bits"] == 4
+
+    report_training = out["score_aware_training"]
+    assert report_training["optimizer_policy"]["schema"] == optimizer_policy["schema"]
+    assert report_training["optimizer_policy"]["resolved_policy"] == (
+        optimizer_policy["resolved_policy"]
+    )
+    assert report_training["optimizer_policy"][
+        "optimizer_kind_consumed_by_native_mlx"
+    ] is True
+    assert report_training["optimizer_policy"][
+        "optimizer_kind_consumed_by_pr95_curriculum"
+    ] is False
+    assert report_training["optimizer_controls"]["optimizer_kind"] == (
+        optimizer_controls["optimizer_kind"]
+    )
+    assert report_training["optimizer_controls"]["grad_clip_max_norm"] == (
+        optimizer_controls["grad_clip_max_norm"]
+    )
+    assert report_training["optimizer_controls"]["weight_decay_effective"] == (
+        optimizer_controls["weight_decay_effective"]
+    )
+    assert report_training["optimizer_kind"] == "lion"
+    assert report_training["native_optimizer_active"] is True
+    assert report_training["effective_weight_decay"] == pytest.approx(2.0e-4)
+    qat = report_training["coder_aware_qat"]
+    assert qat["schema"] == "coder_aware_decoder_qat.v1"
+    assert qat["enabled"] is True
+    assert qat["quant_bits"] == 4
+    assert qat["authority"] == "false_macos_mlx_research_signal"
+    assert qat["authority_status"] == (
+        "advisory_training_loss_only_not_archive_or_score_authority"
+    )
+    assert "quantizer_geometry" in qat
+    assert "include_substrings" in qat
+    assert "exclude_substrings" in qat
+    assert "pact_nerv_vq_spine_projection_manifest_missing" in out["blockers"]
+    assert out["score_claim"] is False
+    assert out["ready_for_exact_eval_dispatch"] is False
+
+
 def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     tmp_path: Path,
     monkeypatch,
@@ -6016,6 +6494,14 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
         coder_qat_c1a_entropy_weight=0.0003,
         coder_qat_c1a_sigma=0.35,
         coder_qat_c1a_sample_size=64,
+        optimizer_kind="adafactor",
+        optimizer_grad_clip_max_norm=0.5,
+        optimizer_weight_decay=3.0e-4,
+        optimizer_warmup_epochs=1,
+        optimizer_warmup_steps_per_epoch=2,
+        optimizer_cosine_decay_enabled=True,
+        optimizer_cosine_decay_total_epochs=3,
+        optimizer_cosine_decay_min_lr_ratio=0.05,
         allow_overwrite=True,
         repo_root=REPO_ROOT,
     )
@@ -6031,22 +6517,67 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert out["score_aware_training"]["scorer_coupled_rd"][
         "fixed_marginal_byte_price"
     ] == "25/uncompressed_total"
-    assert out["score_aware_training"]["coder_aware_qat"] == {
-        "enabled": True,
-        "quant_bits": 4,
-        "quant_residual_weight": 0.001,
-        "magnitude_weight": 0.0001,
-        "delta_weight": 0.0002,
-        "c1a_entropy_weight": 0.0003,
-        "c1a_sigma": 0.35,
-        "c1a_sample_size": 64,
-        "c1a_source": (
-            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
-            "decoder weights"
-        ),
-        "authority": "false_macos_mlx_research_signal",
-    }
+    optimizer_controls = captured_train_kwargs["optimizer_controls"]
+    assert optimizer_controls["optimizer_kind"] == "adafactor"
+    assert optimizer_controls["grad_clip_max_norm"] == pytest.approx(0.5)
+    assert optimizer_controls["weight_decay_effective"] == pytest.approx(3.0e-4)
+    assert optimizer_controls["warmup_epochs"] == 1
+    assert optimizer_controls["warmup_steps_per_epoch"] == 2
+    assert optimizer_controls["cosine_decay_enabled"] is True
+    assert optimizer_controls["cosine_decay_total_epochs"] == 3
+    assert optimizer_controls["cosine_decay_min_lr_ratio"] == pytest.approx(0.05)
+    optimizer_policy = captured_train_kwargs["optimizer_policy"]
+    assert optimizer_policy["schema"] == "compact_pact_native_optimizer_policy.v1"
+    assert optimizer_policy["family"] == "pact_nerv_selector_v4"
+    assert optimizer_policy["resolved_policy"] == "native_optimizer"
+    assert optimizer_policy["optimizer_kind_consumed_by_native_mlx"] is True
+    assert optimizer_policy["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert optimizer_policy["pr95_faithful_curriculum_enabled"] is False
+    assert out["score_aware_training"]["optimizer_policy"]["schema"] == (
+        optimizer_policy["schema"]
+    )
+    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
+        optimizer_policy["resolved_policy"]
+    )
+    assert out["score_aware_training"]["optimizer_policy"][
+        "optimizer_kind_consumed_by_native_mlx"
+    ] is True
+    assert out["score_aware_training"]["optimizer_policy"][
+        "optimizer_kind_consumed_by_pr95_curriculum"
+    ] is False
+    assert out["score_aware_training"]["optimizer_controls"]["optimizer_kind"] == (
+        optimizer_controls["optimizer_kind"]
+    )
+    assert out["score_aware_training"]["optimizer_controls"][
+        "grad_clip_max_norm"
+    ] == optimizer_controls["grad_clip_max_norm"]
+    assert out["score_aware_training"]["optimizer_controls"][
+        "weight_decay_effective"
+    ] == optimizer_controls["weight_decay_effective"]
+    assert out["score_aware_training"]["optimizer_kind"] == "adafactor"
+    assert out["score_aware_training"]["native_optimizer_active"] is True
+    assert out["score_aware_training"]["effective_weight_decay"] == pytest.approx(
+        3.0e-4
+    )
+    qat = out["score_aware_training"]["coder_aware_qat"]
+    assert qat["schema"] == "coder_aware_decoder_qat.v1"
+    assert qat["enabled"] is True
+    assert qat["quant_bits"] == 4
+    assert qat["quant_residual_weight"] == pytest.approx(0.001)
+    assert qat["magnitude_weight"] == pytest.approx(0.0001)
+    assert qat["delta_weight"] == pytest.approx(0.0002)
+    assert qat["c1a_entropy_weight"] == pytest.approx(0.0003)
+    assert qat["c1a_sigma"] == pytest.approx(0.35)
+    assert qat["c1a_sample_size"] == 64
+    assert qat["authority"] == "false_macos_mlx_research_signal"
+    assert qat["authority_status"] == (
+        "advisory_training_loss_only_not_archive_or_score_authority"
+    )
+    assert "quantizer_geometry" in qat
+    assert "include_substrings" in qat
+    assert "exclude_substrings" in qat
     assert out["score_aware_training"]["decoder_codec"] == "int4_scale_bundled"
+    assert captured_train_kwargs["optimizer_kind"] == "adafactor"
     assert captured_train_kwargs["coder_aware_qat"] is True
     assert captured_train_kwargs["decoder_codec"] == "int4_scale_bundled"
     assert captured_train_kwargs["coder_qat_quant_bits"] == 4

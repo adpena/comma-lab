@@ -138,6 +138,7 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
     scorer_loop_qat_decoder_payload_codec: str | None = None,
+    scorer_loop_qat_lf_payload_codec: str | None = None,
     scorer_loop_qat_component_guard_mode: str = "score_primary",
     scorer_loop_qat_device: str = "cpu",
     allow_overwrite: bool = False,
@@ -176,7 +177,12 @@ def train_export_snerv_mlx_native(
         if scorer_loop_qat_decoder_payload_codec
         else decoder_payload_codec
     )
-    lf_payload_codec = str(candidate.get("lf_payload_codec", "auto"))
+    lf_payload_codec = str(candidate.get("lf_payload_codec", "portfolio_auto"))
+    active_lf_payload_codec = (
+        str(scorer_loop_qat_lf_payload_codec)
+        if scorer_loop_qat_lf_payload_codec
+        else lf_payload_codec
+    )
     model_size = _model_size_from_candidate(candidate)
 
     target0_mlx, target1_mlx = decode_mlx_targets(
@@ -219,7 +225,7 @@ def train_export_snerv_mlx_native(
         target_bits_per_coeff=target_bits_per_coeff,
         step_map_bits_per_coeff=step_map_bits_per_coeff,
         decoder_payload_codec=active_decoder_payload_codec,
-        lf_payload_codec=lf_payload_codec,
+        lf_payload_codec=active_lf_payload_codec,
         model_size=model_size,
         metadata_extra={
             "source_video_path": Path(source_video_path).as_posix(),
@@ -243,6 +249,7 @@ def train_export_snerv_mlx_native(
         search_mode=str(scorer_loop_qat_search_mode),
         qat_bits=int(scorer_loop_qat_qat_bits),
         decoder_payload_codec=active_decoder_payload_codec,
+        lf_payload_codec=active_lf_payload_codec,
         component_guard_mode=str(scorer_loop_qat_component_guard_mode),
         device=str(scorer_loop_qat_device),
         allow_overwrite=allow_overwrite,
@@ -350,7 +357,7 @@ def train_export_snerv_mlx_native(
             for group in selected_archive_metadata.get("step_map_coder_groups") or ()
         ),
         decoder_payload_codec=active_decoder_payload_codec,
-        lf_payload_codec=lf_payload_codec,
+        lf_payload_codec=active_lf_payload_codec,
         model_size=model_size.as_jsonable(),
         bridge_drift=bridge,
         scorer_custody=scorer_custody,
@@ -501,6 +508,7 @@ def _run_scorer_loop_qat_attachment(
     search_mode: str,
     qat_bits: int,
     decoder_payload_codec: str,
+    lf_payload_codec: str,
     component_guard_mode: str,
     device: str,
     allow_overwrite: bool,
@@ -520,6 +528,8 @@ def _run_scorer_loop_qat_attachment(
             "requested": False,
             "executed": False,
             "component_guard_mode": str(component_guard_mode),
+            "decoder_payload_codec": str(decoder_payload_codec),
+            "lf_payload_codec": str(lf_payload_codec),
             "receiver_contract_satisfied": False,
             "accepted_improvement": False,
             "full_video_coverage": False,
@@ -551,6 +561,7 @@ def _run_scorer_loop_qat_attachment(
             snerv_hfr_gain=float(model_size.hfr_gain),
             snerv_temporal_context=int(model_size.temporal_context),
             decoder_payload_codec=str(decoder_payload_codec),
+            lf_payload_codec=str(lf_payload_codec),
             qat_bits=int(qat_bits),
             max_trials=int(max_trials),
             search_mode=str(search_mode),
@@ -615,6 +626,9 @@ def _run_scorer_loop_qat_attachment(
             "decoder_payload_codec": str(
                 result_payload.get("decoder_payload_codec") or decoder_payload_codec
             ),
+            "lf_payload_codec": str(
+                result_payload.get("lf_payload_codec") or lf_payload_codec
+            ),
             "component_guard_mode": str(
                 result_payload.get("component_guard_mode") or component_guard_mode
             ),
@@ -642,6 +656,8 @@ def _run_scorer_loop_qat_attachment(
             "failure": repr(exc),
             "receiver_contract_satisfied": False,
             "accepted_improvement": False,
+            "decoder_payload_codec": str(decoder_payload_codec),
+            "lf_payload_codec": str(lf_payload_codec),
             "component_guard_mode": str(component_guard_mode),
             "full_video_coverage": False,
             "emitted_packet_uses_scorer_loop_best_decoder": False,
@@ -745,7 +761,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     target_bits_per_coeff: float,
     decoder_payload_codec: str,
     step_map_bits_per_coeff: float = 4.0,
-    lf_payload_codec: str = "auto",
+    lf_payload_codec: str = "portfolio_auto",
     model_size: SnervModelSizeConfig | None = None,
     metadata_extra: Mapping[str, Any] | None = None,
 ) -> SnervArchivePacket:

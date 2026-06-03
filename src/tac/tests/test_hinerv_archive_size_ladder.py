@@ -208,6 +208,37 @@ def test_build_hinerv_archive_size_ladder_cli_records_invocation(
 ) -> None:
     output_json = tmp_path / "ladder.json"
     output_md = tmp_path / "ladder.md"
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    budget_json = tmp_path / "budget.json"
+    budget_json.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_modelsize_budget.v1",
+                "selected_candidates": [
+                    {
+                        "schema": "hinerv_modelsize_candidate.v1",
+                        "family": "hi_nerv",
+                        "candidate_id": candidate_id,
+                        "num_pairs": 1,
+                        "latent_dim": 4,
+                        "embed_dim": 4,
+                        "decoder_channel": 4,
+                        "decoder_codec": "int2_mixed",
+                        "hard_byte_ceiling": 36_000,
+                        "modelsize_mparams": 0.02,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
 
     rc = ladder_cli.main(
         [
@@ -222,7 +253,9 @@ def test_build_hinerv_archive_size_ladder_cli_records_invocation(
             "--num-pairs",
             "1",
             "--row-id",
-            "hi_nerv_local_tiny",
+            candidate_id,
+            "--hinerv-modelsize-budget-json",
+            str(budget_json),
             "--allow-local-output-dir",
             "--storage-reserve-free-gb",
             "0",
@@ -240,7 +273,17 @@ def test_build_hinerv_archive_size_ladder_cli_records_invocation(
         "tools/build_hinerv_archive_size_ladder.py"
     )
     assert "--row-id" in payload["tool_invocation"]["argv"]
+    provenance = payload["tool_invocation"]["input_files"][
+        "hinerv_modelsize_budget_json"
+    ]
+    assert provenance["path"] == budget_json.as_posix()
+    assert provenance["exists"] is True
+    assert provenance["bytes"] == budget_json.stat().st_size
+    assert len(provenance["sha256"]) == 64
+    assert provenance["score_claim"] is False
+    assert provenance["ready_for_exact_eval_dispatch"] is False
     assert payload["tool_invocation"]["score_claim"] is False
+    assert payload["markdown_report_path"] == output_md.as_posix()
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert "Decoder codec policy" in output_md.read_text(encoding="utf-8")
@@ -267,6 +310,7 @@ def test_hinerv_archive_size_ladder_consumes_modelsize_budget_candidate(
                     "embed_dim": 4,
                     "decoder_channel": 4,
                     "decoder_codec": "int2_mixed",
+                    "hard_byte_ceiling": 36_000,
                     "modelsize_mparams": 0.02,
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -305,7 +349,7 @@ def test_hinerv_archive_size_ladder_consumes_modelsize_budget_candidate(
 def test_hinerv_archive_size_ladder_rejects_mismatched_budget_config(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000_badchannels"
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
     with pytest.raises(ValueError, match="modelsize candidate config mismatch"):
         build_hinerv_archive_size_ladder(
             output_dir=tmp_path / "archive_ladder",
@@ -325,7 +369,124 @@ def test_hinerv_archive_size_ladder_rejects_mismatched_budget_config(
                         "decoder_channel": 4,
                         "decoder_channels": [5, 5, 5, 5, 5, 5, 5],
                         "decoder_codec": "int2_mixed",
+                        "hard_byte_ceiling": 36_000,
                         "modelsize_mparams": 0.02,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            decoder_codec="int8_mixed",
+            allow_local_output_dir=True,
+            storage_reserve_free_gb=0.0,
+        )
+
+
+def test_hinerv_archive_size_ladder_rejects_true_nested_authority_flags(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    with pytest.raises(ValueError, match="forbidden true authority flags"):
+        build_hinerv_archive_size_ladder(
+            output_dir=tmp_path / "archive_ladder",
+            repo_root=REPO_ROOT,
+            num_pairs=1,
+            row_ids=(candidate_id,),
+            hinerv_modelsize_budget={
+                "schema": "nerv_modelsize_budget.v1",
+                "selected_candidates": [
+                    {
+                        "schema": "hinerv_modelsize_candidate.v1",
+                        "family": "hi_nerv",
+                        "candidate_id": candidate_id,
+                        "num_pairs": 1,
+                        "latent_dim": 4,
+                        "embed_dim": 4,
+                        "decoder_channel": 4,
+                        "decoder_codec": "int2_mixed",
+                        "hard_byte_ceiling": 36_000,
+                        "modelsize_mparams": 0.02,
+                        "score_claim": True,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            decoder_codec="int8_mixed",
+            allow_local_output_dir=True,
+            storage_reserve_free_gb=0.0,
+        )
+
+
+def test_hinerv_archive_size_ladder_rejects_candidate_id_control_mismatch(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "hinerv_np1_ld4_ed4_dc5_int2_mixed_ceil36000"
+    with pytest.raises(ValueError, match="candidate_id source controls mismatch"):
+        build_hinerv_archive_size_ladder(
+            output_dir=tmp_path / "archive_ladder",
+            repo_root=REPO_ROOT,
+            num_pairs=1,
+            row_ids=(candidate_id,),
+            hinerv_modelsize_budget={
+                "schema": "nerv_modelsize_budget.v1",
+                "selected_candidates": [
+                    {
+                        "schema": "hinerv_modelsize_candidate.v1",
+                        "family": "hi_nerv",
+                        "candidate_id": candidate_id,
+                        "num_pairs": 1,
+                        "latent_dim": 4,
+                        "embed_dim": 4,
+                        "decoder_channel": 4,
+                        "decoder_codec": "int2_mixed",
+                        "hard_byte_ceiling": 36_000,
+                        "modelsize_mparams": 0.02,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            decoder_codec="int8_mixed",
+            allow_local_output_dir=True,
+            storage_reserve_free_gb=0.0,
+        )
+
+
+def test_hinerv_archive_size_ladder_rejects_mismatched_budget_candidate_id(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "hinerv_np1_ld4_ed32_dc4_int2_mixed_ceil36000"
+    with pytest.raises(ValueError, match="candidate_id source controls mismatch"):
+        build_hinerv_archive_size_ladder(
+            output_dir=tmp_path / "archive_ladder",
+            repo_root=REPO_ROOT,
+            num_pairs=1,
+            row_ids=(candidate_id,),
+            hinerv_modelsize_budget={
+                "schema": "nerv_modelsize_budget.v1",
+                "selected_candidates": [
+                    {
+                        "schema": "hinerv_modelsize_candidate.v1",
+                        "family": "hi_nerv",
+                        "candidate_id": candidate_id,
+                        "num_pairs": 1,
+                        "latent_dim": 4,
+                        "embed_dim": 4,
+                        "decoder_channel": 4,
+                        "decoder_codec": "int2_mixed",
+                        "hard_byte_ceiling": 36_000,
                         "score_claim": False,
                         "promotion_eligible": False,
                         "ready_for_exact_eval_dispatch": False,

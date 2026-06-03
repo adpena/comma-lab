@@ -158,6 +158,8 @@ class SnervDecoderEval:
     blockers: tuple[str, ...]
     quantized_decoder: QuantizedDecoderStats
     per_pair: tuple[SnervPairEval, ...]
+    lf_payload_codec: str = "unknown"
+    lf_payload_bytes: int = 0
     section_value_pressure_linf: float = 0.0
     section_value_pressure_ready: bool = True
     section_value_neutralizations: tuple[SnervSectionNeutralizationEval, ...] = ()
@@ -188,6 +190,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     snerv_temporal_context: int
     decoder_feature_count: int
     decoder_payload_codec: str
+    lf_payload_codec: str
     qat_bits: int
     max_trials: int
     search_mode: str
@@ -281,6 +284,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     snerv_hfr_gain: float = 0.0,
     snerv_temporal_context: int = 0,
     decoder_payload_codec: str = "float32_lzma",
+    lf_payload_codec: str = "portfolio_auto",
     qat_bits: int = 8,
     max_trials: int = 2,
     search_mode: str = "random_signed",
@@ -394,6 +398,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         segnet=segnet,
         qat_bits=qat_bits,
         decoder_payload_codec=decoder_payload_codec,
+        lf_payload_codec=lf_payload_codec,
         label="least_squares_qat_baseline",
         iteration=0,
         accepted=True,
@@ -427,6 +432,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 segnet=segnet,
                 qat_bits=qat_bits,
                 decoder_payload_codec=decoder_payload_codec,
+                lf_payload_codec=lf_payload_codec,
                 label=f"{direction_label}_plus_probe",
                 iteration=trial,
                 accepted=False,
@@ -440,6 +446,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 segnet=segnet,
                 qat_bits=qat_bits,
                 decoder_payload_codec=decoder_payload_codec,
+                lf_payload_codec=lf_payload_codec,
                 label=f"{direction_label}_minus_probe",
                 iteration=trial,
                 accepted=False,
@@ -524,6 +531,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 segnet=segnet,
                 qat_bits=qat_bits,
                 decoder_payload_codec=decoder_payload_codec,
+                lf_payload_codec=lf_payload_codec,
                 label="nes_pair_robust_update",
                 iteration=max_trials + 1,
                 accepted=False,
@@ -589,6 +597,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     segnet=segnet,
                     qat_bits=qat_bits,
                     decoder_payload_codec=decoder_payload_codec,
+                    lf_payload_codec=lf_payload_codec,
                     label=f"{direction_label}_{'plus' if sign > 0 else 'minus'}",
                     iteration=trial,
                     accepted=False,
@@ -650,6 +659,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         prepared,
         best_quantized_decoder,
         decoder_payload_codec=decoder_payload_codec,
+        lf_payload_codec=lf_payload_codec,
     ).packet
     blockers = []
     if not accepted_improvement:
@@ -689,6 +699,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         snerv_temporal_context=int(model_size.temporal_context),
         decoder_feature_count=int(model_size.feature_count),
         decoder_payload_codec=str(decoder_payload_codec),
+        lf_payload_codec=str(lf_payload_codec),
         qat_bits=int(qat_bits),
         max_trials=int(max_trials),
         search_mode=search_mode,
@@ -1341,12 +1352,14 @@ def _evaluate_decoder(
     accepted: bool,
     byte_pressure_multiplier: float,
     section_value_pressure_multiplier: float,
+    lf_payload_codec: str = "portfolio_auto",
 ) -> SnervDecoderEval:
     quantized, qstats = quantize_decoder_for_qat(decoder, bits=qat_bits)
     archive = _pack_receiver_archive(
         prepared,
         quantized,
         decoder_payload_codec=decoder_payload_codec,
+        lf_payload_codec=lf_payload_codec,
     )
     try:
         receiver_np = decode_snerv_archive_frames(archive.packet)
@@ -1406,6 +1419,8 @@ def _evaluate_decoder(
         iteration=int(iteration),
         archive_bytes=archive.total_bytes,
         archive_sha256=_sha256(archive.packet),
+        lf_payload_codec=str(lf_payload_codec),
+        lf_payload_bytes=int(archive.section_bytes.get("lf_payload", 0)),
         d_seg_linf=d_seg,
         d_pose_linf=d_pose,
         score_linf=score,
@@ -1528,12 +1543,16 @@ def _pack_receiver_archive(
     decoder: HfGenerationDecoder,
     *,
     decoder_payload_codec: str = "float32_lzma",
+    lf_payload_codec: str = "portfolio_auto",
 ) -> SnervArchivePacket:
     return pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(
             lf_zero_points=list(prepared.lf_zero_points),
         ),
-        lf_payload=encode_lf_quant_payload(list(prepared.lf_quant_planes)),
+        lf_payload=encode_lf_quant_payload(
+            list(prepared.lf_quant_planes),
+            codec=lf_payload_codec,
+        ),
         decoder_payload=encode_decoder_payload(
             decoder,
             codec=decoder_payload_codec,
@@ -1550,6 +1569,7 @@ def _pack_receiver_archive(
             "lf_plane_count": len(prepared.lf_quant_planes),
             "hf_decoder_fit_mode": "scorer_loop_decoder_qat_smoke",
             "decoder_payload_codec": str(decoder_payload_codec),
+            "lf_payload_codec": str(lf_payload_codec),
             "snerv_model_size_adapter": prepared.model_size.adapter,
             "snerv_spectra_preserving_adapter_enabled": (
                 prepared.model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
@@ -1615,6 +1635,8 @@ def _replace_eval_acceptance(
         iteration=row.iteration,
         archive_bytes=row.archive_bytes,
         archive_sha256=row.archive_sha256,
+        lf_payload_codec=row.lf_payload_codec,
+        lf_payload_bytes=row.lf_payload_bytes,
         d_seg_linf=row.d_seg_linf,
         d_pose_linf=row.d_pose_linf,
         score_linf=row.score_linf,
@@ -1643,6 +1665,8 @@ def _eval_as_gate_row(row: SnervDecoderEval) -> dict[str, Any]:
         "hf_decoder_fit_mode": fit_mode,
         "archive_bytes_total": row.archive_bytes,
         "receiver_archive_sha256": row.archive_sha256,
+        "lf_payload_codec": row.lf_payload_codec,
+        "lf_payload_bytes": row.lf_payload_bytes,
         "receiver_archive_replay_verified": row.receiver_archive_replay_verified,
         "d_seg_mean_linf": row.d_seg_linf,
         "d_pose_mean_linf": row.d_pose_linf,

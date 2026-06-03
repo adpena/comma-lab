@@ -22,6 +22,24 @@ FALSE_AUTHORITY = {
     "production_hardened_claim": False,
     "ready_for_exact_eval_dispatch": False,
 }
+_AUTHORITY_TRUE_KEYS = (
+    "score_claim",
+    "score_claim_valid",
+    "frontier_score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "production_hardened_claim",
+    "ready_for_exact_eval_dispatch",
+)
+_ADVISORY_AXIS_TOKENS = (
+    "advisory",
+    "projected",
+    "predicted",
+    "proxy",
+    "research-signal",
+    "macos",
+    "mps",
+)
 
 
 class NervReceiverClosedLadderRowHarvestError(ValueError):
@@ -323,7 +341,6 @@ def _harvest_row(
             "receiver_contract_satisfied",
             "runtime_consumption_proof_ready",
             "receiver_matches_direct",
-            "receiver_proof_report_paths",
             ("score_aware_training", "receiver_archive_replay_verified"),
             ("score_aware_training", "receiver_contract_satisfied"),
             ("score_aware_training", "mlx_native_receiver_proof_passed"),
@@ -337,7 +354,14 @@ def _harvest_row(
     family = _string_or_none(
         candidate.get("family") or candidate.get("carrier_id") or source_family
     )
-    full600_receiver_proof = bool(local_receiver_replay and sample_scope == "full600_or_better")
+    axis_blocked = _axis_is_advisory_or_projected(source_axis_tag)
+    authority_blockers = _authority_claim_blockers(candidate, source_payload)
+    full600_receiver_proof = bool(
+        local_receiver_replay
+        and sample_scope == "full600_or_better"
+        and not axis_blocked
+        and not authority_blockers
+    )
 
     blockers: list[str] = []
     if family is not None and _carrier_key(family) != _carrier_key(carrier_id):
@@ -363,6 +387,11 @@ def _harvest_row(
         blockers.append("receiver_replay_or_contract_missing")
     if sample_scope != "full600_or_better":
         blockers.append("local_smoke_only_not_full600_receiver_proof")
+    if axis_blocked:
+        blockers.append(
+            "source_axis_advisory_or_projected_not_receiver_closed_ladder_authority"
+        )
+    blockers.extend(authority_blockers)
 
     return {
         "row_id": row_id,
@@ -392,6 +421,7 @@ def _harvest_row(
         "d_pose": d_pose,
         "nonrate_score": nonrate_score,
         "accepted": accepted,
+        "source_axis_is_advisory_or_projected": axis_blocked,
         "local_receiver_archive_replay_verified": bool(local_receiver_replay),
         "full600_receiver_proof": full600_receiver_proof,
         "receiver_proof_passed": full600_receiver_proof,
@@ -579,13 +609,27 @@ def _lookup(row: Mapping[str, Any], key: Any) -> Any:
 def _truthy(value: Any) -> bool:
     if value is True:
         return True
-    if isinstance(value, list | tuple | set | dict):
-        return bool(value)
     if isinstance(value, int | float) and not isinstance(value, bool):
         return value != 0
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "y", "on"}
     return False
+
+
+def _axis_is_advisory_or_projected(axis_tag: str | None) -> bool:
+    if axis_tag is None:
+        return False
+    text = axis_tag.strip().lower()
+    return any(token in text for token in _ADVISORY_AXIS_TOKENS)
+
+
+def _authority_claim_blockers(*rows: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for row in rows:
+        for key in _AUTHORITY_TRUE_KEYS:
+            if _truthy(row.get(key)):
+                blockers.append(f"source_authority_flag_true:{key}")
+    return _ordered_unique(blockers)
 
 
 def _carrier_key(value: Any) -> str | None:

@@ -187,6 +187,121 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def _snerv_native_runner_report(
+    tmp_path: Path,
+    *,
+    required_pair_proof: bool,
+    native_num_pairs: int = 600,
+) -> dict[str, object]:
+    packet = tmp_path / "packet.snar"
+    packet.write_bytes(b"snerv-native-packet")
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"snerv-native-archive")
+    return {
+        "mode": "executed_snerv_native_mlx_and_exported",
+        "execute_family": "snerv",
+        "modelsize_candidate_selection": {
+            "candidate": {
+                "candidate_id": "snerv-native-full600",
+                "num_pairs": 600,
+            }
+        },
+        "candidate_curriculum_plan": {
+            "candidate_id": "snerv-native-full600",
+            "candidate_conditioned": True,
+            "byte_oracle_logging": {
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 32,
+                "feedback_scope": "partial_pair_advisory",
+                "scope_matches_candidate": False,
+                "feedback_ready": False,
+                "hard_byte_ceiling": 178_000,
+                "nominal_total_payload_bytes": 150_000,
+                "measured_payload_bytes": None,
+                "measured_archive_bytes": None,
+                "measured_minus_nominal_bytes": None,
+            },
+        },
+        "snerv_mlx_native_export": {
+            "executed": True,
+            "candidate_id": "snerv-native-full600",
+            "num_pairs": native_num_pairs,
+            "packet_path": packet.as_posix(),
+            "packet_bytes": packet.stat().st_size,
+            "packet_sha256": "p" * 64,
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": "a" * 64,
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "blockers": [],
+        },
+        "snerv_mlx_native_file_backed_export_evidence": {
+            "file_backed_export_proof_passed": True,
+            "required_pair_file_backed_export_proof_passed": required_pair_proof,
+            "num_pairs": native_num_pairs,
+            "blockers": [] if required_pair_proof else ["partial_pair_file_backed_export"],
+        },
+        "blockers": [],
+    }
+
+
+def test_snerv_native_file_backed_full600_bytes_become_feedback(
+    tmp_path: Path,
+) -> None:
+    row = build_nerv_candidate_feedback_row(
+        runner_report=_snerv_native_runner_report(
+            tmp_path,
+            required_pair_proof=True,
+            native_num_pairs=600,
+        )
+    )
+
+    assert row["schema"] == "nerv_candidate_feedback_row.v1"
+    assert row["family"] == "snerv"
+    assert row["candidate_id"] == "snerv-native-full600"
+    assert row["byte_feedback_source"] == "snerv_mlx_native_file_backed_export"
+    assert row["feedback_scope"] == "full600_native_file_backed_snar1_export"
+    assert row["candidate_num_pairs"] == 600
+    assert row["measured_num_pairs"] == 600
+    assert row["scope_matches_candidate"] is True
+    assert row["feedback_ready"] is True
+    assert row["measured_payload_bytes"] == len(b"snerv-native-packet")
+    assert row["measured_archive_bytes"] == len(b"snerv-native-archive")
+    assert row["measured_minus_nominal_bytes"] == (
+        len(b"snerv-native-packet") - 150_000
+    )
+    native_feedback = row["snerv_mlx_native_file_backed_byte_feedback"]
+    assert native_feedback["packet_sha256"] == "p" * 64
+    assert native_feedback["archive_sha256"] == "a" * 64
+    assert native_feedback["score_claim"] is False
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_native_partial_file_backed_bytes_do_not_unblock_feedback(
+    tmp_path: Path,
+) -> None:
+    row = build_nerv_candidate_feedback_row(
+        runner_report=_snerv_native_runner_report(
+            tmp_path,
+            required_pair_proof=False,
+            native_num_pairs=32,
+        )
+    )
+
+    assert row["byte_feedback_source"] is None
+    assert row["feedback_scope"] == "partial_pair_advisory"
+    assert row["measured_num_pairs"] == 32
+    assert row["feedback_ready"] is False
+    assert row["measured_payload_bytes"] is None
+    assert row["measured_archive_bytes"] is None
+    assert row["snerv_mlx_native_file_backed_byte_feedback"] is None
+    assert row["snerv_mlx_native_required_pair_file_backed_export_proof_passed"] is False
+    assert row["score_claim"] is False
+
+
 def test_write_nerv_candidate_feedback_files_writes_json_and_append_ledger(
     tmp_path: Path,
 ) -> None:

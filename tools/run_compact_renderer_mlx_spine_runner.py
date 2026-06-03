@@ -22,7 +22,7 @@ import signal
 import subprocess
 import sys
 import zipfile
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -121,6 +121,9 @@ from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
 COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA = "compact_renderer_mlx_spine_runner.v1"
 ACTIVE_CAMPAIGN_LOCK_SCHEMA = "compact_renderer_active_campaign_lock.v1"
 ACTIVE_FAMILY_PROCESS_REFUSAL_SCHEMA = "compact_renderer_active_family_process_refusal.v1"
+RAW_NERV_MODELSIZE_BUDGET_SCHEMAS = frozenset(
+    {"nerv_modelsize_budget.v1", "snerv_modelsize_budget.v1"}
+)
 DEFAULT_SSD_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact"),
@@ -175,6 +178,7 @@ DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT = 2.0e-4
 DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT = 1.0e-4
 DEFAULT_PACT_CODER_QAT_C1A_SIGMA = 0.2
 DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE = 512
+NERV_DECODER_WEIGHT_WATERFILL_SCHEMA = "nerv_decoder_weight_waterfill.v1"
 COMPACT_FAMILY_STARTUP_MARKER_FILENAME = (
     "compact_renderer_mlx_spine_runner_startup.json"
 )
@@ -2002,7 +2006,8 @@ _SNERV_MODEL_SIZE_ID_RE = re.compile(
     r"mfu(?P<mfu_scales>\d+(?:-\d+)*)_"
     r"hfr(?P<hfr_gain>\d+(?:p\d+)?)_"
     r"t(?P<temporal_context>\d+)_"
-    r"ad(?P<adapter_token>[A-Za-z0-9]+)_"
+    r"ad(?P<adapter_token>[A-Za-z0-9]+)"
+    r"(?:_oms(?P<official_modelsize>\d+(?:p\d+)?))?_"
     r"(?P<decoder_payload_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
 )
 _SNERV_PARTIAL_MODEL_SIZE_ID_RE = re.compile(
@@ -2127,6 +2132,11 @@ def _modelsize_candidate_from_self_describing_id(
                 if "adapter_token" in groups
                 else "snerv_fc_dim_emb_size_adapter_v1"
             ),
+            official_modelsize_mparams=(
+                _float_token(groups["official_modelsize"])
+                if groups.get("official_modelsize") is not None
+                else None
+            ),
         ).as_dict()
         if partial_match is not None or legacy_match is not None:
             row["candidate_id"] = token
@@ -2216,6 +2226,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     step_map_bins: int,
     qat_bits: int,
     decoder_payload_codec: str,
+    lf_payload_codec: str,
     snerv_spectra_preserving_adapter: bool,
     snerv_model_size_adapter: str,
     snerv_fc_dim: int,
@@ -2255,6 +2266,8 @@ def _run_snerv_scorer_loop_qat_attachment(
             "executed": False,
             "requested": False,
             "component_guard_mode": str(component_guard_mode),
+            "decoder_payload_codec": str(decoder_payload_codec),
+            "lf_payload_codec": str(lf_payload_codec),
             "blockers": ["snerv_scorer_loop_qat_not_requested"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -2289,6 +2302,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             snerv_hfr_gain=float(snerv_hfr_gain),
             snerv_temporal_context=int(snerv_temporal_context),
             decoder_payload_codec=str(decoder_payload_codec),
+            lf_payload_codec=str(lf_payload_codec),
             qat_bits=int(qat_bits),
             max_trials=int(max_trials),
             search_mode=str(search_mode),
@@ -2336,6 +2350,9 @@ def _run_snerv_scorer_loop_qat_attachment(
             "snerv_hfr_gain": float(snerv_hfr_gain),
             "snerv_temporal_context": int(snerv_temporal_context),
             "qat_bits": int(qat_bits),
+            "lf_payload_codec": str(
+                result_payload.get("lf_payload_codec") or lf_payload_codec
+            ),
             "max_trials": int(max_trials),
             "search_mode": str(search_mode),
             "component_guard_mode": str(
@@ -2377,6 +2394,8 @@ def _run_snerv_scorer_loop_qat_attachment(
             "requested": True,
             "failure": repr(exc),
             "component_guard_mode": str(component_guard_mode),
+            "decoder_payload_codec": str(decoder_payload_codec),
+            "lf_payload_codec": str(lf_payload_codec),
             "progress_jsonl_path": progress_path.as_posix(),
             "blockers": ["snerv_scorer_loop_qat_failed"],
             "score_claim": False,
@@ -2409,6 +2428,7 @@ def _run_snerv_native_mlx_export_attachment(
     scorer_loop_qat_search_mode: str,
     scorer_loop_qat_qat_bits: int,
     scorer_loop_qat_decoder_payload_codec: str,
+    scorer_loop_qat_lf_payload_codec: str,
     scorer_loop_qat_component_guard_mode: str,
     scorer_loop_qat_device: str,
 ) -> dict[str, Any]:
@@ -2459,6 +2479,7 @@ def _run_snerv_native_mlx_export_attachment(
             scorer_loop_qat_decoder_payload_codec=str(
                 scorer_loop_qat_decoder_payload_codec
             ),
+            scorer_loop_qat_lf_payload_codec=str(scorer_loop_qat_lf_payload_codec),
             scorer_loop_qat_component_guard_mode=str(
                 scorer_loop_qat_component_guard_mode
             ),
@@ -2783,6 +2804,62 @@ def _resolve_mlx_score_aware_optimizer_controls(
     }
 
 
+def _resolve_pact_compact_optimizer_policy(
+    *,
+    family: str,
+    optimizer_controls: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Declare native-optimizer routing for Pact compact runner families."""
+
+    controls = dict(optimizer_controls or {})
+    optimizer = str(controls.get("optimizer_kind") or "pact_muon_adamw").strip().lower()
+    return {
+        "schema": "compact_pact_native_optimizer_policy.v1",
+        "family": str(family),
+        "requested_policy": "native_optimizer",
+        "resolved_policy": "native_optimizer",
+        "optimizer_kind": optimizer,
+        "pr95_faithful_curriculum_enabled": False,
+        "native_optimizer_active": True,
+        "optimizer_kind_consumed_by_native_mlx": True,
+        "optimizer_kind_consumed_by_pr95_curriculum": False,
+        "effective_optimizer_label": optimizer,
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _build_pact_coder_qat_config_and_metadata(
+    *,
+    coder_aware_qat: bool,
+    coder_qat_quant_bits: int,
+    coder_qat_quant_residual_weight: float,
+    coder_qat_magnitude_weight: float,
+    coder_qat_delta_weight: float,
+    coder_qat_c1a_entropy_weight: float,
+    coder_qat_c1a_sigma: float,
+    coder_qat_c1a_sample_size: int,
+) -> tuple[Any, dict[str, Any]]:
+    from tac.substrates._shared.mlx_score_aware import (
+        CoderAwareQATConfig,
+        coder_qat_metadata,
+    )
+
+    cfg = CoderAwareQATConfig(
+        enabled=bool(coder_aware_qat),
+        quant_bits=int(coder_qat_quant_bits),
+        quant_residual_weight=float(coder_qat_quant_residual_weight),
+        magnitude_weight=float(coder_qat_magnitude_weight),
+        delta_weight=float(coder_qat_delta_weight),
+        c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+        c1a_sigma=float(coder_qat_c1a_sigma),
+        c1a_sample_size=int(coder_qat_c1a_sample_size),
+    ).validated()
+    return cfg, coder_qat_metadata(cfg)
+
+
 def execute_snerv_inverse_steg_advisory_and_adapt(
     *,
     output_dir: str | Path,
@@ -2817,6 +2894,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
     snerv_scorer_loop_step_map_bins: int = 16,
     snerv_scorer_loop_qat_bits: int = 8,
+    snerv_scorer_loop_lf_payload_codec: str = "portfolio_auto",
     snerv_scorer_loop_perturb_scale: float = 0.02,
     snerv_scorer_loop_byte_pressure_multiplier: float = 1.0,
     snerv_scorer_loop_section_value_pressure_multiplier: float = 1.0,
@@ -3174,6 +3252,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         step_map_bins=int(snerv_scorer_loop_step_map_bins),
         qat_bits=int(snerv_scorer_loop_qat_bits),
         decoder_payload_codec=decoder_payload_codec,
+        lf_payload_codec=str(snerv_scorer_loop_lf_payload_codec),
         snerv_spectra_preserving_adapter=bool(snerv_spectra_preserving_adapter),
         snerv_model_size_adapter=snerv_model_size_adapter,
         snerv_fc_dim=snerv_fc_dim,
@@ -3223,6 +3302,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
         scorer_loop_qat_qat_bits=int(snerv_scorer_loop_qat_bits),
         scorer_loop_qat_decoder_payload_codec=decoder_payload_codec,
+        scorer_loop_qat_lf_payload_codec=str(snerv_scorer_loop_lf_payload_codec),
         scorer_loop_qat_component_guard_mode=str(
             snerv_scorer_loop_component_guard_mode
         ),
@@ -4630,6 +4710,16 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
     coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
     coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
+    optimizer_kind: str = "pact_muon_adamw",
+    optimizer_grad_clip_max_norm: float | None = (
+        DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
+    ),
+    optimizer_weight_decay: float | None = None,
+    optimizer_warmup_epochs: int = 0,
+    optimizer_warmup_steps_per_epoch: int = 1,
+    optimizer_cosine_decay_enabled: bool = False,
+    optimizer_cosine_decay_total_epochs: int | None = None,
+    optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -4642,6 +4732,31 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
 
     root = Path(repo_root).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
+    optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
+        optimizer_kind=optimizer_kind,
+        requested_weight_decay=optimizer_weight_decay,
+        grad_clip_max_norm=optimizer_grad_clip_max_norm,
+        warmup_epochs=optimizer_warmup_epochs,
+        warmup_steps_per_epoch=optimizer_warmup_steps_per_epoch,
+        cosine_decay_enabled=optimizer_cosine_decay_enabled,
+        cosine_decay_total_epochs=optimizer_cosine_decay_total_epochs,
+        cosine_decay_min_lr_ratio=optimizer_cosine_decay_min_lr_ratio,
+        run_epochs=epochs,
+    )
+    optimizer_policy = _resolve_pact_compact_optimizer_policy(
+        family="pact_nerv_vq",
+        optimizer_controls=optimizer_controls,
+    )
+    _, coder_qat_metadata_row = _build_pact_coder_qat_config_and_metadata(
+        coder_aware_qat=coder_aware_qat,
+        coder_qat_quant_bits=coder_qat_quant_bits,
+        coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
+        coder_qat_magnitude_weight=coder_qat_magnitude_weight,
+        coder_qat_delta_weight=coder_qat_delta_weight,
+        coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+        coder_qat_c1a_sigma=coder_qat_c1a_sigma,
+        coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
+    )
     out = Path(output_dir).expanduser().resolve(strict=False)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
@@ -4681,6 +4796,9 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
             coder_qat_c1a_sigma=coder_qat_c1a_sigma,
             coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
+            optimizer_kind=optimizer_kind,
+            optimizer_policy=optimizer_policy,
+            optimizer_controls=optimizer_controls,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -4801,21 +4919,25 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
-                "coder_aware_qat": {
-                    "enabled": bool(coder_aware_qat),
-                    "quant_bits": int(coder_qat_quant_bits),
-                    "quant_residual_weight": float(coder_qat_quant_residual_weight),
-                    "magnitude_weight": float(coder_qat_magnitude_weight),
-                    "delta_weight": float(coder_qat_delta_weight),
-                    "c1a_entropy_weight": float(coder_qat_c1a_entropy_weight),
-                    "c1a_sigma": float(coder_qat_c1a_sigma),
-                    "c1a_sample_size": int(coder_qat_c1a_sample_size),
-                    "c1a_source": (
-                        "PR95 cat_entropy_v2 soft categorical entropy adapted "
-                        "to selected decoder weights"
-                    ),
-                    "authority": "false_macos_mlx_research_signal",
-                },
+                "optimizer_policy": strip_candidate_curriculum_authority_fields(
+                    optimizer_policy
+                ),
+                "pr95_faithful_curriculum_enabled": bool(
+                    optimizer_policy.get("pr95_faithful_curriculum_enabled")
+                ),
+                "native_optimizer_active": bool(
+                    optimizer_policy.get("native_optimizer_active")
+                ),
+                "optimizer_kind": str(
+                    optimizer_policy.get("optimizer_kind") or optimizer_kind
+                ),
+                "optimizer_controls": strip_candidate_curriculum_authority_fields(
+                    optimizer_controls
+                ),
+                "effective_weight_decay": optimizer_controls.get(
+                    "weight_decay_effective"
+                ),
+                "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
@@ -4961,6 +5083,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     decoder_weight_waterfill_plan_metadata: dict[str, Any] = {
         "schema": "compact_hi_nerv_decoder_weight_waterfill_plan_attachment.v1",
         "attached": False,
+        "active": False,
+        "validated": False,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -4970,31 +5094,40 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         if not plan_path.is_absolute():
             plan_path = root / plan_path
         plan_path = plan_path.resolve(strict=False)
-        if not plan_path.is_file():
-            raise CompactRendererMlxSpineRunnerError(
-                f"decoder waterfill plan does not exist: {plan_path}"
-            )
-        decoder_weight_waterfill_plan = _load_json(plan_path)
-        if decoder_weight_waterfill_plan.get("schema") != (
-            "nerv_decoder_weight_waterfill.v1"
-        ):
-            raise CompactRendererMlxSpineRunnerError(
-                "decoder waterfill plan schema must be "
-                "nerv_decoder_weight_waterfill.v1"
-            )
         decoder_weight_waterfill_plan_metadata.update(
             {
-                "attached": True,
                 "path": plan_path.as_posix(),
-                "sha256": _sha256_file(plan_path),
-                "source_schema": decoder_weight_waterfill_plan.get("schema"),
-                "family": decoder_weight_waterfill_plan.get("family"),
-                "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
-                "group_count": decoder_weight_waterfill_plan.get("group_count"),
-                "row_count": len(decoder_weight_waterfill_plan.get("rows") or []),
-                "blockers": list(decoder_weight_waterfill_plan.get("blockers") or []),
+                "blockers": [],
             }
         )
+        if not plan_path.is_file():
+            decoder_weight_waterfill_plan_metadata["blockers"] = [
+                "decoder_weight_waterfill_plan_json_missing"
+            ]
+        else:
+            decoder_weight_waterfill_plan = _load_json(plan_path)
+            decoder_weight_waterfill_plan_metadata.update(
+                {
+                    "sha256": _sha256_file(plan_path),
+                    "source_schema": decoder_weight_waterfill_plan.get("schema"),
+                    "family": decoder_weight_waterfill_plan.get("family"),
+                    "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+                    "group_count": decoder_weight_waterfill_plan.get("group_count"),
+                    "row_count": len(
+                        decoder_weight_waterfill_plan.get("rows") or []
+                    ),
+                    "source_blockers": list(
+                        decoder_weight_waterfill_plan.get("blockers") or []
+                    ),
+                }
+            )
+            if (
+                decoder_weight_waterfill_plan.get("schema")
+                != NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
+            ):
+                decoder_weight_waterfill_plan_metadata["blockers"] = [
+                    "decoder_weight_waterfill_plan_schema_mismatch"
+                ]
     modelsize_budget_rows, modelsize_budget_sources = (
         _load_compact_modelsize_budget_rows(
             (*modelsize_budget_json_paths, *receiver_closed_ladder_json_paths),
@@ -5033,6 +5166,129 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     effective_pose_distillation_weight = float(
         launch_pressure_binding["pose_distillation_weight"]
     )
+    launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
+    launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
+    launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
+    launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
+    launch_use_hierarchical_feature_grid = bool(
+        candidate.get("use_hierarchical_feature_grid", False)
+    )
+    launch_use_convnext_blocks = bool(candidate.get("use_convnext_blocks", False))
+    launch_local_grid_levels = int(candidate.get("local_grid_levels", 2))
+    launch_local_grid_channels = int(candidate.get("local_grid_channels", 4))
+    launch_convnext_mlp_ratio = int(candidate.get("convnext_mlp_ratio", 2))
+    launch_convnext_kernel_size = int(candidate.get("convnext_kernel_size", 7))
+    launch_mid_injection_block_index = int(
+        candidate.get(
+            "mid_injection_block_index",
+            HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
+        )
+    )
+    launch_fine_injection_block_index = int(
+        candidate.get(
+            "fine_injection_block_index",
+            HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
+        )
+    )
+    (
+        decoder_weight_waterfill_plan,
+        decoder_weight_waterfill_plan_metadata,
+    ) = _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
+        plan=decoder_weight_waterfill_plan,
+        metadata=decoder_weight_waterfill_plan_metadata,
+        candidate=candidate or None,
+        num_pairs=int(num_pairs),
+        latent_dim=launch_latent_dim,
+        embed_dim=launch_embed_dim,
+        decoder_channel=launch_decoder_channel,
+        use_hierarchical_feature_grid=launch_use_hierarchical_feature_grid,
+        use_convnext_blocks=launch_use_convnext_blocks,
+        local_grid_levels=launch_local_grid_levels,
+        local_grid_channels=launch_local_grid_channels,
+        convnext_mlp_ratio=launch_convnext_mlp_ratio,
+        convnext_kernel_size=launch_convnext_kernel_size,
+        mid_injection_block_index=launch_mid_injection_block_index,
+        fine_injection_block_index=launch_fine_injection_block_index,
+    )
+    waterfill_validation_blockers = list(
+        decoder_weight_waterfill_plan_metadata.get("blockers") or []
+    )
+    if decoder_weight_waterfill_plan_json is not None and waterfill_validation_blockers:
+        refusal = _base_report(
+            output_dir=out,
+            mode="hi_nerv_decoder_weight_waterfill_plan_launch_refused",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        refusal.update(
+            {
+                "execute_family": "hi_nerv",
+                "num_pairs": int(num_pairs),
+                "epochs_requested": int(epochs),
+                "training_executed": False,
+                "trainer_launch_allowed": False,
+                "launch_refusal_reason": (
+                    "HiNeRV decoder-weight waterfill plans must match the "
+                    "resolved modelsize candidate and launch decoder state "
+                    "before they can be attached to training."
+                ),
+                "modelsize_candidate_selection": {
+                    "schema": "compact_execute_modelsize_candidate_selection.v1",
+                    "family": "hi_nerv",
+                    "selection_mode": (
+                        "planner_candidate" if candidate else "manual_cli_knobs"
+                    ),
+                    "candidate": candidate or None,
+                    "num_pairs_for_budget": CONTEST_PAIR_COUNT,
+                    "launch_latent_dim": launch_latent_dim,
+                    "launch_embed_dim": launch_embed_dim,
+                    "launch_decoder_channel": launch_decoder_channel,
+                    "launch_decoder_codec": launch_decoder_codec,
+                    "launch_mid_injection_block_index": (
+                        launch_mid_injection_block_index
+                    ),
+                    "launch_fine_injection_block_index": (
+                        launch_fine_injection_block_index
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "status": "refused_before_mlx_training",
+                    "decoder_weight_waterfill_plan": (
+                        decoder_weight_waterfill_plan_metadata
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_optimizer_policy": optimizer_policy,
+                "hi_nerv_optimizer_controls": optimizer_controls,
+                "score_aware_carrier_training_plan": score_aware_training_plan,
+                "modelsize_budget_evidence": modelsize_budget_evidence,
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
+                "blockers": _dedupe(
+                    [
+                        *waterfill_validation_blockers,
+                        "hi_nerv_decoder_weight_waterfill_plan_not_attached",
+                        "hi_nerv_training_not_launched",
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                    ]
+                ),
+            }
+        )
+        refusal["candidate_feedback"] = write_nerv_candidate_feedback_files(
+            runner_report=refusal,
+            output_dir=out,
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, refusal)
+        return {**refusal, "report_path": path.as_posix()}
     config_gate = _validate_hi_nerv_frontier_training_config(
         segnet_distillation_weight=effective_segnet_distillation_weight,
         pose_distillation_weight=effective_pose_distillation_weight,
@@ -5060,6 +5316,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 ),
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "status": "refused_before_mlx_training",
+                    "decoder_weight_waterfill_plan": (
+                        decoder_weight_waterfill_plan_metadata
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
@@ -5082,30 +5348,6 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         path = out / "compact_renderer_mlx_spine_runner_report.json"
         _write_json(path, refusal)
         return {**refusal, "report_path": path.as_posix()}
-    launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
-    launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
-    launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
-    launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
-    launch_use_hierarchical_feature_grid = bool(
-        candidate.get("use_hierarchical_feature_grid", False)
-    )
-    launch_use_convnext_blocks = bool(candidate.get("use_convnext_blocks", False))
-    launch_local_grid_levels = int(candidate.get("local_grid_levels", 2))
-    launch_local_grid_channels = int(candidate.get("local_grid_channels", 4))
-    launch_convnext_mlp_ratio = int(candidate.get("convnext_mlp_ratio", 2))
-    launch_convnext_kernel_size = int(candidate.get("convnext_kernel_size", 7))
-    launch_mid_injection_block_index = int(
-        candidate.get(
-            "mid_injection_block_index",
-            HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
-        )
-    )
-    launch_fine_injection_block_index = int(
-        candidate.get(
-            "fine_injection_block_index",
-            HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
-        )
-    )
     effective_recon_pixel_weight_path = recon_pixel_weight_path
     recon_pixel_weight_auto_discovery: dict[str, Any] | None = None
     enabled_recon_weight_modes = sum(
@@ -5739,6 +5981,16 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
     coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
     coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
+    optimizer_kind: str = "pact_muon_adamw",
+    optimizer_grad_clip_max_norm: float | None = (
+        DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
+    ),
+    optimizer_weight_decay: float | None = None,
+    optimizer_warmup_epochs: int = 0,
+    optimizer_warmup_steps_per_epoch: int = 1,
+    optimizer_cosine_decay_enabled: bool = False,
+    optimizer_cosine_decay_total_epochs: int | None = None,
+    optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -5751,6 +6003,31 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
 
     root = Path(repo_root).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
+    optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
+        optimizer_kind=optimizer_kind,
+        requested_weight_decay=optimizer_weight_decay,
+        grad_clip_max_norm=optimizer_grad_clip_max_norm,
+        warmup_epochs=optimizer_warmup_epochs,
+        warmup_steps_per_epoch=optimizer_warmup_steps_per_epoch,
+        cosine_decay_enabled=optimizer_cosine_decay_enabled,
+        cosine_decay_total_epochs=optimizer_cosine_decay_total_epochs,
+        cosine_decay_min_lr_ratio=optimizer_cosine_decay_min_lr_ratio,
+        run_epochs=epochs,
+    )
+    optimizer_policy = _resolve_pact_compact_optimizer_policy(
+        family="pact_nerv_selector_v4",
+        optimizer_controls=optimizer_controls,
+    )
+    _, coder_qat_metadata_row = _build_pact_coder_qat_config_and_metadata(
+        coder_aware_qat=coder_aware_qat,
+        coder_qat_quant_bits=coder_qat_quant_bits,
+        coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
+        coder_qat_magnitude_weight=coder_qat_magnitude_weight,
+        coder_qat_delta_weight=coder_qat_delta_weight,
+        coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+        coder_qat_c1a_sigma=coder_qat_c1a_sigma,
+        coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
+    )
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise CompactRendererMlxSpineRunnerError(
@@ -5789,6 +6066,9 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
             coder_qat_c1a_sigma=coder_qat_c1a_sigma,
             coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
+            optimizer_kind=optimizer_kind,
+            optimizer_policy=optimizer_policy,
+            optimizer_controls=optimizer_controls,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -5924,21 +6204,25 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                     scorer_upstream
                 ),
                 "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
-                "coder_aware_qat": {
-                    "enabled": bool(coder_aware_qat),
-                    "quant_bits": int(coder_qat_quant_bits),
-                    "quant_residual_weight": float(coder_qat_quant_residual_weight),
-                    "magnitude_weight": float(coder_qat_magnitude_weight),
-                    "delta_weight": float(coder_qat_delta_weight),
-                    "c1a_entropy_weight": float(coder_qat_c1a_entropy_weight),
-                    "c1a_sigma": float(coder_qat_c1a_sigma),
-                    "c1a_sample_size": int(coder_qat_c1a_sample_size),
-                    "c1a_source": (
-                        "PR95 cat_entropy_v2 soft categorical entropy adapted "
-                        "to selected decoder weights"
-                    ),
-                    "authority": "false_macos_mlx_research_signal",
-                },
+                "optimizer_policy": strip_candidate_curriculum_authority_fields(
+                    optimizer_policy
+                ),
+                "pr95_faithful_curriculum_enabled": bool(
+                    optimizer_policy.get("pr95_faithful_curriculum_enabled")
+                ),
+                "native_optimizer_active": bool(
+                    optimizer_policy.get("native_optimizer_active")
+                ),
+                "optimizer_kind": str(
+                    optimizer_policy.get("optimizer_kind") or optimizer_kind
+                ),
+                "optimizer_controls": strip_candidate_curriculum_authority_fields(
+                    optimizer_controls
+                ),
+                "effective_weight_decay": optimizer_controls.get(
+                    "weight_decay_effective"
+                ),
+                "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
@@ -6098,6 +6382,280 @@ def _coder_qat_report_metadata(
     }
 
 
+def _decoder_waterfill_candidate_aliases(value: Any) -> tuple[str, ...]:
+    """Return candidate id aliases accepted by the campaign planner."""
+
+    text = str(value or "").strip()
+    if not text:
+        return ()
+    aliases = [text]
+    has_double_colon = "::" in text
+    if has_double_colon:
+        parts = [part.strip() for part in text.split("::") if part.strip()]
+        if len(parts) >= 3 and parts[0] in {"hi_nerv", "hinerv", "snerv"}:
+            aliases.append(parts[1])
+        elif parts:
+            aliases.append(parts[-1])
+    for marker in (
+        ":hi_nerv_decoder_weight_waterfill:",
+        ":hinerv_decoder_weight_waterfill:",
+        ":snerv_decoder_weight_waterfill:",
+    ):
+        if marker in text:
+            aliases.append(text.split(marker, 1)[0])
+    if ":" in text and not has_double_colon:
+        aliases.append(text.rsplit(":", 1)[-1])
+        aliases.append(text.split(":", 1)[0])
+    return tuple(str(alias) for alias in _dedupe([alias for alias in aliases if alias]))
+
+
+def _candidate_waterfill_match_keys(candidate: Mapping[str, Any] | None) -> tuple[str, ...]:
+    if not candidate:
+        return ()
+    keys: list[str] = []
+    for field in ("candidate_id", "row_id", "planner_row_id", "_modelsize_row_id"):
+        keys.extend(_decoder_waterfill_candidate_aliases(candidate.get(field)))
+    return tuple(str(key) for key in _dedupe(keys))
+
+
+def _shape_tuple_or_none(value: Any) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise CompactRendererMlxSpineRunnerError("shape must be a sequence")
+    out: list[int] = []
+    for dim in value:
+        try:
+            parsed = int(dim)
+        except (TypeError, ValueError) as exc:
+            raise CompactRendererMlxSpineRunnerError(
+                f"shape dim is not an integer: {dim!r}"
+            ) from exc
+        if parsed < 0:
+            raise CompactRendererMlxSpineRunnerError(
+                f"shape dim must be non-negative: {parsed}"
+            )
+        out.append(parsed)
+    return tuple(out)
+
+
+def _row_declared_shape(row: Mapping[str, Any]) -> tuple[int, ...] | None:
+    for field in ("shape", "tensor_shape", "expected_shape", "state_shape"):
+        if field in row:
+            return _shape_tuple_or_none(row.get(field))
+    return None
+
+
+def _row_declared_numel(row: Mapping[str, Any]) -> int | None:
+    for field in ("numel", "tensor_numel", "group_numel", "expected_numel"):
+        if field not in row:
+            continue
+        value = row.get(field)
+        if value is None:
+            return None
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise CompactRendererMlxSpineRunnerError(
+                f"numel field {field} is not an integer: {value!r}"
+            ) from exc
+        if parsed < 0:
+            raise CompactRendererMlxSpineRunnerError(
+                f"numel field {field} must be non-negative: {parsed}"
+            )
+        return parsed
+    return None
+
+
+def _hi_nerv_expected_decoder_state_shapes(
+    *,
+    num_pairs: int,
+    latent_dim: int,
+    embed_dim: int,
+    decoder_channel: int,
+    use_hierarchical_feature_grid: bool,
+    use_convnext_blocks: bool,
+    local_grid_levels: int,
+    local_grid_channels: int,
+    convnext_mlp_ratio: int,
+    convnext_kernel_size: int,
+    mid_injection_block_index: int,
+    fine_injection_block_index: int,
+) -> dict[str, tuple[int, ...]]:
+    from tac.substrates.hi_nerv.architecture import (
+        HinervConfig,
+        expected_decoder_state_shapes,
+    )
+
+    cfg = HinervConfig(
+        latent_dim_coarse=max(1, int(latent_dim) // 2),
+        latent_dim_mid=max(1, int(latent_dim)),
+        latent_dim_fine=max(1, int(latent_dim) * 2),
+        embed_dim=max(1, int(embed_dim)),
+        initial_grid_h=3,
+        initial_grid_w=4,
+        decoder_channels=tuple([max(1, int(decoder_channel))] * 7),
+        sin_frequency=30.0,
+        num_upsample_blocks=7,
+        mid_injection_block_index=int(mid_injection_block_index),
+        fine_injection_block_index=int(fine_injection_block_index),
+        num_pairs=int(num_pairs),
+        output_height=384,
+        output_width=512,
+        use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
+        use_convnext_blocks=bool(use_convnext_blocks),
+        local_grid_levels=int(local_grid_levels),
+        local_grid_channels=int(local_grid_channels),
+        convnext_mlp_ratio=int(convnext_mlp_ratio),
+        convnext_kernel_size=int(convnext_kernel_size),
+    )
+    return expected_decoder_state_shapes(cfg)
+
+
+def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
+    *,
+    plan: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+    candidate: Mapping[str, Any] | None,
+    num_pairs: int,
+    latent_dim: int,
+    embed_dim: int,
+    decoder_channel: int,
+    use_hierarchical_feature_grid: bool,
+    use_convnext_blocks: bool,
+    local_grid_levels: int,
+    local_grid_channels: int,
+    convnext_mlp_ratio: int,
+    convnext_kernel_size: int,
+    mid_injection_block_index: int,
+    fine_injection_block_index: int,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Validate a waterfill plan against the exact HiNeRV launch state."""
+
+    out = {
+        **dict(metadata),
+        "attached": False,
+        "active": False,
+        "validated": False,
+        "validation_schema": "compact_hi_nerv_decoder_weight_waterfill_validation.v1",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    blockers: list[str] = list(out.get("blockers") or [])
+    if plan is None:
+        out["blockers"] = _dedupe(blockers)
+        return None, out
+    if plan.get("schema") != NERV_DECODER_WEIGHT_WATERFILL_SCHEMA:
+        blockers.append("decoder_weight_waterfill_plan_schema_mismatch")
+    family = plan.get("family")
+    if family not in (None, "", "hi_nerv"):
+        blockers.append(f"decoder_weight_waterfill_family_mismatch:{family}")
+    rows = plan.get("rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        blockers.append("decoder_weight_waterfill_rows_not_list")
+        rows = []
+    elif not rows:
+        blockers.append("decoder_weight_waterfill_rows_empty")
+
+    candidate_keys = _candidate_waterfill_match_keys(candidate)
+    plan_candidate_id = str(plan.get("candidate_id") or "").strip()
+    plan_candidate_keys = _decoder_waterfill_candidate_aliases(plan_candidate_id)
+    out["candidate_match"] = {
+        "schema": "compact_hi_nerv_decoder_weight_waterfill_candidate_match.v1",
+        "plan_candidate_id": plan_candidate_id or None,
+        "plan_candidate_keys": list(plan_candidate_keys),
+        "launch_candidate_keys": list(candidate_keys),
+        "matched": bool(set(plan_candidate_keys) & set(candidate_keys)),
+    }
+    if not candidate_keys:
+        blockers.append("decoder_weight_waterfill_launch_candidate_missing")
+    if not plan_candidate_keys:
+        blockers.append("decoder_weight_waterfill_plan_candidate_id_missing")
+    elif not set(plan_candidate_keys) & set(candidate_keys):
+        blockers.append(
+            f"decoder_weight_waterfill_candidate_id_mismatch:{plan_candidate_id}"
+        )
+
+    expected_shapes = _hi_nerv_expected_decoder_state_shapes(
+        num_pairs=num_pairs,
+        latent_dim=latent_dim,
+        embed_dim=embed_dim,
+        decoder_channel=decoder_channel,
+        use_hierarchical_feature_grid=use_hierarchical_feature_grid,
+        use_convnext_blocks=use_convnext_blocks,
+        local_grid_levels=local_grid_levels,
+        local_grid_channels=local_grid_channels,
+        convnext_mlp_ratio=convnext_mlp_ratio,
+        convnext_kernel_size=convnext_kernel_size,
+        mid_injection_block_index=mid_injection_block_index,
+        fine_injection_block_index=fine_injection_block_index,
+    )
+    validated_rows: list[dict[str, Any]] = []
+    for idx, row_obj in enumerate(rows):
+        if not isinstance(row_obj, Mapping):
+            blockers.append(f"decoder_weight_waterfill_row_not_mapping:{idx}")
+            continue
+        group_name = row_obj.get("group_name")
+        if not isinstance(group_name, str) or not group_name:
+            blockers.append(f"decoder_weight_waterfill_row_missing_group_name:{idx}")
+            continue
+        expected_shape = expected_shapes.get(group_name)
+        if expected_shape is None:
+            blockers.append(f"decoder_weight_waterfill_group_missing:{group_name}")
+            continue
+        try:
+            declared_shape = _row_declared_shape(row_obj)
+            declared_numel = _row_declared_numel(row_obj)
+        except CompactRendererMlxSpineRunnerError as exc:
+            blockers.append(
+                f"decoder_weight_waterfill_row_metadata_invalid:{group_name}:{exc}"
+            )
+            continue
+        expected_numel = int(math.prod(expected_shape))
+        row_validation = {
+            "group_name": group_name,
+            "expected_shape": [int(dim) for dim in expected_shape],
+            "expected_numel": expected_numel,
+            "shape_checked": declared_shape is not None,
+            "numel_checked": declared_numel is not None,
+        }
+        if declared_shape is not None and declared_shape != expected_shape:
+            blockers.append(f"decoder_weight_waterfill_shape_mismatch:{group_name}")
+            row_validation["declared_shape"] = [int(dim) for dim in declared_shape]
+        if declared_numel is not None and declared_numel != expected_numel:
+            blockers.append(f"decoder_weight_waterfill_numel_mismatch:{group_name}")
+            row_validation["declared_numel"] = int(declared_numel)
+        validated_rows.append(row_validation)
+
+    try:
+        bits_by_name = _decoder_weight_waterfill_fake_quant_bits_by_name(plan)
+    except CompactRendererMlxSpineRunnerError as exc:
+        blockers.append(f"decoder_weight_waterfill_fake_quant_bits_invalid:{exc}")
+        bits_by_name = {}
+    out.update(
+        {
+            "source_schema": plan.get("schema"),
+            "family": plan.get("family"),
+            "candidate_id": plan.get("candidate_id"),
+            "group_count": plan.get("group_count"),
+            "row_count": len(rows),
+            "launch_state_group_count": len(expected_shapes),
+            "validated_row_count": len(validated_rows),
+            "validated_rows": validated_rows,
+            "per_tensor_fake_quant_group_count": len(bits_by_name),
+            "per_tensor_fake_quant_bits_by_name": dict(sorted(bits_by_name.items())),
+            "blockers": _dedupe(blockers),
+        }
+    )
+    if not out["blockers"]:
+        out["attached"] = True
+        out["active"] = True
+        out["validated"] = True
+        return dict(plan), out
+    return None, out
+
+
 def _decoder_weight_waterfill_fake_quant_bits_by_name(
     decoder_weight_waterfill_plan: Mapping[str, Any] | None,
 ) -> dict[str, int]:
@@ -6105,10 +6663,10 @@ def _decoder_weight_waterfill_fake_quant_bits_by_name(
 
     if decoder_weight_waterfill_plan is None:
         return {}
-    if decoder_weight_waterfill_plan.get("schema") != "nerv_decoder_weight_waterfill.v1":
+    if decoder_weight_waterfill_plan.get("schema") != NERV_DECODER_WEIGHT_WATERFILL_SCHEMA:
         raise CompactRendererMlxSpineRunnerError(
             "decoder_weight_waterfill_plan must have schema "
-            "nerv_decoder_weight_waterfill.v1"
+            f"{NERV_DECODER_WEIGHT_WATERFILL_SCHEMA}"
         )
     bits_by_name: dict[str, int] = {}
     for idx, row in enumerate(decoder_weight_waterfill_plan.get("rows") or []):
@@ -6814,6 +7372,36 @@ def _load_compact_modelsize_budget_rows(
             record["error"] = repr(exc)
             sources.append(record)
             continue
+        raw_refusal = _raw_modelsize_budget_payload_refusal(payload)
+        if raw_refusal is not None:
+            selected = raw_refusal["selected_candidates"]
+            record.update(
+                {
+                    "source_schema": raw_refusal["source_schema"],
+                    "authority": (
+                        "planning_artifact_only_not_receiver_closed_ladder_evidence"
+                    ),
+                    "rows_seen": len(selected),
+                    "rows_added": 0,
+                    "rows_rejected": len(selected),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            )
+            record["blockers"].extend(raw_refusal["blockers"])
+            record["rejected_rows"] = [
+                {
+                    "row_index": index,
+                    "row_id": row.get("candidate_id") or row.get("row_id"),
+                    "blockers": raw_refusal["row_blockers"],
+                }
+                for index, row in enumerate(selected)
+                if isinstance(row, Mapping)
+            ]
+            sources.append(record)
+            continue
         extracted = _modelsize_budget_rows_from_payload(
             payload,
             source_path=resolved,
@@ -6843,6 +7431,41 @@ def _load_compact_modelsize_budget_rows(
             record["blockers"].append("modelsize_budget_json_rows_missing")
         sources.append(record)
     return rows, sources
+
+
+def _raw_modelsize_budget_payload_refusal(
+    payload: Any,
+) -> dict[str, Any] | None:
+    """Classify raw model-size planning reports as non-ladder evidence."""
+
+    if not isinstance(payload, Mapping):
+        return None
+    source_schema = str(payload.get("schema") or "")
+    if source_schema not in RAW_NERV_MODELSIZE_BUDGET_SCHEMAS:
+        return None
+    selected = payload.get("selected_candidates")
+    if not isinstance(selected, list):
+        selected = []
+    selected_by_ceiling = payload.get("selected_candidates_by_ceiling")
+    has_selected_surface = bool(selected) or isinstance(selected_by_ceiling, Mapping)
+    if not has_selected_surface:
+        return None
+    row_blockers = [
+        "selected_candidates_are_planning_rows_not_receiver_closed_ladder",
+        "receiver_closed_byte_proof_missing",
+        "measured_receiver_archive_bytes_missing",
+    ]
+    return {
+        "source_schema": source_schema,
+        "selected_candidates": selected,
+        "row_blockers": row_blockers,
+        "blockers": [
+            "raw_nerv_modelsize_budget_artifact_not_receiver_closed_ladder",
+            "receiver_closed_modelsize_ladder_schema_required",
+            "selected_candidates_are_planning_rows_not_receiver_closed_ladder",
+            "modelsize_budget_json_rows_missing",
+        ],
+    }
 
 
 def _modelsize_budget_rows_from_payload(
@@ -7678,18 +8301,19 @@ def _run_pact_nerv_vq_mlx_smoke(
     coder_qat_c1a_entropy_weight: float,
     coder_qat_c1a_sigma: float,
     coder_qat_c1a_sample_size: int,
+    optimizer_kind: str,
+    optimizer_policy: Mapping[str, Any],
+    optimizer_controls: Mapping[str, Any],
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
-        CoderAwareQATConfig,
         RendererBundle,
         build_decoder_coder_qat_terms,
         build_mlx_posenet_pair_teacher,
         build_mlx_segnet_pair_teacher,
         coder_qat_loss_weights,
-        coder_qat_metadata,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
     )
@@ -7756,17 +8380,27 @@ def _run_pact_nerv_vq_mlx_smoke(
         output_width=int(cfg.output_width),
     )
     model = PactNervVqSubstrateMLX(cfg)
-    pr95_curriculum_enabled = int(epochs) >= 8
-    coder_qat_cfg = CoderAwareQATConfig(
-        enabled=bool(coder_aware_qat),
-        quant_bits=int(coder_qat_quant_bits),
-        quant_residual_weight=float(coder_qat_quant_residual_weight),
-        magnitude_weight=float(coder_qat_magnitude_weight),
-        delta_weight=float(coder_qat_delta_weight),
-        c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
-        c1a_sigma=float(coder_qat_c1a_sigma),
-        c1a_sample_size=int(coder_qat_c1a_sample_size),
-    ).validated()
+    optimizer_policy_row = dict(optimizer_policy or {})
+    optimizer_control = dict(optimizer_controls or {})
+    pr95_curriculum_enabled = bool(
+        optimizer_policy_row.get("pr95_faithful_curriculum_enabled")
+    )
+    effective_optimizer_kind = str(
+        optimizer_policy_row.get("optimizer_kind")
+        or optimizer_control.get("optimizer_kind")
+        or optimizer_kind
+    )
+    effective_weight_decay = optimizer_control.get("weight_decay_effective")
+    coder_qat_cfg, coder_qat_metadata_row = _build_pact_coder_qat_config_and_metadata(
+        coder_aware_qat=coder_aware_qat,
+        coder_qat_quant_bits=coder_qat_quant_bits,
+        coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
+        coder_qat_magnitude_weight=coder_qat_magnitude_weight,
+        coder_qat_delta_weight=coder_qat_delta_weight,
+        coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+        coder_qat_c1a_sigma=coder_qat_c1a_sigma,
+        coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
+    )
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
         terms = {"vq_commitment": model_obj.last_commitment_loss}
@@ -7810,10 +8444,21 @@ def _run_pact_nerv_vq_mlx_smoke(
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+            "native_optimizer_active": bool(
+                optimizer_policy_row.get("native_optimizer_active")
+            ),
+            "optimizer_policy": strip_candidate_curriculum_authority_fields(
+                optimizer_policy_row
+            ),
+            "optimizer_kind": effective_optimizer_kind,
+            "optimizer_controls": strip_candidate_curriculum_authority_fields(
+                optimizer_control
+            ),
+            "effective_weight_decay": effective_weight_decay,
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
-            "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "coder_aware_qat": coder_qat_metadata_row,
             "decoder_codec": str(decoder_codec),
         },
         "score_authority": "false_macos_mlx_research_signal",
@@ -7891,14 +8536,26 @@ def _run_pact_nerv_vq_mlx_smoke(
         checkpoint_interval_epochs=max(1, int(epochs)),
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
-        pr95_curriculum_total_epochs=max(8, int(epochs)),
-        grad_clip_max_norm=1.0,
-        weight_decay=1e-4,
-        optimizer_kind="adamw",
+        pr95_curriculum_total_epochs=max(8, int(epochs))
+        if pr95_curriculum_enabled
+        else None,
+        grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
+        weight_decay=effective_weight_decay,
+        optimizer_kind=effective_optimizer_kind,
+        warmup_epochs=int(optimizer_control.get("warmup_epochs", 0)),
+        warmup_steps_per_epoch=max(
+            1, int(optimizer_control.get("warmup_steps_per_epoch", 1))
+        ),
+        cosine_decay_enabled=bool(optimizer_control.get("cosine_decay_enabled")),
+        cosine_decay_total_epochs=optimizer_control.get("cosine_decay_total_epochs"),
+        cosine_decay_min_lr_ratio=float(
+            optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
+        ),
         notes=(
             "Compact renderer MLX spine runner PACT-NeRV-VQ smoke using real "
             "contest video targets, byte-closed archive export, receiver proof, "
-            "and false-authority MLX evidence only."
+            "explicit native optimizer controls, and false-authority MLX "
+            "evidence only."
         ),
     )
 
@@ -7935,18 +8592,19 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     coder_qat_c1a_entropy_weight: float,
     coder_qat_c1a_sigma: float,
     coder_qat_c1a_sample_size: int,
+    optimizer_kind: str,
+    optimizer_policy: Mapping[str, Any],
+    optimizer_controls: Mapping[str, Any],
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
 ) -> Any:
     from tac.substrates._shared.mlx_score_aware import (
-        CoderAwareQATConfig,
         RendererBundle,
         build_decoder_coder_qat_terms,
         build_mlx_posenet_pair_teacher,
         build_mlx_segnet_pair_teacher,
         coder_qat_loss_weights,
-        coder_qat_metadata,
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
     )
@@ -8023,16 +8681,27 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     )
     model = PactNervSelectorV4SubstrateMLX(cfg)
     selector_render_quality_holder: dict[str, Any] = {}
-    coder_qat_cfg = CoderAwareQATConfig(
-        enabled=bool(coder_aware_qat),
-        quant_bits=int(coder_qat_quant_bits),
-        quant_residual_weight=float(coder_qat_quant_residual_weight),
-        magnitude_weight=float(coder_qat_magnitude_weight),
-        delta_weight=float(coder_qat_delta_weight),
-        c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
-        c1a_sigma=float(coder_qat_c1a_sigma),
-        c1a_sample_size=int(coder_qat_c1a_sample_size),
-    ).validated()
+    optimizer_policy_row = dict(optimizer_policy or {})
+    optimizer_control = dict(optimizer_controls or {})
+    pr95_curriculum_enabled = bool(
+        optimizer_policy_row.get("pr95_faithful_curriculum_enabled")
+    )
+    effective_optimizer_kind = str(
+        optimizer_policy_row.get("optimizer_kind")
+        or optimizer_control.get("optimizer_kind")
+        or optimizer_kind
+    )
+    effective_weight_decay = optimizer_control.get("weight_decay_effective")
+    coder_qat_cfg, coder_qat_metadata_row = _build_pact_coder_qat_config_and_metadata(
+        coder_aware_qat=coder_aware_qat,
+        coder_qat_quant_bits=coder_qat_quant_bits,
+        coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
+        coder_qat_magnitude_weight=coder_qat_magnitude_weight,
+        coder_qat_delta_weight=coder_qat_delta_weight,
+        coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+        coder_qat_c1a_sigma=coder_qat_c1a_sigma,
+        coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
+    )
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
         return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
@@ -8091,11 +8760,23 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": distillation_device,
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "optimizer_policy": strip_candidate_curriculum_authority_fields(
+                optimizer_policy_row
+            ),
+            "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+            "native_optimizer_active": bool(
+                optimizer_policy_row.get("native_optimizer_active")
+            ),
+            "optimizer_kind": effective_optimizer_kind,
+            "optimizer_controls": strip_candidate_curriculum_authority_fields(
+                optimizer_control
+            ),
+            "effective_weight_decay": effective_weight_decay,
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
             "scorer_coupled_rd": _scorer_coupled_rd_metadata(),
-            "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "coder_aware_qat": coder_qat_metadata_row,
             "decoder_codec": str(decoder_codec),
         },
         "score_authority": "false_macos_mlx_research_signal",
@@ -8171,10 +8852,27 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         seed=int(random_seed),
         checkpoint_interval_epochs=max(1, int(epochs)),
         telemetry_flush_interval_epochs=1,
+        pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
+        pr95_curriculum_total_epochs=max(8, int(epochs))
+        if pr95_curriculum_enabled
+        else None,
+        grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
+        weight_decay=effective_weight_decay,
+        optimizer_kind=effective_optimizer_kind,
+        warmup_epochs=int(optimizer_control.get("warmup_epochs", 0)),
+        warmup_steps_per_epoch=max(
+            1, int(optimizer_control.get("warmup_steps_per_epoch", 1))
+        ),
+        cosine_decay_enabled=bool(optimizer_control.get("cosine_decay_enabled")),
+        cosine_decay_total_epochs=optimizer_control.get("cosine_decay_total_epochs"),
+        cosine_decay_min_lr_ratio=float(
+            optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
+        ),
         notes=(
             "Compact renderer MLX spine runner PACT-NeRV-SELECTOR-V4 smoke "
             "using real contest video targets, selector-v4 PSV4 archive export, "
-            "receiver proof, and false-authority MLX evidence only."
+            "receiver proof, explicit native optimizer controls, and "
+            "false-authority MLX evidence only."
         ),
     )
 
@@ -8972,9 +9670,10 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
         default="pact_muon_adamw",
         help=(
-            "Native MLX optimizer for score-aware compact training. HiNeRV "
-            "uses this directly; SNeRV consumes it once the shared long-"
-            "training harness owns the carrier."
+            "Native MLX optimizer for score-aware compact training. HiNeRV, "
+            "PACT-NeRV-VQ, and selector-v4 consume this directly; SNeRV "
+            "consumes it once the shared long-training harness owns the "
+            "carrier."
         ),
     )
     parser.add_argument(
@@ -9470,6 +10169,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="nes_pair_robust",
     )
     parser.add_argument("--snerv-scorer-loop-step-map-bins", default=16, type=int)
+    parser.add_argument(
+        "--snerv-scorer-loop-lf-payload-codec",
+        default="portfolio_auto",
+        help=(
+            "SNeRV scorer-loop/QAT LF payload codec for receiver-priced SNAR1 "
+            "packets."
+        ),
+    )
     parser.add_argument("--snerv-scorer-loop-perturb-scale", default=0.02, type=float)
     parser.add_argument(
         "--snerv-scorer-loop-byte-pressure-multiplier",
@@ -9911,6 +10618,18 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_c1a_entropy_weight=args.coder_qat_c1a_entropy_weight,
             coder_qat_c1a_sigma=args.coder_qat_c1a_sigma,
             coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
+            optimizer_kind=args.optimizer_kind,
+            optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,
+            optimizer_weight_decay=args.optimizer_weight_decay,
+            optimizer_warmup_epochs=args.optimizer_warmup_epochs,
+            optimizer_warmup_steps_per_epoch=args.optimizer_warmup_steps_per_epoch,
+            optimizer_cosine_decay_enabled=args.optimizer_cosine_decay_enabled,
+            optimizer_cosine_decay_total_epochs=(
+                args.optimizer_cosine_decay_total_epochs
+            ),
+            optimizer_cosine_decay_min_lr_ratio=(
+                args.optimizer_cosine_decay_min_lr_ratio
+            ),
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
@@ -9959,6 +10678,18 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_c1a_entropy_weight=args.coder_qat_c1a_entropy_weight,
             coder_qat_c1a_sigma=args.coder_qat_c1a_sigma,
             coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
+            optimizer_kind=args.optimizer_kind,
+            optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,
+            optimizer_weight_decay=args.optimizer_weight_decay,
+            optimizer_warmup_epochs=args.optimizer_warmup_epochs,
+            optimizer_warmup_steps_per_epoch=args.optimizer_warmup_steps_per_epoch,
+            optimizer_cosine_decay_enabled=args.optimizer_cosine_decay_enabled,
+            optimizer_cosine_decay_total_epochs=(
+                args.optimizer_cosine_decay_total_epochs
+            ),
+            optimizer_cosine_decay_min_lr_ratio=(
+                args.optimizer_cosine_decay_min_lr_ratio
+            ),
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
@@ -10012,6 +10743,9 @@ def main(argv: list[str] | None = None) -> int:
             snerv_scorer_loop_search_mode=args.snerv_scorer_loop_search_mode,
             snerv_scorer_loop_step_map_bins=args.snerv_scorer_loop_step_map_bins,
             snerv_scorer_loop_qat_bits=args.coder_qat_quant_bits,
+            snerv_scorer_loop_lf_payload_codec=(
+                args.snerv_scorer_loop_lf_payload_codec
+            ),
             snerv_scorer_loop_perturb_scale=args.snerv_scorer_loop_perturb_scale,
             snerv_scorer_loop_byte_pressure_multiplier=(
                 args.snerv_scorer_loop_byte_pressure_multiplier

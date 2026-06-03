@@ -41,6 +41,16 @@ _RECEIVER_PROOF_KEYS = (
     "receiver_contract_satisfied",
     "byte_closed_receiver_proof",
 )
+_AUTHORITY_TRUE_KEYS = (
+    "score_claim",
+    "score_claim_valid",
+    "frontier_score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "production_hardened_claim",
+    "ready_for_exact_eval_dispatch",
+)
+_NONRATE_ADVISORY_KEYS = {"nonrate_score_advisory"}
 
 
 class NervReceiverClosedModelsizeLadderError(ValueError):
@@ -190,14 +200,18 @@ def _normalize_row(
         ),
     )
     archive_bytes, archive_key = _archive_bytes(source, repo_root=repo_root)
-    nonrate_score = _first_float(
+    nonrate_score, nonrate_score_key = _first_float_with_key(
         source,
         ("nonrate_score", "nonrate_score_value", "nonrate_score_advisory"),
     )
     if nonrate_score is None:
         nonrate_score = _nonrate_from_components(source)
+        if nonrate_score is not None:
+            nonrate_score_key = "component_distortions"
     receiver_proof = _receiver_proof_passed(source)
     archive_sha = _archive_sha(source, repo_root=repo_root)
+    authority_blockers = _authority_claim_blockers(source)
+    advisory_nonrate = nonrate_score_key in _NONRATE_ADVISORY_KEYS
 
     blockers: list[str] = []
     if modelsize is None and fc_dim is None:
@@ -210,14 +224,19 @@ def _normalize_row(
         blockers.append("projected_archive_bytes_not_receiver_closed")
     if nonrate_score is None:
         blockers.append("nonrate_score_or_component_distortions_missing")
+    if advisory_nonrate:
+        blockers.append("advisory_nonrate_score_not_receiver_closed")
     if not receiver_proof:
         blockers.append("receiver_closed_byte_proof_missing")
+    blockers.extend(authority_blockers)
 
     complete_budget_shape = (
         (modelsize is not None or fc_dim is not None)
         and not family_mismatch
         and archive_bytes is not None
         and nonrate_score is not None
+        and not advisory_nonrate
+        and not authority_blockers
     )
     receiver_closed_modelsize_row = complete_budget_shape and receiver_proof and (
         archive_key in _ARCHIVE_BYTE_KEYS
@@ -230,6 +249,13 @@ def _normalize_row(
         "fc_dim": fc_dim,
         "archive_bytes": archive_bytes,
         "archive_bytes_key": archive_key,
+        "archive_byte_evidence_kind": (
+            "projected_or_lower_bound"
+            if archive_key in _PROJECTED_ARCHIVE_BYTE_KEYS
+            else "measured_receiver_archive"
+            if archive_key in _ARCHIVE_BYTE_KEYS
+            else "missing"
+        ),
         "archive_sha256": archive_sha,
         "archive_path": _string_or_none(
             source.get("archive_path")
@@ -237,6 +263,14 @@ def _normalize_row(
             or source.get("candidate_archive_path")
         ),
         "nonrate_score": nonrate_score,
+        "nonrate_score_key": nonrate_score_key,
+        "nonrate_score_evidence_kind": (
+            "advisory"
+            if advisory_nonrate
+            else "measured_or_component_distortion"
+            if nonrate_score is not None
+            else "missing"
+        ),
         "receiver_proof_passed": receiver_proof,
         "eligible_for_modelsize_budget_plan": complete_budget_shape,
         "receiver_closed_modelsize_row": receiver_closed_modelsize_row,
@@ -252,9 +286,9 @@ def _normalize_row(
         "modelsize_mparams": modelsize,
         "fc_dim": fc_dim,
         "archive_sha256": archive_sha,
-        "receiver_proof_passed": receiver_proof,
+        "receiver_proof_passed": receiver_closed_modelsize_row,
         "receiver_closed": receiver_closed_modelsize_row,
-        "receiver_archive_replay_verified": receiver_proof,
+        "receiver_archive_replay_verified": receiver_closed_modelsize_row,
         "source_row_id": row_id,
     }
     if archive_key in _PROJECTED_ARCHIVE_BYTE_KEYS:
@@ -456,6 +490,14 @@ def _mapping_rows(rows: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
 
 
 def _first_float(row: Mapping[str, Any], keys: Sequence[Any]) -> float | None:
+    parsed, _key = _first_float_with_key(row, keys)
+    return parsed
+
+
+def _first_float_with_key(
+    row: Mapping[str, Any],
+    keys: Sequence[Any],
+) -> tuple[float | None, str | None]:
     for key in keys:
         value = _lookup(row, key)
         try:
@@ -463,8 +505,8 @@ def _first_float(row: Mapping[str, Any], keys: Sequence[Any]) -> float | None:
         except (TypeError, ValueError):
             continue
         if isfinite(out):
-            return out
-    return None
+            return out, _path_label(key)
+    return None, None
 
 
 def _first_int(row: Mapping[str, Any], keys: Sequence[Any]) -> int | None:
@@ -510,6 +552,20 @@ def _truthy(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "y", "on"}
     return False
+
+
+def _authority_claim_blockers(row: Mapping[str, Any]) -> list[str]:
+    return _ordered_unique(
+        f"source_authority_flag_true:{key}"
+        for key in _AUTHORITY_TRUE_KEYS
+        if _truthy(row.get(key))
+    )
+
+
+def _path_label(path: Any) -> str:
+    if isinstance(path, tuple):
+        return ".".join(str(part) for part in path)
+    return str(path)
 
 
 def _string_or_none(value: Any) -> str | None:

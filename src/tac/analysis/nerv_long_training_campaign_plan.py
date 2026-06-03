@@ -488,9 +488,12 @@ def _hinerv_campaign_row(
                 str(joint_recon_weight["weight_path"]),
             ]
         )
-    else:
-        command.append("--auto-joint-recon-pixel-weight")
-    if decoder_weight_waterfill:
+    decoder_weight_waterfill_runner_admitted = (
+        _decoder_weight_waterfill_runner_admitted(decoder_weight_waterfill)
+        if decoder_weight_waterfill
+        else False
+    )
+    if decoder_weight_waterfill_runner_admitted:
         command.extend(
             [
                 "--decoder-weight-waterfill-plan-json",
@@ -519,6 +522,14 @@ def _hinerv_campaign_row(
             if decoder_weight_waterfill
             else "hinerv_decoder_weight_waterfill_plan_missing"
         ),
+        (
+            ""
+            if (
+                not decoder_weight_waterfill
+                or decoder_weight_waterfill_runner_admitted
+            )
+            else "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted"
+        ),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *list(curriculum.get("blockers") or []),
@@ -544,6 +555,9 @@ def _hinerv_campaign_row(
         blockers.append("hinerv_candidate_nominal_over_byte_ceiling")
     blockers = _dedupe(blockers)
     prelaunch_gate = dict(curriculum.get("long_campaign_prelaunch_gate") or {})
+    launch_ready = bool(prelaunch_gate.get("launch_allowed")) and bool(
+        joint_recon_weight
+    )
     return _row(
         row_id=row_id,
         family="hi_nerv",
@@ -551,8 +565,12 @@ def _hinerv_campaign_row(
         candidate=candidate,
         curriculum_plan=curriculum,
         command_argv=command,
-        local_mlx_launch_command_ready=bool(prelaunch_gate.get("launch_allowed")),
-        implementation_status="shared_mlx_scoreaware_runner_launchable",
+        local_mlx_launch_command_ready=launch_ready,
+        implementation_status=(
+            "shared_mlx_scoreaware_runner_launchable"
+            if launch_ready
+            else "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
+        ),
         blockers=blockers,
         extra={
             "optimizer_kind": str(optimizer_kind),
@@ -1251,6 +1269,12 @@ def _snerv_expected_candidate_id_from_controls(candidate: Mapping[str, Any]) -> 
         snerv_model_size_adapter=str(candidate["snerv_model_size_adapter"]),
         decoder_payload_codec=str(candidate["decoder_payload_codec"]),
         hard_byte_ceiling=int(candidate["hard_byte_ceiling"]),
+        official_modelsize_mparams=(
+            float(candidate["modelsize_mparams"])
+            if candidate.get("capacity_source") == "official_snerv_modelsize"
+            and candidate.get("modelsize_mparams") is not None
+            else None
+        ),
     )
 
 
@@ -1640,8 +1664,6 @@ def _snerv_native_artifact_evidence_from_feedback(
     feedback: Mapping[str, Any],
 ) -> dict[str, Any]:
     embedded = feedback.get("snerv_mlx_native_file_backed_export_evidence")
-    if isinstance(embedded, Mapping):
-        return dict(embedded)
     artifact = {
         "num_pairs": feedback.get("candidate_num_pairs")
         if feedback.get("scope_matches_candidate")
@@ -1680,7 +1702,14 @@ def _snerv_native_artifact_evidence_from_feedback(
             ),
         },
     }
-    return {key: value for key, value in artifact.items() if value is not None}
+    compact_artifact = {
+        key: value for key, value in artifact.items() if value is not None
+    }
+    if isinstance(embedded, Mapping):
+        merged = dict(embedded)
+        merged.update(compact_artifact)
+        return merged
+    return compact_artifact
 
 
 def _candidate_feedback_for(
@@ -1948,6 +1977,7 @@ def _decoder_weight_waterfill_for(
 
 
 def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, Any]:
+    runner_admission = _decoder_weight_waterfill_runner_admission(row)
     return {
         "schema": "nerv_long_training_decoder_weight_waterfill_attachment.v1",
         "attached": True,
@@ -1960,7 +1990,42 @@ def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, 
         "group_count": int(row.get("group_count") or 0),
         "full_video_coverage": bool(row.get("full_video_coverage")),
         "receiver_proof_ready": bool(row.get("receiver_proof_ready")),
+        "runner_admission": runner_admission,
+        "runner_admitted": bool(runner_admission["admitted"]),
         "blockers": list(row.get("blockers") or []),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _decoder_weight_waterfill_runner_admitted(row: Mapping[str, Any]) -> bool:
+    return bool(_decoder_weight_waterfill_runner_admission(row)["admitted"])
+
+
+def _decoder_weight_waterfill_runner_admission(
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    blockers = {str(blocker) for blocker in row.get("blockers") or ()}
+    refusal_reasons: list[str] = []
+    if row.get("full_video_coverage") is not True:
+        refusal_reasons.append("decoder_weight_waterfill_full_video_coverage_missing")
+    if row.get("receiver_proof_ready") is not True:
+        refusal_reasons.append("decoder_weight_waterfill_receiver_proof_not_ready")
+    for blocker in (
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_coverage_missing",
+        "receiver_proof_not_satisfied",
+    ):
+        if blocker in blockers:
+            refusal_reasons.append(blocker)
+    return {
+        "schema": "nerv_decoder_weight_waterfill_runner_admission.v1",
+        "admitted": not refusal_reasons,
+        "mode": (
+            "runner_training_pressure_and_export_mutation"
+            if not refusal_reasons
+            else "advisory_learning_signal_only"
+        ),
+        "refusal_reasons": _dedupe(refusal_reasons),
         **FALSE_AUTHORITY,
     }
 

@@ -127,6 +127,41 @@ def build_nerv_candidate_feedback_row(
     snerv_native_scorer_loop = _mapping_or_empty(
         snerv_native_export.get("scorer_loop_qat")
     )
+    native_byte_feedback = _snerv_native_file_backed_byte_feedback(
+        family=runner_report.get("execute_family"),
+        candidate_row=candidate_row,
+        byte_feedback=byte_feedback,
+        native_export=snerv_native_export,
+        native_evidence=snerv_native_evidence,
+    )
+    feedback_source = native_byte_feedback.get("byte_feedback_source") or byte_feedback.get(
+        "byte_feedback_source"
+    )
+    candidate_num_pairs = native_byte_feedback.get(
+        "candidate_num_pairs", byte_feedback.get("candidate_num_pairs")
+    )
+    measured_num_pairs = native_byte_feedback.get(
+        "measured_num_pairs", byte_feedback.get("measured_num_pairs")
+    )
+    feedback_scope = native_byte_feedback.get(
+        "feedback_scope", byte_feedback.get("feedback_scope")
+    )
+    scope_matches_candidate = native_byte_feedback.get(
+        "scope_matches_candidate", bool(byte_feedback.get("scope_matches_candidate"))
+    )
+    feedback_ready = native_byte_feedback.get(
+        "feedback_ready", bool(byte_feedback.get("feedback_ready"))
+    )
+    measured_payload_bytes = native_byte_feedback.get(
+        "measured_payload_bytes", byte_feedback.get("measured_payload_bytes")
+    )
+    measured_archive_bytes = native_byte_feedback.get(
+        "measured_archive_bytes", byte_feedback.get("measured_archive_bytes")
+    )
+    measured_minus_nominal_bytes = native_byte_feedback.get(
+        "measured_minus_nominal_bytes",
+        byte_feedback.get("measured_minus_nominal_bytes"),
+    )
     return {
         "schema": SCHEMA,
         "created_utc": datetime.now(UTC).isoformat(),
@@ -136,18 +171,17 @@ def build_nerv_candidate_feedback_row(
         "family": runner_report.get("execute_family"),
         "candidate_id": candidate_row.get("candidate_id") or curriculum.get("candidate_id"),
         "candidate_conditioned": bool(curriculum.get("candidate_conditioned")),
-        "candidate_num_pairs": byte_feedback.get("candidate_num_pairs"),
-        "measured_num_pairs": byte_feedback.get("measured_num_pairs"),
-        "feedback_scope": byte_feedback.get("feedback_scope"),
-        "scope_matches_candidate": bool(byte_feedback.get("scope_matches_candidate")),
-        "feedback_ready": bool(byte_feedback.get("feedback_ready")),
+        "candidate_num_pairs": candidate_num_pairs,
+        "measured_num_pairs": measured_num_pairs,
+        "feedback_scope": feedback_scope,
+        "scope_matches_candidate": bool(scope_matches_candidate),
+        "feedback_ready": bool(feedback_ready),
+        "byte_feedback_source": feedback_source,
         "hard_byte_ceiling": byte_feedback.get("hard_byte_ceiling"),
         "nominal_total_payload_bytes": byte_feedback.get("nominal_total_payload_bytes"),
-        "measured_payload_bytes": byte_feedback.get("measured_payload_bytes"),
-        "measured_archive_bytes": byte_feedback.get("measured_archive_bytes"),
-        "measured_minus_nominal_bytes": byte_feedback.get(
-            "measured_minus_nominal_bytes"
-        ),
+        "measured_payload_bytes": measured_payload_bytes,
+        "measured_archive_bytes": measured_archive_bytes,
+        "measured_minus_nominal_bytes": measured_minus_nominal_bytes,
         "archive_path": runner_report.get("archive_path"),
         "archive_bytes": runner_report.get("archive_bytes"),
         "archive_sha256": runner_report.get("archive_sha256"),
@@ -193,6 +227,7 @@ def build_nerv_candidate_feedback_row(
             snerv_native_evidence.get("blockers") or []
         ),
         "snerv_mlx_native_file_backed_export_evidence": snerv_native_evidence or None,
+        "snerv_mlx_native_file_backed_byte_feedback": native_byte_feedback or None,
         "snerv_mlx_native_scorer_loop_qat_attached": (
             snerv_native_export.get("scorer_loop_qat_attached")
             if "scorer_loop_qat_attached" in snerv_native_export
@@ -281,6 +316,77 @@ def build_nerv_candidate_feedback_row(
         ),
         "mlx_prefilter_blockers": list(mlx_prefilter.get("blockers") or []),
         "blockers": list(runner_report.get("blockers") or []),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_native_file_backed_byte_feedback(
+    *,
+    family: Any,
+    candidate_row: Mapping[str, Any],
+    byte_feedback: Mapping[str, Any],
+    native_export: Mapping[str, Any],
+    native_evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Promote strict SNeRV file-backed export bytes into planner feedback.
+
+    This is byte feedback only: it deliberately leaves score authority false.
+    The evidence object is produced by the native receiver/archive validator, so
+    require its full-pair proof before letting SNAR bytes unblock byte pricing.
+    """
+
+    if _family_key(str(family)) != "snerv":
+        return {}
+    if not native_export or not native_evidence:
+        return {}
+    if native_evidence.get("required_pair_file_backed_export_proof_passed") is not True:
+        return {}
+    packet_bytes = _int_or_none(native_export.get("packet_bytes"))
+    archive_bytes = _int_or_none(native_export.get("archive_bytes"))
+    if packet_bytes is None or archive_bytes is None:
+        return {}
+    if packet_bytes <= 0 or archive_bytes <= 0:
+        return {}
+    native_pairs = (
+        _int_or_none(native_export.get("num_pairs"))
+        or _int_or_none(native_evidence.get("num_pairs"))
+        or _int_or_none(byte_feedback.get("measured_num_pairs"))
+    )
+    candidate_pairs = (
+        _int_or_none(byte_feedback.get("candidate_num_pairs"))
+        or _int_or_none(candidate_row.get("num_pairs"))
+        or CONTEST_PAIR_COUNT
+    )
+    if native_pairs is None or native_pairs < max(candidate_pairs, CONTEST_PAIR_COUNT):
+        return {}
+    candidate_id = str(candidate_row.get("candidate_id") or "").strip()
+    native_candidate_id = str(
+        native_export.get("candidate_id")
+        or native_export.get("modelsize_candidate_id")
+        or ""
+    ).strip()
+    if native_candidate_id and candidate_id and native_candidate_id != candidate_id:
+        return {}
+    nominal_payload = _int_or_none(byte_feedback.get("nominal_total_payload_bytes"))
+    measured_minus_nominal = (
+        None if nominal_payload is None else int(packet_bytes) - int(nominal_payload)
+    )
+    return {
+        "schema": "snerv_native_file_backed_byte_feedback.v1",
+        "byte_feedback_source": "snerv_mlx_native_file_backed_export",
+        "candidate_id": candidate_id or None,
+        "candidate_num_pairs": int(candidate_pairs),
+        "measured_num_pairs": int(native_pairs),
+        "feedback_scope": "full600_native_file_backed_snar1_export",
+        "scope_matches_candidate": True,
+        "feedback_ready": True,
+        "measured_payload_bytes": int(packet_bytes),
+        "measured_archive_bytes": int(archive_bytes),
+        "measured_minus_nominal_bytes": measured_minus_nominal,
+        "packet_path": native_export.get("packet_path"),
+        "packet_sha256": native_export.get("packet_sha256"),
+        "archive_path": native_export.get("archive_path"),
+        "archive_sha256": native_export.get("archive_sha256"),
         **FALSE_AUTHORITY,
     }
 

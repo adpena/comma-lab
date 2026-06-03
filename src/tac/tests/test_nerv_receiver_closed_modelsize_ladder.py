@@ -62,6 +62,63 @@ def test_advisory_or_projected_rows_do_not_open_receiver_ladder() -> None:
     assert any("projected_archive_bytes_not_receiver_closed" in b for b in payload["blockers"])
 
 
+def test_advisory_nonrate_score_does_not_open_receiver_ladder() -> None:
+    payload = build_nerv_receiver_closed_modelsize_ladder(
+        [
+            {
+                "row_id": "tiny_advisory",
+                "modelsize_mparams": 0.03,
+                "fc_dim": 24,
+                "archive_bytes": 20_000,
+                "nonrate_score_advisory": 0.240,
+                "receiver_proof_passed": True,
+            },
+            {
+                "row_id": "small_advisory",
+                "modelsize_mparams": 0.06,
+                "fc_dim": 48,
+                "archive_bytes": 40_000,
+                "nonrate_score_advisory": 0.205,
+                "receiver_proof_passed": True,
+            },
+        ],
+        carrier_id="snerv",
+    )
+
+    rows = {row["row_id"]: row for row in payload["normalized_rows"]}
+    assert payload["status"] == "receiver_closed_modelsize_ladder_blocked"
+    assert payload["budget_row_count"] == 0
+    assert payload["receiver_closed_row_count"] == 0
+    assert payload["modelsize_budget_plan"]["receiver_closed_points"] == []
+    assert rows["tiny_advisory"]["nonrate_score_key"] == "nonrate_score_advisory"
+    assert rows["tiny_advisory"]["nonrate_score_evidence_kind"] == "advisory"
+    assert "advisory_nonrate_score_not_receiver_closed" in rows["tiny_advisory"][
+        "blockers"
+    ]
+    assert payload["ready_for_carrier_training_plan"] is False
+
+
+def test_true_authority_flags_block_receiver_modelsize_rows() -> None:
+    payload = build_nerv_receiver_closed_modelsize_ladder(
+        [
+            {
+                **_row("tiny", 0.03, 24, 20_000, 0.240, proof=True),
+                "promotion_eligible": True,
+            },
+            _row("small", 0.06, 48, 40_000, 0.205, proof=True),
+        ],
+        carrier_id="snerv",
+    )
+
+    rows = {row["row_id"]: row for row in payload["normalized_rows"]}
+    assert rows["tiny"]["receiver_closed_modelsize_row"] is False
+    assert "source_authority_flag_true:promotion_eligible" in rows["tiny"][
+        "blockers"
+    ]
+    assert payload["receiver_closed_row_count"] == 1
+    assert payload["ready_for_carrier_training_plan"] is False
+
+
 def test_missing_modelsize_and_fc_dim_blocks_budget_row() -> None:
     payload = build_nerv_receiver_closed_modelsize_ladder(
         [
