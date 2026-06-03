@@ -583,6 +583,24 @@ def test_snerv_modelsize_budget_records_invalid_official_modelsize_without_abort
     assert invalid["emb_size"] == 2
     assert invalid["error_type"] == "SnervCarrierError"
     assert "snerv_official_modelsize_quadratic_unsatisfied" in invalid["blockers"]
+    contract = invalid["modelsize_control_contract"]
+    assert contract["schema"] == "nerv_modelsize_control_contract.v1"
+    assert contract["control_semantics"] == (
+        "invalid_official_snerv_modelsize_quadratic_fc_dim_solve"
+    )
+    assert contract["shared_target_modelsize_mparams_consumed_as"] == (
+        "official_snerv_modelsize_quadratic_fc_dim_solve"
+    )
+    assert contract["modelsize_mparams_is_official_upstream_flag"] is True
+    assert contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert contract["nominal_payload_bytes_are_planner_prior_only"] is True
+    assert contract["receiver_closed_archive_bytes_required_for_under_ceiling_claim"]
+    assert contract["archive_bytes_authority_required"] is True
+    assert contract["mutates_receiver_visible_fc_dim"] is False
+    assert contract["invalid_control_row"] is True
+    assert contract["control_resolution_status"] == (
+        "failed_before_receiver_visible_fc_dim_candidate"
+    )
     assert invalid["score_claim"] is False
     assert invalid["rank_or_kill_eligible"] is False
     assert invalid["ready_for_exact_eval_dispatch"] is False

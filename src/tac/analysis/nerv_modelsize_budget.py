@@ -1289,6 +1289,14 @@ def _invalid_snerv_official_modelsize_row(
 ) -> dict[str, Any]:
     """Record an unsatisfiable official SNeRV ``--modelsize`` point."""
 
+    contract_payload = {
+        "family": "snerv",
+        "candidate_id": None,
+        "capacity_source": "invalid_official_snerv_modelsize",
+        "snerv_model_size_adapter": str(snerv_model_size_adapter),
+        "modelsize_mparams": float(official_modelsize_mparams),
+        "hard_byte_ceiling": int(hard_byte_ceiling),
+    }
     return {
         "schema": "snerv_invalid_official_modelsize_candidate.v1",
         "family": "snerv",
@@ -1317,6 +1325,32 @@ def _invalid_snerv_official_modelsize_row(
             "snerv_official_modelsize_quadratic_unsatisfied",
             f"snerv_official_modelsize_error:{type(error).__name__}",
         ],
+        "modelsize_control_contract": {
+            "schema": "nerv_modelsize_control_contract.v1",
+            "family": "snerv",
+            "control_semantics": (
+                "invalid_official_snerv_modelsize_quadratic_fc_dim_solve"
+            ),
+            "shared_target_modelsize_mparams_consumed_as": (
+                "official_snerv_modelsize_quadratic_fc_dim_solve"
+            ),
+            "modelsize_mparams_is_official_upstream_flag": True,
+            "modelsize_mparams_caps_archive_zip_bytes": False,
+            **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
+            "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
+            "mutates_receiver_visible_architecture": False,
+            "mutates_receiver_visible_fc_dim": False,
+            "invalid_control_row": True,
+            "control_resolution_status": (
+                "failed_before_receiver_visible_fc_dim_candidate"
+            ),
+            "control_precedence": modelsize_control_precedence_contract(
+                contract_payload
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "error": str(error),
         "score_claim": False,
         "score_claim_valid": False,
