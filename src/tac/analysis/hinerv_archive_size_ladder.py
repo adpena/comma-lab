@@ -114,10 +114,19 @@ def build_hinerv_archive_size_ladder(
     )
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
 
+    decoder_weight_saliency_payload = (
+        {}
+        if decoder_weight_saliency_json is None
+        else _read_json_if_exists(Path(decoder_weight_saliency_json).expanduser())
+    )
     decoder_weight_saliency = (
         None
         if decoder_weight_saliency_json is None
         else load_saliency_json(decoder_weight_saliency_json)
+    )
+    decoder_weight_saliency_metadata = _decoder_weight_saliency_metadata(
+        decoder_weight_saliency_payload,
+        num_pairs=int(num_pairs),
     )
     selected = {str(row_id) for row_id in row_ids} if row_ids is not None else None
     specs = _archive_ladder_specs(
@@ -177,7 +186,9 @@ def build_hinerv_archive_size_ladder(
                 family="hi_nerv",
                 candidate_id=row_id,
                 action_bits=decoder_weight_waterfill_action_bits,
-                full_video_coverage=False,
+                full_video_coverage=bool(
+                    decoder_weight_saliency_metadata["full_video_coverage"]
+                ),
                 receiver_proof_status=proof_status,
                 archive_sha256=archive_sha256,
             )
@@ -223,6 +234,9 @@ def build_hinerv_archive_size_ladder(
                 if waterfill_path is not None
                 else None,
                 "decoder_weight_waterfill_summary": waterfill_summary,
+                "decoder_weight_saliency_full_video_coverage": bool(
+                    decoder_weight_saliency_metadata["full_video_coverage"]
+                ),
                 "submission_dir": _path_if_exists(row_dir / "submission"),
                 "receiver_proof_executed": bool(emit_receiver_proof),
                 "receiver_proof_path": _path_if_exists(proof_path),
@@ -287,6 +301,7 @@ def build_hinerv_archive_size_ladder(
             if decoder_weight_saliency_json is None
             else Path(decoder_weight_saliency_json).expanduser().as_posix()
         ),
+        "decoder_weight_saliency_metadata": decoder_weight_saliency_metadata,
         "decoder_weight_waterfill_action_bits": [
             int(value) for value in decoder_weight_waterfill_action_bits
         ],
@@ -1200,6 +1215,44 @@ def _read_json_if_exists(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _decoder_weight_saliency_metadata(
+    payload: Mapping[str, Any],
+    *,
+    num_pairs: int,
+) -> dict[str, Any]:
+    pair_schedule = payload.get("pair_schedule")
+    schedule_full = False
+    if isinstance(pair_schedule, Mapping):
+        schedule_full = bool(
+            int(pair_schedule.get("max_pairs") or 0) >= int(num_pairs)
+            and int(pair_schedule.get("start_pair") or 0) == 0
+            and int(pair_schedule.get("pair_stride") or 0) == 1
+        )
+    declared_full = payload.get("full_video_coverage") is True
+    # Declared booleans are provenance, not authority.  A decoder-weight
+    # saliency map is full-video only when its schedule proves the exact
+    # deterministic reduction over the requested video.
+    full_video_coverage = bool(schedule_full)
+    blockers = [str(blocker) for blocker in payload.get("blockers") or () if str(blocker)]
+    coverage_blockers = []
+    if payload and not full_video_coverage:
+        coverage_blockers.append("decoder_weight_saliency_full_video_coverage_missing")
+    if payload and declared_full and not schedule_full:
+        coverage_blockers.append("decoder_weight_saliency_declared_full_without_schedule_proof")
+    return {
+        "schema": "hinerv_archive_size_ladder_decoder_weight_saliency_metadata.v1",
+        "source_schema": payload.get("schema"),
+        "provided": bool(payload),
+        "declared_full_video_coverage": bool(declared_full),
+        "schedule_full_video_coverage": bool(schedule_full),
+        "full_video_coverage": bool(full_video_coverage),
+        "num_pairs": int(num_pairs),
+        "source_blockers": blockers,
+        "coverage_blockers": coverage_blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _path_if_exists(path: Path) -> str | None:

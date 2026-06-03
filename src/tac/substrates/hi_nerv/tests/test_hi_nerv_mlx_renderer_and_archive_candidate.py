@@ -54,6 +54,33 @@ def test_mlx_renderer_contains_official_grid_convnext_port() -> None:
     assert "convnext_blocks.{i}.dwconv.weight" in source
 
 
+def test_hi_nerv_inflate_refuses_multi_entry_file_list(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from tac.substrates.hi_nerv import inflate
+
+    archive_dir = tmp_path / "archive"
+    output_dir = tmp_path / "out"
+    archive_dir.mkdir()
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0\n1\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "inflate.py",
+            archive_dir.as_posix(),
+            output_dir.as_posix(),
+            file_list.as_posix(),
+        ],
+    )
+
+    assert inflate.main_cli() == 2
+    assert "supports exactly one archive-bound video entry" in capsys.readouterr().err
+
+
 def _smoke_cfg():
     from tac.substrates.hi_nerv.architecture import HinervConfig
 

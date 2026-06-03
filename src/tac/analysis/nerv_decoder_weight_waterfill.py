@@ -29,6 +29,13 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 NERV_DECODER_WEIGHT_WATERFILL_SCHEMA = "nerv_decoder_weight_waterfill.v1"
+TRUSTED_RECEIVER_PROOF_STATUSES = frozenset(
+    {
+        "runtime_consumption_proof_ready",
+        "receiver_proof_valid",
+        "runtime_consumption_proof_passed",
+    }
+)
 PLANNING_AXIS = "[planning/control]"
 DEFAULT_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "latent_embed",
@@ -130,17 +137,12 @@ def build_nerv_decoder_weight_waterfill_plan(
         blockers.append("decoder_weight_saliency_missing_for_some_groups")
     if not full_video_coverage:
         blockers.append("full_video_coverage_missing")
-    if receiver_proof_status.lower() not in {
-        "runtime_consumption_proof_ready",
-        "receiver_proof_valid",
-        "runtime_consumption_proof_passed",
-        "satisfied",
-        "valid",
-        "passed",
-    }:
+    if receiver_proof_status.lower() not in TRUSTED_RECEIVER_PROOF_STATUSES:
         blockers.append("receiver_proof_not_satisfied")
     if not archive_sha256:
         blockers.append("archive_sha256_missing")
+    elif not _is_sha256_hex(archive_sha256):
+        blockers.append("archive_sha256_invalid")
     blockers.append("contest_cpu_cuda_exact_eval_not_executed")
 
     section_value_rows = [_section_value_row(row) for row in rows]
@@ -254,9 +256,24 @@ def load_saliency_json(path: str | Path) -> dict[str, float]:
     p = Path(path).expanduser().resolve(strict=False)
     payload = json.loads(p.read_text(encoding="utf-8"))
     if isinstance(payload, Mapping):
-        rows = payload.get("rows") or payload.get("saliency_rows")
+        explicit = payload.get("saliency_by_name") or payload.get("global_saliency")
+        if isinstance(explicit, Mapping):
+            parsed = _saliency_from_mapping(explicit)
+            if parsed:
+                return parsed
+        saliency_rows = payload.get("saliency_rows")
+        if isinstance(saliency_rows, Sequence) and not isinstance(saliency_rows, (str, bytes)):
+            parsed = _saliency_from_rows(saliency_rows)
+            if parsed:
+                return parsed
+        rows = payload.get("rows")
         if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
-            return _saliency_from_rows(rows)
+            parsed = _saliency_from_rows(rows)
+            if parsed:
+                return parsed
+            parsed = _saliency_from_nested_row_maps(rows)
+            if parsed:
+                return parsed
         return {
             str(key): float(value)
             for key, value in payload.items()
@@ -458,14 +475,9 @@ def _row_for_group(
         blockers.append("full_video_coverage_missing")
     if not archive_sha256:
         blockers.append("archive_sha256_missing")
-    if receiver_proof_status.lower() not in {
-        "runtime_consumption_proof_ready",
-        "receiver_proof_valid",
-        "runtime_consumption_proof_passed",
-        "satisfied",
-        "valid",
-        "passed",
-    }:
+    elif not _is_sha256_hex(archive_sha256):
+        blockers.append("archive_sha256_invalid")
+    if receiver_proof_status.lower() not in TRUSTED_RECEIVER_PROOF_STATUSES:
         blockers.append("receiver_proof_not_satisfied")
     return {
         "row_id": f"{family}_decoder_weight_waterfill:{group.name}",
@@ -603,6 +615,25 @@ def _saliency_from_rows(rows: Sequence[Any]) -> dict[str, float]:
     return out
 
 
+def _saliency_from_mapping(mapping: Mapping[str, Any]) -> dict[str, float]:
+    return {
+        str(key): float(value)
+        for key, value in mapping.items()
+        if _finite_float_or_none(value) is not None
+    }
+
+
+def _saliency_from_nested_row_maps(rows: Sequence[Any]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        nested = row.get("saliency_by_name")
+        if isinstance(nested, Mapping):
+            out.update(_saliency_from_mapping(nested))
+    return out
+
+
 def _first_present(row: Mapping[str, Any], keys: Sequence[str]) -> Any:
     for key in keys:
         if key in row:
@@ -671,11 +702,17 @@ def _ordered_unique(values: Sequence[str]) -> list[str]:
     return out
 
 
+def _is_sha256_hex(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
 __all__ = [
     "DEFAULT_ACTION_BITS",
     "DEFAULT_EXCLUDE_SUBSTRINGS",
     "DEFAULT_INCLUDE_SUBSTRINGS",
     "NERV_DECODER_WEIGHT_WATERFILL_SCHEMA",
+    "TRUSTED_RECEIVER_PROOF_STATUSES",
     "NervDecoderWeightWaterfillError",
     "TensorGroup",
     "build_nerv_decoder_weight_waterfill_plan",

@@ -187,6 +187,141 @@ def test_hinerv_archive_size_ladder_exports_modelsize_budget_candidate_waterfill
     assert waterfill["score_claim"] is False
 
 
+def test_hinerv_archive_size_ladder_honors_full_video_saliency_metadata(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "hinerv_np1_ld4_ed8_dc4_cnx_int4_mixed_ceil36000_tgtmp0p01"
+    saliency_path = tmp_path / "saliency_replay.json"
+    saliency_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_decoder_weight_saliency_replay.v1",
+                "full_video_coverage": True,
+                "pair_schedule": {"max_pairs": 1, "start_pair": 0, "pair_stride": 1},
+                "saliency_by_name": {"head_rgb_0.bias": 1.0},
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hinerv_archive_size_ladder(
+        output_dir=tmp_path / "archive_ladder",
+        repo_root=REPO_ROOT,
+        num_pairs=1,
+        row_ids=(candidate_id,),
+        hinerv_modelsize_budget={
+            "schema": "nerv_modelsize_budget.v1",
+            "selected_candidates": [
+                {
+                    "schema": "hinerv_modelsize_candidate.v1",
+                    "family": "hi_nerv",
+                    "candidate_id": candidate_id,
+                    "num_pairs": 1,
+                    "latent_dim": 4,
+                    "latent_dim_coarse": 2,
+                    "latent_dim_mid": 4,
+                    "latent_dim_fine": 8,
+                    "embed_dim": 8,
+                    "decoder_channel": 4,
+                    "decoder_channels": [4, 4, 4, 4, 4, 4, 4],
+                    "decoder_codec": "int4_mixed",
+                    "use_hierarchical_feature_grid": False,
+                    "use_convnext_blocks": True,
+                    "local_grid_levels": 2,
+                    "local_grid_channels": 4,
+                    "convnext_mlp_ratio": 2,
+                    "convnext_kernel_size": 7,
+                    "mid_injection_block_index": 1,
+                    "fine_injection_block_index": 4,
+                    "modelsize_mparams": 0.01,
+                    "target_modelsize_mparams": 0.01,
+                    "nominal_total_payload_bytes": 20_000,
+                    "hard_byte_ceiling": 36_000,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+        decoder_codec="int8_mixed",
+        emit_receiver_proof=False,
+        allow_local_output_dir=True,
+        storage_reserve_free_gb=0.0,
+        emit_decoder_weight_waterfill_plan=True,
+        decoder_weight_saliency_json=saliency_path,
+    )
+
+    assert report["decoder_weight_saliency_metadata"]["full_video_coverage"] is True
+    row = report["archive_rows"][0]
+    assert row["decoder_weight_saliency_full_video_coverage"] is True
+    waterfill = json.loads(
+        Path(row["decoder_weight_waterfill_plan_path"]).read_text(encoding="utf-8")
+    )
+    assert "full_video_coverage_missing" not in waterfill["blockers"]
+    assert all(
+        "full_video_coverage_missing" not in waterfill_row["blockers"]
+        for waterfill_row in waterfill["rows"]
+    )
+    assert waterfill["score_claim"] is False
+    assert waterfill["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_archive_size_ladder_rejects_declared_full_without_schedule_proof(
+    tmp_path: Path,
+) -> None:
+    saliency_path = tmp_path / "saliency_replay_declared_only.json"
+    saliency_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_decoder_weight_saliency_replay.v1",
+                "full_video_coverage": True,
+                "saliency_by_name": {"head_rgb_0.bias": 1.0},
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_hinerv_archive_size_ladder(
+        output_dir=tmp_path / "archive_ladder",
+        repo_root=REPO_ROOT,
+        num_pairs=1,
+        row_ids=("hi_nerv_local_tiny",),
+        emit_receiver_proof=False,
+        allow_local_output_dir=True,
+        storage_reserve_free_gb=0.0,
+        emit_decoder_weight_waterfill_plan=True,
+        decoder_weight_saliency_json=saliency_path,
+        decoder_weight_waterfill_action_bits=(0, 2, 32),
+    )
+
+    metadata = report["decoder_weight_saliency_metadata"]
+    assert metadata["declared_full_video_coverage"] is True
+    assert metadata["schedule_full_video_coverage"] is False
+    assert metadata["full_video_coverage"] is False
+    assert "decoder_weight_saliency_declared_full_without_schedule_proof" in metadata[
+        "coverage_blockers"
+    ]
+    row = report["archive_rows"][0]
+    assert row["decoder_weight_saliency_full_video_coverage"] is False
+    waterfill = json.loads(
+        Path(row["decoder_weight_waterfill_plan_path"]).read_text(encoding="utf-8")
+    )
+    assert "full_video_coverage_missing" in waterfill["blockers"]
+    assert any(
+        "full_video_coverage_missing" in waterfill_row["blockers"]
+        for waterfill_row in waterfill["rows"]
+    )
+    assert waterfill["score_claim"] is False
+
+
 def test_hinerv_archive_size_ladder_reports_missing_requested_row(tmp_path: Path) -> None:
     report = build_hinerv_archive_size_ladder(
         output_dir=tmp_path / "archive_ladder",

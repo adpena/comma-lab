@@ -564,6 +564,59 @@ def test_long_training_campaign_plan_blocks_hinerv_candidate_authority_launch(
     assert hi["experiment_queue_entry"]["status"] == "disabled"
 
 
+def test_long_training_campaign_plan_blocks_partial_hinerv_official_controls(
+    tmp_path: Path,
+) -> None:
+    hinerv_budget = _hinerv_budget()
+    partial = dict(hinerv_budget["selected_candidates"][0])
+    partial.update(
+        {
+            "candidate_id": "hinerv_partial_hfg_only",
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": False,
+        }
+    )
+    hinerv_budget["selected_candidates"] = [partial]
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id=partial["candidate_id"],
+        receiver_proof_status="runtime_consumption_proof_ready",
+    )
+    waterfill_path = tmp_path / "partial_hinerv_waterfill.json"
+    waterfill_path.write_text(json.dumps(waterfill, sort_keys=True), encoding="utf-8")
+    waterfill["_decoder_weight_waterfill_plan_path"] = waterfill_path.as_posix()
+    waterfill["_decoder_weight_waterfill_source_path"] = waterfill_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        joint_recon_weight_manifest_paths=(
+            _joint_recon_weight_manifest(tmp_path, num_pairs=600),
+        ),
+        decoder_weight_waterfill_sources=(waterfill,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["candidate_id"] == "hinerv_partial_hfg_only"
+    assert hi["local_mlx_launch_command_ready"] is False
+    assert hi["implementation_status"] == "hinerv_official_controls_required_for_launch"
+    assert "hinerv_official_control_required_for_top_priority_launch" in hi[
+        "blockers"
+    ]
+    assert "hinerv_official_convnext_blocks_not_enabled" in hi["blockers"]
+    assert "hinerv_official_convnext_blocks_not_enabled" in hi[
+        "source_faithfulness_controls"
+    ]["target_official_control_blockers"]
+    assert (
+        hi["experiment_queue_entry"]["status"] == "disabled"
+    )
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None:
     snerv_budget = _snerv_budget()
     huge_over = dict(snerv_budget["selected_candidates"][0])
@@ -808,6 +861,41 @@ def test_long_training_campaign_plan_admits_receiver_proven_hinerv_waterfill(
     assert attachment["runner_admission"]["mode"] == ("runner_training_pressure_and_export_mutation")
     assert attachment["runner_admission"]["refusal_reasons"] == []
     assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" not in hi["blockers"]
+
+
+def test_long_training_campaign_plan_rejects_generic_receiver_proof_string(
+    tmp_path: Path,
+) -> None:
+    waterfill_path = tmp_path / "decoder_weight_waterfill_generic_passed.json"
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id="hinerv_tiny",
+        receiver_proof_status="passed",
+    )
+    waterfill_path.write_text(json.dumps(waterfill, sort_keys=True), encoding="utf-8")
+    waterfill["_decoder_weight_waterfill_plan_path"] = waterfill_path.as_posix()
+    waterfill["_decoder_weight_waterfill_plan_sha256"] = _sha256(waterfill_path)
+    waterfill["_decoder_weight_waterfill_source_path"] = waterfill_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        decoder_weight_waterfill_sources=(waterfill,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    attachment = hi["decoder_weight_waterfill_plan"]
+    assert attachment["attached"] is True
+    assert attachment["receiver_proof_ready"] is False
+    assert attachment["runner_admitted"] is False
+    assert "--decoder-weight-waterfill-plan-json" not in hi["command_argv"]
+    refusal_reasons = attachment["runner_admission"]["refusal_reasons"]
+    assert "decoder_weight_waterfill_receiver_proof_not_ready" in refusal_reasons
+    assert "receiver_proof_not_satisfied" in refusal_reasons
+    assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" in hi["blockers"]
 
 
 def test_long_training_campaign_plan_routes_hinerv_hard_pair_feedback(
@@ -2317,9 +2405,12 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert rc == 0
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["campaign_row_count"] == 2
+    assert payload["planner_row_queue_artifact_path"] == out_json.as_posix()
     assert payload["candidate_feedback_row_count"] == 1
     assert payload["decoder_weight_waterfill_attached_row_count"] == 1
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    assert "--planner-row-queue-artifact" in hi["command_argv"]
+    assert hi["command_argv"][hi["command_argv"].index("--planner-row-queue-artifact") + 1] == out_json.as_posix()
     assert "--recon-pixel-weight-path" in hi["command_argv"]
     assert "--decoder-weight-waterfill-plan-json" in hi["command_argv"]
     waterfill_sidecar = Path(hi["command_argv"][hi["command_argv"].index("--decoder-weight-waterfill-plan-json") + 1])
@@ -2333,9 +2424,14 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert payload["experiment_queue_id"] == (f"nerv_long_training_campaign_{out_json.stem}.v1")
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue == payload["experiment_queue"]
+    assert queue["experiments"][0]["steps"][0]["command"] == payload["campaign_rows"][0]["command_argv"]
     assert queue["queue_id"] == f"nerv_long_training_campaign_{out_json.stem}.v1"
     assert queue["experiments"][0]["steps"][0]["postconditions"]
     snerv_exp = next(exp for exp in queue["experiments"] if exp["family"] == "snerv")
+    assert "--planner-row-queue-artifact" in snerv_exp["steps"][0]["command"]
+    assert snerv_exp["steps"][0]["command"][
+        snerv_exp["steps"][0]["command"].index("--planner-row-queue-artifact") + 1
+    ] == out_json.as_posix()
     assert snerv_exp["blocked"] is True
     loaded_queue = load_queue_definition(out_queue)
     assert loaded_queue["schema"] == "experiment_queue.v1"
@@ -2434,10 +2530,261 @@ def test_build_long_training_campaign_plan_cli_extracts_waterfill_from_archive_l
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert hi["decoder_weight_waterfill_plan"]["attached"] is True
     assert hi["decoder_weight_waterfill_plan"]["path"] == waterfill_plan.as_posix()
-    assert hi["decoder_weight_waterfill_plan"]["receiver_proof_ready"] is True
-    assert "decoder_weight_waterfill_receiver_proof_not_ready" not in hi[
+    assert hi["decoder_weight_waterfill_plan"]["receiver_proof_ready"] is False
+    assert hi["decoder_weight_waterfill_plan"][
+        "_archive_size_ladder_runtime_consumption_proof_ready"
+    ] is True
+    assert "decoder_weight_waterfill_receiver_proof_not_ready" in hi[
         "decoder_weight_waterfill_plan"
     ]["runner_admission"]["refusal_reasons"]
+
+
+def test_build_long_training_campaign_plan_cli_selects_archive_ladder_waterfill_candidate(
+    tmp_path: Path,
+) -> None:
+    hinerv = tmp_path / "hinerv_budget.json"
+    snerv = tmp_path / "snerv_budget.json"
+    out_json = tmp_path / "campaign.json"
+    waterfill_plan = tmp_path / "decoder_weight_waterfill.json"
+    archive_ladder = tmp_path / "hinerv_archive_ladder.json"
+    ladder_candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    ladder_candidate.update(
+        {
+            "candidate_id": "hinerv_ladder_receiver_backed",
+            "nominal_total_payload_bytes": 88_000,
+            "byte_headroom": 90_000,
+        }
+    )
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id="hinerv_ladder_receiver_backed",
+        receiver_proof_status="runtime_consumption_proof_ready",
+    )
+    waterfill["full_video_coverage"] = True
+    waterfill_plan.write_text(json.dumps(waterfill), encoding="utf-8")
+    hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
+    snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
+    archive_ladder.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "archive_rows": [
+                    {
+                        "row_id": "hinerv_ladder_receiver_backed",
+                        "modelsize_candidate": ladder_candidate,
+                        "decoder_weight_waterfill_plan_path": waterfill_plan.as_posix(),
+                        "runtime_consumption_proof_ready": True,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = cli.main(
+        [
+            "--hinerv-modelsize-budget",
+            hinerv.as_posix(),
+            "--snerv-modelsize-budget",
+            snerv.as_posix(),
+            "--optimizer-kind",
+            "lion",
+            "--epochs",
+            "16",
+            "--max-candidates-per-family",
+            "1",
+            "--decoder-weight-waterfill-source",
+            archive_ladder.as_posix(),
+            "--output-json",
+            out_json.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["candidate_id"] == "hinerv_ladder_receiver_backed"
+    assert hi["candidate"]["_candidate_source"] == (
+        "decoder_weight_waterfill_modelsize_candidate"
+    )
+    assert hi["decoder_weight_waterfill_plan"]["attached"] is True
+    assert hi["decoder_weight_waterfill_plan"]["runner_admitted"] is True
+    assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
+    assert payload["decoder_weight_waterfill_unattached_source_count"] == 0
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
+
+
+def test_build_long_training_campaign_plan_keeps_current_budget_over_stale_waterfill_sidecar(
+    tmp_path: Path,
+) -> None:
+    hinerv = tmp_path / "hinerv_budget.json"
+    snerv = tmp_path / "snerv_budget.json"
+    out_json = tmp_path / "campaign.json"
+    waterfill_plan = tmp_path / "decoder_weight_waterfill.json"
+    archive_ladder = tmp_path / "hinerv_archive_ladder.json"
+    current_candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    stale_candidate = dict(current_candidate)
+    stale_candidate["decoder_codec"] = "int8_mixed"
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id=current_candidate["candidate_id"],
+        receiver_proof_status="runtime_consumption_proof_ready",
+    )
+    waterfill_plan.write_text(json.dumps(waterfill), encoding="utf-8")
+    hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
+    snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
+    archive_ladder.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "archive_rows": [
+                    {
+                        "row_id": current_candidate["candidate_id"],
+                        "modelsize_candidate": stale_candidate,
+                        "decoder_weight_waterfill_plan_path": waterfill_plan.as_posix(),
+                        "runtime_consumption_proof_ready": True,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = cli.main(
+        [
+            "--hinerv-modelsize-budget",
+            hinerv.as_posix(),
+            "--snerv-modelsize-budget",
+            snerv.as_posix(),
+            "--optimizer-kind",
+            "lion",
+            "--epochs",
+            "16",
+            "--max-candidates-per-family",
+            "1",
+            "--decoder-weight-waterfill-source",
+            archive_ladder.as_posix(),
+            "--output-json",
+            out_json.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["candidate_id"] == current_candidate["candidate_id"]
+    assert hi["candidate"]["decoder_codec"] == current_candidate["decoder_codec"]
+    attachment = hi["decoder_weight_waterfill_plan"]
+    assert attachment["attached"] is True
+    assert attachment["runner_admitted"] is False
+    assert "decoder_weight_waterfill_modelsize_mismatch:decoder_codec" in attachment["blockers"]
+    assert "decoder_weight_waterfill_receiver_proof_not_ready" in attachment[
+        "runner_admission"
+    ]["refusal_reasons"]
+    assert "--decoder-weight-waterfill-plan-json" not in hi["command_argv"]
+
+
+def test_build_long_training_campaign_plan_cli_emits_ladder_saliency_replay_work_order(
+    tmp_path: Path,
+) -> None:
+    hinerv = tmp_path / "hinerv_budget.json"
+    snerv = tmp_path / "snerv_budget.json"
+    out_json = tmp_path / "campaign.json"
+    waterfill_plan = tmp_path / "decoder_weight_waterfill.json"
+    archive_ladder = tmp_path / "hinerv_archive_ladder.json"
+    ladder_candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    ladder_candidate.update({"candidate_id": "hinerv_ladder_needs_saliency"})
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id="hinerv_ladder_needs_saliency",
+        receiver_proof_status="runtime_consumption_proof_ready",
+    )
+    waterfill["full_video_coverage"] = False
+    waterfill["blockers"] = [
+        "decoder_weight_saliency_missing_for_some_groups",
+        "full_video_coverage_missing",
+    ]
+    for row in waterfill["rows"]:
+        row["blockers"] = ["decoder_weight_group_saliency_missing"]
+    waterfill_plan.write_text(json.dumps(waterfill), encoding="utf-8")
+    hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
+    snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
+    archive_ladder.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "archive_rows": [
+                    {
+                        "row_id": "hinerv_ladder_needs_saliency",
+                        "modelsize_candidate": ladder_candidate,
+                        "decoder_weight_waterfill_plan_path": waterfill_plan.as_posix(),
+                        "runtime_consumption_proof_ready": True,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = cli.main(
+        [
+            "--hinerv-modelsize-budget",
+            hinerv.as_posix(),
+            "--snerv-modelsize-budget",
+            snerv.as_posix(),
+            "--optimizer-kind",
+            "lion",
+            "--epochs",
+            "16",
+            "--max-candidates-per-family",
+            "1",
+            "--decoder-weight-waterfill-source",
+            archive_ladder.as_posix(),
+            "--output-json",
+            out_json.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    attachment = hi["decoder_weight_waterfill_plan"]
+    assert attachment["attached"] is True
+    assert attachment["runner_admitted"] is False
+    work_order = attachment["saliency_replay_work_order"]
+    assert work_order["schema"] == "nerv_decoder_weight_saliency_replay_work_order.v1"
+    assert work_order["required"] is True
+    assert work_order["coverage_required"] == "full600_start0_stride1"
+    assert work_order["blockers"] == []
+    assert "tools/build_hinerv_decoder_weight_saliency_replay.py" in work_order[
+        "saliency_replay_command_argv"
+    ]
+    assert "--max-pairs" in work_order["saliency_replay_command_argv"]
+    assert "600" in work_order["saliency_replay_command_argv"]
+    assert "tools/build_hinerv_archive_ladder_waterfill.py" in work_order[
+        "waterfill_rebuild_command_argv"
+    ]
+    assert work_order["campaign_rebuild_hint_argv"] == []
+    assert work_order["campaign_rebuild_decoder_weight_waterfill_source"] == work_order[
+        "expected_output_waterfill_json"
+    ]
+    assert "--hinerv-modelsize-budget" in work_order["campaign_rebuild_required_inputs"]
+    for argv in (
+        work_order["saliency_replay_command_argv"],
+        work_order["waterfill_rebuild_command_argv"],
+        work_order["campaign_rebuild_hint_argv"],
+    ):
+        assert all("${" not in str(item) for item in argv)
+        assert all(not str(item).strip().startswith("#") for item in argv)
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
 
 
 def _hinerv_budget() -> dict:
@@ -2453,6 +2800,8 @@ def _hinerv_budget() -> dict:
                 "decoder_codec": "int4_mixed",
                 "nominal_total_payload_bytes": 120_000,
                 "nominal_under_ceiling": True,
+                "use_hierarchical_feature_grid": True,
+                "use_convnext_blocks": True,
             }
         ],
         "score_claim": False,
@@ -2510,9 +2859,6 @@ def _decoder_weight_waterfill_plan(
         "runtime_consumption_proof_ready",
         "receiver_proof_valid",
         "runtime_consumption_proof_passed",
-        "satisfied",
-        "valid",
-        "passed",
     }
     blockers = [] if receiver_ready else ["receiver_proof_not_satisfied"]
     return {
@@ -2522,6 +2868,7 @@ def _decoder_weight_waterfill_plan(
         "group_count": 2,
         "full_video_coverage": True,
         "receiver_proof_status": receiver_proof_status,
+        "archive_sha256": "a" * 64,
         "rows": [
             {
                 "group_name": "blocks.0.conv.weight",

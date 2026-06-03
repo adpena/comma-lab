@@ -129,6 +129,27 @@ def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> Non
     assert "selection_strategy" in report["budget_math"]
 
 
+def test_hinerv_modelsize_budget_can_emit_official_controls_only() -> None:
+    report = build_hinerv_modelsize_budget_report(
+        hard_byte_ceilings=(36_000, 178_000),
+        num_pairs=600,
+        per_ceiling_limit=4,
+        official_controls_only=True,
+    )
+
+    assert report["official_controls_only"] is True
+    assert report["budget_math"]["official_controls_only"] is True
+    assert report["use_hierarchical_feature_grid_options"] == [True]
+    assert report["use_convnext_blocks_options"] == [True]
+    selected = report["selected_candidates"]
+    assert selected
+    assert all(row["use_hierarchical_feature_grid"] is True for row in selected)
+    assert all(row["use_convnext_blocks"] is True for row in selected)
+    assert all("_hfg_cnx_" in row["candidate_id"] for row in selected)
+    assert all(row["score_claim"] is False for row in selected)
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in selected)
+
+
 def test_hinerv_target_modelsize_selects_real_capacity_rows() -> None:
     report = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=(178_000,),

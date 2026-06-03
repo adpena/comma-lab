@@ -445,26 +445,248 @@ def test_planner_row_launch_gate_rejects_manual_hinerv_without_row_id(
     assert payload["blockers"] == blockers
 
 
-def test_planner_row_launch_gate_allows_planner_or_explicit_manual() -> None:
-    assert runner_mod._planner_row_launch_blockers(
+def _write_planner_row_queue_artifact(
+    path: Path,
+    *,
+    schema: str = "experiment_queue.v1",
+    family: str = "hi_nerv",
+    row_id: str = "hi_nerv::candidate::adamw",
+    status: str = "queued",
+    blocked: bool = False,
+    runnable_contract: bool = True,
+    command_extra: list[str] | None = None,
+) -> Path:
+    payload = {
+        "schema": schema,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "experiments": [
+            {
+                "id": "unit_planner_row",
+                "family": family,
+                "status": status,
+                "blocked": blocked,
+                "launch_authority_contract": {
+                    "schema": "nerv_long_training_queue_launch_authority_contract.v1",
+                    "queue_status_is_local_mlx_plan": True,
+                    "queue_status_is_runnable_plan": runnable_contract,
+                    "queue_launch_blockers": []
+                    if runnable_contract
+                    else ["unit_not_runnable"],
+                    "queue_status_is_receiver_proof": False,
+                    "queue_status_is_cpu_replay_proof": False,
+                    "queue_status_is_exact_eval_authority": False,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "steps": [
+                    {
+                        "id": "run_mlx_first_campaign_row",
+                        "command": [
+                            "python",
+                            "tools/run_compact_renderer_mlx_spine_runner.py",
+                            "--execute-family",
+                            family,
+                            "--planner-row-id",
+                            row_id,
+                            *(command_extra or []),
+                        ],
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ],
+    }
+    path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+    return path
+
+
+def test_planner_row_launch_gate_requires_queue_artifact_for_planner_row() -> None:
+    blockers = runner_mod._planner_row_launch_blockers(
         SimpleNamespace(
             execute_family="hi_nerv",
             planner_row_id="hi_nerv::candidate::adamw",
+            planner_row_queue_artifact=[],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
             allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            repo_root=REPO_ROOT,
+        )
+    )
+
+    assert "hi_nerv_planner_row_queue_artifact_missing" in blockers
+    assert "planner_row_queue_artifact_required_for_planner_row_launch" in blockers
+    assert "bounded_planner_row_timing_smoke_waiver_missing" in blockers
+
+
+def test_planner_row_launch_gate_allows_queued_runnable_artifact(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(tmp_path / "queue.json")
+    args = SimpleNamespace(
+        execute_family="hi_nerv",
+        planner_row_id="hi_nerv::candidate::adamw",
+        planner_row_queue_artifact=[queue_path],
+        allow_bounded_planner_row_timing_smoke_waiver=False,
+        allow_manual_compact_family_launch=False,
+        num_pairs=600,
+        epochs=29650,
+        repo_root=REPO_ROOT,
+    )
+
+    assert runner_mod._planner_row_launch_blockers(args) == []
+    guard = runner_mod._planner_row_launch_guard(args)
+    record = guard["queue_artifact_status"]["artifact_records"][0]
+    assert record["bytes"] == queue_path.stat().st_size
+    assert record["sha256"] == runner_mod._sha256_file(queue_path)
+
+
+def test_planner_row_launch_gate_rejects_fake_queue_schema(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        schema="fake_queue.v1",
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="hi_nerv",
+            planner_row_id="hi_nerv::candidate::adamw",
+            planner_row_queue_artifact=[queue_path],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
+            allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            repo_root=REPO_ROOT,
+        )
+    )
+
+    assert "planner_row_queue_artifact_schema_not_allowed" in blockers
+    assert "hi_nerv_planner_row_id_not_found_in_queue_artifact" in blockers
+
+
+def test_planner_row_launch_gate_rejects_stale_command_controls(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        command_extra=[
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "29650",
+            "--modelsize-candidate-id",
+            "queued-candidate",
+        ],
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="hi_nerv",
+            planner_row_id="hi_nerv::candidate::adamw",
+            planner_row_queue_artifact=[queue_path],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
+            allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=16,
+            modelsize_candidate_id="different-candidate",
+            repo_root=REPO_ROOT,
+        )
+    )
+
+    assert "planner_row_command_mismatch:--epochs" in blockers
+    assert "planner_row_command_mismatch:--modelsize-candidate-id" in blockers
+
+
+def test_planner_row_launch_gate_rejects_nonrunnable_queue_artifact(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        status="disabled",
+        blocked=True,
+        runnable_contract=False,
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="hi_nerv",
+            planner_row_id="hi_nerv::candidate::adamw",
+            planner_row_queue_artifact=[queue_path],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
+            allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            repo_root=REPO_ROOT,
+        )
+    )
+
+    assert "hi_nerv_planner_row_queue_artifact_not_queued_or_runnable" in blockers
+    assert "bounded_planner_row_timing_smoke_waiver_missing" in blockers
+
+
+def test_planner_row_launch_gate_allows_only_bounded_timing_smoke_waiver() -> None:
+    assert runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="snerv",
+            planner_row_id="snerv::candidate::adamw",
+            planner_row_queue_artifact=[],
+            allow_bounded_planner_row_timing_smoke_waiver=True,
+            allow_manual_compact_family_launch=False,
+            num_pairs=2,
+            epochs=1,
+            repo_root=REPO_ROOT,
         )
     ) == []
+
+    blockers = runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="snerv",
+            planner_row_id="snerv::candidate::adamw",
+            planner_row_queue_artifact=[],
+            allow_bounded_planner_row_timing_smoke_waiver=True,
+            allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            repo_root=REPO_ROOT,
+        )
+    )
+    assert "snerv_bounded_timing_smoke_waiver_exceeds_limits" in blockers
+
+
+def test_planner_row_launch_gate_allows_explicit_manual_without_row() -> None:
     assert runner_mod._planner_row_launch_blockers(
         SimpleNamespace(
             execute_family="snerv",
             planner_row_id="",
+            planner_row_queue_artifact=[],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
             allow_manual_compact_family_launch=True,
+            num_pairs=600,
+            epochs=29650,
+            repo_root=REPO_ROOT,
         )
     ) == []
+
+
+def test_planner_row_launch_gate_allows_non_required_family() -> None:
     assert runner_mod._planner_row_launch_blockers(
         SimpleNamespace(
             execute_family="pr95_hnerv",
             planner_row_id="",
+            planner_row_queue_artifact=[],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
             allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            repo_root=REPO_ROOT,
         )
     ) == []
 
@@ -739,6 +961,18 @@ def test_hinerv_refuses_non_official_control_candidate_before_training(
     assert out["training_executed"] is False
     assert out["trainer_launch_allowed"] is False
     assert out["hi_nerv_source_faithfulness"]["official_hinerv_control"] is False
+    assert out["hi_nerv_control_precedence"]["schema"] == (
+        "hi_nerv_launch_control_precedence.v1"
+    )
+    assert out["hi_nerv_control_precedence"][
+        "more_finely_grained_child_rules_take_priority"
+    ] is True
+    assert out["hi_nerv_control_precedence"][
+        "parent_rules_remain_required_guardrails"
+    ] is True
+    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in out[
+        "hi_nerv_control_precedence"
+    ]["source_base_blockers"]
     assert "hinerv_official_control_required_for_top_priority_launch" in out[
         "blockers"
     ]
@@ -888,6 +1122,12 @@ def test_hinerv_execute_allows_runner_startup_marker_only_dir(
     assert out["execute_family"] == "hi_nerv"
     assert out["training_executed"] is True
     assert marker.is_file()
+    embedded_plan = out["nerv_long_training_campaign_plan"]
+    assert embedded_plan["planner_row_queue_artifact_path"].endswith(
+        "/compact_renderer_mlx_spine_runner_report.json"
+    )
+    embedded_command = embedded_plan["campaign_rows"][0]["command_argv"]
+    assert "--planner-row-queue-artifact" in embedded_command
 
 
 def test_hinerv_execute_forwards_prioritized_pair_indices(
@@ -1474,6 +1714,11 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert hi["nominal_under_ceiling"] is True
     assert hi["use_hierarchical_feature_grid"] is True
     assert hi["use_convnext_blocks"] is True
+    hi_precedence = hi["modelsize_control_contract"]["control_precedence"]
+    assert hi_precedence["more_finely_grained_child_rules_take_priority"] is True
+    assert hi_precedence[
+        "official_controls_are_base_constraints_not_rate_optimizer_overrides"
+    ] is True
     target_hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
@@ -1487,6 +1732,15 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert target_hi["use_hierarchical_feature_grid"] is True
     assert target_hi["use_convnext_blocks"] is True
     assert target_hi["target_modelsize_mparams"] == 0.03
+    target_hi_precedence = target_hi["modelsize_control_contract"][
+        "control_precedence"
+    ]
+    assert target_hi_precedence["highest_specificity_active_layer"] == (
+        "pact_target_modelsize_child_rule"
+    )
+    assert target_hi_precedence[
+        "more_finely_grained_child_rules_take_priority"
+    ] is True
     assert target_hi["modelsize_error_mparams"] == pytest.approx(
         abs(target_hi["modelsize_mparams"] - 0.03)
     )
@@ -4409,6 +4663,18 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
         selection["modelsize_control_contract"]["archive_bytes_authority_required"]
         is True
     )
+    assert selection["modelsize_control_contract"]["control_precedence"][
+        "child_rules_override_parent_defaults"
+    ] is True
+    precedence = out["hi_nerv_control_precedence"]
+    assert precedence["more_finely_grained_child_rules_take_priority"] is True
+    assert precedence["pact_controls_take_priority_inside_source_faithful_subset"] is True
+    assert precedence["highest_specificity_active_layer"] == (
+        "promotion_and_exact_eval_gates"
+    )
+    assert precedence["modelsize_control_precedence"][
+        "highest_specificity_active_layer"
+    ] == "pact_receiver_visible_modelsize_child_rule"
     assert selection["candidate_curriculum_plan"]["coder_pressure"]["enabled"] is True
     assert selection["candidate_curriculum_plan"]["coder_pressure"][
         "quant_bits"

@@ -115,6 +115,20 @@ def inflate_one_video(
             write_rgb_pair_to_raw(fh, rgb_0, rgb_1, input_range="unit")
 
 
+def _read_single_video_file_list(file_list_path: Path) -> str:
+    entries = [
+        line.strip()
+        for line in file_list_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    if len(entries) != 1:
+        raise ValueError(
+            "hi_nerv receiver currently supports exactly one archive-bound "
+            f"video entry; got {len(entries)} entries in {file_list_path}"
+        )
+    return entries[0]
+
+
 def main_cli() -> int:
     """CLI: inflate.py <archive_dir> <output_dir> <file_list> per Catalog #146."""
     if len(sys.argv) < 4:
@@ -124,11 +138,14 @@ def main_cli() -> int:
     output_dir = Path(sys.argv[2])
     file_list_path = Path(sys.argv[3])
 
-    file_list = file_list_path.read_text(encoding="utf-8").strip().splitlines()
+    try:
+        fname = _read_single_video_file_list(file_list_path)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     device = select_inflate_device()
-    for fname in file_list:
-        archive_bytes = (archive_dir / "0.bin").read_bytes()
-        inflate_one_video(archive_bytes, raw_output_path(output_dir, fname), device=device)
+    archive_bytes = (archive_dir / "0.bin").read_bytes()
+    inflate_one_video(archive_bytes, raw_output_path(output_dir, fname), device=device)
     return 0
 
 

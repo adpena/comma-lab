@@ -12,7 +12,7 @@ stop launching one arbitrary compact HiNeRV point.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, replace
 from math import ceil
 from typing import Any
@@ -42,6 +42,106 @@ MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS = (
     "trained_archive_export_required_for_score_or_rate_claim",
     "archive_bytes_authority_required",
 )
+
+
+def modelsize_control_precedence_contract(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    """Describe the modelsize control cascade without granting score authority."""
+
+    family = str(candidate.get("family") or "")
+    candidate_id = str(candidate.get("candidate_id") or "")
+    capacity_source = str(candidate.get("capacity_source") or "")
+    contract = candidate.get("modelsize_control_contract")
+    control_semantics = (
+        str(contract.get("control_semantics") or "")
+        if isinstance(contract, Mapping)
+        else ""
+    )
+    receiver_visible_capacity_active = bool(capacity_source or control_semantics) or any(
+        candidate.get(key) is not None
+        for key in (
+            "latent_dim",
+            "embed_dim",
+            "decoder_channel",
+            "fc_dim",
+            "lower_width",
+            "enc_dim",
+            "modelsize_mparams",
+        )
+    )
+    target_modelsize = candidate.get("target_modelsize_mparams")
+    official_source_base_active = (
+        family == "hi_nerv"
+        and bool(candidate.get("use_hierarchical_feature_grid"))
+        and bool(candidate.get("use_convnext_blocks"))
+    )
+    if family == "snerv":
+        official_source_base_active = str(
+            candidate.get("snerv_model_size_adapter") or ""
+        ).startswith("snerv_")
+    child_layers: list[dict[str, Any]] = [
+        {
+            "layer_id": "parent_source_or_oss_defaults",
+            "specificity": 10,
+            "active": True,
+            "role": "base_rule",
+        },
+        {
+            "layer_id": "official_source_control_base",
+            "specificity": 30,
+            "active": bool(official_source_base_active),
+            "role": "required_guardrail",
+        },
+        {
+            "layer_id": "pact_hard_byte_ceiling",
+            "specificity": 70,
+            "active": bool(candidate.get("hard_byte_ceiling")),
+            "role": "receiver_archive_budget_filter",
+        },
+        {
+            "layer_id": "pact_receiver_visible_modelsize_child_rule",
+            "specificity": 80,
+            "active": receiver_visible_capacity_active,
+            "role": "receiver_visible_capacity_rule",
+        },
+    ]
+    if target_modelsize is not None:
+        child_layers.append(
+            {
+                "layer_id": "pact_target_modelsize_child_rule",
+                "specificity": 90,
+                "active": True,
+                "role": "nearest_receiver_visible_capacity_target",
+            }
+        )
+    if candidate.get("official_modelsize_solution") is not None:
+        child_layers.append(
+            {
+                "layer_id": "official_snerv_modelsize_fc_dim_child_rule",
+                "specificity": 90,
+                "active": True,
+                "role": "receiver_visible_fc_dim_solution",
+            }
+        )
+    active_layers = [row for row in child_layers if row["active"]]
+    highest = max(active_layers, key=lambda row: int(row["specificity"]))
+    return {
+        "schema": "nerv_control_precedence_contract.v1",
+        "family": family,
+        "candidate_id": candidate_id,
+        "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+        "more_finely_grained_child_rules_take_priority": True,
+        "child_rules_override_parent_defaults": True,
+        "parent_rules_remain_required_guardrails": True,
+        "official_controls_are_base_constraints_not_rate_optimizer_overrides": True,
+        "highest_specificity_active_layer": highest["layer_id"],
+        "layers_low_to_high_specificity": sorted(
+            child_layers,
+            key=lambda row: int(row["specificity"]),
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 DEFAULT_HINERV_LATENT_DIMS = (4, 8, 12, 16, 24, 28)
 DEFAULT_HINERV_EMBED_DIMS = (8, 12, 16, 24, 32)
@@ -263,6 +363,7 @@ class HinervModelSizeCandidate:
             "mutates_receiver_visible_architecture": True,
             "mutates_trained_parameter_count": True,
             "hard_byte_ceiling_is_archive_budget_filter": True,
+            "control_precedence": modelsize_control_precedence_contract(payload),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -346,6 +447,7 @@ class SnervModelSizeCandidate:
             ),
             "mutates_trained_parameter_count": True,
             "hard_byte_ceiling_is_archive_budget_filter": True,
+            "control_precedence": modelsize_control_precedence_contract(payload),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -814,9 +916,13 @@ def build_hinerv_modelsize_budget_report(
     use_hierarchical_feature_grid_options: tuple[bool, ...] = (False, True),
     use_convnext_blocks_options: tuple[bool, ...] = (False, True),
     target_modelsize_mparams: tuple[float, ...] = (),
+    official_controls_only: bool = False,
 ) -> dict[str, Any]:
     """Return a planner-safe local HiNeRV model-size budget report."""
 
+    if official_controls_only:
+        use_hierarchical_feature_grid_options = (True,)
+        use_convnext_blocks_options = (True,)
     candidates = enumerate_hinerv_modelsize_candidates(
         hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=num_pairs,
@@ -840,6 +946,7 @@ def build_hinerv_modelsize_budget_report(
             bool(v) for v in use_hierarchical_feature_grid_options
         ],
         "use_convnext_blocks_options": [bool(v) for v in use_convnext_blocks_options],
+        "official_controls_only": bool(official_controls_only),
         "target_modelsize_mparams": [float(v) for v in target_modelsize_mparams],
         "candidate_count": len(candidates),
         "selected_candidate_count": len(selected),
@@ -860,6 +967,7 @@ def build_hinerv_modelsize_budget_report(
                 "row per codec; exact archive bytes and scorer replay arbitrate "
                 "the quantization ladder"
             ),
+            "official_controls_only": bool(official_controls_only),
             "real_authority": (
                 "trained byte-closed archive.zip bytes measured after "
                 "export_hi_nerv_mlx_archive plus receiver proof"
@@ -1720,6 +1828,7 @@ __all__ = [
     "decoder_codec_nominal_bits",
     "enumerate_hinerv_modelsize_candidates",
     "enumerate_snerv_modelsize_candidates",
+    "modelsize_control_precedence_contract",
     "official_nerv_oss_flag_audit",
     "select_hinerv_modelsize_candidates",
     "select_snerv_modelsize_candidates",

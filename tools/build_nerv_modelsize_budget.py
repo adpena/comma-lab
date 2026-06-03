@@ -95,6 +95,15 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--include-hinerv-partial-controls",
+        action="store_true",
+        help=(
+            "Include local/partial HiNeRV control rows in the budget artifact. "
+            "Default top-priority budget generation emits only candidates with "
+            "both official hierarchical feature-grid and ConvNeXt controls."
+        ),
+    )
+    parser.add_argument(
         "--snerv-official-enc-strds",
         type=_parse_int_tuple,
         default=DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
@@ -171,6 +180,7 @@ def main(argv: list[str] | None = None) -> int:
         num_pairs=int(args.num_pairs),
         per_ceiling_limit=int(args.per_ceiling_limit),
         target_modelsize_mparams=hinerv_target_modelsize_mparams,
+        official_controls_only=not bool(args.include_hinerv_partial_controls),
     )
     snerv = build_snerv_modelsize_budget_report(
         hard_byte_ceilings=hard_byte_ceilings,
@@ -213,6 +223,9 @@ def main(argv: list[str] | None = None) -> int:
             "per_ceiling_limit": int(args.per_ceiling_limit),
             "target_modelsize_mparams": list(target_modelsize_mparams),
             "hinerv_target_modelsize_mparams": list(hinerv_target_modelsize_mparams),
+            "hinerv_official_controls_only": not bool(
+                args.include_hinerv_partial_controls
+            ),
             "snerv_fc_dims": list(snerv_fc_dims),
             "snerv_emb_sizes": list(snerv_emb_sizes),
             "snerv_official_modelsize_mparams": list(

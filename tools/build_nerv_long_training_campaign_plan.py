@@ -142,6 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         snerv_bounded_proof_only=bool(args.snerv_bounded_proof_only),
         snerv_bounded_proof_epochs=int(args.snerv_bounded_proof_epochs),
         experiment_queue_id=experiment_queue_id,
+        planner_row_queue_artifact_path=args.output_json,
     )
     write_json_artifact(
         args.output_json,
@@ -267,18 +268,20 @@ def _load_archive_size_ladder_waterfill_sidecars(
             continue
         plan_path = Path(str(plan_path_raw)).expanduser().resolve(strict=False)
         plan = _load(plan_path)
-        if (
-            row.get("runtime_consumption_proof_ready") is True
-            and str(plan.get("receiver_proof_status") or "").strip().lower()
-            in {"", "missing", "not_executed", "unknown"}
-        ):
-            plan = dict(plan)
-            plan["receiver_proof_status"] = "runtime_consumption_proof_ready"
         out.append(
             _waterfill_payload_with_path(
                 plan,
                 plan_path=plan_path,
                 source_path=source_path,
+                extra={
+                    "_modelsize_row_id": row.get("row_id"),
+                    "_modelsize_candidate": row.get("modelsize_candidate"),
+                    "_archive_size_ladder_row_index": index,
+                    "_archive_size_ladder_source_schema": payload.get("schema"),
+                    "_archive_size_ladder_runtime_consumption_proof_ready": row.get(
+                        "runtime_consumption_proof_ready"
+                    ),
+                },
             )
         )
     return out

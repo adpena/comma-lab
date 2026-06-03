@@ -76,6 +76,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     build_snerv_modelsize_budget_report,
     enumerate_hinerv_modelsize_candidates,
     enumerate_snerv_modelsize_candidates,
+    modelsize_control_precedence_contract,
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
     snerv_temporal_mode_from_id_token,
@@ -189,6 +190,17 @@ EXECUTABLE_FAMILIES = (
 PLANNER_GATED_FAMILIES: tuple[str, ...] = ()
 CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
 PLANNER_ROW_REQUIRED_FAMILIES = ("hi_nerv", "snerv")
+PLANNER_ROW_QUEUE_RUNNABLE_STATUSES = ("queued", "runnable")
+PLANNER_ROW_QUEUE_ARTIFACT_SCHEMAS = (
+    "nerv_long_training_campaign_plan.v1",
+    "experiment_queue.v1",
+    COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+)
+PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA = (
+    "nerv_long_training_queue_launch_authority_contract.v1"
+)
+PLANNER_ROW_TIMING_SMOKE_MAX_PAIRS = 32
+PLANNER_ROW_TIMING_SMOKE_MAX_EPOCHS = 3
 HI_NERV_OPTIMIZER_POLICIES = (
     "auto",
     "pr95_curriculum",
@@ -2233,7 +2245,12 @@ def _modelsize_control_contract(
     contract = candidate.get("modelsize_control_contract")
     if not isinstance(contract, Mapping):
         return None
-    return dict(contract)
+    out = dict(contract)
+    out.setdefault(
+        "control_precedence",
+        modelsize_control_precedence_contract(candidate),
+    )
+    return out
 
 
 def _write_snerv_binary_profile_attachment(
@@ -2794,6 +2811,92 @@ def _bind_hi_nerv_modelsize_launch_pressure(
         "pose_distillation_weight": effective_pose,
         "source": source,
         "mutations": mutations,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _hi_nerv_launch_control_precedence_report(
+    *,
+    modelsize_candidate: Mapping[str, Any] | None,
+    source_faithfulness: Mapping[str, Any],
+    modelsize_launch_pressure: Mapping[str, Any],
+    decoder_weight_waterfill_plan_metadata: Mapping[str, Any],
+    optimizer_policy: Mapping[str, Any],
+) -> dict[str, Any]:
+    modelsize_precedence = (
+        modelsize_control_precedence_contract(modelsize_candidate)
+        if modelsize_candidate
+        else None
+    )
+    child_layers = [
+        {
+            "layer_id": "official_hinerv_source_base",
+            "specificity": 30,
+            "active": bool(source_faithfulness.get("official_hinerv_control")),
+            "role": "required_source_faithfulness_guardrail",
+        },
+        {
+            "layer_id": "pact_modelsize_candidate",
+            "specificity": 70,
+            "active": bool(modelsize_candidate),
+            "role": "receiver_visible_capacity_and_byte_budget_child_rule",
+        },
+        {
+            "layer_id": "pact_joint_scorer_pressure",
+            "specificity": 80,
+            "active": bool(modelsize_launch_pressure.get("candidate_conditioned")),
+            "role": "contest_scorer_teacher_child_rule",
+        },
+        {
+            "layer_id": "pact_optimizer_qat_policy",
+            "specificity": 85,
+            "active": bool(optimizer_policy),
+            "role": "contest_optimizer_and_rate_pressure_child_rule",
+        },
+        {
+            "layer_id": "pact_decoder_weight_waterfill",
+            "specificity": 90,
+            "active": bool(decoder_weight_waterfill_plan_metadata.get("attached")),
+            "role": "decoder_weight_saliency_allocator_child_rule",
+        },
+        {
+            "layer_id": "promotion_and_exact_eval_gates",
+            "specificity": 100,
+            "active": True,
+            "role": "fail_closed_authority_guardrail",
+        },
+    ]
+    active_layers = [row for row in child_layers if row["active"]]
+    highest = max(active_layers, key=lambda row: int(row["specificity"]))
+    return {
+        "schema": "hi_nerv_launch_control_precedence.v1",
+        "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+        "more_finely_grained_child_rules_take_priority": True,
+        "child_rules_override_parent_defaults": True,
+        "parent_rules_remain_required_guardrails": True,
+        "official_controls_are_required_base_not_final_optimizer": True,
+        "pact_controls_take_priority_inside_source_faithful_subset": True,
+        "conflict_resolution_high_to_low": [
+            "promotion_and_exact_eval_gates",
+            "pact_decoder_weight_waterfill",
+            "pact_optimizer_qat_policy",
+            "pact_joint_scorer_pressure",
+            "pact_target_modelsize_or_modelsize_candidate",
+            "pact_hard_byte_ceiling",
+            "official_hinerv_source_base",
+            "manual_cli_defaults",
+        ],
+        "highest_specificity_active_layer": highest["layer_id"],
+        "layers_low_to_high_specificity": sorted(
+            child_layers,
+            key=lambda row: int(row["specificity"]),
+        ),
+        "modelsize_control_precedence": modelsize_precedence,
+        "source_base_blockers": list(
+            source_faithfulness.get("official_hinerv_blockers") or []
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -5727,6 +5830,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         mid_injection_block_index=launch_mid_injection_block_index,
         fine_injection_block_index=launch_fine_injection_block_index,
     )
+    launch_control_precedence = _hi_nerv_launch_control_precedence_report(
+        modelsize_candidate=candidate or None,
+        source_faithfulness=launch_source_faithfulness,
+        modelsize_launch_pressure=launch_pressure_binding,
+        decoder_weight_waterfill_plan_metadata=decoder_weight_waterfill_plan_metadata,
+        optimizer_policy=optimizer_policy,
+    )
     waterfill_validation_blockers = list(
         decoder_weight_waterfill_plan_metadata.get("blockers") or []
     )
@@ -5790,6 +5900,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 },
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "hi_nerv_control_precedence": launch_control_precedence,
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
@@ -5842,6 +5953,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "hi_nerv_control_precedence": launch_control_precedence,
                 "score_aware_training": {
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
@@ -5929,6 +6041,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "hi_nerv_control_precedence": launch_control_precedence,
                 "score_aware_training": {
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
@@ -6065,6 +6178,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "hi_nerv_control_precedence": launch_control_precedence,
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
@@ -6202,6 +6316,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "hi_nerv_control_precedence": launch_control_precedence,
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "checkpoint_interval_epochs": checkpoint_interval,
@@ -6432,6 +6547,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "score_aware_training_config_gate": config_gate,
             "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
             "hi_nerv_source_faithfulness": launch_source_faithfulness,
+            "hi_nerv_control_precedence": launch_control_precedence,
             "hi_nerv_optimizer_policy": optimizer_policy,
             "hi_nerv_optimizer_controls": optimizer_controls,
             "score_aware_carrier_training_plan": score_aware_training_plan,
@@ -7022,6 +7138,9 @@ def _base_report(
         "nerv_long_training_campaign_plan": build_nerv_long_training_campaign_plan(
             hinerv_modelsize_budget=hinerv_modelsize_budget,
             snerv_modelsize_budget=snerv_modelsize_budget,
+            planner_row_queue_artifact_path=(
+                output_dir / "compact_renderer_mlx_spine_runner_report.json"
+            ),
         ),
         "nerv_stack_synergy_audit": build_nerv_stack_synergy_audit(
             repo_root=repo_root,
@@ -10123,21 +10242,461 @@ def _active_family_campaign_processes(
 def _planner_row_launch_blockers(args: argparse.Namespace) -> list[str]:
     """Return fail-closed blockers for direct launches of top-priority carriers."""
 
+    return list(_planner_row_launch_guard(args).get("blockers") or [])
+
+
+def _planner_row_launch_guard(args: argparse.Namespace) -> dict[str, Any]:
     family = str(getattr(args, "execute_family", "") or "").strip()
-    if family not in PLANNER_ROW_REQUIRED_FAMILIES:
-        return []
-    if bool(getattr(args, "allow_manual_compact_family_launch", False)):
-        return []
     row_id = str(getattr(args, "planner_row_id", "") or "").strip()
-    if row_id:
-        return []
-    return [
-        f"{family}_planner_row_id_missing",
-        (
-            "top_priority_compact_carrier_launch_must_come_from_"
-            "nerv_long_training_campaign_plan"
-        ),
+    manual_launch_allowed = bool(
+        getattr(args, "allow_manual_compact_family_launch", False)
+    )
+    guard: dict[str, Any] = {
+        "schema": "compact_carrier_planner_row_launch_guard.v1",
+        "required_families": list(PLANNER_ROW_REQUIRED_FAMILIES),
+        "execute_family": family or None,
+        "planner_row_id": row_id or None,
+        "allow_manual_compact_family_launch": manual_launch_allowed,
+        "queue_artifact_status": None,
+        "timing_smoke_waiver_status": None,
+        "passed": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if family not in PLANNER_ROW_REQUIRED_FAMILIES:
+        return guard
+    if not row_id:
+        if manual_launch_allowed:
+            guard["manual_launch_false_authority"] = True
+            return guard
+        guard["passed"] = False
+        guard["blockers"] = [
+            f"{family}_planner_row_id_missing",
+            (
+                "top_priority_compact_carrier_launch_must_come_from_"
+                "nerv_long_training_campaign_plan"
+            ),
+        ]
+        return guard
+
+    queue_status = _planner_row_queue_artifact_status(args, family=family, row_id=row_id)
+    guard["queue_artifact_status"] = queue_status
+    if queue_status.get("passed") is True:
+        return guard
+
+    waiver_status = _planner_row_timing_smoke_waiver_status(
+        args,
+        family=family,
+        row_id=row_id,
+    )
+    guard["timing_smoke_waiver_status"] = waiver_status
+    if waiver_status.get("passed") is True:
+        guard["bounded_timing_smoke_waiver_consumed"] = True
+        return guard
+
+    guard["passed"] = False
+    guard["blockers"] = _dedupe(
+        [
+            *list(queue_status.get("blockers") or []),
+            *list(waiver_status.get("blockers") or []),
+        ]
+    )
+    return guard
+
+
+def _planner_row_queue_artifact_status(
+    args: argparse.Namespace,
+    *,
+    family: str,
+    row_id: str,
+) -> dict[str, Any]:
+    paths = _planner_row_queue_artifact_paths(args)
+    status: dict[str, Any] = {
+        "schema": "compact_carrier_planner_row_queue_artifact_status.v1",
+        "family": family,
+        "planner_row_id": row_id,
+        "artifact_paths": [Path(path).as_posix() for path in paths],
+        "artifact_records": [],
+        "matched_records": [],
+        "passed": False,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if not paths:
+        status["blockers"] = [
+            f"{family}_planner_row_queue_artifact_missing",
+            "planner_row_queue_artifact_required_for_planner_row_launch",
+        ]
+        return status
+
+    repo_root = Path(getattr(args, "repo_root", REPO_ROOT)).expanduser().resolve(
+        strict=False
+    )
+    records: list[dict[str, Any]] = []
+    matches: list[dict[str, Any]] = []
+    for raw_path in paths:
+        record = _planner_row_queue_artifact_record(
+            raw_path,
+            family=family,
+            row_id=row_id,
+            repo_root=repo_root,
+            args=args,
+        )
+        records.append(record)
+        matches.extend(
+            row for row in record.get("matched_records", []) if isinstance(row, dict)
+        )
+    runnable_matches = [
+        row
+        for row in matches
+        if row.get("row_status_runnable") is True
+        and row.get("launch_contract_runnable") is True
+        and not row.get("command_control_blockers")
     ]
+    status["artifact_records"] = records
+    status["matched_records"] = matches
+    if runnable_matches:
+        status["passed"] = True
+        status["matched_runnable_records"] = runnable_matches
+        return status
+    blockers: list[str] = []
+    for record in records:
+        blockers.extend(str(item) for item in record.get("blockers") or [])
+    if not matches:
+        blockers.append(f"{family}_planner_row_id_not_found_in_queue_artifact")
+    else:
+        for match in matches:
+            blockers.extend(
+                str(item) for item in match.get("command_control_blockers") or []
+            )
+        blockers.append(f"{family}_planner_row_queue_artifact_not_queued_or_runnable")
+    status["blockers"] = _dedupe(blockers)
+    return status
+
+
+def _planner_row_queue_artifact_paths(args: argparse.Namespace) -> list[Path]:
+    raw = getattr(args, "planner_row_queue_artifact", []) or []
+    if isinstance(raw, (str, os.PathLike)):
+        raw = [raw]
+    return [Path(path).expanduser() for path in raw if str(path)]
+
+
+def _planner_row_queue_artifact_record(
+    path: str | Path,
+    *,
+    family: str,
+    row_id: str,
+    repo_root: Path,
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    resolved = _resolve(path, base=repo_root)
+    record: dict[str, Any] = {
+        "schema": "compact_carrier_planner_row_queue_artifact_record.v1",
+        "path": resolved.as_posix(),
+        "exists": resolved.is_file(),
+        "bytes": None,
+        "sha256": None,
+        "source_schema": None,
+        "matched_records": [],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if not resolved.is_file():
+        record["blockers"].append("planner_row_queue_artifact_path_missing")
+        return record
+    record["bytes"] = int(resolved.stat().st_size)
+    record["sha256"] = _sha256_file(resolved)
+    try:
+        payload = _load_json(resolved)
+    except (OSError, json.JSONDecodeError, CompactRendererMlxSpineRunnerError) as exc:
+        record["blockers"].append(
+            f"planner_row_queue_artifact_unreadable:{type(exc).__name__}"
+        )
+        return record
+    record["source_schema"] = payload.get("schema")
+    if payload.get("schema") not in PLANNER_ROW_QUEUE_ARTIFACT_SCHEMAS:
+        record["blockers"].append("planner_row_queue_artifact_schema_not_allowed")
+        return record
+    matched = _planner_row_records_from_payload(
+        payload,
+        family=family,
+        row_id=row_id,
+        artifact_path=resolved,
+        args=args,
+    )
+    record["matched_records"] = matched
+    if not matched:
+        record["blockers"].append("planner_row_queue_artifact_no_matching_row")
+    return record
+
+
+def _planner_row_records_from_payload(
+    payload: Mapping[str, Any],
+    *,
+    family: str,
+    row_id: str,
+    artifact_path: Path,
+    args: argparse.Namespace,
+) -> list[dict[str, Any]]:
+    candidates: list[tuple[str, Mapping[str, Any]]] = []
+    if isinstance(payload.get("experiment_queue"), Mapping):
+        candidates.extend(
+            _planner_row_experiment_candidates(
+                payload["experiment_queue"],
+                context="experiment_queue",
+            )
+        )
+    candidates.extend(_planner_row_experiment_candidates(payload, context="root"))
+    rows = payload.get("campaign_rows")
+    if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes)):
+        for index, row in enumerate(rows):
+            if isinstance(row, Mapping):
+                candidates.append((f"campaign_rows[{index}]", row))
+                entry = row.get("experiment_queue_entry")
+                if isinstance(entry, Mapping):
+                    candidates.append(
+                        (f"campaign_rows[{index}].experiment_queue_entry", entry)
+                    )
+
+    matches: list[dict[str, Any]] = []
+    for context, row in candidates:
+        command = _planner_row_command(row)
+        row_id_values = _planner_row_identity_values(row, command)
+        if row_id not in row_id_values:
+            continue
+        if family and str(row.get("family") or "") not in {"", family}:
+            continue
+        status_text = str(row.get("status") or "").strip().lower()
+        blocked = bool(row.get("blocked"))
+        contract = _planner_row_launch_contract(row)
+        contract_schema_valid = (
+            contract.get("schema") == PLANNER_ROW_LAUNCH_CONTRACT_SCHEMA
+        )
+        launch_blockers = [
+            str(item) for item in (contract.get("queue_launch_blockers") or [])
+        ]
+        if not contract_schema_valid:
+            launch_blockers.append("planner_row_launch_contract_schema_mismatch")
+        row_status_runnable = (
+            status_text in PLANNER_ROW_QUEUE_RUNNABLE_STATUSES and not blocked
+        )
+        command_control_blockers = _planner_row_command_control_blockers(
+            args,
+            command,
+        )
+        launch_contract_runnable = (
+            contract_schema_valid
+            and contract.get("queue_status_is_local_mlx_plan") is True
+            and contract.get("queue_status_is_runnable_plan") is True
+            and not launch_blockers
+            and contract.get("queue_status_is_receiver_proof") is not True
+            and contract.get("queue_status_is_cpu_replay_proof") is not True
+            and contract.get("queue_status_is_exact_eval_authority") is not True
+        )
+        matches.append(
+            {
+                "schema": "compact_carrier_planner_row_queue_match.v1",
+                "artifact_path": artifact_path.as_posix(),
+                "context": context,
+                "row_id": row_id,
+                "family": str(row.get("family") or family),
+                "status": status_text or None,
+                "blocked": blocked,
+                "row_status_runnable": row_status_runnable,
+                "launch_contract_runnable": launch_contract_runnable,
+                "launch_contract_schema": contract.get("schema"),
+                "launch_contract_schema_valid": contract_schema_valid,
+                "launch_contract_blockers": launch_blockers,
+                "command_control_blockers": command_control_blockers,
+                "command": command,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        )
+    return matches
+
+
+def _planner_row_experiment_candidates(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+) -> list[tuple[str, Mapping[str, Any]]]:
+    experiments = payload.get("experiments")
+    if not isinstance(experiments, Sequence) or isinstance(experiments, (str, bytes)):
+        return []
+    out: list[tuple[str, Mapping[str, Any]]] = []
+    for index, experiment in enumerate(experiments):
+        if isinstance(experiment, Mapping):
+            out.append((f"{context}.experiments[{index}]", experiment))
+            metadata = experiment.get("metadata")
+            if isinstance(metadata, Mapping):
+                source_row = metadata.get("source_selected_row")
+                if isinstance(source_row, Mapping):
+                    merged_source_row = dict(source_row)
+                    for key in ("status", "blocked", "steps", "command", "family"):
+                        if key not in merged_source_row and key in experiment:
+                            merged_source_row[key] = experiment[key]
+                    out.append(
+                        (
+                            f"{context}.experiments[{index}].metadata.source_selected_row",
+                            merged_source_row,
+                        )
+                    )
+    return out
+
+
+def _planner_row_identity_values(
+    row: Mapping[str, Any],
+    command: Sequence[str],
+) -> set[str]:
+    values = {
+        str(row.get("row_id") or "").strip(),
+        str(row.get("planner_row_id") or "").strip(),
+        str(row.get("id") or "").strip(),
+    }
+    if "--planner-row-id" in command:
+        try:
+            values.add(str(command[command.index("--planner-row-id") + 1]).strip())
+        except IndexError:
+            pass
+    return {value for value in values if value}
+
+
+def _planner_row_command(row: Mapping[str, Any]) -> list[str]:
+    command = row.get("command")
+    if isinstance(command, Sequence) and not isinstance(command, (str, bytes)):
+        return [str(item) for item in command]
+    command_argv = row.get("command_argv")
+    if isinstance(command_argv, Sequence) and not isinstance(command_argv, (str, bytes)):
+        return [str(item) for item in command_argv]
+    steps = row.get("steps")
+    if isinstance(steps, Sequence) and not isinstance(steps, (str, bytes)):
+        for step in steps:
+            if not isinstance(step, Mapping):
+                continue
+            step_command = step.get("command")
+            if isinstance(step_command, Sequence) and not isinstance(
+                step_command, (str, bytes)
+            ):
+                return [str(item) for item in step_command]
+    return []
+
+
+def _planner_row_launch_contract(row: Mapping[str, Any]) -> Mapping[str, Any]:
+    contract = row.get("launch_authority_contract")
+    if isinstance(contract, Mapping):
+        return contract
+    metadata = row.get("metadata")
+    if isinstance(metadata, Mapping):
+        source_row = metadata.get("source_selected_row")
+        if isinstance(source_row, Mapping):
+            contract = source_row.get("launch_authority_contract")
+            if isinstance(contract, Mapping):
+                return contract
+    return {}
+
+
+def _planner_row_command_control_blockers(
+    args: argparse.Namespace,
+    command: Sequence[str],
+) -> list[str]:
+    flag_attrs = (
+        ("--execute-family", "execute_family"),
+        ("--modelsize-candidate-id", "modelsize_candidate_id"),
+        ("--epochs", "epochs"),
+        ("--num-pairs", "num_pairs"),
+        ("--optimizer-kind", "optimizer_kind"),
+        ("--hi-nerv-optimizer-policy", "hi_nerv_optimizer_policy"),
+        ("--decoder-weight-waterfill-plan-json", "decoder_weight_waterfill_plan_json"),
+        ("--recon-pixel-weight-path", "recon_pixel_weight_path"),
+        ("--snerv-model-size-adapter", "snerv_model_size_adapter"),
+        ("--snerv-fc-dim", "snerv_fc_dim"),
+        ("--snerv-emb-size", "snerv_emb_size"),
+        ("--snerv-patch-radius", "snerv_patch_radius"),
+        ("--snerv-mfu-scales", "snerv_mfu_scales"),
+        ("--snerv-hfr-gain", "snerv_hfr_gain"),
+        ("--snerv-temporal-context", "snerv_temporal_context"),
+        ("--snerv-temporal-mode", "snerv_temporal_mode"),
+    )
+    blockers: list[str] = []
+    for flag, attr in flag_attrs:
+        expected = _command_flag_value(command, flag)
+        if expected is None:
+            continue
+        actual = _namespace_flag_value(args, attr)
+        if actual is None or str(actual) != str(expected):
+            blockers.append(f"planner_row_command_mismatch:{flag}")
+    return _dedupe(blockers)
+
+
+def _command_flag_value(command: Sequence[str], flag: str) -> str | None:
+    items = [str(item) for item in command]
+    if flag not in items:
+        return None
+    index = items.index(flag)
+    if index + 1 >= len(items):
+        return ""
+    return str(items[index + 1])
+
+
+def _namespace_flag_value(args: argparse.Namespace, attr: str) -> str | None:
+    if not hasattr(args, attr):
+        return None
+    value = getattr(args, attr)
+    if value is None:
+        return None
+    if isinstance(value, Path):
+        return value.as_posix()
+    if isinstance(value, (tuple, list)):
+        return ",".join(str(item) for item in value)
+    return str(value)
+
+
+def _planner_row_timing_smoke_waiver_status(
+    args: argparse.Namespace,
+    *,
+    family: str,
+    row_id: str,
+) -> dict[str, Any]:
+    waiver_requested = bool(
+        getattr(args, "allow_bounded_planner_row_timing_smoke_waiver", False)
+    )
+    num_pairs = _optional_int(getattr(args, "num_pairs", None))
+    epochs = _optional_int(getattr(args, "epochs", None))
+    within_bounds = (
+        num_pairs is not None
+        and epochs is not None
+        and 0 < num_pairs <= PLANNER_ROW_TIMING_SMOKE_MAX_PAIRS
+        and 0 < epochs <= PLANNER_ROW_TIMING_SMOKE_MAX_EPOCHS
+    )
+    blockers: list[str] = []
+    if not waiver_requested:
+        blockers.append("bounded_planner_row_timing_smoke_waiver_missing")
+    elif not within_bounds:
+        blockers.append(f"{family}_bounded_timing_smoke_waiver_exceeds_limits")
+    return {
+        "schema": "compact_carrier_bounded_timing_smoke_waiver_status.v1",
+        "family": family,
+        "planner_row_id": row_id,
+        "waiver_requested": waiver_requested,
+        "num_pairs": num_pairs,
+        "epochs": epochs,
+        "max_num_pairs": PLANNER_ROW_TIMING_SMOKE_MAX_PAIRS,
+        "max_epochs": PLANNER_ROW_TIMING_SMOKE_MAX_EPOCHS,
+        "passed": waiver_requested and within_bounds,
+        "blockers": blockers,
+        "authority": "bounded_timing_smoke_false_authority_not_production_launch",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _write_planner_row_launch_refusal(
@@ -10183,6 +10742,7 @@ def _write_planner_row_launch_refusal(
                     "tac.analysis.nerv_long_training_campaign_plan."
                     "build_nerv_long_training_campaign_plan"
                 ),
+                "launch_guard": _planner_row_launch_guard(args),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -10927,6 +11487,28 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Queue/planner row identity emitted by "
             "nerv_long_training_campaign_plan for top-priority HiNeRV/SNeRV "
             "launch custody. Required for production launches."
+        ),
+    )
+    parser.add_argument(
+        "--planner-row-queue-artifact",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "JSON artifact proving --planner-row-id is still queued/runnable. "
+            "Accepts a nerv_long_training_campaign_plan payload, an "
+            "experiment_queue.v1 payload, or an execution-admission payload "
+            "with an embedded queue. Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--allow-bounded-planner-row-timing-smoke-waiver",
+        action="store_true",
+        help=(
+            "Permit --planner-row-id without a queue artifact only for bounded "
+            f"timing smokes (<= {PLANNER_ROW_TIMING_SMOKE_MAX_PAIRS} pairs and "
+            f"<= {PLANNER_ROW_TIMING_SMOKE_MAX_EPOCHS} epochs). Long production "
+            "runs still require --planner-row-queue-artifact."
         ),
     )
     parser.add_argument(

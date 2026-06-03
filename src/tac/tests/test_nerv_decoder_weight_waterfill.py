@@ -95,6 +95,25 @@ def test_decoder_weight_waterfill_default_actions_include_official_six_seven_bit
     assert report["score_claim"] is False
 
 
+def test_decoder_weight_waterfill_requires_strict_receiver_proof_status_and_hash() -> None:
+    report = build_nerv_decoder_weight_waterfill_plan(
+        {"blocks.0.weight": np.asarray([0.125, -0.75, 1.0], dtype=np.float32)},
+        saliency_by_name={"blocks.0.weight": 0.0},
+        action_bits=(0, 2, 32),
+        zero_run_overhead_bytes=0,
+        full_video_coverage=True,
+        receiver_proof_status="passed",
+        archive_sha256="not-a-sha",
+    )
+
+    assert "receiver_proof_not_satisfied" in report["blockers"]
+    assert "archive_sha256_invalid" in report["blockers"]
+    row = report["rows"][0]
+    assert "receiver_proof_not_satisfied" in row["blockers"]
+    assert "archive_sha256_invalid" in row["blockers"]
+    assert report["score_claim"] is False
+
+
 def test_decoder_weight_waterfill_loads_zero_saliency_rows(tmp_path: Path) -> None:
     saliency_path = tmp_path / "saliency.json"
     saliency_path.write_text(
@@ -113,6 +132,34 @@ def test_decoder_weight_waterfill_loads_zero_saliency_rows(tmp_path: Path) -> No
     )
 
     assert load_saliency_json(saliency_path) == {"blocks.0.weight": 0.0}
+
+
+def test_decoder_weight_waterfill_loads_saliency_replay_payload_before_rows(
+    tmp_path: Path,
+) -> None:
+    saliency_path = tmp_path / "saliency_replay.json"
+    saliency_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_decoder_weight_saliency_replay.v1",
+                "full_video_coverage": True,
+                "rows": [
+                    {
+                        "row_id": "candidate_a",
+                        "saliency_by_name": {"blocks.1.weight": 0.25},
+                    }
+                ],
+                "saliency_rows": [
+                    {"group_name": "blocks.0.weight", "saliency": 0.125}
+                ],
+                "saliency_by_name": {"blocks.2.weight": 0.5},
+                "score_claim": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert load_saliency_json(saliency_path) == {"blocks.2.weight": 0.5}
 
 
 def test_decoder_weight_waterfill_calibrates_raw_proxy_saliency() -> None:

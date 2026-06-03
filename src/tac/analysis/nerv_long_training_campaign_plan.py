@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,7 @@ from tac.analysis.nerv_candidate_feedback import (
 )
 from tac.analysis.nerv_decoder_weight_waterfill import (
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
+    TRUSTED_RECEIVER_PROOF_STATUSES,
 )
 from tac.analysis.nerv_modelsize_budget import (
     NervModelSizeBudgetError,
@@ -94,6 +96,28 @@ _AUTHORITY_TRUE_KEYS: tuple[str, ...] = (
     "ready_for_exact_eval_dispatch",
 )
 HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = "switch_to_hinerv_official_feature_grid_convnext_controls"
+HINERV_WATERFILL_CANDIDATE_BINDING_FIELDS: tuple[str, ...] = (
+    "num_pairs",
+    "latent_dim",
+    "latent_dim_coarse",
+    "latent_dim_mid",
+    "latent_dim_fine",
+    "embed_dim",
+    "decoder_channel",
+    "decoder_channels",
+    "decoder_codec",
+    "use_hierarchical_feature_grid",
+    "use_convnext_blocks",
+    "local_grid_levels",
+    "local_grid_channels",
+    "convnext_mlp_ratio",
+    "convnext_kernel_size",
+    "mid_injection_block_index",
+    "fine_injection_block_index",
+    "modelsize_mparams",
+    "target_modelsize_mparams",
+    "hard_byte_ceiling",
+)
 DEFAULT_OPTIMIZER_KINDS = (
     "pact_muon_adamw",
     "adamw",
@@ -137,6 +161,7 @@ def build_nerv_long_training_campaign_plan(
     snerv_bounded_proof_only: bool = False,
     snerv_bounded_proof_epochs: int = 3,
     experiment_queue_id: str = DEFAULT_EXPERIMENT_QUEUE_ID,
+    planner_row_queue_artifact_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build the shared HiNeRV/SNeRV long-training campaign matrix."""
 
@@ -163,6 +188,11 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(joint_recon_weight_manifest_paths)
     candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
     decoder_weight_waterfill_index = _decoder_weight_waterfill_index(decoder_weight_waterfill_sources)
+    planner_queue_artifact = (
+        None
+        if planner_row_queue_artifact_path is None
+        else Path(planner_row_queue_artifact_path).as_posix()
+    )
     source_parity_contract = build_nerv_source_parity_contract(
         repo_root=_repo_root(),
         families=("hi_nerv", "snerv"),
@@ -173,6 +203,11 @@ def build_nerv_long_training_campaign_plan(
     hi_candidates = _selected_candidates(
         hinerv_modelsize_budget,
         family="hi_nerv",
+        limit=max_candidates_per_family,
+    )
+    hi_candidates = _merge_hinerv_waterfill_candidate_evidence(
+        candidates=hi_candidates,
+        decoder_weight_waterfill_index=decoder_weight_waterfill_index,
         limit=max_candidates_per_family,
     )
     snerv_candidates = _selected_candidates(
@@ -194,6 +229,7 @@ def build_nerv_long_training_campaign_plan(
                     candidate_feedback_index=candidate_feedback_index,
                     decoder_weight_waterfill_index=decoder_weight_waterfill_index,
                     source_parity_contract=source_parity_contract,
+                    planner_row_queue_artifact_path=planner_queue_artifact,
                 )
             )
     for candidate in snerv_candidates:
@@ -206,6 +242,7 @@ def build_nerv_long_training_campaign_plan(
                 bounded_proof_only=bool(snerv_bounded_proof_only),
                 bounded_proof_epochs=int(snerv_bounded_proof_epochs),
                 source_parity_contract=source_parity_contract,
+                planner_row_queue_artifact_path=planner_queue_artifact,
             )
         )
 
@@ -288,12 +325,13 @@ def build_nerv_long_training_campaign_plan(
         "experiment_queue": experiment_queue,
         "experiment_queue_schema": EXPERIMENT_QUEUE_SCHEMA,
         "experiment_queue_id": experiment_queue["queue_id"],
+        "planner_row_queue_artifact_path": planner_queue_artifact,
         "experiment_queue_experiment_count": len(experiment_queue["experiments"]),
         "launchable_local_row_count": sum(
             1
             for row in rows
             if row["experiment_queue_entry"].get("blocked") is not True
-            and row["experiment_queue_entry"].get("status") in {"queued", "ready"}
+            and row["experiment_queue_entry"].get("status") in {"queued", "runnable"}
         ),
         "blocked_row_count": sum(1 for row in rows if row["blockers"]),
         "family_counts": _family_counts(rows),
@@ -373,6 +411,7 @@ def _hinerv_campaign_row(
     candidate_feedback_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     decoder_weight_waterfill_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     source_parity_contract: Mapping[str, Any] | None = None,
+    planner_row_queue_artifact_path: str | None = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
@@ -403,6 +442,7 @@ def _hinerv_campaign_row(
         candidate=candidate,
         feedback=feedback,
     )
+    official_control_blockers = _hinerv_official_control_blockers(candidate)
     source_parity = _source_parity_family_report(
         family="hi_nerv",
         source_parity_contract=source_parity_contract,
@@ -484,6 +524,8 @@ def _hinerv_campaign_row(
         "--output-dir",
         (output_root / output_dir_basename).as_posix(),
     ]
+    if planner_row_queue_artifact_path:
+        command.extend(["--planner-row-queue-artifact", planner_row_queue_artifact_path])
     if prioritized_pair_indices:
         command.extend(
             [
@@ -529,6 +571,7 @@ def _hinerv_campaign_row(
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *candidate_authority_blockers,
+        *official_control_blockers,
         *list(source_parity["required_blockers"]),
         *list(curriculum.get("blockers") or []),
         *feedback_evidence_blockers,
@@ -557,10 +600,13 @@ def _hinerv_campaign_row(
         and joint_recon_weight
         and decoder_weight_waterfill_runner_admitted
         and not candidate_authority_blockers
+        and not official_control_blockers
         and not source_parity["required_blockers"]
     )
     if candidate_authority_blockers:
         implementation_status = "selected_candidate_authority_flags_block_launch"
+    elif official_control_blockers:
+        implementation_status = "hinerv_official_controls_required_for_launch"
     elif source_parity["required_blockers"]:
         implementation_status = "source_parity_required_gap_blocks_launch"
     elif decoder_weight_waterfill and not decoder_weight_waterfill_runner_admitted:
@@ -629,6 +675,7 @@ def _snerv_campaign_row(
     bounded_proof_only: bool = False,
     bounded_proof_epochs: int = 3,
     source_parity_contract: Mapping[str, Any] | None = None,
+    planner_row_queue_artifact_path: str | None = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
     source_control_blockers = _snerv_source_bound_control_blockers(candidate)
@@ -726,6 +773,8 @@ def _snerv_campaign_row(
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
+    if planner_row_queue_artifact_path:
+        command.extend(["--planner-row-queue-artifact", planner_row_queue_artifact_path])
     if str(candidate.get("snerv_model_size_adapter") or "") == (SNERV_SPECTRA_PRESERVING_ADAPTER):
         insert_at = command.index("--snerv-model-size-adapter")
         command.insert(insert_at, "--snerv-spectra-preserving-adapter")
@@ -1405,6 +1454,98 @@ def _selected_candidates(
         deduped.setdefault(candidate_id, row)
     rows = list(deduped.values())
     return rows[: max(1, int(limit))]
+
+
+def _merge_hinerv_waterfill_candidate_evidence(
+    *,
+    candidates: Sequence[Mapping[str, Any]],
+    decoder_weight_waterfill_index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Prefer source-bound HiNeRV candidates that already have waterfill evidence.
+
+    Modelsize budgets and receiver-proof archive ladders can be generated by
+    different sweeps. The campaign planner should not silently drop a
+    receiver-backed waterfill row just because its candidate was not in the
+    newest top-N budget. When the waterfill source preserves the exact
+    ``modelsize_candidate`` row, it is safe to add it to the selection pool
+    while keeping all launcher and promotion gates false-authority.
+    """
+
+    merged: dict[str, dict[str, Any]] = {}
+    for row_obj in candidates:
+        row = dict(row_obj)
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if candidate_id:
+            merged.setdefault(candidate_id, row)
+    for row in _hinerv_waterfill_source_candidates(decoder_weight_waterfill_index):
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if candidate_id and candidate_id not in merged:
+            merged[candidate_id] = row
+    rows = list(merged.values())
+    rows.sort(
+        key=lambda row: _hinerv_waterfill_candidate_sort_key(
+            row,
+            decoder_weight_waterfill_index,
+        )
+    )
+    return rows[: max(1, int(limit))]
+
+
+def _hinerv_waterfill_source_candidates(
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for (family, _candidate_key), source_rows in (index or {}).items():
+        if _family_key(str(family)) != "hi_nerv":
+            continue
+        for source in source_rows:
+            candidate = source.get("_modelsize_candidate")
+            if not isinstance(candidate, Mapping):
+                continue
+            candidate_id = str(candidate.get("candidate_id") or source.get("candidate_id") or "").strip()
+            if not candidate_id or candidate_id in seen:
+                continue
+            authority_blockers = _candidate_authority_blockers(candidate)
+            clean = _scrub_candidate_authority_flags(candidate)
+            if authority_blockers:
+                clean["_candidate_authority_blockers"] = authority_blockers
+            clean.setdefault("candidate_id", candidate_id)
+            clean.setdefault("family", "hi_nerv")
+            clean["_candidate_source"] = "decoder_weight_waterfill_modelsize_candidate"
+            clean["_candidate_source_waterfill_path"] = source.get("path")
+            clean["_candidate_source_waterfill_receiver_proof_ready"] = bool(
+                source.get("receiver_proof_ready")
+            )
+            clean["_candidate_source_waterfill_runner_admitted"] = bool(
+                _decoder_weight_waterfill_runner_admitted(source)
+            )
+            seen.add(candidate_id)
+            rows.append(clean)
+    return rows
+
+
+def _hinerv_waterfill_candidate_sort_key(
+    row: Mapping[str, Any],
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+) -> tuple[Any, ...]:
+    waterfill = _decoder_weight_waterfill_for(
+        candidate=row,
+        family="hi_nerv",
+        index=index,
+    )
+    has_waterfill = bool(waterfill)
+    waterfill_admitted = bool(
+        waterfill and _decoder_weight_waterfill_runner_admitted(waterfill)
+    )
+    waterfill_receiver_ready = bool(waterfill and waterfill.get("receiver_proof_ready") is True)
+    return (
+        0 if waterfill_admitted else 1,
+        0 if waterfill_receiver_ready else 1,
+        0 if has_waterfill else 1,
+        *_hinerv_long_training_candidate_sort_key(row),
+    )
 
 
 def _candidate_authority_blockers(candidate: Mapping[str, Any]) -> list[str]:
@@ -2297,15 +2438,20 @@ def _normalize_decoder_weight_waterfill_source(
     out["family"] = _family_key(str(source.get("family") or "hi_nerv"))
     out["group_count"] = int(source.get("group_count") or len(rows))
     out["full_video_coverage"] = bool(source.get("full_video_coverage"))
-    out["receiver_proof_ready"] = str(source.get("receiver_proof_status") or "").lower() in {
-        "runtime_consumption_proof_ready",
-        "receiver_proof_valid",
-        "runtime_consumption_proof_passed",
-        "satisfied",
-        "valid",
-        "passed",
-    }
+    out["receiver_proof_ready"] = _decoder_weight_waterfill_receiver_proof_ready(source)
     return out
+
+
+def _decoder_weight_waterfill_receiver_proof_ready(source: Mapping[str, Any]) -> bool:
+    status = str(source.get("receiver_proof_status") or "").strip().lower()
+    return status in TRUSTED_RECEIVER_PROOF_STATUSES and _is_sha256_hex(
+        source.get("archive_sha256")
+    )
+
+
+def _is_sha256_hex(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def _candidate_index_keys(row: Mapping[str, Any]) -> tuple[str, ...]:
@@ -2373,11 +2519,68 @@ def _decoder_weight_waterfill_for(
     if not candidate_id:
         return {}
     rows = list((index or {}).get((_family_key(family), candidate_id)) or [])
-    return dict(rows[0]) if rows else {}
+    mismatch_row: dict[str, Any] = {}
+    for row in rows:
+        source_candidate = row.get("_modelsize_candidate")
+        mismatch_blockers = _waterfill_modelsize_candidate_mismatch_blockers(
+            candidate=candidate,
+            waterfill_candidate=source_candidate,
+        )
+        if not mismatch_blockers:
+            return dict(row)
+        if not mismatch_row:
+            mismatch_row = dict(row)
+            existing = [str(v) for v in mismatch_row.get("blockers") or () if str(v)]
+            mismatch_row["blockers"] = _dedupe([*existing, *mismatch_blockers])
+            mismatch_row["receiver_proof_ready"] = False
+    return mismatch_row
+
+
+def _waterfill_modelsize_candidate_mismatch_blockers(
+    *,
+    candidate: Mapping[str, Any],
+    waterfill_candidate: Any,
+) -> list[str]:
+    if not isinstance(waterfill_candidate, Mapping):
+        return []
+    blockers: list[str] = []
+    for field in HINERV_WATERFILL_CANDIDATE_BINDING_FIELDS:
+        if field not in candidate or field not in waterfill_candidate:
+            continue
+        left = _normalized_candidate_binding_value(candidate.get(field))
+        right = _normalized_candidate_binding_value(waterfill_candidate.get(field))
+        if left != right:
+            blockers.append(f"decoder_weight_waterfill_modelsize_mismatch:{field}")
+    return _dedupe(blockers)
+
+
+def _normalized_candidate_binding_value(value: Any) -> Any:
+    if isinstance(value, (list, tuple)):
+        return tuple(_normalized_candidate_binding_value(item) for item in value)
+    if isinstance(value, bool):
+        return bool(value)
+    if isinstance(value, int):
+        return int(value)
+    if isinstance(value, float):
+        return round(float(value), 12)
+    if value is None:
+        return None
+    text = str(value).strip()
+    try:
+        as_float = float(text)
+    except ValueError:
+        return text
+    if as_float.is_integer():
+        return int(as_float)
+    return round(as_float, 12)
 
 
 def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, Any]:
     runner_admission = _decoder_weight_waterfill_runner_admission(row)
+    saliency_replay_work_order = _decoder_weight_waterfill_saliency_replay_work_order(
+        row=row,
+        runner_admission=runner_admission,
+    )
     return {
         "schema": "nerv_long_training_decoder_weight_waterfill_attachment.v1",
         "attached": True,
@@ -2390,15 +2593,146 @@ def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, 
         "group_count": int(row.get("group_count") or 0),
         "full_video_coverage": bool(row.get("full_video_coverage")),
         "receiver_proof_ready": bool(row.get("receiver_proof_ready")),
+        "_archive_size_ladder_source_schema": row.get("_archive_size_ladder_source_schema"),
+        "_archive_size_ladder_row_index": row.get("_archive_size_ladder_row_index"),
+        "_archive_size_ladder_runtime_consumption_proof_ready": row.get(
+            "_archive_size_ladder_runtime_consumption_proof_ready"
+        ),
         "runner_admission": runner_admission,
         "runner_admitted": bool(runner_admission["admitted"]),
+        "saliency_replay_work_order": saliency_replay_work_order,
         "blockers": list(row.get("blockers") or []),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _decoder_weight_waterfill_saliency_replay_work_order(
+    *,
+    row: Mapping[str, Any],
+    runner_admission: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return the executable next step when decoder-weight saliency blocks launch."""
+
+    refusal_reasons = tuple(str(v) for v in runner_admission.get("refusal_reasons") or ())
+    needs_saliency_replay = any(
+        reason
+        in {
+            "decoder_weight_waterfill_full_video_coverage_missing",
+            "decoder_weight_saliency_missing_for_some_groups",
+            "full_video_coverage_missing",
+        }
+        for reason in refusal_reasons
+    )
+    source_path = str(row.get("_decoder_weight_waterfill_source_path") or "").strip()
+    source_schema = str(row.get("_archive_size_ladder_source_schema") or "").strip()
+    row_id = str(row.get("_modelsize_row_id") or row.get("candidate_id") or "").strip()
+    candidate_id = str(row.get("candidate_id") or row_id).strip()
+    if not needs_saliency_replay:
+        return {
+            "schema": "nerv_decoder_weight_saliency_replay_work_order.v1",
+            "required": False,
+            "reason": "decoder_weight_waterfill_runner_admission_does_not_need_saliency_replay",
+            **FALSE_AUTHORITY,
+        }
+    blockers: list[str] = []
+    if source_schema != "hinerv_archive_size_ladder.v1":
+        blockers.append("decoder_weight_saliency_replay_source_ladder_missing")
+    if not source_path:
+        blockers.append("decoder_weight_saliency_replay_source_ladder_missing")
+    if not row_id:
+        blockers.append("decoder_weight_saliency_replay_row_id_missing")
+    blockers = _dedupe(blockers)
+    slug = _safe_id(candidate_id or row_id or "hinerv_row")
+    utc = _utc_compact_timestamp()
+    saliency_json = f".omx/research/hinerv_decoder_weight_saliency_replay_{utc}_{slug}_full600_codex.json"
+    saliency_md = f".omx/research/hinerv_decoder_weight_saliency_replay_{utc}_{slug}_full600_codex.md"
+    waterfill_json = f".omx/research/hinerv_archive_ladder_waterfill_{utc}_{slug}_full600_saliency_codex.json"
+    waterfill_md = f".omx/research/hinerv_archive_ladder_waterfill_{utc}_{slug}_full600_saliency_codex.md"
+    saliency_command = [
+        "uv",
+        "run",
+        "python",
+        "tools/build_hinerv_decoder_weight_saliency_replay.py",
+        "--archive-ladder-json",
+        source_path,
+        "--row-id",
+        row_id,
+        "--max-pairs",
+        "600",
+        "--start-pair",
+        "0",
+        "--pair-stride",
+        "1",
+        "--device",
+        "mps",
+        "--output-json",
+        saliency_json,
+        "--output-md",
+        saliency_md,
+    ]
+    waterfill_command = [
+        "uv",
+        "run",
+        "python",
+        "tools/build_hinerv_archive_ladder_waterfill.py",
+        "--archive-ladder-json",
+        source_path,
+        "--saliency-json",
+        saliency_json,
+        "--output-json",
+        waterfill_json,
+        "--output-md",
+        waterfill_md,
+    ]
+    return {
+        "schema": "nerv_decoder_weight_saliency_replay_work_order.v1",
+        "required": True,
+        "row_id": row_id or None,
+        "candidate_id": candidate_id or None,
+        "source_archive_ladder_path": source_path or None,
+        "coverage_required": "full600_start0_stride1",
+        "preferred_device": "mps",
+        "cpu_fidelity_note": (
+            "MPS/MLX-family saliency replay is allocation signal only; local CPU replay "
+            "and exact auth gates remain mandatory for promotion."
+        ),
+        "saliency_replay_command_argv": [] if blockers else saliency_command,
+        "waterfill_rebuild_command_argv": [] if blockers else waterfill_command,
+        "campaign_rebuild_hint_argv": [],
+        "campaign_rebuild_required_inputs": (
+            []
+            if blockers
+            else [
+                "--hinerv-modelsize-budget",
+                "--snerv-modelsize-budget",
+                "--output-json",
+                "--decoder-weight-waterfill-source",
+            ]
+        ),
+        "campaign_rebuild_decoder_weight_waterfill_source": (
+            waterfill_json if not blockers else None
+        ),
+        "expected_output_saliency_json": saliency_json if not blockers else None,
+        "expected_output_waterfill_json": waterfill_json if not blockers else None,
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 
 
 def _decoder_weight_waterfill_runner_admitted(row: Mapping[str, Any]) -> bool:
     return bool(_decoder_weight_waterfill_runner_admission(row)["admitted"])
+
+
+def _safe_id(value: str) -> str:
+    out = "".join(
+        ch if ch.isalnum() or ch in {"-", "_"} else "_"
+        for ch in str(value)
+    ).strip("_")
+    return out or "row"
+
+
+def _utc_compact_timestamp() -> str:
+    return datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _decoder_weight_waterfill_runner_admission(
@@ -2410,10 +2744,14 @@ def _decoder_weight_waterfill_runner_admission(
         refusal_reasons.append("decoder_weight_waterfill_full_video_coverage_missing")
     if row.get("receiver_proof_ready") is not True:
         refusal_reasons.append("decoder_weight_waterfill_receiver_proof_not_ready")
+    if not _is_sha256_hex(row.get("archive_sha256")):
+        refusal_reasons.append("decoder_weight_waterfill_archive_sha256_missing_or_invalid")
     for blocker in (
         "decoder_weight_saliency_missing_for_some_groups",
         "full_video_coverage_missing",
         "receiver_proof_not_satisfied",
+        "archive_sha256_missing",
+        "archive_sha256_invalid",
     ):
         if blocker in blockers:
             refusal_reasons.append(blocker)
@@ -2637,12 +2975,14 @@ def _hinerv_source_faithfulness_controls(
 ) -> dict[str, Any]:
     target_score = _hinerv_official_control_score(candidate)
     source_score = _hinerv_feedback_official_control_score(feedback) if feedback else target_score
+    target_blockers = _hinerv_official_control_blockers(candidate)
     return {
         "schema": "hinerv_source_faithfulness_controls.v1",
         "target_candidate_id": str(candidate.get("candidate_id") or ""),
         "target_uses_hierarchical_feature_grid": bool(candidate.get("use_hierarchical_feature_grid")),
         "target_uses_convnext_blocks": bool(candidate.get("use_convnext_blocks")),
         "target_official_control_score": int(target_score),
+        "target_official_control_blockers": target_blockers,
         "source_feedback_candidate_id": str(feedback.get("source_candidate_id") or feedback.get("candidate_id") or ""),
         "source_official_control_score": int(source_score),
         "source_official_control_superseded": bool(
@@ -2650,6 +2990,20 @@ def _hinerv_source_faithfulness_controls(
         ),
         **FALSE_AUTHORITY,
     }
+
+
+def _hinerv_official_control_blockers(candidate: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if not bool(candidate.get("use_hierarchical_feature_grid")):
+        blockers.append("hinerv_official_hierarchical_feature_grid_not_enabled")
+    if not bool(candidate.get("use_convnext_blocks")):
+        blockers.append("hinerv_official_convnext_blocks_not_enabled")
+    if blockers:
+        return [
+            "hinerv_official_control_required_for_top_priority_launch",
+            *blockers,
+        ]
+    return []
 
 
 def _hinerv_official_control_score(row: Mapping[str, Any]) -> int:

@@ -46,6 +46,7 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "per_ceiling_limit": 2,
         "target_modelsize_mparams": [],
         "hinerv_target_modelsize_mparams": [],
+        "hinerv_official_controls_only": True,
         "snerv_emb_sizes": [0],
         "snerv_fc_dims": [9],
         "snerv_official_dec_strds": [5, 4, 2, 2, 2],
@@ -66,6 +67,12 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
     assert hinerv_payload["schema"] == "nerv_modelsize_budget.v1"
     assert snerv_payload["schema"] == "snerv_modelsize_budget.v1"
     assert hinerv_payload["family"] == "hi_nerv"
+    assert hinerv_payload["official_controls_only"] is True
+    assert all(
+        row["use_hierarchical_feature_grid"] is True
+        and row["use_convnext_blocks"] is True
+        for row in hinerv_payload["selected_candidates"]
+    )
     assert snerv_payload["family"] == "snerv"
     assert snerv_payload["selected_candidates"][0]["candidate_id"].startswith(
         "snerv_np17_"
