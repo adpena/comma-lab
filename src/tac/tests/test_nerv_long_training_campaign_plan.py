@@ -45,6 +45,16 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
 
     hi_rows = [row for row in report["campaign_rows"] if row["family"] == "hi_nerv"]
     assert {row["optimizer_kind"] for row in hi_rows} == {"lion", "adafactor"}
+    qat_flags = {
+        "--coder-aware-qat",
+        "--coder-qat-quant-bits",
+        "--coder-qat-quant-residual-weight",
+        "--coder-qat-magnitude-weight",
+        "--coder-qat-delta-weight",
+        "--coder-qat-c1a-entropy-weight",
+        "--coder-qat-c1a-sigma",
+        "--coder-qat-c1a-sample-size",
+    }
     assert all(row["optimizer_control"]["backend"] == "mlx.optimizers" for row in hi_rows)
     assert all(
         row["optimizer_control"]["native_mlx_on_apple_silicon"] is True
@@ -79,6 +89,12 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         for row in hi_rows
     )
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
+    assert all(qat_flags.issubset(set(row["command_argv"])) for row in hi_rows)
+    assert all(
+        row["coder_qat_control"]["c1a_source"].startswith("PR95")
+        and row["coder_qat_control"]["score_claim"] is False
+        for row in hi_rows
+    )
     assert all(
         row["command_argv"][
             row["command_argv"].index("--distillation-device") + 1
@@ -88,6 +104,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     )
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv["optimizer_kind"] is None
+    assert qat_flags.issubset(set(snerv["command_argv"]))
+    assert snerv["coder_qat_control"]["quant_bits"] == snerv["quant_bits"]
+    assert snerv["coder_qat_control"]["c1a_entropy_weight"] == pytest.approx(1.0e-4)
+    assert snerv["coder_qat_control"]["ready_for_exact_eval_dispatch"] is False
     assert snerv["optimizer_control"]["optimizer_kind"] is None
     assert snerv["optimizer_control"]["backend"] == (
         "mlx_target_hydration_numpy_closed_form_decoder_fit_plus_scorer_loop_qat"
@@ -585,10 +605,79 @@ def test_long_training_campaign_plan_attaches_hinerv_decoder_weight_waterfill(
     assert attachment["attached"] is True
     assert attachment["sha256"] == _sha256(waterfill_path)
     assert attachment["candidate_keys"] == ["hinerv_tiny"]
+    assert hi["experiment_queue_entry"]["metadata"]["decoder_weight_waterfill_plan"][
+        "attached"
+    ] is True
     assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
     assert report["decoder_weight_waterfill_source_count"] == 1
     assert report["decoder_weight_waterfill_attached_row_count"] == 1
     assert hi["score_claim"] is False
+
+
+def test_long_training_campaign_plan_attaches_hinerv_waterfill_from_full_row_id(
+    tmp_path: Path,
+) -> None:
+    waterfill_path = tmp_path / "decoder_weight_waterfill_full_row_id.json"
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id="hi_nerv::hinerv_tiny::lion"
+    )
+    waterfill_path.write_text(json.dumps(waterfill, sort_keys=True), encoding="utf-8")
+    waterfill["_decoder_weight_waterfill_plan_path"] = waterfill_path.as_posix()
+    waterfill["_decoder_weight_waterfill_plan_sha256"] = _sha256(waterfill_path)
+    waterfill["_decoder_weight_waterfill_source_path"] = waterfill_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        decoder_weight_waterfill_sources=(waterfill,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert "--decoder-weight-waterfill-plan-json" in hi["command_argv"]
+    attachment = hi["decoder_weight_waterfill_plan"]
+    assert attachment["attached"] is True
+    assert "hinerv_tiny" in attachment["candidate_keys"]
+    assert "lion" not in attachment["candidate_keys"]
+    assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
+    assert report["decoder_weight_waterfill_attached_row_count"] == 1
+    assert report["decoder_weight_waterfill_unattached_source_count"] == 0
+
+
+def test_long_training_campaign_plan_attaches_hinerv_waterfill_from_group_row_id(
+    tmp_path: Path,
+) -> None:
+    waterfill_path = tmp_path / "decoder_weight_waterfill_group_row_id.json"
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id=(
+            "hinerv_tiny:hi_nerv_decoder_weight_waterfill:blocks.0.conv.weight"
+        )
+    )
+    waterfill_path.write_text(json.dumps(waterfill, sort_keys=True), encoding="utf-8")
+    waterfill["_decoder_weight_waterfill_plan_path"] = waterfill_path.as_posix()
+    waterfill["_decoder_weight_waterfill_plan_sha256"] = _sha256(waterfill_path)
+    waterfill["_decoder_weight_waterfill_source_path"] = waterfill_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        decoder_weight_waterfill_sources=(waterfill,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    attachment = hi["decoder_weight_waterfill_plan"]
+    assert attachment["attached"] is True
+    assert "hinerv_tiny" in attachment["candidate_keys"]
+    assert "--decoder-weight-waterfill-plan-json" in hi["command_argv"]
+    assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
+    assert report["decoder_weight_waterfill_attached_row_count"] == 1
 
 
 def test_long_training_campaign_plan_records_unattached_decoder_weight_waterfill(

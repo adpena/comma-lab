@@ -58,6 +58,12 @@ DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
 DEFAULT_HINERV_TELEMETRY_FLUSH_INTERVAL_EPOCHS = 1
+DEFAULT_CODER_QAT_QUANT_RESIDUAL_WEIGHT = 1.0e-3
+DEFAULT_CODER_QAT_MAGNITUDE_WEIGHT = 1.0e-4
+DEFAULT_CODER_QAT_DELTA_WEIGHT = 2.0e-4
+DEFAULT_CODER_QAT_C1A_ENTROPY_WEIGHT = 1.0e-4
+DEFAULT_CODER_QAT_C1A_SIGMA = 0.2
+DEFAULT_CODER_QAT_C1A_SAMPLE_SIZE = 512
 # Do not classify the first 9e-5 pose-spike as repeated low-LR failure: its
 # telemetry explicitly requested a 2.7e-5 recovery run. The Huber path is real,
 # but it is reserved for repeated instability at or below that recovered regime;
@@ -459,6 +465,7 @@ def _hinerv_campaign_row(
         "--coder-aware-qat",
         "--coder-qat-quant-bits",
         str(int(quant_bits)),
+        *_coder_qat_command_args(quant_bits=int(quant_bits)),
         "--optimizer-kind",
         str(optimizer_kind),
         "--hi-nerv-optimizer-policy",
@@ -556,6 +563,7 @@ def _hinerv_campaign_row(
                 optimizer_policy=optimizer_policy,
             ),
             "quant_bits": int(quant_bits),
+            "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
             "decoder_weight_waterfill_plan": (
                 _decoder_weight_waterfill_row_metadata(decoder_weight_waterfill)
@@ -677,6 +685,7 @@ def _snerv_campaign_row(
         "--coder-aware-qat",
         "--coder-qat-quant-bits",
         str(int(quant_bits)),
+        *_coder_qat_command_args(quant_bits=int(quant_bits)),
         "--snerv-scorer-loop-qat",
         "--snerv-scorer-loop-search-mode",
         "learned_random_subspace",
@@ -750,6 +759,7 @@ def _snerv_campaign_row(
             "optimizer_kind": None,
             "optimizer_control": _snerv_optimizer_control_blocker(),
             "quant_bits": int(quant_bits),
+            "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
             "execution_epochs": int(execution_epochs),
             "current_command_is_bounded_proof_not_long_training": bool(
@@ -1876,16 +1886,43 @@ def _candidate_index_keys(row: Mapping[str, Any]) -> tuple[str, ...]:
         row.get("_candidate_id"),
         row.get("_candidate_key"),
         row.get("_modelsize_row_id"),
+        row.get("row_id"),
+        row.get("planner_row_id"),
     ]
     keys: list[str] = []
     for raw in raw_values:
         text = str(raw or "").strip()
         if not text:
             continue
-        keys.append(text)
-        if ":" in text:
-            keys.append(text.rsplit(":", 1)[-1])
+        keys.extend(_candidate_id_aliases(text))
     return tuple(_dedupe(keys))
+
+
+def _candidate_id_aliases(value: str) -> tuple[str, ...]:
+    """Return source-row aliases without dropping the modelsize candidate id."""
+
+    text = str(value or "").strip()
+    if not text:
+        return ()
+    aliases = [text]
+    has_double_colon = "::" in text
+    if has_double_colon:
+        parts = [part.strip() for part in text.split("::") if part.strip()]
+        if len(parts) >= 3 and _family_key(parts[0]) in {"hi_nerv", "snerv"}:
+            aliases.append(parts[1])
+        elif parts:
+            aliases.append(parts[-1])
+    for marker in (
+        ":hi_nerv_decoder_weight_waterfill:",
+        ":hinerv_decoder_weight_waterfill:",
+        ":snerv_decoder_weight_waterfill:",
+    ):
+        if marker in text:
+            aliases.append(text.split(marker, 1)[0])
+    if ":" in text and not has_double_colon:
+        aliases.append(text.rsplit(":", 1)[-1])
+        aliases.append(text.split(":", 1)[0])
+    return tuple(_dedupe(alias for alias in aliases if alias))
 
 
 def _decoder_weight_waterfill_for(
@@ -2201,7 +2238,11 @@ def _hinerv_feedback_official_control_score(row: Mapping[str, Any]) -> int:
 
 def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
     keys = (
+        "coder_qat_control",
+        "decoder_weight_waterfill_plan",
         "feedback_launch_adjustment",
+        "optimizer_control",
+        "optimizer_policy",
         "source_faithfulness_controls",
         "output_dir_reuse_policy",
     )
@@ -2384,6 +2425,42 @@ def _campaign_output_basename(
 
 def _float_token(value: float) -> str:
     return f"{float(value):.12g}"
+
+
+def _coder_qat_control(*, quant_bits: int) -> dict[str, Any]:
+    return {
+        "schema": "nerv_long_training_coder_qat_control.v1",
+        "quant_bits": int(quant_bits),
+        "quant_residual_weight": float(DEFAULT_CODER_QAT_QUANT_RESIDUAL_WEIGHT),
+        "magnitude_weight": float(DEFAULT_CODER_QAT_MAGNITUDE_WEIGHT),
+        "delta_weight": float(DEFAULT_CODER_QAT_DELTA_WEIGHT),
+        "c1a_entropy_weight": float(DEFAULT_CODER_QAT_C1A_ENTROPY_WEIGHT),
+        "c1a_sigma": float(DEFAULT_CODER_QAT_C1A_SIGMA),
+        "c1a_sample_size": int(DEFAULT_CODER_QAT_C1A_SAMPLE_SIZE),
+        "c1a_source": (
+            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
+            "decoder weights"
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _coder_qat_command_args(*, quant_bits: int) -> list[str]:
+    control = _coder_qat_control(quant_bits=int(quant_bits))
+    return [
+        "--coder-qat-quant-residual-weight",
+        _float_token(float(control["quant_residual_weight"])),
+        "--coder-qat-magnitude-weight",
+        _float_token(float(control["magnitude_weight"])),
+        "--coder-qat-delta-weight",
+        _float_token(float(control["delta_weight"])),
+        "--coder-qat-c1a-entropy-weight",
+        _float_token(float(control["c1a_entropy_weight"])),
+        "--coder-qat-c1a-sigma",
+        _float_token(float(control["c1a_sigma"])),
+        "--coder-qat-c1a-sample-size",
+        str(int(control["c1a_sample_size"])),
+    ]
 
 
 def _float_or_none(value: Any) -> float | None:

@@ -1527,6 +1527,10 @@ def test_pact_vq_runner_forwards_pr95_curriculum_kwargs() -> None:
     assert "pr95_faithful_curriculum_enabled" in kw_names
     assert "pr95_curriculum_total_epochs" in kw_names
     assert "grad_clip_max_norm" in kw_names
+    target_source = ast.get_source_segment(source, target_fn) or ""
+    assert "c1a_entropy_weight=float(coder_qat_c1a_entropy_weight)" in target_source
+    assert "c1a_sigma=float(coder_qat_c1a_sigma)" in target_source
+    assert "c1a_sample_size=int(coder_qat_c1a_sample_size)" in target_source
 
 
 def test_mlx_optimizer_controls_default_to_pact_muon_adamw() -> None:
@@ -1745,6 +1749,12 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
             "0.0001",
             "--coder-qat-delta-weight",
             "0.0002",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
             "--hprc-queue-followup-report",
             "hprc_queue_followup_report.json",
         ]
@@ -1766,6 +1776,9 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.coder_qat_quant_residual_weight == 0.001
     assert args.coder_qat_magnitude_weight == 0.0001
     assert args.coder_qat_delta_weight == 0.0002
+    assert args.coder_qat_c1a_entropy_weight == 0.0003
+    assert args.coder_qat_c1a_sigma == 0.35
+    assert args.coder_qat_c1a_sample_size == 64
     assert args.hprc_queue_followup_report == [
         Path("hprc_queue_followup_report.json")
     ]
@@ -3553,6 +3566,13 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
                         "quant_residual_weight": 0.001,
                         "magnitude_weight": 0.0001,
                         "delta_weight": 0.0002,
+                        "c1a_entropy_weight": 0.0003,
+                        "c1a_sigma": 0.35,
+                        "c1a_sample_size": 64,
+                        "c1a_source": (
+                            "PR95 cat_entropy_v2 soft categorical entropy "
+                            "adapted to selected decoder weights"
+                        ),
                         "authority": "false_macos_mlx_research_signal",
                     },
                     "recon_pixel_weight": {
@@ -3616,6 +3636,9 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         coder_qat_quant_residual_weight=0.001,
         coder_qat_magnitude_weight=0.0001,
         coder_qat_delta_weight=0.0002,
+        coder_qat_c1a_entropy_weight=0.0003,
+        coder_qat_c1a_sigma=0.35,
+        coder_qat_c1a_sample_size=64,
         decoder_weight_waterfill_plan_json=waterfill_plan_path,
         recon_pixel_weight_path=weight_path,
         auto_segnet_boundary_recon_weight=False,
@@ -3636,6 +3659,9 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
     assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
+    assert captured_train_kwargs["coder_qat_c1a_entropy_weight"] == 0.0003
+    assert captured_train_kwargs["coder_qat_c1a_sigma"] == 0.35
+    assert captured_train_kwargs["coder_qat_c1a_sample_size"] == 64
     assert captured_train_kwargs["decoder_weight_waterfill_plan"] == waterfill_plan
     assert captured_train_kwargs["recon_pixel_weight_path"] == weight_path
     assert captured_train_kwargs["auto_segnet_boundary_recon_weight"] is False
@@ -3648,6 +3674,13 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
         "quant_residual_weight": 0.001,
         "magnitude_weight": 0.0001,
         "delta_weight": 0.0002,
+        "c1a_entropy_weight": 0.0003,
+        "c1a_sigma": 0.35,
+        "c1a_sample_size": 64,
+        "c1a_source": (
+            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
+            "decoder weights"
+        ),
         "authority": "false_macos_mlx_research_signal",
     }
     selection = out["modelsize_candidate_selection"]
@@ -5951,6 +5984,9 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
         coder_qat_quant_residual_weight=0.001,
         coder_qat_magnitude_weight=0.0001,
         coder_qat_delta_weight=0.0002,
+        coder_qat_c1a_entropy_weight=0.0003,
+        coder_qat_c1a_sigma=0.35,
+        coder_qat_c1a_sample_size=64,
         allow_overwrite=True,
         repo_root=REPO_ROOT,
     )
@@ -5972,6 +6008,13 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
         "quant_residual_weight": 0.001,
         "magnitude_weight": 0.0001,
         "delta_weight": 0.0002,
+        "c1a_entropy_weight": 0.0003,
+        "c1a_sigma": 0.35,
+        "c1a_sample_size": 64,
+        "c1a_source": (
+            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
+            "decoder weights"
+        ),
         "authority": "false_macos_mlx_research_signal",
     }
     assert out["score_aware_training"]["decoder_codec"] == "int4_scale_bundled"
@@ -5981,6 +6024,9 @@ def test_selector_v4_execute_arm_emits_runner_and_fail_closed_blockers(
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
     assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
+    assert captured_train_kwargs["coder_qat_c1a_entropy_weight"] == 0.0003
+    assert captured_train_kwargs["coder_qat_c1a_sigma"] == 0.35
+    assert captured_train_kwargs["coder_qat_c1a_sample_size"] == 64
     assert out["projection_manifest_paths"]
     assert out["receiver_proof_report_paths"]
     assert out["mlx_profile_paths"] == [mlx_profile_path.as_posix()]

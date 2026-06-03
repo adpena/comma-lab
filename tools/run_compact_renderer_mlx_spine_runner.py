@@ -4794,6 +4794,10 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                     "c1a_entropy_weight": float(coder_qat_c1a_entropy_weight),
                     "c1a_sigma": float(coder_qat_c1a_sigma),
                     "c1a_sample_size": int(coder_qat_c1a_sample_size),
+                    "c1a_source": (
+                        "PR95 cat_entropy_v2 soft categorical entropy adapted "
+                        "to selected decoder weights"
+                    ),
                     "authority": "false_macos_mlx_research_signal",
                 },
                 "decoder_codec": str(decoder_codec),
@@ -5910,6 +5914,13 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                     "quant_residual_weight": float(coder_qat_quant_residual_weight),
                     "magnitude_weight": float(coder_qat_magnitude_weight),
                     "delta_weight": float(coder_qat_delta_weight),
+                    "c1a_entropy_weight": float(coder_qat_c1a_entropy_weight),
+                    "c1a_sigma": float(coder_qat_c1a_sigma),
+                    "c1a_sample_size": int(coder_qat_c1a_sample_size),
+                    "c1a_source": (
+                        "PR95 cat_entropy_v2 soft categorical entropy adapted "
+                        "to selected decoder weights"
+                    ),
                     "authority": "false_macos_mlx_research_signal",
                 },
                 "decoder_codec": str(decoder_codec),
@@ -7736,6 +7747,9 @@ def _run_pact_nerv_vq_mlx_smoke(
         quant_residual_weight=float(coder_qat_quant_residual_weight),
         magnitude_weight=float(coder_qat_magnitude_weight),
         delta_weight=float(coder_qat_delta_weight),
+        c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+        c1a_sigma=float(coder_qat_c1a_sigma),
+        c1a_sample_size=int(coder_qat_c1a_sample_size),
     ).validated()
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
@@ -7999,6 +8013,9 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         quant_residual_weight=float(coder_qat_quant_residual_weight),
         magnitude_weight=float(coder_qat_magnitude_weight),
         delta_weight=float(coder_qat_delta_weight),
+        c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+        c1a_sigma=float(coder_qat_c1a_sigma),
+        c1a_sample_size=int(coder_qat_c1a_sample_size),
     ).validated()
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
@@ -9860,6 +9877,9 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            coder_qat_c1a_entropy_weight=args.coder_qat_c1a_entropy_weight,
+            coder_qat_c1a_sigma=args.coder_qat_c1a_sigma,
+            coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
@@ -9905,6 +9925,9 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            coder_qat_c1a_entropy_weight=args.coder_qat_c1a_entropy_weight,
+            coder_qat_c1a_sigma=args.coder_qat_c1a_sigma,
+            coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
