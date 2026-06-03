@@ -2658,7 +2658,43 @@ def _normalize_decoder_weight_waterfill_source(
     out["path"] = str(path)
     out["family"] = _family_key(str(source.get("family") or "hi_nerv"))
     out["group_count"] = int(source.get("group_count") or len(rows))
-    out["full_video_coverage"] = bool(source.get("full_video_coverage"))
+    full_video_coverage = source.get("full_video_coverage")
+    if full_video_coverage is None:
+        full_video_coverage = (
+            source.get("_archive_ladder_full_video_coverage")
+            if source.get("_archive_ladder_full_video_coverage") is not None
+            else source.get("_archive_size_ladder_full_video_coverage")
+        )
+    out["full_video_coverage"] = bool(full_video_coverage)
+    archive_sha = (
+        source.get("archive_sha256")
+        or source.get("_archive_size_ladder_archive_sha256")
+        or source.get("_archive_ladder_archive_sha256")
+    )
+    if archive_sha:
+        out.setdefault("archive_sha256", archive_sha)
+    receiver_proof_path = (
+        source.get("receiver_proof_path")
+        or source.get("receiver_proof_report_path")
+        or source.get("_archive_size_ladder_receiver_proof_path")
+        or source.get("_archive_ladder_receiver_proof_path")
+    )
+    if receiver_proof_path:
+        out.setdefault("receiver_proof_path", receiver_proof_path)
+    receiver_proof_sha = (
+        source.get("receiver_proof_sha256")
+        or source.get("_archive_size_ladder_receiver_proof_sha256")
+        or source.get("_archive_ladder_receiver_proof_sha256")
+    )
+    if receiver_proof_sha:
+        out.setdefault("receiver_proof_sha256", receiver_proof_sha)
+    runtime_ready = (
+        source.get("runtime_consumption_proof_ready")
+        or source.get("_archive_size_ladder_runtime_consumption_proof_ready")
+        or source.get("_archive_ladder_runtime_consumption_proof_ready")
+    )
+    if runtime_ready and not str(source.get("receiver_proof_status") or "").strip():
+        out["receiver_proof_status"] = "runtime_consumption_proof_ready"
     receiver_binding = _decoder_weight_waterfill_receiver_proof_binding(out)
     out["receiver_proof_binding"] = receiver_binding
     out["receiver_proof_ready"] = bool(receiver_binding["bound"])

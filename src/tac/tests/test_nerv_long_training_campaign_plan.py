@@ -2824,6 +2824,115 @@ def test_build_long_training_campaign_plan_cli_selects_archive_ladder_waterfill_
     assert hi["ready_for_exact_eval_dispatch"] is False
 
 
+def test_build_long_training_campaign_plan_cli_preserves_archive_ladder_waterfill_custody(
+    tmp_path: Path,
+) -> None:
+    hinerv = tmp_path / "hinerv_budget.json"
+    snerv = tmp_path / "snerv_budget.json"
+    out_json = tmp_path / "campaign.json"
+    waterfill_bundle = tmp_path / "hinerv_archive_ladder_waterfill.json"
+    archive_ladder = tmp_path / "hinerv_archive_size_ladder.json"
+    proof_path = _receiver_proof(tmp_path, archive_sha="a" * 64)
+    ladder_candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    ladder_candidate.update(
+        {
+            "candidate_id": "hinerv_ladder_waterfill_bundle",
+            "nominal_total_payload_bytes": 88_000,
+            "byte_headroom": 90_000,
+        }
+    )
+    nested_waterfill = _decoder_weight_waterfill_plan(
+        candidate_id="hinerv_ladder_waterfill_bundle",
+        receiver_proof_status="runtime_consumption_proof_ready",
+    )
+    # The real derived waterfill bundle carries proof identity at the row/ladder
+    # layer, not inside the nested plan. The planner must preserve that custody.
+    nested_waterfill.pop("archive_sha256")
+    nested_waterfill.pop("full_video_coverage")
+    nested_waterfill.pop("receiver_proof_status")
+    hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
+    snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
+    archive_ladder.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "archive_rows": [
+                    {
+                        "row_id": "hinerv_ladder_waterfill_bundle",
+                        "modelsize_candidate": ladder_candidate,
+                        "archive_sha256": "a" * 64,
+                        "receiver_proof_path": proof_path.as_posix(),
+                        "runtime_consumption_proof_ready": True,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    waterfill_bundle.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_ladder_waterfill.v1",
+                "source_schema": "hinerv_archive_size_ladder.v1",
+                "archive_ladder_report_path": archive_ladder.as_posix(),
+                "full_video_coverage": True,
+                "num_pairs": 600,
+                "rows": [
+                    {
+                        "row_id": "hinerv_ladder_waterfill_bundle",
+                        "archive_sha256": "a" * 64,
+                        "waterfill_plan": nested_waterfill,
+                        "blockers": [],
+                        "saliency_replay_blockers": [],
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    rc = cli.main(
+        [
+            "--hinerv-modelsize-budget",
+            hinerv.as_posix(),
+            "--snerv-modelsize-budget",
+            snerv.as_posix(),
+            "--optimizer-kind",
+            "lion",
+            "--epochs",
+            "16",
+            "--max-candidates-per-family",
+            "1",
+            "--decoder-weight-waterfill-source",
+            waterfill_bundle.as_posix(),
+            "--output-json",
+            out_json.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    attachment = hi["decoder_weight_waterfill_plan"]
+    assert hi["candidate_id"] == "hinerv_ladder_waterfill_bundle"
+    assert attachment["attached"] is True
+    assert attachment["full_video_coverage"] is True
+    assert attachment["receiver_proof_ready"] is True
+    assert attachment["runner_admitted"] is True
+    assert attachment["receiver_proof_binding"]["archive_sha256"] == "a" * 64
+    assert attachment["receiver_proof_binding"]["proof_path"] == proof_path.as_posix()
+    assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" not in hi["blockers"]
+    assert "--decoder-weight-waterfill-plan-json" in hi["command_argv"]
+
+
 def test_build_long_training_campaign_plan_cli_rejects_stale_ladder_receiver_proof(
     tmp_path: Path,
 ) -> None:
