@@ -57,6 +57,8 @@ from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
 
 TRAINER_SCHEMA = "hi_nerv_mlx_score_aware_trainer.v1"
 TRAINER_AUTHORITY = "false_authority_macos_mlx_training_no_contest_score_claim"
+PR95_FULL_CONTROL_CONTRACT_SCHEMA = "hi_nerv_pr95_full_control_contract.v1"
+CANONICAL_PR95_FULL_EPOCHS = 29_650
 DIRECT_TRAINER_CANONICALIZATION_SCHEMA = (
     "hi_nerv_direct_trainer_canonicalization_contract.v1"
 )
@@ -83,10 +85,12 @@ MODEL_SIZE_ROWS = tuple(
 def _full_main(args: argparse.Namespace) -> int:
     """Run canonical MLX score-aware training for the current HiNeRV carrier."""
 
+    pr95_full_control_contract = _pr95_full_control_contract(args)
     canonicalization = _direct_trainer_canonicalization_contract(mode="full")
     launch_refusal = _direct_trainer_launch_refusal_payload(
         canonicalization,
         mode="full",
+        pr95_full_control_contract=pr95_full_control_contract,
     )
     if launch_refusal is not None:
         print(json.dumps(launch_refusal, sort_keys=True), file=sys.stderr)
@@ -249,10 +253,12 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "storage_preflight": _metadata_safe(storage_payload),
             "direct_trainer_canonicalization": _metadata_safe(canonicalization),
+            "pr95_full_control_contract": _metadata_safe(pr95_full_control_contract),
             "blockers": [
                 "contest_cpu_cuda_exact_eval_not_executed",
                 "official_hinerv_feature_grid_parity_not_proven",
                 *canonicalization["blockers"],
+                *pr95_full_control_contract["blockers"],
             ],
         },
         eval_roundtrip_ste_enabled=bool(args.eval_roundtrip_ste),
@@ -267,11 +273,15 @@ def _full_main(args: argparse.Namespace) -> int:
             "output_dir": output_dir.as_posix(),
             "storage_preflight": storage_payload,
             "direct_trainer_canonicalization": canonicalization,
+            "pr95_full_control_contract": pr95_full_control_contract,
             "prioritized_pair_training": _prioritized_pair_training_metadata(
                 prioritized_pair_indices,
                 target_hydration_pair_indices_consumed=source_pair_indices is not None,
             ),
-            "blockers": list(canonicalization["blockers"]),
+            "blockers": [
+                *canonicalization["blockers"],
+                *pr95_full_control_contract["blockers"],
+            ],
             "command": sys.argv,
             **FALSE_AUTHORITY,
         },
@@ -484,6 +494,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--coder-qat-quant-residual-weight", type=float, default=1.0e-4)
     parser.add_argument("--coder-qat-magnitude-weight", type=float, default=0.0)
     parser.add_argument("--coder-qat-delta-weight", type=float, default=0.0)
+    parser.add_argument("--coder-qat-c1a-entropy-weight", type=float, default=0.0)
+    parser.add_argument("--coder-qat-c1a-sigma", type=float, default=0.2)
+    parser.add_argument("--coder-qat-c1a-sample-size", type=int, default=512)
     parser.add_argument("--distillation-weight", type=float, default=0.0)
     parser.add_argument("--pose-distillation-weight", type=float, default=1.0)
     parser.add_argument("--allow-mock-scorer-teacher", action="store_true")
@@ -574,6 +587,11 @@ def _coder_qat_config_from_args(args: argparse.Namespace) -> Any:
         quant_residual_weight=float(args.coder_qat_quant_residual_weight),
         magnitude_weight=float(args.coder_qat_magnitude_weight),
         delta_weight=float(args.coder_qat_delta_weight),
+        c1a_entropy_weight=float(
+            getattr(args, "coder_qat_c1a_entropy_weight", 0.0)
+        ),
+        c1a_sigma=float(getattr(args, "coder_qat_c1a_sigma", 0.2)),
+        c1a_sample_size=int(getattr(args, "coder_qat_c1a_sample_size", 512)),
     ).validated()
 
 
@@ -871,19 +889,123 @@ def _direct_trainer_canonicalization_contract(*, mode: str) -> dict[str, Any]:
     }
 
 
+def _pr95_full_control_contract(args: argparse.Namespace) -> dict[str, Any]:
+    """Fail-closed production-full control audit for PR95-critical HiNeRV runs."""
+
+    blockers: list[str] = []
+    distillation_weight = float(getattr(args, "distillation_weight", 0.0))
+    pose_distillation_weight = float(getattr(args, "pose_distillation_weight", 0.0))
+    eval_roundtrip_ste = bool(getattr(args, "eval_roundtrip_ste", False))
+    pose_preprocess = str(getattr(args, "pose_student_input_preprocess", ""))
+    pr95_curriculum = bool(getattr(args, "pr95_faithful_curriculum", False))
+    pr95_total_epochs = getattr(args, "pr95_curriculum_total_epochs", None)
+    epochs = int(getattr(args, "epochs", 0))
+    coder_qat = bool(getattr(args, "coder_qat", False))
+    c1a_entropy_weight = float(getattr(args, "coder_qat_c1a_entropy_weight", 0.0))
+    c1a_sigma = float(getattr(args, "coder_qat_c1a_sigma", 0.0))
+    c1a_sample_size = int(getattr(args, "coder_qat_c1a_sample_size", 0))
+    ema_archive_selection = bool(getattr(args, "ema_archive_selection", False))
+    archive_parse_back_selection = bool(
+        getattr(args, "post_export_receiver_cache_quality_gate", False)
+    )
+
+    if distillation_weight <= 0.0:
+        blockers.append("hinerv_full_missing_segnet_distillation_loss")
+    if pose_distillation_weight <= 0.0:
+        blockers.append("hinerv_full_missing_posenet_distillation_loss")
+    if bool(getattr(args, "allow_mock_scorer_teacher", False)):
+        blockers.append("hinerv_full_real_scorer_teacher_blocked_by_mock_flag")
+    if bool(getattr(args, "allow_segnet_only_research", False)):
+        blockers.append("hinerv_full_segnet_only_research_not_production")
+    if not eval_roundtrip_ste:
+        blockers.append("hinerv_full_missing_eval_roundtrip_ste")
+    if pose_preprocess != "pr95_yuv6":
+        blockers.append("hinerv_full_missing_pr95_yuv6_differentiable_pose_path")
+    if not pr95_curriculum:
+        blockers.append("hinerv_full_missing_pr95_faithful_curriculum")
+    if epochs < CANONICAL_PR95_FULL_EPOCHS:
+        blockers.append("hinerv_full_pr95_epoch_budget_below_29650")
+    if pr95_total_epochs is not None and int(pr95_total_epochs) != CANONICAL_PR95_FULL_EPOCHS:
+        blockers.append("hinerv_full_pr95_curriculum_total_epochs_not_canonical_29650")
+    if not coder_qat:
+        blockers.append("hinerv_full_missing_coder_aware_qat")
+    if c1a_entropy_weight <= 0.0:
+        blockers.append("hinerv_full_missing_c1a_entropy_control")
+    if c1a_sigma <= 0.0:
+        blockers.append("hinerv_full_invalid_c1a_sigma")
+    if c1a_sample_size <= 0:
+        blockers.append("hinerv_full_invalid_c1a_sample_size")
+    if not ema_archive_selection:
+        blockers.append("hinerv_full_missing_ema_archive_selection")
+    if not archive_parse_back_selection:
+        blockers.append("hinerv_full_missing_archive_parse_back_selection")
+
+    return {
+        "schema": PR95_FULL_CONTROL_CONTRACT_SCHEMA,
+        "family": "hi_nerv",
+        "control_surface": "production_full_pr95_critical_controls",
+        "production_full_control_ready": not blockers,
+        "controls": {
+            "real_segnet_distillation_loss": distillation_weight > 0.0,
+            "real_posenet_distillation_loss": pose_distillation_weight > 0.0,
+            "mock_scorer_teacher_allowed": bool(
+                getattr(args, "allow_mock_scorer_teacher", False)
+            ),
+            "segnet_only_research_allowed": bool(
+                getattr(args, "allow_segnet_only_research", False)
+            ),
+            "eval_roundtrip_ste_enabled": eval_roundtrip_ste,
+            "pose_student_input_preprocess": pose_preprocess,
+            "pr95_faithful_curriculum_enabled": pr95_curriculum,
+            "epochs": epochs,
+            "canonical_pr95_full_epochs": CANONICAL_PR95_FULL_EPOCHS,
+            "pr95_curriculum_total_epochs": pr95_total_epochs,
+            "coder_qat_enabled": coder_qat,
+            "coder_qat_c1a_entropy_weight": c1a_entropy_weight,
+            "coder_qat_c1a_sigma": c1a_sigma,
+            "coder_qat_c1a_sample_size": c1a_sample_size,
+            "ema_archive_selection_enabled": ema_archive_selection,
+            "archive_parse_back_selection_enabled": archive_parse_back_selection,
+        },
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _direct_trainer_launch_refusal_payload(
     canonicalization: dict[str, Any],
     *,
     mode: str,
+    pr95_full_control_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     if str(mode) == "smoke":
         return None
-    if canonicalization.get("trainer_launch_allowed") is True:
+    control_ready = True
+    if pr95_full_control_contract is not None:
+        control_ready = (
+            pr95_full_control_contract.get("production_full_control_ready") is True
+        )
+    if canonicalization.get("trainer_launch_allowed") is True and control_ready:
         return None
-    blockers = [
-        "hinerv_direct_full_trainer_launch_blocked_by_canonicalization_contract",
-        *[str(blocker) for blocker in canonicalization.get("blockers") or []],
-    ]
+    blockers: list[str] = []
+    if canonicalization.get("trainer_launch_allowed") is not True:
+        blockers.extend(
+            [
+                "hinerv_direct_full_trainer_launch_blocked_by_canonicalization_contract",
+                *[str(blocker) for blocker in canonicalization.get("blockers") or []],
+            ]
+        )
+    if pr95_full_control_contract is not None:
+        control_blockers = [
+            str(blocker) for blocker in pr95_full_control_contract.get("blockers") or []
+        ]
+        if control_blockers:
+            blockers.extend(
+                [
+                    "hinerv_full_trainer_launch_blocked_by_pr95_control_contract",
+                    *control_blockers,
+                ]
+            )
     return {
         "schema": DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
         "authority": TRAINER_AUTHORITY,
@@ -899,6 +1021,7 @@ def _direct_trainer_launch_refusal_payload(
         "canonical_runner_entrypoint": DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT,
         "allowed_direct_research_mode": "--smoke",
         "direct_trainer_canonicalization": _metadata_safe(canonicalization),
+        "pr95_full_control_contract": _metadata_safe(pr95_full_control_contract),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -1087,11 +1210,13 @@ def main(argv: list[str] | None = None) -> int:
 
 
 __all__ = [
+    "PR95_FULL_CONTROL_CONTRACT_SCHEMA",
     "TRAINER_SCHEMA",
     "_build_parser",
     "_coder_qat_config_from_args",
     "_config_from_args",
     "_metadata_safe",
+    "_pr95_full_control_contract",
     "_prioritized_pair_indices_from_args",
     "_prioritized_pair_training_lineage_metadata",
     "_prioritized_pair_training_metadata",

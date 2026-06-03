@@ -28,6 +28,7 @@ def test_contract_is_false_authority_and_family_scoped() -> None:
         "source_bound_modelsize_control",
         "archive_byte_custody",
         "receiver_replay_proof",
+        "receiver_proof_identity",
     }.issubset(
         {row["group_id"] for row in payload["generic_required_field_groups"]}
     )

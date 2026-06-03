@@ -6,8 +6,11 @@ from __future__ import annotations
 import pytest
 
 from tac.analysis.nerv_modelsize_budget import (
+    DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS,
     MODELSIZE_RATE_AUTHORITY_SURFACE,
+    SNERV_CONTEST_RECEIVER_PROFILE_ID,
+    SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID,
     NervModelSizeBudgetError,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
@@ -17,6 +20,7 @@ from tac.analysis.nerv_modelsize_budget import (
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
     snerv_model_size_adapter_id_token,
+    snerv_modelsize_control_profile,
     snerv_temporal_mode_from_id_token,
     snerv_temporal_mode_id_token,
 )
@@ -525,6 +529,8 @@ def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None
 
     assert row.modelsize_mparams == 0.05
     assert row.capacity_source == "official_snerv_modelsize"
+    assert row.modelsize_control_profile_id == DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID
+    assert row.modelsize_control_profile["profile_id"] == SNERV_CONTEST_RECEIVER_PROFILE_ID
     assert row.fc_dim == 11
     assert row.official_modelsize_solution is not None
     assert row.official_modelsize_solution["schema"] == (
@@ -543,6 +549,8 @@ def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None
     )
 
     assert report["official_modelsize_mparams"] == [0.05]
+    assert report["modelsize_control_profile_id"] == SNERV_CONTEST_RECEIVER_PROFILE_ID
+    assert report["modelsize_control_profile"]["source"] == "pact_receiver_closed_snar1_profile"
     assert report["official_enc_strds"] == [5, 4, 2, 2, 2]
     assert report["official_dec_strds"] == [5, 4, 2, 2, 2]
     assert report["candidate_count"] > 0
@@ -557,6 +565,41 @@ def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None
     assert {row["capacity_source"] for row in report["selected_candidates"]} == {
         "official_snerv_modelsize"
     }
+    assert {
+        row["modelsize_control_profile_id"] for row in report["selected_candidates"]
+    } == {SNERV_CONTEST_RECEIVER_PROFILE_ID}
+
+
+def test_snerv_official_cli_default_profile_is_explicit_and_fail_closed() -> None:
+    profile = snerv_modelsize_control_profile(SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID)
+
+    assert profile["enc_strds"] == []
+    assert profile["dec_strds"] == [5, 4, 3, 2, 2]
+    assert profile["modelsize_solve_supported"] is False
+
+    report = build_snerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        per_ceiling_limit=8,
+        official_modelsize_mparams=(0.05,),
+        fc_dims=(),
+        official_enc_strds=(),
+        official_dec_strds=(5, 4, 3, 2, 2),
+        modelsize_control_profile_id=SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID,
+    )
+
+    assert report["modelsize_control_profile_id"] == SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID
+    assert report["official_enc_strds"] == []
+    assert report["official_dec_strds"] == [5, 4, 3, 2, 2]
+    assert report["candidate_count"] == 0
+    assert report["invalid_candidate_count"] > 0
+    invalid = report["invalid_candidates"][0]
+    assert invalid["modelsize_control_profile_id"] == SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID
+    assert invalid["modelsize_control_profile"]["blockers"] == [
+        "official_cli_default_enc_strds_empty_requires_source_context"
+    ]
+    assert invalid["score_claim"] is False
+    assert invalid["ready_for_exact_eval_dispatch"] is False
 
 
 def test_snerv_modelsize_budget_records_invalid_official_modelsize_without_aborting() -> None:
@@ -623,9 +666,68 @@ def test_snerv_modelsize_selection_preserves_official_source_metadata() -> None:
         row["modelsize_mparams"] == 0.05
         and row["capacity_source"] == "official_snerv_modelsize"
         and row["official_modelsize_solution"]["fc_dim"] == 11
+        and row["modelsize_control_profile_id"]
+        == DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID
+        and row["modelsize_control_profile"]["profile_id"]
+        == SNERV_CONTEST_RECEIVER_PROFILE_ID
+        and row["modelsize_control_profile"]["source"]
+        == "pact_receiver_closed_snar1_profile"
         for row in selected
         if row["candidate_id"].find("_fc11e0_") >= 0
     )
+
+
+def test_snerv_modelsize_control_profiles_are_explicit_source_contracts() -> None:
+    cli_default = snerv_modelsize_control_profile(SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID)
+    assert cli_default["source"] == "upstream_train_snerv_parser_defaults"
+    assert cli_default["enc_strds"] == []
+    assert cli_default["dec_strds"] == [5, 4, 3, 2, 2]
+    assert cli_default["modelsize_solve_supported"] is False
+    assert "official_cli_default_enc_strds_empty_requires_source_context" in cli_default[
+        "blockers"
+    ]
+
+    contest = snerv_modelsize_control_profile(SNERV_CONTEST_RECEIVER_PROFILE_ID)
+    assert contest["source"] == "pact_receiver_closed_snar1_profile"
+    assert contest["source_family"] == "PACT SNeRV receiver adapter"
+    assert "Not an upstream README default" in contest["source_notes"]
+    assert contest["enc_strds"] == [5, 4, 2, 2, 2]
+    assert contest["dec_strds"] == [5, 4, 2, 2, 2]
+    assert contest["modelsize_solve_supported"] is True
+    assert contest["blockers"] == []
+
+    with pytest.raises(NervModelSizeBudgetError):
+        snerv_modelsize_control_profile("not-a-profile")
+
+
+def test_snerv_modelsize_manual_stride_override_is_not_labeled_official_default() -> None:
+    row = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=4,
+        bits_per_coeff=2.0,
+        step_map_bits_per_coeff=1.0,
+        decoder_payload_codec="int4_symmetric",
+        official_modelsize_mparams=0.05,
+        official_enc_strds=(5, 4, 2, 2, 2),
+        official_dec_strds=(5, 4, 3, 2, 2),
+    )
+
+    payload = row.as_dict()
+    profile = payload["modelsize_control_profile"]
+    assert payload["modelsize_control_profile_id"] == "manual_stride_override"
+    assert profile["base_profile_id"] == SNERV_CONTEST_RECEIVER_PROFILE_ID
+    assert profile["source"] == "operator_or_tool_explicit_stride_override"
+    assert profile["enc_strds"] == [5, 4, 2, 2, 2]
+    assert profile["dec_strds"] == [5, 4, 3, 2, 2]
+    assert profile["modelsize_solve_supported"] is True
+    assert payload["modelsize_control_contract"][
+        "modelsize_mparams_is_official_upstream_flag"
+    ] is True
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
 
 
 def test_official_nerv_oss_flag_audit_maps_controls_to_local_consumers() -> None:

@@ -8,6 +8,9 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.nerv_receiver_proof_identity import (
+    bind_nerv_receiver_proof_identity,
+)
 from tac.auth_eval_schema import FULL_CONTEST_SAMPLE_COUNT, contest_formula_score
 from tac.repo_io import sha256_file
 
@@ -95,10 +98,20 @@ _POSE_KEYS = (
 _RECEIVER_PROOF_KEYS = (
     "receiver_archive_replay_verified",
     "receiver_contract_satisfied",
-    "byte_closed_receiver_proof",
     "runtime_consumption_proof_ready",
     "receiver_matches_direct",
 )
+_ADVISORY_AXIS_TOKENS = (
+    "advisory",
+    "projected",
+    "predicted",
+    "proxy",
+    "research-signal",
+    "macos",
+    "mps",
+    "planning",
+)
+_CONTEST_AUTH_AXIS_PREFIXES = ("[contest-cpu", "[contest-cuda")
 
 
 class NervTrainedLadderRowEmitterError(ValueError):
@@ -187,13 +200,32 @@ def build_nerv_trained_ladder_row_payload(
     if nonrate_score is None and d_seg is not None and d_pose is not None:
         nonrate_score = float(
             contest_formula_score(seg_dist=d_seg, pose_dist=d_pose, archive_bytes=0)
-        )
-    receiver_replay = _truthy_first((proof, trainer, eval_payload), _RECEIVER_PROOF_KEYS)
+    )
+    raw_receiver_replay = _truthy_first(
+        (proof, trainer, eval_payload),
+        _RECEIVER_PROOF_KEYS,
+    )
+    receiver_proof_identity = bind_nerv_receiver_proof_identity(
+        (proof, trainer, eval_payload),
+        repo_root=root,
+        archive_bytes=archive_bytes,
+        archive_sha256=archive_sha,
+    )
+    receiver_proof_identity_bound = bool(receiver_proof_identity["bound"])
+    receiver_replay = bool(raw_receiver_replay or receiver_proof_identity["proof_passed"])
     source_axis_tag = _first_string(
         eval_payload,
         trainer,
         proof,
         keys=("axis_tag", "axis_label", "evidence_axis", "score_axis"),
+    )
+    source_axis_authorized = _axis_is_receiver_closed_authority(source_axis_tag)
+    receiver_proof_passed = bool(
+        receiver_replay
+        and receiver_proof_identity_bound
+        and source_axis_authorized
+        and pair_count is not None
+        and int(pair_count) >= int(full_pair_count)
     )
 
     row = {
@@ -215,18 +247,15 @@ def build_nerv_trained_ladder_row_payload(
         "nonrate_score": nonrate_score,
         "receiver_archive_replay_verified": bool(receiver_replay),
         "receiver_contract_satisfied": bool(receiver_replay),
-        "byte_closed_receiver_proof": bool(receiver_replay),
-        "receiver_proof_passed": bool(
-            receiver_replay
-            and pair_count is not None
-            and int(pair_count) >= int(full_pair_count)
-        ),
-        "receiver_closed": bool(
-            receiver_replay
-            and pair_count is not None
-            and int(pair_count) >= int(full_pair_count)
-        ),
+        "receiver_proof_identity_bound": receiver_proof_identity_bound,
+        "receiver_proof_identity": receiver_proof_identity,
+        "receiver_proof_path": receiver_proof_identity["proof_path"],
+        "receiver_proof_sha256": receiver_proof_identity["proof_sha256"],
+        "byte_closed_receiver_proof": bool(receiver_replay and receiver_proof_identity_bound),
+        "receiver_proof_passed": receiver_proof_passed,
+        "receiver_closed": receiver_proof_passed,
         "source_axis_tag": source_axis_tag,
+        "source_axis_receiver_closed_authority": source_axis_authorized,
         "receiver_codec_mode": _first_present(
             "receiver_codec_mode", trainer, controls, proof, eval_payload
         ),
@@ -267,6 +296,19 @@ def build_nerv_trained_ladder_row_payload(
             *(["modelsize_or_fc_dim_missing"] if modelsize is None and fc is None else []),
             *(["nonrate_score_or_component_distortions_missing"] if nonrate_score is None else []),
             *(["receiver_replay_or_contract_missing"] if not receiver_replay else []),
+            *(
+                ["source_axis_not_receiver_closed_contest_authority"]
+                if not source_axis_authorized
+                else []
+            ),
+            *(
+                [
+                    "receiver_proof_identity_missing",
+                    *receiver_proof_identity["blockers"],
+                ]
+                if receiver_replay and not receiver_proof_identity_bound
+                else []
+            ),
             *_required_field_blockers(family_key, row),
         ]
     )
@@ -359,6 +401,10 @@ def _next_actions(family: str, blockers: Sequence[str]) -> list[str]:
         actions.append(f"{family}: emit source-bound modelsize_mparams or fc_dim")
     if "receiver_replay_or_contract_missing" in labels:
         actions.append(f"{family}: attach receiver archive replay proof")
+    if "receiver_proof_identity_missing" in labels:
+        actions.append(f"{family}: attach file-backed receiver proof path and sha256")
+    if "source_axis_not_receiver_closed_contest_authority" in labels:
+        actions.append(f"{family}: attach contest CPU/CUDA axis tag to scorer evidence")
     if "nonrate_score_or_component_distortions_missing" in labels:
         actions.append(f"{family}: attach SegNet/PoseNet component deltas")
     if any(label.startswith("required_emission_field_missing:") for label in labels):
@@ -494,6 +540,15 @@ def _family_key(value: Any) -> str:
     if text == "hi_nerv":
         return "hinerv"
     return text
+
+
+def _axis_is_receiver_closed_authority(axis_tag: str | None) -> bool:
+    if axis_tag is None:
+        return False
+    text = axis_tag.strip().lower()
+    if any(token in text for token in _ADVISORY_AXIS_TOKENS):
+        return False
+    return text.startswith(_CONTEST_AUTH_AXIS_PREFIXES)
 
 
 def _path_label(path: Any) -> str:

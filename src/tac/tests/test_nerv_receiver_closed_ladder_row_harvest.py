@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
+from pathlib import Path
+
 from tac.analysis.nerv_receiver_closed_ladder_row_harvest import (
     SCHEMA,
     ReceiverRowSource,
@@ -88,7 +91,9 @@ def test_path_only_receiver_proof_report_does_not_unlock_full600_row() -> None:
     assert payload["ready_for_receiver_closed_modelsize_ladder"] is False
 
 
-def test_advisory_axis_full600_rows_do_not_unlock_ladder_candidates() -> None:
+def test_advisory_axis_full600_rows_do_not_unlock_ladder_candidates(
+    tmp_path: Path,
+) -> None:
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [
             {
@@ -96,12 +101,13 @@ def test_advisory_axis_full600_rows_do_not_unlock_ladder_candidates() -> None:
                 "axis_tag": "[macOS-CPU advisory]",
                 "n_pairs": 600,
                 "rows": [
-                    _full_row("tiny", 0.04, 16, 42_000, 0.004, 0.002, "8"),
-                    _full_row("small", 0.08, 24, 80_000, 0.003, 0.002, "9"),
+                    _full_row(tmp_path, "tiny", 0.04, 16, 42_000, 0.004, 0.002, "8"),
+                    _full_row(tmp_path, "small", 0.08, 24, 80_000, 0.003, 0.002, "9"),
                 ],
             }
         ],
         carrier_id="snerv",
+        repo_root=tmp_path,
     )
 
     assert payload["status"] == "receiver_closed_ladder_rows_blocked"
@@ -116,7 +122,7 @@ def test_advisory_axis_full600_rows_do_not_unlock_ladder_candidates() -> None:
     )
 
 
-def test_true_authority_flags_block_harvest_candidates() -> None:
+def test_true_authority_flags_block_harvest_candidates(tmp_path: Path) -> None:
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [
             {
@@ -125,14 +131,24 @@ def test_true_authority_flags_block_harvest_candidates() -> None:
                 "n_pairs": 600,
                 "rows": [
                     {
-                        **_full_row("tiny", 0.04, 16, 42_000, 0.004, 0.002, "8"),
+                        **_full_row(
+                            tmp_path,
+                            "tiny",
+                            0.04,
+                            16,
+                            42_000,
+                            0.004,
+                            0.002,
+                            "8",
+                        ),
                         "promotion_eligible": True,
                     },
-                    _full_row("small", 0.08, 24, 80_000, 0.003, 0.002, "9"),
+                    _full_row(tmp_path, "small", 0.08, 24, 80_000, 0.003, 0.002, "9"),
                 ],
             }
         ],
         carrier_id="snerv",
+        repo_root=tmp_path,
     )
 
     rows = {row["row_id"]: row for row in payload["harvested_rows"]}
@@ -143,7 +159,33 @@ def test_true_authority_flags_block_harvest_candidates() -> None:
     ]
 
 
-def test_two_full600_modelsize_rows_are_ready_for_ladder_input() -> None:
+def test_boolean_only_full600_rows_do_not_unlock_ladder_candidates() -> None:
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "snerv_boolean_only_full600.v1",
+                "axis_tag": "[contest-CPU]",
+                "n_pairs": 600,
+                "rows": [
+                    _boolean_full_row("tiny", 0.04, 16, 42_000, 0.004, 0.002, "8"),
+                    _boolean_full_row("small", 0.08, 24, 80_000, 0.003, 0.002, "9"),
+                ],
+            }
+        ],
+        carrier_id="snerv",
+    )
+
+    rows = {row["row_id"]: row for row in payload["harvested_rows"]}
+    assert payload["status"] == "receiver_closed_ladder_rows_blocked"
+    assert payload["receiver_proof_row_count"] == 0
+    assert payload["ladder_candidate_row_count"] == 0
+    assert rows["tiny"]["local_receiver_archive_replay_verified"] is True
+    assert rows["tiny"]["receiver_proof_identity_bound"] is False
+    assert "receiver_proof_identity_missing" in rows["tiny"]["harvest_blockers"]
+    assert "receiver_proof_path_missing" in rows["tiny"]["harvest_blockers"]
+
+
+def test_two_full600_modelsize_rows_are_ready_for_ladder_input(tmp_path: Path) -> None:
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [
             {
@@ -151,12 +193,13 @@ def test_two_full600_modelsize_rows_are_ready_for_ladder_input() -> None:
                 "axis_tag": "[contest-CPU]",
                 "n_pairs": 600,
                 "rows": [
-                    _full_row("tiny", 0.04, 16, 42_000, 0.004, 0.002, "b"),
-                    _full_row("small", 0.08, 24, 80_000, 0.003, 0.002, "c"),
+                    _full_row(tmp_path, "tiny", 0.04, 16, 42_000, 0.004, 0.002, "b"),
+                    _full_row(tmp_path, "small", 0.08, 24, 80_000, 0.003, 0.002, "c"),
                 ],
             }
         ],
         carrier_id="snerv",
+        repo_root=tmp_path,
     )
 
     assert payload["status"] == "receiver_closed_ladder_rows_ready"
@@ -168,7 +211,7 @@ def test_two_full600_modelsize_rows_are_ready_for_ladder_input() -> None:
     assert payload["score_claim"] is False
 
 
-def test_family_mismatch_is_preserved_in_harvest_rows() -> None:
+def test_family_mismatch_is_preserved_in_harvest_rows(tmp_path: Path) -> None:
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [
             {
@@ -176,11 +219,21 @@ def test_family_mismatch_is_preserved_in_harvest_rows() -> None:
                 "axis_tag": "[macOS-CPU advisory]",
                 "n_pairs": 600,
                 "rows": [
-                    _full_row("snerv_row", 0.04, 16, 42_000, 0.004, 0.002, "d"),
+                    _full_row(
+                        tmp_path,
+                        "snerv_row",
+                        0.04,
+                        16,
+                        42_000,
+                        0.004,
+                        0.002,
+                        "d",
+                    ),
                 ],
             }
         ],
         carrier_id="hinerv",
+        repo_root=tmp_path,
     )
 
     assert payload["status"] == "receiver_closed_ladder_rows_blocked"
@@ -278,7 +331,11 @@ def test_compact_runner_nested_snerv_evidence_is_harvested_without_signal_loss()
     assert "local_smoke_only_not_full600_receiver_proof" in row["harvest_blockers"]
 
 
-def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis() -> None:
+def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis(
+    tmp_path: Path,
+) -> None:
+    tiny_proof = _receiver_proof(tmp_path, "hi_nerv_local_tiny", 134_842, "f")
+    small_proof = _receiver_proof(tmp_path, "hi_nerv_local_small", 247_815, "1")
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [
             {
@@ -294,6 +351,7 @@ def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis(
                         "archive_bytes": 134_842,
                         "archive_sha256": "f" * 64,
                         "runtime_consumption_proof_ready": True,
+                        **tiny_proof,
                         "d_seg": 0.01,
                         "d_pose": 0.0025,
                         "blockers": [],
@@ -305,6 +363,7 @@ def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis(
                         "archive_bytes": 247_815,
                         "archive_sha256": "1" * 64,
                         "runtime_consumption_proof_ready": True,
+                        **small_proof,
                         "d_seg": 0.008,
                         "d_pose": 0.002,
                         "blockers": [],
@@ -313,6 +372,7 @@ def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis(
             }
         ],
         carrier_id="hi_nerv",
+        repo_root=tmp_path,
     )
 
     assert payload["status"] == "receiver_closed_ladder_rows_ready"
@@ -365,7 +425,7 @@ def test_hinerv_archive_size_ladder_without_nonrate_stays_blocked() -> None:
     ]
 
 
-def _full_row(
+def _boolean_full_row(
     row_id: str,
     modelsize: float,
     fc_dim: int,
@@ -384,4 +444,55 @@ def _full_row(
         "d_seg": d_seg,
         "d_pose": d_pose,
         "accepted": True,
+    }
+
+
+def _full_row(
+    tmp_path: Path,
+    row_id: str,
+    modelsize: float,
+    fc_dim: int,
+    archive_bytes: int,
+    d_seg: float,
+    d_pose: float,
+    sha_char: str,
+) -> dict[str, object]:
+    return {
+        **_boolean_full_row(
+            row_id,
+            modelsize,
+            fc_dim,
+            archive_bytes,
+            d_seg,
+            d_pose,
+            sha_char,
+        ),
+        **_receiver_proof(tmp_path, row_id, archive_bytes, sha_char),
+    }
+
+
+def _receiver_proof(
+    tmp_path: Path,
+    row_id: str,
+    archive_bytes: int,
+    sha_char: str,
+) -> dict[str, object]:
+    proof = tmp_path / f"{row_id}.receiver_proof.json"
+    proof.write_text(
+        (
+            '{"schema":"snerv_inverse_steg_generated_receiver_proof.v1",'
+            '"receiver_contract_satisfied":true,'
+            '"runtime_consumption_proof_ready":true,'
+            '"runtime_consumption_proof_passed":true,'
+            f'"archive_bytes":{archive_bytes},'
+            f'"archive_sha256":"{sha_char * 64}",'
+            '"receiver_output_bytes":123,'
+            '"expected_receiver_output_bytes":123,'
+            '"blockers":[]}\n'
+        ),
+        encoding="utf-8",
+    )
+    return {
+        "receiver_proof_path": proof.as_posix(),
+        "receiver_proof_sha256": hashlib.sha256(proof.read_bytes()).hexdigest(),
     }

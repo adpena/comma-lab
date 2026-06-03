@@ -163,8 +163,51 @@ DEFAULT_SNERV_DECODER_CODECS = (
 )
 DEFAULT_SNERV_MODEL_SIZE_ADAPTER = "snerv_fc_dim_emb_size_adapter_v1"
 DEFAULT_SNERV_TEMPORAL_MODE = "delta"
-DEFAULT_SNERV_OFFICIAL_ENC_STRDS = (5, 4, 2, 2, 2)
-DEFAULT_SNERV_OFFICIAL_DEC_STRDS = (5, 4, 2, 2, 2)
+SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID = "official_cli_default"
+SNERV_CONTEST_RECEIVER_PROFILE_ID = "contest_receiver_profile"
+SNERV_PACT_RECEIVER_PROFILE_ID = SNERV_CONTEST_RECEIVER_PROFILE_ID
+SNERV_MANUAL_STRIDE_OVERRIDE_PROFILE_ID = "manual_stride_override"
+SNERV_MODELSIZE_CONTROL_PROFILES: dict[str, dict[str, Any]] = {
+    SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID: {
+        "profile_id": SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID,
+        "source": "upstream_train_snerv_parser_defaults",
+        "enc_strds": [],
+        "dec_strds": [5, 4, 3, 2, 2],
+        "modelsize_solve_supported": False,
+        "blockers": ["official_cli_default_enc_strds_empty_requires_source_context"],
+    },
+    SNERV_CONTEST_RECEIVER_PROFILE_ID: {
+        "profile_id": SNERV_CONTEST_RECEIVER_PROFILE_ID,
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": (
+            "Not an upstream README default; selected for PACT contest receiver "
+            "custody with explicit measured-archive authority required."
+        ),
+        "enc_strds": [5, 4, 2, 2, 2],
+        "dec_strds": [5, 4, 2, 2, 2],
+        "modelsize_solve_supported": True,
+        "blockers": [],
+    },
+}
+DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID = SNERV_CONTEST_RECEIVER_PROFILE_ID
+DEFAULT_SNERV_MODELSIZE_ENC_STRDS = tuple(
+    int(v)
+    for v in SNERV_MODELSIZE_CONTROL_PROFILES[DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID][
+        "enc_strds"
+    ]
+)
+DEFAULT_SNERV_MODELSIZE_DEC_STRDS = tuple(
+    int(v)
+    for v in SNERV_MODELSIZE_CONTROL_PROFILES[DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID][
+        "dec_strds"
+    ]
+)
+# Backwards-compatible import aliases.  New code should read the named
+# ``modelsize_control_profile_id`` instead of treating these as upstream CLI
+# defaults.
+DEFAULT_SNERV_OFFICIAL_ENC_STRDS = DEFAULT_SNERV_MODELSIZE_ENC_STRDS
+DEFAULT_SNERV_OFFICIAL_DEC_STRDS = DEFAULT_SNERV_MODELSIZE_DEC_STRDS
 _SNERV_ADAPTER_TO_ID_TOKEN = {
     DEFAULT_SNERV_MODEL_SIZE_ADAPTER: "base",
     SNERV_SPECTRA_PRESERVING_ADAPTER: "spectra",
@@ -183,6 +226,48 @@ _SNERV_ID_TOKEN_TO_TEMPORAL_MODE = {
 
 class NervModelSizeBudgetError(ValueError):
     """Raised when a model-size budget request is malformed."""
+
+
+def snerv_modelsize_control_profile(profile_id: str) -> dict[str, Any]:
+    """Return a copy of a named SNeRV modelsize control profile."""
+
+    key = str(profile_id or DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID).strip()
+    profile = SNERV_MODELSIZE_CONTROL_PROFILES.get(key)
+    if profile is None:
+        valid = ", ".join(sorted(SNERV_MODELSIZE_CONTROL_PROFILES))
+        raise NervModelSizeBudgetError(
+            f"unknown SNeRV modelsize control profile {key!r}; expected one of {valid}"
+        )
+    return {
+        **profile,
+        "enc_strds": [int(v) for v in profile.get("enc_strds") or []],
+        "dec_strds": [int(v) for v in profile.get("dec_strds") or []],
+        "blockers": [str(v) for v in profile.get("blockers") or []],
+    }
+
+
+def _snerv_profile_for_strides(
+    *,
+    profile_id: str,
+    enc_strds: tuple[int, ...],
+    dec_strds: tuple[int, ...],
+) -> dict[str, Any]:
+    profile = snerv_modelsize_control_profile(profile_id)
+    profile_enc = tuple(int(v) for v in profile["enc_strds"])
+    profile_dec = tuple(int(v) for v in profile["dec_strds"])
+    enc = tuple(int(v) for v in enc_strds)
+    dec = tuple(int(v) for v in dec_strds)
+    if enc == profile_enc and dec == profile_dec:
+        return profile
+    return {
+        "profile_id": SNERV_MANUAL_STRIDE_OVERRIDE_PROFILE_ID,
+        "source": "operator_or_tool_explicit_stride_override",
+        "base_profile_id": str(profile.get("profile_id")),
+        "enc_strds": [int(v) for v in enc],
+        "dec_strds": [int(v) for v in dec],
+        "modelsize_solve_supported": bool(enc and dec),
+        "blockers": ([] if enc and dec else ["manual_stride_override_missing_enc_or_dec_strds"]),
+    }
 
 
 def snerv_model_size_adapter_id_token(adapter: str) -> str:
@@ -389,6 +474,8 @@ class SnervModelSizeCandidate:
     snerv_model_size_adapter: str
     capacity_source: str
     modelsize_mparams: float | None
+    modelsize_control_profile_id: str
+    modelsize_control_profile: dict[str, Any]
     official_modelsize_solution: dict[str, Any] | None
     fc_dim: int
     emb_size: int
@@ -436,6 +523,8 @@ class SnervModelSizeCandidate:
                 else None
             ),
             "modelsize_mparams_is_official_upstream_flag": bool(official),
+            "modelsize_control_profile_id": self.modelsize_control_profile_id,
+            "modelsize_control_profile": dict(self.modelsize_control_profile),
             "modelsize_mparams_caps_archive_zip_bytes": False,
             **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
             "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
@@ -1001,8 +1090,9 @@ def analyze_snerv_modelsize_candidate(
     decoder_payload_codec: str,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     official_modelsize_mparams: float | None = None,
-    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
-    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
+    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
+    modelsize_control_profile_id: str = DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     fc_dim: int = 9,
     emb_size: int = 0,
     patch_radius: int = 1,
@@ -1028,6 +1118,11 @@ def analyze_snerv_modelsize_candidate(
     )
     from tac.substrates.snerv_inverse_steg_carrier.dwt import lf_coeff_count
 
+    modelsize_control_profile = _snerv_profile_for_strides(
+        profile_id=modelsize_control_profile_id,
+        enc_strds=tuple(int(v) for v in official_enc_strds),
+        dec_strds=tuple(int(v) for v in official_dec_strds),
+    )
     official_modelsize_solution = None
     if official_modelsize_mparams is not None:
         official_modelsize_solution_obj = official_snerv_modelsize_to_fc_dim(
@@ -1106,6 +1201,8 @@ def analyze_snerv_modelsize_candidate(
             if official_modelsize_mparams is None
             else float(official_modelsize_mparams)
         ),
+        modelsize_control_profile_id=str(modelsize_control_profile["profile_id"]),
+        modelsize_control_profile=modelsize_control_profile,
         official_modelsize_solution=official_modelsize_solution,
         fc_dim=int(model_size.fc_dim),
         emb_size=int(model_size.emb_size),
@@ -1153,8 +1250,9 @@ def enumerate_snerv_modelsize_candidates(
     decoder_codecs: tuple[str, ...] = DEFAULT_SNERV_DECODER_CODECS,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     official_modelsize_mparams: tuple[float, ...] = (),
-    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
-    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
+    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
+    modelsize_control_profile_id: str = DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
     patch_radius: int = 1,
@@ -1219,6 +1317,9 @@ def enumerate_snerv_modelsize_candidates(
                                                 ),
                                                 official_enc_strds=official_enc_strds,
                                                 official_dec_strds=official_dec_strds,
+                                                modelsize_control_profile_id=(
+                                                    modelsize_control_profile_id
+                                                ),
                                                 emb_size=int(emb_size),
                                                 patch_radius=int(patch_radius),
                                                 mfu_scales=tuple(int(v) for v in mfu_scales),
@@ -1251,6 +1352,9 @@ def enumerate_snerv_modelsize_candidates(
                                                     ),
                                                     official_enc_strds=official_enc_strds,
                                                     official_dec_strds=official_dec_strds,
+                                                    modelsize_control_profile_id=(
+                                                        modelsize_control_profile_id
+                                                    ),
                                                     emb_size=int(emb_size),
                                                     patch_radius=int(patch_radius),
                                                     mfu_scales=tuple(
@@ -1279,6 +1383,7 @@ def _invalid_snerv_official_modelsize_row(
     official_modelsize_mparams: float,
     official_enc_strds: tuple[int, ...],
     official_dec_strds: tuple[int, ...],
+    modelsize_control_profile_id: str,
     emb_size: int,
     patch_radius: int,
     mfu_scales: tuple[int, ...],
@@ -1289,12 +1394,18 @@ def _invalid_snerv_official_modelsize_row(
 ) -> dict[str, Any]:
     """Record an unsatisfiable official SNeRV ``--modelsize`` point."""
 
+    profile = _snerv_profile_for_strides(
+        profile_id=modelsize_control_profile_id,
+        enc_strds=tuple(int(v) for v in official_enc_strds),
+        dec_strds=tuple(int(v) for v in official_dec_strds),
+    )
     contract_payload = {
         "family": "snerv",
         "candidate_id": None,
         "capacity_source": "invalid_official_snerv_modelsize",
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
         "modelsize_mparams": float(official_modelsize_mparams),
+        "modelsize_control_profile_id": str(profile["profile_id"]),
         "hard_byte_ceiling": int(hard_byte_ceiling),
     }
     return {
@@ -1312,6 +1423,8 @@ def _invalid_snerv_official_modelsize_row(
         "decoder_payload_codec": str(decoder_payload_codec),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
         "official_modelsize_mparams": float(official_modelsize_mparams),
+        "modelsize_control_profile_id": str(profile["profile_id"]),
+        "modelsize_control_profile": profile,
         "official_enc_strds": [int(v) for v in official_enc_strds],
         "official_dec_strds": [int(v) for v in official_dec_strds],
         "emb_size": int(emb_size),
@@ -1335,6 +1448,8 @@ def _invalid_snerv_official_modelsize_row(
                 "official_snerv_modelsize_quadratic_fc_dim_solve"
             ),
             "modelsize_mparams_is_official_upstream_flag": True,
+            "modelsize_control_profile_id": str(profile["profile_id"]),
+            "modelsize_control_profile": profile,
             "modelsize_mparams_caps_archive_zip_bytes": False,
             **dict.fromkeys(MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS, True),
             "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
@@ -1471,8 +1586,9 @@ def build_snerv_modelsize_budget_report(
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
     official_modelsize_mparams: tuple[float, ...] = (),
-    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
-    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
+    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
+    modelsize_control_profile_id: str = DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     patch_radius: int = 1,
     mfu_scales: tuple[int, ...] = (1, 2, 4),
@@ -1482,6 +1598,11 @@ def build_snerv_modelsize_budget_report(
 ) -> dict[str, Any]:
     """Return a planner-safe SNeRV model-size budget report."""
 
+    modelsize_control_profile = _snerv_profile_for_strides(
+        profile_id=modelsize_control_profile_id,
+        enc_strds=tuple(int(v) for v in official_enc_strds),
+        dec_strds=tuple(int(v) for v in official_dec_strds),
+    )
     invalid_candidate_rows: list[dict[str, Any]] = []
     candidates = enumerate_snerv_modelsize_candidates(
         hard_byte_ceilings=hard_byte_ceilings,
@@ -1493,6 +1614,7 @@ def build_snerv_modelsize_budget_report(
         official_modelsize_mparams=official_modelsize_mparams,
         official_enc_strds=official_enc_strds,
         official_dec_strds=official_dec_strds,
+        modelsize_control_profile_id=str(modelsize_control_profile["profile_id"]),
         snerv_model_size_adapter=snerv_model_size_adapter,
         patch_radius=patch_radius,
         mfu_scales=mfu_scales,
@@ -1519,6 +1641,8 @@ def build_snerv_modelsize_budget_report(
         "official_modelsize_mparams": [
             float(v) for v in official_modelsize_mparams
         ],
+        "modelsize_control_profile_id": str(modelsize_control_profile["profile_id"]),
+        "modelsize_control_profile": modelsize_control_profile,
         "official_enc_strds": [int(v) for v in official_enc_strds],
         "official_dec_strds": [int(v) for v in official_dec_strds],
         "emb_sizes": [int(v) for v in emb_sizes],
@@ -1847,10 +1971,18 @@ def official_nerv_oss_flag_audit() -> dict[str, Any]:
 
 
 __all__ = [
+    "DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID",
+    "DEFAULT_SNERV_MODELSIZE_DEC_STRDS",
+    "DEFAULT_SNERV_MODELSIZE_ENC_STRDS",
     "DEFAULT_SNERV_MODEL_SIZE_ADAPTER",
     "DEFAULT_SNERV_OFFICIAL_DEC_STRDS",
     "DEFAULT_SNERV_OFFICIAL_ENC_STRDS",
     "DEFAULT_SNERV_TEMPORAL_MODE",
+    "SNERV_CONTEST_RECEIVER_PROFILE_ID",
+    "SNERV_MANUAL_STRIDE_OVERRIDE_PROFILE_ID",
+    "SNERV_MODELSIZE_CONTROL_PROFILES",
+    "SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID",
+    "SNERV_PACT_RECEIVER_PROFILE_ID",
     "HinervModelSizeCandidate",
     "NervModelSizeBudgetError",
     "SnervModelSizeCandidate",
@@ -1870,6 +2002,7 @@ __all__ = [
     "snerv_model_size_adapter_from_id_token",
     "snerv_model_size_adapter_id_token",
     "snerv_modelsize_candidate_id_from_controls",
+    "snerv_modelsize_control_profile",
     "snerv_temporal_mode_from_id_token",
     "snerv_temporal_mode_id_token",
     "tag_hinerv_target_modelsize_candidate",

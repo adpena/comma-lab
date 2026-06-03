@@ -12,6 +12,7 @@ from comma_lab.storage_tiers import StorageTierError
 from experiments.train_substrate_hi_nerv_mlx_local import (
     DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
     DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
+    PR95_FULL_CONTROL_CONTRACT_SCHEMA,
     TRAINER_SCHEMA,
     _build_parser,
     _build_staged_scorer_curriculum,
@@ -22,6 +23,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _full_main,
     _metadata_safe,
     _pose_student_input_channels,
+    _pr95_full_control_contract,
     _prioritized_pair_indices_from_args,
     _prioritized_pair_training_lineage_metadata,
     _prioritized_pair_training_metadata,
@@ -77,6 +79,12 @@ def test_hinerv_mlx_trainer_coder_qat_config_is_real_and_validated() -> None:
             "0.125",
             "--coder-qat-delta-weight",
             "0.0625",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
         ]
     )
 
@@ -87,6 +95,9 @@ def test_hinerv_mlx_trainer_coder_qat_config_is_real_and_validated() -> None:
     assert cfg.quant_residual_weight == pytest.approx(0.25)
     assert cfg.magnitude_weight == pytest.approx(0.125)
     assert cfg.delta_weight == pytest.approx(0.0625)
+    assert cfg.c1a_entropy_weight == pytest.approx(0.0003)
+    assert cfg.c1a_sigma == pytest.approx(0.35)
+    assert cfg.c1a_sample_size == 64
 
 
 def test_hinerv_mlx_trainer_pose_student_channels_match_preprocess() -> None:
@@ -259,8 +270,73 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_direct_full_trainer_launch_blocked_by_canonicalization_contract"
         in payload["blockers"]
     )
+    assert (
+        "hinerv_full_trainer_launch_blocked_by_pr95_control_contract"
+        in payload["blockers"]
+    )
+    for blocker in (
+        "hinerv_full_missing_segnet_distillation_loss",
+        "hinerv_full_missing_eval_roundtrip_ste",
+        "hinerv_full_missing_pr95_faithful_curriculum",
+        "hinerv_full_pr95_epoch_budget_below_29650",
+        "hinerv_full_missing_coder_aware_qat",
+        "hinerv_full_missing_c1a_entropy_control",
+        "hinerv_full_missing_ema_archive_selection",
+        "hinerv_full_missing_archive_parse_back_selection",
+    ):
+        assert blocker in payload["blockers"]
+    control = payload["pr95_full_control_contract"]
+    assert control["schema"] == PR95_FULL_CONTROL_CONTRACT_SCHEMA
+    assert control["production_full_control_ready"] is False
+    assert "score_claim" not in control
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--epochs",
+            "29650",
+            "--distillation-weight",
+            "1.0",
+            "--pose-distillation-weight",
+            "1.0",
+            "--eval-roundtrip-ste",
+            "--pr95-faithful-curriculum",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
+            "--ema-archive-selection",
+            "--post-export-receiver-cache-quality-gate",
+        ]
+    )
+
+    contract = _pr95_full_control_contract(args)
+
+    assert contract["schema"] == PR95_FULL_CONTROL_CONTRACT_SCHEMA
+    assert contract["production_full_control_ready"] is True
+    assert contract["blockers"] == []
+    controls = contract["controls"]
+    assert controls["real_segnet_distillation_loss"] is True
+    assert controls["real_posenet_distillation_loss"] is True
+    assert controls["eval_roundtrip_ste_enabled"] is True
+    assert controls["pose_student_input_preprocess"] == "pr95_yuv6"
+    assert controls["pr95_faithful_curriculum_enabled"] is True
+    assert controls["coder_qat_enabled"] is True
+    assert controls["coder_qat_c1a_entropy_weight"] == pytest.approx(0.0003)
+    assert controls["coder_qat_c1a_sigma"] == pytest.approx(0.35)
+    assert controls["coder_qat_c1a_sample_size"] == 64
+    assert controls["ema_archive_selection_enabled"] is True
+    assert controls["archive_parse_back_selection_enabled"] is True
+    assert contract["score_claim"] is False
+    assert contract["promotion_eligible"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
 
 
 def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:

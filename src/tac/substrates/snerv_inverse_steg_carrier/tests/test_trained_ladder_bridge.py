@@ -41,8 +41,11 @@ def test_bridge_emits_strict_false_authority_row_from_real_packet(
     assert row["official_controls"]["emb_size"] == 4
     assert row["lf_payload_codec"] == "portfolio_auto"
     assert row["receiver_archive_replay_verified"] is True
+    assert row["receiver_proof_identity_bound"] is False
+    assert row["byte_closed_receiver_proof"] is False
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+    assert "receiver_proof_identity_missing" in payload["blockers"]
     assert "sample_pair_count_below_full600" in payload["blockers"]
     assert "required_emission_field_missing:official_controls.--modelsize" in payload[
         "blockers"
@@ -76,6 +79,54 @@ def test_bridge_emits_strict_false_authority_row_from_real_packet(
     assert "required_emission_field_missing:lf_payload_codec" not in payload[
         "blockers"
     ]
+
+
+def test_bridge_preserves_file_backed_receiver_proof_identity(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-file-backed-proof"
+    packet_path = tmp_path / "candidate.snar"
+    packet_path.write_bytes(packet)
+    proof_path = tmp_path / "receiver_proof.json"
+    proof_path.write_text(
+        (
+            '{"schema":"snerv_inverse_steg_generated_receiver_proof.v1",'
+            '"receiver_contract_satisfied":true,'
+            '"runtime_consumption_proof_ready":true,'
+            '"runtime_consumption_proof_passed":true,'
+            f'"archive_bytes":{packet_path.stat().st_size},'
+            f'"archive_sha256":"{hashlib.sha256(packet).hexdigest()}",'
+            '"receiver_output_bytes":123,'
+            '"expected_receiver_output_bytes":123,'
+            '"blockers":[]}\n'
+        ),
+        encoding="utf-8",
+    )
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(packet),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        receiver_proof={
+            "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+            "receiver_archive_replay_verified": True,
+            "receiver_contract_satisfied": True,
+            "runtime_consumption_proof_ready": True,
+            "receiver_proof_path": proof_path.as_posix(),
+            "receiver_proof_sha256": hashlib.sha256(
+                proof_path.read_bytes()
+            ).hexdigest(),
+        },
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    row = payload["rows"][0]
+    assert row["receiver_archive_replay_verified"] is True
+    assert row["receiver_proof_identity_bound"] is True
+    assert row["byte_closed_receiver_proof"] is True
+    assert "receiver_proof_identity_missing" not in payload["blockers"]
+    assert "sample_pair_count_below_full600" in payload["blockers"]
 
 
 def test_bridge_preserves_actual_lf_payload_codec(tmp_path: Path) -> None:

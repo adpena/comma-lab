@@ -18,15 +18,18 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
-    DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
-    DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+    DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
+    SNERV_MODELSIZE_CONTROL_PROFILES,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
+    snerv_modelsize_control_profile,
 )
 from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
 
 
 def _parse_int_tuple(value: str) -> tuple[int, ...]:
+    if not str(value).strip():
+        return ()
     parts = [part.strip() for part in str(value).split(",") if part.strip()]
     if not parts:
         raise argparse.ArgumentTypeError("expected a comma-separated integer list")
@@ -104,16 +107,31 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-modelsize-control-profile",
+        choices=sorted(SNERV_MODELSIZE_CONTROL_PROFILES),
+        default=DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
+        help=(
+            "Named SNeRV modelsize stride/control profile. The default is the "
+            "PACT receiver-closed contest profile, not the upstream parser default."
+        ),
+    )
+    parser.add_argument(
         "--snerv-official-enc-strds",
         type=_parse_int_tuple,
-        default=DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
-        help="Comma-separated official SNeRV encoder strides.",
+        default=None,
+        help=(
+            "Comma-separated SNeRV encoder strides. Overrides the selected "
+            "--snerv-modelsize-control-profile; use an empty string for []."
+        ),
     )
     parser.add_argument(
         "--snerv-official-dec-strds",
         type=_parse_int_tuple,
-        default=DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
-        help="Comma-separated official SNeRV decoder strides.",
+        default=None,
+        help=(
+            "Comma-separated SNeRV decoder strides. Overrides the selected "
+            "--snerv-modelsize-control-profile."
+        ),
     )
     parser.add_argument(
         "--snerv-temporal-context",
@@ -175,6 +193,19 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     snerv_temporal_modes = tuple(args.snerv_temporal_mode or ("delta",))
+    snerv_profile = snerv_modelsize_control_profile(
+        str(args.snerv_modelsize_control_profile)
+    )
+    snerv_official_enc_strds = (
+        tuple(int(v) for v in args.snerv_official_enc_strds)
+        if args.snerv_official_enc_strds is not None
+        else tuple(int(v) for v in snerv_profile["enc_strds"])
+    )
+    snerv_official_dec_strds = (
+        tuple(int(v) for v in args.snerv_official_dec_strds)
+        if args.snerv_official_dec_strds is not None
+        else tuple(int(v) for v in snerv_profile["dec_strds"])
+    )
     hinerv = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=int(args.num_pairs),
@@ -189,8 +220,9 @@ def main(argv: list[str] | None = None) -> int:
         fc_dims=snerv_fc_dims,
         emb_sizes=snerv_emb_sizes,
         official_modelsize_mparams=snerv_official_modelsize_mparams,
-        official_enc_strds=tuple(int(v) for v in args.snerv_official_enc_strds),
-        official_dec_strds=tuple(int(v) for v in args.snerv_official_dec_strds),
+        official_enc_strds=snerv_official_enc_strds,
+        official_dec_strds=snerv_official_dec_strds,
+        modelsize_control_profile_id=str(args.snerv_modelsize_control_profile),
         temporal_context=int(args.snerv_temporal_context),
         temporal_modes=snerv_temporal_modes,
     )
@@ -231,12 +263,12 @@ def main(argv: list[str] | None = None) -> int:
             "snerv_official_modelsize_mparams": list(
                 snerv_official_modelsize_mparams
             ),
-            "snerv_official_enc_strds": [
-                int(v) for v in args.snerv_official_enc_strds
-            ],
-            "snerv_official_dec_strds": [
-                int(v) for v in args.snerv_official_dec_strds
-            ],
+            "snerv_modelsize_control_profile_id": str(
+                args.snerv_modelsize_control_profile
+            ),
+            "snerv_modelsize_control_profile": snerv_profile,
+            "snerv_official_enc_strds": [int(v) for v in snerv_official_enc_strds],
+            "snerv_official_dec_strds": [int(v) for v in snerv_official_dec_strds],
             "snerv_temporal_context": int(args.snerv_temporal_context),
             "snerv_temporal_modes": list(snerv_temporal_modes),
         },

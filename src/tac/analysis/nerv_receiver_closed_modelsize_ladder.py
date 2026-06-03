@@ -10,6 +10,9 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.nerv_receiver_proof_identity import (
+    bind_nerv_receiver_proof_identity,
+)
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     build_modelsize_budget_plan,
 )
@@ -34,13 +37,6 @@ _ARCHIVE_BYTE_KEYS = (
     "archive_path_stat_bytes",
 )
 _PROJECTED_ARCHIVE_BYTE_KEYS = ("projected_archive_bytes_600pair",)
-_RECEIVER_PROOF_KEYS = (
-    "receiver_closed",
-    "receiver_proof_passed",
-    "receiver_archive_replay_verified",
-    "receiver_contract_satisfied",
-    "byte_closed_receiver_proof",
-)
 _AUTHORITY_TRUE_KEYS = (
     "score_claim",
     "score_claim_valid",
@@ -219,8 +215,17 @@ def _normalize_row(
         nonrate_score = _nonrate_from_components(source)
         if nonrate_score is not None:
             nonrate_score_key = "component_distortions"
-    receiver_proof = _receiver_proof_passed(source)
     archive_sha = _archive_sha(source, repo_root=repo_root)
+    receiver_proof_identity = bind_nerv_receiver_proof_identity(
+        (source,),
+        repo_root=repo_root,
+        archive_bytes=archive_bytes,
+        archive_sha256=archive_sha,
+    )
+    receiver_proof = bool(
+        receiver_proof_identity["bound"]
+        and receiver_proof_identity["proof_passed"]
+    )
     authority_blockers = _authority_claim_blockers(source)
     advisory_nonrate = nonrate_score_key in _NONRATE_ADVISORY_KEYS
     source_axis_tag = _string_or_none(
@@ -245,6 +250,9 @@ def _normalize_row(
         blockers.append("source_axis_not_receiver_closed_contest_authority")
     if not receiver_proof:
         blockers.append("receiver_closed_byte_proof_missing")
+        if not receiver_proof_identity["bound"]:
+            blockers.append("receiver_proof_identity_missing")
+            blockers.extend(receiver_proof_identity["blockers"])
     blockers.extend(authority_blockers)
 
     complete_budget_shape = (
@@ -259,6 +267,7 @@ def _normalize_row(
     receiver_closed_modelsize_row = complete_budget_shape and receiver_proof and (
         archive_key in _ARCHIVE_BYTE_KEYS
     )
+    eligible_for_modelsize_budget_plan = complete_budget_shape
     normalized = {
         "row_id": row_id,
         "source_family": source_family,
@@ -280,6 +289,11 @@ def _normalize_row(
             or source.get("archive_zip_path")
             or source.get("candidate_archive_path")
         ),
+        "receiver_proof_identity_bound": bool(receiver_proof_identity["bound"]),
+        "receiver_proof_identity": receiver_proof_identity,
+        "receiver_proof_path": receiver_proof_identity["proof_path"],
+        "receiver_proof_sha256": receiver_proof_identity["proof_sha256"],
+        "byte_closed_receiver_proof": receiver_proof,
         "nonrate_score": nonrate_score,
         "source_axis_tag": source_axis_tag,
         "source_axis_receiver_closed_authority": source_axis_authorized,
@@ -292,12 +306,12 @@ def _normalize_row(
             else "missing"
         ),
         "receiver_proof_passed": receiver_proof,
-        "eligible_for_modelsize_budget_plan": complete_budget_shape,
+        "eligible_for_modelsize_budget_plan": eligible_for_modelsize_budget_plan,
         "receiver_closed_modelsize_row": receiver_closed_modelsize_row,
         "blockers": blockers,
         "source": source,
     }
-    if not complete_budget_shape:
+    if not eligible_for_modelsize_budget_plan:
         return _NormalizedRow(row=normalized, budget_row=None)
 
     budget_row: dict[str, Any] = {
@@ -309,7 +323,10 @@ def _normalize_row(
         "axis_tag": source_axis_tag,
         "receiver_proof_passed": receiver_closed_modelsize_row,
         "receiver_closed": receiver_closed_modelsize_row,
-        "receiver_archive_replay_verified": receiver_closed_modelsize_row,
+        "byte_closed_receiver_proof": receiver_closed_modelsize_row,
+        "receiver_proof_identity_bound": bool(receiver_proof_identity["bound"]),
+        "receiver_proof_path": receiver_proof_identity["proof_path"],
+        "receiver_proof_sha256": receiver_proof_identity["proof_sha256"],
         "source_row_id": row_id,
     }
     if archive_key in _PROJECTED_ARCHIVE_BYTE_KEYS:
@@ -361,15 +378,6 @@ def _archive_path(row: Mapping[str, Any], *, repo_root: Path) -> Path | None:
     if not path.is_absolute():
         path = repo_root / path
     return path
-
-
-def _receiver_proof_passed(row: Mapping[str, Any]) -> bool:
-    if any(_truthy(row.get(key)) for key in _RECEIVER_PROOF_KEYS):
-        return True
-    receiver = row.get("receiver_proof") or row.get("receiver")
-    if isinstance(receiver, Mapping):
-        return any(_truthy(receiver.get(key)) for key in _RECEIVER_PROOF_KEYS)
-    return False
 
 
 def _nonrate_from_components(row: Mapping[str, Any]) -> float | None:

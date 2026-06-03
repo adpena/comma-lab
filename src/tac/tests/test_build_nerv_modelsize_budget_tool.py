@@ -49,6 +49,20 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "hinerv_official_controls_only": True,
         "snerv_emb_sizes": [0],
         "snerv_fc_dims": [9],
+        "snerv_modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [5, 4, 2, 2, 2],
+            "enc_strds": [5, 4, 2, 2, 2],
+            "modelsize_solve_supported": True,
+            "profile_id": "contest_receiver_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": (
+                "Not an upstream README default; selected for PACT contest receiver "
+                "custody with explicit measured-archive authority required."
+            ),
+            "source": "pact_receiver_closed_snar1_profile",
+        },
+        "snerv_modelsize_control_profile_id": "contest_receiver_profile",
         "snerv_official_dec_strds": [5, 4, 2, 2, 2],
         "snerv_official_enc_strds": [5, 4, 2, 2, 2],
         "snerv_official_modelsize_mparams": [],
@@ -74,6 +88,7 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         for row in hinerv_payload["selected_candidates"]
     )
     assert snerv_payload["family"] == "snerv"
+    assert snerv_payload["modelsize_control_profile_id"] == "contest_receiver_profile"
     assert snerv_payload["selected_candidates"][0]["candidate_id"].startswith(
         "snerv_np17_"
     )

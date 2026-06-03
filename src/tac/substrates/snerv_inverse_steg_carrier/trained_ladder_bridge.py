@@ -237,6 +237,8 @@ def _packet_receiver_proof(advisory_result: Any) -> dict[str, Any]:
     replay = bool(_attr(advisory_result, "receiver_archive_replay_verified") is True)
     proof: dict[str, Any] = {
         "schema": SNERV_PACKET_RECEIVER_PROOF_SCHEMA,
+        "proof_source": "advisory_result_fields_only",
+        "receiver_proof_identity_bound": False,
         "receiver_archive_replay_verified": replay,
         "receiver_contract_satisfied": replay,
         "runtime_consumption_proof_ready": replay,

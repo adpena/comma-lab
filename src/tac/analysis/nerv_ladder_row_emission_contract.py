@@ -60,11 +60,21 @@ GENERIC_REQUIRED_GROUPS: tuple[dict[str, Any], ...] = (
         "group_id": "receiver_replay_proof",
         "requirement": "truthy",
         "paths": (
-            "receiver_archive_replay_verified",
-            "receiver_contract_satisfied",
             "byte_closed_receiver_proof",
+            "receiver_proof_passed",
+            "receiver_closed",
         ),
-        "why": "MLX prefilter/full-scope coverage is not receiver archive replay",
+        "why": "raw replay booleans are local evidence only; ladder authority requires byte-closed receiver proof",
+    },
+    {
+        "group_id": "receiver_proof_identity",
+        "requirement": "all_of",
+        "paths": (
+            "receiver_proof_identity_bound",
+            "receiver_proof_path",
+            "receiver_proof_sha256",
+        ),
+        "why": "file-backed proof identity prevents advisory replay flags from masquerading as receiver-closed evidence",
     },
     {
         "group_id": "nonrate_distortion",

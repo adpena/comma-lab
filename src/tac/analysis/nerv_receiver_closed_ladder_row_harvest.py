@@ -9,6 +9,9 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.nerv_receiver_proof_identity import (
+    bind_nerv_receiver_proof_identity,
+)
 from tac.auth_eval_schema import FULL_CONTEST_SAMPLE_COUNT, contest_formula_score
 
 SCHEMA = "nerv_receiver_closed_ladder_row_harvest.v1"
@@ -60,6 +63,7 @@ def build_nerv_receiver_closed_ladder_row_harvest(
     *,
     carrier_id: str,
     full_pair_count: int = FULL_CONTEST_SAMPLE_COUNT,
+    repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return ladder-ingestable rows while preserving local-smoke blockers."""
 
@@ -69,6 +73,7 @@ def build_nerv_receiver_closed_ladder_row_harvest(
     if full_pair_count <= 0:
         raise NervReceiverClosedLadderRowHarvestError("full_pair_count must be positive")
 
+    root = Path(repo_root).expanduser().resolve(strict=False) if repo_root else Path.cwd()
     normalized_sources = [_normalize_source(source) for source in sources]
     harvested_rows: list[dict[str, Any]] = []
     source_summaries: list[dict[str, Any]] = []
@@ -102,6 +107,7 @@ def build_nerv_receiver_closed_ladder_row_harvest(
                     candidate=candidate,
                     carrier_id=carrier,
                     full_pair_count=full_pair_count,
+                    repo_root=root,
                 )
             )
 
@@ -180,11 +186,15 @@ def build_nerv_receiver_closed_ladder_row_harvest_from_iterable(
     *,
     carrier_id: str,
     full_pair_count: int = FULL_CONTEST_SAMPLE_COUNT,
+    repo_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Build a row harvest from any source iterable."""
 
     return build_nerv_receiver_closed_ladder_row_harvest(
-        list(sources), carrier_id=carrier_id, full_pair_count=full_pair_count
+        list(sources),
+        carrier_id=carrier_id,
+        full_pair_count=full_pair_count,
+        repo_root=repo_root,
     )
 
 
@@ -200,8 +210,14 @@ def _harvest_row(
     candidate: Mapping[str, Any],
     carrier_id: str,
     full_pair_count: int,
+    repo_root: Path,
 ) -> dict[str, Any]:
     row_id = _row_id(source_index, candidate_index, source_path, candidate)
+    effective_source_axis_tag = _string_or_none(
+        candidate.get("source_axis_tag")
+        or candidate.get("axis_tag")
+        or source_axis_tag
+    )
     pair_count = _first_int(
         candidate,
         source_payload,
@@ -351,15 +367,26 @@ def _harvest_row(
             ("hi_nerv_mlx_export", "receiver_contract_satisfied"),
         ),
     )
+    receiver_proof_identity = bind_nerv_receiver_proof_identity(
+        (candidate, source_payload),
+        repo_root=repo_root,
+        archive_bytes=archive_bytes,
+        archive_sha256=archive_sha,
+    )
+    receiver_proof_identity_bound = bool(receiver_proof_identity["bound"])
+    local_receiver_replay = bool(
+        local_receiver_replay or receiver_proof_identity["proof_passed"]
+    )
     accepted = _accepted(candidate)
     family = _string_or_none(
         candidate.get("family") or candidate.get("carrier_id") or source_family
     )
-    axis_authorized = _axis_is_receiver_closed_authority(source_axis_tag)
+    axis_authorized = _axis_is_receiver_closed_authority(effective_source_axis_tag)
     axis_blocked = not axis_authorized
     authority_blockers = _authority_claim_blockers(candidate, source_payload)
     full600_receiver_proof = bool(
         local_receiver_replay
+        and receiver_proof_identity_bound
         and sample_scope == "full600_or_better"
         and not axis_blocked
         and not authority_blockers
@@ -387,6 +414,9 @@ def _harvest_row(
         blockers.append("modelsize_or_fc_dim_missing")
     if not local_receiver_replay:
         blockers.append("receiver_replay_or_contract_missing")
+    if local_receiver_replay and not receiver_proof_identity_bound:
+        blockers.append("receiver_proof_identity_missing")
+        blockers.extend(receiver_proof_identity["blockers"])
     if sample_scope != "full600_or_better":
         blockers.append("local_smoke_only_not_full600_receiver_proof")
     if axis_blocked:
@@ -401,7 +431,8 @@ def _harvest_row(
         "family": family or carrier_id,
         "source_artifact_path": source_path,
         "source_schema": source_schema,
-        "source_axis_tag": source_axis_tag,
+        "axis_tag": effective_source_axis_tag,
+        "source_axis_tag": effective_source_axis_tag,
         "source_axis_receiver_closed_authority": axis_authorized,
         "source_candidate_index": candidate_index,
         "source_label": _string_or_none(
@@ -426,6 +457,11 @@ def _harvest_row(
         "accepted": accepted,
         "source_axis_is_advisory_or_projected": axis_blocked,
         "local_receiver_archive_replay_verified": bool(local_receiver_replay),
+        "receiver_proof_identity_bound": receiver_proof_identity_bound,
+        "receiver_proof_identity": receiver_proof_identity,
+        "receiver_proof_path": receiver_proof_identity["proof_path"],
+        "receiver_proof_sha256": receiver_proof_identity["proof_sha256"],
+        "byte_closed_receiver_proof": full600_receiver_proof,
         "full600_receiver_proof": full600_receiver_proof,
         "receiver_proof_passed": full600_receiver_proof,
         "receiver_closed": full600_receiver_proof,

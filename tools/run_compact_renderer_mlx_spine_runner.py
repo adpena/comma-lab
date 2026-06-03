@@ -66,10 +66,12 @@ from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
 )
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
-    DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
-    DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+    DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
+    DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
+    DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
     HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
     HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
+    SNERV_MODELSIZE_CONTROL_PROFILES,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
     build_hinerv_modelsize_budget_report,
@@ -79,6 +81,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     modelsize_control_precedence_contract,
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
+    snerv_modelsize_control_profile,
     snerv_temporal_mode_from_id_token,
     tag_hinerv_target_modelsize_candidate,
 )
@@ -1901,8 +1904,9 @@ def _resolve_execute_modelsize_candidate(
     target_modelsize_mparams: tuple[float, ...] = (),
     hinerv_target_modelsize_mparams: tuple[float, ...] = (),
     snerv_official_modelsize_mparams: tuple[float, ...] = (),
-    snerv_official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
-    snerv_official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+    snerv_modelsize_control_profile_id: str = DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
+    snerv_official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
+    snerv_official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
     snerv_temporal_context: int = 0,
     snerv_temporal_modes: tuple[str, ...] = ("delta",),
 ) -> dict[str, Any] | None:
@@ -1949,6 +1953,7 @@ def _resolve_execute_modelsize_candidate(
                 official_modelsize_mparams=snerv_targets,
                 official_enc_strds=tuple(int(value) for value in snerv_official_enc_strds),
                 official_dec_strds=tuple(int(value) for value in snerv_official_dec_strds),
+                modelsize_control_profile_id=str(snerv_modelsize_control_profile_id),
                 temporal_context=int(snerv_temporal_context),
                 temporal_modes=tuple(str(value) for value in snerv_temporal_modes),
             )
@@ -11847,16 +11852,32 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--snerv-modelsize-control-profile",
+        choices=sorted(SNERV_MODELSIZE_CONTROL_PROFILES),
+        default=DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
+        help=(
+            "Named SNeRV stride/control profile for --modelsize solves. Manual "
+            "stride flags still override the selected profile and are recorded "
+            "as manual_stride_override in the candidate metadata."
+        ),
+    )
+    parser.add_argument(
         "--snerv-official-enc-strds",
         type=_parse_positive_int_csv,
-        default=DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
-        help="Comma-separated official SNeRV encoder strides for --modelsize solve.",
+        default=None,
+        help=(
+            "Comma-separated SNeRV encoder strides for --modelsize solve. "
+            "Overrides --snerv-modelsize-control-profile when supplied."
+        ),
     )
     parser.add_argument(
         "--snerv-official-dec-strds",
         type=_parse_positive_int_csv,
-        default=DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
-        help="Comma-separated official SNeRV decoder strides for --modelsize solve.",
+        default=None,
+        help=(
+            "Comma-separated SNeRV decoder strides for --modelsize solve. "
+            "Overrides --snerv-modelsize-control-profile when supplied."
+        ),
     )
     parser.add_argument(
         "--snerv-fc-dim",
@@ -12106,6 +12127,19 @@ def main(argv: list[str] | None = None) -> int:
         if args.post_export_materializer_max_experiments == 0
         else args.post_export_materializer_max_experiments
     )
+    snerv_modelsize_profile = snerv_modelsize_control_profile(
+        str(args.snerv_modelsize_control_profile)
+    )
+    snerv_official_enc_strds = (
+        tuple(int(value) for value in args.snerv_official_enc_strds)
+        if args.snerv_official_enc_strds is not None
+        else tuple(int(value) for value in snerv_modelsize_profile["enc_strds"])
+    )
+    snerv_official_dec_strds = (
+        tuple(int(value) for value in args.snerv_official_dec_strds)
+        if args.snerv_official_dec_strds is not None
+        else tuple(int(value) for value in snerv_modelsize_profile["dec_strds"])
+    )
     modelsize_candidate: dict[str, Any] | None = None
     if args.execute_family in {"hi_nerv", "snerv"}:
         modelsize_candidate = _resolve_execute_modelsize_candidate(
@@ -12122,12 +12156,11 @@ def main(argv: list[str] | None = None) -> int:
             snerv_official_modelsize_mparams=tuple(
                 float(value) for value in (args.snerv_official_modelsize_mparams or ())
             ),
-            snerv_official_enc_strds=tuple(
-                int(value) for value in args.snerv_official_enc_strds
+            snerv_modelsize_control_profile_id=str(
+                args.snerv_modelsize_control_profile
             ),
-            snerv_official_dec_strds=tuple(
-                int(value) for value in args.snerv_official_dec_strds
-            ),
+            snerv_official_enc_strds=snerv_official_enc_strds,
+            snerv_official_dec_strds=snerv_official_dec_strds,
             snerv_temporal_context=(
                 0 if args.snerv_temporal_context is None else int(args.snerv_temporal_context)
             ),
