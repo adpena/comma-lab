@@ -61,12 +61,8 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     assert decoded.metadata["wavelet"] == "haar"
     assert decoded.metadata["lf_plane_count"] == 12
     assert decoded.metadata["allocation_mode"] == "uniform_mlx_native_closed_form_export"
-    assert decoded.metadata["step_map_packet_schema"] == (
-        "snerv_step_map_coder.adaptive.v1"
-    )
-    assert decoded.metadata["step_map_coder_mode"] == (
-        "waterfill_mlx_native_uniform_importance_bridge"
-    )
+    assert decoded.metadata["step_map_packet_schema"] == ("snerv_step_map_coder.adaptive.v1")
+    assert decoded.metadata["step_map_coder_mode"] == ("waterfill_mlx_native_uniform_importance_bridge")
     assert decoded.metadata["contest_scorer_distortion_objective"] is False
     assert decoded.metadata["score_aware_hf_decoder_fit_executed"] is False
     assert decoded.metadata["score_aware_long_training_executed"] is False
@@ -149,9 +145,7 @@ def test_packet_builder_preserves_explicit_source_pair_indices() -> None:
     assert decoded.metadata["n_pairs"] == 2
     assert decoded.metadata["source_pair_indices"] == [7, 2]
     assert decoded.metadata["source_pair_indices_preserved"] is True
-    assert decoded.metadata["pair_index_alignment_mode"] == (
-        "explicit_source_pair_indices"
-    )
+    assert decoded.metadata["pair_index_alignment_mode"] == ("explicit_source_pair_indices")
     rows = decoded.metadata["lf_step_allocation_rows"]
     assert {row["pair_idx"] for row in rows[:6]} == {0}
     assert {row["source_pair_idx"] for row in rows[:6]} == {7}
@@ -211,35 +205,18 @@ def test_packet_builder_consumes_joint_recon_pixel_weight_in_decoder_fit() -> No
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
     assert decoded.metadata["recon_pixel_weight_verified_gradient_manifest"] is False
     assert decoded.metadata["contest_scorer_distortion_objective"] is False
-    assert decoded.metadata["allocation_mode"] == (
-        "joint_p18_p19_lf_waterfill_plus_hf_dwt_adjoint_saliency"
-    )
-    assert decoded.metadata["lf_step_allocation_mode"] == (
-        "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill"
-    )
-    assert unweighted_decoded.metadata["lf_step_allocation_mode"] == (
-        "uniform_l2_baseline"
-    )
-    assert decoded.metadata["step_map_coder_mode"] == (
-        "joint_p18_p19_lf_step_map_waterfill"
-    )
-    assert decoded.metadata["lf_step_allocation_rows"][0]["mode"] == (
-        "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill"
-    )
-    assert decoded.metadata["hf_decoder_fit_mode"] == (
-        SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE
-    )
+    assert decoded.metadata["allocation_mode"] == ("joint_p18_p19_lf_waterfill_plus_hf_dwt_adjoint_saliency")
+    assert decoded.metadata["lf_step_allocation_mode"] == ("joint_p18_p19_dwt_adjoint_lf_reverse_waterfill")
+    assert unweighted_decoded.metadata["lf_step_allocation_mode"] == ("uniform_l2_baseline")
+    assert decoded.metadata["step_map_coder_mode"] == ("joint_p18_p19_lf_step_map_waterfill")
+    assert decoded.metadata["lf_step_allocation_rows"][0]["mode"] == ("joint_p18_p19_dwt_adjoint_lf_reverse_waterfill")
+    assert decoded.metadata["hf_decoder_fit_mode"] == (SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE)
     assert decoded.metadata["exact_pixel_weighted_objective"] is False
     assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(3.0)
-    assert decoded.metadata["recon_pixel_weight_metadata"]["schema"] == (
-        "unit_joint_weight.v1"
-    )
+    assert decoded.metadata["recon_pixel_weight_metadata"]["schema"] == ("unit_joint_weight.v1")
     weighted_steps = decoded.decode_step_maps()
     assert any(float(np.std(step)) > 0.0 for step in weighted_steps)
-    assert all(
-        row["mode"] == "uniform_l2_baseline"
-        for row in unweighted_decoded.metadata["lf_step_allocation_rows"]
-    )
+    assert all(row["mode"] == "uniform_l2_baseline" for row in unweighted_decoded.metadata["lf_step_allocation_rows"])
     assert weighted.packet != unweighted.packet
     assert not np.allclose(
         decode_snerv_archive_frames(weighted.packet),
@@ -278,12 +255,8 @@ def test_packet_builder_runs_native_mlx_hf_decoder_training() -> None:
     assert training["any_loss_worsened"] is False
     assert training["level_subband_rows"]
     assert decoded.metadata["native_mlx_training_executed"] is True
-    assert decoded.metadata["native_mlx_training_kind"] == (
-        "hf_decoder_full_batch_gradient_descent"
-    )
-    assert decoded.metadata["hf_decoder_fit_mode"].startswith(
-        "native_mlx_full_batch_gradient_descent_from_"
-    )
+    assert decoded.metadata["native_mlx_training_kind"] == ("hf_decoder_full_batch_gradient_descent")
+    assert decoded.metadata["hf_decoder_fit_mode"].startswith("native_mlx_full_batch_gradient_descent_from_")
     assert training["score_claim"] is False
     assert training["ready_for_exact_eval_dispatch"] is False
     assert packet.score_claim is False
@@ -326,15 +299,9 @@ def test_packet_builder_rejects_worsening_native_mlx_hf_decoder_training() -> No
     assert training["blockers"]
     assert divergent_decoded.metadata["native_mlx_training_executed"] is False
     assert divergent_decoded.metadata["native_mlx_training_kind"] == "none"
-    assert not divergent_decoded.metadata["hf_decoder_fit_mode"].startswith(
-        "native_mlx_full_batch_gradient_descent"
-    )
-    assert divergent_decoded.sections["decoder_payload"] == (
-        baseline_decoded.sections["decoder_payload"]
-    )
-    assert divergent_decoded.metadata["hf_decoder_fit_mode"] == (
-        baseline_decoded.metadata["hf_decoder_fit_mode"]
-    )
+    assert not divergent_decoded.metadata["hf_decoder_fit_mode"].startswith("native_mlx_full_batch_gradient_descent")
+    assert divergent_decoded.sections["decoder_payload"] == (baseline_decoded.sections["decoder_payload"])
+    assert divergent_decoded.metadata["hf_decoder_fit_mode"] == (baseline_decoded.metadata["hf_decoder_fit_mode"])
 
 
 def test_train_export_hydrates_mlx_targets_and_writes_packet(
@@ -377,16 +344,13 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert report["scorer_custody"]["schema"] == "upstream_contest_eval_contract.v1"
     assert report["scorer_custody"]["contract_valid"] is True
     assert any(
-        row["relative_path"] == "evaluate.py" and row["sha256"]
-        for row in report["scorer_custody"]["source_custody"]
+        row["relative_path"] == "evaluate.py" and row["sha256"] for row in report["scorer_custody"]["source_custody"]
     )
     assert report["archive_package"] is None
     assert report["archive_path"] is None
     assert report["step_map_bits_per_coeff"] == pytest.approx(0.5)
     assert report["step_map_packet_schema"] == "snerv_step_map_coder.adaptive.v1"
-    assert report["step_map_coder_mode"] == (
-        "waterfill_mlx_native_uniform_importance_bridge"
-    )
+    assert report["step_map_coder_mode"] == ("waterfill_mlx_native_uniform_importance_bridge")
     assert report["step_map_coder_groups"]
     assert report["lf_payload_codec"] == "portfolio_auto"
     assert report["receiver_proof_passed"] is False
@@ -473,47 +437,68 @@ def test_train_export_executes_real_mlx_hf_decoder_training(
     )
 
 
-def test_train_export_blocks_official_primitives_mode_before_surrogate_hydration(
+def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    mx = pytest.importorskip("mlx.core")
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
-    def forbidden_decode_mlx_targets(*_args, **_kwargs):
-        raise AssertionError("official primitives mode must fail before target hydration")
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    captured: dict[str, object] = {}
 
-    monkeypatch.setattr(mod, "decode_mlx_targets", forbidden_decode_mlx_targets)
+    def fake_decode_mlx_targets(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = dict(kwargs)
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / "official_blocked",
+        output_dir=tmp_path / "official_surrogate",
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={
             "candidate_id": "official-primitives-request",
             "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+            "snerv_hfr_gain": 0.125,
+            "snerv_temporal_context": 1,
+            "snerv_temporal_mode": "official_haar_dwt1d_lowpass",
         },
         scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
         run_archive_export=False,
     )
 
-    assert report["executed"] is False
+    assert captured["kwargs"]["num_pairs"] == 2
+    assert report["executed"] is True
     assert report["snerv_official_mfu_hfr_tub_numeric_primitives_requested"] is True
     assert report["snerv_official_mfu_hfr_tub_export_bound"] is False
+    assert report["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] is True
     assert {
         "snerv_official_neural_decoder_payload_grammar_missing",
         "snerv_official_mfu_hfr_tub_weight_mapping_missing",
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
         "snerv_official_receiver_runtime_decode_missing",
     }.issubset(set(report["blockers"]))
-    assert report["packet_path"] is None
+    assert Path(report["packet_path"]).is_file()
+    assert report["packet_bytes"] == Path(report["packet_path"]).stat().st_size
     assert report["receiver_proof_passed"] is False
     binding = report["official_primitive_binding"]
-    assert binding["schema"] == "snerv_official_mfu_hfr_tub_export_binding.v2"
+    assert binding["schema"] == "snerv_official_mfu_hfr_tub_export_binding.v3"
     assert binding["primitive_modules_available"] is True
-    assert binding["receiver_payload_contract_emitted"] is True
-    assert binding["current_snar_decoder_payload_schema"] == (
-        "linear_hf_generation_decoder_only"
-    )
+    assert binding["export_bound_to_receiver_packet"] is True
+    assert binding["surrogate_receiver_payload_contract_emitted"] is True
+    assert binding["official_receiver_payload_contract_emitted"] is False
+    assert binding["current_snar_decoder_payload_schema"] == ("linear_hf_generation_decoder_only")
     assert binding["linear_hf_generation_decoder_compatible_with_official_neural_graph"] is False
     assert {
         "official_encoder_embedding_payload",
@@ -523,21 +508,142 @@ def test_train_export_blocks_official_primitives_mode_before_surrogate_hydration
         "official_idwt_or_wavelet_payload",
         "official_decoder_graph_topology_payload",
     }.issubset(set(binding["required_receiver_payload_sections"]))
-    assert binding["missing_receiver_payload_sections"] == (
-        binding["required_receiver_payload_sections"]
+    assert binding["missing_receiver_payload_sections"] == (binding["required_receiver_payload_sections"])
+    assert binding["source_pins"]["official_hfr_source_contract"].startswith("official_snerv_lines_62_64_91_122")
+    assert binding["source_pins"]["official_tub_source_contract"].startswith("official_snerv_t_lines_125_136")
+    surrogate = binding["receiver_bound_surrogate_export"]
+    assert surrogate["kind"] == ("snar1_linear_hf_generation_decoder_not_official_neural_graph")
+    assert surrogate["packet_sha256"] == report["packet_sha256"]
+    assert surrogate["packet_receiver_decode_verified_by_builder"] is True
+    assert surrogate["surrogate_receiver_contract_satisfied"] is False
+    assert surrogate["score_claim"] is False
+    evidence = {row["blocker"]: row for row in binding["blocker_evidence"]}
+    assert evidence["snerv_official_neural_decoder_payload_grammar_missing"]["missing_artifact"].startswith(
+        "receiver-visible official decoder graph"
     )
-    assert binding["source_pins"]["official_hfr_source_contract"].startswith(
-        "official_snerv_lines_62_64_91_122"
+    assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"]["closure_test"].startswith(
+        "map official encoder"
     )
-    assert binding["source_pins"]["official_tub_source_contract"].startswith(
-        "official_snerv_t_lines_125_136"
+    assert evidence["snerv_official_mfu_hfr_tub_source_forward_replay_missing"]["official_authority"] is False
+    assert (
+        evidence["snerv_official_receiver_runtime_decode_missing"]["surrogate_receiver_runtime_decode_passed"] is False
     )
     assert binding["export_consumed_official_mfu"] is False
     assert binding["export_consumed_official_hfr"] is False
     assert binding["export_consumed_official_tub"] is False
     assert binding["source_forward_replay_authority"] is False
     assert binding["receiver_runtime_decode_authority"] is False
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] is True
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is False
+    assert decoded.metadata["source_faithful_stack"] is False
+    assert decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes()).shape == (
+        2,
+        2,
+        3,
+        16,
+        16,
+    )
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
     assert Path(report["report_path"]).is_file()
+
+
+def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    exported: dict[str, object] = {}
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    def fake_export_snerv_mlx_archive(
+        *,
+        model_or_artifact,
+        output_dir,
+        repo_root,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=1800,
+    ):
+        packet_path = Path(model_or_artifact["packet_path"])
+        packet = packet_path.read_bytes()
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        archive_path = out / "archive.zip"
+        archive_path.write_bytes(b"zip:" + packet[:16])
+        proof_path = out / "receiver_proof.json"
+        proof_path.write_text('{"runtime_consumption_proof_passed":true}\n')
+        exported["packet_sha256"] = hashlib.sha256(packet).hexdigest()
+        exported["repo_root"] = Path(repo_root).as_posix()
+        exported["retain_receiver_output"] = retain_receiver_output
+        exported["timeout"] = receiver_proof_timeout_seconds
+        return {
+            "schema": "fake_snerv_mlx_archive_package.v1",
+            "receiver_proof": {
+                "archive_path": archive_path.as_posix(),
+                "archive_bytes": archive_path.stat().st_size,
+                "archive_sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+                "proof_path": proof_path.as_posix(),
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(mod, "export_snerv_mlx_archive", fake_export_snerv_mlx_archive)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_archive_bound_surrogate",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-primitives-request",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=True,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=77,
+    )
+
+    assert exported["packet_sha256"] == report["packet_sha256"]
+    assert exported["timeout"] == 77
+    assert report["receiver_proof_passed"] is True
+    assert report["receiver_contract_satisfied"] is True
+    assert "snerv_official_receiver_runtime_decode_missing" in report["blockers"]
+    binding = report["official_primitive_binding"]
+    surrogate = binding["receiver_bound_surrogate_export"]
+    assert surrogate["archive_sha256"] == report["archive_sha256"]
+    assert surrogate["surrogate_receiver_contract_satisfied"] is True
+    assert surrogate["surrogate_runtime_consumption_proof_passed"] is True
+    assert binding["receiver_runtime_decode_authority"] is False
+    receiver_decode_row = {row["blocker"]: row for row in binding["blocker_evidence"]}[
+        "snerv_official_receiver_runtime_decode_missing"
+    ]
+    assert receiver_decode_row["closed"] is False
+    assert receiver_decode_row["surrogate_receiver_runtime_decode_passed"] is True
+    assert receiver_decode_row["official_authority"] is False
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_native_export_modelsize_candidate_consumes_official_fc_dim_solution() -> None:
@@ -617,9 +723,7 @@ def test_train_export_preserves_explicit_source_pair_indices(
     assert report["storage_preflight"]["n_pairs"] == 2
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["source_pair_indices"] == [7, 2]
-    assert decoded.metadata["pair_index_alignment_mode"] == (
-        "explicit_source_pair_indices"
-    )
+    assert decoded.metadata["pair_index_alignment_mode"] == ("explicit_source_pair_indices")
 
 
 def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
@@ -679,25 +783,16 @@ def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
     assert recon["promotion_eligible"] is False
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["score_aware_hf_decoder_fit_executed"] is True
-    assert decoded.metadata["hf_decoder_fit_mode"] == (
-        SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE
-    )
-    assert decoded.metadata["hf_decoder_weight_domain"] == (
-        "dwt_adjoint_detail_saliency_diagonal"
-    )
+    assert decoded.metadata["hf_decoder_fit_mode"] == (SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE)
+    assert decoded.metadata["hf_decoder_weight_domain"] == ("dwt_adjoint_detail_saliency_diagonal")
     assert decoded.metadata["exact_pixel_weighted_objective"] is False
     assert decoded.metadata["contest_scorer_distortion_objective"] is False
     assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(2.5)
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
     assert decoded.metadata["recon_pixel_weight_metadata"]["sha256"] == recon["sha256"]
     assert recon["producer_manifest_verified"] is False
-    assert recon["producer_manifest"]["status"] == (
-        "not_found_unverified_manual_or_legacy_weight"
-    )
-    assert (
-        "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export"
-        in report["blockers"]
-    )
+    assert recon["producer_manifest"]["status"] == ("not_found_unverified_manual_or_legacy_weight")
+    assert "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export" in report["blockers"]
 
 
 def test_train_export_certifies_verified_recon_pixel_weight_manifest(
@@ -776,14 +871,9 @@ def test_train_export_certifies_verified_recon_pixel_weight_manifest(
     assert recon["producer_manifest"]["status"] == "verified_finite_gradient_manifest"
     assert recon["producer_manifest"]["consumption_certified"] is True
     assert recon["producer_manifest"]["gradient_health"] == gradient_health
-    assert (
-        "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export"
-        not in report["blockers"]
-    )
+    assert "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export" not in report["blockers"]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
-    assert decoded.metadata["recon_pixel_weight_metadata"][
-        "producer_manifest_verified"
-    ] is True
+    assert decoded.metadata["recon_pixel_weight_metadata"]["producer_manifest_verified"] is True
     assert decoded.metadata["recon_pixel_weight_verified_gradient_manifest"] is True
     assert decoded.metadata["contest_scorer_distortion_objective"] is True
 
@@ -1080,12 +1170,8 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert report["packet_source"] == "scorer_loop_qat_best_receiver_packet"
     assert report["packet_sha256"] == best_packet_sha256
     assert Path(report["packet_path"]).read_bytes() == best_packet
-    assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report[
-        "blockers"
-    ]
-    assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" not in report[
-        "blockers"
-    ]
+    assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
+    assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" not in report["blockers"]
     assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]
     assert report["score_claim"] is False
 
@@ -1185,14 +1271,8 @@ def test_train_export_rejects_qat_packet_with_mismatched_source_pair_indices(
     assert scorer_loop["source_pair_indices_binding_preserved"] is False
     assert scorer_loop["source_pair_indices_expected"] == [7, 2]
     assert scorer_loop["source_pair_indices_actual"] == [0, 1]
-    assert (
-        "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch"
-        in scorer_loop["blockers"]
-    )
-    assert (
-        "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch"
-        in report["blockers"]
-    )
+    assert "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch" in scorer_loop["blockers"]
+    assert "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch" in report["blockers"]
     assert report["packet_source"] == "mlx_target_hydration_numpy_closed_form_decoder_fit"
     assert report["packet_sha256"] != mismatched_sha256
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
@@ -1256,9 +1336,7 @@ def test_train_export_rejects_unweighted_qat_packet_when_recon_weight_bound(
                 "best_packet_bytes": len(unweighted_best_packet),
                 "best_packet_sha256": unweighted_best_sha256,
                 "component_guard_mode": "pose_seg_hard",
-                "blockers": [
-                    "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
-                ],
+                "blockers": ["snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -1302,14 +1380,8 @@ def test_train_export_rejects_unweighted_qat_packet_when_recon_weight_bound(
     assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is False
     assert scorer_loop["recon_weight_binding_required"] is True
     assert scorer_loop["recon_weight_binding_preserved"] is False
-    assert (
-        "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch"
-        in scorer_loop["blockers"]
-    )
-    assert (
-        "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch"
-        in report["blockers"]
-    )
+    assert "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch" in scorer_loop["blockers"]
+    assert "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch" in report["blockers"]
     assert report["packet_source"] == (
         "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
     )
@@ -1367,9 +1439,7 @@ def test_prefilter_profile_rejects_blocked_full_video_artifact(
 
     assert profile["prefilter_ready_for_cpu_replay"] is False
     assert "snerv_mlx_prefilter_artifact_has_blockers" in profile["blockers"]
-    assert profile["artifact_blockers"] == [
-        "snerv_mlx_score_aware_long_training_not_executed"
-    ]
+    assert profile["artifact_blockers"] == ["snerv_mlx_score_aware_long_training_not_executed"]
 
 
 def test_prefilter_profile_accepts_receiver_proven_full_video_artifact(

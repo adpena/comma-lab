@@ -97,9 +97,7 @@ SNERV_MLX_NATIVE_PREFILTER_PROFILE_SCHEMA = "snerv_mlx_native_prefilter_profile.
 SNERV_MLX_NATIVE_STORAGE_PREFLIGHT_SCHEMA = "snerv_mlx_native_storage_preflight.v1"
 SNERV_MLX_NATIVE_PACKET_FILENAME = "snerv_mlx_native_packet.snar"
 SNERV_MLX_NATIVE_REPORT_FILENAME = "snerv_mlx_native_train_export.json"
-SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE = (
-    "joint_p18_p19_dwt_adjoint_saliency_weighted_least_squares"
-)
+SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE = "joint_p18_p19_dwt_adjoint_saliency_weighted_least_squares"
 SCORER_HW = (384, 512)
 
 FALSE_AUTHORITY = {
@@ -158,12 +156,8 @@ class SnervMlxNativeArtifact:
 
     def as_jsonable(self) -> dict[str, Any]:
         payload = asdict(self)
-        payload["source_pair_indices"] = [
-            int(value) for value in self.source_pair_indices
-        ]
-        payload["step_map_coder_groups"] = [
-            dict(group) for group in self.step_map_coder_groups
-        ]
+        payload["source_pair_indices"] = [int(value) for value in self.source_pair_indices]
+        payload["step_map_coder_groups"] = [dict(group) for group in self.step_map_coder_groups]
         payload["blockers"] = [str(value) for value in self.blockers]
         return payload
 
@@ -224,19 +218,13 @@ def train_export_snerv_mlx_native(
             candidate.get("snerv_step_map_bits_per_coeff", 4.0),
         )
     )
-    decoder_payload_codec = str(
-        candidate.get("decoder_payload_codec", "mixed_magnitude_symmetric")
-    )
+    decoder_payload_codec = str(candidate.get("decoder_payload_codec", "mixed_magnitude_symmetric"))
     active_decoder_payload_codec = (
-        str(scorer_loop_qat_decoder_payload_codec)
-        if scorer_loop_qat_decoder_payload_codec
-        else decoder_payload_codec
+        str(scorer_loop_qat_decoder_payload_codec) if scorer_loop_qat_decoder_payload_codec else decoder_payload_codec
     )
     lf_payload_codec = str(candidate.get("lf_payload_codec", "portfolio_auto"))
     active_lf_payload_codec = (
-        str(scorer_loop_qat_lf_payload_codec)
-        if scorer_loop_qat_lf_payload_codec
-        else lf_payload_codec
+        str(scorer_loop_qat_lf_payload_codec) if scorer_loop_qat_lf_payload_codec else lf_payload_codec
     )
     model_size = _model_size_from_candidate(candidate)
     source_pair_indices = _source_pair_indices_for_native_export(
@@ -245,18 +233,17 @@ def train_export_snerv_mlx_native(
     )
     effective_num_pairs = len(source_pair_indices)
     explicit_pair_indices = pair_indices is not None
-    if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
-        return _blocked_official_primitives_native_export(
-            output_dir=out,
+    official_primitives_requested = bool(model_size.official_mfu_hfr_tub_numeric_primitives_requested)
+    official_primitives_blockers = list(model_size.official_mfu_hfr_tub_export_blockers)
+    official_binding = (
+        _official_primitives_export_binding(
             model_size=model_size,
             candidate=candidate,
-            source_video_path=source_video_path,
-            scorer_upstream_dir=scorer_upstream_dir,
-            source_pair_indices=source_pair_indices,
-            explicit_pair_indices=explicit_pair_indices,
-            num_pairs=effective_num_pairs,
-            started_monotonic=started,
+            blockers=official_primitives_blockers,
         )
+        if official_primitives_requested
+        else None
+    )
 
     target0_mlx, target1_mlx = decode_mlx_targets(
         source_video_path,
@@ -287,9 +274,7 @@ def train_export_snerv_mlx_native(
         bundle_id="snerv_mlx_native_target_bridge",
     )
     if bridge["allclose"] is not True:
-        raise SnervMlxNativeExportError(
-            "MLX target bridge drift failed: " + ",".join(bridge["blockers"])
-        )
+        raise SnervMlxNativeExportError("MLX target bridge drift failed: " + ",".join(bridge["blockers"]))
 
     pairs_nchw255 = _target_pairs_to_nchw255(target0_np, target1_np)
     recon_weight, recon_weight_metadata = _load_recon_pixel_weight_for_native_export(
@@ -338,17 +323,21 @@ def train_export_snerv_mlx_native(
         metadata_extra={
             "source_video_path": Path(source_video_path).as_posix(),
             "pair_index_alignment_mode": (
-                "explicit_source_pair_indices"
-                if explicit_pair_indices
-                else "prefix_source_pair_indices"
+                "explicit_source_pair_indices" if explicit_pair_indices else "prefix_source_pair_indices"
             ),
             "human_visual_fidelity_objective": False,
             "contest_scorer_distortion_objective": (
-                _recon_pixel_weight_metadata_is_verified_gradient_manifest(
-                    recon_weight_metadata
-                )
+                _recon_pixel_weight_metadata_is_verified_gradient_manifest(recon_weight_metadata)
                 if recon_weight is not None
                 else False
+            ),
+            **(
+                _official_primitives_packet_metadata(
+                    official_binding,
+                    blockers=official_primitives_blockers,
+                )
+                if official_binding is not None
+                else {}
             ),
         },
     )
@@ -373,12 +362,8 @@ def train_export_snerv_mlx_native(
         allow_overwrite=allow_overwrite,
     )
     selected_packet = bytes(closed_form_archive.packet)
-    selected_packet_source = _packet_source_from_snerv_native_metadata(
-        closed_form_archive.metadata
-    )
-    scorer_loop_qat_public = {
-        key: value for key, value in scorer_loop_qat.items() if key != "_best_packet_bytes"
-    }
+    selected_packet_source = _packet_source_from_snerv_native_metadata(closed_form_archive.metadata)
+    scorer_loop_qat_public = {key: value for key, value in scorer_loop_qat.items() if key != "_best_packet_bytes"}
     best_packet = scorer_loop_qat.get("_best_packet_bytes")
     best_packet_ready = (
         isinstance(best_packet, bytes)
@@ -387,9 +372,7 @@ def train_export_snerv_mlx_native(
         and scorer_loop_qat.get("receiver_contract_satisfied") is True
     )
     best_packet_source_pair_indices = (
-        _packet_source_pair_indices(best_packet)
-        if isinstance(best_packet, bytes) and best_packet
-        else None
+        _packet_source_pair_indices(best_packet) if isinstance(best_packet, bytes) and best_packet else None
     )
     best_packet_preserves_source_pairs = _packet_preserves_source_pair_indices(
         best_packet if isinstance(best_packet, bytes) else b"",
@@ -400,83 +383,50 @@ def train_export_snerv_mlx_native(
         best_packet if isinstance(best_packet, bytes) else b"",
         recon_weight_metadata,
     )
-    if (
-        best_packet_ready
-        and best_packet_preserves_recon_weight
-        and best_packet_preserves_source_pairs
-    ):
+    if best_packet_ready and best_packet_preserves_recon_weight and best_packet_preserves_source_pairs:
         selected_packet = bytes(best_packet)
         selected_packet_source = "scorer_loop_qat_best_receiver_packet"
         scorer_loop_qat_public["emitted_packet_uses_scorer_loop_best_decoder"] = True
         scorer_loop_qat_public["emitted_packet_bytes"] = len(selected_packet)
-        scorer_loop_qat_public["emitted_packet_sha256"] = _sha256_bytes(
-            selected_packet
-        )
+        scorer_loop_qat_public["emitted_packet_sha256"] = _sha256_bytes(selected_packet)
         scorer_loop_qat_public["blockers"] = _ordered_unique(
             str(blocker)
             for blocker in scorer_loop_qat_public.get("blockers") or []
-            if str(blocker)
-            != "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
+            if str(blocker) != "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
         )
         report = scorer_loop_qat_public.get("report_path")
         if report:
-            _payload_for_disk = {
-                key: value
-                for key, value in scorer_loop_qat_public.items()
-                if key != "report_path"
-            }
+            _payload_for_disk = {key: value for key, value in scorer_loop_qat_public.items() if key != "report_path"}
             write_json(report, _payload_for_disk)
-    elif best_packet_ready and (
-        recon_weight_metadata is not None or explicit_pair_indices
-    ):
-        scorer_loop_qat_public[
-            "emitted_packet_uses_scorer_loop_best_decoder"
-        ] = False
+    elif best_packet_ready and (recon_weight_metadata is not None or explicit_pair_indices):
+        scorer_loop_qat_public["emitted_packet_uses_scorer_loop_best_decoder"] = False
         extra_blockers: list[str] = []
         if recon_weight_metadata is not None and not best_packet_preserves_recon_weight:
             scorer_loop_qat_public["recon_weight_binding_required"] = True
             scorer_loop_qat_public["recon_weight_binding_preserved"] = False
-            scorer_loop_qat_public["recon_weight_expected_sha256"] = (
-                recon_weight_metadata.get("sha256")
-            )
-            extra_blockers.append(
-                "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch"
-            )
+            scorer_loop_qat_public["recon_weight_expected_sha256"] = recon_weight_metadata.get("sha256")
+            extra_blockers.append("snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch")
         if explicit_pair_indices and not best_packet_preserves_source_pairs:
             scorer_loop_qat_public["source_pair_indices_binding_required"] = True
             scorer_loop_qat_public["source_pair_indices_binding_preserved"] = False
-            scorer_loop_qat_public["source_pair_indices_expected"] = [
-                int(value) for value in source_pair_indices
-            ]
+            scorer_loop_qat_public["source_pair_indices_expected"] = [int(value) for value in source_pair_indices]
             scorer_loop_qat_public["source_pair_indices_actual"] = (
                 [int(value) for value in best_packet_source_pair_indices]
                 if best_packet_source_pair_indices is not None
                 else None
             )
-            extra_blockers.append(
-                "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch"
-            )
+            extra_blockers.append("snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch")
         if extra_blockers:
-            extra_blockers.append(
-                "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
-            )
+            extra_blockers.append("snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export")
         scorer_loop_qat_public["blockers"] = _ordered_unique(
             [
-                *(
-                    str(blocker)
-                    for blocker in scorer_loop_qat_public.get("blockers") or []
-                    if str(blocker)
-                ),
+                *(str(blocker) for blocker in scorer_loop_qat_public.get("blockers") or [] if str(blocker)),
                 *extra_blockers,
             ]
         )
         report = scorer_loop_qat_public.get("report_path")
         if report:
-            _payload_for_disk = {
-                key: value
-                for key, value in scorer_loop_qat_public.items()
-                if key != "report_path"
-            }
+            _payload_for_disk = {key: value for key, value in scorer_loop_qat_public.items() if key != "report_path"}
             write_json(report, _payload_for_disk)
 
     packet_path = out / SNERV_MLX_NATIVE_PACKET_FILENAME
@@ -484,11 +434,7 @@ def train_export_snerv_mlx_native(
         packet_path,
         selected_packet,
         allow_overwrite=allow_overwrite,
-        expected_existing_sha256=(
-            sha256_file(packet_path)
-            if allow_overwrite and packet_path.is_file()
-            else None
-        ),
+        expected_existing_sha256=(sha256_file(packet_path) if allow_overwrite and packet_path.is_file() else None),
     )
 
     storage_preflight = build_snerv_mlx_native_storage_preflight(
@@ -501,14 +447,12 @@ def train_export_snerv_mlx_native(
         "snerv_mlx_score_aware_long_training_not_executed",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    if official_primitives_requested:
+        blockers.extend(official_primitives_blockers)
     if scorer_custody.get("contract_valid") is not True:
         blockers.append("snerv_mlx_native_scorer_custody_contract_invalid")
-    if recon_weight_metadata is not None and recon_weight_metadata.get(
-        "producer_manifest_verified"
-    ) is not True:
-        blockers.append(
-            "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export"
-        )
+    if recon_weight_metadata is not None and recon_weight_metadata.get("producer_manifest_verified") is not True:
+        blockers.append("snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export")
     blockers.extend(
         _scorer_loop_qat_blockers(
             scorer_loop_qat_public,
@@ -544,15 +488,10 @@ def train_export_snerv_mlx_native(
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
         step_map_bits_per_coeff=step_map_bits_per_coeff,
-        step_map_packet_schema=str(
-            selected_archive_metadata.get("step_map_packet_schema") or ""
-        ),
-        step_map_coder_mode=str(
-            selected_archive_metadata.get("step_map_coder_mode") or ""
-        ),
+        step_map_packet_schema=str(selected_archive_metadata.get("step_map_packet_schema") or ""),
+        step_map_coder_mode=str(selected_archive_metadata.get("step_map_coder_mode") or ""),
         step_map_coder_groups=tuple(
-            dict(group)
-            for group in selected_archive_metadata.get("step_map_coder_groups") or ()
+            dict(group) for group in selected_archive_metadata.get("step_map_coder_groups") or ()
         ),
         decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=active_lf_payload_codec,
@@ -562,50 +501,30 @@ def train_export_snerv_mlx_native(
         scorer_loop_qat=scorer_loop_qat_public,
         storage_preflight=storage_preflight,
         archive_package=package,
-        archive_path=(
-            str(receiver_proof.get("archive_path"))
-            if receiver_proof.get("archive_path")
-            else None
-        ),
+        archive_path=(str(receiver_proof.get("archive_path")) if receiver_proof.get("archive_path") else None),
         archive_bytes=(
-            int(receiver_proof["archive_bytes"])
-            if receiver_proof.get("archive_bytes") is not None
-            else None
+            int(receiver_proof["archive_bytes"]) if receiver_proof.get("archive_bytes") is not None else None
         ),
-        archive_sha256=(
-            str(receiver_proof.get("archive_sha256"))
-            if receiver_proof.get("archive_sha256")
-            else None
-        ),
-        receiver_proof_path=(
-            str(receiver_proof.get("proof_path"))
-            if receiver_proof.get("proof_path")
-            else None
-        ),
-        receiver_proof_passed=(
-            receiver_proof.get("runtime_consumption_proof_passed") is True
-        ),
-        receiver_contract_satisfied=(
-            receiver_proof.get("receiver_contract_satisfied") is True
-        ),
+        archive_sha256=(str(receiver_proof.get("archive_sha256")) if receiver_proof.get("archive_sha256") else None),
+        receiver_proof_path=(str(receiver_proof.get("proof_path")) if receiver_proof.get("proof_path") else None),
+        receiver_proof_passed=(receiver_proof.get("runtime_consumption_proof_passed") is True),
+        receiver_contract_satisfied=(receiver_proof.get("receiver_contract_satisfied") is True),
         report_path=None,
         blockers=tuple(dict.fromkeys(blockers)),
     )
     payload = artifact.as_jsonable()
+    payload["executed"] = True
     payload["packet_source"] = selected_packet_source
     selected_recon_metadata = selected_archive_metadata.get("recon_pixel_weight_metadata")
-    selected_recon_consumed = (
-        selected_archive_metadata.get("recon_pixel_weight_consumed") is True
-        and isinstance(selected_recon_metadata, Mapping)
+    selected_recon_consumed = selected_archive_metadata.get("recon_pixel_weight_consumed") is True and isinstance(
+        selected_recon_metadata, Mapping
     )
     payload["score_aware_hf_decoder_fit_executed"] = bool(selected_recon_consumed)
     payload["score_aware_long_training_executed"] = False
     payload["native_mlx_training_executed"] = bool(
         selected_archive_metadata.get("native_mlx_training_executed") is True
     )
-    payload["native_mlx_training_kind"] = str(
-        selected_archive_metadata.get("native_mlx_training_kind") or "none"
-    )
+    payload["native_mlx_training_kind"] = str(selected_archive_metadata.get("native_mlx_training_kind") or "none")
     payload["native_mlx_hf_decoder_training"] = dict(
         selected_archive_metadata.get("native_mlx_hf_decoder_training") or {}
     )
@@ -625,12 +544,24 @@ def train_export_snerv_mlx_native(
             "requested_metadata": dict(recon_weight_metadata or {}),
             **FALSE_AUTHORITY,
         }
+    if official_binding is not None:
+        payload["official_primitive_binding"] = _receiver_bound_official_primitives_export_binding(
+            official_binding,
+            packet_path=packet_path,
+            packet_bytes=len(selected_packet),
+            packet_sha256=_sha256_bytes(selected_packet),
+            selected_archive_metadata=selected_archive_metadata,
+            package=package,
+            receiver_proof=receiver_proof,
+        )
+        payload["snerv_official_mfu_hfr_tub_numeric_primitives_requested"] = True
+        payload["snerv_official_mfu_hfr_tub_export_bound"] = False
+        payload["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] = True
+        payload["snerv_official_mfu_hfr_tub_export_blockers"] = list(official_primitives_blockers)
     payload["wall_seconds"] = round(time.monotonic() - started, 6)
     report_path = out / SNERV_MLX_NATIVE_REPORT_FILENAME
     if report_path.exists() and not allow_overwrite:
-        raise SnervMlxNativeExportError(
-            f"refusing to overwrite existing artifact: {report_path}"
-        )
+        raise SnervMlxNativeExportError(f"refusing to overwrite existing artifact: {report_path}")
     payload["report_path"] = report_path.as_posix()
     write_json(report_path, payload)
     return payload
@@ -688,9 +619,7 @@ def write_snerv_mlx_receiver_proof(
     out = Path(output_dir).expanduser().resolve(strict=False)
     packet_path = submission_dir / "0.bin"
     if not packet_path.is_file():
-        raise SnervMlxNativeExportError(
-            f"runtime submission dir is missing 0.bin: {submission_dir}"
-        )
+        raise SnervMlxNativeExportError(f"runtime submission dir is missing 0.bin: {submission_dir}")
     decoded = unpack_snerv_archive(packet_path.read_bytes())
     expected_bytes = expected_receiver_output_bytes_from_metadata(decoded.metadata)
     storage = build_snerv_mlx_native_storage_preflight(
@@ -750,9 +679,7 @@ def _run_scorer_loop_qat_attachment(
     out.mkdir(parents=True, exist_ok=True)
     report_path = out / "snerv_scorer_loop_qat_attachment.json"
     if report_path.exists() and not allow_overwrite:
-        raise SnervMlxNativeExportError(
-            f"refusing to overwrite existing scorer-loop artifact: {report_path}"
-        )
+        raise SnervMlxNativeExportError(f"refusing to overwrite existing scorer-loop artifact: {report_path}")
     if not requested:
         payload = {
             "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
@@ -815,24 +742,17 @@ def _run_scorer_loop_qat_attachment(
                 best_packet,
                 allow_overwrite=allow_overwrite,
                 expected_existing_sha256=(
-                    sha256_file(best_packet_path)
-                    if allow_overwrite and best_packet_path.is_file()
-                    else None
+                    sha256_file(best_packet_path) if allow_overwrite and best_packet_path.is_file() else None
                 ),
             )
             best_packet_materialized = True
             best_packet_path_str = best_packet_path.as_posix()
             best_packet_path_sha256 = sha256_file(best_packet_path)
-        blockers = [
-            str(blocker) for blocker in result_payload.get("blockers") or [] if blocker
-        ]
+        blockers = [str(blocker) for blocker in result_payload.get("blockers") or [] if blocker]
         if bool(result_payload.get("receiver_contract_satisfied")) and not (
-            best_packet_materialized
-            and best_packet_path_sha256 == result_payload.get("best_packet_sha256")
+            best_packet_materialized and best_packet_path_sha256 == result_payload.get("best_packet_sha256")
         ):
-            blockers.append(
-                "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
-            )
+            blockers.append("snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export")
         payload = {
             "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
             "requested": True,
@@ -849,14 +769,10 @@ def _run_scorer_loop_qat_attachment(
                 )
             ],
             "full_video_coverage": int(result_payload.get("n_pairs") or 0) == 600,
-            "scorer_loop_evaluations": int(
-                result_payload.get("scorer_loop_evaluations") or 0
-            ),
+            "scorer_loop_evaluations": int(result_payload.get("scorer_loop_evaluations") or 0),
             "baseline_archive_bytes": _nested(result_payload, "baseline", "archive_bytes"),
             "best_archive_bytes": _nested(result_payload, "best", "archive_bytes"),
-            "baseline_archive_sha256": _nested(
-                result_payload, "baseline", "archive_sha256"
-            ),
+            "baseline_archive_sha256": _nested(result_payload, "baseline", "archive_sha256"),
             "best_archive_sha256": _nested(result_payload, "best", "archive_sha256"),
             "baseline_score_linf": _nested(result_payload, "baseline", "score_linf"),
             "best_score_linf": _nested(result_payload, "best", "score_linf"),
@@ -865,31 +781,19 @@ def _run_scorer_loop_qat_attachment(
             "best_packet_path": best_packet_path_str,
             "best_packet_path_sha256": best_packet_path_sha256,
             "best_packet_materialized": best_packet_materialized,
-            "decoder_payload_codec": str(
-                result_payload.get("decoder_payload_codec") or decoder_payload_codec
-            ),
-            "lf_payload_codec": str(
-                result_payload.get("lf_payload_codec") or lf_payload_codec
-            ),
-            "component_guard_mode": str(
-                result_payload.get("component_guard_mode") or component_guard_mode
-            ),
+            "decoder_payload_codec": str(result_payload.get("decoder_payload_codec") or decoder_payload_codec),
+            "lf_payload_codec": str(result_payload.get("lf_payload_codec") or lf_payload_codec),
+            "component_guard_mode": str(result_payload.get("component_guard_mode") or component_guard_mode),
             "pair_robust_admission": result_payload.get("pair_robust_admission"),
             "accepted_improvement": bool(result_payload.get("accepted_improvement")),
-            "receiver_contract_satisfied": bool(
-                result_payload.get("receiver_contract_satisfied")
-            ),
-            "ready_for_pose_guard_gate": bool(
-                result_payload.get("ready_for_pose_guard_gate")
-            ),
+            "receiver_contract_satisfied": bool(result_payload.get("receiver_contract_satisfied")),
+            "ready_for_pose_guard_gate": bool(result_payload.get("ready_for_pose_guard_gate")),
             "emitted_packet_uses_scorer_loop_best_decoder": False,
             "result": result_payload,
             "blockers": _ordered_unique(blockers),
             **FALSE_AUTHORITY,
         }
-        if best_packet_materialized and best_packet_path_sha256 == result_payload.get(
-            "best_packet_sha256"
-        ):
+        if best_packet_materialized and best_packet_path_sha256 == result_payload.get("best_packet_sha256"):
             payload["_best_packet_bytes"] = best_packet
     except Exception as exc:
         payload = {
@@ -908,9 +812,7 @@ def _run_scorer_loop_qat_attachment(
             "blockers": ["snerv_scorer_loop_qat_attachment_failed"],
             **FALSE_AUTHORITY,
         }
-    payload_for_disk = {
-        key: value for key, value in payload.items() if key != "_best_packet_bytes"
-    }
+    payload_for_disk = {key: value for key, value in payload.items() if key != "_best_packet_bytes"}
     write_json(report_path, payload_for_disk)
     return {**payload, "report_path": report_path.as_posix()}
 
@@ -920,11 +822,7 @@ def _scorer_loop_qat_blockers(
     *,
     num_pairs: int,
 ) -> list[str]:
-    blockers = [
-        str(blocker)
-        for blocker in scorer_loop_qat.get("blockers") or []
-        if str(blocker)
-    ]
+    blockers = [str(blocker) for blocker in scorer_loop_qat.get("blockers") or [] if str(blocker)]
     if scorer_loop_qat.get("executed") is not True:
         blockers.append("snerv_real_segnet_posenet_teacher_loop_not_attached")
         return _ordered_unique(blockers)
@@ -935,9 +833,7 @@ def _scorer_loop_qat_blockers(
     if int(num_pairs) != 600 or scorer_loop_qat.get("full_video_coverage") is not True:
         blockers.append("snerv_scorer_loop_qat_not_full_video")
     if scorer_loop_qat.get("emitted_packet_uses_scorer_loop_best_decoder") is not True:
-        blockers.append(
-            "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
-        )
+        blockers.append("snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export")
     return _ordered_unique(blockers)
 
 
@@ -969,9 +865,7 @@ def write_snerv_mlx_prefilter_profile(
         blockers.append("snerv_mlx_prefilter_archive_package_missing")
     elif str(art.get("archive_sha256")) != str(archive_sha256):
         blockers.append("snerv_mlx_prefilter_archive_sha_mismatch")
-    if int(art.get("archive_bytes") or 0) and int(art.get("archive_bytes") or 0) != int(
-        archive_bytes
-    ):
+    if int(art.get("archive_bytes") or 0) and int(art.get("archive_bytes") or 0) != int(archive_bytes):
         blockers.append("snerv_mlx_prefilter_archive_bytes_mismatch")
     if art.get("receiver_proof_passed") is not True:
         blockers.append("snerv_mlx_prefilter_receiver_proof_missing")
@@ -1020,10 +914,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
 
     pairs = np.asarray(pairs_nchw255, dtype=np.float32)
     if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[2] != 3:
-        raise SnervMlxNativeExportError(
-            "pairs_nchw255 must be shaped (pairs, 2, 3, H, W); "
-            f"got {tuple(pairs.shape)}"
-        )
+        raise SnervMlxNativeExportError(f"pairs_nchw255 must be shaped (pairs, 2, 3, H, W); got {tuple(pairs.shape)}")
     if not np.isfinite(pairs).all():
         raise SnervMlxNativeExportError("pairs_nchw255 contains nonfinite values")
     n_pairs, _frames, channels, h, w = (int(v) for v in pairs.shape)
@@ -1088,9 +979,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "requested_steps": int(native_mlx_decoder_train_steps),
         "executed": False,
         "blockers": (
-            ["snerv_native_mlx_decoder_training_not_requested"]
-            if int(native_mlx_decoder_train_steps) <= 0
-            else []
+            ["snerv_native_mlx_decoder_training_not_requested"] if int(native_mlx_decoder_train_steps) <= 0 else []
         ),
         **FALSE_AUTHORITY,
     }
@@ -1108,10 +997,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         )
         if mlx_training_report.get("executed") is True:
             decoder = trained_decoder
-            hf_decoder_fit_mode = (
-                "native_mlx_full_batch_gradient_descent_from_"
-                f"{hf_decoder_fit_mode}"
-            )
+            hf_decoder_fit_mode = f"native_mlx_full_batch_gradient_descent_from_{hf_decoder_fit_mode}"
 
     lf_quant_planes: list[np.ndarray] = []
     lf_zero_points: list[float] = []
@@ -1140,8 +1026,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
             weight_lf = np.abs(np.asarray(weight_pyramids[record_index].lf, dtype=np.float64))
             if weight_lf.shape != pyr.lf.shape:
                 raise SnervMlxNativeExportError(
-                    "DWT-adjoint LF saliency shape "
-                    f"{weight_lf.shape} != LF shape {pyr.lf.shape}"
+                    f"DWT-adjoint LF saliency shape {weight_lf.shape} != LF shape {pyr.lf.shape}"
                 )
             dynamic_range = max(float(np.max(pyr.lf) - np.min(pyr.lf)), 1.0e-9)
             min_step = max(float(scale) / 16.0, 1.0e-9)
@@ -1163,8 +1048,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
                 {
                     "mode": "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill",
                     "dynamic_range": dynamic_range,
-                    "target_bits_total": float(pyr.lf.size)
-                    * float(target_bits_per_coeff),
+                    "target_bits_total": float(pyr.lf.size) * float(target_bits_per_coeff),
                     "realized_bits_total": float(alloc.total_bits),
                     "water_level": float(alloc.water_level),
                     "min_step": float(alloc.min_step),
@@ -1177,9 +1061,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         lf_quant_planes.append(q)
         lf_zero_points.append(float(zero))
         step_maps.append(step)
-        step_map_importance_values.append(
-            max(float(allocation_row.get("lf_saliency_mean", 1.0)), 1.0e-12)
-        )
+        step_map_importance_values.append(max(float(allocation_row.get("lf_saliency_mean", 1.0)), 1.0e-12))
         lf_step_allocation_rows.append(allocation_row)
 
     step_map_importance = np.asarray(step_map_importance_values, dtype=np.float64)
@@ -1189,9 +1071,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         target_bits_per_coeff=float(step_map_bits_per_coeff),
     )
     decoder_payload = encode_decoder_payload(decoder, codec=decoder_payload_codec)
-    verified_recon_weight = _recon_pixel_weight_metadata_is_verified_gradient_manifest(
-        recon_pixel_weight_metadata
-    )
+    verified_recon_weight = _recon_pixel_weight_metadata_is_verified_gradient_manifest(recon_pixel_weight_metadata)
     metadata = {
         "n_pairs": n_pairs,
         "frames_per_pair": 2,
@@ -1229,38 +1109,28 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
             else "uniform_mlx_native_closed_form_export"
         ),
         "lf_step_allocation_mode": (
-            "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill"
-            if weighted_fit_enabled
-            else "uniform_l2_baseline"
+            "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill" if weighted_fit_enabled else "uniform_l2_baseline"
         ),
         "lf_step_allocation_rows": lf_step_allocation_rows,
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": float(hf_decoder_saliency_gain),
         "native_mlx_hf_decoder_training": mlx_training_report,
         "hf_decoder_weight_domain": (
-            "dwt_adjoint_detail_saliency_diagonal"
-            if weighted_fit_enabled
-            else "unweighted_least_squares"
+            "dwt_adjoint_detail_saliency_diagonal" if weighted_fit_enabled else "unweighted_least_squares"
         ),
         "weight_domain": (
-            "dwt_adjoint_detail_saliency_diagonal"
-            if weighted_fit_enabled
-            else "unweighted_least_squares"
+            "dwt_adjoint_detail_saliency_diagonal" if weighted_fit_enabled else "unweighted_least_squares"
         ),
         "exact_pixel_weighted_objective": False,
         "recon_pixel_weight_consumed": bool(weighted_fit_enabled),
         "recon_pixel_weight_metadata": dict(recon_pixel_weight_metadata or {}),
         "recon_pixel_weight_verified_gradient_manifest": verified_recon_weight,
-        "contest_scorer_distortion_objective": bool(
-            weighted_fit_enabled and verified_recon_weight
-        ),
+        "contest_scorer_distortion_objective": bool(weighted_fit_enabled and verified_recon_weight),
         "score_aware_hf_decoder_fit_executed": bool(weighted_fit_enabled),
         "score_aware_long_training_executed": False,
         "native_mlx_training_executed": bool(mlx_training_report.get("executed") is True),
         "native_mlx_training_kind": (
-            "hf_decoder_full_batch_gradient_descent"
-            if mlx_training_report.get("executed") is True
-            else "none"
+            "hf_decoder_full_batch_gradient_descent" if mlx_training_report.get("executed") is True else "none"
         ),
         "decoder_payload_codec": str(decoder_payload_codec),
         "snerv_fc_dim": int(model_size.fc_dim),
@@ -1271,12 +1141,8 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
             model_size.official_mfu_hfr_tub_numeric_primitives_requested
         ),
         "snerv_official_mfu_hfr_tub_export_bound": False,
-        "snerv_official_mfu_hfr_tub_export_blockers": list(
-            model_size.official_mfu_hfr_tub_export_blockers
-        ),
-        "snerv_spectra_preserving_adapter_enabled": (
-            model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
-        ),
+        "snerv_official_mfu_hfr_tub_export_blockers": list(model_size.official_mfu_hfr_tub_export_blockers),
+        "snerv_spectra_preserving_adapter_enabled": (model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER),
         "snerv_mfu_scales": [int(v) for v in model_size.mfu_scales],
         "snerv_hfr_gain": float(model_size.hfr_gain),
         "snerv_temporal_context": int(model_size.temporal_context),
@@ -1356,9 +1222,7 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
             for _step in range(int(steps)):
                 pred = mx.matmul(x, k)
                 residual = pred - y
-                grad = (2.0 * mx.matmul(mx.transpose(x), weights * residual) / denom) + (
-                    2.0 * float(ridge) * k
-                )
+                grad = (2.0 * mx.matmul(mx.transpose(x), weights * residual) / denom) + (2.0 * float(ridge) * k)
                 k = k - (float(learning_rate) * grad)
                 mx.eval(k)
             final_loss = float(
@@ -1386,9 +1250,7 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
                     "loss_delta": final_loss - initial_loss,
                 }
             )
-    all_final_losses_finite = bool(
-        all(np.isfinite(float(row["final_loss"])) for row in loss_rows)
-    )
+    all_final_losses_finite = bool(all(np.isfinite(float(row["final_loss"])) for row in loss_rows))
     worsened_rows = [
         row
         for row in loss_rows
@@ -1398,12 +1260,8 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
         )
     ]
     blockers = [
-        "snerv_native_mlx_decoder_final_loss_nonfinite"
-        if not all_final_losses_finite
-        else "",
-        "snerv_native_mlx_decoder_loss_worsened"
-        if worsened_rows
-        else "",
+        "snerv_native_mlx_decoder_final_loss_nonfinite" if not all_final_losses_finite else "",
+        "snerv_native_mlx_decoder_loss_worsened" if worsened_rows else "",
     ]
     blockers = [blocker for blocker in blockers if blocker]
     accepted = all_final_losses_finite and not blockers
@@ -1541,9 +1399,7 @@ def _native_export_detail_weights(
         )
     )
     if raw.shape != expected_shape:
-        raise SnervMlxNativeExportError(
-            f"detail weight shape {raw.shape} != expected {expected_shape}"
-        )
+        raise SnervMlxNativeExportError(f"detail weight shape {raw.shape} != expected {expected_shape}")
     if not np.isfinite(raw).all():
         raise SnervMlxNativeExportError("detail weights contain nonfinite values")
     mean = float(np.mean(raw))
@@ -1654,14 +1510,9 @@ def build_snerv_mlx_native_storage_preflight(
 
 def _target_pairs_to_nchw255(target0_np: np.ndarray, target1_np: np.ndarray) -> np.ndarray:
     if target0_np.shape != target1_np.shape:
-        raise SnervMlxNativeExportError(
-            f"target frame shapes differ: {target0_np.shape} vs {target1_np.shape}"
-        )
+        raise SnervMlxNativeExportError(f"target frame shapes differ: {target0_np.shape} vs {target1_np.shape}")
     if target0_np.ndim != 4 or target0_np.shape[-1] != 3:
-        raise SnervMlxNativeExportError(
-            "targets must be NHWC RGB shaped (pairs, H, W, 3); "
-            f"got {target0_np.shape}"
-        )
+        raise SnervMlxNativeExportError(f"targets must be NHWC RGB shaped (pairs, H, W, 3); got {target0_np.shape}")
     pair = np.stack([target0_np, target1_np], axis=1)
     pair = np.clip(pair.astype(np.float32), 0.0, 1.0) * 255.0
     return np.transpose(pair, (0, 1, 4, 2, 3)).astype(np.float32)
@@ -1674,9 +1525,7 @@ def _source_pair_indices_for_native_export(
 ) -> tuple[int, ...]:
     if pair_indices is None:
         if int(num_pairs) < 1:
-            raise SnervMlxNativeExportError(
-                f"num_pairs must be >= 1; got {num_pairs}"
-            )
+            raise SnervMlxNativeExportError(f"num_pairs must be >= 1; got {num_pairs}")
         return tuple(range(int(num_pairs)))
     normalized = normalize_pair_indices(
         pair_indices,
@@ -1700,8 +1549,7 @@ def _source_pair_indices_for_packet(
     )
     if len(normalized) != int(n_pairs):
         raise SnervMlxNativeExportError(
-            "source_pair_indices length "
-            f"{len(normalized)} does not match packet pair count {int(n_pairs)}"
+            f"source_pair_indices length {len(normalized)} does not match packet pair count {int(n_pairs)}"
         )
     return tuple(int(value) for value in normalized)
 
@@ -1770,22 +1618,16 @@ def _load_recon_pixel_weight_for_native_export(
     if path is None:
         return None, None
     if normalize not in {"mean", "none"}:
-        raise SnervMlxNativeExportError(
-            "recon_pixel_weight_normalize must be 'mean' or 'none'"
-        )
+        raise SnervMlxNativeExportError("recon_pixel_weight_normalize must be 'mean' or 'none'")
     resolved = Path(path).expanduser().resolve(strict=False)
     if not resolved.is_file():
-        raise SnervMlxNativeExportError(
-            f"recon_pixel_weight_path is not a file: {resolved}"
-        )
+        raise SnervMlxNativeExportError(f"recon_pixel_weight_path is not a file: {resolved}")
     npz_key: str | None = None
     if resolved.suffix == ".npz":
         with np.load(resolved) as data:
             keys = sorted(str(key) for key in data.files)
             if not keys:
-                raise SnervMlxNativeExportError(
-                    f"recon_pixel_weight npz is empty: {resolved}"
-                )
+                raise SnervMlxNativeExportError(f"recon_pixel_weight npz is empty: {resolved}")
             npz_key = "weight" if "weight" in data.files else keys[0]
             raw = np.asarray(data[npz_key], dtype=np.float32)
     else:
@@ -1853,9 +1695,7 @@ def _load_recon_pixel_weight_producer_manifest_for_native_export(
     """
 
     if explicit_manifest_path is None:
-        manifest_path = weight_path.with_name(
-            "joint_p18_p19_recon_pixel_weight_manifest.json"
-        )
+        manifest_path = weight_path.with_name("joint_p18_p19_recon_pixel_weight_manifest.json")
         if not manifest_path.is_file():
             return {
                 "schema": "snerv_mlx_native_recon_pixel_weight_producer_manifest.v1",
@@ -1869,29 +1709,20 @@ def _load_recon_pixel_weight_producer_manifest_for_native_export(
             base=weight_path.parent,
         )
         if not manifest_path.is_file():
-            raise SnervMlxNativeExportError(
-                "recon_pixel_weight_manifest_path is not a file: "
-                f"{manifest_path}"
-            )
+            raise SnervMlxNativeExportError(f"recon_pixel_weight_manifest_path is not a file: {manifest_path}")
 
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except Exception as exc:
         raise SnervMlxNativeExportError(
-            "recon pixel weight producer manifest is not valid JSON: "
-            f"{manifest_path}"
+            f"recon pixel weight producer manifest is not valid JSON: {manifest_path}"
         ) from exc
     if not isinstance(manifest, dict):
-        raise SnervMlxNativeExportError(
-            "recon pixel weight producer manifest must be an object: "
-            f"{manifest_path}"
-        )
+        raise SnervMlxNativeExportError(f"recon pixel weight producer manifest must be an object: {manifest_path}")
 
     manifest_weight_path = manifest.get("weight_path")
     if manifest_weight_path is None:
-        raise SnervMlxNativeExportError(
-            "recon pixel weight producer manifest is missing weight_path"
-        )
+        raise SnervMlxNativeExportError("recon pixel weight producer manifest is missing weight_path")
     manifest_resolved = _resolve_recon_pixel_weight_manifest_path(
         manifest_weight_path,
         base=manifest_path.parent,
@@ -1911,9 +1742,7 @@ def _load_recon_pixel_weight_producer_manifest_for_native_export(
 
     config = manifest.get("config")
     if isinstance(config, Mapping):
-        if config.get("num_pairs") is not None and int(config["num_pairs"]) != int(
-            expected_pairs
-        ):
+        if config.get("num_pairs") is not None and int(config["num_pairs"]) != int(expected_pairs):
             raise SnervMlxNativeExportError(
                 "recon pixel weight producer manifest num_pairs mismatch: "
                 f"{config.get('num_pairs')} != {int(expected_pairs)}"
@@ -1930,9 +1759,7 @@ def _load_recon_pixel_weight_producer_manifest_for_native_export(
 
     producer_metadata = manifest.get("metadata")
     if not isinstance(producer_metadata, dict):
-        raise SnervMlxNativeExportError(
-            "recon pixel weight producer manifest is missing metadata object"
-        )
+        raise SnervMlxNativeExportError("recon pixel weight producer manifest is missing metadata object")
     gradient_health = producer_metadata.get("gradient_health")
     if not isinstance(gradient_health, dict):
         raise SnervMlxNativeExportError(
@@ -1940,18 +1767,14 @@ def _load_recon_pixel_weight_producer_manifest_for_native_export(
             "regenerate the surface with the finite-gradient producer"
         )
     blockers = [str(blocker) for blocker in producer_metadata.get("blockers") or []]
-    consumption_recommended = bool(
-        producer_metadata.get("training_consumption_recommended", False)
-    )
+    consumption_recommended = bool(producer_metadata.get("training_consumption_recommended", False))
     if gradient_health.get("status") != "pass_finite":
         raise SnervMlxNativeExportError(
-            "recon pixel weight producer manifest did not pass finite-gradient "
-            f"health: {gradient_health.get('status')}"
+            f"recon pixel weight producer manifest did not pass finite-gradient health: {gradient_health.get('status')}"
         )
     if not consumption_recommended or blockers:
         raise SnervMlxNativeExportError(
-            "recon pixel weight producer manifest is not recommended for "
-            f"training consumption; blockers={blockers}"
+            f"recon pixel weight producer manifest is not recommended for training consumption; blockers={blockers}"
         )
 
     return {
@@ -1986,27 +1809,19 @@ def _normalize_recon_pixel_weight_array(
     normalize: str,
 ) -> np.ndarray:
     if normalize not in {"mean", "none"}:
-        raise SnervMlxNativeExportError(
-            "recon_pixel_weight normalize must be 'mean' or 'none'"
-        )
+        raise SnervMlxNativeExportError("recon_pixel_weight normalize must be 'mean' or 'none'")
     arr = np.asarray(value, dtype=np.float32)
     if arr.ndim == 2:
         h, w = arr.shape
         if (int(h), int(w)) != expected_hw:
-            raise SnervMlxNativeExportError(
-                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
-            )
+            raise SnervMlxNativeExportError(f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}")
         arr = arr[None, None, :, :, None]
     elif arr.ndim == 3:
         h, w, channels = arr.shape
         if (int(h), int(w)) != expected_hw:
-            raise SnervMlxNativeExportError(
-                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
-            )
+            raise SnervMlxNativeExportError(f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}")
         if int(channels) not in (1, 3):
-            raise SnervMlxNativeExportError(
-                "recon_pixel_weight channel count must be 1 or 3"
-            )
+            raise SnervMlxNativeExportError("recon_pixel_weight channel count must be 1 or 3")
         arr = arr[None, None, :, :, :]
     elif arr.ndim == 4:
         leading, h, w, channels = arr.shape
@@ -2016,13 +1831,9 @@ def _normalize_recon_pixel_weight_array(
                 f"expected_pairs={int(expected_pairs)}; got {int(leading)}"
             )
         if (int(h), int(w)) != expected_hw:
-            raise SnervMlxNativeExportError(
-                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
-            )
+            raise SnervMlxNativeExportError(f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}")
         if int(channels) not in (1, 3):
-            raise SnervMlxNativeExportError(
-                "recon_pixel_weight channel count must be 1 or 3"
-            )
+            raise SnervMlxNativeExportError("recon_pixel_weight channel count must be 1 or 3")
         arr = arr[:, None, :, :, :]
     elif arr.ndim == 5:
         pairs, frames, h, w, channels = arr.shape
@@ -2032,30 +1843,21 @@ def _normalize_recon_pixel_weight_array(
                 f"expected_pairs={int(expected_pairs)}; got {int(pairs)}"
             )
         if int(frames) != 2:
-            raise SnervMlxNativeExportError(
-                "5D recon_pixel_weight frame dimension must be 2"
-            )
+            raise SnervMlxNativeExportError("5D recon_pixel_weight frame dimension must be 2")
         if (int(h), int(w)) != expected_hw:
-            raise SnervMlxNativeExportError(
-                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
-            )
+            raise SnervMlxNativeExportError(f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}")
         if int(channels) not in (1, 3):
-            raise SnervMlxNativeExportError(
-                "recon_pixel_weight channel count must be 1 or 3"
-            )
+            raise SnervMlxNativeExportError("recon_pixel_weight channel count must be 1 or 3")
     else:
         raise SnervMlxNativeExportError(
-            "recon_pixel_weight must be shaped (H,W), (H,W,1/3), "
-            "(1|N,H,W,1/3), or (1|N,2,H,W,1/3)"
+            "recon_pixel_weight must be shaped (H,W), (H,W,1/3), (1|N,H,W,1/3), or (1|N,2,H,W,1/3)"
         )
     if not np.isfinite(arr).all():
         raise SnervMlxNativeExportError("recon_pixel_weight must be finite")
     if float(np.min(arr)) < 0.0:
         raise SnervMlxNativeExportError("recon_pixel_weight must be non-negative")
     if float(np.mean(arr)) <= 0.0:
-        raise SnervMlxNativeExportError(
-            "recon_pixel_weight must have positive total mass"
-        )
+        raise SnervMlxNativeExportError("recon_pixel_weight must have positive total mass")
     arr = np.broadcast_to(
         arr,
         (
@@ -2069,9 +1871,7 @@ def _normalize_recon_pixel_weight_array(
     if normalize == "mean":
         mean = float(np.mean(arr))
         if mean <= 0.0 or not np.isfinite(mean):
-            raise SnervMlxNativeExportError(
-                "recon_pixel_weight mean is not positive finite"
-            )
+            raise SnervMlxNativeExportError("recon_pixel_weight mean is not positive finite")
         arr = arr / mean
     return np.ascontiguousarray(arr, dtype=np.float32)
 
@@ -2098,11 +1898,146 @@ def _verify_receiver_frame_decode(
 ) -> None:
     decoded = decode_snerv_archive_frames(archive.packet)
     if tuple(int(v) for v in decoded.shape) != tuple(int(v) for v in reference_shape):
-        raise SnervMlxNativeExportError(
-            f"receiver decode shape {decoded.shape} != reference {tuple(reference_shape)}"
-        )
+        raise SnervMlxNativeExportError(f"receiver decode shape {decoded.shape} != reference {tuple(reference_shape)}")
     if not np.isfinite(decoded).all():
         raise SnervMlxNativeExportError("receiver decode produced nonfinite values")
+
+
+def _official_primitives_packet_metadata(
+    official_binding: Mapping[str, Any] | None,
+    *,
+    blockers: Sequence[str],
+) -> dict[str, Any]:
+    if official_binding is None:
+        return {}
+    return {
+        "snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export": True,
+        "snerv_official_mfu_hfr_tub_receiver_bound_surrogate_kind": (
+            "snar1_linear_hf_generation_decoder_not_official_neural_graph"
+        ),
+        "snerv_official_mfu_hfr_tub_export_bound": False,
+        "snerv_official_mfu_hfr_tub_export_blockers": [str(blocker) for blocker in blockers],
+        "snerv_official_mfu_hfr_tub_binding_schema": official_binding.get("schema"),
+        "source_faithful_stack": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _receiver_bound_official_primitives_export_binding(
+    official_binding: Mapping[str, Any],
+    *,
+    packet_path: Path,
+    packet_bytes: int,
+    packet_sha256: str,
+    selected_archive_metadata: Mapping[str, Any],
+    package: Mapping[str, Any] | None,
+    receiver_proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind the official-primitives request to a real receiver packet, fail-closed."""
+
+    blockers = [str(blocker) for blocker in official_binding.get("blockers") or []]
+    proof_passed = receiver_proof.get("runtime_consumption_proof_passed") is True
+    receiver_satisfied = receiver_proof.get("receiver_contract_satisfied") is True
+    archive_path = receiver_proof.get("archive_path")
+    archive_sha256 = receiver_proof.get("archive_sha256")
+    archive_bytes = receiver_proof.get("archive_bytes")
+    out = dict(official_binding)
+    out["schema"] = "snerv_official_mfu_hfr_tub_export_binding.v3"
+    out["export_bound_to_receiver_packet"] = True
+    out["official_export_bound"] = False
+    out["surrogate_receiver_payload_contract_emitted"] = True
+    out["official_receiver_payload_contract_emitted"] = False
+    out["receiver_bound_surrogate_export"] = {
+        "schema": "snerv_official_receiver_bound_surrogate_export.v1",
+        "kind": "snar1_linear_hf_generation_decoder_not_official_neural_graph",
+        "packet_path": packet_path.as_posix(),
+        "packet_bytes": int(packet_bytes),
+        "packet_sha256": str(packet_sha256),
+        "packet_source_faithful_stack": False,
+        "packet_decoder_payload_codec": selected_archive_metadata.get("decoder_payload_codec"),
+        "packet_decoder_payload_schema": out.get("current_snar_decoder_payload_schema"),
+        "packet_receiver_decode_verified_by_builder": True,
+        "archive_path": str(archive_path) if archive_path else None,
+        "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
+        "archive_sha256": str(archive_sha256) if archive_sha256 else None,
+        "receiver_proof_path": (str(receiver_proof.get("proof_path")) if receiver_proof.get("proof_path") else None),
+        "surrogate_receiver_contract_satisfied": bool(receiver_satisfied),
+        "surrogate_runtime_consumption_proof_passed": bool(proof_passed),
+        "archive_package_present": package is not None,
+        **FALSE_AUTHORITY,
+    }
+    out["blocker_evidence"] = _official_primitives_blocker_evidence(
+        blockers,
+        surrogate_receiver_runtime_decode_passed=bool(proof_passed),
+        surrogate_receiver_contract_satisfied=bool(receiver_satisfied),
+    )
+    out["unclosed_official_blockers"] = blockers
+    out["blockers"] = blockers
+    out["export_consumed_official_mfu"] = False
+    out["export_consumed_official_hfr"] = False
+    out["export_consumed_official_tub"] = False
+    out["source_forward_replay_authority"] = False
+    out["receiver_runtime_decode_authority"] = False
+    out.update(FALSE_AUTHORITY)
+    return out
+
+
+def _official_primitives_blocker_evidence(
+    blockers: Sequence[str],
+    *,
+    surrogate_receiver_runtime_decode_passed: bool,
+    surrogate_receiver_contract_satisfied: bool,
+) -> list[dict[str, Any]]:
+    specs = {
+        "snerv_official_neural_decoder_payload_grammar_missing": {
+            "missing_artifact": ("receiver-visible official decoder graph topology and section grammar"),
+            "current_evidence": ("SNAR1 decoder_payload stores HfGenerationDecoder linear kernels only"),
+            "closure_test": (
+                "decode official graph payload into executable MFU/HFR/TUB/T-output "
+                "receiver objects without scorer or torch sidecars"
+            ),
+        },
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing": {
+            "missing_artifact": ("official state_dict-to-receiver tensor map with per-tensor bytes and sha256"),
+            "current_evidence": ("portable MFU/HFR/TUB primitives exist, but export does not consume official weights"),
+            "closure_test": (
+                "map official encoder/MFU/HFR/TUB/residual-block tensors into the "
+                "receiver payload and verify every mapped tensor hash"
+            ),
+        },
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing": {
+            "missing_artifact": ("same-input official torch forward replay against the portable receiver graph"),
+            "current_evidence": ("surrogate SNAR1 packet decodes, but no official source graph output is compared"),
+            "closure_test": (
+                "run official source forward and portable receiver forward on the "
+                "same frames/weights and record max error plus output sha256"
+            ),
+        },
+        "snerv_official_receiver_runtime_decode_missing": {
+            "missing_artifact": ("inflate runtime that consumes official neural graph sections"),
+            "current_evidence": ("existing runtime consumes linear SNAR1 sections only"),
+            "closure_test": (
+                "generated inflate.sh decodes official graph payload sections into 0.raw with matching receiver proof"
+            ),
+        },
+    }
+    rows = []
+    for blocker in blockers:
+        spec = specs.get(str(blocker), {})
+        rows.append(
+            {
+                "blocker": str(blocker),
+                "closed": False,
+                "missing_artifact": spec.get("missing_artifact", "unspecified"),
+                "current_evidence": spec.get("current_evidence", "unspecified"),
+                "closure_test": spec.get("closure_test", "unspecified"),
+                "surrogate_receiver_runtime_decode_passed": bool(surrogate_receiver_runtime_decode_passed),
+                "surrogate_receiver_contract_satisfied": bool(surrogate_receiver_contract_satisfied),
+                "official_authority": False,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
 
 
 def _blocked_official_primitives_native_export(
@@ -2134,9 +2069,7 @@ def _blocked_official_primitives_native_export(
         "num_pairs": int(num_pairs),
         "source_pair_indices": [int(value) for value in source_pair_indices],
         "pair_index_alignment_mode": (
-            "explicit_source_pair_indices"
-            if explicit_pair_indices
-            else "prefix_source_pair_indices"
+            "explicit_source_pair_indices" if explicit_pair_indices else "prefix_source_pair_indices"
         ),
         "candidate_id": candidate.get("candidate_id"),
         "model_size": model_size.as_jsonable(),
@@ -2160,9 +2093,7 @@ def _blocked_official_primitives_native_export(
             "schema": "snerv_native_mlx_hf_decoder_training.v1",
             "requested_steps": 0,
             "executed": False,
-            "blockers": [
-                "snerv_official_mfu_hfr_tub_export_blocked_before_decoder_training"
-            ],
+            "blockers": ["snerv_official_mfu_hfr_tub_export_blocked_before_decoder_training"],
             **FALSE_AUTHORITY,
         },
         "blockers": blockers,
@@ -2224,9 +2155,7 @@ def _official_primitives_export_binding(
             "official_tub_schema": OFFICIAL_SNERV_T_TUB_SCHEMA,
         },
         "numeric_parity_blockers": list(OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS),
-        "candidate_controls_consumed": {
-            key: value for key, value in consumed_controls.items() if value is not None
-        },
+        "candidate_controls_consumed": {key: value for key, value in consumed_controls.items() if value is not None},
         "export_consumed_official_mfu": False,
         "export_consumed_official_hfr": False,
         "export_consumed_official_tub": False,
@@ -2260,9 +2189,7 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
     return SnervModelSizeConfig(
         fc_dim=fc_dim,
         emb_size=int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0))),
-        patch_radius=int(
-            candidate.get("patch_radius", candidate.get("snerv_patch_radius", 1))
-        ),
+        patch_radius=int(candidate.get("patch_radius", candidate.get("snerv_patch_radius", 1))),
         mfu_scales=scales_tuple,
         hfr_gain=float(candidate.get("hfr_gain", candidate.get("snerv_hfr_gain", 0.0))),
         temporal_context=int(
@@ -2295,12 +2222,7 @@ def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:
         final_size = candidate.get("final_size")
         enc_strds = candidate.get("enc_strds", candidate.get("official_enc_strds"))
         dec_strds = candidate.get("dec_strds", candidate.get("official_dec_strds"))
-        if (
-            full_data_length is not None
-            and final_size is not None
-            and enc_strds is not None
-            and dec_strds is not None
-        ):
+        if full_data_length is not None and final_size is not None and enc_strds is not None and dec_strds is not None:
             return int(
                 official_snerv_modelsize_to_fc_dim(
                     modelsize_mparams=float(modelsize),
