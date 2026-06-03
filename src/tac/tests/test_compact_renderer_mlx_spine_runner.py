@@ -533,11 +533,19 @@ def test_hi_nerv_source_faithfulness_separates_official_controls_from_pr95_gaps(
     )
 
     assert report["classification"] == (
-        "official_hinerv_control_candidate_pr95_better_gaps"
+        "official_hinerv_control_candidate_source_parity_missing_"
+        "pr95_better_gaps"
     )
-    assert report["source_faithful_official_hinerv"] is True
-    assert report["local_hiv1_adaptation"] is False
+    assert report["official_hinerv_control"] is True
+    assert report["source_faithful_official_hinerv"] is False
+    assert report["official_source_parity_proof_required"] is True
+    assert report["official_source_parity_proof_attached"] is False
+    assert report["local_hiv1_adaptation"] is True
     assert report["official_hinerv_blockers"] == []
+    assert report["source_parity_blockers"] == [
+        "hinerv_official_source_parity_proof_missing"
+    ]
+    assert "hinerv_official_source_parity_proof_missing" in report["blockers"]
     assert "hinerv_pr95_pixelshuffle_bilinear_skip_refine_path_missing" in report[
         "pr95_better_blockers"
     ]
@@ -561,7 +569,9 @@ def test_hi_nerv_source_faithfulness_metadata_strips_authority_keys() -> None:
     )
 
     assert metadata["schema"] == "hi_nerv_source_faithfulness.v1"
-    assert metadata["source_faithful_official_hinerv"] is True
+    assert metadata["official_hinerv_control"] is True
+    assert metadata["source_faithful_official_hinerv"] is False
+    assert metadata["official_source_parity_proof_required"] is True
     for forbidden in (
         "score_claim",
         "frontier_score_claim",
@@ -865,10 +875,18 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         row for row in campaign_plan["campaign_rows"] if row["family"] == "snerv"
     ]
     assert snerv_campaign_rows
+    assert all(row["local_mlx_launch_command_ready"] is True for row in snerv_campaign_rows)
     assert all(
-        row["score_lowering_gate"]["local_mlx_executable"] is True
+        row["score_lowering_gate"]["command_materialized"] is True
+        and row["score_lowering_gate"]["local_mlx_executable"] is False
+        and row["score_lowering_gate"]["prelaunch_allowed"] is False
         and row["score_lowering_gate"]["cpu_replay_ready"] is False
         and row["score_lowering_gate"]["exact_gate_ready"] is False
+        for row in snerv_campaign_rows
+    )
+    assert all(
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
+        in row["score_lowering_gate"]["launch_blockers"]
         for row in snerv_campaign_rows
     )
     assert any(
@@ -941,7 +959,17 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         in hinerv_plan["dispatch_blockers"]
     )
     assert families["snerv"]["status"] == (
-        "executable_archive_bound_cpu_advisory_mlx_migration_required"
+        "executable_cpu_advisory_plus_mlx_native_export_adapter_available"
+    )
+    assert families["snerv"]["trainer_kind"] == (
+        "mlx_native_target_hydration_receiver_export_available_"
+        "scoreaware_long_training_missing"
+    )
+    assert families["snerv"]["next_action"].startswith(
+        "bind_learned_mlx_scoreaware_decoder_training_to_snerv_native_export"
+    )
+    assert "optional MLX-native target-hydration/export/receiver-proof attachment" in (
+        families["snerv"]["execution_scope"]
     )
     assert families["snerv"]["archive_exporter"] == (
         "tac.substrates.snerv_inverse_steg_carrier.archive_candidate."

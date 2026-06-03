@@ -80,6 +80,9 @@ def test_snerv_spectra_preserving_adapter_unblocks_training_but_not_official_par
     assert rows["snerv_scorer_loop_decoder_qat"]["status"] == "implemented_or_bound"
     assert rows["snerv_qat_receiver_codec_pricing"]["status"] == "implemented_or_bound"
     assert rows["snerv_official_haar_mode"]["status"] == "implemented_or_bound"
+    assert rows["snerv_official_tub_haar_dwt1d_temporal_primitive"]["status"] == (
+        "implemented_or_bound"
+    )
     assert rows["snerv_receiver_dependency_custody"]["status"] == "implemented_or_bound"
     assert rows["snerv_scalable_layer_admission_policy"]["status"] == ("implemented_or_bound")
     assert rows["snerv_scalable_layer_admission_policy"]["required_for_long_training"] is False
@@ -103,6 +106,18 @@ def test_snerv_spectra_preserving_adapter_unblocks_training_but_not_official_par
     assert official["blockers"] == ("snerv_official_mfu_hfr_tub_parity_missing",)
     official_symbols = {symbol["symbol"] for symbol in official["symbol_rows"] if symbol["status"] == "present"}
     assert "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF" not in official_symbols
+    tub = rows["snerv_official_tub_haar_dwt1d_temporal_primitive"]
+    tub_symbols = {
+        symbol["symbol"]
+        for symbol in tub["symbol_rows"]
+        if symbol["status"] == "present"
+    }
+    assert {
+        "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
+        "SnervTemporalExtension.official_haar_dwt1d_lowpass_features",
+    }.issubset(tub_symbols)
+    assert tub["blockers"] == ()
+    assert {row["status"] for row in tub["source_marker_rows"]} == {"present"}
     controls = {row["control_id"]: row for row in report["control_rows"]}
     assert controls["snerv_fc_dim_modelsize_control"]["status"] == ("implemented_or_declared")
     assert controls["snerv_fc_dim_modelsize_control"]["missing_markers"] == []

@@ -22,7 +22,7 @@ requires a combined value+grad+update step (the canonical helper prefers
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -210,6 +210,7 @@ class MlxScoreAwareAdapter:
         cosine_decay_enabled: bool = False,
         cosine_decay_total_epochs: int | None = None,
         cosine_decay_min_lr_ratio: float = 1e-2,
+        prioritized_pair_indices: Sequence[int] | None = None,
     ) -> None:
         """Initialize the canonical MLX score-aware adapter.
 
@@ -265,6 +266,11 @@ class MlxScoreAwareAdapter:
                 ``cosine_decay_enabled=True``.
             cosine_decay_min_lr_ratio: end-of-decay lr = peak_lr * ratio
                 (default 1e-2 matches the L2 hardening canonical).
+            prioritized_pair_indices: optional hard-pair/sensitivity pair index
+                schedule consumed before random fill. This is non-authority
+                training telemetry only; it lets XRay/master-gradient hard-pair
+                lists steer batches without pretending sampled training covers
+                the full video.
         """
         mx = require_mlx_for_harness()
         import mlx.nn as mlx_nn
@@ -339,6 +345,9 @@ class MlxScoreAwareAdapter:
         )
         self._wave_n11_cosine_decay_min_lr_ratio: float = float(
             cosine_decay_min_lr_ratio
+        )
+        self._prioritized_pair_indices = self._normalize_prioritized_pair_indices(
+            prioritized_pair_indices
         )
         # Wave N+11 telemetry (consumed by tests + landing memo for the
         # canonical Provenance bind step).
@@ -731,8 +740,86 @@ class MlxScoreAwareAdapter:
         num_pairs = self.bundle.num_pairs
         size = min(max(1, batch_size), num_pairs)
         rng = np.random.RandomState(seed)
-        sampled = rng.choice(num_pairs, size=size, replace=False)
+        priority = tuple(
+            pair for pair in self._prioritized_pair_indices if 0 <= pair < num_pairs
+        )
+        priority_take = min(size, len(priority))
+        random_fill_count = size - priority_take
+        priority_selected: list[int] = []
+        if priority_take:
+            offset = int(seed) % len(priority)
+            rotated_priority = priority[offset:] + priority[:offset]
+            priority_selected = [int(value) for value in rotated_priority[:priority_take]]
+        if random_fill_count:
+            priority_set = set(priority_selected)
+            remaining = [
+                pair_index
+                for pair_index in range(num_pairs)
+                if pair_index not in priority_set
+            ]
+            random_selected = rng.choice(
+                remaining,
+                size=random_fill_count,
+                replace=False,
+            ).astype("int32")
+            sampled = np.asarray(
+                [*priority_selected, *[int(value) for value in random_selected.tolist()]],
+                dtype=np.int32,
+            )
+        else:
+            sampled = np.asarray(priority_selected, dtype=np.int32)
+        sampling_policy = (
+            "priority_pairs_then_random_fill" if priority else "deterministic_random"
+        )
+        self._last_batch_observability = {
+            "schema": "mlx_score_aware_pair_batch_observability.v1",
+            "num_pairs": int(num_pairs),
+            "requested_batch_size": int(batch_size),
+            "actual_batch_size": int(size),
+            "seed": int(seed),
+            "sampling_policy": sampling_policy,
+            "prioritized_pair_count": len(priority),
+            "priority_pair_indices_in_batch": priority_selected,
+            "random_fill_count": int(random_fill_count),
+            "pair_indices": [int(value) for value in sampled.tolist()],
+            "pair_index_min": int(sampled.min()) if sampled.size else None,
+            "pair_index_max": int(sampled.max()) if sampled.size else None,
+            "coverage_fraction": float(size) / float(num_pairs) if num_pairs else 0.0,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
         return mx.array(sampled.astype("int32"))
+
+    def batch_observability(self, _batch: Any | None = None) -> Mapping[str, Any] | None:
+        """Return the last sampled pair-index batch for telemetry only."""
+
+        observed = getattr(self, "_last_batch_observability", None)
+        return dict(observed) if isinstance(observed, Mapping) else None
+
+    def _normalize_prioritized_pair_indices(
+        self,
+        prioritized_pair_indices: Sequence[int] | None,
+    ) -> tuple[int, ...]:
+        if prioritized_pair_indices is None:
+            return ()
+        out: list[int] = []
+        seen: set[int] = set()
+        for raw in prioritized_pair_indices:
+            try:
+                value = int(raw)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "prioritized_pair_indices must contain integer pair indices"
+                ) from exc
+            if value < 0:
+                raise ValueError(
+                    f"prioritized_pair_indices must be non-negative; got {value}"
+                )
+            if value not in seen:
+                seen.add(value)
+                out.append(value)
+        return tuple(out)
 
     def _build_wave_n11_optimizer(self, learning_rate: float) -> Any:
         """Build the canonical Wave N+11 stabilizer-aware optimizer.

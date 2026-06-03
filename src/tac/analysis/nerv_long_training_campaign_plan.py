@@ -379,6 +379,11 @@ def _hinerv_campaign_row(
         index=candidate_feedback_index,
     )
     feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
+    family_training_telemetry_context = _family_training_telemetry_context_for(
+        candidate=candidate,
+        family="hi_nerv",
+        index=candidate_feedback_index,
+    )
     decoder_weight_waterfill = _decoder_weight_waterfill_for(
         candidate=candidate,
         family="hi_nerv",
@@ -581,6 +586,7 @@ def _hinerv_campaign_row(
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
+            "family_training_telemetry_context": family_training_telemetry_context or None,
             "source_faithfulness_controls": source_faithfulness_controls,
             "source_parity": source_parity,
             "output_dir_basename": output_dir_basename,
@@ -1967,6 +1973,79 @@ def _family_level_candidate_feedback_rows(
     return sorted(rows, key=_candidate_feedback_sort_key, reverse=True)
 
 
+def _family_training_telemetry_context_for(
+    *,
+    candidate: Mapping[str, Any],
+    family: str,
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+) -> dict[str, Any]:
+    family_key = _family_key(family)
+    if family_key != "hi_nerv":
+        return {}
+    target_num_pairs = int(candidate.get("num_pairs") or 0)
+    if target_num_pairs <= 0:
+        return {}
+    rows: list[dict[str, Any]] = []
+    for (row_family, _row_candidate_id), candidate_rows in (index or {}).items():
+        if row_family != family_key:
+            continue
+        for row in candidate_rows:
+            if _family_training_telemetry_context_applicable(
+                target_num_pairs=target_num_pairs,
+                row=row,
+            ):
+                rows.append(dict(row))
+    if not rows:
+        return {}
+    return _sanitize_family_training_telemetry_context(
+        row=sorted(rows, key=_candidate_feedback_sort_key, reverse=True)[0],
+        target_candidate=candidate,
+    )
+
+
+def _family_training_telemetry_context_applicable(
+    *,
+    target_num_pairs: int,
+    row: Mapping[str, Any],
+) -> bool:
+    if str(row.get("feedback_kind") or "").strip() != "training_telemetry":
+        return False
+    if str(row.get("feedback_scope") or "").strip() != "full600_training_telemetry":
+        return False
+    measured_num_pairs = int(row.get("measured_num_pairs") or row.get("candidate_num_pairs") or 0)
+    return measured_num_pairs == int(target_num_pairs)
+
+
+def _sanitize_family_training_telemetry_context(
+    *,
+    row: Mapping[str, Any],
+    target_candidate: Mapping[str, Any],
+) -> dict[str, Any]:
+    out = dict(row)
+    source_candidate_id = str(row.get("candidate_id") or "").strip()
+    target_candidate_id = str(target_candidate.get("candidate_id") or "").strip()
+    candidate_match = bool(source_candidate_id and source_candidate_id == target_candidate_id)
+    out["source_candidate_id"] = source_candidate_id
+    out["target_candidate_id"] = target_candidate_id
+    out["candidate_id_match"] = candidate_match
+    out["feedback_match_scope"] = (
+        "candidate_training_telemetry_context" if candidate_match else "family_training_telemetry_context"
+    )
+    out["scope_matches_candidate"] = candidate_match
+    out["receiver_proof_attached"] = False
+    out["full_video_local_prefilter_attached"] = False
+    out["local_cpu_replay_gate_attached"] = False
+    out["measured_archive_bytes"] = None
+    out["measured_payload_bytes"] = None
+    out["launch_control_feedback_ready"] = False
+    out["context_only"] = True
+    out["feedback_reuse_policy"] = (
+        "telemetry_context_only_no_launch_mutation_no_archive_receiver_or_replay_authority"
+    )
+    out.update(FALSE_AUTHORITY)
+    return out
+
+
 def _family_level_candidate_feedback_applicable(
     *,
     candidate: Mapping[str, Any],
@@ -2455,6 +2534,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "coder_qat_control",
         "decoder_weight_waterfill_plan",
         "feedback_launch_adjustment",
+        "family_training_telemetry_context",
         "optimizer_control",
         "optimizer_policy",
         "source_faithfulness_controls",

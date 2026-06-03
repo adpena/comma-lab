@@ -242,6 +242,25 @@ def _utc_now_iso() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _jsonable(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, Mapping):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_jsonable(v) for v in value]
+    try:
+        return value.item()
+    except AttributeError:
+        return str(value)
+
+
+def _jsonable_mapping(mapping: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): _jsonable(value) for key, value in mapping.items()}
+
+
 def _sha256_text(payload: str) -> str:
     """Hex sha256 of a text payload."""
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -754,6 +773,10 @@ class PerEpochMetrics:
         per_axis_decomposition: optional per-axis seg/pose/rate per
             Catalog #356 dual-tier consumer architecture. None if the
             substrate adapter does not expose score-aware components.
+        batch_observability: optional non-authority sampling telemetry from
+            the adapter, such as pair indices touched by the train/eval
+            batches. This exists to prevent small-subset distortion wins from
+            being mistaken for full-video coverage.
         wall_clock_seconds: cumulative wall-clock seconds since training start.
         ema_drift_l2: L2 norm of (live_params - ema_shadow_params).
         learning_rate: effective learning rate at this epoch
@@ -766,6 +789,7 @@ class PerEpochMetrics:
     loss: float
     loss_components: Mapping[str, float] = field(default_factory=dict)
     per_axis_decomposition: Mapping[str, float] | None = None
+    batch_observability: Mapping[str, Any] | None = None
     wall_clock_seconds: float = 0.0
     ema_drift_l2: float = 0.0
     learning_rate: float = 0.0
@@ -788,6 +812,11 @@ class PerEpochMetrics:
             "per_axis_decomposition": (
                 {k: float(v) for k, v in self.per_axis_decomposition.items()}
                 if self.per_axis_decomposition is not None
+                else None
+            ),
+            "batch_observability": (
+                _jsonable_mapping(self.batch_observability)
+                if self.batch_observability is not None
                 else None
             ),
             "wall_clock_seconds": float(self.wall_clock_seconds),
@@ -2086,6 +2115,21 @@ def _archive_selection_components(
     return out
 
 
+def _adapter_batch_observability(adapter: Any, batch: Any | None = None) -> Mapping[str, Any] | None:
+    hook = getattr(adapter, "batch_observability", None)
+    if callable(hook):
+        try:
+            observed = hook(batch)
+        except TypeError:
+            observed = hook()
+        if isinstance(observed, Mapping):
+            return observed
+    observed = getattr(adapter, "last_batch_observability", None)
+    if isinstance(observed, Mapping):
+        return observed
+    return None
+
+
 def _archive_selection_proxy_score(
     components: Mapping[str, float] | None,
     *,
@@ -2422,6 +2466,7 @@ def run_long_training(
             early_stopped = True
             early_stop_reason = f"oom_safe_runner_exhausted:{exc!s}"
             break
+        train_batch_observability = _adapter_batch_observability(adapter)
 
         # 4) EMA update post-optimizer-step per canonical Polyak pattern.
         try:
@@ -2437,13 +2482,16 @@ def run_long_training(
         per_axis: Mapping[str, float] | None = None
         try:
             sample = adapter.sample_batch(config.batch_pair_indices_per_step, config.seed + epoch + 1_000_000)
+            per_axis_batch_observability = _adapter_batch_observability(adapter, sample)
             per_axis = adapter.score_aware_components(adapter.model, sample)
         except (NotImplementedError, AttributeError):
             per_axis = None
+            per_axis_batch_observability = None
         except Exception as exc:
             # Per-axis decomposition is observability-only; never fail the run.
             print(f"[long_training_canonical] WARN: score_aware_components failed at epoch {epoch}: {exc!r}")
             per_axis = None
+            per_axis_batch_observability = None
 
         # 6) Record canonical metrics.
         wall_clock = time.time() - t_start
@@ -2460,6 +2508,17 @@ def run_long_training(
             loss=total_loss,
             loss_components=loss_components,
             per_axis_decomposition=per_axis,
+            batch_observability={
+                "schema": "long_training_batch_observability.v1",
+                "train_batch": train_batch_observability,
+                "per_axis_batch": per_axis_batch_observability,
+                "actual_train_batch_size": int(actual_bs),
+                "requested_batch_size": int(config.batch_pair_indices_per_step),
+                "coverage_scope": "sampled_pair_indices_not_full_video_replay",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             wall_clock_seconds=wall_clock,
             ema_drift_l2=drift,
             learning_rate=effective_lr,

@@ -368,6 +368,7 @@ def test_run_mlx_score_aware_full_main_end_to_end(tmp_path: Path) -> None:
         batch_pair_indices_per_step=2,
         learning_rate=1e-3,
         seed=0,
+        prioritized_pair_indices=(3, 1),
         notes=(
             "harness end-to-end test: dreamer renderer + synthetic-zero "
             "targets + Hinton-KL scorer surrogate via canonical "
@@ -380,6 +381,11 @@ def test_run_mlx_score_aware_full_main_end_to_end(tmp_path: Path) -> None:
     d = artifact.as_dict()
     assert d.get("score_claim") is False
     assert d.get("promotion_eligible") is False
+    first_batch = d["per_epoch_metrics"][0]["batch_observability"]["train_batch"]
+    assert first_batch["sampling_policy"] == "priority_pairs_then_random_fill"
+    assert first_batch["priority_pair_indices_in_batch"] == [3, 1]
+    assert first_batch["pair_indices"] == [3, 1]
+    assert first_batch["score_claim"] is False
 
 
 @mlx_only

@@ -317,8 +317,13 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
     },
     "snerv": {
         "canonical_family": "snerv",
-        "backend_status": "executable_archive_bound_cpu_advisory_mlx_migration_required",
-        "trainer_kind": "cpu_advisory_snerv_lf_hf_carrier_mlx_native_trainer_missing",
+        "backend_status": (
+            "executable_cpu_advisory_plus_mlx_native_export_adapter_available"
+        ),
+        "trainer_kind": (
+            "mlx_native_target_hydration_receiver_export_available_"
+            "scoreaware_long_training_missing"
+        ),
         "trainer_entrypoint": "tools/run_compact_renderer_mlx_spine_runner.py --execute-family snerv",
         "archive_exporter": (
             "tac.substrates.snerv_inverse_steg_carrier.archive_candidate."
@@ -326,15 +331,17 @@ COMPACT_FAMILY_BACKENDS: dict[str, dict[str, Any]] = {
         ),
         "receiver_proof": "generated_inflate_sh_receiver_proof_from_snerv_packet",
         "next_action": (
-            "migrate_snerv_wavelet_lf_hf_carrier_to_mlx_native_train_export_"
+            "bind_learned_mlx_scoreaware_decoder_training_to_snerv_native_export_"
             "under_same_packet_spine_with_charged_wavelet_features_no_hidden_sidecars"
         ),
         "execution_scope": (
             "primary compact carrier candidate; SNeRV wavelet/frequency split "
             "must be charged as decoder/latent/selector/codebook bytes and "
             "validated by receiver proof before promotion. Current executable "
-            "path is CPU advisory plus archive-bound runtime package; MLX-native "
-            "score-aware training remains the next blocker."
+            "path is CPU advisory plus archive-bound runtime package, with an "
+            "optional MLX-native target-hydration/export/receiver-proof "
+            "attachment. Learned MLX score-aware training remains the next "
+            "blocker."
         ),
         "stack_role": "primary_carrier",
         "carrier_priority": 9,
@@ -7959,18 +7966,25 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
         "hinerv_pr95_pixelshuffle_bilinear_skip_refine_path_missing",
         "hinerv_pr95_pr101_latent_delta_brotli_codec_missing",
     ]
-    source_faithful = not official_hinerv_blockers
-    if source_faithful and pr95_better_blockers:
-        classification = "official_hinerv_control_candidate_pr95_better_gaps"
-    elif source_faithful:
-        classification = "official_hinerv_control_candidate"
+    official_hinerv_control = not official_hinerv_blockers
+    source_parity_blockers = ["hinerv_official_source_parity_proof_missing"]
+    source_faithful = False
+    if official_hinerv_control and pr95_better_blockers:
+        classification = (
+            "official_hinerv_control_candidate_source_parity_missing_"
+            "pr95_better_gaps"
+        )
+    elif official_hinerv_control:
+        classification = "official_hinerv_control_candidate_source_parity_missing"
     else:
         classification = "local_hiv1_adaptation_not_official_hinerv"
     return {
         "schema": "hi_nerv_source_faithfulness.v1",
         "classification": classification,
         "source_faithful_official_hinerv": source_faithful,
-        "official_hinerv_control": source_faithful,
+        "official_hinerv_control": official_hinerv_control,
+        "official_source_parity_proof_required": True,
+        "official_source_parity_proof_attached": False,
         "local_hiv1_adaptation": not source_faithful,
         "use_hierarchical_feature_grid": hierarchical_grid,
         "use_convnext_blocks": convnext_blocks,
@@ -7980,8 +7994,13 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
         "convnext_kernel_size": int(getattr(cfg, "convnext_kernel_size", 0) or 0),
         "decoder_codec": str(decoder_codec),
         "official_hinerv_blockers": official_hinerv_blockers,
+        "source_parity_blockers": source_parity_blockers,
         "pr95_better_blockers": pr95_better_blockers,
-        "blockers": [*official_hinerv_blockers, *pr95_better_blockers],
+        "blockers": [
+            *official_hinerv_blockers,
+            *source_parity_blockers,
+            *pr95_better_blockers,
+        ],
         "authority_note": (
             "This classifies source/architecture custody only. It is not score "
             "authority, and local HiNeRV/MLX rows remain false-authority until "

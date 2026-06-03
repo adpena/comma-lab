@@ -102,6 +102,74 @@ def test_adapter_constructs_with_full_wave_n11_recipe(minimal_bundle, adapter_kw
     assert a._wave_n11_cosine_decay_total_epochs == 50
 
 
+def test_adapter_priority_pair_sampling_consumes_hard_pair_indices(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """Hard-pair lists feed real batches before random fill, not just metadata."""
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        prioritized_pair_indices=(3, 1, 1, 99),
+        **adapter_kwargs,
+    )
+
+    batch = a.sample_batch(batch_size=3, seed=0)
+    observed = a.batch_observability(batch)
+
+    assert [int(value) for value in batch.tolist()] == [3, 1, 2]
+    assert observed["sampling_policy"] == "priority_pairs_then_random_fill"
+    assert observed["prioritized_pair_count"] == 2
+    assert observed["priority_pair_indices_in_batch"] == [3, 1]
+    assert observed["random_fill_count"] == 1
+    assert observed["pair_indices"] == [3, 1, 2]
+    assert observed["score_claim"] is False
+    assert observed["ready_for_exact_eval_dispatch"] is False
+
+
+def test_adapter_priority_pair_sampling_rotates_by_seed(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """Different epochs can cover different hard-pair prefixes deterministically."""
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        prioritized_pair_indices=(3, 1, 2),
+        **adapter_kwargs,
+    )
+
+    batch = a.sample_batch(batch_size=2, seed=1)
+    observed = a.batch_observability()
+
+    assert [int(value) for value in batch.tolist()] == [1, 2]
+    assert observed["priority_pair_indices_in_batch"] == [1, 2]
+    assert observed["random_fill_count"] == 0
+
+
+def test_adapter_rejects_malformed_priority_pair_indices(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """Hard-pair sampling cannot silently coerce invalid pair ids."""
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    with pytest.raises(ValueError, match="non-negative"):
+        MlxScoreAwareAdapter(
+            minimal_bundle,
+            prioritized_pair_indices=(-1,),
+            **adapter_kwargs,
+        )
+    with pytest.raises(ValueError, match="integer pair indices"):
+        MlxScoreAwareAdapter(
+            minimal_bundle,
+            prioritized_pair_indices=("bad",),
+            **adapter_kwargs,
+        )
+
+
 def test_adapter_rejects_invalid_grad_clip_max_norm(minimal_bundle, adapter_kwargs):
     """Negative or zero grad_clip_max_norm is rejected."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
@@ -644,6 +712,7 @@ def test_harness_constructs_adapter_with_wave_n11_kwargs():
         "warmup_steps_per_epoch",
         "weight_decay",
         "optimizer_kind",
+        "prioritized_pair_indices",
         "cosine_decay_enabled",
         "cosine_decay_total_epochs",
         "cosine_decay_min_lr_ratio",

@@ -340,6 +340,16 @@ def build_snerv_candidate_curriculum_plan(
         and native_file_proof_passed
     )
     native_train_export_planned = bool(native_mlx_train_export_attached)
+    current_execution_path = (
+        "cpu_advisory_plus_mlx_native_export_attachment"
+        if native_train_export_planned
+        else "cpu_advisory_receiver_bound_packet"
+    )
+    next_required_adapter = (
+        "snerv_learned_scoreaware_mlx_training_loop_bound_to_native_export"
+        if bool(native_contract.get("surfaces_ready"))
+        else "snerv_mlx_native_train_export_archive"
+    )
     standalone_scorer_loop_attached = bool(scorer_loop_qat_attached)
     native_scorer_loop_planned = bool(native_mlx_scorer_loop_qat_attached)
     native_scorer_loop_verified = bool(
@@ -500,8 +510,8 @@ def build_snerv_candidate_curriculum_plan(
         "training_plan": {
             "requested_epochs": int(requested_epochs),
             "native_mlx_training_required": True,
-            "current_execution_path": "cpu_advisory_receiver_bound_packet",
-            "next_required_adapter": "snerv_mlx_native_train_export_archive",
+            "current_execution_path": current_execution_path,
+            "next_required_adapter": next_required_adapter,
             "native_mlx_adapter_contract": native_contract,
             "native_mlx_adapter_surfaces_ready": bool(
                 native_contract.get("surfaces_ready")
@@ -521,6 +531,10 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_train_export_planned": native_train_export_planned,
             "native_mlx_train_export_attached": bool(native_mlx_train_export_attached),
             "native_mlx_train_export_verified": native_export_verified,
+            "native_mlx_export_attachment_is_learned_training": False,
+            "learned_scoreaware_mlx_training_required_next": (
+                not bool(native_mlx_long_training_bound)
+            ),
             "native_mlx_long_training_bound": bool(native_mlx_long_training_bound),
             "native_mlx_receiver_proof_passed": bool(
                 native_mlx_receiver_proof_passed

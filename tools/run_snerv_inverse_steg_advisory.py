@@ -31,6 +31,7 @@ if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.substrates.snerv_inverse_steg_carrier.advisory import (  # noqa: E402  (sys.path bootstrap above)
+    CONTEST_BYTE_PRICE,
     run_snerv_advisory,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (  # noqa: E402
@@ -47,6 +48,102 @@ from tac.substrates.snerv_inverse_steg_carrier.trained_ladder_bridge import (  #
 def _default_out() -> str:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     return f".omx/research/snerv_inverse_steg_advisory_{stamp}.json"
+
+
+def _sha256_file(path: Path) -> str:
+    h = __import__("hashlib").sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _float_attr(value: object, name: str, default: float = 0.0) -> float:
+    try:
+        return float(getattr(value, name))
+    except (TypeError, ValueError, AttributeError):
+        return float(default)
+
+
+def _int_attr(value: object, name: str, default: int = 0) -> int:
+    try:
+        return int(getattr(value, name))
+    except (TypeError, ValueError, AttributeError):
+        return int(default)
+
+
+def _charge_packaged_archive_rate(
+    *,
+    payload: dict[str, object],
+    advisory_result: object,
+    archive_zip_path: Path,
+) -> None:
+    """Make packaged archive.zip bytes the charged rate numerator.
+
+    The raw SNAR1 packet remains useful diagnostic telemetry, but contest rate
+    is paid on the packaged archive. This helper is intentionally CLI-local
+    because ``run_snerv_advisory`` can also be used without packaging.
+    """
+
+    archive_bytes = archive_zip_path.stat().st_size
+    archive_sha256 = _sha256_file(archive_zip_path)
+    packet_bytes = _int_attr(advisory_result, "archive_bytes_total")
+    packet_rate = _float_attr(advisory_result, "rate_term")
+    packet_score_linf = _float_attr(advisory_result, "score_linf")
+    nonrate_linf = packet_score_linf - packet_rate
+    charged_rate = float(CONTEST_BYTE_PRICE * archive_bytes)
+    charged_score_linf = float(nonrate_linf + charged_rate)
+    frontier_bytes = _int_attr(advisory_result, "pr101_frontier_bytes")
+
+    payload["receiver_snar_packet_rate_accounting"] = {
+        "schema": "snerv_receiver_snar_packet_rate_accounting.v1",
+        "archive_path_kind": "receiver_snar_packet",
+        "archive_bytes_total": packet_bytes,
+        "rate_term": packet_rate,
+        "score_linf": packet_score_linf,
+        "score_linf_without_rate": nonrate_linf,
+        "receiver_archive_sha256": getattr(
+            advisory_result, "receiver_archive_sha256", None
+        ),
+        "chargeable_for_contest_submission": False,
+    }
+    payload["charged_archive_rate_accounting"] = {
+        "schema": "snerv_packaged_archive_rate_accounting.v1",
+        "archive_path_kind": "contest_archive_zip",
+        "archive_path": archive_zip_path.as_posix(),
+        "archive_bytes": archive_bytes,
+        "archive_bytes_total": archive_bytes,
+        "archive_sha256": archive_sha256,
+        "rate_term": charged_rate,
+        "score_linf": charged_score_linf,
+        "score_linf_without_rate": nonrate_linf,
+        "beats_frontier_rate": bool(
+            frontier_bytes > 0 and archive_bytes < frontier_bytes
+        ),
+        "packet_bytes_preserved_as_diagnostic": packet_bytes,
+        "packet_to_package_byte_delta": archive_bytes - packet_bytes,
+        "chargeable_for_contest_submission": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    payload["archive_bytes_total_before_package"] = packet_bytes
+    payload["rate_term_before_package"] = packet_rate
+    payload["score_linf_before_package"] = packet_score_linf
+    payload["charged_archive_path_kind"] = "contest_archive_zip"
+    payload["charged_archive_path"] = archive_zip_path.as_posix()
+    payload["charged_archive_sha256"] = archive_sha256
+    payload["archive_bytes_total"] = archive_bytes
+    payload["rate_term"] = charged_rate
+    payload["score_linf"] = charged_score_linf
+    payload["beats_frontier_rate"] = bool(
+        frontier_bytes > 0 and archive_bytes < frontier_bytes
+    )
+    payload["score_l2_archive_path_kind"] = "receiver_snar_packet"
+    payload["score_l2_package_rate_not_recomputed_reason"] = (
+        "the CLI packages only the selected L-inf SNAR1 packet; L2 remains a "
+        "separate packet-scoped diagnostic unless its packet is packaged too"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -291,6 +388,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         payload["runtime_package_dir"] = str(package_dir)
         payload["runtime_package"] = package
+        archive_zip_path = package_dir / "archive.zip"
+        if archive_zip_path.is_file():
+            _charge_packaged_archive_rate(
+                payload=payload,
+                advisory_result=res,
+                archive_zip_path=archive_zip_path,
+            )
+        else:
+            payload["packaged_archive_rate_accounting_blocker"] = (
+                "contest_archive_zip_missing_after_package_export"
+            )
     trained_row_archive_path: Path | None = None
     trained_row_archive_kind: str | None = None
     trained_row_receiver_proof: dict[str, object] | None = None
@@ -353,6 +461,20 @@ def main(argv: list[str] | None = None) -> int:
         "  metadata = "
         f"{res.metadata_bytes} B  archive_header = {res.receiver_archive_header_bytes} B"
     )
+    charged_archive_bytes_total = int(
+        payload.get("archive_bytes_total", res.archive_bytes_total)
+    )
+    charged_archive_sha256 = str(
+        payload.get("charged_archive_sha256", res.receiver_archive_sha256)
+    )
+    charged_archive_path_kind = str(
+        payload.get("charged_archive_path_kind", "receiver_snar_packet")
+    )
+    charged_rate_term = float(payload.get("rate_term", res.rate_term))
+    charged_score_linf = float(payload.get("score_linf", res.score_linf))
+    charged_beats_frontier_rate = bool(
+        payload.get("beats_frontier_rate", res.beats_frontier_rate)
+    )
     print(
         "  decoder = "
         f"{res.decoder_bytes} B  codec={res.decoder_payload_codec} "
@@ -366,16 +488,17 @@ def main(argv: list[str] | None = None) -> int:
         f"fit={res.hf_decoder_fit_mode} "
         f"gain={res.hf_decoder_saliency_gain:g} "
         f"component={res.hf_decoder_saliency_component}  "
-        f"archive_total = {res.archive_bytes_total} B "
-        f"sha256={res.receiver_archive_sha256[:12]}"
+        f"archive_total = {charged_archive_bytes_total} B "
+        f"source={charged_archive_path_kind} "
+        f"sha256={charged_archive_sha256[:12]}"
     )
     print(
-        f"  rate_term = {res.rate_term:.5f} "
+        f"  rate_term = {charged_rate_term:.5f} "
         f"(shared charged archive term; frontier {res.pr101_frontier_bytes} B = "
         f"{res.pr101_frontier_rate:.5f})"
     )
-    print(f"  beats_frontier_rate = {res.beats_frontier_rate}")
-    print(f"  d_seg(linf) = {res.d_seg_mean_linf:.5f}  d_pose(linf) = {res.d_pose_mean_linf:.5f}  score_linf = {res.score_linf:.5f}")
+    print(f"  beats_frontier_rate = {charged_beats_frontier_rate}")
+    print(f"  d_seg(linf) = {res.d_seg_mean_linf:.5f}  d_pose(linf) = {res.d_pose_mean_linf:.5f}  score_linf = {charged_score_linf:.5f}")
     print(f"  d_seg(l2)   = {res.d_seg_mean_l2:.5f}  d_pose(l2)   = {res.d_pose_mean_l2:.5f}  score_l2   = {res.score_l2:.5f}")
     print(f"  Z8 detail-store-frac = {res.z8_disease_detail_store_frac:.3f}")
     print(f"  Z8 falsification: {res.z8_falsification_verdict}")

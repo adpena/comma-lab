@@ -73,6 +73,7 @@ def run_mlx_score_aware_full_main(
     cosine_decay_enabled: bool = False,
     cosine_decay_total_epochs: int | None = None,
     cosine_decay_min_lr_ratio: float = 1e-2,
+    prioritized_pair_indices: tuple[int, ...] = (),
     ema_archive_selection_enabled: bool = False,
 ) -> Any:
     """Run the canonical MLX-first score-aware ``_full_main`` body.
@@ -134,6 +135,10 @@ def run_mlx_score_aware_full_main(
             ignored otherwise. Smaller budgets (e.g. 100 for an MLX
             smoke) scale per ``PR95FaithfulCurriculumFactory`` canonical
             proportional-ratio rule.
+        prioritized_pair_indices: optional hard-pair/sensitivity pair indices
+            sampled before random fill by the shared MLX adapter. This is local
+            training emphasis and telemetry only; it does not create full-video
+            replay or score authority.
         ema_archive_selection_enabled: when True, the canonical trainer exports
             both live and EMA final archives, evaluates their local score-aware
             proxy plus charged archive bytes, writes
@@ -198,6 +203,7 @@ def run_mlx_score_aware_full_main(
         cosine_decay_enabled=cosine_decay_enabled,
         cosine_decay_total_epochs=cosine_decay_total_epochs,
         cosine_decay_min_lr_ratio=cosine_decay_min_lr_ratio,
+        prioritized_pair_indices=prioritized_pair_indices,
     )
 
     config = LongTrainingConfig(

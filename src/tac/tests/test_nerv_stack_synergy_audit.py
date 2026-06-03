@@ -90,7 +90,8 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     )
     assert "snerv_official_mfu_block_missing" in stacks["snerv"]["blockers"]
     assert "snerv_official_hfr_block_missing" in stacks["snerv"]["blockers"]
-    assert "snerv_official_snerv_t_temporal_path_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_official_snerv_t_full_tub_path_not_source_forward_parity" in stacks["snerv"]["blockers"]
+    assert "snerv_official_snerv_t_temporal_path_missing" not in stacks["snerv"]["blockers"]
     assert "snerv_official_haar_j1_parity_missing" in stacks["snerv"]["blockers"]
     assert "snerv_l2_linf_receiver_packet_rate_accounting_not_separated" in stacks["snerv"]["blockers"]
     assert (

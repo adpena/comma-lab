@@ -558,6 +558,37 @@ def _source_features() -> tuple[SourceFeature, ...]:
         ),
         SourceFeature(
             family="snerv",
+            feature_id="snerv_official_tub_haar_dwt1d_temporal_primitive",
+            official_source_id="snerv_spectra_preserving_official_repo",
+            implementation_target=(
+                "official SNeRV_T Haar DWT1D lowpass/2 temporal primitive is "
+                "receiver-visible and numerically tested; this is narrower than "
+                "full official MFU/HFR/TUB source-forward parity"
+            ),
+            required_symbols=(
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_tub_haar_dwt1d_temporal_primitive",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
+                    "official SNeRV_T Haar/DWT1D lowpass proof constant",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_tub_haar_dwt1d_temporal_primitive",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "SnervTemporalExtension.official_haar_dwt1d_lowpass_features",
+                    "receiver-visible official SNeRV_T temporal primitive",
+                ),
+            ),
+            required_source_markers=(
+                "official_haar_dwt1d_lowpass_features",
+                "1.0 / (2.0 * np.sqrt(2.0))",
+            ),
+            blocker_if_missing="snerv_official_tub_haar_dwt1d_temporal_primitive_missing",
+        ),
+        SourceFeature(
+            family="snerv",
             feature_id="snerv_official_mfu_hfr_tub_parity",
             official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target=(

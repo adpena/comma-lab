@@ -91,6 +91,13 @@ class _MockSubstrateAdapter:
 
     def sample_batch(self, batch_size: int, seed: int) -> Any:
         self.batch_history.append((batch_size, seed))
+        self.last_batch_observability = {
+            "schema": "mock_pair_batch_observability.v1",
+            "pair_indices": [int(seed % 600), int((seed + batch_size) % 600)],
+            "actual_batch_size": int(batch_size),
+            "seed": int(seed),
+            "score_claim": False,
+        }
         return {"batch_size": batch_size, "seed": seed}
 
     def loss_fn(
@@ -744,6 +751,17 @@ def test_run_long_training_emits_telemetry_jsonl(tmp_path: Path) -> None:
         assert "epoch" in row
         assert "stage_name" in row
         assert "loss" in row
+        assert row["batch_observability"]["schema"] == "long_training_batch_observability.v1"
+        assert row["batch_observability"]["coverage_scope"] == "sampled_pair_indices_not_full_video_replay"
+        train_batch = row["batch_observability"]["train_batch"]
+        per_axis_batch = row["batch_observability"]["per_axis_batch"]
+        assert train_batch["schema"] == "mock_pair_batch_observability.v1"
+        assert per_axis_batch["schema"] == "mock_pair_batch_observability.v1"
+        assert train_batch["pair_indices"]
+        assert per_axis_batch["pair_indices"]
+        assert train_batch["seed"] != per_axis_batch["seed"]
+        assert row["batch_observability"]["score_claim"] is False
+        assert row["batch_observability"]["ready_for_exact_eval_dispatch"] is False
 
 
 def test_run_long_training_typed_callback_stop_preserves_artifact(

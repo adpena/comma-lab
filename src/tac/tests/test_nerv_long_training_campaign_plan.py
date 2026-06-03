@@ -1389,6 +1389,76 @@ def test_long_training_campaign_plan_reuses_family_segnet_stagnation_feedback() 
     assert "hi_nerv_receiver_proof_missing" in hi["blockers"]
 
 
+def test_long_training_campaign_plan_preserves_nonlaunch_hinerv_family_telemetry_context() -> None:
+    hinerv_budget = _hinerv_budget()
+    sibling = dict(hinerv_budget["selected_candidates"][0])
+    sibling["candidate_id"] = "hinerv_np600_ld16_ed24_dc6_int4_mixed_ceil178000_tgtmp0p05"
+    hinerv_budget["selected_candidates"] = [sibling]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "training_stopped": False,
+                "training_control_action": "continue_running",
+                "training_control_reason": "no_live_training_replan_trigger",
+                "pose_instability_detected": False,
+                "pose_instability_ever_detected": True,
+                "pose_instability_recovered": True,
+                "seg_stagnation_detected": False,
+                "seg_stagnation_relative_improvement": 0.0944,
+                "observed_learning_rate": 2.7e-5,
+                "observed_segnet_distillation_weight": 4.0,
+                "recommended_learning_rate": None,
+                "recommended_segnet_distillation_weight": None,
+                "training_telemetry": {"last_epoch": 19_781, "row_count": 19_782},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["candidate_feedback"] is None
+    context = hi["family_training_telemetry_context"]
+    assert context["context_only"] is True
+    assert context["candidate_id_match"] is False
+    assert context["feedback_match_scope"] == "family_training_telemetry_context"
+    assert context["source_candidate_id"] == "hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000"
+    assert context["target_candidate_id"] == sibling["candidate_id"]
+    assert context["training_control_action"] == "continue_running"
+    assert context["pose_instability_recovered"] is True
+    assert context["seg_stagnation_detected"] is False
+    assert context["receiver_proof_attached"] is False
+    assert context["full_video_local_prefilter_attached"] is False
+    assert context["local_cpu_replay_gate_attached"] is False
+    assert context["launch_control_feedback_ready"] is False
+    assert hi["feedback_launch_adjustment"]["applied"] is False
+    assert hi["feedback_launch_adjustment"]["reason"] == "no_candidate_feedback"
+    argv = hi["command_argv"]
+    assert argv[argv.index("--learning-rate") + 1] == "2.7e-05"
+    assert argv[argv.index("--segnet-distillation-weight") + 1] == "1"
+    queue_metadata = hi["experiment_queue_entry"]["metadata"]
+    assert queue_metadata["family_training_telemetry_context"]["context_only"] is True
+    assert queue_metadata["family_training_telemetry_context"]["score_claim"] is False
+
+
 def test_long_training_campaign_plan_prefers_official_hinerv_controls_after_stagnation() -> None:
     hinerv_budget = _hinerv_budget()
     generic = dict(hinerv_budget["selected_candidates"][0])

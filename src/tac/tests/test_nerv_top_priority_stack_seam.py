@@ -162,7 +162,16 @@ def test_top_priority_seam_is_fail_closed_and_orders_carriers(tmp_path: Path) ->
     assert "official_modelsize_fc_dim_parameter_budget_solver" in local_audit[
         "snerv"
     ]["implemented_features"]
+    assert "official_SNeRV_T_Haar_DWT1D_temporal_primitive" in local_audit[
+        "snerv"
+    ]["implemented_features"]
     assert "official_modelsize_fc_dim_parameter_budget_solver" not in local_audit[
+        "snerv"
+    ]["missing_source_features"]
+    assert "official_SNeRV_T_temporal_neighbor_path" not in local_audit[
+        "snerv"
+    ]["missing_source_features"]
+    assert "official_SNeRV_T_full_neighbor_TUB_training_path" in local_audit[
         "snerv"
     ]["missing_source_features"]
     assert "invalid_official_modelsize_rows_preserved_false_authority" in local_audit[

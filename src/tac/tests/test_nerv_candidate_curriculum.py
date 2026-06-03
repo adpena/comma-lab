@@ -336,8 +336,22 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     }
     assert plan["training_plan"]["native_mlx_adapter_surfaces_ready"] is True
     assert plan["training_plan"]["native_mlx_adapter_full600_campaign_ready"] is False
+    assert plan["training_plan"]["current_execution_path"] == (
+        "cpu_advisory_receiver_bound_packet"
+    )
+    assert plan["training_plan"]["next_required_adapter"] == (
+        "snerv_learned_scoreaware_mlx_training_loop_bound_to_native_export"
+    )
     assert plan["training_plan"]["native_mlx_train_export_planned"] is False
     assert plan["training_plan"]["native_mlx_train_export_verified"] is False
+    assert (
+        plan["training_plan"]["native_mlx_export_attachment_is_learned_training"]
+        is False
+    )
+    assert (
+        plan["training_plan"]["learned_scoreaware_mlx_training_required_next"]
+        is True
+    )
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_planned"] is False
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_verified"] is False
     assert plan["pr95_stack_binding"]["family"] == "snerv"
@@ -472,7 +486,15 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence(
     assert authority_contract["queue_ready_is_not_receiver_or_exact_authority"] is True
     assert training_plan["native_mlx_train_export_attached"] is True
     assert training_plan["native_mlx_train_export_planned"] is True
+    assert training_plan["current_execution_path"] == (
+        "cpu_advisory_plus_mlx_native_export_attachment"
+    )
+    assert training_plan["next_required_adapter"] == (
+        "snerv_learned_scoreaware_mlx_training_loop_bound_to_native_export"
+    )
     assert training_plan["native_mlx_train_export_verified"] is True
+    assert training_plan["native_mlx_export_attachment_is_learned_training"] is False
+    assert training_plan["learned_scoreaware_mlx_training_required_next"] is True
     assert training_plan["native_mlx_receiver_proof_passed"] is True
     assert training_plan["native_mlx_file_backed_export_proof_passed"] is True
     assert training_plan["native_mlx_export_verified"] is True

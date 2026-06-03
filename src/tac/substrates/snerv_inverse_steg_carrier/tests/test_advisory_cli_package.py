@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_SPECTRA_PRESERVING_ADAPTER,
 )
@@ -84,7 +86,35 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
 
     assert rc == 0
     assert packet_path.read_bytes() == archive.packet
-    assert (package_dir / "archive.zip").is_file()
+    archive_zip_path = package_dir / "archive.zip"
+    assert archive_zip_path.is_file()
+    archive_zip_bytes = archive_zip_path.stat().st_size
+    packet_accounting = payload["receiver_snar_packet_rate_accounting"]
+    charged_accounting = payload["charged_archive_rate_accounting"]
+    assert packet_accounting["archive_path_kind"] == "receiver_snar_packet"
+    assert packet_accounting["archive_bytes_total"] == len(archive.packet)
+    assert packet_accounting["score_linf"] == 1.0
+    assert packet_accounting["chargeable_for_contest_submission"] is False
+    assert charged_accounting["archive_path_kind"] == "contest_archive_zip"
+    assert charged_accounting["archive_bytes"] == archive_zip_bytes
+    assert charged_accounting["archive_bytes_total"] == archive_zip_bytes
+    assert charged_accounting["packet_bytes_preserved_as_diagnostic"] == len(
+        archive.packet
+    )
+    assert charged_accounting["chargeable_for_contest_submission"] is True
+    assert payload["archive_bytes_total_before_package"] == len(archive.packet)
+    assert payload["rate_term_before_package"] == 0.001
+    assert payload["score_linf_before_package"] == 1.0
+    assert payload["charged_archive_path_kind"] == "contest_archive_zip"
+    assert payload["archive_bytes_total"] == archive_zip_bytes
+    assert payload["rate_term"] == pytest.approx(
+        module.CONTEST_BYTE_PRICE * archive_zip_bytes
+    )
+    assert payload["score_linf"] == pytest.approx(1.0 - 0.001 + payload["rate_term"])
+    assert payload["score_l2_archive_path_kind"] == "receiver_snar_packet"
+    assert "selected L-inf SNAR1 packet" in (
+        payload["score_l2_package_rate_not_recomputed_reason"]
+    )
     assert payload["receiver_archive_packet"]["redacted"] is True
     assert payload["receiver_archive_packet_path"] == str(packet_path)
     assert payload["archive_byte_closure_blockers_before_package"] == [
@@ -106,9 +136,7 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     assert trained_row["archive_custody"]["archive_path"].endswith(
         "package/archive.zip"
     )
-    assert trained_row["rows"][0]["archive_bytes"] == (
-        package_dir / "archive.zip"
-    ).stat().st_size
+    assert trained_row["rows"][0]["archive_bytes"] == archive_zip_bytes
     assert "sample_pair_count_below_full600" in trained_row["blockers"]
     assert Path(payload["trained_ladder_row_payload_path"]).is_file()
     assert captured_kwargs["decoder_payload_codec"] == "mixed_magnitude_symmetric"

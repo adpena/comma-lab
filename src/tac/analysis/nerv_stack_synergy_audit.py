@@ -393,7 +393,7 @@ def _snerv_stack_audit(
         "snerv_local_carrier_not_source_faithful_official_snerv_multilayer_stack",
         "snerv_official_mfu_block_missing",
         "snerv_official_hfr_block_missing",
-        "snerv_official_snerv_t_temporal_path_missing",
+        "snerv_official_snerv_t_full_tub_path_not_source_forward_parity",
         "snerv_official_haar_j1_parity_missing",
         "snerv_receiver_dwt_custody_missing",
         "snerv_scorer_loop_qat_is_bounded_smoke_not_production_trainer",
@@ -418,7 +418,7 @@ def _snerv_stack_audit(
             "missing_upstream_axes": [
                 "official multi-layer scalable neural representation",
                 "MFU/HFR/TUB-style blocks",
-                "temporal SNeRV-T/SNeRV-T-2D training path",
+                "full temporal SNeRV-T/SNeRV-T-2D source-forward training path beyond the proven Haar DWT1D primitive",
                 "official Haar/J=1 mode parity",
                 "receiver DWT custody and source/runtime hash proof",
                 "measured SNAR1 archive-byte curve for official modelsize candidates",
