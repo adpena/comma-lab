@@ -94,11 +94,33 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert grid_rows["official_patch_index_path"]["max_abs_error"] == 0.0
     assert grid_rows["official_patch_index_path"]["output_hashes_bit_identical"] is True
     assert grid_rows["official_patch_index_path"]["blockers"] == []
+    assert (
+        grid_rows["official_patch_dataset_video_dataset"][
+            "source_forward_parity_proven"
+        ]
+        is True
+    )
+    assert (
+        grid_rows["official_patch_dataset_video_dataset"][
+            "full_hinerv_forward_parity_proven"
+        ]
+        is False
+    )
+    assert (
+        grid_rows["official_patch_dataset_video_dataset"]["backend"]
+        == "official_dataset_video_dataset_vs_numpy"
+    )
+    assert grid_rows["official_patch_dataset_video_dataset"]["max_abs_error"] == 0.0
+    assert grid_rows["official_patch_dataset_video_dataset"]["blockers"] == []
     artifact_states = {row["component_id"]: row for row in artifact["component_rows"]}
     assert artifact_states["core_hierarchical_renderer"][
         "source_forward_parity_falsified"
     ] is True
-    assert artifact_states["patch_dataset_path"]["source_forward_parity_falsified"] is True
+    assert artifact_states["patch_dataset_path"]["source_forward_parity_proven"] is True
+    assert artifact_states["patch_dataset_path"]["source_forward_parity_falsified"] is False
+    assert artifact_states["patch_dataset_path"]["classification"] == (
+        "official_patch_dataset_source_parity_proven"
+    )
     assert artifact_states["prune_quant_codec"]["source_forward_parity_falsified"] is True
 
     artifact_path = tmp_path / "forward_parity.json"
@@ -128,6 +150,10 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert states["core_hierarchical_renderer"]["official_source_forward_replay"][
         "replay_ran"
     ] is True
+    assert states["patch_dataset_path"]["classification"] == (
+        "official_source_forward_parity_proven"
+    )
+    assert states["patch_dataset_path"]["source_forward_parity_proven"] is True
     assert "hinerv_official_forward_parity_artifact_falsifies_parity" in (
         states["core_hierarchical_renderer"]["blockers"]
     )
@@ -145,6 +171,41 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
         "full_hinerv_forward_parity_proven"
     ] is False
     assert replay_rows["official_patch_index_path"]["max_abs_error"] == 0.0
+    assert replay_rows["official_patch_dataset_video_dataset"][
+        "source_forward_parity_proven"
+    ] is True
+    assert replay_rows["official_patch_dataset_video_dataset"]["max_abs_error"] == 0.0
+
+
+def test_hinerv_official_patch_dataset_replay_detects_source_mismatch(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_hinerv_repo(
+        tmp_path,
+        corrupt_dataset_patch=True,
+    )
+
+    artifact = build_hinerv_official_forward_parity_artifact(
+        official_repo_dir=official,
+        repo_root=REPO_ROOT,
+        generated_utc="20260603T000000Z",
+    )
+
+    replay_rows = {
+        row["component_id"]: row
+        for row in artifact["numeric_subcomponent_rows"]
+    }
+    replay = replay_rows["official_patch_dataset_video_dataset"]
+    assert replay["source_forward_parity_proven"] is False
+    assert replay["max_abs_error"] > 0.0
+    assert "hinerv_official_patch_dataset_source_replay_mismatch" in replay[
+        "blockers"
+    ]
+    states = {row["component_id"]: row for row in artifact["component_rows"]}
+    assert states["patch_dataset_path"]["source_forward_parity_falsified"] is True
+    assert "hinerv_patch_dataset_source_forward_replay_failed" in states[
+        "patch_dataset_path"
+    ]["blockers"]
 
 
 def test_hinerv_official_source_audit_fails_closed_on_missing_markers(
@@ -276,7 +337,11 @@ def _numeric_component(component_id: str) -> dict[str, object]:
     }
 
 
-def _write_minimal_official_hinerv_repo(tmp_path: Path) -> Path:
+def _write_minimal_official_hinerv_repo(
+    tmp_path: Path,
+    *,
+    corrupt_dataset_patch: bool = False,
+) -> Path:
     root = tmp_path / "HiNeRV"
     (root / "models").mkdir(parents=True)
     (root / "compression").mkdir(parents=True)
@@ -341,8 +406,103 @@ class Upsample: pass
 """,
         encoding="utf-8",
     )
+    patch_corruption = (
+        "            patch = torch.zeros_like(patch)\n"
+        if corrupt_dataset_patch
+        else ""
+    )
     (root / "datasets.py").write_text(
-        "group.add_argument('--patch-size')\ndef load_all_patches(): pass\ncached = 'patch'\npatch_size = [1, 2, 3]\n",
+        f"""
+import math
+import os
+import torch
+import torchvision
+
+class VideoDataset(torch.utils.data.Dataset):
+    def __init__(self, logger, root, name, crop=[-1, -1], resize=[-1, -1], patch_size=[1, -1, -1], cached='none'):
+        self.logger = logger
+        self.root = os.path.expanduser(root)
+        self.name = name
+        self.img_paths = sorted([f for f in os.listdir(os.path.join(self.root, self.name)) if not f.startswith(".")])
+        self.raw_size = self.get_raw_size()
+        self.crop = tuple(crop[d] if crop[d] != -1 else self.raw_size[d] for d in range(2))
+        self.resize = tuple(resize[d] if resize[d] != -1 else self.crop[d] for d in range(2))
+        self.video_size = (len(self.img_paths), self.resize[0], self.resize[1])
+        self.patch_size = tuple(patch_size[d] if patch_size[d] != -1 else self.video_size[d] for d in range(3))
+        assert all(self.video_size[d] % self.patch_size[d] == 0 for d in range(3))
+        self.num_patches = tuple(self.video_size[d] // self.patch_size[d] for d in range(3))
+        assert cached in ['none', 'image', 'patch']
+        self.cached = cached
+        self.load_cache()
+
+    def load_cache(self):
+        if self.cached == 'image' or self.cached == 'patch':
+            self.image_cached = self.load_all_images()
+        else:
+            self.image_cached = None
+        if self.cached == 'patch':
+            self.patch_cached = self.load_all_patches()
+            self.image_cached = None
+        else:
+            self.patch_cached = None
+
+    def get_raw_size(self):
+        img = torchvision.io.read_image(os.path.join(self.root, self.name, self.img_paths[0]))
+        return img.shape[1:3]
+
+    def load_image(self, idx):
+        img = torchvision.io.read_image(os.path.join(self.root, self.name, self.img_paths[idx]))
+        img = torchvision.transforms.functional.center_crop(img, self.crop)
+        img = torchvision.transforms.functional.resize(img, self.resize, interpolation=torchvision.transforms.InterpolationMode.BICUBIC, antialias=True)
+        return img
+
+    def load_patch(self, idx):
+        patches = []
+        h = idx[1] * self.patch_size[1]
+        w = idx[2] * self.patch_size[2]
+        for dt in range(self.patch_size[0]):
+            t = idx[0] * self.patch_size[0] + dt
+            image = self.image_cached[t] if self.image_cached is not None else self.load_image(t)
+            patch = image[:, None, h: h + self.patch_size[1], w: w + self.patch_size[2]]
+{patch_corruption}            patches.append(patch)
+        return torch.concatenate(patches, dim=1)
+
+    def load_all_images(self):
+        return {{t: self.load_image(t) for t in range(self.video_size[0])}}
+
+    def load_all_patches(self):
+        patches = {{}}
+        for t in range(self.num_patches[0]):
+            for h in range(self.num_patches[1]):
+                for w in range(self.num_patches[2]):
+                    patches[(t, h, w)] = self.load_patch((t, h, w))
+        return patches
+
+    def get_patch(self, idx):
+        return self.patch_cached[idx] if self.patch_cached is not None else self.load_patch(idx)
+
+    def __len__(self):
+        return math.prod(self.num_patches)
+
+    def __getitem__(self, idx):
+        idx_thw = (
+            idx // (self.num_patches[1] * self.num_patches[2]),
+            (idx % (self.num_patches[1] * self.num_patches[2])) // self.num_patches[2],
+            (idx % (self.num_patches[1] * self.num_patches[2])) % self.num_patches[2],
+        )
+        patch = self.get_patch(idx_thw)
+        return torch.tensor(idx_thw, dtype=int), torch.clone(patch).float() / 255.
+
+def load_all_patches():
+    return None
+
+def set_dataset_args(parser):
+    group = parser.add_argument_group('Dataset parameters')
+    group.add_argument('--patch-size')
+
+cached = 'patch'
+patch_size = [1, 2, 3]
+""",
         encoding="utf-8",
     )
     (root / "cfgs/models/uvg-hinerv-s_1920x1080.txt").write_text(

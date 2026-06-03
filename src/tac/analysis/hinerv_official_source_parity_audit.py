@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import tempfile
 import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -227,8 +228,8 @@ _HINERV_FORWARD_PARITY_COMPONENT_SPECS: tuple[dict[str, Any], ...] = (
         ),
         "local_source_forward_markers": (
             (
-                "src/tac/substrates/hi_nerv/architecture.py",
-                "HINERV_OFFICIAL_PATCH_DATASET_SOURCE_FORWARD_PROOF",
+                "src/tac/analysis/hinerv_official_source_parity_audit.py",
+                "def _official_patch_dataset_source_replay",
             ),
         ),
         "classification": "frame_index_receiver_path_without_official_patch_dataset_replay",
@@ -361,9 +362,17 @@ def build_hinerv_official_forward_parity_artifact(
         component_rows,
         official_forward_replay=official_forward_replay,
     )
+    official_patch_dataset_replay = _official_patch_dataset_source_replay(
+        official_root
+    )
+    component_rows = _attach_official_patch_dataset_replay_to_component_rows(
+        component_rows,
+        official_patch_dataset_replay=official_patch_dataset_replay,
+    )
     numeric_subcomponent_rows = [
         _official_grid_trilinear3d_numeric_replay_row(),
         _official_patch_index_numeric_replay_row(),
+        official_patch_dataset_replay,
     ]
     parity_passed = all(bool(row["source_forward_parity_proven"]) for row in component_rows)
     parity_falsified = any(bool(row["source_forward_parity_falsified"]) for row in component_rows)
@@ -716,9 +725,15 @@ def _forward_parity_artifact_evidence_blockers(
             blockers.append(f"hinerv_official_forward_parity_component_missing:{component_id}")
             continue
         if accept_falsification:
-            if row.get("source_forward_parity_falsified") is not True:
+            if row.get("source_forward_parity_proven") is True:
+                blockers.extend(
+                    f"{blocker}:{component_id}"
+                    for blocker in _forward_parity_component_blockers(row)
+                )
+            elif row.get("source_forward_parity_falsified") is not True:
                 blockers.append(
-                    f"hinerv_official_forward_parity_component_not_falsified:{component_id}"
+                    "hinerv_official_forward_parity_component_neither_proven_"
+                    f"nor_falsified:{component_id}"
                 )
             continue
         blockers.extend(
@@ -732,7 +747,9 @@ def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
     if row.get("source_forward_parity_proven") is not True:
         blockers.append("component_not_proven")
-    tolerance = _float_or_none(row.get("tolerance") or row.get("max_abs_tolerance"))
+    tolerance = _float_or_none(
+        _first_not_none(row, ("tolerance", "max_abs_tolerance"))
+    )
     max_abs_error = _float_or_none(
         _first_not_none(row, ("max_abs_error", "max_error", "max_abs_delta"))
     )
@@ -751,7 +768,16 @@ def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
             blockers.append(f"{field}_missing")
     if row.get("official_output_sha256") != row.get("portable_output_sha256"):
         blockers.append("official_portable_output_sha256_mismatch")
-    if not _is_sha256_hex(row.get("official_weight_sha256")):
+    official_weight_keys = row.get("official_weight_keys")
+    if not (
+        _is_sha256_hex(row.get("official_weight_sha256"))
+        or _is_sha256_hex(row.get("official_source_sha256"))
+        or (
+            isinstance(official_weight_keys, Sequence)
+            and not isinstance(official_weight_keys, (str, bytes))
+            and bool(official_weight_keys)
+        )
+    ):
         blockers.append("official_weight_identity_missing")
     return blockers
 
@@ -791,18 +817,25 @@ def _component_state_rows(
             local_source_forward_scan["all_markers_present"]
         )
         artifact_component = artifact_component_rows.get(component_id, {})
+        artifact_component_passed = bool(
+            artifact_component.get("source_forward_parity_proven") is True
+        )
+        artifact_component_falsified = bool(
+            artifact_component.get("source_forward_parity_falsified") is True
+        )
         source_forward = bool(
             official_group_present
             and receiver_visible
-            and artifact_passed
+            and artifact_component_passed
             and artifact_component.get("source_forward_parity_proven") is True
         )
         source_forward_falsified = bool(
-            artifact_component.get("source_forward_parity_falsified")
+            artifact_component_falsified
             or (
                 official_group_present
                 and receiver_visible
                 and not local_source_forward_markers_present
+                and not artifact_component_passed
             )
         )
         if source_forward:
@@ -814,10 +847,10 @@ def _component_state_rows(
         else:
             classification = "missing_or_partial"
         artifact_blocker = ""
-        if not artifact_passed:
+        if not artifact_component_passed:
             artifact_blocker = (
                 "hinerv_official_forward_parity_artifact_falsifies_parity"
-                if artifact_falsified
+                if artifact_falsified or artifact_component_falsified
                 else "hinerv_official_forward_parity_artifact_missing_or_failed"
             )
         blockers = _ordered_unique(
@@ -840,7 +873,7 @@ def _component_state_rows(
                     if not local_source_forward_markers_present
                     else ""
                 ),
-                artifact_blocker if not artifact_passed else "",
+                artifact_blocker if not artifact_component_passed else "",
                 "" if (source_forward or not source_forward_falsified) else str(spec["blocker"]),
             ]
         )
@@ -1060,6 +1093,86 @@ def _attach_official_forward_replay_to_component_rows(
     return rows
 
 
+def _attach_official_patch_dataset_replay_to_component_rows(
+    component_rows: Sequence[Mapping[str, Any]],
+    *,
+    official_patch_dataset_replay: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    replay_summary = {
+        "schema": "hinerv_official_patch_dataset_source_replay_summary.v1",
+        "backend": official_patch_dataset_replay.get("backend"),
+        "replay_ran": bool(official_patch_dataset_replay.get("replay_ran")),
+        "input_bundle_sha256": official_patch_dataset_replay.get("input_bundle_sha256"),
+        "official_output_sha256": official_patch_dataset_replay.get(
+            "official_output_sha256"
+        ),
+        "portable_output_sha256": official_patch_dataset_replay.get(
+            "portable_output_sha256"
+        ),
+        "official_source_sha256": official_patch_dataset_replay.get(
+            "official_source_sha256"
+        ),
+        "blockers": list(official_patch_dataset_replay.get("blockers") or ()),
+        **FALSE_AUTHORITY,
+    }
+    for row in component_rows:
+        mutable = dict(row)
+        if mutable.get("component_id") == "patch_dataset_path":
+            replay_passed = bool(
+                official_patch_dataset_replay.get("source_forward_parity_proven")
+                is True
+            )
+            mutable["official_source_forward_replay"] = replay_summary
+            mutable["forward_parity_artifact_component"] = dict(
+                official_patch_dataset_replay
+            )
+            mutable["source_forward_parity_proven"] = replay_passed
+            mutable["source_forward_parity_falsified"] = not replay_passed
+            mutable["classification"] = (
+                "official_patch_dataset_source_parity_proven"
+                if replay_passed
+                else "frame_index_receiver_path_without_official_patch_dataset_replay"
+            )
+            for key in (
+                "tolerance",
+                "max_abs_error",
+                "input_sha256",
+                "official_output_sha256",
+                "portable_output_sha256",
+                "official_source_sha256",
+                "official_weight_keys",
+            ):
+                if key in official_patch_dataset_replay:
+                    mutable[key] = official_patch_dataset_replay[key]
+            replay_blockers = [
+                str(blocker)
+                for blocker in official_patch_dataset_replay.get("blockers") or ()
+                if blocker
+            ]
+            if replay_passed:
+                mutable["blockers"] = [
+                    blocker
+                    for blocker in mutable.get("blockers", [])
+                    if blocker
+                    not in {
+                        "hinerv_patch_dataset_source_forward_replay_missing",
+                        "hinerv_official_forward_parity_artifact_missing_or_failed",
+                        "hinerv_official_forward_parity_artifact_falsifies_parity",
+                    }
+                ]
+            else:
+                mutable["blockers"] = _ordered_unique(
+                    [
+                        *list(mutable.get("blockers") or ()),
+                        "hinerv_patch_dataset_source_forward_replay_failed",
+                        *replay_blockers,
+                    ]
+                )
+        rows.append(mutable)
+    return rows
+
+
 class _temporary_official_hinerv_import:
     def __init__(self, official_root: Path) -> None:
         self.official_root = official_root
@@ -1089,6 +1202,40 @@ class _temporary_official_hinerv_import:
         sys.path[:] = self._saved_path
 
 
+class _temporary_official_dataset_import:
+    def __init__(self, official_root: Path) -> None:
+        self.official_root = official_root
+        self._saved_path: list[str] = []
+        self._saved_modules: dict[str, Any] = {}
+        self._module_names: list[str] = []
+
+    def __enter__(self) -> Any:
+        import importlib
+
+        self._saved_path = list(sys.path)
+        roots = ("datasets", "utils")
+        self._module_names = [
+            name
+            for name in sys.modules
+            if any(name == root or name.startswith(f"{root}.") for root in roots)
+        ]
+        self._saved_modules = {name: sys.modules[name] for name in self._module_names}
+        for name in self._module_names:
+            del sys.modules[name]
+        sys.path.insert(0, self.official_root.as_posix())
+        return importlib.import_module("datasets")
+
+    def __exit__(self, *_exc_info: object) -> None:
+        for name in [
+            name
+            for name in sys.modules
+            if name in {"datasets", "utils"} or name.startswith(("datasets.", "utils."))
+        ]:
+            del sys.modules[name]
+        sys.modules.update(self._saved_modules)
+        sys.path[:] = self._saved_path
+
+
 def _official_hinerv_tiny_input_record() -> dict[str, Any]:
     return {
         "schema": "hinerv_official_tiny_forward_input.v1",
@@ -1110,6 +1257,190 @@ def _official_hinerv_torch_input(torch_module: Any) -> dict[str, Any]:
         "video_size": tuple(record["video_size"]),
         "patch_size": tuple(record["patch_size"]),
     }
+
+
+def _official_patch_dataset_source_replay(official_root: Path) -> dict[str, Any]:
+    """Replay official ``VideoDataset`` patch loading against portable helpers."""
+
+    backend = "official_dataset_video_dataset_vs_numpy"
+    frame_count = 4
+    height = 6
+    width = 8
+    patch_size = (2, 3, 4)
+    raw_video = (
+        np.arange(frame_count * height * width * 3, dtype=np.uint16)
+        .reshape(frame_count, height, width, 3)
+        % 251
+    ).astype(np.uint8)
+    input_record = {
+        "schema": "hinerv_official_patch_dataset_input.v1",
+        "frame_count": frame_count,
+        "height": height,
+        "width": width,
+        "channels": 3,
+        "patch_size": list(patch_size),
+        "crop": [-1, -1],
+        "resize": [-1, -1],
+        "cached": "patch",
+        "frame_name_pattern": "{frame:06d}.png",
+        "raw_video_sha256": _array_sha256(raw_video),
+    }
+    source_row = _file_row(official_root, "datasets.py")
+    try:
+        import torch
+        import torchvision
+
+        with tempfile.TemporaryDirectory(prefix="hinerv_patch_dataset_") as tmp:
+            dataset_root = Path(tmp) / "dataset"
+            video_dir = dataset_root / "tiny"
+            video_dir.mkdir(parents=True)
+            for frame_idx, frame in enumerate(raw_video):
+                frame_chw = torch.from_numpy(frame).permute(2, 0, 1).contiguous()
+                torchvision.io.write_png(
+                    frame_chw,
+                    (video_dir / f"{frame_idx:06d}.png").as_posix(),
+                )
+
+            with _temporary_official_dataset_import(official_root) as official_datasets:
+                dataset = official_datasets.VideoDataset(
+                    _SilentLogger(),
+                    root=dataset_root.as_posix(),
+                    name="tiny",
+                    crop=[-1, -1],
+                    resize=[-1, -1],
+                    patch_size=list(patch_size),
+                    cached="patch",
+                )
+                official_idx_rows: list[np.ndarray] = []
+                official_patch_rows: list[np.ndarray] = []
+                for flat_idx in range(len(dataset)):
+                    idx, patch = dataset[flat_idx]
+                    official_idx_rows.append(idx.detach().cpu().numpy().astype(np.int64))
+                    official_patch_rows.append(
+                        patch.detach()
+                        .cpu()
+                        .numpy()
+                        .transpose(1, 2, 3, 0)
+                        .astype(np.float32, copy=False)
+                    )
+                loaded_video = np.stack(
+                    [
+                        dataset.load_image(frame_idx)
+                        .detach()
+                        .cpu()
+                        .numpy()
+                        .transpose(1, 2, 0)
+                        .astype(np.uint8, copy=False)
+                        for frame_idx in range(frame_count)
+                    ],
+                    axis=0,
+                )
+
+        official_idx = np.stack(official_idx_rows, axis=0)
+        official_patch = np.stack(official_patch_rows, axis=0)
+        portable_idx = official_flat_patch_index_to_thw(
+            np.arange(official_patch.shape[0], dtype=np.int64),
+            num_patches=(
+                frame_count // patch_size[0],
+                height // patch_size[1],
+                width // patch_size[2],
+            ),
+        )
+        portable_patch = (
+            official_video_to_patch(loaded_video[None, ...], patch_size=patch_size)
+            .astype(np.float32)
+            / 255.0
+        )
+        max_abs_error = float(
+            max(
+                np.max(
+                    np.abs(
+                        official_patch.astype(np.float64)
+                        - portable_patch.astype(np.float64)
+                    )
+                ),
+                np.max(
+                    np.abs(
+                        official_idx.astype(np.float64)
+                        - portable_idx.astype(np.float64)
+                    )
+                ),
+            )
+        )
+        official_payload = np.concatenate(
+            [
+                official_idx.reshape(-1).astype(np.float32),
+                official_patch.reshape(-1).astype(np.float32),
+            ]
+        )
+        portable_payload = np.concatenate(
+            [
+                portable_idx.reshape(-1).astype(np.float32),
+                portable_patch.reshape(-1).astype(np.float32),
+            ]
+        )
+        official_sha = _array_sha256(official_payload)
+        portable_sha = _array_sha256(portable_payload)
+        passed = bool(max_abs_error == 0.0 and official_sha == portable_sha)
+        blockers = [] if passed else ["hinerv_official_patch_dataset_source_replay_mismatch"]
+        return {
+            "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+            "component_id": "official_patch_dataset_video_dataset",
+            "parent_component_id": "patch_dataset_path",
+            "source_forward_parity_proven": passed,
+            "full_hinerv_forward_parity_proven": False,
+            "backend": backend,
+            "replay_ran": True,
+            "official_repo_root": official_root.as_posix(),
+            "official_repo_head_sha": _git_head_sha(official_root),
+            "official_source_sha256": source_row.get("sha256"),
+            "official_weight_keys": ["datasets.py"],
+            "input_bundle": input_record,
+            "input_bundle_sha256": _stable_json_sha256(input_record),
+            "input_sha256": _array_sha256(loaded_video),
+            "video_shape": list(loaded_video.shape),
+            "patch_size": list(patch_size),
+            "patch_count": int(official_patch.shape[0]),
+            "official_patch_shape": list(official_patch.shape),
+            "portable_patch_shape": list(portable_patch.shape),
+            "tolerance": 0.0,
+            "max_abs_error": max_abs_error,
+            "official_output_sha256": official_sha,
+            "portable_output_sha256": portable_sha,
+            "output_hashes_bit_identical": official_sha == portable_sha,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+    except Exception as exc:  # pragma: no cover - dependency/source dependent
+        return {
+            "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+            "component_id": "official_patch_dataset_video_dataset",
+            "parent_component_id": "patch_dataset_path",
+            "source_forward_parity_proven": False,
+            "full_hinerv_forward_parity_proven": False,
+            "backend": backend,
+            "replay_ran": False,
+            "official_repo_root": official_root.as_posix(),
+            "official_repo_head_sha": _git_head_sha(official_root),
+            "official_source_sha256": source_row.get("sha256"),
+            "official_weight_keys": ["datasets.py"],
+            "input_bundle": input_record,
+            "input_bundle_sha256": _stable_json_sha256(input_record),
+            "input_sha256": None,
+            "video_shape": [frame_count, height, width, 3],
+            "patch_size": list(patch_size),
+            "patch_count": None,
+            "official_patch_shape": None,
+            "portable_patch_shape": None,
+            "tolerance": 0.0,
+            "max_abs_error": None,
+            "official_output_sha256": None,
+            "portable_output_sha256": None,
+            "output_hashes_bit_identical": False,
+            "error": f"{type(exc).__name__}: {exc}",
+            "blockers": ["hinerv_official_patch_dataset_source_replay_failed"],
+            **FALSE_AUTHORITY,
+        }
 
 
 def _tiny_official_hinerv_args() -> SimpleNamespace:
