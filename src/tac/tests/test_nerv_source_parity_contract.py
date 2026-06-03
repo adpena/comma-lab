@@ -87,9 +87,11 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
 
     assert report["required_for_long_training_ready"] is True
     assert "hi_nerv_official_feature_grid_convnext_trilinear_missing" not in report["blockers"]
+    assert "hi_nerv_official_patch_index_path_missing" not in report["blockers"]
     assert "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline_missing" not in report["blockers"]
     assert "hi_nerv_official_torchac_entropy_coder_missing" not in report["blockers"]
     assert rows["hi_nerv_official_feature_grid_convnext_trilinear"]["status"] == ("implemented_or_bound")
+    assert rows["hi_nerv_official_patch_index_path"]["status"] == ("implemented_or_bound")
     assert rows["hi_nerv_prune_quantnoise_receiver_bitstream_pipeline"]["status"] == ("implemented_or_bound")
     assert rows["hi_nerv_official_torchac_entropy_coder_parity"]["status"] == ("implemented_or_bound")
     assert rows["hi_nerv_official_torchac_entropy_coder_parity"]["required_for_long_training"] is False
@@ -100,6 +102,19 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
     }
     assert "OfficialGridTrilinear3D" in feature_present_symbols
     assert "official_grid_trilinear3d_forward" in feature_present_symbols
+    patch_present_symbols = {
+        symbol["symbol"]
+        for symbol in rows["hi_nerv_official_patch_index_path"]["symbol_rows"]
+        if symbol["status"] == "present"
+    }
+    assert {
+        "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+        "official_video_to_patch",
+        "official_patch_to_video",
+        "official_vidx_to_pidx",
+        "official_compute_pixel_idx_3d",
+        "official_flat_patch_index_to_thw",
+    }.issubset(patch_present_symbols)
     bitstream_present_symbols = {
         symbol["symbol"]
         for symbol in rows["hi_nerv_prune_quantnoise_receiver_bitstream_pipeline"]["symbol_rows"]

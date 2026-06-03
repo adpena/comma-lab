@@ -382,6 +382,60 @@ def _source_features() -> tuple[SourceFeature, ...]:
         ),
         SourceFeature(
             family="hi_nerv",
+            feature_id="hi_nerv_official_patch_index_path",
+            official_source_id="hi_nerv_official_repo",
+            implementation_target=(
+                "official patch dataset/index geometry is bound as portable "
+                "NumPy receiver-side primitives before source-faithful training"
+            ),
+            required_symbols=(
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_patch_index_path",
+                    "tac.substrates.hi_nerv.official_patch",
+                    "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+                    "official patch/index proof constant",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_patch_index_path",
+                    "tac.substrates.hi_nerv.official_patch",
+                    "official_video_to_patch",
+                    "official video-to-patch order",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_patch_index_path",
+                    "tac.substrates.hi_nerv.official_patch",
+                    "official_patch_to_video",
+                    "official patch-to-video inverse",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_patch_index_path",
+                    "tac.substrates.hi_nerv.official_patch",
+                    "official_vidx_to_pidx",
+                    "official child patch index expansion",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_patch_index_path",
+                    "tac.substrates.hi_nerv.official_patch",
+                    "official_compute_pixel_idx_3d",
+                    "official padded 3D pixel index projection",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_patch_index_path",
+                    "tac.substrates.hi_nerv.official_patch",
+                    "official_flat_patch_index_to_thw",
+                    "official VideoDataset flat index mapping",
+                ),
+            ),
+            blocker_if_missing="hi_nerv_official_patch_index_path_missing",
+        ),
+        SourceFeature(
+            family="hi_nerv",
             feature_id="hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
             official_source_id="hi_nerv_official_repo",
             implementation_target=(
