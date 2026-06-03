@@ -279,6 +279,9 @@ def _load_archive_size_ladder_waterfill_sidecars(
                     "_modelsize_candidate": row.get("modelsize_candidate"),
                     "_archive_size_ladder_row_index": index,
                     "_archive_size_ladder_source_schema": payload.get("schema"),
+                    "_archive_size_ladder_full_video_coverage": row.get(
+                        "full_video_coverage"
+                    ),
                     "_archive_size_ladder_archive_sha256": row.get("archive_sha256"),
                     "_archive_size_ladder_receiver_proof_path": row.get(
                         "receiver_proof_path"
@@ -351,6 +354,12 @@ def _materialize_archive_ladder_waterfill_sidecars(
                     "_modelsize_row_id": candidate_key,
                     "_archive_ladder_row_index": index,
                     "_archive_ladder_source_schema": payload.get("schema"),
+                    "_archive_ladder_full_video_coverage": (
+                        row.get("full_video_coverage")
+                        if row.get("full_video_coverage") is not None
+                        else payload.get("full_video_coverage")
+                    ),
+                    "_archive_ladder_num_pairs": payload.get("num_pairs"),
                     "_archive_ladder_waterfill_report_path": source_path.as_posix(),
                     "_archive_ladder_waterfill_row_blockers": row_blockers,
                     "_archive_size_ladder_source_schema": payload.get("source_schema"),
@@ -366,8 +375,9 @@ def _materialize_archive_ladder_waterfill_sidecars(
                         "receiver_proof_sha256",
                         archive_ladder_row.get("receiver_proof_sha256"),
                     ),
-                    "_archive_size_ladder_runtime_consumption_proof_ready": archive_ladder_row.get(
-                        "runtime_consumption_proof_ready"
+                    "_archive_size_ladder_runtime_consumption_proof_ready": row.get(
+                        "runtime_consumption_proof_ready",
+                        archive_ladder_row.get("runtime_consumption_proof_ready"),
                     ),
                     "blockers": row_blockers,
                 },
