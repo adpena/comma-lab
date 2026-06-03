@@ -16,6 +16,14 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+    HfGenerationDecoder,
+    SnervModelSizeConfig,
+    generate_hf_from_lf,
+)
+from tac.substrates.snerv_inverse_steg_carrier.dwt import (
+    WaveletPyramid,
+    dwt2_multilevel,
+    idwt2_multilevel,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
@@ -624,6 +632,82 @@ def test_snerv_mlx_haar_renderer_restores_exported_state_dict() -> None:
         rtol=0.0,
         atol=0.0,
     )
+
+
+def test_snerv_mlx_temporal_context_matches_receiver_feature_algebra() -> None:
+    pytest.importorskip("mlx.core")
+
+    from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+        SnervMlxHaarScoreRenderer,
+    )
+
+    pairs = _tiny_pairs(pairs=3)
+    model_size = SnervModelSizeConfig(
+        fc_dim=9,
+        emb_size=0,
+        temporal_context=1,
+        temporal_mode="official_haar_dwt1d_lowpass",
+    )
+    model = SnervMlxHaarScoreRenderer.from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        model_size=model_size,
+    )
+    selected_pairs = [2, 0]
+    mlx_recon = model.render_pairs_nchw255(
+        pair_indices=selected_pairs,
+        batch_size=2,
+    )
+    state = model.export_state_dict()
+    decoder = HfGenerationDecoder(
+        kernels={
+            0: {
+                subband: state[f"decoder_kernels.0.{subband}"].reshape(
+                    model_size.feature_count,
+                )
+                for subband in ("LH", "HL", "HH")
+            }
+        },
+        levels=1,
+        model_size=model_size,
+    )
+    pyramids = [
+        dwt2_multilevel(
+            pairs[pair_idx, frame_idx, channel_idx],
+            levels=1,
+            wavelet="haar",
+        )
+        for pair_idx in range(3)
+        for frame_idx in range(2)
+        for channel_idx in range(3)
+    ]
+    lf_sequence_all = [np.asarray(pyr.lf, dtype=np.float64) for pyr in pyramids]
+    expected = np.empty_like(mlx_recon)
+    for out_pair_idx, pair_idx in enumerate(selected_pairs):
+        for frame_idx in range(2):
+            for channel_idx in range(3):
+                flat_idx = pair_idx * 6 + frame_idx * 3 + channel_idx
+                group = flat_idx % 3
+                temporal_sequence = lf_sequence_all[group::3]
+                temporal_index = flat_idx // 3
+                coeffs = generate_hf_from_lf(
+                    state["latents_lf_planes"][pair_idx, frame_idx, channel_idx],
+                    decoder,
+                    pyramids[flat_idx],
+                    lf_sequence=temporal_sequence,
+                    sequence_index=temporal_index,
+                )
+                expected[out_pair_idx, frame_idx, channel_idx] = idwt2_multilevel(
+                    WaveletPyramid(
+                        coeffs=coeffs,
+                        levels=1,
+                        wavelet="haar",
+                        orig_hw=pyramids[flat_idx].orig_hw,
+                    )
+                )
+
+    np.testing.assert_allclose(mlx_recon, expected, rtol=2.0e-5, atol=2.0e-3)
 
 
 def test_train_export_runs_score_aware_long_training_before_packet_build(

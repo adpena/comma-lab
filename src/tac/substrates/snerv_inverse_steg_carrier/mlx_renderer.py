@@ -189,7 +189,15 @@ class SnervMlxHaarScoreRenderer(nn.Module if nn is not None else object):  # typ
             idx = idx.reshape((1,))
         lf = mx.take(self.latents_lf_planes, idx, axis=0)  # type: ignore[union-attr]
         flat = lf.reshape((-1, int(lf.shape[-2]), int(lf.shape[-1])))
-        recon = self._reconstruct_flat_channels(flat)
+        frame_offsets = mx.arange(2, dtype=mx.int32).reshape((1, 2, 1))  # type: ignore[union-attr]
+        channel_offsets = mx.arange(3, dtype=mx.int32).reshape((1, 1, 3))  # type: ignore[union-attr]
+        global_flat_indices = (
+            idx.reshape((-1, 1, 1)) * 6 + frame_offsets * 3 + channel_offsets
+        ).reshape((-1,))
+        recon = self._reconstruct_flat_channels(
+            flat,
+            global_flat_indices=global_flat_indices,
+        )
         b = int(idx.shape[0])
         h, w = self.output_hw
         pair = recon.reshape((b, 2, 3, h, w))
@@ -300,10 +308,34 @@ class SnervMlxHaarScoreRenderer(nn.Module if nn is not None else object):  # typ
             total += int(np.prod(tuple(arr.shape)))
         return total
 
-    def _reconstruct_flat_channels(self, lf_flat: Any) -> Any:
+    def _reconstruct_flat_channels(
+        self,
+        lf_flat: Any,
+        *,
+        global_flat_indices: Any | None = None,
+    ) -> Any:
         approx = lf_flat
         for lvl in range(self.levels):
-            features = _decoder_features_mlx(approx, self.model_size)
+            temporal = None
+            if int(self.model_size.temporal_context) > 0:
+                if global_flat_indices is None:
+                    raise SnervMlxRendererError(
+                        "temporal_context>0 requires global LF flat indices"
+                    )
+                temporal = _temporal_context_features_mlx(
+                    self.latents_lf_planes.reshape(
+                        (-1, int(self.latents_lf_planes.shape[-2]), int(self.latents_lf_planes.shape[-1]))
+                    ),
+                    global_flat_indices=global_flat_indices,
+                    target_hw=(int(approx.shape[1]), int(approx.shape[2])),
+                    model_size=self.model_size,
+                    group_count=3,
+                )
+            features = _decoder_features_mlx(
+                approx,
+                self.model_size,
+                temporal_features=temporal,
+            )
             kernels = self.decoder_kernels[lvl]
             lh = _linear_detail(features, kernels["LH"])
             hl = _linear_detail(features, kernels["HL"])
@@ -334,12 +366,12 @@ def _linear_detail(features: Any, kernel: Any) -> Any:
     return mx.sum(features * kernel.reshape((1, 1, 1, -1)), axis=-1)  # type: ignore[union-attr]
 
 
-def _decoder_features_mlx(field: Any, model_size: SnervModelSizeConfig) -> Any:
-    if int(model_size.temporal_context) > 0:
-        raise SnervMlxRendererError(
-            "MLX SNeRV score-aware renderer does not yet support temporal_context "
-            "inside the differentiable train-time feature bank; use temporal_context=0"
-        )
+def _decoder_features_mlx(
+    field: Any,
+    model_size: SnervModelSizeConfig,
+    *,
+    temporal_features: Any | None = None,
+) -> Any:
     if model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER:
         context = _mfu_features_mlx(
             field,
@@ -358,9 +390,62 @@ def _decoder_features_mlx(field: Any, model_size: SnervModelSizeConfig) -> Any:
         int(model_size.emb_size),
         batch=int(field.shape[0]),
     )
-    if coord.shape[-1] == 0:
-        return context
-    return mx.concatenate([context, coord], axis=-1)  # type: ignore[union-attr]
+    if int(model_size.temporal_context) > 0:
+        if temporal_features is None:
+            raise SnervMlxRendererError(
+                "temporal_context>0 requires receiver-visible temporal features"
+            )
+        expected = 2 * int(model_size.temporal_context)
+        if int(temporal_features.shape[-1]) != expected:
+            raise SnervMlxRendererError(
+                "temporal feature count mismatch; "
+                f"got {int(temporal_features.shape[-1])}, expected {expected}"
+            )
+    else:
+        temporal_features = mx.zeros(  # type: ignore[union-attr]
+            (int(field.shape[0]), int(field.shape[1]), int(field.shape[2]), 0),
+            dtype=field.dtype,
+        )
+    return mx.concatenate([context, coord, temporal_features], axis=-1)  # type: ignore[union-attr]
+
+
+def _temporal_context_features_mlx(
+    lf_flat_all: Any,
+    *,
+    global_flat_indices: Any,
+    target_hw: tuple[int, int],
+    model_size: SnervModelSizeConfig,
+    group_count: int,
+) -> Any:
+    radius = int(model_size.temporal_context)
+    if radius <= 0:
+        return mx.zeros(  # type: ignore[union-attr]
+            (int(global_flat_indices.shape[0]), int(target_hw[0]), int(target_hw[1]), 0),
+            dtype=lf_flat_all.dtype,
+        )
+    groups = global_flat_indices % int(group_count)
+    sequence_indices = global_flat_indices // int(group_count)
+    max_sequence_index = (int(lf_flat_all.shape[0]) - 1) // int(group_count)
+    center = mx.take(lf_flat_all, global_flat_indices, axis=0)  # type: ignore[union-attr]
+    bank = []
+    inv_two_sqrt2 = 1.0 / (2.0 * np.sqrt(2.0))
+    mode = str(model_size.temporal_mode)
+    for offset in range(1, radius + 1):
+        prev_seq = mx.clip(sequence_indices - int(offset), 0, max_sequence_index)  # type: ignore[union-attr]
+        next_seq = mx.clip(sequence_indices + int(offset), 0, max_sequence_index)  # type: ignore[union-attr]
+        prev = mx.take(lf_flat_all, prev_seq * int(group_count) + groups, axis=0)  # type: ignore[union-attr]
+        nxt = mx.take(lf_flat_all, next_seq * int(group_count) + groups, axis=0)  # type: ignore[union-attr]
+        if mode == "delta":
+            bank.append(_resize_nn_bhw_mlx(center - prev, target_hw))
+            bank.append(_resize_nn_bhw_mlx(nxt - center, target_hw))
+        elif mode == "official_haar_dwt1d_lowpass":
+            bank.append(_resize_nn_bhw_mlx((center + prev) * inv_two_sqrt2, target_hw))
+            bank.append(_resize_nn_bhw_mlx((center + nxt) * inv_two_sqrt2, target_hw))
+        else:
+            raise SnervMlxRendererError(
+                f"unsupported temporal_mode {model_size.temporal_mode!r}"
+            )
+    return mx.stack(bank, axis=-1)  # type: ignore[union-attr]
 
 
 def _patch_features_mlx(field: Any, *, patch_radius: int, feature_count: int) -> Any:
@@ -492,6 +577,16 @@ def _reflect_pad_bhw(field: Any, radius: int) -> Any:
     left = padded[:, :, 1 : r + 1][:, :, ::-1]
     right = padded[:, :, w - r - 1 : w - 1][:, :, ::-1]
     return mx.concatenate([left, padded, right], axis=2)  # type: ignore[union-attr]
+
+
+def _resize_nn_bhw_mlx(field: Any, target_hw: tuple[int, int]) -> Any:
+    th, tw = int(target_hw[0]), int(target_hw[1])
+    h, w = int(field.shape[1]), int(field.shape[2])
+    if (h, w) == (th, tw):
+        return field
+    row_idx = mx.array((np.arange(th) * h // th).clip(0, h - 1), dtype=mx.int32)  # type: ignore[union-attr]
+    col_idx = mx.array((np.arange(tw) * w // tw).clip(0, w - 1), dtype=mx.int32)  # type: ignore[union-attr]
+    return mx.take(mx.take(field, row_idx, axis=1), col_idx, axis=2)  # type: ignore[union-attr]
 
 
 def _box_pool_upsample_mlx(field: Any, scale: int) -> Any:

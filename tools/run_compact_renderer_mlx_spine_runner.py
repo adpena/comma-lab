@@ -3697,6 +3697,490 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         _write_json(path, refusal)
         return {**refusal, "report_path": path.as_posix()}
     local_proof_prelaunch_blockers = list(prelaunch_blockers)
+    resolved_snerv_modelsize_candidate = {
+        **candidate,
+        "fc_dim": int(snerv_fc_dim),
+        "emb_size": int(snerv_emb_size),
+        "patch_radius": int(snerv_patch_radius),
+        "mfu_scales": [int(v) for v in resolved_snerv_mfu_scales],
+        "hfr_gain": float(resolved_snerv_hfr_gain),
+        "temporal_context": int(snerv_temporal_context),
+        "temporal_mode": str(snerv_temporal_mode),
+        "snerv_model_size_adapter": str(snerv_model_size_adapter),
+        "decoder_payload_codec": str(decoder_payload_codec),
+        "levels": int(levels),
+        "wavelet": str(wavelet),
+        "bits_per_coeff": float(target_bits_per_coeff),
+        "step_map_bits_per_coeff": float(step_map_waterfill_bits_per_coeff),
+        "snerv_native_mlx_decoder_train_steps": int(
+            snerv_native_mlx_decoder_train_steps
+        ),
+        "snerv_native_mlx_decoder_train_lr": float(
+            snerv_native_mlx_decoder_train_lr
+        ),
+        "snerv_native_mlx_decoder_train_ridge": float(
+            snerv_native_mlx_decoder_train_ridge
+        ),
+        "snerv_native_mlx_decoder_train_optimizer": str(
+            snerv_native_mlx_decoder_train_optimizer
+        ),
+        "snerv_score_aware_long_training_epochs": int(
+            snerv_score_aware_long_training_epochs
+        ),
+        "snerv_score_aware_long_training_lr": float(
+            snerv_score_aware_long_training_lr
+        ),
+        "snerv_score_aware_long_training_batch_pairs": int(
+            snerv_score_aware_long_training_batch_pairs
+        ),
+        "snerv_score_aware_long_training_optimizer": str(
+            snerv_score_aware_long_training_optimizer
+        ),
+        "snerv_score_aware_long_training_grad_clip_max_norm": (
+            None
+            if snerv_score_aware_long_training_grad_clip_max_norm is None
+            else float(snerv_score_aware_long_training_grad_clip_max_norm)
+        ),
+        "snerv_score_aware_long_training_weight_decay": (
+            None
+            if snerv_score_aware_long_training_weight_decay is None
+            else float(snerv_score_aware_long_training_weight_decay)
+        ),
+        "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
+            snerv_score_aware_long_training_eval_roundtrip_ste
+        ),
+        "snerv_segnet_distillation_weight": float(segnet_distillation_weight),
+        "snerv_pose_distillation_weight": float(pose_distillation_weight),
+        "snerv_pose_distillation_loss": str(pose_distillation_loss),
+        "snerv_pose_distillation_huber_delta": float(
+            pose_distillation_huber_delta
+        ),
+        "snerv_segnet_distillation_objective": str(segnet_distillation_objective),
+        "snerv_distillation_temperature": float(distillation_temperature),
+        "snerv_segnet_tau_boundary": float(segnet_tau_boundary),
+        "snerv_segnet_hinge_margin": float(segnet_hinge_margin),
+        "snerv_distillation_device": str(distillation_device),
+        "snerv_allow_segnet_only_research": bool(allow_segnet_only_research),
+        "snerv_coder_aware_qat": bool(coder_aware_qat),
+        "snerv_coder_qat_quant_bits": int(coder_qat_quant_bits),
+        "snerv_coder_qat_quant_residual_weight": float(
+            coder_qat_quant_residual_weight
+        ),
+        "snerv_coder_qat_magnitude_weight": float(coder_qat_magnitude_weight),
+        "snerv_coder_qat_delta_weight": float(coder_qat_delta_weight),
+        "snerv_coder_qat_c1a_entropy_weight": float(
+            coder_qat_c1a_entropy_weight
+        ),
+        "snerv_coder_qat_c1a_sigma": float(coder_qat_c1a_sigma),
+        "snerv_coder_qat_c1a_sample_size": int(coder_qat_c1a_sample_size),
+        "snerv_score_aware_long_training_pr95_faithful_curriculum": bool(
+            snerv_score_aware_long_training_pr95_faithful_curriculum
+        ),
+    }
+    native_long_training_requested = bool(
+        run_native_mlx_export and int(snerv_score_aware_long_training_epochs) > 0
+    )
+    if native_long_training_requested:
+        snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
+            requested=True,
+            output_dir=out / "snerv_mlx_native_export",
+            num_pairs=int(num_pairs),
+            source_video_path=resolved_source_video,
+            scorer_upstream_dir=scorer_upstream,
+            modelsize_candidate=resolved_snerv_modelsize_candidate,
+            prioritized_pair_indices=prioritized_pair_indices,
+            repo_root=root,
+            allow_overwrite=bool(allow_overwrite),
+            retain_receiver_output=bool(keep_local_replay_inflated),
+            receiver_proof_timeout_seconds=int(
+                snerv_native_mlx_receiver_proof_timeout_seconds
+            ),
+            run_scorer_loop_qat=bool(run_scorer_loop_qat),
+            scorer_loop_qat_max_trials=int(snerv_scorer_loop_max_trials),
+            scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
+            scorer_loop_qat_qat_bits=int(snerv_scorer_loop_qat_bits),
+            scorer_loop_qat_decoder_payload_codec=decoder_payload_codec,
+            scorer_loop_qat_lf_payload_codec=str(snerv_scorer_loop_lf_payload_codec),
+            scorer_loop_qat_component_guard_mode=str(
+                snerv_scorer_loop_component_guard_mode
+            ),
+            scorer_loop_qat_device=str(distillation_device),
+            recon_pixel_weight_path=effective_recon_pixel_weight_path,
+            recon_pixel_weight_manifest_path=(
+                effective_recon_pixel_weight_manifest_path
+            ),
+            recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
+            native_mlx_decoder_train_steps=int(snerv_native_mlx_decoder_train_steps),
+            native_mlx_decoder_train_lr=float(snerv_native_mlx_decoder_train_lr),
+            native_mlx_decoder_train_ridge=float(snerv_native_mlx_decoder_train_ridge),
+            native_mlx_decoder_train_optimizer=str(
+                snerv_native_mlx_decoder_train_optimizer
+            ),
+            score_aware_long_training_epochs=int(
+                snerv_score_aware_long_training_epochs
+            ),
+            score_aware_long_training_lr=float(snerv_score_aware_long_training_lr),
+            score_aware_long_training_batch_pairs=int(
+                snerv_score_aware_long_training_batch_pairs
+            ),
+            score_aware_long_training_optimizer=str(
+                snerv_score_aware_long_training_optimizer
+            ),
+            score_aware_long_training_grad_clip_max_norm=(
+                None
+                if snerv_score_aware_long_training_grad_clip_max_norm is None
+                else float(snerv_score_aware_long_training_grad_clip_max_norm)
+            ),
+            score_aware_long_training_weight_decay=(
+                None
+                if snerv_score_aware_long_training_weight_decay is None
+                else float(snerv_score_aware_long_training_weight_decay)
+            ),
+            score_aware_long_training_eval_roundtrip_ste=bool(
+                snerv_score_aware_long_training_eval_roundtrip_ste
+            ),
+            segnet_distillation_weight=float(segnet_distillation_weight),
+            pose_distillation_weight=float(pose_distillation_weight),
+            pose_distillation_loss=str(pose_distillation_loss),
+            pose_distillation_huber_delta=float(pose_distillation_huber_delta),
+            segnet_distillation_objective=str(segnet_distillation_objective),
+            distillation_temperature=float(distillation_temperature),
+            segnet_tau_boundary=float(segnet_tau_boundary),
+            segnet_hinge_margin=float(segnet_hinge_margin),
+            distillation_device=str(distillation_device),
+            allow_segnet_only_research=bool(allow_segnet_only_research),
+            coder_aware_qat=bool(coder_aware_qat),
+            coder_qat_quant_bits=int(coder_qat_quant_bits),
+            coder_qat_quant_residual_weight=float(coder_qat_quant_residual_weight),
+            coder_qat_magnitude_weight=float(coder_qat_magnitude_weight),
+            coder_qat_delta_weight=float(coder_qat_delta_weight),
+            coder_qat_c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+            coder_qat_c1a_sigma=float(coder_qat_c1a_sigma),
+            coder_qat_c1a_sample_size=int(coder_qat_c1a_sample_size),
+            score_aware_long_training_pr95_faithful_curriculum=bool(
+                snerv_score_aware_long_training_pr95_faithful_curriculum
+            ),
+        )
+        snerv_mlx_native_file_backed_evidence = (
+            build_snerv_mlx_native_file_backed_evidence(
+                snerv_mlx_native_export,
+                required_num_pairs=CONTEST_PAIR_COUNT,
+            )
+        )
+        snerv_mlx_native_adapter_contract_after_export = (
+            build_snerv_mlx_native_adapter_contract(
+                extra_evidence={
+                    "file_backed_export_artifact": snerv_mlx_native_export,
+                    "required_num_pairs": CONTEST_PAIR_COUNT,
+                }
+            )
+        )
+        snerv_mlx_native_export_verified = bool(
+            snerv_mlx_native_export.get("executed")
+            and snerv_mlx_native_export.get("receiver_proof_passed") is True
+            and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
+            and snerv_mlx_native_file_backed_evidence.get(
+                "required_pair_file_backed_export_proof_passed"
+            )
+        )
+        snerv_mlx_native_receiver_proof_passed = bool(
+            snerv_mlx_native_export.get("executed")
+            and snerv_mlx_native_export.get("receiver_proof_passed") is True
+            and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
+        )
+        candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
+            candidate=candidate or None,
+            requested_epochs=int(epochs),
+            num_pairs=int(num_pairs),
+            step_map_coder_mode=str(resolved_step_map_coder_mode),
+            native_mlx_train_export_attached=bool(
+                snerv_mlx_native_export.get("executed")
+            ),
+            native_mlx_long_training_bound=bool(
+                snerv_mlx_native_export.get("score_aware_long_training_executed")
+            ),
+            native_mlx_receiver_proof_passed=(
+                snerv_mlx_native_receiver_proof_passed
+            ),
+            native_mlx_full600_campaign_ready=bool(
+                snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")
+            ),
+            native_mlx_scorer_loop_qat_attached=bool(
+                snerv_mlx_native_export.get("scorer_loop_qat_attached")
+            ),
+            native_mlx_scorer_loop_qat_receiver_contract_satisfied=bool(
+                snerv_mlx_native_export.get(
+                    "scorer_loop_qat_receiver_contract_satisfied"
+                )
+            ),
+            native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=bool(
+                snerv_mlx_native_export.get(
+                    "scorer_loop_qat_ready_for_pose_guard_gate"
+                )
+            ),
+            native_mlx_scorer_loop_qat_accepted_improvement=bool(
+                snerv_mlx_native_export.get("scorer_loop_qat_accepted_improvement")
+            ),
+            native_mlx_scorer_loop_qat_best_materialized=bool(
+                snerv_mlx_native_export.get("scorer_loop_qat_best_materialized")
+            ),
+            native_mlx_real_segnet_teacher_bound=bool(
+                snerv_mlx_native_export.get(
+                    "score_aware_long_training_has_real_segnet_teacher"
+                )
+            ),
+            native_mlx_real_posenet_teacher_bound=bool(
+                snerv_mlx_native_export.get(
+                    "score_aware_long_training_has_real_posenet_teacher"
+                )
+            ),
+            native_mlx_pr95_curriculum_bound=bool(
+                snerv_mlx_native_export.get(
+                    "score_aware_long_training_pr95_curriculum_bound"
+                )
+            ),
+            native_mlx_eval_roundtrip_ste_bound=bool(
+                _nested(
+                    snerv_mlx_native_export,
+                    "score_aware_long_training",
+                    "eval_roundtrip_ste_enabled",
+                )
+            ),
+            native_mlx_differentiable_pose_preprocess_bound=bool(
+                _nested(
+                    snerv_mlx_native_export,
+                    "score_aware_long_training",
+                    "teacher_binding",
+                    "has_real_posenet_teacher",
+                )
+            ),
+            native_mlx_coder_qat_bound=bool(
+                snerv_mlx_native_export.get(
+                    "score_aware_long_training_coder_qat_bound"
+                )
+            ),
+            native_mlx_muon_adamw_partition_bound=bool(
+                snerv_mlx_native_export.get(
+                    "score_aware_long_training_muon_adamw_partition_bound"
+                )
+            ),
+            native_mlx_artifact_evidence=snerv_mlx_native_export,
+        )
+        blockers = _dedupe(
+            [
+                "contest_cpu_cuda_exact_eval_not_executed",
+                *local_proof_prelaunch_blockers,
+                *list(candidate_curriculum_plan.get("blockers") or []),
+                *list(snerv_mlx_native_export.get("blockers") or []),
+                *list(
+                    snerv_mlx_native_adapter_contract_after_export.get("blockers")
+                    or []
+                ),
+            ]
+        )
+        final = _base_report(
+            output_dir=out,
+            mode="executed_snerv_native_mlx_long_training_direct",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        final.update(
+            {
+                "execute_family": "snerv",
+                "num_pairs": int(num_pairs),
+                "epochs_requested": int(epochs),
+                "training_executed": bool(
+                    snerv_mlx_native_export.get("native_mlx_training_executed")
+                ),
+                "legacy_advisory_preexport_skipped": True,
+                "legacy_advisory_preexport_skip_reason": (
+                    "native MLX score-aware long training requested; legacy "
+                    "SNeRV advisory compression is not on the training critical "
+                    "path and can consume minutes plus large memory before the "
+                    "first optimizer step"
+                ),
+                "modelsize_candidate_selection": {
+                    "schema": "compact_execute_modelsize_candidate_selection.v1",
+                    "family": "snerv",
+                    "selection_mode": (
+                        "planner_candidate" if candidate else "manual_cli_knobs"
+                    ),
+                    "candidate": candidate or None,
+                    "modelsize_control_contract": _modelsize_control_contract(
+                        candidate
+                    ),
+                    "candidate_curriculum_plan": candidate_curriculum_plan,
+                    **FALSE_AUTHORITY,
+                },
+                "candidate_curriculum_plan": candidate_curriculum_plan,
+                "score_aware_carrier_training_plan": planner,
+                "snerv_mlx_native_adapter_contract": (
+                    snerv_mlx_native_adapter_contract_after_export
+                ),
+                "archive_path": snerv_mlx_native_export.get("archive_path"),
+                "archive_bytes": snerv_mlx_native_export.get("archive_bytes"),
+                "archive_sha256": snerv_mlx_native_export.get("archive_sha256"),
+                "receiver_proof_report_paths": (
+                    [str(snerv_mlx_native_export.get("receiver_proof_path"))]
+                    if snerv_mlx_native_export.get("receiver_proof_path")
+                    else []
+                ),
+                "snerv_recon_pixel_weight": {
+                    "schema": "compact_snerv_recon_pixel_weight_consumption.v1",
+                    "requested": effective_recon_pixel_weight_path is not None,
+                    "enabled": bool(
+                        (
+                            snerv_mlx_native_export.get("recon_pixel_weight")
+                            or {}
+                        ).get("selected_packet_consumed")
+                    ),
+                    "path": (
+                        Path(effective_recon_pixel_weight_path).as_posix()
+                        if effective_recon_pixel_weight_path is not None
+                        else None
+                    ),
+                    "manifest_path": (
+                        Path(
+                            effective_recon_pixel_weight_manifest_path
+                        ).as_posix()
+                        if effective_recon_pixel_weight_manifest_path is not None
+                        else None
+                    ),
+                    "normalize": str(recon_pixel_weight_normalize),
+                    "auto_discovery": recon_pixel_weight_auto_discovery,
+                    "native_export_consumed": bool(
+                        (
+                            snerv_mlx_native_export.get("recon_pixel_weight")
+                            or {}
+                        ).get("selected_packet_consumed")
+                    ),
+                    "native_export_packet_source": snerv_mlx_native_export.get(
+                        "packet_source"
+                    ),
+                    "native_mlx_export_consumption": snerv_mlx_native_export.get(
+                        "recon_pixel_weight"
+                    ),
+                    "primary_archive_consumed": bool(
+                        (
+                            snerv_mlx_native_export.get("recon_pixel_weight")
+                            or {}
+                        ).get("selected_packet_consumed")
+                    ),
+                    "primary_archive_source": "snerv_native_mlx_export_direct",
+                    "primary_archive_path": snerv_mlx_native_export.get(
+                        "archive_path"
+                    ),
+                    **FALSE_AUTHORITY,
+                },
+                "snerv_mlx_native_export": snerv_mlx_native_export,
+                "snerv_mlx_native_file_backed_export_evidence": (
+                    snerv_mlx_native_file_backed_evidence
+                ),
+                "score_aware_training": {
+                    "schema": "compact_snerv_native_mlx_long_training_direct.v1",
+                    "status": "native_mlx_long_training_direct_no_legacy_advisory",
+                    "axis_tag": "[macOS-MLX research-signal]",
+                    "levels": int(levels),
+                    "wavelet": str(wavelet),
+                    "target_bits_per_coeff": target_bits_per_coeff,
+                    "step_map_coder_mode": str(resolved_step_map_coder_mode),
+                    "step_map_waterfill_bits_per_coeff": (
+                        step_map_waterfill_bits_per_coeff
+                    ),
+                    "decoder_payload_codec": decoder_payload_codec,
+                    "source_pair_indices": list(
+                        snerv_mlx_native_export.get("source_pair_indices") or []
+                    ),
+                    "prioritized_pair_training": {
+                        "schema": "compact_snerv_prioritized_pair_training.v1",
+                        "enabled": bool(prioritized_pair_indices),
+                        "pair_indices": [
+                            int(value) for value in prioritized_pair_indices
+                        ],
+                        "pair_count": len(prioritized_pair_indices),
+                        "consumed_by_cpu_advisory": False,
+                        "consumed_by_scorer_loop_qat": bool(
+                            prioritized_pair_indices
+                            and snerv_mlx_native_export.get(
+                                "scorer_loop_qat_attached"
+                            )
+                        ),
+                        "consumed_by_mlx_native_export": bool(
+                            prioritized_pair_indices
+                            and (
+                                (
+                                    snerv_mlx_native_export.get(
+                                        "prioritized_pair_training"
+                                    )
+                                    or {}
+                                ).get("consumed_by_native_mlx_train_export")
+                                is True
+                            )
+                        ),
+                        "mlx_native_export_blocker": (
+                            None
+                            if (
+                                not prioritized_pair_indices
+                                or (
+                                    (
+                                        snerv_mlx_native_export.get(
+                                            "prioritized_pair_training"
+                                        )
+                                        or {}
+                                    ).get("consumed_by_native_mlx_train_export")
+                                    is True
+                                )
+                            )
+                            else (
+                                "snerv_mlx_native_prioritized_pair_hydration_"
+                                "not_consumed"
+                            )
+                        ),
+                        "sampling_scope": "snerv_native_mlx_direct_training",
+                        **FALSE_AUTHORITY,
+                    },
+                    "scorer_loop_component_guard_mode": str(
+                        snerv_scorer_loop_component_guard_mode
+                    ),
+                    "mlx_native_export": snerv_mlx_native_export,
+                    "mlx_native_file_backed_export_evidence": (
+                        snerv_mlx_native_file_backed_evidence
+                    ),
+                    "mlx_native_train_export_attached": bool(
+                        snerv_mlx_native_export.get("executed")
+                    ),
+                    "mlx_native_hf_decoder_fit_executed": bool(
+                        snerv_mlx_native_export.get(
+                            "score_aware_hf_decoder_fit_executed"
+                        )
+                    ),
+                    "mlx_native_receiver_proof_passed": (
+                        snerv_mlx_native_receiver_proof_passed
+                    ),
+                    "mlx_native_full600_export_verified": (
+                        snerv_mlx_native_export_verified
+                    ),
+                    "mlx_native_training_required_next": (
+                        not bool(
+                            snerv_mlx_native_export.get(
+                                "score_aware_long_training_executed"
+                            )
+                        )
+                    ),
+                    "authority": "macos_mlx_false_authority_until_replay_exact",
+                    **FALSE_AUTHORITY,
+                },
+                "blockers": blockers,
+                **FALSE_AUTHORITY,
+            }
+        )
+        final["candidate_feedback"] = write_nerv_candidate_feedback_files(
+            runner_report=final,
+            output_dir=out,
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, final)
+        return {**final, "report_path": path.as_posix()}
     advisory = run_snerv_advisory(
         n_pairs=int(num_pairs),
         pair_indices=(

@@ -1600,7 +1600,13 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert campaign_plan["ready_for_exact_eval_dispatch"] is False
     assert campaign_plan["family_counts"]["hi_nerv"] > 0
     assert campaign_plan["family_counts"]["snerv"] > 0
-    assert campaign_plan["launchable_local_row_count"] == 0
+    launchable_local_rows = [
+        row
+        for row in campaign_plan["campaign_rows"]
+        if row["local_mlx_launch_command_ready"]
+    ]
+    assert campaign_plan["launchable_local_row_count"] == len(launchable_local_rows)
+    assert launchable_local_rows
     assert any(
         row["experiment_queue_entry"]["launch_authority_contract"][
             "queue_status_is_local_mlx_plan"
@@ -1612,6 +1618,21 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         row["experiment_queue_entry"]["launch_authority_contract"][
             "queue_status_is_runnable_plan"
         ]
+        is row["local_mlx_launch_command_ready"]
+        for row in campaign_plan["campaign_rows"]
+    )
+    assert all(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_status_is_receiver_proof"
+        ]
+        is False
+        and row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_status_is_cpu_replay_proof"
+        ]
+        is False
+        and row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_status_is_exact_eval_authority"
+        ]
         is False
         for row in campaign_plan["campaign_rows"]
     )
@@ -1621,8 +1642,7 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     ]
     ready_families = {
         row["family"]
-        for row in campaign_plan["campaign_rows"]
-        if row["local_mlx_launch_command_ready"]
+        for row in launchable_local_rows
     }
     assert ready_families == {"snerv"}
     assert any(
@@ -1638,17 +1658,18 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     assert all(row["local_mlx_launch_command_ready"] is True for row in snerv_campaign_rows)
     assert all(
         row["score_lowering_gate"]["command_materialized"] is True
-        and row["score_lowering_gate"]["local_mlx_executable"] is False
-        and row["score_lowering_gate"]["prelaunch_allowed"] is False
+        and row["score_lowering_gate"]["local_mlx_executable"] is True
+        and row["score_lowering_gate"]["prelaunch_allowed"] is True
+        and row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
         and row["score_lowering_gate"]["cpu_replay_ready"] is False
         and row["score_lowering_gate"]["exact_gate_ready"] is False
+        and row["score_lowering_gate"]["score_claim"] is False
+        and row["score_lowering_gate"]["score_claim_valid"] is False
+        and row["score_lowering_gate"]["promotion_eligible"] is False
+        and row["score_lowering_gate"]["ready_for_exact_eval_dispatch"] is False
         for row in snerv_campaign_rows
     )
-    assert all(
-        "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
-        in row["score_lowering_gate"]["launch_blockers"]
-        for row in snerv_campaign_rows
-    )
+    assert all(row["score_lowering_gate"]["launch_blockers"] == [] for row in snerv_campaign_rows)
     assert any(
         "snerv_byte_closed_archive_export_missing"
         in row["score_lowering_gate"]["promotion_blockers"]
@@ -6459,9 +6480,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert recon_weight["enabled"] is False
     assert recon_weight["native_export_consumed"] is False
     assert recon_weight["primary_archive_consumed"] is False
-    assert recon_weight["primary_archive_source"] == (
-        "snerv_advisory_archive_packet_not_native_mlx_export"
-    )
+    assert recon_weight["primary_archive_source"] == "snerv_native_mlx_export_direct"
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
     assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
     assert out["score_aware_training"]["mlx_native_full600_export_verified"] is False
