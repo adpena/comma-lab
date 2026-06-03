@@ -1,0 +1,71 @@
+{
+  "schema": "codex_hinerv_full600_mlx_value_profile_pointer.v1",
+  "created_utc": "2026-06-03T22:28:00Z",
+  "family": "hi_nerv",
+  "checkpoint_epoch": 21999,
+  "checkpoint_state_kind": "ema",
+  "axis": "macOS-MLX research-signal",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch021999_ema_archive_export_20260603T222320Z_portfolio_default_guarded/archive.zip",
+    "sha256": "77f3db7f86038841b8bcb1a80b044e195ad363e312722b85882ae254a19c44cf",
+    "bytes": 121797
+  },
+  "export_report": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch021999_ema_archive_export_20260603T222320Z_portfolio_default_guarded/hinerv_checkpoint_archive_export.json",
+    "sha256": "1b9c88897ae1393220d329911a812446fd926f60a75b05d4b9bd0c7e511eae37"
+  },
+  "cache_report": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch021999_ema_archive_export_20260603T222320Z_portfolio_default_guarded/mlx_full600/candidate_cache_report.json",
+    "sha256": "7931d2ed94029c92e10b244563a4af5911222ec7d4da4a44dcbf262d48251081",
+    "cached_pair_count": 600
+  },
+  "mlx_response": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch021999_ema_archive_export_20260603T222320Z_portfolio_default_guarded/mlx_full600/mlx_response_full600.json",
+    "sha256": "fec2ef74f93621945cbeabd01fd1b82dace98a6758fdf94aca080e28527fbc3f",
+    "canonical_score": 88.69066680021047,
+    "avg_segnet_dist": 0.5048249476154645,
+    "avg_posenet_dist": 145.36736509958902,
+    "rate_term": 0.08108885440196925,
+    "nonrate_score": 88.6095779458085,
+    "pairs": 600
+  },
+  "three_point_curve": [
+    {
+      "epoch": 19999,
+      "canonical_score": 89.6117192386665,
+      "avg_segnet_dist": 0.5048249476154645,
+      "avg_posenet_dist": 152.47544425964355,
+      "archive_bytes": 121828
+    },
+    {
+      "epoch": 20999,
+      "canonical_score": 88.85974325228196,
+      "avg_segnet_dist": 0.5048249476154645,
+      "avg_posenet_dist": 146.66049120585123,
+      "archive_bytes": 121603
+    },
+    {
+      "epoch": 21999,
+      "canonical_score": 88.69066680021047,
+      "avg_segnet_dist": 0.5048249476154645,
+      "avg_posenet_dist": 145.36736509958902,
+      "archive_bytes": 121797
+    }
+  ],
+  "decision": {
+    "exact_gate": "blocked",
+    "exact_gate_blocker": "full_video_mlx_advisory_score_far_above_frontier",
+    "rate_axis_status": "archive_under_178k_ceiling",
+    "distortion_axis_status": "not_solved",
+    "training_signal": "pose improves slowly while SegNet is flat across all three full-video replays",
+    "implemented_followup": {
+      "commit_intent": "Make HiNeRV SegNet boundary weights pair scoped",
+      "bug_class": "auto_segnet_boundary_recon_weight_was_static_full_video_average_and_applied_to_both_frames",
+      "fix": "future launches use per-pair frame-1 SegNet saliency and uniform frame-0 reconstruction because upstream SegNet scores x[:,-1,...] only"
+    }
+  }
+}
