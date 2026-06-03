@@ -414,6 +414,19 @@ def test_trilinear_upsample_interpolates_temporal_local_grid() -> None:
     assert sampled.shape == (3, 3, 4, 1)
     assert torch.equal(sampled[0, :, :, 0], torch.tensor([[0, 1, 0, 1], [2, 3, 2, 3], [0, 1, 0, 1]], dtype=torch.float32))
     assert torch.equal(sampled[2, :, :, 0], torch.tensor([[8, 9, 8, 9], [10, 11, 10, 11], [8, 9, 8, 9]], dtype=torch.float32))
+    half_time = trilinear_upsample(
+        grid,
+        torch.tensor([1], dtype=torch.long),
+        num_pairs=5,
+        target_h=2,
+        target_w=2,
+        local_scale=2,
+    )
+    expected_half = torch.tensor(
+        [[[2.0, 3.0], [4.0, 5.0]]],
+        dtype=torch.float32,
+    )
+    assert torch.equal(half_time[:, :, :, 0], expected_half)
 
 
 def test_official_feature_grid_convnext_mode_is_receiver_visible() -> None:
@@ -452,6 +465,35 @@ def test_official_feature_grid_convnext_mode_is_receiver_visible() -> None:
     assert rgb_0.shape == (2, 3, cfg.output_height, cfg.output_width)
     assert rgb_1.shape == (2, 3, cfg.output_height, cfg.output_width)
     assert float(rgb_0.min()) >= 0.0 and float(rgb_0.max()) <= 1.0
+
+    base_state = {
+        name: tensor.detach().clone()
+        for name, tensor in model.state_dict().items()
+    }
+    pair_indices = torch.tensor([0, 1], dtype=torch.long)
+    with torch.no_grad():
+        baseline_0, baseline_1 = model(pair_indices)
+        model.feature_grids[0].proj.bias.add_(0.25)
+        grid_mutated_0, grid_mutated_1 = model(pair_indices)
+    grid_delta = max(
+        float(torch.max(torch.abs(grid_mutated_0 - baseline_0)).item()),
+        float(torch.max(torch.abs(grid_mutated_1 - baseline_1)).item()),
+    )
+    assert grid_delta > 1.0e-7
+
+    model.load_state_dict(base_state, strict=True)
+    with torch.no_grad():
+        baseline_0, baseline_1 = model(pair_indices)
+        first_convnext = model.convnext_blocks[0]
+        assert isinstance(first_convnext, ConvNeXtBlock)
+        first_convnext.gamma.add_(0.25)
+        first_convnext.pwconv2.bias.add_(0.25)
+        convnext_mutated_0, convnext_mutated_1 = model(pair_indices)
+    convnext_delta = max(
+        float(torch.max(torch.abs(convnext_mutated_0 - baseline_0)).item()),
+        float(torch.max(torch.abs(convnext_mutated_1 - baseline_1)).item()),
+    )
+    assert convnext_delta > 1.0e-7
 
 
 def test_official_feature_grid_convnext_archive_roundtrip_preserves_forward() -> None:

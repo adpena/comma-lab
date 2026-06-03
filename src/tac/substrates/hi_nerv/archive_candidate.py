@@ -10,6 +10,8 @@ shared archive-bound receiver proof/package.
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -34,11 +36,15 @@ from tac.substrates._shared.pact_nerv_full_main import (
     build_archive_zip,
     write_contest_runtime,
 )
-from tac.substrates.hi_nerv.architecture import validate_decoder_state_dict
+from tac.substrates.hi_nerv.architecture import (
+    HinervSubstrate,
+    validate_decoder_state_dict,
+)
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hi_nerv.bitstream import (
     prepare_hi_nerv_decoder_bitstream_state,
 )
+from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.hprc.representation_spine import (
     build_hi_nerv_spine_from_archive_payload,
     write_representation_spine_projection,
@@ -54,6 +60,9 @@ HI_NERV_MLX_RECEIVER_PROOF_SCHEMA = "hi_nerv_mlx_generated_receiver_proof.v1"
 HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID = "hi_nerv_mlx_archive_export"
 HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY = "hi_nerv_mlx"
 HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND = "hi_nerv_mlx_archive"
+HI_NERV_DECODER_RENDERED_PIXEL_PROOF_SCHEMA = (
+    "hi_nerv_decoder_preparation_rendered_pixel_proof.v1"
+)
 
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
 _STATE_NPZ_NAME = "hi_nerv_mlx_exported_state.npz"
@@ -154,6 +163,230 @@ def _require_exported_tensor(
     )
 
 
+def _tensor_sha256(tensor: torch.Tensor) -> str:
+    arr = tensor.detach().to("cpu").contiguous().numpy()
+    h = hashlib.sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(np.asarray(arr.shape, dtype="<i8").tobytes())
+    h.update(arr.tobytes(order="C"))
+    return h.hexdigest()
+
+
+def _decoder_state_sha256(decoder_state: Mapping[str, torch.Tensor]) -> str:
+    h = hashlib.sha256()
+    for name in sorted(decoder_state):
+        h.update(str(name).encode("utf-8"))
+        h.update(b"\0")
+        h.update(_tensor_sha256(decoder_state[name]).encode("utf-8"))
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def _changed_decoder_tensors(
+    before: Mapping[str, torch.Tensor],
+    after: Mapping[str, torch.Tensor],
+) -> list[str]:
+    changed: list[str] = []
+    for name in sorted(set(before) | set(after)):
+        before_tensor = before.get(name)
+        after_tensor = after.get(name)
+        if before_tensor is None or after_tensor is None:
+            changed.append(name)
+            continue
+        if _tensor_sha256(before_tensor) != _tensor_sha256(after_tensor):
+            changed.append(name)
+    return changed
+
+
+def _load_receiver_model_for_pixel_proof(
+    *,
+    cfg: HinervConfig,
+    decoder_state: Mapping[str, torch.Tensor],
+    latents_coarse: torch.Tensor,
+    latents_mid: torch.Tensor,
+    latents_fine: torch.Tensor,
+) -> HinervSubstrate:
+    model = HinervSubstrate(cfg).eval()
+    state = {
+        name: tensor.detach().clone().to(dtype=torch.float32, device="cpu")
+        for name, tensor in decoder_state.items()
+    }
+    state.update(
+        {
+            "latents_coarse": latents_coarse.detach()
+            .clone()
+            .to(dtype=torch.float32, device="cpu"),
+            "latents_mid": latents_mid.detach()
+            .clone()
+            .to(dtype=torch.float32, device="cpu"),
+            "latents_fine": latents_fine.detach()
+            .clone()
+            .to(dtype=torch.float32, device="cpu"),
+        }
+    )
+    model.load_state_dict(state, strict=True)
+    return model
+
+
+def _render_receiver_pixels(
+    model: HinervSubstrate,
+    pair_indices: torch.Tensor,
+) -> torch.Tensor:
+    rgb_0, rgb_1 = model(pair_indices)
+    return (
+        torch.stack((rgb_0, rgb_1), dim=1)
+        .detach()
+        .to(dtype=torch.float32, device="cpu")
+        .contiguous()
+    )
+
+
+def _sample_pair_indices_for_pixel_proof(
+    *,
+    num_pairs: int,
+    max_pair_samples: int,
+) -> torch.Tensor:
+    """Return deterministic spread samples for rendered-pixel mutation proof."""
+
+    total = int(num_pairs)
+    requested = int(max_pair_samples)
+    if total <= 0:
+        raise ValueError("HiNeRV rendered-pixel proof requires num_pairs > 0")
+    if requested <= 0:
+        raise ValueError("HiNeRV rendered-pixel proof requires max_pair_samples > 0")
+    pair_count = min(requested, total)
+    if pair_count == total:
+        values = list(range(total))
+    elif pair_count == 1:
+        values = [0]
+    else:
+        values = [
+            round(index * (total - 1) / float(pair_count - 1))
+            for index in range(pair_count)
+        ]
+    return torch.tensor(values, dtype=torch.long)
+
+
+def _build_decoder_rendered_pixel_proof(
+    *,
+    decoder_state_before: Mapping[str, torch.Tensor],
+    decoder_state_after: Mapping[str, torch.Tensor],
+    latents_coarse: torch.Tensor,
+    latents_mid: torch.Tensor,
+    latents_fine: torch.Tensor,
+    cfg: HinervConfig,
+    max_pair_samples: int = 3,
+) -> dict[str, Any]:
+    changed_names = _changed_decoder_tensors(decoder_state_before, decoder_state_after)
+    pair_indices = _sample_pair_indices_for_pixel_proof(
+        num_pairs=int(cfg.num_pairs),
+        max_pair_samples=int(max_pair_samples),
+    )
+    proof: dict[str, Any] = {
+        "schema": HI_NERV_DECODER_RENDERED_PIXEL_PROOF_SCHEMA,
+        "proof_kind": "sampled_receiver_rendered_pixel_delta",
+        "pair_indices": [int(value) for value in pair_indices.tolist()],
+        "sampled_pair_count": int(pair_indices.numel()),
+        "decoder_tensor_count": len(decoder_state_after),
+        "changed_decoder_tensor_count": len(changed_names),
+        "changed_decoder_tensor_names": changed_names,
+        "decoder_state_sha256_before": _decoder_state_sha256(decoder_state_before),
+        "decoder_state_sha256_after": _decoder_state_sha256(decoder_state_after),
+        "blockers": [
+            "sampled_rendered_pixel_proof_not_full_video",
+            "contest_cpu_cuda_exact_eval_not_executed",
+            "scorer_replay_not_executed",
+        ],
+        **FALSE_AUTHORITY,
+    }
+    if not changed_names:
+        proof.update(
+            {
+                "proof_status": "not_required_no_decoder_state_change",
+                "decoder_state_changed": False,
+                "rendered_pixels_changed": False,
+                "changed_rendered_pixel_count": 0,
+                "max_abs_rendered_pixel_delta": 0.0,
+                "mean_abs_rendered_pixel_delta": 0.0,
+            }
+        )
+        return proof
+
+    before_model = _load_receiver_model_for_pixel_proof(
+        cfg=cfg,
+        decoder_state=decoder_state_before,
+        latents_coarse=latents_coarse,
+        latents_mid=latents_mid,
+        latents_fine=latents_fine,
+    )
+    after_model = _load_receiver_model_for_pixel_proof(
+        cfg=cfg,
+        decoder_state=decoder_state_after,
+        latents_coarse=latents_coarse,
+        latents_mid=latents_mid,
+        latents_fine=latents_fine,
+    )
+    with torch.no_grad():
+        before_pixels = _render_receiver_pixels(before_model, pair_indices)
+        after_pixels = _render_receiver_pixels(after_model, pair_indices)
+    delta = torch.abs(after_pixels - before_pixels)
+    max_abs_delta = float(delta.max().item()) if delta.numel() else 0.0
+    changed_pixel_count = int(torch.count_nonzero(delta > 0.0).item())
+    rendered_pixels_changed = bool(changed_pixel_count > 0 and max_abs_delta > 0.0)
+    proof.update(
+        {
+            "proof_status": (
+                "sampled_rendered_pixels_changed"
+                if rendered_pixels_changed
+                else "sampled_rendered_pixels_no_change"
+            ),
+            "decoder_state_changed": True,
+            "rendered_pixels_changed": rendered_pixels_changed,
+            "changed_rendered_pixel_count": changed_pixel_count,
+            "max_abs_rendered_pixel_delta": max_abs_delta,
+            "mean_abs_rendered_pixel_delta": (
+                float(delta.mean().item()) if delta.numel() else 0.0
+            ),
+            "rendered_tensor_shape": [int(value) for value in after_pixels.shape],
+            "rendered_tensor_sha256_before": _tensor_sha256(before_pixels),
+            "rendered_tensor_sha256_after": _tensor_sha256(after_pixels),
+        }
+    )
+    return proof
+
+
+def _bitstream_report_with_rendered_pixel_proof(
+    *,
+    prepared_report: Mapping[str, Any],
+    decoder_state_before: Mapping[str, torch.Tensor],
+    decoder_state_after: Mapping[str, torch.Tensor],
+    latents_coarse: torch.Tensor,
+    latents_mid: torch.Tensor,
+    latents_fine: torch.Tensor,
+    cfg: HinervConfig,
+) -> dict[str, Any]:
+    report = copy.deepcopy(dict(prepared_report))
+    proof = _build_decoder_rendered_pixel_proof(
+        decoder_state_before=decoder_state_before,
+        decoder_state_after=decoder_state_after,
+        latents_coarse=latents_coarse,
+        latents_mid=latents_mid,
+        latents_fine=latents_fine,
+        cfg=cfg,
+    )
+    if proof["decoder_state_changed"] and not proof["rendered_pixels_changed"]:
+        raise ValueError(
+            "HiNeRV decoder bitstream preparation changed decoder tensors but "
+            "sampled receiver rendered pixels did not change"
+        )
+    report["decoder_rendered_pixel_proof"] = proof
+    waterfill = report.get("decoder_weight_waterfill")
+    if isinstance(waterfill, dict):
+        waterfill["rendered_pixel_proof"] = proof
+        waterfill["rendered_pixel_proof_status"] = proof["proof_status"]
+    return report
+
+
 def pack_archive_from_exported_state_dict(
     *,
     exported_state_dict: dict[str, np.ndarray],
@@ -206,6 +439,15 @@ def pack_archive_from_exported_state_dict(
         quant_noise_seed=quant_noise_seed,
         decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
     )
+    bitstream_report = _bitstream_report_with_rendered_pixel_proof(
+        prepared_report=prepared.report,
+        decoder_state_before=decoder_state,
+        decoder_state_after=prepared.state_dict,
+        latents_coarse=latents_coarse,
+        latents_mid=latents_mid,
+        latents_fine=latents_fine,
+        cfg=cfg,
+    )
 
     blob = pack_archive(
         prepared.state_dict,
@@ -214,12 +456,12 @@ def pack_archive_from_exported_state_dict(
         latents_fine,
         {
             **hi_nerv_meta_from_config(cfg),
-            "_hi_nerv_bitstream_preparation": prepared.report,
+            "_hi_nerv_bitstream_preparation": bitstream_report,
         },
         decoder_codec=decoder_codec,
     )
     if return_bitstream_report:
-        return blob, prepared.report
+        return blob, bitstream_report
     return blob
 
 

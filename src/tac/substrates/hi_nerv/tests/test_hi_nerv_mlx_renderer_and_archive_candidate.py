@@ -443,6 +443,21 @@ def test_archive_candidate_int8_decoder_packet_roundtrip() -> None:
     assert "latents_coarse" not in arc.decoder_state_dict
 
 
+def test_archive_candidate_pixel_proof_samples_full_video_span() -> None:
+    from tac.substrates.hi_nerv.archive_candidate import (
+        _sample_pair_indices_for_pixel_proof,
+    )
+
+    assert _sample_pair_indices_for_pixel_proof(
+        num_pairs=600,
+        max_pair_samples=3,
+    ).tolist() == [0, 300, 599]
+    assert _sample_pair_indices_for_pixel_proof(
+        num_pairs=3,
+        max_pair_samples=3,
+    ).tolist() == [0, 1, 2]
+
+
 def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> None:
     from tac.substrates.hi_nerv.archive import parse_archive
     from tac.substrates.hi_nerv.archive_candidate import (
@@ -481,6 +496,60 @@ def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> N
     assert waterfill["applied_rows"][0]["changed"] is True
     assert "contest_cpu_cuda_exact_eval_not_executed" in waterfill["blockers"]
     assert waterfill["score_claim"] is False
+    proof = waterfill["rendered_pixel_proof"]
+    assert proof == arc.meta["_hi_nerv_bitstream_preparation"][
+        "decoder_rendered_pixel_proof"
+    ]
+    assert waterfill["rendered_pixel_proof_status"] == (
+        "sampled_rendered_pixels_changed"
+    )
+    assert proof["proof_kind"] == "sampled_receiver_rendered_pixel_delta"
+    assert proof["pair_indices"] == [0, 1, 2]
+    assert proof["changed_decoder_tensor_names"] == ["head_rgb_1.weight"]
+    assert proof["rendered_pixels_changed"] is True
+    assert proof["changed_rendered_pixel_count"] > 0
+    assert proof["max_abs_rendered_pixel_delta"] > 0.0
+    assert proof["score_claim"] is False
+
+
+def test_archive_candidate_refuses_decoder_prep_rendered_pixel_noop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive_candidate
+
+    def _fake_noop_proof(**_: object) -> dict[str, object]:
+        return {
+            "schema": "hi_nerv_decoder_preparation_rendered_pixel_proof.v1",
+            "proof_status": "sampled_rendered_pixels_no_change",
+            "decoder_state_changed": True,
+            "rendered_pixels_changed": False,
+        }
+
+    monkeypatch.setattr(
+        archive_candidate,
+        "_build_decoder_rendered_pixel_proof",
+        _fake_noop_proof,
+    )
+    exportable = _exportable_torch_model()
+    with pytest.raises(ValueError, match="rendered pixels did not change"):
+        archive_candidate.pack_archive_from_exported_state_dict(
+            exported_state_dict=exportable.export_state_dict(),
+            cfg=exportable.cfg,
+            decoder_codec="fp16_enveloped",
+            decoder_weight_waterfill_plan={
+                "schema": "nerv_decoder_weight_waterfill.v1",
+                "family": "hi_nerv",
+                "candidate_id": "unit",
+                "rows": [
+                    {
+                        "group_name": "head_rgb_1.weight",
+                        "selected_bits": 0,
+                        "selected_action": "zero_rle",
+                    }
+                ],
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+            },
+        )
 
 
 def test_archive_candidate_refuses_unsafe_decoder_waterfill_plan() -> None:
