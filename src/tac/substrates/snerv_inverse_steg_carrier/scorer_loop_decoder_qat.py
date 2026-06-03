@@ -125,6 +125,29 @@ class SnervPairDelta:
 
 
 @dataclass(frozen=True)
+class SnervPairRobustAdmission:
+    """Fail-closed admission verdict for small-window SNeRV scorer-loop wins."""
+
+    schema: str
+    n_pairs: int
+    min_score_improved_fraction: float
+    max_pose_worsened_fraction: float
+    pose_slack: float
+    score_improved_fraction: float
+    pose_worsened_fraction: float
+    permissive_guard: bool
+    passed: bool
+    blockers: tuple[str, ...]
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    def as_jsonable(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class SnervSectionNeutralizationEval:
     """Train-time scored neutralization row for one optional SNAR1 section."""
 
@@ -220,6 +243,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     improvement_d_pose_delta: float
     improvement_d_seg_delta: float
     best_pair_deltas: tuple[SnervPairDelta, ...]
+    pair_robust_admission: SnervPairRobustAdmission
     scorer_loop_evaluations: int
     real_frame_source: str
     receiver_contract_satisfied: bool
@@ -243,6 +267,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
         payload["best_pair_deltas"] = [
             row.as_jsonable() for row in self.best_pair_deltas
         ]
+        payload["pair_robust_admission"] = self.pair_robust_admission.as_jsonable()
         payload["rows"] = [_eval_as_gate_row(row) for row in self.evaluations]
         return payload
 
@@ -694,10 +719,20 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         section_value_pressure_multiplier <= 0.0
         or all(row.section_value_pressure_ready for row in rows)
     )
+    best_pair_deltas = decoder_eval_pair_deltas(baseline, best_eval)
+    pair_robust_admission = build_pair_robust_admission(
+        best_pair_deltas,
+        pose_slack=float(pose_slack),
+        min_score_improved_fraction=float(pair_guard_min_score_improved_fraction),
+        max_pose_worsened_fraction=float(pair_guard_max_pose_worsened_fraction),
+        accepted_improvement=accepted_improvement,
+    )
+    blockers.extend(pair_robust_admission.blockers)
     ready_for_gate = bool(
         accepted_improvement
         and best_eval.receiver_archive_replay_verified
         and section_value_binding_satisfied
+        and pair_robust_admission.passed
     )
     return SnervScorerLoopDecoderQatSmokeResult(
         schema=SCHEMA,
@@ -743,7 +778,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         improvement_score_delta=float(best_eval.score_linf - baseline.score_linf),
         improvement_d_pose_delta=float(best_eval.d_pose_linf - baseline.d_pose_linf),
         improvement_d_seg_delta=float(best_eval.d_seg_linf - baseline.d_seg_linf),
-        best_pair_deltas=decoder_eval_pair_deltas(baseline, best_eval),
+        best_pair_deltas=best_pair_deltas,
+        pair_robust_admission=pair_robust_admission,
         scorer_loop_evaluations=len(rows),
         real_frame_source=video_path,
         receiver_contract_satisfied=all(row.receiver_archive_replay_verified for row in rows),
@@ -939,6 +975,77 @@ def decoder_eval_pair_deltas(
             )
         )
     return tuple(deltas)
+
+
+def build_pair_robust_admission(
+    deltas: tuple[SnervPairDelta, ...],
+    *,
+    pose_slack: float,
+    min_score_improved_fraction: float,
+    max_pose_worsened_fraction: float,
+    accepted_improvement: bool = True,
+) -> SnervPairRobustAdmission:
+    """Return the small-window admission gate for pair-robust SNeRV evidence."""
+
+    if not 0.0 <= min_score_improved_fraction <= 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "pair_guard_min_score_improved_fraction must be in [0, 1]"
+        )
+    if not 0.0 <= max_pose_worsened_fraction <= 1.0:
+        raise SnervScorerLoopDecoderQatError(
+            "pair_guard_max_pose_worsened_fraction must be in [0, 1]"
+        )
+    n_pairs = len(deltas)
+    if n_pairs == 0:
+        return SnervPairRobustAdmission(
+            schema="snerv_pair_robust_admission.v1",
+            n_pairs=0,
+            min_score_improved_fraction=float(min_score_improved_fraction),
+            max_pose_worsened_fraction=float(max_pose_worsened_fraction),
+            pose_slack=float(pose_slack),
+            score_improved_fraction=0.0,
+            pose_worsened_fraction=1.0,
+            permissive_guard=(
+                min_score_improved_fraction <= 0.0
+                and max_pose_worsened_fraction >= 1.0
+            ),
+            passed=False,
+            blockers=("pair_robust_admission_no_pair_deltas",),
+        )
+
+    score_improved_fraction = float(
+        sum(1 for row in deltas if row.score_linf_without_rate_delta < 0.0)
+        / float(n_pairs)
+    )
+    pose_worsened_fraction = float(
+        sum(1 for row in deltas if row.d_pose_linf_delta > float(pose_slack))
+        / float(n_pairs)
+    )
+    permissive = (
+        float(min_score_improved_fraction) <= 0.0
+        and float(max_pose_worsened_fraction) >= 1.0
+    )
+    blockers: list[str] = []
+    if permissive:
+        blockers.append("pair_robust_admission_guard_permissive")
+    if not accepted_improvement:
+        blockers.append("pair_robust_admission_no_accepted_improvement")
+    if score_improved_fraction < float(min_score_improved_fraction):
+        blockers.append("pair_score_improvement_fraction_guard_failed")
+    if pose_worsened_fraction > float(max_pose_worsened_fraction):
+        blockers.append("pair_pose_worsening_fraction_guard_failed")
+    return SnervPairRobustAdmission(
+        schema="snerv_pair_robust_admission.v1",
+        n_pairs=int(n_pairs),
+        min_score_improved_fraction=float(min_score_improved_fraction),
+        max_pose_worsened_fraction=float(max_pose_worsened_fraction),
+        pose_slack=float(pose_slack),
+        score_improved_fraction=score_improved_fraction,
+        pose_worsened_fraction=pose_worsened_fraction,
+        permissive_guard=permissive,
+        passed=not blockers,
+        blockers=tuple(dict.fromkeys(blockers)),
+    )
 
 
 def decoder_search_direction_labels(
@@ -1750,9 +1857,11 @@ __all__ = [
     "SnervDecoderEval",
     "SnervPairDelta",
     "SnervPairEval",
+    "SnervPairRobustAdmission",
     "SnervScorerLoopDecoderQatError",
     "SnervScorerLoopDecoderQatSmokeResult",
     "SnervSectionNeutralizationEval",
+    "build_pair_robust_admission",
     "decoder_eval_pair_deltas",
     "decoder_search_direction_labels",
     "decoder_trial_passes_pose_guard",

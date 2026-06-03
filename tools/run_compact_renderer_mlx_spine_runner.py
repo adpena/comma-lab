@@ -2431,6 +2431,9 @@ def _run_snerv_scorer_loop_qat_attachment(
             "component_guard_mode": str(
                 result_payload.get("component_guard_mode") or component_guard_mode
             ),
+            "pair_robust_admission": result_payload.get(
+                "pair_robust_admission"
+            ),
             "section_value_pressure_multiplier": float(
                 section_value_pressure_multiplier
             ),

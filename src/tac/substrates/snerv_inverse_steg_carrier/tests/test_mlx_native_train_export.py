@@ -716,6 +716,22 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
                 "best_packet_bytes": len(best_packet),
                 "best_packet_sha256": best_packet_sha256,
                 "component_guard_mode": "pose_seg_hard",
+                "pair_robust_admission": {
+                    "schema": "snerv_pair_robust_admission.v1",
+                    "n_pairs": 1,
+                    "min_score_improved_fraction": 1.0,
+                    "max_pose_worsened_fraction": 0.0,
+                    "pose_slack": 0.0,
+                    "score_improved_fraction": 1.0,
+                    "pose_worsened_fraction": 0.0,
+                    "permissive_guard": False,
+                    "passed": True,
+                    "blockers": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
                 "blockers": [
                     "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export",
                     "snerv_scorer_loop_qat_auxiliary_warning",
@@ -777,6 +793,8 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["lf_payload_codec"] == "portfolio_auto"
     assert scorer_loop["receiver_contract_satisfied"] is True
     assert scorer_loop["accepted_improvement"] is True
+    assert scorer_loop["pair_robust_admission"]["passed"] is True
+    assert scorer_loop["pair_robust_admission"]["permissive_guard"] is False
     assert scorer_loop["best_archive_sha256"] == best_packet_sha256
     assert scorer_loop["best_packet_sha256"] == best_packet_sha256
     assert scorer_loop["best_packet_materialized"] is True

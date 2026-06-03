@@ -891,6 +891,18 @@ def test_hinerv_execute_forwards_prioritized_pair_indices(
     assert captured_train_kwargs["resume_from_checkpoint"] == (
         tmp_path / "external_checkpoints/epoch000006.meta.json"
     ).resolve(strict=False)
+    prioritized = out["score_aware_training"]["prioritized_pair_training"]
+    assert prioritized["enabled"] is True
+    assert prioritized["pair_indices"] == [3, 1]
+    assert (
+        prioritized["pair_index_domain"]
+        == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+    )
+    assert prioritized["arbitrary_source_pair_hydration"] is False
+    assert prioritized["target_hydration_pair_indices_consumed"] is False
+    assert prioritized["requires_num_pairs_covering_pair_ids"] is True
+    assert prioritized["score_claim"] is False
+    assert prioritized["promotion_eligible"] is False
     assert out["score_claim"] is False
 
 
@@ -5564,6 +5576,22 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
                 "improvement_d_pose_delta": 0.0,
                 "improvement_d_seg_delta": -0.001,
                 "scorer_loop_evaluations": 3,
+                "pair_robust_admission": {
+                    "schema": "snerv_pair_robust_admission.v1",
+                    "n_pairs": 2,
+                    "min_score_improved_fraction": 0.5,
+                    "max_pose_worsened_fraction": 0.25,
+                    "pose_slack": 0.001,
+                    "score_improved_fraction": 1.0,
+                    "pose_worsened_fraction": 0.0,
+                    "permissive_guard": False,
+                    "passed": True,
+                    "blockers": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
                 "blockers": [],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -5691,6 +5719,10 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     qat = out["snerv_scorer_loop_qat"]
     assert qat["executed"] is True
     assert qat["component_guard_mode"] == "pose_hard"
+    assert qat["pair_robust_admission"]["schema"] == (
+        "snerv_pair_robust_admission.v1"
+    )
+    assert qat["pair_robust_admission"]["passed"] is True
     assert qat["lf_payload_codec"] == "auto"
     assert qat["accepted_improvement"] is True
     assert qat["receiver_contract_satisfied"] is True

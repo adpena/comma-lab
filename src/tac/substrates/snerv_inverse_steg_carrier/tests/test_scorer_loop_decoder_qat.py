@@ -32,6 +32,7 @@ from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     _nes_pair_robust_objective,
     _pack_receiver_archive,
     _PreparedState,
+    build_pair_robust_admission,
     decoder_eval_pair_deltas,
     decoder_search_direction_labels,
     decoder_trial_passes_pose_guard,
@@ -732,6 +733,76 @@ def test_decoder_trial_pose_guard_can_limit_pair_pose_worsening() -> None:
         )
         is False
     )
+
+
+def test_pair_robust_admission_blocks_permissive_defaults() -> None:
+    baseline = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.4,
+        d_seg=0.02,
+        replay=True,
+    )
+    candidate = _eval(
+        label="candidate",
+        score=6.9,
+        d_pose=0.39,
+        d_seg=0.019,
+        replay=True,
+    )
+
+    gate = build_pair_robust_admission(
+        decoder_eval_pair_deltas(baseline, candidate),
+        pose_slack=0.0,
+        min_score_improved_fraction=0.0,
+        max_pose_worsened_fraction=1.0,
+        accepted_improvement=True,
+    )
+
+    assert gate.permissive_guard is True
+    assert gate.passed is False
+    assert "pair_robust_admission_guard_permissive" in gate.blockers
+    assert gate.score_claim is False
+    assert gate.ready_for_exact_eval_dispatch is False
+
+
+def test_pair_robust_admission_passes_strict_pairwise_improvement() -> None:
+    baseline = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.4,
+        d_seg=0.02,
+        replay=True,
+        per_pair=(
+            SnervPairEval(0, 0.02, 0.40, 4.0),
+            SnervPairEval(1, 0.02, 0.30, 3.0),
+        ),
+    )
+    candidate = _eval(
+        label="candidate",
+        score=6.8,
+        d_pose=0.35,
+        d_seg=0.019,
+        replay=True,
+        per_pair=(
+            SnervPairEval(0, 0.019, 0.39, 3.5),
+            SnervPairEval(1, 0.018, 0.29, 2.5),
+        ),
+    )
+
+    gate = build_pair_robust_admission(
+        decoder_eval_pair_deltas(baseline, candidate),
+        pose_slack=0.0,
+        min_score_improved_fraction=1.0,
+        max_pose_worsened_fraction=0.0,
+        accepted_improvement=True,
+    )
+
+    assert gate.permissive_guard is False
+    assert gate.score_improved_fraction == 1.0
+    assert gate.pose_worsened_fraction == 0.0
+    assert gate.passed is True
+    assert gate.blockers == ()
 
 
 def test_decoder_eval_json_preserves_pair_local_detector_response() -> None:
