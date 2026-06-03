@@ -173,6 +173,31 @@ def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) ->
     assert payload["rows"][0]["group_name"] == "decoder.blocks.0.weight"
 
 
+def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
+    weights = runner_mod._compact_scoreaware_stage_loss_weights(
+        recon=0.25,
+        segnet=2.0,
+        pose=1.5,
+    )
+    stages = runner_mod._compact_scoreaware_curriculum_stages(
+        substrate_id="unit_hi_nerv",
+        epochs=9,
+        loss_weights=weights,
+    )
+
+    assert weights == {"recon": 0.25, "distill": 2.0, "pose_distill": 1.5}
+    assert len(stages) == 1
+    assert stages[0].start_epoch == 0
+    assert stages[0].end_epoch == 9
+    assert dict(stages[0].loss_weights) == weights
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="finite"):
+        runner_mod._compact_scoreaware_stage_loss_weights(
+            recon=-0.1,
+            segnet=1.0,
+            pose=1.0,
+        )
+
+
 def test_compact_family_interrupted_report_preserves_false_authority_evidence(
     tmp_path: Path,
 ) -> None:
@@ -1378,6 +1403,9 @@ def test_hinerv_private_smoke_rejects_out_of_range_prioritized_pairs(
             pose_distillation_weight=1.0,
             pose_distillation_loss="mse",
             pose_distillation_huber_delta=1.0,
+            recon_loss_stage_weight=1.0,
+            segnet_loss_stage_weight=1.0,
+            pose_loss_stage_weight=1.0,
             segnet_distillation_objective="kl_t2",
             distillation_temperature=2.0,
             segnet_tau_boundary=1.0,
@@ -2860,6 +2888,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.75",
             "--recon-pixel-weight-normalize",
             "none",
+            "--recon-loss-stage-weight",
+            "0.25",
+            "--segnet-loss-stage-weight",
+            "2.0",
+            "--pose-loss-stage-weight",
+            "1.5",
             "--mlx-prefilter-scorer-batch-pairs",
             "8",
             "--mlx-prefilter-scorer-device",
@@ -2964,6 +2998,9 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.auto_segnet_boundary_recon_weight is True
     assert hi.recon_pixel_weight_tau == 0.75
     assert hi.recon_pixel_weight_normalize == "none"
+    assert hi.recon_loss_stage_weight == 0.25
+    assert hi.segnet_loss_stage_weight == 2.0
+    assert hi.pose_loss_stage_weight == 1.5
     assert hi.mlx_prefilter_scorer_batch_pairs == 8
     assert hi.mlx_prefilter_scorer_device == "gpu"
     assert hi.mlx_prefilter_progress_every == 10
@@ -4536,6 +4573,9 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
         auto_joint_recon_pixel_weight=True,
+        recon_loss_stage_weight=0.25,
+        segnet_loss_stage_weight=2.0,
+        pose_loss_stage_weight=1.5,
         mlx_prefilter_scorer_device="gpu",
         repo_root=REPO_ROOT,
     )
@@ -4543,7 +4583,15 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
     assert captured["recon_pixel_weight_path"] == weight_path
     assert captured["recon_pixel_weight_auto_discovery"] == discovery
     assert captured["auto_segnet_boundary_recon_weight"] is False
+    assert captured["recon_loss_stage_weight"] == 0.25
+    assert captured["segnet_loss_stage_weight"] == 2.0
+    assert captured["pose_loss_stage_weight"] == 1.5
     assert captured["mlx_prefilter_scorer_device"] == "gpu"
+    assert out["score_aware_training"]["stage_loss_weights"] == {
+        "distill": 2.0,
+        "pose_distill": 1.5,
+        "recon": 0.25,
+    }
     assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == (
         "auto_discovered_joint_p18_p19_file"
     )

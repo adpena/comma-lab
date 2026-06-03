@@ -1353,6 +1353,64 @@ def _require_scorer_upstream_dir_for_distillation(
         )
 
 
+def _compact_scoreaware_stage_loss_weights(
+    *,
+    recon: float = 1.0,
+    segnet: float = 1.0,
+    pose: float = 1.0,
+) -> dict[str, float]:
+    """Canonical runner-level weights for shared MLX score-aware components."""
+
+    values = {
+        "recon": float(recon),
+        "distill": float(segnet),
+        "pose_distill": float(pose),
+    }
+    bad = [
+        name
+        for name, value in values.items()
+        if not math.isfinite(value) or value < 0.0
+    ]
+    if bad:
+        raise CompactRendererMlxSpineRunnerError(
+            "score-aware stage loss weights must be finite and non-negative; "
+            "invalid: " + ", ".join(bad)
+        )
+    if (
+        values["recon"] == 0.0
+        and values["distill"] == 0.0
+        and values["pose_distill"] == 0.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "at least one score-aware stage loss weight must be positive"
+        )
+    return values
+
+
+def _compact_scoreaware_curriculum_stages(
+    *,
+    substrate_id: str,
+    epochs: int,
+    loss_weights: Mapping[str, float],
+) -> tuple[Any, ...]:
+    """Build the one-stage explicit-loss-weight curriculum consumed by MLX."""
+
+    from tac.training.long_training_canonical import CurriculumStage
+
+    return (
+        CurriculumStage(
+            name=f"{substrate_id}_mlx_score_aware_weighted_full",
+            start_epoch=0,
+            end_epoch=int(epochs),
+            loss_weights=dict(loss_weights),
+            notes=(
+                "Explicit compact-runner score-aware component weights. "
+                "These values feed the shared MLX adapter train_step directly."
+            ),
+        ),
+    )
+
+
 def _resolve_torch_scorer_device_alias(
     requested_device: str,
     *,
@@ -5835,6 +5893,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     optimizer_cosine_decay_enabled: bool = False,
     optimizer_cosine_decay_total_epochs: int | None = None,
     optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
+    recon_loss_stage_weight: float = 1.0,
+    segnet_loss_stage_weight: float = 1.0,
+    pose_loss_stage_weight: float = 1.0,
     prioritized_pair_indices: tuple[int, ...] = (),
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
@@ -5994,6 +6055,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     effective_pose_distillation_weight = float(
         launch_pressure_binding["pose_distillation_weight"]
     )
+    stage_loss_weights = _compact_scoreaware_stage_loss_weights(
+        recon=float(recon_loss_stage_weight),
+        segnet=float(segnet_loss_stage_weight),
+        pose=float(pose_loss_stage_weight),
+    )
     candidate_supplied = bool(candidate)
     launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
@@ -6114,6 +6180,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training": {
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
+                    "stage_loss_weights": stage_loss_weights,
                     "decoder_weight_waterfill_plan": (
                         decoder_weight_waterfill_plan_metadata
                     ),
@@ -6180,6 +6247,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training": {
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
+                    "stage_loss_weights": stage_loss_weights,
                     "decoder_weight_waterfill_plan": (
                         decoder_weight_waterfill_plan_metadata
                     ),
@@ -6268,6 +6336,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training": {
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
+                    "stage_loss_weights": stage_loss_weights,
                     "decoder_weight_waterfill_plan": (
                         decoder_weight_waterfill_plan_metadata
                     ),
@@ -6473,6 +6542,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             optimizer_kind=str(optimizer_kind),
             hi_nerv_optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
+            recon_loss_stage_weight=float(recon_loss_stage_weight),
+            segnet_loss_stage_weight=float(segnet_loss_stage_weight),
+            pose_loss_stage_weight=float(pose_loss_stage_weight),
             prioritized_pair_indices=prioritized_pair_indices,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
@@ -6544,6 +6616,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "checkpoint_interval_epochs": checkpoint_interval,
+                "score_aware_stage_loss_weights": stage_loss_weights,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
@@ -6847,6 +6920,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "pose_distillation_huber_delta": float(
                     pose_distillation_huber_delta
                 ),
+                "stage_loss_weights": stage_loss_weights,
                 "modelsize_launch_pressure": launch_pressure_binding,
                 "segnet_distillation_objective": segnet_distillation_objective,
                 "distillation_temperature": float(distillation_temperature),
@@ -9337,6 +9411,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     optimizer_kind: str,
     hi_nerv_optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
+    recon_loss_stage_weight: float,
+    segnet_loss_stage_weight: float,
+    pose_loss_stage_weight: float,
     prioritized_pair_indices: tuple[int, ...],
     random_seed: int,
     scorer_upstream_dir: Path,
@@ -9399,6 +9476,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_huber_delta must be > 0"
         )
+    stage_weights = _compact_scoreaware_stage_loss_weights(
+        recon=float(recon_loss_stage_weight),
+        segnet=float(segnet_loss_stage_weight),
+        pose=float(pose_loss_stage_weight),
+    )
     checkpoint_interval = _resolve_checkpoint_interval_epochs(
         checkpoint_interval_epochs,
         epochs=epochs,
@@ -9563,6 +9645,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "optimizer_controls": strip_candidate_curriculum_authority_fields(
                 optimizer_control
             ),
+            "stage_loss_weights": stage_weights,
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
             "checkpoint_dir": (
@@ -9761,6 +9844,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         checkpoint_dir=checkpoint_dir,
         resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=max(1, int(telemetry_flush_interval_epochs)),
+        curriculum_stages=_compact_scoreaware_curriculum_stages(
+            substrate_id="compact_runner_hi_nerv_mlx",
+            epochs=int(epochs),
+            loss_weights=stage_weights,
+        ),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
         ema_archive_selection_enabled=True,
@@ -12225,6 +12313,34 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--segnet-tau-boundary", default=1.0, type=float)
     parser.add_argument("--segnet-hinge-margin", default=1.0, type=float)
     parser.add_argument(
+        "--recon-loss-stage-weight",
+        default=1.0,
+        type=float,
+        help=(
+            "Shared MLX score-aware stage weight for reconstruction. This "
+            "feeds CurriculumStage.loss_weights['recon'] directly; it is not "
+            "metadata-only."
+        ),
+    )
+    parser.add_argument(
+        "--segnet-loss-stage-weight",
+        default=1.0,
+        type=float,
+        help=(
+            "Shared MLX score-aware stage weight for SegNet distillation. "
+            "Feeds CurriculumStage.loss_weights['distill'] directly."
+        ),
+    )
+    parser.add_argument(
+        "--pose-loss-stage-weight",
+        default=1.0,
+        type=float,
+        help=(
+            "Shared MLX score-aware stage weight for PoseNet distillation. "
+            "Feeds CurriculumStage.loss_weights['pose_distill'] directly."
+        ),
+    )
+    parser.add_argument(
         "--distillation-device",
         default="cpu",
         help="Device used to build real scorer teacher caches; default CPU.",
@@ -13449,6 +13565,9 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_cosine_decay_min_lr_ratio=(
                 args.optimizer_cosine_decay_min_lr_ratio
             ),
+            recon_loss_stage_weight=args.recon_loss_stage_weight,
+            segnet_loss_stage_weight=args.segnet_loss_stage_weight,
+            pose_loss_stage_weight=args.pose_loss_stage_weight,
             prioritized_pair_indices=prioritized_pair_indices,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
