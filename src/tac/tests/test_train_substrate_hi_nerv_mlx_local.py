@@ -342,6 +342,30 @@ def test_hinerv_prioritized_pair_lineage_metadata_has_no_canonical_authority() -
         assert forbidden not in metadata
 
 
+def test_hinerv_prioritized_pair_metadata_records_consumed_source_hydration() -> None:
+    metadata = _prioritized_pair_training_metadata(
+        (417, 22),
+        target_hydration_pair_indices_consumed=True,
+    )
+    lineage = _prioritized_pair_training_lineage_metadata(
+        (417, 22),
+        target_hydration_pair_indices_consumed=True,
+    )
+
+    for payload in (metadata, lineage):
+        assert payload["enabled"] is True
+        assert payload["pair_indices"] == [417, 22]
+        assert payload["source_pair_indices"] == [417, 22]
+        assert payload["local_pair_indices"] == [0, 1]
+        assert payload["pair_index_domain"] == "source_video_pair_indices"
+        assert payload["pair_index_alignment_mode"] == (
+            "local_target_rows_to_source_pair_indices"
+        )
+        assert payload["arbitrary_source_pair_hydration"] is True
+        assert payload["target_hydration_pair_indices_consumed"] is True
+        assert payload["requires_num_pairs_covering_pair_ids"] is False
+
+
 def test_hinerv_mlx_trainer_rejects_out_of_range_prioritized_pairs() -> None:
     args = _build_parser().parse_args(
         [
@@ -375,6 +399,57 @@ def test_hinerv_mlx_trainer_forwards_prioritized_pairs_to_harness() -> None:
     assert any(
         any(keyword.arg == "prioritized_pair_indices" for keyword in call.keywords)
         for call in run_calls
+    )
+    assert any(
+        any(
+            keyword.arg == "prioritized_pair_indices"
+            and isinstance(keyword.value, ast.Name)
+            and keyword.value.id == "local_training_pair_indices"
+            for keyword in call.keywords
+        )
+        for call in run_calls
+    )
+
+
+def test_hinerv_mlx_trainer_hydrates_targets_from_source_pairs() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    decode_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "decode_mlx_targets"
+    ]
+    bundle_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "RendererBundle"
+    ]
+
+    assert decode_calls
+    assert any(
+        any(
+            keyword.arg == "pair_indices"
+            and isinstance(keyword.value, ast.Name)
+            and keyword.value.id == "source_pair_indices"
+            for keyword in call.keywords
+        )
+        for call in decode_calls
+    )
+    assert any(
+        any(
+            keyword.arg == "source_pair_indices"
+            and isinstance(keyword.value, ast.Name)
+            and keyword.value.id == "source_pair_indices"
+            for keyword in call.keywords
+        )
+        for call in bundle_calls
     )
 
 

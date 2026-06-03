@@ -740,9 +740,8 @@ class MlxScoreAwareAdapter:
         num_pairs = self.bundle.num_pairs
         size = min(max(1, batch_size), num_pairs)
         rng = np.random.RandomState(seed)
-        priority = tuple(
-            pair for pair in self._prioritized_pair_indices if 0 <= pair < num_pairs
-        )
+        priority_resolution = self._resolve_priority_local_rows()
+        priority = tuple(priority_resolution["priority_local_pair_indices"])
         priority_take = min(size, len(priority))
         random_fill_count = size - priority_take
         priority_selected: list[int] = []
@@ -774,10 +773,14 @@ class MlxScoreAwareAdapter:
         sampled_pair_indices = [int(value) for value in sampled.tolist()]
         if self.bundle.source_pair_indices is None:
             source_pair_indices = list(sampled_pair_indices)
+            priority_source_pair_indices = list(priority_selected)
             pair_index_alignment_mode = "identity_local_rows_are_source_pairs"
         else:
             source_rows = tuple(int(value) for value in self.bundle.source_pair_indices)
             source_pair_indices = [source_rows[int(value)] for value in sampled_pair_indices]
+            priority_source_pair_indices = [
+                source_rows[int(value)] for value in priority_selected
+            ]
             pair_index_alignment_mode = "local_target_rows_to_source_pair_indices"
         self._last_batch_observability = {
             "schema": "mlx_score_aware_pair_batch_observability.v1",
@@ -786,8 +789,19 @@ class MlxScoreAwareAdapter:
             "actual_batch_size": int(size),
             "seed": int(seed),
             "sampling_policy": sampling_policy,
+            "requested_priority_pair_indices": list(
+                priority_resolution["requested_priority_pair_indices"]
+            ),
             "prioritized_pair_count": len(priority),
             "priority_pair_indices_in_batch": priority_selected,
+            "priority_local_pair_indices_in_batch": priority_selected,
+            "priority_source_pair_indices_in_batch": priority_source_pair_indices,
+            "unresolved_priority_pair_indices": list(
+                priority_resolution["unresolved_priority_pair_indices"]
+            ),
+            "priority_pair_alignment_mode": str(
+                priority_resolution["priority_pair_alignment_mode"]
+            ),
             "random_fill_count": int(random_fill_count),
             "pair_indices": sampled_pair_indices,
             "local_pair_indices": sampled_pair_indices,
@@ -813,6 +827,41 @@ class MlxScoreAwareAdapter:
 
         observed = getattr(self, "_last_batch_observability", None)
         return dict(observed) if isinstance(observed, Mapping) else None
+
+    def _resolve_priority_local_rows(self) -> Mapping[str, Any]:
+        requested = tuple(int(value) for value in self._prioritized_pair_indices)
+        if not requested:
+            return {
+                "requested_priority_pair_indices": (),
+                "priority_local_pair_indices": (),
+                "unresolved_priority_pair_indices": (),
+                "priority_pair_alignment_mode": "no_priority_pairs_requested",
+            }
+        num_pairs = int(self.bundle.num_pairs)
+        if self.bundle.source_pair_indices is None:
+            local_rows = tuple(value for value in requested if value < num_pairs)
+            unresolved = tuple(value for value in requested if value >= num_pairs)
+            return {
+                "requested_priority_pair_indices": requested,
+                "priority_local_pair_indices": local_rows,
+                "unresolved_priority_pair_indices": unresolved,
+                "priority_pair_alignment_mode": "identity_priority_pairs_are_local_rows",
+            }
+
+        source_to_local = {
+            int(source_pair_index): int(local_row)
+            for local_row, source_pair_index in enumerate(self.bundle.source_pair_indices)
+        }
+        local_rows = tuple(
+            source_to_local[value] for value in requested if value in source_to_local
+        )
+        unresolved = tuple(value for value in requested if value not in source_to_local)
+        return {
+            "requested_priority_pair_indices": requested,
+            "priority_local_pair_indices": local_rows,
+            "unresolved_priority_pair_indices": unresolved,
+            "priority_pair_alignment_mode": "source_priority_pairs_to_local_rows",
+        }
 
     def _normalize_prioritized_pair_indices(
         self,

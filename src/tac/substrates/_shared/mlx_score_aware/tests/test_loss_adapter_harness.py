@@ -281,6 +281,42 @@ def test_score_aware_loss_uses_source_pairs_for_model_and_local_rows_for_targets
 
 
 @mlx_only
+def test_adapter_priority_sampling_maps_source_pairs_to_local_rows() -> None:
+    import mlx.core as mx
+
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=mx.zeros((2, 1, 1, 3), dtype=mx.float32),
+        target_rgb_1=mx.zeros((2, 1, 1, 3), dtype=mx.float32),
+        num_pairs=2,
+        source_pair_indices=(417, 22),
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="hi_nerv",
+        prioritized_pair_indices=(417, 22, 999),
+    )
+
+    sampled = adapter.sample_batch(batch_size=2, seed=0)
+    observability = adapter.batch_observability(sampled)
+
+    assert np.asarray(sampled).tolist() == [0, 1]
+    assert observability is not None
+    assert observability["requested_priority_pair_indices"] == [417, 22, 999]
+    assert observability["priority_local_pair_indices_in_batch"] == [0, 1]
+    assert observability["priority_source_pair_indices_in_batch"] == [417, 22]
+    assert observability["unresolved_priority_pair_indices"] == [999]
+    assert observability["source_pair_indices"] == [417, 22]
+    assert observability["priority_pair_alignment_mode"] == (
+        "source_priority_pairs_to_local_rows"
+    )
+    assert observability["pair_index_alignment_mode"] == (
+        "local_target_rows_to_source_pair_indices"
+    )
+    assert observability["score_claim"] is False
+
+
+@mlx_only
 def test_score_aware_loss_extra_term_weighted() -> None:
     import mlx.core as mx
 

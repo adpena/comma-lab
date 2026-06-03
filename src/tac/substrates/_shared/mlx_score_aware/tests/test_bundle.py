@@ -35,6 +35,50 @@ def test_rejects_zero_pairs() -> None:
         )
 
 
+def test_source_pair_indices_must_match_local_target_rows() -> None:
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=None,
+        target_rgb_1=None,
+        num_pairs=2,
+        source_pair_indices=[417, 22],  # type: ignore[arg-type]
+    )
+    assert bundle.source_pair_indices == (417, 22)
+
+    with pytest.raises(MlxScoreAwareHarnessError, match="length must equal num_pairs"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=2,
+            source_pair_indices=(7,),
+        )
+    with pytest.raises(MlxScoreAwareHarnessError, match="must not contain duplicates"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=2,
+            source_pair_indices=(7, 7),
+        )
+    with pytest.raises(MlxScoreAwareHarnessError, match="non-negative"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=1,
+            source_pair_indices=(-1,),
+        )
+    with pytest.raises(MlxScoreAwareHarnessError, match="integer source pair ids"):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=1,
+            source_pair_indices=("bad",),  # type: ignore[arg-type]
+        )
+
+
 def test_rejects_negative_distillation_weight() -> None:
     with pytest.raises(MlxScoreAwareHarnessError, match="distillation_weight"):
         RendererBundle(
