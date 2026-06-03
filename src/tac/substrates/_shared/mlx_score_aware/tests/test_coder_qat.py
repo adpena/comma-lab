@@ -170,14 +170,21 @@ def test_c1a_entropy_selection_excludes_latents_from_decoder_pressure() -> None:
 def test_qat_selection_includes_hinerv_official_decoder_controls() -> None:
     import mlx.core as mx
 
-    cfg = CoderAwareQATConfig(enabled=True, quant_bits=2)
+    cfg = CoderAwareQATConfig(
+        enabled=True,
+        quant_bits=2,
+        c1a_entropy_weight=1.0e-4,
+        c1a_sigma=0.75,
+        c1a_sample_size=8,
+    )
     model = _HiNervOfficialParamTree()
 
     terms = build_decoder_coder_qat_terms(model, cfg)
     entropy = build_decoder_c1a_entropy_term(model, cfg, sigma=0.75)
-    mx.eval(terms["coder_qat_quant_residual"], entropy)
+    mx.eval(terms["coder_qat_quant_residual"], terms["coder_qat_c1a_entropy"], entropy)
 
     assert float(terms["coder_qat_quant_residual"].item()) > 0.0
+    assert float(terms["coder_qat_c1a_entropy"].item()) > 0.0
     assert float(entropy.item()) > 0.0
 
 
@@ -190,6 +197,15 @@ def test_c1a_entropy_fails_closed_on_invalid_controls() -> None:
         build_decoder_c1a_entropy_term(model, cfg, sigma=0.0)
     with pytest.raises(MlxScoreAwareHarnessError, match="sample_size"):
         build_decoder_c1a_entropy_term(model, cfg, sigma=1.0, sample_size=0)
+
+
+def test_qat_config_validates_c1a_controls() -> None:
+    with pytest.raises(MlxScoreAwareHarnessError, match="c1a_entropy_weight"):
+        CoderAwareQATConfig(enabled=True, c1a_entropy_weight=-1.0).validated()
+    with pytest.raises(MlxScoreAwareHarnessError, match="c1a_sigma"):
+        CoderAwareQATConfig(enabled=True, c1a_sigma=0.0).validated()
+    with pytest.raises(MlxScoreAwareHarnessError, match="c1a_sample_size"):
+        CoderAwareQATConfig(enabled=True, c1a_sample_size=0).validated()
 
 
 def test_qat_config_fails_closed_on_invalid_values() -> None:
@@ -214,6 +230,20 @@ def test_enabled_qat_keeps_zero_weight_terms_explicit() -> None:
     assert weights["coder_qat_quant_residual"] == pytest.approx(1.0e-4)
     assert weights["coder_qat_magnitude"] == pytest.approx(0.0)
     assert weights["coder_qat_delta"] == pytest.approx(0.0)
+    assert weights["coder_qat_c1a_entropy"] == pytest.approx(0.0)
+
+
+def test_enabled_qat_threads_c1a_entropy_weight() -> None:
+    weights = coder_qat_loss_weights(
+        CoderAwareQATConfig(
+            enabled=True,
+            c1a_entropy_weight=3.0e-4,
+            c1a_sigma=0.25,
+            c1a_sample_size=64,
+        )
+    )
+
+    assert weights["coder_qat_c1a_entropy"] == pytest.approx(3.0e-4)
 
 
 def test_qat_metadata_avoids_duplicate_authority_fields() -> None:
@@ -222,6 +252,10 @@ def test_qat_metadata_avoids_duplicate_authority_fields() -> None:
     assert metadata["schema"] == "coder_aware_decoder_qat.v1"
     assert metadata["enabled"] is True
     assert metadata["quant_bits"] == 4
+    assert metadata["c1a_entropy_weight"] == pytest.approx(0.0)
+    assert metadata["c1a_sigma"] == pytest.approx(0.2)
+    assert metadata["c1a_sample_size"] == 512
+    assert "PR95" in metadata["c1a_source"]
     assert metadata["quantizer_geometry"] == (
         "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
         "per_tensor_fp16_scale_for_biases"

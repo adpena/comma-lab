@@ -53,6 +53,9 @@ class CoderAwareQATConfig:
     quant_residual_weight: float = 1.0e-4
     magnitude_weight: float = 0.0
     delta_weight: float = 0.0
+    c1a_entropy_weight: float = 0.0
+    c1a_sigma: float = 0.2
+    c1a_sample_size: int = 512
     include_substrings: tuple[str, ...] = field(
         default_factory=lambda: DEFAULT_DECODER_INCLUDE_SUBSTRINGS
     )
@@ -80,6 +83,18 @@ class CoderAwareQATConfig:
             raise MlxScoreAwareHarnessError(
                 "coder-aware QAT delta_weight must be non-negative"
             )
+        if float(self.c1a_entropy_weight) < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "coder-aware QAT c1a_entropy_weight must be non-negative"
+            )
+        if float(self.c1a_sigma) <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "coder-aware QAT c1a_sigma must be positive"
+            )
+        if int(self.c1a_sample_size) <= 0:
+            raise MlxScoreAwareHarnessError(
+                "coder-aware QAT c1a_sample_size must be positive"
+            )
         includes = tuple(str(item) for item in self.include_substrings if str(item))
         excludes = tuple(str(item) for item in self.exclude_substrings if str(item))
         if not includes:
@@ -94,6 +109,9 @@ class CoderAwareQATConfig:
             quant_residual_weight=float(self.quant_residual_weight),
             magnitude_weight=float(self.magnitude_weight),
             delta_weight=float(self.delta_weight),
+            c1a_entropy_weight=float(self.c1a_entropy_weight),
+            c1a_sigma=float(self.c1a_sigma),
+            c1a_sample_size=int(self.c1a_sample_size),
             include_substrings=includes,
             exclude_substrings=excludes,
             eps=float(self.eps),
@@ -110,6 +128,7 @@ def coder_qat_loss_weights(cfg: CoderAwareQATConfig) -> dict[str, float]:
         "coder_qat_quant_residual": float(c.quant_residual_weight),
         "coder_qat_magnitude": float(c.magnitude_weight),
         "coder_qat_delta": float(c.delta_weight),
+        "coder_qat_c1a_entropy": float(c.c1a_entropy_weight),
     }
 
 
@@ -124,6 +143,13 @@ def coder_qat_metadata(cfg: CoderAwareQATConfig) -> dict[str, Any]:
         "quant_residual_weight": float(c.quant_residual_weight),
         "magnitude_weight": float(c.magnitude_weight),
         "delta_weight": float(c.delta_weight),
+        "c1a_entropy_weight": float(c.c1a_entropy_weight),
+        "c1a_sigma": float(c.c1a_sigma),
+        "c1a_sample_size": int(c.c1a_sample_size),
+        "c1a_source": (
+            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
+            "decoder weights"
+        ),
         "quantizer_geometry": (
             "symmetric_signed_axis0_fp16_scale_for_matrix_conv_weights_"
             "per_tensor_fp16_scale_for_biases"
@@ -237,6 +263,16 @@ def build_decoder_coder_qat_terms(
         if magnitude_terms
         else zero,
         "coder_qat_delta": mx.mean(mx.stack(delta_terms)) if delta_terms else zero,
+        "coder_qat_c1a_entropy": (
+            build_decoder_c1a_entropy_term(
+                model,
+                c,
+                sigma=float(c.c1a_sigma),
+                sample_size=int(c.c1a_sample_size),
+            )
+            if float(c.c1a_entropy_weight) > 0.0
+            else zero
+        ),
     }
 
 
