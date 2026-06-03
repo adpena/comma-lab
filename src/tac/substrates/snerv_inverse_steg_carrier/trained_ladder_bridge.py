@@ -20,6 +20,9 @@ SNERV_ADVISORY_TRAINER_METADATA_SCHEMA = (
 )
 SNERV_ADVISORY_SCORER_EVAL_SCHEMA = "snerv_advisory_component_eval.v1"
 SNERV_PACKET_RECEIVER_PROOF_SCHEMA = "snerv_advisory_packet_receiver_replay.v1"
+PROTECTED_OFFICIAL_CONTROL_FIELDS = frozenset(
+    ("source_faithful_stack", "official_parity_status")
+)
 
 
 def build_snerv_trained_ladder_row_from_advisory(
@@ -44,7 +47,10 @@ def build_snerv_trained_ladder_row_from_advisory(
         )
     controls = _actual_controls(advisory_result)
     if official_controls is not None:
-        controls.update(dict(official_controls))
+        controls = _merge_official_controls_fail_closed(
+            controls,
+            official_controls,
+        )
 
     proof = dict(receiver_proof or {})
     if not proof:
@@ -166,6 +172,33 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
             ),
         }
     return controls
+
+
+def _merge_official_controls_fail_closed(
+    actual_controls: Mapping[str, Any],
+    supplied_controls: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Merge enrichment fields without allowing caller-supplied authority flags."""
+
+    merged = dict(actual_controls)
+    protected_overrides: dict[str, Any] = {}
+    for key, value in dict(supplied_controls).items():
+        if key in PROTECTED_OFFICIAL_CONTROL_FIELDS:
+            protected_overrides[key] = value
+            continue
+        merged[key] = value
+    if protected_overrides:
+        merged["official_control_override_guard"] = {
+            "schema": "snerv_official_control_override_guard.v1",
+            "protected_fields": sorted(PROTECTED_OFFICIAL_CONTROL_FIELDS),
+            "ignored_overrides": protected_overrides,
+            "source_faithful_stack": bool(merged.get("source_faithful_stack")) is True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    return merged
 
 
 def _trainer_metadata(

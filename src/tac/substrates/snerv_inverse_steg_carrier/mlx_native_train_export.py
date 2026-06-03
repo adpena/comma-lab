@@ -2117,6 +2117,11 @@ def _blocked_official_primitives_native_export(
     started_monotonic: float,
 ) -> dict[str, Any]:
     blockers = list(model_size.official_mfu_hfr_tub_export_blockers)
+    official_binding = _official_primitives_export_binding(
+        model_size=model_size,
+        candidate=candidate,
+        blockers=blockers,
+    )
     payload = {
         "schema": "snerv_mlx_native_train_export.v1",
         "output_dir": output_dir.as_posix(),
@@ -2138,16 +2143,7 @@ def _blocked_official_primitives_native_export(
         "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
         "snerv_official_mfu_hfr_tub_export_bound": False,
         "snerv_official_mfu_hfr_tub_export_blockers": blockers,
-        "official_primitive_binding": {
-            "schema": "snerv_official_mfu_hfr_tub_export_binding.v1",
-            "adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
-            "primitive_modules_available": True,
-            "export_consumed_official_mfu": False,
-            "export_consumed_official_hfr": False,
-            "export_consumed_official_tub": False,
-            "blockers": blockers,
-            **FALSE_AUTHORITY,
-        },
+        "official_primitive_binding": official_binding,
         "packet_path": None,
         "packet_bytes": None,
         "packet_sha256": None,
@@ -2178,6 +2174,66 @@ def _blocked_official_primitives_native_export(
     payload["report_sha256"] = sha256_file(report_path)
     write_json(report_path, payload)
     return payload
+
+
+def _official_primitives_export_binding(
+    *,
+    model_size: SnervModelSizeConfig,
+    candidate: Mapping[str, Any],
+    blockers: Sequence[str],
+) -> dict[str, Any]:
+    """Describe the exact official-SNeRV export gap without granting authority."""
+
+    required_sections = (
+        "official_encoder_embedding_payload",
+        "official_mfu_weight_payload",
+        "official_hfr_weight_payload",
+        "official_tub_weight_payload",
+        "official_idwt_or_wavelet_payload",
+        "official_decoder_graph_topology_payload",
+    )
+    consumed_controls = {
+        "fc_dim": int(model_size.fc_dim),
+        "emb_size": int(model_size.emb_size),
+        "patch_radius": int(model_size.patch_radius),
+        "mfu_scales": [int(v) for v in model_size.mfu_scales],
+        "hfr_gain": float(model_size.hfr_gain),
+        "temporal_context": int(model_size.temporal_context),
+        "temporal_mode": str(model_size.temporal_mode),
+        "candidate_id": candidate.get("candidate_id"),
+        "official_modelsize_solution": candidate.get("official_modelsize_solution"),
+    }
+    return {
+        "schema": "snerv_official_mfu_hfr_tub_export_binding.v2",
+        "adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        "primitive_modules_available": True,
+        "current_snar_decoder_payload_schema": "linear_hf_generation_decoder_only",
+        "linear_hf_generation_decoder_compatible_with_official_neural_graph": False,
+        "receiver_payload_contract_emitted": True,
+        "required_receiver_payload_sections": list(required_sections),
+        "missing_receiver_payload_sections": list(required_sections),
+        "source_pins": {
+            "official_head_sha": OFFICIAL_SNERV_HFR_SOURCE_SHA,
+            "official_mfu_source": OFFICIAL_SNERV_MFU_SOURCE,
+            "official_residual_block_source": OFFICIAL_SNERV_RB_SOURCE,
+            "official_hfr_source_contract": OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
+            "official_hfr_numeric_proof": SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF,
+            "official_tub_source_sha": OFFICIAL_SNERV_T_SOURCE_SHA,
+            "official_tub_source_contract": OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
+            "official_tub_schema": OFFICIAL_SNERV_T_TUB_SCHEMA,
+        },
+        "numeric_parity_blockers": list(OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS),
+        "candidate_controls_consumed": {
+            key: value for key, value in consumed_controls.items() if value is not None
+        },
+        "export_consumed_official_mfu": False,
+        "export_consumed_official_hfr": False,
+        "export_consumed_official_tub": False,
+        "source_forward_replay_authority": False,
+        "receiver_runtime_decode_authority": False,
+        "blockers": list(blockers),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeConfig:

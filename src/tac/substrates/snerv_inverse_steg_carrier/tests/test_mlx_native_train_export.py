@@ -507,10 +507,35 @@ def test_train_export_blocks_official_primitives_mode_before_surrogate_hydration
     assert report["packet_path"] is None
     assert report["receiver_proof_passed"] is False
     binding = report["official_primitive_binding"]
+    assert binding["schema"] == "snerv_official_mfu_hfr_tub_export_binding.v2"
     assert binding["primitive_modules_available"] is True
+    assert binding["receiver_payload_contract_emitted"] is True
+    assert binding["current_snar_decoder_payload_schema"] == (
+        "linear_hf_generation_decoder_only"
+    )
+    assert binding["linear_hf_generation_decoder_compatible_with_official_neural_graph"] is False
+    assert {
+        "official_encoder_embedding_payload",
+        "official_mfu_weight_payload",
+        "official_hfr_weight_payload",
+        "official_tub_weight_payload",
+        "official_idwt_or_wavelet_payload",
+        "official_decoder_graph_topology_payload",
+    }.issubset(set(binding["required_receiver_payload_sections"]))
+    assert binding["missing_receiver_payload_sections"] == (
+        binding["required_receiver_payload_sections"]
+    )
+    assert binding["source_pins"]["official_hfr_source_contract"].startswith(
+        "official_snerv_lines_62_64_91_122"
+    )
+    assert binding["source_pins"]["official_tub_source_contract"].startswith(
+        "official_snerv_t_lines_125_136"
+    )
     assert binding["export_consumed_official_mfu"] is False
     assert binding["export_consumed_official_hfr"] is False
     assert binding["export_consumed_official_tub"] is False
+    assert binding["source_forward_replay_authority"] is False
+    assert binding["receiver_runtime_decode_authority"] is False
     assert Path(report["report_path"]).is_file()
 
 

@@ -272,6 +272,71 @@ def test_bridge_records_official_modelsize_solution_without_score_authority(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_bridge_refuses_official_controls_override_of_source_faithful_stack_without_parity_proof(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-override-guard"
+    packet_path = tmp_path / "override_guard.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(packet),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        official_controls={
+            "source_faithful_stack": True,
+            "safe_extra_control": "kept",
+        },
+        repo_root=tmp_path,
+    )
+
+    controls = payload["rows"][0]["official_controls"]
+    assert controls["safe_extra_control"] == "kept"
+    assert controls["source_faithful_stack"] is False
+    guard = controls["official_control_override_guard"]
+    assert guard["schema"] == "snerv_official_control_override_guard.v1"
+    assert guard["ignored_overrides"]["source_faithful_stack"] is True
+    assert guard["score_claim"] is False
+    assert (
+        "required_emission_field_false:official_controls.source_faithful_stack"
+        in payload["blockers"]
+    )
+
+
+def test_bridge_keeps_official_mfu_hfr_tub_parity_status_fail_closed_when_controls_are_supplied(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-parity-guard"
+    packet_path = tmp_path / "parity_guard.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+            snerv_hfr_gain=0.25,
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        official_controls={
+            "official_parity_status": "official_mfu_hfr_tub_parity_proven",
+        },
+        repo_root=tmp_path,
+    )
+
+    controls = payload["rows"][0]["official_controls"]
+    assert controls["official_parity_status"] == (
+        "receiver_safe_mfu_hfr_temporal_adapter_present__official_oss_"
+        "parity_still_required"
+    )
+    assert controls["official_control_override_guard"]["ignored_overrides"] == {
+        "official_parity_status": "official_mfu_hfr_tub_parity_proven"
+    }
+    assert controls["official_control_override_guard"]["ready_for_exact_eval_dispatch"] is False
+
+
 def _advisory(packet: bytes, **overrides: object) -> SimpleNamespace:
     values = {
         "snerv_model_size_adapter": "snerv_inverse_steg_principled_fork",
