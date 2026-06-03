@@ -36,6 +36,9 @@ def test_decoder_weight_waterfill_protects_when_saliency_missing() -> None:
     assert report["schema"] == NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["full_video_coverage"] is True
+    assert report["receiver_proof_status"] == "runtime_consumption_proof_ready"
+    assert report["archive_sha256"] == "a" * 64
     assert report["group_count"] == 1
     assert report["rows"][0]["selected_action"] == "fp32_protect"
     assert report["rows"][0]["selected_byte_delta"] == 0

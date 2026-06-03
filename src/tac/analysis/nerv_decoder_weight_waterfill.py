@@ -176,6 +176,9 @@ def build_nerv_decoder_weight_waterfill_plan(
         "action_bits": list(bits),
         "zero_run_overhead_bytes": int(zero_run_overhead_bytes),
         "saliency_calibration": dict(saliency_calibration or {}),
+        "full_video_coverage": bool(full_video_coverage),
+        "receiver_proof_status": str(receiver_proof_status),
+        "archive_sha256": archive_sha256,
         "group_count": len(rows),
         "total_baseline_fp32_bytes": int(sum(row["baseline_fp32_bytes"] for row in rows)),
         "total_selected_estimated_bytes": int(
