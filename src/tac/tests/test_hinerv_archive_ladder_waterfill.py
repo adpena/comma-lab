@@ -118,6 +118,7 @@ def test_hinerv_archive_ladder_waterfill_rejects_wrong_source_schema(
 
 def test_build_hinerv_archive_ladder_waterfill_cli_smoke(tmp_path: Path) -> None:
     ladder = _ladder(tmp_path, row_id="tiny", saliency_ready=True)
+    ladder.pop("report_path")
     ladder_path = tmp_path / "ladder.json"
     saliency_path = tmp_path / "saliency.json"
     output_json = tmp_path / "waterfill.json"
@@ -146,6 +147,9 @@ def test_build_hinerv_archive_ladder_waterfill_cli_smoke(tmp_path: Path) -> None
     assert rc == 0
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["row_count"] == 1
+    assert payload["archive_ladder_report_path"] == ladder_path.resolve(
+        strict=False
+    ).as_posix()
     assert payload["section_value_rows"][0]["archive_ladder_row_id"] == "tiny"
     row = payload["rows"][0]
     assert row["waterfill_plan"]["full_video_coverage"] is True

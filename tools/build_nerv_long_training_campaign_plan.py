@@ -278,6 +278,13 @@ def _load_archive_size_ladder_waterfill_sidecars(
                     "_modelsize_candidate": row.get("modelsize_candidate"),
                     "_archive_size_ladder_row_index": index,
                     "_archive_size_ladder_source_schema": payload.get("schema"),
+                    "_archive_size_ladder_archive_sha256": row.get("archive_sha256"),
+                    "_archive_size_ladder_receiver_proof_path": row.get(
+                        "receiver_proof_path"
+                    ),
+                    "_archive_size_ladder_receiver_proof_sha256": row.get(
+                        "receiver_proof_sha256"
+                    ),
                     "_archive_size_ladder_runtime_consumption_proof_ready": row.get(
                         "runtime_consumption_proof_ready"
                     ),
@@ -295,6 +302,22 @@ def _materialize_archive_ladder_waterfill_sidecars(
     rows = payload.get("rows")
     if not isinstance(rows, list):
         raise TypeError(f"{source_path}: archive-ladder waterfill rows must be a list")
+    archive_ladder_report_path_raw = (
+        payload.get("archive_ladder_report_path")
+        or payload.get("archive_ladder_path")
+        or payload.get("source_archive_ladder_path")
+    )
+    archive_ladder_report_path = (
+        Path(str(archive_ladder_report_path_raw)).expanduser().resolve(strict=False)
+        if archive_ladder_report_path_raw
+        else source_path
+    )
+    archive_ladder_rows_by_id: dict[str, dict] = {}
+    if archive_ladder_report_path.is_file():
+        archive_ladder_payload = _load(archive_ladder_report_path)
+        for archive_row in archive_ladder_payload.get("archive_rows") or ():
+            if isinstance(archive_row, dict) and archive_row.get("row_id") is not None:
+                archive_ladder_rows_by_id[str(archive_row["row_id"])] = archive_row
     out: list[dict] = []
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
@@ -307,6 +330,12 @@ def _materialize_archive_ladder_waterfill_sidecars(
                 f"{source_path}: row {index} has unsupported nested waterfill schema {plan.get('schema')!r}"
             )
         candidate_key = str(row.get("row_id") or plan.get("candidate_id") or f"waterfill_row_{index:04d}")
+        archive_ladder_row = archive_ladder_rows_by_id.get(candidate_key, {})
+        row_blockers = _merged_blockers(
+            plan.get("blockers"),
+            row.get("blockers"),
+            row.get("saliency_replay_blockers"),
+        )
         sidecar = (
             sidecar_root / f"{_safe_token(source_path.stem)}__{_safe_token(candidate_key)}"
             ".decoder_weight_waterfill.json"
@@ -316,11 +345,30 @@ def _materialize_archive_ladder_waterfill_sidecars(
             _waterfill_payload_with_path(
                 plan,
                 plan_path=sidecar,
-                source_path=source_path,
+                source_path=archive_ladder_report_path,
                 extra={
                     "_modelsize_row_id": candidate_key,
                     "_archive_ladder_row_index": index,
                     "_archive_ladder_source_schema": payload.get("schema"),
+                    "_archive_ladder_waterfill_report_path": source_path.as_posix(),
+                    "_archive_ladder_waterfill_row_blockers": row_blockers,
+                    "_archive_size_ladder_source_schema": payload.get("source_schema"),
+                    "_modelsize_candidate": archive_ladder_row.get("modelsize_candidate"),
+                    "_archive_size_ladder_archive_sha256": row.get(
+                        "archive_sha256", archive_ladder_row.get("archive_sha256")
+                    ),
+                    "_archive_size_ladder_receiver_proof_path": row.get(
+                        "receiver_proof_path",
+                        archive_ladder_row.get("receiver_proof_path"),
+                    ),
+                    "_archive_size_ladder_receiver_proof_sha256": row.get(
+                        "receiver_proof_sha256",
+                        archive_ladder_row.get("receiver_proof_sha256"),
+                    ),
+                    "_archive_size_ladder_runtime_consumption_proof_ready": archive_ladder_row.get(
+                        "runtime_consumption_proof_ready"
+                    ),
+                    "blockers": row_blockers,
                 },
             )
         )
@@ -365,6 +413,21 @@ def _safe_token(value: str) -> str:
     chars = [ch if ch.isalnum() else "_" for ch in text]
     token = "_".join("".join(chars).split("_"))
     return token[:160] or "waterfill"
+
+
+def _merged_blockers(*groups: object) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        if not isinstance(group, (list, tuple)):
+            continue
+        for item in group:
+            text = str(item)
+            if not text or text in seen:
+                continue
+            seen.add(text)
+            out.append(text)
+    return out
 
 
 if __name__ == "__main__":  # pragma: no cover

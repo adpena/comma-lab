@@ -2438,15 +2438,155 @@ def _normalize_decoder_weight_waterfill_source(
     out["family"] = _family_key(str(source.get("family") or "hi_nerv"))
     out["group_count"] = int(source.get("group_count") or len(rows))
     out["full_video_coverage"] = bool(source.get("full_video_coverage"))
-    out["receiver_proof_ready"] = _decoder_weight_waterfill_receiver_proof_ready(source)
+    receiver_binding = _decoder_weight_waterfill_receiver_proof_binding(out)
+    out["receiver_proof_binding"] = receiver_binding
+    out["receiver_proof_ready"] = bool(receiver_binding["bound"])
+    out["blockers"] = _dedupe(
+        [
+            *(str(blocker) for blocker in source.get("blockers") or () if str(blocker)),
+            *(str(blocker) for blocker in receiver_binding.get("blockers") or () if str(blocker)),
+        ]
+    )
     return out
 
 
 def _decoder_weight_waterfill_receiver_proof_ready(source: Mapping[str, Any]) -> bool:
+    return bool(_decoder_weight_waterfill_receiver_proof_binding(source)["bound"])
+
+
+def _decoder_weight_waterfill_receiver_proof_binding(
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Bind waterfill receiver-proof status to a file-backed archive identity."""
+
     status = str(source.get("receiver_proof_status") or "").strip().lower()
-    return status in TRUSTED_RECEIVER_PROOF_STATUSES and _is_sha256_hex(
-        source.get("archive_sha256")
+    archive_sha = str(source.get("archive_sha256") or "").strip().lower()
+    source_archive_sha = str(
+        source.get("_archive_size_ladder_archive_sha256")
+        or source.get("_archive_ladder_archive_sha256")
+        or ""
+    ).strip().lower()
+    proof_path_raw = str(
+        source.get("receiver_proof_path")
+        or source.get("receiver_proof_report_path")
+        or source.get("_archive_size_ladder_receiver_proof_path")
+        or source.get("_archive_ladder_receiver_proof_path")
+        or ""
+    ).strip()
+    expected_proof_sha = str(
+        source.get("receiver_proof_sha256")
+        or source.get("_archive_size_ladder_receiver_proof_sha256")
+        or source.get("_archive_ladder_receiver_proof_sha256")
+        or ""
+    ).strip().lower()
+    blockers: list[str] = []
+    proof_payload: Mapping[str, Any] = {}
+    proof_sha: str | None = None
+    proof_path: Path | None = None
+    proof_archive_sha: str | None = None
+    proof_runtime_ready = False
+
+    if status not in TRUSTED_RECEIVER_PROOF_STATUSES:
+        blockers.append("receiver_proof_not_satisfied")
+    if not _is_sha256_hex(archive_sha):
+        blockers.append("archive_sha256_missing_or_invalid")
+    if source_archive_sha and (
+        not _is_sha256_hex(source_archive_sha) or source_archive_sha != archive_sha
+    ):
+        blockers.append("decoder_weight_waterfill_archive_sha256_mismatch_with_source_ladder")
+    if not proof_path_raw:
+        blockers.append("decoder_weight_waterfill_receiver_proof_path_missing")
+    else:
+        proof_path = _decoder_weight_waterfill_resolve_proof_path(
+            proof_path_raw,
+            source=source,
+        )
+        if not proof_path.is_file():
+            blockers.append("decoder_weight_waterfill_receiver_proof_path_not_file")
+        else:
+            proof_sha = _sha256_file(proof_path)
+            if expected_proof_sha and expected_proof_sha != proof_sha:
+                blockers.append("decoder_weight_waterfill_receiver_proof_sha256_mismatch")
+            try:
+                payload = json.loads(proof_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                blockers.append(
+                    f"decoder_weight_waterfill_receiver_proof_unreadable:{type(exc).__name__}"
+                )
+            else:
+                if isinstance(payload, Mapping):
+                    proof_payload = payload
+                    proof_archive_sha = _first_sha_value(
+                        proof_payload,
+                        (
+                            "archive_sha256",
+                            "archive_zip_sha256",
+                            "receiver_archive_sha256",
+                            "candidate_archive_sha256",
+                        ),
+                    )
+                    proof_runtime_ready = any(
+                        proof_payload.get(key) is True
+                        for key in (
+                            "runtime_consumption_proof_ready",
+                            "runtime_consumption_proof_passed",
+                            "receiver_archive_replay_verified",
+                            "receiver_proof_passed",
+                        )
+                    )
+                    if proof_archive_sha != archive_sha:
+                        blockers.append(
+                            "decoder_weight_waterfill_receiver_proof_archive_sha256_mismatch"
+                        )
+                    if not proof_runtime_ready:
+                        blockers.append(
+                            "decoder_weight_waterfill_receiver_proof_runtime_consumption_not_ready"
+                        )
+                else:
+                    blockers.append(
+                        "decoder_weight_waterfill_receiver_proof_payload_not_object"
+                    )
+
+    blockers = _dedupe(blockers)
+    return {
+        "schema": "nerv_decoder_weight_waterfill_receiver_proof_binding.v1",
+        "status": status or None,
+        "bound": not blockers,
+        "archive_sha256": archive_sha or None,
+        "source_archive_sha256": source_archive_sha or None,
+        "proof_path": None if proof_path is None else proof_path.as_posix(),
+        "proof_sha256": proof_sha,
+        "expected_proof_sha256": expected_proof_sha or None,
+        "proof_archive_sha256": proof_archive_sha,
+        "proof_runtime_consumption_ready": bool(proof_runtime_ready),
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _decoder_weight_waterfill_resolve_proof_path(
+    value: str,
+    *,
+    source: Mapping[str, Any],
+) -> Path:
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path.resolve(strict=False)
+    base_raw = (
+        source.get("_decoder_weight_waterfill_source_path")
+        or source.get("_decoder_weight_waterfill_plan_path")
+        or source.get("path")
     )
+    base = Path(str(base_raw)).expanduser().resolve(strict=False).parent if base_raw else Path.cwd()
+    return (base / path).resolve(strict=False)
+
+
+def _first_sha_value(payload: Mapping[str, Any], keys: Sequence[str]) -> str | None:
+    for key in keys:
+        value = str(payload.get(key) or "").strip().lower()
+        if _is_sha256_hex(value):
+            return value
+    return None
 
 
 def _is_sha256_hex(value: Any) -> bool:
@@ -2581,6 +2721,10 @@ def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, 
         row=row,
         runner_admission=runner_admission,
     )
+    allocator_basin_recovery_work_order = _decoder_weight_waterfill_allocator_basin_recovery_work_order(
+        row=row,
+        runner_admission=runner_admission,
+    )
     return {
         "schema": "nerv_long_training_decoder_weight_waterfill_attachment.v1",
         "attached": True,
@@ -2593,6 +2737,11 @@ def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, 
         "group_count": int(row.get("group_count") or 0),
         "full_video_coverage": bool(row.get("full_video_coverage")),
         "receiver_proof_ready": bool(row.get("receiver_proof_ready")),
+        "receiver_proof_binding": (
+            dict(row["receiver_proof_binding"])
+            if isinstance(row.get("receiver_proof_binding"), Mapping)
+            else _decoder_weight_waterfill_receiver_proof_binding(row)
+        ),
         "_archive_size_ladder_source_schema": row.get("_archive_size_ladder_source_schema"),
         "_archive_size_ladder_row_index": row.get("_archive_size_ladder_row_index"),
         "_archive_size_ladder_runtime_consumption_proof_ready": row.get(
@@ -2601,6 +2750,7 @@ def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, 
         "runner_admission": runner_admission,
         "runner_admitted": bool(runner_admission["admitted"]),
         "saliency_replay_work_order": saliency_replay_work_order,
+        "allocator_basin_recovery_work_order": allocator_basin_recovery_work_order,
         "blockers": list(row.get("blockers") or []),
         **FALSE_AUTHORITY,
     }
@@ -2719,6 +2869,76 @@ def _decoder_weight_waterfill_saliency_replay_work_order(
     }
 
 
+def _decoder_weight_waterfill_allocator_basin_recovery_work_order(
+    *,
+    row: Mapping[str, Any],
+    runner_admission: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Route unfit HiNeRV rows back to training before allocator mutation."""
+
+    blockers = {str(blocker) for blocker in row.get("blockers") or () if str(blocker)}
+    refusal_reasons = {
+        str(reason)
+        for reason in runner_admission.get("refusal_reasons") or ()
+        if str(reason)
+    }
+    outside_basin = "score_loss_proxy_outside_allocator_linearization_basin" in blockers
+    unfit_waterfill = "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin" in blockers
+    if not (outside_basin or unfit_waterfill):
+        return {
+            "schema": "nerv_decoder_weight_allocator_basin_recovery_work_order.v1",
+            "required": False,
+            "reason": "decoder_weight_waterfill_row_inside_allocator_basin_or_missing_basin_evidence",
+            **FALSE_AUTHORITY,
+        }
+    candidate_id = str(row.get("candidate_id") or row.get("_modelsize_row_id") or "").strip()
+    source_path = str(row.get("_decoder_weight_waterfill_source_path") or "").strip()
+    row_id = str(row.get("_modelsize_row_id") or candidate_id).strip()
+    recovery_blockers: list[str] = []
+    if not candidate_id:
+        recovery_blockers.append("allocator_basin_recovery_candidate_id_missing")
+    command: list[str] = []
+    if candidate_id:
+        command = [
+            "uv",
+            "run",
+            "--extra",
+            "dev",
+            "--extra",
+            "runtime",
+            "--extra",
+            "mlx",
+            "python",
+            "tools/run_compact_renderer_mlx_spine_runner.py",
+            "--execute-family",
+            "hi_nerv",
+            "--modelsize-candidate-id",
+            candidate_id,
+            "--hi-nerv-optimizer-policy",
+            "pr95_curriculum",
+            "--optimizer-kind",
+            "adamw",
+            "--coder-aware-qat",
+            "--mlx-prefilter-scorer-device",
+            "gpu",
+            "--run-post-export-materializers",
+        ]
+    return {
+        "schema": "nerv_decoder_weight_allocator_basin_recovery_work_order.v1",
+        "required": True,
+        "reason": "decoder_weight_waterfill_requires_fit_before_allocator_mutation",
+        "candidate_id": candidate_id or None,
+        "row_id": row_id or None,
+        "source_decoder_weight_waterfill_path": str(row.get("path") or "") or None,
+        "source_decoder_weight_waterfill_report_path": source_path or None,
+        "observed_blockers": _dedupe([*sorted(blockers), *sorted(refusal_reasons)]),
+        "next_stage": "pr95_grade_scoreaware_fit_then_replay_saliency_and_waterfill",
+        "command_argv": [] if recovery_blockers else command,
+        "blockers": recovery_blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _decoder_weight_waterfill_runner_admitted(row: Mapping[str, Any]) -> bool:
     return bool(_decoder_weight_waterfill_runner_admission(row)["admitted"])
 
@@ -2746,8 +2966,14 @@ def _decoder_weight_waterfill_runner_admission(
         refusal_reasons.append("decoder_weight_waterfill_receiver_proof_not_ready")
     if not _is_sha256_hex(row.get("archive_sha256")):
         refusal_reasons.append("decoder_weight_waterfill_archive_sha256_missing_or_invalid")
+    binding = row.get("receiver_proof_binding")
+    if isinstance(binding, Mapping):
+        refusal_reasons.extend(str(blocker) for blocker in binding.get("blockers") or ())
     for blocker in (
         "decoder_weight_saliency_missing_for_some_groups",
+        "decoder_weight_saliency_replay_has_blockers",
+        "score_loss_proxy_outside_allocator_linearization_basin",
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin",
         "full_video_coverage_missing",
         "receiver_proof_not_satisfied",
         "archive_sha256_missing",
@@ -2755,6 +2981,12 @@ def _decoder_weight_waterfill_runner_admission(
     ):
         if blocker in blockers:
             refusal_reasons.append(blocker)
+    refusal_reasons.extend(
+        blocker
+        for blocker in blockers
+        if blocker.startswith("decoder_weight_waterfill_receiver_proof_")
+        or blocker == "decoder_weight_waterfill_archive_sha256_mismatch_with_source_ladder"
+    )
     return {
         "schema": "nerv_decoder_weight_waterfill_runner_admission.v1",
         "admitted": not refusal_reasons,

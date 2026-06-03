@@ -36,7 +36,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--candidate-id", default=None)
     args = parser.parse_args(argv)
 
-    ladder = json.loads(args.archive_ladder_json.read_text(encoding="utf-8"))
+    ladder_path = args.archive_ladder_json.expanduser().resolve(strict=False)
+    ladder = json.loads(ladder_path.read_text(encoding="utf-8"))
+    ladder.setdefault("report_path", ladder_path.as_posix())
     saliency_payload = (
         {}
         if args.saliency_json is None
