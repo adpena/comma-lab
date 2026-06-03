@@ -29,6 +29,9 @@ from tac.analysis.pr95_stack_binding_requirements import (
     build_pr95_stack_binding_evidence,
     build_pr95_stack_binding_requirements,
 )
+from tac.analysis.snerv_official_primitive_replay import (
+    build_snerv_official_primitive_replay_binding,
+)
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
     build_snerv_mlx_native_adapter_contract,
 )
@@ -434,6 +437,9 @@ def _snerv_stack_audit(
         evidence=build_pr95_stack_binding_evidence(),
     )
     native_contract = build_snerv_mlx_native_adapter_contract()
+    official_primitive_replay = build_snerv_official_primitive_replay_binding(
+        repo_root=root,
+    )
     native_adapter_blockers = list(native_contract.get("blockers") or [])
     native_adapter_blockers.append(
         "snerv_mlx_native_adapter_surfaces_present_but_unproven"
@@ -466,6 +472,7 @@ def _snerv_stack_audit(
         "priority": "top_priority_carrier",
         "local_status": "receiver_bound_advisory_export_present_mlx_native_surfaces_unproven",
         "snerv_mlx_native_adapter_contract": native_contract,
+        "official_mfu_hfr_tub_primitive_replay_binding": official_primitive_replay,
         "source_faithfulness": {
             "source_faithful_official_snerv": False,
             "local_role": "contest_adapter_store_lf_generate_hf_snar1_packet",

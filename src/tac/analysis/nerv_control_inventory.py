@@ -22,6 +22,9 @@ from tac.analysis.nerv_modelsize_ladder import (
 from tac.analysis.nerv_official_symbol_parity_map import (
     build_nerv_official_symbol_parity_map,
 )
+from tac.analysis.snerv_official_primitive_replay import (
+    snerv_primitive_source_replay_status,
+)
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
@@ -1987,15 +1990,24 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
     for feature, gap, markers in rows:
         missing_markers = _missing_official_feature_markers(root, family, markers)
         analogue_only = _official_feature_gap_requires_source_forward_replay(gap)
-        local_binding_status = (
-            (
-                "receiver_safe_analogue_only"
-                if analogue_only
-                else "implemented_or_receiver_proven"
-            )
-            if markers and not missing_markers
-            else "missing_or_partial"
+        primitive_replay = (
+            snerv_primitive_source_replay_status(repo_root=root, feature_id=feature)
+            if family == "snerv"
+            else None
         )
+        primitive_replay_proven = bool(
+            isinstance(primitive_replay, Mapping)
+            and primitive_replay.get("primitive_source_replay_proven")
+        )
+        if markers and not missing_markers:
+            if analogue_only and primitive_replay_proven:
+                local_binding_status = "primitive_source_replay_proven_full_stack_missing"
+            elif analogue_only:
+                local_binding_status = "receiver_safe_analogue_only"
+            else:
+                local_binding_status = "implemented_or_receiver_proven"
+        else:
+            local_binding_status = "missing_or_partial"
         out.append(
             {
                 "feature_id": feature,
@@ -2003,6 +2015,7 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
                 "local_binding_status": local_binding_status,
                 "analogue_only": bool(analogue_only and markers and not missing_markers),
                 "source_forward_replay_required": bool(analogue_only),
+                "primitive_source_replay": primitive_replay,
                 "required_markers": tuple(markers),
                 "missing_markers": tuple(missing_markers),
                 "score_interpretation": (

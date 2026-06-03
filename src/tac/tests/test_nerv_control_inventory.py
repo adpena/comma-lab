@@ -299,16 +299,19 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     }
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "local_binding_status"
-    ] == "receiver_safe_analogue_only"
+    ] == "primitive_source_replay_proven_full_stack_missing"
     assert snerv_features["official_high_frequency_restoration_heads"][
         "local_binding_status"
-    ] == "receiver_safe_analogue_only"
+    ] == "primitive_source_replay_proven_full_stack_missing"
     assert snerv_features["official_temporal_extension_snerv_t"][
         "local_binding_status"
-    ] == "receiver_safe_analogue_only"
+    ] == "primitive_source_replay_proven_full_stack_missing"
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "analogue_only"
     ] is True
+    assert snerv_features["official_multi_resolution_fusion_blocks"][
+        "primitive_source_replay"
+    ]["primitive_source_replay_proven"] is True
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "missing_markers"
     ] == ()
@@ -346,7 +349,7 @@ def test_nerv_control_inventory_can_focus_on_snerv_plus_cross_stack_only() -> No
     assert report["control_wiring_audit"]["status"] == "repo_root_not_supplied"
 
 
-def test_snerv_official_numeric_primitives_do_not_clear_source_forward_replay_gaps() -> None:
+def test_snerv_official_numeric_primitives_split_primitive_from_full_stack_replay() -> None:
     report = build_nerv_control_inventory(repo_root=REPO, focus_families=("snerv",))
     stack_rows = {
         row["family"]: row for row in report["implementation_sweep"]["stack_rows"]
@@ -367,9 +370,16 @@ def test_snerv_official_numeric_primitives_do_not_clear_source_forward_replay_ga
     ):
         row = feature_rows[feature_id]
         assert row["missing_markers"] == ()
-        assert row["local_binding_status"] == "receiver_safe_analogue_only"
+        assert row["local_binding_status"] == (
+            "primitive_source_replay_proven_full_stack_missing"
+        )
         assert row["analogue_only"] is True
         assert row["source_forward_replay_required"] is True
+        replay = row["primitive_source_replay"]
+        assert replay["primitive_source_replay_proven"] is True
+        assert replay["full_stack_source_forward_replay_proven"] is False
+        assert replay["missing_source_markers"] == []
+        assert replay["missing_test_markers"] == []
 
 
 def test_nerv_control_inventory_accepts_measured_hinerv_archive_size_ladder() -> None:

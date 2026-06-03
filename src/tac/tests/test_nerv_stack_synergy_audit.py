@@ -93,6 +93,15 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     assert "snerv_official_mfu_source_forward_replay_missing" in stacks["snerv"]["blockers"]
     assert "snerv_official_hfr_source_forward_replay_missing" in stacks["snerv"]["blockers"]
     assert "snerv_official_snerv_t_full_tub_path_not_source_forward_parity" in stacks["snerv"]["blockers"]
+    replay = stacks["snerv"]["official_mfu_hfr_tub_primitive_replay_binding"]
+    assert replay["all_primitive_source_replay_proven"] is True
+    assert replay["full_stack_source_forward_replay_proven"] is False
+    assert replay["receiver_export_bound"] is False
+    replay_rows = {row["component_id"]: row for row in replay["component_rows"]}
+    assert set(replay_rows) == {"mfu", "hfr", "tub"}
+    assert all(row["primitive_source_replay_proven"] for row in replay_rows.values())
+    assert all(row["missing_source_markers"] == [] for row in replay_rows.values())
+    assert all(row["missing_test_markers"] == [] for row in replay_rows.values())
     assert "snerv_official_snerv_t_temporal_path_missing" not in stacks["snerv"]["blockers"]
     assert "snerv_official_haar_j1_parity_missing" in stacks["snerv"]["blockers"]
     assert "snerv_l2_linf_receiver_packet_rate_accounting_not_separated" in stacks["snerv"]["blockers"]
