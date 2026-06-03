@@ -757,6 +757,13 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                         "source_artifact_sha256": unit.get(
                             "source_artifact_sha256"
                         ),
+                        "source_kind": unit.get("source_kind"),
+                        "source_packet_path": unit.get("source_packet_path"),
+                        "source_packet_bytes": unit.get("source_packet_bytes"),
+                        "source_packet_sha256": unit.get("source_packet_sha256"),
+                        "source_packet_metadata": dict(
+                            unit.get("source_packet_metadata") or {}
+                        ),
                         "selection_policy": unit.get("selection_policy"),
                         "history_count": unit.get("history_count"),
                         "plane_count": unit.get("plane_count"),

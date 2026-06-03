@@ -706,6 +706,13 @@ def _control_inventory_evidence_units(
                 "source_artifact_path": report.get("source_artifact_path"),
                 "source_artifact_bytes": report.get("source_artifact_bytes"),
                 "source_artifact_sha256": report.get("source_artifact_sha256"),
+                "source_kind": report.get("source_kind"),
+                "source_packet_path": report.get("source_packet_path"),
+                "source_packet_bytes": report.get("source_packet_bytes"),
+                "source_packet_sha256": report.get("source_packet_sha256"),
+                "source_packet_metadata": dict(
+                    report.get("source_packet_metadata") or {}
+                ),
                 "selection_policy": report.get("selection_policy"),
                 "history_count": report.get("history_count"),
                 "plane_count": report.get("plane_count"),

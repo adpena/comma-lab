@@ -133,6 +133,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert "src/tac/analysis/snerv_lf_payload_codec_sweep.py" in surfaces[
         "section_value_and_codebook"
     ]
+    assert "src/tac/analysis/snerv_lf_payload_archive_recode.py" in surfaces[
+        "section_value_and_codebook"
+    ]
     assert "tools/build_nerv_decoder_weight_waterfill_plan.py" in surfaces[
         "section_value_and_codebook"
     ]
@@ -155,6 +158,9 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "section_value_and_codebook"
     ]
     assert "tools/build_snerv_lf_payload_codec_sweep.py" in surfaces[
+        "section_value_and_codebook"
+    ]
+    assert "tools/recode_snerv_lf_payload_archive.py" in surfaces[
         "section_value_and_codebook"
     ]
     assert "src/tac/submission_packet/paired_auth_eval.py" in surfaces[
@@ -754,6 +760,13 @@ def test_nerv_control_inventory_accepts_snerv_lf_payload_codec_sweep_reports() -
         "source_artifact_path": ".omx/research/snerv_lf_payload_codec_sweep_2pair.json",
         "source_artifact_bytes": 111,
         "source_artifact_sha256": "1" * 64,
+        "source": {
+            "kind": "snar1_packet",
+            "path": "/Volumes/VertigoDataTier/pact/snerv/source_2pair.snar",
+            "bytes": 444,
+            "sha256": "4" * 64,
+            "metadata": {"n_pairs": 2},
+        },
         "axis_tag": "[planning/control]",
         "plane_count": 2,
         "plane_shapes": [[2, 2], [2, 2]],
@@ -852,6 +865,11 @@ def test_nerv_control_inventory_accepts_snerv_lf_payload_codec_sweep_reports() -
     )
     assert measured["source_artifact_bytes"] == 222
     assert measured["source_artifact_sha256"] == "2" * 64
+    assert measured["source_kind"] == "snar1_packet"
+    assert measured["source_packet_path"].endswith("source_2pair.snar")
+    assert measured["source_packet_bytes"] == 444
+    assert measured["source_packet_sha256"] == "4" * 64
+    assert measured["source_packet_metadata"] == {"n_pairs": 2}
     assert measured["selected_mode"] == "portfolio_auto"
     assert measured["selected_payload_bytes"] == 80
     assert measured["section_value_row_count"] == 1
@@ -1405,6 +1423,12 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_lf_payload_codec_sweep(
         "schema": "snerv_lf_payload_codec_sweep.v1",
         "report_path": ".omx/research/snerv_lf_payload_codec_sweep_fake.json",
         "axis_tag": "[planning/control]",
+        "source": {
+            "kind": "snar1_packet",
+            "path": "/Volumes/VertigoDataTier/pact/snerv/source_cli.snar",
+            "bytes": 444,
+            "sha256": "4" * 64,
+        },
         "plane_count": 16,
         "plane_shapes": [[8, 8]],
         "raw_i64_bytes": 512,
@@ -1477,5 +1501,8 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_lf_payload_codec_sweep(
     assert measured["source_artifact_sha256"] == hashlib.sha256(
         sweep_text.encode("utf-8")
     ).hexdigest()
+    assert measured["source_packet_path"].endswith("source_cli.snar")
+    assert measured["source_packet_bytes"] == 444
+    assert measured["source_packet_sha256"] == "4" * 64
     assert measured["byte_price_decision_counts"] == {"demote": 1}
     assert payload["score_claim"] is False

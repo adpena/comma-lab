@@ -2397,6 +2397,20 @@ def _run_snerv_scorer_loop_qat_attachment(
             "requested": True,
             "axis_tag": "[macOS-CPU advisory]",
             "n_pairs": int(num_pairs),
+            "source_pair_indices": [
+                int(value)
+                for value in result_payload.get("source_pair_indices") or []
+            ],
+            "prioritized_pair_training": {
+                "schema": "compact_snerv_prioritized_pair_training.v1",
+                "enabled": bool(prioritized_pair_indices),
+                "pair_indices": [int(value) for value in prioritized_pair_indices],
+                "pair_count": len(prioritized_pair_indices),
+                "consumed_by_cpu_advisory_qat": bool(prioritized_pair_indices),
+                "sampling_scope": "snerv_cpu_advisory_and_scorer_loop_qat_pair_subset",
+                "promotion_authority": False,
+                "contest_score_authority": False,
+            },
             "levels": int(levels),
             "wavelet": str(wavelet),
             "target_bits_per_coeff": float(target_bits_per_coeff),
@@ -3039,6 +3053,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
+    prioritized_pair_indices = _normalize_nonnegative_int_sequence(
+        prioritized_pair_indices
+    )
     if (
         _has_disallowed_existing_output_artifacts(
             out,
@@ -3572,6 +3589,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 )
             ),
             *local_proof_prelaunch_blockers,
+            *(
+                ["snerv_mlx_native_arbitrary_pair_hydration_not_implemented"]
+                if prioritized_pair_indices
+                else []
+            ),
             (
                 "snerv_mlx_native_longer_staged_training_not_executed"
                 if snerv_scorer_loop_qat.get("executed")
@@ -3704,6 +3726,33 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     step_map_waterfill_bits_per_coeff
                 ),
                 "decoder_payload_codec": decoder_payload_codec,
+                "source_pair_indices": [
+                    int(value) for value in advisory.source_pair_indices
+                ],
+                "prioritized_pair_training": {
+                    "schema": "compact_snerv_prioritized_pair_training.v1",
+                    "enabled": bool(prioritized_pair_indices),
+                    "pair_indices": [
+                        int(value) for value in prioritized_pair_indices
+                    ],
+                    "pair_count": len(prioritized_pair_indices),
+                    "consumed_by_cpu_advisory": bool(prioritized_pair_indices),
+                    "consumed_by_scorer_loop_qat": bool(
+                        prioritized_pair_indices
+                        and snerv_scorer_loop_qat.get("executed")
+                    ),
+                    "consumed_by_mlx_native_export": False,
+                    "mlx_native_export_blocker": (
+                        "snerv_mlx_native_arbitrary_pair_hydration_not_implemented"
+                        if prioritized_pair_indices
+                        else None
+                    ),
+                    "sampling_scope": (
+                        "snerv_cpu_advisory_and_scorer_loop_qat_pair_subset"
+                    ),
+                    "promotion_authority": False,
+                    "contest_score_authority": False,
+                },
                 "scorer_loop_component_guard_mode": str(
                     snerv_scorer_loop_component_guard_mode
                 ),
@@ -4502,7 +4551,15 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     """Train/export a public-PR95-seeded HNeRV candidate through the spine."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     resolved_checkpoint_dir = _resolve_optional_compact_family_path(
         checkpoint_dir,
         base=root,
@@ -4752,6 +4809,17 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
                 "segnet_hinge_margin": float(segnet_hinge_margin),
                 "distillation_device": distillation_device,
                 "allow_segnet_only_research": bool(allow_segnet_only_research),
+                "checkpoint_interval_epochs": checkpoint_interval,
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -5015,6 +5083,8 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     optimizer_cosine_decay_total_epochs: int | None = None,
     optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
+    checkpoint_dir: str | Path | None = None,
+    resume_from_checkpoint: str | Path | None = None,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -5029,6 +5099,14 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     checkpoint_interval = _resolve_checkpoint_interval_epochs(
         checkpoint_interval_epochs,
         epochs=epochs,
+    )
+    resolved_checkpoint_dir = _resolve_optional_compact_family_path(
+        checkpoint_dir,
+        base=root,
+    )
+    resolved_resume_from_checkpoint = _resolve_optional_compact_family_path(
+        resume_from_checkpoint,
+        base=root,
     )
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
     optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
@@ -5099,6 +5177,8 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
             checkpoint_interval_epochs=checkpoint_interval,
+            checkpoint_dir=resolved_checkpoint_dir,
+            resume_from_checkpoint=resolved_resume_from_checkpoint,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -5114,6 +5194,16 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             {
                 "execute_family": "pact_nerv_vq",
                 "failure": repr(exc),
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -5238,6 +5328,16 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                     "weight_decay_effective"
                 ),
                 "checkpoint_interval_epochs": checkpoint_interval,
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
@@ -5322,6 +5422,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_progress_every: int = 50,
     telemetry_flush_interval_epochs: int = 1,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
+    checkpoint_dir: str | Path | None = None,
+    resume_from_checkpoint: str | Path | None = None,
     optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     hi_nerv_optimizer_policy: str = "auto",
     optimizer_grad_clip_max_norm: float | None = (
@@ -5352,9 +5454,25 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     prioritized_pair_indices = _normalize_nonnegative_int_sequence(
         prioritized_pair_indices
     )
+    try:
+        prioritized_pair_indices = validate_pair_indices_in_range(
+            prioritized_pair_indices,
+            num_pairs=int(num_pairs),
+            field="prioritized_pair_indices",
+        )
+    except HardPairIndicesError as exc:
+        raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
     checkpoint_interval = _resolve_checkpoint_interval_epochs(
         checkpoint_interval_epochs,
         epochs=epochs,
+    )
+    resolved_checkpoint_dir = _resolve_optional_compact_family_path(
+        checkpoint_dir,
+        base=root,
+    )
+    resolved_resume_from_checkpoint = _resolve_optional_compact_family_path(
+        resume_from_checkpoint,
+        base=root,
     )
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
@@ -5822,6 +5940,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=checkpoint_interval,
+            checkpoint_dir=resolved_checkpoint_dir,
+            resume_from_checkpoint=resolved_resume_from_checkpoint,
             optimizer_kind=str(optimizer_kind),
             hi_nerv_optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
@@ -5846,6 +5966,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "requested_distillation_device": effective_requested_distillation_device,
                 "distillation_device": str(distillation_device),
                 "failure": repr(exc),
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "modelsize_candidate_selection": {
                     "schema": "compact_execute_modelsize_candidate_selection.v1",
                     "family": "hi_nerv",
@@ -6146,6 +6276,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "effective_weight_decay": (
                     optimizer_controls.get("weight_decay_effective")
                 ),
+                "checkpoint_interval_epochs": checkpoint_interval,
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
                     enabled=effective_coder_aware_qat,
@@ -6315,6 +6456,8 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     optimizer_cosine_decay_total_epochs: int | None = None,
     optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
+    checkpoint_dir: str | Path | None = None,
+    resume_from_checkpoint: str | Path | None = None,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -6329,6 +6472,14 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     checkpoint_interval = _resolve_checkpoint_interval_epochs(
         checkpoint_interval_epochs,
         epochs=epochs,
+    )
+    resolved_checkpoint_dir = _resolve_optional_compact_family_path(
+        checkpoint_dir,
+        base=root,
+    )
+    resolved_resume_from_checkpoint = _resolve_optional_compact_family_path(
+        resume_from_checkpoint,
+        base=root,
     )
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
     optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
@@ -6398,6 +6549,8 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
             checkpoint_interval_epochs=checkpoint_interval,
+            checkpoint_dir=resolved_checkpoint_dir,
+            resume_from_checkpoint=resolved_resume_from_checkpoint,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -6413,6 +6566,16 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             {
                 "execute_family": "pact_nerv_selector_v4",
                 "failure": repr(exc),
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -6552,6 +6715,16 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                     "weight_decay_effective"
                 ),
                 "checkpoint_interval_epochs": checkpoint_interval,
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
@@ -8178,6 +8351,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mlx_prefilter_progress_every: int,
     telemetry_flush_interval_epochs: int,
     checkpoint_interval_epochs: int,
+    checkpoint_dir: str | Path | None,
+    resume_from_checkpoint: str | Path | None,
     optimizer_kind: str,
     hi_nerv_optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
@@ -8398,6 +8573,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             ),
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_dir": (
+                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
+            ),
+            "resume_from_checkpoint": (
+                Path(resume_from_checkpoint).as_posix()
+                if resume_from_checkpoint is not None
+                else None
+            ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "prioritized_pair_training": {
                 "schema": "compact_hi_nerv_prioritized_pair_training.v1",
@@ -8576,6 +8759,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=checkpoint_interval,
+        checkpoint_dir=checkpoint_dir,
+        resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=max(1, int(telemetry_flush_interval_epochs)),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
@@ -8682,6 +8867,8 @@ def _run_pact_nerv_vq_mlx_smoke(
     optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
     checkpoint_interval_epochs: int,
+    checkpoint_dir: str | Path | None,
+    resume_from_checkpoint: str | Path | None,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -8728,10 +8915,6 @@ def _run_pact_nerv_vq_mlx_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_huber_delta must be > 0"
         )
-    checkpoint_interval = _resolve_checkpoint_interval_epochs(
-        checkpoint_interval_epochs,
-        epochs=epochs,
-    )
     if (
         segnet_distillation_weight > 0.0
         and pose_distillation_weight <= 0.0
@@ -8842,6 +9025,14 @@ def _run_pact_nerv_vq_mlx_smoke(
             ),
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_dir": (
+                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
+            ),
+            "resume_from_checkpoint": (
+                Path(resume_from_checkpoint).as_posix()
+                if resume_from_checkpoint is not None
+                else None
+            ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
@@ -8922,6 +9113,8 @@ def _run_pact_nerv_vq_mlx_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=checkpoint_interval,
+        checkpoint_dir=checkpoint_dir,
+        resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs))
@@ -8984,6 +9177,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
     checkpoint_interval_epochs: int,
+    checkpoint_dir: str | Path | None,
+    resume_from_checkpoint: str | Path | None,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -9166,6 +9361,14 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
             ),
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_dir": (
+                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
+            ),
+            "resume_from_checkpoint": (
+                Path(resume_from_checkpoint).as_posix()
+                if resume_from_checkpoint is not None
+                else None
+            ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
@@ -9246,6 +9449,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=checkpoint_interval,
+        checkpoint_dir=checkpoint_dir,
+        resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs))
@@ -9367,7 +9572,7 @@ def _normalize_nonnegative_int_sequence(value: Sequence[Any] | None) -> tuple[in
 
 def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, ...]:
     try:
-        merged = merge_pair_indices(
+        return merge_pair_indices(
             parse_pair_indices_csv(
                 str(getattr(args, "prioritized_pair_indices", "") or ""),
                 field="prioritized_pair_indices",
@@ -9377,11 +9582,6 @@ def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, 
                 base=getattr(args, "repo_root", REPO_ROOT),
                 field="prioritized_pair_indices_file",
             ),
-        )
-        return validate_pair_indices_in_range(
-            merged,
-            num_pairs=int(getattr(args, "num_pairs", 0)),
-            field="prioritized_pair_indices",
         )
     except HardPairIndicesError as exc:
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
@@ -9833,11 +10033,29 @@ def _compact_family_interruption_evidence_files(output_dir: Path) -> list[dict[s
         "telemetry.jsonl",
         "training_artifact.json",
         "decoder_weight_gradient_saliency.json",
+        "final_checkpoint_emission_failed.json",
     }
+    checkpoint_suffixes = (
+        ".meta.json",
+        ".live.state",
+        ".live.state.npsd",
+        ".live.state.npz",
+        ".ema_shadow.state",
+        ".ema_shadow.state.npsd",
+        ".ema_shadow.state.npz",
+        ".ema_kahan_compensation.pkl",
+    )
     if not output_dir.exists():
         return files
     for path in sorted(output_dir.rglob("*")):
-        if not path.is_file() or path.name not in names:
+        if not path.is_file():
+            continue
+        is_named_evidence = path.name in names
+        is_checkpoint_evidence = (
+            path.parent.name == "checkpoints"
+            and any(path.name.endswith(suffix) for suffix in checkpoint_suffixes)
+        )
+        if not (is_named_evidence or is_checkpoint_evidence):
             continue
         try:
             files.append(
@@ -9881,6 +10099,8 @@ def _write_compact_family_interrupted_report(
             signal_name = signal.Signals(signum).name
         except ValueError:
             signal_name = f"SIG{signum}"
+    telemetry_summary = _compact_family_telemetry_summary(output_dir)
+    training_executed = bool(telemetry_summary.get("row_count"))
     campaign_identity = _active_campaign_lock_payload(
         args,
         source_video_path=source_video_path,
@@ -9908,7 +10128,8 @@ def _write_compact_family_interrupted_report(
         "hard_byte_ceilings": list(hard_byte_ceilings),
         "command_args": _jsonable_lock_value(vars(args)),
         "evidence_files": _compact_family_interruption_evidence_files(output_dir),
-        "training_executed": False,
+        "telemetry_summary": telemetry_summary,
+        "training_executed": training_executed,
         "training_started": True,
         "score_authority": "false_macos_mlx_research_signal",
         "score_claim": False,
@@ -9970,7 +10191,7 @@ def _write_compact_family_interrupted_report_from_startup_marker(
         "command_args": startup.get("command_args"),
         "evidence_files": _compact_family_interruption_evidence_files(output_dir),
         "telemetry_summary": telemetry_summary,
-        "training_executed": False,
+        "training_executed": training_started,
         "training_started": training_started,
         "score_authority": "false_macos_mlx_research_signal",
         "score_claim": False,
@@ -10662,6 +10883,26 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--checkpoint-dir",
+        type=Path,
+        help=(
+            "Optional canonical checkpoint directory for MLX compact-family "
+            "training. Relative paths resolve from --repo-root; default uses "
+            "the canonical output_dir/checkpoints location inside each "
+            "family's training output."
+        ),
+    )
+    parser.add_argument(
+        "--resume-from-checkpoint",
+        type=Path,
+        help=(
+            "Optional canonical checkpoint .meta.json to resume from. The "
+            "shared long-training harness validates lane/curriculum metadata "
+            "and restores real NumPy-portable MLX state; reports remain "
+            "false-authority until receiver proof and exact replay."
+        ),
+    )
+    parser.add_argument(
         "--coder-aware-qat",
         action="store_true",
         help=(
@@ -11230,6 +11471,8 @@ def main(argv: list[str] | None = None) -> int:
             ),
             allow_segnet_only_research=args.allow_segnet_only_research,
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
+            checkpoint_dir=args.checkpoint_dir,
+            resume_from_checkpoint=args.resume_from_checkpoint,
             scorer_upstream_dir=scorer_upstream_dir,
             run_receiver_proof=args.run_receiver_proof,
             receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
@@ -11301,6 +11544,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.optimizer_cosine_decay_min_lr_ratio
             ),
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
+            checkpoint_dir=args.checkpoint_dir,
+            resume_from_checkpoint=args.resume_from_checkpoint,
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
@@ -11362,6 +11607,8 @@ def main(argv: list[str] | None = None) -> int:
                 args.optimizer_cosine_decay_min_lr_ratio
             ),
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
+            checkpoint_dir=args.checkpoint_dir,
+            resume_from_checkpoint=args.resume_from_checkpoint,
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
@@ -11511,6 +11758,8 @@ def main(argv: list[str] | None = None) -> int:
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
+            checkpoint_dir=args.checkpoint_dir,
+            resume_from_checkpoint=args.resume_from_checkpoint,
             optimizer_kind=args.optimizer_kind,
             hi_nerv_optimizer_policy=args.hi_nerv_optimizer_policy,
             optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,

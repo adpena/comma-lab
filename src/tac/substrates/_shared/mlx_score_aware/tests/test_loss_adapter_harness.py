@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tac.substrates._shared.mlx_score_aware import (
@@ -509,6 +510,39 @@ def test_adapter_export_state_dict_writes_portable_npsd(tmp_path: Path) -> None:
 
 
 @mlx_only
+def test_adapter_import_state_dict_restores_portable_npsd(tmp_path: Path) -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten, tree_unflatten
+
+    adapter = MlxScoreAwareAdapter(
+        _tiny_dreamer_bundle(), substrate_id="dreamer_v3_rssm"
+    )
+    target = tmp_path / "ckpt.state"
+    adapter.export_state_dict(adapter.model, target)
+    before = {
+        name: np.array(value)
+        for name, value in tree_flatten(adapter.model.parameters())
+    }
+
+    mutated = [
+        (name, mx.ones_like(value))
+        for name, value in tree_flatten(adapter.model.parameters())
+    ]
+    adapter.model.update(tree_unflatten(mutated))
+    mx.eval(*[value for _name, value in tree_flatten(adapter.model.parameters())])
+
+    adapter.import_state_dict(adapter.model, target)
+    restored = {
+        name: np.array(value)
+        for name, value in tree_flatten(adapter.model.parameters())
+    }
+
+    assert set(restored) == set(before)
+    for name, expected in before.items():
+        np.testing.assert_allclose(restored[name], expected, rtol=0.0, atol=0.0)
+
+
+@mlx_only
 def test_adapter_score_aware_components_pure_recon_returns_none() -> None:
     """Pure-reconstruction mode preserves legacy None contract.
 
@@ -708,11 +742,17 @@ def test_run_mlx_score_aware_full_main_forwards_telemetry_flush_interval(
         epochs=3,
         batch_pair_indices_per_step=2,
         telemetry_flush_interval_epochs=1,
+        checkpoint_dir=tmp_path / "external_checkpoints",
+        resume_from_checkpoint=tmp_path / "external_checkpoints/epoch000001.meta.json",
         notes="telemetry flush pass-through unit test",
     )
 
     assert result is captured["config"]
     assert captured["config"].telemetry_flush_interval_epochs == 1
+    assert captured["config"].checkpoint_dir == tmp_path / "external_checkpoints"
+    assert captured["config"].resume_from_checkpoint == (
+        tmp_path / "external_checkpoints/epoch000001.meta.json"
+    )
 
 
 @mlx_only

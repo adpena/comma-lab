@@ -920,6 +920,7 @@ def _snerv_lf_payload_codec_sweep_reports(
         if isinstance(selected_report.get("selected_rate_only_row"), Mapping)
         else {}
     )
+    source_packet = _snerv_lf_payload_codec_source_packet(selected_report)
     byte_price_plan = (
         selected_report.get("byte_price_plan")
         if isinstance(selected_report.get("byte_price_plan"), Mapping)
@@ -941,6 +942,11 @@ def _snerv_lf_payload_codec_sweep_reports(
         "source_artifact_path": selected_report.get("source_artifact_path"),
         "source_artifact_bytes": selected_report.get("source_artifact_bytes"),
         "source_artifact_sha256": selected_report.get("source_artifact_sha256"),
+        "source_kind": source_packet.get("source_kind"),
+        "source_packet_path": source_packet.get("source_packet_path"),
+        "source_packet_bytes": source_packet.get("source_packet_bytes"),
+        "source_packet_sha256": source_packet.get("source_packet_sha256"),
+        "source_packet_metadata": dict(source_packet.get("source_packet_metadata") or {}),
         "axis_tag": selected_report.get("axis_tag"),
         "plane_count": selected_report.get("plane_count"),
         "plane_shapes": list(selected_report.get("plane_shapes") or ()),
@@ -987,11 +993,16 @@ def _snerv_lf_payload_codec_history_row(report: Mapping[str, Any]) -> dict[str, 
         if isinstance(report.get("selected_rate_only_row"), Mapping)
         else {}
     )
+    source_packet = _snerv_lf_payload_codec_source_packet(report)
     return {
         "report_path": report.get("report_path") or report.get("source_artifact_path"),
         "source_artifact_path": report.get("source_artifact_path"),
         "source_artifact_bytes": report.get("source_artifact_bytes"),
         "source_artifact_sha256": report.get("source_artifact_sha256"),
+        "source_kind": source_packet.get("source_kind"),
+        "source_packet_path": source_packet.get("source_packet_path"),
+        "source_packet_bytes": source_packet.get("source_packet_bytes"),
+        "source_packet_sha256": source_packet.get("source_packet_sha256"),
         "schema": report.get("schema"),
         "plane_count": report.get("plane_count"),
         "baseline_mode": report.get("baseline_mode"),
@@ -1005,6 +1016,19 @@ def _snerv_lf_payload_codec_history_row(report: Mapping[str, Any]) -> dict[str, 
             else {}
         ),
         **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_lf_payload_codec_source_packet(report: Mapping[str, Any]) -> dict[str, Any]:
+    source = report.get("source") if isinstance(report.get("source"), Mapping) else {}
+    if source.get("kind") != "snar1_packet":
+        return {"source_kind": source.get("kind")}
+    return {
+        "source_kind": "snar1_packet",
+        "source_packet_path": source.get("path"),
+        "source_packet_bytes": source.get("bytes"),
+        "source_packet_sha256": source.get("sha256") or source.get("packet_sha256"),
+        "source_packet_metadata": dict(source.get("metadata") or {}),
     }
 
 
@@ -2013,6 +2037,7 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "src/tac/analysis/hinerv_decoder_weight_saliency_replay.py",
             "src/tac/analysis/snerv_waterfill_mode_assignment.py",
             "src/tac/analysis/snerv_lf_payload_codec_sweep.py",
+            "src/tac/analysis/snerv_lf_payload_archive_recode.py",
             "tools/build_nerv_decoder_weight_waterfill_plan.py",
             "tools/build_hinerv_archive_ladder_waterfill.py",
             "tools/build_hinerv_archive_backend_drift.py",
@@ -2020,6 +2045,7 @@ def _local_binding_surfaces() -> dict[str, list[str]]:
             "tools/build_hinerv_decoder_weight_saliency_replay.py",
             "tools/build_snerv_waterfill_mode_assignment.py",
             "tools/build_snerv_lf_payload_codec_sweep.py",
+            "tools/recode_snerv_lf_payload_archive.py",
         ],
         "receiver_and_exact_custody": [
             "src/tac/substrates/hprc/archive_candidate.py",

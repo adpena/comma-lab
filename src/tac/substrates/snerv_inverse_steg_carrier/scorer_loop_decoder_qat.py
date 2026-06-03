@@ -105,7 +105,10 @@ class SnervPairEval:
     source_pair_index: int | None = None
 
     def as_jsonable(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        if self.source_pair_index is None:
+            payload.pop("source_pair_index", None)
+        return payload
 
 
 @dataclass(frozen=True)
@@ -255,7 +258,6 @@ class _CodeRecord:
 @dataclass(frozen=True)
 class _PreparedState:
     pairs: torch.Tensor
-    source_pair_indices: tuple[int, ...]
     codes: tuple[_CodeRecord, ...]
     lf_quant_planes: tuple[np.ndarray, ...]
     lf_zero_points: tuple[float, ...]
@@ -266,6 +268,7 @@ class _PreparedState:
     levels: int
     wavelet: str
     orig_hw: tuple[int, int]
+    source_pair_indices: tuple[int, ...] = ()
     step_map_bins: int = 16
 
 
@@ -1248,7 +1251,7 @@ def _prepare_state(
     target_bits_per_coeff: float,
     pair_stride: int,
     start_pair: int,
-    pair_indices: tuple[int, ...] | None,
+    pair_indices: tuple[int, ...] | None = None,
     video_path: str,
     device: str,
     step_map_bins: int,
@@ -1415,6 +1418,11 @@ def _evaluate_decoder(
         d_pose_pair = float(dp)
         dsegs.append(d_seg_pair)
         dposes.append(d_pose_pair)
+        source_pair_index = (
+            int(prepared.source_pair_indices[pair_idx])
+            if pair_idx < len(prepared.source_pair_indices)
+            else None
+        )
         per_pair.append(
             SnervPairEval(
                 pair_index=int(pair_idx),
@@ -1424,7 +1432,7 @@ def _evaluate_decoder(
                     100.0 * d_seg_pair
                     + float(np.sqrt(10.0 * max(d_pose_pair, 0.0)))
                 ),
-                source_pair_index=int(prepared.source_pair_indices[pair_idx]),
+                source_pair_index=source_pair_index,
             )
         )
     d_seg = float(np.mean(dsegs))

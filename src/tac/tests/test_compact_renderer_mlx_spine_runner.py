@@ -259,6 +259,31 @@ def test_recover_interrupted_report_from_startup_marker_summarizes_telemetry(
         + "\n",
         encoding="utf-8",
     )
+    checkpoint_dir = train_dir / "checkpoints"
+    checkpoint_dir.mkdir()
+    checkpoint_meta = checkpoint_dir / "epoch026805_20260603T061919Z.meta.json"
+    checkpoint_live = checkpoint_dir / "epoch026805_20260603T061919Z.live.state.npsd"
+    checkpoint_ema = (
+        checkpoint_dir / "epoch026805_20260603T061919Z.ema_shadow.state.npsd"
+    )
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "schema_version": "long_training_canonical_checkpoint.v1",
+                "global_epoch": 26805,
+                "live_state_path": checkpoint_live.as_posix(),
+                "ema_shadow_state_path": checkpoint_ema.as_posix(),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    checkpoint_live.write_bytes(b"live-state")
+    checkpoint_ema.write_bytes(b"ema-state")
 
     report = runner_mod._write_compact_family_interrupted_report_from_startup_marker(
         output_dir=out,
@@ -271,7 +296,7 @@ def test_recover_interrupted_report_from_startup_marker_summarizes_telemetry(
     assert payload["recovered"] is True
     assert payload["execute_family"] == "hi_nerv"
     assert payload["training_started"] is True
-    assert payload["training_executed"] is False
+    assert payload["training_executed"] is True
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert "hi_nerv_training_interrupted_before_export" in payload["blockers"]
@@ -283,6 +308,9 @@ def test_recover_interrupted_report_from_startup_marker_summarizes_telemetry(
     evidence_paths = {row["path"] for row in payload["evidence_files"]}
     assert startup.as_posix() in evidence_paths
     assert telemetry.as_posix() in evidence_paths
+    assert checkpoint_meta.as_posix() in evidence_paths
+    assert checkpoint_live.as_posix() in evidence_paths
+    assert checkpoint_ema.as_posix() in evidence_paths
 
 
 def test_write_decoder_weight_saliency_artifact_missing_fails_closed(
@@ -848,11 +876,21 @@ def test_hinerv_execute_forwards_prioritized_pair_indices(
         decoder_channel=4,
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
+        checkpoint_interval_epochs=7,
+        checkpoint_dir=tmp_path / "external_checkpoints",
+        resume_from_checkpoint=tmp_path / "external_checkpoints/epoch000006.meta.json",
         prioritized_pair_indices=(3, 1, 3),
         repo_root=REPO_ROOT,
     )
 
     assert captured_train_kwargs["prioritized_pair_indices"] == (3, 1)
+    assert captured_train_kwargs["checkpoint_interval_epochs"] == 7
+    assert captured_train_kwargs["checkpoint_dir"] == (
+        tmp_path / "external_checkpoints"
+    ).resolve(strict=False)
+    assert captured_train_kwargs["resume_from_checkpoint"] == (
+        tmp_path / "external_checkpoints/epoch000006.meta.json"
+    ).resolve(strict=False)
     assert out["score_claim"] is False
 
 
@@ -888,11 +926,11 @@ def test_parse_prioritized_pair_indices_file_arg(tmp_path: Path) -> None:
     assert runner_mod._prioritized_pair_indices_from_args(args) == (3, 2, 8)
 
 
-def test_parse_prioritized_pair_indices_rejects_out_of_range() -> None:
+def test_parse_prioritized_pair_indices_allows_source_ids_above_num_pairs() -> None:
     args = runner_mod._parse_args(
         [
             "--execute-family",
-            "hi_nerv",
+            "snerv",
             "--num-pairs",
             "4",
             "--prioritized-pair-indices",
@@ -900,8 +938,29 @@ def test_parse_prioritized_pair_indices_rejects_out_of_range() -> None:
         ]
     )
 
+    assert runner_mod._prioritized_pair_indices_from_args(args) == (3, 4)
+
+
+def test_hinerv_execute_rejects_out_of_range_prioritized_pairs(
+    tmp_path: Path,
+) -> None:
     with pytest.raises(CompactRendererMlxSpineRunnerError, match="out-of-range"):
-        runner_mod._prioritized_pair_indices_from_args(args)
+        execute_hi_nerv_mlx_scoreaware_and_adapt(
+            output_dir=tmp_path / "hinerv_out_of_range_priority",
+            num_pairs=4,
+            epochs=1,
+            batch_pair_indices_per_step=2,
+            learning_rate=1e-3,
+            source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+            hard_byte_ceilings=(178_000,),
+            latent_dim=4,
+            embed_dim=4,
+            decoder_channel=4,
+            segnet_distillation_weight=1.0,
+            pose_distillation_weight=1.0,
+            prioritized_pair_indices=(3, 4),
+            repo_root=REPO_ROOT,
+        )
 
 
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(
@@ -1883,6 +1942,38 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     args = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "1"])
 
     assert args.optimizer_kind == runner_mod.DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    assert (
+        args.checkpoint_interval_epochs
+        == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS
+    )
+    assert args.checkpoint_dir is None
+    assert args.resume_from_checkpoint is None
+
+
+def test_compact_runner_checkpoint_controls_parse_and_validate() -> None:
+    args = _parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--num-pairs",
+            "1",
+            "--checkpoint-interval-epochs",
+            "17",
+            "--checkpoint-dir",
+            "ssd/checkpoints",
+            "--resume-from-checkpoint",
+            "ssd/checkpoints/epoch000016.meta.json",
+        ]
+    )
+
+    assert args.checkpoint_interval_epochs == 17
+    assert args.checkpoint_dir == Path("ssd/checkpoints")
+    assert args.resume_from_checkpoint == Path("ssd/checkpoints/epoch000016.meta.json")
+    assert runner_mod._resolve_checkpoint_interval_epochs(17, epochs=100) == 17
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="positive integer"):
+        runner_mod._resolve_checkpoint_interval_epochs(True, epochs=100)
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="> 0"):
+        runner_mod._resolve_checkpoint_interval_epochs(0, epochs=100)
 
 
 def test_mlx_optimizer_controls_reject_weight_decay_for_no_decay_kind() -> None:
@@ -4701,6 +4792,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
 
         return SimpleNamespace(
             n_pairs=2,
+            source_pair_indices=(7, 2),
             receiver_archive_packet=packet,
             as_jsonable=as_jsonable,
             levels=int(kwargs["levels"]),
@@ -4818,6 +4910,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
+        prioritized_pair_indices=(7, 2, 7),
         repo_root=REPO_ROOT,
     )
 
@@ -4831,6 +4924,7 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert captured_advisory_kwargs["decoder_payload_codec"] == "int2_symmetric"
     assert captured_advisory_kwargs["snerv_mfu_scales"] == (1, 5)
     assert captured_advisory_kwargs["snerv_hfr_gain"] == 0.375
+    assert captured_advisory_kwargs["pair_indices"] == (7, 2)
     selection = out["modelsize_candidate_selection"]
     assert selection["selection_mode"] == "planner_candidate"
     assert selection["candidate"]["candidate_id"] == "snerv-unit-candidate"
@@ -4881,6 +4975,24 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     assert out["score_aware_training"]["target_bits_per_coeff"] == 1.5
     assert out["score_aware_training"]["step_map_coder_mode"] == "waterfill"
     assert out["score_aware_training"]["decoder_payload_codec"] == "int2_symmetric"
+    assert out["score_aware_training"]["source_pair_indices"] == [7, 2]
+    assert out["score_aware_training"]["prioritized_pair_training"]["enabled"] is True
+    assert out["score_aware_training"]["prioritized_pair_training"]["pair_indices"] == [
+        7,
+        2,
+    ]
+    assert (
+        out["score_aware_training"]["prioritized_pair_training"][
+            "consumed_by_cpu_advisory"
+        ]
+        is True
+    )
+    assert (
+        out["score_aware_training"]["prioritized_pair_training"][
+            "consumed_by_mlx_native_export"
+        ]
+        is False
+    )
     feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
     assert feedback["candidate_num_pairs"] == 600
     assert feedback["measured_num_pairs"] == 2

@@ -80,6 +80,19 @@ def test_scorer_loop_smoke_defaults_to_portfolio_lf_payload_codec() -> None:
 
     assert sig.parameters["lf_payload_codec"].default == "portfolio_auto"
     assert sig.parameters["snerv_temporal_mode"].default == "delta"
+    assert "pair_indices" in sig.parameters
+
+
+def test_scorer_loop_pair_eval_preserves_source_pair_index() -> None:
+    row = SnervPairEval(
+        pair_index=0,
+        d_seg_linf=0.1,
+        d_pose_linf=0.2,
+        score_linf_without_rate=1.5,
+        source_pair_index=417,
+    )
+
+    assert row.as_jsonable()["source_pair_index"] == 417
 
 
 def test_scorer_loop_progress_callback_emits_eval_row() -> None:

@@ -494,10 +494,37 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("byte_price_plan"), Mapping)
             else {}
         )
+        selected_mode = str(payload.get("selected_mode") or "")
+        source_packet_path = str(payload.get("source_packet_path") or "")
+        source_packet_sha256 = str(payload.get("source_packet_sha256") or "")
+        token = _safe_token(
+            f"{work_order.get('source_unit_id') or work_order.get('work_order_id') or 'snerv_lf'}"
+        )
+        output_root = (
+            "/Volumes/VertigoDataTier/pact/"
+            f"snerv_lf_payload_archive_recode/{token}"
+        )
+        replay_command = []
+        if source_packet_path and selected_mode:
+            replay_command = [
+                ".venv/bin/python",
+                "tools/recode_snerv_lf_payload_archive.py",
+                "--packet",
+                source_packet_path,
+                "--mode",
+                selected_mode,
+                "--output-packet",
+                f"{output_root}/candidate.snar",
+                "--output-json",
+                f".omx/research/snerv_lf_payload_archive_recode_{token}.json",
+                "--output-md",
+                f".omx/research/snerv_lf_payload_archive_recode_{token}.md",
+            ]
         return {
             "ingest_kind": "snerv_lf_payload_codec_full_archive_replay",
             "planner_action": planner_action,
-            "producer_tool": "tools/build_snerv_lf_payload_codec_sweep.py",
+            "producer_tool": "tools/recode_snerv_lf_payload_archive.py",
+            "intermediate_harvest_tool": "tools/build_snerv_lf_payload_codec_sweep.py",
             "existing_tool_ingress": "tools/build_nerv_control_inventory.py",
             "missing_tool_or_proof": (
                 "full_archive_receiver_replay_full_video_section_value_and_paired_exact_axes"
@@ -506,6 +533,11 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
             "source_artifact_path": payload.get("source_artifact_path"),
             "source_artifact_bytes": payload.get("source_artifact_bytes"),
             "source_artifact_sha256": payload.get("source_artifact_sha256"),
+            "source_kind": payload.get("source_kind"),
+            "source_packet_path": source_packet_path or None,
+            "source_packet_bytes": payload.get("source_packet_bytes"),
+            "source_packet_sha256": source_packet_sha256 or None,
+            "source_packet_metadata": dict(payload.get("source_packet_metadata") or {}),
             "source_selection_policy": payload.get("selection_policy"),
             "source_history_count": payload.get("history_count"),
             "source_plane_count": payload.get("plane_count"),
@@ -530,7 +562,10 @@ def _planner_ingest(work_order: Mapping[str, Any]) -> dict[str, Any]:
                 byte_price_plan.get("decision_rows")
             ),
             "local_lf_codec_packet_sweep_is_promotion_authority": False,
-            "local_full_archive_replay_runnable_now": False,
+            "local_full_archive_replay_runnable_now": bool(replay_command),
+            "local_full_archive_replay_command_argv": replay_command,
+            "local_full_archive_replay_output_root": output_root if replay_command else None,
+            "local_full_archive_replay_output_is_promotion_authority": False,
             "runnable_now": False,
         }
     if work_order_type == "receiver_visible_decoder_mode_assignment":

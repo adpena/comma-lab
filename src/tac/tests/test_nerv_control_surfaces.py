@@ -654,6 +654,9 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
         "snerv_lf_payload_codec_full_archive_replay"
     )
     assert lf_codec_row["planner_ingest"]["producer_tool"] == (
+        "tools/recode_snerv_lf_payload_archive.py"
+    )
+    assert lf_codec_row["planner_ingest"]["intermediate_harvest_tool"] == (
         "tools/build_snerv_lf_payload_codec_sweep.py"
     )
     assert lf_codec_row["planner_ingest"]["source_selected_mode"] == (
@@ -665,6 +668,11 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     )
     assert lf_codec_row["planner_ingest"]["source_artifact_bytes"] == 1234
     assert lf_codec_row["planner_ingest"]["source_artifact_sha256"] == "a" * 64
+    assert lf_codec_row["planner_ingest"]["source_packet_path"].endswith(
+        "source.snar"
+    )
+    assert lf_codec_row["planner_ingest"]["source_packet_bytes"] == 5678
+    assert lf_codec_row["planner_ingest"]["source_packet_sha256"] == "b" * 64
     assert lf_codec_row["planner_ingest"]["source_byte_price_plan_schema"] == (
         "compact_nerv_byte_price_controller.v1"
     )
@@ -676,6 +684,21 @@ def test_rate_allocator_queue_compiles_work_orders_without_authority() -> None:
     )
     assert (
         lf_codec_row["planner_ingest"]["local_full_archive_replay_runnable_now"]
+        is True
+    )
+    command = lf_codec_row["planner_ingest"]["local_full_archive_replay_command_argv"]
+    assert command[:5] == [
+        ".venv/bin/python",
+        "tools/recode_snerv_lf_payload_archive.py",
+        "--packet",
+        "/Volumes/VertigoDataTier/pact/snerv_lf_payload/source.snar",
+        "--mode",
+    ]
+    assert "portfolio_auto" in command
+    assert (
+        lf_codec_row["planner_ingest"][
+            "local_full_archive_replay_output_is_promotion_authority"
+        ]
         is False
     )
     assert "" not in lf_codec_row["pipeline_custody"]["canonical_ingress_paths"]
@@ -1098,6 +1121,13 @@ def _synthetic_rate_bridge() -> dict:
                 "source_artifact_path": ".omx/research/snerv_lf_payload_codec_sweep.json",
                 "source_artifact_bytes": 1234,
                 "source_artifact_sha256": "a" * 64,
+                "source_kind": "snar1_packet",
+                "source_packet_path": (
+                    "/Volumes/VertigoDataTier/pact/snerv_lf_payload/source.snar"
+                ),
+                "source_packet_bytes": 5678,
+                "source_packet_sha256": "b" * 64,
+                "source_packet_metadata": {"n_pairs": 16},
                 "selection_policy": (
                     "largest_plane_count_then_richest_section_value_then_lowest_selected_payload_bytes"
                 ),
