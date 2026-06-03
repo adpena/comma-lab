@@ -195,7 +195,7 @@ class MlxScoreAwareAdapter:
         warmup_epochs: int = 0,
         warmup_steps_per_epoch: int = 1,
         weight_decay: float | None = None,
-        optimizer_kind: str = "adamw",
+        optimizer_kind: str = "pact_muon_adamw",
         cosine_decay_enabled: bool = False,
         cosine_decay_total_epochs: int | None = None,
         cosine_decay_min_lr_ratio: float = 1e-2,
@@ -210,8 +210,8 @@ class MlxScoreAwareAdapter:
                 leaderboard-implementation parity discipline" L14 + L15 +
                 the optimizer stack research memo (commit 118ddb1a4) Option A
                 MINIMUM-VIABLE recommendation. Default False preserves the
-                legacy default-on AdamW behavior (backward compat per
-                CLAUDE.md "Beauty, simplicity, and developer experience").
+                legacy single-stage path while the default optimizer is Pact's
+                partitioned Muon+AdamW control.
                 When True, ``train_step`` routes per-stage optimizer state
                 through the canonical ``apply_pr95_mlx_optimizer_step`` via
                 the canonical ``PR95FaithfulCurriculumFactory``.
@@ -236,11 +236,13 @@ class MlxScoreAwareAdapter:
                 1e-4 per Loshchilov+Hutter 2019).
             optimizer_kind: Wave N+11 stabilizer. One of
                 ``SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS``. Default
-                "adamw" preserves legacy. All supported values route to real
-                ``mlx.optimizers`` classes on Apple silicon. "lion" and
-                "muon" are native MLX implementations of published algorithms,
-                not Apple-specific algorithms; Adafactor is pinned to
-                explicit-LR mode so stage curricula remain the authority.
+                ``pact_muon_adamw``. All supported values route to real
+                ``mlx.optimizers`` classes on Apple silicon except this default,
+                which routes through the PR95-derived
+                partitioned Muon+AdamW train-step helper. "lion" and
+                ``pact_muon_adamw`` are local MLX implementations of published
+                algorithms, not Apple-specific algorithms; Adafactor is pinned
+                to explicit-LR mode so stage curricula remain the authority.
             cosine_decay_enabled: Wave N+11 stabilizer. When True AND
                 warmup_epochs > 0 AND cosine_decay_total_epochs is set,
                 composes the canonical warmup + cosine-decay schedule via
@@ -724,11 +726,10 @@ class MlxScoreAwareAdapter:
     def _build_wave_n11_optimizer(self, learning_rate: float) -> Any:
         """Build the canonical Wave N+11 stabilizer-aware optimizer.
 
-        When NO stabilizer kwargs are set at construction, this returns
-        ``AdamW(learning_rate=lr)`` exactly as the pre-Wave-N+11 code path
-        did so sister substrates are byte-stable. When stabilizer kwargs ARE
-        set, builds the canonical optimizer with the requested schedule +
-        weight_decay + kind.
+        This helper builds single-object MLX optimizers only. The default
+        ``pact_muon_adamw`` path is intentionally handled in ``train_step`` so
+        PR95-derived Muon+AdamW parameter partitioning is preserved; callers
+        that want the explicit AdamW control pass ``optimizer_kind="adamw"``.
 
         Schedule composition:
 
@@ -880,6 +881,14 @@ class MlxScoreAwareAdapter:
             "pr95_faithful_muon_adamw_partition_enabled": (
                 self._pr95_faithful_curriculum_enabled
             ),
+            "pact_native_muon_adamw_partition_enabled": (
+                self._wave_n11_optimizer_kind == "pact_muon_adamw"
+            ),
+            "pact_native_muon_adamw_last_step_summary": (
+                dict(self._pact_muon_adamw_last_step_summary)
+                if self._pact_muon_adamw_last_step_summary is not None
+                else None
+            ),
             "cosine_decay_enabled": self._wave_n11_cosine_decay_enabled,
             "cosine_decay_total_epochs": self._wave_n11_cosine_decay_total_epochs,
             "cosine_decay_min_lr_ratio": self._wave_n11_cosine_decay_min_lr_ratio,
@@ -1005,6 +1014,38 @@ class MlxScoreAwareAdapter:
             out[name] = float(value.item())
         return out
 
+    def _effective_wave_n11_learning_rate(self, learning_rate: float) -> float:
+        """Return the scalar LR for custom step helpers that cannot take schedules."""
+
+        warmup_epochs = self._wave_n11_warmup_epochs
+        warmup_steps_per_epoch = self._wave_n11_warmup_steps_per_epoch
+        if warmup_epochs <= 0:
+            return float(learning_rate)
+        mlx_optim = self._mlx_optim
+        mx = self._mx
+        warmup_steps = max(1, warmup_epochs * warmup_steps_per_epoch)
+        warmup_sched = mlx_optim.linear_schedule(
+            0.0, float(learning_rate), warmup_steps
+        )
+        if self._wave_n11_cosine_decay_enabled:
+            total_epochs = int(self._wave_n11_cosine_decay_total_epochs or 0)
+            decay_epochs = max(1, total_epochs - warmup_epochs)
+            decay_steps = max(1, decay_epochs * warmup_steps_per_epoch)
+            end_lr = float(learning_rate) * float(
+                self._wave_n11_cosine_decay_min_lr_ratio
+            )
+            decay_sched = mlx_optim.cosine_decay(
+                float(learning_rate), decay_steps, end_lr
+            )
+            schedule = mlx_optim.join_schedules(
+                [warmup_sched, decay_sched], [warmup_steps]
+            )
+        else:
+            schedule = warmup_sched
+        value = schedule(mx.array(int(self._wave_n11_step_count)))
+        mx.eval(value)
+        return float(value.item())
+
     def optimizer_step(
         self, model: Any, loss: Any, learning_rate: float
     ) -> None:
@@ -1052,6 +1093,12 @@ class MlxScoreAwareAdapter:
         # is the canonical 1:1 PR95 hnerv_muon source implementation.
         if self._pr95_faithful_curriculum_enabled:
             return self._train_step_pr95_faithful_curriculum(
+                batch=batch,
+                learning_rate=learning_rate,
+                loss_weights=loss_weights,
+            )
+        if self._wave_n11_optimizer_kind == "pact_muon_adamw":
+            return self._train_step_pact_muon_adamw(
                 batch=batch,
                 learning_rate=learning_rate,
                 loss_weights=loss_weights,
@@ -1120,6 +1167,109 @@ class MlxScoreAwareAdapter:
 
         mx.eval(*eval_targets)
         return {"total": float(loss_value.item()), **post_update_metrics}
+
+    def _train_step_pact_muon_adamw(
+        self,
+        *,
+        batch: Any,
+        learning_rate: float,
+        loss_weights: Mapping[str, float],
+    ) -> Mapping[str, float]:
+        """Pact-native MLX partitioned Muon+AdamW score-aware train step.
+
+        This is original Pact optimizer integration built on two borrowed pieces:
+        PR95's hard-won Muon-vs-AdamW parameter partition rule, and the existing
+        MLX Newton-Schulz optimizer step helper. It is deliberately separate from
+        ``pr95_faithful_curriculum_enabled``: PR95 reproduction owns the staged
+        8-part schedule; this path owns fast local optimizer exploration for the
+        HiNeRV/SNeRV score loop while keeping the same no-global-Muon safety.
+        """
+
+        mx = self._mx
+        mlx_nn = self._mlx_nn
+        mlx_optim = self._mlx_optim
+        self._active_loss_weights = dict(loss_weights)
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            Pr95MlxOptimizerConfig,
+            Pr95MlxOptimizerState,
+            apply_pr95_mlx_optimizer_step,
+        )
+
+        if self._pact_muon_adamw_optimizer_state is None:
+            self._pact_muon_adamw_optimizer_state = Pr95MlxOptimizerState()
+
+        def _loss_fn_inner(model: Any) -> Any:
+            total, _parts = score_aware_loss(
+                self.bundle, batch, loss_weights=loss_weights
+            )
+            return total
+
+        loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
+        loss_value, grads = loss_and_grad_fn(self.model)
+        self._accumulate_decoder_weight_gradient_saliency(grads)
+        if self._wave_n11_grad_clip_max_norm is not None:
+            _unused_clipped_grads, total_norm = mlx_optim.clip_grad_norm(
+                grads, self._wave_n11_grad_clip_max_norm
+            )
+            mx.eval(total_norm)
+            grad_norm_pre_clip = float(total_norm.item())
+            self._wave_n11_grad_norm_history.append(grad_norm_pre_clip)
+            if grad_norm_pre_clip > self._wave_n11_grad_clip_max_norm:
+                self._wave_n11_clipped_count += 1
+        effective_lr = self._effective_wave_n11_learning_rate(learning_rate)
+        weight_decay = (
+            0.0
+            if self._wave_n11_weight_decay is None
+            else float(self._wave_n11_weight_decay)
+        )
+        config = Pr95MlxOptimizerConfig(
+            use_muon=True,
+            adamw_lr=effective_lr,
+            muon_lr=effective_lr * PACT_MUON_ADAMW_MUON_LR_MULTIPLIER,
+            latent_lr_mult=PACT_MUON_ADAMW_LATENT_LR_MULTIPLIER,
+            muon_weight_decay=weight_decay,
+            adamw_weight_decay=weight_decay,
+            grad_clip=self._wave_n11_grad_clip_max_norm,
+            grad_clip_muon=self._wave_n11_grad_clip_max_norm,
+        )
+        step_summary = apply_pr95_mlx_optimizer_step(
+            self.model,
+            grads,
+            self._pact_muon_adamw_optimizer_state,
+            config,
+        )
+        self._pact_muon_adamw_last_step_summary = dict(step_summary)
+        self._wave_n11_step_count += 1
+        post_update_eval_targets, post_update_metrics = self._post_train_step_update(
+            batch
+        )
+        post_update_metrics.update(
+            self._score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+            )
+        )
+        student_head_eval_targets = self._train_student_heads(
+            batch=batch,
+            learning_rate=learning_rate,
+            loss_weights=loss_weights,
+        )
+        mx.eval(
+            self.model.parameters(),
+            loss_value,
+            *post_update_eval_targets,
+            *student_head_eval_targets,
+        )
+        return {
+            "total": float(loss_value.item()),
+            "pact_optimizer_uses_muon": 1.0,
+            "pact_muon_tensor_count": float(step_summary["muon_tensor_count"]),
+            "pact_adamw_tensor_count": float(step_summary["adamw_tensor_count"]),
+            "pact_adamw_learning_rate": float(config.adamw_lr),
+            "pact_muon_learning_rate": float(config.muon_lr),
+            "pact_muon_lr_multiplier": float(PACT_MUON_ADAMW_MUON_LR_MULTIPLIER),
+            **post_update_metrics,
+        }
 
     def _train_step_pr95_faithful_curriculum(
         self,

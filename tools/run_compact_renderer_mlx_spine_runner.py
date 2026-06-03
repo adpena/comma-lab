@@ -51,6 +51,8 @@ from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
 )
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
+    HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
+    HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
     build_hinerv_modelsize_budget_report,
@@ -162,6 +164,8 @@ HI_NERV_OPTIMIZER_POLICIES = (
     "pr95_curriculum",
     "native_optimizer",
 )
+DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM = 1.0
+DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_WEIGHT_DECAY = 1.0e-4
 COMPACT_FAMILY_STARTUP_MARKER_FILENAME = (
     "compact_renderer_mlx_spine_runner_startup.json"
 )
@@ -2546,7 +2550,7 @@ def _resolve_hi_nerv_optimizer_policy(
             "hi_nerv_optimizer_policy must be one of "
             f"{HI_NERV_OPTIMIZER_POLICIES}; got {requested_policy!r}"
         )
-    optimizer = str(optimizer_kind or "adamw").strip().lower()
+    optimizer = str(optimizer_kind or "pact_muon_adamw").strip().lower()
     if policy == "auto":
         # Preserve the PR95-faithful control row for the historical default,
         # but let non-AdamW rows genuinely exercise native macOS/MLX optimizers.
@@ -2583,6 +2587,110 @@ def _resolve_hi_nerv_optimizer_policy(
         "effective_optimizer_label": (
             "pr95_8stage_muon_adamw" if pr95_enabled else optimizer
         ),
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _resolve_mlx_score_aware_optimizer_controls(
+    *,
+    optimizer_kind: str,
+    requested_weight_decay: float | None,
+    grad_clip_max_norm: float | None,
+    warmup_epochs: int,
+    warmup_steps_per_epoch: int,
+    cosine_decay_enabled: bool,
+    cosine_decay_total_epochs: int | None,
+    cosine_decay_min_lr_ratio: float,
+    run_epochs: int,
+) -> dict[str, Any]:
+    """Resolve concrete optimizer controls before the MLX adapter is built."""
+
+    kind = str(optimizer_kind or "pact_muon_adamw").strip().lower()
+    if kind not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
+        raise CompactRendererMlxSpineRunnerError(
+            "optimizer_kind must be one of "
+            f"{SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS}; got {optimizer_kind!r}"
+        )
+    weight_decay_supported = kind in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
+    if requested_weight_decay is not None and not weight_decay_supported:
+        raise CompactRendererMlxSpineRunnerError(
+            "--optimizer-weight-decay is only supported for "
+            f"{MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS}; got {kind!r}"
+        )
+    effective_weight_decay = (
+        (
+            DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_WEIGHT_DECAY
+            if requested_weight_decay is None
+            else float(requested_weight_decay)
+        )
+        if weight_decay_supported
+        else None
+    )
+    if grad_clip_max_norm is not None and float(grad_clip_max_norm) <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "--optimizer-grad-clip-max-norm must be > 0 when provided"
+        )
+    resolved_warmup_epochs = int(warmup_epochs)
+    resolved_warmup_steps_per_epoch = int(warmup_steps_per_epoch)
+    if resolved_warmup_epochs < 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "--optimizer-warmup-epochs must be >= 0"
+        )
+    if resolved_warmup_steps_per_epoch <= 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "--optimizer-warmup-steps-per-epoch must be > 0"
+        )
+    resolved_cosine_total_epochs = (
+        int(cosine_decay_total_epochs)
+        if cosine_decay_total_epochs is not None
+        else None
+    )
+    cosine_total_defaulted = False
+    if cosine_decay_enabled:
+        if resolved_warmup_epochs <= 0:
+            raise CompactRendererMlxSpineRunnerError(
+                "--optimizer-cosine-decay-enabled requires "
+                "--optimizer-warmup-epochs > 0"
+            )
+        if resolved_cosine_total_epochs is None:
+            resolved_cosine_total_epochs = max(
+                int(run_epochs), resolved_warmup_epochs + 1
+            )
+            cosine_total_defaulted = True
+        if resolved_cosine_total_epochs <= resolved_warmup_epochs:
+            raise CompactRendererMlxSpineRunnerError(
+                "--optimizer-cosine-decay-total-epochs must be > "
+                "--optimizer-warmup-epochs"
+            )
+    if float(cosine_decay_min_lr_ratio) < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "--optimizer-cosine-decay-min-lr-ratio must be >= 0"
+        )
+    return {
+        "schema": "compact_mlx_score_aware_optimizer_controls.v1",
+        "optimizer_kind": kind,
+        "grad_clip_max_norm": (
+            float(grad_clip_max_norm) if grad_clip_max_norm is not None else None
+        ),
+        "weight_decay_requested": (
+            None if requested_weight_decay is None else float(requested_weight_decay)
+        ),
+        "weight_decay_effective": effective_weight_decay,
+        "weight_decay_defaulted": (
+            requested_weight_decay is None and weight_decay_supported
+        ),
+        "weight_decay_supported_by_optimizer": weight_decay_supported,
+        "warmup_epochs": resolved_warmup_epochs,
+        "warmup_steps_per_epoch": resolved_warmup_steps_per_epoch,
+        "cosine_decay_enabled": bool(cosine_decay_enabled),
+        "cosine_decay_total_epochs": resolved_cosine_total_epochs,
+        "cosine_decay_total_epochs_defaulted_to_run_epochs": cosine_total_defaulted,
+        "cosine_decay_min_lr_ratio": float(cosine_decay_min_lr_ratio),
+        "borrowed_pr95_partition_rule": kind == "pact_muon_adamw",
+        "original_pact_default_optimizer": kind == "pact_muon_adamw",
         "authority": "macos_mlx_research_signal_false_authority",
         "score_claim": False,
         "promotion_eligible": False,
@@ -4685,8 +4793,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
     telemetry_flush_interval_epochs: int = 1,
-    optimizer_kind: str = "adamw",
+    optimizer_kind: str = "pact_muon_adamw",
     hi_nerv_optimizer_policy: str = "auto",
+    optimizer_grad_clip_max_norm: float | None = (
+        DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
+    ),
+    optimizer_weight_decay: float | None = None,
+    optimizer_warmup_epochs: int = 0,
+    optimizer_warmup_steps_per_epoch: int = 1,
+    optimizer_cosine_decay_enabled: bool = False,
+    optimizer_cosine_decay_total_epochs: int | None = None,
+    optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -4708,6 +4825,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         requested_policy=hi_nerv_optimizer_policy,
         epochs=int(epochs),
         optimizer_kind=str(optimizer_kind),
+    )
+    optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
+        optimizer_kind=str(optimizer_policy.get("optimizer_kind") or optimizer_kind),
+        requested_weight_decay=optimizer_weight_decay,
+        grad_clip_max_norm=optimizer_grad_clip_max_norm,
+        warmup_epochs=int(optimizer_warmup_epochs),
+        warmup_steps_per_epoch=int(optimizer_warmup_steps_per_epoch),
+        cosine_decay_enabled=bool(optimizer_cosine_decay_enabled),
+        cosine_decay_total_epochs=optimizer_cosine_decay_total_epochs,
+        cosine_decay_min_lr_ratio=float(optimizer_cosine_decay_min_lr_ratio),
+        run_epochs=int(epochs),
     )
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
     effective_requested_distillation_device = str(
@@ -4861,6 +4989,18 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_local_grid_channels = int(candidate.get("local_grid_channels", 4))
     launch_convnext_mlp_ratio = int(candidate.get("convnext_mlp_ratio", 2))
     launch_convnext_kernel_size = int(candidate.get("convnext_kernel_size", 7))
+    launch_mid_injection_block_index = int(
+        candidate.get(
+            "mid_injection_block_index",
+            HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
+        )
+    )
+    launch_fine_injection_block_index = int(
+        candidate.get(
+            "fine_injection_block_index",
+            HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
+        )
+    )
     effective_recon_pixel_weight_path = recon_pixel_weight_path
     recon_pixel_weight_auto_discovery: dict[str, Any] | None = None
     enabled_recon_weight_modes = sum(
@@ -4940,6 +5080,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_mid_injection_block_index": (
+                        launch_mid_injection_block_index
+                    ),
+                    "launch_fine_injection_block_index": (
+                        launch_fine_injection_block_index
+                    ),
                     "candidate_curriculum_plan": launch_curriculum_plan,
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -4949,6 +5095,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_optimizer_policy": optimizer_policy,
+                "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": prelaunch_blockers,
@@ -4978,6 +5125,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             local_grid_channels=launch_local_grid_channels,
             convnext_mlp_ratio=launch_convnext_mlp_ratio,
             convnext_kernel_size=launch_convnext_kernel_size,
+            mid_injection_block_index=launch_mid_injection_block_index,
+            fine_injection_block_index=launch_fine_injection_block_index,
             decoder_codec=launch_decoder_codec,
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
@@ -5008,6 +5157,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             telemetry_flush_interval_epochs=telemetry_flush_interval_epochs,
             optimizer_kind=str(optimizer_kind),
             hi_nerv_optimizer_policy=optimizer_policy,
+            optimizer_controls=optimizer_controls,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -5040,6 +5190,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_mid_injection_block_index": (
+                        launch_mid_injection_block_index
+                    ),
+                    "launch_fine_injection_block_index": (
+                        launch_fine_injection_block_index
+                    ),
                     "candidate_curriculum_plan": launch_curriculum_plan,
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -5051,6 +5207,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_optimizer_policy": optimizer_policy,
+                "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
@@ -5250,6 +5407,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "launch_embed_dim": launch_embed_dim,
                 "launch_decoder_channel": launch_decoder_channel,
                 "launch_decoder_codec": launch_decoder_codec,
+                "launch_mid_injection_block_index": launch_mid_injection_block_index,
+                "launch_fine_injection_block_index": (
+                    launch_fine_injection_block_index
+                ),
                 "candidate_curriculum_plan": candidate_curriculum_plan,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -5269,6 +5430,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "score_aware_training_config_gate": config_gate,
             "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
             "hi_nerv_optimizer_policy": optimizer_policy,
+            "hi_nerv_optimizer_controls": optimizer_controls,
             "score_aware_carrier_training_plan": score_aware_training_plan,
             "modelsize_budget_evidence": modelsize_budget_evidence,
             "score_aware_training": {
@@ -6867,6 +7029,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     local_grid_channels: int,
     convnext_mlp_ratio: int,
     convnext_kernel_size: int,
+    mid_injection_block_index: int,
+    fine_injection_block_index: int,
     decoder_codec: str,
     ema_decay: float,
     segnet_distillation_weight: float,
@@ -6979,8 +7143,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         decoder_channels=tuple([max(1, int(decoder_channel))] * 7),
         sin_frequency=30.0,
         num_upsample_blocks=7,
-        mid_injection_block_index=1,
-        fine_injection_block_index=4,
+        mid_injection_block_index=int(mid_injection_block_index),
+        fine_injection_block_index=int(fine_injection_block_index),
         num_pairs=pairs,
         output_height=384,
         output_width=512,
@@ -8642,7 +8806,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--optimizer-kind",
         choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
-        default="adamw",
+        default="pact_muon_adamw",
         help=(
             "Native MLX optimizer for score-aware compact training. HiNeRV "
             "uses this directly; SNeRV consumes it once the shared long-"

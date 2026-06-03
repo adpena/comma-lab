@@ -76,8 +76,8 @@ HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = (
     "switch_to_hinerv_official_feature_grid_convnext_controls"
 )
 DEFAULT_OPTIMIZER_KINDS = (
+    "pact_muon_adamw",
     "adamw",
-    "muon",
     "lion",
     "adamax",
     "rmsprop",
@@ -87,7 +87,9 @@ DEFAULT_OPTIMIZER_KINDS = (
     "adadelta",
     "sgd",
 )
-FIRST_PASS_OPTIMIZER_KINDS = frozenset(("adamw", "muon", "lion", "adamax"))
+FIRST_PASS_OPTIMIZER_KINDS = frozenset(
+    ("pact_muon_adamw", "adamw", "lion", "adamax")
+)
 OPTIMIZER_CONTROL_SCHEMA = "nerv_optimizer_control_surface.v1"
 HINERV_OPTIMIZER_POLICY_SCHEMA = "nerv_hinerv_optimizer_policy.v1"
 
@@ -1230,7 +1232,10 @@ def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
 
 
 def _optimizer_priority(optimizer_kind: str) -> int:
-    return 10 if str(optimizer_kind) in FIRST_PASS_OPTIMIZER_KINDS else 11
+    kind = str(optimizer_kind)
+    if kind == "pact_muon_adamw":
+        return 9
+    return 10 if kind in FIRST_PASS_OPTIMIZER_KINDS else 11
 
 
 def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:

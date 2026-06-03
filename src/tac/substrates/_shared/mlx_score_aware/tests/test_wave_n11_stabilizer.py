@@ -61,17 +61,18 @@ def minimal_bundle():
 # -----------------------------------------------------------------------------
 
 
-def test_adapter_constructs_with_legacy_defaults_byte_stable(
+def test_adapter_constructs_with_pact_muon_adamw_default(
     minimal_bundle, adapter_kwargs
 ):
-    """Pre-Wave-N+11 byte-stable: no stabilizer kwargs = legacy behavior."""
+    """Default optimizer is the Pact partitioned Muon+AdamW path."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
     a = MlxScoreAwareAdapter(minimal_bundle, **adapter_kwargs)
     assert a._wave_n11_grad_clip_max_norm is None
     assert a._wave_n11_warmup_epochs == 0
     assert a._wave_n11_weight_decay is None
-    assert a._wave_n11_optimizer_kind == "adamw"
+    assert a._wave_n11_optimizer_kind == "pact_muon_adamw"
+    assert a._pact_muon_adamw_optimizer_state is not None
     assert a._wave_n11_cosine_decay_enabled is False
     assert a._wave_n11_step_count == 0
     assert a._wave_n11_clipped_count == 0
@@ -170,15 +171,17 @@ def test_adapter_rejects_cosine_decay_without_total_epochs(
 # -----------------------------------------------------------------------------
 
 
-def test_build_optimizer_legacy_default_is_adamw_constant_lr(
+def test_build_optimizer_explicit_adamw_control_is_constant_lr(
     minimal_bundle, adapter_kwargs
 ):
-    """Legacy default builds AdamW with constant lr (no warmup, no decay)."""
+    """Explicit AdamW still builds the control optimizer object."""
     import mlx.optimizers as mlx_optim
 
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
-    a = MlxScoreAwareAdapter(minimal_bundle, **adapter_kwargs)
+    a = MlxScoreAwareAdapter(
+        minimal_bundle, optimizer_kind="adamw", **adapter_kwargs
+    )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
     assert isinstance(opt, mlx_optim.AdamW)
 
@@ -192,7 +195,10 @@ def test_build_optimizer_with_grad_clip_only_is_adamw(
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
     a = MlxScoreAwareAdapter(
-        minimal_bundle, grad_clip_max_norm=1.0, **adapter_kwargs
+        minimal_bundle,
+        grad_clip_max_norm=1.0,
+        optimizer_kind="adamw",
+        **adapter_kwargs,
     )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
     assert isinstance(opt, mlx_optim.AdamW)
@@ -308,7 +314,6 @@ def test_build_optimizer_rejects_silent_weight_decay_drop_for_no_decay_kinds(
     ("optimizer_kind", "class_name"),
     (
         ("sgd", "SGD"),
-        ("muon", "Muon"),
     ),
 )
 def test_build_optimizer_routes_additional_native_mlx_decay_optimizer_kinds(
@@ -334,6 +339,24 @@ def test_build_optimizer_routes_additional_native_mlx_decay_optimizer_kinds(
     assert opt.weight_decay == pytest.approx(1.0e-4)
 
 
+def test_build_optimizer_refuses_fake_single_object_pact_muon_adamw(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """pact_muon_adamw is partitioned in train_step, not a fake single object."""
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind="pact_muon_adamw",
+        weight_decay=1.0e-4,
+        **adapter_kwargs,
+    )
+    with pytest.raises(RuntimeError, match="partitioned train_step optimizer"):
+        a._build_wave_n11_optimizer(learning_rate=3.0e-4)
+
+
 def test_build_optimizer_warmup_only_uses_linear_schedule(
     minimal_bundle, adapter_kwargs
 ):
@@ -346,6 +369,7 @@ def test_build_optimizer_warmup_only_uses_linear_schedule(
         minimal_bundle,
         warmup_epochs=5,
         warmup_steps_per_epoch=10,
+        optimizer_kind="adamw",
         **adapter_kwargs,
     )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
@@ -379,6 +403,7 @@ def test_build_optimizer_warmup_plus_cosine_uses_join_schedules(
         minimal_bundle,
         warmup_epochs=5,
         warmup_steps_per_epoch=2,
+        optimizer_kind="adamw",
         cosine_decay_enabled=True,
         cosine_decay_total_epochs=50,
         cosine_decay_min_lr_ratio=1e-2,
@@ -407,7 +432,10 @@ def test_build_optimizer_weight_decay_threaded_into_adamw(
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
     a = MlxScoreAwareAdapter(
-        minimal_bundle, weight_decay=1e-4, **adapter_kwargs
+        minimal_bundle,
+        optimizer_kind="adamw",
+        weight_decay=1e-4,
+        **adapter_kwargs,
     )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
     # mlx.optimizers.AdamW stores weight_decay as attribute
@@ -423,7 +451,9 @@ def test_build_optimizer_no_weight_decay_uses_adamw_default(
     """weight_decay=None preserves AdamW's own default (0.01)."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
-    a = MlxScoreAwareAdapter(minimal_bundle, **adapter_kwargs)
+    a = MlxScoreAwareAdapter(
+        minimal_bundle, optimizer_kind="adamw", **adapter_kwargs
+    )
     opt = a._build_wave_n11_optimizer(learning_rate=1e-3)
     wd = float(opt.weight_decay)
     assert wd == pytest.approx(0.01, abs=1e-9)
@@ -434,10 +464,10 @@ def test_build_optimizer_no_weight_decay_uses_adamw_default(
 # -----------------------------------------------------------------------------
 
 
-def test_stabilizer_summary_legacy_default_returns_zero_history(
+def test_stabilizer_summary_pact_muon_adamw_default_returns_zero_history(
     minimal_bundle, adapter_kwargs
 ):
-    """Legacy default produces empty grad-norm history + no clipping."""
+    """Default summary records Pact Muon+AdamW without optimizer-object faking."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
     a = MlxScoreAwareAdapter(minimal_bundle, **adapter_kwargs)
@@ -446,7 +476,8 @@ def test_stabilizer_summary_legacy_default_returns_zero_history(
     assert summary["grad_clip_max_norm"] is None
     assert summary["warmup_epochs"] == 0
     assert summary["weight_decay"] is None
-    assert summary["optimizer_kind"] == "adamw"
+    assert summary["optimizer_kind"] == "pact_muon_adamw"
+    assert summary["pact_native_muon_adamw_partition_enabled"] is True
     assert summary["step_count"] == 0
     assert summary["grad_norm_clipped_count"] == 0
     assert summary["grad_norm_history_len"] == 0

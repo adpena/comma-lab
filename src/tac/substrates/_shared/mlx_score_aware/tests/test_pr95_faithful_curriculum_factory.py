@@ -700,6 +700,45 @@ def test_train_step_actually_mutates_parameters_per_stage_NO_FAKE() -> None:
 
 
 @requires_mlx
+def test_pact_muon_adamw_default_mutates_and_reports_partition_NO_FAKE() -> None:
+    """Pact-native Muon+AdamW is a real partitioned optimizer, not a label."""
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_bundle()
+    bundle.model.decoder_weight = mx.ones((4, 4)) * 0.5
+    bundle.model.decoder_bias = mx.ones((4,)) * 0.1
+    mx.eval(bundle.model.parameters())
+    initial_weight = mx.array(bundle.model.decoder_weight)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        optimizer_kind="pact_muon_adamw",
+        weight_decay=1.0e-4,
+        grad_clip_max_norm=1.0,
+    )
+    batch = adapter.sample_batch(batch_size=4, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1.0e-2,
+        loss_weights={"recon": 1.0},
+    )
+    mx.eval(bundle.model.parameters())
+
+    moved = float(mx.max(mx.abs(bundle.model.decoder_weight - initial_weight)).item())
+    assert moved > 0.0, "NO FAKE: pact_muon_adamw left decoder weights unchanged"
+    assert metrics["pact_optimizer_uses_muon"] == pytest.approx(1.0)
+    assert metrics["pact_muon_tensor_count"] > 0.0
+    assert metrics["pact_adamw_tensor_count"] > 0.0
+    assert "pr95_stage_index" not in metrics
+    summary = adapter.wave_n11_stabilizer_summary()
+    assert summary["pact_native_muon_adamw_partition_enabled"] is True
+    assert summary["pact_native_muon_adamw_last_step_summary"] is not None
+
+
+@requires_mlx
 def test_stage_transition_resets_muon_buffers_per_l15_invariant() -> None:
     """L15 canonical equation: stage 8 starts with fresh Muon buffers."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter

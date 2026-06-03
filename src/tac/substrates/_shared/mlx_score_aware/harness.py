@@ -69,7 +69,7 @@ def run_mlx_score_aware_full_main(
     warmup_epochs: int = 0,
     warmup_steps_per_epoch: int = 1,
     weight_decay: float | None = None,
-    optimizer_kind: str = "adamw",
+    optimizer_kind: str = "pact_muon_adamw",
     cosine_decay_enabled: bool = False,
     cosine_decay_total_epochs: int | None = None,
     cosine_decay_min_lr_ratio: float = 1e-2,

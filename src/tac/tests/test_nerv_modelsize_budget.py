@@ -41,6 +41,8 @@ def test_hinerv_modelsize_closed_form_matches_real_module() -> None:
     )
 
     assert row.total_trainable_params == model.num_parameters()
+    assert row.mid_injection_block_index == cfg.mid_injection_block_index == 1
+    assert row.fine_injection_block_index == cfg.fine_injection_block_index == 4
     assert row.latent_trainable_params == 17 * (6 + 12 + 24)
     assert row.decoder_trainable_params == (
         row.total_trainable_params - row.latent_trainable_params
@@ -88,6 +90,8 @@ def test_hinerv_modelsize_counts_official_grid_convnext_controls() -> None:
     )
     assert row.use_hierarchical_feature_grid is True
     assert row.use_convnext_blocks is True
+    assert row.mid_injection_block_index == cfg.mid_injection_block_index
+    assert row.fine_injection_block_index == cfg.fine_injection_block_index
     assert row.total_trainable_params == model.num_parameters()
     assert row.decoder_trainable_params > row.latent_trainable_params
     assert row.score_claim is False

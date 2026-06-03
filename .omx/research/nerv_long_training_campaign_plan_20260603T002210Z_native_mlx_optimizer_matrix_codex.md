@@ -9,6 +9,11 @@ Ready for exact dispatch: `False`
 
 ## Rows
 
+- `hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `True`
+  optimizer: `pact_muon_adamw`
+  blockers: `10`
 - `hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::adamax`
   family: `hi_nerv`
   launchable_mlx: `True`
@@ -23,11 +28,6 @@ Ready for exact dispatch: `False`
   family: `hi_nerv`
   launchable_mlx: `True`
   optimizer: `lion`
-  blockers: `10`
-- `hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::muon`
-  family: `hi_nerv`
-  launchable_mlx: `True`
-  optimizer: `muon`
   blockers: `10`
 - `hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::adadelta`
   family: `hi_nerv`

@@ -1113,12 +1113,16 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert hi["hard_byte_ceiling"] == 36_000
     assert hi["decoder_codec"] == "int4_mixed"
     assert hi["use_hierarchical_feature_grid"] is False
+    assert hi["mid_injection_block_index"] == 1
+    assert hi["fine_injection_block_index"] == 4
     assert hi_official is not None
     assert hi_official["candidate_id"] == (
         "hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000"
     )
     assert hi_official["use_hierarchical_feature_grid"] is True
     assert hi_official["use_convnext_blocks"] is True
+    assert hi_official["mid_injection_block_index"] == 1
+    assert hi_official["fine_injection_block_index"] == 4
     assert hi_official["hard_byte_ceiling"] == 36_000
     assert sn is not None
     assert sn["candidate_id"] == (
@@ -3470,6 +3474,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_substrate_metadata(
             "latent_dim": 12,
             "embed_dim": 16,
             "decoder_channel": 6,
+            "mid_injection_block_index": 2,
+            "fine_injection_block_index": 5,
             "decoder_codec": "int4_mixed",
             "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
@@ -3631,6 +3637,8 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
             "latent_dim": 12,
             "embed_dim": 16,
             "decoder_channel": 6,
+            "mid_injection_block_index": 2,
+            "fine_injection_block_index": 5,
             "decoder_codec": "int4_mixed",
             "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
@@ -3653,6 +3661,8 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert captured_train_kwargs["optimizer_kind"] == "adafactor"
     assert captured_train_kwargs["segnet_distillation_weight"] == 1.0
     assert captured_train_kwargs["pose_distillation_weight"] == 1.0
+    assert captured_train_kwargs["mid_injection_block_index"] == 2
+    assert captured_train_kwargs["fine_injection_block_index"] == 5
     assert captured_train_kwargs["pose_distillation_loss"] == "huber"
     assert captured_train_kwargs["pose_distillation_huber_delta"] == 2.5
     assert captured_train_kwargs["coder_aware_qat"] is True

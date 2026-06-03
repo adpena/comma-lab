@@ -18,6 +18,242 @@
       "cpu_replay_ready": false,
       "exact_gate_ready": false,
       "family": "hi_nerv",
+      "id": "hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw",
+      "metadata": {
+        "dispatch_attempted": false,
+        "feedback_launch_adjustment": {
+          "applied": false,
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "learning_rate": 0.001,
+          "policy_logic": "pose instability above low_learning_rate_floor applies the measured lower learning-rate recommendation; repeated instability at or below the floor switches to pose_distillation_loss=huber while preserving raw MSE telemetry; segnet stagnation raises segnet_distillation_weight for the next run without granting archive, replay, or score authority",
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "reason": "no_candidate_feedback",
+          "schema": "hinerv_feedback_launch_adjustment.v1",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "segnet_distillation_weight": 1.0
+        },
+        "gpu_launched": false,
+        "output_dir_reuse_policy": "stable_candidate_optimizer_path",
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "nerv_long_training_campaign_experiment_metadata.v1",
+        "score_claim": false,
+        "score_claim_valid": false,
+        "source_faithfulness_controls": {
+          "dispatch_attempted": false,
+          "gpu_launched": false,
+          "promotable": false,
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "hinerv_source_faithfulness_controls.v1",
+          "score_claim": false,
+          "score_claim_valid": false,
+          "source_feedback_candidate_id": "",
+          "source_official_control_score": 2,
+          "source_official_control_superseded": false,
+          "target_candidate_id": "hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+          "target_official_control_score": 2,
+          "target_uses_convnext_blocks": true,
+          "target_uses_hierarchical_feature_grid": true
+        }
+      },
+      "priority": 9,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "score_lowering_gate": {
+        "cpu_replay_ready": false,
+        "dispatch_attempted": false,
+        "exact_auth_gate_required": false,
+        "exact_gate_ready": false,
+        "family": "hi_nerv",
+        "full_video_prefilter_required": true,
+        "gpu_launched": false,
+        "local_cpu_replay_required": true,
+        "local_mlx_executable": true,
+        "missing_requirement_ids": [
+          "archive_in_loop_byte_oracle",
+          "byte_closed_archive_export",
+          "receiver_proof",
+          "full_video_local_prefilter",
+          "local_cpu_replay_gate"
+        ],
+        "post_run_missing_requirement_ids": [
+          "archive_in_loop_byte_oracle",
+          "byte_closed_archive_export",
+          "receiver_proof",
+          "full_video_local_prefilter",
+          "local_cpu_replay_gate"
+        ],
+        "post_run_requirements": [
+          "archive_in_loop_byte_oracle",
+          "byte_closed_archive_export",
+          "receiver_proof",
+          "full_video_local_prefilter",
+          "local_cpu_replay_gate",
+          "exact_auth_gate_plan"
+        ],
+        "prelaunch_allowed": true,
+        "prelaunch_blockers": [],
+        "promotable": false,
+        "promotion_blockers": [
+          "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
+          "hinerv_decoder_weight_waterfill_plan_missing",
+          "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
+          "requires_local_cpu_replay_win_before_exact_cpu_auth",
+          "hinerv_trained_archive_byte_oracle_feedback_missing",
+          "hi_nerv_archive_in_loop_byte_oracle_missing",
+          "hi_nerv_byte_closed_archive_export_missing",
+          "hi_nerv_receiver_proof_missing",
+          "hi_nerv_full_video_local_prefilter_missing",
+          "hi_nerv_local_cpu_replay_gate_missing"
+        ],
+        "promotion_eligible": false,
+        "promotion_prelaunch_allowed": true,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_proof_required": true,
+        "schema": "nerv_long_training_score_lowering_gate.v1",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
+      "status": "queued",
+      "steps": [
+        {
+          "command": [
+            "uv",
+            "run",
+            "--extra",
+            "dev",
+            "--extra",
+            "runtime",
+            "--extra",
+            "mlx",
+            "python",
+            "tools/run_compact_renderer_mlx_spine_runner.py",
+            "--execute-family",
+            "hi_nerv",
+            "--planner-row-id",
+            "hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::pact_muon_adamw",
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "29650",
+            "--batch-pairs",
+            "8",
+            "--learning-rate",
+            "0.001",
+            "--distillation-device",
+            "gpu",
+            "--modelsize-candidate-id",
+            "hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+            "--segnet-distillation-weight",
+            "1",
+            "--pose-distillation-weight",
+            "1.0",
+            "--coder-aware-qat",
+            "--coder-qat-quant-bits",
+            "4",
+            "--optimizer-kind",
+            "pact_muon_adamw",
+            "--hi-nerv-optimizer-policy",
+            "native_optimizer",
+            "--mlx-prefilter-scorer-device",
+            "gpu",
+            "--mlx-prefilter-scorer-batch-pairs",
+            "8",
+            "--mlx-prefilter-progress-every",
+            "10",
+            "--telemetry-flush-interval-epochs",
+            "1",
+            "--run-post-export-materializers",
+            "--output-dir",
+            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw",
+            "--auto-joint-recon-pixel-weight"
+          ],
+          "id": "run_mlx_first_campaign_row",
+          "on_postcondition_failure": "failed",
+          "postconditions": [
+            {
+              "equals": "compact_renderer_mlx_spine_runner.v1",
+              "key": "schema",
+              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/compact_renderer_mlx_spine_runner_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "score_claim",
+              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/compact_renderer_mlx_spine_runner_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "ready_for_exact_eval_dispatch",
+              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/compact_renderer_mlx_spine_runner_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": false,
+              "key": "promotion_eligible",
+              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/compact_renderer_mlx_spine_runner_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": "hi_nerv",
+              "key": "execute_family",
+              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/compact_renderer_mlx_spine_runner_report.json",
+              "type": "json_equals"
+            },
+            {
+              "equals": true,
+              "key": "training_executed",
+              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/compact_renderer_mlx_spine_runner_report.json",
+              "type": "json_equals"
+            }
+          ],
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "resources": {
+            "kind": "local_mlx",
+            "max_parallel_group": "local_mlx_training"
+          },
+          "score_claim": false,
+          "telemetry": {
+            "artifact_paths": [
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/compact_renderer_mlx_spine_runner_startup.json",
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/hi_nerv_mlx_training/telemetry.jsonl",
+              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_pact_muon_adamw/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl"
+            ],
+            "include_postcondition_paths": true
+          }
+        }
+      ]
+    },
+    {
+      "blocked": false,
+      "blockers": [
+        "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
+        "hinerv_decoder_weight_waterfill_plan_missing",
+        "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
+        "requires_local_cpu_replay_win_before_exact_cpu_auth",
+        "hinerv_trained_archive_byte_oracle_feedback_missing",
+        "hi_nerv_archive_in_loop_byte_oracle_missing",
+        "hi_nerv_byte_closed_archive_export_missing",
+        "hi_nerv_receiver_proof_missing",
+        "hi_nerv_full_video_local_prefilter_missing",
+        "hi_nerv_local_cpu_replay_gate_missing"
+      ],
+      "cpu_replay_ready": false,
+      "exact_gate_ready": false,
+      "family": "hi_nerv",
       "id": "hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamax",
       "metadata": {
         "dispatch_attempted": false,
@@ -703,242 +939,6 @@
               "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_lion/compact_renderer_mlx_spine_runner_startup.json",
               "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_lion/hi_nerv_mlx_training/telemetry.jsonl",
               "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_lion/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl"
-            ],
-            "include_postcondition_paths": true
-          }
-        }
-      ]
-    },
-    {
-      "blocked": false,
-      "blockers": [
-        "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
-        "hinerv_decoder_weight_waterfill_plan_missing",
-        "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
-        "requires_local_cpu_replay_win_before_exact_cpu_auth",
-        "hinerv_trained_archive_byte_oracle_feedback_missing",
-        "hi_nerv_archive_in_loop_byte_oracle_missing",
-        "hi_nerv_byte_closed_archive_export_missing",
-        "hi_nerv_receiver_proof_missing",
-        "hi_nerv_full_video_local_prefilter_missing",
-        "hi_nerv_local_cpu_replay_gate_missing"
-      ],
-      "cpu_replay_ready": false,
-      "exact_gate_ready": false,
-      "family": "hi_nerv",
-      "id": "hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon",
-      "metadata": {
-        "dispatch_attempted": false,
-        "feedback_launch_adjustment": {
-          "applied": false,
-          "dispatch_attempted": false,
-          "gpu_launched": false,
-          "learning_rate": 0.001,
-          "policy_logic": "pose instability above low_learning_rate_floor applies the measured lower learning-rate recommendation; repeated instability at or below the floor switches to pose_distillation_loss=huber while preserving raw MSE telemetry; segnet stagnation raises segnet_distillation_weight for the next run without granting archive, replay, or score authority",
-          "promotable": false,
-          "promotion_eligible": false,
-          "rank_or_kill_eligible": false,
-          "ready_for_exact_eval_dispatch": false,
-          "reason": "no_candidate_feedback",
-          "schema": "hinerv_feedback_launch_adjustment.v1",
-          "score_claim": false,
-          "score_claim_valid": false,
-          "segnet_distillation_weight": 1.0
-        },
-        "gpu_launched": false,
-        "output_dir_reuse_policy": "stable_candidate_optimizer_path",
-        "promotable": false,
-        "promotion_eligible": false,
-        "rank_or_kill_eligible": false,
-        "ready_for_exact_eval_dispatch": false,
-        "schema": "nerv_long_training_campaign_experiment_metadata.v1",
-        "score_claim": false,
-        "score_claim_valid": false,
-        "source_faithfulness_controls": {
-          "dispatch_attempted": false,
-          "gpu_launched": false,
-          "promotable": false,
-          "promotion_eligible": false,
-          "rank_or_kill_eligible": false,
-          "ready_for_exact_eval_dispatch": false,
-          "schema": "hinerv_source_faithfulness_controls.v1",
-          "score_claim": false,
-          "score_claim_valid": false,
-          "source_feedback_candidate_id": "",
-          "source_official_control_score": 2,
-          "source_official_control_superseded": false,
-          "target_candidate_id": "hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
-          "target_official_control_score": 2,
-          "target_uses_convnext_blocks": true,
-          "target_uses_hierarchical_feature_grid": true
-        }
-      },
-      "priority": 10,
-      "promotion_eligible": false,
-      "ready_for_exact_eval_dispatch": false,
-      "score_claim": false,
-      "score_lowering_gate": {
-        "cpu_replay_ready": false,
-        "dispatch_attempted": false,
-        "exact_auth_gate_required": false,
-        "exact_gate_ready": false,
-        "family": "hi_nerv",
-        "full_video_prefilter_required": true,
-        "gpu_launched": false,
-        "local_cpu_replay_required": true,
-        "local_mlx_executable": true,
-        "missing_requirement_ids": [
-          "archive_in_loop_byte_oracle",
-          "byte_closed_archive_export",
-          "receiver_proof",
-          "full_video_local_prefilter",
-          "local_cpu_replay_gate"
-        ],
-        "post_run_missing_requirement_ids": [
-          "archive_in_loop_byte_oracle",
-          "byte_closed_archive_export",
-          "receiver_proof",
-          "full_video_local_prefilter",
-          "local_cpu_replay_gate"
-        ],
-        "post_run_requirements": [
-          "archive_in_loop_byte_oracle",
-          "byte_closed_archive_export",
-          "receiver_proof",
-          "full_video_local_prefilter",
-          "local_cpu_replay_gate",
-          "exact_auth_gate_plan"
-        ],
-        "prelaunch_allowed": true,
-        "prelaunch_blockers": [],
-        "promotable": false,
-        "promotion_blockers": [
-          "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
-          "hinerv_decoder_weight_waterfill_plan_missing",
-          "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
-          "requires_local_cpu_replay_win_before_exact_cpu_auth",
-          "hinerv_trained_archive_byte_oracle_feedback_missing",
-          "hi_nerv_archive_in_loop_byte_oracle_missing",
-          "hi_nerv_byte_closed_archive_export_missing",
-          "hi_nerv_receiver_proof_missing",
-          "hi_nerv_full_video_local_prefilter_missing",
-          "hi_nerv_local_cpu_replay_gate_missing"
-        ],
-        "promotion_eligible": false,
-        "promotion_prelaunch_allowed": true,
-        "rank_or_kill_eligible": false,
-        "ready_for_exact_eval_dispatch": false,
-        "receiver_proof_required": true,
-        "schema": "nerv_long_training_score_lowering_gate.v1",
-        "score_claim": false,
-        "score_claim_valid": false
-      },
-      "status": "queued",
-      "steps": [
-        {
-          "command": [
-            "uv",
-            "run",
-            "--extra",
-            "dev",
-            "--extra",
-            "runtime",
-            "--extra",
-            "mlx",
-            "python",
-            "tools/run_compact_renderer_mlx_spine_runner.py",
-            "--execute-family",
-            "hi_nerv",
-            "--planner-row-id",
-            "hi_nerv::hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000::muon",
-            "--num-pairs",
-            "600",
-            "--epochs",
-            "29650",
-            "--batch-pairs",
-            "8",
-            "--learning-rate",
-            "0.001",
-            "--distillation-device",
-            "gpu",
-            "--modelsize-candidate-id",
-            "hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
-            "--segnet-distillation-weight",
-            "1",
-            "--pose-distillation-weight",
-            "1.0",
-            "--coder-aware-qat",
-            "--coder-qat-quant-bits",
-            "4",
-            "--optimizer-kind",
-            "muon",
-            "--hi-nerv-optimizer-policy",
-            "native_optimizer",
-            "--mlx-prefilter-scorer-device",
-            "gpu",
-            "--mlx-prefilter-scorer-batch-pairs",
-            "8",
-            "--mlx-prefilter-progress-every",
-            "10",
-            "--telemetry-flush-interval-epochs",
-            "1",
-            "--run-post-export-materializers",
-            "--output-dir",
-            "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon",
-            "--auto-joint-recon-pixel-weight"
-          ],
-          "id": "run_mlx_first_campaign_row",
-          "on_postcondition_failure": "failed",
-          "postconditions": [
-            {
-              "equals": "compact_renderer_mlx_spine_runner.v1",
-              "key": "schema",
-              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_equals"
-            },
-            {
-              "equals": false,
-              "key": "score_claim",
-              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_equals"
-            },
-            {
-              "equals": false,
-              "key": "ready_for_exact_eval_dispatch",
-              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_equals"
-            },
-            {
-              "equals": false,
-              "key": "promotion_eligible",
-              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_equals"
-            },
-            {
-              "equals": "hi_nerv",
-              "key": "execute_family",
-              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_equals"
-            },
-            {
-              "equals": true,
-              "key": "training_executed",
-              "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/compact_renderer_mlx_spine_runner_report.json",
-              "type": "json_equals"
-            }
-          ],
-          "promotion_eligible": false,
-          "ready_for_exact_eval_dispatch": false,
-          "resources": {
-            "kind": "local_mlx",
-            "max_parallel_group": "local_mlx_training"
-          },
-          "score_claim": false,
-          "telemetry": {
-            "artifact_paths": [
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/compact_renderer_mlx_spine_runner_startup.json",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/hi_nerv_mlx_training/telemetry.jsonl",
-              "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_muon/hi_nerv_mlx_training/local_mlx_prefilter_progress.jsonl"
             ],
             "include_postcondition_paths": true
           }

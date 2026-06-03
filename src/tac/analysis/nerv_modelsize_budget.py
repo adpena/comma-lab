@@ -25,6 +25,8 @@ CONTEST_RATE_MULTIPLIER = 25.0
 RATE_SCORE_PER_BYTE = CONTEST_RATE_MULTIPLIER / CONTEST_RATE_DENOM_BYTES
 
 SCHEMA = "nerv_modelsize_budget.v1"
+HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX = 1
+HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX = 4
 OSS_FLAG_AUDIT_SCHEMA = "nerv_oss_flag_audit.v1"
 
 DEFAULT_HINERV_LATENT_DIMS = (4, 8, 12, 16, 24, 28)
@@ -138,6 +140,8 @@ class HinervModelSizeCandidate:
     embed_dim: int
     decoder_channel: int
     decoder_channels: tuple[int, ...]
+    mid_injection_block_index: int
+    fine_injection_block_index: int
     decoder_codec: str
     use_hierarchical_feature_grid: bool
     use_convnext_blocks: bool
@@ -264,6 +268,8 @@ def build_hinerv_config_from_size_knobs(
     local_grid_channels: int = 4,
     convnext_mlp_ratio: int = 2,
     convnext_kernel_size: int = 7,
+    mid_injection_block_index: int = HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
+    fine_injection_block_index: int = HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
 ):
     """Build the current local HiNeRV config from compact size knobs."""
 
@@ -293,6 +299,8 @@ def build_hinerv_config_from_size_knobs(
         initial_grid_h=3,
         initial_grid_w=4,
         decoder_channels=tuple([max(1, int(decoder_channel))] * 7),
+        mid_injection_block_index=int(mid_injection_block_index),
+        fine_injection_block_index=int(fine_injection_block_index),
         num_pairs=int(num_pairs),
         output_height=384,
         output_width=512,
@@ -366,6 +374,8 @@ def analyze_hinerv_modelsize_candidate(
     local_grid_channels: int = 4,
     convnext_mlp_ratio: int = 2,
     convnext_kernel_size: int = 7,
+    mid_injection_block_index: int = HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
+    fine_injection_block_index: int = HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
 ) -> HinervModelSizeCandidate:
     """Analyze one local HiNeRV size point against an archive-byte ceiling."""
 
@@ -382,6 +392,8 @@ def analyze_hinerv_modelsize_candidate(
         local_grid_channels=local_grid_channels,
         convnext_mlp_ratio=convnext_mlp_ratio,
         convnext_kernel_size=convnext_kernel_size,
+        mid_injection_block_index=mid_injection_block_index,
+        fine_injection_block_index=fine_injection_block_index,
     )
     total_params, decoder_params, latent_params = _count_hinerv_params(cfg)
     latent_payload = int(
@@ -416,6 +428,8 @@ def analyze_hinerv_modelsize_candidate(
         embed_dim=int(embed_dim),
         decoder_channel=int(decoder_channel),
         decoder_channels=tuple(int(v) for v in cfg.decoder_channels),
+        mid_injection_block_index=int(cfg.mid_injection_block_index),
+        fine_injection_block_index=int(cfg.fine_injection_block_index),
         decoder_codec=str(decoder_codec),
         use_hierarchical_feature_grid=bool(cfg.use_hierarchical_feature_grid),
         use_convnext_blocks=bool(cfg.use_convnext_blocks),
