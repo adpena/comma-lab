@@ -625,6 +625,53 @@ def test_training_telemetry_feedback_does_not_replan_recovered_midrun_instabilit
     assert "hi_nerv_pose_instability_telemetry_feedback" not in row["blockers"]
 
 
+def test_training_telemetry_feedback_detects_pose_tail_burst_without_explosion(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "pose_tail_burst_telemetry.jsonl"
+    rows = []
+    for epoch in range(96):
+        recent_tail_spike = epoch >= 32 and (epoch - 32) in {4, 19, 37, 55}
+        pose_axis = 20.0 if recent_tail_spike else 2.0
+        rows.append(
+            {
+                "epoch": epoch,
+                "learning_rate": 2.7e-5,
+                "loss_components": {"loss_part_pose_distill": pose_axis},
+                "per_axis_decomposition": {"pose": pose_axis, "seg": 6.0},
+            }
+        )
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+    )
+
+    assert row["training_stopped"] is False
+    assert row["pose_instability_detected"] is False
+    assert row["pose_tail_burst_detected"] is True
+    assert row["pose_tail_burst_threshold"] == 8.0
+    assert row["pose_tail_burst_recent_bad_fraction"] == 4 / 64
+    assert row["pose_tail_burst_recent_max"] == 20.0
+    assert row["training_control_action"] == (
+        "continue_running_queue_hardpair_prioritized_successor"
+    )
+    assert row["training_control_should_stop_current_run"] is False
+    assert row["training_control_successor_required"] is True
+    assert "hi_nerv_pose_tail_burst_telemetry_feedback" in row["blockers"]
+    assert (
+        "launch_hard_pair_prioritized_sampler_successor"
+        in row["recommended_launch_mutations"]
+    )
+
+
 def test_training_telemetry_feedback_detects_segnet_stagnation(
     tmp_path: Path,
 ) -> None:

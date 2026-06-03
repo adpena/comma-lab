@@ -119,6 +119,7 @@ def test_refresh_queue_training_feedback_harvests_running_hinerv_row(
     assert Path(write_result["jsonl_path"]).read_text(encoding="utf-8").count("\n") == 1
     markdown = render_refresh_markdown(report)
     assert "recommended_segnet_weight: `8.0`" in markdown
+    assert "pose_tail_burst: `False`" in markdown
     assert (
         "training_control_action: `checkpoint_then_supersede_with_higher_segnet_weight`"
         in markdown

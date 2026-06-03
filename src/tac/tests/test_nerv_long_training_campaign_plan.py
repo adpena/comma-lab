@@ -807,6 +807,157 @@ def test_long_training_campaign_plan_admits_receiver_proven_hinerv_waterfill(
     assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" not in hi["blockers"]
 
 
+def test_long_training_campaign_plan_routes_hinerv_hard_pair_feedback(
+    tmp_path: Path,
+) -> None:
+    waterfill_path = tmp_path / "decoder_weight_waterfill_receiver_ready.json"
+    waterfill = _decoder_weight_waterfill_plan(
+        candidate_id="hinerv_tiny",
+        receiver_proof_status="runtime_consumption_proof_ready",
+    )
+    waterfill_path.write_text(json.dumps(waterfill, sort_keys=True), encoding="utf-8")
+    waterfill["_decoder_weight_waterfill_plan_path"] = waterfill_path.as_posix()
+    waterfill["_decoder_weight_waterfill_plan_sha256"] = _sha256(waterfill_path)
+    waterfill["_decoder_weight_waterfill_source_path"] = waterfill_path.as_posix()
+    feedback = {
+        "schema": "nerv_candidate_feedback_row.v1",
+        "family": "hi_nerv",
+        "candidate_id": "hinerv_tiny",
+        "scope_matches_candidate": True,
+        "measured_num_pairs": 600,
+        "hard_pair_coverage": {
+            "schema": "nerv_hard_pair_coverage_evidence.v1",
+            "representative_distortion_evidence": True,
+            "prioritized_pair_indices": [17, 4, 17, 0],
+            "hard_pair_count": 3,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        joint_recon_weight_manifest_paths=(
+            _joint_recon_weight_manifest(tmp_path, num_pairs=600),
+        ),
+        decoder_weight_waterfill_sources=(waterfill,),
+        candidate_feedback_sources=(feedback,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["prioritized_pair_training"]["schema"] == (
+        "nerv_prioritized_pair_training_plan.v1"
+    )
+    assert hi["prioritized_pair_training"]["enabled"] is True
+    assert hi["prioritized_pair_training"]["pair_indices"] == [17, 4, 0]
+    assert "--prioritized-pair-indices" in hi["command_argv"]
+    assert (
+        hi["command_argv"][hi["command_argv"].index("--prioritized-pair-indices") + 1]
+        == "17,4,0"
+    )
+    queue = hi["experiment_queue_entry"]
+    assert queue["metadata"]["prioritized_pair_training"]["pair_indices"] == [
+        17,
+        4,
+        0,
+    ]
+    assert queue["steps"][0]["command"] == hi["command_argv"]
+    assert queue["steps"][0]["command"][
+        queue["steps"][0]["command"].index("--prioritized-pair-indices") + 1
+    ] == "17,4,0"
+
+
+def test_long_training_campaign_plan_blocks_pose_tail_burst_without_pair_indices() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "pose_instability_detected": False,
+                "pose_tail_burst_detected": True,
+                "recommended_launch_mutations": [
+                    "build_xray_hardpair_hitlist_from_full_video_pose_tail",
+                    "launch_hard_pair_prioritized_sampler_successor",
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["launch_control_feedback_ready"] is True
+    assert adjustment["applied"] is False
+    assert adjustment["pose_tail_burst_detected"] is True
+    assert adjustment["reason"] == "pose_tail_burst_requires_prioritized_pair_indices"
+    assert hi["prioritized_pair_training"]["enabled"] is False
+    assert "--prioritized-pair-indices" not in hi["command_argv"]
+    assert "hinerv_pose_tail_burst_requires_prioritized_pair_indices" in hi["blockers"]
+
+
+def test_long_training_campaign_plan_routes_pose_tail_burst_pair_indices() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_training_telemetry",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "pose_instability_detected": False,
+                "pose_tail_burst_detected": True,
+                "hard_pair_indices": [42, 3, 42],
+                "recommended_launch_mutations": [
+                    "launch_hard_pair_prioritized_sampler_successor",
+                ],
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["prioritized_pair_training"]["enabled"] is True
+    assert hi["prioritized_pair_training"]["pair_indices"] == [42, 3]
+    assert "--prioritized-pair-indices" in hi["command_argv"]
+    assert (
+        hi["command_argv"][hi["command_argv"].index("--prioritized-pair-indices") + 1]
+        == "42,3"
+    )
+    assert "hinerv_pose_tail_burst_requires_prioritized_pair_indices" not in hi["blockers"]
+
+
 def test_long_training_campaign_plan_attaches_hinerv_waterfill_from_full_row_id(
     tmp_path: Path,
 ) -> None:

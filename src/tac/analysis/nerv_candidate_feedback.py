@@ -60,6 +60,11 @@ _SEG_STAGNATION_WEIGHT_MULTIPLIER = 2.0
 _SEG_STAGNATION_MAX_DISTILLATION_WEIGHT = 8.0
 _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS = 64
 _TRAINING_CONTROL_MIN_RECENT_RELATIVE_IMPROVEMENT = 0.01
+_POSE_TAIL_BURST_MIN_EPOCHS = 64
+_POSE_TAIL_BURST_WINDOW_EPOCHS = 64
+_POSE_TAIL_BURST_MIN_AXIS = 8.0
+_POSE_TAIL_BURST_MEDIAN_MULTIPLIER = 4.0
+_POSE_TAIL_BURST_BAD_FRACTION = 0.05
 _PR95_FINAL_MUON_STAGE_INDEX = 8
 
 
@@ -617,11 +622,35 @@ def _hard_pair_coverage_evidence(
                     "source_schema": value.get("schema"),
                     "representative_distortion_evidence": representative,
                     "hard_pair_count": _int_or_none(value.get("hard_pair_count")),
+                    "prioritized_pair_indices": _hard_pair_indices_from(value),
                     "coverage_verdict": value.get("verdict")
                     or value.get("coverage_verdict"),
                     **FALSE_AUTHORITY,
                 }
     return {}
+
+
+def _hard_pair_indices_from(value: Mapping[str, Any]) -> list[int]:
+    for key in (
+        "prioritized_pair_indices",
+        "hard_pair_indices",
+        "vulnerable_pair_indices",
+        "pair_indices",
+    ):
+        raw = value.get(key)
+        if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, bytearray)):
+            continue
+        out: list[int] = []
+        seen: set[int] = set()
+        for item in raw:
+            parsed = _int_or_none(item)
+            if parsed is None or parsed < 0 or parsed in seen:
+                continue
+            seen.add(parsed)
+            out.append(parsed)
+        if out:
+            return out
+    return []
 
 
 def _chunked_micro_row_evidence(
@@ -832,6 +861,8 @@ def build_nerv_training_telemetry_feedback_row(
     ]
     if health["pose_instability_detected"]:
         blockers.append("hi_nerv_pose_instability_telemetry_feedback")
+    if health.get("pose_tail_burst_detected"):
+        blockers.append("hi_nerv_pose_tail_burst_telemetry_feedback")
     if health.get("seg_stagnation_detected"):
         blockers.append("hi_nerv_segnet_stagnation_telemetry_feedback")
     if health.get("pr95_stage_mismatch_detected"):
@@ -915,6 +946,19 @@ def build_nerv_training_telemetry_feedback_row(
         "pose_instability_first_epoch": health.get("pose_instability_first_epoch"),
         "pose_instability_last_window_bad_fraction": health.get(
             "pose_instability_last_window_bad_fraction"
+        ),
+        "pose_tail_burst_detected": bool(health.get("pose_tail_burst_detected")),
+        "pose_tail_burst_recent_window_epochs": health.get(
+            "pose_tail_burst_recent_window_epochs"
+        ),
+        "pose_tail_burst_recent_bad_fraction": health.get(
+            "pose_tail_burst_recent_bad_fraction"
+        ),
+        "pose_tail_burst_threshold": health.get("pose_tail_burst_threshold"),
+        "pose_tail_burst_recent_p95": health.get("pose_tail_burst_recent_p95"),
+        "pose_tail_burst_recent_max": health.get("pose_tail_burst_recent_max"),
+        "pose_tail_burst_baseline_median": health.get(
+            "pose_tail_burst_baseline_median"
         ),
         "observed_learning_rate": health.get("observed_learning_rate"),
         "recommended_learning_rate": health.get("recommended_learning_rate"),
@@ -1389,6 +1433,40 @@ def _summarize_training_telemetry_health(
                 "treat_previous_hi_nerv_run_as_fit_failure_not_rate_negative",
             ]
         )
+    tail_window_size = max(1, int(_POSE_TAIL_BURST_WINDOW_EPOCHS))
+    tail_recent_axes = pose_axes[-tail_window_size:]
+    tail_baseline_axes = (
+        pose_axes[:-tail_window_size]
+        if len(pose_axes) > tail_window_size
+        else pose_axes
+    )
+    tail_baseline_median = _median(tail_baseline_axes)
+    tail_threshold = (
+        max(
+            float(_POSE_TAIL_BURST_MIN_AXIS),
+            float(tail_baseline_median) * float(_POSE_TAIL_BURST_MEDIAN_MULTIPLIER),
+        )
+        if tail_baseline_median is not None
+        else float(_POSE_TAIL_BURST_MIN_AXIS)
+    )
+    tail_bad_count = sum(1 for value in tail_recent_axes if value >= tail_threshold)
+    tail_bad_fraction = (
+        tail_bad_count / float(len(tail_recent_axes)) if tail_recent_axes else 0.0
+    )
+    pose_tail_burst = bool(
+        len(pose_axes) >= _POSE_TAIL_BURST_MIN_EPOCHS
+        and tail_bad_count > 0
+        and tail_bad_fraction >= float(_POSE_TAIL_BURST_BAD_FRACTION)
+    )
+    if pose_tail_burst:
+        mutations.extend(
+            [
+                "build_xray_hardpair_hitlist_from_full_video_pose_tail",
+                "launch_hard_pair_prioritized_sampler_successor",
+                "preserve_random_full_video_fill_when_prioritizing_hard_pairs",
+                "treat_previous_hi_nerv_run_as_hard_pair_tail_fit_failure_not_rate_negative",
+            ]
+        )
     seg_first_window_median = _median(seg_axes[: _SEG_STAGNATION_WINDOW_EPOCHS])
     seg_last_window_median = _median(seg_axes[-_SEG_STAGNATION_WINDOW_EPOCHS:])
     seg_previous_window_median = _median(
@@ -1516,6 +1594,19 @@ def _summarize_training_telemetry_health(
         "pose_instability_detected": instability,
         "pose_instability_first_epoch": first_bad_window_epoch,
         "pose_instability_last_window_bad_fraction": last_bad_fraction,
+        "pose_tail_burst_detected": pose_tail_burst,
+        "pose_tail_burst_min_epochs": _POSE_TAIL_BURST_MIN_EPOCHS,
+        "pose_tail_burst_recent_window_epochs": len(tail_recent_axes),
+        "pose_tail_burst_config_window_epochs": _POSE_TAIL_BURST_WINDOW_EPOCHS,
+        "pose_tail_burst_min_axis": _POSE_TAIL_BURST_MIN_AXIS,
+        "pose_tail_burst_median_multiplier": _POSE_TAIL_BURST_MEDIAN_MULTIPLIER,
+        "pose_tail_burst_bad_fraction_threshold": _POSE_TAIL_BURST_BAD_FRACTION,
+        "pose_tail_burst_recent_bad_count": tail_bad_count,
+        "pose_tail_burst_recent_bad_fraction": tail_bad_fraction,
+        "pose_tail_burst_threshold": tail_threshold,
+        "pose_tail_burst_recent_p95": _quantile(tail_recent_axes, 0.95),
+        "pose_tail_burst_recent_max": max(tail_recent_axes) if tail_recent_axes else None,
+        "pose_tail_burst_baseline_median": tail_baseline_median,
         "max_pose_distill_loss": max(pose_losses) if pose_losses else None,
         "max_pose_axis": max(pose_axes) if pose_axes else None,
         "median_pose_distill_loss": _median(pose_losses),
@@ -1600,6 +1691,11 @@ def _training_control_recommendation(
         action = "checkpoint_then_supersede_with_lower_learning_rate"
         reason = "active_pose_instability_requires_lower_lr_successor"
         should_stop = True
+        successor_required = True
+    elif bool(health.get("pose_tail_burst_detected")):
+        action = "continue_running_queue_hardpair_prioritized_successor"
+        reason = "full_video_pose_tail_burst_requires_hardpair_curriculum"
+        should_stop = False
         successor_required = True
     elif bool(health.get("seg_stagnation_detected")) and health.get(
         "recommended_segnet_distillation_weight"
@@ -1750,6 +1846,23 @@ def _median(values: Sequence[float]) -> float | None:
     if len(ordered) % 2:
         return ordered[mid]
     return (ordered[mid - 1] + ordered[mid]) / 2.0
+
+
+def _quantile(values: Sequence[float], q: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(float(value) for value in values)
+    clipped = min(max(float(q), 0.0), 1.0)
+    if len(ordered) == 1:
+        return ordered[0]
+    position = clipped * float(len(ordered) - 1)
+    lower_index = math.floor(position)
+    upper_index = math.ceil(position)
+    if lower_index == upper_index:
+        return ordered[lower_index]
+    lower = ordered[lower_index]
+    upper = ordered[upper_index]
+    return lower + (upper - lower) * (position - float(lower_index))
 
 
 def _relative_improvement(

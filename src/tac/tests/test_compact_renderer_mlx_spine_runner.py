@@ -716,9 +716,68 @@ def test_hinerv_execute_allows_runner_startup_marker_only_dir(
     assert captured_train_kwargs
     assert captured_train_kwargs["distillation_device"] == "mps"
     assert captured_train_kwargs["requested_distillation_device"] == "gpu"
+    assert captured_train_kwargs["prioritized_pair_indices"] == ()
     assert out["execute_family"] == "hi_nerv"
     assert out["training_executed"] is True
     assert marker.is_file()
+
+
+def test_hinerv_execute_forwards_prioritized_pair_indices(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=4)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "score_aware_training": {
+                    "decoder_weight_gradient_saliency_artifact": None,
+                }
+            },
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_priority",
+        num_pairs=4,
+        epochs=1,
+        batch_pair_indices_per_step=2,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        prioritized_pair_indices=(3, 1, 3),
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["prioritized_pair_indices"] == (3, 1)
+    assert out["score_claim"] is False
+
+
+def test_parse_prioritized_pair_indices_arg() -> None:
+    assert runner_mod._parse_nonnegative_int_csv("") == ()
+    assert runner_mod._parse_nonnegative_int_csv("3,1,3,0") == (3, 1, 0)
+    assert runner_mod._normalize_nonnegative_int_sequence(None) == ()
+    assert runner_mod._normalize_nonnegative_int_sequence("3,1,3") == (3, 1)
+    with pytest.raises(CompactRendererMlxSpineRunnerError):
+        runner_mod._parse_nonnegative_int_csv("2,-1")
 
 
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(

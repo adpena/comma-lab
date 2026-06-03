@@ -87,6 +87,10 @@ def _summary(result: dict[str, Any]) -> dict[str, Any]:
             "pose_instability_active_latest_window"
         ),
         "pose_instability_first_epoch": row.get("pose_instability_first_epoch"),
+        "pose_tail_burst_detected": row.get("pose_tail_burst_detected"),
+        "pose_tail_burst_recent_p95": row.get("pose_tail_burst_recent_p95"),
+        "pose_tail_burst_recent_max": row.get("pose_tail_burst_recent_max"),
+        "pose_tail_burst_threshold": row.get("pose_tail_burst_threshold"),
         "recommended_learning_rate": row.get("recommended_learning_rate"),
         "seg_stagnation_detected": row.get("seg_stagnation_detected"),
         "seg_stagnation_relative_improvement": row.get(

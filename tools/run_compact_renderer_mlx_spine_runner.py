@@ -5257,6 +5257,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     optimizer_cosine_decay_enabled: bool = False,
     optimizer_cosine_decay_total_epochs: int | None = None,
     optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
+    prioritized_pair_indices: tuple[int, ...] = (),
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -5272,6 +5273,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     """Train/export a HiNeRV MLX candidate through the real receiver bundle."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    prioritized_pair_indices = _normalize_nonnegative_int_sequence(
+        prioritized_pair_indices
+    )
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
     optimizer_policy = _resolve_hi_nerv_optimizer_policy(
@@ -5740,6 +5744,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             optimizer_kind=str(optimizer_kind),
             hi_nerv_optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
+            prioritized_pair_indices=prioritized_pair_indices,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -8086,6 +8091,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     optimizer_kind: str,
     hi_nerv_optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
+    prioritized_pair_indices: tuple[int, ...],
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -8297,6 +8303,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 optimizer_control
             ),
             "effective_weight_decay": effective_weight_decay,
+            "prioritized_pair_training": {
+                "schema": "compact_hi_nerv_prioritized_pair_training.v1",
+                "enabled": bool(prioritized_pair_indices),
+                "pair_indices": [int(value) for value in prioritized_pair_indices],
+                "pair_count": len(prioritized_pair_indices),
+                "sampling_scope": "training_batch_emphasis_only",
+                "authority": "macos_mlx_research_signal_false_authority",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_fake_quant_forward": {
                 "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
@@ -8480,6 +8497,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         cosine_decay_min_lr_ratio=float(
             optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
         ),
+        prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         on_epoch_end=pose_instability_monitor,
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
@@ -9220,6 +9238,42 @@ def _parse_positive_int_csv(value: str) -> tuple[int, ...]:
     return tuple(out)
 
 
+def _parse_nonnegative_int_csv(value: str) -> tuple[int, ...]:
+    text = str(value or "").strip()
+    if not text:
+        return ()
+    parts = [part.strip() for part in text.split(",") if part.strip()]
+    return _normalize_nonnegative_int_sequence(parts)
+
+
+def _normalize_nonnegative_int_sequence(value: Sequence[Any] | None) -> tuple[int, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return _parse_nonnegative_int_csv(value)
+    if isinstance(value, (bytes, bytearray)):
+        raise CompactRendererMlxSpineRunnerError(
+            "prioritized pair indices must be text or a sequence of integers"
+        )
+    out: list[int] = []
+    seen: set[int] = set()
+    for part in value:
+        try:
+            parsed = int(part)
+        except (TypeError, ValueError) as exc:
+            raise CompactRendererMlxSpineRunnerError(
+                f"invalid non-negative integer {part!r} in comma-separated list"
+            ) from exc
+        if parsed < 0:
+            raise CompactRendererMlxSpineRunnerError(
+                f"invalid negative integer {part!r} in comma-separated list"
+            )
+        if parsed not in seen:
+            seen.add(parsed)
+            out.append(parsed)
+    return tuple(out)
+
+
 def _checkpoint_summary(row: dict[str, Any], *, base: Path) -> dict[str, Any]:
     summary = dict(row)
     for key in (
@@ -9928,6 +9982,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--num-pairs", default=2, type=int)
     parser.add_argument("--epochs", default=1, type=int)
     parser.add_argument("--batch-pairs", default=1, type=int)
+    parser.add_argument(
+        "--prioritized-pair-indices",
+        default="",
+        help=(
+            "Comma-separated hard-pair/sensitivity pair indices to emphasize "
+            "inside MLX training batches. This is false-authority training "
+            "sampling only; full-video MLX prefilter and CPU replay gates still "
+            "decide promotion."
+        ),
+    )
     parser.add_argument("--learning-rate", default=1e-3, type=float)
     parser.add_argument(
         "--optimizer-kind",
@@ -10583,6 +10647,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    prioritized_pair_indices = _parse_nonnegative_int_csv(
+        args.prioritized_pair_indices
+    )
     args.requested_distillation_device = str(args.distillation_device)
     args.distillation_device = _resolve_torch_scorer_device_alias(
         args.distillation_device
@@ -11131,6 +11198,7 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_cosine_decay_min_lr_ratio=(
                 args.optimizer_cosine_decay_min_lr_ratio
             ),
+            prioritized_pair_indices=prioritized_pair_indices,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,

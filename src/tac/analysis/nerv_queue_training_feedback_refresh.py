@@ -205,6 +205,8 @@ def render_refresh_markdown(report: Mapping[str, Any]) -> str:
                 f"  status: `{row.get('status')}`",
                 f"  candidate: `{row.get('candidate_id')}`",
                 f"  last_epoch: `{dict(feedback.get('training_telemetry') or {}).get('last_epoch')}`",
+                f"  pose_tail_burst: `{feedback.get('pose_tail_burst_detected')}`",
+                f"  pose_tail_recent_p95: `{feedback.get('pose_tail_burst_recent_p95')}`",
                 f"  observed_segnet_weight: `{feedback.get('observed_segnet_distillation_weight')}`",
                 f"  recommended_segnet_weight: `{feedback.get('recommended_segnet_distillation_weight')}`",
                 f"  training_control_action: `{feedback.get('training_control_action')}`",

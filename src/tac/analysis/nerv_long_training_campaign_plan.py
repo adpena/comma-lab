@@ -378,6 +378,7 @@ def _hinerv_campaign_row(
         family="hi_nerv",
         index=candidate_feedback_index,
     )
+    prioritized_pair_indices = _feedback_prioritized_pair_indices(feedback)
     feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
     family_training_telemetry_context = _family_training_telemetry_context_for(
         candidate=candidate,
@@ -478,6 +479,13 @@ def _hinerv_campaign_row(
         "--output-dir",
         (output_root / output_dir_basename).as_posix(),
     ]
+    if prioritized_pair_indices:
+        command.extend(
+            [
+                "--prioritized-pair-indices",
+                _int_csv(prioritized_pair_indices),
+            ]
+        )
     if joint_recon_weight:
         command.extend(
             [
@@ -526,6 +534,11 @@ def _hinerv_campaign_row(
         blockers.append("hinerv_pose_instability_feedback_unapplied")
     if feedback.get("seg_stagnation_detected") is True and not launch_feedback_adjustment.get("segnet_weight_applied"):
         blockers.append("hinerv_segnet_stagnation_feedback_unapplied")
+    if (
+        feedback.get("pose_tail_burst_detected") is True
+        and not prioritized_pair_indices
+    ):
+        blockers.append("hinerv_pose_tail_burst_requires_prioritized_pair_indices")
     if launch_feedback_adjustment.get(
         "repeated_low_lr_pose_instability"
     ) is True and not launch_feedback_adjustment.get("pose_protected_pathway_applied"):
@@ -585,6 +598,9 @@ def _hinerv_campaign_row(
             ),
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
+            "prioritized_pair_training": _prioritized_pair_training_plan(
+                prioritized_pair_indices
+            ),
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
             "family_training_telemetry_context": family_training_telemetry_context or None,
             "source_faithfulness_controls": source_faithfulness_controls,
@@ -1053,6 +1069,65 @@ def _candidate_feedback_evidence_blockers(
     if isinstance(gate, Mapping):
         blockers.extend(str(blocker) for blocker in gate.get("blockers") or [])
     return _dedupe(blockers)
+
+
+def _feedback_prioritized_pair_indices(feedback: Mapping[str, Any]) -> tuple[int, ...]:
+    if not isinstance(feedback, Mapping):
+        return ()
+    containers: list[Mapping[str, Any]] = []
+    hard_pair = feedback.get("hard_pair_coverage")
+    if isinstance(hard_pair, Mapping):
+        containers.append(hard_pair)
+    gate = feedback.get("sample_generalization_gate")
+    if isinstance(gate, Mapping):
+        nested = gate.get("hard_pair_coverage")
+        if isinstance(nested, Mapping):
+            containers.append(nested)
+        containers.append(gate)
+    containers.append(feedback)
+    for container in containers:
+        for key in (
+            "prioritized_pair_indices",
+            "hard_pair_indices",
+            "vulnerable_pair_indices",
+            "pair_indices",
+        ):
+            normalized = _normalize_pair_index_sequence(container.get(key))
+            if normalized:
+                return normalized
+    return ()
+
+
+def _normalize_pair_index_sequence(value: Any) -> tuple[int, ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return ()
+    out: list[int] = []
+    seen: set[int] = set()
+    for raw in value:
+        try:
+            parsed = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if parsed < 0 or parsed in seen:
+            continue
+        seen.add(parsed)
+        out.append(parsed)
+    return tuple(out)
+
+
+def _prioritized_pair_training_plan(pair_indices: Sequence[int]) -> dict[str, Any]:
+    normalized = _normalize_pair_index_sequence(pair_indices)
+    return {
+        "schema": "nerv_prioritized_pair_training_plan.v1",
+        "enabled": bool(normalized),
+        "pair_indices": [int(value) for value in normalized],
+        "pair_count": len(normalized),
+        "sampling_scope": "local_mlx_training_batch_emphasis_only",
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _source_parity_family_report(
@@ -2398,6 +2473,7 @@ def _hinerv_feedback_launch_adjustment(
     if pose_protected_pathway_applied:
         launch_mutations.append("enable_pose_distillation_huber_from_repeated_low_lr_instability")
     seg_stagnation = bool(feedback.get("seg_stagnation_detected"))
+    pose_tail_burst = bool(feedback.get("pose_tail_burst_detected"))
     recommended_seg_weight = _float_or_none(feedback.get("recommended_segnet_distillation_weight"))
     segnet_weight_applied = bool(seg_stagnation and recommended_seg_weight is not None and recommended_seg_weight > 1.0)
     if segnet_weight_applied:
@@ -2438,7 +2514,11 @@ def _hinerv_feedback_launch_adjustment(
                         else (
                             "pose_instability_feedback_without_lower_lr"
                             if pose_instability
-                            else "feedback_does_not_request_launch_adjustment"
+                            else (
+                                "pose_tail_burst_requires_prioritized_pair_indices"
+                                if pose_tail_burst
+                                else "feedback_does_not_request_launch_adjustment"
+                            )
                         )
                     )
                 )
@@ -2449,6 +2529,7 @@ def _hinerv_feedback_launch_adjustment(
         "feedback_ready": feedback.get("feedback_ready"),
         "launch_control_feedback_ready": launch_control_ready,
         "pose_instability_detected": pose_instability,
+        "pose_tail_burst_detected": pose_tail_burst,
         "seg_stagnation_detected": seg_stagnation,
         "observed_learning_rate": observed,
         "low_learning_rate_floor": lr_floor,
@@ -2484,7 +2565,8 @@ def _feedback_launch_control_ready(feedback: Mapping[str, Any]) -> bool:
             and recommended_seg_weight is not None
             and recommended_seg_weight > 1.0
         )
-        return bool(pose_ready or seg_ready)
+        tail_ready = feedback.get("pose_tail_burst_detected") is True
+        return bool(pose_ready or seg_ready or tail_ready)
     if feedback.get("feedback_ready") is False:
         return False
     return bool(feedback)
@@ -2537,6 +2619,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "family_training_telemetry_context",
         "optimizer_control",
         "optimizer_policy",
+        "prioritized_pair_training",
         "source_faithfulness_controls",
         "source_bound_capacity_controls",
         "source_bound_capacity_control_blockers",
