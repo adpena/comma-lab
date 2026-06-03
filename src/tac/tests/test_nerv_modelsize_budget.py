@@ -186,6 +186,7 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     )
     assert row.wavelet == "db2"
     assert row.fc_dim == 11
+    assert row.capacity_source == "manual_fc_dim"
     assert row.emb_size == 2
     assert row.decoder_feature_count == 15
     assert row.hf_decoder_weight_count == 3 * 3 * 15
@@ -286,6 +287,8 @@ def test_snerv_fc_dim_and_emb_size_are_receiver_decoder_controls() -> None:
         emb_size=4,
     )
 
+    assert base.capacity_source == "manual_fc_dim"
+    assert larger_decoder.capacity_source == "manual_fc_dim"
     assert larger_decoder.decoder_feature_count > base.decoder_feature_count
     assert larger_decoder.hf_decoder_weight_count > base.hf_decoder_weight_count
     assert larger_decoder.nominal_decoder_payload_bytes > (
@@ -313,6 +316,7 @@ def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None
     )
 
     assert row.modelsize_mparams == 0.05
+    assert row.capacity_source == "official_snerv_modelsize"
     assert row.fc_dim == 11
     assert row.official_modelsize_solution is not None
     assert row.official_modelsize_solution["schema"] == (
@@ -341,6 +345,30 @@ def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None
     } == {11}
     assert all(
         row["modelsize_mparams"] == 0.05 for row in report["selected_candidates"]
+    )
+    assert {row["capacity_source"] for row in report["selected_candidates"]} == {
+        "official_snerv_modelsize"
+    }
+
+
+def test_snerv_modelsize_selection_preserves_official_source_metadata() -> None:
+    report = build_snerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        per_ceiling_limit=6,
+        fc_dims=(11,),
+        official_modelsize_mparams=(0.05,),
+    )
+
+    selected = report["selected_candidates"]
+    assert selected
+    assert any(row["candidate_id"].find("_fc11e0_") >= 0 for row in selected)
+    assert any(
+        row["modelsize_mparams"] == 0.05
+        and row["capacity_source"] == "official_snerv_modelsize"
+        and row["official_modelsize_solution"]["fc_dim"] == 11
+        for row in selected
+        if row["candidate_id"].find("_fc11e0_") >= 0
     )
 
 

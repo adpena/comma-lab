@@ -44,6 +44,11 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "hard_byte_ceilings": [36000],
         "num_pairs": 17,
         "per_ceiling_limit": 2,
+        "snerv_emb_sizes": [0],
+        "snerv_fc_dims": [9],
+        "snerv_official_dec_strds": [5, 4, 2, 2, 2],
+        "snerv_official_enc_strds": [5, 4, 2, 2, 2],
+        "snerv_official_modelsize_mparams": [],
     }
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
@@ -61,6 +66,48 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "snerv_np17_"
     )
     assert "_mfu" in snerv_payload["selected_candidates"][0]["candidate_id"]
+
+
+def test_build_nerv_modelsize_budget_tool_exposes_official_snerv_modelsize(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    hinerv = tmp_path / "hinerv.json"
+    snerv = tmp_path / "snerv.json"
+
+    rc = tool.main(
+        [
+            "--output-hinerv-json",
+            str(hinerv),
+            "--output-snerv-json",
+            str(snerv),
+            "--hard-byte-ceiling",
+            "178000",
+            "--num-pairs",
+            "600",
+            "--per-ceiling-limit",
+            "4",
+            "--snerv-fc-dim",
+            "11",
+            "--snerv-official-modelsize-mparams",
+            "0.05",
+        ]
+    )
+
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["inputs"]["snerv_fc_dims"] == [11]
+    assert summary["inputs"]["snerv_official_modelsize_mparams"] == [0.05]
+    payload = json.loads(snerv.read_text(encoding="utf-8"))
+    selected = payload["selected_candidates"]
+    assert selected
+    assert any(row["modelsize_mparams"] == 0.05 for row in selected)
+    assert any(
+        row["official_modelsize_solution"] is not None
+        and row["capacity_source"] == "official_snerv_modelsize"
+        for row in selected
+        if row["candidate_id"].find("_fc11e0_") >= 0
+    )
 
 
 def test_build_nerv_modelsize_budget_tool_requires_expected_hashes_for_overwrite(

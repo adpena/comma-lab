@@ -18,10 +18,22 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
+    DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+    DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
 )
 from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
+
+
+def _parse_int_tuple(value: str) -> tuple[int, ...]:
+    parts = [part.strip() for part in str(value).split(",") if part.strip()]
+    if not parts:
+        raise argparse.ArgumentTypeError("expected a comma-separated integer list")
+    try:
+        return tuple(int(part) for part in parts)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,6 +44,46 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--hard-byte-ceiling", action="append", type=int)
     parser.add_argument("--num-pairs", type=int, default=600)
     parser.add_argument("--per-ceiling-limit", type=int, default=6)
+    parser.add_argument(
+        "--snerv-fc-dim",
+        action="append",
+        type=int,
+        help=(
+            "Manual SNeRV fc_dim candidate. Repeatable. Defaults to 9 when "
+            "omitted."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-emb-size",
+        action="append",
+        type=int,
+        help=(
+            "SNeRV embedding-size candidate. Repeatable. Defaults to 0 when "
+            "omitted."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-official-modelsize-mparams",
+        action="append",
+        type=float,
+        help=(
+            "Source-faithful SNeRV --modelsize value in millions of params. "
+            "Repeatable. Solves fc_dim through the official equation and still "
+            "requires archive-byte/receiver proof before promotion."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-official-enc-strds",
+        type=_parse_int_tuple,
+        default=DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+        help="Comma-separated official SNeRV encoder strides.",
+    )
+    parser.add_argument(
+        "--snerv-official-dec-strds",
+        type=_parse_int_tuple,
+        default=DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+        help="Comma-separated official SNeRV decoder strides.",
+    )
     parser.add_argument(
         "--allow-overwrite",
         action="store_true",
@@ -48,6 +100,11 @@ def main(argv: list[str] | None = None) -> int:
     hard_byte_ceilings = tuple(
         int(value) for value in (args.hard_byte_ceiling or (216_000, 285_000, 360_000))
     )
+    snerv_fc_dims = tuple(int(value) for value in (args.snerv_fc_dim or (9,)))
+    snerv_emb_sizes = tuple(int(value) for value in (args.snerv_emb_size or (0,)))
+    snerv_official_modelsize_mparams = tuple(
+        float(value) for value in (args.snerv_official_modelsize_mparams or ())
+    )
     hinerv = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=int(args.num_pairs),
@@ -57,6 +114,11 @@ def main(argv: list[str] | None = None) -> int:
         hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=int(args.num_pairs),
         per_ceiling_limit=int(args.per_ceiling_limit),
+        fc_dims=snerv_fc_dims,
+        emb_sizes=snerv_emb_sizes,
+        official_modelsize_mparams=snerv_official_modelsize_mparams,
+        official_enc_strds=tuple(int(v) for v in args.snerv_official_enc_strds),
+        official_dec_strds=tuple(int(v) for v in args.snerv_official_dec_strds),
     )
     hinerv_result = write_json_artifact(
         args.output_hinerv_json,
@@ -85,6 +147,17 @@ def main(argv: list[str] | None = None) -> int:
             "hard_byte_ceilings": list(hard_byte_ceilings),
             "num_pairs": int(args.num_pairs),
             "per_ceiling_limit": int(args.per_ceiling_limit),
+            "snerv_fc_dims": list(snerv_fc_dims),
+            "snerv_emb_sizes": list(snerv_emb_sizes),
+            "snerv_official_modelsize_mparams": list(
+                snerv_official_modelsize_mparams
+            ),
+            "snerv_official_enc_strds": [
+                int(v) for v in args.snerv_official_enc_strds
+            ],
+            "snerv_official_dec_strds": [
+                int(v) for v in args.snerv_official_dec_strds
+            ],
         },
         "hinerv_output_json": hinerv_result.path,
         "hinerv_output_sha256": hinerv_result.sha256,

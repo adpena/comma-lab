@@ -12,6 +12,7 @@ stop launching one arbitrary compact HiNeRV point.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from math import ceil
 from typing import Any
@@ -49,6 +50,8 @@ DEFAULT_SNERV_DECODER_CODECS = (
     "int2_symmetric",
 )
 DEFAULT_SNERV_MODEL_SIZE_ADAPTER = "snerv_fc_dim_emb_size_adapter_v1"
+DEFAULT_SNERV_OFFICIAL_ENC_STRDS = (5, 4, 2, 2, 2)
+DEFAULT_SNERV_OFFICIAL_DEC_STRDS = (5, 4, 2, 2, 2)
 _SNERV_ADAPTER_TO_ID_TOKEN = {
     DEFAULT_SNERV_MODEL_SIZE_ADAPTER: "base",
     SNERV_SPECTRA_PRESERVING_ADAPTER: "spectra",
@@ -192,6 +195,7 @@ class SnervModelSizeCandidate:
     step_map_bits_per_coeff: float
     decoder_payload_codec: str
     snerv_model_size_adapter: str
+    capacity_source: str
     modelsize_mparams: float | None
     official_modelsize_solution: dict[str, Any] | None
     fc_dim: int
@@ -564,6 +568,25 @@ def select_hinerv_modelsize_candidates(
     return selected
 
 
+def _dedupe_snerv_modelsize_candidates(
+    rows: list[SnervModelSizeCandidate],
+    *,
+    key_fn: Callable[[SnervModelSizeCandidate], tuple[float, ...]],
+) -> list[SnervModelSizeCandidate]:
+    """Keep one row per receiver candidate id, preserving strongest provenance."""
+
+    best: dict[str, SnervModelSizeCandidate] = {}
+    order: list[str] = []
+    for row in rows:
+        current = best.get(row.candidate_id)
+        if current is None:
+            order.append(row.candidate_id)
+            best[row.candidate_id] = row
+        elif key_fn(row) > key_fn(current):
+            best[row.candidate_id] = row
+    return [best[candidate_id] for candidate_id in order]
+
+
 def build_hinerv_modelsize_budget_report(
     *,
     hard_byte_ceilings: tuple[int, ...],
@@ -642,8 +665,8 @@ def analyze_snerv_modelsize_candidate(
     decoder_payload_codec: str,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     official_modelsize_mparams: float | None = None,
-    official_enc_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
-    official_dec_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
+    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
     fc_dim: int = 9,
     emb_size: int = 0,
     patch_radius: int = 1,
@@ -733,6 +756,11 @@ def analyze_snerv_modelsize_candidate(
         step_map_bits_per_coeff=float(step_map_bits_per_coeff),
         decoder_payload_codec=str(decoder_payload_codec),
         snerv_model_size_adapter=str(snerv_model_size_adapter),
+        capacity_source=(
+            "manual_fc_dim"
+            if official_modelsize_mparams is None
+            else "official_snerv_modelsize"
+        ),
         modelsize_mparams=(
             None
             if official_modelsize_mparams is None
@@ -784,8 +812,8 @@ def enumerate_snerv_modelsize_candidates(
     decoder_codecs: tuple[str, ...] = DEFAULT_SNERV_DECODER_CODECS,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     official_modelsize_mparams: tuple[float, ...] = (),
-    official_enc_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
-    official_dec_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
+    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
     patch_radius: int = 1,
@@ -865,54 +893,77 @@ def select_snerv_modelsize_candidates(
         raise NervModelSizeBudgetError("per_ceiling_limit must be positive")
     selected: list[SnervModelSizeCandidate] = []
     ceilings = sorted({row.hard_byte_ceiling for row in candidates})
+
+    def _selection_key(row: SnervModelSizeCandidate) -> tuple[float, ...]:
+        return (
+            float(row.nominal_total_payload_bytes),
+            1.0 if row.official_modelsize_solution is not None else 0.0,
+            float(row.modelsize_mparams or 0.0),
+            float(row.bits_per_coeff),
+            float(row.step_map_bits_per_coeff),
+        )
+
     for ceiling in ceilings:
         group = [row for row in candidates if row.hard_byte_ceiling == ceiling]
         under = [row for row in group if row.nominal_under_ceiling]
         chosen: dict[str, SnervModelSizeCandidate] = {}
+
+        def choose(
+            chosen_by_id: dict[str, SnervModelSizeCandidate],
+            row: SnervModelSizeCandidate,
+        ) -> None:
+            current = chosen_by_id.get(row.candidate_id)
+            if current is None or _selection_key(row) > _selection_key(current):
+                chosen_by_id[row.candidate_id] = row
+
         for lvl in DEFAULT_SNERV_LEVELS:
             lvl_rows = [row for row in under if row.levels == lvl]
             if lvl_rows:
                 best_for_level = max(
                     lvl_rows,
-                    key=lambda row: (
-                        row.nominal_total_payload_bytes,
-                        row.bits_per_coeff,
-                        row.step_map_bits_per_coeff,
-                    ),
+                    key=_selection_key,
                 )
             else:
                 level_blockers = [row for row in group if row.levels == lvl]
                 if not level_blockers:
                     continue
                 best_for_level = min(level_blockers, key=lambda row: abs(row.byte_headroom))
-            chosen[best_for_level.candidate_id] = best_for_level
+            choose(chosen, best_for_level)
         for bits in DEFAULT_SNERV_BITS_PER_COEFF:
             bit_rows = [row for row in under if row.bits_per_coeff == bits]
             if bit_rows:
-                best_for_bits = max(bit_rows, key=lambda row: row.nominal_total_payload_bytes)
+                best_for_bits = max(bit_rows, key=_selection_key)
             else:
                 bit_blockers = [row for row in group if row.bits_per_coeff == bits]
                 if not bit_blockers:
                     continue
                 best_for_bits = min(bit_blockers, key=lambda row: abs(row.byte_headroom))
-            chosen[best_for_bits.candidate_id] = best_for_bits
+            choose(chosen, best_for_bits)
         under.sort(
             key=lambda row: (
-                row.nominal_total_payload_bytes,
+                *_selection_key(row),
                 row.levels,
-                row.bits_per_coeff,
             ),
             reverse=True,
         )
         for row in under:
             if len(chosen) >= per_ceiling_limit:
                 break
-            chosen.setdefault(row.candidate_id, row)
-        selected.extend(list(chosen.values())[:per_ceiling_limit])
+            choose(chosen, row)
+        selected.extend(
+            _dedupe_snerv_modelsize_candidates(
+                list(chosen.values()),
+                key_fn=_selection_key,
+            )[:per_ceiling_limit]
+        )
         if not under:
             group.sort(key=lambda row: abs(row.byte_headroom))
-            selected.extend(group[: min(2, per_ceiling_limit)])
-    return selected
+            selected.extend(
+                _dedupe_snerv_modelsize_candidates(group, key_fn=_selection_key)[
+                    : min(2, per_ceiling_limit)
+                ]
+            )
+    return _dedupe_snerv_modelsize_candidates(selected, key_fn=_selection_key)
 
 
 def build_snerv_modelsize_budget_report(
@@ -925,8 +976,8 @@ def build_snerv_modelsize_budget_report(
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
     official_modelsize_mparams: tuple[float, ...] = (),
-    official_enc_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
-    official_dec_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
+    official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+    official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     patch_radius: int = 1,
     mfu_scales: tuple[int, ...] = (1, 2, 4),
@@ -1291,6 +1342,8 @@ def official_nerv_oss_flag_audit() -> dict[str, Any]:
 
 __all__ = [
     "DEFAULT_SNERV_MODEL_SIZE_ADAPTER",
+    "DEFAULT_SNERV_OFFICIAL_DEC_STRDS",
+    "DEFAULT_SNERV_OFFICIAL_ENC_STRDS",
     "HinervModelSizeCandidate",
     "NervModelSizeBudgetError",
     "SnervModelSizeCandidate",

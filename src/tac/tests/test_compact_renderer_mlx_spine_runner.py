@@ -1050,6 +1050,20 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert sn["family"] == "snerv"
     assert sn["hard_byte_ceiling"] == 285_000
     assert sn["nominal_under_ceiling"] is True
+    official_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        snerv_official_modelsize_mparams=(0.05,),
+    )
+    assert official_sn is not None
+    assert official_sn["family"] == "snerv"
+    assert official_sn["capacity_source"] == "official_snerv_modelsize"
+    assert official_sn["modelsize_mparams"] == 0.05
+    assert official_sn["official_modelsize_solution"]["fc_dim"] == (
+        official_sn["fc_dim"]
+    )
+    assert official_sn["ready_for_exact_eval_dispatch"] is False
     explicit = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id=hi["candidate_id"],

@@ -51,6 +51,8 @@ from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
 )
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
+    DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+    DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
     HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
     HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
     analyze_hinerv_modelsize_candidate,
@@ -1843,6 +1845,9 @@ def _resolve_execute_modelsize_candidate(
     candidate_id: str,
     hard_byte_ceilings: tuple[int, ...],
     num_pairs: int = CONTEST_PAIR_COUNT,
+    snerv_official_modelsize_mparams: tuple[float, ...] = (),
+    snerv_official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+    snerv_official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
 ) -> dict[str, Any] | None:
     """Resolve an executable NeRV byte-budget candidate for a family launch.
 
@@ -1869,6 +1874,11 @@ def _resolve_execute_modelsize_candidate(
             for row in enumerate_snerv_modelsize_candidates(
                 hard_byte_ceilings=hard_byte_ceilings,
                 num_pairs=int(num_pairs),
+                official_modelsize_mparams=tuple(
+                    float(value) for value in snerv_official_modelsize_mparams
+                ),
+                official_enc_strds=tuple(int(value) for value in snerv_official_enc_strds),
+                official_dec_strds=tuple(int(value) for value in snerv_official_dec_strds),
             )
         ]
     else:
@@ -1880,6 +1890,14 @@ def _resolve_execute_modelsize_candidate(
             f"no {family} modelsize candidates were enumerated"
         )
     if token.lower() == "auto":
+        if family == "snerv" and snerv_official_modelsize_mparams:
+            official_candidates = [
+                row
+                for row in candidates
+                if row.get("official_modelsize_solution") is not None
+            ]
+            if official_candidates:
+                candidates = official_candidates
         under = [row for row in candidates if bool(row.get("nominal_under_ceiling"))]
         if under:
             tightest_ceiling = min(int(row["hard_byte_ceiling"]) for row in under)
@@ -1890,6 +1908,8 @@ def _resolve_execute_modelsize_candidate(
                 tightest_under,
                 key=lambda row: (
                     int(row["nominal_total_payload_bytes"]),
+                    int(row.get("official_modelsize_solution") is not None),
+                    float(row.get("modelsize_mparams") or 0.0),
                     int(row.get("total_trainable_params", 0)),
                 ),
             )
@@ -1897,6 +1917,8 @@ def _resolve_execute_modelsize_candidate(
             candidates,
             key=lambda row: (
                 abs(int(row.get("byte_headroom") or 0)),
+                -int(row.get("official_modelsize_solution") is not None),
+                -float(row.get("modelsize_mparams") or 0.0),
                 int(row["hard_byte_ceiling"]),
             ),
         )
@@ -9189,6 +9211,28 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--snerv-official-modelsize-mparams",
+        action="append",
+        type=float,
+        help=(
+            "Include source-faithful SNeRV --modelsize values, in millions of "
+            "params, when resolving --modelsize-candidate-id auto. Repeatable; "
+            "still advisory until trained archive bytes and receiver proof land."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-official-enc-strds",
+        type=_parse_positive_int_csv,
+        default=DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
+        help="Comma-separated official SNeRV encoder strides for --modelsize solve.",
+    )
+    parser.add_argument(
+        "--snerv-official-dec-strds",
+        type=_parse_positive_int_csv,
+        default=DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+        help="Comma-separated official SNeRV decoder strides for --modelsize solve.",
+    )
+    parser.add_argument(
         "--snerv-fc-dim",
         type=int,
         help="Manual SNeRV fc_dim override for no-candidate probes.",
@@ -9425,6 +9469,15 @@ def main(argv: list[str] | None = None) -> int:
             candidate_id=args.modelsize_candidate_id,
             hard_byte_ceilings=ceilings,
             num_pairs=CONTEST_PAIR_COUNT,
+            snerv_official_modelsize_mparams=tuple(
+                float(value) for value in (args.snerv_official_modelsize_mparams or ())
+            ),
+            snerv_official_enc_strds=tuple(
+                int(value) for value in args.snerv_official_enc_strds
+            ),
+            snerv_official_dec_strds=tuple(
+                int(value) for value in args.snerv_official_dec_strds
+            ),
         )
     planner_launch_blockers = _planner_row_launch_blockers(args)
     if planner_launch_blockers:
