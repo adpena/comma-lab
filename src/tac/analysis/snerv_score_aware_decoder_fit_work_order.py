@@ -139,19 +139,7 @@ def build_snerv_decoder_fit_work_order(
         bits = 5.0
     if levels is None:
         levels = 4
-    smoke_commands = (
-        (
-            ".venv/bin/python tools/run_snerv_inverse_steg_advisory.py "
-            f"--n-pairs 1 --levels {levels} --bits-per-coeff {bits:.3g} "
-            "--step-map-coder-mode waterfill --step-map-waterfill-bits-per-coeff 6.0 "
-            "--out .omx/research/snerv_score_aware_decoder_fit_after_smoke_<UTC>.json"
-        ),
-        (
-            ".venv/bin/python tools/adjudicate_snerv_rate_sweep.py "
-            ".omx/research/snerv_score_aware_decoder_fit_after_smoke_<UTC>.json "
-            "--out .omx/research/snerv_score_aware_decoder_fit_after_adjudication_<UTC>.json"
-        ),
-    )
+    smoke_commands = _recommended_scorer_loop_commands(levels=levels, bits=bits)
     next_action = (
         "run_local_score_aware_decoder_fit_smoke_with_waterfill_packet_in_loop"
         if ready
@@ -219,3 +207,31 @@ def _optional_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _recommended_scorer_loop_commands(*, levels: int, bits: float) -> tuple[str, ...]:
+    result_path = ".omx/research/snerv_scorer_loop_decoder_qat_after_work_order_<UTC>.json"
+    geometry_json = ".omx/research/snerv_scorer_loop_geometry_after_work_order_<UTC>.json"
+    geometry_md = ".omx/research/snerv_scorer_loop_geometry_after_work_order_<UTC>.md"
+    return (
+        (
+            ".venv/bin/python tools/run_snerv_scorer_loop_decoder_qat_smoke.py "
+            f"--n-pairs 4 --levels {levels} --target-bits-per-coeff {bits:.3g} "
+            "--search-mode nes_pair_robust --max-trials 2 "
+            "--byte-pressure-multiplier 8.0 "
+            "--section-value-pressure-multiplier 1.0 "
+            "--max-archive-byte-growth 0 "
+            "--pose-slack 0.0 --seg-slack 0.00005 "
+            "--pair-guard-min-score-improved-fraction 0.75 "
+            "--pair-guard-max-pose-worsened-fraction 0.0 "
+            "--component-guard-mode score_primary "
+            f"--out {result_path}"
+        ),
+        (
+            ".venv/bin/python tools/build_snerv_scorer_loop_geometry.py "
+            f"--result-json {result_path} "
+            f"--output-json {geometry_json} "
+            f"--output-md {geometry_md} "
+            "--label snerv_score_aware_decoder_fit_after_work_order"
+        ),
+    )

@@ -78,6 +78,7 @@ HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = (
 DEFAULT_OPTIMIZER_KINDS = (
     "pact_muon_adamw",
     "adamw",
+    "muon",
     "lion",
     "adamax",
     "rmsprop",
@@ -88,7 +89,7 @@ DEFAULT_OPTIMIZER_KINDS = (
     "sgd",
 )
 FIRST_PASS_OPTIMIZER_KINDS = frozenset(
-    ("pact_muon_adamw", "adamw", "lion", "adamax")
+    ("pact_muon_adamw", "adamw", "muon", "lion", "adamax")
 )
 OPTIMIZER_CONTROL_SCHEMA = "nerv_optimizer_control_surface.v1"
 HINERV_OPTIMIZER_POLICY_SCHEMA = "nerv_hinerv_optimizer_policy.v1"
@@ -215,7 +216,13 @@ def build_nerv_long_training_campaign_plan(
             "does_not_apply_to": [
                 "snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"
             ],
-            "native_mlx_optimizer_kinds": list(optimizers),
+            "optimizer_kinds": list(optimizers),
+            "native_mlx_optimizer_kinds": [
+                kind for kind in optimizers if kind != "pact_muon_adamw"
+            ],
+            "pact_partitioned_optimizer_kinds": [
+                kind for kind in optimizers if kind == "pact_muon_adamw"
+            ],
             "first_pass_optimizer_kinds": sorted(FIRST_PASS_OPTIMIZER_KINDS),
             "default_optimizer_kind": "pact_muon_adamw",
             "default_optimizer_backend": "tac.local_acceleration.pr95_hnerv_mlx",
@@ -230,9 +237,9 @@ def build_nerv_long_training_campaign_plan(
             ),
             "notes": (
                 "pact_muon_adamw is Pact's PR95-derived partitioned default; "
-                "Lion, AdamW, Adamax, and the other listed controls are direct "
-                "MLX optimizer baselines on Apple silicon, not Apple-invented "
-                "optimizer algorithms."
+                "Muon, Lion, AdamW, Adamax, and the other native controls are "
+                "direct MLX optimizer baselines on Apple silicon, not "
+                "Apple-invented optimizer algorithms."
             ),
         },
         "epochs": int(epochs),
@@ -1308,6 +1315,8 @@ def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
             else "mlx.optimizers"
         ),
         "native_mlx_on_apple_silicon": True,
+        "native_mlx_optimizer_object": not is_pact_default,
+        "pact_partitioned_muon_adamw": is_pact_default,
         "apple_specific_algorithm_claim": False,
         "first_pass_priority": kind in FIRST_PASS_OPTIMIZER_KINDS,
         "borrowed_from_pr95": is_pact_default,

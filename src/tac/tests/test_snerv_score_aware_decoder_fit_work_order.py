@@ -44,7 +44,15 @@ def test_waterfill_pose_destroyed_row_routes_to_local_decoder_fit_smoke() -> Non
     assert work_order["promotion_eligible"] is False
     assert work_order["selected_classification"] == "rate_below_frontier_pose_or_seg_destroyed"
     assert work_order["current_step_map_mode"] == "waterfill"
-    assert "run_snerv_inverse_steg_advisory.py" in work_order["recommended_smoke_commands"][0]
+    first, second = work_order["recommended_smoke_commands"]
+    assert "tools/run_snerv_scorer_loop_decoder_qat_smoke.py" in first
+    assert "--search-mode nes_pair_robust" in first
+    assert "--byte-pressure-multiplier 8.0" in first
+    assert "--max-archive-byte-growth 0" in first
+    assert "--component-guard-mode score_primary" in first
+    assert "tools/run_snerv_inverse_steg_advisory.py" not in first
+    assert "tools/build_snerv_scorer_loop_geometry.py" in second
+    assert "snerv_score_aware_decoder_fit_after_work_order" in second
 
 
 def test_undercharged_or_unreplayed_rows_refuse_decoder_fit_work_order() -> None:

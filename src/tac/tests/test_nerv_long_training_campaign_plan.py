@@ -1410,9 +1410,10 @@ def test_default_optimizer_kinds_cover_native_mlx_optimizer_surface() -> None:
     assert set(DEFAULT_OPTIMIZER_KINDS) == set(
         SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS
     )
-    assert DEFAULT_OPTIMIZER_KINDS[:4] == (
+    assert DEFAULT_OPTIMIZER_KINDS[:5] == (
         "pact_muon_adamw",
         "adamw",
+        "muon",
         "lion",
         "adamax",
     )
@@ -1436,6 +1437,29 @@ def test_adamw_hinerv_row_is_explicit_pr95_curriculum_control() -> None:
     assert hi["command_argv"][
         hi["command_argv"].index("--hi-nerv-optimizer-policy") + 1
     ] == "pr95_curriculum"
+
+
+def test_native_muon_hinerv_row_is_not_pact_or_pr95_curriculum() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("muon",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["optimizer_kind"] == "muon"
+    assert hi["optimizer_control"]["backend"] == "mlx.optimizers"
+    assert hi["optimizer_control"]["native_mlx_optimizer_object"] is True
+    assert hi["optimizer_control"]["pact_partitioned_muon_adamw"] is False
+    assert hi["optimizer_policy"]["requested_policy"] == "native_optimizer"
+    assert hi["optimizer_policy"]["pr95_faithful_curriculum_expected"] is False
+    assert hi["optimizer_policy"]["native_mlx_optimizer_expected"] is True
+    assert hi["command_argv"][
+        hi["command_argv"].index("--hi-nerv-optimizer-policy") + 1
+    ] == "native_optimizer"
 
 
 def test_pact_muon_adamw_hinerv_row_is_default_first_priority() -> None:

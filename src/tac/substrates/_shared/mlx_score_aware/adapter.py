@@ -47,6 +47,7 @@ SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS: tuple[str, ...] = (
     "sgd",
     "lion",
     "adafactor",
+    "muon",
     "pact_muon_adamw",
 )
 MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS: tuple[str, ...] = (
@@ -54,6 +55,7 @@ MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS: tuple[str, ...] = (
     "sgd",
     "lion",
     "adafactor",
+    "muon",
     "pact_muon_adamw",
 )
 _MLX_OPTIMIZER_PROVENANCE_BY_KIND: dict[str, dict[str, Any]] = {
@@ -101,6 +103,14 @@ _MLX_OPTIMIZER_PROVENANCE_BY_KIND: dict[str, dict[str, Any]] = {
         "borrowed_from": "mlx.optimizers.AdaDelta",
         "role": "native_mlx_lr_scale_adaptive_baseline_sweep",
         "contest_adaptation": "weight_decay_rejected_when_requested",
+    },
+    "muon": {
+        "borrowed_from": "mlx.optimizers.Muon",
+        "role": "native_mlx_all_parameter_muon_sweep",
+        "contest_adaptation": (
+            "explicit non-default comparison against Pact's PR95-style "
+            "partitioned Muon+AdamW path; no promotion without archive proof"
+        ),
     },
     "pact_muon_adamw": {
         "borrowed_from": (
@@ -237,12 +247,12 @@ class MlxScoreAwareAdapter:
             optimizer_kind: Wave N+11 stabilizer. One of
                 ``SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS``. Default
                 ``pact_muon_adamw``. All supported values route to real
-                ``mlx.optimizers`` classes on Apple silicon except this default,
-                which routes through the PR95-derived
-                partitioned Muon+AdamW train-step helper. "lion" and
-                ``pact_muon_adamw`` are local MLX implementations of published
-                algorithms, not Apple-specific algorithms; Adafactor is pinned
-                to explicit-LR mode so stage curricula remain the authority.
+                ``mlx.optimizers`` classes on Apple silicon except the Pact
+                default, which routes through the PR95-derived partitioned
+                Muon+AdamW train-step helper. "muon" and "lion" are native MLX
+                implementations of published algorithms, not Apple-specific
+                algorithms; Adafactor is pinned to explicit-LR mode so stage
+                curricula remain the authority.
             cosine_decay_enabled: Wave N+11 stabilizer. When True AND
                 warmup_epochs > 0 AND cosine_decay_total_epochs is set,
                 composes the canonical warmup + cosine-decay schedule via
@@ -766,6 +776,9 @@ class MlxScoreAwareAdapter:
         - ``"adafactor"``: ``mlx.optimizers.Adafactor(learning_rate=sched,
           relative_step=False, scale_parameter=False)`` so the caller's
           stage/curriculum LR remains the sole scheduler authority.
+        - ``"muon"``: native ``mlx.optimizers.Muon`` as an explicit
+          all-parameter optimizer-object comparison row. It is intentionally
+          separate from Pact's default partitioned Muon+AdamW path.
         - ``"pact_muon_adamw"`` is intentionally NOT built here: it uses the
           PR95-derived partitioned Muon+AdamW helper inside ``train_step`` so
           latents, heads, biases, and scalar-like params never receive a naive
@@ -830,6 +843,13 @@ class MlxScoreAwareAdapter:
             if self._wave_n11_weight_decay is not None:
                 adafactor_kwargs["weight_decay"] = self._wave_n11_weight_decay
             return mlx_optim.Adafactor(**adafactor_kwargs)
+        if self._wave_n11_optimizer_kind == "muon":
+            if self._wave_n11_weight_decay is None:
+                return mlx_optim.Muon(learning_rate=lr_sched)
+            return mlx_optim.Muon(
+                learning_rate=lr_sched,
+                weight_decay=self._wave_n11_weight_decay,
+            )
         if self._wave_n11_optimizer_kind == "pact_muon_adamw":
             raise RuntimeError(
                 "pact_muon_adamw is a partitioned train_step optimizer, not a "

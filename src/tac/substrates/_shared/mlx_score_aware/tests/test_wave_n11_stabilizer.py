@@ -339,6 +339,27 @@ def test_build_optimizer_routes_additional_native_mlx_decay_optimizer_kinds(
     assert opt.weight_decay == pytest.approx(1.0e-4)
 
 
+def test_build_optimizer_routes_native_mlx_muon(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """MLX-native Muon is an explicit comparison row, not hidden by Pact Muon."""
+
+    import mlx.optimizers as mlx_optim
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind="muon",
+        weight_decay=1.0e-4,
+        **adapter_kwargs,
+    )
+    opt = a._build_wave_n11_optimizer(learning_rate=3.0e-4)
+    assert isinstance(opt, mlx_optim.Muon)
+    assert opt.weight_decay == pytest.approx(1.0e-4)
+
+
 def test_build_optimizer_refuses_fake_single_object_pact_muon_adamw(
     minimal_bundle,
     adapter_kwargs,
