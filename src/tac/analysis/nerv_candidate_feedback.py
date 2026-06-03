@@ -1035,26 +1035,69 @@ def build_nerv_training_telemetry_feedback_row(
     )
     candidate_pairs = int(candidate_num_pairs)
     measured_pairs = _int_or_none(health.get("num_pairs")) or candidate_pairs
+    family_key = _family_key(family)
+    recommended_launch_mutations = _training_telemetry_mutations_for_family(
+        family_key,
+        health.get("recommended_launch_mutations") or [],
+    )
+    health_for_control = {
+        **health,
+        "recommended_launch_mutations": recommended_launch_mutations,
+    }
     blockers: list[str] = [
-        "hinerv_trained_archive_byte_oracle_feedback_missing",
-        "hi_nerv_byte_closed_archive_export_missing",
-        "hi_nerv_receiver_proof_missing",
-        "hi_nerv_full_video_local_prefilter_missing",
-        "hi_nerv_local_cpu_replay_gate_missing",
+        _training_telemetry_blocker(
+            family_key,
+            "trained_archive_byte_oracle_feedback_missing",
+        ),
+        _training_telemetry_blocker(
+            family_key,
+            "byte_closed_archive_export_missing",
+        ),
+        _training_telemetry_blocker(family_key, "receiver_proof_missing"),
+        _training_telemetry_blocker(
+            family_key,
+            "full_video_local_prefilter_missing",
+        ),
+        _training_telemetry_blocker(family_key, "local_cpu_replay_gate_missing"),
     ]
     if health["pose_instability_detected"]:
-        blockers.append("hi_nerv_pose_instability_telemetry_feedback")
+        blockers.append(
+            _training_telemetry_blocker(
+                family_key,
+                "pose_instability_telemetry_feedback",
+            )
+        )
     if health.get("pose_tail_burst_detected"):
-        blockers.append("hi_nerv_pose_tail_burst_telemetry_feedback")
+        blockers.append(
+            _training_telemetry_blocker(
+                family_key,
+                "pose_tail_burst_telemetry_feedback",
+            )
+        )
     if health.get("seg_stagnation_detected"):
-        blockers.append("hi_nerv_segnet_stagnation_telemetry_feedback")
+        blockers.append(
+            _training_telemetry_blocker(
+                family_key,
+                "segnet_stagnation_telemetry_feedback",
+            )
+        )
     if health.get("pr95_stage_mismatch_detected"):
-        blockers.append("hi_nerv_pr95_stage_index_mismatch_telemetry")
+        blockers.append(
+            _training_telemetry_blocker(
+                family_key,
+                "pr95_stage_index_mismatch_telemetry",
+            )
+        )
     if health.get("pr95_final_stage_muon_missing"):
-        blockers.append("hi_nerv_pr95_final_stage_muon_missing_telemetry")
+        blockers.append(
+            _training_telemetry_blocker(
+                family_key,
+                "pr95_final_stage_muon_missing_telemetry",
+            )
+        )
     training_stopped = not _is_midrun_feedback_snapshot(stop_reason)
     training_control = _training_control_recommendation(
-        health=health,
+        health=health_for_control,
         training_stopped=training_stopped,
         measured_pairs=measured_pairs,
         candidate_pairs=candidate_pairs,
@@ -1069,7 +1112,7 @@ def build_nerv_training_telemetry_feedback_row(
         "source_queue_path": source_queue.as_posix() if source_queue else None,
         "source_queue_sha256": _sha256_file(source_queue) if source_queue else None,
         "mode": "training_telemetry_harvested",
-        "family": _family_key(family),
+        "family": family_key,
         "candidate_id": str(candidate_id),
         "candidate_conditioned": True,
         "candidate_num_pairs": candidate_pairs,
@@ -1095,7 +1138,7 @@ def build_nerv_training_telemetry_feedback_row(
             if health["pose_instability_detected"]
             else "telemetry_harvest_without_completion_artifact"
         ),
-        "training_telemetry": health,
+        "training_telemetry": health_for_control,
         "training_control": training_control,
         "training_control_action": training_control["action"],
         "training_control_reason": training_control["reason"],
@@ -1202,9 +1245,7 @@ def build_nerv_training_telemetry_feedback_row(
         "recommended_segnet_distillation_weight_multiplier": health.get(
             "recommended_segnet_distillation_weight_multiplier"
         ),
-        "recommended_launch_mutations": list(
-            health.get("recommended_launch_mutations") or []
-        ),
+        "recommended_launch_mutations": recommended_launch_mutations,
         "receiver_proof_report_paths": [],
         "local_cpu_replay_summary_present": False,
         "local_cpu_replay_score_estimate": None,
@@ -2075,6 +2116,28 @@ def _family_key(value: str) -> str:
     if text == "hinerv":
         return "hi_nerv"
     return text
+
+
+def _training_telemetry_blocker(family_key: str, suffix: str) -> str:
+    if family_key == "hi_nerv":
+        if suffix == "trained_archive_byte_oracle_feedback_missing":
+            return "hinerv_trained_archive_byte_oracle_feedback_missing"
+        return f"hi_nerv_{suffix}"
+    return f"{family_key}_{suffix}"
+
+
+def _training_telemetry_mutations_for_family(
+    family_key: str,
+    mutations: Sequence[Any],
+) -> list[str]:
+    family_slug = "hi_nerv" if family_key == "hi_nerv" else family_key
+    return [
+        str(mutation).replace(
+            "treat_previous_hi_nerv_run_as",
+            f"treat_previous_{family_slug}_run_as",
+        )
+        for mutation in mutations
+    ]
 
 
 __all__ = [

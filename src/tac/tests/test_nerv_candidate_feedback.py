@@ -883,6 +883,64 @@ def test_training_telemetry_feedback_detects_segnet_stagnation(
     assert row["score_claim"] is False
 
 
+def test_training_telemetry_feedback_uses_family_specific_blockers(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "snerv_segnet_stagnation_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 6.3,
+                "loss_part_weighted_distill": 12.6,
+            },
+            "per_axis_decomposition": {
+                "pose": 2.0,
+                "seg": 6.3 - min(epoch, 127) * 0.0005,
+            },
+        }
+        for epoch in range(160)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="snerv",
+        candidate_id="snerv_np600_haar_lv5_fc36e0_native",
+        candidate_num_pairs=600,
+    )
+
+    assert row["family"] == "snerv"
+    assert "snerv_trained_archive_byte_oracle_feedback_missing" in row["blockers"]
+    assert "snerv_byte_closed_archive_export_missing" in row["blockers"]
+    assert "snerv_receiver_proof_missing" in row["blockers"]
+    assert "snerv_full_video_local_prefilter_missing" in row["blockers"]
+    assert "snerv_local_cpu_replay_gate_missing" in row["blockers"]
+    assert "snerv_segnet_stagnation_telemetry_feedback" in row["blockers"]
+    assert "hi_nerv_segnet_stagnation_telemetry_feedback" not in row["blockers"]
+    assert (
+        "treat_previous_snerv_run_as_segnet_fit_failure_not_rate_negative"
+        in row["recommended_launch_mutations"]
+    )
+    assert all(
+        "treat_previous_hi_nerv_run_as" not in mutation
+        for mutation in row["recommended_launch_mutations"]
+    )
+    assert (
+        "treat_previous_snerv_run_as_segnet_fit_failure_not_rate_negative"
+        in row["training_telemetry"]["recommended_launch_mutations"]
+    )
+    assert all(
+        "treat_previous_hi_nerv_run_as" not in mutation
+        for mutation in row["training_telemetry"]["recommended_launch_mutations"]
+    )
+
+
 def test_running_training_telemetry_feedback_recommends_checkpoint_supersede_for_flat_segnet(
     tmp_path: Path,
 ) -> None:
