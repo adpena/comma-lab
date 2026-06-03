@@ -135,6 +135,8 @@ def test_hi_nerv_bitstream_roundtrip_measures_codec_portfolio() -> None:
         decoder_codecs=(
             "fp16_enveloped",
             "int8_scale_bundled",
+            "int7_scale_bundled",
+            "int6_mixed",
             "int4_scale_bundled",
         ),
         pruning_ratio=0.25,
@@ -175,7 +177,13 @@ def test_hi_nerv_bitstream_roundtrip_measures_codec_portfolio() -> None:
     assert {row["decoder_codec_requested"] for row in rows} == {
         "fp16_enveloped",
         "int8_scale_bundled",
+        "int7_scale_bundled",
+        "int6_mixed",
         "int4_scale_bundled",
+    }
+    assert {row["decoder_codec_emitted"] for row in rows} >= {
+        "int7_scale_bundled",
+        "int6_mixed",
     }
     for row in rows:
         assert row["shape_preserved"] is True

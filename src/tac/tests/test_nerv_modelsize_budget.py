@@ -150,7 +150,7 @@ def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> Non
     report = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=(178_000,),
         num_pairs=600,
-        per_ceiling_limit=5,
+        per_ceiling_limit=6,
     )
 
     assert report["schema"] == "nerv_modelsize_budget.v1"
@@ -167,7 +167,14 @@ def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> Non
     assert any(row["use_hierarchical_feature_grid"] for row in selected)
     assert any(row["use_convnext_blocks"] for row in selected)
     codecs = {row["decoder_codec"] for row in selected}
-    assert {"portfolio_auto", "int8_mixed", "int4_mixed", "int2_mixed"} <= codecs
+    assert {
+        "portfolio_auto",
+        "int8_mixed",
+        "int7_mixed",
+        "int6_mixed",
+        "int4_mixed",
+        "int2_mixed",
+    } <= codecs
     assert "selection_strategy" in report["budget_math"]
 
 

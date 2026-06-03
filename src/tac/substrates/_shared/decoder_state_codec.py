@@ -65,7 +65,19 @@ def serialize_decoder_state_dict(
         return _legacy_fp16_brotli(state_dict)
     candidates: list[tuple[bytes, DecoderStateCodecStats]] = []
     if normalized in {"auto", "portfolio_auto", "int8_auto"}:
-        for tensor_codec in ("int8_mixed", "int8_scale_bundled", "fp16_enveloped"):
+        for tensor_codec in (
+            "int8_mixed",
+            "int8_scale_bundled",
+            "int7_mixed",
+            "int7_scale_bundled",
+            "int6_mixed",
+            "int6_scale_bundled",
+            "int4_mixed",
+            "int4_scale_bundled",
+            "int2_mixed",
+            "int2_scale_bundled",
+            "fp16_enveloped",
+        ):
             payload = _payload_for_codec(state_dict, codec=tensor_codec)
             for compressor in _SUPPORTED_COMPRESSORS:
                 candidates.append(
@@ -79,6 +91,24 @@ def serialize_decoder_state_dict(
         payload = _payload_for_codec(state_dict, codec="int8_scale_bundled")
         for compressor in _SUPPORTED_COMPRESSORS:
             candidates.append(_wrap_payload(payload, codec="int8_scale_bundled", compressor=compressor))
+    elif normalized in {"int7", "int7_mixed", "int7_mixed_auto"}:
+        for tensor_codec in ("int7_mixed", "int7_scale_bundled"):
+            payload = _payload_for_codec(state_dict, codec=tensor_codec)
+            for compressor in _SUPPORTED_COMPRESSORS:
+                candidates.append(_wrap_payload(payload, codec=tensor_codec, compressor=compressor))
+    elif normalized in {"int7_scale_bundled", "int7_by_scale", "int7_scale_sorted"}:
+        payload = _payload_for_codec(state_dict, codec="int7_scale_bundled")
+        for compressor in _SUPPORTED_COMPRESSORS:
+            candidates.append(_wrap_payload(payload, codec="int7_scale_bundled", compressor=compressor))
+    elif normalized in {"int6", "int6_mixed", "int6_mixed_auto"}:
+        for tensor_codec in ("int6_mixed", "int6_scale_bundled"):
+            payload = _payload_for_codec(state_dict, codec=tensor_codec)
+            for compressor in _SUPPORTED_COMPRESSORS:
+                candidates.append(_wrap_payload(payload, codec=tensor_codec, compressor=compressor))
+    elif normalized in {"int6_scale_bundled", "int6_by_scale", "int6_scale_sorted"}:
+        payload = _payload_for_codec(state_dict, codec="int6_scale_bundled")
+        for compressor in _SUPPORTED_COMPRESSORS:
+            candidates.append(_wrap_payload(payload, codec="int6_scale_bundled", compressor=compressor))
     elif normalized in {"int4", "int4_mixed", "int4_mixed_auto"}:
         for tensor_codec in ("int4_mixed", "int4_scale_bundled"):
             payload = _payload_for_codec(state_dict, codec=tensor_codec)
@@ -136,6 +166,16 @@ def deserialize_decoder_state_dict(blob: bytes) -> dict[str, torch.Tensor]:
         }
     if codec in {"int8_mixed", "int8_scale_bundled"}:
         return {name: _decode_int8_record(record) for name, record in records.items()}
+    if codec in {"int7_mixed", "int7_scale_bundled"}:
+        return {
+            name: _decode_nbit_record(record, bits=7)
+            for name, record in records.items()
+        }
+    if codec in {"int6_mixed", "int6_scale_bundled"}:
+        return {
+            name: _decode_nbit_record(record, bits=6)
+            for name, record in records.items()
+        }
     if codec in {"int4_mixed", "int4_scale_bundled"}:
         return {
             name: _decode_nbit_record(record, bits=4)
@@ -204,6 +244,46 @@ def _payload_for_codec(state_dict: dict[str, torch.Tensor], *, codec: str) -> by
         records = {
             name: _encode_int8_record(
                 tensor.detach().to("cpu", dtype=torch.float32),
+                scale_bundled=True,
+            )
+            for name, tensor in state_dict.items()
+            if name != "selectors"
+        }
+    elif codec == "int7_mixed":
+        records = {
+            name: _encode_nbit_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                bits=7,
+                scale_bundled=False,
+            )
+            for name, tensor in state_dict.items()
+            if name != "selectors"
+        }
+    elif codec == "int7_scale_bundled":
+        records = {
+            name: _encode_nbit_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                bits=7,
+                scale_bundled=True,
+            )
+            for name, tensor in state_dict.items()
+            if name != "selectors"
+        }
+    elif codec == "int6_mixed":
+        records = {
+            name: _encode_nbit_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                bits=6,
+                scale_bundled=False,
+            )
+            for name, tensor in state_dict.items()
+            if name != "selectors"
+        }
+    elif codec == "int6_scale_bundled":
+        records = {
+            name: _encode_nbit_record(
+                tensor.detach().to("cpu", dtype=torch.float32),
+                bits=6,
                 scale_bundled=True,
             )
             for name, tensor in state_dict.items()
@@ -362,8 +442,8 @@ def _encode_nbit_record(
     bits: int,
     scale_bundled: bool = False,
 ) -> dict[str, Any]:
-    if bits not in (2, 4):
-        raise ValueError(f"n-bit codec supports int2/int4 only; got {bits}")
+    if bits not in (2, 4, 6, 7):
+        raise ValueError(f"n-bit codec supports int2/int4/int6/int7 only; got {bits}")
     arr = tensor.contiguous().numpy().astype(np.float32, copy=False)
     if arr.size == 0:
         return {"kind": "empty", "shape": list(arr.shape), "bits": bits}

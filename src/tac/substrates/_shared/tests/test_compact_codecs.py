@@ -42,10 +42,10 @@ def test_decoder_state_codec_int8_roundtrips_shapes_and_metadata() -> None:
     assert torch.isfinite(decoded["conv.weight"]).all()
 
 
-def test_decoder_state_codec_int4_and_int2_bitpacked_roundtrip_shapes() -> None:
+def test_decoder_state_codec_nbit_bitpacked_roundtrip_shapes() -> None:
     torch.manual_seed(1)
     state = {"w": torch.randn(5, 4) * 0.03}
-    for codec in ("int4_mixed", "int2_mixed"):
+    for codec in ("int7_mixed", "int6_mixed", "int4_mixed", "int2_mixed"):
         blob = serialize_decoder_state_dict(state, codec=codec)
         stats = decoder_state_codec_stats(blob)
         decoded = deserialize_decoder_state_dict(blob)
@@ -63,7 +63,13 @@ def test_decoder_state_codec_scale_bundled_roundtrips_shapes_and_metadata() -> N
         ),
         "conv.bias": torch.randn(8) * 0.01,
     }
-    for codec in ("int8_scale_bundled", "int4_scale_bundled", "int2_scale_bundled"):
+    for codec in (
+        "int8_scale_bundled",
+        "int7_scale_bundled",
+        "int6_scale_bundled",
+        "int4_scale_bundled",
+        "int2_scale_bundled",
+    ):
         blob = serialize_decoder_state_dict(state, codec=codec)
         stats = decoder_state_codec_stats(blob)
         decoded = deserialize_decoder_state_dict(blob)
@@ -91,6 +97,14 @@ def test_decoder_state_codec_portfolio_auto_beats_or_matches_int8_modes() -> Non
     assert decoder_state_codec_stats(auto).codec in {
         "int8_mixed",
         "int8_scale_bundled",
+        "int7_mixed",
+        "int7_scale_bundled",
+        "int6_mixed",
+        "int6_scale_bundled",
+        "int4_mixed",
+        "int4_scale_bundled",
+        "int2_mixed",
+        "int2_scale_bundled",
         "fp16_enveloped",
     }
     assert decoded["conv.weight"].shape == state["conv.weight"].shape
@@ -112,7 +126,7 @@ def test_scale_bundled_records_store_nontrivial_order_and_restore_axis0() -> Non
     assert list(int8_record["axis0_order"]) != list(range(tensor.shape[0]))
     assert _decode_int8_record(int8_record).shape == tensor.shape
 
-    for bits in (2, 4):
+    for bits in (2, 4, 6, 7):
         nbit_record = _encode_nbit_record(tensor, bits=bits, scale_bundled=True)
         assert nbit_record["kind"] == (
             f"int{bits}_per_channel_axis0_fp16_scale_bundled_bitpacked"
@@ -134,7 +148,7 @@ def test_int_stream_auto_uses_compact_envelope_and_roundtrips() -> None:
     assert np.array_equal(decoded, values)
 
 
-def test_fixed_width_uint_packing_supports_int2_and_int4_surfaces() -> None:
+def test_fixed_width_uint_packing_supports_nbit_surfaces() -> None:
     two_bit = np.array([0, 1, 2, 3, 0, 3, 2, 1, 1], dtype=np.int64)
     packed_2 = pack_fixed_width_uints(two_bit, bits=2)
     assert np.array_equal(
@@ -147,4 +161,18 @@ def test_fixed_width_uint_packing_supports_int2_and_int4_surfaces() -> None:
     assert np.array_equal(
         unpack_fixed_width_uints(packed_4, bits=4, count=len(four_bit)),
         four_bit,
+    )
+
+    six_bit = np.arange(64, dtype=np.int64)
+    packed_6 = pack_fixed_width_uints(six_bit, bits=6)
+    assert np.array_equal(
+        unpack_fixed_width_uints(packed_6, bits=6, count=len(six_bit)),
+        six_bit,
+    )
+
+    seven_bit = np.arange(128, dtype=np.int64)
+    packed_7 = pack_fixed_width_uints(seven_bit, bits=7)
+    assert np.array_equal(
+        unpack_fixed_width_uints(packed_7, bits=7, count=len(seven_bit)),
+        seven_bit,
     )

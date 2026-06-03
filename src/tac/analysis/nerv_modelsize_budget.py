@@ -188,6 +188,8 @@ DEFAULT_HINERV_DECODER_CHANNELS = (4, 6, 8, 12, 16, 24, 32)
 DEFAULT_HINERV_DECODER_CODECS = (
     "portfolio_auto",
     "int8_mixed",
+    "int7_mixed",
+    "int6_mixed",
     "int4_mixed",
     "int2_mixed",
 )
@@ -656,6 +658,10 @@ def decoder_codec_nominal_bits(codec: str) -> int:
         return 16
     if normalized.startswith("int8") or normalized in {"auto", "portfolio_auto"}:
         return 8
+    if normalized.startswith("int7"):
+        return 7
+    if normalized.startswith("int6"):
+        return 6
     if normalized.startswith("int4"):
         return 4
     if normalized.startswith("int2"):

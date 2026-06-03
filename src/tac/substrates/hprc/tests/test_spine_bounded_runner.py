@@ -812,6 +812,8 @@ def test_pact_vq_core_negative_sections_open_projection_gap_repair(
         "/capacity_l8_e16_k32_ch32/decoder_codec_sweep"
     )
     assert "portfolio_auto" in sweep["decoder_codecs"]
+    assert "int7_scale_bundled" in sweep["decoder_codecs"]
+    assert "int6_scale_bundled" in sweep["decoder_codecs"]
     assert "int2_scale_bundled" in sweep["decoder_codecs"]
     assert "tools/sweep_compact_decoder_codecs.py" in sweep["argv"]
     assert sweep["run_receiver_proof"] is True
