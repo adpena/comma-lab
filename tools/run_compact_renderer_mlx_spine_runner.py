@@ -9020,7 +9020,17 @@ def _segnet_boundary_recon_pixel_weight(
     sorted_logits = np.sort(logits, axis=-1)
     margin = sorted_logits[..., -1] - sorted_logits[..., -2]
     saliency = np.exp(-np.maximum(margin, 0.0) / float(tau)).astype(np.float32)
-    weight = np.mean(saliency, axis=0).astype(np.float32)
+    # SegNet scores only the LAST frame of each pair. Keep frame 0 on uniform
+    # reconstruction pressure for pose/reconstruction, and give frame 1 its
+    # own per-pair boundary map so moving class boundaries are not blurred into
+    # one static full-video average.
+    weight = np.stack(
+        [
+            np.ones_like(saliency, dtype=np.float32),
+            saliency,
+        ],
+        axis=1,
+    )[..., None].astype(np.float32)
     weight = _validate_recon_pixel_weight_array(weight, expected_hw=(384, 512))
     metadata = {
         "schema": "compact_recon_pixel_weight.v1",
@@ -9029,8 +9039,15 @@ def _segnet_boundary_recon_pixel_weight(
         "tau": float(tau),
         "normalize": normalize,
         "scorer_terms": {
-            "p18_segnet": "top2_margin_exp_boundary_saliency_from_real_teacher",
+            "p18_segnet": (
+                "per_pair_last_frame_top2_margin_exp_boundary_saliency_from_real_teacher"
+            ),
             "p19_posenet": "not_included_use_recon_pixel_weight_path_for_joint_map",
+        },
+        "frame_policy": {
+            "frame0": "uniform_reconstruction_pose_support_not_seen_by_segnet",
+            "frame1": "per_pair_segnet_top2_boundary_saliency",
+            "reason": "upstream SegNet scores x[:,-1,...] only",
         },
         "stats": _weight_stats(weight),
         "authority": "false_macos_mlx_research_signal",
