@@ -74,9 +74,18 @@ from .bitstream import (
     prepare_hi_nerv_decoder_bitstream_state,
     select_hi_nerv_bitstream_codec_by_scorer_waterfill,
 )
+from .official_grid import (
+    HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF,
+    HINERV_OFFICIAL_GRID_TRILINEAR3D_SOURCE_CONTRACT,
+    OfficialGridTrilinear3D,
+    OfficialGridTrilinear3DError,
+    official_grid_trilinear3d_forward,
+)
 from .score_aware_loss import HinervScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
+    "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+    "HINERV_OFFICIAL_GRID_TRILINEAR3D_SOURCE_CONTRACT",
     "HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE",
     "HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA",
     "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
@@ -85,6 +94,8 @@ __all__ = [
     "HinervConfig",
     "HinervScoreAwareLoss",
     "HinervSubstrate",
+    "OfficialGridTrilinear3D",
+    "OfficialGridTrilinear3DError",
     "ScoreAwareLossWeights",
     "apply_decoder_pruning",
     "apply_decoder_quant_noise",
@@ -92,6 +103,7 @@ __all__ = [
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
+    "official_grid_trilinear3d_forward",
     "pack_archive",
     "pack_archive_from_exported_state_dict",
     "parse_archive",

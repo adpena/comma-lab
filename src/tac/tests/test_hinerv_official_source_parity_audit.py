@@ -8,6 +8,7 @@ from pathlib import Path
 from tac.analysis.hinerv_official_source_parity_audit import (
     FORWARD_PARITY_ARTIFACT_SCHEMA,
     SCHEMA,
+    build_hinerv_official_forward_parity_artifact,
     build_hinerv_official_source_parity_audit,
     render_hinerv_official_source_parity_markdown,
     summarize_hinerv_official_source_audit,
@@ -32,6 +33,9 @@ def test_hinerv_official_source_audit_blocks_until_numeric_forward_artifact(
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["official_source_markers_present"] is True
     assert report["local_receiver_bindings_present"] is True
+    assert "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF" in report[
+        "local_binding_marker_row"
+    ]["present_markers"]
     assert report["official_forward_parity_proven"] is False
     assert report["blockers"] == ["hinerv_official_forward_parity_missing"]
     assert report["official_forward_parity_artifact_row"]["status"] == "missing"
@@ -47,6 +51,51 @@ def test_hinerv_official_source_audit_blocks_until_numeric_forward_artifact(
     md = render_hinerv_official_source_parity_markdown(report)
     assert "HiNeRV Official Source-Parity Audit" in md
     assert "official forward parity proven: `False`" in md
+    assert "| `core_hierarchical_renderer` | `False` | `True` |" in md
+
+
+def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_hinerv_repo(tmp_path)
+
+    artifact = build_hinerv_official_forward_parity_artifact(
+        official_repo_dir=official,
+        repo_root=REPO_ROOT,
+        generated_utc="20260603T000000Z",
+    )
+
+    assert artifact["score_claim"] is False
+    assert artifact["ready_for_exact_eval_dispatch"] is False
+    assert artifact["official_forward_parity_passed"] is False
+    assert artifact["official_forward_parity_falsified"] is True
+    artifact_states = {row["component_id"]: row for row in artifact["component_rows"]}
+    assert artifact_states["core_hierarchical_renderer"][
+        "source_forward_parity_falsified"
+    ] is True
+    assert artifact_states["patch_dataset_path"]["source_forward_parity_falsified"] is True
+    assert artifact_states["prune_quant_codec"]["source_forward_parity_falsified"] is True
+
+    artifact_path = tmp_path / "forward_parity.json"
+    artifact_path.write_text(json.dumps(artifact, sort_keys=True), encoding="utf-8")
+    report = build_hinerv_official_source_parity_audit(
+        official_repo_dir=official,
+        repo_root=REPO_ROOT,
+        official_forward_parity_artifact_path=artifact_path,
+        generated_utc="20260603T000000Z",
+    )
+
+    assert report["official_forward_parity_proven"] is False
+    assert report["official_forward_parity_artifact_row"]["parity_passed"] is False
+    assert report["official_forward_parity_artifact_row"]["parity_falsified"] is True
+    states = {row["component_id"]: row for row in report["component_state_rows"]}
+    assert states["core_hierarchical_renderer"]["classification"] == (
+        "receiver_visible_official_like_renderer_without_source_forward_replay"
+    )
+    assert states["core_hierarchical_renderer"]["source_forward_parity_falsified"] is True
+    assert "hinerv_official_forward_parity_artifact_falsifies_parity" in (
+        states["core_hierarchical_renderer"]["blockers"]
+    )
 
 
 def test_hinerv_official_source_audit_fails_closed_on_missing_markers(

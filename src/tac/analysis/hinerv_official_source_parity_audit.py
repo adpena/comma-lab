@@ -144,6 +144,8 @@ OFFICIAL_MARKER_GROUPS: tuple[MarkerGroup, ...] = (
 )
 
 LOCAL_BINDING_MARKERS: tuple[str, ...] = (
+    "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+    "OfficialGridTrilinear3D",
     "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
     "HierarchicalFeatureGrid",
     "ConvNeXtBlock",
@@ -152,6 +154,94 @@ LOCAL_BINDING_MARKERS: tuple[str, ...] = (
     "apply_decoder_pruning",
     "apply_decoder_quant_noise",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
+)
+
+_HINERV_FORWARD_PARITY_COMPONENT_SPECS: tuple[dict[str, Any], ...] = (
+    {
+        "component_id": "core_hierarchical_renderer",
+        "official_group_ids": (
+            "official_hierarchical_feature_grid",
+            "official_convnext_decoder",
+            "official_config_family_controls",
+        ),
+        "local_receiver_markers": (
+            (
+                "src/tac/substrates/hi_nerv/architecture.py",
+                "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+            ),
+            ("src/tac/substrates/hi_nerv/architecture.py", "class HierarchicalFeatureGrid"),
+            ("src/tac/substrates/hi_nerv/architecture.py", "class ConvNeXtBlock"),
+            ("src/tac/substrates/hi_nerv/official_grid.py", "class OfficialGridTrilinear3D"),
+            (
+                "src/tac/substrates/hi_nerv/official_grid.py",
+                "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+            ),
+            ("src/tac/substrates/hi_nerv/mlx_renderer.py", "class ConvNeXtBlockMLX"),
+        ),
+        "local_source_forward_markers": (
+            (
+                "src/tac/substrates/hi_nerv/architecture.py",
+                "HINERV_OFFICIAL_HIERARCHICAL_RENDERER_SOURCE_FORWARD_PROOF",
+            ),
+        ),
+        "classification": "receiver_visible_official_like_renderer_without_source_forward_replay",
+        "blocker": "hinerv_core_hierarchical_renderer_source_forward_replay_missing",
+        "evidence_summary": (
+            "Local HiNeRV has receiver-visible feature-grid/ConvNeXt/trilinear "
+            "surfaces, but official hmkx HiNeRV torch source-forward replay is "
+            "not proven until the numeric artifact carries matching hashes."
+        ),
+    },
+    {
+        "component_id": "patch_dataset_path",
+        "official_group_ids": ("official_patch_dataset_path",),
+        "local_receiver_markers": (
+            ("src/tac/substrates/hi_nerv/architecture.py", "pair_indices"),
+            ("src/tac/substrates/hi_nerv/architecture.py", "num_pairs"),
+            ("src/tac/substrates/hi_nerv/inflate.py", "num_pairs"),
+        ),
+        "local_source_forward_markers": (
+            (
+                "src/tac/substrates/hi_nerv/architecture.py",
+                "HINERV_OFFICIAL_PATCH_DATASET_SOURCE_FORWARD_PROOF",
+            ),
+        ),
+        "classification": "frame_index_receiver_path_without_official_patch_dataset_replay",
+        "blocker": "hinerv_patch_dataset_source_forward_replay_missing",
+        "evidence_summary": (
+            "Official HiNeRV trains/evals spatial patches through --patch-size; "
+            "the local receiver renders pair-indexed full frames and needs an "
+            "explicit patch/frame equivalence replay before source-faithful use."
+        ),
+    },
+    {
+        "component_id": "prune_quant_codec",
+        "official_group_ids": ("official_quant_prune_torchac_bitstream",),
+        "local_receiver_markers": (
+            (
+                "src/tac/substrates/hi_nerv/bitstream.py",
+                "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+            ),
+            ("src/tac/substrates/hi_nerv/bitstream.py", "def apply_decoder_pruning"),
+            ("src/tac/substrates/hi_nerv/bitstream.py", "def apply_decoder_quant_noise"),
+            (
+                "src/tac/substrates/hi_nerv/bitstream.py",
+                "def measure_hi_nerv_decoder_bitstream_roundtrip",
+            ),
+        ),
+        "local_source_forward_markers": (
+            (
+                "src/tac/substrates/hi_nerv/bitstream.py",
+                "HINERV_OFFICIAL_PRUNE_QUANT_TORCHAC_SOURCE_FORWARD_PROOF",
+            ),
+        ),
+        "classification": "receiver_visible_prune_quantnoise_without_official_torchac_replay",
+        "blocker": "hinerv_prune_quant_codec_source_forward_replay_missing",
+        "evidence_summary": (
+            "Local pruning/QuantNoise/bitstream probes are real receiver-visible "
+            "controls, but they are not official torchac bitstream-q parity."
+        ),
+    },
 )
 
 
@@ -177,6 +267,11 @@ def build_hinerv_official_source_parity_audit(
     local_bindings_present = bool(local_binding_row["all_markers_present"])
     official_forward_parity_proven = bool(
         official_markers_present and local_bindings_present and forward_row["parity_passed"]
+    )
+    component_state_rows = _component_state_rows(
+        official_group_rows=official_group_rows,
+        local_root=local_root,
+        forward_parity_artifact_row=forward_row,
     )
     blockers = _ordered_unique(
         [
@@ -207,11 +302,62 @@ def build_hinerv_official_source_parity_audit(
         "official_marker_group_rows": official_group_rows,
         "local_binding_marker_row": local_binding_row,
         "official_forward_parity_artifact_row": forward_row,
+        "component_state_rows": component_state_rows,
         "official_source_markers_present": official_markers_present,
         "local_receiver_bindings_present": local_bindings_present,
         "official_forward_parity_proven": official_forward_parity_proven,
         "blockers": blockers,
         "next_actions": _next_actions(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def build_hinerv_official_forward_parity_artifact(
+    *,
+    official_repo_dir: str | Path,
+    repo_root: str | Path,
+    generated_utc: str | None = None,
+) -> dict[str, Any]:
+    """Build a false-authority HiNeRV source-forward proof/falsification artifact."""
+
+    official_root = Path(official_repo_dir)
+    local_root = Path(repo_root)
+    if generated_utc is None:
+        generated_utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    file_rows = [_file_row(official_root, rel_path) for rel_path in REQUIRED_OFFICIAL_FILES]
+    official_group_rows = [_official_marker_group_row(official_root, group) for group in OFFICIAL_MARKER_GROUPS]
+    component_rows = _component_state_rows(
+        official_group_rows=official_group_rows,
+        local_root=local_root,
+        forward_parity_artifact_row={"parity_passed": False, "component_rows": []},
+    )
+    parity_passed = all(bool(row["source_forward_parity_proven"]) for row in component_rows)
+    parity_falsified = any(bool(row["source_forward_parity_falsified"]) for row in component_rows)
+    return {
+        "schema": FORWARD_PARITY_ARTIFACT_SCHEMA,
+        "authority": AUTHORITY,
+        "generated_utc": generated_utc,
+        "family": "hi_nerv",
+        "official_repo": {
+            "repo_url": OFFICIAL_REPO_URL,
+            "repo_url_git": OFFICIAL_REPO_URL_GIT,
+            "root": official_root.as_posix(),
+            "head_sha": _git_head_sha(official_root),
+            "required_files": list(REQUIRED_OFFICIAL_FILES),
+        },
+        "local_repo_root": local_root.as_posix(),
+        "official_file_rows": file_rows,
+        "official_marker_group_rows": official_group_rows,
+        "component_rows": component_rows,
+        "official_forward_parity_passed": parity_passed,
+        "official_forward_parity_falsified": parity_falsified,
+        "blockers": _ordered_unique(
+            [
+                blocker
+                for row in component_rows
+                for blocker in row.get("blockers") or ()
+            ]
+        ),
         **FALSE_AUTHORITY,
     }
 
@@ -236,6 +382,16 @@ def summarize_hinerv_official_source_audit(report: Mapping[str, Any]) -> dict[st
         "local_receiver_bindings_present": bool(report.get("local_receiver_bindings_present")),
         "official_forward_parity_proven": bool(report.get("official_forward_parity_proven")),
         "forward_parity_falsified": bool(forward_row.get("parity_falsified")),
+        "component_states": [
+            {
+                "component_id": row.get("component_id"),
+                "classification": row.get("classification"),
+                "source_forward_parity_proven": bool(row.get("source_forward_parity_proven")),
+                "source_forward_parity_falsified": bool(row.get("source_forward_parity_falsified")),
+            }
+            for row in report.get("component_state_rows") or ()
+            if isinstance(row, Mapping)
+        ],
         "blockers": list(report.get("blockers") or ()),
         **FALSE_AUTHORITY,
     }
@@ -282,6 +438,21 @@ def render_hinerv_official_source_parity_markdown(report: Mapping[str, Any]) -> 
         lines.extend(f"- `{blocker}`" for blocker in blockers)
     else:
         lines.append("- none")
+    component_rows = [
+        row for row in report.get("component_state_rows") or () if isinstance(row, Mapping)
+    ]
+    if component_rows:
+        lines.extend(["", "## Component States", ""])
+        lines.append("| component | proven | falsified | classification |")
+        lines.append("|---|---:|---:|---|")
+        for row in component_rows:
+            lines.append(
+                "| "
+                f"`{row.get('component_id')}` | "
+                f"`{bool(row.get('source_forward_parity_proven'))}` | "
+                f"`{bool(row.get('source_forward_parity_falsified'))}` | "
+                f"`{row.get('classification')}` |"
+            )
     lines.extend(["", "## Next Actions", ""])
     actions = list(report.get("next_actions") or ())
     if actions:
@@ -513,6 +684,148 @@ def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
     return blockers
 
 
+def _component_state_rows(
+    *,
+    official_group_rows: Sequence[Mapping[str, Any]],
+    local_root: Path,
+    forward_parity_artifact_row: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    official_by_group = {str(row.get("group_id")): row for row in official_group_rows}
+    artifact_passed = bool(forward_parity_artifact_row.get("parity_passed"))
+    artifact_falsified = bool(forward_parity_artifact_row.get("parity_falsified"))
+    artifact_component_rows = {
+        str(row.get("component_id")): row
+        for row in forward_parity_artifact_row.get("component_rows") or ()
+        if isinstance(row, Mapping)
+    }
+    rows: list[dict[str, Any]] = []
+    for spec in _HINERV_FORWARD_PARITY_COMPONENT_SPECS:
+        component_id = str(spec["component_id"])
+        official_group_ids = tuple(str(value) for value in spec["official_group_ids"])
+        official_group_present = all(
+            bool(official_by_group.get(group_id, {}).get("all_markers_present"))
+            for group_id in official_group_ids
+        )
+        local_receiver_scan = _file_marker_rows(
+            local_root,
+            spec.get("local_receiver_markers") or (),
+        )
+        local_source_forward_scan = _file_marker_rows(
+            local_root,
+            spec.get("local_source_forward_markers") or (),
+        )
+        receiver_visible = bool(local_receiver_scan["all_markers_present"])
+        local_source_forward_markers_present = bool(
+            local_source_forward_scan["all_markers_present"]
+        )
+        artifact_component = artifact_component_rows.get(component_id, {})
+        source_forward = bool(
+            official_group_present
+            and receiver_visible
+            and artifact_passed
+            and artifact_component.get("source_forward_parity_proven") is True
+        )
+        source_forward_falsified = bool(
+            artifact_component.get("source_forward_parity_falsified")
+            or (
+                official_group_present
+                and receiver_visible
+                and not local_source_forward_markers_present
+            )
+        )
+        if source_forward:
+            classification = "official_source_forward_parity_proven"
+        elif source_forward_falsified:
+            classification = str(spec["classification"])
+        elif receiver_visible:
+            classification = "receiver_visible_analogue"
+        else:
+            classification = "missing_or_partial"
+        artifact_blocker = ""
+        if not artifact_passed:
+            artifact_blocker = (
+                "hinerv_official_forward_parity_artifact_falsifies_parity"
+                if artifact_falsified
+                else "hinerv_official_forward_parity_artifact_missing_or_failed"
+            )
+        blockers = _ordered_unique(
+            [
+                *[
+                    (
+                        f"hinerv_official_source_marker_missing:{group_id}"
+                        if not bool(official_by_group.get(group_id, {}).get("all_markers_present"))
+                        else ""
+                    )
+                    for group_id in official_group_ids
+                ],
+                (
+                    f"hinerv_{component_id}_receiver_visible_adapter_missing"
+                    if not receiver_visible
+                    else ""
+                ),
+                (
+                    f"hinerv_{component_id}_local_source_forward_markers_missing"
+                    if not local_source_forward_markers_present
+                    else ""
+                ),
+                artifact_blocker if not artifact_passed else "",
+                "" if (source_forward or not source_forward_falsified) else str(spec["blocker"]),
+            ]
+        )
+        rows.append(
+            {
+                "schema": "hinerv_official_component_state.v1",
+                "component_id": component_id,
+                "official_group_ids": list(official_group_ids),
+                "official_markers_present": official_group_present,
+                "receiver_visible_analogue_present": receiver_visible,
+                "local_receiver_marker_rows": local_receiver_scan["marker_rows"],
+                "local_source_forward_markers_present": local_source_forward_markers_present,
+                "local_source_forward_marker_rows": local_source_forward_scan["marker_rows"],
+                "forward_parity_artifact_passed": artifact_passed,
+                "source_forward_parity_proven": source_forward,
+                "source_forward_parity_falsified": source_forward_falsified,
+                "classification": classification,
+                "evidence_summary": str(spec["evidence_summary"]),
+                "blockers": blockers,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def _file_marker_rows(
+    root: Path,
+    markers: Sequence[Sequence[str] | tuple[str, str]],
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    cache: dict[str, str] = {}
+    for marker_spec in markers:
+        rel_path = str(marker_spec[0])
+        marker = str(marker_spec[1])
+        if rel_path not in cache:
+            path = root / rel_path
+            cache[rel_path] = (
+                read_python_source_for_marker_scan(path) if path.is_file() else ""
+            )
+        rows.append(
+            {
+                "rel_path": rel_path,
+                "marker": marker,
+                "present": marker in cache[rel_path],
+            }
+        )
+    return {
+        "marker_rows": rows,
+        "all_markers_present": all(row["present"] for row in rows),
+        "missing_markers": [
+            f"{row['rel_path']}::{row['marker']}"
+            for row in rows
+            if not row["present"]
+        ],
+    }
+
+
 def _git_head_sha(root: Path) -> str | None:
     try:
         return subprocess.check_output(
@@ -584,6 +897,7 @@ __all__ = [
     "AUTHORITY",
     "FORWARD_PARITY_ARTIFACT_SCHEMA",
     "SCHEMA",
+    "build_hinerv_official_forward_parity_artifact",
     "build_hinerv_official_source_parity_audit",
     "render_hinerv_official_source_parity_markdown",
     "summarize_hinerv_official_source_audit",

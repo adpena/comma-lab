@@ -60,6 +60,7 @@ HI_NERV_SURFACES = (
     "src/tac/substrates/hi_nerv/archive.py",
     "src/tac/substrates/hi_nerv/archive_candidate.py",
     "src/tac/substrates/hi_nerv/bitstream.py",
+    "src/tac/substrates/hi_nerv/official_grid.py",
     "src/tac/substrates/hi_nerv/inflate.py",
     "src/tac/substrates/hi_nerv/score_aware_loss.py",
     "src/tac/analysis/nerv_decoder_weight_waterfill.py",
@@ -211,11 +212,16 @@ def _hi_nerv_stack_audit(
         ),
     )
     quantnoise_binding = _hi_nerv_quantnoise_control_binding(root)
+    official_grid_binding = _hi_nerv_official_grid_binding(root)
     blockers = [
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle",
         "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid",
         "hinerv_official_convnext_feature_grid_path_missing",
-        "hinerv_official_trilinear_feature_interpolation_path_missing",
+        (
+            ""
+            if official_grid_binding["bound"]
+            else "hinerv_official_trilinear_feature_interpolation_path_missing"
+        ),
         "hinerv_upstream_grid_depth_prune_bitstream_controls_not_executable_atoms",
         "hinerv_official_pruning_control_not_bound_to_planner",
         (
@@ -246,7 +252,11 @@ def _hi_nerv_stack_audit(
             "missing_upstream_axes": [
                 "hierarchical feature-grid encoding",
                 "official ConvNeXt-style feature-grid path",
-                "official trilinear feature interpolation path",
+                (
+                    "full official GridTrilinear3D forward replay artifact"
+                    if official_grid_binding["bound"]
+                    else "official trilinear feature interpolation path"
+                ),
                 "patch/frame unified training and eval",
                 "adaptive pruning schedule",
                 "QuantNoise-controlled source-faithful training path",
@@ -263,6 +273,7 @@ def _hi_nerv_stack_audit(
         "partial_markers": markers,
         "modelsize_budget": budget,
         "quantnoise_control_binding": quantnoise_binding,
+        "official_grid_trilinear_binding": official_grid_binding,
         "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "byte ceiling selects capacity candidate before launch",
@@ -353,6 +364,46 @@ def _hi_nerv_quantnoise_control_binding(root: Path) -> dict[str, Any]:
         "official_quant_levels_6_7_executable": not blockers,
         "source_rows": rows,
         "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hi_nerv_official_grid_binding(root: Path) -> dict[str, Any]:
+    """Return whether official HiNeRV temporal-only GridTrilinear3D is bound."""
+
+    path = root / "src/tac/substrates/hi_nerv/official_grid.py"
+    test_path = root / "src/tac/substrates/hi_nerv/tests/test_official_grid.py"
+    text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+    test_text = (
+        test_path.read_text(encoding="utf-8", errors="replace")
+        if test_path.is_file()
+        else ""
+    )
+    required_markers = (
+        "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+        "OfficialGridTrilinear3D",
+        "official_grid_trilinear3d_forward",
+        "mode=\"bilinear\"",
+        "only supports temporal scaling",
+    )
+    required_test_markers = (
+        "test_official_grid_trilinear3d_matches_torch_interpolate",
+        "F.interpolate",
+        "align_corners",
+    )
+    missing = [marker for marker in required_markers if marker not in text]
+    test_missing = [marker for marker in required_test_markers if marker not in test_text]
+    return {
+        "schema": "hinerv_official_grid_trilinear_binding.v1",
+        "rel_path": "src/tac/substrates/hi_nerv/official_grid.py",
+        "test_rel_path": "src/tac/substrates/hi_nerv/tests/test_official_grid.py",
+        "present": path.is_file(),
+        "test_present": test_path.is_file(),
+        "required_markers": list(required_markers),
+        "missing_markers": missing,
+        "missing_test_markers": test_missing,
+        "bound": path.is_file() and test_path.is_file() and not missing and not test_missing,
+        "authority": "false_authority_component_binding_no_full_forward_parity_claim",
         **FALSE_AUTHORITY,
     }
 

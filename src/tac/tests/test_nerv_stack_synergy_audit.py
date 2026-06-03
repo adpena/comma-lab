@@ -61,7 +61,9 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         in stacks["hi_nerv"]["blockers"]
     )
     assert "hinerv_official_convnext_feature_grid_path_missing" in stacks["hi_nerv"]["blockers"]
-    assert "hinerv_official_trilinear_feature_interpolation_path_missing" in stacks["hi_nerv"]["blockers"]
+    assert "hinerv_official_trilinear_feature_interpolation_path_missing" not in stacks["hi_nerv"]["blockers"]
+    assert stacks["hi_nerv"]["official_grid_trilinear_binding"]["bound"] is True
+    assert stacks["hi_nerv"]["official_grid_trilinear_binding"]["score_claim"] is False
     assert (
         "hinerv_official_quantnoise_control_not_bound_to_mlx_trainer"
         not in stacks["hi_nerv"]["blockers"]

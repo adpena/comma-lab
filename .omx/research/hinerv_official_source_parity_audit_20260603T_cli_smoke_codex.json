@@ -1,0 +1,612 @@
+{
+  "authority": "false_authority_source_audit_no_score_claim",
+  "blockers": [
+    "hinerv_official_forward_parity_missing"
+  ],
+  "component_state_rows": [
+    {
+      "blockers": [
+        "hinerv_core_hierarchical_renderer_local_source_forward_markers_missing",
+        "hinerv_official_forward_parity_artifact_falsifies_parity",
+        "hinerv_core_hierarchical_renderer_source_forward_replay_missing"
+      ],
+      "classification": "receiver_visible_official_like_renderer_without_source_forward_replay",
+      "component_id": "core_hierarchical_renderer",
+      "evidence_summary": "Local HiNeRV has receiver-visible feature-grid/ConvNeXt/trilinear surfaces, but official hmkx HiNeRV torch source-forward replay is not proven until the numeric artifact carries matching hashes.",
+      "forward_parity_artifact_passed": false,
+      "local_receiver_marker_rows": [
+        {
+          "marker": "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+        },
+        {
+          "marker": "class HierarchicalFeatureGrid",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+        },
+        {
+          "marker": "class ConvNeXtBlock",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+        },
+        {
+          "marker": "class OfficialGridTrilinear3D",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_grid.py"
+        },
+        {
+          "marker": "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_grid.py"
+        },
+        {
+          "marker": "class ConvNeXtBlockMLX",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/mlx_renderer.py"
+        }
+      ],
+      "local_source_forward_marker_rows": [
+        {
+          "marker": "HINERV_OFFICIAL_HIERARCHICAL_RENDERER_SOURCE_FORWARD_PROOF",
+          "present": false,
+          "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+        }
+      ],
+      "local_source_forward_markers_present": false,
+      "official_group_ids": [
+        "official_hierarchical_feature_grid",
+        "official_convnext_decoder",
+        "official_config_family_controls"
+      ],
+      "official_markers_present": true,
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_visible_analogue_present": true,
+      "schema": "hinerv_official_component_state.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": true,
+      "source_forward_parity_proven": false
+    },
+    {
+      "blockers": [
+        "hinerv_patch_dataset_path_local_source_forward_markers_missing",
+        "hinerv_official_forward_parity_artifact_falsifies_parity",
+        "hinerv_patch_dataset_source_forward_replay_missing"
+      ],
+      "classification": "frame_index_receiver_path_without_official_patch_dataset_replay",
+      "component_id": "patch_dataset_path",
+      "evidence_summary": "Official HiNeRV trains/evals spatial patches through --patch-size; the local receiver renders pair-indexed full frames and needs an explicit patch/frame equivalence replay before source-faithful use.",
+      "forward_parity_artifact_passed": false,
+      "local_receiver_marker_rows": [
+        {
+          "marker": "pair_indices",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+        },
+        {
+          "marker": "num_pairs",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+        },
+        {
+          "marker": "num_pairs",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/inflate.py"
+        }
+      ],
+      "local_source_forward_marker_rows": [
+        {
+          "marker": "HINERV_OFFICIAL_PATCH_DATASET_SOURCE_FORWARD_PROOF",
+          "present": false,
+          "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+        }
+      ],
+      "local_source_forward_markers_present": false,
+      "official_group_ids": [
+        "official_patch_dataset_path"
+      ],
+      "official_markers_present": true,
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_visible_analogue_present": true,
+      "schema": "hinerv_official_component_state.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": true,
+      "source_forward_parity_proven": false
+    },
+    {
+      "blockers": [
+        "hinerv_prune_quant_codec_local_source_forward_markers_missing",
+        "hinerv_official_forward_parity_artifact_falsifies_parity",
+        "hinerv_prune_quant_codec_source_forward_replay_missing"
+      ],
+      "classification": "receiver_visible_prune_quantnoise_without_official_torchac_replay",
+      "component_id": "prune_quant_codec",
+      "evidence_summary": "Local pruning/QuantNoise/bitstream probes are real receiver-visible controls, but they are not official torchac bitstream-q parity.",
+      "forward_parity_artifact_passed": false,
+      "local_receiver_marker_rows": [
+        {
+          "marker": "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+        },
+        {
+          "marker": "def apply_decoder_pruning",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+        },
+        {
+          "marker": "def apply_decoder_quant_noise",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+        },
+        {
+          "marker": "def measure_hi_nerv_decoder_bitstream_roundtrip",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+        }
+      ],
+      "local_source_forward_marker_rows": [
+        {
+          "marker": "HINERV_OFFICIAL_PRUNE_QUANT_TORCHAC_SOURCE_FORWARD_PROOF",
+          "present": false,
+          "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+        }
+      ],
+      "local_source_forward_markers_present": false,
+      "official_group_ids": [
+        "official_quant_prune_torchac_bitstream"
+      ],
+      "official_markers_present": true,
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_visible_analogue_present": true,
+      "schema": "hinerv_official_component_state.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": true,
+      "source_forward_parity_proven": false
+    }
+  ],
+  "family": "hi_nerv",
+  "generated_utc": "20260603T153237Z",
+  "local_binding_marker_row": {
+    "all_markers_present": true,
+    "marker_group_id": "local_hinerv_receiver_visible_bindings",
+    "markers": [
+      "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+      "OfficialGridTrilinear3D",
+      "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+      "HierarchicalFeatureGrid",
+      "ConvNeXtBlock",
+      "trilinear_upsample",
+      "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+      "apply_decoder_pruning",
+      "apply_decoder_quant_noise",
+      "measure_hi_nerv_decoder_bitstream_roundtrip"
+    ],
+    "missing_markers": [],
+    "present_markers": [
+      "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+      "OfficialGridTrilinear3D",
+      "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+      "HierarchicalFeatureGrid",
+      "ConvNeXtBlock",
+      "trilinear_upsample",
+      "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+      "apply_decoder_pruning",
+      "apply_decoder_quant_noise",
+      "measure_hi_nerv_decoder_bitstream_roundtrip"
+    ],
+    "source_root": "/Users/adpena/Projects/pact/src/tac/substrates/hi_nerv"
+  },
+  "local_receiver_bindings_present": true,
+  "local_repo_root": "/Users/adpena/Projects/pact",
+  "next_actions": [
+    "run tiny official HiNeRV torch forward versus local portable/MLX replay with weight/input/output SHA evidence"
+  ],
+  "official_file_rows": [
+    {
+      "bytes": 33826,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV/models/hinerv.py",
+      "rel_path": "models/hinerv.py",
+      "sha256": "5827273c70eabd896272853a2543c81d0481dffa2916b23898d95c2255ea58eb",
+      "status": "present"
+    },
+    {
+      "bytes": 11301,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV/models/layers.py",
+      "rel_path": "models/layers.py",
+      "sha256": "6e2220ea4af1662a2bbf0bd84825d4631e30f5adfead3e5a89e6e8cc3a71973a",
+      "status": "present"
+    },
+    {
+      "bytes": 7322,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV/datasets.py",
+      "rel_path": "datasets.py",
+      "sha256": "6fb8ebb9a879a513b751ffbcfa96ac37ba39569df21a79bdddfc7ad7da750988",
+      "status": "present"
+    },
+    {
+      "bytes": 3510,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV/hinerv_compress.py",
+      "rel_path": "hinerv_compress.py",
+      "sha256": "d19f81e6e9f5cb4d0a23b801c65781fcb89764f6314d896522eca6804102289b",
+      "status": "present"
+    },
+    {
+      "bytes": 4331,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV/compression/quant_utils.py",
+      "rel_path": "compression/quant_utils.py",
+      "sha256": "1951afb09a8df2696fad07aea734d037a29fc51b32dab5555cef32e0deb9cacf",
+      "status": "present"
+    },
+    {
+      "bytes": 9728,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV/compression/codec_utils.py",
+      "rel_path": "compression/codec_utils.py",
+      "sha256": "b59f713b3b35dc01416700c23af82c0016eec8c0ec8ee67a16be8ce84a931e00",
+      "status": "present"
+    },
+    {
+      "bytes": 2936,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV/compression/prune_utils.py",
+      "rel_path": "compression/prune_utils.py",
+      "sha256": "2052eb1020ccfb791d6a3be1e05c1bd73dd76eebde18598981de2c9567441c8f",
+      "status": "present"
+    }
+  ],
+  "official_forward_parity_artifact_row": {
+    "artifact_blockers": [
+      "hinerv_core_hierarchical_renderer_local_source_forward_markers_missing",
+      "hinerv_official_forward_parity_artifact_missing_or_failed",
+      "hinerv_core_hierarchical_renderer_source_forward_replay_missing",
+      "hinerv_patch_dataset_path_local_source_forward_markers_missing",
+      "hinerv_patch_dataset_source_forward_replay_missing",
+      "hinerv_prune_quant_codec_local_source_forward_markers_missing",
+      "hinerv_prune_quant_codec_source_forward_replay_missing"
+    ],
+    "artifact_schema": "hinerv_official_forward_parity.v1",
+    "blockers": [
+      "hinerv_official_forward_parity_artifact_not_passing",
+      "hinerv_official_forward_parity_weight_manifest_missing",
+      "hinerv_official_forward_parity_source_replay_missing",
+      "component_not_proven:core_hierarchical_renderer",
+      "numeric_tolerance_missing:core_hierarchical_renderer",
+      "numeric_max_abs_error_missing:core_hierarchical_renderer",
+      "input_sha256_missing:core_hierarchical_renderer",
+      "official_output_sha256_missing:core_hierarchical_renderer",
+      "portable_output_sha256_missing:core_hierarchical_renderer",
+      "official_weight_identity_missing:core_hierarchical_renderer",
+      "component_not_proven:patch_dataset_path",
+      "numeric_tolerance_missing:patch_dataset_path",
+      "numeric_max_abs_error_missing:patch_dataset_path",
+      "input_sha256_missing:patch_dataset_path",
+      "official_output_sha256_missing:patch_dataset_path",
+      "portable_output_sha256_missing:patch_dataset_path",
+      "official_weight_identity_missing:patch_dataset_path",
+      "component_not_proven:prune_quant_codec",
+      "numeric_tolerance_missing:prune_quant_codec",
+      "numeric_max_abs_error_missing:prune_quant_codec",
+      "input_sha256_missing:prune_quant_codec",
+      "official_output_sha256_missing:prune_quant_codec",
+      "portable_output_sha256_missing:prune_quant_codec",
+      "official_weight_identity_missing:prune_quant_codec"
+    ],
+    "bytes": 13495,
+    "component_rows": [
+      {
+        "blockers": [
+          "hinerv_core_hierarchical_renderer_local_source_forward_markers_missing",
+          "hinerv_official_forward_parity_artifact_missing_or_failed",
+          "hinerv_core_hierarchical_renderer_source_forward_replay_missing"
+        ],
+        "classification": "receiver_visible_official_like_renderer_without_source_forward_replay",
+        "component_id": "core_hierarchical_renderer",
+        "evidence_summary": "Local HiNeRV has receiver-visible feature-grid/ConvNeXt/trilinear surfaces, but official hmkx HiNeRV torch source-forward replay is not proven until the numeric artifact carries matching hashes.",
+        "forward_parity_artifact_passed": false,
+        "local_receiver_marker_rows": [
+          {
+            "marker": "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+          },
+          {
+            "marker": "class HierarchicalFeatureGrid",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+          },
+          {
+            "marker": "class ConvNeXtBlock",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+          },
+          {
+            "marker": "class OfficialGridTrilinear3D",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/official_grid.py"
+          },
+          {
+            "marker": "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/official_grid.py"
+          },
+          {
+            "marker": "class ConvNeXtBlockMLX",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/mlx_renderer.py"
+          }
+        ],
+        "local_source_forward_marker_rows": [
+          {
+            "marker": "HINERV_OFFICIAL_HIERARCHICAL_RENDERER_SOURCE_FORWARD_PROOF",
+            "present": false,
+            "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+          }
+        ],
+        "local_source_forward_markers_present": false,
+        "official_group_ids": [
+          "official_hierarchical_feature_grid",
+          "official_convnext_decoder",
+          "official_config_family_controls"
+        ],
+        "official_markers_present": true,
+        "production_hardened_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_visible_analogue_present": true,
+        "schema": "hinerv_official_component_state.v1",
+        "score_claim": false,
+        "source_faithful_stack_claim": false,
+        "source_forward_parity_falsified": true,
+        "source_forward_parity_proven": false
+      },
+      {
+        "blockers": [
+          "hinerv_patch_dataset_path_local_source_forward_markers_missing",
+          "hinerv_official_forward_parity_artifact_missing_or_failed",
+          "hinerv_patch_dataset_source_forward_replay_missing"
+        ],
+        "classification": "frame_index_receiver_path_without_official_patch_dataset_replay",
+        "component_id": "patch_dataset_path",
+        "evidence_summary": "Official HiNeRV trains/evals spatial patches through --patch-size; the local receiver renders pair-indexed full frames and needs an explicit patch/frame equivalence replay before source-faithful use.",
+        "forward_parity_artifact_passed": false,
+        "local_receiver_marker_rows": [
+          {
+            "marker": "pair_indices",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+          },
+          {
+            "marker": "num_pairs",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+          },
+          {
+            "marker": "num_pairs",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/inflate.py"
+          }
+        ],
+        "local_source_forward_marker_rows": [
+          {
+            "marker": "HINERV_OFFICIAL_PATCH_DATASET_SOURCE_FORWARD_PROOF",
+            "present": false,
+            "rel_path": "src/tac/substrates/hi_nerv/architecture.py"
+          }
+        ],
+        "local_source_forward_markers_present": false,
+        "official_group_ids": [
+          "official_patch_dataset_path"
+        ],
+        "official_markers_present": true,
+        "production_hardened_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_visible_analogue_present": true,
+        "schema": "hinerv_official_component_state.v1",
+        "score_claim": false,
+        "source_faithful_stack_claim": false,
+        "source_forward_parity_falsified": true,
+        "source_forward_parity_proven": false
+      },
+      {
+        "blockers": [
+          "hinerv_prune_quant_codec_local_source_forward_markers_missing",
+          "hinerv_official_forward_parity_artifact_missing_or_failed",
+          "hinerv_prune_quant_codec_source_forward_replay_missing"
+        ],
+        "classification": "receiver_visible_prune_quantnoise_without_official_torchac_replay",
+        "component_id": "prune_quant_codec",
+        "evidence_summary": "Local pruning/QuantNoise/bitstream probes are real receiver-visible controls, but they are not official torchac bitstream-q parity.",
+        "forward_parity_artifact_passed": false,
+        "local_receiver_marker_rows": [
+          {
+            "marker": "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+          },
+          {
+            "marker": "def apply_decoder_pruning",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+          },
+          {
+            "marker": "def apply_decoder_quant_noise",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+          },
+          {
+            "marker": "def measure_hi_nerv_decoder_bitstream_roundtrip",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+          }
+        ],
+        "local_source_forward_marker_rows": [
+          {
+            "marker": "HINERV_OFFICIAL_PRUNE_QUANT_TORCHAC_SOURCE_FORWARD_PROOF",
+            "present": false,
+            "rel_path": "src/tac/substrates/hi_nerv/bitstream.py"
+          }
+        ],
+        "local_source_forward_markers_present": false,
+        "official_group_ids": [
+          "official_quant_prune_torchac_bitstream"
+        ],
+        "official_markers_present": true,
+        "production_hardened_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_visible_analogue_present": true,
+        "schema": "hinerv_official_component_state.v1",
+        "score_claim": false,
+        "source_faithful_stack_claim": false,
+        "source_forward_parity_falsified": true,
+        "source_forward_parity_proven": false
+      }
+    ],
+    "parity_falsified": true,
+    "parity_passed": false,
+    "path": "/Users/adpena/Projects/pact/.omx/research/hinerv_official_forward_parity_20260603T_cli_smoke_codex.json",
+    "production_hardened_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "hinerv_official_forward_parity_artifact_row.v1",
+    "score_claim": false,
+    "sha256": "0be85997db8764e4f2e2caffe924d027880f0cfb2af808f55c895fe962bc0584",
+    "source_faithful_stack_claim": false,
+    "status": "present"
+  },
+  "official_forward_parity_proven": false,
+  "official_marker_group_rows": [
+    {
+      "all_markers_present": true,
+      "description": "Official HiNeRV builds temporal-local FeatureGrid levels expanded by GridTrilinear3D.",
+      "group_id": "official_hierarchical_feature_grid",
+      "markers": [
+        "class HiNeRV",
+        "class HiNeRVEncoding",
+        "FeatureGrid",
+        "GridTrilinear3D",
+        "self.grids.append",
+        "self.grid_expands.append",
+        "enc-grid-level"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "models/hinerv.py",
+        "models/layers.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official HiNeRV decoder uses ConvNeXt block families and staged upsampling.",
+      "group_id": "official_convnext_decoder",
+      "markers": [
+        "class HiNeRVDecoder",
+        "HiNeRVUpsampler",
+        "ConvNeXtBlock",
+        "ConvNeXtBlockLessNorm",
+        "Upsample",
+        "blocks"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "models/hinerv.py",
+        "models/layers.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official training/eval consumes spatial patches through --patch-size.",
+      "group_id": "official_patch_dataset_path",
+      "markers": [
+        "--patch-size",
+        "load_all_patches",
+        "'patch'",
+        "patch_size"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "datasets.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official compression path binds QuantNoise, PruningMask, and torchac arithmetic coding.",
+      "group_id": "official_quant_prune_torchac_bitstream",
+      "markers": [
+        "QuantNoise",
+        "PruningMask",
+        "quant-level",
+        "torchac.encode_float_cdf",
+        "torchac.decode_float_cdf",
+        "set_quantization",
+        "set_pruning"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "hinerv_compress.py",
+        "compression/quant_utils.py",
+        "compression/codec_utils.py",
+        "compression/prune_utils.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official configs expose base/encoding grid size, levels, scales, and quant controls.",
+      "group_id": "official_config_family_controls",
+      "markers": [
+        "--base-grid-size",
+        "--base-grid-level",
+        "--base-grid-level-scale",
+        "--enc-grid-size",
+        "--enc-grid-level",
+        "--enc-grid-level-scale",
+        "--quant-level"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "models/hinerv.py",
+        "hinerv_compress.py",
+        "cfgs/models/uvg-hinerv-s_1920x1080.txt"
+      ]
+    }
+  ],
+  "official_repo": {
+    "head_sha": "fdb92ec22492246f800621dfd454f6a5c62ab75b",
+    "repo_url": "https://github.com/hmkx/HiNeRV",
+    "repo_url_git": "https://github.com/hmkx/HiNeRV.git",
+    "required_files": [
+      "models/hinerv.py",
+      "models/layers.py",
+      "datasets.py",
+      "hinerv_compress.py",
+      "compression/quant_utils.py",
+      "compression/codec_utils.py",
+      "compression/prune_utils.py"
+    ],
+    "root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/HiNeRV"
+  },
+  "official_source_markers_present": true,
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "hinerv_official_source_parity_audit.v1",
+  "score_claim": false,
+  "source_faithful_stack_claim": false
+}

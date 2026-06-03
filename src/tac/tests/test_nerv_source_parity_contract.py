@@ -93,7 +93,14 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
     assert rows["hi_nerv_prune_quantnoise_receiver_bitstream_pipeline"]["status"] == ("implemented_or_bound")
     assert rows["hi_nerv_official_torchac_entropy_coder_parity"]["status"] == ("implemented_or_bound")
     assert rows["hi_nerv_official_torchac_entropy_coder_parity"]["required_for_long_training"] is False
-    present_symbols = {
+    feature_present_symbols = {
+        symbol["symbol"]
+        for symbol in rows["hi_nerv_official_feature_grid_convnext_trilinear"]["symbol_rows"]
+        if symbol["status"] == "present"
+    }
+    assert "OfficialGridTrilinear3D" in feature_present_symbols
+    assert "official_grid_trilinear3d_forward" in feature_present_symbols
+    bitstream_present_symbols = {
         symbol["symbol"]
         for symbol in rows["hi_nerv_prune_quantnoise_receiver_bitstream_pipeline"]["symbol_rows"]
         if symbol["status"] == "present"
@@ -105,7 +112,7 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
         "measure_hi_nerv_decoder_bitstream_roundtrip",
         "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
         "repack_archive_decoder_codec",
-    }.issubset(present_symbols)
+    }.issubset(bitstream_present_symbols)
 
 
 def test_source_parity_contract_records_insufficient_analogue_surfaces() -> None:
