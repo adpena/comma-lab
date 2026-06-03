@@ -144,7 +144,7 @@ def test_source_parity_contract_records_insufficient_analogue_surfaces() -> None
             "remaining_blockers"
         ]
     )
-    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" not in risks[
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in risks[
         "snerv_official_mfu_hfr_tub_numeric_primitives"
     ]["remaining_blockers"]
     assert risks["snerv_official_mfu_hfr_tub_numeric_primitives"][

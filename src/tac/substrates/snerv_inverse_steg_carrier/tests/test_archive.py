@@ -374,18 +374,18 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert header["tensor_count"] == len(header["tensor_manifest"])
     assert header["receiver_export_payload_bound"] is True
     assert header["receiver_export_self_consistency_verified"] is True
-    assert header["source_forward_replay_bound_by_export"] is True
-    assert header["source_forward_replay_authority"] is True
-    assert header["source_forward_replay_reference"]["schema"] == (
-        "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_replay.v1"
+    assert header["source_forward_replay_bound_by_export"] is False
+    assert header["source_forward_replay_authority"] is False
+    assert header["receiver_self_consistency_reference"]["schema"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub.receiver_self_consistency.v1"
     )
     assert decoded.schema == header["schema"]
     assert proof["schema"].endswith("receiver_runtime_proof.v1")
     assert proof["receiver_export_bound"] is True
     assert proof["receiver_runtime_decode_proven"] is True
     assert proof["receiver_export_self_consistency_verified"] is True
-    assert proof["source_forward_replay_bound"] is True
-    assert proof["source_forward_replay_verified"] is True
+    assert proof["source_forward_replay_bound"] is False
+    assert proof["source_forward_replay_verified"] is False
     assert proof["executed_components"] == {
         "official_mfu": True,
         "official_hfr": True,
@@ -393,13 +393,13 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     }
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
-    assert proof["source_forward_replay_authority"] is True
+    assert proof["source_forward_replay_authority"] is False
     assert proof["contest_scorer_authority"] is False
-    assert proof["source_forward_replay_reference_sha256"] == header[
-        "source_forward_replay_reference_sha256"
+    assert proof["receiver_self_consistency_reference_sha256"] == header[
+        "receiver_self_consistency_reference_sha256"
     ]
     assert proof["output_bundle_sha256"] == proof2["output_bundle_sha256"]
-    assert proof["output_bundle_sha256"] == header["source_forward_replay_reference"][
+    assert proof["output_bundle_sha256"] == header["receiver_self_consistency_reference"][
         "output_bundle_sha256"
     ]
     assert proof["mfu_output"]["pyr_out_shape"] == [1, 1, 8, 8]
@@ -423,15 +423,22 @@ def test_archive_can_carry_official_mfu_hfr_tub_receiver_payload() -> None:
             "lf_plane_count": 1,
             "levels": 1,
             "wavelet": "haar",
-            "orig_hw": [4, 4],
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 1,
+            "channels": 3,
         },
     )
 
     decoded = unpack_snerv_archive(archive.packet)
     proof = decoded.execute_official_mfu_hfr_tub_payload()
+    frames = decode_snerv_archive_frames(archive.packet)
 
     assert proof["receiver_bound_official_primitive_payload"] is True
     assert proof["payload_sha256"] == decoded.decode_official_mfu_hfr_tub_payload().payload_sha256
+    assert frames.shape == (1, 1, 3, 16, 16)
+    assert np.isfinite(frames).all()
+    assert float(np.std(frames)) > 0.0
     with pytest.raises(SnervArchiveError, match="requires decode_official"):
         decoded.decode_decoder()
 
@@ -446,16 +453,16 @@ def test_official_mfu_hfr_tub_decoder_payload_is_hash_checked() -> None:
         decode_official_mfu_hfr_tub_decoder_payload(bytes(payload))
 
 
-def test_official_mfu_hfr_tub_source_forward_reference_is_fail_closed() -> None:
+def test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed() -> None:
     payload = encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())
     missing_reference = _rewrite_subpacket_header(
         payload,
-        lambda header: header.pop("source_forward_replay_reference"),
+        lambda header: header.pop("receiver_self_consistency_reference"),
     )
-    with pytest.raises(SnervArchiveError, match="source-forward replay reference"):
+    with pytest.raises(SnervArchiveError, match="self-consistency reference"):
         decode_official_mfu_hfr_tub_decoder_payload(missing_reference)
 
-    bad_reference = _rewrite_subpacket_header(payload, _corrupt_source_forward_reference)
+    bad_reference = _rewrite_subpacket_header(payload, _corrupt_self_consistency_reference)
     with pytest.raises(SnervArchiveError, match="output bundle sha256 mismatch"):
         execute_official_mfu_hfr_tub_decoder_payload(bad_reference)
 
@@ -872,11 +879,11 @@ def _rewrite_subpacket_header(packet: bytes, mutator) -> bytes:
     )
 
 
-def _corrupt_source_forward_reference(header: dict[str, object]) -> None:
-    reference = dict(header["source_forward_replay_reference"])
+def _corrupt_self_consistency_reference(header: dict[str, object]) -> None:
+    reference = dict(header["receiver_self_consistency_reference"])
     reference["output_bundle_sha256"] = "0" * 64
-    header["source_forward_replay_reference"] = reference
-    header["source_forward_replay_reference_sha256"] = hashlib.sha256(
+    header["receiver_self_consistency_reference"] = reference
+    header["receiver_self_consistency_reference_sha256"] = hashlib.sha256(
         json.dumps(reference, separators=(",", ":"), sort_keys=True).encode("utf-8")
     ).hexdigest()
 

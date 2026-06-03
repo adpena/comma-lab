@@ -37,7 +37,7 @@ def test_official_symbol_parity_map_binds_hinerv_and_snerv_without_authority() -
         "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
         in rows["snerv_mfu_hfr_tub_official_primitives"]["still_blocked_by"]
     )
-    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" not in rows[
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in rows[
         "snerv_mfu_hfr_tub_official_primitives"
     ]["still_blocked_by"]
     assert rows["hi_nerv_core_hierarchical_renderer"][

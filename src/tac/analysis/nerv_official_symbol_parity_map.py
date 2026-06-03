@@ -137,6 +137,7 @@ def _binding_specs() -> tuple[SymbolBinding, ...]:
             still_blocked_by=(
                 "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
                 "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
             ),
         ),
         SymbolBinding(
@@ -155,6 +156,7 @@ def _binding_specs() -> tuple[SymbolBinding, ...]:
             still_blocked_by=(
                 "snerv_quantized_checkpoint_payload_replay_missing",
                 "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
             ),
         ),
         SymbolBinding(

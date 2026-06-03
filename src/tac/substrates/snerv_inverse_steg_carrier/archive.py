@@ -41,6 +41,10 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     decode_frame,
     dequantize_lf,
 )
+from tac.substrates.snerv_inverse_steg_carrier.dwt import (
+    WaveletPyramid,
+    idwt2_multilevel,
+)
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     SNERV_LF_PAYLOAD_INTN_CODEC_PROOF as _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF,
 )
@@ -94,6 +98,9 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA = (
 )
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PROOF_SCHEMA = (
     "snerv_decoder_payload.official_mfu_hfr_tub.receiver_runtime_proof.v1"
+)
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA = (
+    "snerv_decoder_payload.official_mfu_hfr_tub.receiver_self_consistency.v1"
 )
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA = (
     "snerv_decoder_payload.official_mfu_hfr_tub.source_forward_replay.v1"
@@ -336,10 +343,10 @@ class OfficialMfuHfrTubReceiverPayload:
             tub_next_frame=next_frame,
             tub_config=dict(self.header.get("tub_config") or {}),
         )
-        output_rows, output_bundle_sha256 = _official_source_forward_output_manifest(
+        output_rows, output_bundle_sha256 = _official_receiver_self_consistency_output_manifest(
             output_tensors
         )
-        source_forward_reference = _validate_official_source_forward_replay_reference(
+        self_consistency_reference = _validate_official_receiver_self_consistency_reference(
             self.header,
             output_rows=output_rows,
             output_bundle_sha256=output_bundle_sha256,
@@ -372,15 +379,48 @@ class OfficialMfuHfrTubReceiverPayload:
             "output_tensors": output_rows,
             "output_bundle_sha256": output_bundle_sha256,
             "receiver_export_self_consistency_verified": True,
-            "source_forward_replay_bound": True,
-            "source_forward_replay_verified": True,
-            "source_forward_replay_reference_sha256": _json_sha256(
-                source_forward_reference
+            "receiver_self_consistency_reference_sha256": _json_sha256(
+                self_consistency_reference
             ),
-            "source_forward_replay_authority": True,
+            "source_forward_replay_bound": False,
+            "source_forward_replay_verified": False,
+            "source_forward_replay_authority": False,
             "contest_scorer_authority": False,
             **FALSE_AUTHORITY,
         }
+
+    def decode_frame_planes(self, *, clip_to_uint8_range: bool = True) -> list[np.ndarray]:
+        """Render official MFU/HFR payload outputs into receiver frame planes.
+
+        This is the first frame-producing official-payload bridge: archived MFU
+        tensors generate the LL/pyr output, archived HFR heads generate
+        LH/HL/HH detail planes, and the receiver performs one-level Haar
+        synthesis. It deliberately remains one-frame-per-payload until the full
+        official temporal/pair graph is mapped.
+        """
+
+        low, skip_mid, skip_high = self.mfu_inputs()
+        mfu_out = self.build_mfu().forward(low, skip_mid, skip_high)
+        hfr_out = self.build_hfr_heads().forward(mfu_out.pyr_out)
+        planes = _official_mfu_hfr_frame_planes(
+            mfu_out.pyr_out,
+            hfr_out.yh_out,
+            clip_to_uint8_range=clip_to_uint8_range,
+        )
+        return planes
+
+    def decode_frames(self, *, clip_to_uint8_range: bool = True) -> np.ndarray:
+        """Render official MFU/HFR payload as ``(1, 1, C, H, W)`` frames."""
+
+        planes = self.decode_frame_planes(clip_to_uint8_range=clip_to_uint8_range)
+        if not planes:
+            raise SnervArchiveError("official payload produced no frame planes")
+        shape = planes[0].shape
+        if any(plane.shape != shape for plane in planes):
+            raise SnervArchiveError("official payload produced ragged frame planes")
+        return np.stack(planes, axis=0)[np.newaxis, np.newaxis, :, :, :].astype(
+            np.float32
+        )
 
     def as_jsonable(self) -> dict[str, Any]:
         """Return payload metadata without embedding tensor bytes."""
@@ -434,7 +474,58 @@ def _execute_official_mfu_hfr_tub_forward(
     return mfu_out, hfr_out, tub_out, output_tensors
 
 
-def _build_official_source_forward_replay_reference(
+def _official_mfu_hfr_frame_planes(
+    pyr_out: np.ndarray,
+    yh_out: np.ndarray,
+    *,
+    clip_to_uint8_range: bool,
+) -> list[np.ndarray]:
+    ll = np.asarray(pyr_out, dtype=np.float64)
+    yh = np.asarray(yh_out, dtype=np.float64)
+    if ll.ndim != 4:
+        raise SnervArchiveError(f"official MFU pyr_out must be NCHW, got {ll.shape}")
+    if yh.ndim != 5 or int(yh.shape[2]) != 3:
+        raise SnervArchiveError(
+            f"official HFR yh_out must be (N,C,3,H,W), got {yh.shape}"
+        )
+    if int(ll.shape[0]) != 1 or int(yh.shape[0]) != 1:
+        raise SnervArchiveError("official frame decode currently supports batch=1")
+    if tuple(int(v) for v in ll.shape[-2:]) != tuple(int(v) for v in yh.shape[-2:]):
+        raise SnervArchiveError(
+            f"official LL shape {ll.shape[-2:]} != HFR detail shape {yh.shape[-2:]}"
+        )
+    detail_channels = int(yh.shape[1])
+    if int(ll.shape[1]) not in (1, detail_channels):
+        raise SnervArchiveError(
+            "official MFU pyr_out channels must be 1 or match HFR channels "
+            f"({ll.shape[1]} vs {detail_channels})"
+        )
+    planes: list[np.ndarray] = []
+    h, w = int(ll.shape[-2]), int(ll.shape[-1])
+    for channel in range(detail_channels):
+        ll_channel = 0 if int(ll.shape[1]) == 1 else channel
+        pyramid = WaveletPyramid(
+            coeffs=[
+                ll[0, ll_channel],
+                (
+                    yh[0, channel, 0],
+                    yh[0, channel, 1],
+                    yh[0, channel, 2],
+                ),
+            ],
+            levels=1,
+            wavelet="haar",
+            orig_hw=(2 * h, 2 * w),
+            padded_hw=(2 * h, 2 * w),
+        )
+        plane = idwt2_multilevel(pyramid)
+        if clip_to_uint8_range:
+            plane = np.clip(plane, 0.0, 255.0)
+        planes.append(np.asarray(plane, dtype=np.float32))
+    return planes
+
+
+def _build_official_receiver_self_consistency_reference(
     *,
     mfu: OfficialSnervMfu,
     hfr_heads: OfficialHfrHeads,
@@ -457,15 +548,15 @@ def _build_official_source_forward_replay_reference(
         tub_next_frame=tub_next_frame,
         tub_config=tub_config,
     )
-    output_rows, output_bundle_sha256 = _official_source_forward_output_manifest(
+    output_rows, output_bundle_sha256 = _official_receiver_self_consistency_output_manifest(
         output_tensors
     )
     return {
-        "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA,
+        "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA,
         "backend": "official_numpy_export_vs_receiver_replay",
         "receiver_export_payload_bound": True,
         "receiver_export_self_consistency_verified": True,
-        "source_forward_replay_verified_by_export": True,
+        "source_forward_replay_verified_by_export": False,
         "output_tensors": output_rows,
         "output_bundle_sha256": output_bundle_sha256,
         "score_claim": False,
@@ -475,7 +566,7 @@ def _build_official_source_forward_replay_reference(
     }
 
 
-def _official_source_forward_output_manifest(
+def _official_receiver_self_consistency_output_manifest(
     output_tensors: Mapping[str, np.ndarray],
 ) -> tuple[list[dict[str, Any]], str]:
     output_rows = [
@@ -659,6 +750,11 @@ def decode_snerv_archive_frame_planes_from_decoded(
     clip_to_uint8_range: bool = True,
 ) -> list[np.ndarray]:
     """Decode archived LF planes into receiver frames from an unpacked archive."""
+
+    if is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
+        return decoded.decode_official_mfu_hfr_tub_payload().decode_frame_planes(
+            clip_to_uint8_range=clip_to_uint8_range,
+        )
 
     metadata = decoded.metadata
     levels = _metadata_int(metadata, "levels", minimum=1)
@@ -1004,7 +1100,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
             else None
         ),
     }
-    source_forward_reference = _build_official_source_forward_replay_reference(
+    self_consistency_reference = _build_official_receiver_self_consistency_reference(
         mfu=mfu,
         hfr_heads=hfr_heads,
         low=low,
@@ -1045,15 +1141,15 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "raw_tensor_sha256": _sha256(raw),
         "compressed_bytes": len(compressed),
         "compressed_sha256": _sha256(compressed),
-        "source_forward_replay_reference": source_forward_reference,
-        "source_forward_replay_reference_sha256": _json_sha256(
-            source_forward_reference
+        "receiver_self_consistency_reference": self_consistency_reference,
+        "receiver_self_consistency_reference_sha256": _json_sha256(
+            self_consistency_reference
         ),
         "receiver_export_payload_bound": True,
         "receiver_export_self_consistency_verified": True,
-        "source_forward_replay_bound_by_export": True,
+        "source_forward_replay_bound_by_export": False,
         "receiver_runtime_decode_proven_by_payload": False,
-        "source_forward_replay_authority": True,
+        "source_forward_replay_authority": False,
         **FALSE_AUTHORITY,
     }
     return _pack_subpacket(SNERV_DECODER_MAGIC, header, compressed)
@@ -2026,99 +2122,99 @@ def _validate_official_payload_exec_surfaces(
     payload.build_hfr_heads()
     payload.mfu_inputs()
     payload.tub_inputs()
-    _official_source_forward_reference_from_header(payload.header)
+    _official_receiver_self_consistency_reference_from_header(payload.header)
 
 
-def _official_source_forward_reference_from_header(
+def _official_receiver_self_consistency_reference_from_header(
     header: Mapping[str, Any],
 ) -> dict[str, Any]:
-    reference = header.get("source_forward_replay_reference")
+    reference = header.get("receiver_self_consistency_reference")
     if not isinstance(reference, Mapping):
         raise SnervArchiveError(
-            "official primitive payload missing source-forward replay reference"
+            "official primitive payload missing receiver self-consistency reference"
         )
     reference = dict(reference)
     if (
         reference.get("schema")
-        != DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA
+        != DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA
     ):
         raise SnervArchiveError(
-            "official primitive payload source-forward replay schema mismatch"
+            "official primitive payload receiver self-consistency schema mismatch"
         )
     if reference.get("receiver_export_payload_bound") is not True:
         raise SnervArchiveError(
-            "official primitive payload source-forward replay export flag missing"
+            "official primitive payload receiver self-consistency export flag missing"
         )
     if reference.get("receiver_export_self_consistency_verified") is not True:
         raise SnervArchiveError(
             "official primitive payload receiver export self-consistency proof missing"
         )
-    if reference.get("source_forward_replay_verified_by_export") is not True:
+    if reference.get("source_forward_replay_verified_by_export") is not False:
         raise SnervArchiveError(
-            "official primitive payload source-forward replay export proof missing"
+            "official primitive payload receiver self-consistency must not claim source-forward replay"
         )
     if not _looks_like_sha256(reference.get("output_bundle_sha256")):
         raise SnervArchiveError(
-            "official primitive payload source-forward replay output sha256 missing"
+            "official primitive payload receiver self-consistency output sha256 missing"
         )
     output_rows = reference.get("output_tensors")
     if not isinstance(output_rows, Sequence) or isinstance(output_rows, (str, bytes)):
         raise SnervArchiveError(
-            "official primitive payload source-forward replay tensor manifest missing"
+            "official primitive payload receiver self-consistency tensor manifest missing"
         )
     if not output_rows:
         raise SnervArchiveError(
-            "official primitive payload source-forward replay tensor manifest is empty"
+            "official primitive payload receiver self-consistency tensor manifest is empty"
         )
     for row in output_rows:
         if not isinstance(row, Mapping):
             raise SnervArchiveError(
-                "official primitive payload source-forward replay tensor row invalid"
+                "official primitive payload receiver self-consistency tensor row invalid"
             )
         if not str(row.get("name") or ""):
             raise SnervArchiveError(
-                "official primitive payload source-forward replay tensor row missing name"
+                "official primitive payload receiver self-consistency tensor row missing name"
             )
         if str(row.get("dtype") or "") != "float64_le":
             raise SnervArchiveError(
-                "official primitive payload source-forward replay tensor dtype invalid"
+                "official primitive payload receiver self-consistency tensor dtype invalid"
             )
         if int(row.get("bytes", 0)) <= 0:
             raise SnervArchiveError(
-                "official primitive payload source-forward replay tensor bytes invalid"
+                "official primitive payload receiver self-consistency tensor bytes invalid"
             )
         if not _looks_like_sha256(row.get("sha256")):
             raise SnervArchiveError(
-                "official primitive payload source-forward replay tensor sha256 missing"
+                "official primitive payload receiver self-consistency tensor sha256 missing"
             )
-    expected_reference_sha = header.get("source_forward_replay_reference_sha256")
+    expected_reference_sha = header.get("receiver_self_consistency_reference_sha256")
     if not _looks_like_sha256(expected_reference_sha):
         raise SnervArchiveError(
-            "official primitive payload source-forward replay reference sha256 missing"
+            "official primitive payload receiver self-consistency reference sha256 missing"
         )
     if _json_sha256(reference) != str(expected_reference_sha):
         raise SnervArchiveError(
-            "official primitive payload source-forward replay reference sha256 mismatch"
+            "official primitive payload receiver self-consistency reference sha256 mismatch"
         )
     return reference
 
 
-def _validate_official_source_forward_replay_reference(
+def _validate_official_receiver_self_consistency_reference(
     header: Mapping[str, Any],
     *,
     output_rows: Sequence[Mapping[str, Any]],
     output_bundle_sha256: str,
 ) -> dict[str, Any]:
-    reference = _official_source_forward_reference_from_header(header)
+    reference = _official_receiver_self_consistency_reference_from_header(header)
     if reference.get("output_bundle_sha256") != output_bundle_sha256:
         raise SnervArchiveError(
-            "official primitive source-forward replay output bundle sha256 mismatch"
+            "official primitive receiver self-consistency output bundle sha256 mismatch"
         )
     if _json_sha256(reference.get("output_tensors")) != _json_sha256(
         list(output_rows)
     ):
         raise SnervArchiveError(
-            "official primitive source-forward replay tensor manifest mismatch"
+            "official primitive receiver self-consistency tensor manifest mismatch"
         )
     return reference
 

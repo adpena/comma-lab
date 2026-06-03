@@ -50,6 +50,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
+    inspect_decoder_payload_header,
     pack_snerv_archive,
     unpack_snerv_archive,
 )
@@ -574,6 +575,7 @@ def train_export_snerv_mlx_native(
             packet_path=packet_path,
             packet_bytes=len(selected_packet),
             packet_sha256=_sha256_bytes(selected_packet),
+            selected_packet=selected_packet,
             selected_archive_metadata=selected_archive_metadata,
             package=package,
             receiver_proof=receiver_proof,
@@ -1960,6 +1962,7 @@ def _receiver_bound_official_primitives_export_binding(
     packet_path: Path,
     packet_bytes: int,
     packet_sha256: str,
+    selected_packet: bytes,
     selected_archive_metadata: Mapping[str, Any],
     package: Mapping[str, Any] | None,
     receiver_proof: Mapping[str, Any],
@@ -1967,6 +1970,7 @@ def _receiver_bound_official_primitives_export_binding(
     """Bind the official-primitives request to a real receiver packet, fail-closed."""
 
     blockers = [str(blocker) for blocker in official_binding.get("blockers") or []]
+    selected_authority = _selected_packet_official_payload_authority(selected_packet)
     proof_passed = receiver_proof.get("runtime_consumption_proof_passed") is True
     receiver_satisfied = receiver_proof.get("receiver_contract_satisfied") is True
     archive_path = receiver_proof.get("archive_path")
@@ -1977,7 +1981,10 @@ def _receiver_bound_official_primitives_export_binding(
     out["export_bound_to_receiver_packet"] = True
     out["official_export_bound"] = False
     out["surrogate_receiver_payload_contract_emitted"] = True
-    out["official_receiver_payload_contract_emitted"] = False
+    out["official_receiver_payload_contract_emitted"] = bool(
+        selected_authority["official_decoder_payload_selected"]
+    )
+    out["selected_packet_authority"] = selected_authority
     out["receiver_bound_surrogate_export"] = {
         "schema": "snerv_official_receiver_bound_surrogate_export.v1",
         "kind": "snar1_linear_hf_generation_decoder_not_official_neural_graph",
@@ -1986,7 +1993,7 @@ def _receiver_bound_official_primitives_export_binding(
         "packet_sha256": str(packet_sha256),
         "packet_source_faithful_stack": False,
         "packet_decoder_payload_codec": selected_archive_metadata.get("decoder_payload_codec"),
-        "packet_decoder_payload_schema": out.get("current_snar_decoder_payload_schema"),
+        "packet_decoder_payload_schema": selected_authority.get("decoder_payload_schema"),
         "packet_receiver_decode_verified_by_builder": True,
         "archive_path": str(archive_path) if archive_path else None,
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
@@ -1999,6 +2006,7 @@ def _receiver_bound_official_primitives_export_binding(
     }
     out["blocker_evidence"] = _official_primitives_blocker_evidence(
         blockers,
+        selected_packet_authority=selected_authority,
         surrogate_receiver_runtime_decode_passed=bool(proof_passed),
         surrogate_receiver_contract_satisfied=bool(receiver_satisfied),
     )
@@ -2017,14 +2025,83 @@ def _receiver_bound_official_primitives_export_binding(
     out["receiver_runtime_decode_authority"] = bool(
         out["official_receiver_runtime_decode_contract_proven"]
     )
-    out["selected_packet_official_payload_runtime_decode_authority"] = False
+    out["selected_packet_official_payload_runtime_decode_authority"] = bool(
+        selected_authority["official_payload_runtime_decode_authority"]
+    )
+    out["selected_packet_frame_producing_official_export"] = bool(
+        selected_authority["frame_producing_official_export"]
+    )
     out.update(FALSE_AUTHORITY)
+    return out
+
+
+def _selected_packet_official_payload_authority(packet: bytes) -> dict[str, Any]:
+    """Classify selected receiver bytes; intent metadata is not authority."""
+
+    out: dict[str, Any] = {
+        "schema": "snerv_selected_packet_official_payload_authority.v1",
+        "packet_sha256": _sha256_bytes(packet),
+        "packet_bytes": len(packet),
+        "decoder_payload_schema": None,
+        "decoder_payload_codec": None,
+        "official_decoder_payload_selected": False,
+        "linear_surrogate_decoder_selected": False,
+        "frame_decode_attempted": False,
+        "frame_decode_succeeded": False,
+        "official_payload_runtime_decode_authority": False,
+        "frame_producing_official_export": False,
+        "status": "unclassified",
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    try:
+        decoded = unpack_snerv_archive(packet)
+        header = inspect_decoder_payload_header(decoded.sections["decoder_payload"])
+        schema = str(header.get("schema") or "")
+        out["decoder_payload_schema"] = schema
+        out["decoder_payload_codec"] = str(header.get("codec") or "")
+        out["official_decoder_payload_selected"] = (
+            schema == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA
+        )
+        out["linear_surrogate_decoder_selected"] = not bool(
+            out["official_decoder_payload_selected"]
+        )
+        out["frame_decode_attempted"] = True
+        try:
+            frames = decode_snerv_archive_frames(packet)
+        except Exception as exc:
+            out["frame_decode_error"] = f"{type(exc).__name__}: {exc}"
+            if out["official_decoder_payload_selected"]:
+                out["status"] = "official_payload_selected_not_frame_producing"
+                out["blockers"] = [
+                    "snerv_official_mfu_hfr_tub_selected_payload_not_frame_producing"
+                ]
+            else:
+                out["status"] = "surrogate_packet_frame_decode_failed"
+                out["blockers"] = ["snerv_selected_surrogate_packet_frame_decode_failed"]
+        else:
+            out["frame_decode_succeeded"] = True
+            out["decoded_frame_shape"] = [int(value) for value in frames.shape]
+            if out["official_decoder_payload_selected"]:
+                out["status"] = "frame_producing_official_export"
+                out["official_payload_runtime_decode_authority"] = True
+                out["frame_producing_official_export"] = True
+            else:
+                out["status"] = "surrogate_linear_decoder_frame_producing"
+                out["blockers"] = [
+                    "snerv_selected_packet_uses_linear_surrogate_decoder_payload"
+                ]
+    except Exception as exc:
+        out["status"] = "packet_parse_failed"
+        out["packet_parse_error"] = f"{type(exc).__name__}: {exc}"
+        out["blockers"] = ["snerv_selected_packet_official_payload_authority_parse_failed"]
     return out
 
 
 def _official_primitives_blocker_evidence(
     blockers: Sequence[str],
     *,
+    selected_packet_authority: Mapping[str, Any],
     surrogate_receiver_runtime_decode_passed: bool,
     surrogate_receiver_contract_satisfied: bool,
 ) -> list[dict[str, Any]]:
@@ -2032,8 +2109,8 @@ def _official_primitives_blocker_evidence(
         "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload": {
             "missing_artifact": ("native MLX train/export selected packet with official MFU/HFR/TUB decoder payload"),
             "current_evidence": (
-                "receiver-visible official decoder payload grammar exists, but "
-                "native MLX export still selects the linear HfGenerationDecoder surrogate"
+                "receiver-visible official decoder payload grammar exists; selected "
+                f"packet status is {selected_packet_authority.get('status')}"
             ),
             "closure_test": (
                 "train/export writes decoder_payload schema "
@@ -2071,6 +2148,18 @@ def _official_primitives_blocker_evidence(
                 "missing_artifact": spec.get("missing_artifact", "unspecified"),
                 "current_evidence": spec.get("current_evidence", "unspecified"),
                 "closure_test": spec.get("closure_test", "unspecified"),
+                "selected_packet_status": selected_packet_authority.get("status"),
+                "selected_packet_decoder_payload_schema": selected_packet_authority.get(
+                    "decoder_payload_schema"
+                ),
+                "selected_packet_official_decoder_payload_selected": bool(
+                    selected_packet_authority.get("official_decoder_payload_selected")
+                    is True
+                ),
+                "selected_packet_frame_producing_official_export": bool(
+                    selected_packet_authority.get("frame_producing_official_export")
+                    is True
+                ),
                 "surrogate_receiver_runtime_decode_passed": bool(surrogate_receiver_runtime_decode_passed),
                 "surrogate_receiver_contract_satisfied": bool(surrogate_receiver_contract_satisfied),
                 "official_authority": False,
