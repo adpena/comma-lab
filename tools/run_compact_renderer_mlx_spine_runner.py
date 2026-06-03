@@ -2727,6 +2727,7 @@ def _run_snerv_native_mlx_export_attachment(
     coder_qat_c1a_sigma: float,
     coder_qat_c1a_sample_size: int,
     score_aware_long_training_pr95_faithful_curriculum: bool,
+    score_aware_long_training_pr95_muon_policy: str,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
 
@@ -2834,6 +2835,9 @@ def _run_snerv_native_mlx_export_attachment(
             score_aware_long_training_pr95_faithful_curriculum=bool(
                 score_aware_long_training_pr95_faithful_curriculum
             ),
+            score_aware_long_training_pr95_muon_policy=str(
+                score_aware_long_training_pr95_muon_policy
+            ),
             allow_overwrite=bool(allow_overwrite),
         )
         native_training_export_guard = build_snerv_mlx_native_training_export_guard(
@@ -2936,6 +2940,19 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             "score_aware_long_training_pr95_curriculum_bound": bool(
                 artifact.get("score_aware_long_training_pr95_curriculum_bound")
+            ),
+            "score_aware_long_training_pr95_muon_policy": artifact.get(
+                "score_aware_long_training_pr95_muon_policy"
+            ),
+            "score_aware_long_training_pr95_faithful_optimizer_schedule_bound": bool(
+                artifact.get(
+                    "score_aware_long_training_pr95_faithful_optimizer_schedule_bound"
+                )
+            ),
+            "score_aware_long_training_pact_native_muon_adamw_partition_bound": bool(
+                artifact.get(
+                    "score_aware_long_training_pact_native_muon_adamw_partition_bound"
+                )
             ),
             "score_aware_long_training_muon_adamw_partition_bound": bool(
                 artifact.get("score_aware_long_training_muon_adamw_partition_bound")
@@ -3442,6 +3459,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     coder_qat_c1a_sigma: float = 0.2,
     coder_qat_c1a_sample_size: int = 512,
     snerv_score_aware_long_training_pr95_faithful_curriculum: bool = False,
+    snerv_score_aware_long_training_pr95_muon_policy: str = "faithful_stage8_only",
     run_scorer_loop_qat: bool = False,
     snerv_scorer_loop_max_trials: int = 2,
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
@@ -3776,6 +3794,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_pr95_faithful_curriculum": bool(
             snerv_score_aware_long_training_pr95_faithful_curriculum
         ),
+        "snerv_score_aware_long_training_pr95_muon_policy": str(
+            snerv_score_aware_long_training_pr95_muon_policy
+        ),
     }
     native_long_training_requested = bool(
         run_native_mlx_export and int(snerv_score_aware_long_training_epochs) > 0
@@ -3859,6 +3880,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             coder_qat_c1a_sample_size=int(coder_qat_c1a_sample_size),
             score_aware_long_training_pr95_faithful_curriculum=bool(
                 snerv_score_aware_long_training_pr95_faithful_curriculum
+            ),
+            score_aware_long_training_pr95_muon_policy=str(
+                snerv_score_aware_long_training_pr95_muon_policy
             ),
         )
         snerv_mlx_native_file_backed_evidence = (
@@ -4459,6 +4483,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_pr95_faithful_curriculum": bool(
             snerv_score_aware_long_training_pr95_faithful_curriculum
         ),
+        "snerv_score_aware_long_training_pr95_muon_policy": str(
+            snerv_score_aware_long_training_pr95_muon_policy
+        ),
     }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
@@ -4534,6 +4561,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         coder_qat_c1a_sample_size=int(coder_qat_c1a_sample_size),
         score_aware_long_training_pr95_faithful_curriculum=bool(
             snerv_score_aware_long_training_pr95_faithful_curriculum
+        ),
+        score_aware_long_training_pr95_muon_policy=str(
+            snerv_score_aware_long_training_pr95_muon_policy
         ),
     )
     snerv_mlx_native_file_backed_evidence = (
@@ -6723,6 +6753,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
     launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
     launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
+    launch_hi_nerv_latent_codec = str(
+        candidate.get("hi_nerv_latent_codec", hi_nerv_latent_codec)
+    )
     launch_use_hierarchical_feature_grid = bool(
         candidate.get("use_hierarchical_feature_grid", not candidate_supplied)
     )
@@ -6753,9 +6786,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         convnext_mlp_ratio=launch_convnext_mlp_ratio,
         convnext_kernel_size=launch_convnext_kernel_size,
         decoder_codec=launch_decoder_codec,
-        hi_nerv_latent_codec=str(
-            candidate.get("hi_nerv_latent_codec", hi_nerv_latent_codec)
-        ),
+        hi_nerv_latent_codec=launch_hi_nerv_latent_codec,
     )
     (
         decoder_weight_waterfill_plan,
@@ -6821,6 +6852,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
                     "launch_use_hierarchical_feature_grid": (
                         launch_use_hierarchical_feature_grid
                     ),
@@ -6973,6 +7005,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
                     "launch_use_hierarchical_feature_grid": (
                         launch_use_hierarchical_feature_grid
                     ),
@@ -7109,6 +7142,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
                     "launch_use_hierarchical_feature_grid": (
                         launch_use_hierarchical_feature_grid
                     ),
@@ -7163,7 +7197,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mid_injection_block_index=launch_mid_injection_block_index,
             fine_injection_block_index=launch_fine_injection_block_index,
             decoder_codec=launch_decoder_codec,
-            hi_nerv_latent_codec=str(hi_nerv_latent_codec),
+            hi_nerv_latent_codec=launch_hi_nerv_latent_codec,
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
             pose_distillation_weight=effective_pose_distillation_weight,
@@ -7249,6 +7283,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
                     "launch_use_hierarchical_feature_grid": (
                         launch_use_hierarchical_feature_grid
                     ),
@@ -7523,6 +7558,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "launch_embed_dim": launch_embed_dim,
                 "launch_decoder_channel": launch_decoder_channel,
                 "launch_decoder_codec": launch_decoder_codec,
+                "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
                 "launch_use_hierarchical_feature_grid": (
                     launch_use_hierarchical_feature_grid
                 ),
@@ -7589,6 +7625,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "allow_unscored_research_smoke": bool(allow_unscored_research_smoke),
                 "config_gate": config_gate,
                 "decoder_codec": str(launch_decoder_codec),
+                "hi_nerv_latent_codec": str(launch_hi_nerv_latent_codec),
                 "requested_optimizer_kind": str(optimizer_kind),
                 "optimizer_kind": str(
                     optimizer_policy.get("optimizer_kind") or optimizer_kind
@@ -9055,6 +9092,101 @@ def _segnet_boundary_recon_pixel_weight(
     return weight, metadata
 
 
+class _LazySegNetBoundaryReconPixelWeight:
+    """Provider-backed P18 recon weights for full-video compact training.
+
+    The dense equivalent is ``(N,2,384,512,1)``: frame 0 is uniform; frame 1 is
+    exp(-top2-margin/tau) from the real SegNet teacher logits. Keeping that as a
+    full float32 tensor adds avoidable full-video memory pressure. This provider
+    computes the active batch slice from the already-bound teacher cache instead.
+    """
+
+    def __init__(self, scorer_teacher: Any, *, tau: float) -> None:
+        self.scorer_teacher = scorer_teacher
+        self.tau = float(tau)
+
+    def recon_pixel_weight_for_batch(
+        self,
+        *,
+        idx: Any,
+        frame_shape: Any,
+        frame_index: int,
+    ) -> Any:
+        import mlx.core as mx
+
+        b, h, w, _c = frame_shape
+        if int(frame_index) == 0:
+            return mx.ones((int(b), int(h), int(w), 1), dtype=mx.float32)
+        logits = self.scorer_teacher.teacher_logits_for_indices(idx)
+        sorted_logits = mx.sort(logits, axis=-1)
+        margin = sorted_logits[..., -1] - sorted_logits[..., -2]
+        saliency = mx.exp(-mx.maximum(margin, 0.0) / self.tau)
+        return saliency.astype(mx.float32)[..., None]
+
+
+def _lazy_segnet_boundary_recon_pixel_weight(
+    scorer_teacher: Any,
+    *,
+    tau: float,
+    normalize: str = "mean",
+) -> tuple[Any, dict[str, Any]]:
+    import numpy as np
+
+    if tau <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "recon pixel weight tau must be > 0"
+        )
+    if normalize not in ("mean", "none"):
+        raise CompactRendererMlxSpineRunnerError(
+            "recon_pixel_weight_normalize must be 'mean' or 'none'"
+        )
+    logits = np.asarray(scorer_teacher.teacher_logits_thwk, dtype=np.float32)
+    if logits.ndim != 4 or int(logits.shape[-1]) < 2:
+        raise CompactRendererMlxSpineRunnerError(
+            "SegNet boundary recon weight requires teacher logits shaped (T,H,W,K>=2)"
+        )
+    provider = _LazySegNetBoundaryReconPixelWeight(scorer_teacher, tau=float(tau))
+    # Stats are intentionally sampled from the same real teacher logits used by
+    # the provider. The provider itself remains the training authority.
+    sorted_logits = np.sort(logits, axis=-1)
+    margin = sorted_logits[..., -1] - sorted_logits[..., -2]
+    saliency = np.exp(-np.maximum(margin, 0.0) / float(tau)).astype(np.float32)
+    stats_weight = np.stack(
+        [np.ones_like(saliency, dtype=np.float32), saliency],
+        axis=1,
+    )[..., None]
+    metadata = {
+        "schema": "compact_recon_pixel_weight.v1",
+        "enabled": True,
+        "source_kind": "auto_segnet_top2_boundary_margin_lazy_provider",
+        "provider_kind": "lazy_segnet_top2_boundary_margin",
+        "materialization": "batch_slices_only_no_full_video_dense_weight",
+        "dense_equivalent_shape": [
+            int(logits.shape[0]),
+            2,
+            int(logits.shape[1]),
+            int(logits.shape[2]),
+            1,
+        ],
+        "tau": float(tau),
+        "normalize": normalize,
+        "scorer_terms": {
+            "p18_segnet": (
+                "per_pair_last_frame_top2_margin_exp_boundary_saliency_from_real_teacher"
+            ),
+            "p19_posenet": "not_included_use_recon_pixel_weight_path_for_joint_map",
+        },
+        "frame_policy": {
+            "frame0": "uniform_reconstruction_pose_support_not_seen_by_segnet",
+            "frame1": "per_pair_segnet_top2_boundary_saliency",
+            "reason": "upstream SegNet scores x[:,-1,...] only",
+        },
+        "stats": _weight_stats(stats_weight),
+        "authority": "false_macos_mlx_research_signal",
+    }
+    return provider, metadata
+
+
 def _disabled_recon_pixel_weight_metadata() -> dict[str, Any]:
     return {
         "schema": "compact_recon_pixel_weight.v1",
@@ -10490,7 +10622,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "--segnet-distillation-weight > 0 so real SegNet teacher "
                 "logits exist"
             )
-        recon_pixel_weight, recon_metadata = _segnet_boundary_recon_pixel_weight(
+        recon_pixel_weight, recon_metadata = _lazy_segnet_boundary_recon_pixel_weight(
             scorer_teacher,
             tau=float(recon_pixel_weight_tau),
             normalize=recon_pixel_weight_normalize,
@@ -13526,6 +13658,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--snerv-score-aware-long-training-pr95-muon-policy",
+        choices=("faithful_stage8_only", "every_stage"),
+        default="faithful_stage8_only",
+        help=(
+            "Muon activation policy inside the PR95 curriculum. "
+            "faithful_stage8_only preserves PR95 source parity; every_stage "
+            "is the explicit contest-specific PR95-but-harder control."
+        ),
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-qat",
         action="store_true",
         help=(
@@ -14211,6 +14353,9 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
             snerv_score_aware_long_training_pr95_faithful_curriculum=(
                 args.snerv_score_aware_long_training_pr95_faithful_curriculum
+            ),
+            snerv_score_aware_long_training_pr95_muon_policy=(
+                args.snerv_score_aware_long_training_pr95_muon_policy
             ),
             run_scorer_loop_qat=bool(
                 args.coder_aware_qat or args.snerv_scorer_loop_qat

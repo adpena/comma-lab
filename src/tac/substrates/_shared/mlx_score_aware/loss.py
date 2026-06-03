@@ -200,8 +200,41 @@ def _prepare_recon_pixel_weight(
         MlxScoreAwareHarnessError,
     )
 
-    _b, h, w, _c = frame_shape
+    b, h, w, _c = frame_shape
     w_arr = bundle.recon_pixel_weight
+    provider = getattr(w_arr, "recon_pixel_weight_for_batch", None)
+    if callable(provider):
+        if idx is None or frame_index not in (0, 1):
+            raise MlxScoreAwareHarnessError(
+                "recon_pixel_weight provider requires pair indices and "
+                "frame_index 0 or 1"
+            )
+        w_arr = mx.array(
+            provider(idx=idx, frame_shape=frame_shape, frame_index=int(frame_index))
+        ).astype(mx.float32)
+        if w_arr.ndim != 4:
+            raise MlxScoreAwareHarnessError(
+                "recon_pixel_weight provider must return (B,H,W,C); got "
+                f"ndim={w_arr.ndim} shape={tuple(w_arr.shape)}"
+            )
+        lb, wh, ww, wc = w_arr.shape
+        if lb not in (1, b) or (wh, ww) != (h, w) or wc not in (1, 3):
+            raise MlxScoreAwareHarnessError(
+                "recon_pixel_weight provider must return "
+                f"(1|B,{h},{w},1|3); got {tuple(w_arr.shape)} for B={b}"
+            )
+        if float(mx.min(w_arr)) < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "recon_pixel_weight must be non-negative (it is a per-pixel weight)."
+            )
+        if not bool(mx.all(mx.isfinite(w_arr))):
+            raise MlxScoreAwareHarnessError("recon_pixel_weight must be finite.")
+        if float(mx.mean(w_arr)) <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "recon_pixel_weight must have positive total mass; all-zero maps "
+                "silently disable reconstruction instead of re-weighting it."
+            )
+        return w_arr
     # Coerce numpy / list -> MLX float32 (MLX arrays pass through as float32).
     w_arr = mx.array(w_arr).astype(mx.float32)
     nd = w_arr.ndim

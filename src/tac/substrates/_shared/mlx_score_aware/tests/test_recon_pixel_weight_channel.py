@@ -289,6 +289,31 @@ def test_prepare_weight_indexes_per_pair_shared_frame_maps() -> None:
 
 
 @mlx_only
+def test_prepare_weight_accepts_lazy_provider_batch_slices() -> None:
+    import mlx.core as mx
+
+    class Provider:
+        def recon_pixel_weight_for_batch(self, *, idx, frame_shape, frame_index):
+            b, h, w, _c = frame_shape
+            scale = 3.0 if frame_index == 1 else 1.0
+            values = mx.reshape(idx.astype(mx.float32) + scale, (int(b), 1, 1, 1))
+            return mx.broadcast_to(values, (int(b), int(h), int(w), 1))
+
+    bundle = _tiny_bundle(recon_pixel_weight=Provider(), num_pairs=4)
+    prepared = _prepare_recon_pixel_weight(
+        bundle,
+        (2, 384, 512, 3),
+        idx=mx.array([2, 0], dtype=mx.int32),
+        frame_index=1,
+    )
+    mx.eval(prepared)
+
+    assert prepared.shape == (2, 384, 512, 1)
+    assert float(prepared[0, 0, 0, 0].item()) == pytest.approx(5.0)
+    assert float(prepared[1, 0, 0, 0].item()) == pytest.approx(3.0)
+
+
+@mlx_only
 def test_prepare_weight_rejects_spatial_mismatch() -> None:
     import mlx.core as mx
 
