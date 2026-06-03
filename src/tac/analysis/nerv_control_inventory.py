@@ -1925,8 +1925,13 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
     out = []
     for feature, gap, markers in rows:
         missing_markers = _missing_official_feature_markers(root, family, markers)
+        analogue_only = _official_feature_gap_requires_source_forward_replay(gap)
         local_binding_status = (
-            "implemented_or_receiver_proven"
+            (
+                "receiver_safe_analogue_only"
+                if analogue_only
+                else "implemented_or_receiver_proven"
+            )
             if markers and not missing_markers
             else "missing_or_partial"
         )
@@ -1935,6 +1940,8 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
                 "feature_id": feature,
                 "gap_id": f"{family}_{gap}",
                 "local_binding_status": local_binding_status,
+                "analogue_only": bool(analogue_only and markers and not missing_markers),
+                "source_forward_replay_required": bool(analogue_only),
                 "required_markers": tuple(markers),
                 "missing_markers": tuple(missing_markers),
                 "score_interpretation": (
@@ -1946,6 +1953,18 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
             }
         )
     return out
+
+
+def _official_feature_gap_requires_source_forward_replay(gap: str) -> bool:
+    gap_text = str(gap)
+    return any(
+        token in gap_text
+        for token in (
+            "source_forward_replay_missing",
+            "receiver_not_source_faithful",
+            "not_official_feature_grid",
+        )
+    )
 
 
 def _missing_official_feature_markers(

@@ -252,27 +252,28 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "snerv_scorer_loop_decoder_qat_full_video_missing",
         "snerv_missing_measured_fc_dim_modelsize_ladder",
         "snerv_missing_official_stride_stack_parity",
+        "snerv_partial_native_dwt_present_hfr_receiver_not_source_faithful",
+        "snerv_official_mfu_source_forward_replay_missing",
+        "snerv_official_hfr_source_forward_replay_missing",
+        "snerv_official_snerv_t_full_tub_source_forward_replay_missing",
         "snerv_mlx_native_train_export_surfaces_unproven",
         "snerv_missing_quant_payload_receiver_replay",
     }.issubset(snerv_blocking_gaps)
-    assert "snerv_official_mfu_source_forward_replay_missing" not in snerv_blocking_gaps
-    assert "snerv_official_hfr_source_forward_replay_missing" not in snerv_blocking_gaps
-    assert (
-        "snerv_official_snerv_t_full_tub_source_forward_replay_missing"
-        not in snerv_blocking_gaps
-    )
     snerv_features = {
         row["feature_id"]: row for row in stack_rows["snerv"]["official_feature_rows"]
     }
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "local_binding_status"
-    ] == "implemented_or_receiver_proven"
+    ] == "receiver_safe_analogue_only"
     assert snerv_features["official_high_frequency_restoration_heads"][
         "local_binding_status"
-    ] == "implemented_or_receiver_proven"
+    ] == "receiver_safe_analogue_only"
     assert snerv_features["official_temporal_extension_snerv_t"][
         "local_binding_status"
-    ] == "implemented_or_receiver_proven"
+    ] == "receiver_safe_analogue_only"
+    assert snerv_features["official_multi_resolution_fusion_blocks"][
+        "analogue_only"
+    ] is True
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "missing_markers"
     ] == ()
@@ -308,6 +309,32 @@ def test_nerv_control_inventory_can_focus_on_snerv_plus_cross_stack_only() -> No
     assert report["measured_archive_size_ladders"] == {}
     assert report["implementation_sweep"]["status"] == "repo_root_not_supplied"
     assert report["control_wiring_audit"]["status"] == "repo_root_not_supplied"
+
+
+def test_snerv_official_numeric_primitives_do_not_clear_source_forward_replay_gaps() -> None:
+    report = build_nerv_control_inventory(repo_root=REPO, focus_families=("snerv",))
+    stack_rows = {
+        row["family"]: row for row in report["implementation_sweep"]["stack_rows"]
+    }
+    snerv = stack_rows["snerv"]
+    blocking_gaps = set(snerv["blocking_gaps"])
+
+    assert {
+        "snerv_official_mfu_source_forward_replay_missing",
+        "snerv_official_hfr_source_forward_replay_missing",
+        "snerv_official_snerv_t_full_tub_source_forward_replay_missing",
+    }.issubset(blocking_gaps)
+    feature_rows = {row["feature_id"]: row for row in snerv["official_feature_rows"]}
+    for feature_id in (
+        "official_multi_resolution_fusion_blocks",
+        "official_high_frequency_restoration_heads",
+        "official_temporal_extension_snerv_t",
+    ):
+        row = feature_rows[feature_id]
+        assert row["missing_markers"] == ()
+        assert row["local_binding_status"] == "receiver_safe_analogue_only"
+        assert row["analogue_only"] is True
+        assert row["source_forward_replay_required"] is True
 
 
 def test_nerv_control_inventory_accepts_measured_hinerv_archive_size_ladder() -> None:
