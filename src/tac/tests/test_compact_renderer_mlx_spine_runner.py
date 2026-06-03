@@ -852,6 +852,9 @@ def test_compact_family_startup_marker_records_mlx_custody(
         execute_family="hi_nerv",
         planner_row_id="hi_nerv::candidate::adamw",
         modelsize_candidate_id="candidate",
+        target_modelsize_mparams=[],
+        hinerv_target_modelsize_mparams=[],
+        snerv_official_modelsize_mparams=[],
         auto_joint_recon_pixel_weight=True,
         distillation_device="mps",
         requested_distillation_device="gpu",
@@ -885,6 +888,11 @@ def test_compact_family_startup_marker_records_mlx_custody(
         weight_path
     )
     assert payload["auto_joint_recon_pixel_weight_error"] is None
+    assert payload["modelsize_target_binding"]["schema"] == (
+        "compact_startup_modelsize_target_binding.v1"
+    )
+    assert payload["modelsize_target_binding"]["inverse_target_requested"] is False
+    assert payload["modelsize_target_binding"]["selected_from_inverse_target"] is False
     assert payload["campaign_identity"]["auto_joint_recon_pixel_weight_path"] == (
         weight_path.as_posix()
     )
@@ -913,6 +921,61 @@ def test_compact_family_startup_marker_records_mlx_custody(
         )
         is True
     )
+
+
+def test_compact_family_startup_marker_records_inverse_modelsize_target(
+    tmp_path: Path,
+) -> None:
+    args = SimpleNamespace(
+        execute_family="hi_nerv",
+        planner_row_id="hi_nerv::targeted::adamw",
+        modelsize_candidate_id="auto",
+        target_modelsize_mparams=[0.178],
+        hinerv_target_modelsize_mparams=[],
+        snerv_official_modelsize_mparams=[],
+        auto_joint_recon_pixel_weight=False,
+        distillation_device="gpu",
+        requested_distillation_device="gpu",
+        mlx_prefilter_scorer_device="gpu",
+        mlx_prefilter_scorer_batch_pairs=4,
+        mlx_prefilter_progress_every=50,
+        num_pairs=600,
+        output_dir=tmp_path,
+        repo_root=Path("/repo"),
+    )
+
+    path = runner_mod._write_compact_family_startup_marker(
+        output_dir=tmp_path,
+        args=args,
+        source_video_path=Path("/Volumes/VertigoDataTier/pact/source/0.mkv"),
+        hard_byte_ceilings=(178_000,),
+        modelsize_candidate={
+            "candidate_id": "hinerv_np600_target",
+            "capacity_source": "local_hinerv_target_modelsize",
+            "target_modelsize_mparams": 0.178,
+            "modelsize_control_contract": {
+                "control_semantics": "local_receiver_visible_grid_search_nearest_target",
+                "shared_target_modelsize_mparams_consumed_as": (
+                    "nearest_local_param_count_target"
+                ),
+                "modelsize_mparams_is_official_upstream_flag": False,
+                "modelsize_mparams_caps_archive_zip_bytes": False,
+                "archive_bytes_authority_required": True,
+            },
+        },
+    )
+
+    assert path is not None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    binding = payload["modelsize_target_binding"]
+    assert binding["inverse_target_requested"] is True
+    assert binding["selected_from_inverse_target"] is True
+    assert binding["effective_requested_targets_for_family"] == [0.178]
+    assert binding["selected_capacity_source"] == "local_hinerv_target_modelsize"
+    assert binding["control_semantics"] == (
+        "local_receiver_visible_grid_search_nearest_target"
+    )
+    assert binding["blockers"] == []
 
 
 def test_compact_family_interrupted_report_preserves_false_authority_custody(

@@ -12397,6 +12397,11 @@ def _write_compact_family_startup_marker(
         source_video_path=source_video_path,
         hard_byte_ceilings=hard_byte_ceilings,
     )
+    modelsize_target_binding = _startup_modelsize_target_binding(
+        args=args,
+        family=family,
+        modelsize_candidate=modelsize_candidate,
+    )
     payload = {
         "schema": "compact_carrier_startup_marker.v1",
         "created_utc": datetime.now(UTC).isoformat(),
@@ -12419,6 +12424,7 @@ def _write_compact_family_startup_marker(
         ).strip()
         or None,
         "modelsize_candidate": _jsonable_lock_value(dict(modelsize_candidate or {})),
+        "modelsize_target_binding": modelsize_target_binding,
         "output_dir": output_dir.as_posix(),
         "source_video_path": source_video_path.as_posix(),
         "hard_byte_ceilings": list(hard_byte_ceilings),
@@ -12454,6 +12460,97 @@ def _write_compact_family_startup_marker(
     path = output_dir / COMPACT_FAMILY_STARTUP_MARKER_FILENAME
     _write_json(path, payload)
     return path
+
+
+def _startup_modelsize_target_binding(
+    *,
+    args: argparse.Namespace,
+    family: str,
+    modelsize_candidate: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Record whether launch selection consumed inverse modelsize controls."""
+
+    shared_targets = _float_tuple_from_arg(getattr(args, "target_modelsize_mparams", None))
+    hinerv_targets = _float_tuple_from_arg(
+        getattr(args, "hinerv_target_modelsize_mparams", None)
+    )
+    snerv_targets = _float_tuple_from_arg(
+        getattr(args, "snerv_official_modelsize_mparams", None)
+    )
+    candidate = dict(modelsize_candidate or {})
+    contract = candidate.get("modelsize_control_contract")
+    if not isinstance(contract, Mapping):
+        contract = {}
+    if family == "hi_nerv":
+        requested_targets = _dedupe_float_tuple((*shared_targets, *hinerv_targets))
+        expected_capacity_source = "local_hinerv_target_modelsize"
+    elif family == "snerv":
+        requested_targets = _dedupe_float_tuple((*shared_targets, *snerv_targets))
+        expected_capacity_source = "official_snerv_modelsize"
+    else:
+        requested_targets = ()
+        expected_capacity_source = None
+    selected_capacity_source = str(candidate.get("capacity_source") or "")
+    target_active = bool(requested_targets)
+    selected_from_inverse_target = bool(
+        target_active and selected_capacity_source == expected_capacity_source
+    )
+    blockers: list[str] = []
+    if target_active and not selected_from_inverse_target:
+        blockers.append("modelsize_inverse_target_requested_but_not_selected")
+    if not target_active and str(getattr(args, "modelsize_candidate_id", "") or "").strip().lower() == "auto":
+        blockers.append("modelsize_auto_launch_without_inverse_target")
+    return {
+        "schema": "compact_startup_modelsize_target_binding.v1",
+        "family": str(family),
+        "modelsize_candidate_id": str(
+            getattr(args, "modelsize_candidate_id", "") or ""
+        ).strip()
+        or None,
+        "shared_target_modelsize_mparams": list(shared_targets),
+        "hinerv_target_modelsize_mparams": list(hinerv_targets),
+        "snerv_official_modelsize_mparams": list(snerv_targets),
+        "effective_requested_targets_for_family": list(requested_targets),
+        "inverse_target_requested": target_active,
+        "selected_from_inverse_target": selected_from_inverse_target,
+        "selected_capacity_source": selected_capacity_source or None,
+        "expected_capacity_source_for_inverse_target": expected_capacity_source,
+        "control_semantics": contract.get("control_semantics"),
+        "shared_target_modelsize_mparams_consumed_as": contract.get(
+            "shared_target_modelsize_mparams_consumed_as"
+        ),
+        "modelsize_mparams_is_official_upstream_flag": contract.get(
+            "modelsize_mparams_is_official_upstream_flag"
+        ),
+        "modelsize_mparams_caps_archive_zip_bytes": contract.get(
+            "modelsize_mparams_caps_archive_zip_bytes"
+        ),
+        "archive_bytes_authority_required": contract.get(
+            "archive_bytes_authority_required"
+        ),
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _float_tuple_from_arg(value: Any) -> tuple[float, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, (str, bytes)):
+        values = [value]
+    else:
+        try:
+            values = list(value)
+        except TypeError:
+            values = [value]
+    out: list[float] = []
+    for item in values:
+        if item is None or str(item).strip() == "":
+            continue
+        out.append(float(item))
+    return tuple(out)
 
 
 def _compact_family_interruption_blockers(family: str) -> list[str]:
