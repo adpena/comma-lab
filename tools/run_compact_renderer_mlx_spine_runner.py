@@ -8787,15 +8787,29 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
         "hinerv_pr95_pr101_latent_delta_brotli_codec_missing",
     ]
     official_hinerv_control = not official_hinerv_blockers
-    source_parity_blockers = ["hinerv_official_source_parity_proof_missing"]
+    source_parity_binding = _hi_nerv_source_parity_binding()
+    source_parity_blockers = list(source_parity_binding.get("required_blockers") or [])
+    source_parity_attached = bool(
+        source_parity_binding.get("contract_attached")
+        and not source_parity_blockers
+    )
     source_faithful = False
-    if official_hinerv_control and pr95_better_blockers:
+    if official_hinerv_control and pr95_better_blockers and source_parity_attached:
+        classification = (
+            "official_hinerv_control_candidate_source_parity_bound_"
+            "pr95_better_gaps"
+        )
+    elif official_hinerv_control and pr95_better_blockers:
         classification = (
             "official_hinerv_control_candidate_source_parity_missing_"
             "pr95_better_gaps"
         )
     elif official_hinerv_control:
-        classification = "official_hinerv_control_candidate_source_parity_missing"
+        classification = (
+            "official_hinerv_control_candidate_source_parity_bound"
+            if source_parity_attached
+            else "official_hinerv_control_candidate_source_parity_missing"
+        )
     else:
         classification = "local_hiv1_adaptation_not_official_hinerv"
     return {
@@ -8804,7 +8818,8 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
         "source_faithful_official_hinerv": source_faithful,
         "official_hinerv_control": official_hinerv_control,
         "official_source_parity_proof_required": True,
-        "official_source_parity_proof_attached": False,
+        "official_source_parity_proof_attached": source_parity_attached,
+        "source_parity_binding": source_parity_binding,
         "local_hiv1_adaptation": not source_faithful,
         "use_hierarchical_feature_grid": hierarchical_grid,
         "use_convnext_blocks": convnext_blocks,
@@ -8826,6 +8841,49 @@ def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict
             "authority, and local HiNeRV/MLX rows remain false-authority until "
             "byte-closed archive/runtime plus contest CPU/CUDA replay."
         ),
+        "score_claim": False,
+        "frontier_score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _hi_nerv_source_parity_binding() -> dict[str, Any]:
+    """Return the long-training source-parity binding for HiNeRV rows."""
+
+    contract = build_nerv_source_parity_contract(
+        repo_root=REPO_ROOT,
+        families=("hi_nerv",),
+    )
+    family_rows = [
+        row
+        for row in contract.get("family_rows") or ()
+        if isinstance(row, Mapping) and row.get("family") == "hi_nerv"
+    ]
+    family_row = family_rows[0] if family_rows else {}
+    blockers = [
+        f"source_parity:{blocker}"
+        for blocker in (family_row.get("blockers") if isinstance(family_row, Mapping) else ())
+    ]
+    feature_statuses = {
+        str(row.get("feature_id")): str(row.get("status"))
+        for row in contract.get("feature_rows") or ()
+        if isinstance(row, Mapping) and row.get("family") == "hi_nerv"
+    }
+    return {
+        "schema": "hi_nerv_source_parity_binding.v1",
+        "contract_schema": contract.get("schema"),
+        "contract_authority": contract.get("authority"),
+        "contract_attached": contract.get("schema") == "nerv_source_parity_contract.v1",
+        "required_for_long_training_ready": bool(
+            contract.get("required_for_long_training_ready")
+        ),
+        "required_blockers": blockers,
+        "nonblocking_gaps": [
+            f"source_parity:{gap}" for gap in contract.get("nonblocking_gaps") or ()
+        ],
+        "feature_statuses": feature_statuses,
         "score_claim": False,
         "frontier_score_claim": False,
         "promotion_eligible": False,

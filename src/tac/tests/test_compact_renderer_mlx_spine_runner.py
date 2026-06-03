@@ -917,19 +917,20 @@ def test_hi_nerv_source_faithfulness_separates_official_controls_from_pr95_gaps(
     )
 
     assert report["classification"] == (
-        "official_hinerv_control_candidate_source_parity_missing_"
+        "official_hinerv_control_candidate_source_parity_bound_"
         "pr95_better_gaps"
     )
     assert report["official_hinerv_control"] is True
     assert report["source_faithful_official_hinerv"] is False
     assert report["official_source_parity_proof_required"] is True
-    assert report["official_source_parity_proof_attached"] is False
+    assert report["official_source_parity_proof_attached"] is True
     assert report["local_hiv1_adaptation"] is True
     assert report["official_hinerv_blockers"] == []
-    assert report["source_parity_blockers"] == [
-        "hinerv_official_source_parity_proof_missing"
-    ]
-    assert "hinerv_official_source_parity_proof_missing" in report["blockers"]
+    assert report["source_parity_blockers"] == []
+    assert report["source_parity_binding"]["required_for_long_training_ready"] is True
+    assert report["source_parity_binding"]["feature_statuses"][
+        "hi_nerv_official_patch_index_path"
+    ] == "implemented_or_bound"
     assert "hinerv_pr95_pixelshuffle_bilinear_skip_refine_path_missing" in report[
         "pr95_better_blockers"
     ]
