@@ -24,6 +24,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--output-json", required=True, type=Path)
     parser.add_argument("--output-md", type=Path)
     parser.add_argument(
+        "--hinerv-official-source-audit",
+        type=Path,
+        help="Optional hinerv_official_source_parity_audit.v1 JSON to embed.",
+    )
+    parser.add_argument(
         "--snerv-official-source-audit",
         type=Path,
         help="Optional snerv_official_source_parity_audit.v1 JSON to embed.",
@@ -40,6 +45,11 @@ def _parse_args() -> argparse.Namespace:
 def main() -> int:
     args = _parse_args()
     families = tuple(args.family or ("hi_nerv", "snerv"))
+    hinerv_official_source_audit = (
+        None
+        if args.hinerv_official_source_audit is None
+        else json.loads(args.hinerv_official_source_audit.read_text(encoding="utf-8"))
+    )
     snerv_official_source_audit = (
         None
         if args.snerv_official_source_audit is None
@@ -48,6 +58,7 @@ def main() -> int:
     report = build_nerv_source_parity_contract(
         repo_root=args.repo_root,
         families=families,
+        hinerv_official_source_audit=hinerv_official_source_audit,
         snerv_official_source_audit=snerv_official_source_audit,
     )
     args.output_json.parent.mkdir(parents=True, exist_ok=True)

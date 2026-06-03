@@ -27,6 +27,10 @@ OFFICIAL_SNERV_MFU_SOURCE: Final[str] = (
     "SNeRV/model/snerv.py lines 68-71 and 104-109 at "
     "0844a08f9591eea9625f8b961ed91d08030e06d1"
 )
+OFFICIAL_SNERV_T_MFU_SOURCE: Final[str] = (
+    "SNeRV/model/snerv_t.py lines 109-112 and 161-165 at "
+    "0844a08f9591eea9625f8b961ed91d08030e06d1"
+)
 OFFICIAL_SNERV_RB_SOURCE: Final[str] = (
     "SNeRV/model/residual_block.py ResidualBlocksWithInputConv"
 )
@@ -146,7 +150,13 @@ class ConvTranspose2dShapeSpec:
                 )
 
     @classmethod
-    def official(cls, *, channels: int, stride: int) -> ConvTranspose2dShapeSpec:
+    def official(
+        cls,
+        *,
+        channels: int,
+        stride: int,
+        source: str = OFFICIAL_SNERV_MFU_SOURCE,
+    ) -> ConvTranspose2dShapeSpec:
         """Build the official MFU upsampler: kernel=stride, padding=0."""
 
         return cls(
@@ -157,6 +167,7 @@ class ConvTranspose2dShapeSpec:
             padding=(0, 0),
             output_padding=(0, 0),
             dilation=(1, 1),
+            source=str(source),
         )
 
     def forward_spec(self, x: TensorSpec, *, name: str) -> TensorSpec:
@@ -552,6 +563,7 @@ class OfficialSnervMfuSpec:
     mid_stride: int
     high_stride: int
     num_blocks: int
+    source: str = OFFICIAL_SNERV_MFU_SOURCE
 
     def __post_init__(self) -> None:
         for name in ("low_channels", "mid_channels", "high_channels", "mid_stride", "high_stride"):
@@ -560,8 +572,11 @@ class OfficialSnervMfuSpec:
             if value <= 0:
                 raise OfficialSnervMfuError(f"{name} must be positive")
         object.__setattr__(self, "num_blocks", int(self.num_blocks))
+        object.__setattr__(self, "source", str(self.source))
         if self.num_blocks < 0:
             raise OfficialSnervMfuError("num_blocks must be non-negative")
+        if not self.source:
+            raise OfficialSnervMfuError("source must be non-empty")
 
     @classmethod
     def from_official_lists(
@@ -586,11 +601,48 @@ class OfficialSnervMfuSpec:
             num_blocks=int(num_blocks),
         )
 
+    @classmethod
+    def from_official_temporal_lists(
+        cls,
+        *,
+        ngf_list: Iterable[int],
+        dec_strds: Iterable[int],
+        num_blocks: int,
+    ) -> OfficialSnervMfuSpec:
+        """Build the official SNeRV_T MFU spec.
+
+        The temporal source does not use ``args.dec_strds[-2:]`` for MFU.
+        ``model/snerv_t.py`` hardcodes both MFU transposed-convolution strides
+        to ``2`` at construction, so the portable control must preserve that
+        distinction from the non-temporal SNeRV graph.
+        """
+
+        ngf = tuple(int(v) for v in ngf_list)
+        strds = tuple(int(v) for v in dec_strds)
+        if len(ngf) < 3:
+            raise OfficialSnervMfuError(
+                "official temporal MFU needs at least three decoder channel stages"
+            )
+        if len(strds) < 2:
+            raise OfficialSnervMfuError(
+                "official temporal MFU still requires decoder stride context"
+            )
+        return cls(
+            low_channels=ngf[-3],
+            mid_channels=ngf[-2],
+            high_channels=ngf[-1],
+            mid_stride=2,
+            high_stride=2,
+            num_blocks=int(num_blocks),
+            source=OFFICIAL_SNERV_T_MFU_SOURCE,
+        )
+
     @property
     def upsample_mid(self) -> ConvTranspose2dShapeSpec:
         return ConvTranspose2dShapeSpec.official(
             channels=self.low_channels,
             stride=self.mid_stride,
+            source=self.source,
         )
 
     @property
@@ -606,6 +658,7 @@ class OfficialSnervMfuSpec:
         return ConvTranspose2dShapeSpec.official(
             channels=self.mid_channels,
             stride=self.high_stride,
+            source=self.source,
         )
 
     @property
@@ -635,7 +688,7 @@ class OfficialSnervMfuSpec:
                 op="ConvTranspose2d(kernel=stride,padding=0)",
                 inputs=(low_spec.name,),
                 output=up1,
-                source=OFFICIAL_SNERV_MFU_SOURCE,
+                source=self.source,
             )
         )
 
@@ -649,7 +702,7 @@ class OfficialSnervMfuSpec:
                 op="torch.cat(dim=1)",
                 inputs=(up1.name, skip_mid_spec.name),
                 output=concat_mid,
-                source=OFFICIAL_SNERV_MFU_SOURCE,
+                source=self.source,
             )
         )
 
@@ -671,7 +724,7 @@ class OfficialSnervMfuSpec:
                 op="ConvTranspose2d(kernel=stride,padding=0)",
                 inputs=(unet1.name,),
                 output=unet1_up,
-                source=OFFICIAL_SNERV_MFU_SOURCE,
+                source=self.source,
             )
         )
 
@@ -685,7 +738,7 @@ class OfficialSnervMfuSpec:
                 op="torch.cat(dim=1)",
                 inputs=(unet1_up.name, skip_high_spec.name),
                 output=concat_high,
-                source=OFFICIAL_SNERV_MFU_SOURCE,
+                source=self.source,
             )
         )
 
@@ -710,7 +763,7 @@ class OfficialSnervMfuSpec:
         parameter_shapes.update(self.rb_high.torch_parameter_shapes(prefix="decoder_len+6"))
         return OfficialMfuShapeTrace(
             schema="official_snerv_mfu_shape_trace.v1",
-            source=OFFICIAL_SNERV_MFU_SOURCE,
+            source=self.source,
             nodes=tuple(nodes),
             output=pyr_out,
             parameter_shapes=parameter_shapes,
@@ -950,6 +1003,7 @@ __all__ = [
     "OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS",
     "OFFICIAL_SNERV_MFU_SOURCE",
     "OFFICIAL_SNERV_RB_SOURCE",
+    "OFFICIAL_SNERV_T_MFU_SOURCE",
     "ConvTranspose2dShapeSpec",
     "NchwShape",
     "OfficialConvTranspose2dNchw",

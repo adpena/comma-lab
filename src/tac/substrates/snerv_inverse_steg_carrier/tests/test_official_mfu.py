@@ -7,6 +7,8 @@ import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier import (
     OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS,
+    OFFICIAL_SNERV_MFU_SOURCE,
+    OFFICIAL_SNERV_T_MFU_SOURCE,
     ConvTranspose2dShapeSpec,
     OfficialConv2dNchw,
     OfficialConvTranspose2dNchw,
@@ -64,7 +66,55 @@ def test_official_mfu_shape_trace_matches_source_graph_contract() -> None:
     assert trace.parameter_shapes["decoder_len+6.main.1.1.conv2.weight"] == (8, 8, 3, 3)
     payload = trace.as_jsonable()
     assert payload["output_shape"] == [1, 8, 32, 40]
+    assert payload["source"] == OFFICIAL_SNERV_MFU_SOURCE
     assert payload["promotion_eligible"] is False
+
+
+def test_official_mfu_temporal_spec_pins_source_hardcoded_strides() -> None:
+    spec = OfficialSnervMfuSpec.from_official_temporal_lists(
+        ngf_list=(64, 32, 16, 8),
+        dec_strds=(5, 4, 3, 7, 11),
+        num_blocks=2,
+    )
+
+    trace = spec.forward_shape(
+        TensorSpec.from_shape((1, 32, 4, 5), name="low"),
+        TensorSpec.from_shape((1, 16, 8, 10), name="mid"),
+        TensorSpec.from_shape((1, 8, 16, 20), name="high"),
+    )
+
+    assert spec.mid_stride == 2
+    assert spec.high_stride == 2
+    assert trace.source == OFFICIAL_SNERV_T_MFU_SOURCE
+    assert trace.output.nchw == (1, 8, 16, 20)
+    assert trace.parameter_shapes["decoder_len+3.weight"] == (32, 32, 2, 2)
+    assert trace.parameter_shapes["decoder_len+5.weight"] == (16, 16, 2, 2)
+    assert {node.source for node in trace.nodes if node.name != "unet1" and node.name != "pyr_out"} == {
+        OFFICIAL_SNERV_T_MFU_SOURCE
+    }
+    assert trace.score_claim is False
+    assert trace.ready_for_exact_eval_dispatch is False
+
+
+def test_official_mfu_temporal_stride_control_is_distinct_from_base_snerv() -> None:
+    ngf_list = (64, 32, 16, 8)
+    dec_strds = (5, 4, 3, 7, 11)
+
+    base = OfficialSnervMfuSpec.from_official_lists(
+        ngf_list=ngf_list,
+        dec_strds=dec_strds,
+        num_blocks=1,
+    )
+    temporal = OfficialSnervMfuSpec.from_official_temporal_lists(
+        ngf_list=ngf_list,
+        dec_strds=dec_strds,
+        num_blocks=1,
+    )
+
+    assert (base.mid_stride, base.high_stride) == (7, 11)
+    assert base.source == OFFICIAL_SNERV_MFU_SOURCE
+    assert (temporal.mid_stride, temporal.high_stride) == (2, 2)
+    assert temporal.source == OFFICIAL_SNERV_T_MFU_SOURCE
 
 
 def test_convtranspose_shape_spec_matches_torch_output_formula() -> None:

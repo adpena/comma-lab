@@ -20,6 +20,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.hinerv_official_source_parity_audit import (
+    SCHEMA as HINERV_OFFICIAL_SOURCE_AUDIT_SCHEMA,
+)
+from tac.analysis.hinerv_official_source_parity_audit import (
+    summarize_hinerv_official_source_audit,
+)
 from tac.analysis.snerv_official_source_parity_audit import (
     SCHEMA as SNERV_OFFICIAL_SOURCE_AUDIT_SCHEMA,
 )
@@ -101,6 +107,7 @@ def build_nerv_source_parity_contract(
     *,
     repo_root: str | Path,
     families: Iterable[str] = ("hi_nerv", "snerv"),
+    hinerv_official_source_audit: Mapping[str, Any] | None = None,
     snerv_official_source_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return the current source-parity contract for compact NeRV carriers."""
@@ -109,6 +116,7 @@ def build_nerv_source_parity_contract(
     selected_families = tuple(dict.fromkeys(str(f) for f in families))
     source_audits = _source_audit_rows(
         selected_families,
+        hinerv_official_source_audit=hinerv_official_source_audit,
         snerv_official_source_audit=snerv_official_source_audit,
     )
     features = [feature for feature in _source_features() if feature.family in selected_families]
@@ -195,6 +203,7 @@ def write_nerv_source_parity_contract(
     output_json: str | Path,
     output_md: str | Path | None = None,
     families: Iterable[str] = ("hi_nerv", "snerv"),
+    hinerv_official_source_audit: Mapping[str, Any] | None = None,
     snerv_official_source_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Write JSON and optional Markdown source-parity artifacts."""
@@ -202,6 +211,7 @@ def write_nerv_source_parity_contract(
     report = build_nerv_source_parity_contract(
         repo_root=repo_root,
         families=families,
+        hinerv_official_source_audit=hinerv_official_source_audit,
         snerv_official_source_audit=snerv_official_source_audit,
     )
     json_path = Path(output_json)
@@ -994,9 +1004,39 @@ def _control_rows(root: Path, families: tuple[str, ...]) -> list[dict[str, Any]]
 def _source_audit_rows(
     families: tuple[str, ...],
     *,
+    hinerv_official_source_audit: Mapping[str, Any] | None,
     snerv_official_source_audit: Mapping[str, Any] | None,
 ) -> tuple[dict[str, Any], ...]:
     rows: list[dict[str, Any]] = []
+    if "hi_nerv" in families and isinstance(hinerv_official_source_audit, Mapping):
+        schema = hinerv_official_source_audit.get("schema")
+        if schema == HINERV_OFFICIAL_SOURCE_AUDIT_SCHEMA:
+            summary = summarize_hinerv_official_source_audit(
+                hinerv_official_source_audit
+            )
+            rows.append(
+                {
+                    "family": "hi_nerv",
+                    "feature_id": "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "audit_kind": "official_source_marker_and_numeric_forward_audit",
+                    **summary,
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "family": "hi_nerv",
+                    "feature_id": "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "audit_kind": "official_source_marker_and_numeric_forward_audit",
+                    "schema": schema,
+                    "authority": AUTHORITY,
+                    "official_source_markers_present": False,
+                    "local_receiver_bindings_present": False,
+                    "official_forward_parity_proven": False,
+                    "blockers": ["hinerv_official_source_audit_schema_invalid"],
+                    **FALSE_AUTHORITY,
+                }
+            )
     if "snerv" in families and isinstance(snerv_official_source_audit, Mapping):
         schema = snerv_official_source_audit.get("schema")
         if schema == SNERV_OFFICIAL_SOURCE_AUDIT_SCHEMA:

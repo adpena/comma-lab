@@ -258,6 +258,43 @@ def test_snerv_official_source_audit_embeds_without_promoting_parity() -> None:
     assert official["source_audit_rows"][0]["official_mfu_hfr_tub_parity_proven"] is False
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["nonblocking_gaps"]
     assert report["score_claim"] is False
+
+
+def test_hinerv_official_source_audit_embeds_without_promoting_parity() -> None:
+    audit = {
+        "schema": "hinerv_official_source_parity_audit.v1",
+        "authority": "false_authority_source_audit_no_score_claim",
+        "family": "hi_nerv",
+        "official_repo": {
+            "repo_url": "https://github.com/hmkx/HiNeRV",
+            "root": "/Volumes/VertigoDataTier/pact/oss_sources/HiNeRV",
+            "head_sha": "def456",
+        },
+        "official_source_markers_present": True,
+        "local_receiver_bindings_present": True,
+        "official_forward_parity_proven": False,
+        "blockers": ["hinerv_official_forward_parity_missing"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_source_parity_contract(
+        repo_root=REPO_ROOT,
+        families=("hi_nerv",),
+        hinerv_official_source_audit=audit,
+    )
+
+    assert report["source_audits"]
+    rows = {row["feature_id"]: row for row in report["feature_rows"]}
+    official = rows["hi_nerv_official_feature_grid_convnext_trilinear"]
+    assert official["status"] == "implemented_or_bound"
+    assert official["source_audit_rows"][0]["official_head_sha"] == "def456"
+    assert official["source_audit_rows"][0]["official_source_markers_present"] is True
+    assert official["source_audit_rows"][0]["official_forward_parity_proven"] is False
+    assert "hinerv_official_forward_parity_missing" in official["source_audit_rows"][0]["blockers"]
+    assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
