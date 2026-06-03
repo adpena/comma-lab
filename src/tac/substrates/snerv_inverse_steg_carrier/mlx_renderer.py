@@ -1,0 +1,568 @@
+# SPDX-License-Identifier: MIT
+"""MLX-native SNeRV renderer for shared score-aware long training.
+
+This module is the differentiable training-side counterpart of the receiver
+SNAR1 grammar in :mod:`tac.substrates.snerv_inverse_steg_carrier.carrier`:
+
+* per-pair/per-frame/per-channel LF planes are trainable latents;
+* shared HF detail predictors are trainable decoder weights;
+* reconstruction uses the same Haar synthesis algebra as the NumPy receiver;
+* model-size controls such as ``fc_dim``, ``patch_radius``, MFU scales, and HFR
+  gain change the trainable feature bank instead of living only in metadata.
+
+It is deliberately MLX-first for local training velocity, but all archive output
+still flows through the NumPy-portable SNAR1 packer. The renderer is not a score
+authority surface by itself; it is a real train-time carrier used before
+receiver-closed export.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    _DETAIL_KEYS,
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+    HfGenerationDecoder,
+    SnervModelSizeConfig,
+    _kernel_storage_shape,
+    dwt2_multilevel,
+    fit_hf_decoder_least_squares,
+)
+
+try:  # pragma: no cover - exercised on Apple Silicon with MLX installed.
+    import mlx.core as mx
+    import mlx.nn as nn
+    from mlx.utils import tree_flatten
+except Exception as exc:  # pragma: no cover - import guard for non-Apple CI.
+    mx = None  # type: ignore[assignment]
+    nn = None  # type: ignore[assignment]
+    tree_flatten = None  # type: ignore[assignment]
+    _MLX_IMPORT_ERROR: Exception | None = exc
+else:
+    _MLX_IMPORT_ERROR = None
+
+
+SNERV_MLX_RENDERER_SCHEMA = "snerv_mlx_score_aware_haar_renderer.v1"
+
+
+class SnervMlxRendererError(ValueError):
+    """Raised when the MLX SNeRV renderer contract is violated."""
+
+
+def _require_mlx() -> None:
+    if mx is None or nn is None:
+        raise RuntimeError(
+            "MLX is not available on this host; SNeRV MLX score-aware training "
+            "requires Apple Silicon with the mlx package installed. Original "
+            f"import error: {_MLX_IMPORT_ERROR!r}"
+        )
+
+
+class SnervMlxHaarScoreRenderer(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Differentiable SNeRV Haar LF/HF renderer for the shared MLX harness."""
+
+    def __init__(
+        self,
+        *,
+        lf_init: np.ndarray,
+        decoder: HfGenerationDecoder,
+        output_hw: tuple[int, int],
+        model_size: SnervModelSizeConfig | None = None,
+        wavelet: str = "haar",
+    ) -> None:
+        _require_mlx()
+        super().__init__()
+        wavelet_key = str(wavelet).strip().lower()
+        if wavelet_key not in {"haar", "db1"}:
+            raise SnervMlxRendererError(
+                "SnervMlxHaarScoreRenderer is the NumPy-portable Haar path; "
+                f"got wavelet={wavelet!r}"
+            )
+        lf = np.asarray(lf_init, dtype=np.float32)
+        if lf.ndim != 5 or lf.shape[1] != 2 or lf.shape[2] != 3:
+            raise SnervMlxRendererError(
+                "lf_init must be shaped (pairs, 2, 3, H_lf, W_lf); got "
+                f"{tuple(lf.shape)}"
+            )
+        if not np.isfinite(lf).all():
+            raise SnervMlxRendererError("lf_init contains non-finite values")
+        self.schema = SNERV_MLX_RENDERER_SCHEMA
+        self.levels = int(decoder.levels)
+        if self.levels < 1:
+            raise SnervMlxRendererError("levels must be >= 1")
+        self.wavelet = "haar"
+        self.num_pairs = int(lf.shape[0])
+        self.output_hw = (int(output_hw[0]), int(output_hw[1]))
+        self.model_size = model_size or decoder.model_size
+        if tuple(_kernel_storage_shape(self.model_size)) != tuple(
+            np.asarray(next(iter(decoder.kernels[0].values()))).shape
+        ):
+            raise SnervMlxRendererError(
+                "decoder kernel shape does not match model_size feature_count"
+            )
+
+        self.latents_lf_planes = mx.array(lf, dtype=mx.float32)  # type: ignore[union-attr]
+        self.decoder_kernels: list[dict[str, Any]] = []
+        for lvl in range(self.levels):
+            level_row: dict[str, Any] = {}
+            for subband in _DETAIL_KEYS:
+                level_row[subband] = mx.array(  # type: ignore[union-attr]
+                    np.asarray(decoder.kernels[lvl][subband], dtype=np.float32).reshape(-1),
+                    dtype=mx.float32,  # type: ignore[union-attr]
+                )
+            self.decoder_kernels.append(level_row)
+
+    @classmethod
+    def from_numpy_pairs(
+        cls,
+        pairs_nchw255: np.ndarray,
+        *,
+        levels: int,
+        wavelet: str = "haar",
+        model_size: SnervModelSizeConfig | None = None,
+    ) -> SnervMlxHaarScoreRenderer:
+        """Initialize LF latents and decoder weights from real pair pixels."""
+
+        model_size = model_size or SnervModelSizeConfig()
+        pairs = np.asarray(pairs_nchw255, dtype=np.float32)
+        if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[2] != 3:
+            raise SnervMlxRendererError(
+                "pairs_nchw255 must be shaped (pairs, 2, 3, H, W); got "
+                f"{tuple(pairs.shape)}"
+            )
+        if not np.isfinite(pairs).all():
+            raise SnervMlxRendererError("pairs_nchw255 contains non-finite values")
+        if str(wavelet).strip().lower() not in {"haar", "db1"}:
+            raise SnervMlxRendererError(
+                "MLX score-aware SNeRV long training currently supports the "
+                f"receiver-safe Haar path only; got {wavelet!r}"
+            )
+        n_pairs, _two, channels, h, w = (int(v) for v in pairs.shape)
+        if h % (1 << int(levels)) or w % (1 << int(levels)):
+            raise SnervMlxRendererError(
+                f"H/W must be divisible by 2**levels for MLX Haar training; "
+                f"got {(h, w)} levels={levels}"
+            )
+        pyramids = []
+        lf_planes = np.empty(
+            (n_pairs, 2, channels, h >> int(levels), w >> int(levels)),
+            dtype=np.float32,
+        )
+        for pair_idx in range(n_pairs):
+            for frame_idx in range(2):
+                for channel_idx in range(channels):
+                    pyr = dwt2_multilevel(
+                        pairs[pair_idx, frame_idx, channel_idx],
+                        levels=int(levels),
+                        wavelet="haar",
+                    )
+                    pyramids.append(pyr)
+                    lf_planes[pair_idx, frame_idx, channel_idx] = np.asarray(
+                        pyr.lf,
+                        dtype=np.float32,
+                    )
+        decoder = fit_hf_decoder_least_squares(
+            pyramids,
+            levels=int(levels),
+            model_size=model_size,
+            temporal_group_count=channels,
+        )
+        return cls(
+            lf_init=lf_planes,
+            decoder=decoder,
+            output_hw=(h, w),
+            model_size=model_size,
+            wavelet="haar",
+        )
+
+    def reconstruct_pair(self, pair_indices: Any) -> tuple[Any, Any]:
+        """Return ``(rgb_0, rgb_1)`` NCHW in ``[0, 1]`` for the shared harness."""
+
+        _require_mlx()
+        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+        if idx.ndim == 0:
+            idx = idx.reshape((1,))
+        lf = mx.take(self.latents_lf_planes, idx, axis=0)  # type: ignore[union-attr]
+        flat = lf.reshape((-1, int(lf.shape[-2]), int(lf.shape[-1])))
+        recon = self._reconstruct_flat_channels(flat)
+        b = int(idx.shape[0])
+        h, w = self.output_hw
+        pair = recon.reshape((b, 2, 3, h, w))
+        pair01 = mx.clip(pair / 255.0, 0.0, 1.0)  # type: ignore[union-attr]
+        return pair01[:, 0], pair01[:, 1]
+
+    def __call__(self, pair_indices: Any) -> Any:
+        """Return ``(B, 2, 3, H, W)`` in ``[0, 255]`` for export helpers."""
+
+        rgb0, rgb1 = self.reconstruct_pair(pair_indices)
+        return mx.stack([rgb0, rgb1], axis=1) * 255.0  # type: ignore[union-attr]
+
+    def render_pairs_nchw255(
+        self,
+        *,
+        pair_indices: Sequence[int] | None = None,
+        batch_size: int = 8,
+    ) -> np.ndarray:
+        """Render selected rows as a NumPy ``(pairs,2,3,H,W)`` uint surface."""
+
+        _require_mlx()
+        indices = (
+            tuple(range(self.num_pairs))
+            if pair_indices is None
+            else tuple(int(value) for value in pair_indices)
+        )
+        if not indices:
+            raise SnervMlxRendererError("pair_indices must not be empty")
+        chunks: list[np.ndarray] = []
+        for start in range(0, len(indices), max(1, int(batch_size))):
+            chunk = indices[start : start + max(1, int(batch_size))]
+            arr = self(mx.array(chunk, dtype=mx.int32))  # type: ignore[union-attr]
+            mx.eval(arr)  # type: ignore[union-attr]
+            chunks.append(np.asarray(arr, dtype=np.float32))
+        out = np.concatenate(chunks, axis=0)
+        return np.clip(out, 0.0, 255.0).astype(np.float32, copy=False)
+
+    def export_state_dict(self) -> dict[str, np.ndarray]:
+        """Return a NumPy-portable train-time checkpoint dictionary."""
+
+        _require_mlx()
+        out: dict[str, np.ndarray] = {
+            "latents_lf_planes": np.asarray(
+                self.latents_lf_planes,
+                dtype=np.float32,
+            ).copy()
+        }
+        for lvl, level_row in enumerate(self.decoder_kernels):
+            for subband in _DETAIL_KEYS:
+                out[f"decoder_kernels.{lvl}.{subband}"] = np.asarray(
+                    level_row[subband],
+                    dtype=np.float32,
+                ).copy()
+        return out
+
+    def import_state_dict(self, state: dict[str, np.ndarray]) -> None:
+        """Restore a state emitted by :meth:`export_state_dict` exactly."""
+
+        _require_mlx()
+        expected = set(self.export_state_dict())
+        observed = set(state)
+        if observed != expected:
+            missing = sorted(expected - observed)
+            extra = sorted(observed - expected)
+            raise SnervMlxRendererError(
+                "SNeRV MLX renderer state key mismatch; "
+                f"missing={missing[:8]} extra={extra[:8]}"
+            )
+        lf = np.asarray(state["latents_lf_planes"], dtype=np.float32)
+        if tuple(lf.shape) != tuple(self.latents_lf_planes.shape):
+            raise SnervMlxRendererError(
+                "latents_lf_planes shape mismatch; "
+                f"state={tuple(lf.shape)} model={tuple(self.latents_lf_planes.shape)}"
+            )
+        self.latents_lf_planes = mx.array(lf, dtype=mx.float32)  # type: ignore[union-attr]
+        for lvl, level_row in enumerate(self.decoder_kernels):
+            for subband in _DETAIL_KEYS:
+                key = f"decoder_kernels.{lvl}.{subband}"
+                arr = np.asarray(state[key], dtype=np.float32)
+                if tuple(arr.shape) != tuple(level_row[subband].shape):
+                    raise SnervMlxRendererError(
+                        f"{key} shape mismatch; "
+                        f"state={tuple(arr.shape)} model={tuple(level_row[subband].shape)}"
+                    )
+                level_row[subband] = mx.array(arr, dtype=mx.float32)  # type: ignore[union-attr]
+
+    def metadata(self) -> dict[str, Any]:
+        """Return non-authority renderer metadata for train/export reports."""
+
+        return {
+            "schema": SNERV_MLX_RENDERER_SCHEMA,
+            "levels": int(self.levels),
+            "wavelet": self.wavelet,
+            "num_pairs": int(self.num_pairs),
+            "output_hw": [int(v) for v in self.output_hw],
+            "lf_shape": [int(v) for v in self.latents_lf_planes.shape[-2:]],
+            "model_size": self.model_size.as_jsonable(),
+            "trainable_parameter_count": int(self.num_parameters()),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def num_parameters(self) -> int:
+        _require_mlx()
+        total = 0
+        for _name, arr in tree_flatten(self.parameters()):  # type: ignore[operator]
+            total += int(np.prod(tuple(arr.shape)))
+        return total
+
+    def _reconstruct_flat_channels(self, lf_flat: Any) -> Any:
+        approx = lf_flat
+        for lvl in range(self.levels):
+            features = _decoder_features_mlx(approx, self.model_size)
+            kernels = self.decoder_kernels[lvl]
+            lh = _linear_detail(features, kernels["LH"])
+            hl = _linear_detail(features, kernels["HL"])
+            hh = _linear_detail(features, kernels["HH"])
+            if float(self.model_size.hfr_gain) > 0.0:
+                lh, hl, hh = _hfr_restore_mlx(
+                    approx,
+                    (lh, hl, hh),
+                    gain=float(self.model_size.hfr_gain),
+                )
+            approx = _haar_idwt2_level_mlx(approx, lh, hl, hh)
+        return approx
+
+
+def export_snerv_mlx_renderer_state_dict(
+    model: SnervMlxHaarScoreRenderer,
+    path: str | Path,
+) -> None:
+    """Write a portable ``.npz`` state snapshot for explicit bridge tests."""
+
+    arrays = model.export_state_dict()
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(target.with_suffix(target.suffix + ".npz"), **arrays)
+
+
+def _linear_detail(features: Any, kernel: Any) -> Any:
+    return mx.sum(features * kernel.reshape((1, 1, 1, -1)), axis=-1)  # type: ignore[union-attr]
+
+
+def _decoder_features_mlx(field: Any, model_size: SnervModelSizeConfig) -> Any:
+    if int(model_size.temporal_context) > 0:
+        raise SnervMlxRendererError(
+            "MLX SNeRV score-aware renderer does not yet support temporal_context "
+            "inside the differentiable train-time feature bank; use temporal_context=0"
+        )
+    if model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER:
+        context = _mfu_features_mlx(
+            field,
+            feature_count=int(model_size.fc_dim),
+            patch_radius=int(model_size.patch_radius),
+            scales=tuple(int(v) for v in model_size.mfu_scales),
+        )
+    else:
+        context = _patch_features_mlx(
+            field,
+            patch_radius=int(model_size.patch_radius),
+            feature_count=int(model_size.fc_dim),
+        )
+    coord = _coordinate_embedding_features_mlx(
+        (int(field.shape[1]), int(field.shape[2])),
+        int(model_size.emb_size),
+        batch=int(field.shape[0]),
+    )
+    if coord.shape[-1] == 0:
+        return context
+    return mx.concatenate([context, coord], axis=-1)  # type: ignore[union-attr]
+
+
+def _patch_features_mlx(field: Any, *, patch_radius: int, feature_count: int) -> Any:
+    radius = int(patch_radius)
+    wanted = int(feature_count)
+    if wanted < 1:
+        raise SnervMlxRendererError("feature_count must be >= 1")
+    if radius < 0 or radius > 3:
+        raise SnervMlxRendererError("patch_radius must be in [0, 3]")
+    if radius == 0:
+        base = field[:, :, :, None]
+    else:
+        padded = _reflect_pad_bhw(field, radius)
+        h, w = int(field.shape[1]), int(field.shape[2])
+        feats = []
+        for di in range(-radius, radius + 1):
+            for dj in range(-radius, radius + 1):
+                row = radius + di
+                col = radius + dj
+                feats.append(padded[:, row : row + h, col : col + w])
+        base = mx.stack(feats, axis=-1)  # type: ignore[union-attr]
+    if wanted <= int(base.shape[-1]):
+        return base[:, :, :, :wanted]
+    extras = _extra_context_features_mlx(field, wanted - int(base.shape[-1]))
+    return mx.concatenate([base, extras], axis=-1)  # type: ignore[union-attr]
+
+
+def _mfu_features_mlx(
+    field: Any,
+    *,
+    feature_count: int,
+    patch_radius: int,
+    scales: tuple[int, ...],
+) -> Any:
+    bank = []
+    for scale in scales:
+        pooled = _box_pool_upsample_mlx(field, int(scale))
+        bank.append(pooled)
+        if int(scale) > 1:
+            bank.append(field - pooled)
+    gy, gx = _central_gradients_mlx(field)
+    bank.extend((gy, gx, mx.sqrt(gy * gy + gx * gx)))  # type: ignore[union-attr]
+    local = _patch_features_mlx(
+        field,
+        patch_radius=int(patch_radius),
+        feature_count=(2 * int(patch_radius) + 1) ** 2,
+    )
+    for idx in range(int(local.shape[-1])):
+        bank.append(local[:, :, :, idx])
+    return _select_feature_bank_mlx(bank, int(feature_count))
+
+
+def _select_feature_bank_mlx(bank: list[Any], feature_count: int) -> Any:
+    if not bank:
+        raise SnervMlxRendererError("feature bank must be non-empty")
+    normalized = []
+    for feature in bank:
+        mean = mx.mean(feature, axis=(1, 2), keepdims=True)  # type: ignore[union-attr]
+        centered = feature - mean
+        var = mx.mean(centered * centered, axis=(1, 2), keepdims=True)  # type: ignore[union-attr]
+        normalized.append(centered / mx.sqrt(var + 1.0e-6))  # type: ignore[union-attr]
+    out = [normalized[i % len(normalized)] for i in range(int(feature_count))]
+    return mx.stack(out, axis=-1)  # type: ignore[union-attr]
+
+
+def _extra_context_features_mlx(field: Any, count: int) -> Any:
+    if int(count) <= 0:
+        return mx.zeros(  # type: ignore[union-attr]
+            (int(field.shape[0]), int(field.shape[1]), int(field.shape[2]), 0),
+            dtype=field.dtype,
+        )
+    mean = mx.mean(field, axis=(1, 2), keepdims=True)  # type: ignore[union-attr]
+    centered = field - mean
+    var = mx.mean(centered * centered, axis=(1, 2), keepdims=True)  # type: ignore[union-attr]
+    norm = centered / mx.sqrt(var + 1.0e-6)  # type: ignore[union-attr]
+    bank = (
+        norm * norm,
+        mx.tanh(norm),  # type: ignore[union-attr]
+        mx.sin(norm),  # type: ignore[union-attr]
+        mx.cos(norm),  # type: ignore[union-attr]
+        norm * mx.roll(norm, shift=1, axis=1),  # type: ignore[union-attr]
+        norm * mx.roll(norm, shift=1, axis=2),  # type: ignore[union-attr]
+    )
+    out = [bank[i % len(bank)] for i in range(int(count))]
+    return mx.stack(out, axis=-1)  # type: ignore[union-attr]
+
+
+def _coordinate_embedding_features_mlx(
+    target_hw: tuple[int, int],
+    emb_size: int,
+    *,
+    batch: int,
+) -> Any:
+    emb = int(emb_size)
+    h, w = int(target_hw[0]), int(target_hw[1])
+    if emb <= 0:
+        return mx.zeros((int(batch), h, w, 0), dtype=mx.float32)  # type: ignore[union-attr]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    y = (2.0 * yy / max(h - 1, 1)) - 1.0
+    x = (2.0 * xx / max(w - 1, 1)) - 1.0
+    bank_np = (
+        y,
+        x,
+        y * x,
+        y * y,
+        x * x,
+        np.sin(np.pi * y),
+        np.cos(np.pi * y),
+        np.sin(np.pi * x),
+        np.cos(np.pi * x),
+    )
+    stacked = np.stack([bank_np[i % len(bank_np)] for i in range(emb)], axis=-1)
+    arr = mx.array(stacked, dtype=mx.float32)  # type: ignore[union-attr]
+    return mx.broadcast_to(arr[None, :, :, :], (int(batch), h, w, emb))  # type: ignore[union-attr]
+
+
+def _reflect_pad_bhw(field: Any, radius: int) -> Any:
+    r = int(radius)
+    if r <= 0:
+        return field
+    h, w = int(field.shape[1]), int(field.shape[2])
+    if h <= r or w <= r:
+        raise SnervMlxRendererError(
+            f"cannot reflect-pad shape {(h, w)} by radius={r}"
+        )
+    top = field[:, 1 : r + 1, :][:, ::-1, :]
+    bottom = field[:, h - r - 1 : h - 1, :][:, ::-1, :]
+    padded = mx.concatenate([top, field, bottom], axis=1)  # type: ignore[union-attr]
+    left = padded[:, :, 1 : r + 1][:, :, ::-1]
+    right = padded[:, :, w - r - 1 : w - 1][:, :, ::-1]
+    return mx.concatenate([left, padded, right], axis=2)  # type: ignore[union-attr]
+
+
+def _box_pool_upsample_mlx(field: Any, scale: int) -> Any:
+    s = int(scale)
+    if s <= 1:
+        return field
+    b, h, w = int(field.shape[0]), int(field.shape[1]), int(field.shape[2])
+    ph = ((h + s - 1) // s) * s
+    pw = ((w + s - 1) // s) * s
+    padded = mx.pad(  # type: ignore[union-attr]
+        field,
+        ((0, 0), (0, ph - h), (0, pw - w)),
+        mode="edge",
+    )
+    pooled = mx.mean(  # type: ignore[union-attr]
+        padded.reshape((b, ph // s, s, pw // s, s)),
+        axis=(2, 4),
+    )
+    up = mx.repeat(mx.repeat(pooled, s, axis=1), s, axis=2)  # type: ignore[union-attr]
+    return up[:, :h, :w]
+
+
+def _central_gradients_mlx(field: Any) -> tuple[Any, Any]:
+    gy = 0.5 * (
+        mx.roll(field, shift=-1, axis=1) - mx.roll(field, shift=1, axis=1)  # type: ignore[union-attr]
+    )
+    gx = 0.5 * (
+        mx.roll(field, shift=-1, axis=2) - mx.roll(field, shift=1, axis=2)  # type: ignore[union-attr]
+    )
+    return gy, gx
+
+
+def _hfr_restore_mlx(
+    context: Any,
+    details: tuple[Any, Any, Any],
+    *,
+    gain: float,
+) -> tuple[Any, Any, Any]:
+    edge = context - _box_pool_upsample_mlx(context, 3)
+    gy, gx = _central_gradients_mlx(edge)
+    bases = (gy, gx, 0.5 * (gy + gx))
+    out = []
+    for detail, basis in zip(details, bases, strict=True):
+        mean = mx.mean(basis, axis=(1, 2), keepdims=True)  # type: ignore[union-attr]
+        centered = basis - mean
+        scale = mx.sqrt(  # type: ignore[union-attr]
+            mx.mean(centered * centered, axis=(1, 2), keepdims=True) + 1.0e-6  # type: ignore[union-attr]
+        )
+        out.append(detail + float(gain) * centered / scale)
+    return tuple(out)  # type: ignore[return-value]
+
+
+def _haar_idwt2_level_mlx(ll: Any, lh: Any, hl: Any, hh: Any) -> Any:
+    a = (ll + lh + hl + hh) * 0.5
+    b = (ll + lh - hl - hh) * 0.5
+    c = (ll - lh + hl - hh) * 0.5
+    d = (ll - lh - hl + hh) * 0.5
+    row0 = mx.stack([a, b], axis=-1).reshape(  # type: ignore[union-attr]
+        (int(ll.shape[0]), int(ll.shape[1]), int(ll.shape[2]) * 2)
+    )
+    row1 = mx.stack([c, d], axis=-1).reshape(  # type: ignore[union-attr]
+        (int(ll.shape[0]), int(ll.shape[1]), int(ll.shape[2]) * 2)
+    )
+    return mx.stack([row0, row1], axis=2).reshape(  # type: ignore[union-attr]
+        (int(ll.shape[0]), int(ll.shape[1]) * 2, int(ll.shape[2]) * 2)
+    )
+
+
+__all__ = [
+    "SNERV_MLX_RENDERER_SCHEMA",
+    "SnervMlxHaarScoreRenderer",
+    "SnervMlxRendererError",
+    "export_snerv_mlx_renderer_state_dict",
+]

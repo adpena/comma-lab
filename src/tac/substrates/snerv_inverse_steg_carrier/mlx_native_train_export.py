@@ -197,6 +197,13 @@ def train_export_snerv_mlx_native(
     native_mlx_decoder_train_lr: float = 1.0e-5,
     native_mlx_decoder_train_ridge: float = 1.0e-6,
     native_mlx_decoder_train_optimizer: str = "pact_guarded_adamw",
+    score_aware_long_training_epochs: int = 0,
+    score_aware_long_training_lr: float = 1.0e-3,
+    score_aware_long_training_batch_pairs: int = 2,
+    score_aware_long_training_optimizer: str = "pact_muon_adamw",
+    score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
+    score_aware_long_training_weight_decay: float | None = 1.0e-4,
+    score_aware_long_training_eval_roundtrip_ste: bool = False,
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
@@ -303,8 +310,115 @@ def train_export_snerv_mlx_native(
         expected_hw=(int(output_height), int(output_width)),
         normalize=str(recon_pixel_weight_normalize),
     )
+    score_aware_long_training = _run_score_aware_long_training_attachment(
+        requested_epochs=int(
+            candidate.get(
+                "score_aware_long_training_epochs",
+                candidate.get(
+                    "snerv_score_aware_long_training_epochs",
+                    score_aware_long_training_epochs,
+                ),
+            )
+        ),
+        output_dir=out / "snerv_score_aware_long_training",
+        pairs_nchw255=pairs_nchw255,
+        model_size=model_size,
+        levels=levels,
+        wavelet=wavelet,
+        source_pair_indices=source_pair_indices,
+        recon_pixel_weight=recon_weight,
+        recon_pixel_weight_metadata=recon_weight_metadata,
+        learning_rate=float(
+            candidate.get(
+                "score_aware_long_training_lr",
+                candidate.get(
+                    "snerv_score_aware_long_training_lr",
+                    score_aware_long_training_lr,
+                ),
+            )
+        ),
+        batch_pairs=int(
+            candidate.get(
+                "score_aware_long_training_batch_pairs",
+                candidate.get(
+                    "snerv_score_aware_long_training_batch_pairs",
+                    score_aware_long_training_batch_pairs,
+                ),
+            )
+        ),
+        optimizer_kind=str(
+            candidate.get(
+                "score_aware_long_training_optimizer",
+                candidate.get(
+                    "snerv_score_aware_long_training_optimizer",
+                    score_aware_long_training_optimizer,
+                ),
+            )
+        ),
+        grad_clip_max_norm=(
+            None
+            if candidate.get(
+                "score_aware_long_training_grad_clip_max_norm",
+                candidate.get(
+                    "snerv_score_aware_long_training_grad_clip_max_norm",
+                    score_aware_long_training_grad_clip_max_norm,
+                ),
+            )
+            is None
+            else float(
+                candidate.get(
+                    "score_aware_long_training_grad_clip_max_norm",
+                    candidate.get(
+                        "snerv_score_aware_long_training_grad_clip_max_norm",
+                        score_aware_long_training_grad_clip_max_norm,
+                    ),
+                )
+            )
+        ),
+        weight_decay=(
+            None
+            if candidate.get(
+                "score_aware_long_training_weight_decay",
+                candidate.get(
+                    "snerv_score_aware_long_training_weight_decay",
+                    score_aware_long_training_weight_decay,
+                ),
+            )
+            is None
+            else float(
+                candidate.get(
+                    "score_aware_long_training_weight_decay",
+                    candidate.get(
+                        "snerv_score_aware_long_training_weight_decay",
+                        score_aware_long_training_weight_decay,
+                    ),
+                )
+            )
+        ),
+        eval_roundtrip_ste=bool(
+            candidate.get(
+                "score_aware_long_training_eval_roundtrip_ste",
+                candidate.get(
+                    "snerv_score_aware_long_training_eval_roundtrip_ste",
+                    score_aware_long_training_eval_roundtrip_ste,
+                ),
+            )
+        ),
+        allow_overwrite=allow_overwrite,
+    )
+    pairs_for_packet = (
+        np.asarray(score_aware_long_training["_trained_pairs_nchw255"], dtype=np.float32)
+        if score_aware_long_training.get("executed") is True
+        and isinstance(score_aware_long_training.get("_trained_pairs_nchw255"), np.ndarray)
+        else pairs_nchw255
+    )
+    score_aware_long_training_public = {
+        key: value
+        for key, value in score_aware_long_training.items()
+        if key != "_trained_pairs_nchw255"
+    }
     closed_form_archive = build_snerv_mlx_native_packet_from_numpy_pairs(
-        pairs_nchw255,
+        pairs_for_packet,
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
@@ -355,6 +469,27 @@ def train_export_snerv_mlx_native(
                 _recon_pixel_weight_metadata_is_verified_gradient_manifest(recon_weight_metadata)
                 if recon_weight is not None
                 else False
+            ),
+            "score_aware_long_training": score_aware_long_training_public,
+            "score_aware_long_training_executed": bool(
+                score_aware_long_training_public.get("executed") is True
+            ),
+            "score_aware_long_training_kind": str(
+                score_aware_long_training_public.get("training_kind") or "none"
+            ),
+            "score_aware_long_training_optimizer": str(
+                score_aware_long_training_public.get("optimizer_kind") or "none"
+            ),
+            **(
+                {
+                    "native_mlx_training_executed": True,
+                    "native_mlx_training_kind": str(
+                        score_aware_long_training_public.get("training_kind")
+                        or "snerv_mlx_score_aware_haar_renderer"
+                    ),
+                }
+                if score_aware_long_training_public.get("executed") is True
+                else {}
             ),
             **(
                 _official_primitives_packet_metadata(
@@ -478,6 +613,17 @@ def train_export_snerv_mlx_native(
         blockers.append("snerv_mlx_native_scorer_custody_contract_invalid")
     if recon_weight_metadata is not None and recon_weight_metadata.get("producer_manifest_verified") is not True:
         blockers.append("snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export")
+    if score_aware_long_training_public.get("executed") is True:
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "snerv_mlx_score_aware_long_training_not_executed"
+        ]
+    blockers.extend(
+        str(blocker)
+        for blocker in score_aware_long_training_public.get("blockers") or ()
+        if str(blocker)
+    )
     blockers.extend(
         _scorer_loop_qat_blockers(
             scorer_loop_qat_public,
@@ -607,7 +753,13 @@ def train_export_snerv_mlx_native(
         selected_recon_metadata, Mapping
     )
     payload["score_aware_hf_decoder_fit_executed"] = bool(selected_recon_consumed)
-    payload["score_aware_long_training_executed"] = False
+    payload["score_aware_long_training"] = score_aware_long_training_public
+    payload["score_aware_long_training_executed"] = bool(
+        selected_archive_metadata.get("score_aware_long_training_executed") is True
+    )
+    payload["score_aware_long_training_kind"] = str(
+        selected_archive_metadata.get("score_aware_long_training_kind") or "none"
+    )
     payload["native_mlx_training_executed"] = bool(
         selected_archive_metadata.get("native_mlx_training_executed") is True
     )
@@ -750,6 +902,303 @@ def write_snerv_mlx_receiver_proof(
     )
     proof["snerv_mlx_native_storage_preflight"] = storage
     return proof
+
+
+def _run_score_aware_long_training_attachment(
+    *,
+    requested_epochs: int,
+    output_dir: str | Path,
+    pairs_nchw255: np.ndarray,
+    model_size: SnervModelSizeConfig,
+    levels: int,
+    wavelet: str,
+    source_pair_indices: tuple[int, ...],
+    recon_pixel_weight: np.ndarray | None,
+    recon_pixel_weight_metadata: Mapping[str, Any] | None,
+    learning_rate: float,
+    batch_pairs: int,
+    optimizer_kind: str,
+    grad_clip_max_norm: float | None,
+    weight_decay: float | None,
+    eval_roundtrip_ste: bool,
+    allow_overwrite: bool,
+) -> dict[str, Any]:
+    """Run real SNeRV MLX long training before NumPy-portable SNAR export."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    report_path = out / "snerv_score_aware_long_training.json"
+    if report_path.exists() and not allow_overwrite:
+        raise SnervMlxNativeExportError(
+            f"refusing to overwrite existing score-aware long-training report: {report_path}"
+        )
+    base_payload = {
+        "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
+        "requested_epochs": int(requested_epochs),
+        "executed": False,
+        "training_kind": "snerv_mlx_score_aware_haar_renderer",
+        "optimizer_kind": str(optimizer_kind),
+        "levels": int(levels),
+        "wavelet": str(wavelet),
+        "source_pair_indices": [int(value) for value in source_pair_indices],
+        "model_size": model_size.as_jsonable(),
+        "human_visual_fidelity_objective": False,
+        "contest_scorer_distortion_objective": bool(
+            _recon_pixel_weight_metadata_is_verified_gradient_manifest(
+                recon_pixel_weight_metadata
+            )
+        ),
+        **FALSE_AUTHORITY,
+    }
+    if int(requested_epochs) <= 0:
+        payload = {
+            **base_payload,
+            "blockers": ["snerv_mlx_score_aware_long_training_not_requested"],
+        }
+        write_json(report_path, payload)
+        return {**payload, "report_path": report_path.as_posix()}
+    if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
+        payload = {
+            **base_payload,
+            "blockers": [
+                "snerv_score_aware_long_training_official_mfu_hfr_tub_renderer_not_bound"
+            ],
+        }
+        write_json(report_path, payload)
+        return {**payload, "report_path": report_path.as_posix()}
+    if str(wavelet).strip().lower() not in {"haar", "db1"}:
+        payload = {
+            **base_payload,
+            "blockers": [
+                "snerv_score_aware_long_training_requires_receiver_safe_haar"
+            ],
+        }
+        write_json(report_path, payload)
+        return {**payload, "report_path": report_path.as_posix()}
+
+    pairs = np.asarray(pairs_nchw255, dtype=np.float32)
+    try:
+        import mlx.core as mx
+
+        from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+        from tac.substrates._shared.mlx_score_aware.harness import (
+            run_mlx_score_aware_full_main,
+        )
+        from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+            SNERV_MLX_RENDERER_SCHEMA,
+            SnervMlxHaarScoreRenderer,
+        )
+
+        model = SnervMlxHaarScoreRenderer.from_numpy_pairs(
+            pairs,
+            levels=int(levels),
+            wavelet="haar",
+            model_size=model_size,
+        )
+        initial_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
+        initial_mse = float(np.mean((initial_pairs - pairs) ** 2))
+        best_state = model.export_state_dict()
+        best_selection: dict[str, Any] = {
+            "epoch": -1,
+            "state_source": "initial_closed_form_renderer",
+            "selection_metric": "full_reconstruction_mse_nchw255",
+            "recon_mse_nchw255": initial_mse,
+            "training_loss": None,
+            "selected_as_best": True,
+        }
+        selection_history: list[dict[str, Any]] = [dict(best_selection)]
+        selection_interval_epochs = max(1, min(100, int(requested_epochs)))
+
+        def _maybe_select_current_renderer(
+            *,
+            epoch: int,
+            training_loss: float | None,
+            state_source: str,
+        ) -> None:
+            nonlocal best_selection, best_state
+            rendered = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
+            recon_mse = float(np.mean((rendered - pairs) ** 2))
+            row = {
+                "epoch": int(epoch),
+                "state_source": str(state_source),
+                "selection_metric": "full_reconstruction_mse_nchw255",
+                "recon_mse_nchw255": recon_mse,
+                "training_loss": (
+                    None if training_loss is None else float(training_loss)
+                ),
+                "selected_as_best": False,
+            }
+            if np.isfinite(recon_mse) and (
+                not np.isfinite(float(best_selection["recon_mse_nchw255"]))
+                or recon_mse < float(best_selection["recon_mse_nchw255"]) - 1.0e-9
+            ):
+                best_state = model.export_state_dict()
+                row["selected_as_best"] = True
+                best_selection = dict(row)
+            selection_history.append(row)
+
+        def _on_epoch_end(metrics: Any) -> None:
+            epoch = int(metrics.epoch)
+            if (epoch + 1) % selection_interval_epochs != 0 and (
+                epoch + 1
+            ) < int(requested_epochs):
+                return
+            _maybe_select_current_renderer(
+                epoch=epoch,
+                training_loss=float(metrics.loss),
+                state_source="post_epoch_interval_or_final",
+            )
+
+        target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0, dtype=mx.float32)
+        target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0, dtype=mx.float32)
+        recon_weight_mlx = (
+            None
+            if recon_pixel_weight is None
+            else mx.array(np.asarray(recon_pixel_weight, dtype=np.float32), dtype=mx.float32)
+        )
+        bundle = RendererBundle(
+            model=model,
+            target_rgb_0=target0,
+            target_rgb_1=target1,
+            num_pairs=int(pairs.shape[0]),
+            forward_convention="reconstruct_pair_nchw01",
+            recon_pixel_weight=recon_weight_mlx,
+            recon_pixel_weight_normalize="mean",
+            eval_roundtrip_ste_enabled=bool(eval_roundtrip_ste),
+            substrate_artifact_metadata={
+                "schema": "snerv_mlx_score_aware_renderer_bundle.v1",
+                "renderer_schema": SNERV_MLX_RENDERER_SCHEMA,
+                "source_pair_indices": [int(value) for value in source_pair_indices],
+                "receiver_export_path": "SNAR1_numpy_portable_packet_after_training",
+                "human_visual_fidelity_objective": False,
+                "contest_scorer_distortion_objective": bool(
+                    _recon_pixel_weight_metadata_is_verified_gradient_manifest(
+                        recon_pixel_weight_metadata
+                    )
+                ),
+            },
+        )
+        artifact = run_mlx_score_aware_full_main(
+            bundle=bundle,
+            substrate_id="snerv_inverse_steg_carrier",
+            lane_id="lane_snerv_mlx_score_aware_train_export",
+            output_dir=out / "long_training",
+            epochs=int(requested_epochs),
+            batch_pair_indices_per_step=max(1, int(batch_pairs)),
+            learning_rate=float(learning_rate),
+            seed=0,
+            checkpoint_interval_epochs=max(1, min(100, int(requested_epochs))),
+            telemetry_flush_interval_epochs=1,
+            grad_clip_max_norm=grad_clip_max_norm,
+            weight_decay=weight_decay,
+            optimizer_kind=str(optimizer_kind),
+            notes=(
+                "SNeRV MLX score-aware train/export attachment: train LF "
+                "latents plus shared HF decoder weights with the canonical "
+                "shared MLX harness, then export trained renders through the "
+                "NumPy-portable SNAR1 receiver packet builder."
+            ),
+            on_epoch_end=_on_epoch_end,
+        )
+        live_final_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
+        live_final_mse = float(np.mean((live_final_pairs - pairs) ** 2))
+        if np.isfinite(live_final_mse) and (
+            not np.isfinite(float(best_selection["recon_mse_nchw255"]))
+            or live_final_mse < float(best_selection["recon_mse_nchw255"]) - 1.0e-9
+        ):
+            best_state = model.export_state_dict()
+            best_selection = {
+                "epoch": int(artifact.as_dict().get("total_epochs_completed") or 0)
+                - 1,
+                "state_source": "live_final_post_training",
+                "selection_metric": "full_reconstruction_mse_nchw255",
+                "recon_mse_nchw255": live_final_mse,
+                "training_loss": None,
+                "selected_as_best": True,
+            }
+            selection_history.append(dict(best_selection))
+        model.import_state_dict(best_state)
+        trained_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
+        final_mse = float(np.mean((trained_pairs - pairs) ** 2))
+        artifact_dict = artifact.as_dict()
+        telemetry_path = str(artifact_dict.get("telemetry_path") or "")
+        live_checkpoint_path = str(artifact_dict.get("live_checkpoint_path") or "")
+        ema_checkpoint_path = str(
+            artifact_dict.get("ema_shadow_checkpoint_path") or ""
+        )
+        blockers: list[str] = []
+        if not np.isfinite(final_mse):
+            blockers.append("snerv_score_aware_long_training_selected_mse_nonfinite")
+        if int(artifact_dict.get("total_epochs_completed") or 0) < int(requested_epochs):
+            blockers.append("snerv_score_aware_long_training_early_stopped")
+        selection_warnings = []
+        if (
+            np.isfinite(live_final_mse)
+            and np.isfinite(final_mse)
+            and live_final_mse > final_mse + 1.0e-9
+        ):
+            selection_warnings.append(
+                "snerv_score_aware_long_training_live_final_worse_than_selected"
+            )
+        if str(best_selection.get("state_source")) == "initial_closed_form_renderer":
+            selection_warnings.append(
+                "snerv_score_aware_long_training_selected_initial_no_improvement"
+            )
+        payload = {
+            **base_payload,
+            "executed": not blockers,
+            "training_completed": True,
+            "epochs_completed": int(artifact_dict.get("total_epochs_completed") or 0),
+            "learning_rate": float(learning_rate),
+            "batch_pairs": max(1, int(batch_pairs)),
+            "grad_clip_max_norm": (
+                None if grad_clip_max_norm is None else float(grad_clip_max_norm)
+            ),
+            "weight_decay": None if weight_decay is None else float(weight_decay),
+            "eval_roundtrip_ste_enabled": bool(eval_roundtrip_ste),
+            "renderer": model.metadata(),
+            "initial_recon_mse_nchw255": initial_mse,
+            "live_final_recon_mse_nchw255": live_final_mse,
+            "final_recon_mse_nchw255": final_mse,
+            "loss_delta_nchw255": final_mse - initial_mse,
+            "best_checkpoint_selection": best_selection,
+            "selection_interval_epochs": int(selection_interval_epochs),
+            "selection_history_tail": selection_history[-8:],
+            "selection_warnings": selection_warnings,
+            "training_artifact": {
+                "schema": artifact_dict.get("schema"),
+                "substrate_id": artifact_dict.get("substrate_id"),
+                "lane_id": artifact_dict.get("lane_id"),
+                "total_epochs_completed": artifact_dict.get("total_epochs_completed"),
+                "total_wall_clock_seconds": artifact_dict.get("total_wall_clock_seconds"),
+                "telemetry_path": telemetry_path,
+                "live_checkpoint_path": live_checkpoint_path,
+                "ema_shadow_checkpoint_path": ema_checkpoint_path,
+                "archive_path": artifact_dict.get("archive_path"),
+                "archive_bytes": artifact_dict.get("archive_bytes"),
+                "score_claim": artifact_dict.get("score_claim"),
+                "promotion_eligible": artifact_dict.get("promotion_eligible"),
+                "ready_for_exact_eval_dispatch": artifact_dict.get(
+                    "ready_for_exact_eval_dispatch"
+                ),
+            },
+            "blockers": blockers,
+        }
+        write_json(report_path, payload)
+        return {
+            **payload,
+            "report_path": report_path.as_posix(),
+            "_trained_pairs_nchw255": trained_pairs,
+        }
+    except Exception as exc:
+        payload = {
+            **base_payload,
+            "training_completed": False,
+            "failure": repr(exc),
+            "blockers": ["snerv_score_aware_long_training_failed"],
+        }
+        write_json(report_path, payload)
+        return {**payload, "report_path": report_path.as_posix()}
 
 
 def _run_scorer_loop_qat_attachment(

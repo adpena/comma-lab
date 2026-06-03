@@ -2643,6 +2643,13 @@ def _run_snerv_native_mlx_export_attachment(
     native_mlx_decoder_train_lr: float,
     native_mlx_decoder_train_ridge: float,
     native_mlx_decoder_train_optimizer: str,
+    score_aware_long_training_epochs: int,
+    score_aware_long_training_lr: float,
+    score_aware_long_training_batch_pairs: int,
+    score_aware_long_training_optimizer: str,
+    score_aware_long_training_grad_clip_max_norm: float | None,
+    score_aware_long_training_weight_decay: float | None,
+    score_aware_long_training_eval_roundtrip_ste: bool,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
 
@@ -2708,6 +2715,27 @@ def _run_snerv_native_mlx_export_attachment(
             native_mlx_decoder_train_lr=float(native_mlx_decoder_train_lr),
             native_mlx_decoder_train_ridge=float(native_mlx_decoder_train_ridge),
             native_mlx_decoder_train_optimizer=str(native_mlx_decoder_train_optimizer),
+            score_aware_long_training_epochs=int(score_aware_long_training_epochs),
+            score_aware_long_training_lr=float(score_aware_long_training_lr),
+            score_aware_long_training_batch_pairs=int(
+                score_aware_long_training_batch_pairs
+            ),
+            score_aware_long_training_optimizer=str(
+                score_aware_long_training_optimizer
+            ),
+            score_aware_long_training_grad_clip_max_norm=(
+                None
+                if score_aware_long_training_grad_clip_max_norm is None
+                else float(score_aware_long_training_grad_clip_max_norm)
+            ),
+            score_aware_long_training_weight_decay=(
+                None
+                if score_aware_long_training_weight_decay is None
+                else float(score_aware_long_training_weight_decay)
+            ),
+            score_aware_long_training_eval_roundtrip_ste=bool(
+                score_aware_long_training_eval_roundtrip_ste
+            ),
             allow_overwrite=bool(allow_overwrite),
         )
         native_training_export_guard = build_snerv_mlx_native_training_export_guard(
@@ -3272,6 +3300,13 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_native_mlx_decoder_train_lr: float = 1.0e-5,
     snerv_native_mlx_decoder_train_ridge: float = 1.0e-6,
     snerv_native_mlx_decoder_train_optimizer: str = "pact_guarded_adamw",
+    snerv_score_aware_long_training_epochs: int = 0,
+    snerv_score_aware_long_training_lr: float = 1.0e-3,
+    snerv_score_aware_long_training_batch_pairs: int = 2,
+    snerv_score_aware_long_training_optimizer: str = "pact_muon_adamw",
+    snerv_score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
+    snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
+    snerv_score_aware_long_training_eval_roundtrip_ste: bool = False,
     run_scorer_loop_qat: bool = False,
     snerv_scorer_loop_max_trials: int = 2,
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
@@ -3753,6 +3788,31 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_native_mlx_decoder_train_optimizer": str(
             snerv_native_mlx_decoder_train_optimizer
         ),
+        "snerv_score_aware_long_training_epochs": int(
+            snerv_score_aware_long_training_epochs
+        ),
+        "snerv_score_aware_long_training_lr": float(
+            snerv_score_aware_long_training_lr
+        ),
+        "snerv_score_aware_long_training_batch_pairs": int(
+            snerv_score_aware_long_training_batch_pairs
+        ),
+        "snerv_score_aware_long_training_optimizer": str(
+            snerv_score_aware_long_training_optimizer
+        ),
+        "snerv_score_aware_long_training_grad_clip_max_norm": (
+            None
+            if snerv_score_aware_long_training_grad_clip_max_norm is None
+            else float(snerv_score_aware_long_training_grad_clip_max_norm)
+        ),
+        "snerv_score_aware_long_training_weight_decay": (
+            None
+            if snerv_score_aware_long_training_weight_decay is None
+            else float(snerv_score_aware_long_training_weight_decay)
+        ),
+        "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
+            snerv_score_aware_long_training_eval_roundtrip_ste
+        ),
     }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
@@ -3785,6 +3845,29 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         native_mlx_decoder_train_lr=float(snerv_native_mlx_decoder_train_lr),
         native_mlx_decoder_train_ridge=float(snerv_native_mlx_decoder_train_ridge),
         native_mlx_decoder_train_optimizer=str(snerv_native_mlx_decoder_train_optimizer),
+        score_aware_long_training_epochs=int(
+            snerv_score_aware_long_training_epochs
+        ),
+        score_aware_long_training_lr=float(snerv_score_aware_long_training_lr),
+        score_aware_long_training_batch_pairs=int(
+            snerv_score_aware_long_training_batch_pairs
+        ),
+        score_aware_long_training_optimizer=str(
+            snerv_score_aware_long_training_optimizer
+        ),
+        score_aware_long_training_grad_clip_max_norm=(
+            None
+            if snerv_score_aware_long_training_grad_clip_max_norm is None
+            else float(snerv_score_aware_long_training_grad_clip_max_norm)
+        ),
+        score_aware_long_training_weight_decay=(
+            None
+            if snerv_score_aware_long_training_weight_decay is None
+            else float(snerv_score_aware_long_training_weight_decay)
+        ),
+        score_aware_long_training_eval_roundtrip_ste=bool(
+            snerv_score_aware_long_training_eval_roundtrip_ste
+        ),
     )
     snerv_mlx_native_file_backed_evidence = (
         build_snerv_mlx_native_file_backed_evidence(
@@ -3879,10 +3962,17 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 )
             ),
             *local_proof_prelaunch_blockers,
-            (
-                "snerv_mlx_native_longer_staged_training_not_executed"
-                if snerv_scorer_loop_qat.get("executed")
-                else "snerv_longer_staged_score_aware_training_not_executed"
+            *(
+                []
+                if snerv_mlx_native_export.get("score_aware_long_training_executed")
+                is True
+                else [
+                    (
+                        "snerv_mlx_native_longer_staged_training_not_executed"
+                        if snerv_scorer_loop_qat.get("executed")
+                        else "snerv_longer_staged_score_aware_training_not_executed"
+                    )
+                ]
             ),
             *list(candidate_curriculum_plan.get("blockers") or []),
             *list(snerv_mlx_native_export.get("blockers") or []),
@@ -12521,6 +12611,64 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--snerv-score-aware-long-training-epochs",
+        default=0,
+        type=int,
+        help=(
+            "Run the SNeRV LF-latent + shared-HF-decoder MLX renderer through "
+            "the canonical score-aware long-training harness before SNAR export. "
+            "Zero preserves the closed-form export path."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-score-aware-long-training-lr",
+        default=1.0e-3,
+        type=float,
+        help="Learning rate for SNeRV score-aware MLX long training.",
+    )
+    parser.add_argument(
+        "--snerv-score-aware-long-training-batch-pairs",
+        default=2,
+        type=int,
+        help="Batch pair count for SNeRV score-aware MLX long training.",
+    )
+    parser.add_argument(
+        "--snerv-score-aware-long-training-optimizer",
+        default=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
+        choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
+        help=(
+            "Optimizer for the full SNeRV score-aware MLX renderer. Defaults "
+            "to Pact's PR95-derived partitioned Muon+AdamW path."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-score-aware-long-training-grad-clip-max-norm",
+        default=1.0,
+        type=float,
+        help=(
+            "Optional MLX gradient clip max-norm for SNeRV score-aware long "
+            "training. Pass a non-positive value only through config-level "
+            "overrides after adding a blocker-aware test."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-score-aware-long-training-weight-decay",
+        default=1.0e-4,
+        type=float,
+        help=(
+            "Weight decay for SNeRV score-aware long training. Use -1 to pass "
+            "None and let the selected optimizer own its default."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-score-aware-long-training-eval-roundtrip-ste",
+        action="store_true",
+        help=(
+            "Apply the PR95-style differentiable eval roundtrip during SNeRV "
+            "score-aware MLX long training."
+        ),
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-qat",
         action="store_true",
         help=(
@@ -13163,6 +13311,29 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_native_mlx_decoder_train_optimizer=(
                 args.snerv_native_mlx_decoder_train_optimizer
+            ),
+            snerv_score_aware_long_training_epochs=(
+                args.snerv_score_aware_long_training_epochs
+            ),
+            snerv_score_aware_long_training_lr=(
+                args.snerv_score_aware_long_training_lr
+            ),
+            snerv_score_aware_long_training_batch_pairs=(
+                args.snerv_score_aware_long_training_batch_pairs
+            ),
+            snerv_score_aware_long_training_optimizer=(
+                args.snerv_score_aware_long_training_optimizer
+            ),
+            snerv_score_aware_long_training_grad_clip_max_norm=(
+                args.snerv_score_aware_long_training_grad_clip_max_norm
+            ),
+            snerv_score_aware_long_training_weight_decay=(
+                None
+                if args.snerv_score_aware_long_training_weight_decay < 0.0
+                else args.snerv_score_aware_long_training_weight_decay
+            ),
+            snerv_score_aware_long_training_eval_roundtrip_ste=(
+                args.snerv_score_aware_long_training_eval_roundtrip_ste
             ),
             run_scorer_loop_qat=bool(
                 args.coder_aware_qat or args.snerv_scorer_loop_qat

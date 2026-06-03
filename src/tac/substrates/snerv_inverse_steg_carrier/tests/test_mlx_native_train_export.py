@@ -537,6 +537,159 @@ def test_train_export_executes_real_mlx_hf_decoder_training(
     )
 
 
+def test_snerv_mlx_haar_renderer_trains_under_shared_pact_muon_harness(
+    tmp_path: Path,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+    from tac.substrates._shared.mlx_score_aware.harness import (
+        run_mlx_score_aware_full_main,
+    )
+    from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+        SNERV_MLX_RENDERER_SCHEMA,
+        SnervMlxHaarScoreRenderer,
+    )
+
+    pairs = _tiny_pairs(pairs=2)
+    model = SnervMlxHaarScoreRenderer.from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+    )
+    model.latents_lf_planes = model.latents_lf_planes * 0.25
+    before = np.asarray(model.latents_lf_planes, dtype=np.float32).copy()
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        substrate_artifact_metadata={
+            "schema": "unit_snerv_mlx_renderer_bundle.v1",
+            "renderer_schema": SNERV_MLX_RENDERER_SCHEMA,
+        },
+    )
+
+    artifact = run_mlx_score_aware_full_main(
+        bundle=bundle,
+        substrate_id="snerv_inverse_steg_carrier",
+        lane_id="lane_unit_snerv_mlx_renderer_train",
+        output_dir=tmp_path / "snerv_renderer_long_train",
+        epochs=3,
+        batch_pair_indices_per_step=2,
+        learning_rate=1.0e-2,
+        optimizer_kind="pact_muon_adamw",
+        notes=(
+            "unit SNeRV renderer shared-harness training proof: pact_muon_adamw "
+            "updates LF latents and decoder weights; false-authority smoke"
+        ),
+    )
+
+    after = np.asarray(model.latents_lf_planes, dtype=np.float32)
+    metadata = artifact.as_dict()["substrate_artifact_metadata"]
+    assert artifact.total_epochs_completed == 3
+    assert not np.allclose(before, after)
+    assert metadata["score_aware_training"]["schema"] == (
+        "mlx_score_aware_training_objective.v1"
+    )
+    assert model.metadata()["schema"] == SNERV_MLX_RENDERER_SCHEMA
+    assert model.metadata()["trainable_parameter_count"] > before.size
+
+
+def test_snerv_mlx_haar_renderer_restores_exported_state_dict() -> None:
+    pytest.importorskip("mlx.core")
+
+    from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+        SnervMlxHaarScoreRenderer,
+    )
+
+    pairs = _tiny_pairs(pairs=1)
+    model = SnervMlxHaarScoreRenderer.from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+    )
+    state = model.export_state_dict()
+    expected = model.render_pairs_nchw255(batch_size=1)
+    model.latents_lf_planes = model.latents_lf_planes * 0.0
+
+    model.import_state_dict(state)
+
+    np.testing.assert_allclose(
+        model.render_pairs_nchw255(batch_size=1),
+        expected,
+        rtol=0.0,
+        atol=0.0,
+    )
+
+
+def test_train_export_runs_score_aware_long_training_before_packet_build(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "score_aware_long_train",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "score_aware_long_training_epochs": 2,
+            "score_aware_long_training_lr": 1.0e-3,
+            "score_aware_long_training_batch_pairs": 2,
+            "score_aware_long_training_optimizer": "pact_muon_adamw",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    assert report["score_aware_long_training_executed"] is True
+    assert report["score_aware_long_training_kind"] == (
+        "snerv_mlx_score_aware_haar_renderer"
+    )
+    assert report["native_mlx_training_executed"] is True
+    assert "snerv_mlx_score_aware_long_training_not_executed" not in report["blockers"]
+    long_training = report["score_aware_long_training"]
+    assert long_training["executed"] is True
+    assert long_training["optimizer_kind"] == "pact_muon_adamw"
+    assert long_training["final_recon_mse_nchw255"] <= (
+        long_training["initial_recon_mse_nchw255"] + 1.0e-8
+    )
+    assert long_training["best_checkpoint_selection"]["selection_metric"] == (
+        "full_reconstruction_mse_nchw255"
+    )
+    assert long_training["selection_history_tail"]
+    assert Path(long_training["report_path"]).is_file()
+    assert Path(long_training["training_artifact"]["telemetry_path"]).is_file()
+    packet = Path(report["packet_path"]).read_bytes()
+    decoded = unpack_snerv_archive(packet)
+    assert decoded.metadata["score_aware_long_training_executed"] is True
+    assert decoded.metadata["score_aware_long_training"]["executed"] is True
+    frames = decode_snerv_archive_frames(packet)
+    assert frames.shape == (2, 2, 3, 16, 16)
+    assert np.isfinite(frames).all()
+
+
 def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

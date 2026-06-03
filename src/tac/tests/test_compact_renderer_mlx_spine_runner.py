@@ -2938,6 +2938,19 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.000004",
             "--snerv-native-mlx-decoder-train-optimizer",
             "lion",
+            "--snerv-score-aware-long-training-epochs",
+            "17",
+            "--snerv-score-aware-long-training-lr",
+            "0.0025",
+            "--snerv-score-aware-long-training-batch-pairs",
+            "6",
+            "--snerv-score-aware-long-training-optimizer",
+            "lion",
+            "--snerv-score-aware-long-training-grad-clip-max-norm",
+            "0.75",
+            "--snerv-score-aware-long-training-weight-decay",
+            "-1",
+            "--snerv-score-aware-long-training-eval-roundtrip-ste",
         ]
     )
 
@@ -2990,6 +3003,13 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_native_mlx_decoder_train_lr == 0.0003
     assert sn.snerv_native_mlx_decoder_train_ridge == 0.000004
     assert sn.snerv_native_mlx_decoder_train_optimizer == "lion"
+    assert sn.snerv_score_aware_long_training_epochs == 17
+    assert sn.snerv_score_aware_long_training_lr == 0.0025
+    assert sn.snerv_score_aware_long_training_batch_pairs == 6
+    assert sn.snerv_score_aware_long_training_optimizer == "lion"
+    assert sn.snerv_score_aware_long_training_grad_clip_max_norm == 0.75
+    assert sn.snerv_score_aware_long_training_weight_decay == -1.0
+    assert sn.snerv_score_aware_long_training_eval_roundtrip_ste is True
 
 
 def test_top_priority_family_cli_refuses_missing_planner_row(
@@ -6003,6 +6023,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             encoding="utf-8",
         )
         report = out / "snerv_mlx_native_train_export.json"
+        long_training_executed = int(
+            kwargs.get("score_aware_long_training_epochs") or 0
+        ) > 0
         payload = {
             "schema": "snerv_mlx_native_train_export.v1",
             "report_path": report.as_posix(),
@@ -6018,8 +6041,38 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "native_mlx_training_executed": int(
                 kwargs.get("native_mlx_decoder_train_steps") or 0
             )
-            > 0,
-            "native_mlx_training_kind": "full_batch_hf_decoder_gradient_descent",
+            > 0
+            or long_training_executed,
+            "native_mlx_training_kind": (
+                "snerv_mlx_score_aware_haar_renderer"
+                if long_training_executed
+                else "full_batch_hf_decoder_gradient_descent"
+            ),
+            "score_aware_long_training_executed": long_training_executed,
+            "score_aware_long_training_kind": (
+                "snerv_mlx_score_aware_haar_renderer"
+                if long_training_executed
+                else "none"
+            ),
+            "score_aware_long_training": {
+                "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
+                "executed": long_training_executed,
+                "requested_epochs": int(
+                    kwargs.get("score_aware_long_training_epochs") or 0
+                ),
+                "learning_rate": float(
+                    kwargs.get("score_aware_long_training_lr") or 0.0
+                ),
+                "batch_pairs": int(
+                    kwargs.get("score_aware_long_training_batch_pairs") or 0
+                ),
+                "optimizer_kind": str(
+                    kwargs.get("score_aware_long_training_optimizer") or ""
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "native_mlx_hf_decoder_training": {
                 "schema": "snerv_native_mlx_hf_decoder_training.v1",
                 "requested_steps": int(
@@ -6050,7 +6103,11 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 )
             ],
             "blockers": [
-                "snerv_mlx_score_aware_long_training_not_executed",
+                *(
+                    []
+                    if long_training_executed
+                    else ["snerv_mlx_score_aware_long_training_not_executed"]
+                ),
                 "contest_cpu_cuda_exact_eval_not_executed",
             ],
             "score_claim": False,
@@ -6164,6 +6221,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_native_mlx_decoder_train_lr=0.004,
         snerv_native_mlx_decoder_train_ridge=0.0003,
         snerv_native_mlx_decoder_train_optimizer="adam",
+        snerv_score_aware_long_training_epochs=13,
+        snerv_score_aware_long_training_lr=0.002,
+        snerv_score_aware_long_training_batch_pairs=2,
+        snerv_score_aware_long_training_optimizer="lion",
+        snerv_score_aware_long_training_grad_clip_max_norm=0.5,
+        snerv_score_aware_long_training_weight_decay=None,
+        snerv_score_aware_long_training_eval_roundtrip_ste=True,
         prioritized_pair_indices=(7, 2, 7),
         repo_root=REPO_ROOT,
     )
@@ -6184,6 +6248,16 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["native_mlx_decoder_train_lr"] == pytest.approx(0.004)
     assert native_calls[0]["native_mlx_decoder_train_ridge"] == pytest.approx(0.0003)
     assert native_calls[0]["native_mlx_decoder_train_optimizer"] == "adam"
+    assert native_calls[0]["score_aware_long_training_epochs"] == 13
+    assert native_calls[0]["score_aware_long_training_lr"] == pytest.approx(0.002)
+    assert native_calls[0]["score_aware_long_training_batch_pairs"] == 2
+    assert native_calls[0]["score_aware_long_training_optimizer"] == "lion"
+    assert native_calls[0]["score_aware_long_training_grad_clip_max_norm"] == 0.5
+    assert native_calls[0]["score_aware_long_training_weight_decay"] is None
+    assert native_calls[0]["score_aware_long_training_eval_roundtrip_ste"] is True
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_epochs"
+    ] == 13
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
         Path(native_calls[0]["recon_pixel_weight_manifest_path"])
@@ -6203,8 +6277,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["receiver_contract_satisfied"] is True
     assert native["native_mlx_training_executed"] is True
     assert native["native_mlx_training_kind"] == (
-        "full_batch_hf_decoder_gradient_descent"
+        "snerv_mlx_score_aware_haar_renderer"
     )
+    assert native["score_aware_long_training_executed"] is True
     assert native["native_mlx_hf_decoder_training"]["requested_steps"] == 11
     assert native["native_mlx_hf_decoder_training"]["learning_rate"] == pytest.approx(
         0.004
@@ -6275,8 +6350,11 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     ]
     assert (
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
-        in out["blockers"]
+        not in plan["blockers"]
     )
+    assert "snerv_mlx_native_longer_staged_training_not_executed" not in out[
+        "blockers"
+    ]
 
 
 def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
