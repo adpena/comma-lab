@@ -2915,7 +2915,7 @@ def test_archive_ladder_waterfill_reingest_preserves_replay_source_and_refuses_u
     candidate = dict(_hinerv_budget()["selected_candidates"][0])
     candidate.update({"candidate_id": "hinerv_ladder_unfit"})
     waterfill = _decoder_weight_waterfill_plan(
-        candidate_id="hinerv_ladder_unfit",
+        candidate_id="source_hinerv:hinerv_ladder_unfit",
         receiver_proof_status="runtime_consumption_proof_ready",
     )
     waterfill["full_video_coverage"] = True
@@ -3001,6 +3001,7 @@ def test_archive_ladder_waterfill_reingest_preserves_replay_source_and_refuses_u
     recovery_work_order = attachment["allocator_basin_recovery_work_order"]
     assert recovery_work_order["schema"] == "nerv_decoder_weight_allocator_basin_recovery_work_order.v1"
     assert recovery_work_order["required"] is True
+    assert recovery_work_order["candidate_id"] == "hinerv_ladder_unfit"
     assert recovery_work_order["blockers"] == []
     assert recovery_work_order["source_decoder_weight_waterfill_report_path"] == archive_ladder.resolve(
         strict=False

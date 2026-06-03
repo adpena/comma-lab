@@ -1,0 +1,77 @@
+# NeRV Long-Training Campaign Plan
+
+Schema: `nerv_long_training_campaign_plan.v1`
+Rows: `12`
+Launchable local rows: `0`
+Blocked rows: `12`
+Score claim: `False`
+Ready for exact dispatch: `False`
+
+## Rows
+
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `11`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `11`
+- `snerv::snerv_np600_haar_lv5_lfb2_stepb1_fc17e0_p1_mfu1-2-4_hfr0_t1_adbase_oms0p08_int8_symmetric_ceil285000::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `True`
+  optimizer: `None`
+  blockers: `24`
+- `snerv::snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc17e0_p1_mfu1-2-4_hfr0_t1_adbase_oms0p08_int8_symmetric_ceil285000::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `True`
+  optimizer: `None`
+  blockers: `24`
+- `snerv::snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc17e0_p1_mfu1-2-4_hfr0_t1_tmhaar1_adbase_oms0p08_int8_symmetric_ceil285000::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `True`
+  optimizer: `None`
+  blockers: `24`
+
+## Blockers
+
+- `campaign_plan_is_not_execution`
+- `exact_cpu_cuda_not_launched_by_campaign_plan`
+- `snerv_native_rate_pressure_in_loop_not_yet_training_authority`

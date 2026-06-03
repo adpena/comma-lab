@@ -2891,7 +2891,7 @@ def _decoder_weight_waterfill_allocator_basin_recovery_work_order(
             "reason": "decoder_weight_waterfill_row_inside_allocator_basin_or_missing_basin_evidence",
             **FALSE_AUTHORITY,
         }
-    candidate_id = str(row.get("candidate_id") or row.get("_modelsize_row_id") or "").strip()
+    candidate_id = str(row.get("_modelsize_row_id") or row.get("candidate_id") or "").strip()
     source_path = str(row.get("_decoder_weight_waterfill_source_path") or "").strip()
     row_id = str(row.get("_modelsize_row_id") or candidate_id).strip()
     recovery_blockers: list[str] = []
