@@ -591,6 +591,40 @@ def test_long_training_campaign_plan_attaches_hinerv_decoder_weight_waterfill(
     assert hi["score_claim"] is False
 
 
+def test_long_training_campaign_plan_records_unattached_decoder_weight_waterfill(
+    tmp_path: Path,
+) -> None:
+    waterfill_path = tmp_path / "decoder_weight_waterfill_wrong_candidate.json"
+    waterfill = _decoder_weight_waterfill_plan(candidate_id="hinerv_wrong_shape")
+    waterfill_path.write_text(json.dumps(waterfill, sort_keys=True), encoding="utf-8")
+    waterfill["_decoder_weight_waterfill_plan_path"] = waterfill_path.as_posix()
+    waterfill["_decoder_weight_waterfill_plan_sha256"] = _sha256(waterfill_path)
+    waterfill["_decoder_weight_waterfill_source_path"] = waterfill_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        decoder_weight_waterfill_sources=(waterfill,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert "--decoder-weight-waterfill-plan-json" not in hi["command_argv"]
+    assert hi["decoder_weight_waterfill_plan"]["attached"] is False
+    assert "hinerv_decoder_weight_waterfill_plan_missing" in hi["blockers"]
+    assert report["decoder_weight_waterfill_attached_row_count"] == 0
+    assert report["decoder_weight_waterfill_unattached_source_count"] == 1
+    [unattached] = report["decoder_weight_waterfill_unattached_sources"]
+    assert unattached["reason"] == "no_matching_campaign_candidate_id"
+    assert unattached["source_candidate_id"] == "hinerv_wrong_shape"
+    assert unattached["target_candidate_ids"] == ["hinerv_tiny"]
+    assert unattached["sha256"] == _sha256(waterfill_path)
+    assert unattached["score_claim"] is False
+
+
 def test_long_training_campaign_plan_keeps_snerv_bounded_proof_explicit() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),

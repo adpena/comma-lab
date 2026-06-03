@@ -193,6 +193,12 @@ def build_nerv_long_training_campaign_plan(
         ),
     )
     experiment_queue = _experiment_queue(rows, queue_id=queue_id)
+    decoder_weight_waterfill_unattached_sources = (
+        _decoder_weight_waterfill_unattached_sources(
+            index=decoder_weight_waterfill_index,
+            campaign_rows=rows,
+        )
+    )
     return {
         "schema": SCHEMA,
         "baseline_to_beat": "pr95_public_control_arm_plus_frontier_exact_axes",
@@ -258,6 +264,12 @@ def build_nerv_long_training_campaign_plan(
         "decoder_weight_waterfill_row_count": sum(
             len(rows_for_key)
             for rows_for_key in decoder_weight_waterfill_index.values()
+        ),
+        "decoder_weight_waterfill_unattached_source_count": len(
+            decoder_weight_waterfill_unattached_sources
+        ),
+        "decoder_weight_waterfill_unattached_sources": (
+            decoder_weight_waterfill_unattached_sources
         ),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
@@ -1905,6 +1917,66 @@ def _decoder_weight_waterfill_row_metadata(row: Mapping[str, Any]) -> dict[str, 
         "blockers": list(row.get("blockers") or []),
         **FALSE_AUTHORITY,
     }
+
+
+def _decoder_weight_waterfill_unattached_sources(
+    *,
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+    campaign_rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Return source-backed waterfill rows that no campaign row consumed.
+
+    Decoder-weight waterfill is candidate-shape specific. Dropping unmatched
+    sources silently loses useful signal and invites false attachments later.
+    The planner records them as non-authoritative diagnostics instead.
+    """
+
+    attached_paths = {
+        str(plan.get("path") or "")
+        for row in campaign_rows
+        if isinstance((plan := row.get("decoder_weight_waterfill_plan")), Mapping)
+        and plan.get("attached") is True
+    }
+    target_candidates_by_family: dict[str, list[str]] = {}
+    for row in campaign_rows:
+        family = _family_key(str(row.get("family") or ""))
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if family and candidate_id:
+            target_candidates_by_family.setdefault(family, []).append(candidate_id)
+
+    by_path: dict[str, dict[str, Any]] = {}
+    for (family, _candidate_key), source_rows in (index or {}).items():
+        for source in source_rows:
+            path = str(source.get("path") or "")
+            if not path or path in attached_paths or path in by_path:
+                continue
+            family_key = _family_key(str(source.get("family") or family))
+            by_path[path] = {
+                "schema": (
+                    "nerv_long_training_unattached_decoder_weight_waterfill_"
+                    "source.v1"
+                ),
+                "attached": False,
+                "reason": "no_matching_campaign_candidate_id",
+                "path": path,
+                "sha256": source.get("_decoder_weight_waterfill_plan_sha256"),
+                "source_path": source.get("_decoder_weight_waterfill_source_path"),
+                "family": family_key,
+                "source_candidate_id": source.get("candidate_id"),
+                "candidate_keys": list(_candidate_index_keys(source)),
+                "target_candidate_ids": sorted(
+                    _dedupe(target_candidates_by_family.get(family_key, []))
+                ),
+                "group_count": int(source.get("group_count") or 0),
+                "full_video_coverage": bool(source.get("full_video_coverage")),
+                "receiver_proof_ready": bool(source.get("receiver_proof_ready")),
+                "blockers": list(source.get("blockers") or []),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                **FALSE_AUTHORITY,
+            }
+    return sorted(by_path.values(), key=lambda item: str(item.get("path") or ""))
 
 
 def _hinerv_feedback_launch_adjustment(
