@@ -125,6 +125,21 @@ def test_official_hfr_mlx_optimized_matches_numpy_convblock() -> None:
     np.testing.assert_allclose(np.asarray(got), expected, atol=1e-4, rtol=2e-3)
 
 
+def test_official_hfr_mlx_default_is_fixed_reference_and_repeatable() -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    rng = np.random.default_rng(45)
+    block = _head(rng, in_ch=3, hidden_ch=4)
+    x = rng.standard_normal((1, 3, 4, 4)).astype(np.float32)
+
+    expected = block.forward(x)
+    first = block.forward_mlx(mx.array(x))
+    second = block.forward_mlx(mx.array(x))
+
+    np.testing.assert_allclose(np.asarray(first), expected, atol=2e-5, rtol=2e-5)
+    np.testing.assert_array_equal(np.asarray(first), np.asarray(second))
+
+
 def test_official_hfr_mlx_fixed_reference_matches_numpy_conv() -> None:
     mx = pytest.importorskip("mlx.core")
 
