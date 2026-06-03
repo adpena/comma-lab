@@ -51,6 +51,7 @@ import json
 import struct
 from dataclasses import dataclass
 
+import brotli  # type: ignore[import-not-found]
 import torch
 
 from tac.substrates._shared.decoder_state_codec import (
@@ -68,6 +69,12 @@ HIV1_HEADER_SIZE: int = struct.calcsize(HIV1_HEADER_FMT)
 assert HIV1_HEADER_SIZE == 33, "HIV1 header size invariant"
 
 BROTLI_QUALITY: int = 9
+LATENT_CODEC_RAW_INT16: str = "int16_raw"
+LATENT_CODEC_BROTLI_INT16_Q11: str = "int16_brotli_q11"
+SUPPORTED_LATENT_CODECS: tuple[str, ...] = (
+    LATENT_CODEC_RAW_INT16,
+    LATENT_CODEC_BROTLI_INT16_Q11,
+)
 
 
 @dataclass(frozen=True)
@@ -150,6 +157,7 @@ def pack_archive(
     *,
     schema_version: int = HIV1_SCHEMA_VERSION,
     decoder_codec: str = "fp16_brotli_legacy",
+    latent_codec: str = LATENT_CODEC_RAW_INT16,
 ) -> bytes:
     """Serialize trained weights + 3-scale latents + meta into 0.bin bytes."""
     if schema_version != HIV1_SCHEMA_VERSION:
@@ -185,9 +193,12 @@ def pack_archive(
     qm, sc_m, zp_m = _quantize_latents_to_int16(latents_mid)
     qf, sc_f, zp_f = _quantize_latents_to_int16(latents_fine)
 
-    bytes_c = qc.contiguous().numpy().tobytes()
-    bytes_m = qm.contiguous().numpy().tobytes()
-    bytes_f = qf.contiguous().numpy().tobytes()
+    raw_c = qc.contiguous().numpy().tobytes()
+    raw_m = qm.contiguous().numpy().tobytes()
+    raw_f = qf.contiguous().numpy().tobytes()
+    bytes_c = _encode_latent_blob(raw_c, codec=latent_codec)
+    bytes_m = _encode_latent_blob(raw_m, codec=latent_codec)
+    bytes_f = _encode_latent_blob(raw_f, codec=latent_codec)
 
     decoder_blob = _serialize_state_dict(decoder_state_dict, codec=decoder_codec)
 
@@ -198,6 +209,14 @@ def pack_archive(
     meta_with_quant["_quant_zero_point_mid"] = float(zp_m)
     meta_with_quant["_quant_scale_fine"] = float(sc_f)
     meta_with_quant["_quant_zero_point_fine"] = float(zp_f)
+    meta_with_quant["_latent_codec"] = str(latent_codec)
+    meta_with_quant["_latent_codec_lossless"] = True
+    meta_with_quant["_latent_raw_bytes_coarse"] = len(raw_c)
+    meta_with_quant["_latent_raw_bytes_mid"] = len(raw_m)
+    meta_with_quant["_latent_raw_bytes_fine"] = len(raw_f)
+    meta_with_quant["_latent_coded_bytes_coarse"] = len(bytes_c)
+    meta_with_quant["_latent_coded_bytes_mid"] = len(bytes_m)
+    meta_with_quant["_latent_coded_bytes_fine"] = len(bytes_f)
     meta_with_quant["_decoder_state_codec"] = decoder_state_codec_stats(
         decoder_blob
     ).as_dict()
@@ -246,16 +265,6 @@ def split_archive_sections(blob: bytes) -> HinervArchiveSections:
         raise ValueError(f"bad magic: {magic!r} (expected {HIV1_MAGIC!r})")
     if version != HIV1_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {version}")
-    for name, given, expected in (
-        ("lat_c_len", lat_c_len, num_pairs * dim_c * 2),
-        ("lat_m_len", lat_m_len, num_pairs * dim_m * 2),
-        ("lat_f_len", lat_f_len, num_pairs * dim_f * 2),
-    ):
-        if given != expected:
-            raise ValueError(
-                f"{name} {given} != num_pairs*latent_dim*2 = {expected}"
-            )
-
     end_header = HIV1_HEADER_SIZE
     end_decoder = end_header + decoder_len
     end_lat_c = end_decoder + lat_c_len
@@ -352,16 +361,6 @@ def parse_archive(blob: bytes) -> HinervArchive:
     if version != HIV1_SCHEMA_VERSION:
         raise ValueError(f"unsupported schema version: {version}")
 
-    for name, given, expected in (
-        ("lat_c_len", lat_c_len, num_pairs * dim_c * 2),
-        ("lat_m_len", lat_m_len, num_pairs * dim_m * 2),
-        ("lat_f_len", lat_f_len, num_pairs * dim_f * 2),
-    ):
-        if given != expected:
-            raise ValueError(
-                f"{name} {given} != num_pairs*latent_dim*2 = {expected}"
-            )
-
     end_header = HIV1_HEADER_SIZE
     end_decoder = end_header + decoder_len
     end_lat_c = end_decoder + lat_c_len
@@ -384,14 +383,22 @@ def parse_archive(blob: bytes) -> HinervArchive:
 
     import numpy as np
 
-    def _decode_latent(buf: bytes, np_dim: int, lat_dim: int) -> torch.Tensor:
+    latent_codec = str(meta.get("_latent_codec", LATENT_CODEC_RAW_INT16))
+
+    def _decode_latent(buf: bytes, np_dim: int, lat_dim: int, name: str) -> torch.Tensor:
+        raw = _decode_latent_blob(
+            buf,
+            codec=latent_codec,
+            expected_raw_bytes=int(np_dim) * int(lat_dim) * 2,
+            name=name,
+        )
         return torch.from_numpy(
-            np.frombuffer(buf, dtype=np.int16).copy()
+            np.frombuffer(raw, dtype=np.int16).copy()
         ).view(np_dim, lat_dim)
 
-    qc = _decode_latent(lat_c_blob, num_pairs, dim_c)
-    qm = _decode_latent(lat_m_blob, num_pairs, dim_m)
-    qf = _decode_latent(lat_f_blob, num_pairs, dim_f)
+    qc = _decode_latent(lat_c_blob, num_pairs, dim_c, "latents_coarse")
+    qm = _decode_latent(lat_m_blob, num_pairs, dim_m, "latents_mid")
+    qf = _decode_latent(lat_f_blob, num_pairs, dim_f, "latents_fine")
 
     sc_c = float(meta.pop("_quant_scale_coarse"))
     zp_c = float(meta.pop("_quant_zero_point_coarse"))
@@ -399,6 +406,14 @@ def parse_archive(blob: bytes) -> HinervArchive:
     zp_m = float(meta.pop("_quant_zero_point_mid"))
     sc_f = float(meta.pop("_quant_scale_fine"))
     zp_f = float(meta.pop("_quant_zero_point_fine"))
+    meta.pop("_latent_codec", None)
+    meta.pop("_latent_codec_lossless", None)
+    meta.pop("_latent_raw_bytes_coarse", None)
+    meta.pop("_latent_raw_bytes_mid", None)
+    meta.pop("_latent_raw_bytes_fine", None)
+    meta.pop("_latent_coded_bytes_coarse", None)
+    meta.pop("_latent_coded_bytes_mid", None)
+    meta.pop("_latent_coded_bytes_fine", None)
 
     return HinervArchive(
         decoder_state_dict=sd,
@@ -408,3 +423,38 @@ def parse_archive(blob: bytes) -> HinervArchive:
         meta=meta,
         schema_version=int(version),
     )
+
+
+def _encode_latent_blob(raw: bytes, *, codec: str) -> bytes:
+    normalized = str(codec)
+    if normalized == LATENT_CODEC_RAW_INT16:
+        return bytes(raw)
+    if normalized == LATENT_CODEC_BROTLI_INT16_Q11:
+        return bytes(brotli.compress(raw, quality=11))
+    valid = ", ".join(SUPPORTED_LATENT_CODECS)
+    raise ValueError(f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}")
+
+
+def _decode_latent_blob(
+    blob: bytes,
+    *,
+    codec: str,
+    expected_raw_bytes: int,
+    name: str,
+) -> bytes:
+    normalized = str(codec)
+    if normalized == LATENT_CODEC_RAW_INT16:
+        raw = bytes(blob)
+    elif normalized == LATENT_CODEC_BROTLI_INT16_Q11:
+        raw = bytes(brotli.decompress(blob))
+    else:
+        valid = ", ".join(SUPPORTED_LATENT_CODECS)
+        raise ValueError(
+            f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}"
+        )
+    if len(raw) != int(expected_raw_bytes):
+        raise ValueError(
+            f"{name} decoded latent bytes {len(raw)} != expected {int(expected_raw_bytes)} "
+            f"for codec {normalized}"
+        )
+    return raw

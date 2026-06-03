@@ -5656,6 +5656,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     embed_dim: int = 8,
     decoder_channel: int = 8,
     decoder_codec: str = "portfolio_auto",
+    hi_nerv_latent_codec: str = "int16_raw",
     modelsize_candidate: Mapping[str, Any] | None = None,
     allow_unscored_research_smoke: bool = False,
     modelsize_budget_json_paths: tuple[str | Path, ...] = (),
@@ -6304,6 +6305,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mid_injection_block_index=launch_mid_injection_block_index,
             fine_injection_block_index=launch_fine_injection_block_index,
             decoder_codec=launch_decoder_codec,
+            hi_nerv_latent_codec=str(hi_nerv_latent_codec),
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
             pose_distillation_weight=effective_pose_distillation_weight,
@@ -8990,6 +8992,7 @@ def _hi_nerv_launch_source_faithfulness_report(
     convnext_mlp_ratio: int,
     convnext_kernel_size: int,
     decoder_codec: str,
+    hi_nerv_latent_codec: str,
 ) -> dict[str, Any]:
     cfg = SimpleNamespace(
         use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
@@ -9166,6 +9169,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mid_injection_block_index: int,
     fine_injection_block_index: int,
     decoder_codec: str,
+    hi_nerv_latent_codec: str,
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
@@ -9363,6 +9367,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "hi_nerv",
             ],
             decoder_codec=str(decoder_codec),
+            latent_codec=str(hi_nerv_latent_codec),
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         )
 
@@ -9372,6 +9377,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "num_pairs": pairs,
         "full_video_pairs_required_for_promotion": 600,
         "decoder_codec": str(decoder_codec),
+        "hi_nerv_latent_codec": str(hi_nerv_latent_codec),
         "model_num_parameters_at_init": int(model.num_parameters()),
         "source_faithfulness": _hi_nerv_source_faithfulness_metadata(
             cfg=cfg,
@@ -11940,6 +11946,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--hi-nerv-latent-codec",
+        default="int16_raw",
+        choices=("int16_raw", "int16_brotli_q11"),
+        help=(
+            "HiNeRV latent-section codec consumed by HIV1 parse/inflate. "
+            "int16_brotli_q11 is lossless over the quantized latent int16 "
+            "stream and reduces charged archive bytes without changing decoded "
+            "latents."
+        ),
+    )
+    parser.add_argument(
         "--modelsize-candidate-id",
         default="auto",
         help=(
@@ -13130,6 +13147,7 @@ def main(argv: list[str] | None = None) -> int:
             embed_dim=args.compact_embed_dim,
             decoder_channel=args.compact_decoder_channel,
             decoder_codec=args.compact_decoder_codec,
+            hi_nerv_latent_codec=args.hi_nerv_latent_codec,
             modelsize_candidate=modelsize_candidate,
             ema_decay=args.compact_ema_decay,
             segnet_distillation_weight=args.segnet_distillation_weight,

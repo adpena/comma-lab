@@ -397,6 +397,7 @@ def pack_archive_from_exported_state_dict(
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
+    latent_codec: str = "int16_raw",
     return_bitstream_report: bool = False,
 ) -> bytes | tuple[bytes, dict[str, Any]]:
     """Pack PyTorch-layout exported MLX tensors into HIV1 ``0.bin`` bytes."""
@@ -459,6 +460,7 @@ def pack_archive_from_exported_state_dict(
             "_hi_nerv_bitstream_preparation": bitstream_report,
         },
         decoder_codec=decoder_codec,
+        latent_codec=latent_codec,
     )
     if return_bitstream_report:
         return blob, bitstream_report
@@ -480,6 +482,7 @@ def export_hi_nerv_mlx_archive(
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
+    latent_codec: str = "int16_raw",
 ) -> tuple[Path, str, int]:
     """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
 
@@ -510,6 +513,7 @@ def export_hi_nerv_mlx_archive(
         quant_noise_scale=quant_noise_scale,
         quant_noise_seed=quant_noise_seed,
         decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        latent_codec=latent_codec,
         return_bitstream_report=True,
     )
     bin_path = out_dir / "0.bin"

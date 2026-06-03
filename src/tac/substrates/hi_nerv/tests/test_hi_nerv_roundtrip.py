@@ -23,6 +23,8 @@ from tac.substrates.hi_nerv.archive import (
     HIV1_HEADER_SIZE,
     HIV1_MAGIC,
     HIV1_SCHEMA_VERSION,
+    LATENT_CODEC_BROTLI_INT16_Q11,
+    LATENT_CODEC_RAW_INT16,
     pack_archive,
     parse_archive,
     repack_archive_decoder_codec,
@@ -112,6 +114,56 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors():
 
 def test_header_size_invariant_is_33_bytes():
     assert HIV1_HEADER_SIZE == 33
+
+
+def test_lossless_brotli_latent_codec_roundtrips_receiver_latents_and_shrinks():
+    cfg = _smoke_cfg()
+    torch.manual_seed(101)
+    model = HinervSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v
+        for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    lc = torch.zeros_like(sd["latents_coarse"])
+    lm = torch.zeros_like(sd["latents_mid"])
+    lf = torch.zeros_like(sd["latents_fine"])
+
+    raw_blob = pack_archive(
+        decoder_sd,
+        lc,
+        lm,
+        lf,
+        _smoke_meta(cfg),
+        latent_codec=LATENT_CODEC_RAW_INT16,
+    )
+    coded_blob = pack_archive(
+        decoder_sd,
+        lc,
+        lm,
+        lf,
+        _smoke_meta(cfg),
+        latent_codec=LATENT_CODEC_BROTLI_INT16_Q11,
+    )
+    raw_sections = split_archive_sections(raw_blob)
+    coded_sections = split_archive_sections(coded_blob)
+    parsed = parse_archive(coded_blob)
+
+    assert (
+        len(coded_sections.latents_coarse_blob)
+        + len(coded_sections.latents_mid_blob)
+        + len(coded_sections.latents_fine_blob)
+    ) < (
+        len(raw_sections.latents_coarse_blob)
+        + len(raw_sections.latents_mid_blob)
+        + len(raw_sections.latents_fine_blob)
+    )
+    assert coded_sections.meta["_latent_codec"] == LATENT_CODEC_BROTLI_INT16_Q11
+    assert coded_sections.meta["_latent_codec_lossless"] is True
+    assert torch.equal(parsed.latents_coarse, lc)
+    assert torch.equal(parsed.latents_mid, lm)
+    assert torch.equal(parsed.latents_fine, lf)
 
 
 def test_parse_archive_rejects_short_blob():
