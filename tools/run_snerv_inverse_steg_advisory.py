@@ -298,6 +298,15 @@ def main(argv: list[str] | None = None) -> int:
             "(zero,int2,int4,int8,fp16), one mode per level/subband kernel."
         ),
     )
+    ap.add_argument(
+        "--lf-payload-codec",
+        choices=("legacy", "portfolio_auto"),
+        default="portfolio_auto",
+        help=(
+            "Receiver-visible LF payload grammar. portfolio_auto uses the "
+            "lossless SQL2 int-stream portfolio; legacy preserves raw-i64+xz."
+        ),
+    )
     ap.add_argument("--out", type=str, default=None)
     ap.add_argument(
         "--packet-out",
@@ -382,6 +391,7 @@ def main(argv: list[str] | None = None) -> int:
         decoder_payload_mixed_modes=_parse_optional_modes(
             args.decoder_payload_mixed_modes
         ),
+        lf_payload_codec=args.lf_payload_codec,
     )
     payload = res.as_jsonable()
     payload.setdefault("schema", "snerv_inverse_steg_advisory.v1")

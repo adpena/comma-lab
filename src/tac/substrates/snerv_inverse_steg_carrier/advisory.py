@@ -178,6 +178,7 @@ class SnervAdvisoryResult:
     receiver_archive_packet: bytes
     receiver_archive_replay_verified: bool
     receiver_archive_replay_error: str
+    lf_payload_codec: str
     lf_payload_bytes: int  # entropy-coded quantized LF
     linf_steps_payload_bytes: int
     linf_steps_payload_codec: str
@@ -515,6 +516,7 @@ def run_snerv_advisory(
     hf_decoder_saliency_component: str = "combined",
     decoder_payload_codec: str = "float32_lzma",
     decoder_payload_mixed_modes: tuple[str, ...] | None = None,
+    lf_payload_codec: str = "portfolio_auto",
     snerv_fc_dim: int = 9,
     snerv_fc_dim_explicit: bool = False,
     snerv_emb_size: int = 0,
@@ -836,8 +838,9 @@ def run_snerv_advisory(
             if decoder_payload_mixed_modes is not None
             else None
         ),
+        "lf_payload_codec": lf_payload_codec,
     }
-    lf_payload = encode_lf_quant_payload(lf_quant_linf)
+    lf_payload = encode_lf_quant_payload(lf_quant_linf, codec=lf_payload_codec)
     metadata_payload = encode_lf_metadata_payload(
         lf_zero_points=lf_zero_points_linf,
     )
@@ -857,7 +860,7 @@ def run_snerv_advisory(
             "step_map_waterfill_bits_per_coeff": step_map_waterfill_bits_per_coeff,
         },
     )
-    l2_lf_payload = encode_lf_quant_payload(lf_quant_l2)
+    l2_lf_payload = encode_lf_quant_payload(lf_quant_l2, codec=lf_payload_codec)
     l2_metadata_payload = encode_lf_metadata_payload(
         lf_zero_points=lf_zero_points_l2,
     )
@@ -1025,6 +1028,7 @@ def run_snerv_advisory(
         receiver_archive_packet=receiver_archive.packet,
         receiver_archive_replay_verified=receiver_archive_replay_verified,
         receiver_archive_replay_error=receiver_archive_replay_error,
+        lf_payload_codec=lf_payload_codec,
         lf_payload_bytes=len(lf_payload),
         linf_steps_payload_bytes=steps_packet.total_bytes,
         linf_steps_payload_codec=steps_packet.schema,

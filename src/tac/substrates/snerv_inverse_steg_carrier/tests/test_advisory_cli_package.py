@@ -66,6 +66,8 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
             "mixed_magnitude_symmetric",
             "--decoder-payload-mixed-modes",
             "fp16,int4,int4",
+            "--lf-payload-codec",
+            "portfolio_auto",
             "--snerv-spectra-preserving-adapter",
             "--snerv-mfu-scales",
             "1,3",
@@ -141,6 +143,8 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     assert Path(payload["trained_ladder_row_payload_path"]).is_file()
     assert captured_kwargs["decoder_payload_codec"] == "mixed_magnitude_symmetric"
     assert captured_kwargs["decoder_payload_mixed_modes"] == ("fp16", "int4", "int4")
+    assert captured_kwargs["lf_payload_codec"] == "portfolio_auto"
+    assert payload["lf_payload_codec"] == "portfolio_auto"
     assert captured_kwargs["snerv_model_size_adapter"] == (
         SNERV_SPECTRA_PRESERVING_ADAPTER
     )
@@ -242,6 +246,7 @@ def _fake_advisory_result(
             "sha256": "fake",
             "redacted": True,
         },
+        "lf_payload_codec": "portfolio_auto",
         "archive_byte_closure_blockers": [
             "full_600_pair_receiver_replay_missing",
             "paired_contest_cpu_cuda_auth_eval_missing",
@@ -257,6 +262,7 @@ def _fake_advisory_result(
         wavelet="db2",
         adjoint_rel_residual=0.0,
         lf_coeff_count_total=384,
+        lf_payload_codec="portfolio_auto",
         lf_payload_bytes=100,
         linf_steps_payload_bytes=80,
         linf_steps_payload_codec="snerv_step_map_coder.v1",
