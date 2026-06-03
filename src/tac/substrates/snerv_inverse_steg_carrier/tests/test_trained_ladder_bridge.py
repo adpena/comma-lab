@@ -302,6 +302,9 @@ def test_bridge_consumes_receiver_bound_official_payload_evidence(
                 "export_bound_to_receiver_packet": True,
                 "official_receiver_payload_contract_emitted": True,
                 "receiver_runtime_decode_authority": True,
+                "official_receiver_tensor_map": {
+                    "receiver_tensor_map_verified": True,
+                },
             },
             blockers=[
                 "snerv_official_mfu_hfr_tub_weight_mapping_missing",
@@ -325,7 +328,6 @@ def test_bridge_consumes_receiver_bound_official_payload_evidence(
         not in controls["official_mfu_hfr_tub_export_blockers"]
     )
     assert controls["official_mfu_hfr_tub_export_blockers"] == [
-        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
     ]
     assert controls["source_faithful_stack"] is False

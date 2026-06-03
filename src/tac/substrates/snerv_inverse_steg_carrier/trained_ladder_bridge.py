@@ -30,7 +30,6 @@ SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS = (
     "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
 )
 SNERV_OFFICIAL_MFU_HFR_TUB_POST_EXPORT_BLOCKERS = (
-    "snerv_official_mfu_hfr_tub_weight_mapping_missing",
     "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
 )
 PROTECTED_OFFICIAL_CONTROL_FIELDS = frozenset(
@@ -262,6 +261,7 @@ def _official_mfu_hfr_tub_export_blockers(
         for value in observed
         if value.startswith("snerv_official_mfu_hfr_tub_")
     ]
+    tensor_map_verified = _official_receiver_tensor_map_verified(advisory_result)
     if export_bound:
         blockers = [
             value
@@ -269,11 +269,27 @@ def _official_mfu_hfr_tub_export_blockers(
             if value
             != "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
         ]
+        if tensor_map_verified:
+            blockers = [
+                value
+                for value in blockers
+                if value != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
+            ]
         for fallback in SNERV_OFFICIAL_MFU_HFR_TUB_POST_EXPORT_BLOCKERS:
             if fallback not in blockers:
                 blockers.append(fallback)
         return blockers
     return list(SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS)
+
+
+def _official_receiver_tensor_map_verified(advisory_result: Any) -> bool:
+    binding = _attr(advisory_result, "official_primitive_binding")
+    if not isinstance(binding, Mapping):
+        return False
+    tensor_map = binding.get("official_receiver_tensor_map")
+    return isinstance(tensor_map, Mapping) and bool(
+        tensor_map.get("receiver_tensor_map_verified") is True
+    )
 
 
 def _merge_official_controls_fail_closed(

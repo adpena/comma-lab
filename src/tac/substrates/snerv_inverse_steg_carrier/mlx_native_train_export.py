@@ -505,6 +505,11 @@ def train_export_snerv_mlx_native(
         if official_primitives_requested
         else None
     )
+    selected_official_tensor_map = (
+        _official_receiver_tensor_map_from_packet(selected_packet)
+        if official_primitives_requested
+        else None
+    )
     if (
         official_primitives_requested
         and selected_official_authority is not None
@@ -522,6 +527,23 @@ def train_export_snerv_mlx_native(
             if str(blocker)
             != "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
         ]
+        if (
+            selected_official_tensor_map is not None
+            and selected_official_tensor_map.get("receiver_tensor_map_verified")
+            is True
+        ):
+            official_primitives_blockers = [
+                str(blocker)
+                for blocker in official_primitives_blockers
+                if str(blocker)
+                != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
+            ]
+            blockers = [
+                str(blocker)
+                for blocker in blockers
+                if str(blocker)
+                != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
+            ]
         if official_binding is not None:
             official_binding = dict(official_binding)
             official_binding["blockers"] = list(official_primitives_blockers)
@@ -2403,6 +2425,13 @@ def _receiver_bound_official_primitives_export_binding(
 
     blockers = [str(blocker) for blocker in official_binding.get("blockers") or []]
     selected_authority = _selected_packet_official_payload_authority(selected_packet)
+    tensor_map = _official_receiver_tensor_map_from_packet(selected_packet)
+    if bool(tensor_map.get("receiver_tensor_map_verified")):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
+        ]
     proof_passed = receiver_proof.get("runtime_consumption_proof_passed") is True
     receiver_satisfied = receiver_proof.get("receiver_contract_satisfied") is True
     archive_path = receiver_proof.get("archive_path")
@@ -2421,6 +2450,7 @@ def _receiver_bound_official_primitives_export_binding(
         selected_authority["official_decoder_payload_selected"]
     )
     out["selected_packet_authority"] = selected_authority
+    out["official_receiver_tensor_map"] = tensor_map
     out["receiver_bound_surrogate_export"] = {
         "schema": "snerv_official_receiver_bound_surrogate_export.v1",
         "kind": "snar1_linear_hf_generation_decoder_not_official_neural_graph",
@@ -2473,6 +2503,90 @@ def _receiver_bound_official_primitives_export_binding(
     )
     out.update(FALSE_AUTHORITY)
     return out
+
+
+def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
+    """Extract receiver-bound official tensor custody from selected bytes."""
+
+    base = {
+        "schema": "snerv_official_mfu_hfr_tub_receiver_tensor_map.v1",
+        "receiver_tensor_map_verified": False,
+        "official_decoder_payload_selected": False,
+        "row_count": 0,
+        "total_tensor_bytes": 0,
+        "category_counts": {},
+        "category_bytes": {},
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    try:
+        decoded = unpack_snerv_archive(packet)
+        header = inspect_decoder_payload_header(decoded.sections["decoder_payload"])
+    except Exception as exc:
+        return {
+            **base,
+            "blockers": ["snerv_official_receiver_tensor_map_packet_parse_failed"],
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+    if str(header.get("schema") or "") != DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA:
+        return {
+            **base,
+            "blockers": ["snerv_official_receiver_tensor_map_payload_not_official"],
+            "decoder_payload_schema": str(header.get("schema") or ""),
+        }
+    rows = []
+    category_counts: dict[str, int] = {}
+    category_bytes: dict[str, int] = {}
+    for raw_row in header.get("tensor_manifest") or ():
+        if not isinstance(raw_row, Mapping):
+            return {
+                **base,
+                "official_decoder_payload_selected": True,
+                "blockers": ["snerv_official_receiver_tensor_map_malformed_row"],
+            }
+        name = str(raw_row.get("name") or "")
+        nbytes = int(raw_row.get("bytes") or 0)
+        category = _official_receiver_tensor_category(name)
+        row = {
+            "name": name,
+            "category": category,
+            "shape": [int(value) for value in raw_row.get("shape") or ()],
+            "dtype": str(raw_row.get("dtype") or ""),
+            "bytes": nbytes,
+            "sha256": str(raw_row.get("sha256") or ""),
+        }
+        rows.append(row)
+        category_counts[category] = category_counts.get(category, 0) + 1
+        category_bytes[category] = category_bytes.get(category, 0) + nbytes
+    manifest_sha = hashlib.sha256(
+        json.dumps(rows, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return {
+        **base,
+        "receiver_tensor_map_verified": bool(rows),
+        "official_decoder_payload_selected": True,
+        "decoder_payload_schema": str(header.get("schema") or ""),
+        "decoder_payload_codec": str(header.get("codec") or ""),
+        "row_count": len(rows),
+        "total_tensor_bytes": int(sum(int(row["bytes"]) for row in rows)),
+        "category_counts": dict(sorted(category_counts.items())),
+        "category_bytes": dict(sorted(category_bytes.items())),
+        "tensor_manifest_sha256": manifest_sha,
+        "rows": rows,
+        "blockers": [],
+    }
+
+
+def _official_receiver_tensor_category(name: str) -> str:
+    if name.startswith("mfu."):
+        return "official_mfu_weight_payload"
+    if name.startswith("hfr."):
+        return "official_hfr_weight_payload"
+    if name.startswith("inputs.tub."):
+        return "official_tub_input_payload"
+    if name.startswith("inputs.mfu."):
+        return "official_mfu_input_payload"
+    return "official_decoder_graph_topology_payload"
 
 
 def _selected_packet_official_payload_authority(packet: bytes) -> dict[str, Any]:
