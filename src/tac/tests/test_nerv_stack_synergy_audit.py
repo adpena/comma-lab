@@ -24,6 +24,9 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     assert audit["ready_for_exact_eval_dispatch"] is False
     stacks = {row["stack_id"]: row for row in audit["stacks"]}
     assert set(stacks) == {"hi_nerv", "snerv"}
+    assert len(audit["blockers"]) == len(set(audit["blockers"]))
+    for stack in stacks.values():
+        assert len(stack["blockers"]) == len(set(stack["blockers"]))
     assert stacks["hi_nerv"]["modelsize_budget"]["schema"] == "nerv_modelsize_budget.v1"
     assert stacks["snerv"]["modelsize_budget"]["schema"] == "snerv_modelsize_budget.v1"
     assert stacks["hi_nerv"]["pr95_stack_binding"]["schema"] == (

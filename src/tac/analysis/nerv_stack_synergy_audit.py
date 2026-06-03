@@ -243,7 +243,7 @@ def _hi_nerv_stack_audit(
     ]
     if markers:
         blockers.append("hinerv_partial_or_stub_markers_present")
-    blockers = [blocker for blocker in blockers if blocker]
+    blockers = _ordered_unique_nonempty(blockers)
     return {
         "schema": "nerv_stack_synergy_stack_row.v1",
         "stack_id": "hi_nerv",
@@ -466,6 +466,7 @@ def _snerv_stack_audit(
     ]
     if markers:
         blockers.append("snerv_partial_or_stub_markers_present")
+    blockers = _ordered_unique_nonempty(blockers)
     return {
         "schema": "nerv_stack_synergy_stack_row.v1",
         "stack_id": "snerv",
@@ -533,6 +534,18 @@ def _snerv_stack_audit(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _ordered_unique_nonempty(values: Iterable[Any]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        text = str(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
 
 
 def _priors_for_stack(oss: dict[str, Any], *, stack_id: str) -> list[dict[str, Any]]:
