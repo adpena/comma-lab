@@ -28,6 +28,15 @@ def _default_out() -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", default=None)
+    parser.add_argument(
+        "--progress-jsonl",
+        default=None,
+        help=(
+            "Append one false-authority JSON row after every receiver-replayed "
+            "scorer-loop evaluation. This is progress custody only; it is not "
+            "promotion authority."
+        ),
+    )
     parser.add_argument("--n-pairs", type=int, default=1)
     parser.add_argument("--levels", type=int, default=2)
     parser.add_argument("--wavelet", default="db2")
@@ -81,6 +90,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=1337)
     args = parser.parse_args(argv)
 
+    progress_callback = _build_progress_callback(args.progress_jsonl)
+
     result = run_snerv_scorer_loop_decoder_qat_smoke(
         n_pairs=args.n_pairs,
         levels=args.levels,
@@ -116,6 +127,7 @@ def main(argv: list[str] | None = None) -> int:
             args.pair_guard_max_pose_worsened_fraction
         ),
         seed=args.seed,
+        progress_callback=progress_callback,
     )
 
     out_path = Path(args.out) if args.out else _default_out()
@@ -154,6 +166,32 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  blockers: {list(result.blockers)}")
     print(f"  wrote {out_path}")
     return 0
+
+
+def _build_progress_callback(raw_path: str | None):
+    if raw_path is None:
+        return None
+    progress_path = Path(raw_path)
+    if not progress_path.is_absolute():
+        progress_path = REPO_ROOT / progress_path
+    progress_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def callback(row) -> None:
+        payload = {
+            "schema": "snerv_scorer_loop_decoder_qat_progress.v1",
+            "captured_at_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "axis_tag": "[macOS-CPU advisory]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "row": row.as_jsonable(),
+        }
+        with progress_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, sort_keys=True) + "\n")
+            handle.flush()
+
+    return callback
 
 
 def _parse_positive_int_csv(raw: str) -> tuple[int, ...]:

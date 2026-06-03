@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -66,6 +67,7 @@ COMPONENT_GUARD_MODES: tuple[str, ...] = (
     "pose_hard",
     "pose_seg_hard",
 )
+ProgressCallback = Callable[["SnervDecoderEval"], None]
 
 
 class SnervScorerLoopDecoderQatError(ValueError):
@@ -292,6 +294,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     pair_guard_max_pose_worsened_fraction: float = 1.0,
     component_guard_mode: str = "score_primary",
     seed: int = 1337,
+    progress_callback: ProgressCallback | None = None,
 ) -> SnervScorerLoopDecoderQatSmokeResult:
     """Run a tiny real-frame scorer-loop decoder/QAT smoke.
 
@@ -400,6 +403,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     best_decoder = prepared.baseline_decoder
     best_eval = baseline
     rows: list[SnervDecoderEval] = [baseline]
+    _emit_progress(progress_callback, baseline)
     rng = np.random.default_rng(seed)
     base_vec, layout = _decoder_to_vector(prepared.baseline_decoder)
     if base_vec.size == 0:
@@ -474,41 +478,41 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             )
             gradient += (plus_objective - minus_objective) * direction
             for row in (plus_row, minus_row):
-                rows.append(
-                    _replace_eval_acceptance(
-                        row,
-                        accepted=False,
-                        blockers=tuple(
-                            dict.fromkeys(
-                                (
-                                    "nes_probe_only_not_candidate",
-                                    *_trial_blockers(
-                                        row,
-                                        best_eval,
-                                        pose_slack=pose_slack,
-                                        seg_slack=seg_slack,
-                                        byte_pressure_multiplier=(
-                                            byte_pressure_multiplier
-                                        ),
-                                        section_value_pressure_multiplier=(
-                                            section_value_pressure_multiplier
-                                        ),
-                                        max_archive_byte_growth=(
-                                            max_archive_byte_growth
-                                        ),
-                                        pair_guard_min_score_improved_fraction=(
-                                            pair_guard_min_score_improved_fraction
-                                        ),
-                                        pair_guard_max_pose_worsened_fraction=(
-                                            pair_guard_max_pose_worsened_fraction
-                                        ),
-                                        component_guard_mode=component_mode,
+                progress_row = _replace_eval_acceptance(
+                    row,
+                    accepted=False,
+                    blockers=tuple(
+                        dict.fromkeys(
+                            (
+                                "nes_probe_only_not_candidate",
+                                *_trial_blockers(
+                                    row,
+                                    best_eval,
+                                    pose_slack=pose_slack,
+                                    seg_slack=seg_slack,
+                                    byte_pressure_multiplier=(
+                                        byte_pressure_multiplier
                                     ),
-                                )
+                                    section_value_pressure_multiplier=(
+                                        section_value_pressure_multiplier
+                                    ),
+                                    max_archive_byte_growth=(
+                                        max_archive_byte_growth
+                                    ),
+                                    pair_guard_min_score_improved_fraction=(
+                                        pair_guard_min_score_improved_fraction
+                                    ),
+                                    pair_guard_max_pose_worsened_fraction=(
+                                        pair_guard_max_pose_worsened_fraction
+                                    ),
+                                    component_guard_mode=component_mode,
+                                ),
                             )
-                        ),
-                    )
+                        )
+                    ),
                 )
+                rows.append(progress_row)
+                _emit_progress(progress_callback, progress_row)
         gradient_rms = float(np.sqrt(np.mean(gradient * gradient)))
         if gradient_rms > 0.0:
             update_direction = -gradient / gradient_rms
@@ -570,6 +574,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     ),
                 )
             rows.append(row)
+            _emit_progress(progress_callback, row)
     else:
         for trial, (direction_label, direction) in enumerate(directions, start=1):
             for sign in (1.0, -1.0):
@@ -634,6 +639,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                         ),
                     )
                 rows.append(row)
+                _emit_progress(progress_callback, row)
 
     accepted_improvement = best_eval.label != baseline.label
     best_quantized_decoder, _best_qstats = quantize_decoder_for_qat(
@@ -743,6 +749,14 @@ def run_snerv_scorer_loop_decoder_qat(
     """
 
     return run_snerv_scorer_loop_decoder_qat_smoke(**kwargs)
+
+
+def _emit_progress(
+    progress_callback: ProgressCallback | None,
+    row: SnervDecoderEval,
+) -> None:
+    if progress_callback is not None:
+        progress_callback(row)
 
 
 def quantize_decoder_for_qat(

@@ -50,6 +50,7 @@ def test_waterfill_pose_destroyed_row_routes_to_local_decoder_fit_smoke() -> Non
     assert "--byte-pressure-multiplier 8.0" in first
     assert "--max-archive-byte-growth 0" in first
     assert "--component-guard-mode score_primary" in first
+    assert "--progress-jsonl" in first
     assert "tools/run_snerv_inverse_steg_advisory.py" not in first
     assert "tools/build_snerv_scorer_loop_geometry.py" in second
     assert "snerv_score_aware_decoder_fit_after_work_order" in second

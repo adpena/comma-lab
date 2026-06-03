@@ -4545,6 +4545,17 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
 
     def fake_run_snerv_scorer_loop_decoder_qat(**kwargs):
         captured_qat_kwargs.update(kwargs)
+        progress_callback = kwargs.get("progress_callback")
+        if progress_callback is not None:
+            progress_callback(
+                SimpleNamespace(
+                    as_jsonable=lambda: {
+                        "label": "fake_progress_eval",
+                        "archive_bytes": 123,
+                        "score_linf": 4.5,
+                    }
+                )
+            )
 
         def as_jsonable() -> dict[str, object]:
             return {
@@ -4668,6 +4679,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["pair_guard_max_pose_worsened_fraction"] == 0.25
     assert captured_qat_kwargs["component_guard_mode"] == "pose_hard"
     assert captured_qat_kwargs["seed"] == 123
+    assert callable(captured_qat_kwargs["progress_callback"])
 
     qat = out["snerv_scorer_loop_qat"]
     assert qat["executed"] is True
@@ -4676,6 +4688,13 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert qat["receiver_contract_satisfied"] is True
     assert qat["ready_for_pose_guard_gate"] is True
     assert Path(qat["result_path"]).is_file()
+    progress_path = Path(qat["progress_jsonl_path"])
+    assert progress_path.is_file()
+    progress_payload = json.loads(progress_path.read_text(encoding="utf-8"))
+    assert progress_payload["schema"] == "snerv_scorer_loop_decoder_qat_progress.v1"
+    assert progress_payload["score_claim"] is False
+    assert progress_payload["row"]["label"] == "fake_progress_eval"
+    assert len(qat["progress_jsonl_sha256"]) == 64
     assert out["score_aware_training"]["scorer_loop_qat"]["executed"] is True
     assert (
         out["score_aware_training"]["scorer_loop_component_guard_mode"]

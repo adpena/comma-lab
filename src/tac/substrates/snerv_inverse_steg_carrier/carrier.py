@@ -63,6 +63,7 @@ __all__ = [
     "HfGenerationDecoder",
     "HighFrequencyRestorer",
     "MultiResolutionFusionUnit",
+    "OfficialSnervModelSizeSolution",
     "SnervCarrierError",
     "SnervFrameCode",
     "SnervModelSizeConfig",
@@ -73,6 +74,7 @@ __all__ = [
     "fit_hf_decoder_least_squares",
     "fit_hf_decoder_weighted_least_squares",
     "generate_hf_from_lf",
+    "official_snerv_modelsize_to_fc_dim",
     "quantize_lf",
 ]
 
@@ -84,6 +86,9 @@ SNERV_SPECTRA_PRESERVING_ADAPTER: Final[str] = (
 )
 SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF: Final[str] = (
     "receiver_safe_numpy_mfu_hfr_temporal_blocks_no_torch_no_scorer"
+)
+SNERV_OFFICIAL_MODELSIZE_TO_FC_DIM_PROOF: Final[str] = (
+    "official_snerv_train_snerv_modelsize_quadratic_fc_dim_resolver_bound"
 )
 
 
@@ -158,6 +163,202 @@ class SnervModelSizeConfig:
 
 
 DEFAULT_SNERV_MODEL_SIZE = SnervModelSizeConfig()
+
+
+@dataclass(frozen=True)
+class OfficialSnervModelSizeSolution:
+    """Official SNeRV ``--modelsize`` budget equation, made inspectable.
+
+    Upstream ``train_snerv.py`` does not treat ``fc_dim`` as an arbitrary free
+    knob when it is omitted: it derives it from ``--modelsize`` after charging
+    embedding parameters, then solves a quadratic decoder-budget equation.  The
+    local carrier still uses a receiver-safe fork, so this solution is a source
+    parity/control surface rather than score authority.
+    """
+
+    schema: str
+    source: str
+    modelsize_mparams: float
+    full_data_length: int
+    final_size: int
+    enc_strds: tuple[int, ...]
+    dec_strds: tuple[int, ...]
+    ks: tuple[int, int, int]
+    enc_dim: tuple[float, float]
+    emb_size: int
+    reduce: float
+    lower_width: int
+    saturate_stages: int
+    embed_hw: float
+    embed_dim: int
+    embed_param: float
+    fc_param: float
+    decoder_size: float
+    quadratic_a: float
+    quadratic_b: float
+    quadratic_c: float
+    fc_dim: int
+    score_claim: bool
+    promotion_eligible: bool
+    ready_for_exact_eval_dispatch: bool
+
+    def as_jsonable(self) -> dict[str, object]:
+        return {
+            "schema": self.schema,
+            "source": self.source,
+            "modelsize_mparams": self.modelsize_mparams,
+            "full_data_length": self.full_data_length,
+            "final_size": self.final_size,
+            "enc_strds": list(self.enc_strds),
+            "dec_strds": list(self.dec_strds),
+            "ks": list(self.ks),
+            "enc_dim": list(self.enc_dim),
+            "emb_size": self.emb_size,
+            "reduce": self.reduce,
+            "lower_width": self.lower_width,
+            "saturate_stages": self.saturate_stages,
+            "embed_hw": self.embed_hw,
+            "embed_dim": self.embed_dim,
+            "embed_param": self.embed_param,
+            "fc_param": self.fc_param,
+            "decoder_size": self.decoder_size,
+            "quadratic_a": self.quadratic_a,
+            "quadratic_b": self.quadratic_b,
+            "quadratic_c": self.quadratic_c,
+            "fc_dim": self.fc_dim,
+            "score_claim": self.score_claim,
+            "promotion_eligible": self.promotion_eligible,
+            "ready_for_exact_eval_dispatch": self.ready_for_exact_eval_dispatch,
+        }
+
+
+def official_snerv_modelsize_to_fc_dim(
+    *,
+    modelsize_mparams: float,
+    full_data_length: int,
+    final_size: int,
+    enc_strds: tuple[int, ...],
+    dec_strds: tuple[int, ...],
+    ks: tuple[int, int, int] = (0, 1, 5),
+    enc_dim: tuple[float, float] = (64.0, 16.0),
+    emb_size: int = 20,
+    reduce: float = 1.2,
+    lower_width: int = 12,
+    saturate_stages: int = -1,
+) -> OfficialSnervModelSizeSolution:
+    """Mirror official SNeRV ``train_snerv.py`` ``--modelsize`` fc_dim math.
+
+    The formula intentionally keeps upstream's parameter units: ``modelsize`` is
+    millions of parameters, ``final_size`` is the scalar frame area used by the
+    official dataset object, and stride/kernel lists are the CLI controls from
+    the official training script.  Callers must still verify trained archive
+    bytes; this helper only removes arbitrariness from capacity selection.
+    """
+
+    modelsize = float(modelsize_mparams)
+    data_len = int(full_data_length)
+    frame_area = int(final_size)
+    enc = tuple(int(v) for v in enc_strds)
+    dec = tuple(int(v) for v in dec_strds)
+    kernel = tuple(int(v) for v in ks)
+    enc_dim_pair = tuple(float(v) for v in enc_dim)
+    if modelsize <= 0.0:
+        raise SnervCarrierError("modelsize_mparams must be positive")
+    if data_len <= 0:
+        raise SnervCarrierError("full_data_length must be positive")
+    if frame_area <= 0:
+        raise SnervCarrierError("final_size must be positive")
+    if not enc or not dec:
+        raise SnervCarrierError("enc_strds and dec_strds must be non-empty")
+    if len(kernel) != 3:
+        raise SnervCarrierError("ks must contain three integers")
+    if len(enc_dim_pair) != 2:
+        raise SnervCarrierError("enc_dim must contain two values")
+    if reduce <= 0.0:
+        raise SnervCarrierError("reduce must be positive")
+    if lower_width <= 0:
+        raise SnervCarrierError("lower_width must be positive")
+
+    enc_prod = _int_product(enc)
+    dec_prod = _int_product(dec)
+    embed_hw = float(frame_area) / float(enc_prod**2) // float(2**2)
+    if embed_hw <= 0.0:
+        raise SnervCarrierError("official modelsize formula produced embed_hw <= 0")
+    enc_dim1, embed_ratio = enc_dim_pair
+    embed_dim = (
+        int(embed_ratio * modelsize * 1_000_000 / data_len / embed_hw)
+        if embed_ratio < 1.0
+        else int(embed_ratio)
+    )
+    embed_param = float(embed_dim) * embed_hw * data_len
+    embed_param += 2 * data_len
+    embed_param += float(6 * int(emb_size) * int(emb_size) * 2) * data_len
+    # Upstream mutates args.enc_dim to f"{int(enc_dim1)}_{embed_dim}".  enc_dim1
+    # is preserved in the solution for reproducibility even though the local
+    # receiver-safe fork does not instantiate the official encoder.
+    _ = enc_dim1
+    fc_param = float((enc_prod // dec_prod) ** 2 * 9)
+    decoder_size = modelsize * 1_000_000 - embed_param
+    ch_reduce = 1.0 / float(reduce)
+    dec_ks1, dec_ks2 = kernel[1:]
+    fix_ch_stages = len(dec) if int(saturate_stages) == -1 else int(saturate_stages)
+    if fix_ch_stages < 0 or fix_ch_stages > len(dec):
+        raise SnervCarrierError("saturate_stages must be -1 or within dec_strds")
+    a = ch_reduce * sum(
+        ch_reduce ** (2 * i)
+        * (int(stride) ** 2)
+        * min((2 * i + dec_ks1), dec_ks2) ** 2
+        for i, stride in enumerate(dec[:fix_ch_stages])
+    )
+    b = float(embed_dim) * fc_param
+    c = float(int(lower_width) ** 2) * sum(
+        int(stride) ** 2
+        * min(2 * (fix_ch_stages + i) + dec_ks1, dec_ks2) ** 2
+        for i, stride in enumerate(dec[fix_ch_stages:])
+    )
+    roots = np.roots([a, b, c - decoder_size])
+    real_roots = [float(root.real) for root in roots if abs(float(root.imag)) < 1e-6]
+    if not real_roots:
+        raise SnervCarrierError("official modelsize quadratic has no real root")
+    fc_dim = int(max(real_roots))
+    if fc_dim < 1:
+        raise SnervCarrierError("official modelsize formula produced fc_dim < 1")
+    return OfficialSnervModelSizeSolution(
+        schema="official_snerv_modelsize_to_fc_dim.v1",
+        source=SNERV_OFFICIAL_MODELSIZE_TO_FC_DIM_PROOF,
+        modelsize_mparams=modelsize,
+        full_data_length=data_len,
+        final_size=frame_area,
+        enc_strds=enc,
+        dec_strds=dec,
+        ks=kernel,
+        enc_dim=enc_dim_pair,
+        emb_size=int(emb_size),
+        reduce=float(reduce),
+        lower_width=int(lower_width),
+        saturate_stages=int(saturate_stages),
+        embed_hw=float(embed_hw),
+        embed_dim=int(embed_dim),
+        embed_param=float(embed_param),
+        fc_param=float(fc_param),
+        decoder_size=float(decoder_size),
+        quadratic_a=float(a),
+        quadratic_b=float(b),
+        quadratic_c=float(c - decoder_size),
+        fc_dim=int(fc_dim),
+        score_claim=False,
+        promotion_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+    )
+
+
+def _int_product(values: tuple[int, ...]) -> int:
+    out = 1
+    for value in values:
+        if int(value) <= 0:
+            raise SnervCarrierError("stride values must be positive")
+        out *= int(value)
+    return out
 
 
 @dataclass(frozen=True)

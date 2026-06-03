@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 from types import SimpleNamespace
 
 import numpy as np
@@ -26,6 +27,7 @@ from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
     SnervDecoderEval,
     SnervPairEval,
     SnervScorerLoopDecoderQatError,
+    _emit_progress,
     _evaluate_decoder,
     _nes_pair_robust_objective,
     _pack_receiver_archive,
@@ -70,6 +72,37 @@ def test_first_class_qat_runner_preserves_false_authority_wrapper(monkeypatch) -
 
     assert result == "sentinel_result"
     assert calls == {"n_pairs": 2, "wavelet": "haar"}
+
+
+def test_scorer_loop_progress_callback_emits_eval_row() -> None:
+    rows = []
+    row = _eval(label="progress_row", score=6.5, d_pose=0.2, replay=True)
+
+    _emit_progress(rows.append, row)
+    _emit_progress(None, row)
+
+    assert rows == [row]
+
+
+def test_scorer_loop_cli_progress_jsonl_writer_is_fail_closed(tmp_path) -> None:
+    from tools.run_snerv_scorer_loop_decoder_qat_smoke import (
+        _build_progress_callback,
+    )
+
+    progress_path = tmp_path / "progress.jsonl"
+    callback = _build_progress_callback(str(progress_path))
+    assert callback is not None
+
+    callback(_eval(label="cli_progress_row", score=6.5, d_pose=0.2, replay=True))
+
+    payload = json.loads(progress_path.read_text(encoding="utf-8"))
+    assert payload["schema"] == "snerv_scorer_loop_decoder_qat_progress.v1"
+    assert payload["axis_tag"] == "[macOS-CPU advisory]"
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["row"]["label"] == "cli_progress_row"
 
 
 def test_prepare_state_disables_score_exact_saliency_diagnostics_hot_loop() -> None:

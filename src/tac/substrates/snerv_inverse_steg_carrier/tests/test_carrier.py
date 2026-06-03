@@ -28,6 +28,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     fit_hf_decoder_least_squares,
     fit_hf_decoder_weighted_least_squares,
     generate_hf_from_lf,
+    official_snerv_modelsize_to_fc_dim,
     quantize_lf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.dwt import WaveletPyramid
@@ -49,6 +50,45 @@ def test_quantize_dequantize_uniform_roundtrip():
     deq = dequantize_lf(q, sc, zr)
     # uniform 8-bit quant error bounded by half a step
     assert np.abs(deq - lf).max() <= sc * 0.51
+
+
+def test_official_snerv_modelsize_solver_exposes_fc_dim_budget_math() -> None:
+    """NO-FAKE: official --modelsize is a quadratic fc_dim control, not prose."""
+
+    solution = official_snerv_modelsize_to_fc_dim(
+        modelsize_mparams=1.0,
+        full_data_length=100,
+        final_size=4096,
+        enc_strds=(2, 2),
+        dec_strds=(2, 2),
+        ks=(0, 1, 5),
+        enc_dim=(64.0, 16.0),
+        emb_size=2,
+        reduce=2.0,
+        lower_width=4,
+    )
+
+    assert solution.schema == "official_snerv_modelsize_to_fc_dim.v1"
+    assert solution.fc_dim == 359
+    assert solution.embed_hw == 64.0
+    assert solution.embed_dim == 16
+    assert solution.embed_param == 107_400.0
+    assert solution.fc_param == 9.0
+    assert solution.quadratic_a == 6.5
+    assert solution.quadratic_b == 144.0
+    assert solution.quadratic_c == -892_600.0
+    assert solution.as_jsonable()["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_snerv_modelsize_solver_rejects_invalid_strides() -> None:
+    with pytest.raises(SnervCarrierError, match="stride values must be positive"):
+        official_snerv_modelsize_to_fc_dim(
+            modelsize_mparams=1.0,
+            full_data_length=100,
+            final_size=4096,
+            enc_strds=(2, 0),
+            dec_strds=(2, 2),
+        )
 
 
 def test_quantize_per_element_steps_actually_used():

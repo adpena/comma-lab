@@ -2169,6 +2169,7 @@ def _run_snerv_scorer_loop_qat_attachment(
 
     attachment_dir = Path(output_dir).expanduser().resolve(strict=False)
     result_path = attachment_dir / "snerv_scorer_loop_qat_result.json"
+    progress_path = attachment_dir / "snerv_scorer_loop_qat_progress.jsonl"
     attachment_dir.mkdir(parents=True, exist_ok=True)
     if not requested:
         payload = {
@@ -2231,6 +2232,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             ),
             component_guard_mode=str(component_guard_mode),
             seed=int(seed),
+            progress_callback=_snerv_scorer_loop_progress_callback(progress_path),
         )
         result_payload = (
             result.as_jsonable() if hasattr(result, "as_jsonable") else dict(result)
@@ -2280,6 +2282,10 @@ def _run_snerv_scorer_loop_qat_attachment(
             "scorer_loop_evaluations": result_payload.get(
                 "scorer_loop_evaluations"
             ),
+            "progress_jsonl_path": progress_path.as_posix(),
+            "progress_jsonl_sha256": (
+                _sha256_file(progress_path) if progress_path.is_file() else None
+            ),
             "blockers": _dedupe(blockers),
             "score_claim": False,
             "promotion_eligible": False,
@@ -2293,6 +2299,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             "requested": True,
             "failure": repr(exc),
             "component_guard_mode": str(component_guard_mode),
+            "progress_jsonl_path": progress_path.as_posix(),
             "blockers": ["snerv_scorer_loop_qat_failed"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -9977,6 +9984,28 @@ def _load_json(path: Path) -> dict[str, Any]:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _snerv_scorer_loop_progress_callback(progress_path: Path):
+    progress_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def callback(row: Any) -> None:
+        row_payload = row.as_jsonable() if hasattr(row, "as_jsonable") else dict(row)
+        payload = {
+            "schema": "snerv_scorer_loop_decoder_qat_progress.v1",
+            "captured_at_utc": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "axis_tag": "[macOS-CPU advisory]",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "row": row_payload,
+        }
+        with progress_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, sort_keys=True) + "\n")
+            handle.flush()
+
+    return callback
 
 
 def _has_disallowed_existing_output_artifacts(

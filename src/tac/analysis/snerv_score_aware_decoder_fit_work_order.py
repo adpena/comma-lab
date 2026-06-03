@@ -211,6 +211,7 @@ def _optional_float(value: Any) -> float | None:
 
 def _recommended_scorer_loop_commands(*, levels: int, bits: float) -> tuple[str, ...]:
     result_path = ".omx/research/snerv_scorer_loop_decoder_qat_after_work_order_<UTC>.json"
+    progress_path = ".omx/research/snerv_scorer_loop_decoder_qat_after_work_order_<UTC>.progress.jsonl"
     geometry_json = ".omx/research/snerv_scorer_loop_geometry_after_work_order_<UTC>.json"
     geometry_md = ".omx/research/snerv_scorer_loop_geometry_after_work_order_<UTC>.md"
     return (
@@ -225,6 +226,7 @@ def _recommended_scorer_loop_commands(*, levels: int, bits: float) -> tuple[str,
             "--pair-guard-min-score-improved-fraction 0.75 "
             "--pair-guard-max-pose-worsened-fraction 0.0 "
             "--component-guard-mode score_primary "
+            f"--progress-jsonl {progress_path} "
             f"--out {result_path}"
         ),
         (
