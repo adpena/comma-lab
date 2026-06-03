@@ -7,6 +7,17 @@ from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
 )
 
 
+def _receiver_proof_fields(label: str) -> dict[str, object]:
+    return {
+        "receiver_proof_passed": True,
+        "receiver_proof_path": f"/Volumes/VertigoDataTier/pact/proofs/{label}.json",
+        "receiver_proof_sha256": "a" * 64,
+        "archive_sha256": "b" * 64,
+        "axis_tag": "[planning/control]",
+        "sample_pair_count": 600,
+    }
+
+
 def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
     rows = [
         {
@@ -14,21 +25,21 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
             "archive_bytes": 20_000,
             "nonrate_score": 0.240,
             "modelsize_mparams": 0.04,
-            "receiver_proof_passed": True,
+            **_receiver_proof_fields("tiny"),
         },
         {
             "row_id": "small",
             "archive_bytes": 40_000,
             "nonrate_score": 0.205,
             "modelsize_mparams": 0.08,
-            "receiver_proof_passed": True,
+            **_receiver_proof_fields("small"),
         },
         {
             "row_id": "medium",
             "archive_bytes": 80_000,
             "nonrate_score": 0.200,
             "modelsize_mparams": 0.16,
-            "receiver_proof_passed": True,
+            **_receiver_proof_fields("medium"),
         },
     ]
 
@@ -149,13 +160,13 @@ def test_modelsize_budget_plan_blocks_unbound_capacity_controls() -> None:
                 "row_id": "tiny_unbound",
                 "archive_bytes": 20_000,
                 "nonrate_score": 0.240,
-                "receiver_proof_passed": True,
+                **_receiver_proof_fields("tiny_unbound"),
             },
             {
                 "row_id": "small_unbound",
                 "archive_bytes": 40_000,
                 "nonrate_score": 0.205,
-                "receiver_proof_passed": True,
+                **_receiver_proof_fields("small_unbound"),
             },
         ],
         carrier_id="hi_nerv",
@@ -171,3 +182,37 @@ def test_modelsize_budget_plan_blocks_unbound_capacity_controls() -> None:
         "emit_source_bound_modelsize_mparams_or_fc_dim_for_budget_points"
         in plan["recommended_next_actions"]
     )
+
+
+def test_modelsize_budget_plan_rejects_bare_receiver_proof_boolean_as_advisory() -> None:
+    plan = build_modelsize_budget_plan(
+        [
+            {
+                "row_id": "tiny_boolean_only",
+                "archive_bytes": 20_000,
+                "nonrate_score": 0.240,
+                "modelsize_mparams": 0.04,
+                "receiver_proof_passed": True,
+            },
+            {
+                "row_id": "small_boolean_only",
+                "archive_bytes": 40_000,
+                "nonrate_score": 0.205,
+                "modelsize_mparams": 0.08,
+                "receiver_proof_passed": True,
+            },
+        ],
+        carrier_id="snerv",
+    )
+
+    assert plan["status"] == "advisory_or_projected_modelsize_budget_selected"
+    assert plan["decision_basis"] == "all_rows_advisory_planning_only"
+    assert plan["receiver_closed_points"] == []
+    assert plan["point_count_by_evidence"] == {
+        "advisory_measured_bytes_without_receiver_proof": 2
+    }
+    assert "receiver_proof_path_missing" in plan["blockers"]
+    assert "receiver_proof_sha256_missing_or_invalid" in plan["blockers"]
+    assert "archive_sha256_missing_or_invalid" in plan["blockers"]
+    assert "receiver_proof_axis_tag_missing" in plan["blockers"]
+    assert "receiver_proof_full_sample_count_missing" in plan["blockers"]

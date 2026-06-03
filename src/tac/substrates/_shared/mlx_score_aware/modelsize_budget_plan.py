@@ -36,6 +36,36 @@ _RECEIVER_CLOSED_PROOF_KEYS = (
     "receiver_contract_satisfied",
     "byte_closed_receiver_proof",
 )
+_RECEIVER_PROOF_PATH_KEYS = (
+    "receiver_proof_path",
+    "receiver_proof_report_path",
+    "receiver_closed_proof_path",
+)
+_RECEIVER_PROOF_SHA_KEYS = (
+    "receiver_proof_sha256",
+    "receiver_proof_report_sha256",
+    "receiver_closed_proof_sha256",
+)
+_ARCHIVE_SHA_KEYS = (
+    "archive_sha256",
+    "candidate_archive_sha256",
+    "receiver_archive_sha256",
+    "source_archive_sha256",
+    "archive_zip_sha256",
+)
+_AXIS_TAG_KEYS = (
+    "axis_tag",
+    "score_axis_tag",
+    "measured_score_axis_tag",
+    "receiver_proof_axis_tag",
+)
+_SAMPLE_COUNT_KEYS = (
+    "sample_pair_count",
+    "sample_pairs",
+    "n_pairs",
+    "num_pairs",
+    "pair_count",
+)
 _MEASURED_ARCHIVE_BYTE_KEYS = (
     "measured_archive_bytes",
     "archive_bytes",
@@ -386,15 +416,20 @@ def _classify_point_evidence(
     archive_bytes_key: str,
 ) -> tuple[str, bool, bool, list[str]]:
     blockers: list[str] = []
-    proof_present = any(_truthy(row.get(key)) for key in _RECEIVER_CLOSED_PROOF_KEYS)
+    proof_flag_present = any(
+        _truthy(row.get(key)) for key in _RECEIVER_CLOSED_PROOF_KEYS
+    )
+    proof_identity_blockers = _receiver_closed_identity_blockers(row)
+    proof_present = proof_flag_present and not proof_identity_blockers
     lower_bound = any(_truthy(row.get(key)) for key in _LOWER_BOUND_MARKER_KEYS)
     projected = archive_bytes_key in _PROJECTED_ARCHIVE_BYTE_KEYS or lower_bound
     source_bound_capacity = _has_source_bound_capacity_control(row)
 
     if projected:
         blockers.append("projected_or_lower_bound_archive_bytes_not_receiver_closed")
-    if not proof_present:
+    if not proof_flag_present:
         blockers.append("receiver_closed_byte_proof_missing")
+    blockers.extend(proof_identity_blockers)
     if archive_bytes_key not in _MEASURED_ARCHIVE_BYTE_KEYS:
         blockers.append("measured_archive_byte_field_missing")
     if not source_bound_capacity:
@@ -415,6 +450,58 @@ def _classify_point_evidence(
         source_bound_capacity,
         blockers,
     )
+
+
+def _receiver_closed_identity_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if not _first_present_str(row, _RECEIVER_PROOF_PATH_KEYS):
+        blockers.append("receiver_proof_path_missing")
+    proof_sha = _first_present_str(row, _RECEIVER_PROOF_SHA_KEYS)
+    if not _is_sha256_hex(proof_sha):
+        blockers.append("receiver_proof_sha256_missing_or_invalid")
+    archive_sha = _first_present_str(row, _ARCHIVE_SHA_KEYS)
+    if not _is_sha256_hex(archive_sha):
+        blockers.append("archive_sha256_missing_or_invalid")
+    if not _first_present_str(row, _AXIS_TAG_KEYS):
+        blockers.append("receiver_proof_axis_tag_missing")
+    sample_count = _first_present_int(row, _SAMPLE_COUNT_KEYS)
+    full_video = bool(
+        _truthy(row.get("full_video_coverage"))
+        or _truthy(row.get("full600_coverage"))
+        or _truthy(row.get("full_sample_coverage"))
+    )
+    if sample_count is None and not full_video:
+        blockers.append("receiver_proof_full_sample_count_missing")
+    elif sample_count is not None and sample_count < 600 and not full_video:
+        blockers.append("receiver_proof_full_sample_count_incomplete")
+    return blockers
+
+
+def _first_present_str(row: Mapping[str, Any], keys: Sequence[str]) -> str | None:
+    for key in keys:
+        value = row.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return None
+
+
+def _first_present_int(row: Mapping[str, Any], keys: Sequence[str]) -> int | None:
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _is_sha256_hex(value: str | None) -> bool:
+    if value is None:
+        return False
+    text = str(value).strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def _has_source_bound_capacity_control(row: Mapping[str, Any]) -> bool:
