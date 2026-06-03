@@ -1,0 +1,19 @@
+{
+  "archive_bytes": 121690,
+  "archive_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_epoch009499/archive.zip",
+  "archive_sha256": "094031b0563b4e278c0a75e83e11a40a2c4c1cc2b3465b880bd632e989197dea",
+  "cleanup_action": "delete_certified_rebuildable_receiver_proof_raw_output_only",
+  "created_utc": "2026-06-03T20:30:02Z",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "raw_bytes": 3662409600,
+  "raw_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_epoch009499/receiver_proof/runtime_out/0.raw",
+  "raw_sha256": "4d4f6c63607c9cfed69ba8be0fac03ffa8893a180e503bcab5d02e5bd9158f00",
+  "ready_for_exact_eval_dispatch": false,
+  "rebuildability_reason": "receiver proof raw output is deterministic scratch from archive plus recorded inflate command; successful portfolio receiver proof for the same checkpoint/archive was recorded separately before cleanup",
+  "schema": "hinerv_checkpoint_receiverproof_interrupted_cleanup_manifest.v1",
+  "score_claim": false,
+  "source_command": "uv run python tools/export_hinerv_checkpoint_archive.py --startup-json /Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/compact_renderer_mlx_spine_runner_startup.json --checkpoint-meta /Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch009499_20260603T201619Z.meta.json --output-dir /Volumes/VertigoDataTier/pact/experiments/results/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_epoch009499 --state-kind ema --decoder-codec portfolio_auto --latent-codec int16_brotli_q11 --emit-receiver-proof --output-json .omx/research/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_codex.json",
+  "source_interrupted_report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_checkpoint_archive_export_receiverproof_20260603T201705Z_codex_interrupted.json",
+  "source_interrupted_report_sha256": "f5e80debe41e703ccaa45dd8b7339881a31a6e448bb1d0e6a1df6d1b6032e3cc"
+}
