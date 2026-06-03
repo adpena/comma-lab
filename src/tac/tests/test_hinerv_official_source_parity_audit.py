@@ -69,6 +69,16 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert artifact["ready_for_exact_eval_dispatch"] is False
     assert artifact["official_forward_parity_passed"] is False
     assert artifact["official_forward_parity_falsified"] is True
+    grid_rows = {
+        row["component_id"]: row
+        for row in artifact["numeric_subcomponent_rows"]
+    }
+    assert grid_rows["official_grid_trilinear3d"]["source_forward_parity_proven"] is True
+    assert grid_rows["official_grid_trilinear3d"]["full_hinerv_forward_parity_proven"] is False
+    assert grid_rows["official_grid_trilinear3d"]["max_abs_error"] <= 1.0e-6
+    assert len(grid_rows["official_grid_trilinear3d"]["official_output_sha256"]) == 64
+    assert len(grid_rows["official_grid_trilinear3d"]["portable_output_sha256"]) == 64
+    assert grid_rows["official_grid_trilinear3d"]["blockers"] == []
     artifact_states = {row["component_id"]: row for row in artifact["component_rows"]}
     assert artifact_states["core_hierarchical_renderer"][
         "source_forward_parity_falsified"
@@ -96,6 +106,15 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert "hinerv_official_forward_parity_artifact_falsifies_parity" in (
         states["core_hierarchical_renderer"]["blockers"]
     )
+    summary = summarize_hinerv_official_source_audit(report)
+    replay_rows = {
+        row["component_id"]: row
+        for row in summary["numeric_subcomponent_replays"]
+    }
+    assert replay_rows["official_grid_trilinear3d"]["source_forward_parity_proven"] is True
+    assert replay_rows["official_grid_trilinear3d"][
+        "full_hinerv_forward_parity_proven"
+    ] is False
 
 
 def test_hinerv_official_source_audit_fails_closed_on_missing_markers(

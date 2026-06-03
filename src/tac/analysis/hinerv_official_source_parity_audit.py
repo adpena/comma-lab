@@ -21,7 +21,10 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
+from tac.substrates.hi_nerv.official_grid import official_grid_trilinear3d_forward
 
 SCHEMA = "hinerv_official_source_parity_audit.v1"
 AUTHORITY = "false_authority_source_audit_no_score_claim"
@@ -331,6 +334,7 @@ def build_hinerv_official_forward_parity_artifact(
         local_root=local_root,
         forward_parity_artifact_row={"parity_passed": False, "component_rows": []},
     )
+    numeric_subcomponent_rows = [_official_grid_trilinear3d_numeric_replay_row()]
     parity_passed = all(bool(row["source_forward_parity_proven"]) for row in component_rows)
     parity_falsified = any(bool(row["source_forward_parity_falsified"]) for row in component_rows)
     return {
@@ -349,6 +353,7 @@ def build_hinerv_official_forward_parity_artifact(
         "official_file_rows": file_rows,
         "official_marker_group_rows": official_group_rows,
         "component_rows": component_rows,
+        "numeric_subcomponent_rows": numeric_subcomponent_rows,
         "official_forward_parity_passed": parity_passed,
         "official_forward_parity_falsified": parity_falsified,
         "blockers": _ordered_unique(
@@ -391,6 +396,21 @@ def summarize_hinerv_official_source_audit(report: Mapping[str, Any]) -> dict[st
             }
             for row in report.get("component_state_rows") or ()
             if isinstance(row, Mapping)
+        ],
+        "numeric_subcomponent_replays": [
+            {
+                "component_id": row.get("component_id"),
+                "parent_component_id": row.get("parent_component_id"),
+                "backend": row.get("backend"),
+                "source_forward_parity_proven": bool(row.get("source_forward_parity_proven")),
+                "full_hinerv_forward_parity_proven": bool(
+                    row.get("full_hinerv_forward_parity_proven")
+                ),
+                "max_abs_error": row.get("max_abs_error"),
+                "tolerance": row.get("tolerance"),
+                "blockers": list(row.get("blockers") or ()),
+            }
+            for row in _numeric_subcomponent_rows_from_report(report)
         ],
         "blockers": list(report.get("blockers") or ()),
         **FALSE_AUTHORITY,
@@ -824,6 +844,115 @@ def _file_marker_rows(
             if not row["present"]
         ],
     }
+
+
+def _numeric_subcomponent_rows_from_report(report: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    forward_row = report.get("official_forward_parity_artifact_row")
+    if not isinstance(forward_row, Mapping):
+        return []
+    path_value = forward_row.get("path")
+    if not path_value:
+        return []
+    artifact_path = Path(str(path_value))
+    if not artifact_path.is_file():
+        return []
+    try:
+        payload = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return []
+    return [
+        row
+        for row in payload.get("numeric_subcomponent_rows") or ()
+        if isinstance(row, Mapping)
+    ]
+
+
+def _official_grid_trilinear3d_numeric_replay_row() -> dict[str, Any]:
+    """Replay official temporal-only GridTrilinear3D against PyTorch.
+
+    This proves only the standalone grid interpolation primitive.  It is not a
+    full HiNeRV source-forward replay because no official checkpoint, patch
+    dataset path, decoder, pruning, or torchac bitstream is involved.
+    """
+
+    rng = np.random.default_rng(20260603)
+    x = rng.normal(size=(3, 2, 4, 5)).astype(np.float32)
+    output_size = (7, 2, 4)
+    try:
+        import torch
+        import torch.nn.functional as F
+
+        torch_in = torch.from_numpy(x).reshape(1, 1, x.shape[0], int(np.prod(x.shape[1:])))
+        official = (
+            F.interpolate(
+                torch_in,
+                size=(output_size[0], int(np.prod(x.shape[1:]))),
+                mode="bilinear",
+                align_corners=False,
+            )
+            .reshape(output_size + (x.shape[-1],))
+            .detach()
+            .cpu()
+            .numpy()
+        )
+        portable = official_grid_trilinear3d_forward(
+            x,
+            output_size=output_size,
+            align_corners=False,
+        ).astype(np.float32)
+        max_abs_error = float(np.max(np.abs(official.astype(np.float64) - portable.astype(np.float64))))
+        official_sha = _array_sha256(official)
+        portable_sha = _array_sha256(portable)
+        passed = bool(max_abs_error <= 1.0e-6)
+        blockers = [] if passed else ["hinerv_official_grid_trilinear3d_numeric_replay_mismatch"]
+        return {
+            "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+            "component_id": "official_grid_trilinear3d",
+            "parent_component_id": "core_hierarchical_renderer",
+            "source_forward_parity_proven": passed,
+            "full_hinerv_forward_parity_proven": False,
+            "backend": "torch_vs_numpy",
+            "input_shape": list(x.shape),
+            "output_size": list(output_size),
+            "align_corners": False,
+            "tolerance": 1.0e-6,
+            "max_abs_error": max_abs_error,
+            "input_sha256": _array_sha256(x),
+            "official_output_sha256": official_sha,
+            "portable_output_sha256": portable_sha,
+            "output_hashes_bit_identical": official_sha == portable_sha,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+    except Exception as exc:  # pragma: no cover - environment dependent
+        return {
+            "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+            "component_id": "official_grid_trilinear3d",
+            "parent_component_id": "core_hierarchical_renderer",
+            "source_forward_parity_proven": False,
+            "full_hinerv_forward_parity_proven": False,
+            "backend": "torch_vs_numpy",
+            "input_shape": list(x.shape),
+            "output_size": list(output_size),
+            "align_corners": False,
+            "tolerance": 1.0e-6,
+            "max_abs_error": None,
+            "input_sha256": _array_sha256(x),
+            "official_output_sha256": None,
+            "portable_output_sha256": None,
+            "error": f"{type(exc).__name__}: {exc}",
+            "blockers": ["hinerv_official_grid_trilinear3d_numeric_replay_failed"],
+            **FALSE_AUTHORITY,
+        }
+
+
+def _array_sha256(array: np.ndarray) -> str:
+    arr = np.ascontiguousarray(array)
+    h = sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(str(tuple(int(v) for v in arr.shape)).encode("utf-8"))
+    h.update(arr.tobytes())
+    return h.hexdigest()
 
 
 def _git_head_sha(root: Path) -> str | None:

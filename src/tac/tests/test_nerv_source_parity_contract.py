@@ -280,6 +280,9 @@ def test_hinerv_official_source_audit_embeds_without_promoting_parity() -> None:
         "official_source_markers_present": True,
         "local_receiver_bindings_present": True,
         "official_forward_parity_proven": False,
+        "official_forward_parity_artifact_row": {
+            "path": None,
+        },
         "blockers": ["hinerv_official_forward_parity_missing"],
         "score_claim": False,
         "promotion_eligible": False,

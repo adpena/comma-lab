@@ -184,8 +184,43 @@
     }
   ],
   "family": "hi_nerv",
-  "generated_utc": "20260603T153237Z",
+  "generated_utc": "20260603T153837Z",
   "local_repo_root": "/Users/adpena/Projects/pact",
+  "numeric_subcomponent_rows": [
+    {
+      "align_corners": false,
+      "backend": "torch_vs_numpy",
+      "blockers": [],
+      "component_id": "official_grid_trilinear3d",
+      "full_hinerv_forward_parity_proven": false,
+      "input_sha256": "6ae5b3e7d0ff528be58b1e8936a7f2f4969de3262c9838b541f2020d31fc2e28",
+      "input_shape": [
+        3,
+        2,
+        4,
+        5
+      ],
+      "max_abs_error": 1.9744038581848145e-07,
+      "official_output_sha256": "13609459c58aa93b8ec5249c995ac5abd53e0569333ac37ff37351e5d5d2cdfa",
+      "output_hashes_bit_identical": false,
+      "output_size": [
+        7,
+        2,
+        4
+      ],
+      "parent_component_id": "core_hierarchical_renderer",
+      "portable_output_sha256": "b4827f4e1b35f2b2e1447917f2f39edf01e26f3aea5e417f601c0716cde2eb94",
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_proven": true,
+      "tolerance": 1e-06
+    }
+  ],
   "official_file_rows": [
     {
       "bytes": 33826,
