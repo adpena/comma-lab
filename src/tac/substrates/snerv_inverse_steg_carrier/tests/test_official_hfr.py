@@ -17,6 +17,18 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
 )
 
 
+def test_official_hfr_package_exports_are_available() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier as snerv
+
+    assert snerv.OfficialHfrConvBlock is OfficialHfrConvBlock
+    assert snerv.OfficialHfrHeads is OfficialHfrHeads
+    assert snerv.OfficialConv2dNchw is OfficialConv2dNchw
+    assert snerv.SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF == (
+        SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF
+    )
+    assert snerv.OFFICIAL_SNERV_HFR_FALSE_AUTHORITY["score_claim"] is False
+
+
 def test_official_hfr_convblock_shape_and_stack_contract() -> None:
     rng = np.random.default_rng(1)
     heads = OfficialHfrHeads(
