@@ -57,10 +57,18 @@ def test_allocate_lf_linf_produces_real_nonuniform_steps_from_saliency():
     seg[10:20, 30:45] = 10.0
     pose += np.abs(rng.standard_normal(hw)) * 0.01
     lfs = push_pixel_saliency_to_lf(seg, pose, carrier_hw=hw, levels=3)
-    alloc = allocate_lf_linf(lfs, target_bits=float(lfs.lf_saliency.size) * 4.0)
+    target_bits = float(lfs.lf_saliency.size) * 4.0
+    alloc = allocate_lf_linf(
+        lfs,
+        target_bits=target_bits,
+        dynamic_range=37.5,
+        min_step=37.5 / 256.0,
+        max_step=37.5,
+    )
     steps = alloc.steps.reshape(lfs.lf_shape)
 
     assert steps.shape == lfs.lf_shape
     assert np.all(np.isfinite(steps))
     assert np.all(steps > 0)
     assert float(steps.max()) > float(steps.min())
+    assert alloc.total_bits >= target_bits

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import numpy as np
@@ -121,8 +122,24 @@ def test_packet_builder_consumes_joint_recon_pixel_weight_in_decoder_fit() -> No
     )
 
     decoded = unpack_snerv_archive(weighted.packet)
+    unweighted_decoded = unpack_snerv_archive(unweighted.packet)
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
     assert decoded.metadata["contest_scorer_distortion_objective"] is True
+    assert decoded.metadata["allocation_mode"] == (
+        "joint_p18_p19_lf_waterfill_plus_hf_dwt_adjoint_saliency"
+    )
+    assert decoded.metadata["lf_step_allocation_mode"] == (
+        "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill"
+    )
+    assert unweighted_decoded.metadata["lf_step_allocation_mode"] == (
+        "uniform_l2_baseline"
+    )
+    assert decoded.metadata["step_map_coder_mode"] == (
+        "joint_p18_p19_lf_step_map_waterfill"
+    )
+    assert decoded.metadata["lf_step_allocation_rows"][0]["mode"] == (
+        "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill"
+    )
     assert decoded.metadata["hf_decoder_fit_mode"] == (
         SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE
     )
@@ -130,6 +147,12 @@ def test_packet_builder_consumes_joint_recon_pixel_weight_in_decoder_fit() -> No
     assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(3.0)
     assert decoded.metadata["recon_pixel_weight_metadata"]["schema"] == (
         "unit_joint_weight.v1"
+    )
+    weighted_steps = decoded.decode_step_maps()
+    assert any(float(np.std(step)) > 0.0 for step in weighted_steps)
+    assert all(
+        row["mode"] == "uniform_l2_baseline"
+        for row in unweighted_decoded.metadata["lf_step_allocation_rows"]
     )
     assert weighted.packet != unweighted.packet
     assert not np.allclose(
@@ -266,10 +289,172 @@ def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
     assert decoded.metadata["recon_pixel_weight_metadata"]["sha256"] == recon["sha256"]
     assert recon["producer_manifest_verified"] is False
+    assert recon["producer_manifest"]["status"] == (
+        "not_found_unverified_manual_or_legacy_weight"
+    )
     assert (
         "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export"
         in report["blockers"]
     )
+
+
+def test_train_export_certifies_verified_recon_pixel_weight_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    weight = np.ones((1, 2, 16, 16, 1), dtype=np.float32)
+    weight_path = tmp_path / "joint_p18_p19_recon_pixel_weight.npz"
+    np.savez_compressed(weight_path, weight=weight)
+    weight_sha = mod.sha256_file(weight_path)
+    manifest_path = tmp_path / "joint_p18_p19_recon_pixel_weight_manifest.json"
+    gradient_health = {
+        "schema": "joint_recon_pixel_weight_gradient_health.v1",
+        "status": "pass_finite",
+        "component_count": 2,
+        "components_with_nonfinite": 0,
+        "total_nonfinite_values": 0,
+        "consumption_recommended": True,
+    }
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "joint_p18_p19_recon_pixel_weight_manifest.v1",
+                "weight_path": weight_path.as_posix(),
+                "weight_sha256": weight_sha,
+                "config": {
+                    "num_pairs": 1,
+                    "scorer_hw": [16, 16],
+                },
+                "metadata": {
+                    "schema": "joint_p18_p19_recon_pixel_weight.v1",
+                    "blockers": [],
+                    "training_consumption_recommended": True,
+                    "gradient_health": gradient_health,
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "export_verified",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        recon_pixel_weight_path=weight_path,
+        recon_pixel_weight_manifest_path=manifest_path,
+        recon_pixel_weight_normalize="mean",
+    )
+
+    recon = report["recon_pixel_weight"]
+    assert recon["producer_manifest_verified"] is True
+    assert recon["verification_status"] == "verified_finite_gradient_manifest"
+    assert recon["producer_manifest"]["status"] == "verified_finite_gradient_manifest"
+    assert recon["producer_manifest"]["consumption_certified"] is True
+    assert recon["producer_manifest"]["gradient_health"] == gradient_health
+    assert (
+        "snerv_recon_pixel_weight_verified_gradient_manifest_not_bound_to_native_export"
+        not in report["blockers"]
+    )
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["recon_pixel_weight_metadata"][
+        "producer_manifest_verified"
+    ] is True
+
+
+def test_train_export_refuses_recon_pixel_weight_manifest_sha_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    weight_path = tmp_path / "joint_p18_p19_recon_pixel_weight.npz"
+    np.savez_compressed(
+        weight_path,
+        weight=np.ones((1, 2, 16, 16, 1), dtype=np.float32),
+    )
+    manifest_path = tmp_path / "joint_p18_p19_recon_pixel_weight_manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema": "joint_p18_p19_recon_pixel_weight_manifest.v1",
+                "weight_path": weight_path.as_posix(),
+                "weight_sha256": "0" * 64,
+                "config": {
+                    "num_pairs": 1,
+                    "scorer_hw": [16, 16],
+                },
+                "metadata": {
+                    "schema": "joint_p18_p19_recon_pixel_weight.v1",
+                    "blockers": [],
+                    "training_consumption_recommended": True,
+                    "gradient_health": {
+                        "schema": "joint_recon_pixel_weight_gradient_health.v1",
+                        "status": "pass_finite",
+                        "component_count": 1,
+                        "components_with_nonfinite": 0,
+                        "total_nonfinite_values": 0,
+                        "consumption_recommended": True,
+                    },
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    with pytest.raises(
+        mod.SnervMlxNativeExportError,
+        match="producer manifest SHA does not match",
+    ):
+        train_export_snerv_mlx_native(
+            output_dir=tmp_path / "export_stale_manifest",
+            num_pairs=1,
+            source_video_path="unit.mkv",
+            modelsize_candidate={
+                "levels": 1,
+                "wavelet": "haar",
+                "bits_per_coeff": 3.0,
+                "decoder_payload_codec": "int8_symmetric",
+            },
+            scorer_upstream_dir="upstream",
+            output_height=16,
+            output_width=16,
+            run_archive_export=False,
+            recon_pixel_weight_path=weight_path,
+            recon_pixel_weight_manifest_path=manifest_path,
+        )
 
 
 def test_train_export_refuses_bad_recon_pixel_weight_shape(

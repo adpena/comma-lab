@@ -14,6 +14,7 @@ loop.
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 import time
 from collections.abc import Mapping, Sequence
@@ -34,6 +35,10 @@ from tac.substrates._shared.mlx_score_aware.bridge_drift import (
     mlx_numpy_bridge_drift_report,
 )
 from tac.substrates._shared.mlx_score_aware.targets import decode_mlx_targets
+from tac.substrates.snerv_inverse_steg_carrier.allocation import (
+    LfSaliency,
+    allocate_lf_linf,
+)
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     SnervArchivePacket,
     decode_snerv_archive_frames,
@@ -150,6 +155,7 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat_component_guard_mode: str = "score_primary",
     scorer_loop_qat_device: str = "cpu",
     recon_pixel_weight_path: str | Path | None = None,
+    recon_pixel_weight_manifest_path: str | Path | None = None,
     recon_pixel_weight_normalize: str = "mean",
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
@@ -230,6 +236,7 @@ def train_export_snerv_mlx_native(
     pairs_nchw255 = _target_pairs_to_nchw255(target0_np, target1_np)
     recon_weight, recon_weight_metadata = _load_recon_pixel_weight_for_native_export(
         recon_pixel_weight_path,
+        manifest_path=recon_pixel_weight_manifest_path,
         expected_pairs=int(num_pairs),
         expected_hw=(int(output_height), int(output_width)),
         normalize=str(recon_pixel_weight_normalize),
@@ -930,15 +937,71 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     lf_quant_planes: list[np.ndarray] = []
     lf_zero_points: list[float] = []
     step_maps: list[np.ndarray] = []
+    lf_step_allocation_rows: list[dict[str, Any]] = []
+    step_map_importance_values: list[float] = []
     n_levels = max(2, round(2.0 ** float(target_bits_per_coeff)))
-    for _pair_idx, _frame_idx, _channel_idx, pyr in records:
-        q, scale, zero = quantize_lf(pyr.lf, n_levels=n_levels)
-        step = np.full(q.shape, float(scale), dtype=np.float32)
+    for record_index, (pair_idx, frame_idx, channel_idx, pyr) in enumerate(records):
+        q_uniform, scale, zero = quantize_lf(pyr.lf, n_levels=n_levels)
+        step = np.full(q_uniform.shape, float(scale), dtype=np.float32)
+        allocation_row: dict[str, Any] = {
+            "schema": "snerv_lf_step_allocation_row.v1",
+            "pair_idx": int(pair_idx),
+            "frame_idx": int(frame_idx),
+            "channel_idx": int(channel_idx),
+            "mode": "uniform_l2_baseline",
+            "uniform_step": float(scale),
+            "target_bits_per_coeff": float(target_bits_per_coeff),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        if weight_pyramids is not None:
+            weight_lf = np.abs(np.asarray(weight_pyramids[record_index].lf, dtype=np.float64))
+            if weight_lf.shape != pyr.lf.shape:
+                raise SnervMlxNativeExportError(
+                    "DWT-adjoint LF saliency shape "
+                    f"{weight_lf.shape} != LF shape {pyr.lf.shape}"
+                )
+            dynamic_range = max(float(np.max(pyr.lf) - np.min(pyr.lf)), 1.0e-9)
+            min_step = max(float(scale) / 16.0, 1.0e-9)
+            max_step = max(dynamic_range, float(scale) * 16.0, min_step * 2.0)
+            alloc = allocate_lf_linf(
+                LfSaliency(
+                    lf_saliency=weight_lf,
+                    lf_shape=(int(pyr.lf.shape[0]), int(pyr.lf.shape[1])),
+                    pixel_seg_mass=0.0,
+                    pixel_pose_mass=0.0,
+                ),
+                target_bits=float(pyr.lf.size) * float(target_bits_per_coeff),
+                dynamic_range=dynamic_range,
+                min_step=min_step,
+                max_step=max_step,
+            )
+            step = alloc.steps.reshape(pyr.lf.shape).astype(np.float32)
+            allocation_row.update(
+                {
+                    "mode": "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill",
+                    "dynamic_range": dynamic_range,
+                    "target_bits_total": float(pyr.lf.size)
+                    * float(target_bits_per_coeff),
+                    "realized_bits_total": float(alloc.total_bits),
+                    "water_level": float(alloc.water_level),
+                    "min_step": float(alloc.min_step),
+                    "max_step": float(alloc.max_step),
+                    "lf_saliency_mean": float(np.mean(weight_lf)),
+                    "lf_saliency_max": float(np.max(weight_lf)),
+                }
+            )
+        q, _scale, zero = quantize_lf(pyr.lf, per_element_steps=step)
         lf_quant_planes.append(q)
         lf_zero_points.append(float(zero))
         step_maps.append(step)
+        step_map_importance_values.append(
+            max(float(allocation_row.get("lf_saliency_mean", 1.0)), 1.0e-12)
+        )
+        lf_step_allocation_rows.append(allocation_row)
 
-    step_map_importance = np.ones(len(step_maps), dtype=np.float64)
+    step_map_importance = np.asarray(step_map_importance_values, dtype=np.float64)
     step_packet = encode_step_maps_waterfill(
         step_maps,
         map_importance=step_map_importance,
@@ -959,13 +1022,27 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "lf_scale_mode": "implicit_per_element_steps_scale_1",
         "lf_payload_codec": str(lf_payload_codec),
         "step_map_packet_schema": step_packet.schema,
-        "step_map_coder_mode": "waterfill_mlx_native_uniform_importance_bridge",
+        "step_map_coder_mode": (
+            "joint_p18_p19_lf_step_map_waterfill"
+            if weighted_fit_enabled
+            else "waterfill_mlx_native_uniform_importance_bridge"
+        ),
         "step_map_coder_bins": None,
         "step_map_waterfill_bits_per_coeff": float(step_map_bits_per_coeff),
         "step_map_coder_groups": [dict(group) for group in step_packet.groups],
         "target_bits_per_coeff": float(target_bits_per_coeff),
         "uniform_quantization_levels": int(n_levels),
-        "allocation_mode": "uniform_mlx_native_closed_form_export",
+        "allocation_mode": (
+            "joint_p18_p19_lf_waterfill_plus_hf_dwt_adjoint_saliency"
+            if weighted_fit_enabled
+            else "uniform_mlx_native_closed_form_export"
+        ),
+        "lf_step_allocation_mode": (
+            "joint_p18_p19_dwt_adjoint_lf_reverse_waterfill"
+            if weighted_fit_enabled
+            else "uniform_l2_baseline"
+        ),
+        "lf_step_allocation_rows": lf_step_allocation_rows,
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": float(hf_decoder_saliency_gain),
         "hf_decoder_weight_domain": (
@@ -1077,6 +1154,7 @@ def _packet_preserves_recon_weight_binding(
 def _load_recon_pixel_weight_for_native_export(
     path: str | Path | None,
     *,
+    manifest_path: str | Path | None = None,
     expected_pairs: int,
     expected_hw: tuple[int, int],
     normalize: str,
@@ -1110,12 +1188,24 @@ def _load_recon_pixel_weight_for_native_export(
         expected_hw=expected_hw,
         normalize=normalize,
     )
+    source_sha256 = sha256_file(resolved)
+    producer_manifest = _load_recon_pixel_weight_producer_manifest_for_native_export(
+        resolved,
+        expected_weight_sha256=source_sha256,
+        explicit_manifest_path=manifest_path,
+        expected_pairs=int(expected_pairs),
+        expected_hw=expected_hw,
+    )
+    producer_manifest_verified = (
+        producer_manifest.get("consumption_certified") is True
+        and producer_manifest.get("status") == "verified_finite_gradient_manifest"
+    )
     metadata = {
         "schema": "snerv_mlx_native_recon_pixel_weight_consumption.v1",
         "enabled": True,
         "source_kind": "file",
         "path": resolved.as_posix(),
-        "sha256": sha256_file(resolved),
+        "sha256": source_sha256,
         "npz_key": npz_key,
         "normalize": normalize,
         "expected_pairs": int(expected_pairs),
@@ -1125,12 +1215,159 @@ def _load_recon_pixel_weight_for_native_export(
         "hf_decoder_fit_mode": SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
         "weight_domain": "dwt_adjoint_detail_saliency_diagonal",
         "exact_pixel_weighted_objective": False,
-        "producer_manifest_verified": False,
-        "verification_status": "manual_file_sha_only_no_verified_gradient_manifest",
+        "producer_manifest": producer_manifest,
+        "producer_manifest_verified": producer_manifest_verified,
+        "verification_status": (
+            "verified_finite_gradient_manifest"
+            if producer_manifest_verified
+            else "manual_file_sha_only_no_verified_gradient_manifest"
+        ),
         "authority": "false_macos_mlx_research_signal",
         **FALSE_AUTHORITY,
     }
     return weight, metadata
+
+
+def _load_recon_pixel_weight_producer_manifest_for_native_export(
+    weight_path: Path,
+    *,
+    expected_weight_sha256: str,
+    explicit_manifest_path: str | Path | None,
+    expected_pairs: int,
+    expected_hw: tuple[int, int],
+) -> dict[str, Any]:
+    """Validate finite-gradient producer custody for a native-export weight.
+
+    The compact runner can auto-discover the newest joint P18/P19 recon-weight,
+    but the native exporter is the archive-producing boundary. It must re-check
+    the producer manifest itself so manifest custody survives direct calls and
+    cannot be forged by runner metadata alone.
+    """
+
+    if explicit_manifest_path is None:
+        manifest_path = weight_path.with_name(
+            "joint_p18_p19_recon_pixel_weight_manifest.json"
+        )
+        if not manifest_path.is_file():
+            return {
+                "schema": "snerv_mlx_native_recon_pixel_weight_producer_manifest.v1",
+                "status": "not_found_unverified_manual_or_legacy_weight",
+                "path": manifest_path.as_posix(),
+                "consumption_certified": False,
+            }
+    else:
+        manifest_path = _resolve_recon_pixel_weight_manifest_path(
+            explicit_manifest_path,
+            base=weight_path.parent,
+        )
+        if not manifest_path.is_file():
+            raise SnervMlxNativeExportError(
+                "recon_pixel_weight_manifest_path is not a file: "
+                f"{manifest_path}"
+            )
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest is not valid JSON: "
+            f"{manifest_path}"
+        ) from exc
+    if not isinstance(manifest, dict):
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest must be an object: "
+            f"{manifest_path}"
+        )
+
+    manifest_weight_path = manifest.get("weight_path")
+    if manifest_weight_path is None:
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest is missing weight_path"
+        )
+    manifest_resolved = _resolve_recon_pixel_weight_manifest_path(
+        manifest_weight_path,
+        base=manifest_path.parent,
+    )
+    if manifest_resolved != weight_path:
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest points at a different "
+            f"weight file: {manifest_resolved} != {weight_path}"
+        )
+
+    manifest_weight_sha = str(manifest.get("weight_sha256") or "")
+    if manifest_weight_sha != expected_weight_sha256:
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest SHA does not match loaded "
+            f"weight file: {manifest_weight_sha} != {expected_weight_sha256}"
+        )
+
+    config = manifest.get("config")
+    if isinstance(config, Mapping):
+        if config.get("num_pairs") is not None and int(config["num_pairs"]) != int(
+            expected_pairs
+        ):
+            raise SnervMlxNativeExportError(
+                "recon pixel weight producer manifest num_pairs mismatch: "
+                f"{config.get('num_pairs')} != {int(expected_pairs)}"
+            )
+        scorer_hw = config.get("scorer_hw")
+        if scorer_hw is not None and [int(v) for v in scorer_hw] != [
+            int(expected_hw[0]),
+            int(expected_hw[1]),
+        ]:
+            raise SnervMlxNativeExportError(
+                "recon pixel weight producer manifest scorer_hw mismatch: "
+                f"{scorer_hw} != {[int(expected_hw[0]), int(expected_hw[1])]}"
+            )
+
+    producer_metadata = manifest.get("metadata")
+    if not isinstance(producer_metadata, dict):
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest is missing metadata object"
+        )
+    gradient_health = producer_metadata.get("gradient_health")
+    if not isinstance(gradient_health, dict):
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest is missing gradient_health; "
+            "regenerate the surface with the finite-gradient producer"
+        )
+    blockers = [str(blocker) for blocker in producer_metadata.get("blockers") or []]
+    consumption_recommended = bool(
+        producer_metadata.get("training_consumption_recommended", False)
+    )
+    if gradient_health.get("status") != "pass_finite":
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest did not pass finite-gradient "
+            f"health: {gradient_health.get('status')}"
+        )
+    if not consumption_recommended or blockers:
+        raise SnervMlxNativeExportError(
+            "recon pixel weight producer manifest is not recommended for "
+            f"training consumption; blockers={blockers}"
+        )
+
+    return {
+        "schema": "snerv_mlx_native_recon_pixel_weight_producer_manifest.v1",
+        "status": "verified_finite_gradient_manifest",
+        "path": manifest_path.as_posix(),
+        "sha256": sha256_file(manifest_path),
+        "producer_schema": manifest.get("schema"),
+        "producer_metadata_schema": producer_metadata.get("schema"),
+        "weight_path": manifest_resolved.as_posix(),
+        "weight_sha256": expected_weight_sha256,
+        "config": dict(config) if isinstance(config, Mapping) else None,
+        "gradient_health": dict(gradient_health),
+        "blockers": blockers,
+        "training_consumption_recommended": consumption_recommended,
+        "consumption_certified": True,
+    }
+
+
+def _resolve_recon_pixel_weight_manifest_path(path: str | Path, *, base: Path) -> Path:
+    candidate = Path(path).expanduser()
+    if not candidate.is_absolute():
+        candidate = base / candidate
+    return candidate.resolve(strict=False)
 
 
 def _normalize_recon_pixel_weight_array(

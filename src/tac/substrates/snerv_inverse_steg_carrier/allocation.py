@@ -170,6 +170,7 @@ def allocate_lf_linf(
     lf_saliency: LfSaliency,
     *,
     target_bits: float,
+    dynamic_range: float = 256.0,
     min_step: float = 0.5,
     max_step: float | None = None,
     eps: float = 1e-8,
@@ -192,6 +193,7 @@ def allocate_lf_linf(
     alloc = allocate_linf_margin_budget(
         rho,
         target_bits=target_bits,
+        dynamic_range=float(dynamic_range),
         min_step=min_step,
         max_step=max_step,
         fairness_direction="disadvantage_linf",  # NO-FAKE: L-inf spends >= L2 bits
