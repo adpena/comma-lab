@@ -990,6 +990,50 @@ def test_training_telemetry_feedback_uses_current_segnet_pressure_for_pr95_stage
     assert row["training_control_should_stop_current_run"] is True
 
 
+def test_training_telemetry_feedback_does_not_lower_above_cap_segnet_pressure(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "snerv_pr95_stage_seg_stagnation_above_cap.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pr95_stage_pose_surrogate": 1.0,
+                "loss_part_pr95_stage_seg_surrogate": 1.4,
+                "loss_part_weighted_pr95_stage_pose_surrogate": 1.0,
+                "loss_part_weighted_pr95_stage_seg_surrogate": 2240.0,
+                "pr95_stage_index": 1.0,
+                "pr95_stage_uses_muon": 1.0,
+            },
+            "per_axis_decomposition": {
+                "pose": 1.0,
+                "seg": 8.4 - min(epoch, 127) * 0.0001,
+            },
+        }
+        for epoch in range(192)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_current_seg_w16",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+        current_segnet_distillation_weight=16.0,
+    )
+
+    assert row["seg_stagnation_detected"] is True
+    assert row["observed_segnet_distillation_weight"] == 16.0
+    assert row["recommended_segnet_distillation_weight"] is None
+    assert row["training_control_action"] == "continue_running"
+    assert row["training_control_should_stop_current_run"] is False
+
+
 def test_running_training_telemetry_feedback_recommends_checkpoint_supersede_for_flat_segnet(
     tmp_path: Path,
 ) -> None:

@@ -2071,17 +2071,20 @@ def _effective_distillation_weight(loss_components: Any) -> float | None:
 
 def recommend_segnet_distillation_weight_for_stagnation(
     observed_weight: float | None,
-) -> float:
+) -> float | None:
     """Return the next bounded SegNet pressure for a stagnant HiNeRV run."""
 
     observed = _float_or_none(observed_weight)
     if observed is None or observed <= 0.0:
         return float(_SEG_STAGNATION_WEIGHT_MULTIPLIER)
+    if observed >= float(_SEG_STAGNATION_MAX_DISTILLATION_WEIGHT):
+        return None
     next_weight = max(
         float(_SEG_STAGNATION_WEIGHT_MULTIPLIER),
         observed * float(_SEG_STAGNATION_WEIGHT_MULTIPLIER),
     )
-    return min(next_weight, float(_SEG_STAGNATION_MAX_DISTILLATION_WEIGHT))
+    bounded = min(next_weight, float(_SEG_STAGNATION_MAX_DISTILLATION_WEIGHT))
+    return bounded if bounded > observed else None
 
 
 def _median(values: Sequence[float]) -> float | None:
