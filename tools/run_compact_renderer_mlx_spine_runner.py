@@ -2227,8 +2227,6 @@ def _modelsize_candidate_from_self_describing_id(
                 *list(row.get("blockers") or []),
                 "legacy_hinerv_modelsize_candidate_id_missing_graph_controls",
             ]
-        else:
-            row["legacy_candidate_id"] = False
     elif family == "snerv":
         match = _SNERV_MODEL_SIZE_ID_RE.match(token)
         partial_match = _SNERV_PARTIAL_MODEL_SIZE_ID_RE.match(token)
