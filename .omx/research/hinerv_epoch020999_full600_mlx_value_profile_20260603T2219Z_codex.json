@@ -1,0 +1,92 @@
+{
+  "schema": "codex_hinerv_full600_mlx_value_profile_pointer.v1",
+  "created_utc": "2026-06-03T22:19:00Z",
+  "family": "hi_nerv",
+  "checkpoint_epoch": 20999,
+  "checkpoint_state_kind": "ema",
+  "axis": "macOS-MLX research-signal",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch020999_ema_archive_export_20260603T221757Z_portfolio_default_guarded/archive.zip",
+    "sha256": "4b6109c7d19b1d3bc69e11f9a0b5d7e62ebc2a5e61d9c2889f9dc7ceacdc8706",
+    "bytes": 121603
+  },
+  "export_report": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch020999_ema_archive_export_20260603T221757Z_portfolio_default_guarded/hinerv_checkpoint_archive_export.json",
+    "sha256": "ef70aafbacb2f4fd1fef3f1c9c12d34f766ac1ce474a0e89c88a225d00288792",
+    "modelsize_integrity": {
+      "matches_candidate_controls": true,
+      "observed_total_trainable_params": 159718,
+      "observed_modelsize_mparams": 0.159718,
+      "modelsize_mparams_caps_archive_zip_bytes": false,
+      "archive_byte_authority_surface": "measured_archive_zip_after_export"
+    },
+    "decoder_codec_resolution": {
+      "resolved": "portfolio_auto",
+      "resolution_source": "runner_compact_decoder_codec",
+      "modelsize_candidate_decoder_codec": "int7_mixed",
+      "modelsize_candidate_decoder_codec_is_capacity_authority": false
+    }
+  },
+  "codec_bug_class_closed": {
+    "name": "modelsize_candidate_decoder_codec_misclassified_as_capacity_authority",
+    "bad_control_observed_archive_bytes": 214727,
+    "fixed_portfolio_auto_archive_bytes": 121603,
+    "bytes_saved_by_fix": 93124,
+    "score_rate_saved_by_fix": 0.06201044068270847,
+    "verdict": "candidate decoder_codec metadata is advisory; portfolio_auto remains the default byte-minimizing export path unless an explicit runner/export override is supplied"
+  },
+  "cache_report": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch020999_ema_archive_export_20260603T221757Z_portfolio_default_guarded/mlx_full600/candidate_cache_report.json",
+    "sha256": "2181a6eb59540d497e9e43c7584dc34f87c2aa1708d0d391192fc8b0c1ea914d",
+    "cached_pair_count": 600
+  },
+  "mlx_response": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch020999_ema_archive_export_20260603T221757Z_portfolio_default_guarded/mlx_full600/mlx_response_full600.json",
+    "sha256": "21debaa76bfeadddb9b4d118107a390e756a5550384d8fe0f904f704cd138e13",
+    "canonical_score": 88.85974325228196,
+    "avg_segnet_dist": 0.5048249476154645,
+    "avg_posenet_dist": 146.66049120585123,
+    "rate_term": 0.08097427815684402,
+    "nonrate_score": 88.77876897412512,
+    "pairs": 600
+  },
+  "previous_epoch019999_comparison": {
+    "canonical_score": 89.6117192386665,
+    "avg_segnet_dist": 0.5048249476154645,
+    "avg_posenet_dist": 152.47544425964355,
+    "archive_bytes": 121828,
+    "delta_score_epoch020999_minus_epoch019999": -0.7519759863845342,
+    "delta_segnet": 0.0,
+    "delta_posenet": -5.814953053792317,
+    "delta_archive_bytes": -225
+  },
+  "section_value_profile": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch020999_ema_archive_export_20260603T221757Z_portfolio_default_guarded/mlx_full600/compact_renderer_mlx_section_value_profile.json",
+    "sha256": "895a7dbe379470ccc31cd1312ace81a586c17098e0be0f3a5d561f1239639363",
+    "section_byte_record_count": 4,
+    "dominant_rate_sections": [
+      {
+        "section_name": "latents_rc",
+        "bytes": 65290,
+        "rate_cost": 0.04347393104934657
+      },
+      {
+        "section_name": "decoder_qw",
+        "bytes": 30070,
+        "rate_cost": 0.020022378720383694
+      }
+    ]
+  },
+  "decision": {
+    "exact_gate": "blocked",
+    "exact_gate_blocker": "full_video_mlx_advisory_score_far_above_frontier",
+    "continue_training": true,
+    "rate_axis_status": "archive_under_178k_ceiling_with_portfolio_auto",
+    "distortion_axis_status": "not_solved",
+    "optimizer_signal": "epoch020999 improves pose-only versus epoch019999 while seg remains flat at 0.5048249476; prioritize scorer-faithful SegNet/boundary decoder-weight training and optimizer/control fixes over additional rate nibbling"
+  }
+}

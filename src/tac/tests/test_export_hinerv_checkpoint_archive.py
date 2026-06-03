@@ -21,16 +21,17 @@ def _state() -> dict[str, np.ndarray]:
     }
 
 
-def test_hinerv_checkpoint_decoder_codec_prefers_candidate_over_runner_default() -> None:
+def test_hinerv_checkpoint_decoder_codec_keeps_portfolio_auto_over_candidate_metadata() -> None:
     resolution = _resolve_decoder_codec(
         explicit_arg=None,
         command_args={"compact_decoder_codec": "portfolio_auto"},
         candidate={"decoder_codec": "int7_mixed"},
     )
 
-    assert resolution["resolved"] == "int7_mixed"
-    assert resolution["resolution_source"] == "modelsize_candidate_decoder_codec"
-    assert resolution["candidate_codec_takes_precedence_over_runner_default"] is True
+    assert resolution["resolved"] == "portfolio_auto"
+    assert resolution["resolution_source"] == "runner_compact_decoder_codec"
+    assert resolution["candidate_codec_takes_precedence_over_runner_default"] is False
+    assert resolution["modelsize_candidate_decoder_codec_is_capacity_authority"] is False
 
 
 def test_hinerv_checkpoint_decoder_codec_keeps_explicit_arg_authority() -> None:
@@ -42,6 +43,7 @@ def test_hinerv_checkpoint_decoder_codec_keeps_explicit_arg_authority() -> None:
 
     assert resolution["resolved"] == "int4_mixed"
     assert resolution["resolution_source"] == "explicit_arg"
+    assert resolution["modelsize_candidate_decoder_codec"] == "int7_mixed"
 
 
 def test_hinerv_checkpoint_decoder_codec_keeps_nondefault_runner_codec() -> None:

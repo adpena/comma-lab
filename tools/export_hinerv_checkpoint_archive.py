@@ -218,15 +218,12 @@ def _resolve_decoder_codec(
     if explicit is not None:
         resolved = explicit
         source = "explicit_arg"
-    elif candidate_codec is not None and runner_default_like:
-        resolved = candidate_codec
-        source = "modelsize_candidate_decoder_codec"
     elif runner is not None:
         resolved = runner
         source = "runner_compact_decoder_codec"
     elif candidate_codec is not None:
-        resolved = candidate_codec
-        source = "modelsize_candidate_decoder_codec"
+        resolved = HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC
+        source = "checkpoint_export_default"
     else:
         resolved = HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC
         source = "checkpoint_export_default"
@@ -240,6 +237,11 @@ def _resolve_decoder_codec(
         "resolution_source": source,
         "candidate_codec_takes_precedence_over_runner_default": bool(
             source == "modelsize_candidate_decoder_codec" and runner_default_like
+        ),
+        "modelsize_candidate_decoder_codec_is_capacity_authority": False,
+        "candidate_codec_advisory_reason": (
+            "modelsize candidates describe graph capacity; decoder codec promotion is "
+            "measured by portfolio_auto or an explicit runner/export override"
         ),
         **FALSE_AUTHORITY,
     }
