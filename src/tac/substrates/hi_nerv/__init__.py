@@ -81,11 +81,25 @@ from .official_grid import (
     OfficialGridTrilinear3DError,
     official_grid_trilinear3d_forward,
 )
+from .official_patch import (
+    HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF,
+    HINERV_OFFICIAL_PATCH_INDEX_SOURCE_CONTRACT,
+    OfficialPatchIndexError,
+    OfficialPixelIndex3D,
+    official_compute_pixel_idx_3d,
+    official_flat_patch_index_to_thw,
+    official_patch_index_contract,
+    official_patch_to_video,
+    official_vidx_to_pidx,
+    official_video_to_patch,
+)
 from .score_aware_loss import HinervScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
     "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
     "HINERV_OFFICIAL_GRID_TRILINEAR3D_SOURCE_CONTRACT",
+    "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+    "HINERV_OFFICIAL_PATCH_INDEX_SOURCE_CONTRACT",
     "HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE",
     "HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA",
     "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
@@ -96,6 +110,8 @@ __all__ = [
     "HinervSubstrate",
     "OfficialGridTrilinear3D",
     "OfficialGridTrilinear3DError",
+    "OfficialPatchIndexError",
+    "OfficialPixelIndex3D",
     "ScoreAwareLossWeights",
     "apply_decoder_pruning",
     "apply_decoder_quant_noise",
@@ -103,7 +119,13 @@ __all__ = [
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
+    "official_compute_pixel_idx_3d",
+    "official_flat_patch_index_to_thw",
     "official_grid_trilinear3d_forward",
+    "official_patch_index_contract",
+    "official_patch_to_video",
+    "official_vidx_to_pidx",
+    "official_video_to_patch",
     "pack_archive",
     "pack_archive_from_exported_state_dict",
     "parse_archive",

@@ -25,6 +25,13 @@ import numpy as np
 
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
 from tac.substrates.hi_nerv.official_grid import official_grid_trilinear3d_forward
+from tac.substrates.hi_nerv.official_patch import (
+    official_compute_pixel_idx_3d,
+    official_flat_patch_index_to_thw,
+    official_patch_to_video,
+    official_video_to_patch,
+    official_vidx_to_pidx,
+)
 
 SCHEMA = "hinerv_official_source_parity_audit.v1"
 AUTHORITY = "false_authority_source_audit_no_score_claim"
@@ -149,6 +156,9 @@ OFFICIAL_MARKER_GROUPS: tuple[MarkerGroup, ...] = (
 LOCAL_BINDING_MARKERS: tuple[str, ...] = (
     "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
     "OfficialGridTrilinear3D",
+    "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+    "official_video_to_patch",
+    "official_compute_pixel_idx_3d",
     "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
     "HierarchicalFeatureGrid",
     "ConvNeXtBlock",
@@ -202,6 +212,15 @@ _HINERV_FORWARD_PARITY_COMPONENT_SPECS: tuple[dict[str, Any], ...] = (
             ("src/tac/substrates/hi_nerv/architecture.py", "pair_indices"),
             ("src/tac/substrates/hi_nerv/architecture.py", "num_pairs"),
             ("src/tac/substrates/hi_nerv/inflate.py", "num_pairs"),
+            (
+                "src/tac/substrates/hi_nerv/official_patch.py",
+                "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+            ),
+            ("src/tac/substrates/hi_nerv/official_patch.py", "def official_video_to_patch"),
+            (
+                "src/tac/substrates/hi_nerv/official_patch.py",
+                "def official_compute_pixel_idx_3d",
+            ),
         ),
         "local_source_forward_markers": (
             (
@@ -334,7 +353,10 @@ def build_hinerv_official_forward_parity_artifact(
         local_root=local_root,
         forward_parity_artifact_row={"parity_passed": False, "component_rows": []},
     )
-    numeric_subcomponent_rows = [_official_grid_trilinear3d_numeric_replay_row()]
+    numeric_subcomponent_rows = [
+        _official_grid_trilinear3d_numeric_replay_row(),
+        _official_patch_index_numeric_replay_row(),
+    ]
     parity_passed = all(bool(row["source_forward_parity_proven"]) for row in component_rows)
     parity_falsified = any(bool(row["source_forward_parity_falsified"]) for row in component_rows)
     return {
@@ -890,7 +912,7 @@ def _official_grid_trilinear3d_numeric_replay_row() -> dict[str, Any]:
                 mode="bilinear",
                 align_corners=False,
             )
-            .reshape(output_size + (x.shape[-1],))
+            .reshape((*output_size, x.shape[-1]))
             .detach()
             .cpu()
             .numpy()
@@ -942,6 +964,231 @@ def _official_grid_trilinear3d_numeric_replay_row() -> dict[str, Any]:
             "portable_output_sha256": None,
             "error": f"{type(exc).__name__}: {exc}",
             "blockers": ["hinerv_official_grid_trilinear3d_numeric_replay_failed"],
+            **FALSE_AUTHORITY,
+        }
+
+
+def _official_patch_index_numeric_replay_row() -> dict[str, Any]:
+    """Replay official patch/index formulas against Torch tensor semantics.
+
+    This proves only the standalone official patch/index primitives.  It does
+    not prove full HiNeRV source-forward parity because the decoder, feature
+    grids, pruning, quantization, and bitstream are not involved.
+    """
+
+    video = np.arange(2 * 4 * 6 * 8 * 3, dtype=np.float32).reshape(2, 4, 6, 8, 3)
+    patch_size = (2, 3, 4)
+    vidx = np.array([[0, 1, 0], [1, 0, 1]], dtype=np.int64)
+    idx = np.array([[0, 0, 0], [1, 2, 3]], dtype=np.int64)
+    flat_patch_indices = np.array([0, 1, 3, 4, 11], dtype=np.int64)
+    try:
+        import torch
+
+        torch_video = torch.from_numpy(video)
+        n_patch_t, n_patch_h, n_patch_w = (
+            torch_video.shape[d + 1] // patch_size[d] for d in range(3)
+        )
+        official_patch = (
+            torch_video.view(
+                -1,
+                n_patch_t,
+                patch_size[0],
+                n_patch_h,
+                patch_size[1],
+                n_patch_w,
+                patch_size[2],
+                torch_video.shape[-1],
+            )
+            .permute(0, 1, 3, 5, 2, 4, 6, 7)
+            .contiguous()
+            .view(-1, patch_size[0], patch_size[1], patch_size[2], torch_video.shape[-1])
+            .numpy()
+        )
+        torch_patch = torch.from_numpy(official_patch)
+        video_size = (4, 6, 8)
+        n_patch_t, n_patch_h, n_patch_w = (
+            video_size[d] // torch_patch.shape[d + 1] for d in range(3)
+        )
+        official_roundtrip = (
+            torch_patch.view(
+                -1,
+                n_patch_t,
+                n_patch_h,
+                n_patch_w,
+                torch_patch.shape[1],
+                torch_patch.shape[2],
+                torch_patch.shape[3],
+                torch_patch.shape[-1],
+            )
+            .permute(0, 1, 4, 2, 5, 3, 6, 7)
+            .contiguous()
+            .view(-1, video_size[0], video_size[1], video_size[2], torch_patch.shape[-1])
+            .numpy()
+        )
+
+        torch_vidx = torch.from_numpy(vidx)
+        scales = [2, 2, 3]
+        pidx_t, pidx_h, pidx_w = [
+            scales[d] * torch_vidx[:, d][:, None] + torch.arange(scales[d])[None, :]
+            for d in range(3)
+        ]
+        official_pidx = (
+            torch.stack(
+                [
+                    pidx_t[:, :, None, None].expand([torch_vidx.shape[0], *scales]),
+                    pidx_h[:, None, :, None].expand([torch_vidx.shape[0], *scales]),
+                    pidx_w[:, None, None, :].expand([torch_vidx.shape[0], *scales]),
+                ],
+                dim=-1,
+            )
+            .view(-1, 3)
+            .numpy()
+        )
+
+        torch_idx = torch.from_numpy(idx)
+        idx_max = (2, 3, 4)
+        sizes = (4, 9, 8)
+        padding = (1, 0, 2)
+        patch_sizes = [sizes[d] // idx_max[d] for d in range(3)]
+        padded = [patch_sizes[d] + padding[d] * 2 for d in range(3)]
+        raw_pixel_idx = [
+            torch_idx[:, d][:, None] * patch_sizes[d]
+            - padding[d]
+            + torch.arange(padded[d])[None, :]
+            for d in range(3)
+        ]
+        official_pixel_idx = [
+            torch.clip(raw_pixel_idx[d], 0, sizes[d] - 1).numpy()
+            for d in range(3)
+        ]
+        official_pixel_masks = [
+            ((raw_pixel_idx[d] >= 0) * (raw_pixel_idx[d] < sizes[d])).numpy()
+            for d in range(3)
+        ]
+
+        flat = torch.from_numpy(flat_patch_indices)
+        official_thw = torch.stack(
+            [
+                flat // (2 * 3),
+                (flat % (2 * 3)) // 3,
+                (flat % (2 * 3)) % 3,
+            ],
+            dim=-1,
+        ).numpy()
+
+        portable_patch = official_video_to_patch(video, patch_size=patch_size)
+        portable_roundtrip = official_patch_to_video(portable_patch, video_size=video_size)
+        portable_pidx = official_vidx_to_pidx(
+            vidx,
+            vidx_max=(2, 2, 2),
+            pidx_max=(4, 4, 6),
+        )
+        portable_pixel = official_compute_pixel_idx_3d(
+            idx,
+            idx_max=idx_max,
+            sizes=sizes,
+            padding=padding,
+            clipped=True,
+            return_mask=True,
+        )
+        portable_thw = official_flat_patch_index_to_thw(
+            flat_patch_indices,
+            num_patches=(2, 2, 3),
+        )
+
+        max_abs_error = float(
+            max(
+                np.max(np.abs(official_patch.astype(np.float64) - portable_patch.astype(np.float64))),
+                np.max(
+                    np.abs(
+                        official_roundtrip.astype(np.float64) - portable_roundtrip.astype(np.float64)
+                    )
+                ),
+                np.max(np.abs(official_pidx.astype(np.float64) - portable_pidx.astype(np.float64))),
+                np.max(
+                    [
+                        np.max(
+                            np.abs(
+                                official_pixel_idx[axis].astype(np.float64)
+                                - portable_pixel.pixel_indices[axis].astype(np.float64)
+                            )
+                        )
+                        for axis in range(3)
+                    ]
+                ),
+                np.max(
+                    [
+                        np.max(
+                            np.abs(
+                                official_pixel_masks[axis].astype(np.int64)
+                                - (portable_pixel.masks or ())[axis].astype(np.int64)
+                            )
+                        )
+                        for axis in range(3)
+                    ]
+                ),
+                np.max(np.abs(official_thw.astype(np.float64) - portable_thw.astype(np.float64))),
+            )
+        )
+        official_hash_payload = np.concatenate(
+            [
+                official_patch.reshape(-1).astype(np.float32),
+                official_roundtrip.reshape(-1).astype(np.float32),
+                official_pidx.reshape(-1).astype(np.float32),
+                *(arr.reshape(-1).astype(np.float32) for arr in official_pixel_idx),
+                *(arr.reshape(-1).astype(np.float32) for arr in official_pixel_masks),
+                official_thw.reshape(-1).astype(np.float32),
+            ]
+        )
+        portable_hash_payload = np.concatenate(
+            [
+                portable_patch.reshape(-1).astype(np.float32),
+                portable_roundtrip.reshape(-1).astype(np.float32),
+                portable_pidx.reshape(-1).astype(np.float32),
+                *(arr.reshape(-1).astype(np.float32) for arr in portable_pixel.pixel_indices),
+                *(arr.reshape(-1).astype(np.float32) for arr in (portable_pixel.masks or ())),
+                portable_thw.reshape(-1).astype(np.float32),
+            ]
+        )
+        official_sha = _array_sha256(official_hash_payload)
+        portable_sha = _array_sha256(portable_hash_payload)
+        passed = bool(max_abs_error == 0.0 and official_sha == portable_sha)
+        blockers = [] if passed else ["hinerv_official_patch_index_numeric_replay_mismatch"]
+        return {
+            "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+            "component_id": "official_patch_index_path",
+            "parent_component_id": "patch_dataset_path",
+            "source_forward_parity_proven": passed,
+            "full_hinerv_forward_parity_proven": False,
+            "backend": "torch_formula_vs_numpy",
+            "video_shape": list(video.shape),
+            "patch_size": list(patch_size),
+            "tolerance": 0.0,
+            "max_abs_error": max_abs_error,
+            "input_sha256": _array_sha256(video),
+            "official_output_sha256": official_sha,
+            "portable_output_sha256": portable_sha,
+            "output_hashes_bit_identical": official_sha == portable_sha,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        }
+    except Exception as exc:  # pragma: no cover - environment dependent
+        return {
+            "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+            "component_id": "official_patch_index_path",
+            "parent_component_id": "patch_dataset_path",
+            "source_forward_parity_proven": False,
+            "full_hinerv_forward_parity_proven": False,
+            "backend": "torch_formula_vs_numpy",
+            "video_shape": list(video.shape),
+            "patch_size": list(patch_size),
+            "tolerance": 0.0,
+            "max_abs_error": None,
+            "input_sha256": _array_sha256(video),
+            "official_output_sha256": None,
+            "portable_output_sha256": None,
+            "error": f"{type(exc).__name__}: {exc}",
+            "blockers": ["hinerv_official_patch_index_numeric_replay_failed"],
             **FALSE_AUTHORITY,
         }
 

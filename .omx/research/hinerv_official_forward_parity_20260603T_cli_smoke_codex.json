@@ -102,6 +102,21 @@
           "marker": "num_pairs",
           "present": true,
           "rel_path": "src/tac/substrates/hi_nerv/inflate.py"
+        },
+        {
+          "marker": "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
+        },
+        {
+          "marker": "def official_video_to_patch",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
+        },
+        {
+          "marker": "def official_compute_pixel_idx_3d",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
         }
       ],
       "local_source_forward_marker_rows": [
@@ -184,7 +199,7 @@
     }
   ],
   "family": "hi_nerv",
-  "generated_utc": "20260603T153837Z",
+  "generated_utc": "20260603T154559Z",
   "local_repo_root": "/Users/adpena/Projects/pact",
   "numeric_subcomponent_rows": [
     {
@@ -219,6 +234,39 @@
       "source_faithful_stack_claim": false,
       "source_forward_parity_proven": true,
       "tolerance": 1e-06
+    },
+    {
+      "backend": "torch_formula_vs_numpy",
+      "blockers": [],
+      "component_id": "official_patch_index_path",
+      "full_hinerv_forward_parity_proven": false,
+      "input_sha256": "f5ac27d572f875373da07285282f90808cdf65b8a4c9f2ef908ef5e3db07ebfa",
+      "max_abs_error": 0.0,
+      "official_output_sha256": "07a9688e3293c4deb2a6d8c8875a9d1b245bef38ccc739f944fded8073b73784",
+      "output_hashes_bit_identical": true,
+      "parent_component_id": "patch_dataset_path",
+      "patch_size": [
+        2,
+        3,
+        4
+      ],
+      "portable_output_sha256": "07a9688e3293c4deb2a6d8c8875a9d1b245bef38ccc739f944fded8073b73784",
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "hinerv_official_numeric_subcomponent_replay.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_proven": true,
+      "tolerance": 0.0,
+      "video_shape": [
+        2,
+        4,
+        6,
+        8,
+        3
+      ]
     }
   ],
   "official_file_rows": [

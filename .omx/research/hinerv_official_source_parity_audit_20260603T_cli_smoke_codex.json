@@ -96,6 +96,21 @@
           "marker": "num_pairs",
           "present": true,
           "rel_path": "src/tac/substrates/hi_nerv/inflate.py"
+        },
+        {
+          "marker": "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
+        },
+        {
+          "marker": "def official_video_to_patch",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
+        },
+        {
+          "marker": "def official_compute_pixel_idx_3d",
+          "present": true,
+          "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
         }
       ],
       "local_source_forward_marker_rows": [
@@ -178,13 +193,16 @@
     }
   ],
   "family": "hi_nerv",
-  "generated_utc": "20260603T153838Z",
+  "generated_utc": "20260603T154559Z",
   "local_binding_marker_row": {
     "all_markers_present": true,
     "marker_group_id": "local_hinerv_receiver_visible_bindings",
     "markers": [
       "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
       "OfficialGridTrilinear3D",
+      "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+      "official_video_to_patch",
+      "official_compute_pixel_idx_3d",
       "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
       "HierarchicalFeatureGrid",
       "ConvNeXtBlock",
@@ -198,6 +216,9 @@
     "present_markers": [
       "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
       "OfficialGridTrilinear3D",
+      "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+      "official_video_to_patch",
+      "official_compute_pixel_idx_3d",
       "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
       "HierarchicalFeatureGrid",
       "ConvNeXtBlock",
@@ -302,7 +323,7 @@
       "portable_output_sha256_missing:prune_quant_codec",
       "official_weight_identity_missing:prune_quant_codec"
     ],
-    "bytes": 14680,
+    "bytes": 16308,
     "component_rows": [
       {
         "blockers": [
@@ -396,6 +417,21 @@
             "marker": "num_pairs",
             "present": true,
             "rel_path": "src/tac/substrates/hi_nerv/inflate.py"
+          },
+          {
+            "marker": "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
+          },
+          {
+            "marker": "def official_video_to_patch",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
+          },
+          {
+            "marker": "def official_compute_pixel_idx_3d",
+            "present": true,
+            "rel_path": "src/tac/substrates/hi_nerv/official_patch.py"
           }
         ],
         "local_source_forward_marker_rows": [
@@ -486,7 +522,7 @@
     "ready_for_exact_eval_dispatch": false,
     "schema": "hinerv_official_forward_parity_artifact_row.v1",
     "score_claim": false,
-    "sha256": "e58dc1b749ae2bda8c9944abf2ad0818d3c96e5bd88ab54183bd73ced15d59cd",
+    "sha256": "d199dbbad9e26b19516910034da7697d577c68f40b1447c7b7522186162954e5",
     "source_faithful_stack_claim": false,
     "status": "present"
   },

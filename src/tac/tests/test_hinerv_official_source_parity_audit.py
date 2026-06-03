@@ -79,6 +79,11 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert len(grid_rows["official_grid_trilinear3d"]["official_output_sha256"]) == 64
     assert len(grid_rows["official_grid_trilinear3d"]["portable_output_sha256"]) == 64
     assert grid_rows["official_grid_trilinear3d"]["blockers"] == []
+    assert grid_rows["official_patch_index_path"]["source_forward_parity_proven"] is True
+    assert grid_rows["official_patch_index_path"]["full_hinerv_forward_parity_proven"] is False
+    assert grid_rows["official_patch_index_path"]["max_abs_error"] == 0.0
+    assert grid_rows["official_patch_index_path"]["output_hashes_bit_identical"] is True
+    assert grid_rows["official_patch_index_path"]["blockers"] == []
     artifact_states = {row["component_id"]: row for row in artifact["component_rows"]}
     assert artifact_states["core_hierarchical_renderer"][
         "source_forward_parity_falsified"
@@ -115,6 +120,11 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert replay_rows["official_grid_trilinear3d"][
         "full_hinerv_forward_parity_proven"
     ] is False
+    assert replay_rows["official_patch_index_path"]["source_forward_parity_proven"] is True
+    assert replay_rows["official_patch_index_path"][
+        "full_hinerv_forward_parity_proven"
+    ] is False
+    assert replay_rows["official_patch_index_path"]["max_abs_error"] == 0.0
 
 
 def test_hinerv_official_source_audit_fails_closed_on_missing_markers(
