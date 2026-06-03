@@ -76,6 +76,23 @@ def _extra_loss_weight_overrides(
     }
 
 
+def source_pair_indices_for_local_batch(bundle: RendererBundle, idx: Any) -> Any:
+    """Map local hydrated target rows to source-video model pair indices.
+
+    Most harness users train on a prefix, so local target rows and source model
+    rows are identical. Hard-pair training is different: the targets may be a
+    compact local tensor such as rows ``[0, 1]`` while the full-video renderer
+    must decode source temporal rows such as ``[417, 22]``. This helper keeps
+    that distinction explicit and MLX-native.
+    """
+
+    if bundle.source_pair_indices is None:
+        return idx
+    mx = require_mlx_for_harness()
+    source_rows = mx.array(bundle.source_pair_indices, dtype=mx.int32)
+    return mx.take(source_rows, idx, axis=0)
+
+
 def decode_frames_nhwc01(bundle: RendererBundle, idx: Any) -> tuple[Any, Any]:
     """Decode ``(rgb_0, rgb_1)`` as NHWC ``[0, 1]`` regardless of model convention.
 
@@ -91,8 +108,9 @@ def decode_frames_nhwc01(bundle: RendererBundle, idx: Any) -> tuple[Any, Any]:
     """
     mx = require_mlx_for_harness()
     model = bundle.model
+    model_idx = source_pair_indices_for_local_batch(bundle, idx)
     if bundle.forward_convention == "reconstruct_pair_nchw01":
-        result = model.reconstruct_pair(idx)
+        result = model.reconstruct_pair(model_idx)
         # The renderer may return (rgb_0, rgb_1) or (rgb_0, rgb_1, z); take the
         # first two. Each is (B, 3, H, W) in [0, 1].
         rgb_0 = result[0]
@@ -101,7 +119,7 @@ def decode_frames_nhwc01(bundle: RendererBundle, idx: Any) -> tuple[Any, Any]:
         rgb_1 = mx.transpose(rgb_1, (0, 2, 3, 1))
         return rgb_0, rgb_1
     # call_b2chw_255: model(idx) -> (B, 2, 3, H, W) in [0, 255].
-    pair = model(idx)
+    pair = model(model_idx)
     pair01 = pair / 255.0
     rgb_0 = mx.transpose(pair01[:, 0], (0, 2, 3, 1))
     rgb_1 = mx.transpose(pair01[:, 1], (0, 2, 3, 1))
@@ -696,6 +714,7 @@ __all__ = [
     "decode_frames_nhwc01",
     "pose_student_inputs_nhwc",
     "score_aware_loss",
+    "source_pair_indices_for_local_batch",
 ]
 
 # Internal helpers exported for the channel's dedicated tests + substrate reuse.

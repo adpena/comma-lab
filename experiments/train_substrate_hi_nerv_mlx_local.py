@@ -116,6 +116,15 @@ def _full_main(args: argparse.Namespace) -> int:
     output_dir, storage_payload = _resolve_output_dir(args)
     cfg = _config_from_args(args)
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
+    source_pair_indices = prioritized_pair_indices or None
+    effective_training_num_pairs = (
+        len(source_pair_indices) if source_pair_indices is not None else int(cfg.num_pairs)
+    )
+    local_training_pair_indices = (
+        tuple(range(effective_training_num_pairs))
+        if source_pair_indices is not None
+        else prioritized_pair_indices
+    )
     model = HinervSubstrateMLX(cfg)
     if args.decoder_fake_quant_forward:
         model.configure_decoder_fake_quant_forward(
@@ -136,6 +145,7 @@ def _full_main(args: argparse.Namespace) -> int:
         num_pairs=int(cfg.num_pairs),
         output_height=int(cfg.output_height),
         output_width=int(cfg.output_width),
+        pair_indices=source_pair_indices,
     )
 
     scorer_teacher = None
@@ -148,11 +158,12 @@ def _full_main(args: argparse.Namespace) -> int:
             model=model,
             target_rgb_0=target_rgb_0,
             target_rgb_1=target_rgb_1,
-            num_pairs=int(cfg.num_pairs),
+            num_pairs=effective_training_num_pairs,
             forward_convention="call_b2chw_255",
             distillation_weight=0.0,
             pose_distillation_weight=0.0,
             pose_dims=DEFAULT_POSE_DIMS,
+            source_pair_indices=source_pair_indices,
         )
         scorer_teacher = build_mlx_segnet_pair_teacher(
             bundle_no_teacher,
@@ -182,7 +193,7 @@ def _full_main(args: argparse.Namespace) -> int:
         model=model,
         target_rgb_0=target_rgb_0,
         target_rgb_1=target_rgb_1,
-        num_pairs=int(cfg.num_pairs),
+        num_pairs=effective_training_num_pairs,
         forward_convention="call_b2chw_255",
         extra_loss_terms=extra_loss_terms,
         extra_loss_weights=coder_qat_loss_weights(coder_qat_cfg),
@@ -209,6 +220,18 @@ def _full_main(args: argparse.Namespace) -> int:
             "source_fidelity_status": "local_hi_nerv_fork_not_official_hinerv_parity",
             "modelsize_row": args.modelsize_row,
             "config": _config_snapshot(cfg),
+            "training_target_pair_count": int(effective_training_num_pairs),
+            "source_pair_indices": (
+                [int(value) for value in source_pair_indices]
+                if source_pair_indices is not None
+                else None
+            ),
+            "local_training_pair_indices": [int(value) for value in local_training_pair_indices],
+            "pair_index_alignment_mode": (
+                "local_target_rows_to_source_pair_indices"
+                if source_pair_indices is not None
+                else "identity_local_rows_are_source_pairs"
+            ),
             "decoder_codec": str(args.decoder_codec),
             "decoder_fake_quant_forward": {
                 "enabled": bool(args.decoder_fake_quant_forward),
@@ -221,7 +244,8 @@ def _full_main(args: argparse.Namespace) -> int:
                 str(args.pose_student_input_preprocess)
             ),
             "prioritized_pair_training": _prioritized_pair_training_lineage_metadata(
-                prioritized_pair_indices
+                prioritized_pair_indices,
+                target_hydration_pair_indices_consumed=source_pair_indices is not None,
             ),
             "storage_preflight": _metadata_safe(storage_payload),
             "direct_trainer_canonicalization": _metadata_safe(canonicalization),
@@ -233,6 +257,7 @@ def _full_main(args: argparse.Namespace) -> int:
         },
         eval_roundtrip_ste_enabled=bool(args.eval_roundtrip_ste),
         pose_student_input_preprocess=str(args.pose_student_input_preprocess),
+        source_pair_indices=source_pair_indices,
     )
     write_json(
         output_dir / "hi_nerv_mlx_training_launch_preflight.json",
@@ -243,7 +268,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "storage_preflight": storage_payload,
             "direct_trainer_canonicalization": canonicalization,
             "prioritized_pair_training": _prioritized_pair_training_metadata(
-                prioritized_pair_indices
+                prioritized_pair_indices,
+                target_hydration_pair_indices_consumed=source_pair_indices is not None,
             ),
             "blockers": list(canonicalization["blockers"]),
             "command": sys.argv,
@@ -256,7 +282,9 @@ def _full_main(args: argparse.Namespace) -> int:
         lane_id="lane_hi_nerv_mlx_score_aware_local_20260602",
         output_dir=output_dir,
         epochs=int(args.epochs),
-        batch_pair_indices_per_step=min(int(args.batch_pairs), int(cfg.num_pairs)),
+        batch_pair_indices_per_step=min(
+            int(args.batch_pairs), int(effective_training_num_pairs)
+        ),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
         checkpoint_interval_epochs=int(args.checkpoint_interval_epochs),
@@ -272,7 +300,7 @@ def _full_main(args: argparse.Namespace) -> int:
         cosine_decay_total_epochs=args.cosine_decay_total_epochs,
         cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         ema_archive_selection_enabled=bool(args.ema_archive_selection),
-        prioritized_pair_indices=prioritized_pair_indices,
+        prioritized_pair_indices=local_training_pair_indices,
         notes=(
             "HiNeRV MLX-local score-aware training through the canonical "
             "mlx_score_aware harness, with optional real SegNet/PoseNet teacher "
@@ -573,17 +601,38 @@ def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, 
 
 def _prioritized_pair_training_metadata(
     pair_indices: tuple[int, ...],
+    *,
+    target_hydration_pair_indices_consumed: bool = False,
 ) -> dict[str, Any]:
+    consumed = bool(pair_indices) and bool(target_hydration_pair_indices_consumed)
+    local_pair_indices = list(range(len(pair_indices))) if consumed else [
+        int(value) for value in pair_indices
+    ]
     return {
         "schema": "hi_nerv_direct_trainer_prioritized_pair_training.v1",
         "enabled": bool(pair_indices),
         "pair_indices": [int(value) for value in pair_indices],
+        "source_pair_indices": [int(value) for value in pair_indices],
+        "local_pair_indices": local_pair_indices,
         "pair_count": len(pair_indices),
-        "sampling_scope": "local_mlx_training_batch_emphasis_only",
-        "pair_index_domain": "decoded_prefix_pair_indices_0_to_num_pairs_minus_1",
-        "arbitrary_source_pair_hydration": False,
-        "target_hydration_pair_indices_consumed": False,
-        "requires_num_pairs_covering_pair_ids": bool(pair_indices),
+        "sampling_scope": (
+            "explicit_source_pair_target_hydration"
+            if consumed
+            else "local_mlx_training_batch_emphasis_only"
+        ),
+        "pair_index_domain": (
+            "source_video_pair_indices"
+            if consumed
+            else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+        ),
+        "pair_index_alignment_mode": (
+            "local_target_rows_to_source_pair_indices"
+            if consumed
+            else "identity_local_rows_are_source_pairs"
+        ),
+        "arbitrary_source_pair_hydration": consumed,
+        "target_hydration_pair_indices_consumed": consumed,
+        "requires_num_pairs_covering_pair_ids": bool(pair_indices) and not consumed,
         "authority": "macos_mlx_research_signal_false_authority",
         **FALSE_AUTHORITY,
     }
@@ -591,17 +640,38 @@ def _prioritized_pair_training_metadata(
 
 def _prioritized_pair_training_lineage_metadata(
     pair_indices: tuple[int, ...],
+    *,
+    target_hydration_pair_indices_consumed: bool = False,
 ) -> dict[str, Any]:
+    consumed = bool(pair_indices) and bool(target_hydration_pair_indices_consumed)
+    local_pair_indices = list(range(len(pair_indices))) if consumed else [
+        int(value) for value in pair_indices
+    ]
     return {
         "schema": "hi_nerv_direct_trainer_prioritized_pair_training.v1",
         "enabled": bool(pair_indices),
         "pair_indices": [int(value) for value in pair_indices],
+        "source_pair_indices": [int(value) for value in pair_indices],
+        "local_pair_indices": local_pair_indices,
         "pair_count": len(pair_indices),
-        "sampling_scope": "local_mlx_training_batch_emphasis_only",
-        "pair_index_domain": "decoded_prefix_pair_indices_0_to_num_pairs_minus_1",
-        "arbitrary_source_pair_hydration": False,
-        "target_hydration_pair_indices_consumed": False,
-        "requires_num_pairs_covering_pair_ids": bool(pair_indices),
+        "sampling_scope": (
+            "explicit_source_pair_target_hydration"
+            if consumed
+            else "local_mlx_training_batch_emphasis_only"
+        ),
+        "pair_index_domain": (
+            "source_video_pair_indices"
+            if consumed
+            else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+        ),
+        "pair_index_alignment_mode": (
+            "local_target_rows_to_source_pair_indices"
+            if consumed
+            else "identity_local_rows_are_source_pairs"
+        ),
+        "arbitrary_source_pair_hydration": consumed,
+        "target_hydration_pair_indices_consumed": consumed,
+        "requires_num_pairs_covering_pair_ids": bool(pair_indices) and not consumed,
         "authority": "macos_mlx_research_signal_false_authority",
         "canonical_authority_surface": (
             "TrainingArtifact top-level false-authority fields"

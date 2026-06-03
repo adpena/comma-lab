@@ -234,6 +234,53 @@ def test_decode_mlx_targets_honors_explicit_source_pair_indices(
 
 
 @mlx_only
+def test_score_aware_loss_uses_source_pairs_for_model_and_local_rows_for_targets() -> None:
+    import mlx.core as mx
+
+    class _SourceIndexedPair:
+        def __init__(self) -> None:
+            self.calls: list[list[int]] = []
+
+        def __call__(self, idx):
+            self.calls.append([int(value) for value in np.asarray(idx).tolist()])
+            src = idx.astype(mx.float32)
+            base = mx.reshape(src, (-1, 1, 1, 1))
+            rgb_0 = mx.broadcast_to(base, (int(idx.shape[0]), 3, 1, 1))
+            rgb_1 = mx.broadcast_to(base + 10.0, (int(idx.shape[0]), 3, 1, 1))
+            return mx.stack([rgb_0, rgb_1], axis=1)
+
+    model = _SourceIndexedPair()
+    target_rgb_0 = mx.array(
+        [
+            [[[2.0 / 255.0, 2.0 / 255.0, 2.0 / 255.0]]],
+            [[[0.0, 0.0, 0.0]]],
+        ],
+        dtype=mx.float32,
+    )
+    target_rgb_1 = mx.array(
+        [
+            [[[12.0 / 255.0, 12.0 / 255.0, 12.0 / 255.0]]],
+            [[[10.0 / 255.0, 10.0 / 255.0, 10.0 / 255.0]]],
+        ],
+        dtype=mx.float32,
+    )
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=target_rgb_0,
+        target_rgb_1=target_rgb_1,
+        num_pairs=2,
+        forward_convention="call_b2chw_255",
+        source_pair_indices=(2, 0),
+    )
+
+    total, parts = score_aware_loss(bundle, mx.array([0, 1], dtype=mx.int32))
+    mx.eval(total, parts["recon"])
+
+    assert model.calls[-1] == [2, 0]
+    assert float(parts["recon"].item()) == pytest.approx(0.0)
+
+
+@mlx_only
 def test_score_aware_loss_extra_term_weighted() -> None:
     import mlx.core as mx
 

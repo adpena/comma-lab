@@ -771,6 +771,14 @@ class MlxScoreAwareAdapter:
         sampling_policy = (
             "priority_pairs_then_random_fill" if priority else "deterministic_random"
         )
+        sampled_pair_indices = [int(value) for value in sampled.tolist()]
+        if self.bundle.source_pair_indices is None:
+            source_pair_indices = list(sampled_pair_indices)
+            pair_index_alignment_mode = "identity_local_rows_are_source_pairs"
+        else:
+            source_rows = tuple(int(value) for value in self.bundle.source_pair_indices)
+            source_pair_indices = [source_rows[int(value)] for value in sampled_pair_indices]
+            pair_index_alignment_mode = "local_target_rows_to_source_pair_indices"
         self._last_batch_observability = {
             "schema": "mlx_score_aware_pair_batch_observability.v1",
             "num_pairs": int(num_pairs),
@@ -781,9 +789,18 @@ class MlxScoreAwareAdapter:
             "prioritized_pair_count": len(priority),
             "priority_pair_indices_in_batch": priority_selected,
             "random_fill_count": int(random_fill_count),
-            "pair_indices": [int(value) for value in sampled.tolist()],
+            "pair_indices": sampled_pair_indices,
+            "local_pair_indices": sampled_pair_indices,
+            "source_pair_indices": source_pair_indices,
+            "pair_index_alignment_mode": pair_index_alignment_mode,
             "pair_index_min": int(sampled.min()) if sampled.size else None,
             "pair_index_max": int(sampled.max()) if sampled.size else None,
+            "source_pair_index_min": (
+                min(source_pair_indices) if source_pair_indices else None
+            ),
+            "source_pair_index_max": (
+                max(source_pair_indices) if source_pair_indices else None
+            ),
             "coverage_fraction": float(size) / float(num_pairs) if num_pairs else 0.0,
             "score_claim": False,
             "promotion_eligible": False,

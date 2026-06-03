@@ -335,6 +335,13 @@ class RendererBundle:
             the raw MSE telemetry and remains false-authority MLX evidence.
         pose_distillation_huber_delta: positive robust-loss transition point
             used only when ``pose_distillation_loss == "huber"``.
+        source_pair_indices: optional local-target-row -> source-video-pair
+            mapping. When set, ``num_pairs`` is the hydrated target row count
+            and each local row decodes the corresponding source model/latent
+            row. Reconstruction and teacher caches remain indexed by local
+            rows, while renderer calls use these source pair IDs. This is the
+            first-class hard-pair hydration contract for full-video models
+            such as HiNeRV, where archive/runtime pair rows stay global.
     """
 
     model: Any
@@ -371,6 +378,7 @@ class RendererBundle:
     pose_student_input_preprocess: str = "rgb"
     pose_distillation_loss: str = "mse"
     pose_distillation_huber_delta: float = 1.0
+    source_pair_indices: tuple[int, ...] | None = None
 
     def __post_init__(self) -> None:
         if self.forward_convention not in FORWARD_CONVENTIONS:
@@ -382,6 +390,42 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 f"num_pairs must be >= 1; got {self.num_pairs}"
             )
+        if self.source_pair_indices is not None:
+            normalized_source_indices: list[int] = []
+            seen_source_indices: set[int] = set()
+            try:
+                raw_source_pair_indices = tuple(self.source_pair_indices)
+            except TypeError as exc:
+                raise MlxScoreAwareHarnessError(
+                    "source_pair_indices must be a finite sequence of integer "
+                    "source video pair ids"
+                ) from exc
+            if len(raw_source_pair_indices) != int(self.num_pairs):
+                raise MlxScoreAwareHarnessError(
+                    "source_pair_indices length must equal num_pairs so every "
+                    "hydrated target row has exactly one source model row; got "
+                    f"{len(raw_source_pair_indices)} indices for num_pairs="
+                    f"{self.num_pairs}"
+                )
+            for raw in raw_source_pair_indices:
+                try:
+                    value = int(raw)
+                except (TypeError, ValueError) as exc:
+                    raise MlxScoreAwareHarnessError(
+                        "source_pair_indices must contain integer source pair ids"
+                    ) from exc
+                if value < 0:
+                    raise MlxScoreAwareHarnessError(
+                        f"source_pair_indices must be non-negative; got {value}"
+                    )
+                if value in seen_source_indices:
+                    raise MlxScoreAwareHarnessError(
+                        "source_pair_indices must not contain duplicates; "
+                        f"duplicate source pair id {value}"
+                    )
+                seen_source_indices.add(value)
+                normalized_source_indices.append(value)
+            self.source_pair_indices = tuple(normalized_source_indices)
         if not isinstance(self.substrate_artifact_metadata, Mapping):
             raise MlxScoreAwareHarnessError(
                 "substrate_artifact_metadata must be a Mapping; got "
