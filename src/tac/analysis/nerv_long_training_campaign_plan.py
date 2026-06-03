@@ -88,9 +88,7 @@ _AUTHORITY_TRUE_KEYS: tuple[str, ...] = (
     "production_hardened_claim",
     "ready_for_exact_eval_dispatch",
 )
-HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = (
-    "switch_to_hinerv_official_feature_grid_convnext_controls"
-)
+HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = "switch_to_hinerv_official_feature_grid_convnext_controls"
 DEFAULT_OPTIMIZER_KINDS = (
     "pact_muon_adamw",
     "adamw",
@@ -104,9 +102,7 @@ DEFAULT_OPTIMIZER_KINDS = (
     "adadelta",
     "sgd",
 )
-FIRST_PASS_OPTIMIZER_KINDS = frozenset(
-    ("pact_muon_adamw", "adamw", "muon", "lion", "adamax")
-)
+FIRST_PASS_OPTIMIZER_KINDS = frozenset(("pact_muon_adamw", "adamw", "muon", "lion", "adamax"))
 OPTIMIZER_CONTROL_SCHEMA = "nerv_optimizer_control_surface.v1"
 HINERV_OPTIMIZER_POLICY_SCHEMA = "nerv_hinerv_optimizer_policy.v1"
 
@@ -132,6 +128,7 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_manifest_paths: Sequence[str | Path] = (),
     candidate_feedback_sources: Sequence[Mapping[str, Any]] = (),
     decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
+    snerv_official_source_audit: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
     snerv_bounded_proof_epochs: int = 3,
     experiment_queue_id: str = DEFAULT_EXPERIMENT_QUEUE_ID,
@@ -158,16 +155,13 @@ def build_nerv_long_training_campaign_plan(
     queue_id = str(experiment_queue_id or "").strip()
     if not queue_id:
         raise NervLongTrainingCampaignPlanError("experiment_queue_id must be non-empty")
-    joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(
-        joint_recon_weight_manifest_paths
-    )
+    joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(joint_recon_weight_manifest_paths)
     candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
-    decoder_weight_waterfill_index = _decoder_weight_waterfill_index(
-        decoder_weight_waterfill_sources
-    )
+    decoder_weight_waterfill_index = _decoder_weight_waterfill_index(decoder_weight_waterfill_sources)
     source_parity_contract = build_nerv_source_parity_contract(
         repo_root=_repo_root(),
         families=("hi_nerv", "snerv"),
+        snerv_official_source_audit=snerv_official_source_audit,
     )
 
     rows: list[dict[str, Any]] = []
@@ -219,11 +213,9 @@ def build_nerv_long_training_campaign_plan(
         ),
     )
     experiment_queue = _experiment_queue(rows, queue_id=queue_id)
-    decoder_weight_waterfill_unattached_sources = (
-        _decoder_weight_waterfill_unattached_sources(
-            index=decoder_weight_waterfill_index,
-            campaign_rows=rows,
-        )
+    decoder_weight_waterfill_unattached_sources = _decoder_weight_waterfill_unattached_sources(
+        index=decoder_weight_waterfill_index,
+        campaign_rows=rows,
     )
     return {
         "schema": SCHEMA,
@@ -245,23 +237,14 @@ def build_nerv_long_training_campaign_plan(
                 "hi_nerv_shared_mlx_scoreaware_runner_rows",
                 "future_snerv_learned_scoreaware_decoder_rows_after_binding",
             ],
-            "does_not_apply_to": [
-                "snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"
-            ],
+            "does_not_apply_to": ["snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"],
             "optimizer_kinds": list(optimizers),
-            "native_mlx_optimizer_kinds": [
-                kind for kind in optimizers if kind != "pact_muon_adamw"
-            ],
-            "pact_partitioned_optimizer_kinds": [
-                kind for kind in optimizers if kind == "pact_muon_adamw"
-            ],
+            "native_mlx_optimizer_kinds": [kind for kind in optimizers if kind != "pact_muon_adamw"],
+            "pact_partitioned_optimizer_kinds": [kind for kind in optimizers if kind == "pact_muon_adamw"],
             "first_pass_optimizer_kinds": sorted(FIRST_PASS_OPTIMIZER_KINDS),
             "default_optimizer_kind": "pact_muon_adamw",
             "default_optimizer_backend": "tac.local_acceleration.pr95_hnerv_mlx",
-            "borrowed_from_pr95": (
-                "Muon-vs-AdamW parameter partition and Newton-Schulz Muon "
-                "update helper"
-            ),
+            "borrowed_from_pr95": ("Muon-vs-AdamW parameter partition and Newton-Schulz Muon update helper"),
             "original_pact_contest_adaptation": (
                 "default score-aware NeRV optimizer control with false-authority "
                 "MLX telemetry, byte/coder pressure, and per-run optimizer "
@@ -283,27 +266,18 @@ def build_nerv_long_training_campaign_plan(
         "candidate_feedback_source_count": len(candidate_feedback_sources),
         "snerv_bounded_proof_only": bool(snerv_bounded_proof_only),
         "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
-        "candidate_feedback_row_count": _unique_index_row_count(
-            candidate_feedback_index
-        ),
+        "candidate_feedback_row_count": _unique_index_row_count(candidate_feedback_index),
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
-        "decoder_weight_waterfill_row_count": _unique_index_row_count(
-            decoder_weight_waterfill_index
-        ),
-        "decoder_weight_waterfill_unattached_source_count": len(
-            decoder_weight_waterfill_unattached_sources
-        ),
-        "decoder_weight_waterfill_unattached_sources": (
-            decoder_weight_waterfill_unattached_sources
-        ),
+        "decoder_weight_waterfill_row_count": _unique_index_row_count(decoder_weight_waterfill_index),
+        "decoder_weight_waterfill_unattached_source_count": len(decoder_weight_waterfill_unattached_sources),
+        "decoder_weight_waterfill_unattached_sources": (decoder_weight_waterfill_unattached_sources),
         "source_parity_contract": source_parity_contract,
+        "snerv_official_source_audit_attached": isinstance(snerv_official_source_audit, Mapping),
         "source_parity_required_for_long_training_ready": bool(
             source_parity_contract.get("required_for_long_training_ready")
         ),
         "source_parity_blockers": list(source_parity_contract.get("blockers") or ()),
-        "source_parity_nonblocking_gaps": list(
-            source_parity_contract.get("nonblocking_gaps") or ()
-        ),
+        "source_parity_nonblocking_gaps": list(source_parity_contract.get("nonblocking_gaps") or ()),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
         "experiment_queue": experiment_queue,
@@ -337,12 +311,7 @@ def build_nerv_long_training_campaign_plan(
             [
                 "campaign_plan_is_not_execution",
                 "exact_cpu_cuda_not_launched_by_campaign_plan",
-                *[
-                    blocker
-                    for row in rows
-                    for blocker in row.get("blockers", [])
-                    if _plan_level_blocker(blocker)
-                ],
+                *[blocker for row in rows for blocker in row.get("blockers", []) if _plan_level_blocker(blocker)],
             ]
         ),
         **FALSE_AUTHORITY,
@@ -396,20 +365,14 @@ def _hinerv_campaign_row(
     learning_rate: float,
     output_root: Path,
     joint_recon_weight_artifacts: Mapping[int, Mapping[str, Any]] | None = None,
-    candidate_feedback_index: (
-        Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
-    ) = None,
-    decoder_weight_waterfill_index: (
-        Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
-    ) = None,
+    candidate_feedback_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
+    decoder_weight_waterfill_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     source_parity_contract: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
     num_pairs = int(candidate.get("num_pairs") or 600)
-    joint_recon_weight = dict(
-        (joint_recon_weight_artifacts or {}).get(num_pairs) or {}
-    )
+    joint_recon_weight = dict((joint_recon_weight_artifacts or {}).get(num_pairs) or {})
     feedback = _candidate_feedback_for(
         candidate=candidate,
         family="hi_nerv",
@@ -432,12 +395,8 @@ def _hinerv_campaign_row(
         family="hi_nerv",
         source_parity_contract=source_parity_contract,
     )
-    effective_learning_rate = float(
-        launch_feedback_adjustment.get("learning_rate") or learning_rate
-    )
-    effective_segnet_distillation_weight = float(
-        launch_feedback_adjustment.get("segnet_distillation_weight") or 1.0
-    )
+    effective_learning_rate = float(launch_feedback_adjustment.get("learning_rate") or learning_rate)
+    effective_segnet_distillation_weight = float(launch_feedback_adjustment.get("segnet_distillation_weight") or 1.0)
     output_dir_basename = _campaign_output_basename(
         row_id=f"hi_nerv::{candidate_id}::{optimizer_kind}",
         launch_feedback_adjustment=launch_feedback_adjustment,
@@ -455,12 +414,8 @@ def _hinerv_campaign_row(
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
         receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
-        full_video_local_prefilter_attached=bool(
-            feedback.get("full_video_local_prefilter_attached")
-        ),
-        local_cpu_replay_gate_attached=bool(
-            feedback.get("local_cpu_replay_gate_attached")
-        ),
+        full_video_local_prefilter_attached=bool(feedback.get("full_video_local_prefilter_attached")),
+        local_cpu_replay_gate_attached=bool(feedback.get("local_cpu_replay_gate_attached")),
         measured_archive_bytes=feedback.get("measured_archive_bytes"),
         measured_num_pairs=feedback.get("measured_num_pairs"),
     )
@@ -525,9 +480,7 @@ def _hinerv_campaign_row(
             ]
         )
     decoder_weight_waterfill_runner_admitted = (
-        _decoder_weight_waterfill_runner_admitted(decoder_weight_waterfill)
-        if decoder_weight_waterfill
-        else False
+        _decoder_weight_waterfill_runner_admitted(decoder_weight_waterfill) if decoder_weight_waterfill else False
     )
     if decoder_weight_waterfill_runner_admitted:
         command.extend(
@@ -542,23 +495,13 @@ def _hinerv_campaign_row(
                 "--pose-distillation-loss",
                 str(launch_feedback_adjustment["pose_distillation_loss"]),
                 "--pose-distillation-huber-delta",
-                _float_token(
-                    float(launch_feedback_adjustment["pose_distillation_huber_delta"])
-                ),
+                _float_token(float(launch_feedback_adjustment["pose_distillation_huber_delta"])),
             ]
         )
     candidate_authority_blockers = list(candidate.get("_candidate_authority_blockers") or [])
     blockers = [
-        (
-            ""
-            if joint_recon_weight
-            else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
-        ),
-        (
-            ""
-            if decoder_weight_waterfill
-            else "hinerv_decoder_weight_waterfill_plan_missing"
-        ),
+        ("" if joint_recon_weight else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"),
+        ("" if decoder_weight_waterfill else "hinerv_decoder_weight_waterfill_plan_missing"),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *candidate_authority_blockers,
@@ -566,22 +509,15 @@ def _hinerv_campaign_row(
         *list(curriculum.get("blockers") or []),
     ]
     if feedback.get("pose_instability_detected") is True and not (
-        launch_feedback_adjustment.get("applied")
-        or launch_feedback_adjustment.get("pose_protected_pathway_applied")
+        launch_feedback_adjustment.get("applied") or launch_feedback_adjustment.get("pose_protected_pathway_applied")
     ):
         blockers.append("hinerv_pose_instability_feedback_unapplied")
-    if (
-        feedback.get("seg_stagnation_detected") is True
-        and not launch_feedback_adjustment.get("segnet_weight_applied")
-    ):
+    if feedback.get("seg_stagnation_detected") is True and not launch_feedback_adjustment.get("segnet_weight_applied"):
         blockers.append("hinerv_segnet_stagnation_feedback_unapplied")
-    if (
-        launch_feedback_adjustment.get("repeated_low_lr_pose_instability") is True
-        and not launch_feedback_adjustment.get("pose_protected_pathway_applied")
-    ):
-        blockers.append(
-            "hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway"
-        )
+    if launch_feedback_adjustment.get(
+        "repeated_low_lr_pose_instability"
+    ) is True and not launch_feedback_adjustment.get("pose_protected_pathway_applied"):
+        blockers.append("hinerv_repeated_low_lr_pose_instability_requires_pose_protected_pathway")
     if candidate.get("nominal_under_ceiling") is not True:
         blockers.append("hinerv_candidate_nominal_over_byte_ceiling")
     blockers = _dedupe(blockers)
@@ -628,10 +564,7 @@ def _hinerv_campaign_row(
                 _decoder_weight_waterfill_row_metadata(decoder_weight_waterfill)
                 if decoder_weight_waterfill
                 else {
-                    "schema": (
-                        "nerv_long_training_decoder_weight_waterfill_"
-                        "attachment.v1"
-                    ),
+                    "schema": ("nerv_long_training_decoder_weight_waterfill_attachment.v1"),
                     "attached": False,
                     "reason": "no_matching_decoder_weight_waterfill_plan",
                     **FALSE_AUTHORITY,
@@ -656,9 +589,7 @@ def _snerv_campaign_row(
     candidate: Mapping[str, Any],
     epochs: int,
     output_root: Path,
-    candidate_feedback_index: (
-        Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None
-    ) = None,
+    candidate_feedback_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     bounded_proof_only: bool = False,
     bounded_proof_epochs: int = 3,
     source_parity_contract: Mapping[str, Any] | None = None,
@@ -674,11 +605,7 @@ def _snerv_campaign_row(
         family="snerv",
         index=candidate_feedback_index,
     )
-    execution_epochs = (
-        min(int(epochs), max(1, int(bounded_proof_epochs)))
-        if bounded_proof_only
-        else int(epochs)
-    )
+    execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
     quant_bits = min(
         8,
         snerv_decoder_codec_nominal_bits(str(candidate.get("decoder_payload_codec"))),
@@ -690,12 +617,8 @@ def _snerv_campaign_row(
         step_map_coder_mode="waterfill",
         native_mlx_train_export_attached=True,
         native_mlx_long_training_bound=not bool(bounded_proof_only),
-        native_mlx_receiver_proof_passed=bool(
-            feedback.get("native_mlx_receiver_proof_passed")
-        ),
-        native_mlx_full600_campaign_ready=bool(
-            feedback.get("native_mlx_full600_campaign_ready")
-        ),
+        native_mlx_receiver_proof_passed=bool(feedback.get("native_mlx_receiver_proof_passed")),
+        native_mlx_full600_campaign_ready=bool(feedback.get("native_mlx_full600_campaign_ready")),
         native_mlx_scorer_loop_qat_attached=True,
         native_mlx_scorer_loop_qat_receiver_contract_satisfied=bool(
             feedback.get("native_mlx_scorer_loop_qat_receiver_contract_satisfied")
@@ -706,19 +629,11 @@ def _snerv_campaign_row(
         native_mlx_scorer_loop_qat_accepted_improvement=bool(
             feedback.get("native_mlx_scorer_loop_qat_accepted_improvement")
         ),
-        native_mlx_scorer_loop_qat_best_materialized=bool(
-            feedback.get("native_mlx_scorer_loop_qat_best_materialized")
-        ),
-        native_mlx_artifact_evidence=_snerv_native_artifact_evidence_from_feedback(
-            feedback
-        ),
+        native_mlx_scorer_loop_qat_best_materialized=bool(feedback.get("native_mlx_scorer_loop_qat_best_materialized")),
+        native_mlx_artifact_evidence=_snerv_native_artifact_evidence_from_feedback(feedback),
         receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
-        full_video_local_prefilter_attached=bool(
-            feedback.get("full_video_local_prefilter_attached")
-        ),
-        local_cpu_replay_gate_attached=bool(
-            feedback.get("local_cpu_replay_gate_attached")
-        ),
+        full_video_local_prefilter_attached=bool(feedback.get("full_video_local_prefilter_attached")),
+        local_cpu_replay_gate_attached=bool(feedback.get("local_cpu_replay_gate_attached")),
         measured_packet_bytes=feedback.get("measured_payload_bytes"),
         measured_archive_bytes=feedback.get("measured_archive_bytes"),
         measured_num_pairs=feedback.get("measured_num_pairs"),
@@ -771,21 +686,13 @@ def _snerv_campaign_row(
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
-    if str(candidate.get("snerv_model_size_adapter") or "") == (
-        SNERV_SPECTRA_PRESERVING_ADAPTER
-    ):
+    if str(candidate.get("snerv_model_size_adapter") or "") == (SNERV_SPECTRA_PRESERVING_ADAPTER):
         insert_at = command.index("--snerv-model-size-adapter")
         command.insert(insert_at, "--snerv-spectra-preserving-adapter")
-    rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(
-        candidate
-    )
+    rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
     blockers = _dedupe(
         [
-            (
-                "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
-                if bounded_proof_only
-                else ""
-            ),
+            ("snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" if bounded_proof_only else ""),
             "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
             (
                 "snerv_nominal_payload_far_over_ceiling_refuse_long_training"
@@ -802,12 +709,13 @@ def _snerv_campaign_row(
             *list(curriculum.get("blockers") or []),
         ]
     )
-    source_controls_ready = not source_control_blockers and not candidate.get(
-        "_candidate_authority_blockers"
-    ) and not source_parity["required_blockers"]
+    source_controls_ready = (
+        not source_control_blockers
+        and not candidate.get("_candidate_authority_blockers")
+        and not source_parity["required_blockers"]
+    )
     launch_ready = bool(
-        source_controls_ready
-        and (True if bounded_proof_only else bool(rate_plausible_for_long_training))
+        source_controls_ready and (True if bounded_proof_only else bool(rate_plausible_for_long_training))
     )
     return _row(
         row_id=row_id,
@@ -838,9 +746,7 @@ def _snerv_campaign_row(
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
             "execution_epochs": int(execution_epochs),
-            "current_command_is_bounded_proof_not_long_training": bool(
-                bounded_proof_only
-            ),
+            "current_command_is_bounded_proof_not_long_training": bool(bounded_proof_only),
             "snerv_bounded_proof_epochs": int(bounded_proof_epochs),
             "source_bound_capacity_controls": _snerv_source_bound_controls(candidate),
             "source_bound_capacity_control_blockers": source_control_blockers,
@@ -877,9 +783,7 @@ def _row(
         "candidate_id": candidate.get("candidate_id"),
         "candidate": dict(candidate),
         "hard_byte_ceiling": int(candidate.get("hard_byte_ceiling") or 0),
-        "candidate_nominal_total_payload_bytes": int(
-            candidate.get("nominal_total_payload_bytes") or 0
-        ),
+        "candidate_nominal_total_payload_bytes": int(candidate.get("nominal_total_payload_bytes") or 0),
         "candidate_nominal_under_ceiling": bool(candidate.get("nominal_under_ceiling")),
         "local_mlx_launch_command_ready": bool(local_mlx_launch_command_ready),
         "implementation_status": str(implementation_status),
@@ -1000,10 +904,7 @@ def _experiment_for_row(
                 "equals": "snerv",
             }
         )
-        bounded_blocker = (
-            "snerv_scoreaware_long_training_not_bound_"
-            "bounded_native_export_stage_only"
-        )
+        bounded_blocker = "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         if bounded_blocker in blockers:
             postconditions.append(
                 {
@@ -1029,9 +930,7 @@ def _experiment_for_row(
             "queue_status_is_receiver_proof": False,
             "queue_status_is_cpu_replay_proof": False,
             "queue_status_is_exact_eval_authority": False,
-            "receiver_proof_required": bool(
-                score_lowering_gate.get("receiver_proof_required")
-            ),
+            "receiver_proof_required": bool(score_lowering_gate.get("receiver_proof_required")),
             "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
             "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
             "score_claim": False,
@@ -1089,10 +988,7 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
             str(blocker)
             for blocker in blockers
             if str(blocker)
-            and (
-                str(blocker) in exact_names
-                or any(str(blocker).startswith(prefix) for prefix in prefixes)
-            )
+            and (str(blocker) in exact_names or any(str(blocker).startswith(prefix) for prefix in prefixes))
         ]
     )
 
@@ -1126,6 +1022,11 @@ def _source_parity_family_report(
         for row in source_parity_contract.get("control_rows") or ()
         if isinstance(row, Mapping) and row.get("family") == family
     ]
+    source_audits = [
+        row
+        for row in source_parity_contract.get("source_audits") or ()
+        if isinstance(row, Mapping) and row.get("family") == family
+    ]
     required_blockers = _dedupe(
         [
             f"source_parity:{blocker}"
@@ -1154,18 +1055,18 @@ def _source_parity_family_report(
         "contract_schema": source_parity_contract.get("schema"),
         "contract_authority": source_parity_contract.get("authority"),
         "family": str(family),
-        "long_training_ready": bool(
-            family_summary.get("long_training_ready", not required_blockers)
-        ),
+        "long_training_ready": bool(family_summary.get("long_training_ready", not required_blockers)),
         "required_blockers": list(required_blockers),
         "nonblocking_gaps": list(nonblocking_gaps),
+        "source_audit_rows": [dict(row) for row in source_audits],
         "feature_status_rows": [
             {
                 "feature_id": row.get("feature_id"),
                 "status": row.get("status"),
-                "required_for_long_training": bool(
-                    row.get("required_for_long_training")
-                ),
+                "required_for_long_training": bool(row.get("required_for_long_training")),
+                "source_audit_rows": [
+                    dict(audit) for audit in row.get("source_audit_rows") or () if isinstance(audit, Mapping)
+                ],
                 "blockers": list(row.get("blockers") or ()),
             }
             for row in feature_rows
@@ -1174,9 +1075,7 @@ def _source_parity_family_report(
             {
                 "control_id": row.get("control_id"),
                 "status": row.get("status"),
-                "required_for_long_training": bool(
-                    row.get("required_for_long_training")
-                ),
+                "required_for_long_training": bool(row.get("required_for_long_training")),
                 "blockers": list(row.get("blockers") or ()),
             }
             for row in control_rows
@@ -1186,9 +1085,7 @@ def _source_parity_family_report(
 
 
 def _row_output_report_path(command_argv: Sequence[str]) -> str:
-    return (
-        _row_output_dir(command_argv) / "compact_renderer_mlx_spine_runner_report.json"
-    ).as_posix()
+    return (_row_output_dir(command_argv) / "compact_renderer_mlx_spine_runner_report.json").as_posix()
 
 
 def _row_output_dir(command_argv: Sequence[str]) -> Path:
@@ -1201,18 +1098,12 @@ def _row_output_dir(command_argv: Sequence[str]) -> Path:
 
 
 def _row_observable_artifacts(*, family: str, output_dir: Path) -> list[str]:
-    artifacts = [
-        (output_dir / "compact_renderer_mlx_spine_runner_startup.json").as_posix()
-    ]
+    artifacts = [(output_dir / "compact_renderer_mlx_spine_runner_startup.json").as_posix()]
     if str(family) == "hi_nerv":
         artifacts.extend(
             [
                 (output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl").as_posix(),
-                (
-                    output_dir
-                    / "hi_nerv_mlx_training"
-                    / "local_mlx_prefilter_progress.jsonl"
-                ).as_posix(),
+                (output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl").as_posix(),
             ]
         )
     return artifacts
@@ -1238,35 +1129,18 @@ def _score_lowering_gate(
         else {}
     )
     missing_rows = [
-        dict(row)
-        for row in binding.get("rows", [])
-        if isinstance(row, Mapping) and row.get("satisfied") is not True
+        dict(row) for row in binding.get("rows", []) if isinstance(row, Mapping) and row.get("satisfied") is not True
     ]
-    missing_requirement_ids = [
-        str(row.get("requirement_id"))
-        for row in missing_rows
-        if row.get("requirement_id")
-    ]
-    post_run_requirements = [
-        str(item) for item in gate.get("post_run_requirements_excluded", []) if item
-    ]
-    post_run_missing = [
-        requirement
-        for requirement in missing_requirement_ids
-        if requirement in post_run_requirements
-    ]
+    missing_requirement_ids = [str(row.get("requirement_id")) for row in missing_rows if row.get("requirement_id")]
+    post_run_requirements = [str(item) for item in gate.get("post_run_requirements_excluded", []) if item]
+    post_run_missing = [requirement for requirement in missing_requirement_ids if requirement in post_run_requirements]
     promotion_blockers = _dedupe(
         [
             *(str(blocker) for blocker in blockers if blocker),
-            *(
-                f"{family}_{requirement}_missing"
-                for requirement in post_run_missing
-            ),
+            *(f"{family}_{requirement}_missing" for requirement in post_run_missing),
         ]
     )
-    prelaunch_blockers = [
-        str(blocker) for blocker in gate.get("blockers", []) if blocker
-    ]
+    prelaunch_blockers = [str(blocker) for blocker in gate.get("blockers", []) if blocker]
     local_proof_launch_allowed = bool(local_mlx_launch_command_ready)
     cpu_replay_ready = (
         bool(local_mlx_launch_command_ready)
@@ -1274,11 +1148,7 @@ def _score_lowering_gate(
         and "full_video_local_prefilter" not in post_run_missing
         and "local_cpu_replay_gate" not in post_run_missing
     )
-    exact_gate_ready = (
-        cpu_replay_ready
-        and "exact_auth_gate_plan" not in post_run_missing
-        and not promotion_blockers
-    )
+    exact_gate_ready = cpu_replay_ready and "exact_auth_gate_plan" not in post_run_missing and not promotion_blockers
     return {
         "schema": SCORE_LOWERING_GATE_SCHEMA,
         "family": str(family),
@@ -1304,9 +1174,7 @@ def _require_schema(payload: Mapping[str, Any], schema: str, name: str) -> None:
     if not isinstance(payload, Mapping):
         raise NervLongTrainingCampaignPlanError(f"{name} must be a mapping")
     if payload.get("schema") != schema:
-        raise NervLongTrainingCampaignPlanError(
-            f"{name} schema must be {schema}; got {payload.get('schema')}"
-        )
+        raise NervLongTrainingCampaignPlanError(f"{name} schema must be {schema}; got {payload.get('schema')}")
 
 
 def _selected_candidates(
@@ -1433,9 +1301,7 @@ def _snerv_source_bound_control_blockers(candidate: Mapping[str, Any]) -> list[s
             blockers.append(f"snerv_source_bound_control_missing:{key}")
     if not blockers:
         try:
-            expected_candidate_id = _snerv_expected_candidate_id_from_controls(
-                candidate
-            )
+            expected_candidate_id = _snerv_expected_candidate_id_from_controls(candidate)
         except (KeyError, NervModelSizeBudgetError, TypeError, ValueError):
             blockers.append("snerv_candidate_id_source_bound_controls_unparseable")
         else:
@@ -1449,9 +1315,7 @@ def _snerv_source_bound_controls(candidate: Mapping[str, Any]) -> dict[str, Any]
     candidate_id_matches_source_controls = False
     try:
         expected_candidate_id = _snerv_expected_candidate_id_from_controls(candidate)
-        candidate_id_matches_source_controls = (
-            str(candidate.get("candidate_id") or "") == expected_candidate_id
-        )
+        candidate_id_matches_source_controls = str(candidate.get("candidate_id") or "") == expected_candidate_id
     except (KeyError, NervModelSizeBudgetError, TypeError, ValueError):
         pass
     return {
@@ -1505,10 +1369,7 @@ def _snerv_optimizer_control_blocker() -> dict[str, Any]:
     return {
         "schema": OPTIMIZER_CONTROL_SCHEMA,
         "optimizer_kind": None,
-        "backend": (
-            "mlx_target_hydration_numpy_closed_form_decoder_fit_plus_"
-            "scorer_loop_qat"
-        ),
+        "backend": ("mlx_target_hydration_numpy_closed_form_decoder_fit_plus_scorer_loop_qat"),
         "native_mlx_on_apple_silicon": True,
         "apple_specific_algorithm_claim": False,
         "first_pass_priority": False,
@@ -1521,8 +1382,7 @@ def _snerv_optimizer_control_blocker() -> dict[str, Any]:
             "learned optimizer-controlled decoder-weight training loop."
         ),
         "blocked_until": (
-            "snerv_learned_nonlinear_or_shared_mlx_scoreaware_decoder_training_"
-            "loop_bound_to_receiver_grammar"
+            "snerv_learned_nonlinear_or_shared_mlx_scoreaware_decoder_training_loop_bound_to_receiver_grammar"
         ),
         "required_next_implementation": [
             "source_faithful_snerv_mfu_hfr_tub_forward_parity",
@@ -1550,9 +1410,7 @@ def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
         if not text:
             continue
         if text not in supported:
-            raise NervLongTrainingCampaignPlanError(
-                f"unsupported optimizer kind: {value!r}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"unsupported optimizer kind: {value!r}")
         if text not in out:
             out.append(text)
     if not out:
@@ -1570,18 +1428,12 @@ def _optimizer_priority(optimizer_kind: str) -> int:
 def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
     kind = str(optimizer_kind).strip().lower()
     if kind not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
-        raise NervLongTrainingCampaignPlanError(
-            f"unsupported optimizer kind: {optimizer_kind!r}"
-        )
+        raise NervLongTrainingCampaignPlanError(f"unsupported optimizer kind: {optimizer_kind!r}")
     is_pact_default = kind == "pact_muon_adamw"
     return {
         "schema": OPTIMIZER_CONTROL_SCHEMA,
         "optimizer_kind": kind,
-        "backend": (
-            "tac.local_acceleration.pr95_hnerv_mlx"
-            if is_pact_default
-            else "mlx.optimizers"
-        ),
+        "backend": ("tac.local_acceleration.pr95_hnerv_mlx" if is_pact_default else "mlx.optimizers"),
         "native_mlx_on_apple_silicon": True,
         "native_mlx_optimizer_object": not is_pact_default,
         "pact_partitioned_muon_adamw": is_pact_default,
@@ -1597,9 +1449,7 @@ def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
             else "Direct native MLX optimizer control row."
         ),
         "default_hinerv_optimizer_policy": _hinerv_optimizer_policy_for_kind(kind),
-        "pr95_curriculum_optimizer_swallow_guard": (
-            kind != "adamw"
-        ),
+        "pr95_curriculum_optimizer_swallow_guard": (kind != "adamw"),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -1625,9 +1475,7 @@ def _hinerv_optimizer_policy_control(
         "requested_policy": policy,
         "pr95_faithful_curriculum_expected": policy == "pr95_curriculum",
         "native_mlx_optimizer_expected": policy == "native_optimizer",
-        "effective_optimizer_label": (
-            "pr95_8stage_muon_adamw" if policy == "pr95_curriculum" else kind
-        ),
+        "effective_optimizer_label": ("pr95_8stage_muon_adamw" if policy == "pr95_curriculum" else kind),
         "why": (
             "adamw owns the PR95-faithful 8-stage Muon+AdamW control row; "
             "non-adamw rows must run as native MLX optimizers so optimizer "
@@ -1664,11 +1512,7 @@ def _candidate_feedback_sort_key(
     row: Mapping[str, Any],
 ) -> tuple[bool, int, bool, int, bool, bool, bool]:
     telemetry = row.get("training_telemetry")
-    last_epoch = (
-        int(telemetry.get("last_epoch") or 0)
-        if isinstance(telemetry, Mapping)
-        else 0
-    )
+    last_epoch = int(telemetry.get("last_epoch") or 0) if isinstance(telemetry, Mapping) else 0
     return (
         bool(row.get("scope_matches_candidate")),
         int(row.get("measured_num_pairs") or 0),
@@ -1737,8 +1581,7 @@ def _sanitize_direct_candidate_feedback_row(source: Mapping[str, Any]) -> dict[s
     )
     evidence = row.get("snerv_mlx_native_file_backed_export_evidence")
     file_backed_ready = bool(
-        isinstance(evidence, Mapping)
-        and evidence.get("required_pair_file_backed_export_proof_passed") is True
+        isinstance(evidence, Mapping) and evidence.get("required_pair_file_backed_export_proof_passed") is True
     )
     if row.get("native_mlx_full600_campaign_ready") is True and not file_backed_ready:
         row["native_mlx_full600_campaign_ready"] = False
@@ -1804,38 +1647,21 @@ def _normalize_hinerv_training_telemetry_feedback(
     pose_recovered = bool(source.get("pose_recovered_from_initial_spike") is True)
     pose_instability = bool(source.get("pose_instability_detected") is True)
     recommended_lr = _float_or_none(source.get("recommended_learning_rate"))
-    observed_seg_weight = _float_or_none(
-        source.get("observed_segnet_distillation_weight")
-    )
-    recommended_seg_weight = _float_or_none(
-        source.get("recommended_segnet_distillation_weight")
-    )
+    observed_seg_weight = _float_or_none(source.get("observed_segnet_distillation_weight"))
+    recommended_seg_weight = _float_or_none(source.get("recommended_segnet_distillation_weight"))
     if seg_still_binding and recommended_seg_weight is None:
-        recommended_seg_weight = recommend_segnet_distillation_weight_for_stagnation(
-            observed_seg_weight
-        )
+        recommended_seg_weight = recommend_segnet_distillation_weight_for_stagnation(observed_seg_weight)
     recommended_mutations = list(source.get("recommended_next_mutations") or [])
     if seg_still_binding and (
-        "increase_segnet_distillation_weight_from_stagnation_telemetry"
-        not in recommended_mutations
+        "increase_segnet_distillation_weight_from_stagnation_telemetry" not in recommended_mutations
     ):
-        recommended_mutations.append(
-            "increase_segnet_distillation_weight_from_stagnation_telemetry"
-        )
+        recommended_mutations.append("increase_segnet_distillation_weight_from_stagnation_telemetry")
     launch_control_feedback_ready = bool(
         candidate_id
         and last_epoch > 0
         and (
-            (
-                pose_instability
-                and recommended_lr is not None
-                and recommended_lr > 0.0
-            )
-            or (
-                seg_still_binding
-                and recommended_seg_weight is not None
-                and recommended_seg_weight > 1.0
-            )
+            (pose_instability and recommended_lr is not None and recommended_lr > 0.0)
+            or (seg_still_binding and recommended_seg_weight is not None and recommended_seg_weight > 1.0)
         )
     )
     return {
@@ -1860,9 +1686,7 @@ def _normalize_hinerv_training_telemetry_feedback(
         "segnet_still_binding": seg_still_binding,
         "observed_segnet_distillation_weight": observed_seg_weight,
         "recommended_segnet_distillation_weight": recommended_seg_weight,
-        "recommended_segnet_distillation_weight_multiplier": (
-            2.0 if seg_still_binding else None
-        ),
+        "recommended_segnet_distillation_weight_multiplier": (2.0 if seg_still_binding else None),
         "recommended_launch_mutations": recommended_mutations,
         "training_telemetry": {
             "schema": str(source.get("schema")),
@@ -1899,19 +1723,12 @@ def _augment_feedback_row(
         )
         out.setdefault(
             "native_mlx_file_backed_export_proof_passed",
-            bool(
-                native_file_evidence.get(
-                    "required_pair_file_backed_export_proof_passed"
-                )
-            ),
+            bool(native_file_evidence.get("required_pair_file_backed_export_proof_passed")),
         )
     if isinstance(native, Mapping):
         out.setdefault(
             "native_mlx_receiver_proof_passed",
-            bool(
-                native.get("receiver_proof_passed")
-                and native.get("receiver_contract_satisfied")
-            ),
+            bool(native.get("receiver_proof_passed") and native.get("receiver_contract_satisfied")),
         )
         out.setdefault(
             "native_mlx_full600_campaign_ready",
@@ -1939,15 +1756,9 @@ def _augment_feedback_row(
             native.get("artifact_report_path") or native.get("report_path"),
         )
         out.setdefault("snerv_mlx_native_export_packet_path", native.get("packet_path"))
-        out.setdefault(
-            "snerv_mlx_native_export_packet_sha256", native.get("packet_sha256")
-        )
-        out.setdefault(
-            "snerv_mlx_native_export_archive_path", native.get("archive_path")
-        )
-        out.setdefault(
-            "snerv_mlx_native_export_archive_sha256", native.get("archive_sha256")
-        )
+        out.setdefault("snerv_mlx_native_export_packet_sha256", native.get("packet_sha256"))
+        out.setdefault("snerv_mlx_native_export_archive_path", native.get("archive_path"))
+        out.setdefault("snerv_mlx_native_export_archive_sha256", native.get("archive_sha256"))
         out.setdefault(
             "snerv_mlx_native_export_receiver_proof_path",
             native.get("receiver_proof_path"),
@@ -1962,13 +1773,10 @@ def _augment_feedback_row(
             )
         )
     if "full_video_local_prefilter_attached" not in out:
-        out["full_video_local_prefilter_attached"] = bool(
-            out.get("mlx_prefilter_has_full_video")
-        )
+        out["full_video_local_prefilter_attached"] = bool(out.get("mlx_prefilter_has_full_video"))
     if "local_cpu_replay_gate_attached" not in out:
         out["local_cpu_replay_gate_attached"] = bool(
-            out.get("local_cpu_replay_gate_executed")
-            or out.get("local_cpu_replay_summary_present")
+            out.get("local_cpu_replay_gate_executed") or out.get("local_cpu_replay_summary_present")
         )
     return out
 
@@ -1982,42 +1790,26 @@ def _snerv_native_artifact_evidence_from_feedback(
         if feedback.get("scope_matches_candidate")
         else feedback.get("measured_num_pairs"),
         "executed": feedback.get("snerv_mlx_native_export_executed"),
-        "artifact_report_path": feedback.get(
-            "snerv_mlx_native_export_artifact_report_path"
-        ),
+        "artifact_report_path": feedback.get("snerv_mlx_native_export_artifact_report_path"),
         "packet_path": feedback.get("snerv_mlx_native_export_packet_path"),
         "packet_sha256": feedback.get("snerv_mlx_native_export_packet_sha256"),
         "archive_path": feedback.get("snerv_mlx_native_export_archive_path"),
         "archive_sha256": feedback.get("snerv_mlx_native_export_archive_sha256"),
-        "receiver_proof_path": feedback.get(
-            "snerv_mlx_native_export_receiver_proof_path"
-        ),
-        "receiver_proof_passed": feedback.get(
-            "snerv_mlx_native_export_receiver_proof_passed"
-        )
+        "receiver_proof_path": feedback.get("snerv_mlx_native_export_receiver_proof_path"),
+        "receiver_proof_passed": feedback.get("snerv_mlx_native_export_receiver_proof_passed")
         or feedback.get("native_mlx_receiver_proof_passed"),
-        "receiver_contract_satisfied": feedback.get(
-            "snerv_mlx_native_export_receiver_contract_satisfied"
-        ),
+        "receiver_contract_satisfied": feedback.get("snerv_mlx_native_export_receiver_contract_satisfied"),
         "scorer_loop_qat": {
             "executed": feedback.get("native_mlx_scorer_loop_qat_attached"),
-            "receiver_contract_satisfied": feedback.get(
-                "native_mlx_scorer_loop_qat_receiver_contract_satisfied"
-            ),
-            "ready_for_pose_guard_gate": feedback.get(
-                "native_mlx_scorer_loop_qat_ready_for_pose_guard_gate"
-            ),
-            "accepted_improvement": feedback.get(
-                "native_mlx_scorer_loop_qat_accepted_improvement"
-            ),
+            "receiver_contract_satisfied": feedback.get("native_mlx_scorer_loop_qat_receiver_contract_satisfied"),
+            "ready_for_pose_guard_gate": feedback.get("native_mlx_scorer_loop_qat_ready_for_pose_guard_gate"),
+            "accepted_improvement": feedback.get("native_mlx_scorer_loop_qat_accepted_improvement"),
             "emitted_packet_uses_scorer_loop_best_decoder": feedback.get(
                 "native_mlx_scorer_loop_qat_best_materialized"
             ),
         },
     }
-    compact_artifact = {
-        key: value for key, value in artifact.items() if value is not None
-    }
+    compact_artifact = {key: value for key, value in artifact.items() if value is not None}
     if isinstance(embedded, Mapping):
         merged = dict(embedded)
         merged.update(compact_artifact)
@@ -2098,16 +1890,10 @@ def _family_level_candidate_feedback_applicable(
     pose_feedback = bool(row.get("pose_instability_detected") is True)
     seg_feedback = bool(row.get("seg_stagnation_detected") is True)
     recommended = _float_or_none(row.get("recommended_learning_rate"))
-    recommended_seg_weight = _float_or_none(
-        row.get("recommended_segnet_distillation_weight")
-    )
+    recommended_seg_weight = _float_or_none(row.get("recommended_segnet_distillation_weight"))
     if not (
         (pose_feedback and recommended is not None and recommended > 0.0)
-        or (
-            seg_feedback
-            and recommended_seg_weight is not None
-            and recommended_seg_weight > 1.0
-        )
+        or (seg_feedback and recommended_seg_weight is not None and recommended_seg_weight > 1.0)
     ):
         return False
     target_num_pairs = int(candidate.get("num_pairs") or 0)
@@ -2140,15 +1926,9 @@ def _sanitize_family_level_candidate_feedback(
     out["source_official_control_score"] = int(source_official_score)
     out["target_official_control_score"] = int(target_official_score)
     out["source_official_control_superseded"] = source_official_superseded
-    out["feedback_reuse_policy"] = (
-        "optimizer_stability_only_no_archive_receiver_or_replay_authority"
-    )
+    out["feedback_reuse_policy"] = "optimizer_stability_only_no_archive_receiver_or_replay_authority"
     if source_official_superseded:
-        mutations = [
-            str(item)
-            for item in (out.get("recommended_launch_mutations") or [])
-            if str(item).strip()
-        ]
+        mutations = [str(item) for item in (out.get("recommended_launch_mutations") or []) if str(item).strip()]
         if HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION not in mutations:
             mutations.append(HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION)
         out["recommended_launch_mutations"] = mutations
@@ -2195,22 +1975,17 @@ def _normalize_decoder_weight_waterfill_source(
     )
     if not path:
         raise NervLongTrainingCampaignPlanError(
-            "decoder_weight_waterfill_source missing "
-            "_decoder_weight_waterfill_plan_path"
+            "decoder_weight_waterfill_source missing _decoder_weight_waterfill_plan_path"
         )
     rows = source.get("rows")
     if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)) or not rows:
-        raise NervLongTrainingCampaignPlanError(
-            "decoder_weight_waterfill_source must contain non-empty rows"
-        )
+        raise NervLongTrainingCampaignPlanError("decoder_weight_waterfill_source must contain non-empty rows")
     out = dict(source)
     out["path"] = str(path)
     out["family"] = _family_key(str(source.get("family") or "hi_nerv"))
     out["group_count"] = int(source.get("group_count") or len(rows))
     out["full_video_coverage"] = bool(source.get("full_video_coverage"))
-    out["receiver_proof_ready"] = str(
-        source.get("receiver_proof_status") or ""
-    ).lower() in {
+    out["receiver_proof_ready"] = str(source.get("receiver_proof_status") or "").lower() in {
         "runtime_consumption_proof_ready",
         "receiver_proof_valid",
         "runtime_consumption_proof_passed",
@@ -2334,9 +2109,7 @@ def _decoder_weight_waterfill_runner_admission(
         "schema": "nerv_decoder_weight_waterfill_runner_admission.v1",
         "admitted": not refusal_reasons,
         "mode": (
-            "runner_training_pressure_and_export_mutation"
-            if not refusal_reasons
-            else "advisory_learning_signal_only"
+            "runner_training_pressure_and_export_mutation" if not refusal_reasons else "advisory_learning_signal_only"
         ),
         "refusal_reasons": _dedupe(refusal_reasons),
         **FALSE_AUTHORITY,
@@ -2358,8 +2131,7 @@ def _decoder_weight_waterfill_unattached_sources(
     attached_paths = {
         str(plan.get("path") or "")
         for row in campaign_rows
-        if isinstance((plan := row.get("decoder_weight_waterfill_plan")), Mapping)
-        and plan.get("attached") is True
+        if isinstance((plan := row.get("decoder_weight_waterfill_plan")), Mapping) and plan.get("attached") is True
     }
     target_candidates_by_family: dict[str, list[str]] = {}
     for row in campaign_rows:
@@ -2376,10 +2148,7 @@ def _decoder_weight_waterfill_unattached_sources(
                 continue
             family_key = _family_key(str(source.get("family") or family))
             by_path[path] = {
-                "schema": (
-                    "nerv_long_training_unattached_decoder_weight_waterfill_"
-                    "source.v1"
-                ),
+                "schema": ("nerv_long_training_unattached_decoder_weight_waterfill_source.v1"),
                 "attached": False,
                 "reason": "no_matching_campaign_candidate_id",
                 "path": path,
@@ -2388,9 +2157,7 @@ def _decoder_weight_waterfill_unattached_sources(
                 "family": family_key,
                 "source_candidate_id": source.get("candidate_id"),
                 "candidate_keys": list(_candidate_index_keys(source)),
-                "target_candidate_ids": sorted(
-                    _dedupe(target_candidates_by_family.get(family_key, []))
-                ),
+                "target_candidate_ids": sorted(_dedupe(target_candidates_by_family.get(family_key, []))),
                 "group_count": int(source.get("group_count") or 0),
                 "full_video_coverage": bool(source.get("full_video_coverage")),
                 "receiver_proof_ready": bool(source.get("receiver_proof_ready")),
@@ -2428,9 +2195,7 @@ def _hinerv_feedback_launch_adjustment(
             "source_feedback_kind": feedback.get("feedback_kind"),
             "source_feedback_scope": feedback.get("feedback_scope"),
             "feedback_ready": feedback.get("feedback_ready"),
-            "launch_control_feedback_ready": feedback.get(
-                "launch_control_feedback_ready"
-            ),
+            "launch_control_feedback_ready": feedback.get("launch_control_feedback_ready"),
             "learning_rate": float(learning_rate),
             "segnet_distillation_weight": 1.0,
             **FALSE_AUTHORITY,
@@ -2439,9 +2204,7 @@ def _hinerv_feedback_launch_adjustment(
     recommended = _float_or_none(feedback.get("recommended_learning_rate"))
     pose_instability = bool(feedback.get("pose_instability_detected"))
     lr_floor = HINERV_POSE_INSTABILITY_LOW_LR_FLOOR
-    repeated_low_lr_instability = bool(
-        pose_instability and observed is not None and observed <= lr_floor
-    )
+    repeated_low_lr_instability = bool(pose_instability and observed is not None and observed <= lr_floor)
     lower_learning_rate_applied = bool(
         pose_instability
         and not repeated_low_lr_instability
@@ -2454,30 +2217,18 @@ def _hinerv_feedback_launch_adjustment(
     if lower_learning_rate_applied:
         launch_mutations.extend(list(feedback.get("recommended_launch_mutations") or []))
     if pose_protected_pathway_applied:
-        launch_mutations.append(
-            "enable_pose_distillation_huber_from_repeated_low_lr_instability"
-        )
+        launch_mutations.append("enable_pose_distillation_huber_from_repeated_low_lr_instability")
     seg_stagnation = bool(feedback.get("seg_stagnation_detected"))
-    recommended_seg_weight = _float_or_none(
-        feedback.get("recommended_segnet_distillation_weight")
-    )
-    segnet_weight_applied = bool(
-        seg_stagnation
-        and recommended_seg_weight is not None
-        and recommended_seg_weight > 1.0
-    )
+    recommended_seg_weight = _float_or_none(feedback.get("recommended_segnet_distillation_weight"))
+    segnet_weight_applied = bool(seg_stagnation and recommended_seg_weight is not None and recommended_seg_weight > 1.0)
     if segnet_weight_applied:
         launch_mutations.extend(
             mutation
             for mutation in (feedback.get("recommended_launch_mutations") or [])
             if mutation not in launch_mutations
         )
-    official_control_superseded = bool(
-        feedback.get("source_official_control_superseded")
-    )
-    if official_control_superseded and (
-        HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION not in launch_mutations
-    ):
+    official_control_superseded = bool(feedback.get("source_official_control_superseded"))
+    if official_control_superseded and (HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION not in launch_mutations):
         launch_mutations.append(HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION)
     applied = bool(
         lower_learning_rate_applied
@@ -2525,20 +2276,12 @@ def _hinerv_feedback_launch_adjustment(
         "repeated_low_lr_pose_instability": repeated_low_lr_instability,
         "requested_learning_rate": float(learning_rate),
         "recommended_learning_rate": recommended,
-        "learning_rate": float(
-            recommended if lower_learning_rate_applied else learning_rate
-        ),
+        "learning_rate": float(recommended if lower_learning_rate_applied else learning_rate),
         "recommended_segnet_distillation_weight": recommended_seg_weight,
-        "segnet_distillation_weight": float(
-            recommended_seg_weight if segnet_weight_applied else 1.0
-        ),
-        "pose_distillation_loss": (
-            HINERV_POSE_PROTECTED_LOSS if pose_protected_pathway_applied else "mse"
-        ),
+        "segnet_distillation_weight": float(recommended_seg_weight if segnet_weight_applied else 1.0),
+        "pose_distillation_loss": (HINERV_POSE_PROTECTED_LOSS if pose_protected_pathway_applied else "mse"),
         "pose_distillation_huber_delta": (
-            HINERV_POSE_PROTECTED_HUBER_DELTA
-            if pose_protected_pathway_applied
-            else None
+            HINERV_POSE_PROTECTED_HUBER_DELTA if pose_protected_pathway_applied else None
         ),
         "launch_mutations": launch_mutations,
         **FALSE_AUTHORITY,
@@ -2548,17 +2291,14 @@ def _hinerv_feedback_launch_adjustment(
 def _feedback_launch_control_ready(feedback: Mapping[str, Any]) -> bool:
     if feedback.get("launch_control_feedback_ready") is True:
         return True
-    if str(feedback.get("feedback_kind") or "") == "training_telemetry" and str(
-        feedback.get("feedback_scope") or ""
-    ) == "full600_training_telemetry":
+    if (
+        str(feedback.get("feedback_kind") or "") == "training_telemetry"
+        and str(feedback.get("feedback_scope") or "") == "full600_training_telemetry"
+    ):
         recommended_lr = _float_or_none(feedback.get("recommended_learning_rate"))
-        recommended_seg_weight = _float_or_none(
-            feedback.get("recommended_segnet_distillation_weight")
-        )
+        recommended_seg_weight = _float_or_none(feedback.get("recommended_segnet_distillation_weight"))
         pose_ready = (
-            feedback.get("pose_instability_detected") is True
-            and recommended_lr is not None
-            and recommended_lr > 0.0
+            feedback.get("pose_instability_detected") is True and recommended_lr is not None and recommended_lr > 0.0
         )
         seg_ready = (
             feedback.get("seg_stagnation_detected") is True
@@ -2577,35 +2317,24 @@ def _hinerv_source_faithfulness_controls(
     feedback: Mapping[str, Any],
 ) -> dict[str, Any]:
     target_score = _hinerv_official_control_score(candidate)
-    source_score = (
-        _hinerv_feedback_official_control_score(feedback) if feedback else target_score
-    )
+    source_score = _hinerv_feedback_official_control_score(feedback) if feedback else target_score
     return {
         "schema": "hinerv_source_faithfulness_controls.v1",
         "target_candidate_id": str(candidate.get("candidate_id") or ""),
-        "target_uses_hierarchical_feature_grid": bool(
-            candidate.get("use_hierarchical_feature_grid")
-        ),
+        "target_uses_hierarchical_feature_grid": bool(candidate.get("use_hierarchical_feature_grid")),
         "target_uses_convnext_blocks": bool(candidate.get("use_convnext_blocks")),
         "target_official_control_score": int(target_score),
-        "source_feedback_candidate_id": str(
-            feedback.get("source_candidate_id")
-            or feedback.get("candidate_id")
-            or ""
-        ),
+        "source_feedback_candidate_id": str(feedback.get("source_candidate_id") or feedback.get("candidate_id") or ""),
         "source_official_control_score": int(source_score),
         "source_official_control_superseded": bool(
-            feedback.get("source_official_control_superseded")
-            or source_score < target_score
+            feedback.get("source_official_control_superseded") or source_score < target_score
         ),
         **FALSE_AUTHORITY,
     }
 
 
 def _hinerv_official_control_score(row: Mapping[str, Any]) -> int:
-    return int(bool(row.get("use_hierarchical_feature_grid"))) + int(
-        bool(row.get("use_convnext_blocks"))
-    )
+    return int(bool(row.get("use_hierarchical_feature_grid"))) + int(bool(row.get("use_convnext_blocks")))
 
 
 def _hinerv_feedback_official_control_score(row: Mapping[str, Any]) -> int:
@@ -2617,9 +2346,7 @@ def _hinerv_feedback_official_control_score(row: Mapping[str, Any]) -> int:
     explicit_score = _hinerv_official_control_score(row)
     if explicit_score:
         return explicit_score
-    candidate_id = str(
-        row.get("source_candidate_id") or row.get("candidate_id") or ""
-    ).lower()
+    candidate_id = str(row.get("source_candidate_id") or row.get("candidate_id") or "").lower()
     return int("_hfg" in candidate_id) + int("_cnx" in candidate_id)
 
 
@@ -2634,9 +2361,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "output_dir_reuse_policy",
     )
     return {
-        key: dict(extra[key]) if isinstance(extra.get(key), Mapping) else extra[key]
-        for key in keys
-        if key in extra
+        key: dict(extra[key]) if isinstance(extra.get(key), Mapping) else extra[key] for key in keys if key in extra
     }
 
 
@@ -2658,9 +2383,7 @@ def _load_verified_joint_recon_weight_artifacts(
     for path_value in manifest_paths:
         manifest_path = Path(path_value).expanduser().resolve(strict=False)
         if not manifest_path.is_file():
-            raise NervLongTrainingCampaignPlanError(
-                f"joint recon weight manifest not found: {manifest_path}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"joint recon weight manifest not found: {manifest_path}")
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
@@ -2668,13 +2391,9 @@ def _load_verified_joint_recon_weight_artifacts(
                 f"invalid joint recon weight manifest JSON: {manifest_path}"
             ) from exc
         if not isinstance(manifest, Mapping):
-            raise NervLongTrainingCampaignPlanError(
-                f"joint recon weight manifest must be an object: {manifest_path}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"joint recon weight manifest must be an object: {manifest_path}")
         if manifest.get("schema") != JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA:
-            raise NervLongTrainingCampaignPlanError(
-                f"unsupported joint recon weight manifest schema: {manifest_path}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"unsupported joint recon weight manifest schema: {manifest_path}")
         config = manifest.get("config")
         metadata = manifest.get("metadata")
         if not isinstance(config, Mapping) or not isinstance(metadata, Mapping):
@@ -2694,33 +2413,24 @@ def _load_verified_joint_recon_weight_artifacts(
             )
         if metadata.get("training_consumption_recommended") is not True:
             raise NervLongTrainingCampaignPlanError(
-                "joint recon weight manifest is not recommended for training "
-                f"consumption: {manifest_path}"
+                f"joint recon weight manifest is not recommended for training consumption: {manifest_path}"
             )
         blockers = [str(item) for item in metadata.get("blockers") or [] if item]
         if blockers:
-            raise NervLongTrainingCampaignPlanError(
-                f"joint recon weight manifest has blockers: {manifest_path}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"joint recon weight manifest has blockers: {manifest_path}")
         raw_weight_path = manifest.get("weight_path")
         if raw_weight_path is None:
-            raise NervLongTrainingCampaignPlanError(
-                f"joint recon weight manifest missing weight_path: {manifest_path}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"joint recon weight manifest missing weight_path: {manifest_path}")
         weight_path = Path(str(raw_weight_path)).expanduser()
         if not weight_path.is_absolute():
             weight_path = manifest_path.parent / weight_path
         weight_path = weight_path.resolve(strict=False)
         if not weight_path.is_file():
-            raise NervLongTrainingCampaignPlanError(
-                f"joint recon weight file not found: {weight_path}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"joint recon weight file not found: {weight_path}")
         actual_sha = _sha256_file(weight_path)
         expected_sha = str(manifest.get("weight_sha256") or "")
         if expected_sha and actual_sha != expected_sha:
-            raise NervLongTrainingCampaignPlanError(
-                f"joint recon weight sha mismatch: {weight_path}"
-            )
+            raise NervLongTrainingCampaignPlanError(f"joint recon weight sha mismatch: {weight_path}")
         artifact = {
             "schema": "nerv_long_training_joint_recon_weight_artifact.v1",
             "num_pairs": int(num_pairs),
@@ -2792,13 +2502,8 @@ def _campaign_output_basename(
     learning_rate = _float_or_none(launch_feedback_adjustment.get("learning_rate"))
     if learning_rate is not None:
         suffix_parts.append(f"lr{_safe_path_token(_float_token(learning_rate))}")
-    segnet_weight = _float_or_none(
-        launch_feedback_adjustment.get("segnet_distillation_weight")
-    )
-    if (
-        launch_feedback_adjustment.get("segnet_weight_applied")
-        and segnet_weight is not None
-    ):
+    segnet_weight = _float_or_none(launch_feedback_adjustment.get("segnet_distillation_weight"))
+    if launch_feedback_adjustment.get("segnet_weight_applied") and segnet_weight is not None:
         suffix_parts.append(f"segw{_safe_path_token(_float_token(segnet_weight))}")
     mutations = [
         _safe_path_token(str(mutation))[:48]
@@ -2824,10 +2529,7 @@ def _coder_qat_control(*, quant_bits: int) -> dict[str, Any]:
         "c1a_entropy_weight": float(DEFAULT_CODER_QAT_C1A_ENTROPY_WEIGHT),
         "c1a_sigma": float(DEFAULT_CODER_QAT_C1A_SIGMA),
         "c1a_sample_size": int(DEFAULT_CODER_QAT_C1A_SAMPLE_SIZE),
-        "c1a_source": (
-            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
-            "decoder weights"
-        ),
+        "c1a_source": ("PR95 cat_entropy_v2 soft categorical entropy adapted to selected decoder weights"),
         **FALSE_AUTHORITY,
     }
 

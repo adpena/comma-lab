@@ -92,6 +92,15 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-official-source-audit",
+        type=Path,
+        help=(
+            "Optional snerv_official_source_parity_audit.v1 JSON. When present, "
+            "SNeRV rows carry official-source marker custody and remaining "
+            "parity debt without granting promotion authority."
+        ),
+    )
+    parser.add_argument(
         "--output-root",
         default="/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
     )
@@ -120,15 +129,15 @@ def main(argv: list[str] | None = None) -> int:
         output_root=args.output_root,
         max_candidates_per_family=args.max_candidates_per_family,
         joint_recon_weight_manifest_paths=tuple(args.joint_recon_weight_manifest),
-        candidate_feedback_sources=tuple(
-            _load_feedback_sources(args.candidate_feedback_source)
-        ),
+        candidate_feedback_sources=tuple(_load_feedback_sources(args.candidate_feedback_source)),
         decoder_weight_waterfill_sources=tuple(
             _load_decoder_weight_waterfill_sources(
                 args.decoder_weight_waterfill_source,
-                sidecar_root=args.output_json.parent
-                / "decoder_weight_waterfill_sidecars",
+                sidecar_root=args.output_json.parent / "decoder_weight_waterfill_sidecars",
             )
+        ),
+        snerv_official_source_audit=(
+            None if args.snerv_official_source_audit is None else _load(args.snerv_official_source_audit)
         ),
         snerv_bounded_proof_only=bool(args.snerv_bounded_proof_only),
         snerv_bounded_proof_epochs=int(args.snerv_bounded_proof_epochs),
@@ -159,23 +168,13 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "schema": report["schema"],
                 "campaign_row_count": report["campaign_row_count"],
-                "launchable_local_row_count": report[
-                    "launchable_local_row_count"
-                ],
+                "launchable_local_row_count": report["launchable_local_row_count"],
                 "blocked_row_count": report["blocked_row_count"],
-                "decoder_weight_waterfill_attached_row_count": report[
-                    "decoder_weight_waterfill_attached_row_count"
-                ],
+                "decoder_weight_waterfill_attached_row_count": report["decoder_weight_waterfill_attached_row_count"],
                 "score_claim": report["score_claim"],
-                "ready_for_exact_eval_dispatch": report[
-                    "ready_for_exact_eval_dispatch"
-                ],
+                "ready_for_exact_eval_dispatch": report["ready_for_exact_eval_dispatch"],
                 "output_json": args.output_json.as_posix(),
-                "output_queue": (
-                    None
-                    if args.output_queue is None
-                    else args.output_queue.as_posix()
-                ),
+                "output_queue": (None if args.output_queue is None else args.output_queue.as_posix()),
                 "experiment_queue_id": report["experiment_queue_id"],
             },
             sort_keys=True,
@@ -266,17 +265,11 @@ def _materialize_archive_ladder_waterfill_sidecars(
             continue
         if plan.get("schema") != "nerv_decoder_weight_waterfill.v1":
             raise TypeError(
-                f"{source_path}: row {index} has unsupported nested waterfill schema "
-                f"{plan.get('schema')!r}"
+                f"{source_path}: row {index} has unsupported nested waterfill schema {plan.get('schema')!r}"
             )
-        candidate_key = str(
-            row.get("row_id")
-            or plan.get("candidate_id")
-            or f"waterfill_row_{index:04d}"
-        )
+        candidate_key = str(row.get("row_id") or plan.get("candidate_id") or f"waterfill_row_{index:04d}")
         sidecar = (
-            sidecar_root
-            / f"{_safe_token(source_path.stem)}__{_safe_token(candidate_key)}"
+            sidecar_root / f"{_safe_token(source_path.stem)}__{_safe_token(candidate_key)}"
             ".decoder_weight_waterfill.json"
         )
         _write_json_sidecar_if_identical_or_missing(sidecar, plan)

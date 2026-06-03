@@ -20,6 +20,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.snerv_official_source_parity_audit import (
+    SCHEMA as SNERV_OFFICIAL_SOURCE_AUDIT_SCHEMA,
+)
+from tac.analysis.snerv_official_source_parity_audit import (
+    summarize_snerv_official_source_audit,
+)
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
 
 SCHEMA = "nerv_source_parity_contract.v1"
@@ -95,40 +101,28 @@ def build_nerv_source_parity_contract(
     *,
     repo_root: str | Path,
     families: Iterable[str] = ("hi_nerv", "snerv"),
+    snerv_official_source_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return the current source-parity contract for compact NeRV carriers."""
 
     root = Path(repo_root)
     selected_families = tuple(dict.fromkeys(str(f) for f in families))
-    features = [
-        feature for feature in _source_features()
-        if feature.family in selected_families
-    ]
-    feature_rows = [_feature_row(root, feature) for feature in features]
+    source_audits = _source_audit_rows(
+        selected_families,
+        snerv_official_source_audit=snerv_official_source_audit,
+    )
+    features = [feature for feature in _source_features() if feature.family in selected_families]
+    feature_rows = [_feature_row(root, feature, source_audits=source_audits) for feature in features]
     control_rows = _control_rows(root, selected_families)
     blockers = _ordered_unique(
-        [
-            blocker
-            for row in feature_rows
-            for blocker in row["blockers"]
-            if row["required_for_long_training"]
-        ]
-        + [
-            blocker
-            for row in control_rows
-            for blocker in row["blockers"]
-            if row["required_for_long_training"]
-        ]
+        [blocker for row in feature_rows for blocker in row["blockers"] if row["required_for_long_training"]]
+        + [blocker for row in control_rows for blocker in row["blockers"] if row["required_for_long_training"]]
     )
     nonblocking_gaps = _ordered_unique(
-        blocker
-        for row in feature_rows
-        for blocker in row["blockers"]
-        if not row["required_for_long_training"]
+        blocker for row in feature_rows for blocker in row["blockers"] if not row["required_for_long_training"]
     )
     family_rows = [
-        _family_summary(family, feature_rows=feature_rows, control_rows=control_rows)
-        for family in selected_families
+        _family_summary(family, feature_rows=feature_rows, control_rows=control_rows) for family in selected_families
     ]
     return {
         "schema": SCHEMA,
@@ -137,6 +131,7 @@ def build_nerv_source_parity_contract(
         "repo_root": root.as_posix(),
         "official_source_refs": list(OFFICIAL_SOURCE_REFS),
         "families": selected_families,
+        "source_audits": source_audits,
         "family_rows": family_rows,
         "feature_rows": feature_rows,
         "control_rows": control_rows,
@@ -193,10 +188,15 @@ def write_nerv_source_parity_contract(
     output_json: str | Path,
     output_md: str | Path | None = None,
     families: Iterable[str] = ("hi_nerv", "snerv"),
+    snerv_official_source_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Write JSON and optional Markdown source-parity artifacts."""
 
-    report = build_nerv_source_parity_contract(repo_root=repo_root, families=families)
+    report = build_nerv_source_parity_contract(
+        repo_root=repo_root,
+        families=families,
+        snerv_official_source_audit=snerv_official_source_audit,
+    )
     json_path = Path(output_json)
     json_path.parent.mkdir(parents=True, exist_ok=True)
     json_path.write_text(
@@ -218,11 +218,41 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="hi_nerv_official_repo",
             implementation_target="architecture/archive/export symbols resolve",
             required_symbols=(
-                RequiredSymbol("hi_nerv", "hi_nerv_symbol_map", "tac.substrates.hi_nerv.architecture", "HinervConfig", "config surface"),
-                RequiredSymbol("hi_nerv", "hi_nerv_symbol_map", "tac.substrates.hi_nerv.architecture", "HinervSubstrate", "torch forward surface"),
-                RequiredSymbol("hi_nerv", "hi_nerv_symbol_map", "tac.substrates.hi_nerv.archive", "pack_archive", "receiver packet packer"),
-                RequiredSymbol("hi_nerv", "hi_nerv_symbol_map", "tac.substrates.hi_nerv.archive", "parse_archive", "receiver packet parser"),
-                RequiredSymbol("hi_nerv", "hi_nerv_symbol_map", "tac.substrates.hi_nerv.archive_candidate", "export_hi_nerv_mlx_archive", "archive-bound export"),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_symbol_map",
+                    "tac.substrates.hi_nerv.architecture",
+                    "HinervConfig",
+                    "config surface",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_symbol_map",
+                    "tac.substrates.hi_nerv.architecture",
+                    "HinervSubstrate",
+                    "torch forward surface",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_symbol_map",
+                    "tac.substrates.hi_nerv.archive",
+                    "pack_archive",
+                    "receiver packet packer",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_symbol_map",
+                    "tac.substrates.hi_nerv.archive",
+                    "parse_archive",
+                    "receiver packet parser",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_symbol_map",
+                    "tac.substrates.hi_nerv.archive_candidate",
+                    "export_hi_nerv_mlx_archive",
+                    "archive-bound export",
+                ),
             ),
             blocker_if_missing="hi_nerv_required_symbol_missing",
         ),
@@ -232,8 +262,20 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="hi_nerv_official_repo",
             implementation_target="MLX forward and PyTorch-layout export parity",
             required_symbols=(
-                RequiredSymbol("hi_nerv", "hi_nerv_mlx_tiny_forward_parity", "tac.substrates.hi_nerv.mlx_renderer", "HinervSubstrateMLX", "MLX renderer"),
-                RequiredSymbol("hi_nerv", "hi_nerv_mlx_tiny_forward_parity", "tac.substrates.hi_nerv.mlx_renderer", "_bilinear_resize_nhwc", "resolution path"),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_mlx_tiny_forward_parity",
+                    "tac.substrates.hi_nerv.mlx_renderer",
+                    "HinervSubstrateMLX",
+                    "MLX renderer",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_mlx_tiny_forward_parity",
+                    "tac.substrates.hi_nerv.mlx_renderer",
+                    "_bilinear_resize_nhwc",
+                    "resolution path",
+                ),
             ),
             blocker_if_missing="hi_nerv_mlx_tiny_forward_parity_missing",
         ),
@@ -257,14 +299,36 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 "trilinear multi-scale upsampling are bound or explicitly forked"
             ),
             required_symbols=(
-                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF", "receiver-visible proof constant"),
-                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "HierarchicalFeatureGrid", "temporal-local feature grid"),
-                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "ConvNeXtBlock", "ConvNeXt refinement block"),
-                RequiredSymbol("hi_nerv", "hi_nerv_official_feature_grid_convnext_trilinear", "tac.substrates.hi_nerv.architecture", "trilinear_upsample", "temporal-local grid sampler"),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "tac.substrates.hi_nerv.architecture",
+                    "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
+                    "receiver-visible proof constant",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "tac.substrates.hi_nerv.architecture",
+                    "HierarchicalFeatureGrid",
+                    "temporal-local feature grid",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "tac.substrates.hi_nerv.architecture",
+                    "ConvNeXtBlock",
+                    "ConvNeXt refinement block",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "tac.substrates.hi_nerv.architecture",
+                    "trilinear_upsample",
+                    "temporal-local grid sampler",
+                ),
             ),
-            blocker_if_missing=(
-                "hi_nerv_official_feature_grid_convnext_trilinear_missing"
-            ),
+            blocker_if_missing=("hi_nerv_official_feature_grid_convnext_trilinear_missing"),
         ),
         SourceFeature(
             family="hi_nerv",
@@ -275,12 +339,48 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 "roundtrip are receiver-visible instead of prose-only"
             ),
             required_symbols=(
-                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF", "behavior-backed proof constant"),
-                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "apply_decoder_pruning", "global magnitude pruning"),
-                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "apply_decoder_quant_noise", "deterministic QuantNoise"),
-                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "measure_hi_nerv_decoder_bitstream_roundtrip", "receiver codec measurement"),
-                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.bitstream", "select_hi_nerv_bitstream_codec_by_scorer_waterfill", "score-priced codec waterfill selector"),
-                RequiredSymbol("hi_nerv", "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline", "tac.substrates.hi_nerv.archive", "repack_archive_decoder_codec", "latent-preserving decoder codec repack"),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
+                    "tac.substrates.hi_nerv.bitstream",
+                    "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+                    "behavior-backed proof constant",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
+                    "tac.substrates.hi_nerv.bitstream",
+                    "apply_decoder_pruning",
+                    "global magnitude pruning",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
+                    "tac.substrates.hi_nerv.bitstream",
+                    "apply_decoder_quant_noise",
+                    "deterministic QuantNoise",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
+                    "tac.substrates.hi_nerv.bitstream",
+                    "measure_hi_nerv_decoder_bitstream_roundtrip",
+                    "receiver codec measurement",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
+                    "tac.substrates.hi_nerv.bitstream",
+                    "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
+                    "score-priced codec waterfill selector",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline",
+                    "tac.substrates.hi_nerv.archive",
+                    "repack_archive_decoder_codec",
+                    "latent-preserving decoder codec repack",
+                ),
             ),
             blocker_if_missing="hi_nerv_prune_quantnoise_receiver_bitstream_pipeline_missing",
         ),
@@ -302,8 +402,20 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="hi_nerv_official_repo",
             implementation_target="receiver-visible compressed decoder and latent bitstream",
             required_symbols=(
-                RequiredSymbol("hi_nerv", "hi_nerv_bitstream_quantization_roundtrip", "tac.substrates.hi_nerv.archive", "pack_archive", "packet packer"),
-                RequiredSymbol("hi_nerv", "hi_nerv_bitstream_quantization_roundtrip", "tac.substrates._shared.decoder_state_codec", "serialize_decoder_state_dict", "decoder codec"),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_bitstream_quantization_roundtrip",
+                    "tac.substrates.hi_nerv.archive",
+                    "pack_archive",
+                    "packet packer",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_bitstream_quantization_roundtrip",
+                    "tac.substrates._shared.decoder_state_codec",
+                    "serialize_decoder_state_dict",
+                    "decoder codec",
+                ),
             ),
             blocker_if_missing="hi_nerv_bitstream_roundtrip_missing",
         ),
@@ -313,8 +425,20 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="hi_nerv_paper",
             implementation_target="score saliency pushes into decoder/latent fit before export",
             required_symbols=(
-                RequiredSymbol("hi_nerv", "hi_nerv_decoder_weight_saliency_binding", "tac.analysis.hinerv_latent_linf_allocation", "decoder_jacobian_vjp", "dense VJP adjoint"),
-                RequiredSymbol("hi_nerv", "hi_nerv_decoder_weight_saliency_binding", "tac.analysis.hinerv_latent_linf_allocation", "allocate_linf_latent_steps", "latent allocator"),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_decoder_weight_saliency_binding",
+                    "tac.analysis.hinerv_latent_linf_allocation",
+                    "decoder_jacobian_vjp",
+                    "dense VJP adjoint",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_decoder_weight_saliency_binding",
+                    "tac.analysis.hinerv_latent_linf_allocation",
+                    "allocate_linf_latent_steps",
+                    "latent allocator",
+                ),
             ),
             blocker_if_missing="hi_nerv_decoder_weight_saliency_binding_missing",
         ),
@@ -324,11 +448,41 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="DWT, LF/HF carrier, archive, and receiver symbols resolve",
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_symbol_map", "tac.substrates.snerv_inverse_steg_carrier.dwt", "dwt2_multilevel", "DWT analysis"),
-                RequiredSymbol("snerv", "snerv_symbol_map", "tac.substrates.snerv_inverse_steg_carrier.dwt", "idwt2_multilevel", "DWT synthesis"),
-                RequiredSymbol("snerv", "snerv_symbol_map", "tac.substrates.snerv_inverse_steg_carrier.carrier", "HfGenerationDecoder", "HF generator"),
-                RequiredSymbol("snerv", "snerv_symbol_map", "tac.substrates.snerv_inverse_steg_carrier.archive", "pack_snerv_archive", "archive packer"),
-                RequiredSymbol("snerv", "snerv_symbol_map", "tac.substrates.snerv_inverse_steg_carrier.archive", "decode_snerv_archive_frames", "receiver decode"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_symbol_map",
+                    "tac.substrates.snerv_inverse_steg_carrier.dwt",
+                    "dwt2_multilevel",
+                    "DWT analysis",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_symbol_map",
+                    "tac.substrates.snerv_inverse_steg_carrier.dwt",
+                    "idwt2_multilevel",
+                    "DWT synthesis",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_symbol_map",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "HfGenerationDecoder",
+                    "HF generator",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_symbol_map",
+                    "tac.substrates.snerv_inverse_steg_carrier.archive",
+                    "pack_snerv_archive",
+                    "archive packer",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_symbol_map",
+                    "tac.substrates.snerv_inverse_steg_carrier.archive",
+                    "decode_snerv_archive_frames",
+                    "receiver decode",
+                ),
             ),
             blocker_if_missing="snerv_required_symbol_missing",
         ),
@@ -338,8 +492,20 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="SNAR1 packet consumes LF, decoder, step maps into frames",
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_receiver_bitstream_roundtrip", "tac.substrates.snerv_inverse_steg_carrier.archive", "unpack_snerv_archive", "archive parser"),
-                RequiredSymbol("snerv", "snerv_receiver_bitstream_roundtrip", "tac.substrates.snerv_inverse_steg_carrier.receiver_proof", "build_snerv_receiver_archive_proof", "receiver proof"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_bitstream_roundtrip",
+                    "tac.substrates.snerv_inverse_steg_carrier.archive",
+                    "unpack_snerv_archive",
+                    "archive parser",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_bitstream_roundtrip",
+                    "tac.substrates.snerv_inverse_steg_carrier.receiver_proof",
+                    "build_snerv_receiver_archive_proof",
+                    "receiver proof",
+                ),
             ),
             blocker_if_missing="snerv_receiver_bitstream_roundtrip_missing",
         ),
@@ -352,10 +518,34 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 "receiver-closed, and byte-priced before long training"
             ),
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "MultiResolutionFusionUnit", "local receiver-safe MFU adapter"),
-                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "HighFrequencyRestorer", "local receiver-safe HFR adapter"),
-                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SnervTemporalExtension", "local SNeRV_T analysis utility"),
-                RequiredSymbol("snerv", "snerv_receiver_safe_mfu_hfr_temporal_adapter", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF", "local receiver-safe adapter proof constant"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_safe_mfu_hfr_temporal_adapter",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "MultiResolutionFusionUnit",
+                    "local receiver-safe MFU adapter",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_safe_mfu_hfr_temporal_adapter",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "HighFrequencyRestorer",
+                    "local receiver-safe HFR adapter",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_safe_mfu_hfr_temporal_adapter",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "SnervTemporalExtension",
+                    "local SNeRV_T analysis utility",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_safe_mfu_hfr_temporal_adapter",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+                    "local receiver-safe adapter proof constant",
+                ),
             ),
             blocker_if_missing="snerv_receiver_safe_mfu_hfr_temporal_adapter_missing",
         ),
@@ -369,7 +559,13 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 "evidence"
             ),
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_official_mfu_hfr_tub_parity", "tac.substrates.snerv_inverse_steg_carrier.carrier", "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF", "official MFU/HFR/TUB parity proof"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_parity",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",
+                    "official MFU/HFR/TUB parity proof",
+                ),
             ),
             blocker_if_missing="snerv_official_mfu_hfr_tub_parity_missing",
             required_for_long_training=False,
@@ -380,7 +576,13 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="snerv_spectra_preserving_paper",
             implementation_target="score-aware decoder-weight QAT before packet export",
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_scorer_loop_decoder_qat", "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat", "run_snerv_scorer_loop_decoder_qat", "full trainer entrypoint"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_scorer_loop_decoder_qat",
+                    "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat",
+                    "run_snerv_scorer_loop_decoder_qat",
+                    "full trainer entrypoint",
+                ),
             ),
             blocker_if_missing="snerv_scorer_loop_decoder_qat_missing",
         ),
@@ -390,7 +592,13 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="snerv_spectra_preserving_paper",
             implementation_target="QAT objective prices the same decoder codec consumed by receiver",
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_qat_receiver_codec_pricing", "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat", "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF", "receiver-priced QAT proof constant"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_qat_receiver_codec_pricing",
+                    "tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat",
+                    "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF",
+                    "receiver-priced QAT proof constant",
+                ),
             ),
             blocker_if_missing="snerv_qat_receiver_codec_pricing_missing",
         ),
@@ -400,7 +608,13 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="official Haar DWT/IDWT path or explicit forked-adapter label",
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_official_haar_mode", "tac.substrates.snerv_inverse_steg_carrier.dwt", "OFFICIAL_SNERV_HAAR_MODE_PROOF", "official Haar mode proof constant"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_haar_mode",
+                    "tac.substrates.snerv_inverse_steg_carrier.dwt",
+                    "OFFICIAL_SNERV_HAAR_MODE_PROOF",
+                    "official Haar mode proof constant",
+                ),
             ),
             blocker_if_missing="snerv_official_haar_mode_missing",
         ),
@@ -410,7 +624,13 @@ def _source_features() -> tuple[SourceFeature, ...]:
             official_source_id="snerv_spectra_preserving_official_repo",
             implementation_target="receiver DWT runtime is pure NumPy or contest-proven dependency closure",
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_receiver_dependency_custody", "tac.substrates.snerv_inverse_steg_carrier.dwt", "SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF", "receiver dependency custody proof constant"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_dependency_custody",
+                    "tac.substrates.snerv_inverse_steg_carrier.dwt",
+                    "SNERV_RECEIVER_DWT_RUNTIME_CUSTODY_PROOF",
+                    "receiver dependency custody proof constant",
+                ),
             ),
             blocker_if_missing="snerv_receiver_dependency_custody_missing",
         ),
@@ -423,9 +643,27 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 "before scalable-layer is promoted to a separate lane"
             ),
             required_symbols=(
-                RequiredSymbol("snerv", "snerv_scalable_layer_admission_policy", "tac.analysis.snerv_scalable_layer_admission", "SNERV_SCALABLE_LAYER_ADMISSION_PROOF", "behavior-backed proof constant"),
-                RequiredSymbol("snerv", "snerv_scalable_layer_admission_policy", "tac.analysis.snerv_scalable_layer_admission", "build_snerv_scalable_layer_admission_report", "real SNAR1 layer admission profiler"),
-                RequiredSymbol("snerv", "snerv_scalable_layer_admission_policy", "tac.analysis.snerv_scalable_layer_admission", "write_snerv_scalable_layer_admission_report", "durable report writer"),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_scalable_layer_admission_policy",
+                    "tac.analysis.snerv_scalable_layer_admission",
+                    "SNERV_SCALABLE_LAYER_ADMISSION_PROOF",
+                    "behavior-backed proof constant",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_scalable_layer_admission_policy",
+                    "tac.analysis.snerv_scalable_layer_admission",
+                    "build_snerv_scalable_layer_admission_report",
+                    "real SNAR1 layer admission profiler",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_scalable_layer_admission_policy",
+                    "tac.analysis.snerv_scalable_layer_admission",
+                    "write_snerv_scalable_layer_admission_report",
+                    "durable report writer",
+                ),
             ),
             blocker_if_missing="snerv_scalable_layer_admission_policy_missing",
             required_for_long_training=False,
@@ -436,59 +674,106 @@ def _source_features() -> tuple[SourceFeature, ...]:
 def _control_rows(root: Path, families: tuple[str, ...]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     if "hi_nerv" in families:
-        rows.extend((
-            _source_marker_control_row(
-                root,
-                family="hi_nerv",
-                control_id="hi_nerv_modelsize_config_ladder",
-                source_files=("src/tac/substrates/hi_nerv/architecture.py",),
-                markers=("latent_dim_coarse", "embed_dim", "decoder_channels"),
-                blocker="hi_nerv_measured_modelsize_ladder_missing",
-                required_for_long_training=True,
-            ),
-            _source_marker_control_row(
-                root,
-                family="hi_nerv",
-                control_id="hi_nerv_bitstream_q_control",
-                source_files=(
-                    "src/tac/substrates/hi_nerv/archive.py",
-                    "src/tac/substrates/hi_nerv/archive_candidate.py",
+        rows.extend(
+            (
+                _source_marker_control_row(
+                    root,
+                    family="hi_nerv",
+                    control_id="hi_nerv_modelsize_config_ladder",
+                    source_files=("src/tac/substrates/hi_nerv/architecture.py",),
+                    markers=("latent_dim_coarse", "embed_dim", "decoder_channels"),
+                    blocker="hi_nerv_measured_modelsize_ladder_missing",
+                    required_for_long_training=True,
                 ),
-                markers=("decoder_codec", "int8_mixed"),
-                blocker="hi_nerv_bitstream_q_receiver_sweep_missing",
-                required_for_long_training=True,
-            ),
-        ))
+                _source_marker_control_row(
+                    root,
+                    family="hi_nerv",
+                    control_id="hi_nerv_bitstream_q_control",
+                    source_files=(
+                        "src/tac/substrates/hi_nerv/archive.py",
+                        "src/tac/substrates/hi_nerv/archive_candidate.py",
+                    ),
+                    markers=("decoder_codec", "int8_mixed"),
+                    blocker="hi_nerv_bitstream_q_receiver_sweep_missing",
+                    required_for_long_training=True,
+                ),
+            )
+        )
     if "snerv" in families:
-        rows.extend((
-            _source_marker_control_row(
-                root,
-                family="snerv",
-                control_id="snerv_fc_dim_modelsize_control",
-                source_files=("src/tac/substrates/snerv_inverse_steg_carrier",),
-                markers=("fc_dim", "emb_size"),
-                blocker="snerv_fc_dim_modelsize_control_missing",
-                required_for_long_training=True,
-            ),
-            _source_marker_control_row(
-                root,
-                family="snerv",
-                control_id="snerv_lf_stepmap_and_intN_control",
-                source_files=("src/tac/substrates/snerv_inverse_steg_carrier/archive.py",),
-                markers=("SNERV_LF_PAYLOAD_INTN_CODEC_PROOF",),
-                blocker="snerv_lf_quant_intn_codec_missing",
-                required_for_long_training=True,
-            ),
-        ))
+        rows.extend(
+            (
+                _source_marker_control_row(
+                    root,
+                    family="snerv",
+                    control_id="snerv_fc_dim_modelsize_control",
+                    source_files=("src/tac/substrates/snerv_inverse_steg_carrier",),
+                    markers=("fc_dim", "emb_size"),
+                    blocker="snerv_fc_dim_modelsize_control_missing",
+                    required_for_long_training=True,
+                ),
+                _source_marker_control_row(
+                    root,
+                    family="snerv",
+                    control_id="snerv_lf_stepmap_and_intN_control",
+                    source_files=("src/tac/substrates/snerv_inverse_steg_carrier/archive.py",),
+                    markers=("SNERV_LF_PAYLOAD_INTN_CODEC_PROOF",),
+                    blocker="snerv_lf_quant_intn_codec_missing",
+                    required_for_long_training=True,
+                ),
+            )
+        )
     return rows
 
 
-def _feature_row(root: Path, feature: SourceFeature) -> dict[str, Any]:
+def _source_audit_rows(
+    families: tuple[str, ...],
+    *,
+    snerv_official_source_audit: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any], ...]:
+    rows: list[dict[str, Any]] = []
+    if "snerv" in families and isinstance(snerv_official_source_audit, Mapping):
+        schema = snerv_official_source_audit.get("schema")
+        if schema == SNERV_OFFICIAL_SOURCE_AUDIT_SCHEMA:
+            summary = summarize_snerv_official_source_audit(snerv_official_source_audit)
+            rows.append(
+                {
+                    "family": "snerv",
+                    "feature_id": "snerv_official_mfu_hfr_tub_parity",
+                    "audit_kind": "official_source_marker_and_local_proof_audit",
+                    **summary,
+                }
+            )
+        else:
+            rows.append(
+                {
+                    "family": "snerv",
+                    "feature_id": "snerv_official_mfu_hfr_tub_parity",
+                    "audit_kind": "official_source_marker_and_local_proof_audit",
+                    "schema": schema,
+                    "authority": AUTHORITY,
+                    "official_source_markers_present": False,
+                    "local_receiver_safe_adapter_present": False,
+                    "official_mfu_hfr_tub_parity_proven": False,
+                    "blockers": ["snerv_official_source_audit_schema_invalid"],
+                    **FALSE_AUTHORITY,
+                }
+            )
+    return tuple(rows)
+
+
+def _feature_row(
+    root: Path,
+    feature: SourceFeature,
+    *,
+    source_audits: tuple[dict[str, Any], ...] = (),
+) -> dict[str, Any]:
     symbol_rows = [_symbol_row(symbol) for symbol in feature.required_symbols]
-    marker_rows = [
-        _source_marker_row(root, marker, feature.family)
-        for marker in feature.required_source_markers
-    ]
+    marker_rows = [_source_marker_row(root, marker, feature.family) for marker in feature.required_source_markers]
+    feature_source_audits = tuple(
+        row
+        for row in source_audits
+        if row.get("family") == feature.family and row.get("feature_id") == feature.feature_id
+    )
     blockers: list[str] = []
     if any(row["status"] != "present" for row in symbol_rows):
         blockers.append(feature.blocker_if_missing)
@@ -504,6 +789,7 @@ def _feature_row(root: Path, feature: SourceFeature) -> dict[str, Any]:
         "required_for_long_training": feature.required_for_long_training,
         "symbol_rows": symbol_rows,
         "source_marker_rows": marker_rows,
+        "source_audit_rows": feature_source_audits,
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
     }
@@ -519,10 +805,7 @@ def _source_marker_control_row(
     blocker: str,
     required_for_long_training: bool,
 ) -> dict[str, Any]:
-    text = "\n".join(
-        _read_source_for_marker_scan(root / source_file)
-        for source_file in source_files
-    )
+    text = "\n".join(_read_source_for_marker_scan(root / source_file) for source_file in source_files)
     missing = [marker for marker in markers if marker not in text]
     return {
         "family": family,
@@ -542,10 +825,7 @@ def _source_marker_row(root: Path, marker: str, family: str) -> dict[str, Any]:
         "hi_nerv": ("src/tac/substrates/hi_nerv", "src/tac/analysis"),
         "snerv": ("src/tac/substrates/snerv_inverse_steg_carrier", "src/tac/analysis"),
     }
-    text = "\n".join(
-        _read_source_for_marker_scan(root / source_dir)
-        for source_dir in source_dirs[family]
-    )
+    text = "\n".join(_read_source_for_marker_scan(root / source_dir) for source_dir in source_dirs[family])
     return {
         "marker": marker,
         "status": "present" if marker in text else "missing",
@@ -614,13 +894,9 @@ def _read_source_for_marker_scan(path: Path) -> str:
 def _next_actions(blockers: tuple[str, ...]) -> tuple[str, ...]:
     actions: list[str] = []
     if any("hi_nerv" in blocker for blocker in blockers):
-        actions.append(
-            "close HiNeRV official config/modelsize ladder and receiver bitstream replay before long run"
-        )
+        actions.append("close HiNeRV official config/modelsize ladder and receiver bitstream replay before long run")
     if any("snerv" in blocker for blocker in blockers):
-        actions.append(
-            "close SNeRV fc_dim/MFU/HFR or explicitly block source-faithful SNeRV before long run"
-        )
+        actions.append("close SNeRV fc_dim/MFU/HFR or explicitly block source-faithful SNeRV before long run")
     if not actions:
         actions.append("allow compact-carrier long-training smoke with cache gate and packet spine")
     return tuple(actions)
