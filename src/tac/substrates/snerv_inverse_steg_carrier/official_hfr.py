@@ -16,7 +16,7 @@ parity, and byte-closed archive wiring are separate gates.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 import numpy as np
 
@@ -80,6 +80,21 @@ class OfficialConv2dNchw:
             stride=self.stride,
         )
 
+    def forward_mlx(
+        self,
+        x: Any,
+        *,
+        accumulation_mode: str = "optimized",
+    ) -> Any:
+        return conv2d_nchw_mlx(
+            x,
+            self.weight,
+            bias=self.bias,
+            padding=self.padding,
+            stride=self.stride,
+            accumulation_mode=accumulation_mode,
+        )
+
 
 @dataclass(frozen=True)
 class OfficialHfrConvBlock:
@@ -108,6 +123,17 @@ class OfficialHfrConvBlock:
     def forward(self, pyr_out: np.ndarray) -> np.ndarray:
         hidden = leaky_relu01(self.conv1.forward(pyr_out))
         return self.conv2.forward(hidden)
+
+    def forward_mlx(
+        self,
+        pyr_out: Any,
+        *,
+        accumulation_mode: str = "optimized",
+    ) -> Any:
+        hidden = leaky_relu01_mlx(
+            self.conv1.forward_mlx(pyr_out, accumulation_mode=accumulation_mode)
+        )
+        return self.conv2.forward_mlx(hidden, accumulation_mode=accumulation_mode)
 
 
 @dataclass(frozen=True)
@@ -164,6 +190,25 @@ class OfficialHfrHeads:
         yh_out = np.stack([lh, hl, hh], axis=2)
         return OfficialHfrHeadsOutput(lh=lh, hl=hl, hh=hh, yh_out=yh_out)
 
+    def forward_mlx(
+        self,
+        pyr_out: Any,
+        *,
+        accumulation_mode: str = "optimized",
+    ) -> OfficialHfrHeadsOutput:
+        import mlx.core as mx
+
+        x = _ensure_nchw_shape(pyr_out)
+        if int(x.shape[1]) != self.in_channels:
+            raise OfficialSnervHfrError(
+                f"pyr_out channels {x.shape[1]} do not match HFR in_channels {self.in_channels}"
+            )
+        lh = self.lh_head.forward_mlx(x, accumulation_mode=accumulation_mode)
+        hl = self.hl_head.forward_mlx(x, accumulation_mode=accumulation_mode)
+        hh = self.hh_head.forward_mlx(x, accumulation_mode=accumulation_mode)
+        yh_out = mx.stack([lh, hl, hh], axis=2)
+        return OfficialHfrHeadsOutput(lh=lh, hl=hl, hh=hh, yh_out=yh_out)
+
 
 def conv2d_nchw(
     x: np.ndarray,
@@ -214,6 +259,65 @@ def conv2d_nchw(
     return out.astype(np.float64, copy=False)
 
 
+def conv2d_nchw_mlx(
+    x: Any,
+    weight: np.ndarray,
+    *,
+    bias: np.ndarray | None = None,
+    padding: int = 0,
+    stride: int = 1,
+    accumulation_mode: str = "optimized",
+) -> Any:
+    """MLX implementation of PyTorch-style NCHW/OIHW Conv2d.
+
+    ``optimized`` uses native ``mx.conv2d`` for MLX training throughput.  Fixed
+    modes delegate to the canonical MLX scorer reference conv to diagnose drift.
+    The returned tensor stays NCHW so PyTorch/NumPy/MLX call sites share one
+    official HFR layout contract.
+    """
+
+    import mlx.core as mx
+
+    x_shape = _ensure_nchw_shape(x)
+    w64 = np.asarray(weight, dtype=np.float64)
+    if w64.ndim != 4:
+        raise OfficialSnervHfrError(f"weight must be OIHW, got {w64.shape}")
+    if int(x_shape[1]) != int(w64.shape[1]):
+        raise OfficialSnervHfrError(
+            f"input channels {x_shape[1]} do not match weight channels {w64.shape[1]}"
+        )
+    b64 = None if bias is None else np.asarray(bias, dtype=np.float64)
+    if b64 is not None and b64.shape != (w64.shape[0],):
+        raise OfficialSnervHfrError(
+            f"bias shape {b64.shape} does not match out channels {w64.shape[0]}"
+        )
+    x_mx = mx.array(x)
+    weight_ohwi = mx.array(np.transpose(w64, (0, 2, 3, 1)))
+    x_nhwc = mx.transpose(x_mx, (0, 2, 3, 1))
+    if str(accumulation_mode) == "optimized":
+        out_nhwc = mx.conv2d(
+            x_nhwc,
+            weight_ohwi,
+            stride=(int(stride), int(stride)),
+            padding=(int(padding), int(padding)),
+        )
+    else:
+        from tac.local_acceleration.mlx_scorer_adapters import (
+            mlx_reference_conv2d_nhwc,
+        )
+
+        out_nhwc = mlx_reference_conv2d_nhwc(
+            x_nhwc,
+            weight_ohwi,
+            stride=(int(stride), int(stride)),
+            padding=(int(padding), int(padding)),
+            accumulation_mode=str(accumulation_mode),
+        )
+    if b64 is not None:
+        out_nhwc = out_nhwc + mx.reshape(mx.array(b64), (1, 1, 1, int(b64.shape[0])))
+    return mx.transpose(out_nhwc, (0, 3, 1, 2))
+
+
 def leaky_relu01(x: np.ndarray) -> np.ndarray:
     """Official ``act='leaky01'`` activation."""
 
@@ -221,11 +325,25 @@ def leaky_relu01(x: np.ndarray) -> np.ndarray:
     return np.where(x64 >= 0.0, x64, 0.1 * x64).astype(np.float64, copy=False)
 
 
+def leaky_relu01_mlx(x: Any) -> Any:
+    """MLX official ``act='leaky01'`` activation."""
+
+    import mlx.core as mx
+
+    return mx.where(x >= 0.0, x, 0.1 * x)
+
+
 def _ensure_nchw(x: np.ndarray) -> np.ndarray:
     arr = np.asarray(x, dtype=np.float64)
-    if arr.ndim != 4:
-        raise OfficialSnervHfrError(f"expected NCHW tensor, got {arr.shape}")
+    _ensure_nchw_shape(arr)
     return arr
+
+
+def _ensure_nchw_shape(x: Any) -> tuple[int, int, int, int]:
+    shape = tuple(int(v) for v in getattr(x, "shape", ()))
+    if len(shape) != 4:
+        raise OfficialSnervHfrError(f"expected NCHW tensor, got {shape}")
+    return shape
 
 
 __all__ = [
@@ -237,5 +355,7 @@ __all__ = [
     "OfficialHfrHeadsOutput",
     "OfficialSnervHfrError",
     "conv2d_nchw",
+    "conv2d_nchw_mlx",
     "leaky_relu01",
+    "leaky_relu01_mlx",
 ]

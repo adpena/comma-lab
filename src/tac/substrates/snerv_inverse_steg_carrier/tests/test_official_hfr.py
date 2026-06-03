@@ -12,6 +12,7 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OfficialHfrHeads,
     OfficialSnervHfrError,
     conv2d_nchw,
+    conv2d_nchw_mlx,
     leaky_relu01,
 )
 
@@ -95,6 +96,41 @@ def test_official_hfr_numpy_matches_torch_convblock() -> None:
     expected = conv2(torch.nn.LeakyReLU(negative_slope=0.1)(conv1(torch.from_numpy(x))))
 
     np.testing.assert_allclose(block.forward(x), expected.detach().numpy(), atol=1e-10)
+
+
+def test_official_hfr_mlx_optimized_matches_numpy_convblock() -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    rng = np.random.default_rng(4)
+    block = _head(rng, in_ch=4, hidden_ch=5)
+    x = rng.standard_normal((2, 4, 5, 6)).astype(np.float32)
+
+    expected = block.forward(x)
+    got = block.forward_mlx(mx.array(x), accumulation_mode="optimized")
+
+    # Native MLX conv is the throughput path, not the fixed-order parity path;
+    # the measured drift on Apple Metal is O(1e-5) for this official HFR block.
+    np.testing.assert_allclose(np.asarray(got), expected, atol=1e-4, rtol=2e-3)
+
+
+def test_official_hfr_mlx_fixed_reference_matches_numpy_conv() -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    rng = np.random.default_rng(5)
+    x = rng.standard_normal((1, 2, 4, 5)).astype(np.float32)
+    weight = (rng.standard_normal((3, 2, 3, 3)) * 0.05).astype(np.float32)
+    bias = (rng.standard_normal(3) * 0.01).astype(np.float32)
+
+    expected = conv2d_nchw(x, weight, bias=bias, padding=1)
+    got = conv2d_nchw_mlx(
+        mx.array(x),
+        weight,
+        bias=bias,
+        padding=1,
+        accumulation_mode="fixed_fp32",
+    )
+
+    np.testing.assert_allclose(np.asarray(got), expected, atol=2e-5, rtol=2e-5)
 
 
 def test_leaky_relu01_matches_official_slope() -> None:
