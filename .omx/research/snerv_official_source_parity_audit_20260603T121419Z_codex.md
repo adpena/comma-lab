@@ -1,0 +1,39 @@
+# SNeRV Official Source-Parity Audit
+
+Schema: `snerv_official_source_parity_audit.v1`
+Authority: `false_authority_source_audit_no_score_claim`
+Official repo: `/Volumes/VertigoDataTier/pact/oss_sources/snerv_official_qwertja_20260603`
+Official head SHA: `0844a08f9591eea9625f8b961ed91d08030e06d1`
+
+## Verdict
+
+- official source markers present: `True`
+- local receiver-safe adapter present: `True`
+- official MFU/HFR/TUB parity proven: `False`
+- score claim: `False`
+
+## Component States
+
+| component | classification | receiver analogue | official forward parity | blockers |
+|---|---|---:|---:|---|
+| `mfu` | `receiver_safe_analogue` | `True` | `False` | `snerv_official_mfu_hfr_tub_parity_marker_missing, snerv_official_forward_parity_artifact_missing_or_failed` |
+| `hfr` | `receiver_safe_analogue` | `True` | `False` | `snerv_official_mfu_hfr_tub_parity_marker_missing, snerv_official_forward_parity_artifact_missing_or_failed` |
+| `tub` | `official_haar_primitive_only` | `True` | `False` | `snerv_official_mfu_hfr_tub_parity_marker_missing, snerv_official_forward_parity_artifact_missing_or_failed` |
+## Marker Groups
+
+| group | present | missing |
+|---|---:|---|
+| `official_haar_dwt_lf_hf_split` | `True` | `` |
+| `official_mfu_multi_resolution_fusion` | `True` | `` |
+| `official_hfr_high_frequency_restoration` | `True` | `` |
+| `official_tub_temporal_extension` | `True` | `` |
+| `official_modelsize_fc_dim_solver` | `True` | `` |
+| `official_quantized_payload_controls` | `True` | `` |
+
+## Blockers
+
+- `snerv_official_mfu_hfr_tub_parity_missing`
+
+## Next Actions
+
+- implement source-forward official MFU/HFR/TUB behavior proof or explicitly supersede it with same-axis receiver evidence
