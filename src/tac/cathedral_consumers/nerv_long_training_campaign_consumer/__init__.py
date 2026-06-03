@@ -28,6 +28,9 @@ CONSUMER_HOOK_NUMBERS = (
 PLAN_SCHEMA = "nerv_long_training_campaign_plan.v1"
 QUEUE_SCHEMA = "experiment_queue.v1"
 RESULT_SCHEMA = "nerv_long_training_campaign_consumer_result.v1"
+LAUNCH_AUTHORITY_CONTRACT_SCHEMA = (
+    "nerv_long_training_queue_launch_authority_contract.v1"
+)
 
 _AUTHORITY_FIELDS = (
     "score_claim",
@@ -77,12 +80,19 @@ def consume_candidate(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
     for index, row in enumerate(campaign_rows):
         blockers.extend(_authority_blockers(row, label=f"campaign_row_{index}"))
     for index, experiment in enumerate(experiments):
+        experiment_id = _experiment_id(experiment, index)
         blockers.extend(
-            _authority_blockers(experiment, label=f"experiment_{_experiment_id(experiment, index)}")
+            _authority_blockers(experiment, label=f"experiment_{experiment_id}")
+        )
+        blockers.extend(
+            _launch_authority_contract_blockers(
+                experiment,
+                label=f"experiment_{experiment_id}",
+            )
         )
         gate = _mapping(experiment.get("score_lowering_gate"))
         blockers.extend(
-            _authority_blockers(gate, label=f"experiment_gate_{_experiment_id(experiment, index)}")
+            _authority_blockers(gate, label=f"experiment_gate_{experiment_id}")
         )
 
     ready_local = [
@@ -224,9 +234,15 @@ def render_markdown(result: Mapping[str, Any]) -> str:
 
 def _local_mlx_ready(experiment: Mapping[str, Any]) -> bool:
     gate = _mapping(experiment.get("score_lowering_gate"))
+    contract = _mapping(experiment.get("launch_authority_contract"))
     return (
         str(experiment.get("status") or "") in {"ready", "queued"}
         and experiment.get("blocked") is not True
+        and contract.get("schema") == LAUNCH_AUTHORITY_CONTRACT_SCHEMA
+        and contract.get("queue_status_is_local_mlx_plan") is True
+        and contract.get("queue_status_is_receiver_proof") is not True
+        and contract.get("queue_status_is_cpu_replay_proof") is not True
+        and contract.get("queue_status_is_exact_eval_authority") is not True
         and gate.get("local_mlx_executable") is True
         and gate.get("cpu_replay_ready") is not True
         and gate.get("exact_gate_ready") is not True
@@ -241,6 +257,7 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
     first_step = steps[0] if steps else {}
     gate = _mapping(experiment.get("score_lowering_gate"))
     metadata = _mapping(experiment.get("metadata"))
+    launch_contract = _mapping(experiment.get("launch_authority_contract"))
     return {
         "id": _experiment_id(experiment, index),
         "family": str(experiment.get("family") or "unknown"),
@@ -264,6 +281,21 @@ def _compact_experiment(experiment: Mapping[str, Any], index: int) -> dict[str, 
             is True,
             "exact_auth_gate_required": gate.get("exact_auth_gate_required") is True,
             "promotion_blockers": _string_list(gate.get("promotion_blockers")),
+        },
+        "launch_authority_contract": {
+            "schema": launch_contract.get("schema"),
+            "queue_status_is_local_mlx_plan": (
+                launch_contract.get("queue_status_is_local_mlx_plan") is True
+            ),
+            "queue_status_is_receiver_proof": (
+                launch_contract.get("queue_status_is_receiver_proof") is True
+            ),
+            "queue_status_is_cpu_replay_proof": (
+                launch_contract.get("queue_status_is_cpu_replay_proof") is True
+            ),
+            "queue_status_is_exact_eval_authority": (
+                launch_contract.get("queue_status_is_exact_eval_authority") is True
+            ),
         },
         "metadata": _compact_metadata(metadata),
         "score_claim": False,
@@ -331,6 +363,31 @@ def _experiment_has_gates(experiment: Mapping[str, Any]) -> bool:
         or _string_list(gate.get("missing_requirement_ids"))
         or _string_list(gate.get("post_run_missing_requirement_ids"))
     )
+
+
+def _launch_authority_contract_blockers(
+    experiment: Mapping[str, Any],
+    *,
+    label: str,
+) -> list[str]:
+    contract = _mapping(experiment.get("launch_authority_contract"))
+    blockers: list[str] = []
+    if not contract:
+        return [f"{label}_launch_authority_contract_missing"]
+    if contract.get("schema") != LAUNCH_AUTHORITY_CONTRACT_SCHEMA:
+        blockers.append(f"{label}_launch_authority_contract_schema_mismatch")
+    if contract.get("queue_status_is_local_mlx_plan") is not True:
+        blockers.append(f"{label}_launch_authority_contract_not_local_mlx_plan")
+    for key in (
+        "queue_status_is_receiver_proof",
+        "queue_status_is_cpu_replay_proof",
+        "queue_status_is_exact_eval_authority",
+    ):
+        if contract.get(key) is True:
+            blockers.append(f"{label}_{key}_overclaimed")
+    if _truthy_authority(contract):
+        blockers.append(f"{label}_launch_authority_contract_false_authority")
+    return blockers
 
 
 def _sort_compact_experiments(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:

@@ -45,6 +45,29 @@ def test_long_training_campaign_consumer_routes_local_mlx_without_exact_authorit
     assert "tools/run_compact_renderer_mlx_spine_runner.py" in first["command"]
     assert first["score_lowering_gate"]["receiver_proof_required"] is True
     assert first["score_lowering_gate"]["cpu_replay_ready"] is False
+    assert first["launch_authority_contract"] == {
+        "schema": "nerv_long_training_queue_launch_authority_contract.v1",
+        "queue_status_is_local_mlx_plan": True,
+        "queue_status_is_receiver_proof": False,
+        "queue_status_is_cpu_replay_proof": False,
+        "queue_status_is_exact_eval_authority": False,
+    }
+
+
+def test_long_training_campaign_consumer_requires_launch_authority_contract() -> None:
+    queue = json.loads(json.dumps(_campaign_plan()["experiment_queue"]))
+    snerv = next(row for row in queue["experiments"] if row["family"] == "snerv")
+    snerv.pop("launch_authority_contract")
+
+    verdict = consumer.consume_candidate(queue)
+
+    assert verdict["planner_action"] == "close_campaign_row_blockers_then_reconsume"
+    assert verdict["local_mlx_route_recommended"] is False
+    assert verdict["ready_local_mlx_experiment_count"] == 0
+    assert any(
+        blocker.endswith("_launch_authority_contract_missing")
+        for blocker in verdict["blockers"]
+    )
 
 
 def test_long_training_campaign_consumer_preserves_hinerv_supersession_metadata(
