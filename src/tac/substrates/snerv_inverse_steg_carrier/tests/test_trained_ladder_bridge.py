@@ -39,6 +39,7 @@ def test_bridge_emits_strict_false_authority_row_from_real_packet(
     assert row["fc_dim"] == 12
     assert row["official_controls"]["fc_dim"] == 12
     assert row["official_controls"]["emb_size"] == 4
+    assert row["lf_payload_codec"] == "portfolio_auto"
     assert row["receiver_archive_replay_verified"] is True
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
@@ -72,6 +73,52 @@ def test_bridge_emits_strict_false_authority_row_from_real_packet(
     ]
     assert "modelsize_or_fc_dim_missing" not in payload["blockers"]
     assert "required_emission_field_missing:qat_bits" in payload["blockers"]
+    assert "required_emission_field_missing:lf_payload_codec" not in payload[
+        "blockers"
+    ]
+
+
+def test_bridge_preserves_actual_lf_payload_codec(tmp_path: Path) -> None:
+    packet = b"SNAR1-legacy-lf-codec-packet"
+    packet_path = tmp_path / "legacy_codec.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(packet, lf_payload_codec="legacy"),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    row = payload["rows"][0]
+    assert row["lf_payload_codec"] == "legacy"
+    assert row["lf_payload_codec"] != "snerv_lf_quant_payload.v1"
+    assert "required_emission_field_missing:lf_payload_codec" not in payload[
+        "blockers"
+    ]
+
+
+def test_bridge_blocks_missing_lf_payload_codec_instead_of_faking_v1(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-missing-lf-codec-packet"
+    packet_path = tmp_path / "missing_codec.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(packet, lf_payload_codec=None),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    row = payload["rows"][0]
+    assert row["lf_payload_codec"] is None
+    assert "required_emission_field_missing:lf_payload_codec" in payload[
+        "blockers"
+    ]
 
 
 def test_bridge_rejects_unknown_archive_path_kind(tmp_path: Path) -> None:
@@ -180,6 +227,7 @@ def _advisory(packet: bytes, **overrides: object) -> SimpleNamespace:
         "snerv_mfu_scales": (),
         "snerv_hfr_gain": 0.0,
         "snerv_temporal_context": 0,
+        "lf_payload_codec": "portfolio_auto",
     }
     values.update(overrides)
     return SimpleNamespace(

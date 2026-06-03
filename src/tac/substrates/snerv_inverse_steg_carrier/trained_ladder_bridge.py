@@ -176,6 +176,7 @@ def _trainer_metadata(
     qat_bits: int | None,
     official_controls: Mapping[str, Any],
 ) -> dict[str, Any]:
+    lf_payload_codec = _attr(advisory_result, "lf_payload_codec")
     metadata: dict[str, Any] = {
         "schema": SNERV_ADVISORY_TRAINER_METADATA_SCHEMA,
         "n_pairs": _int_attr(advisory_result, "n_pairs"),
@@ -196,7 +197,7 @@ def _trainer_metadata(
         "snerv_temporal_mode": _attr(advisory_result, "snerv_temporal_mode"),
         "decoder_feature_count": _int_attr(advisory_result, "decoder_feature_count"),
         "receiver_codec_mode": archive_path_kind,
-        "lf_payload_codec": "snerv_lf_quant_payload.v1",
+        "lf_payload_codec": lf_payload_codec,
         "decoder_precision_mode": _attr(advisory_result, "decoder_payload_codec"),
         "step_map_codec": _attr(advisory_result, "linf_steps_payload_codec"),
         "target_bits_per_coeff": target_bits_per_coeff,
