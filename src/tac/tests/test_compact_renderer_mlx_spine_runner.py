@@ -1122,6 +1122,16 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         abs(shared_target_hi["modelsize_mparams"] - 0.03)
     )
     assert shared_target_hi["candidate_id"].endswith("_tgtmp0p03")
+    shared_hi_contract = shared_target_hi["modelsize_control_contract"]
+    assert shared_hi_contract["schema"] == "nerv_modelsize_control_contract.v1"
+    assert shared_hi_contract["control_semantics"] == (
+        "local_receiver_visible_grid_search_nearest_target"
+    )
+    assert shared_hi_contract["shared_target_modelsize_mparams_consumed_as"] == (
+        "nearest_local_param_count_target"
+    )
+    assert shared_hi_contract["modelsize_mparams_is_official_upstream_flag"] is False
+    assert shared_hi_contract["archive_bytes_authority_required"] is True
     shared_target_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
@@ -1136,6 +1146,18 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         shared_target_sn["fc_dim"]
     )
     assert shared_target_sn["ready_for_exact_eval_dispatch"] is False
+    shared_sn_contract = shared_target_sn["modelsize_control_contract"]
+    assert shared_sn_contract["schema"] == "nerv_modelsize_control_contract.v1"
+    assert shared_sn_contract["control_semantics"] == (
+        "official_snerv_modelsize_quadratic_fc_dim_solve"
+    )
+    assert shared_sn_contract["shared_target_modelsize_mparams_consumed_as"] == (
+        "official_snerv_modelsize_quadratic_fc_dim_solve"
+    )
+    assert shared_sn_contract["modelsize_mparams_is_official_upstream_flag"] is True
+    assert shared_sn_contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert shared_sn_contract["mutates_receiver_visible_fc_dim"] is True
+    assert shared_sn_contract["archive_bytes_authority_required"] is True
     explicit_shared_target_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id=shared_target_sn["candidate_id"],
@@ -3816,6 +3838,17 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 160_000,
             "nominal_under_ceiling": True,
+            "modelsize_control_contract": {
+                "schema": "nerv_modelsize_control_contract.v1",
+                "family": "hi_nerv",
+                "control_semantics": (
+                    "local_receiver_visible_grid_search_nearest_target"
+                ),
+                "archive_bytes_authority_required": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -3889,6 +3922,14 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     selection = out["modelsize_candidate_selection"]
     assert selection["selection_mode"] == "planner_candidate"
     assert selection["candidate"]["candidate_id"] == "hinerv-unit-candidate"
+    assert selection["modelsize_control_contract"]["family"] == "hi_nerv"
+    assert selection["modelsize_control_contract"]["control_semantics"] == (
+        "local_receiver_visible_grid_search_nearest_target"
+    )
+    assert (
+        selection["modelsize_control_contract"]["archive_bytes_authority_required"]
+        is True
+    )
     assert selection["candidate_curriculum_plan"]["coder_pressure"]["enabled"] is True
     assert selection["candidate_curriculum_plan"]["coder_pressure"][
         "quant_bits"
@@ -4515,6 +4556,17 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 150_000,
             "nominal_under_ceiling": True,
+            "modelsize_control_contract": {
+                "schema": "nerv_modelsize_control_contract.v1",
+                "family": "snerv",
+                "control_semantics": (
+                    "manual_receiver_visible_fc_dim_feature_basis"
+                ),
+                "archive_bytes_authority_required": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -4535,6 +4587,14 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
     selection = out["modelsize_candidate_selection"]
     assert selection["selection_mode"] == "planner_candidate"
     assert selection["candidate"]["candidate_id"] == "snerv-unit-candidate"
+    assert selection["modelsize_control_contract"]["family"] == "snerv"
+    assert selection["modelsize_control_contract"]["control_semantics"] == (
+        "manual_receiver_visible_fc_dim_feature_basis"
+    )
+    assert (
+        selection["modelsize_control_contract"]["archive_bytes_authority_required"]
+        is True
+    )
     assert selection["launch_levels"] == 2
     assert selection["launch_bits_per_coeff"] == 1.5
     assert selection["launch_decoder_payload_codec"] == "int2_symmetric"
@@ -4842,6 +4902,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "run_snerv_scorer_loop_decoder_qat_smoke",
         lambda **_kwargs: FakeQatResult(),
     )
+    recon_weight_path = tmp_path / "joint_recon_weight.npy"
+    np.save(recon_weight_path, np.ones((384, 512), dtype=np.float32))
 
     out = execute_snerv_inverse_steg_advisory_and_adapt(
         output_dir=tmp_path / "snerv_native_gate",
@@ -4867,6 +4929,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_scorer_loop_search_mode="top_weight_coordinate",
         snerv_scorer_loop_qat_bits=4,
         snerv_scorer_loop_component_guard_mode="pose_seg_hard",
+        recon_pixel_weight_path=recon_weight_path,
+        recon_pixel_weight_normalize="none",
         repo_root=REPO_ROOT,
     )
 
@@ -4881,6 +4945,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "int2_symmetric"
     )
     assert native_calls[0]["scorer_loop_qat_lf_payload_codec"] == "portfolio_auto"
+    assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
+    assert native_calls[0]["recon_pixel_weight_normalize"] == "none"
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
     assert native["receiver_proof_passed"] is True

@@ -227,6 +227,19 @@ def test_hinerv_target_modelsize_rows_are_false_authority_nearest_rows() -> None
     assert all(row["score_claim"] is False for row in targeted)
     assert all(row["ready_for_exact_eval_dispatch"] is False for row in targeted)
     assert all("_tgtmp0p02" in row["candidate_id"] for row in targeted)
+    contract = targeted[0]["modelsize_control_contract"]
+    assert contract["schema"] == "nerv_modelsize_control_contract.v1"
+    assert contract["family"] == "hi_nerv"
+    assert contract["control_semantics"] == (
+        "local_receiver_visible_grid_search_nearest_target"
+    )
+    assert contract["shared_target_modelsize_mparams_consumed_as"] == (
+        "nearest_local_param_count_target"
+    )
+    assert contract["modelsize_mparams_is_official_upstream_flag"] is False
+    assert contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert contract["mutates_receiver_visible_architecture"] is True
+    assert contract["archive_bytes_authority_required"] is True
 
 
 def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
@@ -268,6 +281,13 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     assert row.requires_snAR1_archive_byte_oracle is True
     assert row.score_claim is False
     assert row.ready_for_exact_eval_dispatch is False
+    row_contract = row.as_dict()["modelsize_control_contract"]
+    assert row_contract["control_semantics"] == (
+        "manual_receiver_visible_fc_dim_feature_basis"
+    )
+    assert row_contract["modelsize_mparams_is_official_upstream_flag"] is False
+    assert row_contract["mutates_receiver_visible_fc_dim"] is True
+    assert row_contract["archive_bytes_authority_required"] is True
 
     report = build_snerv_modelsize_budget_report(
         hard_byte_ceilings=(178_000,),
@@ -327,6 +347,18 @@ def test_snerv_modelsize_candidate_id_tokens_losslessly_bind_receiver_controls()
     assert official_row.capacity_source == "official_snerv_modelsize"
     assert official_row.modelsize_mparams == 0.05
     assert official_row.official_modelsize_solution is not None
+    official_contract = official_row.as_dict()["modelsize_control_contract"]
+    assert official_contract["family"] == "snerv"
+    assert official_contract["control_semantics"] == (
+        "official_snerv_modelsize_quadratic_fc_dim_solve"
+    )
+    assert official_contract["shared_target_modelsize_mparams_consumed_as"] == (
+        "official_snerv_modelsize_quadratic_fc_dim_solve"
+    )
+    assert official_contract["modelsize_mparams_is_official_upstream_flag"] is True
+    assert official_contract["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert official_contract["mutates_receiver_visible_fc_dim"] is True
+    assert official_contract["archive_bytes_authority_required"] is True
     assert snerv_model_size_adapter_id_token(
         SNERV_SPECTRA_PRESERVING_ADAPTER
     ) == "spectra"

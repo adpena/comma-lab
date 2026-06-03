@@ -54,7 +54,12 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SnervModelSizeConfig,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
+    fit_hf_decoder_weighted_least_squares,
     quantize_lf,
+)
+from tac.substrates.snerv_inverse_steg_carrier.dwt import (
+    WaveletPyramid,
+    dwt2_native_synthesis_adjoint,
 )
 
 SNERV_MLX_NATIVE_TRAIN_EXPORT_SCHEMA = "snerv_mlx_native_train_export.v1"
@@ -141,6 +146,8 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat_lf_payload_codec: str | None = None,
     scorer_loop_qat_component_guard_mode: str = "score_primary",
     scorer_loop_qat_device: str = "cpu",
+    recon_pixel_weight_path: str | Path | None = None,
+    recon_pixel_weight_normalize: str = "mean",
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Hydrate real targets on MLX, export a NumPy-portable SNAR1 archive.
@@ -218,6 +225,12 @@ def train_export_snerv_mlx_native(
         )
 
     pairs_nchw255 = _target_pairs_to_nchw255(target0_np, target1_np)
+    recon_weight, recon_weight_metadata = _load_recon_pixel_weight_for_native_export(
+        recon_pixel_weight_path,
+        expected_pairs=int(num_pairs),
+        expected_hw=(int(output_height), int(output_width)),
+        normalize=str(recon_pixel_weight_normalize),
+    )
     closed_form_archive = build_snerv_mlx_native_packet_from_numpy_pairs(
         pairs_nchw255,
         levels=levels,
@@ -227,12 +240,26 @@ def train_export_snerv_mlx_native(
         decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=active_lf_payload_codec,
         model_size=model_size,
+        recon_pixel_weight=recon_weight,
+        recon_pixel_weight_metadata=recon_weight_metadata,
+        hf_decoder_saliency_gain=float(
+            candidate.get(
+                "hf_decoder_saliency_gain",
+                candidate.get("snerv_hf_decoder_saliency_gain", 1.0),
+            )
+        ),
         metadata_extra={
             "source_video_path": Path(source_video_path).as_posix(),
-            "training_backend": "mlx_target_hydration_numpy_closed_form_decoder_fit",
+            "training_backend": (
+                "mlx_target_hydration_numpy_joint_p18_p19_weighted_decoder_fit"
+                if recon_weight is not None
+                else "mlx_target_hydration_numpy_closed_form_decoder_fit"
+            ),
             "human_visual_fidelity_objective": False,
-            "contest_scorer_distortion_objective": True,
+            "contest_scorer_distortion_objective": recon_weight is not None,
+            "score_aware_hf_decoder_fit_executed": recon_weight is not None,
             "score_aware_long_training_executed": False,
+            "native_mlx_training_executed": False,
         },
     )
     scorer_loop_qat = _run_scorer_loop_qat_attachment(
@@ -255,7 +282,11 @@ def train_export_snerv_mlx_native(
         allow_overwrite=allow_overwrite,
     )
     selected_packet = bytes(closed_form_archive.packet)
-    selected_packet_source = "mlx_target_hydration_numpy_closed_form_decoder_fit"
+    selected_packet_source = (
+        "mlx_target_hydration_numpy_joint_p18_p19_weighted_decoder_fit"
+        if recon_weight is not None
+        else "mlx_target_hydration_numpy_closed_form_decoder_fit"
+    )
     scorer_loop_qat_public = {
         key: value for key, value in scorer_loop_qat.items() if key != "_best_packet_bytes"
     }
@@ -395,6 +426,16 @@ def train_export_snerv_mlx_native(
     )
     payload = artifact.as_jsonable()
     payload["packet_source"] = selected_packet_source
+    payload["score_aware_hf_decoder_fit_executed"] = recon_weight is not None
+    payload["score_aware_long_training_executed"] = False
+    payload["native_mlx_training_executed"] = False
+    payload["recon_pixel_weight"] = recon_weight_metadata or {
+        "schema": "snerv_mlx_native_recon_pixel_weight_consumption.v1",
+        "enabled": False,
+        "source_kind": "disabled",
+        "hf_decoder_fit_mode": "least_squares_numpy_closed_form",
+        **FALSE_AUTHORITY,
+    }
     payload["wall_seconds"] = round(time.monotonic() - started, 6)
     report_path = out / SNERV_MLX_NATIVE_REPORT_FILENAME
     if report_path.exists() and not allow_overwrite:
@@ -763,6 +804,9 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     step_map_bits_per_coeff: float = 4.0,
     lf_payload_codec: str = "portfolio_auto",
     model_size: SnervModelSizeConfig | None = None,
+    recon_pixel_weight: np.ndarray | None = None,
+    recon_pixel_weight_metadata: Mapping[str, Any] | None = None,
+    hf_decoder_saliency_gain: float = 1.0,
     metadata_extra: Mapping[str, Any] | None = None,
 ) -> SnervArchivePacket:
     """Build an SNAR1 packet from NumPy pair frames using existing SNeRV codecs."""
@@ -777,7 +821,19 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         raise SnervMlxNativeExportError("pairs_nchw255 contains nonfinite values")
     n_pairs, _frames, channels, h, w = (int(v) for v in pairs.shape)
     model_size = model_size or SnervModelSizeConfig()
+    weighted_fit_enabled = recon_pixel_weight is not None
+    recon_weight = (
+        _normalize_recon_pixel_weight_array(
+            recon_pixel_weight,
+            expected_pairs=n_pairs,
+            expected_hw=(h, w),
+            normalize="none",
+        )
+        if weighted_fit_enabled
+        else None
+    )
     pyramids = []
+    weight_pyramids: list[WaveletPyramid] | None = [] if weighted_fit_enabled else None
     records: list[tuple[int, int, int, Any]] = []
     for pair_idx in range(n_pairs):
         for frame_idx in range(2):
@@ -788,13 +844,34 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
                     wavelet=str(wavelet),
                 )
                 pyramids.append(pyr)
+                if weight_pyramids is not None and recon_weight is not None:
+                    weight_channel = 0 if int(recon_weight.shape[-1]) == 1 else channel_idx
+                    weight_pyramids.append(
+                        dwt2_native_synthesis_adjoint(
+                            recon_weight[pair_idx, frame_idx, :, :, weight_channel],
+                            levels=int(levels),
+                            wavelet=str(wavelet),
+                        )
+                    )
                 records.append((pair_idx, frame_idx, channel_idx, pyr))
-    decoder = fit_hf_decoder_least_squares(
-        pyramids,
-        levels=int(levels),
-        model_size=model_size,
-        temporal_group_count=channels,
-    )
+    if weight_pyramids is None:
+        decoder = fit_hf_decoder_least_squares(
+            pyramids,
+            levels=int(levels),
+            model_size=model_size,
+            temporal_group_count=channels,
+        )
+        hf_decoder_fit_mode = "least_squares_numpy_closed_form"
+    else:
+        decoder = fit_hf_decoder_weighted_least_squares(
+            pyramids,
+            levels=int(levels),
+            detail_weight_pyramids=weight_pyramids,
+            saliency_gain=float(hf_decoder_saliency_gain),
+            model_size=model_size,
+            temporal_group_count=channels,
+        )
+        hf_decoder_fit_mode = "joint_p18_p19_recon_pixel_weighted_least_squares"
 
     lf_quant_planes: list[np.ndarray] = []
     lf_zero_points: list[float] = []
@@ -835,7 +912,10 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "target_bits_per_coeff": float(target_bits_per_coeff),
         "uniform_quantization_levels": int(n_levels),
         "allocation_mode": "uniform_mlx_native_closed_form_export",
-        "hf_decoder_fit_mode": "least_squares_numpy_closed_form",
+        "hf_decoder_fit_mode": hf_decoder_fit_mode,
+        "hf_decoder_saliency_gain": float(hf_decoder_saliency_gain),
+        "recon_pixel_weight_consumed": bool(weighted_fit_enabled),
+        "recon_pixel_weight_metadata": dict(recon_pixel_weight_metadata or {}),
         "decoder_payload_codec": str(decoder_payload_codec),
         "snerv_fc_dim": int(model_size.fc_dim),
         "snerv_emb_size": int(model_size.emb_size),
@@ -902,6 +982,174 @@ def _target_pairs_to_nchw255(target0_np: np.ndarray, target1_np: np.ndarray) -> 
     pair = np.stack([target0_np, target1_np], axis=1)
     pair = np.clip(pair.astype(np.float32), 0.0, 1.0) * 255.0
     return np.transpose(pair, (0, 1, 4, 2, 3)).astype(np.float32)
+
+
+def _load_recon_pixel_weight_for_native_export(
+    path: str | Path | None,
+    *,
+    expected_pairs: int,
+    expected_hw: tuple[int, int],
+    normalize: str,
+) -> tuple[np.ndarray | None, dict[str, Any] | None]:
+    if path is None:
+        return None, None
+    if normalize not in {"mean", "none"}:
+        raise SnervMlxNativeExportError(
+            "recon_pixel_weight_normalize must be 'mean' or 'none'"
+        )
+    resolved = Path(path).expanduser().resolve(strict=False)
+    if not resolved.is_file():
+        raise SnervMlxNativeExportError(
+            f"recon_pixel_weight_path is not a file: {resolved}"
+        )
+    npz_key: str | None = None
+    if resolved.suffix == ".npz":
+        with np.load(resolved) as data:
+            keys = sorted(str(key) for key in data.files)
+            if not keys:
+                raise SnervMlxNativeExportError(
+                    f"recon_pixel_weight npz is empty: {resolved}"
+                )
+            npz_key = "weight" if "weight" in data.files else keys[0]
+            raw = np.asarray(data[npz_key], dtype=np.float32)
+    else:
+        raw = np.asarray(np.load(resolved), dtype=np.float32)
+    weight = _normalize_recon_pixel_weight_array(
+        raw,
+        expected_pairs=int(expected_pairs),
+        expected_hw=expected_hw,
+        normalize=normalize,
+    )
+    metadata = {
+        "schema": "snerv_mlx_native_recon_pixel_weight_consumption.v1",
+        "enabled": True,
+        "source_kind": "file",
+        "path": resolved.as_posix(),
+        "sha256": sha256_file(resolved),
+        "npz_key": npz_key,
+        "normalize": normalize,
+        "expected_pairs": int(expected_pairs),
+        "expected_hw": [int(expected_hw[0]), int(expected_hw[1])],
+        "consumed_shape": [int(v) for v in weight.shape],
+        "stats": _array_stats(weight),
+        "hf_decoder_fit_mode": "joint_p18_p19_recon_pixel_weighted_least_squares",
+        "authority": "false_macos_mlx_research_signal",
+        **FALSE_AUTHORITY,
+    }
+    return weight, metadata
+
+
+def _normalize_recon_pixel_weight_array(
+    value: Any,
+    *,
+    expected_pairs: int,
+    expected_hw: tuple[int, int],
+    normalize: str,
+) -> np.ndarray:
+    if normalize not in {"mean", "none"}:
+        raise SnervMlxNativeExportError(
+            "recon_pixel_weight normalize must be 'mean' or 'none'"
+        )
+    arr = np.asarray(value, dtype=np.float32)
+    if arr.ndim == 2:
+        h, w = arr.shape
+        if (int(h), int(w)) != expected_hw:
+            raise SnervMlxNativeExportError(
+                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
+            )
+        arr = arr[None, None, :, :, None]
+    elif arr.ndim == 3:
+        h, w, channels = arr.shape
+        if (int(h), int(w)) != expected_hw:
+            raise SnervMlxNativeExportError(
+                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
+            )
+        if int(channels) not in (1, 3):
+            raise SnervMlxNativeExportError(
+                "recon_pixel_weight channel count must be 1 or 3"
+            )
+        arr = arr[None, None, :, :, :]
+    elif arr.ndim == 4:
+        leading, h, w, channels = arr.shape
+        if int(leading) not in (1, int(expected_pairs)):
+            raise SnervMlxNativeExportError(
+                "4D recon_pixel_weight leading dimension must be 1 or "
+                f"expected_pairs={int(expected_pairs)}; got {int(leading)}"
+            )
+        if (int(h), int(w)) != expected_hw:
+            raise SnervMlxNativeExportError(
+                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
+            )
+        if int(channels) not in (1, 3):
+            raise SnervMlxNativeExportError(
+                "recon_pixel_weight channel count must be 1 or 3"
+            )
+        arr = arr[:, None, :, :, :]
+    elif arr.ndim == 5:
+        pairs, frames, h, w, channels = arr.shape
+        if int(pairs) not in (1, int(expected_pairs)):
+            raise SnervMlxNativeExportError(
+                "5D recon_pixel_weight pair dimension must be 1 or "
+                f"expected_pairs={int(expected_pairs)}; got {int(pairs)}"
+            )
+        if int(frames) != 2:
+            raise SnervMlxNativeExportError(
+                "5D recon_pixel_weight frame dimension must be 2"
+            )
+        if (int(h), int(w)) != expected_hw:
+            raise SnervMlxNativeExportError(
+                f"recon_pixel_weight spatial shape {(int(h), int(w))} != {expected_hw}"
+            )
+        if int(channels) not in (1, 3):
+            raise SnervMlxNativeExportError(
+                "recon_pixel_weight channel count must be 1 or 3"
+            )
+    else:
+        raise SnervMlxNativeExportError(
+            "recon_pixel_weight must be shaped (H,W), (H,W,1/3), "
+            "(1|N,H,W,1/3), or (1|N,2,H,W,1/3)"
+        )
+    if not np.isfinite(arr).all():
+        raise SnervMlxNativeExportError("recon_pixel_weight must be finite")
+    if float(np.min(arr)) < 0.0:
+        raise SnervMlxNativeExportError("recon_pixel_weight must be non-negative")
+    if float(np.mean(arr)) <= 0.0:
+        raise SnervMlxNativeExportError(
+            "recon_pixel_weight must have positive total mass"
+        )
+    arr = np.broadcast_to(
+        arr,
+        (
+            int(expected_pairs),
+            2,
+            int(expected_hw[0]),
+            int(expected_hw[1]),
+            int(arr.shape[-1]),
+        ),
+    ).astype(np.float32, copy=True)
+    if normalize == "mean":
+        mean = float(np.mean(arr))
+        if mean <= 0.0 or not np.isfinite(mean):
+            raise SnervMlxNativeExportError(
+                "recon_pixel_weight mean is not positive finite"
+            )
+        arr = arr / mean
+    return np.ascontiguousarray(arr, dtype=np.float32)
+
+
+def _array_stats(value: np.ndarray) -> dict[str, Any]:
+    arr = np.asarray(value, dtype=np.float64)
+    finite = arr[np.isfinite(arr)]
+    return {
+        "shape": [int(v) for v in arr.shape],
+        "dtype": str(np.asarray(value).dtype),
+        "min": float(np.min(finite)) if finite.size else 0.0,
+        "max": float(np.max(finite)) if finite.size else 0.0,
+        "mean": float(np.mean(finite)) if finite.size else 0.0,
+        "std": float(np.std(finite)) if finite.size else 0.0,
+        "nonzero_fraction": float(np.count_nonzero(arr) / max(int(arr.size), 1)),
+        "nonfinite_count": int(arr.size - finite.size),
+    }
 
 
 def _verify_receiver_frame_decode(

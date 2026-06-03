@@ -85,6 +85,53 @@ def test_packet_builder_defaults_to_portfolio_lf_payload_codec() -> None:
     assert packet.section_bytes["lf_payload"] > 0
 
 
+def test_packet_builder_consumes_joint_recon_pixel_weight_in_decoder_fit() -> None:
+    pairs = _tiny_pairs(pairs=1)
+    yy, xx = np.mgrid[0:16, 0:16].astype(np.float32)
+    pairs[0, 1, 0] += 18.0 * np.sin(xx * 0.9) * np.cos(yy * 0.7)
+    pairs[0, 0, 2] += 12.0 * (((xx.astype(np.int32) + yy.astype(np.int32)) % 3) == 0)
+    pairs = np.clip(pairs, 0.0, 255.0)
+    weight = np.ones((1, 2, 16, 16, 1), dtype=np.float32)
+    weight[:, :, 3:11, 4:12, :] = 64.0
+
+    unweighted = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+    )
+    weighted = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+        recon_pixel_weight=weight,
+        recon_pixel_weight_metadata={"schema": "unit_joint_weight.v1"},
+        hf_decoder_saliency_gain=3.0,
+    )
+
+    decoded = unpack_snerv_archive(weighted.packet)
+    assert decoded.metadata["recon_pixel_weight_consumed"] is True
+    assert decoded.metadata["hf_decoder_fit_mode"] == (
+        "joint_p18_p19_recon_pixel_weighted_least_squares"
+    )
+    assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(3.0)
+    assert decoded.metadata["recon_pixel_weight_metadata"]["schema"] == (
+        "unit_joint_weight.v1"
+    )
+    assert weighted.packet != unweighted.packet
+    assert not np.allclose(
+        decode_snerv_archive_frames(weighted.packet),
+        decode_snerv_archive_frames(unweighted.packet),
+    )
+
+
 def test_train_export_hydrates_mlx_targets_and_writes_packet(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -143,6 +190,108 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert report["scorer_loop_qat"]["requested"] is False
     frames = decode_snerv_archive_frames(packet_path.read_bytes())
     assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    pairs[0, 1, 0, 3:12, 4:13] += 24.0
+    pairs = np.clip(pairs, 0.0, 255.0)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    weight = np.ones((1, 2, 16, 16, 1), dtype=np.float32)
+    weight[:, :, 3:12, 4:13, :] = 16.0
+    weight_path = tmp_path / "joint_p18_p19_weight.npz"
+    np.savez(weight_path, weight=weight)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "export",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "hf_decoder_saliency_gain": 2.5,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        recon_pixel_weight_path=weight_path,
+        recon_pixel_weight_normalize="mean",
+    )
+
+    assert report["packet_source"] == (
+        "mlx_target_hydration_numpy_joint_p18_p19_weighted_decoder_fit"
+    )
+    recon = report["recon_pixel_weight"]
+    assert recon["enabled"] is True
+    assert recon["source_kind"] == "file"
+    assert recon["path"] == weight_path.as_posix()
+    assert recon["sha256"]
+    assert recon["npz_key"] == "weight"
+    assert recon["normalize"] == "mean"
+    assert recon["consumed_shape"] == [1, 2, 16, 16, 1]
+    assert recon["score_claim"] is False
+    assert recon["promotion_eligible"] is False
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["score_aware_hf_decoder_fit_executed"] is True
+    assert decoded.metadata["hf_decoder_fit_mode"] == (
+        "joint_p18_p19_recon_pixel_weighted_least_squares"
+    )
+    assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(2.5)
+    assert decoded.metadata["recon_pixel_weight_consumed"] is True
+    assert decoded.metadata["recon_pixel_weight_metadata"]["sha256"] == recon["sha256"]
+
+
+def test_train_export_refuses_bad_recon_pixel_weight_shape(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    bad_weight_path = tmp_path / "bad_weight.npy"
+    np.save(bad_weight_path, np.ones((8, 8), dtype=np.float32))
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    with pytest.raises(mod.SnervMlxNativeExportError, match="spatial shape"):
+        train_export_snerv_mlx_native(
+            output_dir=tmp_path / "export_bad",
+            num_pairs=1,
+            source_video_path="unit.mkv",
+            modelsize_candidate={
+                "levels": 1,
+                "wavelet": "haar",
+                "bits_per_coeff": 3.0,
+                "decoder_payload_codec": "int8_symmetric",
+            },
+            scorer_upstream_dir="upstream",
+            output_height=16,
+            output_width=16,
+            run_archive_export=False,
+            recon_pixel_weight_path=bad_weight_path,
+        )
 
 
 def test_train_export_reports_actual_active_decoder_payload_codec(

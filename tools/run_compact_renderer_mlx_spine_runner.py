@@ -2153,6 +2153,19 @@ def _modelsize_candidate_from_self_describing_id(
     return row
 
 
+def _modelsize_control_contract(
+    candidate: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Return canonical modelsize-control semantics without inventing authority."""
+
+    if not candidate:
+        return None
+    contract = candidate.get("modelsize_control_contract")
+    if not isinstance(contract, Mapping):
+        return None
+    return dict(contract)
+
+
 def _write_snerv_binary_profile_attachment(
     *,
     archive_path: str | Path | None,
@@ -2431,6 +2444,8 @@ def _run_snerv_native_mlx_export_attachment(
     scorer_loop_qat_lf_payload_codec: str,
     scorer_loop_qat_component_guard_mode: str,
     scorer_loop_qat_device: str,
+    recon_pixel_weight_path: str | Path | None,
+    recon_pixel_weight_normalize: str,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
 
@@ -2484,6 +2499,8 @@ def _run_snerv_native_mlx_export_attachment(
                 scorer_loop_qat_component_guard_mode
             ),
             scorer_loop_qat_device=str(scorer_loop_qat_device),
+            recon_pixel_weight_path=recon_pixel_weight_path,
+            recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
             allow_overwrite=bool(allow_overwrite),
         )
         blockers = list(artifact.get("blockers") or [])
@@ -2524,8 +2541,18 @@ def _run_snerv_native_mlx_export_attachment(
             "scorer_loop_qat_best_materialized": bool(
                 native_scorer_loop.get("emitted_packet_uses_scorer_loop_best_decoder")
             ),
+            "score_aware_hf_decoder_fit_executed": bool(
+                artifact.get("score_aware_hf_decoder_fit_executed")
+            ),
+            "score_aware_long_training_executed": bool(
+                artifact.get("score_aware_long_training_executed")
+            ),
+            "native_mlx_training_executed": bool(
+                artifact.get("native_mlx_training_executed")
+            ),
             "native_mlx_train_export_attached": True,
             "native_mlx_full600_campaign_ready": int(num_pairs) >= CONTEST_PAIR_COUNT,
+            "recon_pixel_weight": artifact.get("recon_pixel_weight"),
             "blockers": _dedupe(blockers),
             "artifact": artifact,
             "score_claim": False,
@@ -2887,6 +2914,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
     snerv_temporal_context_override: int | None = None,
+    recon_pixel_weight_path: str | Path | None = None,
+    auto_joint_recon_pixel_weight: bool = False,
+    recon_pixel_weight_normalize: str = "mean",
     run_native_mlx_export: bool = False,
     snerv_native_mlx_receiver_proof_timeout_seconds: int = 1800,
     run_scorer_loop_qat: bool = False,
@@ -2941,6 +2971,21 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             f"output dir is non-empty; pass --overwrite: {out}"
         )
     out.mkdir(parents=True, exist_ok=True)
+    effective_recon_pixel_weight_path = recon_pixel_weight_path
+    recon_pixel_weight_auto_discovery: dict[str, Any] | None = None
+    if auto_joint_recon_pixel_weight:
+        if recon_pixel_weight_path is not None:
+            raise CompactRendererMlxSpineRunnerError(
+                "pass either --recon-pixel-weight-path or "
+                "--auto-joint-recon-pixel-weight, not both"
+            )
+        (
+            effective_recon_pixel_weight_path,
+            recon_pixel_weight_auto_discovery,
+        ) = _discover_joint_recon_pixel_weight_path(
+            repo_root=root,
+            num_pairs=int(num_pairs),
+        )
 
     planner = _score_aware_carrier_training_plan(
         "snerv",
@@ -3084,6 +3129,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                         "planner_candidate" if candidate else "manual_cli_knobs"
                     ),
                     "candidate": candidate or None,
+                    "modelsize_control_contract": _modelsize_control_contract(
+                        candidate
+                    ),
                     "candidate_curriculum_plan": prelaunch_curriculum_plan,
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -3307,6 +3355,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             snerv_scorer_loop_component_guard_mode
         ),
         scorer_loop_qat_device=str(distillation_device),
+        recon_pixel_weight_path=effective_recon_pixel_weight_path,
+        recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
     )
     snerv_mlx_native_file_backed_evidence = (
         build_snerv_mlx_native_file_backed_evidence(
@@ -3358,9 +3408,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             snerv_mlx_native_export.get("executed")
         ),
         native_mlx_long_training_bound=bool(
-            snerv_mlx_native_export.get("executed")
-            and int(num_pairs) >= CONTEST_PAIR_COUNT
-            and int(epochs) >= 8
+            snerv_mlx_native_export.get("score_aware_long_training_executed")
         ),
         native_mlx_receiver_proof_passed=snerv_mlx_native_export_verified,
         native_mlx_full600_campaign_ready=bool(
@@ -3437,6 +3485,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "family": "snerv",
                 "selection_mode": "planner_candidate" if candidate else "manual_cli_knobs",
                 "candidate": candidate or None,
+                "modelsize_control_contract": _modelsize_control_contract(candidate),
                 "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                 "launch_levels": levels,
                 "launch_bits_per_coeff": target_bits_per_coeff,
@@ -3446,6 +3495,23 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 ),
                 "launch_decoder_payload_codec": decoder_payload_codec,
                 "candidate_curriculum_plan": candidate_curriculum_plan,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "snerv_recon_pixel_weight": {
+                "schema": "compact_snerv_recon_pixel_weight_consumption.v1",
+                "enabled": effective_recon_pixel_weight_path is not None,
+                "path": (
+                    Path(effective_recon_pixel_weight_path).as_posix()
+                    if effective_recon_pixel_weight_path is not None
+                    else None
+                ),
+                "normalize": str(recon_pixel_weight_normalize),
+                "auto_discovery": recon_pixel_weight_auto_discovery,
+                "native_mlx_export_consumption": snerv_mlx_native_export.get(
+                    "recon_pixel_weight"
+                ),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -3509,9 +3575,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "mlx_native_train_export_attached": bool(
                     snerv_mlx_native_export.get("executed")
                 ),
+                "mlx_native_hf_decoder_fit_executed": bool(
+                    snerv_mlx_native_export.get(
+                        "score_aware_hf_decoder_fit_executed"
+                    )
+                ),
                 "mlx_native_receiver_proof_passed": snerv_mlx_native_export_verified,
                 "mlx_native_training_required_next": (
-                    not snerv_mlx_native_export_verified
+                    not bool(
+                        snerv_mlx_native_export.get(
+                            "score_aware_long_training_executed"
+                        )
+                    )
                 ),
                 "authority": "macos_cpu_advisory_false_authority",
             },
@@ -5239,6 +5314,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                         "planner_candidate" if candidate else "manual_cli_knobs"
                     ),
                     "candidate": candidate or None,
+                    "modelsize_control_contract": _modelsize_control_contract(
+                        candidate
+                    ),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -5422,6 +5500,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                         "planner_candidate" if candidate else "manual_cli_knobs"
                     ),
                     "candidate": candidate or None,
+                    "modelsize_control_contract": _modelsize_control_contract(
+                        candidate
+                    ),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -5535,6 +5616,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                         "planner_candidate" if candidate else "manual_cli_knobs"
                     ),
                     "candidate": candidate or None,
+                    "modelsize_control_contract": _modelsize_control_contract(
+                        candidate
+                    ),
                     "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                     "launch_latent_dim": launch_latent_dim,
                     "launch_embed_dim": launch_embed_dim,
@@ -5752,6 +5836,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "family": "hi_nerv",
                 "selection_mode": "planner_candidate" if candidate else "manual_cli_knobs",
                 "candidate": candidate or None,
+                "modelsize_control_contract": _modelsize_control_contract(candidate),
                 "num_pairs_for_budget": CONTEST_PAIR_COUNT,
                 "launch_latent_dim": launch_latent_dim,
                 "launch_embed_dim": launch_embed_dim,
@@ -10747,6 +10832,9 @@ def main(argv: list[str] | None = None) -> int:
             snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
             snerv_hfr_gain=args.snerv_hfr_gain,
             snerv_temporal_context_override=args.snerv_temporal_context,
+            recon_pixel_weight_path=args.recon_pixel_weight_path,
+            auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
+            recon_pixel_weight_normalize=args.recon_pixel_weight_normalize,
             run_native_mlx_export=not args.skip_snerv_native_mlx_export,
             snerv_native_mlx_receiver_proof_timeout_seconds=(
                 args.snerv_native_mlx_receiver_proof_timeout

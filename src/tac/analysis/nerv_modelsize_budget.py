@@ -186,6 +186,29 @@ class HinervModelSizeCandidate:
     def as_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["decoder_channels"] = list(self.decoder_channels)
+        payload["modelsize_control_contract"] = {
+            "schema": "nerv_modelsize_control_contract.v1",
+            "family": "hi_nerv",
+            "control_semantics": (
+                "local_receiver_visible_grid_search_nearest_target"
+                if self.capacity_source == "local_hinerv_target_modelsize"
+                else "manual_receiver_visible_architecture_knobs"
+            ),
+            "shared_target_modelsize_mparams_consumed_as": (
+                "nearest_local_param_count_target"
+                if self.target_modelsize_mparams is not None
+                else None
+            ),
+            "modelsize_mparams_is_official_upstream_flag": False,
+            "modelsize_mparams_caps_archive_zip_bytes": False,
+            "mutates_receiver_visible_architecture": True,
+            "mutates_trained_parameter_count": True,
+            "hard_byte_ceiling_is_archive_budget_filter": True,
+            "archive_bytes_authority_required": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
         return payload
 
 
@@ -238,6 +261,31 @@ class SnervModelSizeCandidate:
         payload = asdict(self)
         payload["carrier_hw"] = list(self.carrier_hw)
         payload["mfu_scales"] = list(self.mfu_scales)
+        official = self.official_modelsize_solution is not None
+        payload["modelsize_control_contract"] = {
+            "schema": "nerv_modelsize_control_contract.v1",
+            "family": "snerv",
+            "control_semantics": (
+                "official_snerv_modelsize_quadratic_fc_dim_solve"
+                if official
+                else "manual_receiver_visible_fc_dim_feature_basis"
+            ),
+            "shared_target_modelsize_mparams_consumed_as": (
+                "official_snerv_modelsize_quadratic_fc_dim_solve"
+                if official
+                else None
+            ),
+            "modelsize_mparams_is_official_upstream_flag": bool(official),
+            "modelsize_mparams_caps_archive_zip_bytes": False,
+            "mutates_receiver_visible_architecture": True,
+            "mutates_receiver_visible_fc_dim": True,
+            "mutates_trained_parameter_count": True,
+            "hard_byte_ceiling_is_archive_budget_filter": True,
+            "archive_bytes_authority_required": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
         return payload
 
 
