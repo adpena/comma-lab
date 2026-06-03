@@ -6,6 +6,8 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-06-03T22:00:28Z | codex | hinerv_epoch19499_ema_archive_export_20260603T2158Z | local_mlx | local-export-epoch19499-ema |  | completed_receiver_proof_archive_bytes_121738 | Export complete: archive.zip 121738 bytes, receiver_proof_ready=true; section trend vs epoch16499 is +114 bytes total (+63 latents_rc, +47 decoder_qw, +4 overhead). Blockers remain MLX false-authority/full-video replay/exact eval. |
+| 2026-06-03T22:00:28Z | codex | hinerv_epoch19499_ema_archive_export_20260603T2158Z | local_mlx | pending |  | stale_superseded_by_local_export_epoch19499_ema | Pending export claim replaced by completed local export artifact. No score claim. |
 | 2026-06-03T21:57:53Z | codex | hinerv_epoch19499_ema_archive_export_20260603T2158Z | local_mlx | pending |  | active_exporting | Export latest HiNeRV EMA epoch19499 into byte-closed archive plus receiver proof; local MLX false-authority, measuring section bytes trend. |
 | 2026-06-03T21:54:59Z | codex | snerv_full600_native_temporal_segw8_pr95bound_20260603T2156Z | local_mlx | local-pid-58321 |  | active_running | Concrete child process for corrected SNeRV segw8 run under wrapper pid58320; false-authority local MLX until receiver proof/replay/exact. |
 | 2026-06-03T21:54:46Z | codex | snerv_full600_native_temporal_segw8_pr95bound_20260603T2156Z | local_mlx | local-pid-58320 |  | active_running | Corrected SNeRV full600 PR95-stage SegNet-weight-8 run; pact_muon_adamw, PR95 faithful curriculum, coder-QAT, native MLX receiver-safe fork; false-authority local MLX until receiver proof/replay/exact. |
