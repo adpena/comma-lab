@@ -178,6 +178,48 @@ def test_nchw_batch_one_inputs_match_chw_inputs() -> None:
     assert nchw.as_jsonable_metadata()["promotion_eligible"] is False
 
 
+def test_official_tub_numpy_matches_torch_haar_and_temporal_algebra() -> None:
+    torch = pytest.importorskip("torch")
+
+    rng = np.random.default_rng(4)
+    current = rng.standard_normal((2, 6, 8))
+    previous = current * 0.75 + 0.5
+    next_frame = current * -0.25 - 0.125
+
+    out = prepare_official_tub_graph_inputs(current, previous, next_frame)
+
+    frames = torch.tensor(
+        np.stack([current, previous, next_frame], axis=0),
+        dtype=torch.float64,
+    )
+    torch_lf = (
+        frames[:, :, 0::2, 0::2]
+        + frames[:, :, 0::2, 1::2]
+        + frames[:, :, 1::2, 0::2]
+        + frames[:, :, 1::2, 1::2]
+    ) * 0.5
+    torch_norm = (torch_lf - torch_lf.min()) / (torch_lf.max() - torch_lf.min())
+    torch_prev_lowpass_over_2 = (torch_norm[0:1] + torch_norm[1:2]) / (
+        2.0 * torch.sqrt(torch.tensor(2.0, dtype=torch.float64))
+    )
+    torch_next_lowpass_over_2 = (torch_norm[0:1] + torch_norm[2:3]) / (
+        2.0 * torch.sqrt(torch.tensor(2.0, dtype=torch.float64))
+    )
+
+    np.testing.assert_allclose(out.lf_triplet, torch_lf.numpy(), atol=1e-12)
+    np.testing.assert_allclose(out.normalized_lf, torch_norm.numpy(), atol=1e-12)
+    np.testing.assert_allclose(
+        out.prev_lowpass_over_2,
+        torch_prev_lowpass_over_2.numpy(),
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        out.next_lowpass_over_2,
+        torch_next_lowpass_over_2.numpy(),
+        atol=1e-12,
+    )
+
+
 def test_official_tub_output2_fusion_shape_matches_source_split_concat_shuffle() -> None:
     shape = official_output2_fusion_shape(
         (1, 12, 4, 5),

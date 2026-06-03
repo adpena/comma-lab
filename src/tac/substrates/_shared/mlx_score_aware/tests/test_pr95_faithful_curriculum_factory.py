@@ -773,6 +773,39 @@ def test_pr95_stage_4_consumes_real_coder_qat_terms_NO_FAKE() -> None:
 
 
 @requires_mlx
+def test_mlx_score_adapter_forwards_post_optimizer_projection_NO_FAKE() -> None:
+    """Substrate proximal projections must run through the training harness."""
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    calls: list[int] = []
+
+    def _projection(*, epoch: int) -> dict[str, object]:
+        calls.append(int(epoch))
+        return {
+            "schema": "unit_post_optimizer_projection.v1",
+            "epoch": int(epoch),
+            "applied": True,
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    bundle.model.post_optimizer_projection = _projection
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="test_substrate")
+
+    report = adapter.post_optimizer_projection(epoch=17)
+
+    assert calls == [17]
+    assert report == {
+        "schema": "unit_post_optimizer_projection.v1",
+        "epoch": 17,
+        "applied": True,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+@requires_mlx
 def test_pr95_curriculum_path_trains_student_heads_when_stage_weight_active() -> None:
     import mlx.core as mx
 
