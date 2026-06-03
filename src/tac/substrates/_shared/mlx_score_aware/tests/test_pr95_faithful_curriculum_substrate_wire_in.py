@@ -588,17 +588,18 @@ def test_harness_construction_propagates_pr95_state_into_adapter() -> None:
 
 
 def test_pr95_curriculum_step_consumes_c1a_entropy_not_telemetry_only() -> None:
-    """PR95 C1a/sigma controls must change the train loss path, not only logs."""
+    """PR95 stage verdict controls must change the train loss path."""
 
     repo_root = _repo_root()
     adapter_source = (
         repo_root / "src/tac/substrates/_shared/mlx_score_aware/adapter.py"
     ).read_text(encoding="utf-8")
 
+    assert "pr95_mlx_stage_scorer_surrogate_loss" in adapter_source
+    assert "stage_verdict.loss_family" in adapter_source
+    assert "refusing to fall back to generic" in adapter_source
+    assert "score_aware_loss" in adapter_source
     assert "build_decoder_c1a_entropy_term" in adapter_source
     assert "stage_verdict.cat_lambda" in adapter_source
     assert "stage_verdict.cat_sigma" in adapter_source
     assert "loss_part_weighted_pr95_c1a_entropy" in adapter_source
-    assert "total = total + float(stage_verdict.cat_lambda) * c1a_entropy" in (
-        adapter_source
-    )

@@ -45,6 +45,9 @@ from tac.analysis.nerv_modelsize_budget import (
     snerv_modelsize_candidate_id_from_controls,
 )
 from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_contract
+from tac.analysis.snerv_lf_payload_archive_recode import (
+    build_snerv_lf_payload_recode_admission_plan,
+)
 from tac.optimization.recon_pixel_weight_surface import (
     JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA,
 )
@@ -157,6 +160,7 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_manifest_paths: Sequence[str | Path] = (),
     candidate_feedback_sources: Sequence[Mapping[str, Any]] = (),
     decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
+    snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
     snerv_bounded_proof_epochs: int = 3,
@@ -243,6 +247,7 @@ def build_nerv_long_training_campaign_plan(
                 bounded_proof_epochs=int(snerv_bounded_proof_epochs),
                 source_parity_contract=source_parity_contract,
                 planner_row_queue_artifact_path=planner_queue_artifact,
+                snerv_lf_payload_recode_sources=snerv_lf_payload_recode_sources,
             )
         )
 
@@ -310,6 +315,7 @@ def build_nerv_long_training_campaign_plan(
         "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
         "candidate_feedback_row_count": _unique_index_row_count(candidate_feedback_index),
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
+        "snerv_lf_payload_recode_source_count": len(snerv_lf_payload_recode_sources),
         "decoder_weight_waterfill_row_count": _unique_index_row_count(decoder_weight_waterfill_index),
         "decoder_weight_waterfill_unattached_source_count": len(decoder_weight_waterfill_unattached_sources),
         "decoder_weight_waterfill_unattached_sources": (decoder_weight_waterfill_unattached_sources),
@@ -676,6 +682,7 @@ def _snerv_campaign_row(
     bounded_proof_epochs: int = 3,
     source_parity_contract: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
+    snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
     source_control_blockers = _snerv_source_bound_control_blockers(candidate)
@@ -779,6 +786,22 @@ def _snerv_campaign_row(
         insert_at = command.index("--snerv-model-size-adapter")
         command.insert(insert_at, "--snerv-spectra-preserving-adapter")
     prioritized_pair_training = _snerv_prioritized_pair_training_plan(prioritized_pair_indices)
+    lf_recode_admission_plan = _snerv_lf_payload_recode_admission_for_candidate(
+        sources=snerv_lf_payload_recode_sources,
+        candidate=candidate,
+        candidate_id=candidate_id,
+        full_video_coverage=bool(feedback.get("full_video_local_prefilter_attached")),
+    )
+    lf_recode_selected_mode = _snerv_lf_recode_selected_mode(
+        lf_recode_admission_plan
+    )
+    if lf_recode_selected_mode:
+        command.extend(
+            [
+                "--snerv-scorer-loop-lf-payload-codec",
+                lf_recode_selected_mode,
+            ]
+        )
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
     blockers = _dedupe(
         [
@@ -799,6 +822,9 @@ def _snerv_campaign_row(
             *list(source_parity["required_blockers"]),
             *list(curriculum.get("blockers") or []),
             *feedback_evidence_blockers,
+            *_snerv_lf_payload_recode_campaign_blockers(
+                lf_recode_admission_plan
+            ),
         ]
     )
     source_controls_ready = (
@@ -846,6 +872,8 @@ def _snerv_campaign_row(
             "candidate_feedback": feedback or None,
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
             "prioritized_pair_training": prioritized_pair_training,
+            "snerv_lf_payload_recode_admission_plan": lf_recode_admission_plan,
+            "snerv_lf_payload_codec_from_admission_plan": lf_recode_selected_mode,
         },
     )
 
@@ -1717,6 +1745,58 @@ def _snerv_source_bound_controls(candidate: Mapping[str, Any]) -> dict[str, Any]
         "decoder_feature_count": candidate.get("decoder_feature_count"),
         **FALSE_AUTHORITY,
     }
+
+
+def _snerv_lf_payload_recode_admission_for_candidate(
+    *,
+    sources: Sequence[Mapping[str, Any]],
+    candidate: Mapping[str, Any],
+    candidate_id: str,
+    full_video_coverage: bool,
+) -> dict[str, Any] | None:
+    if not sources:
+        return None
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        sources,
+        hard_byte_ceiling=int(candidate.get("hard_byte_ceiling") or 0),
+        candidate_id=candidate_id,
+        full_video_coverage=bool(full_video_coverage),
+    )
+    return plan
+
+
+def _snerv_lf_recode_selected_mode(
+    plan: Mapping[str, Any] | None,
+) -> str | None:
+    if not isinstance(plan, Mapping):
+        return None
+    selected = plan.get("selected_row")
+    if not isinstance(selected, Mapping):
+        return None
+    if selected.get("local_planner_admitted") is not True:
+        return None
+    mode = str(selected.get("mode") or "").strip()
+    return mode or None
+
+
+def _snerv_lf_payload_recode_campaign_blockers(
+    plan: Mapping[str, Any] | None,
+) -> list[str]:
+    if not isinstance(plan, Mapping):
+        return []
+    selected = plan.get("selected_row")
+    if not isinstance(selected, Mapping):
+        return ["snerv_lf_payload_recode_no_receiver_proven_byte_saving_mode"]
+    blockers: list[str] = []
+    over_waterline = selected.get("post_recode_over_waterline_bytes")
+    if over_waterline is not None and int(over_waterline) > 0:
+        blockers.append("snerv_lf_payload_recode_still_over_hard_byte_ceiling")
+    blockers.extend(
+        str(blocker)
+        for blocker in selected.get("local_admission_blockers") or ()
+        if str(blocker)
+    )
+    return _dedupe(blockers)
 
 
 def _snerv_expected_candidate_id_from_controls(candidate: Mapping[str, Any]) -> str:
@@ -3270,6 +3350,8 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "source_parity",
         "current_command_is_bounded_proof_not_long_training",
         "snerv_bounded_proof_epochs",
+        "snerv_lf_payload_recode_admission_plan",
+        "snerv_lf_payload_codec_from_admission_plan",
         "output_dir_reuse_policy",
     )
     return {

@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -59,13 +60,11 @@ TRAINER_SCHEMA = "hi_nerv_mlx_score_aware_trainer.v1"
 TRAINER_AUTHORITY = "false_authority_macos_mlx_training_no_contest_score_claim"
 PR95_FULL_CONTROL_CONTRACT_SCHEMA = "hi_nerv_pr95_full_control_contract.v1"
 CANONICAL_PR95_FULL_EPOCHS = 29_650
-DIRECT_TRAINER_CANONICALIZATION_SCHEMA = (
-    "hi_nerv_direct_trainer_canonicalization_contract.v1"
-)
+HI_NERV_TRAIN_TIME_CONTROL_SCHEMA = "hi_nerv_train_time_controls.v1"
+HI_NERV_TRAIN_TIME_DECODER_CONTROL_REPORT_SCHEMA = "hi_nerv_train_time_decoder_control_report.v1"
+DIRECT_TRAINER_CANONICALIZATION_SCHEMA = "hi_nerv_direct_trainer_canonicalization_contract.v1"
 DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA = "hi_nerv_direct_trainer_launch_refusal.v1"
-DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = (
-    "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
-)
+DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
 DIRECT_TRAINER_CANONICALIZATION_BLOCKERS = (
     "direct_hinerv_trainer_launch_not_compact_runner_owned",
     "hinerv_direct_trainer_missing_planner_row_id",
@@ -77,15 +76,238 @@ DIRECT_TRAINER_CANONICALIZATION_BLOCKERS = (
     "hinerv_direct_trainer_local_cpu_replay_gate_not_bound",
 )
 DEFAULT_WORKLOAD_SUBDIR = "hinerv_mlx_local_training"
-MODEL_SIZE_ROWS = tuple(
-    row["row_id"] for row in hi_nerv_modelsize_config_rows(num_pairs=600)
+MODEL_SIZE_ROWS = tuple(row["row_id"] for row in hi_nerv_modelsize_config_rows(num_pairs=600))
+_HI_NERV_DECODER_CONTROL_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
+    "latent_embed",
+    "blocks",
+    "feature_grids",
+    "convnext_blocks",
+    "injector",
+    "head",
+    "decoder",
 )
+_HI_NERV_DECODER_CONTROL_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
+    "latents",
+    "codebook",
+    "ema",
+    "student",
+    "teacher",
+    "quantizer",
+)
+_HI_NERV_TRAIN_TIME_QUANT_NOISE_BITS: tuple[int, ...] = (2, 4, 6, 7, 8)
+
+
+@dataclass(frozen=True)
+class HiNervTrainTimeControlConfig:
+    """Explicit, validated controls for HiNeRV train-time rate pressure."""
+
+    stage_loss_schedule: str
+    optimizer_kind: str
+    pr95_faithful_curriculum_enabled: bool
+    pr95_curriculum_total_epochs: int | None
+    staged_scorer_curriculum_enabled: bool
+    coder_qat_enabled: bool
+    coder_qat_quant_bits: int
+    coder_qat_c1a_entropy_weight: float
+    coder_qat_c1a_sigma: float
+    coder_qat_c1a_sample_size: int
+    decoder_fake_quant_forward_enabled: bool
+    decoder_fake_quant_bits: int
+    train_time_decoder_pruning_ratio: float = 0.0
+    train_time_decoder_quant_noise_bits: int | None = None
+    train_time_decoder_quant_noise_scale: float = 0.0
+    train_time_decoder_quant_noise_seed: int = 0
+    train_time_decoder_control_start_epoch: int = 0
+    train_time_decoder_control_frequency_epochs: int = 1
+    export_decoder_pruning_ratio: float = 0.0
+    export_decoder_quant_noise_bits: int | None = None
+    export_decoder_quant_noise_scale: float = 0.0
+    export_decoder_quant_noise_seed: int = 0
+
+    def validated(self) -> HiNervTrainTimeControlConfig:
+        if self.stage_loss_schedule not in {
+            "single_stage_score_aware_full",
+            "staged_scorer_curriculum",
+            "pr95_faithful_8stage",
+        }:
+            raise ValueError(
+                "stage_loss_schedule must be one of "
+                "single_stage_score_aware_full, staged_scorer_curriculum, "
+                f"pr95_faithful_8stage; got {self.stage_loss_schedule!r}"
+            )
+        if self.pr95_faithful_curriculum_enabled and self.staged_scorer_curriculum_enabled:
+            raise ValueError(
+                "HiNeRV train-time controls require exactly one stage-loss "
+                "authority; --pr95-faithful-curriculum and "
+                "--staged-scorer-curriculum cannot both be set"
+            )
+        if (
+            self.pr95_faithful_curriculum_enabled
+            and str(self.optimizer_kind) != DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+        ):
+            raise ValueError(
+                "HiNeRV PR95 faithful curriculum owns optimizer staging; leave "
+                "--optimizer-kind at the Pact partitioned Muon+AdamW default "
+                "or disable --pr95-faithful-curriculum"
+            )
+        if int(self.coder_qat_quant_bits) < 1 or int(self.coder_qat_quant_bits) > 16:
+            raise ValueError("coder_qat_quant_bits must be in [1, 16]")
+        if float(self.coder_qat_c1a_entropy_weight) > 0.0 and not self.coder_qat_enabled:
+            raise ValueError(
+                "coder_qat_c1a_entropy_weight requires --coder-qat so the "
+                "C1a sigma control reaches the real loss path"
+            )
+        _require_finite_nonnegative(
+            self.coder_qat_c1a_entropy_weight,
+            "coder_qat_c1a_entropy_weight",
+        )
+        _require_finite_positive(self.coder_qat_c1a_sigma, "coder_qat_c1a_sigma")
+        if int(self.coder_qat_c1a_sample_size) <= 0:
+            raise ValueError("coder_qat_c1a_sample_size must be positive")
+        if int(self.decoder_fake_quant_bits) < 1 or int(self.decoder_fake_quant_bits) > 16:
+            raise ValueError("decoder_fake_quant_bits must be in [1, 16]")
+        _validate_ratio(
+            self.train_time_decoder_pruning_ratio,
+            "train_time_decoder_pruning_ratio",
+        )
+        _validate_ratio(self.export_decoder_pruning_ratio, "export_decoder_pruning_ratio")
+        _validate_quant_noise_controls(
+            bits=self.train_time_decoder_quant_noise_bits,
+            scale=self.train_time_decoder_quant_noise_scale,
+            field_prefix="train_time_decoder_quant_noise",
+        )
+        _validate_quant_noise_controls(
+            bits=self.export_decoder_quant_noise_bits,
+            scale=self.export_decoder_quant_noise_scale,
+            field_prefix="export_decoder_quant_noise",
+        )
+        if int(self.train_time_decoder_control_start_epoch) < 0:
+            raise ValueError("train_time_decoder_control_start_epoch must be >= 0")
+        if int(self.train_time_decoder_control_frequency_epochs) <= 0:
+            raise ValueError("train_time_decoder_control_frequency_epochs must be positive")
+        return replace(
+            self,
+            optimizer_kind=str(self.optimizer_kind),
+            pr95_curriculum_total_epochs=(
+                None
+                if self.pr95_curriculum_total_epochs is None
+                else int(self.pr95_curriculum_total_epochs)
+            ),
+            coder_qat_quant_bits=int(self.coder_qat_quant_bits),
+            coder_qat_c1a_entropy_weight=float(self.coder_qat_c1a_entropy_weight),
+            coder_qat_c1a_sigma=float(self.coder_qat_c1a_sigma),
+            coder_qat_c1a_sample_size=int(self.coder_qat_c1a_sample_size),
+            decoder_fake_quant_bits=int(self.decoder_fake_quant_bits),
+            train_time_decoder_pruning_ratio=float(self.train_time_decoder_pruning_ratio),
+            train_time_decoder_quant_noise_bits=(
+                None
+                if self.train_time_decoder_quant_noise_bits is None
+                else int(self.train_time_decoder_quant_noise_bits)
+            ),
+            train_time_decoder_quant_noise_scale=float(
+                self.train_time_decoder_quant_noise_scale
+            ),
+            train_time_decoder_quant_noise_seed=int(self.train_time_decoder_quant_noise_seed),
+            train_time_decoder_control_start_epoch=int(
+                self.train_time_decoder_control_start_epoch
+            ),
+            train_time_decoder_control_frequency_epochs=int(
+                self.train_time_decoder_control_frequency_epochs
+            ),
+            export_decoder_pruning_ratio=float(self.export_decoder_pruning_ratio),
+            export_decoder_quant_noise_bits=(
+                None
+                if self.export_decoder_quant_noise_bits is None
+                else int(self.export_decoder_quant_noise_bits)
+            ),
+            export_decoder_quant_noise_scale=float(self.export_decoder_quant_noise_scale),
+            export_decoder_quant_noise_seed=int(self.export_decoder_quant_noise_seed),
+        )
+
+    @property
+    def train_time_decoder_controls_enabled(self) -> bool:
+        return bool(
+            float(self.train_time_decoder_pruning_ratio) > 0.0
+            or (
+                self.train_time_decoder_quant_noise_bits is not None
+                and float(self.train_time_decoder_quant_noise_scale) > 0.0
+            )
+        )
+
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "schema": HI_NERV_TRAIN_TIME_CONTROL_SCHEMA,
+            "stage_loss_schedule": self.stage_loss_schedule,
+            "optimizer_kind": self.optimizer_kind,
+            "optimizer_surface": (
+                "pr95_faithful_stage_descriptors"
+                if self.pr95_faithful_curriculum_enabled
+                else "shared_mlx_score_aware_adapter"
+            ),
+            "pr95_faithful_curriculum_enabled": bool(
+                self.pr95_faithful_curriculum_enabled
+            ),
+            "pr95_curriculum_total_epochs": self.pr95_curriculum_total_epochs,
+            "staged_scorer_curriculum_enabled": bool(
+                self.staged_scorer_curriculum_enabled
+            ),
+            "coder_qat_enabled": bool(self.coder_qat_enabled),
+            "coder_qat_quant_bits": int(self.coder_qat_quant_bits),
+            "coder_qat_c1a_entropy_weight": float(
+                self.coder_qat_c1a_entropy_weight
+            ),
+            "coder_qat_c1a_sigma": float(self.coder_qat_c1a_sigma),
+            "coder_qat_c1a_sample_size": int(self.coder_qat_c1a_sample_size),
+            "decoder_fake_quant_forward_enabled": bool(
+                self.decoder_fake_quant_forward_enabled
+            ),
+            "decoder_fake_quant_bits": int(self.decoder_fake_quant_bits),
+            "train_time_decoder_controls_enabled": (
+                self.train_time_decoder_controls_enabled
+            ),
+            "train_time_decoder_pruning_ratio": float(
+                self.train_time_decoder_pruning_ratio
+            ),
+            "train_time_decoder_quant_noise_bits": (
+                None
+                if self.train_time_decoder_quant_noise_bits is None
+                else int(self.train_time_decoder_quant_noise_bits)
+            ),
+            "train_time_decoder_quant_noise_scale": float(
+                self.train_time_decoder_quant_noise_scale
+            ),
+            "train_time_decoder_quant_noise_seed": int(
+                self.train_time_decoder_quant_noise_seed
+            ),
+            "train_time_decoder_control_start_epoch": int(
+                self.train_time_decoder_control_start_epoch
+            ),
+            "train_time_decoder_control_frequency_epochs": int(
+                self.train_time_decoder_control_frequency_epochs
+            ),
+            "export_decoder_pruning_ratio": float(self.export_decoder_pruning_ratio),
+            "export_decoder_quant_noise_bits": (
+                None
+                if self.export_decoder_quant_noise_bits is None
+                else int(self.export_decoder_quant_noise_bits)
+            ),
+            "export_decoder_quant_noise_scale": float(
+                self.export_decoder_quant_noise_scale
+            ),
+            "export_decoder_quant_noise_seed": int(self.export_decoder_quant_noise_seed),
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
 
 
 def _full_main(args: argparse.Namespace) -> int:
     """Run canonical MLX score-aware training for the current HiNeRV carrier."""
 
-    pr95_full_control_contract = _pr95_full_control_contract(args)
+    train_time_controls = _train_time_control_config_from_args(args)
+    pr95_full_control_contract = _pr95_full_control_contract(
+        args,
+        train_time_controls=train_time_controls,
+    )
     canonicalization = _direct_trainer_canonicalization_contract(mode="full")
     launch_refusal = _direct_trainer_launch_refusal_payload(
         canonicalization,
@@ -121,19 +343,15 @@ def _full_main(args: argparse.Namespace) -> int:
     cfg = _config_from_args(args)
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     source_pair_indices = prioritized_pair_indices or None
-    effective_training_num_pairs = (
-        len(source_pair_indices) if source_pair_indices is not None else int(cfg.num_pairs)
-    )
+    effective_training_num_pairs = len(source_pair_indices) if source_pair_indices is not None else int(cfg.num_pairs)
     local_training_pair_indices = (
-        tuple(range(effective_training_num_pairs))
-        if source_pair_indices is not None
-        else prioritized_pair_indices
+        tuple(range(effective_training_num_pairs)) if source_pair_indices is not None else prioritized_pair_indices
     )
     model = HinervSubstrateMLX(cfg)
-    if args.decoder_fake_quant_forward:
+    if train_time_controls.decoder_fake_quant_forward_enabled:
         model.configure_decoder_fake_quant_forward(
             enabled=True,
-            quant_bits=int(args.decoder_fake_quant_bits),
+            quant_bits=int(train_time_controls.decoder_fake_quant_bits),
         )
     coder_qat_cfg = _coder_qat_config_from_args(args)
     extra_loss_terms = None
@@ -186,9 +404,7 @@ def _full_main(args: argparse.Namespace) -> int:
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
             pose_dims=DEFAULT_POSE_DIMS,
-            input_channels=_pose_student_input_channels(
-                str(args.pose_student_input_preprocess)
-            ),
+            input_channels=_pose_student_input_channels(str(args.pose_student_input_preprocess)),
             seed=int(args.seed),
         )
         pose_distillation_weight = float(args.pose_distillation_weight)
@@ -216,6 +432,10 @@ def _full_main(args: argparse.Namespace) -> int:
             repo_root=REPO_ROOT,
             decoder_codec=str(args.decoder_codec),
             source_backend="mlx",
+            pruning_ratio=float(train_time_controls.export_decoder_pruning_ratio),
+            quant_noise_bits=train_time_controls.export_decoder_quant_noise_bits,
+            quant_noise_scale=float(train_time_controls.export_decoder_quant_noise_scale),
+            quant_noise_seed=int(train_time_controls.export_decoder_quant_noise_seed),
         ),
         substrate_artifact_metadata={
             "schema": TRAINER_SCHEMA,
@@ -226,9 +446,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "config": _config_snapshot(cfg),
             "training_target_pair_count": int(effective_training_num_pairs),
             "source_pair_indices": (
-                [int(value) for value in source_pair_indices]
-                if source_pair_indices is not None
-                else None
+                [int(value) for value in source_pair_indices] if source_pair_indices is not None else None
             ),
             "local_training_pair_indices": [int(value) for value in local_training_pair_indices],
             "pair_index_alignment_mode": (
@@ -238,15 +456,14 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "decoder_codec": str(args.decoder_codec),
             "decoder_fake_quant_forward": {
-                "enabled": bool(args.decoder_fake_quant_forward),
-                "quant_bits": int(args.decoder_fake_quant_bits),
+                "enabled": bool(train_time_controls.decoder_fake_quant_forward_enabled),
+                "quant_bits": int(train_time_controls.decoder_fake_quant_bits),
             },
             "coder_qat": coder_qat_metadata(coder_qat_cfg),
+            "train_time_controls": _metadata_safe(train_time_controls.metadata()),
             "eval_roundtrip_ste_enabled": bool(args.eval_roundtrip_ste),
             "pose_student_input_preprocess": str(args.pose_student_input_preprocess),
-            "pose_student_input_channels": _pose_student_input_channels(
-                str(args.pose_student_input_preprocess)
-            ),
+            "pose_student_input_channels": _pose_student_input_channels(str(args.pose_student_input_preprocess)),
             "prioritized_pair_training": _prioritized_pair_training_lineage_metadata(
                 prioritized_pair_indices,
                 target_hydration_pair_indices_consumed=source_pair_indices is not None,
@@ -274,6 +491,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "storage_preflight": storage_payload,
             "direct_trainer_canonicalization": canonicalization,
             "pr95_full_control_contract": pr95_full_control_contract,
+            "train_time_controls": train_time_controls.metadata(),
             "prioritized_pair_training": _prioritized_pair_training_metadata(
                 prioritized_pair_indices,
                 target_hydration_pair_indices_consumed=source_pair_indices is not None,
@@ -292,9 +510,7 @@ def _full_main(args: argparse.Namespace) -> int:
         lane_id="lane_hi_nerv_mlx_score_aware_local_20260602",
         output_dir=output_dir,
         epochs=int(args.epochs),
-        batch_pair_indices_per_step=min(
-            int(args.batch_pairs), int(effective_training_num_pairs)
-        ),
+        batch_pair_indices_per_step=min(int(args.batch_pairs), int(effective_training_num_pairs)),
         learning_rate=float(args.full_lr),
         seed=int(args.seed),
         checkpoint_interval_epochs=int(args.checkpoint_interval_epochs),
@@ -311,6 +527,11 @@ def _full_main(args: argparse.Namespace) -> int:
         cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         ema_archive_selection_enabled=bool(args.ema_archive_selection),
         prioritized_pair_indices=local_training_pair_indices,
+        on_epoch_end=_build_train_time_decoder_control_callback(
+            model=model,
+            controls=train_time_controls,
+            output_dir=output_dir,
+        ),
         notes=(
             "HiNeRV MLX-local score-aware training through the canonical "
             "mlx_score_aware harness, with optional real SegNet/PoseNet teacher "
@@ -336,14 +557,10 @@ def _full_main(args: argparse.Namespace) -> int:
                 "epochs": artifact.total_epochs_completed,
                 "archive_bytes": getattr(artifact, "archive_bytes", None),
                 "post_export_receiver_cache_quality_report": (
-                    post_export_quality.get("report_path")
-                    if post_export_quality is not None
-                    else None
+                    post_export_quality.get("report_path") if post_export_quality is not None else None
                 ),
                 "post_export_receiver_cache_quality_passed": (
-                    bool(post_export_quality.get("quality_gate_passed"))
-                    if post_export_quality is not None
-                    else False
+                    bool(post_export_quality.get("quality_gate_passed")) if post_export_quality is not None else False
                 ),
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -368,12 +585,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
     output_dir, storage_payload = _resolve_output_dir(args)
     cfg = _config_from_args(args)
     canonicalization = _direct_trainer_canonicalization_contract(mode="smoke")
+    train_time_controls = _train_time_control_config_from_args(args)
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     model = HinervSubstrateMLX(cfg)
-    if args.decoder_fake_quant_forward:
+    if train_time_controls.decoder_fake_quant_forward_enabled:
         model.configure_decoder_fake_quant_forward(
             enabled=True,
-            quant_bits=int(args.decoder_fake_quant_bits),
+            quant_bits=int(train_time_controls.decoder_fake_quant_bits),
         )
     idx = mx.array(list(range(min(2, int(cfg.num_pairs)))), dtype=mx.int32)
     output = model(idx)
@@ -387,6 +605,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
             repo_root=REPO_ROOT,
             decoder_codec=str(args.decoder_codec),
             source_backend="mlx",
+            pruning_ratio=float(train_time_controls.export_decoder_pruning_ratio),
+            quant_noise_bits=train_time_controls.export_decoder_quant_noise_bits,
+            quant_noise_scale=float(train_time_controls.export_decoder_quant_noise_scale),
+            quant_noise_seed=int(train_time_controls.export_decoder_quant_noise_seed),
         )
         archive_path = archive_path_obj.as_posix()
     post_export_quality = _maybe_write_post_export_receiver_cache_quality(
@@ -414,16 +636,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_mean": float(mx.mean(output)),
         },
         "decoder_codec": str(args.decoder_codec),
-        "prioritized_pair_training": _prioritized_pair_training_metadata(
-            prioritized_pair_indices
-        ),
+        "train_time_controls": train_time_controls.metadata(),
+        "prioritized_pair_training": _prioritized_pair_training_metadata(prioritized_pair_indices),
         "archive_path": archive_path,
         "archive_sha256": archive_sha256,
         "archive_bytes": archive_bytes,
         "post_export_receiver_cache_quality": (
-            _receiver_cache_quality_manifest_summary(post_export_quality)
-            if post_export_quality is not None
-            else None
+            _receiver_cache_quality_manifest_summary(post_export_quality) if post_export_quality is not None else None
         ),
         "direct_trainer_canonicalization": canonicalization,
         "blockers": [
@@ -435,7 +654,11 @@ def _smoke_main(args: argparse.Namespace) -> int:
         **FALSE_AUTHORITY,
     }
     write_json(output_dir / "smoke_manifest.json", manifest)
-    print(json.dumps({"smoke_manifest": (output_dir / "smoke_manifest.json").as_posix(), **FALSE_AUTHORITY}, sort_keys=True))
+    print(
+        json.dumps(
+            {"smoke_manifest": (output_dir / "smoke_manifest.json").as_posix(), **FALSE_AUTHORITY}, sort_keys=True
+        )
+    )
     return 0
 
 
@@ -489,6 +712,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--decoder-codec", default="int8_mixed")
     parser.add_argument("--decoder-fake-quant-forward", action="store_true")
     parser.add_argument("--decoder-fake-quant-bits", type=int, default=8)
+    parser.add_argument("--train-time-decoder-pruning-ratio", type=float, default=0.0)
+    parser.add_argument("--train-time-decoder-quant-noise-bits", type=int, default=None)
+    parser.add_argument("--train-time-decoder-quant-noise-scale", type=float, default=0.0)
+    parser.add_argument("--train-time-decoder-quant-noise-seed", type=int, default=0)
+    parser.add_argument("--train-time-decoder-control-start-epoch", type=int, default=0)
+    parser.add_argument("--train-time-decoder-control-frequency-epochs", type=int, default=1)
+    parser.add_argument("--export-decoder-pruning-ratio", type=float, default=0.0)
+    parser.add_argument("--export-decoder-quant-noise-bits", type=int, default=None)
+    parser.add_argument("--export-decoder-quant-noise-scale", type=float, default=0.0)
+    parser.add_argument("--export-decoder-quant-noise-seed", type=int, default=0)
     parser.add_argument("--coder-qat", action="store_true")
     parser.add_argument("--coder-qat-bits", type=int, default=8)
     parser.add_argument("--coder-qat-quant-residual-weight", type=float, default=1.0e-4)
@@ -551,10 +784,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _config_from_args(args: argparse.Namespace) -> Any:
-    rows = {
-        str(row["row_id"]): row["config"]
-        for row in hi_nerv_modelsize_config_rows(num_pairs=int(args.num_pairs))
-    }
+    rows = {str(row["row_id"]): row["config"] for row in hi_nerv_modelsize_config_rows(num_pairs=int(args.num_pairs))}
     cfg = rows[str(args.modelsize_row)]
     updates: dict[str, Any] = {
         "num_pairs": int(args.num_pairs),
@@ -572,9 +802,7 @@ def _config_from_args(args: argparse.Namespace) -> Any:
         if value is not None:
             updates[attr] = value
     if args.decoder_channels:
-        updates["decoder_channels"] = tuple(
-            int(part) for part in str(args.decoder_channels).split(",") if part
-        )
+        updates["decoder_channels"] = tuple(int(part) for part in str(args.decoder_channels).split(",") if part)
     return replace(cfg, **updates)
 
 
@@ -587,12 +815,344 @@ def _coder_qat_config_from_args(args: argparse.Namespace) -> Any:
         quant_residual_weight=float(args.coder_qat_quant_residual_weight),
         magnitude_weight=float(args.coder_qat_magnitude_weight),
         delta_weight=float(args.coder_qat_delta_weight),
-        c1a_entropy_weight=float(
-            getattr(args, "coder_qat_c1a_entropy_weight", 0.0)
-        ),
+        c1a_entropy_weight=float(getattr(args, "coder_qat_c1a_entropy_weight", 0.0)),
         c1a_sigma=float(getattr(args, "coder_qat_c1a_sigma", 0.2)),
         c1a_sample_size=int(getattr(args, "coder_qat_c1a_sample_size", 512)),
     ).validated()
+
+
+def _train_time_control_config_from_args(
+    args: argparse.Namespace,
+) -> HiNervTrainTimeControlConfig:
+    if bool(getattr(args, "pr95_faithful_curriculum", False)):
+        stage_loss_schedule = "pr95_faithful_8stage"
+    elif bool(getattr(args, "staged_scorer_curriculum", False)):
+        stage_loss_schedule = "staged_scorer_curriculum"
+    else:
+        stage_loss_schedule = "single_stage_score_aware_full"
+    return HiNervTrainTimeControlConfig(
+        stage_loss_schedule=stage_loss_schedule,
+        optimizer_kind=str(getattr(args, "optimizer_kind", "")),
+        pr95_faithful_curriculum_enabled=bool(
+            getattr(args, "pr95_faithful_curriculum", False)
+        ),
+        pr95_curriculum_total_epochs=getattr(
+            args,
+            "pr95_curriculum_total_epochs",
+            None,
+        ),
+        staged_scorer_curriculum_enabled=bool(
+            getattr(args, "staged_scorer_curriculum", False)
+        ),
+        coder_qat_enabled=bool(getattr(args, "coder_qat", False)),
+        coder_qat_quant_bits=int(getattr(args, "coder_qat_bits", 8)),
+        coder_qat_c1a_entropy_weight=float(
+            getattr(args, "coder_qat_c1a_entropy_weight", 0.0)
+        ),
+        coder_qat_c1a_sigma=float(getattr(args, "coder_qat_c1a_sigma", 0.2)),
+        coder_qat_c1a_sample_size=int(
+            getattr(args, "coder_qat_c1a_sample_size", 512)
+        ),
+        decoder_fake_quant_forward_enabled=bool(
+            getattr(args, "decoder_fake_quant_forward", False)
+        ),
+        decoder_fake_quant_bits=int(getattr(args, "decoder_fake_quant_bits", 8)),
+        train_time_decoder_pruning_ratio=float(
+            getattr(args, "train_time_decoder_pruning_ratio", 0.0)
+        ),
+        train_time_decoder_quant_noise_bits=getattr(
+            args,
+            "train_time_decoder_quant_noise_bits",
+            None,
+        ),
+        train_time_decoder_quant_noise_scale=float(
+            getattr(args, "train_time_decoder_quant_noise_scale", 0.0)
+        ),
+        train_time_decoder_quant_noise_seed=int(
+            getattr(args, "train_time_decoder_quant_noise_seed", 0)
+        ),
+        train_time_decoder_control_start_epoch=int(
+            getattr(args, "train_time_decoder_control_start_epoch", 0)
+        ),
+        train_time_decoder_control_frequency_epochs=int(
+            getattr(args, "train_time_decoder_control_frequency_epochs", 1)
+        ),
+        export_decoder_pruning_ratio=float(
+            getattr(args, "export_decoder_pruning_ratio", 0.0)
+        ),
+        export_decoder_quant_noise_bits=getattr(
+            args,
+            "export_decoder_quant_noise_bits",
+            None,
+        ),
+        export_decoder_quant_noise_scale=float(
+            getattr(args, "export_decoder_quant_noise_scale", 0.0)
+        ),
+        export_decoder_quant_noise_seed=int(
+            getattr(args, "export_decoder_quant_noise_seed", 0)
+        ),
+    ).validated()
+
+
+def _require_finite_nonnegative(value: float, field: str) -> None:
+    if not math.isfinite(float(value)) or float(value) < 0.0:
+        raise ValueError(f"{field} must be finite and non-negative")
+
+
+def _require_finite_positive(value: float, field: str) -> None:
+    if not math.isfinite(float(value)) or float(value) <= 0.0:
+        raise ValueError(f"{field} must be finite and positive")
+
+
+def _validate_ratio(value: float, field: str) -> None:
+    if not math.isfinite(float(value)) or float(value) < 0.0 or float(value) >= 1.0:
+        raise ValueError(f"{field} must be finite and in [0, 1)")
+
+
+def _validate_quant_noise_controls(
+    *,
+    bits: int | None,
+    scale: float,
+    field_prefix: str,
+) -> None:
+    _require_finite_nonnegative(float(scale), f"{field_prefix}_scale")
+    if bits is None:
+        if float(scale) > 0.0:
+            raise ValueError(f"{field_prefix}_bits is required when scale > 0")
+        return
+    if int(bits) not in set(_HI_NERV_TRAIN_TIME_QUANT_NOISE_BITS):
+        raise ValueError(
+            f"{field_prefix}_bits must be one of "
+            f"{list(_HI_NERV_TRAIN_TIME_QUANT_NOISE_BITS)}"
+        )
+
+
+def _build_train_time_decoder_control_callback(
+    *,
+    model: Any,
+    controls: HiNervTrainTimeControlConfig,
+    output_dir: Path,
+) -> Any:
+    if not controls.train_time_decoder_controls_enabled:
+        return None
+    path = output_dir / "hi_nerv_train_time_decoder_controls.jsonl"
+
+    def _callback(metrics: Any) -> None:
+        report = _apply_train_time_decoder_controls(
+            model,
+            controls,
+            epoch=int(metrics.epoch),
+        )
+        if bool(report.get("applied")):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(report, sort_keys=True) + "\n")
+
+    return _callback
+
+
+def _apply_train_time_decoder_controls(
+    model: Any,
+    controls: HiNervTrainTimeControlConfig,
+    *,
+    epoch: int,
+) -> dict[str, Any]:
+    c = controls.validated()
+    if not c.train_time_decoder_controls_enabled:
+        return _train_time_decoder_control_report(
+            controls=c,
+            epoch=epoch,
+            applied=False,
+            reason="disabled",
+        )
+    if int(epoch) < int(c.train_time_decoder_control_start_epoch):
+        return _train_time_decoder_control_report(
+            controls=c,
+            epoch=epoch,
+            applied=False,
+            reason="before_start_epoch",
+        )
+    cadence = int(c.train_time_decoder_control_frequency_epochs)
+    if (int(epoch) - int(c.train_time_decoder_control_start_epoch)) % cadence != 0:
+        return _train_time_decoder_control_report(
+            controls=c,
+            epoch=epoch,
+            applied=False,
+            reason="cadence_skip",
+        )
+
+    try:
+        import mlx.core as mx
+        from mlx.utils import tree_flatten, tree_unflatten
+    except Exception as exc:  # pragma: no cover - only on non-MLX hosts.
+        raise RuntimeError("HiNeRV train-time decoder controls require MLX") from exc
+    import numpy as np
+
+    flat_items = list(tree_flatten(model.parameters()))
+    flat = dict(flat_items)
+    selected = [
+        (key, _mlx_tree_key_name(key), value)
+        for key, value in flat_items
+        if _is_train_time_decoder_control_tensor(_mlx_tree_key_name(key), value)
+    ]
+    if not selected:
+        raise RuntimeError(
+            "HiNeRV train-time decoder controls selected no decoder tensors; "
+            "adjust include/exclude selectors before launching"
+        )
+
+    changed_names: set[str] = set()
+    pruned_values = 0
+    pruning_threshold: float | None = None
+
+    if float(c.train_time_decoder_pruning_ratio) > 0.0:
+        arrays = [
+            np.asarray(value, dtype=np.float32)
+            for _key, _name, value in selected
+            if np.asarray(value).size
+        ]
+        total_values = int(sum(arr.size for arr in arrays))
+        target_pruned = math.floor(float(c.train_time_decoder_pruning_ratio) * total_values)
+        if target_pruned > 0 and arrays:
+            all_abs = np.concatenate([np.abs(arr).reshape(-1) for arr in arrays])
+            pruning_threshold = float(np.partition(all_abs, target_pruned - 1)[target_pruned - 1])
+            remaining = target_pruned
+            for key, name, value in selected:
+                if remaining <= 0:
+                    break
+                original = np.asarray(flat[key], dtype=np.float32)
+                arr = np.array(original, copy=True)
+                if arr.size == 0:
+                    continue
+                abs_arr = np.abs(arr)
+                mask = abs_arr < pruning_threshold
+                already = int(mask.sum())
+                need = max(0, remaining - already)
+                if need:
+                    equal_flat = (abs_arr == pruning_threshold).reshape(-1)
+                    equal_indices = np.flatnonzero(equal_flat)[:need]
+                    mask_flat = mask.reshape(-1)
+                    mask_flat[equal_indices] = True
+                    mask = mask_flat.reshape(mask.shape)
+                selected_here = int(mask.sum())
+                if selected_here:
+                    arr[mask] = 0.0
+                    flat[key] = mx.array(arr).astype(value.dtype)
+                    pruned_values += selected_here
+                    remaining -= selected_here
+                    changed_names.add(name)
+
+    quant_noise_changed = 0
+    max_abs_quant_delta = 0.0
+    if (
+        c.train_time_decoder_quant_noise_bits is not None
+        and float(c.train_time_decoder_quant_noise_scale) > 0.0
+    ):
+        bits = int(c.train_time_decoder_quant_noise_bits)
+        qmax = (1 << (bits - 1)) - 1
+        rng = np.random.default_rng(int(c.train_time_decoder_quant_noise_seed) + int(epoch))
+        for key, name, value in selected:
+            arr = np.asarray(flat[key], dtype=np.float32)
+            if arr.size == 0:
+                continue
+            abs_max = float(np.max(np.abs(arr))) if arr.size else 0.0
+            if abs_max <= 0.0:
+                continue
+            step = abs_max / float(qmax)
+            noise = rng.uniform(-0.5, 0.5, size=arr.shape).astype(np.float32)
+            delta = np.where(
+                arr != 0.0,
+                noise * (step * float(c.train_time_decoder_quant_noise_scale)),
+                0.0,
+            ).astype(np.float32, copy=False)
+            if not bool(np.any(delta != 0.0)):
+                continue
+            updated = arr + delta
+            flat[key] = mx.array(updated).astype(value.dtype)
+            quant_noise_changed += 1
+            max_abs_quant_delta = max(max_abs_quant_delta, float(np.max(np.abs(delta))))
+            changed_names.add(name)
+
+    if not changed_names:
+        raise RuntimeError(
+            "HiNeRV train-time decoder controls were enabled but changed no "
+            "decoder tensors"
+        )
+
+    model.update(tree_unflatten(list(flat.items())))
+    mx.eval(model.parameters())
+    return _train_time_decoder_control_report(
+        controls=c,
+        epoch=epoch,
+        applied=True,
+        reason="applied",
+        selected_tensor_count=len(selected),
+        changed_tensor_count=len(changed_names),
+        changed_tensor_names=sorted(changed_names),
+        pruned_values=pruned_values,
+        pruning_threshold=pruning_threshold,
+        quant_noise_changed_tensor_count=quant_noise_changed,
+        quant_noise_max_abs_delta=max_abs_quant_delta,
+    )
+
+
+def _train_time_decoder_control_report(
+    *,
+    controls: HiNervTrainTimeControlConfig,
+    epoch: int,
+    applied: bool,
+    reason: str,
+    selected_tensor_count: int = 0,
+    changed_tensor_count: int = 0,
+    changed_tensor_names: list[str] | None = None,
+    pruned_values: int = 0,
+    pruning_threshold: float | None = None,
+    quant_noise_changed_tensor_count: int = 0,
+    quant_noise_max_abs_delta: float = 0.0,
+) -> dict[str, Any]:
+    return {
+        "schema": HI_NERV_TRAIN_TIME_DECODER_CONTROL_REPORT_SCHEMA,
+        "epoch": int(epoch),
+        "applied": bool(applied),
+        "reason": str(reason),
+        "selected_tensor_count": int(selected_tensor_count),
+        "changed_tensor_count": int(changed_tensor_count),
+        "changed_tensor_names": list(changed_tensor_names or []),
+        "pruning": {
+            "ratio": float(controls.train_time_decoder_pruning_ratio),
+            "pruned_values": int(pruned_values),
+            "threshold": pruning_threshold,
+        },
+        "quant_noise": {
+            "bits": (
+                None
+                if controls.train_time_decoder_quant_noise_bits is None
+                else int(controls.train_time_decoder_quant_noise_bits)
+            ),
+            "scale": float(controls.train_time_decoder_quant_noise_scale),
+            "seed": int(controls.train_time_decoder_quant_noise_seed),
+            "changed_tensor_count": int(quant_noise_changed_tensor_count),
+            "max_abs_delta": float(quant_noise_max_abs_delta),
+        },
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _mlx_tree_key_name(key: Any) -> str:
+    if isinstance(key, (tuple, list)):
+        return ".".join(str(part) for part in key if str(part))
+    return str(key)
+
+
+def _is_train_time_decoder_control_tensor(name: str, value: Any) -> bool:
+    lowered = str(name).lower()
+    if any(token in lowered for token in _HI_NERV_DECODER_CONTROL_EXCLUDE_SUBSTRINGS):
+        return False
+    if not any(token in lowered for token in _HI_NERV_DECODER_CONTROL_INCLUDE_SUBSTRINGS):
+        return False
+    shape = getattr(value, "shape", ())
+    return bool(shape) and int(math.prod(int(v) for v in shape)) > 0
 
 
 def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, ...]:
@@ -623,9 +1183,7 @@ def _prioritized_pair_training_metadata(
     target_hydration_pair_indices_consumed: bool = False,
 ) -> dict[str, Any]:
     consumed = bool(pair_indices) and bool(target_hydration_pair_indices_consumed)
-    local_pair_indices = list(range(len(pair_indices))) if consumed else [
-        int(value) for value in pair_indices
-    ]
+    local_pair_indices = list(range(len(pair_indices))) if consumed else [int(value) for value in pair_indices]
     return {
         "schema": "hi_nerv_direct_trainer_prioritized_pair_training.v1",
         "enabled": bool(pair_indices),
@@ -634,19 +1192,13 @@ def _prioritized_pair_training_metadata(
         "local_pair_indices": local_pair_indices,
         "pair_count": len(pair_indices),
         "sampling_scope": (
-            "explicit_source_pair_target_hydration"
-            if consumed
-            else "local_mlx_training_batch_emphasis_only"
+            "explicit_source_pair_target_hydration" if consumed else "local_mlx_training_batch_emphasis_only"
         ),
         "pair_index_domain": (
-            "source_video_pair_indices"
-            if consumed
-            else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+            "source_video_pair_indices" if consumed else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
         ),
         "pair_index_alignment_mode": (
-            "local_target_rows_to_source_pair_indices"
-            if consumed
-            else "identity_local_rows_are_source_pairs"
+            "local_target_rows_to_source_pair_indices" if consumed else "identity_local_rows_are_source_pairs"
         ),
         "arbitrary_source_pair_hydration": consumed,
         "target_hydration_pair_indices_consumed": consumed,
@@ -662,9 +1214,7 @@ def _prioritized_pair_training_lineage_metadata(
     target_hydration_pair_indices_consumed: bool = False,
 ) -> dict[str, Any]:
     consumed = bool(pair_indices) and bool(target_hydration_pair_indices_consumed)
-    local_pair_indices = list(range(len(pair_indices))) if consumed else [
-        int(value) for value in pair_indices
-    ]
+    local_pair_indices = list(range(len(pair_indices))) if consumed else [int(value) for value in pair_indices]
     return {
         "schema": "hi_nerv_direct_trainer_prioritized_pair_training.v1",
         "enabled": bool(pair_indices),
@@ -673,27 +1223,19 @@ def _prioritized_pair_training_lineage_metadata(
         "local_pair_indices": local_pair_indices,
         "pair_count": len(pair_indices),
         "sampling_scope": (
-            "explicit_source_pair_target_hydration"
-            if consumed
-            else "local_mlx_training_batch_emphasis_only"
+            "explicit_source_pair_target_hydration" if consumed else "local_mlx_training_batch_emphasis_only"
         ),
         "pair_index_domain": (
-            "source_video_pair_indices"
-            if consumed
-            else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+            "source_video_pair_indices" if consumed else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
         ),
         "pair_index_alignment_mode": (
-            "local_target_rows_to_source_pair_indices"
-            if consumed
-            else "identity_local_rows_are_source_pairs"
+            "local_target_rows_to_source_pair_indices" if consumed else "identity_local_rows_are_source_pairs"
         ),
         "arbitrary_source_pair_hydration": consumed,
         "target_hydration_pair_indices_consumed": consumed,
         "requires_num_pairs_covering_pair_ids": bool(pair_indices) and not consumed,
         "authority": "macos_mlx_research_signal_false_authority",
-        "canonical_authority_surface": (
-            "TrainingArtifact top-level false-authority fields"
-        ),
+        "canonical_authority_surface": ("TrainingArtifact top-level false-authority fields"),
     }
 
 
@@ -702,10 +1244,7 @@ def _pose_student_input_channels(preprocess: str) -> int:
         return 3
     if preprocess == "pr95_yuv6":
         return 6
-    raise ValueError(
-        "unsupported pose_student_input_preprocess "
-        f"{preprocess!r}; expected 'rgb' or 'pr95_yuv6'"
-    )
+    raise ValueError(f"unsupported pose_student_input_preprocess {preprocess!r}; expected 'rgb' or 'pr95_yuv6'")
 
 
 def _curriculum_stages_from_args(args: argparse.Namespace) -> tuple[Any, ...] | None:
@@ -738,15 +1277,9 @@ def _build_staged_scorer_curriculum(
             f"and joint scorer stages are all non-empty; got {epochs}"
         )
     if not (0.0 < recon_fraction < 1.0):
-        raise ValueError(
-            "staged_scorer_recon_fraction must be in (0, 1); "
-            f"got {recon_fraction}"
-        )
+        raise ValueError(f"staged_scorer_recon_fraction must be in (0, 1); got {recon_fraction}")
     if not (0.0 < segnet_fraction < 1.0):
-        raise ValueError(
-            "staged_scorer_segnet_fraction must be in (0, 1); "
-            f"got {segnet_fraction}"
-        )
+        raise ValueError(f"staged_scorer_segnet_fraction must be in (0, 1); got {segnet_fraction}")
     if recon_fraction + segnet_fraction >= 1.0:
         raise ValueError(
             "staged scorer recon + SegNet fractions must leave a non-empty "
@@ -754,14 +1287,10 @@ def _build_staged_scorer_curriculum(
             f"recon={recon_fraction} segnet={segnet_fraction}"
         )
     if final_recon_weight < 0.0:
-        raise ValueError(
-            "staged_scorer_final_recon_weight must be non-negative; "
-            f"got {final_recon_weight}"
-        )
+        raise ValueError(f"staged_scorer_final_recon_weight must be non-negative; got {final_recon_weight}")
     if segnet_lr_scale <= 0.0 or final_lr_scale <= 0.0:
         raise ValueError(
-            "staged scorer lr scales must be positive; got "
-            f"segnet={segnet_lr_scale} final={final_lr_scale}"
+            f"staged scorer lr scales must be positive; got segnet={segnet_lr_scale} final={final_lr_scale}"
         )
 
     recon_end = max(1, min(epochs - 2, round(epochs * recon_fraction)))
@@ -818,10 +1347,7 @@ def _resolve_output_dir(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]
             output = REPO_ROOT / output
         output = output.resolve(strict=False)
         if _looks_local(output) and not bool(args.allow_local_output_dir):
-            raise StorageTierError(
-                "hi_nerv_mlx_trainer_output_storage_preflight_failed: "
-                "local_disk_tier_disabled"
-            )
+            raise StorageTierError("hi_nerv_mlx_trainer_output_storage_preflight_failed: local_disk_tier_disabled")
         output.mkdir(parents=True, exist_ok=True)
         return output, {
             "schema": "hi_nerv_mlx_trainer_explicit_output_preflight.v1",
@@ -839,10 +1365,7 @@ def _resolve_output_dir(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]
         reserve_free_gb=float(args.storage_reserve_free_gb),
         allow_local_disk=False,
     )
-    subdir = (
-        f"{str(args.storage_workload_subdir).strip('/')}/"
-        f"{args.modelsize_row!s}_{int(args.num_pairs)}pairs"
-    )
+    subdir = f"{str(args.storage_workload_subdir).strip('/')}/{args.modelsize_row!s}_{int(args.num_pairs)}pairs"
     plan = plan_experiment_storage(
         tiers,
         workload_subdir=subdir,
@@ -889,9 +1412,15 @@ def _direct_trainer_canonicalization_contract(*, mode: str) -> dict[str, Any]:
     }
 
 
-def _pr95_full_control_contract(args: argparse.Namespace) -> dict[str, Any]:
+def _pr95_full_control_contract(
+    args: argparse.Namespace,
+    *,
+    train_time_controls: HiNervTrainTimeControlConfig | None = None,
+) -> dict[str, Any]:
     """Fail-closed production-full control audit for PR95-critical HiNeRV runs."""
 
+    if train_time_controls is None:
+        train_time_controls = _train_time_control_config_from_args(args)
     blockers: list[str] = []
     distillation_weight = float(getattr(args, "distillation_weight", 0.0))
     pose_distillation_weight = float(getattr(args, "pose_distillation_weight", 0.0))
@@ -905,9 +1434,7 @@ def _pr95_full_control_contract(args: argparse.Namespace) -> dict[str, Any]:
     c1a_sigma = float(getattr(args, "coder_qat_c1a_sigma", 0.0))
     c1a_sample_size = int(getattr(args, "coder_qat_c1a_sample_size", 0))
     ema_archive_selection = bool(getattr(args, "ema_archive_selection", False))
-    archive_parse_back_selection = bool(
-        getattr(args, "post_export_receiver_cache_quality_gate", False)
-    )
+    archive_parse_back_selection = bool(getattr(args, "post_export_receiver_cache_quality_gate", False))
 
     if distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_segnet_distillation_loss")
@@ -946,14 +1473,13 @@ def _pr95_full_control_contract(args: argparse.Namespace) -> dict[str, Any]:
         "control_surface": "production_full_pr95_critical_controls",
         "production_full_control_ready": not blockers,
         "controls": {
+            "stage_loss_schedule": train_time_controls.stage_loss_schedule,
+            "optimizer_kind": train_time_controls.optimizer_kind,
+            "optimizer_surface": train_time_controls.metadata()["optimizer_surface"],
             "real_segnet_distillation_loss": distillation_weight > 0.0,
             "real_posenet_distillation_loss": pose_distillation_weight > 0.0,
-            "mock_scorer_teacher_allowed": bool(
-                getattr(args, "allow_mock_scorer_teacher", False)
-            ),
-            "segnet_only_research_allowed": bool(
-                getattr(args, "allow_segnet_only_research", False)
-            ),
+            "mock_scorer_teacher_allowed": bool(getattr(args, "allow_mock_scorer_teacher", False)),
+            "segnet_only_research_allowed": bool(getattr(args, "allow_segnet_only_research", False)),
             "eval_roundtrip_ste_enabled": eval_roundtrip_ste,
             "pose_student_input_preprocess": pose_preprocess,
             "pr95_faithful_curriculum_enabled": pr95_curriculum,
@@ -964,9 +1490,39 @@ def _pr95_full_control_contract(args: argparse.Namespace) -> dict[str, Any]:
             "coder_qat_c1a_entropy_weight": c1a_entropy_weight,
             "coder_qat_c1a_sigma": c1a_sigma,
             "coder_qat_c1a_sample_size": c1a_sample_size,
+            "decoder_fake_quant_forward_enabled": bool(
+                train_time_controls.decoder_fake_quant_forward_enabled
+            ),
+            "decoder_fake_quant_bits": int(train_time_controls.decoder_fake_quant_bits),
+            "train_time_decoder_controls_enabled": (
+                train_time_controls.train_time_decoder_controls_enabled
+            ),
+            "train_time_decoder_pruning_ratio": float(
+                train_time_controls.train_time_decoder_pruning_ratio
+            ),
+            "train_time_decoder_quant_noise_bits": (
+                None
+                if train_time_controls.train_time_decoder_quant_noise_bits is None
+                else int(train_time_controls.train_time_decoder_quant_noise_bits)
+            ),
+            "train_time_decoder_quant_noise_scale": float(
+                train_time_controls.train_time_decoder_quant_noise_scale
+            ),
+            "export_decoder_pruning_ratio": float(
+                train_time_controls.export_decoder_pruning_ratio
+            ),
+            "export_decoder_quant_noise_bits": (
+                None
+                if train_time_controls.export_decoder_quant_noise_bits is None
+                else int(train_time_controls.export_decoder_quant_noise_bits)
+            ),
+            "export_decoder_quant_noise_scale": float(
+                train_time_controls.export_decoder_quant_noise_scale
+            ),
             "ema_archive_selection_enabled": ema_archive_selection,
             "archive_parse_back_selection_enabled": archive_parse_back_selection,
         },
+        "train_time_controls": _metadata_safe(train_time_controls.metadata()),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -982,9 +1538,7 @@ def _direct_trainer_launch_refusal_payload(
         return None
     control_ready = True
     if pr95_full_control_contract is not None:
-        control_ready = (
-            pr95_full_control_contract.get("production_full_control_ready") is True
-        )
+        control_ready = pr95_full_control_contract.get("production_full_control_ready") is True
     if canonicalization.get("trainer_launch_allowed") is True and control_ready:
         return None
     blockers: list[str] = []
@@ -996,9 +1550,7 @@ def _direct_trainer_launch_refusal_payload(
             ]
         )
     if pr95_full_control_contract is not None:
-        control_blockers = [
-            str(blocker) for blocker in pr95_full_control_contract.get("blockers") or []
-        ]
+        control_blockers = [str(blocker) for blocker in pr95_full_control_contract.get("blockers") or []]
         if control_blockers:
             blockers.extend(
                 [
@@ -1115,9 +1667,7 @@ def _maybe_write_post_export_receiver_cache_quality(
         batch_pairs=int(args.receiver_cache_quality_batch_pairs),
         sample_pairs=int(args.receiver_cache_quality_max_pairs),
         min_segnet_std=float(args.receiver_cache_quality_min_segnet_std),
-        min_segnet_dynamic_range=float(
-            args.receiver_cache_quality_min_segnet_dynamic_range
-        ),
+        min_segnet_dynamic_range=float(args.receiver_cache_quality_min_segnet_dynamic_range),
         max_segnet_mae_vs_reference_for_fit_gate=float(
             args.receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
         ),
@@ -1135,9 +1685,7 @@ def _write_post_export_receiver_cache_quality_refusal(
         "schema": "hi_nerv_receiver_cache_quality_report.v1",
         "output_dir": (output_dir / "post_export_receiver_cache_quality").as_posix(),
         "archive_path": archive_path.as_posix() if archive_path is not None else None,
-        "reference_cache_dir": (
-            reference_cache_dir.as_posix() if reference_cache_dir is not None else None
-        ),
+        "reference_cache_dir": (reference_cache_dir.as_posix() if reference_cache_dir is not None else None),
         "quality_gate": None,
         "quality_gate_passed": False,
         "blockers": [
@@ -1164,9 +1712,7 @@ def _attach_post_export_receiver_cache_quality_to_training_artifact(
         return
     artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
     metadata = dict(artifact.get("substrate_artifact_metadata") or {})
-    metadata["post_export_receiver_cache_quality"] = (
-        _receiver_cache_quality_manifest_summary(report)
-    )
+    metadata["post_export_receiver_cache_quality"] = _receiver_cache_quality_manifest_summary(report)
     artifact["substrate_artifact_metadata"] = metadata
     artifact_path.write_text(
         json.dumps(artifact, indent=2, sort_keys=True) + "\n",
@@ -1191,13 +1737,9 @@ def _receiver_cache_quality_manifest_summary(
         "quality_gate_verdict": gate.get("verdict") if isinstance(gate, dict) else None,
         "quality_gate_passed": bool(report.get("quality_gate_passed")),
         "candidate_segnet_last_rgb_stats": (
-            gate_stats.get("candidate_segnet_last_rgb")
-            if isinstance(gate_stats, dict)
-            else None
+            gate_stats.get("candidate_segnet_last_rgb") if isinstance(gate_stats, dict) else None
         ),
-        "distance_to_reference": (
-            gate.get("distance_to_reference") if isinstance(gate, dict) else None
-        ),
+        "distance_to_reference": (gate.get("distance_to_reference") if isinstance(gate, dict) else None),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
     }
 
@@ -1210,9 +1752,14 @@ def main(argv: list[str] | None = None) -> int:
 
 
 __all__ = [
+    "HI_NERV_TRAIN_TIME_CONTROL_SCHEMA",
+    "HI_NERV_TRAIN_TIME_DECODER_CONTROL_REPORT_SCHEMA",
     "PR95_FULL_CONTROL_CONTRACT_SCHEMA",
     "TRAINER_SCHEMA",
+    "HiNervTrainTimeControlConfig",
+    "_apply_train_time_decoder_controls",
     "_build_parser",
+    "_build_train_time_decoder_control_callback",
     "_coder_qat_config_from_args",
     "_config_from_args",
     "_metadata_safe",
@@ -1221,6 +1768,7 @@ __all__ = [
     "_prioritized_pair_training_lineage_metadata",
     "_prioritized_pair_training_metadata",
     "_resolve_output_dir",
+    "_train_time_control_config_from_args",
     "main",
 ]
 

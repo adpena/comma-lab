@@ -40,6 +40,34 @@ RECEIVER_PROOF_TRUTHY_KEYS = (
     "receiver_closed",
     "byte_closed_receiver_proof",
 )
+RECEIVER_PROOF_ARCHIVE_SHA_KEYS = (
+    "archive_sha256",
+    "archive_zip_sha256",
+    "candidate_archive_sha256",
+    "receiver_archive_sha256",
+    "archive_packet_sha256",
+)
+RECEIVER_PROOF_ARCHIVE_BYTE_KEYS = (
+    "archive_bytes",
+    "archive_zip_bytes",
+    "candidate_archive_bytes",
+    "archive_packet_bytes",
+)
+RECEIVER_PROOF_AUTHORITY_TRUE_KEYS = (
+    "score_claim",
+    "score_claim_valid",
+    "frontier_score_claim",
+    "promotion_eligible",
+    "rank_or_kill_eligible",
+    "production_hardened_claim",
+    "ready_for_exact_eval_dispatch",
+)
+KNOWN_RECEIVER_PROOF_SCHEMAS = {
+    "tac_archive_bound_candidate_generated_receiver_proof.v1",
+    "snerv_inverse_steg_generated_receiver_proof.v1",
+    "hi_nerv_mlx_generated_receiver_proof.v1",
+    "snerv_receiver_archive_proof.v1",
+}
 
 
 def receiver_proof_identity_binding(
@@ -65,6 +93,8 @@ def receiver_proof_identity_binding(
     actual_sha: str | None = None
     proof_file_claimed_pass = False
     proof_file_blockers: list[str] = []
+    proof_file_archive_bytes: int | None = None
+    proof_file_archive_sha256: str | None = None
     if proof_path_raw is None:
         blockers.append("receiver_proof_path_missing")
     else:
@@ -73,8 +103,15 @@ def receiver_proof_identity_binding(
             blockers.append("receiver_proof_path_not_file")
         else:
             actual_sha = sha256_file(proof_path)
-            proof_file_claimed_pass, proof_file_blockers = _proof_file_claims_pass(
-                proof_path
+            (
+                proof_file_claimed_pass,
+                proof_file_blockers,
+                proof_file_archive_bytes,
+                proof_file_archive_sha256,
+            ) = _proof_file_claims_pass(
+                proof_path,
+                archive_bytes=archive_bytes,
+                archive_sha256=archive_sha256,
             )
     if not is_sha256_hex(expected_sha):
         blockers.append("receiver_proof_sha256_missing_or_invalid")
@@ -93,14 +130,14 @@ def receiver_proof_identity_binding(
             str(expected_sha).strip().lower() if expected_sha is not None else None
         ),
         "proof_passed": bool(
-            bound and claimed_proof_passed and proof_file_claimed_pass
+            bound and proof_file_claimed_pass
         ),
         "claimed_receiver_proof_pass": bool(claimed_proof_passed),
         "proof_file_claimed_receiver_proof_pass": bool(proof_file_claimed_pass),
-        "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
-        "archive_sha256": (
-            str(archive_sha256).strip().lower() if archive_sha256 is not None else None
-        ),
+        "archive_bytes": proof_file_archive_bytes,
+        "archive_sha256": proof_file_archive_sha256,
+        "expected_archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
+        "expected_archive_sha256": _sha256_or_none(archive_sha256),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -152,21 +189,68 @@ def _lookup(row: Mapping[str, Any], key: Any) -> Any:
     return row.get(key)
 
 
-def _proof_file_claims_pass(path: Path) -> tuple[bool, list[str]]:
+def _proof_file_claims_pass(
+    path: Path,
+    *,
+    archive_bytes: int | None,
+    archive_sha256: str | None,
+) -> tuple[bool, list[str], int | None, str | None]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return False, ["receiver_proof_json_unreadable"]
+        return False, ["receiver_proof_json_unreadable"], None, None
     if not isinstance(payload, Mapping):
-        return False, ["receiver_proof_payload_not_object"]
+        return False, ["receiver_proof_payload_not_object"], None, None
     blockers: list[str] = []
     schema = payload.get("schema")
     if not isinstance(schema, str) or not schema.strip():
         blockers.append("receiver_proof_schema_missing")
+    elif not _known_receiver_proof_schema(schema):
+        blockers.append(f"receiver_proof_schema_unrecognized:{schema}")
     pass_flag = any(_truthy(_lookup(payload, key)) for key in RECEIVER_PROOF_TRUTHY_KEYS)
     if not pass_flag:
         blockers.append("receiver_proof_payload_pass_flag_missing")
-    return not blockers, blockers
+    if _sequence_or_empty(payload.get("blockers")):
+        blockers.append("receiver_proof_payload_blockers_present")
+    for key in RECEIVER_PROOF_AUTHORITY_TRUE_KEYS:
+        if _truthy(payload.get(key)):
+            blockers.append(f"receiver_proof_authority_flag_true:{key}")
+
+    proof_archive_sha = _sha256_or_none(
+        _first_value(payload, RECEIVER_PROOF_ARCHIVE_SHA_KEYS)
+    )
+    expected_archive_sha = _sha256_or_none(archive_sha256)
+    if expected_archive_sha is not None:
+        if proof_archive_sha is None:
+            blockers.append("receiver_proof_archive_sha256_missing")
+        elif proof_archive_sha != expected_archive_sha:
+            blockers.append("receiver_proof_archive_sha256_mismatch")
+
+    proof_archive_bytes = _positive_int_or_none(
+        _first_value(payload, RECEIVER_PROOF_ARCHIVE_BYTE_KEYS)
+    )
+    expected_archive_bytes = _positive_int_or_none(archive_bytes)
+    if expected_archive_bytes is not None:
+        if proof_archive_bytes is None:
+            blockers.append("receiver_proof_archive_bytes_missing")
+        elif proof_archive_bytes != expected_archive_bytes:
+            blockers.append("receiver_proof_archive_bytes_mismatch")
+    return not blockers, blockers, proof_archive_bytes, proof_archive_sha
+
+
+def _known_receiver_proof_schema(schema: str) -> bool:
+    text = schema.strip()
+    return text in KNOWN_RECEIVER_PROOF_SCHEMAS or text.endswith(
+        "_generated_receiver_proof.v1"
+    )
+
+
+def _first_value(row: Mapping[str, Any], keys: Sequence[Any]) -> Any:
+    for key in keys:
+        value = _lookup(row, key)
+        if value is not None:
+            return value
+    return None
 
 
 def _truthy(value: Any) -> bool:
@@ -186,6 +270,33 @@ def _resolve_path(value: str | Path | None, *, repo_root: Path) -> Path | None:
     if not path.is_absolute():
         path = repo_root / path
     return path
+
+
+def _sha256_or_none(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if len(text) != 64 or any(ch not in "0123456789abcdef" for ch in text):
+        return None
+    return text
+
+
+def _positive_int_or_none(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _sequence_or_empty(value: Any) -> Sequence[Any]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, Sequence):
+        return value
+    return (value,)
 
 
 def _ordered_unique(values: Sequence[str]) -> list[str]:

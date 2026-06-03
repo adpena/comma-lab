@@ -367,6 +367,93 @@ def _make_minimal_bundle() -> object:
     )
 
 
+def _make_minimal_pr95_score_bundle() -> object:
+    """Build a tiny bundle with both scorer teachers for PR95 stage dispatch."""
+
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+    from tac.substrates.hinton_distilled_scorer_surrogate import (
+        RealPoseNetTeacherCache,
+        RealSegNetTeacherLogitsCache,
+        build_learnable_pose_student_head,
+        build_learnable_student_head,
+    )
+
+    base = _make_minimal_bundle()
+    num_pairs = int(base.num_pairs)
+    num_classes = 5
+    labels = np.asarray(
+        [
+            [[0, 1], [2, 3]],
+            [[4, 3], [2, 1]],
+            [[1, 2], [3, 4]],
+            [[0, 2], [4, 1]],
+            [[3, 1], [0, 2]],
+            [[2, 4], [1, 0]],
+            [[4, 0], [3, 2]],
+            [[1, 3], [2, 4]],
+        ],
+        dtype=np.int32,
+    )
+    logits = np.full((num_pairs, 2, 2, num_classes), -1.5, dtype=np.float32)
+    for pair_index in range(num_pairs):
+        for row in range(2):
+            for col in range(2):
+                logits[pair_index, row, col, labels[pair_index, row, col]] = 2.5
+    seg_teacher = RealSegNetTeacherLogitsCache(
+        teacher_logits_thwk=mx.array(logits),
+        frame_count=num_pairs,
+        height=2,
+        width=2,
+        num_classes=num_classes,
+    )
+
+    pose_np = np.stack(
+        [
+            np.linspace(0.1 * i, 0.1 * i + 0.5, 6, dtype=np.float32)
+            for i in range(num_pairs)
+        ],
+        axis=0,
+    )
+    pose_teacher = RealPoseNetTeacherCache(
+        teacher_pose_np=mx.array(pose_np),
+        num_pairs=num_pairs,
+        pose_dims=6,
+        per_dim_scale=mx.ones((6,)),
+    )
+    seg_head = build_learnable_student_head(
+        num_classes=num_classes,
+        in_channels=3,
+        seed=23,
+        init_scale=0.2,
+    )
+    seg_head.weight = mx.zeros((3, num_classes))
+    seg_head.bias = mx.array([4.0, 1.0, 0.0, -1.0, -2.0], dtype=mx.float32)
+    pose_head = build_learnable_pose_student_head(
+        pose_dims=6,
+        pool_grid=1,
+        input_channels=3,
+        seed=29,
+        init_scale=0.1,
+    )
+
+    return RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=num_pairs,
+        forward_convention=base.forward_convention,
+        distillation_weight=1.0,
+        scorer_teacher=seg_teacher,
+        learnable_student_head=seg_head,
+        pose_distillation_weight=1.0,
+        pose_scorer_teacher=pose_teacher,
+        learnable_pose_student_head=pose_head,
+    )
+
+
 @requires_mlx
 def test_adapter_default_off_preserves_legacy_adamw_path() -> None:
     """Backward compat: pr95_faithful_curriculum_enabled=False keeps legacy adapter."""
@@ -495,7 +582,7 @@ def test_train_step_returns_stage_index_in_metrics_when_curriculum_enabled() -> 
     """train_step's return dict carries pr95_stage_index + uses_muon metrics."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
-    bundle = _make_minimal_bundle()
+    bundle = _make_minimal_pr95_score_bundle()
     adapter = MlxScoreAwareAdapter(
         bundle,
         substrate_id="test_substrate",
@@ -513,6 +600,7 @@ def test_train_step_returns_stage_index_in_metrics_when_curriculum_enabled() -> 
     assert "total" in metrics
     assert "pr95_stage_index" in metrics
     assert "pr95_stage_uses_muon" in metrics
+    assert "loss_part_pr95_stage_scorer_surrogate" in metrics
     assert metrics["pr95_stage_index"] == 1.0
     assert metrics["pr95_stage_uses_muon"] == 0.0  # stage 1 uses AdamW only.
 
@@ -522,7 +610,7 @@ def test_train_step_stage_8_signals_muon_active_in_metrics() -> None:
     """At final-stage epoch, train_step metrics carry pr95_stage_uses_muon=1.0."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
-    bundle = _make_minimal_bundle()
+    bundle = _make_minimal_pr95_score_bundle()
     adapter = MlxScoreAwareAdapter(
         bundle,
         substrate_id="test_substrate",
@@ -543,6 +631,53 @@ def test_train_step_stage_8_signals_muon_active_in_metrics() -> None:
     assert metrics["pr95_stage_uses_muon"] == 1.0, (
         "stage 8 MUST signal use_muon=True per L15 canonical equation"
     )
+    assert metrics["loss_part_pr95_stage_loss_surface_active"] == pytest.approx(1.0)
+
+
+@requires_mlx
+def test_pr95_stage_dispatch_makes_stage_1_2_5_losses_behaviorally_distinct() -> None:
+    """Stage verdict loss_family must change the adapter's actual loss value."""
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.model.decoder_weight = mx.ones((4, 4)) * 0.25
+    mx.eval(bundle.model.parameters())
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    batch = adapter.sample_batch(batch_size=4, seed=3)
+    stage_starts = {
+        int(stage_index): int(start_epoch)
+        for stage_index, start_epoch, _end_epoch in (
+            adapter._pr95_curriculum_factory.stage_epoch_boundaries
+        )
+    }
+    losses: dict[int, float] = {}
+    families: dict[int, str] = {}
+    for stage_index in (1, 2, 5):
+        verdict = adapter._pr95_curriculum_factory.current_stage_verdict(
+            stage_starts[stage_index]
+        )
+        total, parts = adapter._pr95_stage_loss_and_parts(
+            batch=batch,
+            stage_verdict=verdict,
+            model=adapter.model,
+        )
+        mx.eval(total, *parts.values())
+        losses[stage_index] = float(total.item())
+        families[stage_index] = str(verdict.loss_family)
+
+    assert families == {
+        1: "ce_seg_loss",
+        2: "tau_softplus_seg_loss",
+        5: "l7_softplus_seg_loss",
+    }
+    assert len({round(value, 6) for value in losses.values()}) == 3, losses
 
 
 @requires_mlx
@@ -550,34 +685,9 @@ def test_pr95_curriculum_path_trains_student_heads_when_stage_weight_active() ->
     import mlx.core as mx
 
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
-    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
-    from tac.substrates.hinton_distilled_scorer_surrogate import (
-        RealPoseNetTeacherCache,
-        build_learnable_pose_student_head,
-    )
 
-    base = _make_minimal_bundle()
-    pose_teacher = RealPoseNetTeacherCache(
-        teacher_pose_np=mx.ones((base.num_pairs, 6)),
-        num_pairs=base.num_pairs,
-        pose_dims=6,
-    )
-    pose_head = build_learnable_pose_student_head(
-        seed=17,
-        input_channels=6,
-        pool_grid=1,
-    )
-    bundle = RendererBundle(
-        model=base.model,
-        target_rgb_0=base.target_rgb_0,
-        target_rgb_1=base.target_rgb_1,
-        num_pairs=base.num_pairs,
-        forward_convention=base.forward_convention,
-        pose_distillation_weight=0.5,
-        pose_scorer_teacher=pose_teacher,
-        learnable_pose_student_head=pose_head,
-        pose_student_input_preprocess="pr95_yuv6",
-    )
+    bundle = _make_minimal_pr95_score_bundle()
+    pose_head = bundle.learnable_pose_student_head
     adapter = MlxScoreAwareAdapter(
         bundle,
         substrate_id="test_substrate",
@@ -596,7 +706,7 @@ def test_pr95_curriculum_path_trains_student_heads_when_stage_weight_active() ->
 
     moved = float(mx.max(mx.abs(pose_head.weight - w0)).item())
     assert moved > 0.0
-    assert metrics["loss_part_stage_weight_pose_distill"] == pytest.approx(1.0)
+    assert "loss_part_pr95_stage_pose_surrogate" in metrics
 
 
 @requires_mlx
@@ -604,34 +714,9 @@ def test_pr95_curriculum_path_respects_zero_student_head_stage_weight() -> None:
     import mlx.core as mx
 
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
-    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
-    from tac.substrates.hinton_distilled_scorer_surrogate import (
-        RealPoseNetTeacherCache,
-        build_learnable_pose_student_head,
-    )
 
-    base = _make_minimal_bundle()
-    pose_teacher = RealPoseNetTeacherCache(
-        teacher_pose_np=mx.ones((base.num_pairs, 6)),
-        num_pairs=base.num_pairs,
-        pose_dims=6,
-    )
-    pose_head = build_learnable_pose_student_head(
-        seed=19,
-        input_channels=6,
-        pool_grid=1,
-    )
-    bundle = RendererBundle(
-        model=base.model,
-        target_rgb_0=base.target_rgb_0,
-        target_rgb_1=base.target_rgb_1,
-        num_pairs=base.num_pairs,
-        forward_convention=base.forward_convention,
-        pose_distillation_weight=0.5,
-        pose_scorer_teacher=pose_teacher,
-        learnable_pose_student_head=pose_head,
-        pose_student_input_preprocess="pr95_yuv6",
-    )
+    bundle = _make_minimal_pr95_score_bundle()
+    pose_head = bundle.learnable_pose_student_head
     adapter = MlxScoreAwareAdapter(
         bundle,
         substrate_id="test_substrate",
@@ -650,7 +735,8 @@ def test_pr95_curriculum_path_respects_zero_student_head_stage_weight() -> None:
 
     moved = float(mx.max(mx.abs(pose_head.weight - w0)).item())
     assert moved == pytest.approx(0.0)
-    assert "loss_part_pose_distill" not in metrics
+    assert "loss_part_stage_weight_pose_distill" not in metrics
+    assert "loss_part_pr95_stage_pose_surrogate" in metrics
 
 
 # ---------- Section 5: NO FAKE end-to-end verification (param mutation) ----------
@@ -663,7 +749,7 @@ def test_train_step_actually_mutates_parameters_per_stage_NO_FAKE() -> None:
 
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
-    bundle = _make_minimal_bundle()
+    bundle = _make_minimal_pr95_score_bundle()
     # Initialize model parameters to non-zero so the loss gradient is non-zero.
     bundle.model.decoder_weight = mx.ones((4, 4)) * 0.5
     bundle.model.decoder_bias = mx.ones((4,)) * 0.1
@@ -743,7 +829,7 @@ def test_stage_transition_resets_muon_buffers_per_l15_invariant() -> None:
     """L15 canonical equation: stage 8 starts with fresh Muon buffers."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
-    bundle = _make_minimal_bundle()
+    bundle = _make_minimal_pr95_score_bundle()
     adapter = MlxScoreAwareAdapter(
         bundle,
         substrate_id="test_substrate",

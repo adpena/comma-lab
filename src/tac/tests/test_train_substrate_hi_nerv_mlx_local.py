@@ -12,8 +12,11 @@ from comma_lab.storage_tiers import StorageTierError
 from experiments.train_substrate_hi_nerv_mlx_local import (
     DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
     DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
+    HI_NERV_TRAIN_TIME_CONTROL_SCHEMA,
     PR95_FULL_CONTROL_CONTRACT_SCHEMA,
     TRAINER_SCHEMA,
+    HiNervTrainTimeControlConfig,
+    _apply_train_time_decoder_controls,
     _build_parser,
     _build_staged_scorer_curriculum,
     _coder_qat_config_from_args,
@@ -29,6 +32,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _prioritized_pair_training_metadata,
     _receiver_cache_quality_manifest_summary,
     _resolve_output_dir,
+    _train_time_control_config_from_args,
 )
 from tac.substrates._shared.mlx_score_aware.adapter import (
     DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
@@ -98,6 +102,158 @@ def test_hinerv_mlx_trainer_coder_qat_config_is_real_and_validated() -> None:
     assert cfg.c1a_entropy_weight == pytest.approx(0.0003)
     assert cfg.c1a_sigma == pytest.approx(0.35)
     assert cfg.c1a_sample_size == 64
+
+
+def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--pr95-faithful-curriculum",
+            "--pr95-curriculum-total-epochs",
+            "29650",
+            "--coder-qat",
+            "--coder-qat-bits",
+            "4",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
+            "--decoder-fake-quant-forward",
+            "--decoder-fake-quant-bits",
+            "4",
+            "--train-time-decoder-pruning-ratio",
+            "0.125",
+            "--train-time-decoder-quant-noise-bits",
+            "4",
+            "--train-time-decoder-quant-noise-scale",
+            "0.25",
+            "--train-time-decoder-control-start-epoch",
+            "2",
+            "--train-time-decoder-control-frequency-epochs",
+            "3",
+            "--export-decoder-pruning-ratio",
+            "0.0625",
+            "--export-decoder-quant-noise-bits",
+            "6",
+            "--export-decoder-quant-noise-scale",
+            "0.125",
+        ]
+    )
+
+    cfg = _train_time_control_config_from_args(args)
+    metadata = cfg.metadata()
+
+    assert metadata["schema"] == HI_NERV_TRAIN_TIME_CONTROL_SCHEMA
+    assert metadata["stage_loss_schedule"] == "pr95_faithful_8stage"
+    assert metadata["optimizer_kind"] == DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    assert metadata["optimizer_surface"] == "pr95_faithful_stage_descriptors"
+    assert metadata["coder_qat_enabled"] is True
+    assert metadata["coder_qat_c1a_sigma"] == pytest.approx(0.35)
+    assert metadata["decoder_fake_quant_forward_enabled"] is True
+    assert metadata["decoder_fake_quant_bits"] == 4
+    assert metadata["train_time_decoder_controls_enabled"] is True
+    assert metadata["train_time_decoder_pruning_ratio"] == pytest.approx(0.125)
+    assert metadata["train_time_decoder_quant_noise_bits"] == 4
+    assert metadata["train_time_decoder_control_start_epoch"] == 2
+    assert metadata["train_time_decoder_control_frequency_epochs"] == 3
+    assert metadata["export_decoder_pruning_ratio"] == pytest.approx(0.0625)
+    assert metadata["export_decoder_quant_noise_bits"] == 6
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_train_time_control_config_rejects_ambiguous_or_fake_controls() -> None:
+    with pytest.raises(ValueError, match="exactly one stage-loss authority"):
+        _train_time_control_config_from_args(
+            _build_parser().parse_args(
+                ["--full", "--pr95-faithful-curriculum", "--staged-scorer-curriculum"]
+            )
+        )
+
+    with pytest.raises(ValueError, match="owns optimizer staging"):
+        _train_time_control_config_from_args(
+            _build_parser().parse_args(
+                ["--full", "--pr95-faithful-curriculum", "--optimizer-kind", "adamw"]
+            )
+        )
+
+    with pytest.raises(ValueError, match="requires --coder-qat"):
+        _train_time_control_config_from_args(
+            _build_parser().parse_args(
+                ["--full", "--coder-qat-c1a-entropy-weight", "0.001"]
+            )
+        )
+
+    with pytest.raises(ValueError, match="bits is required"):
+        _train_time_control_config_from_args(
+            _build_parser().parse_args(
+                ["--full", "--train-time-decoder-quant-noise-scale", "0.1"]
+            )
+        )
+
+
+def test_hinerv_train_time_decoder_controls_mutate_mlx_decoder_not_latents() -> None:
+    mx = pytest.importorskip("mlx.core")
+    import numpy as np
+
+    class TinyMlxModel:
+        def __init__(self) -> None:
+            self.params = {
+                "decoder": {
+                    "weight": mx.array(
+                        [[0.01, -0.20, 0.50, 2.0], [0.03, -0.04, 1.5, -3.0]],
+                        dtype=mx.float32,
+                    )
+                },
+                "latents": mx.array([1.0, 2.0, 3.0], dtype=mx.float32),
+            }
+
+        def parameters(self) -> dict[str, object]:
+            return self.params
+
+        def update(self, params: dict[str, object]) -> None:
+            self.params = params
+
+    model = TinyMlxModel()
+    before_decoder = np.asarray(model.params["decoder"]["weight"]).copy()
+    before_latents = np.asarray(model.params["latents"]).copy()
+    controls = HiNervTrainTimeControlConfig(
+        stage_loss_schedule="single_stage_score_aware_full",
+        optimizer_kind=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
+        pr95_faithful_curriculum_enabled=False,
+        pr95_curriculum_total_epochs=None,
+        staged_scorer_curriculum_enabled=False,
+        coder_qat_enabled=False,
+        coder_qat_quant_bits=8,
+        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_sigma=0.2,
+        coder_qat_c1a_sample_size=512,
+        decoder_fake_quant_forward_enabled=False,
+        decoder_fake_quant_bits=8,
+        train_time_decoder_pruning_ratio=0.25,
+        train_time_decoder_quant_noise_bits=4,
+        train_time_decoder_quant_noise_scale=0.5,
+        train_time_decoder_quant_noise_seed=7,
+    ).validated()
+
+    report = _apply_train_time_decoder_controls(model, controls, epoch=0)
+
+    after_decoder = np.asarray(model.params["decoder"]["weight"])
+    after_latents = np.asarray(model.params["latents"])
+    assert report["applied"] is True
+    assert report["selected_tensor_count"] == 1
+    assert report["changed_tensor_count"] == 1
+    assert report["pruning"]["pruned_values"] > 0
+    assert report["quant_noise"]["changed_tensor_count"] == 1
+    assert not np.array_equal(after_decoder, before_decoder)
+    assert np.count_nonzero(after_decoder == 0.0) > np.count_nonzero(
+        before_decoder == 0.0
+    )
+    assert np.array_equal(after_latents, before_latents)
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_hinerv_mlx_trainer_pose_student_channels_match_preprocess() -> None:
@@ -183,9 +339,7 @@ def test_hinerv_mlx_trainer_staged_curriculum_from_args_and_validation() -> None
 def test_hinerv_mlx_trainer_rejects_local_output_without_opt_in(
     tmp_path: Path,
 ) -> None:
-    args = _build_parser().parse_args(
-        ["--smoke", "--output-dir", str(tmp_path / "local")]
-    )
+    args = _build_parser().parse_args(["--smoke", "--output-dir", str(tmp_path / "local")])
 
     with pytest.raises(StorageTierError, match="local_disk_tier_disabled"):
         _resolve_output_dir(args)
@@ -226,18 +380,14 @@ def test_hinerv_direct_trainer_canonicalization_contract_blocks_authority() -> N
     assert contract["canonical_runner_entrypoint"] == (
         "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
     )
-    assert contract["direct_trainer_role"] == (
-        "runner_subprocess_or_research_smoke_only"
-    )
+    assert contract["direct_trainer_role"] == ("runner_subprocess_or_research_smoke_only")
     assert contract["planner_row_required"] is True
     assert contract["planner_row_id"] is None
     assert contract["source_parity_contract_consumed"] is False
     assert contract["pr95_prelaunch_gate_consumed"] is False
     assert contract["trainer_launch_allowed"] is False
     assert "hinerv_direct_trainer_missing_planner_row_id" in contract["blockers"]
-    assert "hinerv_direct_trainer_local_cpu_replay_gate_not_bound" in contract[
-        "blockers"
-    ]
+    assert "hinerv_direct_trainer_local_cpu_replay_gate_not_bound" in contract["blockers"]
     assert contract["score_claim"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
 
@@ -266,14 +416,8 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
     assert payload["export_executed"] is False
     assert payload["trainer_launch_allowed"] is False
     assert payload["allowed_direct_research_mode"] == "--smoke"
-    assert (
-        "hinerv_direct_full_trainer_launch_blocked_by_canonicalization_contract"
-        in payload["blockers"]
-    )
-    assert (
-        "hinerv_full_trainer_launch_blocked_by_pr95_control_contract"
-        in payload["blockers"]
-    )
+    assert "hinerv_direct_full_trainer_launch_blocked_by_canonicalization_contract" in payload["blockers"]
+    assert "hinerv_full_trainer_launch_blocked_by_pr95_control_contract" in payload["blockers"]
     for blocker in (
         "hinerv_full_missing_segnet_distillation_loss",
         "hinerv_full_missing_eval_roundtrip_ste",
@@ -327,11 +471,16 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["real_posenet_distillation_loss"] is True
     assert controls["eval_roundtrip_ste_enabled"] is True
     assert controls["pose_student_input_preprocess"] == "pr95_yuv6"
+    assert controls["stage_loss_schedule"] == "pr95_faithful_8stage"
+    assert controls["optimizer_kind"] == DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    assert controls["optimizer_surface"] == "pr95_faithful_stage_descriptors"
     assert controls["pr95_faithful_curriculum_enabled"] is True
     assert controls["coder_qat_enabled"] is True
     assert controls["coder_qat_c1a_entropy_weight"] == pytest.approx(0.0003)
     assert controls["coder_qat_c1a_sigma"] == pytest.approx(0.35)
     assert controls["coder_qat_c1a_sample_size"] == 64
+    assert controls["train_time_decoder_controls_enabled"] is False
+    assert controls["export_decoder_pruning_ratio"] == pytest.approx(0.0)
     assert controls["ema_archive_selection_enabled"] is True
     assert controls["archive_parse_back_selection_enabled"] is True
     assert contract["score_claim"] is False
@@ -344,15 +493,11 @@ def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
     assert default_args.optimizer_kind == DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
 
     for optimizer_kind in ("rmsprop", "lion", "adafactor", "muon", "pact_muon_adamw"):
-        args = _build_parser().parse_args(
-            ["--full", "--optimizer-kind", optimizer_kind]
-        )
+        args = _build_parser().parse_args(["--full", "--optimizer-kind", optimizer_kind])
         assert args.optimizer_kind == optimizer_kind
 
     with pytest.raises(SystemExit):
-        _build_parser().parse_args(
-            ["--full", "--optimizer-kind", "definitely_not_optimizer"]
-        )
+        _build_parser().parse_args(["--full", "--optimizer-kind", "definitely_not_optimizer"])
 
 
 def test_hinerv_mlx_trainer_parses_prioritized_pair_controls(
@@ -360,8 +505,7 @@ def test_hinerv_mlx_trainer_parses_prioritized_pair_controls(
 ) -> None:
     pair_file = tmp_path / "sample_generalization_gate.json"
     pair_file.write_text(
-        '{"sample_generalization_gate":{"hard_pair_coverage":'
-        '{"prioritized_pair_indices":[9,4,9]}}}',
+        '{"sample_generalization_gate":{"hard_pair_coverage":{"prioritized_pair_indices":[9,4,9]}}}',
         encoding="utf-8",
     )
     args = _build_parser().parse_args(
@@ -381,10 +525,7 @@ def test_hinerv_mlx_trainer_parses_prioritized_pair_controls(
     assert metadata["schema"] == "hi_nerv_direct_trainer_prioritized_pair_training.v1"
     assert metadata["enabled"] is True
     assert metadata["pair_indices"] == [3, 4, 9]
-    assert (
-        metadata["pair_index_domain"]
-        == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
-    )
+    assert metadata["pair_index_domain"] == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
     assert metadata["arbitrary_source_pair_hydration"] is False
     assert metadata["target_hydration_pair_indices_consumed"] is False
     assert metadata["requires_num_pairs_covering_pair_ids"] is True
@@ -398,16 +539,11 @@ def test_hinerv_prioritized_pair_lineage_metadata_has_no_canonical_authority() -
 
     assert metadata["enabled"] is True
     assert metadata["pair_indices"] == [4, 1]
-    assert (
-        metadata["pair_index_domain"]
-        == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
-    )
+    assert metadata["pair_index_domain"] == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
     assert metadata["arbitrary_source_pair_hydration"] is False
     assert metadata["target_hydration_pair_indices_consumed"] is False
     assert metadata["requires_num_pairs_covering_pair_ids"] is True
-    assert metadata["canonical_authority_surface"] == (
-        "TrainingArtifact top-level false-authority fields"
-    )
+    assert metadata["canonical_authority_surface"] == ("TrainingArtifact top-level false-authority fields")
     for forbidden in (
         "score_claim",
         "promotion_eligible",
@@ -434,9 +570,7 @@ def test_hinerv_prioritized_pair_metadata_records_consumed_source_hydration() ->
         assert payload["source_pair_indices"] == [417, 22]
         assert payload["local_pair_indices"] == [0, 1]
         assert payload["pair_index_domain"] == "source_video_pair_indices"
-        assert payload["pair_index_alignment_mode"] == (
-            "local_target_rows_to_source_pair_indices"
-        )
+        assert payload["pair_index_alignment_mode"] == ("local_target_rows_to_source_pair_indices")
         assert payload["arbitrary_source_pair_hydration"] is True
         assert payload["target_hydration_pair_indices_consumed"] is True
         assert payload["requires_num_pairs_covering_pair_ids"] is False
@@ -459,9 +593,7 @@ def test_hinerv_mlx_trainer_rejects_out_of_range_prioritized_pairs() -> None:
 
 def test_hinerv_mlx_trainer_forwards_prioritized_pairs_to_harness() -> None:
     repo_root = Path(__file__).resolve().parents[3]
-    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
-        encoding="utf-8"
-    )
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     run_calls = [
         node
@@ -472,10 +604,7 @@ def test_hinerv_mlx_trainer_forwards_prioritized_pairs_to_harness() -> None:
     ]
 
     assert run_calls
-    assert any(
-        any(keyword.arg == "prioritized_pair_indices" for keyword in call.keywords)
-        for call in run_calls
-    )
+    assert any(any(keyword.arg == "prioritized_pair_indices" for keyword in call.keywords) for call in run_calls)
     assert any(
         any(
             keyword.arg == "prioritized_pair_indices"
@@ -489,23 +618,17 @@ def test_hinerv_mlx_trainer_forwards_prioritized_pairs_to_harness() -> None:
 
 def test_hinerv_mlx_trainer_hydrates_targets_from_source_pairs() -> None:
     repo_root = Path(__file__).resolve().parents[3]
-    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
-        encoding="utf-8"
-    )
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     decode_calls = [
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "decode_mlx_targets"
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "decode_mlx_targets"
     ]
     bundle_calls = [
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "RendererBundle"
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "RendererBundle"
     ]
 
     assert decode_calls
@@ -569,9 +692,7 @@ def test_hinerv_mlx_trainer_parses_post_export_receiver_cache_quality_gate() -> 
     assert args.receiver_cache_quality_max_pairs == 4
     assert args.receiver_cache_quality_batch_pairs == 2
     assert args.receiver_cache_quality_min_segnet_dynamic_range == pytest.approx(8.0)
-    assert args.receiver_cache_quality_reference_cache_dir.as_posix().endswith(
-        "/ref_cache"
-    )
+    assert args.receiver_cache_quality_reference_cache_dir.as_posix().endswith("/ref_cache")
 
 
 def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
@@ -604,6 +725,4 @@ def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
     assert summary["quality_gate_passed"] is False
     assert summary["quality_gate_verdict"] == "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW"
     assert "score_claim" not in summary
-    assert summary["candidate_segnet_last_rgb_stats"]["dynamic_range"] == pytest.approx(
-        4.0
-    )
+    assert summary["candidate_segnet_last_rgb_stats"]["dynamic_range"] == pytest.approx(4.0)

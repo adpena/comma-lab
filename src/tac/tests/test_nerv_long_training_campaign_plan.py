@@ -669,6 +669,51 @@ def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None
     assert "snerv_nominal_payload_far_over_ceiling_refuse_long_training" not in snerv_row["blockers"]
 
 
+def test_long_training_campaign_plan_consumes_snerv_lf_recode_admission() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_lf_payload_recode_sources=(
+            _snerv_lf_recode_report(
+                mode="spatial_delta_zigzag_leb128_lzma",
+                source_packet_bytes=190_000,
+                candidate_packet_bytes=160_000,
+                source_lf_bytes=120_000,
+                candidate_lf_bytes=90_000,
+            ),
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    admission = snerv["snerv_lf_payload_recode_admission_plan"]
+    argv = snerv["command_argv"]
+    queue_metadata = snerv["experiment_queue_entry"]["metadata"]
+    launch_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert report["snerv_lf_payload_recode_source_count"] == 1
+    assert admission["schema"] == "snerv_lf_payload_recode_admission_plan.v1"
+    assert admission["selected_mode"] == "spatial_delta_zigzag_leb128_lzma"
+    assert admission["selected_row"]["packet_byte_delta"] == -30_000
+    assert admission["selected_row"]["waterline_crossed_by_recode"] is True
+    assert admission["waterline_satisfied_after_selected_recode"] is True
+    assert snerv["snerv_lf_payload_codec_from_admission_plan"] == (
+        "spatial_delta_zigzag_leb128_lzma"
+    )
+    assert "--snerv-scorer-loop-lf-payload-codec" in argv
+    assert argv[argv.index("--snerv-scorer-loop-lf-payload-codec") + 1] == (
+        "spatial_delta_zigzag_leb128_lzma"
+    )
+    assert queue_metadata["snerv_lf_payload_recode_admission_plan"][
+        "selected_mode"
+    ] == "spatial_delta_zigzag_leb128_lzma"
+    assert launch_contract["queue_status_is_exact_eval_authority"] is False
+    assert snerv["score_claim"] is False
+    assert snerv["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_dedupes_snerv_candidate_ids() -> None:
     snerv_budget = _snerv_budget()
     first = dict(snerv_budget["selected_candidates"][0])
@@ -3076,6 +3121,56 @@ def _snerv_budget() -> dict:
 
 def _snerv_candidate_id() -> str:
     return str(_snerv_budget()["selected_candidates"][0]["candidate_id"])
+
+
+def _snerv_lf_recode_report(
+    *,
+    mode: str,
+    source_packet_bytes: int,
+    candidate_packet_bytes: int,
+    source_lf_bytes: int,
+    candidate_lf_bytes: int,
+) -> dict:
+    return {
+        "schema": "snerv_lf_payload_archive_recode.v1",
+        "mode": mode,
+        "source_packet": {"bytes": source_packet_bytes, "sha256": "a" * 64},
+        "candidate_packet": {"bytes": candidate_packet_bytes, "sha256": "b" * 64},
+        "packet_byte_delta": int(candidate_packet_bytes - source_packet_bytes),
+        "lf_payload": {
+            "source_bytes": source_lf_bytes,
+            "candidate_bytes": candidate_lf_bytes,
+            "byte_delta": int(candidate_lf_bytes - source_lf_bytes),
+        },
+        "section_bytes": {
+            "source": {
+                "metadata_payload": 64,
+                "lf_payload": source_lf_bytes,
+                "decoder_payload": 1024,
+                "step_map_packet": max(source_packet_bytes - source_lf_bytes - 1088, 0),
+            },
+            "candidate": {
+                "metadata_payload": 64,
+                "lf_payload": candidate_lf_bytes,
+                "decoder_payload": 1024,
+                "step_map_packet": max(
+                    candidate_packet_bytes - candidate_lf_bytes - 1088,
+                    0,
+                ),
+            },
+        },
+        "receiver_contract_satisfied": True,
+        "runtime_consumption_proof_ready": True,
+        "receiver_frame_equality_proof": {"status": "proven_exact"},
+        "blockers": [
+            "not_packaged_as_contest_archive_zip",
+            "paired_contest_cpu_cuda_auth_eval_missing",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _decoder_weight_waterfill_plan(

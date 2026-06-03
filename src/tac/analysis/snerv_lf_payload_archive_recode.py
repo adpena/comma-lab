@@ -582,7 +582,7 @@ def _select_admission_row(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any] |
     if not admitted:
         return None
 
-    def key(row: Mapping[str, Any]) -> tuple[int, int, int, str]:
+    def key(row: Mapping[str, Any]) -> tuple[int, int, int, int, str]:
         over = row.get("post_recode_over_waterline_bytes")
         over_value = 0 if over is None else int(over)
         packet_bytes = int(row.get("candidate_packet_bytes") or 2**63 - 1)
@@ -591,7 +591,8 @@ def _select_admission_row(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any] |
             0 if over is None or over_value <= 0 else 1,
             over_value,
             packet_bytes,
-            f"{-credit:020d}:{row.get('mode')}",
+            -credit,
+            str(row.get("mode") or ""),
         )
 
     return sorted(admitted, key=key)[0]

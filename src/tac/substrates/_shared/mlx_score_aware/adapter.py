@@ -514,6 +514,177 @@ class MlxScoreAwareAdapter:
         )
         return out
 
+    def _pr95_stage_loss_and_parts(
+        self,
+        *,
+        batch: Any,
+        stage_verdict: Any,
+        model: Any,
+    ) -> tuple[Any, dict[str, Any]]:
+        """Build the PR95 stage-specific scorer-surrogate loss.
+
+        This is the PR95-faithful curriculum's loss bridge: the stage verdict's
+        canonical ``loss_family`` selects the SegNet margin loss, while the
+        adapter supplies decoded frames, hard SegNet targets, PoseNet targets,
+        and optional C1a entropy pressure. The result is still macOS-MLX
+        research signal only; archive/runtime replay remains the authority.
+        """
+
+        mx = self._mx
+        from tac.local_acceleration.pr95_hnerv_mlx_stage_losses import (
+            PR95_MLX_STAGE_SCORER_LOSS_SURFACE,
+            PR95_SEG_LOSS_CE,
+            PR95_SEG_LOSS_L7_SOFTPLUS,
+            PR95_SEG_LOSS_SMOOTH_DISAGREEMENT,
+            PR95_SEG_LOSS_TAU_SOFTPLUS,
+            pr95_mlx_pose_loss,
+            pr95_mlx_stage_scorer_surrogate_loss,
+            pr95_mlx_stage_seg_loss,
+        )
+        from tac.substrates._shared.mlx_score_aware.loss import (
+            _apply_eval_roundtrip_ste_nhwc01,
+            decode_frames_nhwc01,
+            pose_student_inputs_nhwc,
+        )
+
+        if (
+            self.bundle.scorer_teacher is None
+            or self.bundle.learnable_student_head is None
+        ):
+            raise ValueError(
+                "PR95-faithful stage loss requires a real SegNet teacher and "
+                "learnable_student_head; refusing to fall back to generic "
+                "score_aware_loss."
+            )
+        if (
+            self.bundle.pose_scorer_teacher is None
+            or self.bundle.learnable_pose_student_head is None
+        ):
+            raise ValueError(
+                "PR95-faithful stage loss requires a real PoseNet teacher and "
+                "learnable_pose_student_head; refusing false-authority "
+                "SegNet-only stage scoring."
+            )
+
+        rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
+        rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
+        rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
+
+        seg_rgb = rgb_1 if self.bundle.segnet_teacher_frame_index == 1 else rgb_0
+        student_logits_nhwc = self.bundle.learnable_student_head(seg_rgb)
+        teacher_logits_nhwc = mx.stop_gradient(
+            self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
+        )
+        if tuple(student_logits_nhwc.shape) != tuple(teacher_logits_nhwc.shape):
+            raise ValueError(
+                "PR95-faithful SegNet student/teacher shape mismatch: "
+                f"student={tuple(student_logits_nhwc.shape)} "
+                f"teacher={tuple(teacher_logits_nhwc.shape)}"
+            )
+        targets_hard_nhw = mx.argmax(teacher_logits_nhwc, axis=-1)
+        seg_logits_nchw = mx.transpose(student_logits_nhwc, (0, 3, 1, 2))
+
+        pose_rgb_0, pose_rgb_1 = pose_student_inputs_nhwc(
+            self.bundle, rgb_0, rgb_1
+        )
+        pose_pred = self.bundle.learnable_pose_student_head(pose_rgb_0, pose_rgb_1)
+        pose_target = mx.stop_gradient(
+            self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
+        )
+        if int(pose_pred.shape[-1]) < 6 or int(pose_target.shape[-1]) < 6:
+            raise ValueError(
+                "PR95-faithful PoseNet stage loss requires at least 6 pose "
+                f"dims; got pred={tuple(pose_pred.shape)} "
+                f"target={tuple(pose_target.shape)}"
+            )
+
+        cat_entropy_term = None
+        if float(stage_verdict.cat_lambda) > 0.0:
+            from tac.substrates._shared.mlx_score_aware.coder_qat import (
+                CoderAwareQATConfig,
+                build_decoder_c1a_entropy_term,
+            )
+
+            cat_entropy_term = build_decoder_c1a_entropy_term(
+                model,
+                CoderAwareQATConfig(enabled=True, quant_bits=8),
+                sigma=float(stage_verdict.cat_sigma),
+            )
+
+        loss_family = str(stage_verdict.loss_family)
+        total = pr95_mlx_stage_scorer_surrogate_loss(
+            seg_logits_nchw=seg_logits_nchw,
+            targets_hard_nhw=targets_hard_nhw,
+            pose_pred_first6=pose_pred[:, :6],
+            pose_target_first6=pose_target[:, :6],
+            loss_family=loss_family,
+            cat_entropy_term=cat_entropy_term,
+            cat_lambda=float(stage_verdict.cat_lambda),
+        )
+        seg_loss = pr95_mlx_stage_seg_loss(
+            loss_family,
+            seg_logits_nchw,
+            targets_hard_nhw,
+        )
+        pose_loss = pr95_mlx_pose_loss(pose_pred[:, :6], pose_target[:, :6])
+        family_index = {
+            PR95_SEG_LOSS_CE: 1.0,
+            PR95_SEG_LOSS_TAU_SOFTPLUS: 2.0,
+            PR95_SEG_LOSS_SMOOTH_DISAGREEMENT: 3.0,
+            PR95_SEG_LOSS_L7_SOFTPLUS: 4.0,
+        }.get(loss_family, -1.0)
+        parts: dict[str, Any] = {
+            "pr95_stage_scorer_surrogate": total,
+            "pr95_stage_seg_surrogate": seg_loss,
+            "pr95_stage_pose_surrogate": pose_loss,
+            "pr95_stage_loss_family_index": mx.array(
+                family_index, dtype=mx.float32
+            ),
+            "pr95_stage_loss_surface_active": mx.array(1.0, dtype=mx.float32),
+        }
+        if cat_entropy_term is not None:
+            parts["pr95_c1a_entropy"] = cat_entropy_term
+        # Keep the symbolic surface reachable for tests and downstream source
+        # audits without putting a string into float-only metrics.
+        self._pr95_last_stage_loss_surface = PR95_MLX_STAGE_SCORER_LOSS_SURFACE
+        return total, parts
+
+    def _pr95_stage_loss_part_metrics(
+        self,
+        batch: Any,
+        *,
+        stage_verdict: Any,
+    ) -> dict[str, float]:
+        """Return float telemetry for the active PR95 stage loss parts."""
+
+        mx = self._mx
+        try:
+            _total, parts = self._pr95_stage_loss_and_parts(
+                batch=batch,
+                stage_verdict=stage_verdict,
+                model=self.model,
+            )
+        except Exception:
+            return {"pr95_stage_loss_part_probe_failed": 1.0}
+
+        out: dict[str, float] = {}
+        for name, value in parts.items():
+            mx.eval(value)
+            scalar = float(value.item())
+            out[f"loss_part_{name}"] = scalar
+            if name == "pr95_stage_seg_surrogate":
+                out["loss_part_weighted_pr95_stage_seg_surrogate"] = (
+                    100.0 * scalar
+                )
+            elif name == "pr95_stage_pose_surrogate":
+                out["loss_part_weighted_pr95_stage_pose_surrogate"] = scalar
+            elif name == "pr95_c1a_entropy":
+                out["loss_part_weighted_pr95_c1a_entropy"] = (
+                    float(stage_verdict.cat_lambda) * scalar
+                )
+        out["pr95_stage_loss_parts_active"] = 1.0
+        return out
+
     def _train_student_heads(
         self,
         *,
@@ -1179,9 +1350,19 @@ class MlxScoreAwareAdapter:
         this.
         """
         mx = self._mx
-        _total, parts = score_aware_loss(
-            self.bundle, batch, loss_weights=loss_weights
-        )
+        if self._pr95_faithful_curriculum_enabled:
+            stage_verdict = self._pr95_curriculum_factory.current_stage_verdict(
+                self._pr95_global_epoch
+            )
+            _total, parts = self._pr95_stage_loss_and_parts(
+                batch=batch,
+                stage_verdict=stage_verdict,
+                model=model,
+            )
+        else:
+            _total, parts = score_aware_loss(
+                self.bundle, batch, loss_weights=loss_weights
+            )
         out: dict[str, float] = {}
         for name, value in parts.items():
             mx.eval(value)
@@ -1474,10 +1655,10 @@ class MlxScoreAwareAdapter:
                 preserved in the API for harness backward-compat per Catalog
                 #341 canonical-routing-markers + the canonical
                 ``SubstrateLongTrainingAdapter`` Protocol contract.
-            loss_weights: passed through to ``score_aware_loss``. For stages
-                whose canonical PR95 verdict has ``cat_lambda > 0``, the loss
-                also adds the real C1a-style soft categorical entropy term over
-                decoder weights using that stage's ``cat_sigma``.
+            loss_weights: still passed to sibling student-head optimizers.
+                The renderer objective itself is owned by the PR95 stage
+                verdict and routes ``stage_verdict.loss_family`` into
+                ``pr95_mlx_stage_scorer_surrogate_loss``.
         """
         mx = self._mx
         mlx_nn = self._mlx_nn
@@ -1514,23 +1695,13 @@ class MlxScoreAwareAdapter:
         self._pr95_last_stage_verdict = stage_verdict
 
         def _loss_fn_inner(model: Any) -> Any:
-            # NOTE: score_aware_loss reads bundle.model; the value_and_grad
+            # NOTE: the PR95 stage loss reads bundle.model; the value_and_grad
             # closure differentiates ``self.model`` which IS bundle.model.
-            total, _parts = score_aware_loss(
-                self.bundle, batch, loss_weights=loss_weights
+            total, _parts = self._pr95_stage_loss_and_parts(
+                batch=batch,
+                stage_verdict=stage_verdict,
+                model=model,
             )
-            if float(stage_verdict.cat_lambda) > 0.0:
-                from tac.substrates._shared.mlx_score_aware.coder_qat import (
-                    CoderAwareQATConfig,
-                    build_decoder_c1a_entropy_term,
-                )
-
-                c1a_entropy = build_decoder_c1a_entropy_term(
-                    model,
-                    CoderAwareQATConfig(enabled=True, quant_bits=8),
-                    sigma=float(stage_verdict.cat_sigma),
-                )
-                total = total + float(stage_verdict.cat_lambda) * c1a_entropy
             return total
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
@@ -1553,9 +1724,9 @@ class MlxScoreAwareAdapter:
             batch
         )
         post_update_metrics.update(
-            self._score_aware_loss_part_metrics(
+            self._pr95_stage_loss_part_metrics(
                 batch,
-                loss_weights=loss_weights,
+                stage_verdict=stage_verdict,
             )
         )
         student_head_eval_targets = self._train_student_heads(
@@ -1563,23 +1734,6 @@ class MlxScoreAwareAdapter:
             learning_rate=learning_rate,
             loss_weights=loss_weights,
         )
-        if float(stage_verdict.cat_lambda) > 0.0:
-            from tac.substrates._shared.mlx_score_aware.coder_qat import (
-                CoderAwareQATConfig,
-                build_decoder_c1a_entropy_term,
-            )
-
-            c1a_metric = build_decoder_c1a_entropy_term(
-                self.model,
-                CoderAwareQATConfig(enabled=True, quant_bits=8),
-                sigma=float(stage_verdict.cat_sigma),
-            )
-            mx.eval(c1a_metric)
-            c1a_value = float(c1a_metric.item())
-            post_update_metrics["loss_part_pr95_c1a_entropy"] = c1a_value
-            post_update_metrics["loss_part_weighted_pr95_c1a_entropy"] = (
-                float(stage_verdict.cat_lambda) * c1a_value
-            )
 
         mx.eval(
             self.model.parameters(),
