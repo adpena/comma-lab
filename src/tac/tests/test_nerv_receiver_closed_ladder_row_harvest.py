@@ -348,6 +348,22 @@ def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis(
                         "row_id": "hi_nerv_local_tiny",
                         "family": "hi_nerv",
                         "modelsize_scale": 0.25,
+                        "modelsize_control_contract": {
+                            "schema": "nerv_modelsize_control_contract.v1",
+                            "authority_split": {
+                                "schema": "nerv_modelsize_control_authority_split.v1",
+                                "modelsize_mparams_semantics": (
+                                    "local_nearest_parameter_count_target"
+                                ),
+                                "modelsize_mparams_caps_archive_zip_bytes": False,
+                                "archive_byte_authority_surface": (
+                                    "archive_zip_bytes_after_receiver_export_and_"
+                                    "inflate_proof"
+                                ),
+                                "score_claim": False,
+                                "ready_for_exact_eval_dispatch": False,
+                            },
+                        },
                         "archive_bytes": 134_842,
                         "archive_sha256": "f" * 64,
                         "runtime_consumption_proof_ready": True,
@@ -386,6 +402,12 @@ def test_hinerv_archive_size_ladder_archive_rows_are_harvested_as_capacity_axis(
     assert first["sample_scope"] == "full600_or_better"
     assert first["modelsize_mparams"] is None
     assert first["modelsize_scale"] == 0.25
+    assert first["modelsize_authority_split"]["modelsize_mparams_semantics"] == (
+        "local_nearest_parameter_count_target"
+    )
+    assert first["modelsize_authority_split"][
+        "modelsize_mparams_caps_archive_zip_bytes"
+    ] is False
     assert first["fc_dim"] is None
     assert first["receiver_proof_passed"] is True
     assert first["nonrate_score"] is not None
@@ -423,6 +445,50 @@ def test_hinerv_archive_size_ladder_without_nonrate_stays_blocked() -> None:
     assert "nonrate_score_or_component_distortions_missing" in row[
         "harvest_blockers"
     ]
+
+
+def test_harvest_blocks_modelsize_contract_without_authority_split(
+    tmp_path: Path,
+) -> None:
+    proof = _receiver_proof(tmp_path, "hi_nerv_ambiguous_contract", 134_842, "a")
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "axis_tag": "[contest-CPU]",
+                "family": "hi_nerv",
+                "num_pairs": 600,
+                "archive_rows": [
+                    {
+                        "row_id": "hi_nerv_ambiguous_contract",
+                        "family": "hi_nerv",
+                        "modelsize_scale": 0.25,
+                        "modelsize_control_contract": {
+                            "schema": "nerv_modelsize_control_contract.v1",
+                            "modelsize_mparams_caps_archive_zip_bytes": False,
+                        },
+                        "archive_bytes": 134_842,
+                        "archive_sha256": "a" * 64,
+                        "runtime_consumption_proof_ready": True,
+                        **proof,
+                        "d_seg": 0.01,
+                        "d_pose": 0.0025,
+                        "blockers": [],
+                    }
+                ],
+            }
+        ],
+        carrier_id="hi_nerv",
+        repo_root=tmp_path,
+    )
+
+    assert payload["status"] == "receiver_closed_ladder_rows_blocked"
+    row = payload["harvested_rows"][0]
+    assert row["modelsize_control_contract"]["schema"] == (
+        "nerv_modelsize_control_contract.v1"
+    )
+    assert row["modelsize_authority_split"] is None
+    assert "modelsize_authority_split_missing" in row["harvest_blockers"]
 
 
 def _boolean_full_row(

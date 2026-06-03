@@ -350,6 +350,23 @@ def _harvest_row(
             ("score_aware_training", "decoder_payload_codec"),
         ),
     )
+    modelsize_control_contract = _first_mapping(
+        candidate,
+        source_payload,
+        keys=(
+            "modelsize_control_contract",
+            ("official_controls", "modelsize_control_contract"),
+            ("modelsize_candidate", "modelsize_control_contract"),
+            ("modelsize_candidate_selection", "candidate", "modelsize_control_contract"),
+            ("solved_budget", "modelsize_control_contract"),
+        ),
+    )
+    modelsize_authority_split = (
+        dict(modelsize_control_contract.get("authority_split"))
+        if isinstance(modelsize_control_contract, Mapping)
+        and isinstance(modelsize_control_contract.get("authority_split"), Mapping)
+        else None
+    )
     local_receiver_replay = _truthy_first(
         candidate,
         source_payload,
@@ -412,6 +429,12 @@ def _harvest_row(
     )
     if not has_capacity_axis:
         blockers.append("modelsize_or_fc_dim_missing")
+    blockers.extend(
+        _modelsize_contract_blockers(
+            modelsize_control_contract=modelsize_control_contract,
+            authority_split=modelsize_authority_split,
+        )
+    )
     if not local_receiver_replay:
         blockers.append("receiver_replay_or_contract_missing")
     if local_receiver_replay and not receiver_proof_identity_bound:
@@ -445,6 +468,12 @@ def _harvest_row(
         "modelsize_mparams": modelsize,
         "modelsize_scale": modelsize_scale,
         "fc_dim": fc_dim,
+        "modelsize_control_contract": (
+            dict(modelsize_control_contract)
+            if isinstance(modelsize_control_contract, Mapping)
+            else None
+        ),
+        "modelsize_authority_split": modelsize_authority_split,
         "snerv_levels": snerv_levels,
         "snerv_bits_per_coeff": snerv_bits_per_coeff,
         "snerv_step_map_bits_per_coeff": snerv_step_map_bits_per_coeff,
@@ -554,6 +583,31 @@ def _capacity_axis_present(
     )
 
 
+def _modelsize_contract_blockers(
+    *,
+    modelsize_control_contract: Mapping[str, Any] | None,
+    authority_split: Mapping[str, Any] | None,
+) -> list[str]:
+    if modelsize_control_contract is None:
+        return []
+    blockers: list[str] = []
+    if authority_split is None:
+        blockers.append("modelsize_authority_split_missing")
+        return blockers
+    if authority_split.get("modelsize_mparams_caps_archive_zip_bytes") is not False:
+        blockers.append("modelsize_mparams_archive_cap_authority_claimed")
+    if authority_split.get("score_claim") is not False:
+        blockers.append("modelsize_authority_split_score_claim_not_false")
+    if authority_split.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("modelsize_authority_split_exact_flag_not_false")
+    if authority_split.get("archive_byte_authority_surface") not in {
+        "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "receiver_visible_SNAR1_packet_or_archive_zip_bytes_after_receiver_proof",
+    }:
+        blockers.append("modelsize_authority_split_archive_surface_invalid")
+    return blockers
+
+
 def _row_id(
     source_index: int,
     candidate_index: int,
@@ -592,6 +646,22 @@ def _first_float(
                 continue
             if isfinite(out):
                 return out
+    return None
+
+
+def _first_mapping(
+    primary: Mapping[str, Any],
+    fallback: Mapping[str, Any],
+    *,
+    keys: Sequence[Any],
+) -> dict[str, Any] | None:
+    for key in keys:
+        value = _lookup(primary, key)
+        if isinstance(value, Mapping):
+            return dict(value)
+        value = _lookup(fallback, key)
+        if isinstance(value, Mapping):
+            return dict(value)
     return None
 
 
