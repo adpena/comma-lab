@@ -697,3 +697,56 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert "canonical_npz_bridge_not_used_or_not_applicable" not in portability[
         "portability_blockers"
     ]
+
+
+def test_archive_export_emits_hprc_spine_for_brotli_latents(tmp_path: Path) -> None:
+    from tac.substrates.hi_nerv.archive import parse_archive, split_archive_sections
+    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+
+    archive_path, archive_sha, archive_bytes = export_hi_nerv_mlx_archive(
+        _exportable_torch_model(),
+        tmp_path / "hi_nerv_export_brotli_latents",
+        repo_root=REPO_ROOT,
+        decoder_codec="int8_mixed",
+        latent_codec="int16_brotli_q11",
+        retain_receiver_proof_output=False,
+        source_backend="pytorch_test_export",
+    )
+
+    manifest_path = (
+        tmp_path
+        / "hi_nerv_export_brotli_latents"
+        / "hprc_representation_spine_hi_nerv_manifest.json"
+    )
+    proof_path = (
+        tmp_path
+        / "hi_nerv_export_brotli_latents"
+        / "receiver_proof"
+        / "hi_nerv_mlx_receiver_proof.json"
+    )
+    assert archive_path.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes == archive_path.stat().st_size
+    assert manifest_path.is_file()
+    assert proof_path.is_file()
+
+    inner = (tmp_path / "hi_nerv_export_brotli_latents" / "0.bin").read_bytes()
+    sections = split_archive_sections(inner)
+    parsed = parse_archive(inner)
+    assert parsed.latents_coarse.shape[0] == _exportable_torch_model().cfg.num_pairs
+    assert sections.meta["_latent_codec"] == "int16_brotli_q11"
+    assert sections.meta["_latent_raw_bytes_coarse"] == parsed.latents_coarse.numel() * 2
+    assert sections.meta["_latent_coded_bytes_coarse"] == len(
+        sections.latents_coarse_blob
+    )
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    header = manifest["manifest"]["representation_spine"]["manifest_extra"]
+    assert header["source_payload_kind"] == "hi_nerv_hiv1"
+    assert any(row["name"] == "latents_rc" for row in manifest["manifest"]["sections"])
+    assert any(
+        row["name"] == "receiver_state"
+        for row in manifest["manifest"]["sections"]
+    )
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    assert proof["runtime_consumption_proof_ready"] is True

@@ -589,15 +589,6 @@ def _split_hinerv_payload(payload: bytes) -> dict[str, Any]:
         raise HprcRepresentationSpineError(
             f"bad HiNeRV magic: {magic!r}; expected {HINERV_MAGIC!r}"
         )
-    for name, given, expected in (
-        ("lat_c_len", lat_c_len, int(num_pairs) * int(dim_c) * 2),
-        ("lat_m_len", lat_m_len, int(num_pairs) * int(dim_m) * 2),
-        ("lat_f_len", lat_f_len, int(num_pairs) * int(dim_f) * 2),
-    ):
-        if int(given) != int(expected):
-            raise HprcRepresentationSpineError(
-                f"HiNeRV {name} {given} != num_pairs*latent_dim*2 = {expected}"
-            )
     end_decoder = HINERV_HEADER_SIZE + int(decoder_len)
     end_lat_c = end_decoder + int(lat_c_len)
     end_lat_m = end_lat_c + int(lat_m_len)
@@ -607,6 +598,53 @@ def _split_hinerv_payload(payload: bytes) -> dict[str, Any]:
         raise HprcRepresentationSpineError(
             f"HiNeRV payload bytes {len(payload)} != header-declared {end_meta}"
         )
+    meta_blob = payload[end_lat_f:end_meta]
+    try:
+        meta = json.loads(meta_blob.decode("utf-8"))
+    except Exception as exc:
+        raise HprcRepresentationSpineError(
+            f"HiNeRV meta JSON decode failed: {exc}"
+        ) from exc
+    latent_codec = str(meta.get("_latent_codec", "int16_raw"))
+    coded_lengths = {
+        "coarse": int(lat_c_len),
+        "mid": int(lat_m_len),
+        "fine": int(lat_f_len),
+    }
+    raw_lengths_expected = {
+        "coarse": int(num_pairs) * int(dim_c) * 2,
+        "mid": int(num_pairs) * int(dim_m) * 2,
+        "fine": int(num_pairs) * int(dim_f) * 2,
+    }
+    raw_lengths_meta = {
+        "coarse": int(meta.get("_latent_raw_bytes_coarse", raw_lengths_expected["coarse"])),
+        "mid": int(meta.get("_latent_raw_bytes_mid", raw_lengths_expected["mid"])),
+        "fine": int(meta.get("_latent_raw_bytes_fine", raw_lengths_expected["fine"])),
+    }
+    coded_lengths_meta = {
+        "coarse": int(meta.get("_latent_coded_bytes_coarse", coded_lengths["coarse"])),
+        "mid": int(meta.get("_latent_coded_bytes_mid", coded_lengths["mid"])),
+        "fine": int(meta.get("_latent_coded_bytes_fine", coded_lengths["fine"])),
+    }
+    for scale in ("coarse", "mid", "fine"):
+        if raw_lengths_meta[scale] != raw_lengths_expected[scale]:
+            raise HprcRepresentationSpineError(
+                "HiNeRV latent raw length metadata "
+                f"{scale}={raw_lengths_meta[scale]} != num_pairs*latent_dim*2 "
+                f"= {raw_lengths_expected[scale]}"
+            )
+        if coded_lengths_meta[scale] != coded_lengths[scale]:
+            raise HprcRepresentationSpineError(
+                "HiNeRV latent coded length metadata "
+                f"{scale}={coded_lengths_meta[scale]} != header length "
+                f"{coded_lengths[scale]}"
+            )
+        if latent_codec == "int16_raw" and coded_lengths[scale] != raw_lengths_expected[scale]:
+            raise HprcRepresentationSpineError(
+                "HiNeRV raw latent section length "
+                f"{scale}={coded_lengths[scale]} != num_pairs*latent_dim*2 "
+                f"= {raw_lengths_expected[scale]}"
+            )
     return {
         "header": {
             "version": int(version),
@@ -618,13 +656,17 @@ def _split_hinerv_payload(payload: bytes) -> dict[str, Any]:
             "latent_coarse_len": int(lat_c_len),
             "latent_mid_len": int(lat_m_len),
             "latent_fine_len": int(lat_f_len),
+            "latent_codec": latent_codec,
+            "latent_coarse_raw_len": raw_lengths_meta["coarse"],
+            "latent_mid_raw_len": raw_lengths_meta["mid"],
+            "latent_fine_raw_len": raw_lengths_meta["fine"],
             "meta_len": int(meta_len),
         },
         "decoder_blob": payload[HINERV_HEADER_SIZE:end_decoder],
         "latent_coarse_blob": payload[end_decoder:end_lat_c],
         "latent_mid_blob": payload[end_lat_c:end_lat_m],
         "latent_fine_blob": payload[end_lat_m:end_lat_f],
-        "meta_blob": payload[end_lat_f:end_meta],
+        "meta_blob": meta_blob,
     }
 
 
