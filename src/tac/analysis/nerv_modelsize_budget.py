@@ -86,6 +86,45 @@ def snerv_model_size_adapter_from_id_token(token: str) -> str:
     raise NervModelSizeBudgetError(f"unknown SNeRV adapter id token: {token!r}")
 
 
+def snerv_modelsize_candidate_id_from_controls(
+    *,
+    num_pairs: int,
+    wavelet: str,
+    levels: int,
+    bits_per_coeff: float,
+    step_map_bits_per_coeff: float,
+    fc_dim: int,
+    emb_size: int,
+    patch_radius: int,
+    mfu_scales: tuple[int, ...],
+    hfr_gain: float,
+    temporal_context: int,
+    snerv_model_size_adapter: str,
+    decoder_payload_codec: str,
+    hard_byte_ceiling: int,
+) -> str:
+    """Build the canonical self-describing SNeRV model-size candidate id."""
+
+    bits_label = _float_id_token(bits_per_coeff)
+    step_label = _float_id_token(step_map_bits_per_coeff)
+    hfr_label = _float_id_token(hfr_gain)
+    wavelet_label = str(wavelet).replace(".", "p").replace("_", "")
+    feature_label = f"fc{int(fc_dim)}e{int(emb_size)}"
+    mfu_label = "-".join(str(int(value)) for value in mfu_scales)
+    adapter_label = snerv_model_size_adapter_id_token(snerv_model_size_adapter)
+    return (
+        f"snerv_np{int(num_pairs)}_{wavelet_label}_lv{int(levels)}_"
+        f"lfb{bits_label}_stepb{step_label}_{feature_label}_"
+        f"p{int(patch_radius)}_mfu{mfu_label}_"
+        f"hfr{hfr_label}_t{int(temporal_context)}_"
+        f"ad{adapter_label}_{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
+    )
+
+
+def _float_id_token(value: float) -> str:
+    return f"{float(value):g}".replace(".", "p")
+
+
 @dataclass(frozen=True)
 class HinervModelSizeCandidate:
     """One local HiNeRV capacity point, priced before real training/export."""
@@ -632,24 +671,26 @@ def analyze_snerv_modelsize_candidate(
         lf_payload + step_payload + decoder_payload + metadata_payload + header_overhead
     )
     headroom = int(hard_byte_ceiling) - int(total_payload)
-    bits_label = f"{float(bits_per_coeff):g}".replace(".", "p")
-    step_label = f"{float(step_map_bits_per_coeff):g}".replace(".", "p")
-    hfr_label = f"{float(model_size.hfr_gain):g}".replace(".", "p")
-    wavelet_label = str(wavelet).replace(".", "p").replace("_", "")
-    feature_label = f"fc{int(model_size.fc_dim)}e{int(model_size.emb_size)}"
-    mfu_label = "-".join(str(int(value)) for value in model_size.mfu_scales)
-    adapter_label = snerv_model_size_adapter_id_token(model_size.adapter)
+    candidate_id = snerv_modelsize_candidate_id_from_controls(
+        num_pairs=int(num_pairs),
+        wavelet=str(wavelet),
+        levels=int(levels),
+        bits_per_coeff=float(bits_per_coeff),
+        step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+        fc_dim=int(model_size.fc_dim),
+        emb_size=int(model_size.emb_size),
+        patch_radius=int(model_size.patch_radius),
+        mfu_scales=tuple(int(value) for value in model_size.mfu_scales),
+        hfr_gain=float(model_size.hfr_gain),
+        temporal_context=int(model_size.temporal_context),
+        snerv_model_size_adapter=str(model_size.adapter),
+        decoder_payload_codec=str(decoder_payload_codec),
+        hard_byte_ceiling=int(hard_byte_ceiling),
+    )
     return SnervModelSizeCandidate(
         schema="snerv_modelsize_candidate.v1",
         family="snerv",
-        candidate_id=(
-            f"snerv_np{int(num_pairs)}_{wavelet_label}_lv{int(levels)}_"
-            f"lfb{bits_label}_stepb{step_label}_{feature_label}_"
-            f"p{int(model_size.patch_radius)}_mfu{mfu_label}_"
-            f"hfr{hfr_label}_t{int(model_size.temporal_context)}_"
-            f"ad{adapter_label}_"
-            f"{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
-        ),
+        candidate_id=candidate_id,
         num_pairs=int(num_pairs),
         hard_byte_ceiling=int(hard_byte_ceiling),
         carrier_hw=(int(carrier_hw[0]), int(carrier_hw[1])),
@@ -1187,4 +1228,5 @@ __all__ = [
     "snerv_decoder_codec_nominal_bits",
     "snerv_model_size_adapter_from_id_token",
     "snerv_model_size_adapter_id_token",
+    "snerv_modelsize_candidate_id_from_controls",
 ]

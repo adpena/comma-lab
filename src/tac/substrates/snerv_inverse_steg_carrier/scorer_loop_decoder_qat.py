@@ -1241,6 +1241,7 @@ def _prepare_state(
         train_pyrs,
         levels=levels,
         model_size=model_size,
+        temporal_group_count=3,
     )
 
     raw_step_maps: list[np.ndarray] = []

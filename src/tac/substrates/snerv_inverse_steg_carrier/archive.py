@@ -39,6 +39,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SnervFrameCode,
     SnervModelSizeConfig,
     decode_frame,
+    dequantize_lf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     SNERV_LF_PAYLOAD_INTN_CODEC_PROOF as _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF,
@@ -351,7 +352,8 @@ def decode_snerv_archive_frame_planes_from_decoded(
     decoder = decoded.decode_decoder()
     _validate_replay_counts(lf_planes, zeros, step_maps)
 
-    out: list[np.ndarray] = []
+    codes: list[SnervFrameCode] = []
+    decoded_lfs: list[np.ndarray] = []
     for idx, (q, zero, steps) in enumerate(zip(lf_planes, zeros, step_maps, strict=True)):
         if q.shape != steps.shape:
             raise SnervArchiveError(
@@ -367,7 +369,34 @@ def decode_snerv_archive_frame_planes_from_decoded(
             orig_hw=orig_hw,
             per_element_steps=steps,
         )
-        frame = decode_frame(code, decoder)
+        codes.append(code)
+        decoded_lfs.append(
+            dequantize_lf(
+                q,
+                1.0,
+                float(zero),
+                per_element_steps=steps,
+            )
+        )
+
+    temporal_group_count = 1
+    if int(decoder.model_size.temporal_context) > 0:
+        temporal_group_count = _metadata_int(metadata, "channels", default=1, minimum=1)
+
+    out: list[np.ndarray] = []
+    for idx, code in enumerate(codes):
+        lf_sequence = None
+        sequence_index = None
+        if int(decoder.model_size.temporal_context) > 0:
+            group = idx % temporal_group_count
+            lf_sequence = decoded_lfs[group::temporal_group_count]
+            sequence_index = idx // temporal_group_count
+        frame = decode_frame(
+            code,
+            decoder,
+            lf_sequence=lf_sequence,
+            sequence_index=sequence_index,
+        )
         if clip_to_uint8_range:
             frame = np.clip(frame, 0.0, 255.0)
         out.append(np.asarray(frame, dtype=np.float32))

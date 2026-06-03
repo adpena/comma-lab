@@ -138,7 +138,11 @@ class SnervModelSizeConfig:
 
     @property
     def feature_count(self) -> int:
-        return int(self.fc_dim + self.emb_size)
+        # SNeRV_T contributes two receiver-visible LF-delta channels per radius:
+        # center-prev and next-center. These are generated from archived LF
+        # planes, so increasing temporal_context changes both decoder payload
+        # bytes and decoded pixels rather than only metadata.
+        return int(self.fc_dim + self.emb_size + 2 * self.temporal_context)
 
     def as_jsonable(self) -> dict[str, int | str]:
         return {
@@ -515,9 +519,55 @@ def _coordinate_embedding_features(
     return np.stack(out, axis=-1).astype(np.float64)
 
 
+def _temporal_context_features(
+    *,
+    target_hw: tuple[int, int],
+    model_size: SnervModelSizeConfig,
+    lf_sequence: list[np.ndarray] | tuple[np.ndarray, ...] | None,
+    sequence_index: int | None,
+) -> np.ndarray:
+    h, w = int(target_hw[0]), int(target_hw[1])
+    radius = int(model_size.temporal_context)
+    if radius <= 0:
+        return np.empty((h, w, 0), dtype=np.float64)
+    if lf_sequence is None or sequence_index is None:
+        raise SnervCarrierError(
+            "temporal_context>0 requires receiver-visible lf_sequence and sequence_index"
+        )
+    return SnervTemporalExtension(radius=radius).sequence_delta_features(
+        lf_sequence,
+        index=int(sequence_index),
+        target_hw=(h, w),
+    )
+
+
+def _flat_temporal_group(
+    lf_sequence: list[np.ndarray] | tuple[np.ndarray, ...],
+    *,
+    flat_index: int,
+    group_count: int,
+) -> tuple[list[np.ndarray], int]:
+    """Return same-group LF timeline for a flat pair/frame/channel index."""
+
+    if group_count < 1:
+        raise SnervCarrierError("temporal group_count must be >= 1")
+    idx = int(flat_index)
+    if idx < 0 or idx >= len(lf_sequence):
+        raise SnervCarrierError("temporal flat_index out of range")
+    group = idx % int(group_count)
+    sequence = [np.asarray(v, dtype=np.float64) for v in lf_sequence[group::group_count]]
+    sequence_index = idx // int(group_count)
+    if sequence_index >= len(sequence):
+        raise SnervCarrierError("temporal sequence_index out of range")
+    return sequence, sequence_index
+
+
 def _decoder_features(
     field: np.ndarray,
     model_size: SnervModelSizeConfig,
+    *,
+    lf_sequence: list[np.ndarray] | tuple[np.ndarray, ...] | None = None,
+    sequence_index: int | None = None,
 ) -> np.ndarray:
     if model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER:
         context = MultiResolutionFusionUnit(scales=model_size.mfu_scales).features(
@@ -532,7 +582,13 @@ def _decoder_features(
             feature_count=model_size.fc_dim,
         )
     coord = _coordinate_embedding_features(field.shape, model_size.emb_size)
-    return np.concatenate([context, coord], axis=-1)
+    temporal = _temporal_context_features(
+        target_hw=tuple(int(v) for v in field.shape),
+        model_size=model_size,
+        lf_sequence=lf_sequence,
+        sequence_index=sequence_index,
+    )
+    return np.concatenate([context, coord, temporal], axis=-1)
 
 
 def _hfr_for_model_size(model_size: SnervModelSizeConfig) -> HighFrequencyRestorer:
@@ -543,6 +599,9 @@ def generate_hf_from_lf(
     lf: np.ndarray,
     decoder: HfGenerationDecoder,
     pyramid_template: WaveletPyramid,
+    *,
+    lf_sequence: list[np.ndarray] | tuple[np.ndarray, ...] | None = None,
+    sequence_index: int | None = None,
 ) -> list:
     """Generate the HF detail tuples from the LF approximation + decoder.
 
@@ -565,7 +624,12 @@ def generate_hf_from_lf(
     for lvl, (lh_t, _hl_t, _hh_t) in enumerate(detail_templates):
         target_hw = (int(lh_t.shape[0]), int(lh_t.shape[1]))
         up = _upsample_nn(approx, target_hw)
-        feats = _decoder_features(up, decoder.model_size)
+        feats = _decoder_features(
+            up,
+            decoder.model_size,
+            lf_sequence=lf_sequence,
+            sequence_index=sequence_index,
+        )
         kern = decoder.kernels[lvl]
         raw_details = (
             feats @ _kernel_vector(kern["LH"], decoder.model_size),
@@ -591,6 +655,7 @@ def fit_hf_decoder_least_squares(
     levels: int,
     *,
     model_size: SnervModelSizeConfig | None = None,
+    temporal_group_count: int = 1,
 ) -> HfGenerationDecoder:
     """Fit the HF-generation decoder by per-level ridge least squares (the "train").
 
@@ -606,6 +671,7 @@ def fit_hf_decoder_least_squares(
         levels=levels,
         detail_weight_pyramids=None,
         model_size=model_size,
+        temporal_group_count=temporal_group_count,
     )
 
 
@@ -617,6 +683,7 @@ def fit_hf_decoder_weighted_least_squares(
     weight_floor: float = 1e-3,
     saliency_gain: float = 1.0,
     model_size: SnervModelSizeConfig | None = None,
+    temporal_group_count: int = 1,
 ) -> HfGenerationDecoder:
     """Fit the HF decoder with optional score/saliency weights.
 
@@ -636,7 +703,11 @@ def fit_hf_decoder_weighted_least_squares(
     if saliency_gain < 0:
         raise SnervCarrierError("saliency_gain must be non-negative")
     model_size = model_size or DEFAULT_SNERV_MODEL_SIZE
+    temporal_group_count = int(temporal_group_count)
+    if temporal_group_count < 1:
+        raise SnervCarrierError("temporal_group_count must be >= 1")
     feature_count = int(model_size.feature_count)
+    lf_sequence_all = [np.asarray(pyr.lf, dtype=np.float64) for pyr in pyramids]
     # Accumulate normal equations per (level, subband).
     accum: dict = {
         lvl: {
@@ -649,11 +720,24 @@ def fit_hf_decoder_weighted_least_squares(
         for lvl in range(levels)
     }
     for pyr_idx, pyr in enumerate(pyramids):
+        temporal_sequence = None
+        temporal_index = None
+        if int(model_size.temporal_context) > 0:
+            temporal_sequence, temporal_index = _flat_temporal_group(
+                lf_sequence_all,
+                flat_index=pyr_idx,
+                group_count=temporal_group_count,
+            )
         approx = pyr.lf
         for lvl, (lh, hl, hh) in enumerate(pyr.details):
             target_hw = (int(lh.shape[0]), int(lh.shape[1]))
             up = _upsample_nn(approx, target_hw)
-            feats = _decoder_features(up, model_size).reshape(-1, feature_count)
+            feats = _decoder_features(
+                up,
+                model_size,
+                lf_sequence=temporal_sequence,
+                sequence_index=temporal_index,
+            ).reshape(-1, feature_count)
             for sb, d in (("LH", lh), ("HL", hl), ("HH", hh)):
                 ata, atb = accum[lvl][sb]
                 correction = _hfr_for_model_size(model_size).correction(
@@ -791,7 +875,13 @@ def dequantize_lf(
     return q * scale + zero
 
 
-def decode_frame(code: SnervFrameCode, decoder: HfGenerationDecoder) -> np.ndarray:
+def decode_frame(
+    code: SnervFrameCode,
+    decoder: HfGenerationDecoder,
+    *,
+    lf_sequence: list[np.ndarray] | tuple[np.ndarray, ...] | None = None,
+    sequence_index: int | None = None,
+) -> np.ndarray:
     """Decode one frame: dequantize LF, GENERATE HF, synthesize (the inflate path).
 
     This is the receiver-side reconstruction: numpy-only, no scorer, no torch.
@@ -809,7 +899,13 @@ def decode_frame(code: SnervFrameCode, decoder: HfGenerationDecoder) -> np.ndarr
         raise SnervCarrierError(
             f"decoded LF shape {lf.shape} != template LF shape {template.lf.shape}"
         )
-    coeffs = generate_hf_from_lf(lf, decoder, template)
+    coeffs = generate_hf_from_lf(
+        lf,
+        decoder,
+        template,
+        lf_sequence=lf_sequence,
+        sequence_index=sequence_index,
+    )
     pyr = WaveletPyramid(
         coeffs=coeffs, levels=code.levels, wavelet=code.wavelet, orig_hw=code.orig_hw
     )

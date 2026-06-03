@@ -772,6 +772,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         pyramids,
         levels=int(levels),
         model_size=model_size,
+        temporal_group_count=channels,
     )
 
     lf_quant_planes: list[np.ndarray] = []

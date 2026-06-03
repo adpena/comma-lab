@@ -183,8 +183,8 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     assert row.wavelet == "db2"
     assert row.fc_dim == 11
     assert row.emb_size == 2
-    assert row.decoder_feature_count == 13
-    assert row.hf_decoder_weight_count == 3 * 3 * 13
+    assert row.decoder_feature_count == 15
+    assert row.hf_decoder_weight_count == 3 * 3 * 15
     assert row.mfu_scales == (1, 3)
     assert row.hfr_gain == 0.25
     assert row.temporal_context == 1

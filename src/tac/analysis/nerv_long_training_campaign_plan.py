@@ -32,8 +32,10 @@ from tac.analysis.nerv_decoder_weight_waterfill import (
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
 )
 from tac.analysis.nerv_modelsize_budget import (
+    NervModelSizeBudgetError,
     decoder_codec_nominal_bits,
     snerv_decoder_codec_nominal_bits,
+    snerv_modelsize_candidate_id_from_controls,
 )
 from tac.optimization.recon_pixel_weight_surface import (
     JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA,
@@ -1089,26 +1091,52 @@ def _candidate_byte_headroom(row: Mapping[str, Any]) -> int:
 def _snerv_source_bound_control_blockers(candidate: Mapping[str, Any]) -> list[str]:
     blockers: list[str] = []
     candidate_id = str(candidate.get("candidate_id") or "")
-    if "_fc" not in candidate_id:
-        blockers.append("snerv_candidate_id_missing_source_bound_fc_dim_emb_size")
     for key in (
+        "num_pairs",
         "wavelet",
+        "levels",
+        "bits_per_coeff",
+        "step_map_bits_per_coeff",
+        "decoder_payload_codec",
+        "snerv_model_size_adapter",
         "fc_dim",
         "emb_size",
         "patch_radius",
         "mfu_scales",
         "hfr_gain",
         "temporal_context",
+        "hard_byte_ceiling",
     ):
         if key not in candidate:
             blockers.append(f"snerv_source_bound_control_missing:{key}")
+    if not blockers:
+        try:
+            expected_candidate_id = _snerv_expected_candidate_id_from_controls(
+                candidate
+            )
+        except (KeyError, NervModelSizeBudgetError, TypeError, ValueError):
+            blockers.append("snerv_candidate_id_source_bound_controls_unparseable")
+        else:
+            if candidate_id != expected_candidate_id:
+                blockers.append("snerv_candidate_id_source_bound_controls_mismatch")
     return blockers
 
 
 def _snerv_source_bound_controls(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    expected_candidate_id = None
+    candidate_id_matches_source_controls = False
+    try:
+        expected_candidate_id = _snerv_expected_candidate_id_from_controls(candidate)
+        candidate_id_matches_source_controls = (
+            str(candidate.get("candidate_id") or "") == expected_candidate_id
+        )
+    except (KeyError, NervModelSizeBudgetError, TypeError, ValueError):
+        pass
     return {
         "schema": "snerv_source_bound_capacity_controls.v1",
         "candidate_id": str(candidate.get("candidate_id") or ""),
+        "expected_candidate_id": expected_candidate_id,
+        "candidate_id_matches_source_controls": candidate_id_matches_source_controls,
         "wavelet": candidate.get("wavelet"),
         "levels": candidate.get("levels"),
         "bits_per_coeff": candidate.get("bits_per_coeff"),
@@ -1124,6 +1152,25 @@ def _snerv_source_bound_controls(candidate: Mapping[str, Any]) -> dict[str, Any]
         "decoder_feature_count": candidate.get("decoder_feature_count"),
         **FALSE_AUTHORITY,
     }
+
+
+def _snerv_expected_candidate_id_from_controls(candidate: Mapping[str, Any]) -> str:
+    return snerv_modelsize_candidate_id_from_controls(
+        num_pairs=int(candidate["num_pairs"]),
+        wavelet=str(candidate["wavelet"]),
+        levels=int(candidate["levels"]),
+        bits_per_coeff=float(candidate["bits_per_coeff"]),
+        step_map_bits_per_coeff=float(candidate["step_map_bits_per_coeff"]),
+        fc_dim=int(candidate["fc_dim"]),
+        emb_size=int(candidate["emb_size"]),
+        patch_radius=int(candidate["patch_radius"]),
+        mfu_scales=tuple(int(value) for value in candidate["mfu_scales"]),
+        hfr_gain=float(candidate["hfr_gain"]),
+        temporal_context=int(candidate["temporal_context"]),
+        snerv_model_size_adapter=str(candidate["snerv_model_size_adapter"]),
+        decoder_payload_codec=str(candidate["decoder_payload_codec"]),
+        hard_byte_ceiling=int(candidate["hard_byte_ceiling"]),
+    )
 
 
 def _int_csv(values: Any) -> str:

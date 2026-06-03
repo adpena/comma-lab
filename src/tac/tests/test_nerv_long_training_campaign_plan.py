@@ -173,6 +173,16 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["candidate"]["wavelet"] == "haar"
     assert snerv_row["source_bound_capacity_controls"]["fc_dim"] == 11
     assert snerv_row["source_bound_capacity_controls"]["emb_size"] == 2
+    assert (
+        snerv_row["source_bound_capacity_controls"][
+            "candidate_id_matches_source_controls"
+        ]
+        is True
+    )
+    assert (
+        snerv_row["source_bound_capacity_controls"]["expected_candidate_id"]
+        == snerv_row["candidate_id"]
+    )
     assert not snerv_row["source_bound_capacity_control_blockers"]
     assert "--snerv-model-size-adapter" in snerv_row["command_argv"]
     assert (
@@ -278,12 +288,43 @@ def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> 
     )
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert "snerv_candidate_id_missing_source_bound_fc_dim_emb_size" in snerv_row[
-        "blockers"
-    ]
     assert "snerv_source_bound_control_missing:wavelet" in snerv_row["blockers"]
     assert "snerv_source_bound_control_missing:fc_dim" in snerv_row["blockers"]
     assert snerv_row["source_bound_capacity_control_blockers"]
+
+
+def test_long_training_campaign_plan_blocks_snerv_id_control_mismatch() -> None:
+    snerv_budget = _snerv_budget()
+    mismatched = dict(snerv_budget["selected_candidates"][0])
+    mismatched["candidate_id"] = str(mismatched["candidate_id"]).replace(
+        "_mfu1-2-4_",
+        "_mfu1-3_",
+    )
+    snerv_budget["selected_candidates"] = [mismatched]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert "snerv_candidate_id_source_bound_controls_mismatch" in snerv_row[
+        "blockers"
+    ]
+    assert (
+        snerv_row["source_bound_capacity_controls"][
+            "candidate_id_matches_source_controls"
+        ]
+        is False
+    )
+    assert (
+        snerv_row["source_bound_capacity_controls"]["expected_candidate_id"]
+        != snerv_row["candidate_id"]
+    )
 
 
 def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None:
@@ -293,9 +334,13 @@ def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None
         {
             "candidate_id": (
                 "snerv_np600_haar_lv2_lfb1p5_stepb0p5_"
-                "fc9e0_int2_symmetric_ceil36000"
+                "fc9e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000"
             ),
             "hard_byte_ceiling": 36_000,
+            "decoder_payload_codec": "int2_symmetric",
+            "fc_dim": 9,
+            "emb_size": 0,
+            "decoder_feature_count": 9,
             "nominal_total_payload_bytes": 11_074_662,
             "nominal_under_ceiling": False,
             "byte_headroom": 36_000 - 11_074_662,
@@ -306,9 +351,12 @@ def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None
         {
             "candidate_id": (
                 "snerv_np600_haar_lv5_lfb2_stepb0p5_"
-                "fc11e2_int2_symmetric_ceil285000"
+                "fc11e2_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil285000"
             ),
             "hard_byte_ceiling": 285_000,
+            "levels": 5,
+            "bits_per_coeff": 2.0,
+            "decoder_payload_codec": "int2_symmetric",
             "nominal_total_payload_bytes": 231_518,
             "nominal_under_ceiling": True,
             "byte_headroom": 285_000 - 231_518,
@@ -363,9 +411,13 @@ def test_long_training_campaign_plan_refuses_far_over_ceiling_snerv_long_run() -
         {
             "candidate_id": (
                 "snerv_np600_haar_lv2_lfb1p5_stepb0p5_"
-                "fc9e0_int2_symmetric_ceil36000"
+                "fc9e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000"
             ),
             "hard_byte_ceiling": 36_000,
+            "decoder_payload_codec": "int2_symmetric",
+            "fc_dim": 9,
+            "emb_size": 0,
+            "decoder_feature_count": 9,
             "nominal_total_payload_bytes": 11_074_662,
             "nominal_under_ceiling": False,
             "byte_headroom": 36_000 - 11_074_662,
@@ -1464,7 +1516,7 @@ def _snerv_budget() -> dict:
                 "family": "snerv",
                 "candidate_id": (
                     "snerv_np600_haar_lv2_lfb1p5_stepb0p5_"
-                    "fc11e2_int4_symmetric_ceil178000"
+                    "fc11e2_p1_mfu1-2-4_hfr0_t0_adbase_int4_symmetric_ceil178000"
                 ),
                 "num_pairs": 600,
                 "hard_byte_ceiling": 178_000,

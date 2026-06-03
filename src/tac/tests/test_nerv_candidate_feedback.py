@@ -238,6 +238,11 @@ def test_training_telemetry_feedback_detects_pose_instability_and_lr_replan(
     assert row["family"] == "hi_nerv"
     assert row["feedback_kind"] == "training_telemetry"
     assert row["measured_num_pairs"] == 600
+    assert row["training_row_count"] == 40
+    assert row["training_first_epoch"] == 0
+    assert row["training_last_epoch"] == 39
+    assert row["training_median_pose_axis"] == 1_250.0
+    assert row["training_median_seg_axis"] == 5.0
     assert row["scope_matches_candidate"] is True
     assert row["feedback_ready"] is False
     assert row["pose_instability_detected"] is True
@@ -361,6 +366,9 @@ def test_training_telemetry_feedback_detects_segnet_stagnation(
 
     assert row["pose_instability_detected"] is False
     assert row["seg_stagnation_detected"] is True
+    assert row["training_last_epoch"] == 159
+    assert row["training_median_seg_axis"] is not None
+    assert row["training_median_pose_axis"] == 2.0
     assert row["observed_segnet_distillation_weight"] == 2.0
     assert row["recommended_segnet_distillation_weight"] == 4.0
     assert row["seg_stagnation_relative_improvement"] < 0.05

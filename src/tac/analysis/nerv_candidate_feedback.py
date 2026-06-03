@@ -369,6 +369,14 @@ def build_nerv_training_telemetry_feedback_row(
             else "telemetry_harvest_without_completion_artifact"
         ),
         "training_telemetry": health,
+        "training_row_count": health.get("row_count"),
+        "training_first_epoch": health.get("first_epoch"),
+        "training_last_epoch": health.get("last_epoch"),
+        "training_median_pose_axis": health.get("median_pose_axis"),
+        "training_median_pose_distill_loss": health.get("median_pose_distill_loss"),
+        "training_median_seg_axis": health.get("median_seg_axis"),
+        "training_max_pose_axis": health.get("max_pose_axis"),
+        "training_max_pose_distill_loss": health.get("max_pose_distill_loss"),
         "pose_instability_detected": bool(health["pose_instability_detected"]),
         "pose_instability_ever_detected": bool(
             health.get("pose_instability_ever_detected")

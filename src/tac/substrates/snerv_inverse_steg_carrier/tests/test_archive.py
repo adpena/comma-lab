@@ -481,6 +481,105 @@ def test_archive_full_frame_replay_reconstructs_ordered_pair_tensor() -> None:
     np.testing.assert_array_equal(replayed.reshape(6, h, w), np.stack(expected_planes))
 
 
+def test_archive_receiver_replay_consumes_temporal_context_from_lf_sequence() -> None:
+    h, w = 32, 48
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float64)
+    frames = []
+    for frame_index in range(2):
+        channels = []
+        for channel_index in range(3):
+            channels.append(
+                np.clip(
+                    120.0
+                    + 20.0 * np.sin((xx - 2 * frame_index) / (5.0 + channel_index))
+                    + 10.0 * np.cos((yy + frame_index) / 4.0)
+                    + 3.0 * channel_index,
+                    0.0,
+                    255.0,
+                )
+            )
+        frames.append(channels)
+    pyrs = [
+        encode_frame_lf(channel, levels=2, wavelet="haar")
+        for frame in frames
+        for channel in frame
+    ]
+    model_size = SnervModelSizeConfig(fc_dim=9, emb_size=0, temporal_context=1)
+    decoder = fit_hf_decoder_least_squares(
+        pyrs,
+        levels=2,
+        model_size=model_size,
+        temporal_group_count=3,
+    )
+    decoder_payload = encode_decoder_payload(decoder)
+    step_maps = [np.full(pyr.lf.shape, 1.0, dtype=np.float32) for pyr in pyrs]
+    step_packet = encode_step_maps(step_maps, bins=8)
+    receiver_step_maps = decode_step_maps(step_packet.packet)
+    q_planes = []
+    zero_points = []
+    for pyr, receiver_steps in zip(pyrs, receiver_step_maps, strict=True):
+        q, _scale, zero = quantize_lf(pyr.lf, per_element_steps=receiver_steps)
+        q_planes.append(q)
+        zero_points.append(zero)
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=zero_points),
+        lf_payload=encode_lf_quant_payload(q_planes),
+        decoder_payload=decoder_payload,
+        step_map_packet=step_packet.packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+            "lf_plane_count": 6,
+            "levels": 2,
+            "wavelet": "haar",
+            "carrier_hw": [h, w],
+        },
+    )
+
+    decoded = unpack_snerv_archive(archive.packet)
+    q_recv = decoded.decode_lf_quant_planes()
+    zeros_recv = decoded.decode_lf_zero_points()
+    steps_recv = decoded.decode_step_maps()
+    lf_sequence_all = [
+        q.astype(np.float64) * steps + float(zero)
+        for q, zero, steps in zip(q_recv, zeros_recv, steps_recv, strict=True)
+    ]
+    expected_planes = []
+    for idx, (q, zero, steps) in enumerate(
+        zip(q_recv, zeros_recv, steps_recv, strict=True)
+    ):
+        code = SnervFrameCode(
+            lf_quant=q,
+            lf_scale=1.0,
+            lf_zero=float(zero),
+            lf_shape=q.shape,
+            levels=2,
+            wavelet="haar",
+            orig_hw=(h, w),
+            per_element_steps=steps,
+        )
+        group = idx % 3
+        expected_planes.append(
+            np.clip(
+                decode_frame(
+                    code,
+                    decoded.decode_decoder(),
+                    lf_sequence=lf_sequence_all[group::3],
+                    sequence_index=idx // 3,
+                ),
+                0.0,
+                255.0,
+            ).astype(np.float32)
+        )
+
+    replayed = decode_snerv_archive_frames(archive.packet)
+
+    assert decoded.decode_decoder().model_size.temporal_context == 1
+    assert replayed.shape == (1, 2, 3, h, w)
+    np.testing.assert_array_equal(replayed.reshape(6, h, w), np.stack(expected_planes))
+
+
 def test_archive_full_frame_replay_requires_pair_grouping_metadata() -> None:
     step_packet = encode_step_maps(_step_maps()[:1], bins=4)
     archive = pack_snerv_archive(

@@ -291,6 +291,67 @@ def test_temporal_extension_exposes_lf_motion_without_hidden_sidecars():
     assert np.any(features[:, :, 1] != 0)
 
 
+def test_temporal_context_changes_decoder_capacity_and_requires_lf_sequence():
+    """NO-FAKE: temporal_context changes bytes and decoded pixels, not metadata only."""
+
+    yy, xx = np.mgrid[0:48, 0:64].astype(np.float64)
+    frames = [
+        np.clip(
+            125.0
+            + 38.0 * np.sin((xx - 2.0 * i) / 7.0)
+            + 22.0 * np.cos((yy + i) / 5.0),
+            0.0,
+            255.0,
+        )
+        for i in range(4)
+    ]
+    pyrs = [encode_frame_lf(frame, levels=2, wavelet="haar") for frame in frames]
+    cfg = SnervModelSizeConfig(fc_dim=9, emb_size=0, temporal_context=1)
+    base = fit_hf_decoder_least_squares(pyrs, levels=2)
+    temporal = fit_hf_decoder_least_squares(
+        pyrs,
+        levels=2,
+        model_size=cfg,
+        temporal_group_count=1,
+    )
+
+    assert cfg.feature_count == 11
+    assert temporal.byte_cost() == 2 * 3 * 11 * 4
+    assert temporal.byte_cost() > base.byte_cost()
+    assert temporal.kernels[0]["LH"].shape == (11,)
+
+    p1 = pyrs[1]
+    q, sc, zr = quantize_lf(p1.lf, n_levels=128)
+    code = SnervFrameCode(
+        lf_quant=q,
+        lf_scale=sc,
+        lf_zero=zr,
+        lf_shape=p1.lf.shape,
+        levels=2,
+        wavelet=p1.wavelet,
+        orig_hw=frames[1].shape,
+    )
+    with pytest.raises(SnervCarrierError, match="lf_sequence"):
+        decode_frame(code, temporal)
+
+    actual = decode_frame(
+        code,
+        temporal,
+        lf_sequence=[p.lf for p in pyrs],
+        sequence_index=1,
+    )
+    perturbed_sequence = [p.lf.copy() for p in pyrs]
+    perturbed_sequence[0] = perturbed_sequence[1]
+    perturbed_sequence[2] = perturbed_sequence[1]
+    perturbed = decode_frame(
+        code,
+        temporal,
+        lf_sequence=perturbed_sequence,
+        sequence_index=1,
+    )
+    assert not np.allclose(actual, perturbed)
+
+
 def test_generate_hf_produces_correct_shapes():
     """The generated detail tuples match the template subband shapes (well-formed synthesis)."""
     rng = np.random.default_rng(4)

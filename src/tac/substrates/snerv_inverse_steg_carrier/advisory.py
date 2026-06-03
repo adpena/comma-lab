@@ -444,6 +444,7 @@ def run_snerv_advisory(
             train_pyrs,
             levels=levels,
             model_size=model_size,
+            temporal_group_count=3,
         )
     elif hf_decoder_fit_mode == "score_weighted":
         decoder = fit_hf_decoder_weighted_least_squares(
@@ -452,6 +453,7 @@ def run_snerv_advisory(
             detail_weight_pyramids=weight_pyrs,
             saliency_gain=hf_decoder_saliency_gain,
             model_size=model_size,
+            temporal_group_count=3,
         )
     else:
         raise RuntimeError(f"unknown HF decoder fit mode: {hf_decoder_fit_mode!r}")
