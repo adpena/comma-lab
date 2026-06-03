@@ -9,6 +9,7 @@ import pytest
 
 from tac.analysis.nerv_control_inventory import (
     NERV_CONTROL_INVENTORY_SCHEMA,
+    _scan_markers,
     build_nerv_control_inventory,
     render_nerv_control_inventory_markdown,
 )
@@ -16,6 +17,26 @@ from tools import build_nerv_control_inventory as inventory_tool
 from tools.build_nerv_control_inventory import main as inventory_tool_main
 
 REPO = Path(__file__).resolve().parents[3]
+
+
+def test_nerv_control_inventory_marks_mock_teacher_marker_guarded(tmp_path: Path) -> None:
+    source = tmp_path / "guarded.py"
+    source.write_text(
+        '''
+scoreaware = {"allow_mock_scorer_teacher": False}
+if not bool(scoreaware.get("allow_mock_scorer_teacher")):
+    raise RuntimeError("mock scorer teacher path refused")
+''',
+        encoding="utf-8",
+    )
+
+    row = _scan_markers(tmp_path, "guarded.py")
+    hits = {hit["needle"]: hit for hit in row["hits"]}
+
+    assert hits["allow_mock_scorer_teacher"]["severity"] == "guarded"
+    assert hits["allow_mock_scorer_teacher"]["guard_marker"] == (
+        'not bool(scoreaware.get("allow_mock_scorer_teacher"))'
+    )
 
 
 def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() -> None:
