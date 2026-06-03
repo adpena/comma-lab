@@ -69,6 +69,16 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert artifact["ready_for_exact_eval_dispatch"] is False
     assert artifact["official_forward_parity_passed"] is False
     assert artifact["official_forward_parity_falsified"] is True
+    assert artifact["source_forward_replay"]["backend"] == (
+        "official_torch_cpu_full_hinerv_forward"
+    )
+    assert artifact["source_forward_replay"]["replay_ran"] is True
+    assert len(artifact["source_forward_replay"]["input_bundle_sha256"]) == 64
+    assert len(artifact["source_forward_replay"]["official_output_sha256"]) == 64
+    assert artifact["source_forward_replay"]["official_output_shape"] == [1, 3, 1, 2, 2]
+    assert artifact["source_forward_replay"]["full_hinerv_forward_parity_proven"] is False
+    assert artifact["official_weight_manifest"]["state_dict_key_count"] > 0
+    assert len(artifact["official_weight_manifest"]["state_dict_sha256"]) == 64
     grid_rows = {
         row["component_id"]: row
         for row in artifact["numeric_subcomponent_rows"]
@@ -103,11 +113,21 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert report["official_forward_parity_proven"] is False
     assert report["official_forward_parity_artifact_row"]["parity_passed"] is False
     assert report["official_forward_parity_artifact_row"]["parity_falsified"] is True
+    assert report["official_forward_parity_artifact_row"][
+        "falsification_accepted"
+    ] is True
+    assert (
+        "hinerv_official_forward_parity_artifact_not_passing"
+        not in report["official_forward_parity_artifact_row"]["blockers"]
+    )
     states = {row["component_id"]: row for row in report["component_state_rows"]}
     assert states["core_hierarchical_renderer"]["classification"] == (
         "receiver_visible_official_like_renderer_without_source_forward_replay"
     )
     assert states["core_hierarchical_renderer"]["source_forward_parity_falsified"] is True
+    assert states["core_hierarchical_renderer"]["official_source_forward_replay"][
+        "replay_ran"
+    ] is True
     assert "hinerv_official_forward_parity_artifact_falsifies_parity" in (
         states["core_hierarchical_renderer"]["blockers"]
     )
@@ -263,6 +283,14 @@ def _write_minimal_official_hinerv_repo(tmp_path: Path) -> Path:
     (root / "cfgs/models").mkdir(parents=True)
     (root / "models/hinerv.py").write_text(
         """
+import torch
+
+class _Group:
+    def add_argument(self, *args, **kwargs):
+        return None
+
+group = _Group()
+
 class HiNeRVEncoding:
     def __init__(self):
         self.grids.append(FeatureGrid((1, 2), init_scale=0.01))
@@ -278,6 +306,21 @@ class HiNeRVDecoder:
 
 class HiNeRV:
     pass
+
+class TinyHiNeRV(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.tensor([0.25], dtype=torch.float32))
+
+    def forward(self, input):
+        idx = input['idx'].to(torch.float32)
+        return (
+            torch.ones((idx.shape[0], 3, 1, 2, 2), dtype=torch.float32)
+            * self.weight.view(1, 1, 1, 1, 1)
+        ).contiguous(memory_format=torch.channels_last_3d)
+
+def build_model(args, logger, input):
+    return TinyHiNeRV()
 
 group.add_argument('--enc-grid-level')
 group.add_argument('--base-grid-size')

@@ -14,11 +14,14 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
@@ -348,10 +351,15 @@ def build_hinerv_official_forward_parity_artifact(
         generated_utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     file_rows = [_file_row(official_root, rel_path) for rel_path in REQUIRED_OFFICIAL_FILES]
     official_group_rows = [_official_marker_group_row(official_root, group) for group in OFFICIAL_MARKER_GROUPS]
+    official_forward_replay = _official_hinerv_forward_source_replay(official_root)
     component_rows = _component_state_rows(
         official_group_rows=official_group_rows,
         local_root=local_root,
         forward_parity_artifact_row={"parity_passed": False, "component_rows": []},
+    )
+    component_rows = _attach_official_forward_replay_to_component_rows(
+        component_rows,
+        official_forward_replay=official_forward_replay,
     )
     numeric_subcomponent_rows = [
         _official_grid_trilinear3d_numeric_replay_row(),
@@ -374,6 +382,10 @@ def build_hinerv_official_forward_parity_artifact(
         "local_repo_root": local_root.as_posix(),
         "official_file_rows": file_rows,
         "official_marker_group_rows": official_group_rows,
+        "official_weight_manifest": official_forward_replay[
+            "official_weight_manifest"
+        ],
+        "source_forward_replay": official_forward_replay,
         "component_rows": component_rows,
         "numeric_subcomponent_rows": numeric_subcomponent_rows,
         "official_forward_parity_passed": parity_passed,
@@ -592,18 +604,7 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
         for row in payload.get("component_rows") or ()
         if isinstance(row, Mapping)
     ]
-    evidence_blockers = _forward_parity_artifact_evidence_blockers(
-        payload,
-        component_rows=component_rows,
-    )
     artifact_schema = str(payload.get("schema") or "")
-    parity_passed = bool(
-        artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
-        and payload.get("official_forward_parity_passed") is True
-        and payload.get("score_claim") is False
-        and payload.get("ready_for_exact_eval_dispatch") is False
-        and not evidence_blockers
-    )
     parity_falsified = bool(
         artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
         and (
@@ -611,10 +612,29 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
             or any(row.get("source_forward_parity_falsified") is True for row in component_rows)
         )
     )
+    evidence_blockers = _forward_parity_artifact_evidence_blockers(
+        payload,
+        component_rows=component_rows,
+        accept_falsification=parity_falsified,
+    )
+    parity_passed = bool(
+        artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
+        and payload.get("official_forward_parity_passed") is True
+        and payload.get("score_claim") is False
+        and payload.get("ready_for_exact_eval_dispatch") is False
+        and not evidence_blockers
+    )
+    falsification_accepted = bool(
+        artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
+        and parity_falsified
+        and payload.get("score_claim") is False
+        and payload.get("ready_for_exact_eval_dispatch") is False
+        and not evidence_blockers
+    )
     blockers = []
     if artifact_schema != FORWARD_PARITY_ARTIFACT_SCHEMA:
         blockers.append("hinerv_official_forward_parity_artifact_schema_invalid")
-    if payload.get("official_forward_parity_passed") is not True:
+    if payload.get("official_forward_parity_passed") is not True and not parity_falsified:
         blockers.append("hinerv_official_forward_parity_artifact_not_passing")
     if payload.get("score_claim") is not False:
         blockers.append("hinerv_official_forward_parity_artifact_score_claim_not_false")
@@ -630,6 +650,7 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
         "sha256": digest,
         "parity_passed": parity_passed,
         "parity_falsified": parity_falsified,
+        "falsification_accepted": falsification_accepted,
         "component_rows": component_rows,
         "artifact_blockers": list(payload.get("blockers") or ()),
         "blockers": _ordered_unique(blockers),
@@ -647,6 +668,7 @@ def _missing_forward_row(*, path: str | None) -> dict[str, Any]:
         "sha256": None,
         "parity_passed": False,
         "parity_falsified": False,
+        "falsification_accepted": False,
         "component_rows": [],
         "blockers": ["hinerv_official_forward_parity_artifact_missing"],
         **FALSE_AUTHORITY,
@@ -657,6 +679,7 @@ def _forward_parity_artifact_evidence_blockers(
     payload: Mapping[str, Any],
     *,
     component_rows: Sequence[Mapping[str, Any]],
+    accept_falsification: bool = False,
 ) -> list[str]:
     blockers: list[str] = []
     weight_manifest = payload.get("official_weight_manifest")
@@ -677,6 +700,7 @@ def _forward_parity_artifact_evidence_blockers(
             "torch_vs_mlx",
             "official_torch_vs_portable",
             "official_torch_vs_mlx",
+            "official_torch_cpu_full_hinerv_forward",
         }:
             blockers.append("hinerv_official_forward_parity_source_replay_backend_invalid")
         if not _is_sha256_hex(source_replay.get("input_bundle_sha256")):
@@ -690,6 +714,12 @@ def _forward_parity_artifact_evidence_blockers(
         row = by_component.get(component_id)
         if row is None:
             blockers.append(f"hinerv_official_forward_parity_component_missing:{component_id}")
+            continue
+        if accept_falsification:
+            if row.get("source_forward_parity_falsified") is not True:
+                blockers.append(
+                    f"hinerv_official_forward_parity_component_not_falsified:{component_id}"
+                )
             continue
         blockers.extend(
             f"{blocker}:{component_id}"
@@ -825,6 +855,15 @@ def _component_state_rows(
                 "local_source_forward_markers_present": local_source_forward_markers_present,
                 "local_source_forward_marker_rows": local_source_forward_scan["marker_rows"],
                 "forward_parity_artifact_passed": artifact_passed,
+                "forward_parity_artifact_component": dict(artifact_component),
+                "official_source_forward_replay": (
+                    dict(artifact_component["official_source_forward_replay"])
+                    if isinstance(
+                        artifact_component.get("official_source_forward_replay"),
+                        Mapping,
+                    )
+                    else None
+                ),
                 "source_forward_parity_proven": source_forward,
                 "source_forward_parity_falsified": source_forward_falsified,
                 "classification": classification,
@@ -887,6 +926,275 @@ def _numeric_subcomponent_rows_from_report(report: Mapping[str, Any]) -> list[Ma
         for row in payload.get("numeric_subcomponent_rows") or ()
         if isinstance(row, Mapping)
     ]
+
+
+class _SilentLogger:
+    def info(self, *_args: object, **_kwargs: object) -> None:
+        return None
+
+
+def _official_hinerv_forward_source_replay(official_root: Path) -> dict[str, Any]:
+    """Run a tiny deterministic official HiNeRV torch forward.
+
+    This is source-custody evidence only.  It proves the pinned upstream graph
+    can be instantiated and executed on a hashed input; it does not compare
+    against a local portable/MLX renderer, so it cannot clear forward parity.
+    """
+
+    input_record = _official_hinerv_tiny_input_record()
+    backend = "official_torch_cpu_full_hinerv_forward"
+    try:
+        with _temporary_official_hinerv_import(official_root) as official_hinerv:
+            import torch
+
+            previous_threads = torch.get_num_threads()
+            torch.set_num_threads(1)
+            try:
+                torch.manual_seed(20260603)
+                model_input = _official_hinerv_torch_input(torch)
+                args = _tiny_official_hinerv_args()
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", FutureWarning)
+                    model = official_hinerv.build_model(
+                        args,
+                        _SilentLogger(),
+                        model_input,
+                    )
+                model.eval()
+                with torch.no_grad():
+                    output = model(model_input)
+                output_np = output.detach().cpu().numpy().astype(np.float32, copy=False)
+                state_manifest = _torch_state_dict_manifest(model.state_dict())
+            finally:
+                torch.set_num_threads(previous_threads)
+
+        output_sha = _array_sha256(output_np)
+        return {
+            "schema": "hinerv_official_source_forward_replay.v1",
+            "authority": AUTHORITY,
+            "backend": backend,
+            "replay_ran": True,
+            "official_repo_root": official_root.as_posix(),
+            "official_repo_head_sha": _git_head_sha(official_root),
+            "input_bundle": input_record,
+            "input_bundle_sha256": _stable_json_sha256(input_record),
+            "official_weight_manifest": state_manifest,
+            "official_output_shape": [int(v) for v in output_np.shape],
+            "official_output_dtype": str(output_np.dtype),
+            "official_output_sha256": output_sha,
+            "official_output_min": float(output_np.min()),
+            "official_output_max": float(output_np.max()),
+            "official_output_mean": float(output_np.mean()),
+            "local_portable_output_sha256": None,
+            "full_hinerv_forward_parity_proven": False,
+            "blockers": [
+                "hinerv_local_portable_full_forward_adapter_missing",
+                "hinerv_official_forward_replay_is_source_only",
+            ],
+            **FALSE_AUTHORITY,
+        }
+    except Exception as exc:  # pragma: no cover - dependency/source dependent
+        return {
+            "schema": "hinerv_official_source_forward_replay.v1",
+            "authority": AUTHORITY,
+            "backend": backend,
+            "replay_ran": False,
+            "official_repo_root": official_root.as_posix(),
+            "official_repo_head_sha": _git_head_sha(official_root),
+            "input_bundle": input_record,
+            "input_bundle_sha256": _stable_json_sha256(input_record),
+            "official_weight_manifest": {
+                "schema": "hinerv_official_weight_manifest.v1",
+                "state_dict_sha256": _stable_json_sha256(
+                    {"state_dict": "not_built"}
+                ),
+                "state_dict_key_count": 0,
+                "state_dict_tensor_count": 0,
+                "state_dict_numel": 0,
+                "state_dict_keys": [],
+                "replay_status": "official_model_build_or_forward_failed",
+            },
+            "official_output_shape": None,
+            "official_output_dtype": None,
+            "official_output_sha256": None,
+            "local_portable_output_sha256": None,
+            "error": f"{type(exc).__name__}: {exc}",
+            "full_hinerv_forward_parity_proven": False,
+            "blockers": ["hinerv_official_torch_forward_replay_failed"],
+            **FALSE_AUTHORITY,
+        }
+
+
+def _attach_official_forward_replay_to_component_rows(
+    component_rows: Sequence[Mapping[str, Any]],
+    *,
+    official_forward_replay: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    replay_summary = {
+        "schema": "hinerv_official_source_forward_replay_summary.v1",
+        "backend": official_forward_replay.get("backend"),
+        "replay_ran": bool(official_forward_replay.get("replay_ran")),
+        "input_bundle_sha256": official_forward_replay.get("input_bundle_sha256"),
+        "official_output_sha256": official_forward_replay.get(
+            "official_output_sha256"
+        ),
+        "official_weight_sha256": (
+            (
+                official_forward_replay.get("official_weight_manifest")
+                if isinstance(
+                    official_forward_replay.get("official_weight_manifest"),
+                    Mapping,
+                )
+                else {}
+            ).get("state_dict_sha256")
+        ),
+        "blockers": list(official_forward_replay.get("blockers") or ()),
+        **FALSE_AUTHORITY,
+    }
+    for row in component_rows:
+        mutable = dict(row)
+        if mutable.get("component_id") == "core_hierarchical_renderer":
+            mutable["official_source_forward_replay"] = replay_summary
+        rows.append(mutable)
+    return rows
+
+
+class _temporary_official_hinerv_import:
+    def __init__(self, official_root: Path) -> None:
+        self.official_root = official_root
+        self._saved_path: list[str] = []
+        self._saved_modules: dict[str, Any] = {}
+        self._model_module_names: list[str] = []
+
+    def __enter__(self) -> Any:
+        import importlib
+
+        self._saved_path = list(sys.path)
+        self._model_module_names = [
+            name for name in sys.modules if name == "models" or name.startswith("models.")
+        ]
+        self._saved_modules = {name: sys.modules[name] for name in self._model_module_names}
+        for name in self._model_module_names:
+            del sys.modules[name]
+        sys.path.insert(0, self.official_root.as_posix())
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", FutureWarning)
+            return importlib.import_module("models.hinerv")
+
+    def __exit__(self, *_exc_info: object) -> None:
+        for name in [name for name in sys.modules if name == "models" or name.startswith("models.")]:
+            del sys.modules[name]
+        sys.modules.update(self._saved_modules)
+        sys.path[:] = self._saved_path
+
+
+def _official_hinerv_tiny_input_record() -> dict[str, Any]:
+    return {
+        "schema": "hinerv_official_tiny_forward_input.v1",
+        "idx": [[0, 0, 0]],
+        "idx_dtype": "int64",
+        "idx_max": [1, 1, 1],
+        "video_size": [1, 2, 2],
+        "patch_size": [1, 2, 2],
+        "torch_manual_seed": 20260603,
+        "torch_num_threads": 1,
+    }
+
+
+def _official_hinerv_torch_input(torch_module: Any) -> dict[str, Any]:
+    record = _official_hinerv_tiny_input_record()
+    return {
+        "idx": torch_module.tensor(record["idx"], dtype=torch_module.long),
+        "idx_max": tuple(record["idx_max"]),
+        "video_size": tuple(record["video_size"]),
+        "patch_size": tuple(record["patch_size"]),
+    }
+
+
+def _tiny_official_hinerv_args() -> SimpleNamespace:
+    return SimpleNamespace(
+        channels=4,
+        channels_reduce=2.0,
+        channels_reduce_base=1,
+        channels_min=1,
+        depths=[1],
+        exps=[1.0],
+        kernels=[1],
+        scales_t=[1],
+        scales_hw=[2],
+        stem_kernels=1,
+        stem_paddings=[0, 0, 0],
+        paddings=[0, 0, 0],
+        base_size=[-1, -1, -1],
+        base_grid_size=[1, 1, 1, 4],
+        base_grid_level=1,
+        base_grid_level_scale=[1.0, 1.0, 1.0, 1.0],
+        base_grid_init_scale=1.0e-3,
+        block_type="mlp",
+        block_norm="layernorm-no-affine",
+        block_act="gelu",
+        block_layerscale=0.0,
+        block_dropout=0.0,
+        block_droppath=0.0,
+        block_bias=False,
+        stem_type="conv_stem",
+        stem_norm="none",
+        stem_act="none",
+        stem_layerscale=0.0,
+        stem_dropout=0.0,
+        stem_droppath=0.0,
+        stem_bias=True,
+        head_type="linear_head",
+        head_norm="none",
+        head_act="sigmoid",
+        head_layerscale=0.0,
+        head_dropout=0.0,
+        head_droppath=0.0,
+        head_bias=True,
+        enc_type="normalized+temp_local_grid",
+        enc_align_corners=False,
+        enc_pe=[1.2, 60, 1.2, 60],
+        enc_pe_no_t=False,
+        enc_grid_size=[1, 1, 1, 1],
+        enc_grid_level=1,
+        enc_grid_level_scale=[1.0, 1.0, 1.0, 1.0],
+        enc_grid_init_scale=1.0e-3,
+        enc_grid_depth_scale=[1.0, 1.0, 1.0, 1.0],
+        upsample_type="trilinear",
+        upsample_config="matmul-th-w",
+        upsample_norm="layernorm-no-affine",
+        upsample_act="none",
+        eval_patch_size=None,
+        debug=False,
+    )
+
+
+def _torch_state_dict_manifest(state_dict: Mapping[str, Any]) -> dict[str, Any]:
+    tensor_rows: list[dict[str, Any]] = []
+    for key in sorted(str(k) for k in state_dict):
+        tensor = state_dict[key]
+        array = tensor.detach().cpu().numpy()
+        tensor_rows.append(
+            {
+                "key": key,
+                "shape": [int(v) for v in array.shape],
+                "dtype": str(array.dtype),
+                "numel": int(array.size),
+                "sha256": _array_sha256(array),
+            }
+        )
+    state_dict_sha = _stable_json_sha256(tensor_rows)
+    return {
+        "schema": "hinerv_official_weight_manifest.v1",
+        "state_dict_sha256": state_dict_sha,
+        "state_dict_key_count": len(tensor_rows),
+        "state_dict_tensor_count": len(tensor_rows),
+        "state_dict_numel": int(sum(row["numel"] for row in tensor_rows)),
+        "state_dict_keys": [str(row["key"]) for row in tensor_rows],
+        "state_dict_tensor_rows": tensor_rows,
+        "replay_status": "official_model_forward_ran",
+    }
 
 
 def _official_grid_trilinear3d_numeric_replay_row() -> dict[str, Any]:
@@ -1200,6 +1508,17 @@ def _array_sha256(array: np.ndarray) -> str:
     h.update(str(tuple(int(v) for v in arr.shape)).encode("utf-8"))
     h.update(arr.tobytes())
     return h.hexdigest()
+
+
+def _stable_json_sha256(payload: Any) -> str:
+    return sha256(
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 def _git_head_sha(root: Path) -> str | None:
