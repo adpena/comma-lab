@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import struct
+import warnings
 
 import numpy as np
 import pytest
@@ -193,7 +194,7 @@ def test_quantized_decoder_payload_codecs_roundtrip_receiver_values() -> None:
         assert header["schema"] == "snerv_decoder_payload.v2"
         assert header["codec"] == codec
         assert header["bits_per_weight"] in {8, 4, 2}
-        assert header["quantizer"] == "symmetric_per_kernel_fp16_scale"
+        assert header["quantizer"] == "symmetric_per_kernel_adaptive_scale"
         for lvl in range(decoder.levels):
             for subband in ("LH", "HL", "HH"):
                 np.testing.assert_allclose(
@@ -206,6 +207,27 @@ def test_quantized_decoder_payload_codecs_roundtrip_receiver_values() -> None:
     assert payload_sizes["int2_symmetric"] <= payload_sizes["int4_symmetric"]
     assert payload_sizes["int4_symmetric"] <= payload_sizes["int8_symmetric"]
     assert decode_decoder_payload(legacy_payload).levels == decoder.levels
+
+
+def test_quantized_decoder_payload_escalates_large_scales_to_fp32() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=1)
+    decoder.kernels[0]["LH"] = np.full((3, 3), 10_000_000.0, dtype=np.float64)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        payload = encode_decoder_payload(decoder, codec="int8_symmetric")
+        decoded = decode_decoder_payload(payload)
+
+    header = _read_subpacket_header(payload)
+    assert header["scale_dtype"] == "float32_le"
+    assert header["scale_bytes"] == header["scale_count"] * np.dtype("<f4").itemsize
+    assert np.isfinite(decoded.kernels[0]["LH"]).all()
+    np.testing.assert_allclose(
+        decoded.kernels[0]["LH"],
+        decoder.kernels[0]["LH"],
+        rtol=1.0e-6,
+        atol=0.0,
+    )
 
 
 def test_decoder_payload_roundtrips_nondefault_model_size_controls() -> None:

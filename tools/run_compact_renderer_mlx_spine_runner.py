@@ -12154,12 +12154,19 @@ def _acquire_active_campaign_lock(
     )
     digest = _campaign_lock_digest(payload)
     lock_path = lock_dir / f"{digest}.json"
+    planner_row_id = str(getattr(args, "planner_row_id", "") or "").strip() or None
+    modelsize_candidate_id = (
+        str(getattr(args, "modelsize_candidate_id", "") or "").strip() or None
+    )
     manifest = {
         "schema": ACTIVE_CAMPAIGN_LOCK_SCHEMA,
         "digest": digest,
         "pid": os.getpid(),
         "created_utc": datetime.now(UTC).isoformat(),
         "output_dir": output_dir.as_posix(),
+        "family": family,
+        "planner_row_id": planner_row_id,
+        "modelsize_candidate_id": modelsize_candidate_id,
         "identity": payload,
         "score_claim": False,
         "promotion_eligible": False,

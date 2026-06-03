@@ -2298,6 +2298,11 @@ def test_active_campaign_lock_refuses_duplicate_active_pid(
     )
     assert lock_path is not None
     assert lock_path.is_file()
+    manifest = json.loads(lock_path.read_text(encoding="utf-8"))
+    assert manifest["family"] == "hi_nerv"
+    assert manifest["planner_row_id"] is None
+    assert manifest["modelsize_candidate_id"] == "auto"
+    assert manifest["score_claim"] is False
     try:
         with pytest.raises(SystemExit, match="duplicate active"):
             runner_mod._acquire_active_campaign_lock(

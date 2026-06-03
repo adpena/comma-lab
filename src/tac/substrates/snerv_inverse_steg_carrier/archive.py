@@ -141,6 +141,11 @@ DECODER_PAYLOAD_QUANTIZED_CODECS = {
     "int4_symmetric": 4,
     "int2_symmetric": 2,
 }
+DECODER_SCALE_DTYPE_TO_NUMPY = {
+    "float16_le": np.dtype("<f2"),
+    "float32_le": np.dtype("<f4"),
+}
+DECODER_FP16_MAX_FINITE = float(np.finfo(np.float16).max)
 DECODER_PAYLOAD_MIXED_MODE_TO_CODE = {
     "zero": 0,
     "int2": 1,
@@ -997,6 +1002,51 @@ def _decode_lf_quant_payload_spatial_delta_leb128_lzma(
         raise SnervArchiveError(str(exc)) from exc
 
 
+def _encode_decoder_scale_payload(scales: Sequence[float]) -> tuple[bytes, str]:
+    arr64 = np.asarray(scales, dtype=np.float64)
+    if not np.all(np.isfinite(arr64)):
+        raise SnervArchiveError("decoder quantized scales must be finite")
+    with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+        arr16 = arr64.astype("<f2")
+    use_fp16 = np.all(np.isfinite(arr16))
+    if use_fp16 and arr64.size:
+        positive = arr64 > 0.0
+        use_fp16 = bool(np.all(arr16[positive] > 0.0))
+    if use_fp16:
+        return arr16.tobytes(), "float16_le"
+    arr32 = arr64.astype("<f4")
+    if not np.all(np.isfinite(arr32)):
+        raise SnervArchiveError("decoder quantized scales exceed float32 range")
+    if arr64.size:
+        positive = arr64 > 0.0
+        if not np.all(arr32[positive] > 0.0):
+            raise SnervArchiveError("decoder quantized scales underflow float32")
+    return arr32.tobytes(), "float32_le"
+
+
+def _validate_finite_decoder_values(values: np.ndarray, *, context: str) -> np.ndarray:
+    arr64 = np.asarray(values, dtype=np.float64)
+    if not np.all(np.isfinite(arr64)):
+        raise SnervArchiveError(f"{context} must be finite")
+    return arr64
+
+
+def _decoder_float32_payload(values: np.ndarray, *, context: str) -> bytes:
+    arr64 = _validate_finite_decoder_values(values, context=context)
+    max_abs = float(np.max(np.abs(arr64))) if arr64.size else 0.0
+    if max_abs > float(np.finfo(np.float32).max):
+        raise SnervArchiveError(f"{context} exceeds float32 receiver range")
+    return arr64.astype("<f4").tobytes()
+
+
+def _decoder_scale_dtype(header: Mapping[str, Any]) -> np.dtype:
+    raw = str(header.get("scale_dtype", "float16_le"))
+    dtype = DECODER_SCALE_DTYPE_TO_NUMPY.get(raw)
+    if dtype is None:
+        raise SnervArchiveError(f"unsupported decoder scale dtype: {raw!r}")
+    return dtype
+
+
 def encode_decoder_payload(
     decoder: HfGenerationDecoder,
     *,
@@ -1006,7 +1056,7 @@ def encode_decoder_payload(
     """Encode the shared HF decoder as deterministic scorer-free receiver bytes."""
 
     levels, values, model_size = _decoder_to_flat_values(decoder)
-    raw = values.astype("<f4").tobytes()
+    raw = _decoder_float32_payload(values, context="decoder raw reference")
     if not raw:
         raise SnervArchiveError("decoder payload must be non-empty")
     normalized = str(codec).strip().lower()
@@ -1197,18 +1247,22 @@ def _encode_decoder_payload_quantized(
     max_abs_error = 0.0
     mean_abs_errors = []
     for group in value_groups:
-        max_abs = float(np.max(np.abs(group))) if group.size else 0.0
+        group64 = _validate_finite_decoder_values(
+            group,
+            context="decoder quantized group",
+        )
+        max_abs = float(np.max(np.abs(group64))) if group64.size else 0.0
         scale = 1.0 if max_abs == 0.0 else max_abs / float(qmax)
-        q_signed = np.round(group / scale).clip(-qmax, qmax).astype(np.int64)
+        q_signed = np.round(group64 / scale).clip(-qmax, qmax).astype(np.int64)
         dequant = q_signed.astype(np.float64) * scale
-        err = np.abs(dequant - group)
+        err = np.abs(dequant - group64)
         max_abs_error = max(max_abs_error, float(np.max(err)) if err.size else 0.0)
         mean_abs_errors.append(float(np.mean(err)) if err.size else 0.0)
         scales.append(scale)
         unsigned_parts.append((q_signed + qmax).astype(np.int64))
     q_unsigned = np.concatenate(unsigned_parts) if unsigned_parts else np.zeros(0)
     packed_q = pack_fixed_width_uints(q_unsigned, bits=bits)
-    scale_payload = np.asarray(scales, dtype="<f2").tobytes()
+    scale_payload, scale_dtype = _encode_decoder_scale_payload(scales)
     raw_payload = scale_payload + packed_q
     header = {
         "schema": DECODER_PAYLOAD_V2_SCHEMA,
@@ -1219,9 +1273,9 @@ def _encode_decoder_payload_quantized(
         "model_size_config": model_size.as_jsonable(),
         "codec": codec,
         "bits_per_weight": int(bits),
-        "quantizer": "symmetric_per_kernel_fp16_scale",
+        "quantizer": "symmetric_per_kernel_adaptive_scale",
         "q_offset": int(qmax),
-        "scale_dtype": "float16_le",
+        "scale_dtype": scale_dtype,
         "scale_count": len(scales),
         "scale_bytes": len(scale_payload),
         "packed_q_bytes": len(packed_q),
@@ -1263,37 +1317,49 @@ def _encode_decoder_payload_mixed(
     mean_abs_errors = []
     histogram = dict.fromkeys(DECODER_PAYLOAD_MIXED_MODE_TO_CODE, 0)
     for idx, group in enumerate(value_groups):
+        group64 = _validate_finite_decoder_values(
+            group,
+            context="decoder mixed group",
+        )
         mode = (
             mode_plan[idx]
             if mode_plan is not None
-            else _select_mixed_decoder_kernel_mode(group)
+            else _select_mixed_decoder_kernel_mode(group64)
         )
         histogram[mode] += 1
         mode_codes.append(DECODER_PAYLOAD_MIXED_MODE_TO_CODE[mode])
         if mode == "zero":
-            dequant = np.zeros_like(group, dtype=np.float64)
+            dequant = np.zeros_like(group64, dtype=np.float64)
         elif mode == "fp16":
-            payload = np.asarray(group, dtype="<f2").tobytes()
+            max_abs = float(np.max(np.abs(group64))) if group64.size else 0.0
+            if max_abs > DECODER_FP16_MAX_FINITE:
+                raise SnervArchiveError(
+                    "decoder mixed fp16 group exceeds float16 receiver range"
+                )
+            payload = np.asarray(group64, dtype="<f2").tobytes()
             fp16_parts.append(payload)
             dequant = np.frombuffer(payload, dtype="<f2").astype(np.float64)
         elif mode == "fp32":
-            payload = np.asarray(group, dtype="<f4").tobytes()
+            payload = _decoder_float32_payload(
+                group64,
+                context="decoder mixed fp32 group",
+            )
             fp32_parts.append(payload)
             dequant = np.frombuffer(payload, dtype="<f4").astype(np.float64)
         else:
             bits = int(mode.removeprefix("int"))
             qmax = (1 << (bits - 1)) - 1
-            max_abs = float(np.max(np.abs(group))) if group.size else 0.0
+            max_abs = float(np.max(np.abs(group64))) if group64.size else 0.0
             scale = 1.0 if max_abs == 0.0 else max_abs / float(qmax)
-            q_signed = np.round(group / scale).clip(-qmax, qmax).astype(np.int64)
+            q_signed = np.round(group64 / scale).clip(-qmax, qmax).astype(np.int64)
             q_parts.append(pack_fixed_width_uints(q_signed + qmax, bits=bits))
             scales.append(scale)
             dequant = q_signed.astype(np.float64) * scale
-        err = np.abs(dequant - group)
+        err = np.abs(dequant - group64)
         max_abs_error = max(max_abs_error, float(np.max(err)) if err.size else 0.0)
         mean_abs_errors.append(float(np.mean(err)) if err.size else 0.0)
     mode_code_payload = pack_fixed_width_uints(mode_codes, bits=3)
-    scale_payload = np.asarray(scales, dtype="<f2").tobytes()
+    scale_payload, scale_dtype = _encode_decoder_scale_payload(scales)
     q_payload = b"".join(q_parts)
     fp16_payload = b"".join(fp16_parts)
     fp32_payload = b"".join(fp32_parts)
@@ -1321,7 +1387,7 @@ def _encode_decoder_payload_mixed(
         "mode_histogram": histogram,
         "mode_count": len(mode_codes),
         "mode_code_bytes": len(mode_code_payload),
-        "scale_dtype": "float16_le",
+        "scale_dtype": scale_dtype,
         "scale_count": len(scales),
         "scale_bytes": len(scale_payload),
         "packed_q_bytes": len(q_payload),
@@ -1711,6 +1777,10 @@ def _decode_decoder_payload_mixed(
         raise SnervArchiveError("decoder mixed mode count mismatch")
     mode_code_bytes = int(header["mode_code_bytes"])
     scale_bytes = int(header["scale_bytes"])
+    scale_dtype = _decoder_scale_dtype(header)
+    scale_count = int(header.get("scale_count", 0))
+    if scale_bytes != scale_count * scale_dtype.itemsize:
+        raise SnervArchiveError("decoder mixed scale byte count mismatch")
     q_bytes = int(header["packed_q_bytes"])
     fp16_bytes = int(header["fp16_value_bytes"])
     fp32_bytes = int(header.get("fp32_value_bytes", 0))
@@ -1732,7 +1802,9 @@ def _decode_decoder_payload_mixed(
         bits=int(header["mode_code_bits"]),
         count=group_count,
     )
-    scales = np.frombuffer(scale_payload, dtype="<f2").astype(np.float64)
+    scales = np.frombuffer(scale_payload, dtype=scale_dtype).astype(np.float64)
+    if not np.all(np.isfinite(scales)):
+        raise SnervArchiveError("decoder mixed scale payload contains non-finite values")
     values = np.zeros(int(header["value_count"]), dtype=np.float64)
     scale_cursor = 0
     q_cursor = 0
@@ -1798,6 +1870,8 @@ def _select_mixed_decoder_kernel_mode(group: np.ndarray) -> str:
     max_abs = float(np.max(np.abs(group))) if group.size else 0.0
     if max_abs <= 1e-12:
         return "zero"
+    if max_abs > DECODER_FP16_MAX_FINITE:
+        return "fp32"
     if max_abs >= 0.125:
         return "fp16"
     if max_abs >= 0.05:
@@ -1852,7 +1926,8 @@ def _decode_decoder_payload_quantized(
     value_count = int(header["value_count"])
     if scale_count != levels * len(DECODER_SUBBANDS):
         raise SnervArchiveError("decoder quantized scale count mismatch")
-    if scale_bytes != scale_count * np.dtype("<f2").itemsize:
+    scale_dtype = _decoder_scale_dtype(header)
+    if scale_bytes != scale_count * scale_dtype.itemsize:
         raise SnervArchiveError("decoder quantized scale byte count mismatch")
     if len(payload) < scale_bytes:
         raise SnervArchiveError("decoder quantized payload too short")
@@ -1860,7 +1935,11 @@ def _decode_decoder_payload_quantized(
     packed_q = payload[scale_bytes:]
     if len(packed_q) != int(header["packed_q_bytes"]):
         raise SnervArchiveError("decoder quantized q byte count mismatch")
-    scales = np.frombuffer(scale_payload, dtype="<f2").astype(np.float64)
+    scales = np.frombuffer(scale_payload, dtype=scale_dtype).astype(np.float64)
+    if not np.all(np.isfinite(scales)):
+        raise SnervArchiveError(
+            "decoder quantized scale payload contains non-finite values"
+        )
     q_unsigned = unpack_fixed_width_uints(packed_q, bits=bits, count=value_count)
     q_signed = q_unsigned.astype(np.int64) - offset
     values = q_signed.astype(np.float64)
