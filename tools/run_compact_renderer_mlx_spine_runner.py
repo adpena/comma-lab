@@ -75,6 +75,7 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
 )
 from tac.substrates._shared.mlx_score_aware.adapter import (  # noqa: E402
+    MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS,
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
 from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (  # noqa: E402
@@ -156,6 +157,11 @@ EXECUTABLE_FAMILIES = (
 PLANNER_GATED_FAMILIES: tuple[str, ...] = ()
 CLI_EXECUTE_FAMILIES = (*EXECUTABLE_FAMILIES, *PLANNER_GATED_FAMILIES)
 PLANNER_ROW_REQUIRED_FAMILIES = ("hi_nerv", "snerv")
+HI_NERV_OPTIMIZER_POLICIES = (
+    "auto",
+    "pr95_curriculum",
+    "native_optimizer",
+)
 COMPACT_FAMILY_STARTUP_MARKER_FILENAME = (
     "compact_renderer_mlx_spine_runner_startup.json"
 )
@@ -2520,6 +2526,70 @@ def _bind_hi_nerv_modelsize_launch_pressure(
     }
 
 
+def _resolve_hi_nerv_optimizer_policy(
+    *,
+    requested_policy: str,
+    epochs: int,
+    optimizer_kind: str,
+) -> dict[str, Any]:
+    """Resolve whether HiNeRV uses PR95 curriculum or native MLX optimizer.
+
+    Long runs used to infer PR95 curriculum solely from ``epochs >= 8``. That
+    made planner rows labelled ``lion``/``adafactor``/``rmsprop`` silently run
+    the PR95 Muon+AdamW curriculum instead. This helper makes that authority
+    explicit and machine-checkable.
+    """
+
+    policy = str(requested_policy or "auto").strip().lower()
+    if policy not in HI_NERV_OPTIMIZER_POLICIES:
+        raise CompactRendererMlxSpineRunnerError(
+            "hi_nerv_optimizer_policy must be one of "
+            f"{HI_NERV_OPTIMIZER_POLICIES}; got {requested_policy!r}"
+        )
+    optimizer = str(optimizer_kind or "adamw").strip().lower()
+    if policy == "auto":
+        # Preserve the PR95-faithful control row for the historical default,
+        # but let non-AdamW rows genuinely exercise native macOS/MLX optimizers.
+        resolved = (
+            "pr95_curriculum"
+            if int(epochs) >= 8 and optimizer == "adamw"
+            else "native_optimizer"
+        )
+    else:
+        resolved = policy
+    if resolved == "pr95_curriculum" and int(epochs) < 8:
+        raise CompactRendererMlxSpineRunnerError(
+            "hi_nerv PR95 curriculum requires epochs >= 8; use "
+            "--hi-nerv-optimizer-policy native_optimizer for short native "
+            "optimizer probes"
+        )
+    if resolved == "pr95_curriculum" and optimizer != "adamw":
+        raise CompactRendererMlxSpineRunnerError(
+            "hi_nerv PR95 curriculum owns the optimizer schedule "
+            "(Muon+AdamW); non-adamw --optimizer-kind would be ignored. Use "
+            "--hi-nerv-optimizer-policy native_optimizer to run "
+            f"{optimizer!r} as a real native MLX optimizer."
+        )
+    pr95_enabled = resolved == "pr95_curriculum"
+    return {
+        "schema": "compact_hi_nerv_optimizer_policy.v1",
+        "requested_policy": policy,
+        "resolved_policy": resolved,
+        "optimizer_kind": optimizer,
+        "pr95_faithful_curriculum_enabled": pr95_enabled,
+        "native_optimizer_active": resolved == "native_optimizer",
+        "optimizer_kind_consumed_by_native_mlx": resolved == "native_optimizer",
+        "optimizer_kind_consumed_by_pr95_curriculum": pr95_enabled,
+        "effective_optimizer_label": (
+            "pr95_8stage_muon_adamw" if pr95_enabled else optimizer
+        ),
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def execute_snerv_inverse_steg_advisory_and_adapt(
     *,
     output_dir: str | Path,
@@ -4616,6 +4686,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_progress_every: int = 50,
     telemetry_flush_interval_epochs: int = 1,
     optimizer_kind: str = "adamw",
+    hi_nerv_optimizer_policy: str = "auto",
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -4633,6 +4704,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     root = Path(repo_root).expanduser().resolve(strict=False)
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
+    optimizer_policy = _resolve_hi_nerv_optimizer_policy(
+        requested_policy=hi_nerv_optimizer_policy,
+        epochs=int(epochs),
+        optimizer_kind=str(optimizer_kind),
+    )
     resolved_source_video = _resolve_source_video_path(source_video_path, base=root)
     effective_requested_distillation_device = str(
         requested_distillation_device or distillation_device
@@ -4872,6 +4948,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "candidate_curriculum_plan": launch_curriculum_plan,
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_optimizer_policy": optimizer_policy,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": prelaunch_blockers,
@@ -4930,6 +5007,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=telemetry_flush_interval_epochs,
             optimizer_kind=str(optimizer_kind),
+            hi_nerv_optimizer_policy=optimizer_policy,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -4972,6 +5050,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 ),
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_optimizer_policy": optimizer_policy,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
@@ -5094,9 +5173,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         )
     elif int(decoder_weight_saliency_artifact.get("row_count") or 0) <= 0:
         blockers.append("hi_nerv_decoder_weight_saliency_no_decoder_rows")
-    pr95_curriculum_enabled = int(epochs) >= 8
-    if not pr95_curriculum_enabled:
-        blockers.append("hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs")
+    pr95_curriculum_enabled = bool(
+        optimizer_policy.get("pr95_faithful_curriculum_enabled")
+    )
     if (
         effective_segnet_distillation_weight <= 0.0
         or effective_pose_distillation_weight <= 0.0
@@ -5189,6 +5268,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_training_config_gate": config_gate,
             "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+            "hi_nerv_optimizer_policy": optimizer_policy,
             "score_aware_carrier_training_plan": score_aware_training_plan,
             "modelsize_budget_evidence": modelsize_budget_evidence,
             "score_aware_training": {
@@ -5218,8 +5298,21 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "allow_unscored_research_smoke": bool(allow_unscored_research_smoke),
                 "config_gate": config_gate,
                 "decoder_codec": str(launch_decoder_codec),
-                "optimizer_kind": str(optimizer_kind),
+                "requested_optimizer_kind": str(optimizer_kind),
+                "optimizer_kind": str(
+                    optimizer_policy.get("optimizer_kind") or optimizer_kind
+                ),
+                "optimizer_policy": optimizer_policy,
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+                "native_optimizer_active": bool(
+                    optimizer_policy.get("native_optimizer_active")
+                ),
+                "effective_weight_decay": (
+                    1.0e-4
+                    if str(optimizer_policy.get("optimizer_kind") or optimizer_kind)
+                    in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
+                    else None
+                ),
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
                     enabled=effective_coder_aware_qat,
@@ -6803,6 +6896,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mlx_prefilter_progress_every: int,
     telemetry_flush_interval_epochs: int,
     optimizer_kind: str,
+    hi_nerv_optimizer_policy: Mapping[str, Any],
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -6904,7 +6998,19 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         output_width=int(cfg.output_width),
     )
     model = HinervSubstrateMLX(cfg)
-    pr95_curriculum_enabled = int(epochs) >= 8
+    optimizer_policy = dict(hi_nerv_optimizer_policy or {})
+    pr95_curriculum_enabled = bool(
+        optimizer_policy.get("pr95_faithful_curriculum_enabled")
+    )
+    native_optimizer_active = bool(optimizer_policy.get("native_optimizer_active"))
+    effective_optimizer_kind = str(
+        optimizer_policy.get("optimizer_kind") or optimizer_kind
+    )
+    effective_weight_decay = (
+        1.0e-4
+        if effective_optimizer_kind in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
+        else None
+    )
     coder_qat_cfg = CoderAwareQATConfig(
         enabled=bool(coder_aware_qat),
         quant_bits=int(coder_qat_quant_bits),
@@ -6992,8 +7098,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "scope": "real_pytorch_segnet_posenet_teacher_cache",
             },
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "optimizer_policy": optimizer_policy,
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
-            "optimizer_kind": str(optimizer_kind),
+            "native_optimizer_active": native_optimizer_active,
+            "optimizer_kind": effective_optimizer_kind,
+            "effective_weight_decay": effective_weight_decay,
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_fake_quant_forward": {
                 "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
@@ -7166,13 +7275,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pr95_curriculum_total_epochs=max(8, int(epochs)),
         ema_archive_selection_enabled=True,
         grad_clip_max_norm=1.0,
-        weight_decay=1e-4,
-        optimizer_kind=str(optimizer_kind),
+        weight_decay=effective_weight_decay,
+        optimizer_kind=effective_optimizer_kind,
         on_epoch_end=pose_instability_monitor,
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
             "contest video targets, byte-closed archive export, receiver proof, "
-            "PR95-faithful curriculum routing, and false-authority MLX evidence."
+            "explicit optimizer-policy routing, and false-authority MLX evidence."
         ),
     )
     artifact_metadata["score_aware_training"]["pose_instability_monitor"] = (
@@ -8540,6 +8649,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "training harness owns the carrier."
         ),
     )
+    parser.add_argument(
+        "--hi-nerv-optimizer-policy",
+        choices=HI_NERV_OPTIMIZER_POLICIES,
+        default="auto",
+        help=(
+            "HiNeRV optimizer authority. auto uses the PR95 8-stage "
+            "Muon+AdamW curriculum for long AdamW control rows and native MLX "
+            "optimizers for non-AdamW rows; native_optimizer forces "
+            "--optimizer-kind to be consumed directly."
+        ),
+    )
     parser.add_argument("--compact-latent-dim", default=8, type=int)
     parser.add_argument("--compact-embed-dim", default=8, type=int)
     parser.add_argument("--compact-codebook-size", default=16, type=int)
@@ -9516,6 +9636,7 @@ def main(argv: list[str] | None = None) -> int:
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             optimizer_kind=args.optimizer_kind,
+            hi_nerv_optimizer_policy=args.hi_nerv_optimizer_policy,
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,

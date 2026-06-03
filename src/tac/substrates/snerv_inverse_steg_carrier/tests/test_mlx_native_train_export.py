@@ -217,6 +217,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
                 },
                 "best_packet_bytes": len(best_packet),
                 "best_packet_sha256": best_packet_sha256,
+                "component_guard_mode": "pose_seg_hard",
                 "blockers": [
                     "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export",
                     "snerv_scorer_loop_qat_auxiliary_warning",
@@ -256,17 +257,20 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
         scorer_loop_qat_max_trials=1,
         scorer_loop_qat_search_mode="top_weight_coordinate",
         scorer_loop_qat_qat_bits=4,
+        scorer_loop_qat_component_guard_mode="pose_seg_hard",
     )
 
     assert captured["n_pairs"] == 1
     assert captured["max_trials"] == 1
     assert captured["qat_bits"] == 4
     assert captured["decoder_payload_codec"] == "int8_symmetric"
+    assert captured["component_guard_mode"] == "pose_seg_hard"
     assert captured["snerv_fc_dim"] == 5
     assert captured["snerv_mfu_scales"] == (1, 2)
     scorer_loop = report["scorer_loop_qat"]
     assert scorer_loop["requested"] is True
     assert scorer_loop["executed"] is True
+    assert scorer_loop["component_guard_mode"] == "pose_seg_hard"
     assert scorer_loop["receiver_contract_satisfied"] is True
     assert scorer_loop["accepted_improvement"] is True
     assert scorer_loop["best_archive_sha256"] == best_packet_sha256

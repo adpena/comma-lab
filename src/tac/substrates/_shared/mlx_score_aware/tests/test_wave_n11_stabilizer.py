@@ -131,7 +131,7 @@ def test_adapter_rejects_invalid_optimizer_kind(minimal_bundle, adapter_kwargs):
 
     with pytest.raises(ValueError, match="optimizer_kind must be one of"):
         MlxScoreAwareAdapter(
-            minimal_bundle, optimizer_kind="sgd", **adapter_kwargs
+            minimal_bundle, optimizer_kind="not_a_native_mlx_optimizer", **adapter_kwargs
         )
 
 
@@ -251,6 +251,87 @@ def test_build_optimizer_adafactor_honors_explicit_curriculum_lr(
     assert opt.relative_step is False
     assert opt.scale_parameter is False
     assert opt.weight_decay == pytest.approx(1.0e-5)
+
+
+@pytest.mark.parametrize(
+    ("optimizer_kind", "class_name"),
+    (
+        ("adam", "Adam"),
+        ("adamax", "Adamax"),
+        ("adagrad", "Adagrad"),
+        ("adadelta", "AdaDelta"),
+    ),
+)
+def test_build_optimizer_routes_additional_native_mlx_optimizer_kinds_without_decay(
+    minimal_bundle,
+    adapter_kwargs,
+    optimizer_kind,
+    class_name,
+):
+    """Additional no-decay optimizer kinds route to real native MLX classes."""
+
+    import mlx.optimizers as mlx_optim
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind=optimizer_kind,
+        **adapter_kwargs,
+    )
+    opt = a._build_wave_n11_optimizer(learning_rate=3.0e-4)
+    assert isinstance(opt, getattr(mlx_optim, class_name))
+
+
+@pytest.mark.parametrize(
+    "optimizer_kind", ("adam", "adamax", "adagrad", "adadelta", "rmsprop")
+)
+def test_build_optimizer_rejects_silent_weight_decay_drop_for_no_decay_kinds(
+    minimal_bundle,
+    adapter_kwargs,
+    optimizer_kind,
+):
+    """weight_decay must not be silently ignored by native MLX optimizers."""
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    with pytest.raises(ValueError, match="weight_decay is only supported"):
+        MlxScoreAwareAdapter(
+            minimal_bundle,
+            optimizer_kind=optimizer_kind,
+            weight_decay=1.0e-4,
+            **adapter_kwargs,
+        )
+
+
+@pytest.mark.parametrize(
+    ("optimizer_kind", "class_name"),
+    (
+        ("sgd", "SGD"),
+        ("muon", "Muon"),
+    ),
+)
+def test_build_optimizer_routes_additional_native_mlx_decay_optimizer_kinds(
+    minimal_bundle,
+    adapter_kwargs,
+    optimizer_kind,
+    class_name,
+):
+    """Additional native MLX optimizer kinds keep explicit decay pressure."""
+
+    import mlx.optimizers as mlx_optim
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind=optimizer_kind,
+        weight_decay=1.0e-4,
+        **adapter_kwargs,
+    )
+    opt = a._build_wave_n11_optimizer(learning_rate=3.0e-4)
+    assert isinstance(opt, getattr(mlx_optim, class_name))
+    assert opt.weight_decay == pytest.approx(1.0e-4)
 
 
 def test_build_optimizer_warmup_only_uses_linear_schedule(

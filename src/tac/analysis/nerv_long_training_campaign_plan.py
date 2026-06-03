@@ -77,10 +77,19 @@ HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION = (
 )
 DEFAULT_OPTIMIZER_KINDS = (
     "adamw",
+    "muon",
     "lion",
-    "adafactor",
+    "adamax",
     "rmsprop",
+    "adafactor",
+    "adam",
+    "adagrad",
+    "adadelta",
+    "sgd",
 )
+FIRST_PASS_OPTIMIZER_KINDS = frozenset(("adamw", "muon", "lion", "adamax"))
+OPTIMIZER_CONTROL_SCHEMA = "nerv_optimizer_control_surface.v1"
+HINERV_OPTIMIZER_POLICY_SCHEMA = "nerv_hinerv_optimizer_policy.v1"
 
 
 class NervLongTrainingCampaignPlanError(ValueError):
@@ -192,6 +201,19 @@ def build_nerv_long_training_campaign_plan(
         ),
         "top_priority_families": ["hi_nerv", "snerv"],
         "optimizer_kinds": list(optimizers),
+        "optimizer_control_policy": {
+            "schema": OPTIMIZER_CONTROL_SCHEMA,
+            "backend": "mlx.optimizers",
+            "native_mlx_on_apple_silicon": True,
+            "apple_specific_algorithm_claim": False,
+            "native_mlx_optimizer_kinds": list(optimizers),
+            "first_pass_optimizer_kinds": sorted(FIRST_PASS_OPTIMIZER_KINDS),
+            "notes": (
+                "Lion, Muon, AdamW, Adamax, and the other listed optimizers "
+                "are treated as native MLX implementations available on "
+                "Apple silicon, not as Apple-invented optimizer algorithms."
+            ),
+        },
         "epochs": int(epochs),
         "batch_pairs": int(batch_pairs),
         "learning_rate": float(learning_rate),
@@ -362,6 +384,7 @@ def _hinerv_campaign_row(
         measured_num_pairs=feedback.get("measured_num_pairs"),
     )
     row_id = f"hi_nerv::{candidate_id}::{optimizer_kind}"
+    optimizer_policy = _hinerv_optimizer_policy_for_kind(optimizer_kind)
     command = [
         "uv",
         "run",
@@ -398,6 +421,8 @@ def _hinerv_campaign_row(
         str(int(quant_bits)),
         "--optimizer-kind",
         str(optimizer_kind),
+        "--hi-nerv-optimizer-policy",
+        optimizer_policy,
         "--mlx-prefilter-scorer-device",
         "gpu",
         "--mlx-prefilter-scorer-batch-pairs",
@@ -476,7 +501,7 @@ def _hinerv_campaign_row(
     return _row(
         row_id=row_id,
         family="hi_nerv",
-        priority=10 if optimizer_kind in {"adamw", "lion"} else 11,
+        priority=_optimizer_priority(optimizer_kind),
         candidate=candidate,
         curriculum_plan=curriculum,
         command_argv=command,
@@ -485,6 +510,11 @@ def _hinerv_campaign_row(
         blockers=blockers,
         extra={
             "optimizer_kind": str(optimizer_kind),
+            "optimizer_control": _optimizer_control(optimizer_kind),
+            "optimizer_policy": _hinerv_optimizer_policy_control(
+                optimizer_kind=optimizer_kind,
+                optimizer_policy=optimizer_policy,
+            ),
             "quant_bits": int(quant_bits),
             "joint_recon_pixel_weight_artifact": joint_recon_weight or None,
             "decoder_weight_waterfill_plan": (
@@ -1197,6 +1227,66 @@ def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
     if not out:
         raise NervLongTrainingCampaignPlanError("at least one optimizer is required")
     return tuple(out)
+
+
+def _optimizer_priority(optimizer_kind: str) -> int:
+    return 10 if str(optimizer_kind) in FIRST_PASS_OPTIMIZER_KINDS else 11
+
+
+def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
+    kind = str(optimizer_kind).strip().lower()
+    if kind not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
+        raise NervLongTrainingCampaignPlanError(
+            f"unsupported optimizer kind: {optimizer_kind!r}"
+        )
+    return {
+        "schema": OPTIMIZER_CONTROL_SCHEMA,
+        "optimizer_kind": kind,
+        "backend": "mlx.optimizers",
+        "native_mlx_on_apple_silicon": True,
+        "apple_specific_algorithm_claim": False,
+        "first_pass_priority": kind in FIRST_PASS_OPTIMIZER_KINDS,
+        "default_hinerv_optimizer_policy": _hinerv_optimizer_policy_for_kind(kind),
+        "pr95_curriculum_optimizer_swallow_guard": (
+            kind != "adamw"
+        ),
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _hinerv_optimizer_policy_for_kind(optimizer_kind: str) -> str:
+    """Return the runner policy that makes this row's optimizer semantics real."""
+
+    kind = str(optimizer_kind).strip().lower()
+    return "pr95_curriculum" if kind == "adamw" else "native_optimizer"
+
+
+def _hinerv_optimizer_policy_control(
+    *,
+    optimizer_kind: str,
+    optimizer_policy: str,
+) -> dict[str, Any]:
+    kind = str(optimizer_kind).strip().lower()
+    policy = str(optimizer_policy).strip().lower()
+    return {
+        "schema": HINERV_OPTIMIZER_POLICY_SCHEMA,
+        "optimizer_kind": kind,
+        "requested_policy": policy,
+        "pr95_faithful_curriculum_expected": policy == "pr95_curriculum",
+        "native_mlx_optimizer_expected": policy == "native_optimizer",
+        "effective_optimizer_label": (
+            "pr95_8stage_muon_adamw" if policy == "pr95_curriculum" else kind
+        ),
+        "why": (
+            "adamw owns the PR95-faithful 8-stage Muon+AdamW control row; "
+            "non-adamw rows must run as native MLX optimizers so optimizer "
+            "diversity is measured rather than swallowed by the curriculum"
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 def _candidate_feedback_index(

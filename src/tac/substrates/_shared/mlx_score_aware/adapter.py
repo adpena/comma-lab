@@ -38,11 +38,85 @@ if TYPE_CHECKING:
     from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
 
 SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS: tuple[str, ...] = (
+    "adam",
     "adamw",
+    "adamax",
+    "adadelta",
+    "adagrad",
     "rmsprop",
+    "sgd",
     "lion",
     "adafactor",
+    "pact_muon_adamw",
 )
+MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS: tuple[str, ...] = (
+    "adamw",
+    "sgd",
+    "lion",
+    "adafactor",
+    "pact_muon_adamw",
+)
+_MLX_OPTIMIZER_PROVENANCE_BY_KIND: dict[str, dict[str, Any]] = {
+    "adamw": {
+        "borrowed_from": "mlx.optimizers.AdamW",
+        "role": "legacy_default_and_pr95_adam_branch_control",
+        "contest_adaptation": "score_aware_loss_qat_archive_export",
+    },
+    "lion": {
+        "borrowed_from": "mlx.optimizers.Lion",
+        "role": "native_mlx_low_state_optimizer_sweep",
+        "contest_adaptation": "false_authority_neRV_score_loop_candidate",
+    },
+    "adafactor": {
+        "borrowed_from": "mlx.optimizers.Adafactor",
+        "role": "native_mlx_memory_efficient_optimizer_sweep",
+        "contest_adaptation": "relative_step_disabled_for_explicit_priced_curriculum_lr",
+    },
+    "rmsprop": {
+        "borrowed_from": "mlx.optimizers.RMSprop",
+        "role": "native_mlx_curvature_baseline_sweep",
+        "contest_adaptation": "weight_decay_rejected_when_requested",
+    },
+    "sgd": {
+        "borrowed_from": "mlx.optimizers.SGD",
+        "role": "native_mlx_momentum_free_baseline_sweep",
+        "contest_adaptation": "score_loop_curvature_control",
+    },
+    "adam": {
+        "borrowed_from": "mlx.optimizers.Adam",
+        "role": "native_mlx_adam_without_decoupled_weight_decay_control",
+        "contest_adaptation": "weight_decay_rejected_when_requested",
+    },
+    "adamax": {
+        "borrowed_from": "mlx.optimizers.Adamax",
+        "role": "native_mlx_infinity_norm_adam_family_sweep",
+        "contest_adaptation": "weight_decay_rejected_when_requested",
+    },
+    "adagrad": {
+        "borrowed_from": "mlx.optimizers.Adagrad",
+        "role": "native_mlx_accumulated_gradient_baseline_sweep",
+        "contest_adaptation": "weight_decay_rejected_when_requested",
+    },
+    "adadelta": {
+        "borrowed_from": "mlx.optimizers.AdaDelta",
+        "role": "native_mlx_lr_scale_adaptive_baseline_sweep",
+        "contest_adaptation": "weight_decay_rejected_when_requested",
+    },
+    "pact_muon_adamw": {
+        "borrowed_from": (
+            "PR95 partition rule and tac.local_acceleration.pr95_hnerv_mlx "
+            "Newton-Schulz Muon+AdamW step"
+        ),
+        "role": "default_pact_native_partitioned_muon_adamw_optimizer",
+        "contest_adaptation": (
+            "Pact-labeled MLX score-loop optimizer; Muon only for eligible "
+            "hidden matrix/conv weights, AdamW for latents, heads, biases, "
+            "and scalar-like params"
+        ),
+    },
+}
+PACT_MUON_ADAMW_MUON_LR_MULTIPLIER = 2.0e-4 / 3.0e-5
+PACT_MUON_ADAMW_LATENT_LR_MULTIPLIER = 10.0
 
 DECODER_GRADIENT_SALIENCY_SCHEMA = "mlx_decoder_weight_gradient_saliency.v1"
 _DECODER_SALIENCY_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
@@ -162,12 +236,11 @@ class MlxScoreAwareAdapter:
                 1e-4 per Loshchilov+Hutter 2019).
             optimizer_kind: Wave N+11 stabilizer. One of
                 ``SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS``. Default
-                "adamw" preserves legacy. "rmsprop" routes through
-                ``mlx.optimizers.RMSprop`` per Mamba-2 RMSprop empirical
-                stability finding. "lion" and "adafactor" are native MLX
-                primitives exposed for long score-aware HiNeRV/SNeRV sweeps;
-                Adafactor is pinned to explicit-LR mode so stage curricula
-                remain the authority.
+                "adamw" preserves legacy. All supported values route to real
+                ``mlx.optimizers`` classes on Apple silicon. "lion" and
+                "muon" are native MLX implementations of published algorithms,
+                not Apple-specific algorithms; Adafactor is pinned to
+                explicit-LR mode so stage curricula remain the authority.
             cosine_decay_enabled: Wave N+11 stabilizer. When True AND
                 warmup_epochs > 0 AND cosine_decay_total_epochs is set,
                 composes the canonical warmup + cosine-decay schedule via
@@ -206,10 +279,20 @@ class MlxScoreAwareAdapter:
             raise ValueError(
                 f"warmup_steps_per_epoch must be > 0; got {warmup_steps_per_epoch}"
             )
-        if str(optimizer_kind).lower() not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
+        optimizer_kind_text = str(optimizer_kind).lower()
+        if optimizer_kind_text not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
             raise ValueError(
                 "optimizer_kind must be one of "
                 f"{SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS}; got {optimizer_kind!r}"
+            )
+        if (
+            weight_decay is not None
+            and optimizer_kind_text not in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
+        ):
+            raise ValueError(
+                "weight_decay is only supported for optimizer_kind values "
+                f"{MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS}; got "
+                f"optimizer_kind={optimizer_kind!r}"
             )
         if cosine_decay_enabled:
             if int(warmup_epochs) <= 0:
@@ -230,7 +313,11 @@ class MlxScoreAwareAdapter:
         self._wave_n11_weight_decay: float | None = (
             float(weight_decay) if weight_decay is not None else None
         )
-        self._wave_n11_optimizer_kind: str = str(optimizer_kind).lower()
+        self._wave_n11_optimizer_kind: str = optimizer_kind_text
+        self._wave_n11_weight_decay_supported: bool = (
+            self._wave_n11_optimizer_kind
+            in MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS
+        )
         self._wave_n11_cosine_decay_enabled: bool = bool(cosine_decay_enabled)
         self._wave_n11_cosine_decay_total_epochs: int | None = (
             int(cosine_decay_total_epochs)
@@ -261,10 +348,18 @@ class MlxScoreAwareAdapter:
         self._pr95_optimizer_state: Any = None
         self._pr95_global_epoch: int = 0
         self._pr95_last_stage_verdict: Any = None
-        if self._pr95_faithful_curriculum_enabled:
+        self._pact_muon_adamw_optimizer_state: Any = None
+        self._pact_muon_adamw_last_step_summary: dict[str, Any] | None = None
+        if (
+            self._pr95_faithful_curriculum_enabled
+            or self._wave_n11_optimizer_kind == "pact_muon_adamw"
+        ):
             from tac.local_acceleration.pr95_hnerv_mlx import (
                 Pr95MlxOptimizerState,
             )
+            if self._wave_n11_optimizer_kind == "pact_muon_adamw":
+                self._pact_muon_adamw_optimizer_state = Pr95MlxOptimizerState()
+        if self._pr95_faithful_curriculum_enabled:
             from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
                 CANONICAL_PR95_TOTAL_EPOCHS,
                 PR95FaithfulCurriculumFactory,
@@ -651,16 +746,29 @@ class MlxScoreAwareAdapter:
         - ``"adamw"``: ``mlx.optimizers.AdamW(learning_rate=sched,
           weight_decay=wd)`` where ``wd`` defaults to AdamW's own 0.01 if
           ``weight_decay`` is None at construction.
+        - ``"adam"`` / ``"adamax"`` / ``"adagrad"`` / ``"adadelta"``:
+          native MLX optimizer primitives exposed as explicit campaign cells
+          so Mac-local sweeps can test optimizer geometry instead of assuming
+          AdamW dominance. These MLX classes do not accept weight_decay, so the
+          adapter rejects that combination instead of silently dropping decay
+          pressure.
         - ``"rmsprop"``: ``mlx.optimizers.RMSprop(learning_rate=sched)`` (MLX
           RMSprop does not accept weight_decay; a future canonical add lands
           weight-decay-via-AdamW-style decoupling per Loshchilov+Hutter 2019
           §4 if Mamba-2 empirically benefits from it).
+        - ``"sgd"``: native ``mlx.optimizers.SGD`` with optional explicit
+          weight_decay. This is low-priority for score-aware carrier fitting
+          but kept available as a curvature/baseline control.
         - ``"lion"``: ``mlx.optimizers.Lion(learning_rate=sched)`` with
           optional explicit weight decay. Native MLX primitive, lower optimizer
           state than Adam-class methods.
         - ``"adafactor"``: ``mlx.optimizers.Adafactor(learning_rate=sched,
           relative_step=False, scale_parameter=False)`` so the caller's
           stage/curriculum LR remains the sole scheduler authority.
+        - ``"pact_muon_adamw"`` is intentionally NOT built here: it uses the
+          PR95-derived partitioned Muon+AdamW helper inside ``train_step`` so
+          latents, heads, biases, and scalar-like params never receive a naive
+          all-parameter Muon update.
         """
         mlx_optim = self._mlx_optim
         warmup_epochs = self._wave_n11_warmup_epochs
@@ -688,8 +796,23 @@ class MlxScoreAwareAdapter:
         else:
             lr_sched = float(learning_rate)
 
+        if self._wave_n11_optimizer_kind == "adam":
+            return mlx_optim.Adam(learning_rate=lr_sched)
+        if self._wave_n11_optimizer_kind == "adamax":
+            return mlx_optim.Adamax(learning_rate=lr_sched)
+        if self._wave_n11_optimizer_kind == "adagrad":
+            return mlx_optim.Adagrad(learning_rate=lr_sched)
+        if self._wave_n11_optimizer_kind == "adadelta":
+            return mlx_optim.AdaDelta(learning_rate=lr_sched)
         if self._wave_n11_optimizer_kind == "rmsprop":
             return mlx_optim.RMSprop(learning_rate=lr_sched)
+        if self._wave_n11_optimizer_kind == "sgd":
+            if self._wave_n11_weight_decay is None:
+                return mlx_optim.SGD(learning_rate=lr_sched)
+            return mlx_optim.SGD(
+                learning_rate=lr_sched,
+                weight_decay=self._wave_n11_weight_decay,
+            )
         if self._wave_n11_optimizer_kind == "lion":
             if self._wave_n11_weight_decay is None:
                 return mlx_optim.Lion(learning_rate=lr_sched)
@@ -706,6 +829,11 @@ class MlxScoreAwareAdapter:
             if self._wave_n11_weight_decay is not None:
                 adafactor_kwargs["weight_decay"] = self._wave_n11_weight_decay
             return mlx_optim.Adafactor(**adafactor_kwargs)
+        if self._wave_n11_optimizer_kind == "pact_muon_adamw":
+            raise RuntimeError(
+                "pact_muon_adamw is a partitioned train_step optimizer, not a "
+                "single MLX optimizer object"
+            )
 
         # adamw default + weight_decay override
         if self._wave_n11_weight_decay is None:
@@ -730,7 +858,28 @@ class MlxScoreAwareAdapter:
             "warmup_epochs": self._wave_n11_warmup_epochs,
             "warmup_steps_per_epoch": self._wave_n11_warmup_steps_per_epoch,
             "weight_decay": self._wave_n11_weight_decay,
+            "weight_decay_supported_by_optimizer": (
+                self._wave_n11_weight_decay_supported
+            ),
+            "weight_decay_policy": (
+                "applied_to_native_optimizer"
+                if self._wave_n11_weight_decay is not None
+                else "not_requested"
+            ),
             "optimizer_kind": self._wave_n11_optimizer_kind,
+            "optimizer_provenance": dict(
+                _MLX_OPTIMIZER_PROVENANCE_BY_KIND.get(
+                    self._wave_n11_optimizer_kind,
+                    {
+                        "borrowed_from": "unknown",
+                        "role": "unknown",
+                        "contest_adaptation": "unknown",
+                    },
+                )
+            ),
+            "pr95_faithful_muon_adamw_partition_enabled": (
+                self._pr95_faithful_curriculum_enabled
+            ),
             "cosine_decay_enabled": self._wave_n11_cosine_decay_enabled,
             "cosine_decay_total_epochs": self._wave_n11_cosine_decay_total_epochs,
             "cosine_decay_min_lr_ratio": self._wave_n11_cosine_decay_min_lr_ratio,

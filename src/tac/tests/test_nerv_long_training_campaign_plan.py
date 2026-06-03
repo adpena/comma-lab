@@ -9,10 +9,14 @@ import pytest
 
 from comma_lab.scheduler.experiment_queue import load_queue_definition
 from tac.analysis.nerv_long_training_campaign_plan import (
+    DEFAULT_OPTIMIZER_KINDS,
     HINERV_POSE_INSTABILITY_LOW_LR_FLOOR,
     NervLongTrainingCampaignPlanError,
     build_nerv_long_training_campaign_plan,
     render_nerv_long_training_campaign_plan_markdown,
+)
+from tac.substrates._shared.mlx_score_aware.adapter import (
+    SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
 from tools import build_nerv_long_training_campaign_plan as cli
 
@@ -41,7 +45,32 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
 
     hi_rows = [row for row in report["campaign_rows"] if row["family"] == "hi_nerv"]
     assert {row["optimizer_kind"] for row in hi_rows} == {"lion", "adafactor"}
+    assert all(row["optimizer_control"]["backend"] == "mlx.optimizers" for row in hi_rows)
+    assert all(
+        row["optimizer_control"]["native_mlx_on_apple_silicon"] is True
+        for row in hi_rows
+    )
+    assert all(
+        row["optimizer_control"]["apple_specific_algorithm_claim"] is False
+        for row in hi_rows
+    )
     assert all("--optimizer-kind" in row["command_argv"] for row in hi_rows)
+    assert all("--hi-nerv-optimizer-policy" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["optimizer_policy"]["requested_policy"] == "native_optimizer"
+        for row in hi_rows
+    )
+    assert all(
+        row["optimizer_policy"]["native_mlx_optimizer_expected"] is True
+        for row in hi_rows
+    )
+    assert all(
+        row["command_argv"][
+            row["command_argv"].index("--hi-nerv-optimizer-policy") + 1
+        ]
+        == "native_optimizer"
+        for row in hi_rows
+    )
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
     assert all(
         row["command_argv"][
@@ -1355,8 +1384,35 @@ def test_long_training_campaign_plan_rejects_unknown_optimizer() -> None:
         build_nerv_long_training_campaign_plan(
             hinerv_modelsize_budget=_hinerv_budget(),
             snerv_modelsize_budget=_snerv_budget(),
-            optimizer_kinds=("muon",),
+            optimizer_kinds=("not_a_real_optimizer",),
         )
+
+
+def test_default_optimizer_kinds_cover_native_mlx_optimizer_surface() -> None:
+    assert set(DEFAULT_OPTIMIZER_KINDS) == set(
+        SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS
+    )
+    assert DEFAULT_OPTIMIZER_KINDS[:4] == ("adamw", "muon", "lion", "adamax")
+
+
+def test_adamw_hinerv_row_is_explicit_pr95_curriculum_control() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["optimizer_kind"] == "adamw"
+    assert hi["optimizer_policy"]["requested_policy"] == "pr95_curriculum"
+    assert hi["optimizer_policy"]["pr95_faithful_curriculum_expected"] is True
+    assert hi["optimizer_policy"]["native_mlx_optimizer_expected"] is False
+    assert hi["command_argv"][
+        hi["command_argv"].index("--hi-nerv-optimizer-policy") + 1
+    ] == "pr95_curriculum"
 
 
 def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) -> None:

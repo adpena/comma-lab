@@ -2562,6 +2562,11 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     assert captured_train_kwargs["mlx_prefilter_scorer_batch_pairs"] == 4
     assert captured_train_kwargs["mlx_prefilter_progress_every"] == 7
     assert captured_train_kwargs["optimizer_kind"] == "lion"
+    optimizer_policy = captured_train_kwargs["hi_nerv_optimizer_policy"]
+    assert optimizer_policy["resolved_policy"] == "native_optimizer"
+    assert optimizer_policy["optimizer_kind_consumed_by_native_mlx"] is True
+    assert optimizer_policy["pr95_faithful_curriculum_enabled"] is False
+    assert out["score_aware_training"]["optimizer_policy"] == optimizer_policy
     assert out["score_aware_training"]["local_mlx_prefilter"] == {
         "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
         "scorer_device": "cpu",
@@ -3652,6 +3657,12 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert captured_train_kwargs["pose_distillation_huber_delta"] == 2.5
     assert captured_train_kwargs["coder_aware_qat"] is True
     assert captured_train_kwargs["coder_qat_quant_bits"] == 4
+    assert captured_train_kwargs["hi_nerv_optimizer_policy"]["resolved_policy"] == (
+        "native_optimizer"
+    )
+    assert captured_train_kwargs["hi_nerv_optimizer_policy"][
+        "optimizer_kind_consumed_by_native_mlx"
+    ] is True
     plan = captured_train_kwargs["candidate_curriculum_plan"]
     assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in plan[
         "blockers"
@@ -3670,6 +3681,9 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert out["score_aware_training"]["segnet_distillation_weight"] == 1.0
     assert out["score_aware_training"]["pose_distillation_weight"] == 1.0
     assert out["score_aware_training"]["optimizer_kind"] == "adafactor"
+    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
+        "native_optimizer"
+    )
     assert out["score_aware_training_config_gate"]["frontier_targeting"] is True
     assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
         "blockers"
@@ -3680,6 +3694,34 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in out[
         "blockers"
     ]
+
+
+def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="non-adamw --optimizer-kind would be ignored",
+    ):
+        runner_mod._resolve_hi_nerv_optimizer_policy(
+            requested_policy="pr95_curriculum",
+            epochs=29_650,
+            optimizer_kind="lion",
+        )
+
+    native = runner_mod._resolve_hi_nerv_optimizer_policy(
+        requested_policy="auto",
+        epochs=29_650,
+        optimizer_kind="lion",
+    )
+    assert native["resolved_policy"] == "native_optimizer"
+    assert native["optimizer_kind_consumed_by_native_mlx"] is True
+
+    pr95 = runner_mod._resolve_hi_nerv_optimizer_policy(
+        requested_policy="auto",
+        epochs=29_650,
+        optimizer_kind="adamw",
+    )
+    assert pr95["resolved_policy"] == "pr95_curriculum"
+    assert pr95["pr95_faithful_curriculum_enabled"] is True
 
 
 @pytest.mark.skipif(
@@ -4212,6 +4254,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_scorer_loop_max_trials=1,
         snerv_scorer_loop_search_mode="top_weight_coordinate",
         snerv_scorer_loop_qat_bits=4,
+        snerv_scorer_loop_component_guard_mode="pose_seg_hard",
         repo_root=REPO_ROOT,
     )
 
@@ -4221,6 +4264,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["scorer_loop_qat_max_trials"] == 1
     assert native_calls[0]["scorer_loop_qat_search_mode"] == "top_weight_coordinate"
     assert native_calls[0]["scorer_loop_qat_qat_bits"] == 4
+    assert native_calls[0]["scorer_loop_qat_component_guard_mode"] == "pose_seg_hard"
     assert native_calls[0]["scorer_loop_qat_decoder_payload_codec"] == (
         "int2_symmetric"
     )
@@ -4456,6 +4500,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
         snerv_scorer_loop_start_pair=7,
         snerv_scorer_loop_pair_guard_min_score_improved_fraction=0.5,
         snerv_scorer_loop_pair_guard_max_pose_worsened_fraction=0.25,
+        snerv_scorer_loop_component_guard_mode="pose_hard",
         random_seed=123,
         repo_root=REPO_ROOT,
     )
@@ -4496,15 +4541,21 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["start_pair"] == 7
     assert captured_qat_kwargs["pair_guard_min_score_improved_fraction"] == 0.5
     assert captured_qat_kwargs["pair_guard_max_pose_worsened_fraction"] == 0.25
+    assert captured_qat_kwargs["component_guard_mode"] == "pose_hard"
     assert captured_qat_kwargs["seed"] == 123
 
     qat = out["snerv_scorer_loop_qat"]
     assert qat["executed"] is True
+    assert qat["component_guard_mode"] == "pose_hard"
     assert qat["accepted_improvement"] is True
     assert qat["receiver_contract_satisfied"] is True
     assert qat["ready_for_pose_guard_gate"] is True
     assert Path(qat["result_path"]).is_file()
     assert out["score_aware_training"]["scorer_loop_qat"]["executed"] is True
+    assert (
+        out["score_aware_training"]["scorer_loop_component_guard_mode"]
+        == "pose_hard"
+    )
     assert out["score_aware_training"]["status"] == (
         "executed_cpu_advisory_plus_receiver_priced_scorer_loop_qat_"
         "mlx_native_training_missing"
