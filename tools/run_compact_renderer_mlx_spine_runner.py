@@ -12402,6 +12402,11 @@ def _write_compact_family_startup_marker(
         family=family,
         modelsize_candidate=modelsize_candidate,
     )
+    byte_cap_binding = _startup_byte_cap_binding(
+        family=family,
+        hard_byte_ceilings=hard_byte_ceilings,
+        modelsize_candidate=modelsize_candidate,
+    )
     payload = {
         "schema": "compact_carrier_startup_marker.v1",
         "created_utc": datetime.now(UTC).isoformat(),
@@ -12425,6 +12430,7 @@ def _write_compact_family_startup_marker(
         or None,
         "modelsize_candidate": _jsonable_lock_value(dict(modelsize_candidate or {})),
         "modelsize_target_binding": modelsize_target_binding,
+        "byte_cap_binding": byte_cap_binding,
         "output_dir": output_dir.as_posix(),
         "source_video_path": source_video_path.as_posix(),
         "hard_byte_ceilings": list(hard_byte_ceilings),
@@ -12528,6 +12534,89 @@ def _startup_modelsize_target_binding(
         "archive_bytes_authority_required": contract.get(
             "archive_bytes_authority_required"
         ),
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _startup_byte_cap_binding(
+    *,
+    family: str,
+    hard_byte_ceilings: tuple[int, ...],
+    modelsize_candidate: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Record byte-cap semantics without pretending caps are archive authority."""
+
+    ceilings = tuple(sorted({int(value) for value in hard_byte_ceilings if int(value) > 0}))
+    candidate = dict(modelsize_candidate or {})
+    contract = candidate.get("modelsize_control_contract")
+    if not isinstance(contract, Mapping):
+        contract = {}
+    tightest_ceiling = min(ceilings) if ceilings else None
+    candidate_ceiling = _compact_first_present_int(candidate, ("hard_byte_ceiling",))
+    nominal_total = _compact_first_present_int(
+        candidate,
+        (
+            "nominal_total_payload_bytes",
+            "total_payload_bytes",
+            "estimated_total_payload_bytes",
+        ),
+    )
+    nominal_headroom = (
+        None
+        if tightest_ceiling is None or nominal_total is None
+        else int(tightest_ceiling) - int(nominal_total)
+    )
+    candidate_headroom = _compact_first_present_int(candidate, ("byte_headroom",))
+    candidate_under_own_cap = candidate.get("nominal_under_ceiling")
+    if candidate_under_own_cap is not None:
+        candidate_under_own_cap = bool(candidate_under_own_cap)
+    elif candidate_ceiling is not None and nominal_total is not None:
+        candidate_under_own_cap = int(nominal_total) <= int(candidate_ceiling)
+    blockers: list[str] = []
+    if not ceilings:
+        blockers.append("hard_byte_ceiling_not_configured")
+    if candidate and candidate_ceiling is None:
+        blockers.append("selected_modelsize_candidate_missing_hard_byte_ceiling")
+    if (
+        tightest_ceiling is not None
+        and candidate_ceiling is not None
+        and int(candidate_ceiling) > int(tightest_ceiling)
+    ):
+        blockers.append("selected_modelsize_candidate_ceiling_looser_than_tightest_cap")
+    if nominal_total is None:
+        blockers.append("selected_modelsize_candidate_nominal_payload_bytes_missing")
+    elif tightest_ceiling is not None and int(nominal_total) > int(tightest_ceiling):
+        blockers.append("selected_modelsize_candidate_nominally_over_tightest_cap")
+    blockers.append("byte_cap_requires_measured_archive_zip_export")
+    return {
+        "schema": "compact_startup_byte_cap_binding.v1",
+        "family": str(family),
+        "hard_byte_ceilings": list(ceilings),
+        "tightest_hard_byte_ceiling": tightest_ceiling,
+        "hard_byte_cap_requested": bool(ceilings),
+        "selected_candidate_id": candidate.get("candidate_id"),
+        "selected_candidate_hard_byte_ceiling": candidate_ceiling,
+        "selected_candidate_nominal_total_payload_bytes": nominal_total,
+        "selected_candidate_byte_headroom": candidate_headroom,
+        "nominal_headroom_against_tightest_hard_ceiling": nominal_headroom,
+        "selected_candidate_nominal_under_own_hard_ceiling": candidate_under_own_cap,
+        "selected_candidate_nominal_under_tightest_hard_ceiling": (
+            None if nominal_headroom is None else nominal_headroom >= 0
+        ),
+        "hard_byte_ceiling_semantics": (
+            "launch_filter_and_export_blocker_until_measured_archive_zip_bytes_exist"
+        ),
+        "control_semantics": contract.get("control_semantics"),
+        "modelsize_mparams_caps_archive_zip_bytes": contract.get(
+            "modelsize_mparams_caps_archive_zip_bytes"
+        ),
+        "archive_bytes_authority_required": contract.get(
+            "archive_bytes_authority_required"
+        ),
+        "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
         "blockers": blockers,
         "score_claim": False,
         "promotion_eligible": False,

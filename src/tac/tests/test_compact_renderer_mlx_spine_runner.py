@@ -893,6 +893,17 @@ def test_compact_family_startup_marker_records_mlx_custody(
     )
     assert payload["modelsize_target_binding"]["inverse_target_requested"] is False
     assert payload["modelsize_target_binding"]["selected_from_inverse_target"] is False
+    assert payload["byte_cap_binding"]["schema"] == (
+        "compact_startup_byte_cap_binding.v1"
+    )
+    assert payload["byte_cap_binding"]["hard_byte_cap_requested"] is True
+    assert payload["byte_cap_binding"]["tightest_hard_byte_ceiling"] == 178_000
+    assert payload["byte_cap_binding"]["authority_surface"] == (
+        "measured_archive_zip_bytes_after_receiver_export"
+    )
+    assert "byte_cap_requires_measured_archive_zip_export" in payload[
+        "byte_cap_binding"
+    ]["blockers"]
     assert payload["campaign_identity"]["auto_joint_recon_pixel_weight_path"] == (
         weight_path.as_posix()
     )
@@ -953,6 +964,10 @@ def test_compact_family_startup_marker_records_inverse_modelsize_target(
             "candidate_id": "hinerv_np600_target",
             "capacity_source": "local_hinerv_target_modelsize",
             "target_modelsize_mparams": 0.178,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 164_000,
+            "byte_headroom": 14_000,
+            "nominal_under_ceiling": True,
             "modelsize_control_contract": {
                 "control_semantics": "local_receiver_visible_grid_search_nearest_target",
                 "shared_target_modelsize_mparams_consumed_as": (
@@ -976,6 +991,19 @@ def test_compact_family_startup_marker_records_inverse_modelsize_target(
         "local_receiver_visible_grid_search_nearest_target"
     )
     assert binding["blockers"] == []
+    byte_binding = payload["byte_cap_binding"]
+    assert byte_binding["hard_byte_cap_requested"] is True
+    assert byte_binding["tightest_hard_byte_ceiling"] == 178_000
+    assert byte_binding["selected_candidate_hard_byte_ceiling"] == 178_000
+    assert byte_binding["selected_candidate_nominal_total_payload_bytes"] == 164_000
+    assert byte_binding["nominal_headroom_against_tightest_hard_ceiling"] == 14_000
+    assert byte_binding["selected_candidate_nominal_under_tightest_hard_ceiling"] is True
+    assert byte_binding["selected_candidate_nominal_under_own_hard_ceiling"] is True
+    assert byte_binding["modelsize_mparams_caps_archive_zip_bytes"] is False
+    assert byte_binding["archive_bytes_authority_required"] is True
+    assert byte_binding["blockers"] == [
+        "byte_cap_requires_measured_archive_zip_export"
+    ]
 
 
 def test_compact_family_interrupted_report_preserves_false_authority_custody(
