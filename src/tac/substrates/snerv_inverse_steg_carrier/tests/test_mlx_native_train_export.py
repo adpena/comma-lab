@@ -247,19 +247,59 @@ def test_packet_builder_runs_native_mlx_hf_decoder_training() -> None:
     training = decoded.metadata["native_mlx_hf_decoder_training"]
     assert training["schema"] == "snerv_native_mlx_hf_decoder_training.v1"
     assert training["executed"] is True
-    assert training["optimizer"] == "full_batch_gradient_descent"
+    assert training["optimizer"] == "pact_guarded_adamw"
+    assert training["optimizer_backend"] == "mlx.optimizers+guarded_manual_fallback"
     assert training["steps"] == 2
     assert training["learning_rate"] == pytest.approx(1.0e-5)
     assert training["all_final_losses_finite"] is True
     assert training["accepted"] is True
     assert training["any_loss_worsened"] is False
+    assert training["optimizer_used_counts"]
     assert training["level_subband_rows"]
     assert decoded.metadata["native_mlx_training_executed"] is True
-    assert decoded.metadata["native_mlx_training_kind"] == ("hf_decoder_full_batch_gradient_descent")
-    assert decoded.metadata["hf_decoder_fit_mode"].startswith("native_mlx_full_batch_gradient_descent_from_")
+    assert decoded.metadata["native_mlx_training_kind"] == (
+        "hf_decoder_pact_guarded_adamw"
+    )
+    assert decoded.metadata["hf_decoder_fit_mode"].startswith(
+        "native_mlx_pact_guarded_adamw_from_"
+    )
     assert training["score_claim"] is False
     assert training["ready_for_exact_eval_dispatch"] is False
     assert packet.score_claim is False
+
+
+def test_packet_builder_consumes_opt_in_native_mlx_manual_gradient_descent_optimizer() -> None:
+    pytest.importorskip("mlx.core")
+    pairs = _tiny_pairs(pairs=1)
+    pairs[0, 1, 0, 2:13, 3:14] += 9.0
+    pairs = np.clip(pairs, 0.0, 255.0)
+
+    packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+        native_mlx_decoder_train_steps=2,
+        native_mlx_decoder_train_lr=1.0e-5,
+        native_mlx_decoder_train_ridge=1.0e-6,
+        native_mlx_decoder_train_optimizer="full_batch_gradient_descent",
+    )
+
+    decoded = unpack_snerv_archive(packet.packet)
+    training = decoded.metadata["native_mlx_hf_decoder_training"]
+    assert training["executed"] is True
+    assert training["optimizer"] == "full_batch_gradient_descent"
+    assert training["optimizer_backend"] == "manual_mlx"
+    assert training["optimizer_used_counts"]
+    assert decoded.metadata["native_mlx_training_kind"] == (
+        "hf_decoder_full_batch_gradient_descent"
+    )
+    assert decoded.metadata["hf_decoder_fit_mode"].startswith(
+        "native_mlx_full_batch_gradient_descent_from_"
+    )
 
 
 def test_packet_builder_rejects_worsening_native_mlx_hf_decoder_training() -> None:
@@ -288,6 +328,7 @@ def test_packet_builder_rejects_worsening_native_mlx_hf_decoder_training() -> No
         native_mlx_decoder_train_steps=2,
         native_mlx_decoder_train_lr=1.0e6,
         native_mlx_decoder_train_ridge=1.0e-6,
+        native_mlx_decoder_train_optimizer="adamw",
     )
 
     baseline_decoded = unpack_snerv_archive(baseline.packet)
@@ -337,6 +378,7 @@ def test_train_export_records_blocker_when_native_mlx_training_worsens(
             "decoder_payload_codec": "int8_symmetric",
             "native_mlx_decoder_train_steps": 2,
             "native_mlx_decoder_train_lr": 1.0e6,
+            "native_mlx_decoder_train_optimizer": "adamw",
         },
         scorer_upstream_dir="upstream",
         output_height=16,
@@ -469,16 +511,19 @@ def test_train_export_executes_real_mlx_hf_decoder_training(
 
     assert baseline["native_mlx_training_executed"] is False
     assert trained["native_mlx_training_executed"] is True
-    assert trained["native_mlx_training_kind"] == "hf_decoder_full_batch_gradient_descent"
+    assert trained["native_mlx_training_kind"] == (
+        "hf_decoder_pact_guarded_adamw"
+    )
     training = trained["native_mlx_hf_decoder_training"]
     assert training["schema"] == "snerv_native_mlx_hf_decoder_training.v1"
     assert training["executed"] is True
     assert training["steps"] == 2
+    assert training["optimizer"] == "pact_guarded_adamw"
     assert training["level_subband_rows"]
     assert training["all_final_losses_finite"] is True
     assert training["accepted"] is True
     assert training["any_loss_worsened"] is False
-    assert trained["packet_source"].startswith("native_mlx_full_batch_gradient_descent")
+    assert trained["packet_source"].startswith("native_mlx_pact_guarded_adamw")
     assert Path(trained["packet_path"]).read_bytes() != Path(baseline["packet_path"]).read_bytes()
     decoded = unpack_snerv_archive(Path(trained["packet_path"]).read_bytes())
     assert decoded.metadata["native_mlx_training_executed"] is True

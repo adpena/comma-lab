@@ -196,6 +196,7 @@ def train_export_snerv_mlx_native(
     native_mlx_decoder_train_steps: int = 0,
     native_mlx_decoder_train_lr: float = 1.0e-5,
     native_mlx_decoder_train_ridge: float = 1.0e-6,
+    native_mlx_decoder_train_optimizer: str = "pact_guarded_adamw",
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
@@ -336,6 +337,12 @@ def train_export_snerv_mlx_native(
             candidate.get(
                 "native_mlx_decoder_train_ridge",
                 candidate.get("snerv_native_mlx_decoder_train_ridge", native_mlx_decoder_train_ridge),
+            )
+        ),
+        native_mlx_decoder_train_optimizer=str(
+            candidate.get(
+                "native_mlx_decoder_train_optimizer",
+                candidate.get("snerv_native_mlx_decoder_train_optimizer", native_mlx_decoder_train_optimizer),
             )
         ),
         metadata_extra={
@@ -979,6 +986,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     native_mlx_decoder_train_steps: int = 0,
     native_mlx_decoder_train_lr: float = 1.0e-5,
     native_mlx_decoder_train_ridge: float = 1.0e-6,
+    native_mlx_decoder_train_optimizer: str = "pact_guarded_adamw",
     metadata_extra: Mapping[str, Any] | None = None,
 ) -> SnervArchivePacket:
     """Build an SNAR1 packet from NumPy pair frames using existing SNeRV codecs."""
@@ -1055,6 +1063,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     mlx_training_report: dict[str, Any] = {
         "schema": "snerv_native_mlx_hf_decoder_training.v1",
         "requested_steps": int(native_mlx_decoder_train_steps),
+        "requested_optimizer": str(native_mlx_decoder_train_optimizer),
         "executed": False,
         "blockers": (
             ["snerv_native_mlx_decoder_training_not_requested"] if int(native_mlx_decoder_train_steps) <= 0 else []
@@ -1072,10 +1081,12 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
             steps=int(native_mlx_decoder_train_steps),
             learning_rate=float(native_mlx_decoder_train_lr),
             ridge=float(native_mlx_decoder_train_ridge),
+            optimizer_name=str(native_mlx_decoder_train_optimizer),
         )
         if mlx_training_report.get("executed") is True:
             decoder = trained_decoder
-            hf_decoder_fit_mode = f"native_mlx_full_batch_gradient_descent_from_{hf_decoder_fit_mode}"
+            optimizer_tag = _native_mlx_decoder_optimizer_tag(mlx_training_report)
+            hf_decoder_fit_mode = f"native_mlx_{optimizer_tag}_from_{hf_decoder_fit_mode}"
 
     lf_quant_planes: list[np.ndarray] = []
     lf_zero_points: list[float] = []
@@ -1215,7 +1226,9 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "score_aware_long_training_executed": False,
         "native_mlx_training_executed": bool(mlx_training_report.get("executed") is True),
         "native_mlx_training_kind": (
-            "hf_decoder_full_batch_gradient_descent" if mlx_training_report.get("executed") is True else "none"
+            f"hf_decoder_{_native_mlx_decoder_optimizer_tag(mlx_training_report)}"
+            if mlx_training_report.get("executed") is True
+            else "none"
         ),
         "decoder_payload_codec": str(decoder_payload_codec),
         "snerv_fc_dim": int(model_size.fc_dim),
@@ -1452,6 +1465,7 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
     steps: int,
     learning_rate: float,
     ridge: float,
+    optimizer_name: str = "pact_guarded_adamw",
 ) -> tuple[HfGenerationDecoder, dict[str, Any]]:
     if int(steps) <= 0:
         raise SnervMlxNativeExportError("native MLX decoder train steps must be positive")
@@ -1459,8 +1473,10 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
         raise SnervMlxNativeExportError("native MLX decoder train lr must be positive")
     if float(ridge) < 0.0:
         raise SnervMlxNativeExportError("native MLX decoder train ridge must be non-negative")
+    optimizer_tag = _normalize_native_mlx_decoder_optimizer(optimizer_name)
     try:
         import mlx.core as mx
+        import mlx.optimizers as optim
     except Exception as exc:  # pragma: no cover - exercised on non-MLX hosts.
         raise SnervMlxNativeExportError(f"MLX import failed for SNeRV decoder training: {exc!s}") from exc
 
@@ -1498,12 +1514,23 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
                     ridge=float(ridge),
                 ).item()
             )
-            for _step in range(int(steps)):
-                pred = mx.matmul(x, k)
-                residual = pred - y
-                grad = (2.0 * mx.matmul(mx.transpose(x), weights * residual) / denom) + (2.0 * float(ridge) * k)
-                k = k - (float(learning_rate) * grad)
-                mx.eval(k)
+            optimizer_used = optimizer_tag
+            guard_action = "none"
+            k = _run_native_mlx_decoder_optimizer_steps(
+                mx,
+                optim,
+                x=x,
+                y=y,
+                weights=weights,
+                denom=denom,
+                initial_vec=k,
+                ridge=float(ridge),
+                steps=int(steps),
+                learning_rate=float(learning_rate),
+                optimizer=(
+                    "adamw" if optimizer_tag == "pact_guarded_adamw" else optimizer_tag
+                ),
+            )
             final_loss = float(
                 _mlx_weighted_linear_loss(
                     mx,
@@ -1515,6 +1542,53 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
                     ridge=float(ridge),
                 ).item()
             )
+            if optimizer_tag == "pact_guarded_adamw" and _native_mlx_loss_worsened(
+                initial=initial_loss,
+                final=final_loss,
+            ):
+                fallback = _run_native_mlx_decoder_optimizer_steps(
+                    mx,
+                    optim,
+                    x=x,
+                    y=y,
+                    weights=weights,
+                    denom=denom,
+                    initial_vec=mx.array(
+                        np.asarray(initial_decoder.kernels[lvl][subband], dtype=np.float32).reshape(-1),
+                        dtype=mx.float32,
+                    ),
+                    ridge=float(ridge),
+                    steps=int(steps),
+                    learning_rate=float(learning_rate),
+                    optimizer="full_batch_gradient_descent",
+                )
+                fallback_loss = float(
+                    _mlx_weighted_linear_loss(
+                        mx,
+                        x=x,
+                        y=y,
+                        weights=weights,
+                        denom=denom,
+                        vec=fallback,
+                        ridge=float(ridge),
+                    ).item()
+                )
+                if not _native_mlx_loss_worsened(
+                    initial=initial_loss,
+                    final=fallback_loss,
+                ):
+                    k = fallback
+                    final_loss = fallback_loss
+                    optimizer_used = "full_batch_gradient_descent"
+                    guard_action = "adamw_worsened_used_full_batch_gradient_descent"
+                else:
+                    k = mx.array(
+                        np.asarray(initial_decoder.kernels[lvl][subband], dtype=np.float32).reshape(-1),
+                        dtype=mx.float32,
+                    )
+                    final_loss = initial_loss
+                    optimizer_used = "closed_form_initial"
+                    guard_action = "adamw_and_gradient_descent_worsened_kept_initial"
             kernels[lvl][subband] = np.asarray(k, dtype=np.float64).reshape(
                 _kernel_storage_shape(initial_decoder.model_size)
             )
@@ -1527,6 +1601,8 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
                     "initial_loss": initial_loss,
                     "final_loss": final_loss,
                     "loss_delta": final_loss - initial_loss,
+                    "optimizer_used": optimizer_used,
+                    "guard_action": guard_action,
                 }
             )
     all_final_losses_finite = bool(all(np.isfinite(float(row["final_loss"])) for row in loss_rows))
@@ -1556,12 +1632,31 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
             "attempted": True,
             "executed": bool(accepted),
             "accepted": bool(accepted),
-            "optimizer": "full_batch_gradient_descent",
+            "optimizer": optimizer_tag,
+            "optimizer_backend": (
+                "mlx.optimizers+guarded_manual_fallback"
+                if optimizer_tag == "pact_guarded_adamw"
+                else (
+                    "mlx.optimizers"
+                    if optimizer_tag != "full_batch_gradient_descent"
+                    else "manual_mlx"
+                )
+            ),
             "steps": int(steps),
             "learning_rate": float(learning_rate),
             "ridge": float(ridge),
             "saliency_gain": float(saliency_gain),
             "level_subband_rows": loss_rows,
+            "optimizer_used_counts": {
+                str(name): sum(1 for row in loss_rows if row["optimizer_used"] == name)
+                for name in sorted({str(row["optimizer_used"]) for row in loss_rows})
+            },
+            "guarded_fallback_count": sum(
+                1 for row in loss_rows if str(row["guard_action"]) != "none"
+            ),
+            "kept_initial_count": sum(
+                1 for row in loss_rows if row["optimizer_used"] == "closed_form_initial"
+            ),
             "mean_initial_loss": float(np.mean([row["initial_loss"] for row in loss_rows])),
             "mean_final_loss": float(np.mean([row["final_loss"] for row in loss_rows])),
             "all_final_losses_finite": all_final_losses_finite,
@@ -1684,6 +1779,97 @@ def _native_export_detail_weights(
     mean = float(np.mean(raw))
     scaled = np.ones(expected_shape, dtype=np.float64) if mean <= 0.0 else raw / mean
     return np.maximum(1.0e-3, 1.0 + float(saliency_gain) * (scaled - 1.0)).astype(np.float32)
+
+
+def _normalize_native_mlx_decoder_optimizer(name: str) -> str:
+    normalized = str(name or "adamw").strip().lower().replace("-", "_")
+    aliases = {
+        "gd": "full_batch_gradient_descent",
+        "gradient_descent": "full_batch_gradient_descent",
+        "manual_gradient_descent": "full_batch_gradient_descent",
+        "full_batch_gd": "full_batch_gradient_descent",
+        "full_batch_gradient_descent": "full_batch_gradient_descent",
+        "pact": "pact_guarded_adamw",
+        "pact_adamw": "pact_guarded_adamw",
+        "pact_guarded_adamw": "pact_guarded_adamw",
+        "guarded_adamw": "pact_guarded_adamw",
+        "adamw": "adamw",
+        "adam": "adam",
+        "lion": "lion",
+        "sgd": "sgd",
+    }
+    try:
+        return aliases[normalized]
+    except KeyError as exc:
+        raise SnervMlxNativeExportError(
+            "unsupported native MLX decoder optimizer "
+            f"{name!r}; expected one of {sorted(aliases)}"
+        ) from exc
+
+
+def _build_native_mlx_decoder_optimizer(
+    optim: Any,
+    *,
+    optimizer: str,
+    learning_rate: float,
+) -> Any:
+    if optimizer in ("full_batch_gradient_descent", "pact_guarded_adamw"):
+        return None
+    if optimizer == "adamw":
+        return optim.AdamW(learning_rate=float(learning_rate), weight_decay=0.0)
+    if optimizer == "adam":
+        return optim.Adam(learning_rate=float(learning_rate))
+    if optimizer == "lion":
+        return optim.Lion(learning_rate=float(learning_rate), weight_decay=0.0)
+    if optimizer == "sgd":
+        return optim.SGD(learning_rate=float(learning_rate), momentum=0.9)
+    raise SnervMlxNativeExportError(f"unsupported native MLX decoder optimizer {optimizer!r}")
+
+
+def _run_native_mlx_decoder_optimizer_steps(
+    mx: Any,
+    optim: Any,
+    *,
+    x: Any,
+    y: Any,
+    weights: Any,
+    denom: Any,
+    initial_vec: Any,
+    ridge: float,
+    steps: int,
+    learning_rate: float,
+    optimizer: str,
+) -> Any:
+    opt = _build_native_mlx_decoder_optimizer(
+        optim,
+        optimizer=optimizer,
+        learning_rate=float(learning_rate),
+    )
+    params = {"k": initial_vec}
+    for _step in range(int(steps)):
+        k = params["k"]
+        pred = mx.matmul(x, k)
+        residual = pred - y
+        grad = (2.0 * mx.matmul(mx.transpose(x), weights * residual) / denom) + (
+            2.0 * float(ridge) * k
+        )
+        if optimizer == "full_batch_gradient_descent":
+            params["k"] = k - (float(learning_rate) * grad)
+            mx.eval(params["k"])
+        else:
+            opt.update(params, {"k": grad})
+            mx.eval(params, opt.state)
+    return params["k"]
+
+
+def _native_mlx_decoder_optimizer_tag(report: Mapping[str, Any]) -> str:
+    return _normalize_native_mlx_decoder_optimizer(
+        str(
+            report.get("optimizer")
+            or report.get("requested_optimizer")
+            or "pact_guarded_adamw"
+        )
+    )
 
 
 def _native_mlx_loss_worsened(*, initial: float, final: float) -> bool:
