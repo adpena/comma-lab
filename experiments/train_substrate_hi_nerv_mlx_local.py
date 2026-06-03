@@ -220,7 +220,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "pose_student_input_channels": _pose_student_input_channels(
                 str(args.pose_student_input_preprocess)
             ),
-            "prioritized_pair_training": _prioritized_pair_training_metadata(
+            "prioritized_pair_training": _prioritized_pair_training_lineage_metadata(
                 prioritized_pair_indices
             ),
             "storage_preflight": _metadata_safe(storage_payload),
@@ -581,8 +581,23 @@ def _prioritized_pair_training_metadata(
         "pair_count": len(pair_indices),
         "sampling_scope": "local_mlx_training_batch_emphasis_only",
         "authority": "macos_mlx_research_signal_false_authority",
-        "promotion_authority": False,
-        "contest_score_authority": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _prioritized_pair_training_lineage_metadata(
+    pair_indices: tuple[int, ...],
+) -> dict[str, Any]:
+    return {
+        "schema": "hi_nerv_direct_trainer_prioritized_pair_training.v1",
+        "enabled": bool(pair_indices),
+        "pair_indices": [int(value) for value in pair_indices],
+        "pair_count": len(pair_indices),
+        "sampling_scope": "local_mlx_training_batch_emphasis_only",
+        "authority": "macos_mlx_research_signal_false_authority",
+        "canonical_authority_surface": (
+            "TrainingArtifact top-level false-authority fields"
+        ),
     }
 
 
@@ -1000,6 +1015,7 @@ __all__ = [
     "_config_from_args",
     "_metadata_safe",
     "_prioritized_pair_indices_from_args",
+    "_prioritized_pair_training_lineage_metadata",
     "_prioritized_pair_training_metadata",
     "_resolve_output_dir",
     "main",

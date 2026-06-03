@@ -74,6 +74,87 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     assert packet.score_claim is False
 
 
+def test_mlx_target_hydration_selects_arbitrary_pair_indices(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.data as data_mod
+    import tac.substrates._shared.mlx_score_aware.targets as target_mod
+
+    class FakeFrame:
+        def __init__(self, frame_idx: int) -> None:
+            self._array = np.full((4, 5, 3), frame_idx, dtype=np.float32)
+
+        def numpy(self) -> np.ndarray:
+            return self._array
+
+    seen: dict[str, object] = {}
+
+    def fake_decode_video(*_args, **kwargs):
+        seen.update(kwargs)
+        return [FakeFrame(idx) for idx in range(int(kwargs["max_frames"]))]
+
+    monkeypatch.setattr(target_mod, "require_mlx_for_harness", lambda: mx)
+    monkeypatch.setattr(data_mod, "decode_video", fake_decode_video)
+
+    target0, target1 = target_mod.decode_mlx_targets(
+        "unit.mkv",
+        num_pairs=2,
+        output_height=4,
+        output_width=5,
+        pair_indices=[3, 1, 3],
+    )
+
+    assert seen["max_frames"] == 8
+    np.testing.assert_allclose(np.asarray(target0)[:, 0, 0, 0], [6 / 255.0, 2 / 255.0])
+    np.testing.assert_allclose(np.asarray(target1)[:, 0, 0, 0], [7 / 255.0, 3 / 255.0])
+
+
+def test_mlx_target_hydration_rejects_pair_count_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates._shared.mlx_score_aware.targets as target_mod
+
+    monkeypatch.setattr(target_mod, "require_mlx_for_harness", lambda: mx)
+
+    with pytest.raises(target_mod.MlxScoreAwareHarnessError, match="does not match"):
+        target_mod.decode_mlx_targets(
+            "unit.mkv",
+            num_pairs=3,
+            output_height=4,
+            output_width=5,
+            pair_indices=[3, 1, 3],
+        )
+
+
+def test_packet_builder_preserves_explicit_source_pair_indices() -> None:
+    packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        _tiny_pairs(pairs=2),
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+        source_pair_indices=[7, 2, 7],
+    )
+
+    decoded = unpack_snerv_archive(packet.packet)
+
+    assert decoded.metadata["n_pairs"] == 2
+    assert decoded.metadata["source_pair_indices"] == [7, 2]
+    assert decoded.metadata["source_pair_indices_preserved"] is True
+    assert decoded.metadata["pair_index_alignment_mode"] == (
+        "explicit_source_pair_indices"
+    )
+    rows = decoded.metadata["lf_step_allocation_rows"]
+    assert {row["pair_idx"] for row in rows[:6]} == {0}
+    assert {row["source_pair_idx"] for row in rows[:6]} == {7}
+    assert {row["pair_idx"] for row in rows[6:12]} == {1}
+    assert {row["source_pair_idx"] for row in rows[6:12]} == {2}
+
+
 def test_packet_builder_defaults_to_portfolio_lf_payload_codec() -> None:
     packet = build_snerv_mlx_native_packet_from_numpy_pairs(
         _tiny_pairs(pairs=1),
@@ -219,6 +300,55 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert report["scorer_loop_qat"]["requested"] is False
     frames = decode_snerv_archive_frames(packet_path.read_bytes())
     assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_train_export_preserves_explicit_source_pair_indices(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    captured: dict[str, object] = {}
+
+    def fake_decode_mlx_targets(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = dict(kwargs)
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path,
+        num_pairs=600,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        pair_indices=[7, 2, 7],
+        run_archive_export=False,
+    )
+
+    assert captured["kwargs"]["num_pairs"] == 2
+    assert captured["kwargs"]["pair_indices"] == (7, 2)
+    assert report["num_pairs"] == 2
+    assert list(report["source_pair_indices"]) == [7, 2]
+    assert report["storage_preflight"]["n_pairs"] == 2
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["source_pair_indices"] == [7, 2]
+    assert decoded.metadata["pair_index_alignment_mode"] == (
+        "explicit_source_pair_indices"
+    )
 
 
 def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
@@ -666,6 +796,115 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     ]
     assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]
     assert report["score_claim"] is False
+
+
+def test_train_export_rejects_qat_packet_with_mismatched_source_pair_indices(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    mismatched_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs + 1.0,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+        source_pair_indices=[0, 1],
+    ).packet
+    mismatched_sha256 = hashlib.sha256(mismatched_packet).hexdigest()
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    class FakeQatResult:
+        best_packet = mismatched_packet
+
+        def as_jsonable(self) -> dict:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 2,
+                "source_pair_indices": [7, 2],
+                "decoder_payload_codec": "int8_symmetric",
+                "lf_payload_codec": "portfolio_auto",
+                "scorer_loop_evaluations": 1,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "baseline": {
+                    "archive_bytes": 111,
+                    "archive_sha256": "1" * 64,
+                    "score_linf": 3.0,
+                },
+                "best": {
+                    "archive_bytes": len(mismatched_packet),
+                    "archive_sha256": mismatched_sha256,
+                    "score_linf": 2.5,
+                },
+                "best_packet_bytes": len(mismatched_packet),
+                "best_packet_sha256": mismatched_sha256,
+                "component_guard_mode": "score_primary",
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    captured: dict[str, object] = {}
+
+    def fake_run_qat(**kwargs):
+        captured.update(kwargs)
+        return FakeQatResult()
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(qat_mod, "run_snerv_scorer_loop_decoder_qat_smoke", fake_run_qat)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path,
+        num_pairs=600,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        pair_indices=[7, 2],
+        run_archive_export=False,
+        run_scorer_loop_qat=True,
+        scorer_loop_qat_max_trials=1,
+    )
+
+    assert captured["n_pairs"] == 2
+    assert captured["pair_indices"] == (7, 2)
+    scorer_loop = report["scorer_loop_qat"]
+    assert scorer_loop["accepted_improvement"] is True
+    assert scorer_loop["source_pair_indices_binding_required"] is True
+    assert scorer_loop["source_pair_indices_binding_preserved"] is False
+    assert scorer_loop["source_pair_indices_expected"] == [7, 2]
+    assert scorer_loop["source_pair_indices_actual"] == [0, 1]
+    assert (
+        "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch"
+        in scorer_loop["blockers"]
+    )
+    assert (
+        "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch"
+        in report["blockers"]
+    )
+    assert report["packet_source"] == "mlx_target_hydration_numpy_closed_form_decoder_fit"
+    assert report["packet_sha256"] != mismatched_sha256
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["source_pair_indices"] == [7, 2]
 
 
 def test_train_export_rejects_unweighted_qat_packet_when_recon_weight_bound(

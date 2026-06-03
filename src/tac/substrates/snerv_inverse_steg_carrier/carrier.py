@@ -59,6 +59,9 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
 __all__ = [
     "DEFAULT_SNERV_MODEL_SIZE",
     "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+    "SNERV_OFFICIAL_DEFAULT_DEC_STRDS",
+    "SNERV_OFFICIAL_DEFAULT_ENC_STRDS",
+    "SNERV_OFFICIAL_MODELSIZE_TO_FC_DIM_PROOF",
     "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
     "SNERV_SPECTRA_PRESERVING_ADAPTER",
     "HfGenerationDecoder",
@@ -94,6 +97,8 @@ SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF: Final[str] = (
 SNERV_OFFICIAL_MODELSIZE_TO_FC_DIM_PROOF: Final[str] = (
     "official_snerv_train_snerv_modelsize_quadratic_fc_dim_resolver_bound"
 )
+SNERV_OFFICIAL_DEFAULT_ENC_STRDS: Final[tuple[int, ...]] = (5, 4, 2, 2, 2)
+SNERV_OFFICIAL_DEFAULT_DEC_STRDS: Final[tuple[int, ...]] = (5, 4, 2, 2, 2)
 SNERV_TEMPORAL_MODES: Final[frozenset[str]] = frozenset(
     ("delta", "official_haar_dwt1d_lowpass")
 )

@@ -192,6 +192,48 @@ def test_pose_student_inputs_can_use_pr95_yuv6_preprocess() -> None:
 
 
 @mlx_only
+def test_decode_mlx_targets_honors_explicit_source_pair_indices(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.data as data
+    from tac.substrates._shared.mlx_score_aware.targets import decode_mlx_targets
+
+    class _Frame:
+        def __init__(self, value: int) -> None:
+            self._value = int(value)
+
+        def numpy(self) -> np.ndarray:
+            return np.full((2, 3, 3), self._value, dtype=np.uint8)
+
+    captured: dict[str, int] = {}
+
+    def _fake_decode_video(*_args, **kwargs):
+        captured["max_frames"] = int(kwargs["max_frames"])
+        return [_Frame(i) for i in range(captured["max_frames"])]
+
+    monkeypatch.setattr(data, "decode_video", _fake_decode_video)
+
+    target0, target1 = decode_mlx_targets(
+        "unit.mkv",
+        num_pairs=2,
+        output_height=2,
+        output_width=3,
+        pair_indices=(3, 1, 3),
+    )
+
+    assert captured["max_frames"] == 8
+    assert tuple(target0.shape) == (2, 2, 3, 3)
+    np.testing.assert_allclose(
+        np.asarray(target0)[:, 0, 0, 0],
+        np.array([6.0 / 255.0, 2.0 / 255.0], dtype=np.float32),
+    )
+    np.testing.assert_allclose(
+        np.asarray(target1)[:, 0, 0, 0],
+        np.array([7.0 / 255.0, 3.0 / 255.0], dtype=np.float32),
+    )
+
+
+@mlx_only
 def test_score_aware_loss_extra_term_weighted() -> None:
     import mlx.core as mx
 

@@ -38,6 +38,8 @@ from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (  # noq
     export_snerv_archive_bound_candidate_package,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
+    SNERV_OFFICIAL_DEFAULT_DEC_STRDS,
+    SNERV_OFFICIAL_DEFAULT_ENC_STRDS,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
 )
 from tac.substrates.snerv_inverse_steg_carrier.trained_ladder_bridge import (  # noqa: E402
@@ -207,8 +209,28 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--snerv-fc-dim",
         type=int,
-        default=9,
+        default=None,
         help="Receiver-visible LF-context feature count for the SNeRV HF decoder.",
+    )
+    ap.add_argument(
+        "--snerv-official-modelsize-mparams",
+        type=float,
+        default=None,
+        help=(
+            "Official SNeRV-style --modelsize value in millions of parameters. "
+            "When provided, the advisory solves fc_dim from the source-bound "
+            "quadratic and records official_modelsize_solution metadata."
+        ),
+    )
+    ap.add_argument(
+        "--snerv-official-enc-strds",
+        default=",".join(str(v) for v in SNERV_OFFICIAL_DEFAULT_ENC_STRDS),
+        help="Comma-separated official SNeRV encoder strides for --modelsize solving.",
+    )
+    ap.add_argument(
+        "--snerv-official-dec-strds",
+        default=",".join(str(v) for v in SNERV_OFFICIAL_DEFAULT_DEC_STRDS),
+        help="Comma-separated official SNeRV decoder strides for --modelsize solving.",
     )
     ap.add_argument(
         "--snerv-emb-size",
@@ -315,6 +337,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
 
+    snerv_fc_dim_explicit = args.snerv_fc_dim is not None
     res = run_snerv_advisory(
         n_pairs=args.n_pairs,
         levels=args.levels,
@@ -335,7 +358,8 @@ def main(argv: list[str] | None = None) -> int:
         hf_decoder_fit_mode=args.hf_decoder_fit_mode,
         hf_decoder_saliency_gain=args.hf_decoder_saliency_gain,
         hf_decoder_saliency_component=args.hf_decoder_saliency_component,
-        snerv_fc_dim=args.snerv_fc_dim,
+        snerv_fc_dim=9 if args.snerv_fc_dim is None else args.snerv_fc_dim,
+        snerv_fc_dim_explicit=snerv_fc_dim_explicit,
         snerv_emb_size=args.snerv_emb_size,
         snerv_patch_radius=args.snerv_patch_radius,
         snerv_model_size_adapter=(
@@ -347,6 +371,13 @@ def main(argv: list[str] | None = None) -> int:
         snerv_hfr_gain=args.snerv_hfr_gain,
         snerv_temporal_context=args.snerv_temporal_context,
         snerv_temporal_mode=args.snerv_temporal_mode,
+        snerv_official_modelsize_mparams=args.snerv_official_modelsize_mparams,
+        snerv_official_enc_strds=_parse_positive_int_csv(
+            args.snerv_official_enc_strds
+        ),
+        snerv_official_dec_strds=_parse_positive_int_csv(
+            args.snerv_official_dec_strds
+        ),
         decoder_payload_codec=args.decoder_payload_codec,
         decoder_payload_mixed_modes=_parse_optional_modes(
             args.decoder_payload_mixed_modes
@@ -492,6 +523,18 @@ def main(argv: list[str] | None = None) -> int:
         f"source={charged_archive_path_kind} "
         f"sha256={charged_archive_sha256[:12]}"
     )
+    official_solution = getattr(res, "official_modelsize_solution", None)
+    if official_solution:
+        print(
+            "  modelsize control = official_snerv_modelsize "
+            f"mparams={official_solution['modelsize_mparams']} "
+            f"solved_fc_dim={official_solution['fc_dim']}"
+        )
+    else:
+        print(
+            "  modelsize control = "
+            f"{getattr(res, 'snerv_capacity_source', 'manual_fc_dim')}"
+        )
     print(
         f"  rate_term = {charged_rate_term:.5f} "
         f"(shared charged archive term; frontier {res.pr101_frontier_bytes} B = "

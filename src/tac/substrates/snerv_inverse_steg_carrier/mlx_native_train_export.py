@@ -24,6 +24,7 @@ from typing import Any
 
 import numpy as np
 
+from tac.adaptation.hard_pair_indices import normalize_pair_indices
 from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill
 from tac.contest_eval_contract import build_upstream_eval_contract
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
@@ -131,7 +132,15 @@ class SnervMlxNativeArtifact:
     ready_for_exact_eval_dispatch: bool = False
 
     def as_jsonable(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["source_pair_indices"] = [
+            int(value) for value in self.source_pair_indices
+        ]
+        payload["step_map_coder_groups"] = [
+            dict(group) for group in self.step_map_coder_groups
+        ]
+        payload["blockers"] = [str(value) for value in self.blockers]
+        return payload
 
 
 def train_export_snerv_mlx_native(
@@ -158,6 +167,7 @@ def train_export_snerv_mlx_native(
     recon_pixel_weight_path: str | Path | None = None,
     recon_pixel_weight_manifest_path: str | Path | None = None,
     recon_pixel_weight_normalize: str = "mean",
+    pair_indices: Sequence[Any] | str | None = None,
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Hydrate real targets on MLX, export a NumPy-portable SNAR1 archive.
@@ -201,12 +211,19 @@ def train_export_snerv_mlx_native(
         else lf_payload_codec
     )
     model_size = _model_size_from_candidate(candidate)
+    source_pair_indices = _source_pair_indices_for_native_export(
+        int(num_pairs),
+        pair_indices=pair_indices,
+    )
+    effective_num_pairs = len(source_pair_indices)
+    explicit_pair_indices = pair_indices is not None
 
     target0_mlx, target1_mlx = decode_mlx_targets(
         source_video_path,
-        num_pairs=int(num_pairs),
+        num_pairs=effective_num_pairs,
         output_height=int(output_height),
         output_width=int(output_width),
+        pair_indices=source_pair_indices if explicit_pair_indices else None,
     )
     target0_np = np.asarray(target0_mlx, dtype=np.float32)
     target1_np = np.asarray(target1_mlx, dtype=np.float32)
@@ -238,7 +255,7 @@ def train_export_snerv_mlx_native(
     recon_weight, recon_weight_metadata = _load_recon_pixel_weight_for_native_export(
         recon_pixel_weight_path,
         manifest_path=recon_pixel_weight_manifest_path,
-        expected_pairs=int(num_pairs),
+        expected_pairs=effective_num_pairs,
         expected_hw=(int(output_height), int(output_width)),
         normalize=str(recon_pixel_weight_normalize),
     )
@@ -251,6 +268,7 @@ def train_export_snerv_mlx_native(
         decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=active_lf_payload_codec,
         model_size=model_size,
+        source_pair_indices=source_pair_indices,
         recon_pixel_weight=recon_weight,
         recon_pixel_weight_metadata=recon_weight_metadata,
         hf_decoder_saliency_gain=float(
@@ -261,6 +279,11 @@ def train_export_snerv_mlx_native(
         ),
         metadata_extra={
             "source_video_path": Path(source_video_path).as_posix(),
+            "pair_index_alignment_mode": (
+                "explicit_source_pair_indices"
+                if explicit_pair_indices
+                else "prefix_source_pair_indices"
+            ),
             "training_backend": (
                 "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
                 if recon_weight is not None
@@ -276,7 +299,8 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat = _run_scorer_loop_qat_attachment(
         requested=bool(run_scorer_loop_qat),
         output_dir=out / "snerv_scorer_loop_qat",
-        num_pairs=int(num_pairs),
+        num_pairs=effective_num_pairs,
+        pair_indices=source_pair_indices if explicit_pair_indices else None,
         source_video_path=source_video_path,
         scorer_upstream_dir=scorer_upstream_dir,
         levels=levels,
@@ -308,11 +332,25 @@ def train_export_snerv_mlx_native(
         and scorer_loop_qat.get("accepted_improvement") is True
         and scorer_loop_qat.get("receiver_contract_satisfied") is True
     )
+    best_packet_source_pair_indices = (
+        _packet_source_pair_indices(best_packet)
+        if isinstance(best_packet, bytes) and best_packet
+        else None
+    )
+    best_packet_preserves_source_pairs = _packet_preserves_source_pair_indices(
+        best_packet if isinstance(best_packet, bytes) else b"",
+        expected_source_pair_indices=source_pair_indices,
+        explicit_pair_indices=explicit_pair_indices,
+    )
     best_packet_preserves_recon_weight = _packet_preserves_recon_weight_binding(
         best_packet if isinstance(best_packet, bytes) else b"",
         recon_weight_metadata,
     )
-    if best_packet_ready and best_packet_preserves_recon_weight:
+    if (
+        best_packet_ready
+        and best_packet_preserves_recon_weight
+        and best_packet_preserves_source_pairs
+    ):
         selected_packet = bytes(best_packet)
         selected_packet_source = "scorer_loop_qat_best_receiver_packet"
         scorer_loop_qat_public["emitted_packet_uses_scorer_loop_best_decoder"] = True
@@ -334,13 +372,40 @@ def train_export_snerv_mlx_native(
                 if key != "report_path"
             }
             write_json(report, _payload_for_disk)
-    elif best_packet_ready and recon_weight_metadata is not None:
-        scorer_loop_qat_public["emitted_packet_uses_scorer_loop_best_decoder"] = False
-        scorer_loop_qat_public["recon_weight_binding_required"] = True
-        scorer_loop_qat_public["recon_weight_binding_preserved"] = False
-        scorer_loop_qat_public["recon_weight_expected_sha256"] = recon_weight_metadata.get(
-            "sha256"
-        )
+    elif best_packet_ready and (
+        recon_weight_metadata is not None or explicit_pair_indices
+    ):
+        scorer_loop_qat_public[
+            "emitted_packet_uses_scorer_loop_best_decoder"
+        ] = False
+        extra_blockers: list[str] = []
+        if recon_weight_metadata is not None and not best_packet_preserves_recon_weight:
+            scorer_loop_qat_public["recon_weight_binding_required"] = True
+            scorer_loop_qat_public["recon_weight_binding_preserved"] = False
+            scorer_loop_qat_public["recon_weight_expected_sha256"] = (
+                recon_weight_metadata.get("sha256")
+            )
+            extra_blockers.append(
+                "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch"
+            )
+        if explicit_pair_indices and not best_packet_preserves_source_pairs:
+            scorer_loop_qat_public["source_pair_indices_binding_required"] = True
+            scorer_loop_qat_public["source_pair_indices_binding_preserved"] = False
+            scorer_loop_qat_public["source_pair_indices_expected"] = [
+                int(value) for value in source_pair_indices
+            ]
+            scorer_loop_qat_public["source_pair_indices_actual"] = (
+                [int(value) for value in best_packet_source_pair_indices]
+                if best_packet_source_pair_indices is not None
+                else None
+            )
+            extra_blockers.append(
+                "snerv_scorer_loop_qat_best_packet_rejected_source_pair_indices_mismatch"
+            )
+        if extra_blockers:
+            extra_blockers.append(
+                "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export"
+            )
         scorer_loop_qat_public["blockers"] = _ordered_unique(
             [
                 *(
@@ -348,8 +413,7 @@ def train_export_snerv_mlx_native(
                     for blocker in scorer_loop_qat_public.get("blockers") or []
                     if str(blocker)
                 ),
-                "snerv_scorer_loop_qat_best_packet_rejected_recon_weight_binding_mismatch",
-                "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export",
+                *extra_blockers,
             ]
         )
         report = scorer_loop_qat_public.get("report_path")
@@ -375,7 +439,7 @@ def train_export_snerv_mlx_native(
 
     storage_preflight = build_snerv_mlx_native_storage_preflight(
         output_dir=out,
-        n_pairs=int(num_pairs),
+        n_pairs=effective_num_pairs,
         packet_bytes=len(selected_packet),
     )
     package: dict[str, Any] | None = None
@@ -394,7 +458,7 @@ def train_export_snerv_mlx_native(
     blockers.extend(
         _scorer_loop_qat_blockers(
             scorer_loop_qat_public,
-            num_pairs=int(num_pairs),
+            num_pairs=effective_num_pairs,
         )
     )
     if run_archive_export:
@@ -420,8 +484,8 @@ def train_export_snerv_mlx_native(
         packet_path=packet_path.as_posix(),
         packet_bytes=len(selected_packet),
         packet_sha256=_sha256_bytes(selected_packet),
-        num_pairs=int(num_pairs),
-        source_pair_indices=tuple(range(int(num_pairs))),
+        num_pairs=effective_num_pairs,
+        source_pair_indices=tuple(int(value) for value in source_pair_indices),
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
@@ -602,6 +666,7 @@ def _run_scorer_loop_qat_attachment(
     requested: bool,
     output_dir: str | Path,
     num_pairs: int,
+    pair_indices: tuple[int, ...] | None,
     source_video_path: str | Path,
     scorer_upstream_dir: str | Path,
     levels: int,
@@ -631,6 +696,7 @@ def _run_scorer_loop_qat_attachment(
             "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
             "requested": False,
             "executed": False,
+            "source_pair_indices": [int(value) for value in pair_indices or ()],
             "component_guard_mode": str(component_guard_mode),
             "decoder_payload_codec": str(decoder_payload_codec),
             "lf_payload_codec": str(lf_payload_codec),
@@ -651,6 +717,7 @@ def _run_scorer_loop_qat_attachment(
 
         result = run_snerv_scorer_loop_decoder_qat_smoke(
             n_pairs=int(num_pairs),
+            pair_indices=pair_indices,
             levels=int(levels),
             wavelet=str(wavelet),
             target_bits_per_coeff=float(target_bits_per_coeff),
@@ -711,6 +778,14 @@ def _run_scorer_loop_qat_attachment(
             "source_schema": result_payload.get("schema"),
             "axis_tag": result_payload.get("axis_tag"),
             "num_pairs": int(result_payload.get("n_pairs") or num_pairs),
+            "source_pair_indices": [
+                int(value)
+                for value in (
+                    result_payload.get("source_pair_indices")
+                    or pair_indices
+                    or tuple(range(int(result_payload.get("n_pairs") or num_pairs)))
+                )
+            ],
             "full_video_coverage": int(result_payload.get("n_pairs") or 0) == 600,
             "scorer_loop_evaluations": int(
                 result_payload.get("scorer_loop_evaluations") or 0
@@ -759,6 +834,7 @@ def _run_scorer_loop_qat_attachment(
             "requested": True,
             "executed": False,
             "failure": repr(exc),
+            "source_pair_indices": [int(value) for value in pair_indices or ()],
             "receiver_contract_satisfied": False,
             "accepted_improvement": False,
             "decoder_payload_codec": str(decoder_payload_codec),
@@ -868,6 +944,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     step_map_bits_per_coeff: float = 4.0,
     lf_payload_codec: str = "portfolio_auto",
     model_size: SnervModelSizeConfig | None = None,
+    source_pair_indices: Sequence[Any] | str | None = None,
     recon_pixel_weight: np.ndarray | None = None,
     recon_pixel_weight_metadata: Mapping[str, Any] | None = None,
     hf_decoder_saliency_gain: float = 1.0,
@@ -884,6 +961,10 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     if not np.isfinite(pairs).all():
         raise SnervMlxNativeExportError("pairs_nchw255 contains nonfinite values")
     n_pairs, _frames, channels, h, w = (int(v) for v in pairs.shape)
+    source_pair_indices_tuple = _source_pair_indices_for_packet(
+        n_pairs,
+        source_pair_indices=source_pair_indices,
+    )
     model_size = model_size or SnervModelSizeConfig()
     weighted_fit_enabled = recon_pixel_weight is not None
     recon_weight = (
@@ -944,11 +1025,13 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     step_map_importance_values: list[float] = []
     n_levels = max(2, round(2.0 ** float(target_bits_per_coeff)))
     for record_index, (pair_idx, frame_idx, channel_idx, pyr) in enumerate(records):
+        source_pair_idx = int(source_pair_indices_tuple[pair_idx])
         q_uniform, scale, zero = quantize_lf(pyr.lf, n_levels=n_levels)
         step = np.full(q_uniform.shape, float(scale), dtype=np.float32)
         allocation_row: dict[str, Any] = {
             "schema": "snerv_lf_step_allocation_row.v1",
             "pair_idx": int(pair_idx),
+            "source_pair_idx": source_pair_idx,
             "frame_idx": int(frame_idx),
             "channel_idx": int(channel_idx),
             "mode": "uniform_l2_baseline",
@@ -1019,6 +1102,13 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "wavelet": str(wavelet),
         "carrier_hw": [h, w],
         "orig_hw": [h, w],
+        "source_pair_indices": [int(value) for value in source_pair_indices_tuple],
+        "source_pair_indices_preserved": True,
+        "pair_index_alignment_mode": (
+            "prefix_source_pair_indices"
+            if source_pair_indices_tuple == tuple(range(n_pairs))
+            else "explicit_source_pair_indices"
+        ),
         "lf_plane_count": len(lf_quant_planes),
         "lf_coeff_count_total": int(sum(int(p.lf.size) for p in pyramids)),
         "lf_zero_dtype": "float32_le",
@@ -1132,6 +1222,77 @@ def _target_pairs_to_nchw255(target0_np: np.ndarray, target1_np: np.ndarray) -> 
     pair = np.stack([target0_np, target1_np], axis=1)
     pair = np.clip(pair.astype(np.float32), 0.0, 1.0) * 255.0
     return np.transpose(pair, (0, 1, 4, 2, 3)).astype(np.float32)
+
+
+def _source_pair_indices_for_native_export(
+    num_pairs: int,
+    *,
+    pair_indices: Sequence[Any] | str | None,
+) -> tuple[int, ...]:
+    if pair_indices is None:
+        if int(num_pairs) < 1:
+            raise SnervMlxNativeExportError(
+                f"num_pairs must be >= 1; got {num_pairs}"
+            )
+        return tuple(range(int(num_pairs)))
+    normalized = normalize_pair_indices(
+        pair_indices,
+        field="snerv_mlx_native_pair_indices",
+    )
+    if not normalized:
+        raise SnervMlxNativeExportError("pair_indices must contain at least one pair")
+    return tuple(int(value) for value in normalized)
+
+
+def _source_pair_indices_for_packet(
+    n_pairs: int,
+    *,
+    source_pair_indices: Sequence[Any] | str | None,
+) -> tuple[int, ...]:
+    if source_pair_indices is None:
+        return tuple(range(int(n_pairs)))
+    normalized = normalize_pair_indices(
+        source_pair_indices,
+        field="snerv_mlx_native_source_pair_indices",
+    )
+    if len(normalized) != int(n_pairs):
+        raise SnervMlxNativeExportError(
+            "source_pair_indices length "
+            f"{len(normalized)} does not match packet pair count {int(n_pairs)}"
+        )
+    return tuple(int(value) for value in normalized)
+
+
+def _packet_source_pair_indices(packet: bytes) -> tuple[int, ...] | None:
+    if not packet:
+        return None
+    try:
+        metadata = unpack_snerv_archive(packet).metadata
+    except Exception:
+        return None
+    raw = metadata.get("source_pair_indices")
+    if raw is None:
+        return None
+    try:
+        return normalize_pair_indices(
+            raw,
+            field="snerv_mlx_native_packet_source_pair_indices",
+        )
+    except Exception:
+        return None
+
+
+def _packet_preserves_source_pair_indices(
+    packet: bytes,
+    *,
+    expected_source_pair_indices: Sequence[int],
+    explicit_pair_indices: bool,
+) -> bool:
+    actual = _packet_source_pair_indices(packet)
+    expected = tuple(int(value) for value in expected_source_pair_indices)
+    if actual is None:
+        return (not explicit_pair_indices) and expected == tuple(range(len(expected)))
+    return tuple(actual) == expected
 
 
 def _packet_preserves_recon_weight_binding(

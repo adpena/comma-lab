@@ -23,6 +23,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _metadata_safe,
     _pose_student_input_channels,
     _prioritized_pair_indices_from_args,
+    _prioritized_pair_training_lineage_metadata,
     _prioritized_pair_training_metadata,
     _receiver_cache_quality_manifest_summary,
     _resolve_output_dir,
@@ -304,11 +305,27 @@ def test_hinerv_mlx_trainer_parses_prioritized_pair_controls(
     assert metadata["schema"] == "hi_nerv_direct_trainer_prioritized_pair_training.v1"
     assert metadata["enabled"] is True
     assert metadata["pair_indices"] == [3, 4, 9]
-    assert metadata["promotion_authority"] is False
-    assert metadata["contest_score_authority"] is False
-    assert "score_claim" not in metadata
-    assert "promotion_eligible" not in metadata
-    assert "ready_for_exact_eval_dispatch" not in metadata
+    assert metadata["score_claim"] is False
+    assert metadata["promotion_eligible"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_prioritized_pair_lineage_metadata_has_no_canonical_authority() -> None:
+    metadata = _prioritized_pair_training_lineage_metadata((4, 1))
+
+    assert metadata["enabled"] is True
+    assert metadata["pair_indices"] == [4, 1]
+    assert metadata["canonical_authority_surface"] == (
+        "TrainingArtifact top-level false-authority fields"
+    )
+    for forbidden in (
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "rank_or_kill_eligible",
+        "score_claim_valid",
+    ):
+        assert forbidden not in metadata
 
 
 def test_hinerv_mlx_trainer_rejects_out_of_range_prioritized_pairs() -> None:

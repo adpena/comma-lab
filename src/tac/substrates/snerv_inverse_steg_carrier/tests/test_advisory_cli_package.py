@@ -150,12 +150,93 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     assert captured_kwargs["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
 
 
-def _fake_advisory_result(packet: bytes):
+def test_advisory_cli_forwards_official_modelsize_and_persists_solution(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[5]
+    cli_path = repo_root / "tools/run_snerv_inverse_steg_advisory.py"
+    spec = importlib.util.spec_from_file_location(
+        "run_snerv_inverse_steg_advisory_for_modelsize_test",
+        cli_path,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    official_solution = {
+        "schema": "official_snerv_modelsize_to_fc_dim.v1",
+        "source": "official_snerv_train_snerv_modelsize_quadratic_fc_dim_resolver_bound",
+        "modelsize_mparams": 0.05,
+        "full_data_length": 2,
+        "final_size": 16 * 24,
+        "enc_strds": [5, 4, 2, 2, 2],
+        "dec_strds": [5, 4, 2, 2, 2],
+        "fc_dim": 11,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    fake = _fake_advisory_result(
+        b"SNAR1-modelsize",
+        snerv_fc_dim=11,
+        snerv_capacity_source="official_snerv_modelsize",
+        official_modelsize_solution=official_solution,
+    )
+    captured_kwargs = {}
+
+    def fake_run_snerv_advisory(**kwargs):
+        captured_kwargs.update(kwargs)
+        return fake
+
+    monkeypatch.setattr(module, "run_snerv_advisory", fake_run_snerv_advisory)
+
+    report_path = tmp_path / "advisory_modelsize.json"
+    rc = module.main(
+        [
+            "--n-pairs",
+            "1",
+            "--levels",
+            "1",
+            "--out",
+            str(report_path),
+            "--snerv-official-modelsize-mparams",
+            "0.05",
+            "--snerv-official-enc-strds",
+            "5,4,2,2,2",
+            "--snerv-official-dec-strds",
+            "5,4,2,2,2",
+        ]
+    )
+    payload = json.loads(report_path.read_text())
+
+    assert rc == 0
+    assert captured_kwargs["snerv_official_modelsize_mparams"] == 0.05
+    assert captured_kwargs["snerv_official_enc_strds"] == (5, 4, 2, 2, 2)
+    assert captured_kwargs["snerv_official_dec_strds"] == (5, 4, 2, 2, 2)
+    assert captured_kwargs["snerv_fc_dim"] == 9
+    assert captured_kwargs["snerv_fc_dim_explicit"] is False
+    assert payload["snerv_capacity_source"] == "official_snerv_modelsize"
+    assert payload["official_modelsize_solution"]["modelsize_mparams"] == 0.05
+    assert payload["official_modelsize_solution"]["fc_dim"] == 11
+    assert payload["snerv_fc_dim"] == 11
+
+
+def _fake_advisory_result(
+    packet: bytes,
+    *,
+    snerv_fc_dim: int = 9,
+    snerv_capacity_source: str = "manual_fc_dim",
+    official_modelsize_solution: dict[str, object] | None = None,
+):
     base = {
         "n_pairs": 1,
         "levels": 1,
         "wavelet": "db2",
         "carrier_hw": [16, 24],
+        "snerv_fc_dim": int(snerv_fc_dim),
+        "snerv_capacity_source": snerv_capacity_source,
+        "official_modelsize_solution": official_modelsize_solution,
         "receiver_archive_packet": {
             "bytes": len(packet),
             "sha256": "fake",
@@ -189,7 +270,7 @@ def _fake_advisory_result(packet: bytes):
         decoder_bytes=40,
         decoder_payload_codec="float32_lzma",
         decoder_payload_header={"schema": "snerv_decoder_payload.v1"},
-        snerv_fc_dim=9,
+        snerv_fc_dim=int(snerv_fc_dim),
         snerv_emb_size=0,
         snerv_patch_radius=1,
         snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
@@ -197,6 +278,8 @@ def _fake_advisory_result(packet: bytes):
         snerv_hfr_gain=0.25,
         snerv_temporal_context=0,
         snerv_temporal_mode="delta",
+        snerv_capacity_source=snerv_capacity_source,
+        official_modelsize_solution=official_modelsize_solution,
         decoder_feature_count=9,
         hf_decoder_fit_mode="least_squares",
         hf_decoder_saliency_gain=1.0,

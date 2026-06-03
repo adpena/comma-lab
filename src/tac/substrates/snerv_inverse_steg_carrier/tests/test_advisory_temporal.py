@@ -9,6 +9,7 @@ from tac.analysis.snerv_step_map_coder import decode_step_maps, encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.advisory import (
     _decode_receiver_codes_into_pairs,
     _LfRecord,
+    resolve_snerv_modelsize_control,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_decoder_payload,
@@ -125,6 +126,45 @@ def test_advisory_temporal_decode_matches_receiver_archive_replay() -> None:
 
     assert receiver_decoder.model_size.temporal_context == 1
     np.testing.assert_array_equal(advisory_recon.cpu().numpy(), receiver_recon)
+
+
+def test_advisory_resolves_official_modelsize_into_receiver_config() -> None:
+    resolution = resolve_snerv_modelsize_control(
+        full_data_length=100,
+        final_size=4096,
+        snerv_fc_dim=9,
+        snerv_fc_dim_explicit=False,
+        snerv_emb_size=2,
+        snerv_official_modelsize_mparams=1.0,
+        snerv_official_enc_strds=(2, 2),
+        snerv_official_dec_strds=(2, 2),
+    )
+
+    assert resolution.capacity_source == "official_snerv_modelsize"
+    assert resolution.model_size.fc_dim > 9
+    assert resolution.official_modelsize_solution is not None
+    assert resolution.official_modelsize_solution["modelsize_mparams"] == 1.0
+    assert resolution.official_modelsize_solution["fc_dim"] == (
+        resolution.model_size.fc_dim
+    )
+    metadata = resolution.metadata()
+    assert metadata["model_size"]["fc_dim"] == resolution.model_size.fc_dim
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+
+
+def test_advisory_rejects_conflicting_manual_fc_dim_and_official_modelsize() -> None:
+    with pytest.raises(SnervCarrierError, match="conflicts"):
+        resolve_snerv_modelsize_control(
+            full_data_length=100,
+            final_size=4096,
+            snerv_fc_dim=3,
+            snerv_fc_dim_explicit=True,
+            snerv_emb_size=2,
+            snerv_official_modelsize_mparams=1.0,
+            snerv_official_enc_strds=(2, 2),
+            snerv_official_dec_strds=(2, 2),
+        )
 
 
 def _temporal_rgb_pairs(*, n_pairs: int, hw: tuple[int, int]) -> np.ndarray:

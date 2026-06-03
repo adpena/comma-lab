@@ -127,6 +127,53 @@ def test_bridge_records_receiver_visible_mfu_hfr_adapter_controls(
     ]
 
 
+def test_bridge_records_official_modelsize_solution_without_score_authority(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-official-modelsize"
+    packet_path = tmp_path / "official_modelsize.snar"
+    packet_path.write_bytes(packet)
+    official_solution = {
+        "schema": "official_snerv_modelsize_to_fc_dim.v1",
+        "source": "official_snerv_train_snerv_modelsize_quadratic_fc_dim_resolver_bound",
+        "modelsize_mparams": 0.05,
+        "full_data_length": 4,
+        "final_size": 384 * 512,
+        "enc_strds": [5, 4, 2, 2, 2],
+        "dec_strds": [5, 4, 2, 2, 2],
+        "fc_dim": 12,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            official_modelsize_solution=official_solution,
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    row = payload["rows"][0]
+    controls = row["official_controls"]
+    assert row["modelsize_mparams"] == 0.05
+    assert controls["--modelsize"] == 0.05
+    assert controls["official_modelsize_solution"]["fc_dim"] == 12
+    assert controls["source_bound_modelsize_control"]["fc_dim"] == 12
+    assert controls["source_bound_modelsize_control"]["score_claim"] is False
+    assert controls["local_modelsize_analogue"]["official_modelsize_authority"] is True
+    assert (
+        "required_emission_field_missing:official_controls.--modelsize"
+        not in payload["blockers"]
+    )
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def _advisory(packet: bytes, **overrides: object) -> SimpleNamespace:
     values = {
         "snerv_model_size_adapter": "snerv_inverse_steg_principled_fork",

@@ -2408,8 +2408,7 @@ def _run_snerv_scorer_loop_qat_attachment(
                 "pair_count": len(prioritized_pair_indices),
                 "consumed_by_cpu_advisory_qat": bool(prioritized_pair_indices),
                 "sampling_scope": "snerv_cpu_advisory_and_scorer_loop_qat_pair_subset",
-                "promotion_authority": False,
-                "contest_score_authority": False,
+                **FALSE_AUTHORITY,
             },
             "levels": int(levels),
             "wavelet": str(wavelet),
@@ -2493,6 +2492,7 @@ def _run_snerv_native_mlx_export_attachment(
     source_video_path: str | Path,
     scorer_upstream_dir: str | Path,
     modelsize_candidate: Mapping[str, Any] | None,
+    prioritized_pair_indices: tuple[int, ...],
     repo_root: str | Path,
     allow_overwrite: bool,
     retain_receiver_output: bool,
@@ -2547,6 +2547,11 @@ def _run_snerv_native_mlx_export_attachment(
             scorer_upstream_dir=Path(scorer_upstream_dir),
             repo_root=Path(repo_root),
             run_archive_export=True,
+            pair_indices=(
+                tuple(int(value) for value in prioritized_pair_indices)
+                if prioritized_pair_indices
+                else None
+            ),
             retain_receiver_output=bool(retain_receiver_output),
             receiver_proof_timeout_seconds=int(receiver_proof_timeout_seconds),
             run_scorer_loop_qat=bool(run_scorer_loop_qat),
@@ -2592,6 +2597,18 @@ def _run_snerv_native_mlx_export_attachment(
             "requested": True,
             "axis_tag": "[macOS-MLX research-signal]",
             "num_pairs": int(num_pairs),
+            "source_pair_indices": [
+                int(value) for value in artifact.get("source_pair_indices") or []
+            ],
+            "prioritized_pair_training": {
+                "schema": "compact_snerv_native_mlx_prioritized_pair_training.v1",
+                "enabled": bool(prioritized_pair_indices),
+                "pair_indices": [int(value) for value in prioritized_pair_indices],
+                "pair_count": len(prioritized_pair_indices),
+                "consumed_by_native_mlx_train_export": bool(prioritized_pair_indices),
+                "sampling_scope": "snerv_native_mlx_target_hydration_pair_subset",
+                **FALSE_AUTHORITY,
+            },
             "artifact_schema": artifact.get("schema"),
             "artifact_report_path": artifact.get("report_path"),
             "packet_path": artifact.get("packet_path"),
@@ -3296,6 +3313,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     packet_path.write_bytes(advisory.receiver_archive_packet)
     advisory_payload = advisory.as_jsonable()
     advisory_payload.setdefault("schema", "snerv_inverse_steg_advisory.v1")
+    advisory_source_pair_indices = _snerv_advisory_source_pair_indices(
+        advisory,
+        advisory_payload,
+        requested_num_pairs=int(num_pairs),
+    )
+    advisory_payload["source_pair_indices"] = [
+        int(value) for value in advisory_source_pair_indices
+    ]
     advisory_payload["receiver_archive_packet_path"] = packet_path.as_posix()
     advisory_archive_bytes_total = int(
         getattr(
@@ -3481,6 +3506,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         source_video_path=resolved_source_video,
         scorer_upstream_dir=scorer_upstream,
         modelsize_candidate=resolved_snerv_modelsize_candidate,
+        prioritized_pair_indices=prioritized_pair_indices,
         repo_root=root,
         allow_overwrite=bool(allow_overwrite),
         retain_receiver_output=bool(keep_local_replay_inflated),
@@ -3589,11 +3615,6 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 )
             ),
             *local_proof_prelaunch_blockers,
-            *(
-                ["snerv_mlx_native_arbitrary_pair_hydration_not_implemented"]
-                if prioritized_pair_indices
-                else []
-            ),
             (
                 "snerv_mlx_native_longer_staged_training_not_executed"
                 if snerv_scorer_loop_qat.get("executed")
@@ -3727,7 +3748,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 ),
                 "decoder_payload_codec": decoder_payload_codec,
                 "source_pair_indices": [
-                    int(value) for value in advisory.source_pair_indices
+                    int(value) for value in advisory_source_pair_indices
                 ],
                 "prioritized_pair_training": {
                     "schema": "compact_snerv_prioritized_pair_training.v1",
@@ -3741,17 +3762,38 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                         prioritized_pair_indices
                         and snerv_scorer_loop_qat.get("executed")
                     ),
-                    "consumed_by_mlx_native_export": False,
+                    "consumed_by_mlx_native_export": bool(
+                        prioritized_pair_indices
+                        and (
+                            (
+                                snerv_mlx_native_export.get(
+                                    "prioritized_pair_training"
+                                )
+                                or {}
+                            ).get("consumed_by_native_mlx_train_export")
+                            is True
+                        )
+                    ),
                     "mlx_native_export_blocker": (
-                        "snerv_mlx_native_arbitrary_pair_hydration_not_implemented"
-                        if prioritized_pair_indices
-                        else None
+                        None
+                        if (
+                            not prioritized_pair_indices
+                            or (
+                                (
+                                    snerv_mlx_native_export.get(
+                                        "prioritized_pair_training"
+                                    )
+                                    or {}
+                                ).get("consumed_by_native_mlx_train_export")
+                                is True
+                            )
+                        )
+                        else "snerv_mlx_native_prioritized_pair_hydration_not_consumed"
                     ),
                     "sampling_scope": (
                         "snerv_cpu_advisory_and_scorer_loop_qat_pair_subset"
                     ),
-                    "promotion_authority": False,
-                    "contest_score_authority": False,
+                    **FALSE_AUTHORITY,
                 },
                 "scorer_loop_component_guard_mode": str(
                     snerv_scorer_loop_component_guard_mode
@@ -8589,8 +8631,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "pair_count": len(prioritized_pair_indices),
                 "sampling_scope": "training_batch_emphasis_only",
                 "authority": "macos_mlx_research_signal_false_authority",
-                "promotion_authority": False,
-                "contest_score_authority": False,
+                "canonical_authority_surface": (
+                    "TrainingArtifact top-level false-authority fields"
+                ),
             },
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_fake_quant_forward": {
@@ -9675,6 +9718,26 @@ def _resolve_optional_compact_family_path(
     if not path.is_absolute():
         path = base / path
     return path.resolve(strict=False)
+
+
+def _snerv_advisory_source_pair_indices(
+    advisory: Any,
+    advisory_payload: Mapping[str, Any],
+    *,
+    requested_num_pairs: int,
+) -> tuple[int, ...]:
+    raw = getattr(advisory, "source_pair_indices", None)
+    if raw is None:
+        raw = advisory_payload.get("source_pair_indices")
+    if raw is not None:
+        return tuple(int(value) for value in raw)
+    raw_count = getattr(
+        advisory,
+        "n_pairs",
+        advisory_payload.get("n_pairs", requested_num_pairs),
+    )
+    count = max(0, int(raw_count))
+    return tuple(range(count))
 
 
 def _active_campaign_lock_payload(

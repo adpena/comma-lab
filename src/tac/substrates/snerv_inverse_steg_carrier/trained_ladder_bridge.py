@@ -107,6 +107,7 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
     patch_radius = _int_attr(advisory_result, "snerv_patch_radius")
     feature_count = _int_attr(advisory_result, "decoder_feature_count")
     mfu_scales = _attr(advisory_result, "snerv_mfu_scales") or ()
+    official_solution = _attr(advisory_result, "official_modelsize_solution")
     if wavelet is not None:
         controls["wavelet"] = wavelet
     if levels is not None:
@@ -122,6 +123,25 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
     controls["mfu_scales"] = [int(v) for v in mfu_scales]
     controls["hfr_gain"] = hfr_gain
     controls["temporal_context"] = temporal_context
+    if isinstance(official_solution, Mapping):
+        modelsize_mparams = _float_mapping_value(
+            official_solution,
+            "modelsize_mparams",
+        )
+        solved_fc_dim = _int_mapping_value(official_solution, "fc_dim")
+        if modelsize_mparams is not None:
+            controls["--modelsize"] = modelsize_mparams
+        controls["official_modelsize_solution"] = dict(official_solution)
+        controls["source_bound_modelsize_control"] = {
+            "schema": "snerv_source_bound_modelsize_control.v1",
+            "--modelsize": modelsize_mparams,
+            "fc_dim": solved_fc_dim,
+            "official_modelsize_solution": dict(official_solution),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        controls["modelsize_control_source"] = "official_snerv_modelsize"
     if fc_dim is not None or emb_size is not None or feature_count is not None:
         controls["local_modelsize_analogue"] = {
             "schema": "snerv_local_modelsize_analogue.v1",
@@ -133,11 +153,16 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
             "temporal_context": temporal_context,
             "adapter": adapter,
             "decoder_feature_count": feature_count,
-            "official_modelsize_authority": False,
+            "official_modelsize_authority": bool(isinstance(official_solution, Mapping)),
+            "official_modelsize_solution": (
+                dict(official_solution)
+                if isinstance(official_solution, Mapping)
+                else None
+            ),
             "authority_note": (
                 "local fc_dim/emb_size/MFU/HFR controls alter receiver decoder "
                 "features and bytes, but are not official SNeRV --modelsize "
-                "authority until upstream OSS parity closes"
+                "stack authority until upstream OSS parity closes"
             ),
         }
     return controls
@@ -184,6 +209,15 @@ def _trainer_metadata(
     }
     if qat_bits is not None:
         metadata["qat_bits"] = int(qat_bits)
+    official_solution = _attr(advisory_result, "official_modelsize_solution")
+    if isinstance(official_solution, Mapping):
+        metadata["official_modelsize_solution"] = dict(official_solution)
+        modelsize_mparams = _float_mapping_value(
+            official_solution,
+            "modelsize_mparams",
+        )
+        if modelsize_mparams is not None:
+            metadata["modelsize_mparams"] = modelsize_mparams
     if archive_path_kind == "receiver_snar_packet":
         packet_bytes = _int_attr(
             advisory_result,
@@ -254,6 +288,20 @@ def _float_attr(value: Any, name: str) -> float | None:
     raw = _attr(value, name)
     try:
         return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _float_mapping_value(value: Mapping[str, Any], name: str) -> float | None:
+    try:
+        return float(value.get(name))
+    except (TypeError, ValueError):
+        return None
+
+
+def _int_mapping_value(value: Mapping[str, Any], name: str) -> int | None:
+    try:
+        return int(value.get(name))
     except (TypeError, ValueError):
         return None
 

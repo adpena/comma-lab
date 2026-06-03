@@ -4993,6 +4993,22 @@ def test_snerv_execution_writes_archive_bound_report_and_reusable_hooks(
         ]
         is False
     )
+    assert (
+        out["score_aware_training"]["prioritized_pair_training"]["score_claim"]
+        is False
+    )
+    assert (
+        out["score_aware_training"]["prioritized_pair_training"][
+            "promotion_eligible"
+        ]
+        is False
+    )
+    assert (
+        out["score_aware_training"]["prioritized_pair_training"][
+            "ready_for_exact_eval_dispatch"
+        ]
+        is False
+    )
     feedback = out["candidate_curriculum_plan"]["byte_oracle_logging"]
     assert feedback["candidate_num_pairs"] == 600
     assert feedback["measured_num_pairs"] == 2
@@ -5204,6 +5220,12 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 "emitted_packet_uses_scorer_loop_best_decoder": False,
             },
             "num_pairs": int(kwargs["num_pairs"]),
+            "source_pair_indices": [
+                int(value)
+                for value in (
+                    kwargs.get("pair_indices") or tuple(range(int(kwargs["num_pairs"])))
+                )
+            ],
             "blockers": [
                 "snerv_mlx_score_aware_long_training_not_executed",
                 "contest_cpu_cuda_exact_eval_not_executed",
@@ -5315,11 +5337,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_scorer_loop_component_guard_mode="pose_seg_hard",
         auto_joint_recon_pixel_weight=True,
         recon_pixel_weight_normalize="none",
+        prioritized_pair_indices=(7, 2, 7),
         repo_root=REPO_ROOT,
     )
 
     assert native_calls
     assert native_calls[0]["num_pairs"] == 2
+    assert native_calls[0]["pair_indices"] == (7, 2)
     assert native_calls[0]["run_scorer_loop_qat"] is True
     assert native_calls[0]["scorer_loop_qat_max_trials"] == 1
     assert native_calls[0]["scorer_loop_qat_search_mode"] == "top_weight_coordinate"
@@ -5337,6 +5361,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["recon_pixel_weight_normalize"] == "none"
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
+    assert native["source_pair_indices"] == [7, 2]
+    assert native["prioritized_pair_training"]["enabled"] is True
+    assert native["prioritized_pair_training"]["pair_indices"] == [7, 2]
+    assert (
+        native["prioritized_pair_training"]["consumed_by_native_mlx_train_export"]
+        is True
+    )
     assert native["receiver_proof_passed"] is True
     assert native["receiver_contract_satisfied"] is True
     assert native["scorer_loop_qat_attached"] is True
@@ -5357,6 +5388,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     )
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
     assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is False
+    top_prioritized = out["score_aware_training"]["prioritized_pair_training"]
+    assert top_prioritized["consumed_by_mlx_native_export"] is True
+    assert top_prioritized["mlx_native_export_blocker"] is None
     assert (
         out["score_aware_training"]["mlx_native_file_backed_export_evidence"][
             "file_backed_export_proof_passed"
@@ -5391,6 +5425,12 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "blockers"
     ]
     assert "snerv_mlx_native_export_partial_pair_coverage" in out["blockers"]
+    assert "snerv_mlx_native_arbitrary_pair_hydration_not_implemented" not in out[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_prioritized_pair_hydration_not_consumed" not in out[
+        "blockers"
+    ]
     assert (
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         in out["blockers"]

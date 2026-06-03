@@ -79,7 +79,10 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_DEFAULT_DEC_STRDS,
+    SNERV_OFFICIAL_DEFAULT_ENC_STRDS,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
+    SnervCarrierError,
     SnervFrameCode,
     SnervModelSizeConfig,
     decode_frame,
@@ -87,6 +90,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     encode_frame_lf,
     fit_hf_decoder_least_squares,
     fit_hf_decoder_weighted_least_squares,
+    official_snerv_modelsize_to_fc_dim,
     quantize_lf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.dwt import (
@@ -98,6 +102,8 @@ __all__ = [
     "CONTEST_BYTE_PRICE",
     "CONTEST_RATE_DENOM",
     "SnervAdvisoryResult",
+    "SnervModelsizeControlResolution",
+    "resolve_snerv_modelsize_control",
     "run_snerv_advisory",
 ]
 
@@ -115,6 +121,26 @@ class _LfRecord:
     frame_index: int
     channel_index: int
     lf: np.ndarray
+
+
+@dataclass(frozen=True)
+class SnervModelsizeControlResolution:
+    """Resolved SNeRV capacity control, preserving the source of authority."""
+
+    model_size: SnervModelSizeConfig
+    capacity_source: str
+    official_modelsize_solution: dict[str, Any] | None
+
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "schema": "snerv_modelsize_control_resolution.v1",
+            "capacity_source": self.capacity_source,
+            "model_size": self.model_size.as_jsonable(),
+            "official_modelsize_solution": self.official_modelsize_solution,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
 
 
 @dataclass(frozen=True)
@@ -139,6 +165,8 @@ class SnervAdvisoryResult:
     snerv_hfr_gain: float
     snerv_temporal_context: int
     snerv_temporal_mode: str
+    snerv_capacity_source: str
+    official_modelsize_solution: dict[str, Any] | None
     decoder_feature_count: int
     hf_decoder_fit_mode: str
     hf_decoder_saliency_gain: float
@@ -407,6 +435,63 @@ def _verify_receiver_archive_full_frame_replay(
         return False, f"{type(exc).__name__}:{exc}", None
 
 
+def resolve_snerv_modelsize_control(
+    *,
+    full_data_length: int,
+    final_size: int,
+    snerv_fc_dim: int = 9,
+    snerv_fc_dim_explicit: bool = False,
+    snerv_emb_size: int = 0,
+    snerv_patch_radius: int = 1,
+    snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
+    snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
+    snerv_hfr_gain: float = 0.0,
+    snerv_temporal_context: int = 0,
+    snerv_temporal_mode: str = "delta",
+    snerv_official_modelsize_mparams: float | None = None,
+    snerv_official_enc_strds: tuple[int, ...] = SNERV_OFFICIAL_DEFAULT_ENC_STRDS,
+    snerv_official_dec_strds: tuple[int, ...] = SNERV_OFFICIAL_DEFAULT_DEC_STRDS,
+) -> SnervModelsizeControlResolution:
+    """Resolve manual ``fc_dim`` or official-style ``--modelsize`` fail-closed."""
+
+    fc_dim = int(snerv_fc_dim)
+    official_solution: dict[str, Any] | None = None
+    capacity_source = "manual_fc_dim"
+    if snerv_official_modelsize_mparams is not None:
+        solution = official_snerv_modelsize_to_fc_dim(
+            modelsize_mparams=float(snerv_official_modelsize_mparams),
+            full_data_length=int(full_data_length),
+            final_size=int(final_size),
+            enc_strds=tuple(int(v) for v in snerv_official_enc_strds),
+            dec_strds=tuple(int(v) for v in snerv_official_dec_strds),
+            emb_size=int(snerv_emb_size),
+        )
+        if bool(snerv_fc_dim_explicit) and fc_dim != int(solution.fc_dim):
+            raise SnervCarrierError(
+                "--snerv-fc-dim conflicts with solved official --modelsize "
+                f"fc_dim: got {fc_dim}, solved {solution.fc_dim}"
+            )
+        fc_dim = int(solution.fc_dim)
+        official_solution = solution.as_jsonable()
+        capacity_source = "official_snerv_modelsize"
+
+    model_size = SnervModelSizeConfig(
+        fc_dim=fc_dim,
+        emb_size=snerv_emb_size,
+        patch_radius=snerv_patch_radius,
+        mfu_scales=tuple(snerv_mfu_scales),
+        hfr_gain=float(snerv_hfr_gain),
+        temporal_context=int(snerv_temporal_context),
+        temporal_mode=str(snerv_temporal_mode),
+        adapter=str(snerv_model_size_adapter),
+    )
+    return SnervModelsizeControlResolution(
+        model_size=model_size,
+        capacity_source=capacity_source,
+        official_modelsize_solution=official_solution,
+    )
+
+
 def run_snerv_advisory(
     *,
     n_pairs: int = 8,
@@ -431,6 +516,7 @@ def run_snerv_advisory(
     decoder_payload_codec: str = "float32_lzma",
     decoder_payload_mixed_modes: tuple[str, ...] | None = None,
     snerv_fc_dim: int = 9,
+    snerv_fc_dim_explicit: bool = False,
     snerv_emb_size: int = 0,
     snerv_patch_radius: int = 1,
     snerv_model_size_adapter: str = "snerv_fc_dim_emb_size_adapter_v1",
@@ -438,6 +524,9 @@ def run_snerv_advisory(
     snerv_hfr_gain: float = 0.0,
     snerv_temporal_context: int = 0,
     snerv_temporal_mode: str = "delta",
+    snerv_official_modelsize_mparams: float | None = None,
+    snerv_official_enc_strds: tuple[int, ...] = SNERV_OFFICIAL_DEFAULT_ENC_STRDS,
+    snerv_official_dec_strds: tuple[int, ...] = SNERV_OFFICIAL_DEFAULT_DEC_STRDS,
 ) -> SnervAdvisoryResult:
     """Run the complete byte-closed SNeRV advisory on ``n_pairs`` real pairs.
 
@@ -480,16 +569,23 @@ def run_snerv_advisory(
             device=device,
         )  # (n_pairs, 2, 3, H, W)
     H, W = int(pairs.shape[-2]), int(pairs.shape[-1])
-    model_size = SnervModelSizeConfig(
-        fc_dim=snerv_fc_dim,
-        emb_size=snerv_emb_size,
-        patch_radius=snerv_patch_radius,
-        mfu_scales=tuple(snerv_mfu_scales),
-        hfr_gain=float(snerv_hfr_gain),
-        temporal_context=int(snerv_temporal_context),
-        temporal_mode=str(snerv_temporal_mode),
-        adapter=str(snerv_model_size_adapter),
+    modelsize_control = resolve_snerv_modelsize_control(
+        full_data_length=int(n_pairs) * 2,
+        final_size=int(H) * int(W),
+        snerv_fc_dim=int(snerv_fc_dim),
+        snerv_fc_dim_explicit=bool(snerv_fc_dim_explicit),
+        snerv_emb_size=int(snerv_emb_size),
+        snerv_patch_radius=int(snerv_patch_radius),
+        snerv_model_size_adapter=str(snerv_model_size_adapter),
+        snerv_mfu_scales=tuple(snerv_mfu_scales),
+        snerv_hfr_gain=float(snerv_hfr_gain),
+        snerv_temporal_context=int(snerv_temporal_context),
+        snerv_temporal_mode=str(snerv_temporal_mode),
+        snerv_official_modelsize_mparams=snerv_official_modelsize_mparams,
+        snerv_official_enc_strds=tuple(int(v) for v in snerv_official_enc_strds),
+        snerv_official_dec_strds=tuple(int(v) for v in snerv_official_dec_strds),
     )
+    model_size = modelsize_control.model_size
 
     # ---- 1. Analyze every frame channel; collect pyramids for decoder fit ----
     # The carrier reconstructs BOTH frames of each pair (d_seg = last frame,
@@ -727,6 +823,9 @@ def run_snerv_advisory(
         "snerv_hfr_gain": float(model_size.hfr_gain),
         "snerv_temporal_context": int(model_size.temporal_context),
         "snerv_temporal_mode": model_size.temporal_mode,
+        "snerv_capacity_source": modelsize_control.capacity_source,
+        "official_modelsize_solution": modelsize_control.official_modelsize_solution,
+        "snerv_modelsize_control_resolution": modelsize_control.metadata(),
         "decoder_feature_count": int(model_size.feature_count),
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
@@ -913,6 +1012,8 @@ def run_snerv_advisory(
         snerv_hfr_gain=float(model_size.hfr_gain),
         snerv_temporal_context=int(model_size.temporal_context),
         snerv_temporal_mode=model_size.temporal_mode,
+        snerv_capacity_source=modelsize_control.capacity_source,
+        official_modelsize_solution=modelsize_control.official_modelsize_solution,
         decoder_feature_count=int(model_size.feature_count),
         hf_decoder_fit_mode=hf_decoder_fit_mode,
         hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
