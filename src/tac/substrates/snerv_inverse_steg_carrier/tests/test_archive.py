@@ -443,6 +443,45 @@ def test_archive_can_carry_official_mfu_hfr_tub_receiver_payload() -> None:
         decoded.decode_decoder()
 
 
+def test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    step_packet = encode_step_maps([np.ones((2, 2), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((2, 2), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+
+    frames = decode_snerv_archive_frames(archive.packet)
+
+    assert frames.shape == (1, 2, 3, 16, 16)
+    assert np.isfinite(frames).all()
+    assert not np.allclose(frames[0, 0], frames[0, 1])
+
+
 def test_official_mfu_hfr_tub_decoder_payload_is_hash_checked() -> None:
     payload = bytearray(
         encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())

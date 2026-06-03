@@ -536,10 +536,11 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert captured["kwargs"]["num_pairs"] == 2
     assert report["executed"] is True
     assert report["snerv_official_mfu_hfr_tub_numeric_primitives_requested"] is True
-    assert report["snerv_official_mfu_hfr_tub_export_bound"] is False
-    assert report["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] is True
+    assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
+    assert report["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] is False
+    assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in report["blockers"]
     assert {
-        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
         "snerv_official_mfu_hfr_tub_weight_mapping_missing",
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
     }.issubset(set(report["blockers"]))
@@ -550,9 +551,10 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert binding["schema"] == "snerv_official_mfu_hfr_tub_export_binding.v3"
     assert binding["primitive_modules_available"] is True
     assert binding["export_bound_to_receiver_packet"] is True
-    assert binding["surrogate_receiver_payload_contract_emitted"] is True
+    assert binding["official_export_bound"] is True
+    assert binding["surrogate_receiver_payload_contract_emitted"] is False
     assert binding["official_receiver_payload_contract_available"] is True
-    assert binding["official_receiver_payload_contract_emitted"] is False
+    assert binding["official_receiver_payload_contract_emitted"] is True
     assert binding["available_official_decoder_payload_schema"] == (
         "snerv_decoder_payload.official_mfu_hfr_tub.v1"
     )
@@ -563,14 +565,12 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert binding["linear_hf_generation_decoder_compatible_with_official_neural_graph"] is False
     authority = binding["selected_packet_authority"]
     assert authority["schema"] == "snerv_selected_packet_official_payload_authority.v1"
-    assert authority["status"] == "surrogate_linear_decoder_frame_producing"
-    assert authority["linear_surrogate_decoder_selected"] is True
-    assert authority["official_decoder_payload_selected"] is False
+    assert authority["status"] == "frame_producing_official_export"
+    assert authority["linear_surrogate_decoder_selected"] is False
+    assert authority["official_decoder_payload_selected"] is True
     assert authority["frame_decode_succeeded"] is True
-    assert authority["frame_producing_official_export"] is False
-    assert authority["blockers"] == [
-        "snerv_selected_packet_uses_linear_surrogate_decoder_payload"
-    ]
+    assert authority["frame_producing_official_export"] is True
+    assert authority["blockers"] == []
     assert {
         "official_encoder_embedding_payload",
         "official_mfu_weight_payload",
@@ -590,39 +590,32 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert surrogate["surrogate_receiver_contract_satisfied"] is False
     assert surrogate["score_claim"] is False
     evidence = {row["blocker"]: row for row in binding["blocker_evidence"]}
-    assert evidence[
-        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-    ]["missing_artifact"].startswith(
-        "native MLX train/export selected packet"
-    )
-    assert evidence[
-        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-    ]["selected_packet_status"] == "surrogate_linear_decoder_frame_producing"
-    assert evidence[
-        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-    ]["selected_packet_frame_producing_official_export"] is False
+    assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in evidence
     assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"]["closure_test"].startswith(
         "map official encoder"
     )
     assert evidence["snerv_official_mfu_hfr_tub_source_forward_replay_missing"]["official_authority"] is False
-    assert binding["export_consumed_official_mfu"] is False
-    assert binding["export_consumed_official_hfr"] is False
-    assert binding["export_consumed_official_tub"] is False
+    assert binding["export_consumed_official_mfu"] is True
+    assert binding["export_consumed_official_hfr"] is True
+    assert binding["export_consumed_official_tub"] is True
     assert binding["source_forward_replay_authority"] is False
     assert binding["receiver_runtime_decode_authority"] is True
-    assert binding["selected_packet_official_payload_runtime_decode_authority"] is False
-    assert binding["selected_packet_frame_producing_official_export"] is False
+    assert binding["selected_packet_official_payload_runtime_decode_authority"] is True
+    assert binding["selected_packet_frame_producing_official_export"] is True
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
-    assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] is True
-    assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is False
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert decoded.metadata["source_faithful_stack"] is False
-    assert decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes()).shape == (
+    official_frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
+    assert official_frames.shape == (
         2,
         2,
         3,
         16,
         16,
     )
+    max_abs_error = float(np.max(np.abs(official_frames - pairs)))
+    assert max_abs_error < 3.0e-2
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
@@ -708,28 +701,21 @@ def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     assert report["receiver_proof_passed"] is True
     assert report["receiver_contract_satisfied"] is True
     assert "snerv_official_receiver_runtime_decode_missing" not in report["blockers"]
-    assert (
-        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-        in report["blockers"]
-    )
+    assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in report["blockers"]
     binding = report["official_primitive_binding"]
     surrogate = binding["receiver_bound_surrogate_export"]
     assert surrogate["archive_sha256"] == report["archive_sha256"]
     assert surrogate["surrogate_receiver_contract_satisfied"] is True
     assert surrogate["surrogate_runtime_consumption_proof_passed"] is True
     assert binding["receiver_runtime_decode_authority"] is True
-    assert binding["selected_packet_official_payload_runtime_decode_authority"] is False
-    assert binding["selected_packet_frame_producing_official_export"] is False
+    assert binding["selected_packet_official_payload_runtime_decode_authority"] is True
+    assert binding["selected_packet_frame_producing_official_export"] is True
     assert binding["selected_packet_authority"]["status"] == (
-        "surrogate_linear_decoder_frame_producing"
+        "frame_producing_official_export"
     )
-    receiver_decode_row = {row["blocker"]: row for row in binding["blocker_evidence"]}[
-        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-    ]
-    assert receiver_decode_row["closed"] is False
-    assert receiver_decode_row["selected_packet_official_decoder_payload_selected"] is False
-    assert receiver_decode_row["surrogate_receiver_runtime_decode_passed"] is True
-    assert receiver_decode_row["official_authority"] is False
+    assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in {
+        row["blocker"] for row in binding["blocker_evidence"]
+    }
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False

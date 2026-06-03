@@ -9,6 +9,7 @@ from tac.substrates.snerv_inverse_steg_carrier import (
     OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS,
     OFFICIAL_SNERV_MFU_SOURCE,
     OFFICIAL_SNERV_T_MFU_SOURCE,
+    SNERV_OFFICIAL_MFU_TORCH_NUMPY_MLX_PARITY_PROOF,
     ConvTranspose2dShapeSpec,
     OfficialConv2dNchw,
     OfficialConvTranspose2dNchw,
@@ -19,8 +20,10 @@ from tac.substrates.snerv_inverse_steg_carrier import (
     OfficialSnervMfuSpec,
     TensorSpec,
     concat_nchw_arrays,
+    concat_nchw_mlx,
     concat_nchw_specs,
     conv_transpose2d_nchw,
+    conv_transpose2d_nchw_mlx,
 )
 
 
@@ -31,7 +34,13 @@ def test_official_mfu_package_exports_are_available() -> None:
     assert snerv.OfficialConvTranspose2dNchw is OfficialConvTranspose2dNchw
     assert snerv.OfficialResidualBlocksWithInputConv is OfficialResidualBlocksWithInputConv
     assert snerv.concat_nchw_arrays is concat_nchw_arrays
+    assert snerv.concat_nchw_mlx is concat_nchw_mlx
     assert snerv.conv_transpose2d_nchw is conv_transpose2d_nchw
+    assert snerv.conv_transpose2d_nchw_mlx is conv_transpose2d_nchw_mlx
+    assert (
+        snerv.SNERV_OFFICIAL_MFU_TORCH_NUMPY_MLX_PARITY_PROOF
+        == SNERV_OFFICIAL_MFU_TORCH_NUMPY_MLX_PARITY_PROOF
+    )
 
 
 def test_official_mfu_shape_trace_matches_source_graph_contract() -> None:
@@ -168,6 +177,41 @@ def test_conv_transpose2d_nchw_matches_torch_convtranspose2d() -> None:
 
     np.testing.assert_allclose(got, expected.detach().numpy(), atol=1e-12, rtol=1e-12)
     np.testing.assert_allclose(module_got, expected.detach().numpy(), atol=1e-12, rtol=1e-12)
+
+
+def test_conv_transpose2d_mlx_modes_match_numpy_reference() -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    rng = np.random.default_rng(111)
+    x = rng.standard_normal((1, 2, 3, 4)).astype(np.float32)
+    weight = (rng.standard_normal((2, 3, 2, 2)) * 0.05).astype(np.float32)
+    bias = (rng.standard_normal(3) * 0.01).astype(np.float32)
+    expected = conv_transpose2d_nchw(
+        x,
+        weight,
+        bias=bias,
+        stride=(2, 2),
+        padding=(0, 0),
+    )
+
+    fixed = conv_transpose2d_nchw_mlx(
+        mx.array(x),
+        weight,
+        bias=bias,
+        stride=(2, 2),
+        padding=(0, 0),
+    )
+    optimized = conv_transpose2d_nchw_mlx(
+        mx.array(x),
+        weight,
+        bias=bias,
+        stride=(2, 2),
+        padding=(0, 0),
+        accumulation_mode="optimized",
+    )
+
+    np.testing.assert_allclose(np.array(fixed), expected, atol=2e-6, rtol=2e-6)
+    np.testing.assert_allclose(np.array(optimized), expected, atol=5e-3, rtol=5e-3)
 
 
 def test_official_mfu_residual_blocks_match_torch_source_block() -> None:
@@ -332,6 +376,36 @@ def test_official_mfu_full_numpy_forward_matches_torch_graph() -> None:
     assert metadata["source_forward_replay_authority"] is False
 
 
+def test_official_mfu_mlx_forward_modes_match_numpy_reference() -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    mfu, low, skip_mid, skip_high = _tiny_mfu_fixture(seed=113)
+    expected = mfu.forward(low, skip_mid, skip_high)
+
+    fixed = mfu.forward_mlx(mx.array(low), mx.array(skip_mid), mx.array(skip_high))
+    optimized = mfu.forward_mlx(
+        mx.array(low),
+        mx.array(skip_mid),
+        mx.array(skip_high),
+        accumulation_mode="optimized",
+    )
+
+    np.testing.assert_allclose(np.array(fixed.up1), expected.up1, atol=2e-6, rtol=2e-6)
+    np.testing.assert_allclose(np.array(fixed.unet1), expected.unet1, atol=2e-5, rtol=2e-5)
+    np.testing.assert_allclose(
+        np.array(fixed.pyr_out),
+        expected.pyr_out,
+        atol=5e-5,
+        rtol=5e-5,
+    )
+    np.testing.assert_allclose(
+        np.array(optimized.pyr_out),
+        expected.pyr_out,
+        atol=5e-3,
+        rtol=5e-3,
+    )
+
+
 def test_official_mfu_rejects_shape_equivalent_non_source_upsamplers() -> None:
     rng = np.random.default_rng(14)
     spec = OfficialSnervMfuSpec(
@@ -460,4 +534,40 @@ def _rb(
             )
             for _ in range(int(blocks))
         ),
+    )
+
+
+def _tiny_mfu_fixture(
+    *,
+    seed: int,
+) -> tuple[OfficialSnervMfu, np.ndarray, np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(seed)
+    spec = OfficialSnervMfuSpec(
+        low_channels=2,
+        mid_channels=3,
+        high_channels=4,
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=1,
+    )
+    mfu = OfficialSnervMfu(
+        spec=spec,
+        upsample_mid=OfficialConvTranspose2dNchw(
+            rng.standard_normal((2, 2, 2, 2)) * 0.04,
+            rng.standard_normal(2) * 0.01,
+            stride=2,
+        ),
+        rb_mid=_rb(rng, in_ch=5, out_ch=3, blocks=1),
+        upsample_high=OfficialConvTranspose2dNchw(
+            rng.standard_normal((3, 3, 2, 2)) * 0.04,
+            rng.standard_normal(3) * 0.01,
+            stride=2,
+        ),
+        rb_high=_rb(rng, in_ch=7, out_ch=4, blocks=1),
+    )
+    return (
+        mfu,
+        rng.standard_normal((1, 2, 2, 3)).astype(np.float32),
+        rng.standard_normal((1, 3, 4, 6)).astype(np.float32),
+        rng.standard_normal((1, 4, 8, 12)).astype(np.float32),
     )

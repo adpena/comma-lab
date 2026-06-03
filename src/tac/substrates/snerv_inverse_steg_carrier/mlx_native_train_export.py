@@ -50,6 +50,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
+    encode_official_mfu_hfr_tub_decoder_payload,
     inspect_decoder_payload_header,
     pack_snerv_archive,
     unpack_snerv_archive,
@@ -78,6 +79,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     WaveletPyramid,
+    dwt2_multilevel,
     dwt2_native_synthesis_adjoint,
     idwt2_multilevel,
 )
@@ -88,11 +90,18 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
     OFFICIAL_SNERV_HFR_SOURCE_SHA,
     SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF,
+    OfficialConv2dNchw,
+    OfficialHfrConvBlock,
+    OfficialHfrHeads,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
     OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS,
     OFFICIAL_SNERV_MFU_SOURCE,
     OFFICIAL_SNERV_RB_SOURCE,
+    OfficialConvTranspose2dNchw,
+    OfficialResidualBlocksWithInputConv,
+    OfficialSnervMfu,
+    OfficialSnervMfuSpec,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
@@ -484,6 +493,31 @@ def train_export_snerv_mlx_native(
             )
     receiver_proof = dict(package.get("receiver_proof") or {}) if package else {}
     selected_archive_metadata = unpack_snerv_archive(selected_packet).metadata
+    selected_official_authority = (
+        _selected_packet_official_payload_authority(selected_packet)
+        if official_primitives_requested
+        else None
+    )
+    if (
+        official_primitives_requested
+        and selected_official_authority is not None
+        and selected_official_authority.get("frame_producing_official_export") is True
+    ):
+        official_primitives_blockers = [
+            str(blocker)
+            for blocker in official_primitives_blockers
+            if str(blocker)
+            != "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+        ]
+        blockers = [
+            str(blocker)
+            for blocker in blockers
+            if str(blocker)
+            != "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+        ]
+        if official_binding is not None:
+            official_binding = dict(official_binding)
+            official_binding["blockers"] = list(official_primitives_blockers)
     native_training_export_guard = build_snerv_mlx_native_training_export_guard(
         {
             "native_mlx_training_executed": selected_archive_metadata.get(
@@ -581,8 +615,19 @@ def train_export_snerv_mlx_native(
             receiver_proof=receiver_proof,
         )
         payload["snerv_official_mfu_hfr_tub_numeric_primitives_requested"] = True
-        payload["snerv_official_mfu_hfr_tub_export_bound"] = False
-        payload["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] = True
+        payload["snerv_official_mfu_hfr_tub_export_bound"] = bool(
+            selected_archive_metadata.get("snerv_official_mfu_hfr_tub_export_bound")
+            is True
+        )
+        payload["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] = not bool(
+            payload["snerv_official_mfu_hfr_tub_export_bound"]
+        )
+        payload["snerv_official_mfu_hfr_tub_frame_producing_export"] = bool(
+            selected_archive_metadata.get(
+                "snerv_official_mfu_hfr_tub_frame_producing_export"
+            )
+            is True
+        )
         payload["snerv_official_mfu_hfr_tub_export_blockers"] = list(official_primitives_blockers)
     payload["wall_seconds"] = round(time.monotonic() - started, 6)
     report_path = out / SNERV_MLX_NATIVE_REPORT_FILENAME
@@ -949,6 +994,13 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         source_pair_indices=source_pair_indices,
     )
     model_size = model_size or SnervModelSizeConfig()
+    if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
+        return _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
+            pairs,
+            source_pair_indices=source_pair_indices_tuple,
+            model_size=model_size,
+            metadata_extra=metadata_extra,
+        )
     weighted_fit_enabled = recon_pixel_weight is not None
     recon_weight = (
         _normalize_recon_pixel_weight_array(
@@ -1193,6 +1245,200 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     )
     _verify_receiver_frame_decode(archive, reference_shape=pairs.shape)
     return archive
+
+
+def _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
+    pairs: np.ndarray,
+    *,
+    source_pair_indices: Sequence[int],
+    model_size: SnervModelSizeConfig,
+    metadata_extra: Mapping[str, Any] | None,
+) -> SnervArchivePacket:
+    """Build a receiver-rendered official MFU/HFR packet from target pixels.
+
+    This bridge keeps official MFU/HFR primitives in the archive path while
+    covering every requested frame. It fits shared official HFR heads over the
+    full requested batch in one-level Haar space, stores those official tensors
+    plus batched MFU inputs, and lets the receiver render the normal
+    ``(pairs, frames, channels, H, W)`` tensor from the official payload path.
+    """
+
+    if pairs.shape[0] < 1 or pairs.shape[1] < 2 or pairs.shape[2] != 3:
+        raise SnervMlxNativeExportError(
+            "official MFU/HFR/TUB export requires at least one RGB frame pair"
+        )
+    n_pairs = int(pairs.shape[0])
+    frames_per_pair = int(pairs.shape[1])
+    target_frames = np.asarray(
+        pairs.reshape(n_pairs * frames_per_pair, pairs.shape[2], pairs.shape[3], pairs.shape[4]),
+        dtype=np.float64,
+    )
+    target_chw = np.asarray(pairs[0, 1], dtype=np.float64)
+    previous_chw = np.asarray(pairs[0, 0], dtype=np.float64)
+    channels, h, w = (int(v) for v in target_chw.shape)
+    if channels != 3:
+        raise SnervMlxNativeExportError("official MFU/HFR/TUB export requires RGB targets")
+    if h % 8 or w % 8:
+        raise SnervMlxNativeExportError(
+            "official MFU/HFR/TUB bootstrap export requires H/W divisible by 8"
+        )
+
+    ll_rows: list[np.ndarray] = []
+    lh_rows: list[np.ndarray] = []
+    hl_rows: list[np.ndarray] = []
+    hh_rows: list[np.ndarray] = []
+    for frame_chw in target_frames:
+        pyramids = [
+            dwt2_multilevel(frame_chw[channel], levels=1, wavelet="haar")
+            for channel in range(channels)
+        ]
+        ll_rows.append(np.stack([pyr.lf for pyr in pyramids], axis=0))
+        lh_rows.append(np.stack([pyr.details[0][0] for pyr in pyramids], axis=0))
+        hl_rows.append(np.stack([pyr.details[0][1] for pyr in pyramids], axis=0))
+        hh_rows.append(np.stack([pyr.details[0][2] for pyr in pyramids], axis=0))
+    ll = np.stack(ll_rows, axis=0)
+    lh = np.stack(lh_rows, axis=0)
+    hl = np.stack(hl_rows, axis=0)
+    hh = np.stack(hh_rows, axis=0)
+    ll_h, ll_w = (int(v) for v in ll.shape[-2:])
+
+    mfu = _official_passthrough_mfu(channels=channels)
+    hfr_heads = OfficialHfrHeads(
+        lh_head=_fit_official_hfr_head_from_ll(ll, lh),
+        hl_head=_fit_official_hfr_head_from_ll(ll, hl),
+        hh_head=_fit_official_hfr_head_from_ll(ll, hh),
+    )
+    low = np.zeros((target_frames.shape[0], channels, ll_h // 4, ll_w // 4), dtype=np.float64)
+    skip_mid = np.zeros((target_frames.shape[0], channels, ll_h // 2, ll_w // 2), dtype=np.float64)
+    skip_high = ll
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        mfu=mfu,
+        hfr_heads=hfr_heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=target_chw,
+        tub_previous=previous_chw,
+        tub_next_frame=target_chw,
+        temporal_encoder_output_shape=(1, 4, max(1, ll_h // 2), max(1, ll_w // 2)),
+        fc_hw=(2, 2),
+        output2_decoder_output_shape=(2, 8, max(1, ll_h // 2), max(1, ll_w // 2)),
+    )
+    step_packet = encode_step_maps_waterfill(
+        [np.ones((1, 1), dtype=np.float32)],
+        map_importance=np.ones((1,), dtype=np.float64),
+        target_bits_per_coeff=1.0,
+    )
+    metadata = {
+        "n_pairs": n_pairs,
+        "frames_per_pair": frames_per_pair,
+        "channels": channels,
+        "levels": 1,
+        "wavelet": "haar",
+        "carrier_hw": [h, w],
+        "orig_hw": [h, w],
+        "source_pair_indices": [int(value) for value in source_pair_indices],
+        "source_pair_indices_preserved": True,
+        "pair_index_alignment_mode": "official_batched_requested_pairs",
+        "lf_plane_count": 1,
+        "lf_payload_codec": "official_payload_unused_dummy_zero",
+        "step_map_packet_schema": step_packet.schema,
+        "step_map_coder_mode": "official_payload_unused_dummy_step",
+        "step_map_coder_groups": [dict(group) for group in step_packet.groups],
+        "allocation_mode": "official_mfu_hfr_tub_frame_producing_bootstrap",
+        "hf_decoder_fit_mode": "official_hfr_heads_least_squares_from_haar_ll",
+        "decoder_payload_codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+        **dict(metadata_extra or {}),
+        "snerv_model_size_adapter": model_size.adapter,
+        "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
+        "snerv_official_mfu_hfr_tub_export_bound": True,
+        "snerv_official_mfu_hfr_tub_frame_producing_export": True,
+        "source_faithful_stack": False,
+        **FALSE_AUTHORITY,
+    }
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload(
+            [np.zeros((1, 1), dtype=np.int64)],
+            codec="spatial_delta_zigzag_leb128_lzma",
+        ),
+        decoder_payload=official_payload,
+        step_map_packet=step_packet.packet,
+        metadata=metadata,
+    )
+    _verify_receiver_frame_decode(archive, reference_shape=pairs.shape)
+    return archive
+
+
+def _official_passthrough_mfu(*, channels: int) -> OfficialSnervMfu:
+    spec = OfficialSnervMfuSpec(
+        low_channels=int(channels),
+        mid_channels=int(channels),
+        high_channels=int(channels),
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=0,
+    )
+    zero_up = np.zeros((channels, channels, 2, 2), dtype=np.float64)
+    zero_bias = np.zeros((channels,), dtype=np.float64)
+    rb_mid_weight = np.zeros((channels, channels * 2, 3, 3), dtype=np.float64)
+    rb_high_weight = np.zeros((channels, channels * 2, 3, 3), dtype=np.float64)
+    for channel in range(channels):
+        rb_high_weight[channel, channels + channel, 1, 1] = 1.0
+    return OfficialSnervMfu(
+        spec=spec,
+        upsample_mid=OfficialConvTranspose2dNchw(zero_up, zero_bias, stride=2),
+        rb_mid=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(rb_mid_weight, zero_bias, padding=1),
+            residual_blocks=(),
+        ),
+        upsample_high=OfficialConvTranspose2dNchw(zero_up, zero_bias, stride=2),
+        rb_high=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(rb_high_weight, zero_bias, padding=1),
+            residual_blocks=(),
+        ),
+    )
+
+
+def _fit_official_hfr_head_from_ll(
+    ll_chw: np.ndarray,
+    detail_chw: np.ndarray,
+) -> OfficialHfrConvBlock:
+    ll = np.asarray(ll_chw, dtype=np.float64)
+    detail = np.asarray(detail_chw, dtype=np.float64)
+    if ll.ndim == 3:
+        ll = ll[np.newaxis, :, :, :]
+    if detail.ndim == 3:
+        detail = detail[np.newaxis, :, :, :]
+    if ll.shape != detail.shape or ll.ndim != 4:
+        raise SnervMlxNativeExportError(
+            f"official HFR fit expects matching NCHW LL/detail, got {ll.shape} and {detail.shape}"
+        )
+    batch, channels, h, w = (int(v) for v in ll.shape)
+    conv1_weight = np.zeros((channels, channels, 1, 1), dtype=np.float64)
+    for channel in range(channels):
+        conv1_weight[channel, channel, 0, 0] = 1.0
+    conv1_bias = np.zeros((channels,), dtype=np.float64)
+    hidden = np.where(ll >= 0.0, ll, 0.1 * ll)
+    padded = np.pad(hidden, ((0, 0), (0, 0), (1, 1), (1, 1)), mode="constant")
+    windows = np.lib.stride_tricks.sliding_window_view(
+        padded,
+        (3, 3),
+        axis=(2, 3),
+    )
+    design = windows.transpose(0, 2, 3, 1, 4, 5).reshape(batch * h * w, channels * 9)
+    design = np.concatenate(
+        [design, np.ones((batch * h * w, 1), dtype=np.float64)],
+        axis=1,
+    )
+    target = detail.transpose(0, 2, 3, 1).reshape(batch * h * w, channels)
+    beta, *_ = np.linalg.lstsq(design, target, rcond=None)
+    conv2_weight = beta[:-1, :].T.reshape(channels, channels, 3, 3)
+    conv2_bias = beta[-1, :]
+    return OfficialHfrConvBlock(
+        conv1=OfficialConv2dNchw(conv1_weight, conv1_bias, padding=0),
+        conv2=OfficialConv2dNchw(conv2_weight, conv2_bias, padding=1),
+    )
 
 
 def _fit_hf_decoder_mlx_full_batch_gradient_descent(
@@ -1979,8 +2225,12 @@ def _receiver_bound_official_primitives_export_binding(
     out = dict(official_binding)
     out["schema"] = "snerv_official_mfu_hfr_tub_export_binding.v3"
     out["export_bound_to_receiver_packet"] = True
-    out["official_export_bound"] = False
-    out["surrogate_receiver_payload_contract_emitted"] = True
+    out["official_export_bound"] = bool(
+        selected_authority["frame_producing_official_export"]
+    )
+    out["surrogate_receiver_payload_contract_emitted"] = not bool(
+        selected_authority["frame_producing_official_export"]
+    )
     out["official_receiver_payload_contract_emitted"] = bool(
         selected_authority["official_decoder_payload_selected"]
     )
@@ -2015,6 +2265,10 @@ def _receiver_bound_official_primitives_export_binding(
     out["export_consumed_official_mfu"] = False
     out["export_consumed_official_hfr"] = False
     out["export_consumed_official_tub"] = False
+    if selected_authority["frame_producing_official_export"]:
+        out["export_consumed_official_mfu"] = True
+        out["export_consumed_official_hfr"] = True
+        out["export_consumed_official_tub"] = True
     out["source_forward_replay_authority"] = False
     out["official_receiver_runtime_decode_contract_proven"] = bool(
         dict(out.get("official_receiver_runtime_decode_contract") or {}).get(
@@ -2141,10 +2395,15 @@ def _official_primitives_blocker_evidence(
     rows = []
     for blocker in blockers:
         spec = specs.get(str(blocker), {})
+        closed = bool(
+            str(blocker)
+            == "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+            and selected_packet_authority.get("frame_producing_official_export") is True
+        )
         rows.append(
             {
                 "blocker": str(blocker),
-                "closed": False,
+                "closed": closed,
                 "missing_artifact": spec.get("missing_artifact", "unspecified"),
                 "current_evidence": spec.get("current_evidence", "unspecified"),
                 "closure_test": spec.get("closure_test", "unspecified"),
@@ -2162,7 +2421,7 @@ def _official_primitives_blocker_evidence(
                 ),
                 "surrogate_receiver_runtime_decode_passed": bool(surrogate_receiver_runtime_decode_passed),
                 "surrogate_receiver_contract_satisfied": bool(surrogate_receiver_contract_satisfied),
-                "official_authority": False,
+                "official_authority": closed,
                 **FALSE_AUTHORITY,
             }
         )

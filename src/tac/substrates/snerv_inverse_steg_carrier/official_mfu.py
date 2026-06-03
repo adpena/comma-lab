@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 import numpy as np
 
@@ -21,6 +21,7 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     FALSE_AUTHORITY,
     OfficialConv2dNchw,
     leaky_relu01,
+    leaky_relu01_mlx,
 )
 
 OFFICIAL_SNERV_MFU_SOURCE: Final[str] = (
@@ -37,6 +38,9 @@ OFFICIAL_SNERV_RB_SOURCE: Final[str] = (
 OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS: Final[tuple[str, ...]] = (
     "official_weight_tensor_mapping_not_loaded",
     "full_official_mfu_forward_artifact_not_emitted",
+)
+SNERV_OFFICIAL_MFU_TORCH_NUMPY_MLX_PARITY_PROOF: Final[str] = (
+    "official_snerv_mfu_torch_numpy_mlx_forward_modes"
 )
 
 
@@ -268,6 +272,24 @@ class OfficialConvTranspose2dNchw:
             groups=self.groups,
         )
 
+    def forward_mlx(
+        self,
+        x: Any,
+        *,
+        accumulation_mode: str = "fixed_fp32",
+    ) -> Any:
+        return conv_transpose2d_nchw_mlx(
+            x,
+            self.weight,
+            bias=self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            output_padding=self.output_padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            accumulation_mode=accumulation_mode,
+        )
+
 
 @dataclass(frozen=True)
 class OfficialResidualBlockNoBN:
@@ -300,6 +322,22 @@ class OfficialResidualBlockNoBN:
             )
         out = leaky_relu01(self.conv1.forward(arr))
         return (arr + self.conv2.forward(out)).astype(np.float64, copy=False)
+
+    def forward_mlx(
+        self,
+        x: Any,
+        *,
+        accumulation_mode: str = "fixed_fp32",
+    ) -> Any:
+        x_shape = _ensure_nchw_shape(x)
+        if int(x_shape[1]) != self.channels:
+            raise OfficialSnervMfuError(
+                f"ResidualBlockNoBN expected {self.channels} channels, got {x_shape[1]}"
+            )
+        out = leaky_relu01_mlx(
+            self.conv1.forward_mlx(x, accumulation_mode=accumulation_mode)
+        )
+        return x + self.conv2.forward_mlx(out, accumulation_mode=accumulation_mode)
 
 
 @dataclass(frozen=True)
@@ -338,6 +376,22 @@ class OfficialResidualBlocksWithInputConv:
         for block in self.residual_blocks:
             out = block.forward(out)
         return out.astype(np.float64, copy=False)
+
+    def forward_mlx(
+        self,
+        x: Any,
+        *,
+        accumulation_mode: str = "fixed_fp32",
+    ) -> Any:
+        x_shape = _ensure_nchw_shape(x)
+        if int(x_shape[1]) != self.in_channels:
+            raise OfficialSnervMfuError(
+                f"RB expected {self.in_channels} input channels, got {x_shape[1]}"
+            )
+        out = self.input_conv.forward_mlx(x, accumulation_mode=accumulation_mode)
+        for block in self.residual_blocks:
+            out = block.forward_mlx(out, accumulation_mode=accumulation_mode)
+        return out
 
 
 @dataclass(frozen=True)
@@ -450,6 +504,54 @@ class OfficialSnervMfu:
         unet1_up = self.upsample_high.forward(unet1)
         cat_high = concat_nchw_arrays((unet1_up, skip_high_arr))
         pyr_out = self.rb_high.forward(cat_high)
+        return OfficialSnervMfuForwardOutput(
+            up1=up1,
+            cat_mid=cat_mid,
+            unet1=unet1,
+            unet1_up=unet1_up,
+            cat_high=cat_high,
+            pyr_out=pyr_out,
+        )
+
+    def forward_mlx(
+        self,
+        low: Any,
+        skip_mid: Any,
+        skip_high: Any,
+        *,
+        accumulation_mode: str = "fixed_fp32",
+    ) -> OfficialSnervMfuForwardOutput:
+
+        low_shape = _ensure_nchw_shape(low)
+        skip_mid_shape = _ensure_nchw_shape(skip_mid)
+        skip_high_shape = _ensure_nchw_shape(skip_high)
+        if int(low_shape[1]) != self.spec.low_channels:
+            raise OfficialSnervMfuError(
+                f"low channels {low_shape[1]} do not match spec {self.spec.low_channels}"
+            )
+        if int(skip_mid_shape[1]) != self.spec.mid_channels:
+            raise OfficialSnervMfuError(
+                f"skip_mid channels {skip_mid_shape[1]} do not match spec {self.spec.mid_channels}"
+            )
+        if int(skip_high_shape[1]) != self.spec.high_channels:
+            raise OfficialSnervMfuError(
+                f"skip_high channels {skip_high_shape[1]} do not match spec {self.spec.high_channels}"
+            )
+        up1 = self.upsample_mid.forward_mlx(
+            low,
+            accumulation_mode=accumulation_mode,
+        )
+        cat_mid = concat_nchw_mlx((up1, skip_mid))
+        unet1 = self.rb_mid.forward_mlx(cat_mid, accumulation_mode=accumulation_mode)
+        unet1_up = self.upsample_high.forward_mlx(
+            unet1,
+            accumulation_mode=accumulation_mode,
+        )
+        cat_high = concat_nchw_mlx((unet1_up, skip_high))
+        pyr_out = self.rb_high.forward_mlx(
+            cat_high,
+            accumulation_mode=accumulation_mode,
+        )
         return OfficialSnervMfuForwardOutput(
             up1=up1,
             cat_mid=cat_mid,
@@ -815,6 +917,26 @@ def concat_nchw_arrays(arrays: Iterable[np.ndarray]) -> np.ndarray:
     return np.concatenate(parts, axis=1).astype(np.float64, copy=False)
 
 
+def concat_nchw_mlx(arrays: Iterable[Any]) -> Any:
+    """Execute official ``torch.cat(..., dim=1)`` for MLX NCHW tensors."""
+
+    import mlx.core as mx
+
+    parts = tuple(arrays)
+    if len(parts) < 2:
+        raise OfficialSnervMfuError("skip concat needs at least two tensors")
+    first_shape = _ensure_nchw_shape(parts[0])
+    n, _c, h, w = first_shape
+    for part in parts:
+        shape = _ensure_nchw_shape(part)
+        if (shape[0], shape[2], shape[3]) != (n, h, w):
+            raise OfficialSnervMfuError(
+                "skip concat requires matching N/H/W; "
+                f"got {first_shape} and {shape}"
+            )
+    return mx.concatenate(tuple(mx.array(part) for part in parts), axis=1)
+
+
 def _validate_official_upsampler_contract(
     module: OfficialConvTranspose2dNchw,
     *,
@@ -945,6 +1067,84 @@ def conv_transpose2d_nchw(
     return out.astype(np.float64, copy=False)
 
 
+def conv_transpose2d_nchw_mlx(
+    x: Any,
+    weight: np.ndarray,
+    *,
+    bias: np.ndarray | None = None,
+    stride: int | tuple[int, int] = 1,
+    padding: int | tuple[int, int] = 0,
+    output_padding: int | tuple[int, int] = 0,
+    dilation: int | tuple[int, int] = 1,
+    groups: int = 1,
+    accumulation_mode: str = "fixed_fp32",
+) -> Any:
+    """MLX implementation of PyTorch-style NCHW/IOHW ConvTranspose2d.
+
+    ``fixed_fp32`` uses the NumPy reference and returns an MLX tensor, which is
+    slow but deterministic enough for parity and replay. ``optimized`` uses
+    MLX's native NHWC ``conv_transpose2d`` for long local training. MLX 0.31
+    supports only ``groups=1`` for the native op, matching official SNeRV MFU.
+    """
+
+    import mlx.core as mx
+
+    x_shape = _ensure_nchw_shape(x)
+    w64 = np.asarray(weight, dtype=np.float64)
+    if w64.ndim != 4:
+        raise OfficialSnervMfuError(f"weight must be IOHW, got {w64.shape}")
+    if int(x_shape[1]) != int(w64.shape[0]):
+        raise OfficialSnervMfuError(
+            f"input channels {x_shape[1]} do not match weight channels {w64.shape[0]}"
+        )
+    b64 = None if bias is None else np.asarray(bias, dtype=np.float64)
+    stride_pair = _pair_int(stride, "stride")
+    padding_pair = _pair_int(padding, "padding", minimum=0)
+    output_padding_pair = _pair_int(output_padding, "output_padding", minimum=0)
+    dilation_pair = _pair_int(dilation, "dilation")
+    groups_i = int(groups)
+    if groups_i != 1:
+        raise OfficialSnervMfuError(
+            "official MLX ConvTranspose2d path currently supports groups=1"
+        )
+    out_channels = int(w64.shape[1])
+    if b64 is not None and b64.shape != (out_channels,):
+        raise OfficialSnervMfuError(
+            f"bias shape {b64.shape} does not match out channels {out_channels}"
+        )
+    if str(accumulation_mode) != "optimized":
+        ref = conv_transpose2d_nchw(
+            np.asarray(x),
+            w64,
+            bias=b64,
+            stride=stride_pair,
+            padding=padding_pair,
+            output_padding=output_padding_pair,
+            dilation=dilation_pair,
+            groups=groups_i,
+        )
+        return mx.array(ref.astype(np.float32, copy=False))
+
+    x_mx = mx.array(x)
+    x_nhwc = mx.transpose(x_mx, (0, 2, 3, 1))
+    weight_ohwi = mx.array(np.transpose(w64, (1, 2, 3, 0)).astype(np.float32, copy=False))
+    out_nhwc = mx.conv_transpose2d(
+        x_nhwc,
+        weight_ohwi,
+        stride=stride_pair,
+        padding=padding_pair,
+        dilation=dilation_pair,
+        output_padding=output_padding_pair,
+        groups=groups_i,
+    )
+    if b64 is not None:
+        out_nhwc = out_nhwc + mx.reshape(
+            mx.array(b64.astype(np.float32, copy=False)),
+            (1, 1, 1, int(b64.shape[0])),
+        )
+    return mx.transpose(out_nhwc, (0, 3, 1, 2))
+
+
 def _conv_transpose2d_axis(
     size: int,
     *,
@@ -969,6 +1169,13 @@ def _ensure_nchw_array(x: np.ndarray) -> np.ndarray:
     if arr.ndim != 4:
         raise OfficialSnervMfuError(f"expected NCHW tensor, got {arr.shape}")
     return arr
+
+
+def _ensure_nchw_shape(x: Any) -> tuple[int, int, int, int]:
+    shape = tuple(int(v) for v in getattr(x, "shape", ()))
+    if len(shape) != 4:
+        raise OfficialSnervMfuError(f"expected NCHW tensor, got {shape}")
+    return shape
 
 
 def _pair_int(
@@ -1004,6 +1211,7 @@ __all__ = [
     "OFFICIAL_SNERV_MFU_SOURCE",
     "OFFICIAL_SNERV_RB_SOURCE",
     "OFFICIAL_SNERV_T_MFU_SOURCE",
+    "SNERV_OFFICIAL_MFU_TORCH_NUMPY_MLX_PARITY_PROOF",
     "ConvTranspose2dShapeSpec",
     "NchwShape",
     "OfficialConvTranspose2dNchw",
@@ -1018,6 +1226,8 @@ __all__ = [
     "ResidualBlocksWithInputConvSpec",
     "TensorSpec",
     "concat_nchw_arrays",
+    "concat_nchw_mlx",
     "concat_nchw_specs",
     "conv_transpose2d_nchw",
+    "conv_transpose2d_nchw_mlx",
 ]

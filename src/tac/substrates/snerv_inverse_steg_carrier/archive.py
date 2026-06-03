@@ -392,11 +392,9 @@ class OfficialMfuHfrTubReceiverPayload:
     def decode_frame_planes(self, *, clip_to_uint8_range: bool = True) -> list[np.ndarray]:
         """Render official MFU/HFR payload outputs into receiver frame planes.
 
-        This is the first frame-producing official-payload bridge: archived MFU
-        tensors generate the LL/pyr output, archived HFR heads generate
-        LH/HL/HH detail planes, and the receiver performs one-level Haar
-        synthesis. It deliberately remains one-frame-per-payload until the full
-        official temporal/pair graph is mapped.
+        This frame-producing official-payload bridge uses archived MFU tensors
+        to generate the LL/pyr output, archived HFR heads to generate LH/HL/HH
+        detail planes, and one-level Haar synthesis for every batch element.
         """
 
         low, skip_mid, skip_high = self.mfu_inputs()
@@ -488,8 +486,10 @@ def _official_mfu_hfr_frame_planes(
         raise SnervArchiveError(
             f"official HFR yh_out must be (N,C,3,H,W), got {yh.shape}"
         )
-    if int(ll.shape[0]) != 1 or int(yh.shape[0]) != 1:
-        raise SnervArchiveError("official frame decode currently supports batch=1")
+    if int(ll.shape[0]) != int(yh.shape[0]):
+        raise SnervArchiveError(
+            f"official MFU batch {ll.shape[0]} != HFR batch {yh.shape[0]}"
+        )
     if tuple(int(v) for v in ll.shape[-2:]) != tuple(int(v) for v in yh.shape[-2:]):
         raise SnervArchiveError(
             f"official LL shape {ll.shape[-2:]} != HFR detail shape {yh.shape[-2:]}"
@@ -502,26 +502,27 @@ def _official_mfu_hfr_frame_planes(
         )
     planes: list[np.ndarray] = []
     h, w = int(ll.shape[-2]), int(ll.shape[-1])
-    for channel in range(detail_channels):
-        ll_channel = 0 if int(ll.shape[1]) == 1 else channel
-        pyramid = WaveletPyramid(
-            coeffs=[
-                ll[0, ll_channel],
-                (
-                    yh[0, channel, 0],
-                    yh[0, channel, 1],
-                    yh[0, channel, 2],
-                ),
-            ],
-            levels=1,
-            wavelet="haar",
-            orig_hw=(2 * h, 2 * w),
-            padded_hw=(2 * h, 2 * w),
-        )
-        plane = idwt2_multilevel(pyramid)
-        if clip_to_uint8_range:
-            plane = np.clip(plane, 0.0, 255.0)
-        planes.append(np.asarray(plane, dtype=np.float32))
+    for batch in range(int(ll.shape[0])):
+        for channel in range(detail_channels):
+            ll_channel = 0 if int(ll.shape[1]) == 1 else channel
+            pyramid = WaveletPyramid(
+                coeffs=[
+                    ll[batch, ll_channel],
+                    (
+                        yh[batch, channel, 0],
+                        yh[batch, channel, 1],
+                        yh[batch, channel, 2],
+                    ),
+                ],
+                levels=1,
+                wavelet="haar",
+                orig_hw=(2 * h, 2 * w),
+                padded_hw=(2 * h, 2 * w),
+            )
+            plane = idwt2_multilevel(pyramid)
+            if clip_to_uint8_range:
+                plane = np.clip(plane, 0.0, 255.0)
+            planes.append(np.asarray(plane, dtype=np.float32))
     return planes
 
 
