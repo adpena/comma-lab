@@ -1211,13 +1211,10 @@ def _selected_candidates(
     for row in payload.get("selected_candidates", []):
         if not isinstance(row, Mapping) or row.get("family") != family:
             continue
-        candidate = dict(row)
-        authority_blockers = _candidate_authority_blockers(candidate)
+        authority_blockers = _candidate_authority_blockers(row)
+        candidate = _scrub_candidate_authority_flags(row)
         if authority_blockers:
             candidate["_candidate_authority_blockers"] = authority_blockers
-            for key in _AUTHORITY_TRUE_KEYS:
-                if key in candidate:
-                    candidate[key] = False
         rows.append(candidate)
     if family == "snerv":
         rows.sort(key=_snerv_long_training_candidate_sort_key)
@@ -1234,11 +1231,47 @@ def _selected_candidates(
 def _candidate_authority_blockers(candidate: Mapping[str, Any]) -> list[str]:
     return _dedupe(
         [
-            f"selected_candidate_authority_flag_true:{key}"
-            for key in _AUTHORITY_TRUE_KEYS
-            if _truthy_authority_value(candidate.get(key))
+            f"selected_candidate_authority_flag_true:{path}"
+            for path in _iter_truthy_authority_paths(candidate)
         ]
     )
+
+
+def _scrub_candidate_authority_flags(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        scrubbed: dict[str, Any] = {}
+        for key, raw in value.items():
+            text_key = str(key)
+            if text_key in _AUTHORITY_TRUE_KEYS:
+                scrubbed[text_key] = False
+            else:
+                scrubbed[text_key] = _scrub_candidate_authority_flags(raw)
+        return scrubbed
+    if isinstance(value, list):
+        return [_scrub_candidate_authority_flags(item) for item in value]
+    if isinstance(value, tuple):
+        return [_scrub_candidate_authority_flags(item) for item in value]
+    return value
+
+
+def _iter_truthy_authority_paths(
+    value: Any,
+    *,
+    prefix: str = "",
+) -> list[str]:
+    paths: list[str] = []
+    if isinstance(value, Mapping):
+        for key, raw in value.items():
+            text_key = str(key)
+            path = f"{prefix}.{text_key}" if prefix else text_key
+            if text_key in _AUTHORITY_TRUE_KEYS and _truthy_authority_value(raw):
+                paths.append(path)
+            paths.extend(_iter_truthy_authority_paths(raw, prefix=path))
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        for index, raw in enumerate(value):
+            path = f"{prefix}[{index}]" if prefix else f"[{index}]"
+            paths.extend(_iter_truthy_authority_paths(raw, prefix=path))
+    return paths
 
 
 def _truthy_authority_value(value: Any) -> bool:

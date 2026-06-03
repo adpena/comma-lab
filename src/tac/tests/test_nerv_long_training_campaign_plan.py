@@ -393,6 +393,50 @@ def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> 
     assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
 
 
+def test_long_training_campaign_plan_scrubs_nested_candidate_authority_flags() -> None:
+    snerv_budget = _snerv_budget()
+    candidate = dict(snerv_budget["selected_candidates"][0])
+    candidate["score_claim"] = True
+    candidate["metadata"] = {
+        "score_claim": True,
+        "nested": {"ready_for_exact_eval_dispatch": True},
+    }
+    candidate["section_rows"] = [{"promotion_eligible": True}]
+    snerv_budget["selected_candidates"] = [candidate]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert "selected_candidate_authority_flag_true:score_claim" in snerv_row[
+        "blockers"
+    ]
+    assert "selected_candidate_authority_flag_true:metadata.score_claim" in snerv_row[
+        "blockers"
+    ]
+    assert (
+        "selected_candidate_authority_flag_true:"
+        "metadata.nested.ready_for_exact_eval_dispatch"
+    ) in snerv_row["blockers"]
+    assert (
+        "selected_candidate_authority_flag_true:section_rows[0].promotion_eligible"
+        in snerv_row["blockers"]
+    )
+    emitted = snerv_row["candidate"]
+    assert emitted["score_claim"] is False
+    assert emitted["metadata"]["score_claim"] is False
+    assert emitted["metadata"]["nested"]["ready_for_exact_eval_dispatch"] is False
+    assert emitted["section_rows"][0]["promotion_eligible"] is False
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+
+
 def test_long_training_campaign_plan_executes_snerv_official_temporal_mode() -> None:
     snerv_budget = _snerv_budget()
     candidate = dict(snerv_budget["selected_candidates"][0])

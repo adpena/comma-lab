@@ -499,6 +499,36 @@ def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None
     }
 
 
+def test_snerv_modelsize_budget_records_invalid_official_modelsize_without_aborting() -> None:
+    report = build_snerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        per_ceiling_limit=4,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        fc_dims=(9,),
+        emb_sizes=(0, 2),
+        official_modelsize_mparams=(0.05,),
+        temporal_context=2,
+        temporal_modes=("delta", "official_haar_dwt1d_lowpass"),
+    )
+
+    assert report["schema"] == "snerv_modelsize_budget.v1"
+    assert report["candidate_count"] > 0
+    assert report["selected_candidate_count"] > 0
+    assert report["invalid_candidate_count"] > 0
+    invalid = report["invalid_candidates"][0]
+    assert invalid["schema"] == "snerv_invalid_official_modelsize_candidate.v1"
+    assert invalid["official_modelsize_mparams"] == 0.05
+    assert invalid["emb_size"] == 2
+    assert invalid["error_type"] == "SnervCarrierError"
+    assert "snerv_official_modelsize_quadratic_unsatisfied" in invalid["blockers"]
+    assert invalid["score_claim"] is False
+    assert invalid["rank_or_kill_eligible"] is False
+    assert invalid["ready_for_exact_eval_dispatch"] is False
+    assert report["score_claim"] is False
+
+
 def test_snerv_modelsize_selection_preserves_official_source_metadata() -> None:
     report = build_snerv_modelsize_budget_report(
         hard_byte_ceilings=(178_000,),
