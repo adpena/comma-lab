@@ -235,6 +235,9 @@ def main(argv: list[str] | None = None) -> int:
         "output_md_sha256": None if md_result is None else md_result.sha256,
         "hinerv_selected_candidate_count": int(hinerv["selected_candidate_count"]),
         "snerv_selected_candidate_count": int(snerv["selected_candidate_count"]),
+        "snerv_invalid_candidate_count": int(
+            snerv.get("invalid_candidate_count") or 0
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -254,6 +257,7 @@ def _render_markdown(hinerv: dict[str, Any], snerv: dict[str, Any]) -> str:
         "",
         f"- HiNeRV selected candidates: `{hinerv['selected_candidate_count']}`",
         f"- SNeRV selected candidates: `{snerv['selected_candidate_count']}`",
+        f"- SNeRV invalid official controls skipped: `{snerv.get('invalid_candidate_count', 0)}`",
         f"- Num pairs: `{hinerv['num_pairs']}`",
         f"- Score claim: `{hinerv['score_claim']}`",
         f"- Ready for exact eval: `{hinerv['ready_for_exact_eval_dispatch']}`",
@@ -264,6 +268,10 @@ def _render_markdown(hinerv: dict[str, Any], snerv: dict[str, Any]) -> str:
     lines.extend(_candidate_lines(hinerv.get("selected_candidates") or []))
     lines.extend(["", "## Top SNeRV Candidates", ""])
     lines.extend(_candidate_lines(snerv.get("selected_candidates") or []))
+    invalid_snerv = snerv.get("invalid_candidates") or []
+    if invalid_snerv:
+        lines.extend(["", "## Skipped SNeRV Official Controls", ""])
+        lines.extend(_invalid_candidate_lines(invalid_snerv))
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -288,6 +296,19 @@ def _candidate_lines(rows: list[dict[str, Any]]) -> list[str]:
             f"`{row.get('candidate_id')}` "
             f"payload=`{payload_bytes}` "
             f"nominal_under_ceiling=`{row.get('nominal_under_ceiling')}`"
+        )
+    return out or ["- none"]
+
+
+def _invalid_candidate_lines(rows: list[dict[str, Any]]) -> list[str]:
+    out = []
+    for row in rows[:8]:
+        out.append(
+            "- "
+            f"modelsize=`{row.get('official_modelsize_mparams')}` "
+            f"emb_size=`{row.get('emb_size')}` "
+            f"temporal_mode=`{row.get('temporal_mode')}` "
+            f"error_type=`{row.get('error_type')}`"
         )
     return out or ["- none"]
 

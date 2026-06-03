@@ -46,7 +46,7 @@ DEFAULT_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "teacher",
     "student",
 )
-DEFAULT_ACTION_BITS: tuple[int, ...] = (0, 2, 4, 8, 16, 32)
+DEFAULT_ACTION_BITS: tuple[int, ...] = (0, 2, 4, 6, 7, 8, 16, 32)
 SALIENCY_CALIBRATION_MODES: tuple[str, ...] = (
     "none",
     "max",
@@ -623,9 +623,9 @@ def _validated_action_bits(bits: Sequence[int]) -> tuple[int, ...]:
     for bit in parsed:
         if bit < 0 or bit > 32:
             raise NervDecoderWeightWaterfillError("action bits must be in [0, 32]")
-        if bit not in {0, 2, 4, 8, 16, 32}:
+        if bit not in set(DEFAULT_ACTION_BITS):
             raise NervDecoderWeightWaterfillError(
-                "supported action bits are 0, 2, 4, 8, 16, 32"
+                "supported action bits are 0, 2, 4, 6, 7, 8, 16, 32"
             )
     return parsed
 

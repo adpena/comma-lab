@@ -58,6 +58,8 @@ HI_NERV_DECODER_WATERFILL_ACTUATION_BLOCKERS: frozenset[str] = frozenset(
         "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin",
     }
 )
+HI_NERV_QUANT_NOISE_BITS: tuple[int, ...] = (2, 4, 6, 7, 8)
+HI_NERV_DECODER_WATERFILL_ACTION_BITS: tuple[int, ...] = (0, 2, 4, 6, 7, 8, 16, 32)
 
 
 class HiNervBitstreamError(ValueError):
@@ -199,8 +201,10 @@ def apply_decoder_quant_noise(
             "max_abs_delta": 0.0,
         }
     bits = int(quant_bits)
-    if bits not in (2, 4, 8):
-        raise HiNervBitstreamError("quant_noise_bits must be one of 2, 4, 8")
+    if bits not in set(HI_NERV_QUANT_NOISE_BITS):
+        raise HiNervBitstreamError(
+            "quant_noise_bits must be one of 2, 4, 6, 7, 8"
+        )
     if scale < 0.0:
         raise HiNervBitstreamError("quant_noise_scale must be non-negative")
 
@@ -774,9 +778,10 @@ def _waterfill_selected_bits(row: Mapping[str, Any]) -> int:
         raise HiNervBitstreamError(
             "decoder waterfill row missing integer selected_bits"
         ) from exc
-    if bits not in {0, 2, 4, 8, 16, 32}:
+    if bits not in set(HI_NERV_DECODER_WATERFILL_ACTION_BITS):
         raise HiNervBitstreamError(
-            "decoder waterfill selected_bits must be one of 0, 2, 4, 8, 16, 32"
+            "decoder waterfill selected_bits must be one of "
+            "0, 2, 4, 6, 7, 8, 16, 32"
         )
     return bits
 
@@ -794,8 +799,10 @@ def _apply_waterfill_bits(tensor: torch.Tensor, *, bits: int) -> torch.Tensor:
 
 
 def _symmetric_quant_dequant_tensor(tensor: torch.Tensor, *, bits: int) -> torch.Tensor:
-    if bits not in {2, 4, 8}:
-        raise HiNervBitstreamError("symmetric quant/dequant bits must be 2, 4, or 8")
+    if bits not in {2, 4, 6, 7, 8}:
+        raise HiNervBitstreamError(
+            "symmetric quant/dequant bits must be one of 2, 4, 6, 7, 8"
+        )
     arr = tensor.detach().to("cpu", dtype=torch.float32)
     if arr.numel() == 0:
         return tensor.detach().clone()
@@ -899,7 +906,9 @@ __all__ = [
     "HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE",
     "HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA",
     "HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA",
+    "HI_NERV_DECODER_WATERFILL_ACTION_BITS",
     "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
+    "HI_NERV_QUANT_NOISE_BITS",
     "HI_NERV_SUPPORTED_DECODER_CODECS",
     "HiNervBitstreamError",
     "HinervBitstreamPreparation",

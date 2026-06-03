@@ -287,13 +287,16 @@ def test_mlx_decoder_fake_quant_can_target_named_receiver_tensors() -> None:
     model.configure_decoder_fake_quant_forward(
         enabled=True,
         quant_bits=None,
-        per_tensor_bits={"head_rgb_1.weight": 0},
+        per_tensor_bits={
+            "head_rgb_0.weight": 7,
+            "head_rgb_1.weight": 0,
+        },
     )
     targeted = model(pair_indices)
     mx.eval(targeted)
     exported_after = model.export_state_dict()
 
-    assert float(mx.max(mx.abs(targeted[:, 0] - baseline[:, 0]))) < 1.0e-6
+    assert float(mx.max(mx.abs(targeted[:, 0] - baseline[:, 0]))) > 1.0e-8
     assert float(mx.max(mx.abs(targeted[:, 1] - baseline[:, 1]))) > 1.0e-7
     for name, before in exported_before.items():
         np.testing.assert_array_equal(before, exported_after[name])

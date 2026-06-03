@@ -46,6 +46,16 @@ else:
 SCHEMA_VERSION = "hi_nerv_mlx_renderer_v1"
 MLX_EVIDENCE_GRADE = "[macOS-MLX research-signal]"
 _MIN_POSITIVE_FP16_SCALE = 5.960464477539063e-08
+HI_NERV_DECODER_FAKE_QUANT_ACTION_BITS: tuple[int, ...] = (
+    0,
+    2,
+    4,
+    6,
+    7,
+    8,
+    16,
+    32,
+)
 
 
 def _require_mlx() -> None:
@@ -630,10 +640,11 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         normalized: dict[str, int] = {}
         for name, value in dict(per_tensor_bits or {}).items():
             tensor_bits = int(value)
-            if tensor_bits not in {0, 2, 4, 8, 16, 32}:
+            if tensor_bits not in set(HI_NERV_DECODER_FAKE_QUANT_ACTION_BITS):
                 raise ValueError(
                     "per_tensor_bits values must be one of "
-                    f"[0, 2, 4, 8, 16, 32]; got {value!r} for {name!r}"
+                    f"{list(HI_NERV_DECODER_FAKE_QUANT_ACTION_BITS)}; "
+                    f"got {value!r} for {name!r}"
                 )
             normalized[str(name)] = tensor_bits
         self.decoder_fake_quant_forward_enabled = bool(enabled)

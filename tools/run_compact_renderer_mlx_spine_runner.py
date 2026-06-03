@@ -47,6 +47,12 @@ from tac.analysis.nerv_candidate_curriculum import (  # noqa: E402
 from tac.analysis.nerv_candidate_feedback import (  # noqa: E402
     write_nerv_candidate_feedback_files,
 )
+from tac.analysis.nerv_decoder_weight_waterfill import (  # noqa: E402
+    DEFAULT_ACTION_BITS as NERV_DECODER_WEIGHT_WATERFILL_ACTION_BITS,
+)
+from tac.analysis.nerv_decoder_weight_waterfill import (  # noqa: E402
+    NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
+)
 from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
 )
@@ -183,7 +189,6 @@ DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT = 2.0e-4
 DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT = 1.0e-4
 DEFAULT_PACT_CODER_QAT_C1A_SIGMA = 0.2
 DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE = 512
-NERV_DECODER_WEIGHT_WATERFILL_SCHEMA = "nerv_decoder_weight_waterfill.v1"
 COMPACT_FAMILY_STARTUP_MARKER_FILENAME = (
     "compact_renderer_mlx_spine_runner_startup.json"
 )
@@ -6909,10 +6914,11 @@ def _decoder_weight_waterfill_fake_quant_bits_by_name(
             raise CompactRendererMlxSpineRunnerError(
                 f"decoder_weight_waterfill_plan row {idx} missing selected_bits"
             ) from exc
-        if selected_bits not in {0, 2, 4, 8, 16, 32}:
+        if selected_bits not in set(NERV_DECODER_WEIGHT_WATERFILL_ACTION_BITS):
             raise CompactRendererMlxSpineRunnerError(
                 "decoder_weight_waterfill_plan selected_bits must be one of "
-                f"[0, 2, 4, 8, 16, 32]; got {selected_bits} for {group_name}"
+                f"{list(NERV_DECODER_WEIGHT_WATERFILL_ACTION_BITS)}; "
+                f"got {selected_bits} for {group_name}"
             )
         bits_by_name[group_name] = selected_bits
     return bits_by_name
@@ -10299,7 +10305,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         help=(
             "HiNeRV only: attach a nerv_decoder_weight_waterfill.v1 artifact "
-            "and apply its selected 0/2/4/8/16/32 actions to real decoder "
+            "and apply its selected 0/2/4/6/7/8/16/32 actions to real decoder "
             "tensors before archive packing. False-authority until replay."
         ),
     )

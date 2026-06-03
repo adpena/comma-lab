@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from tac.analysis.nerv_decoder_weight_waterfill import (
+    DEFAULT_ACTION_BITS,
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
     NervDecoderWeightWaterfillError,
     build_nerv_decoder_weight_waterfill_plan,
@@ -68,6 +69,30 @@ def test_decoder_weight_waterfill_uses_measured_saliency_for_actions() -> None:
     assert cheap["rows"][0]["selected_delta_total_score_proxy"] < 0.0
     assert protected["rows"][0]["selected_action"] == "fp32_protect"
     assert protected["rows"][0]["selected_delta_total_score_proxy"] == 0.0
+
+
+def test_decoder_weight_waterfill_default_actions_include_official_six_seven_bits() -> None:
+    state = {"blocks.0.weight": np.linspace(-1.0, 1.0, num=257, dtype=np.float32)}
+
+    report = build_nerv_decoder_weight_waterfill_plan(
+        state,
+        saliency_by_name={"blocks.0.weight": 1.0e-5},
+        zero_run_overhead_bytes=0,
+        full_video_coverage=True,
+        receiver_proof_status="runtime_consumption_proof_ready",
+        archive_sha256="d" * 64,
+    )
+
+    assert DEFAULT_ACTION_BITS == (0, 2, 4, 6, 7, 8, 16, 32)
+    candidates = {
+        row["bits"]: row for row in report["rows"][0]["candidate_actions"]
+    }
+    assert {6, 7}.issubset(candidates)
+    assert candidates[6]["action"] == "int6"
+    assert candidates[7]["action"] == "int7"
+    assert candidates[6]["estimated_bytes"] == (257 * 6 + 7) // 8
+    assert candidates[7]["estimated_bytes"] == (257 * 7 + 7) // 8
+    assert report["score_claim"] is False
 
 
 def test_decoder_weight_waterfill_loads_zero_saliency_rows(tmp_path: Path) -> None:

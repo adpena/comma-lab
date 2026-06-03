@@ -63,6 +63,25 @@ def test_hi_nerv_bitstream_preparation_applies_receiver_visible_transforms() -> 
     )
 
 
+def test_hi_nerv_bitstream_quant_noise_accepts_official_six_seven_bits() -> None:
+    base = _state()
+
+    for bits in (6, 7):
+        changed, report = apply_decoder_quant_noise(
+            base,
+            quant_bits=bits,
+            noise_scale=0.5,
+            seed=bits,
+        )
+
+        assert report["method"] == "uniform_symmetric_quant_grid_noise"
+        assert report["quant_bits"] == bits
+        assert report["changed_tensor_count"] > 0
+        assert report["max_abs_delta"] > 0.0
+        assert report["preserves_existing_zero_symbols"] is True
+        assert not torch.equal(changed["block.weight"], base["block.weight"])
+
+
 def test_hi_nerv_bitstream_roundtrip_measures_codec_portfolio() -> None:
     report = measure_hi_nerv_decoder_bitstream_roundtrip(
         _state(),
@@ -153,6 +172,43 @@ def test_hi_nerv_decoder_waterfill_actions_mutate_real_tensors() -> None:
         "sha256_after"
     ]
     assert by_name["norm.weight"]["changed"] is False
+
+
+def test_hi_nerv_decoder_waterfill_accepts_official_six_seven_bit_actions() -> None:
+    base = _state()
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {
+                "group_name": "stem.weight",
+                "selected_bits": 6,
+                "selected_action": "int6",
+            },
+            {
+                "group_name": "block.weight",
+                "selected_bits": 7,
+                "selected_action": "int7",
+            },
+        ],
+        "blockers": [],
+    }
+
+    changed, report = apply_decoder_waterfill_actions(
+        base,
+        decoder_weight_waterfill_plan=plan,
+    )
+
+    assert report["method"] == "decoder_weight_waterfill_selected_actions"
+    assert report["applied_row_count"] == 2
+    assert report["changed_tensor_count"] == 2
+    assert not torch.equal(changed["stem.weight"], base["stem.weight"])
+    assert not torch.equal(changed["block.weight"], base["block.weight"])
+    by_name = {row["group_name"]: row for row in report["applied_rows"]}
+    assert by_name["stem.weight"]["selected_bits"] == 6
+    assert by_name["block.weight"]["selected_bits"] == 7
+    assert report["score_claim"] is False
 
 
 def test_hi_nerv_decoder_waterfill_allows_authority_only_blocked_plan_locally() -> None:

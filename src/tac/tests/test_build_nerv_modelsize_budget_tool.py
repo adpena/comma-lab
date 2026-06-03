@@ -56,6 +56,7 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
     }
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
+    assert summary["snerv_invalid_candidate_count"] == 0
     assert hinerv.is_file()
     assert snerv.is_file()
     assert md.is_file()
@@ -179,16 +180,29 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_snerv_modelsize(
             "4",
             "--snerv-fc-dim",
             "11",
+            "--snerv-emb-size",
+            "0",
+            "--snerv-emb-size",
+            "2",
             "--snerv-official-modelsize-mparams",
             "0.05",
+            "--output-md",
+            str(tmp_path / "budget.md"),
         ]
     )
 
     assert rc == 0
     summary = json.loads(capsys.readouterr().out)
     assert summary["inputs"]["snerv_fc_dims"] == [11]
+    assert summary["inputs"]["snerv_emb_sizes"] == [0, 2]
     assert summary["inputs"]["snerv_official_modelsize_mparams"] == [0.05]
+    assert summary["snerv_invalid_candidate_count"] > 0
     payload = json.loads(snerv.read_text(encoding="utf-8"))
+    assert payload["invalid_candidate_count"] == summary["snerv_invalid_candidate_count"]
+    assert payload["invalid_candidates"][0]["score_claim"] is False
+    assert payload["invalid_candidates"][0]["ready_for_exact_eval_dispatch"] is False
+    md = (tmp_path / "budget.md").read_text(encoding="utf-8")
+    assert "Skipped SNeRV Official Controls" in md
     selected = payload["selected_candidates"]
     assert selected
     assert any(row["modelsize_mparams"] == 0.05 for row in selected)

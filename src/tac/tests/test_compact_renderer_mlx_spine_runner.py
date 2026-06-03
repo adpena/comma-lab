@@ -4203,6 +4203,8 @@ def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
         "rows": [
             {"group_name": "head_rgb_1.weight", "selected_bits": 0},
             {"group_name": "blocks.0.conv.weight", "selected_bits": 4},
+            {"group_name": "blocks.1.conv.weight", "selected_bits": 6},
+            {"group_name": "blocks.2.conv.weight", "selected_bits": 7},
             {"group_name": "latent_embed.bias", "selected_bits": 32},
         ],
     }
@@ -4210,6 +4212,8 @@ def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
     assert runner_mod._decoder_weight_waterfill_fake_quant_bits_by_name(plan) == {
         "head_rgb_1.weight": 0,
         "blocks.0.conv.weight": 4,
+        "blocks.1.conv.weight": 6,
+        "blocks.2.conv.weight": 7,
         "latent_embed.bias": 32,
     }
 
