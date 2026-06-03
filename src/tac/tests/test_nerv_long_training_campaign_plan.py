@@ -961,7 +961,7 @@ def test_long_training_campaign_plan_blocks_bare_snerv_hard_pair_feedback() -> N
     assert snerv["ready_for_exact_eval_dispatch"] is False
 
 
-def test_long_training_campaign_plan_routes_snerv_representative_hard_pair_feedback() -> None:
+def test_long_training_campaign_plan_blocks_snerv_representative_hard_pair_command_routing() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
         snerv_modelsize_budget=_snerv_budget(),
@@ -996,24 +996,34 @@ def test_long_training_campaign_plan_routes_snerv_representative_hard_pair_feedb
     assert snerv["prioritized_pair_training"]["schema"] == (
         "nerv_prioritized_pair_training_plan.v1"
     )
-    assert snerv["prioritized_pair_training"]["enabled"] is True
-    assert snerv["prioritized_pair_training"]["pair_indices"] == [417, 22]
-    assert "--prioritized-pair-indices" in snerv["command_argv"]
-    assert (
-        snerv["command_argv"][
-            snerv["command_argv"].index("--prioritized-pair-indices") + 1
-        ]
-        == "417,22"
+    assert snerv["prioritized_pair_training"]["enabled"] is False
+    assert snerv["prioritized_pair_training"]["requested"] is True
+    assert snerv["prioritized_pair_training"]["command_routed"] is False
+    assert snerv["prioritized_pair_training"]["pair_indices"] == []
+    assert snerv["prioritized_pair_training"]["requested_pair_indices"] == [417, 22]
+    assert snerv["prioritized_pair_training"]["blocked_pair_indices"] == [417, 22]
+    assert snerv["prioritized_pair_training"]["requested_pair_count"] == 2
+    assert snerv["prioritized_pair_training"]["required_successor"] == (
+        "snerv_full_video_scoreaware_trainer_with_sampler_emphasis"
     )
+    assert "snerv_hardpair_indices_only_hydrated_subset_not_full_training" in snerv[
+        "prioritized_pair_training"
+    ]["blockers"]
+    assert "snerv_hardpair_indices_only_hydrated_subset_not_full_training" in snerv[
+        "blockers"
+    ]
+    assert "--prioritized-pair-indices" not in snerv["command_argv"]
     queue = snerv["experiment_queue_entry"]
-    assert queue["metadata"]["prioritized_pair_training"]["pair_indices"] == [
+    assert queue["metadata"]["prioritized_pair_training"]["requested_pair_indices"] == [
         417,
         22,
     ]
+    assert queue["metadata"]["prioritized_pair_training"]["command_routed"] is False
+    assert "snerv_hardpair_indices_only_hydrated_subset_not_full_training" in queue[
+        "metadata"
+    ]["prioritized_pair_training"]["blockers"]
     assert queue["steps"][0]["command"] == snerv["command_argv"]
-    assert queue["steps"][0]["command"][
-        queue["steps"][0]["command"].index("--prioritized-pair-indices") + 1
-    ] == "417,22"
+    assert "--prioritized-pair-indices" not in queue["steps"][0]["command"]
     assert snerv["score_claim"] is False
     assert snerv["ready_for_exact_eval_dispatch"] is False
 
@@ -2386,6 +2396,7 @@ def test_build_long_training_campaign_plan_cli_extracts_waterfill_from_archive_l
                     {
                         "row_id": "hinerv_tiny",
                         "decoder_weight_waterfill_plan_path": waterfill_plan.as_posix(),
+                        "runtime_consumption_proof_ready": True,
                     }
                 ],
                 "score_claim": False,
@@ -2423,6 +2434,10 @@ def test_build_long_training_campaign_plan_cli_extracts_waterfill_from_archive_l
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert hi["decoder_weight_waterfill_plan"]["attached"] is True
     assert hi["decoder_weight_waterfill_plan"]["path"] == waterfill_plan.as_posix()
+    assert hi["decoder_weight_waterfill_plan"]["receiver_proof_ready"] is True
+    assert "decoder_weight_waterfill_receiver_proof_not_ready" not in hi[
+        "decoder_weight_waterfill_plan"
+    ]["runner_admission"]["refusal_reasons"]
 
 
 def _hinerv_budget() -> dict:

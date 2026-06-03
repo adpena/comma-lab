@@ -729,18 +729,13 @@ def _snerv_campaign_row(
     if str(candidate.get("snerv_model_size_adapter") or "") == (SNERV_SPECTRA_PRESERVING_ADAPTER):
         insert_at = command.index("--snerv-model-size-adapter")
         command.insert(insert_at, "--snerv-spectra-preserving-adapter")
-    if prioritized_pair_indices:
-        command.extend(
-            [
-                "--prioritized-pair-indices",
-                ",".join(str(value) for value in prioritized_pair_indices),
-            ]
-        )
+    prioritized_pair_training = _snerv_prioritized_pair_training_plan(prioritized_pair_indices)
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
     blockers = _dedupe(
         [
             ("snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" if bounded_proof_only else ""),
             "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+            *list(prioritized_pair_training.get("blockers") or []),
             (
                 "snerv_nominal_payload_far_over_ceiling_refuse_long_training"
                 if not bounded_proof_only and not rate_plausible_for_long_training
@@ -801,9 +796,7 @@ def _snerv_campaign_row(
             "source_parity": source_parity,
             "candidate_feedback": feedback or None,
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
-            "prioritized_pair_training": _prioritized_pair_training_plan(
-                prioritized_pair_indices
-            ),
+            "prioritized_pair_training": prioritized_pair_training,
         },
     )
 
@@ -1163,6 +1156,31 @@ def _prioritized_pair_training_plan(pair_indices: Sequence[int]) -> dict[str, An
         "pair_indices": [int(value) for value in normalized],
         "pair_count": len(normalized),
         "sampling_scope": "local_mlx_training_batch_emphasis_only",
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_prioritized_pair_training_plan(pair_indices: Sequence[int]) -> dict[str, Any]:
+    normalized = _normalize_pair_index_sequence(pair_indices)
+    if not normalized:
+        return _prioritized_pair_training_plan(())
+    return {
+        "schema": "nerv_prioritized_pair_training_plan.v1",
+        "enabled": False,
+        "requested": True,
+        "command_routed": False,
+        "pair_indices": [],
+        "requested_pair_indices": [int(value) for value in normalized],
+        "blocked_pair_indices": [int(value) for value in normalized],
+        "pair_count": 0,
+        "requested_pair_count": len(normalized),
+        "sampling_scope": "blocked_current_snerv_path_hydrates_source_subset_not_full_training_emphasis",
+        "routing_status": "recorded_not_routed_current_snerv_hydrates_subset_not_training_emphasis",
+        "required_successor": "snerv_full_video_scoreaware_trainer_with_sampler_emphasis",
+        "blockers": ["snerv_hardpair_indices_only_hydrated_subset_not_full_training"],
         "authority": "macos_mlx_research_signal_false_authority",
         "score_claim": False,
         "promotion_eligible": False,

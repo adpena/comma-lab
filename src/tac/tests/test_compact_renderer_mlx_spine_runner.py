@@ -695,6 +695,59 @@ def test_hi_nerv_source_faithfulness_metadata_strips_authority_keys() -> None:
         assert forbidden not in metadata
 
 
+def test_hinerv_refuses_non_official_control_candidate_before_training(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fail_train(**_kwargs):
+        raise AssertionError("local HiV1-style candidate must refuse before training")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_local_control_refusal",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        modelsize_candidate={
+            "schema": "hinerv_modelsize_candidate.v1",
+            "family": "hi_nerv",
+            "candidate_id": "local-hiv1-unit-candidate",
+            "latent_dim": 4,
+            "embed_dim": 4,
+            "decoder_channel": 4,
+            "decoder_codec": "int4_mixed",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 100_000,
+            "nominal_under_ceiling": True,
+            "use_hierarchical_feature_grid": False,
+            "use_convnext_blocks": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "hi_nerv_official_control_launch_refused"
+    assert out["training_executed"] is False
+    assert out["trainer_launch_allowed"] is False
+    assert out["hi_nerv_source_faithfulness"]["official_hinerv_control"] is False
+    assert "hinerv_official_control_required_for_top_priority_launch" in out[
+        "blockers"
+    ]
+    assert "hinerv_official_hierarchical_feature_grid_not_enabled" in out[
+        "blockers"
+    ]
+    assert "hinerv_official_convnext_blocks_not_enabled" in out["blockers"]
+
+
 def test_startup_marker_only_output_dir_is_not_dirty(tmp_path: Path) -> None:
     out = tmp_path / "candidate"
     out.mkdir()
@@ -830,6 +883,8 @@ def test_hinerv_execute_allows_runner_startup_marker_only_dir(
     assert captured_train_kwargs["distillation_device"] == "mps"
     assert captured_train_kwargs["requested_distillation_device"] == "gpu"
     assert captured_train_kwargs["prioritized_pair_indices"] == ()
+    assert captured_train_kwargs["use_hierarchical_feature_grid"] is True
+    assert captured_train_kwargs["use_convnext_blocks"] is True
     assert out["execute_family"] == "hi_nerv"
     assert out["training_executed"] is True
     assert marker.is_file()
@@ -884,6 +939,8 @@ def test_hinerv_execute_forwards_prioritized_pair_indices(
     )
 
     assert captured_train_kwargs["prioritized_pair_indices"] == (3, 1)
+    assert captured_train_kwargs["use_hierarchical_feature_grid"] is True
+    assert captured_train_kwargs["use_convnext_blocks"] is True
     assert captured_train_kwargs["checkpoint_interval_epochs"] == 7
     assert captured_train_kwargs["checkpoint_dir"] == (
         tmp_path / "external_checkpoints"
@@ -1415,6 +1472,8 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert hi["family"] == "hi_nerv"
     assert hi["hard_byte_ceiling"] == 178_000
     assert hi["nominal_under_ceiling"] is True
+    assert hi["use_hierarchical_feature_grid"] is True
+    assert hi["use_convnext_blocks"] is True
     target_hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
@@ -1425,6 +1484,8 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert target_hi is not None
     assert target_hi["family"] == "hi_nerv"
     assert target_hi["capacity_source"] == "local_hinerv_target_modelsize"
+    assert target_hi["use_hierarchical_feature_grid"] is True
+    assert target_hi["use_convnext_blocks"] is True
     assert target_hi["target_modelsize_mparams"] == 0.03
     assert target_hi["modelsize_error_mparams"] == pytest.approx(
         abs(target_hi["modelsize_mparams"] - 0.03)
@@ -1465,6 +1526,8 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert target_hi is not None
     assert target_hi["family"] == "hi_nerv"
     assert target_hi["capacity_source"] == "local_hinerv_target_modelsize"
+    assert target_hi["use_hierarchical_feature_grid"] is True
+    assert target_hi["use_convnext_blocks"] is True
     assert target_hi["target_modelsize_mparams"] == 0.02
     assert target_hi["modelsize_error_mparams"] is not None
     assert "_tgtmp0p02" in target_hi["candidate_id"]
@@ -1479,6 +1542,8 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert shared_target_hi is not None
     assert shared_target_hi["family"] == "hi_nerv"
     assert shared_target_hi["capacity_source"] == "local_hinerv_target_modelsize"
+    assert shared_target_hi["use_hierarchical_feature_grid"] is True
+    assert shared_target_hi["use_convnext_blocks"] is True
     assert shared_target_hi["target_modelsize_mparams"] == 0.03
     assert shared_target_hi["modelsize_error_mparams"] == pytest.approx(
         abs(shared_target_hi["modelsize_mparams"] - 0.03)
@@ -4250,6 +4315,8 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 160_000,
             "nominal_under_ceiling": True,
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": True,
             "modelsize_control_contract": {
                 "schema": "nerv_modelsize_control_contract.v1",
                 "family": "hi_nerv",
@@ -4414,6 +4481,8 @@ def _hinerv_waterfill_modelsize_candidate(
         "hard_byte_ceiling": 178_000,
         "nominal_total_payload_bytes": 160_000,
         "nominal_under_ceiling": True,
+        "use_hierarchical_feature_grid": True,
+        "use_convnext_blocks": True,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -4653,6 +4722,8 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 160_000,
             "nominal_under_ceiling": True,
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": True,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,

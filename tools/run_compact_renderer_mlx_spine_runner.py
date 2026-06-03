@@ -25,6 +25,7 @@ import zipfile
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 try:
@@ -1911,12 +1912,19 @@ def _resolve_execute_modelsize_candidate(
     snerv_targets = _dedupe_float_tuple(
         (*shared_targets, *tuple(float(v) for v in snerv_official_modelsize_mparams))
     )
+    hinerv_auto_official_only = family == "hi_nerv" and token.lower() == "auto"
     if family == "hi_nerv":
         candidates = [
             row.as_dict()
             for row in enumerate_hinerv_modelsize_candidates(
                 hard_byte_ceilings=hard_byte_ceilings,
                 num_pairs=int(num_pairs),
+                use_hierarchical_feature_grid_options=(
+                    (True,) if hinerv_auto_official_only else (False, True)
+                ),
+                use_convnext_blocks_options=(
+                    (True,) if hinerv_auto_official_only else (False, True)
+                ),
                 target_modelsize_mparams=hinerv_targets,
             )
         ]
@@ -1942,6 +1950,22 @@ def _resolve_execute_modelsize_candidate(
             f"no {family} modelsize candidates were enumerated"
         )
     if token.lower() == "auto":
+        if family == "hi_nerv":
+            official_candidates = [
+                row
+                for row in candidates
+                if _hi_nerv_modelsize_candidate_has_official_controls(row)
+            ]
+            official_under = [
+                row
+                for row in official_candidates
+                if bool(row.get("nominal_under_ceiling"))
+            ]
+            if not official_under:
+                raise CompactRendererMlxSpineRunnerError(
+                    "hinerv_official_control_candidate_missing_under_ceiling"
+                )
+            candidates = official_candidates
         if family == "hi_nerv" and hinerv_targets:
             target_candidates = [
                 row
@@ -2020,6 +2044,14 @@ def _dedupe_float_tuple(values: tuple[float, ...]) -> tuple[float, ...]:
         seen.add(normalized)
         out.append(normalized)
     return tuple(out)
+
+
+def _hi_nerv_modelsize_candidate_has_official_controls(row: Mapping[str, Any]) -> bool:
+    """Return whether a candidate enables the official HiNeRV control spine."""
+
+    return bool(row.get("use_hierarchical_feature_grid")) and bool(
+        row.get("use_convnext_blocks")
+    )
 
 
 _HINERV_MODEL_SIZE_ID_RE = re.compile(
@@ -5639,14 +5671,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     effective_pose_distillation_weight = float(
         launch_pressure_binding["pose_distillation_weight"]
     )
+    candidate_supplied = bool(candidate)
     launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
     launch_embed_dim = int(candidate.get("embed_dim", embed_dim))
     launch_decoder_channel = int(candidate.get("decoder_channel", decoder_channel))
     launch_decoder_codec = str(candidate.get("decoder_codec", decoder_codec))
     launch_use_hierarchical_feature_grid = bool(
-        candidate.get("use_hierarchical_feature_grid", False)
+        candidate.get("use_hierarchical_feature_grid", not candidate_supplied)
     )
-    launch_use_convnext_blocks = bool(candidate.get("use_convnext_blocks", False))
+    launch_use_convnext_blocks = bool(
+        candidate.get("use_convnext_blocks", not candidate_supplied)
+    )
     launch_local_grid_levels = int(candidate.get("local_grid_levels", 2))
     launch_local_grid_channels = int(candidate.get("local_grid_channels", 4))
     launch_convnext_mlp_ratio = int(candidate.get("convnext_mlp_ratio", 2))
@@ -5662,6 +5697,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "fine_injection_block_index",
             HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
         )
+    )
+    launch_source_faithfulness = _hi_nerv_launch_source_faithfulness_report(
+        use_hierarchical_feature_grid=launch_use_hierarchical_feature_grid,
+        use_convnext_blocks=launch_use_convnext_blocks,
+        local_grid_levels=launch_local_grid_levels,
+        local_grid_channels=launch_local_grid_channels,
+        convnext_mlp_ratio=launch_convnext_mlp_ratio,
+        convnext_kernel_size=launch_convnext_kernel_size,
+        decoder_codec=launch_decoder_codec,
     )
     (
         decoder_weight_waterfill_plan,
@@ -5720,6 +5764,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_use_hierarchical_feature_grid": (
+                        launch_use_hierarchical_feature_grid
+                    ),
+                    "launch_use_convnext_blocks": launch_use_convnext_blocks,
                     "launch_mid_injection_block_index": (
                         launch_mid_injection_block_index
                     ),
@@ -5741,6 +5789,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "ready_for_exact_eval_dispatch": False,
                 },
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_source_faithfulness": launch_source_faithfulness,
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
@@ -5792,6 +5841,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 ),
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_source_faithfulness": launch_source_faithfulness,
                 "score_aware_training": {
                     "schema": "compact_hi_nerv_score_aware_training.v1",
                     "status": "refused_before_mlx_training",
@@ -5811,6 +5861,96 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     [
                         *config_gate.get("blockers", []),
                         *score_aware_training_plan.get("blockers", []),
+                        "hi_nerv_training_not_launched",
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                    ]
+                ),
+            }
+        )
+        refusal["candidate_feedback"] = write_nerv_candidate_feedback_files(
+            runner_report=refusal,
+            output_dir=out,
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, refusal)
+        return {**refusal, "report_path": path.as_posix()}
+    if (
+        not bool(launch_source_faithfulness["official_hinerv_control"])
+        and not bool(allow_unscored_research_smoke)
+    ):
+        refusal = _base_report(
+            output_dir=out,
+            mode="hi_nerv_official_control_launch_refused",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        refusal.update(
+            {
+                "execute_family": "hi_nerv",
+                "num_pairs": int(num_pairs),
+                "epochs_requested": int(epochs),
+                "training_executed": False,
+                "trainer_launch_allowed": False,
+                "launch_refusal_reason": (
+                    "HiNeRV top-priority launches require the official "
+                    "hierarchical feature grid and ConvNeXt controls. Use "
+                    "allow_unscored_research_smoke only for explicit "
+                    "false-authority local probes."
+                ),
+                "modelsize_candidate_selection": {
+                    "schema": "compact_execute_modelsize_candidate_selection.v1",
+                    "family": "hi_nerv",
+                    "selection_mode": (
+                        "planner_candidate" if candidate else "manual_cli_knobs"
+                    ),
+                    "candidate": candidate or None,
+                    "modelsize_control_contract": _modelsize_control_contract(
+                        candidate
+                    ),
+                    "num_pairs_for_budget": CONTEST_PAIR_COUNT,
+                    "launch_latent_dim": launch_latent_dim,
+                    "launch_embed_dim": launch_embed_dim,
+                    "launch_decoder_channel": launch_decoder_channel,
+                    "launch_decoder_codec": launch_decoder_codec,
+                    "launch_use_hierarchical_feature_grid": (
+                        launch_use_hierarchical_feature_grid
+                    ),
+                    "launch_use_convnext_blocks": launch_use_convnext_blocks,
+                    "launch_mid_injection_block_index": (
+                        launch_mid_injection_block_index
+                    ),
+                    "launch_fine_injection_block_index": (
+                        launch_fine_injection_block_index
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_aware_training_config_gate": config_gate,
+                "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "status": "refused_before_mlx_training",
+                    "decoder_weight_waterfill_plan": (
+                        decoder_weight_waterfill_plan_metadata
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_aware_carrier_training_plan": score_aware_training_plan,
+                "modelsize_budget_evidence": modelsize_budget_evidence,
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
+                "blockers": _dedupe(
+                    [
+                        "hinerv_official_control_required_for_top_priority_launch",
+                        *launch_source_faithfulness.get(
+                            "official_hinerv_blockers",
+                            [],
+                        ),
                         "hi_nerv_training_not_launched",
                         "contest_cpu_cuda_exact_eval_not_executed",
                     ]
@@ -5906,6 +6046,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_use_hierarchical_feature_grid": (
+                        launch_use_hierarchical_feature_grid
+                    ),
+                    "launch_use_convnext_blocks": launch_use_convnext_blocks,
                     "launch_mid_injection_block_index": (
                         launch_mid_injection_block_index
                     ),
@@ -5920,6 +6064,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "candidate_curriculum_plan": launch_curriculum_plan,
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_source_faithfulness": launch_source_faithfulness,
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
@@ -6036,6 +6181,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "launch_embed_dim": launch_embed_dim,
                     "launch_decoder_channel": launch_decoder_channel,
                     "launch_decoder_codec": launch_decoder_codec,
+                    "launch_use_hierarchical_feature_grid": (
+                        launch_use_hierarchical_feature_grid
+                    ),
+                    "launch_use_convnext_blocks": launch_use_convnext_blocks,
                     "launch_mid_injection_block_index": (
                         launch_mid_injection_block_index
                     ),
@@ -6052,6 +6201,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 ),
                 "score_aware_training_config_gate": config_gate,
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_source_faithfulness": launch_source_faithfulness,
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "checkpoint_interval_epochs": checkpoint_interval,
@@ -6255,6 +6405,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "launch_embed_dim": launch_embed_dim,
                 "launch_decoder_channel": launch_decoder_channel,
                 "launch_decoder_codec": launch_decoder_codec,
+                "launch_use_hierarchical_feature_grid": (
+                    launch_use_hierarchical_feature_grid
+                ),
+                "launch_use_convnext_blocks": launch_use_convnext_blocks,
                 "launch_mid_injection_block_index": launch_mid_injection_block_index,
                 "launch_fine_injection_block_index": (
                     launch_fine_injection_block_index
@@ -6277,6 +6431,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "candidate_curriculum_plan": candidate_curriculum_plan,
             "score_aware_training_config_gate": config_gate,
             "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+            "hi_nerv_source_faithfulness": launch_source_faithfulness,
             "hi_nerv_optimizer_policy": optimizer_policy,
             "hi_nerv_optimizer_controls": optimizer_controls,
             "score_aware_carrier_training_plan": score_aware_training_plan,
@@ -8277,6 +8432,30 @@ def _validate_hi_nerv_frontier_training_config(
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _hi_nerv_launch_source_faithfulness_report(
+    *,
+    use_hierarchical_feature_grid: bool,
+    use_convnext_blocks: bool,
+    local_grid_levels: int,
+    local_grid_channels: int,
+    convnext_mlp_ratio: int,
+    convnext_kernel_size: int,
+    decoder_codec: str,
+) -> dict[str, Any]:
+    cfg = SimpleNamespace(
+        use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
+        use_convnext_blocks=bool(use_convnext_blocks),
+        local_grid_levels=int(local_grid_levels),
+        local_grid_channels=int(local_grid_channels),
+        convnext_mlp_ratio=int(convnext_mlp_ratio),
+        convnext_kernel_size=int(convnext_kernel_size),
+    )
+    return _hi_nerv_source_faithfulness_report(
+        cfg=cfg,
+        decoder_codec=str(decoder_codec),
+    )
 
 
 def _hi_nerv_source_faithfulness_report(*, cfg: Any, decoder_codec: str) -> dict[str, Any]:

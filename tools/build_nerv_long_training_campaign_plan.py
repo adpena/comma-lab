@@ -267,6 +267,13 @@ def _load_archive_size_ladder_waterfill_sidecars(
             continue
         plan_path = Path(str(plan_path_raw)).expanduser().resolve(strict=False)
         plan = _load(plan_path)
+        if (
+            row.get("runtime_consumption_proof_ready") is True
+            and str(plan.get("receiver_proof_status") or "").strip().lower()
+            in {"", "missing", "not_executed", "unknown"}
+        ):
+            plan = dict(plan)
+            plan["receiver_proof_status"] = "runtime_consumption_proof_ready"
         out.append(
             _waterfill_payload_with_path(
                 plan,
