@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from tac.analysis.snerv_official_primitive_replay import (
+    RECEIVER_RUNTIME_DECODE_SCHEMA,
+)
 from tac.analysis.snerv_official_source_parity_audit import (
     SCHEMA,
     build_snerv_official_mfu_hfr_tub_forward_parity_artifact,
@@ -36,6 +39,12 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert primitive["all_primitive_source_replay_proven"] is True
     assert primitive["full_stack_source_forward_replay_proven"] is False
     assert primitive["receiver_export_bound"] is False
+    runtime = report["official_receiver_runtime_decode_contract"]
+    assert runtime["schema"] == RECEIVER_RUNTIME_DECODE_SCHEMA
+    assert runtime["all_runtime_modules_import_safe"] is True
+    assert runtime["all_numeric_source_replay_tests_hashed"] is True
+    assert runtime["receiver_runtime_decode_proven"] is False
+    assert "snerv_tub_official_output2_packet_decode_missing" in runtime["blockers"]
     assert report["official_mfu_hfr_tub_parity_proven"] is False
     assert report["blockers"] == ["snerv_official_mfu_hfr_tub_parity_missing"]
     assert report["official_forward_parity_artifact_row"]["status"] == "missing"
@@ -62,6 +71,10 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     summary = summarize_snerv_official_source_audit(report)
     assert summary["official_source_markers_present"] is True
     assert summary["official_mfu_hfr_tub_primitives_proven"] is True
+    assert summary["official_receiver_runtime_decode_proven"] is False
+    assert "snerv_mfu_official_weight_packet_decode_missing" in summary[
+        "official_receiver_runtime_decode_blockers"
+    ]
     assert summary["full_stack_source_forward_replay_proven"] is False
     assert summary["official_mfu_hfr_tub_parity_proven"] is False
     assert {row["classification"] for row in summary["component_states"]} == {
@@ -74,6 +87,7 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert "SNeRV Official Source-Parity Audit" in md
     assert "official MFU/HFR/TUB parity proven: `False`" in md
     assert "official MFU/HFR/TUB primitive replay proven: `True`" in md
+    assert "official receiver runtime decode proven: `False`" in md
     assert "official MFU/HFR/TUB parity falsified: `False`" in md
     assert (
         "| `tub` | "
@@ -216,6 +230,9 @@ def test_snerv_official_forward_parity_artifact_rejects_boolean_only_pass(
     assert "snerv_official_forward_parity_source_replay_missing" in artifact_row[
         "blockers"
     ]
+    assert "snerv_official_forward_parity_receiver_runtime_decode_missing" in (
+        artifact_row["blockers"]
+    )
     assert any(
         blocker.startswith("numeric_max_abs_error_missing:mfu")
         for blocker in artifact_row["blockers"]
@@ -247,6 +264,7 @@ def test_snerv_official_forward_parity_artifact_accepts_numeric_replay_evidence(
                     "backend": "torch_vs_numpy",
                     "input_bundle_sha256": "2" * 64,
                 },
+                "receiver_runtime_decode": _receiver_runtime_decode_contract(),
                 "official_mfu_hfr_tub_forward_parity_passed": True,
                 "official_mfu_hfr_tub_forward_parity_falsified": False,
                 "component_rows": component_rows,
@@ -273,6 +291,58 @@ def test_snerv_official_forward_parity_artifact_accepts_numeric_replay_evidence(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_official_forward_parity_artifact_rejects_partial_receiver_decode(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_snerv_repo(tmp_path)
+    local = _write_marker_only_local_snerv_repo(tmp_path)
+    receiver_decode = _receiver_runtime_decode_contract()
+    receiver_rows = list(receiver_decode["component_rows"])
+    receiver_rows[0] = dict(receiver_rows[0])
+    receiver_rows[0].pop("runtime_output_sha256")
+    receiver_decode["component_rows"] = receiver_rows
+    artifact_path = tmp_path / "partial_receiver_decode.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+                "official_weight_manifest": {
+                    "state_dict_sha256": "1" * 64,
+                    "state_dict_key_count": 9,
+                },
+                "source_forward_replay": {
+                    "backend": "torch_vs_numpy",
+                    "input_bundle_sha256": "2" * 64,
+                },
+                "receiver_runtime_decode": receiver_decode,
+                "official_mfu_hfr_tub_forward_parity_passed": True,
+                "official_mfu_hfr_tub_forward_parity_falsified": False,
+                "component_rows": [
+                    _numeric_component_row("mfu"),
+                    _numeric_component_row("hfr"),
+                    _numeric_component_row("tub"),
+                ],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_snerv_official_source_parity_audit(
+        official_repo_dir=official,
+        repo_root=local,
+        official_forward_parity_artifact_path=artifact_path,
+        generated_utc="20260603T000000Z",
+    )
+
+    artifact_row = report["official_forward_parity_artifact_row"]
+    assert artifact_row["parity_passed"] is False
+    assert "runtime_output_sha256_missing:mfu" in artifact_row["blockers"]
+    assert report["official_mfu_hfr_tub_parity_proven"] is False
+
+
 def _numeric_component_row(component_id: str) -> dict[str, object]:
     return {
         "component_id": component_id,
@@ -283,6 +353,35 @@ def _numeric_component_row(component_id: str) -> dict[str, object]:
         "official_output_sha256": "4" * 64,
         "portable_output_sha256": "4" * 64,
         "official_weight_sha256": "5" * 64,
+    }
+
+
+def _receiver_runtime_decode_contract() -> dict[str, object]:
+    return {
+        "schema": RECEIVER_RUNTIME_DECODE_SCHEMA,
+        "receiver_runtime_decode_proven": True,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+        "component_rows": [
+            _receiver_runtime_decode_row("mfu"),
+            _receiver_runtime_decode_row("hfr"),
+            _receiver_runtime_decode_row("tub"),
+        ],
+    }
+
+
+def _receiver_runtime_decode_row(component_id: str) -> dict[str, object]:
+    return {
+        "component_id": component_id,
+        "receiver_runtime_decode_proven": True,
+        "runtime_module_import_safe": True,
+        "runtime_module_sha256": "6" * 64,
+        "numeric_test_sha256": "7" * 64,
+        "archive_section_sha256": "8" * 64,
+        "decoded_input_sha256": "9" * 64,
+        "runtime_output_sha256": "a" * 64,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 

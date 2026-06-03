@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from tac.analysis.snerv_official_primitive_replay import (
+    RECEIVER_RUNTIME_DECODE_SCHEMA,
     build_snerv_official_primitive_replay_binding,
 )
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
@@ -334,6 +335,9 @@ def build_snerv_official_source_parity_audit(
         "local_receiver_safe_marker_row": local_receiver_safe_row,
         "local_official_parity_marker_row": local_official_parity_row,
         "official_mfu_hfr_tub_primitive_replay_binding": primitive_replay_binding,
+        "official_receiver_runtime_decode_contract": primitive_replay_binding[
+            "official_receiver_runtime_decode_contract"
+        ],
         "official_forward_parity_artifact_row": forward_parity_artifact_row,
         "component_state_rows": component_state_rows,
         "official_source_markers_present": official_markers_present,
@@ -377,6 +381,9 @@ def build_snerv_official_mfu_hfr_tub_forward_parity_artifact(
     primitive_replay_binding = build_snerv_official_primitive_replay_binding(
         repo_root=local_root,
     )
+    receiver_runtime = primitive_replay_binding[
+        "official_receiver_runtime_decode_contract"
+    ]
     component_rows = _component_state_rows(
         official_root=official_root,
         local_root=local_root,
@@ -385,7 +392,10 @@ def build_snerv_official_mfu_hfr_tub_forward_parity_artifact(
         local_official_parity_row=local_official_parity_row,
         forward_parity_artifact_row={"parity_passed": False},
     )
-    parity_passed = all(bool(row["source_forward_parity_proven"]) for row in component_rows)
+    parity_passed = bool(
+        receiver_runtime["receiver_runtime_decode_proven"]
+        and all(bool(row["source_forward_parity_proven"]) for row in component_rows)
+    )
     parity_falsified = any(bool(row["source_forward_parity_falsified"]) for row in component_rows)
     return {
         "schema": FORWARD_PARITY_ARTIFACT_SCHEMA,
@@ -403,6 +413,7 @@ def build_snerv_official_mfu_hfr_tub_forward_parity_artifact(
         "official_file_rows": file_rows,
         "official_marker_group_rows": official_group_rows,
         "official_mfu_hfr_tub_primitive_replay_binding": primitive_replay_binding,
+        "official_receiver_runtime_decode_contract": receiver_runtime,
         "component_rows": component_rows,
         "official_mfu_hfr_tub_forward_parity_passed": parity_passed,
         "official_mfu_hfr_tub_forward_parity_falsified": parity_falsified,
@@ -429,6 +440,11 @@ def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str
     primitive_binding = report.get("official_mfu_hfr_tub_primitive_replay_binding")
     if not isinstance(primitive_binding, Mapping):
         primitive_binding = {}
+    receiver_runtime = report.get("official_receiver_runtime_decode_contract")
+    if not isinstance(receiver_runtime, Mapping):
+        receiver_runtime = primitive_binding.get("official_receiver_runtime_decode_contract")
+    if not isinstance(receiver_runtime, Mapping):
+        receiver_runtime = {}
     return {
         "schema": str(report.get("schema") or ""),
         "authority": str(report.get("authority") or ""),
@@ -442,6 +458,12 @@ def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str
         "official_mfu_hfr_tub_parity_falsified": bool(forward_row.get("parity_falsified")),
         "official_mfu_hfr_tub_primitives_proven": bool(
             primitive_binding.get("all_primitive_source_replay_proven")
+        ),
+        "official_receiver_runtime_decode_proven": bool(
+            receiver_runtime.get("receiver_runtime_decode_proven")
+        ),
+        "official_receiver_runtime_decode_blockers": list(
+            receiver_runtime.get("blockers") or ()
         ),
         "full_stack_source_forward_replay_proven": bool(
             primitive_binding.get("full_stack_source_forward_replay_proven")
@@ -477,6 +499,11 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
     primitive_binding = report.get("official_mfu_hfr_tub_primitive_replay_binding")
     if not isinstance(primitive_binding, Mapping):
         primitive_binding = {}
+    receiver_runtime = report.get("official_receiver_runtime_decode_contract")
+    if not isinstance(receiver_runtime, Mapping):
+        receiver_runtime = primitive_binding.get("official_receiver_runtime_decode_contract")
+    if not isinstance(receiver_runtime, Mapping):
+        receiver_runtime = {}
     lines = [
         "# SNeRV Official Source-Parity Audit",
         "",
@@ -490,6 +517,7 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
         f"- official source markers present: `{bool(report.get('official_source_markers_present'))}`",
         f"- local receiver-safe adapter present: `{bool(report.get('local_receiver_safe_adapter_present'))}`",
         f"- official MFU/HFR/TUB primitive replay proven: `{bool(primitive_binding.get('all_primitive_source_replay_proven'))}`",
+        f"- official receiver runtime decode proven: `{bool(receiver_runtime.get('receiver_runtime_decode_proven'))}`",
         f"- official MFU/HFR/TUB parity proven: `{bool(report.get('official_mfu_hfr_tub_parity_proven'))}`",
         f"- official MFU/HFR/TUB parity falsified: `{bool(forward_row.get('parity_falsified'))}`",
         f"- score claim: `{bool(report.get('score_claim'))}`",
@@ -683,6 +711,7 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
         "parity_passed": parity_passed,
         "parity_falsified": parity_falsified,
         "component_rows": component_rows,
+        "receiver_runtime_decode": payload.get("receiver_runtime_decode"),
         "artifact_blockers": list(payload.get("blockers") or ()),
         "blockers": blockers,
         **FALSE_AUTHORITY,
@@ -746,7 +775,62 @@ def _forward_parity_artifact_evidence_blockers(
             f"{blocker}:{component_id}"
             for blocker in _forward_parity_component_blockers(row)
         )
+    blockers.extend(_forward_parity_receiver_runtime_blockers(payload))
     return _ordered_unique(blockers)
+
+
+def _forward_parity_receiver_runtime_blockers(payload: Mapping[str, Any]) -> list[str]:
+    receiver_runtime = payload.get("receiver_runtime_decode")
+    if not isinstance(receiver_runtime, Mapping):
+        return ["snerv_official_forward_parity_receiver_runtime_decode_missing"]
+    blockers: list[str] = []
+    if receiver_runtime.get("schema") != RECEIVER_RUNTIME_DECODE_SCHEMA:
+        blockers.append("snerv_official_forward_parity_receiver_runtime_schema_invalid")
+    if receiver_runtime.get("receiver_runtime_decode_proven") is not True:
+        blockers.append("snerv_official_forward_parity_receiver_runtime_not_proven")
+    if receiver_runtime.get("score_claim") is not False:
+        blockers.append("snerv_official_forward_parity_receiver_runtime_score_claim_not_false")
+    if receiver_runtime.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("snerv_official_forward_parity_receiver_runtime_exact_flag_not_false")
+    rows = {
+        str(row.get("component_id") or ""): row
+        for row in receiver_runtime.get("component_rows") or ()
+        if isinstance(row, Mapping)
+    }
+    for component_id in REQUIRED_FORWARD_PARITY_COMPONENT_IDS:
+        row = rows.get(component_id)
+        if row is None:
+            blockers.append(
+                f"receiver_runtime_decode_component_missing:{component_id}"
+            )
+            continue
+        blockers.extend(
+            f"{blocker}:{component_id}"
+            for blocker in _receiver_runtime_component_blockers(row)
+        )
+    return blockers
+
+
+def _receiver_runtime_component_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if row.get("receiver_runtime_decode_proven") is not True:
+        blockers.append("receiver_runtime_decode_component_not_proven")
+    for field in (
+        "runtime_module_sha256",
+        "numeric_test_sha256",
+        "archive_section_sha256",
+        "decoded_input_sha256",
+        "runtime_output_sha256",
+    ):
+        if not _is_sha256_hex(row.get(field)):
+            blockers.append(f"{field}_missing")
+    if row.get("runtime_module_import_safe") is not True:
+        blockers.append("runtime_module_import_not_safe")
+    if row.get("score_claim") is not False:
+        blockers.append("score_claim_not_false")
+    if row.get("ready_for_exact_eval_dispatch") is not False:
+        blockers.append("exact_flag_not_false")
+    return blockers
 
 
 def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
