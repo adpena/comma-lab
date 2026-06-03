@@ -153,7 +153,7 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
 def test_hinerv_archive_size_ladder_exports_modelsize_budget_candidate_waterfill(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed8_dc4_cnx_int4_mixed_ceil36000_tgtmp0p01"
+    candidate_id = "hinerv_np1_ld4_ed8_dc4_mi1fi4_cnx_lg2c4_cx2k7_int4_mixed_ceil36000_tgtmp0p01"
     report = build_hinerv_archive_size_ladder(
         output_dir=tmp_path / "archive_ladder",
         repo_root=REPO_ROOT,
@@ -222,7 +222,7 @@ def test_hinerv_archive_size_ladder_exports_modelsize_budget_candidate_waterfill
 def test_hinerv_archive_size_ladder_honors_full_video_saliency_metadata(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed8_dc4_cnx_int4_mixed_ceil36000_tgtmp0p01"
+    candidate_id = "hinerv_np1_ld4_ed8_dc4_mi1fi4_cnx_lg2c4_cx2k7_int4_mixed_ceil36000_tgtmp0p01"
     saliency_path = tmp_path / "saliency_replay.json"
     saliency_path.write_text(
         json.dumps(
@@ -353,7 +353,7 @@ def test_build_hinerv_archive_size_ladder_cli_records_invocation(
 ) -> None:
     output_json = tmp_path / "ladder.json"
     output_md = tmp_path / "ladder.md"
-    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_mi1fi4_int2_mixed_ceil36000"
     budget_json = tmp_path / "budget.json"
     budget_json.write_text(
         json.dumps(
@@ -425,7 +425,7 @@ def test_build_hinerv_archive_size_ladder_cli_records_invocation(
 def test_hinerv_archive_size_ladder_consumes_modelsize_budget_candidate(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_mi1fi4_int2_mixed_ceil36000"
     report = build_hinerv_archive_size_ladder(
         output_dir=tmp_path / "archive_ladder",
         repo_root=REPO_ROOT,
@@ -481,7 +481,7 @@ def test_hinerv_archive_size_ladder_consumes_modelsize_budget_candidate(
 def test_hinerv_archive_size_ladder_rejects_mismatched_budget_config(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_mi1fi4_int2_mixed_ceil36000"
     with pytest.raises(ValueError, match="modelsize candidate config mismatch"):
         build_hinerv_archive_size_ladder(
             output_dir=tmp_path / "archive_ladder",
@@ -508,7 +508,7 @@ def test_hinerv_archive_size_ladder_rejects_mismatched_budget_config(
 def test_hinerv_archive_size_ladder_rejects_true_nested_authority_flags(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_mi1fi4_int2_mixed_ceil36000"
     with pytest.raises(ValueError, match="forbidden true authority flags"):
         build_hinerv_archive_size_ladder(
             output_dir=tmp_path / "archive_ladder",
@@ -533,7 +533,7 @@ def test_hinerv_archive_size_ladder_rejects_true_nested_authority_flags(
 def test_hinerv_archive_size_ladder_rejects_missing_modelsize_contract(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_mi1fi4_int2_mixed_ceil36000"
     candidate = _hinerv_budget_candidate()
     candidate.pop("modelsize_control_contract")
 
@@ -559,7 +559,7 @@ def test_hinerv_archive_size_ladder_rejects_missing_modelsize_contract(
 def test_hinerv_archive_size_ladder_rejects_ambiguous_target_modelsize_contract(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed8_dc4_cnx_int4_mixed_ceil36000_tgtmp0p01"
+    candidate_id = "hinerv_np1_ld4_ed8_dc4_mi1fi4_cnx_lg2c4_cx2k7_int4_mixed_ceil36000_tgtmp0p01"
     candidate = _hinerv_budget_candidate(
         embed_dim=8,
         decoder_codec="int4_mixed",
@@ -601,7 +601,7 @@ def test_hinerv_archive_size_ladder_rejects_ambiguous_target_modelsize_contract(
 def test_hinerv_archive_size_ladder_rejects_candidate_id_control_mismatch(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed4_dc5_int2_mixed_ceil36000"
+    candidate_id = "hinerv_np1_ld4_ed4_dc5_mi1fi4_int2_mixed_ceil36000"
     with pytest.raises(ValueError, match="candidate_id source controls mismatch"):
         build_hinerv_archive_size_ladder(
             output_dir=tmp_path / "archive_ladder",
@@ -626,7 +626,7 @@ def test_hinerv_archive_size_ladder_rejects_candidate_id_control_mismatch(
 def test_hinerv_archive_size_ladder_rejects_mismatched_budget_candidate_id(
     tmp_path: Path,
 ) -> None:
-    candidate_id = "hinerv_np1_ld4_ed32_dc4_int2_mixed_ceil36000"
+    candidate_id = "hinerv_np1_ld4_ed32_dc4_mi1fi4_int2_mixed_ceil36000"
     with pytest.raises(ValueError, match="candidate_id source controls mismatch"):
         build_hinerv_archive_size_ladder(
             output_dir=tmp_path / "archive_ladder",

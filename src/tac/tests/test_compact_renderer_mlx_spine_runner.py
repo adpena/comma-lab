@@ -2010,13 +2010,17 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     )
     hi_official = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
-        candidate_id="hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000",
+        candidate_id=(
+            "hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_"
+            "int4_mixed_ceil36000"
+        ),
         hard_byte_ceilings=(178_000,),
     )
     hi_target = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id=(
-            "hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000_tgtmp0p02"
+            "hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_"
+            "int4_mixed_ceil36000_tgtmp0p02"
         ),
         hard_byte_ceilings=(178_000,),
     )
@@ -2066,10 +2070,15 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert hi["fine_injection_block_index"] == 4
     assert hi_official is not None
     assert hi_official["candidate_id"] == (
-        "hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000"
+        "hinerv_np600_ld4_ed12_dc12_mi1fi4_hfg_cnx_lg2c4_cx2k7_"
+        "int4_mixed_ceil36000"
     )
     assert hi_official["use_hierarchical_feature_grid"] is True
     assert hi_official["use_convnext_blocks"] is True
+    assert hi_official["local_grid_levels"] == 2
+    assert hi_official["local_grid_channels"] == 4
+    assert hi_official["convnext_mlp_ratio"] == 2
+    assert hi_official["convnext_kernel_size"] == 7
     assert hi_official["mid_injection_block_index"] == 1
     assert hi_official["fine_injection_block_index"] == 4
     assert hi_official["hard_byte_ceiling"] == 36_000
@@ -5447,6 +5456,21 @@ def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() 
     )
     assert pr95["resolved_policy"] == "pr95_curriculum"
     assert pr95["pr95_faithful_curriculum_enabled"] is True
+
+
+def test_hinerv_auto_policy_keeps_pact_muon_adamw_as_adapter_default() -> None:
+    default_policy = runner_mod._resolve_hi_nerv_optimizer_policy(
+        requested_policy="auto",
+        epochs=29_650,
+        optimizer_kind="pact_muon_adamw",
+    )
+
+    assert default_policy["resolved_policy"] == "native_optimizer"
+    assert default_policy["optimizer_kind"] == "pact_muon_adamw"
+    assert default_policy["effective_optimizer_label"] == "pact_muon_adamw"
+    assert default_policy["optimizer_kind_consumed_by_native_mlx"] is True
+    assert default_policy["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert default_policy["pr95_faithful_curriculum_enabled"] is False
 
 
 def test_hinerv_optimizer_controls_default_to_pact_muon_adamw() -> None:

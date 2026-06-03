@@ -419,6 +419,49 @@ def _float_id_token(value: float) -> str:
     return f"{float(value):g}".replace(".", "p")
 
 
+def hinerv_modelsize_candidate_id_from_controls(
+    *,
+    num_pairs: int,
+    latent_dim: int,
+    embed_dim: int,
+    decoder_channel: int,
+    decoder_codec: str,
+    hard_byte_ceiling: int,
+    use_hierarchical_feature_grid: bool,
+    use_convnext_blocks: bool,
+    local_grid_levels: int,
+    local_grid_channels: int,
+    convnext_mlp_ratio: int,
+    convnext_kernel_size: int,
+    mid_injection_block_index: int,
+    fine_injection_block_index: int,
+) -> str:
+    """Build the lossless self-describing HiNeRV model-size candidate id.
+
+    Older ids encoded only ``_hfg``/``_cnx`` booleans. That collided for
+    materially different receiver graphs with different grid, ConvNeXt, or
+    latent-injection controls. New ids include every architecture knob that the
+    executor must reconstruct before training/export.
+    """
+
+    control_label = ""
+    if bool(use_hierarchical_feature_grid):
+        control_label += "_hfg"
+    if bool(use_convnext_blocks):
+        control_label += "_cnx"
+    if bool(use_hierarchical_feature_grid) or bool(use_convnext_blocks):
+        control_label += (
+            f"_lg{int(local_grid_levels)}c{int(local_grid_channels)}"
+            f"_cx{int(convnext_mlp_ratio)}k{int(convnext_kernel_size)}"
+        )
+    return (
+        f"hinerv_np{int(num_pairs)}_ld{int(latent_dim)}_ed{int(embed_dim)}_"
+        f"dc{int(decoder_channel)}_mi{int(mid_injection_block_index)}"
+        f"fi{int(fine_injection_block_index)}{control_label}_"
+        f"{decoder_codec}_ceil{int(hard_byte_ceiling)}"
+    )
+
+
 @dataclass(frozen=True)
 class HinervModelSizeCandidate:
     """One local HiNeRV capacity point, priced before real training/export."""
@@ -790,18 +833,24 @@ def analyze_hinerv_modelsize_candidate(
     nominal_decoder_payload = int((decoder_params * bits + 7) // 8)
     nominal_total_payload = int(latent_payload + nominal_decoder_payload)
     headroom = int(hard_byte_ceiling) - nominal_total_payload
-    official_label = ""
-    if bool(use_hierarchical_feature_grid):
-        official_label += "_hfg"
-    if bool(use_convnext_blocks):
-        official_label += "_cnx"
     return HinervModelSizeCandidate(
         schema="hinerv_modelsize_candidate.v1",
         family="hi_nerv",
-        candidate_id=(
-            f"hinerv_np{int(num_pairs)}_ld{int(latent_dim)}_ed{int(embed_dim)}_"
-            f"dc{int(decoder_channel)}{official_label}_"
-            f"{decoder_codec}_ceil{int(hard_byte_ceiling)}"
+        candidate_id=hinerv_modelsize_candidate_id_from_controls(
+            num_pairs=int(num_pairs),
+            latent_dim=int(latent_dim),
+            embed_dim=int(embed_dim),
+            decoder_channel=int(decoder_channel),
+            decoder_codec=str(decoder_codec),
+            hard_byte_ceiling=int(hard_byte_ceiling),
+            use_hierarchical_feature_grid=bool(cfg.use_hierarchical_feature_grid),
+            use_convnext_blocks=bool(cfg.use_convnext_blocks),
+            local_grid_levels=int(cfg.local_grid_levels),
+            local_grid_channels=int(cfg.local_grid_channels),
+            convnext_mlp_ratio=int(cfg.convnext_mlp_ratio),
+            convnext_kernel_size=int(cfg.convnext_kernel_size),
+            mid_injection_block_index=int(cfg.mid_injection_block_index),
+            fine_injection_block_index=int(cfg.fine_injection_block_index),
         ),
         num_pairs=int(num_pairs),
         hard_byte_ceiling=int(hard_byte_ceiling),

@@ -2127,7 +2127,10 @@ def _hi_nerv_modelsize_candidate_has_official_controls(row: Mapping[str, Any]) -
 _HINERV_MODEL_SIZE_ID_RE = re.compile(
     r"^hinerv_np(?P<num_pairs>\d+)_ld(?P<latent_dim>\d+)_"
     r"ed(?P<embed_dim>\d+)_dc(?P<decoder_channel>\d+)"
+    r"(?:_mi(?P<mid_injection_block_index>\d+)fi(?P<fine_injection_block_index>\d+))?"
     r"(?P<control_suffix>(?:_hfg)?(?:_cnx)?)_"
+    r"(?:(?:lg(?P<local_grid_levels>\d+)c(?P<local_grid_channels>\d+)_"
+    r"cx(?P<convnext_mlp_ratio>\d+)k(?P<convnext_kernel_size>\d+)_))?"
     r"(?P<decoder_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)"
     r"(?:_tgtmp(?P<target_modelsize>\d+(?:p\d+)?))?$"
 )
@@ -2196,6 +2199,18 @@ def _modelsize_candidate_from_self_describing_id(
             decoder_codec=match.group("decoder_codec"),
             use_hierarchical_feature_grid="_hfg" in control_suffix,
             use_convnext_blocks="_cnx" in control_suffix,
+            local_grid_levels=int(match.group("local_grid_levels") or 2),
+            local_grid_channels=int(match.group("local_grid_channels") or 4),
+            convnext_mlp_ratio=int(match.group("convnext_mlp_ratio") or 2),
+            convnext_kernel_size=int(match.group("convnext_kernel_size") or 7),
+            mid_injection_block_index=int(
+                match.group("mid_injection_block_index")
+                or HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX
+            ),
+            fine_injection_block_index=int(
+                match.group("fine_injection_block_index")
+                or HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX
+            ),
         )
         target_modelsize = match.group("target_modelsize")
         if target_modelsize is not None:
@@ -2205,7 +2220,15 @@ def _modelsize_candidate_from_self_describing_id(
             )
         row = row_obj.as_dict()
         if row["candidate_id"] != token:
-            return None
+            row["canonical_candidate_id"] = row["candidate_id"]
+            row["candidate_id"] = token
+            row["legacy_candidate_id"] = True
+            row["blockers"] = [
+                *list(row.get("blockers") or []),
+                "legacy_hinerv_modelsize_candidate_id_missing_graph_controls",
+            ]
+        else:
+            row["legacy_candidate_id"] = False
     elif family == "snerv":
         match = _SNERV_MODEL_SIZE_ID_RE.match(token)
         partial_match = _SNERV_PARTIAL_MODEL_SIZE_ID_RE.match(token)
@@ -3005,8 +3028,10 @@ def _resolve_hi_nerv_optimizer_policy(
         optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
     ).strip().lower()
     if policy == "auto":
-        # Preserve the PR95-faithful control row for the historical default,
-        # but let non-AdamW rows genuinely exercise native macOS/MLX optimizers.
+        # Preserve the PR95-faithful control row for the historical AdamW
+        # curriculum.  The Pact default is already Muon+AdamW and must be
+        # consumed by the shared score-aware adapter, not swallowed by the
+        # source-PR95 8-stage policy.
         resolved = (
             "pr95_curriculum"
             if int(epochs) >= 8 and optimizer == "adamw"
@@ -5908,6 +5933,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         convnext_mlp_ratio=launch_convnext_mlp_ratio,
         convnext_kernel_size=launch_convnext_kernel_size,
         decoder_codec=launch_decoder_codec,
+        hi_nerv_latent_codec=str(
+            candidate.get("hi_nerv_latent_codec", hi_nerv_latent_codec)
+        ),
     )
     (
         decoder_weight_waterfill_plan,
@@ -11872,10 +11900,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
         default=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
         help=(
-            "Native MLX optimizer for score-aware compact training. HiNeRV, "
-            "PACT-NeRV-VQ, and selector-v4 consume this directly; SNeRV "
-            "consumes it once the shared long-training harness owns the "
-            "carrier."
+            "Optimizer control for score-aware compact training. Default "
+            "pact_muon_adamw is Pact's PR95-derived Muon+AdamW partitioned "
+            "adapter; other values are direct MLX optimizer baselines. "
+            "HiNeRV, PACT-NeRV-VQ, and selector-v4 consume this directly; "
+            "SNeRV consumes it once the shared long-training harness owns "
+            "the carrier."
         ),
     )
     parser.add_argument(
@@ -11884,9 +11914,10 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="auto",
         help=(
             "HiNeRV optimizer authority. auto uses the PR95 8-stage "
-            "Muon+AdamW curriculum for long AdamW control rows and native MLX "
-            "optimizers for non-AdamW rows; native_optimizer forces "
-            "--optimizer-kind to be consumed directly."
+            "Muon+AdamW curriculum only for long AdamW control rows. The "
+            "default pact_muon_adamw is consumed directly by the shared "
+            "score-aware adapter as Pact's partitioned Muon+AdamW optimizer; "
+            "native_optimizer forces --optimizer-kind to be consumed directly."
         ),
     )
     parser.add_argument(
@@ -12472,8 +12503,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "sgd",
         ),
         help=(
-            "Optimizer for SNeRV native MLX HF decoder training. The default "
-            "tries MLX AdamW and falls back per subband when the measured loss worsens."
+            "Optimizer for SNeRV's narrow native MLX HF-decoder vector "
+            "refinement only, not the full SNeRV family train-time optimizer. "
+            "The full score-aware NeRV harness default is --optimizer-kind "
+            "pact_muon_adamw. This default tries MLX AdamW and falls back per "
+            "subband when measured loss worsens."
         ),
     )
     parser.add_argument(

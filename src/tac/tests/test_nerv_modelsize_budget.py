@@ -97,7 +97,8 @@ def test_hinerv_modelsize_counts_official_grid_convnext_controls() -> None:
     )
 
     assert row.candidate_id == (
-        "hinerv_np17_ld12_ed16_dc10_hfg_cnx_int4_mixed_ceil178000"
+        "hinerv_np17_ld12_ed16_dc10_mi1fi4_hfg_cnx_lg2c4_cx2k3_"
+        "int4_mixed_ceil178000"
     )
     assert row.use_hierarchical_feature_grid is True
     assert row.use_convnext_blocks is True
@@ -106,6 +107,43 @@ def test_hinerv_modelsize_counts_official_grid_convnext_controls() -> None:
     assert row.total_trainable_params == model.num_parameters()
     assert row.decoder_trainable_params > row.latent_trainable_params
     assert row.score_claim is False
+
+
+def test_hinerv_modelsize_candidate_id_separates_graph_controls() -> None:
+    base = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=17,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=10,
+        decoder_codec="int4_mixed",
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+    )
+    changed = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=17,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=10,
+        decoder_codec="int4_mixed",
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=3,
+        local_grid_channels=5,
+        convnext_mlp_ratio=4,
+        convnext_kernel_size=5,
+        mid_injection_block_index=0,
+        fine_injection_block_index=2,
+    )
+
+    assert base.candidate_id != changed.candidate_id
+    assert "_mi1fi4_hfg_cnx_lg2c4_cx2k3_" in base.candidate_id
+    assert "_mi0fi2_hfg_cnx_lg3c5_cx4k5_" in changed.candidate_id
 
 
 def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> None:
