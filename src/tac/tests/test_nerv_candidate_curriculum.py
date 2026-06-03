@@ -211,6 +211,81 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert receiver_proven["scorer_pressure"]["receiver_proof_attached"] is True
 
 
+def test_hinerv_candidate_curriculum_uses_explicit_optimizer_binding_evidence() -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        latent_dim=12,
+        embed_dim=24,
+        decoder_channel=32,
+        decoder_codec="int4_mixed",
+    ).as_dict()
+    measured = int(candidate["nominal_total_payload_bytes"])
+
+    native_optimizer_plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=29_650,
+        num_pairs=600,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
+        pr95_staged_curriculum_bound=False,
+        muon_adamw_partition_bound=True,
+        measured_archive_bytes=measured,
+    )
+
+    assert native_optimizer_plan["pr95_stage_plan"]["requested_epochs"] == 29_650
+    assert native_optimizer_plan["pr95_stage_plan"]["enabled"] is False
+    assert native_optimizer_plan["pr95_stage_plan"]["evidence_source"] == (
+        "explicit_runner_optimizer_policy"
+    )
+    assert native_optimizer_plan["pr95_stage_plan"][
+        "muon_adamw_partition_bound"
+    ] is True
+    assert "hi_nerv_pr95_staged_curriculum_missing" in native_optimizer_plan[
+        "blockers"
+    ]
+    assert "hi_nerv_muon_adamw_partition_missing" not in native_optimizer_plan[
+        "blockers"
+    ]
+    assert native_optimizer_plan["long_campaign_prelaunch_gate"][
+        "launch_allowed"
+    ] is False
+
+    pr95_bound_plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=29_650,
+        num_pairs=600,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        eval_roundtrip_ste_attached=True,
+        differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
+        pr95_staged_curriculum_bound=True,
+        muon_adamw_partition_bound=True,
+        measured_archive_bytes=measured,
+    )
+
+    assert pr95_bound_plan["pr95_stage_plan"]["enabled"] is True
+    assert "hi_nerv_pr95_staged_curriculum_missing" not in pr95_bound_plan[
+        "blockers"
+    ]
+    assert "hi_nerv_muon_adamw_partition_missing" not in pr95_bound_plan[
+        "blockers"
+    ]
+    assert pr95_bound_plan["long_campaign_prelaunch_gate"][
+        "launch_allowed"
+    ] is True
+
+
 def test_hinerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:
     candidate = analyze_hinerv_modelsize_candidate(
         hard_byte_ceiling=178_000,

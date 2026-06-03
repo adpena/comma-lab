@@ -151,6 +151,8 @@ def build_hinerv_candidate_curriculum_plan(
     eval_roundtrip_ste_attached: bool = False,
     differentiable_pose_preprocess_attached: bool = False,
     ema_archive_selection_attached: bool = False,
+    pr95_staged_curriculum_bound: bool | None = None,
+    muon_adamw_partition_bound: bool | None = None,
     receiver_proof_attached: bool = False,
     full_video_local_prefilter_attached: bool = False,
     local_cpu_replay_gate_attached: bool = False,
@@ -169,6 +171,16 @@ def build_hinerv_candidate_curriculum_plan(
     effective_coder_regularizer = bool(coder_aware_qat or candidate_selected)
     epochs = max(0, int(requested_epochs))
     full_video = int(num_pairs) >= 600
+    pr95_staged_bound = (
+        epochs >= 8
+        if pr95_staged_curriculum_bound is None
+        else bool(pr95_staged_curriculum_bound)
+    )
+    muon_partition_bound = (
+        epochs >= 8
+        if muon_adamw_partition_bound is None
+        else bool(muon_adamw_partition_bound)
+    )
     blockers: list[str] = []
     launch_mutations: list[str] = []
     if candidate_selected and not coder_aware_qat:
@@ -215,7 +227,7 @@ def build_hinerv_candidate_curriculum_plan(
         family="hi_nerv",
         evidence=build_pr95_stack_binding_evidence(
             modelsize_archive_budget=candidate_selected,
-            pr95_staged_curriculum=epochs >= 8,
+            pr95_staged_curriculum=pr95_staged_bound,
             real_segnet_teacher=_num(segnet_distillation_weight) > 0.0,
             real_posenet_teacher=_num(pose_distillation_weight) > 0.0,
             differentiable_pose_preprocess=bool(
@@ -225,7 +237,7 @@ def build_hinerv_candidate_curriculum_plan(
             ema_archive_selection=bool(ema_archive_selection_attached),
             qat_forward=effective_coder_regularizer,
             coder_aware_regularizer=effective_coder_regularizer,
-            muon_adamw_partition=epochs >= 8,
+            muon_adamw_partition=muon_partition_bound,
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
             receiver_proof=bool(receiver_proof_attached),
@@ -245,12 +257,18 @@ def build_hinerv_candidate_curriculum_plan(
         "num_pairs": int(num_pairs),
         "campaign_scope": "full600" if full_video else "partial_pair_smoke",
         "pr95_stage_plan": {
-            "enabled": epochs >= 8,
+            "enabled": pr95_staged_bound,
             "requested_epochs": epochs,
             "minimum_candidate_epochs": 8,
             "canonical_full_epochs": CANONICAL_PR95_TOTAL_EPOCHS,
             "stage_count": 8,
             "stage_policy": "scaled_pr95_8_stage_curriculum",
+            "evidence_source": (
+                "explicit_runner_optimizer_policy"
+                if pr95_staged_curriculum_bound is not None
+                else "legacy_epoch_floor"
+            ),
+            "muon_adamw_partition_bound": muon_partition_bound,
         },
         "scorer_pressure": {
             "segnet_distillation_weight": float(segnet_distillation_weight),

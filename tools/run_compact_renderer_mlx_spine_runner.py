@@ -213,6 +213,11 @@ HI_NERV_OPTIMIZER_POLICIES = (
     "pr95_curriculum",
     "native_optimizer",
 )
+HI_NERV_PR95_MUON_POLICIES = (
+    "auto",
+    "faithful_stage8_only",
+    "every_stage",
+)
 DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM = 1.0
 DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_WEIGHT_DECAY = 1.0e-4
 DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT = 1.0e-3
@@ -3169,6 +3174,7 @@ def _resolve_hi_nerv_optimizer_policy(
     requested_policy: str,
     epochs: int,
     optimizer_kind: str,
+    pr95_muon_policy: str = "auto",
 ) -> dict[str, Any]:
     """Resolve whether HiNeRV uses PR95 curriculum or native MLX optimizer.
 
@@ -3187,14 +3193,20 @@ def _resolve_hi_nerv_optimizer_policy(
     optimizer = str(
         optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
     ).strip().lower()
+    requested_muon_policy = str(pr95_muon_policy or "auto").strip().lower()
+    if requested_muon_policy not in HI_NERV_PR95_MUON_POLICIES:
+        raise CompactRendererMlxSpineRunnerError(
+            "hi_nerv_pr95_muon_policy must be one of "
+            f"{HI_NERV_PR95_MUON_POLICIES}; got {pr95_muon_policy!r}"
+        )
     if policy == "auto":
         # Preserve the PR95-faithful control row for the historical AdamW
-        # curriculum.  The Pact default is already Muon+AdamW and must be
-        # consumed by the shared score-aware adapter, not swallowed by the
-        # source-PR95 8-stage policy.
+        # curriculum.  For the Pact default, long campaigns should still use
+        # PR95's 8-stage scorer/QAT schedule, but with the contest-specific
+        # every-stage Muon policy wired through the shared harness.
         resolved = (
             "pr95_curriculum"
-            if int(epochs) >= 8 and optimizer == "adamw"
+            if int(epochs) >= 8 and optimizer in {"adamw", "pact_muon_adamw"}
             else "native_optimizer"
         )
     else:
@@ -3205,25 +3217,41 @@ def _resolve_hi_nerv_optimizer_policy(
             "--hi-nerv-optimizer-policy native_optimizer for short native "
             "optimizer probes"
         )
-    if resolved == "pr95_curriculum" and optimizer != "adamw":
+    if resolved == "pr95_curriculum" and optimizer not in {"adamw", "pact_muon_adamw"}:
         raise CompactRendererMlxSpineRunnerError(
             "hi_nerv PR95 curriculum owns the optimizer schedule "
-            "(Muon+AdamW); non-adamw --optimizer-kind would be ignored. Use "
-            "--hi-nerv-optimizer-policy native_optimizer to run "
+            "(Muon+AdamW); non-PR95-compatible --optimizer-kind would be "
+            "ignored. Use --hi-nerv-optimizer-policy native_optimizer to run "
             f"{optimizer!r} as a real native MLX optimizer."
         )
     pr95_enabled = resolved == "pr95_curriculum"
+    if pr95_enabled:
+        resolved_muon_policy = (
+            "every_stage"
+            if requested_muon_policy == "auto" and optimizer == "pact_muon_adamw"
+            else (
+                "faithful_stage8_only"
+                if requested_muon_policy == "auto"
+                else requested_muon_policy
+            )
+        )
+    else:
+        resolved_muon_policy = None
     return {
         "schema": "compact_hi_nerv_optimizer_policy.v1",
         "requested_policy": policy,
         "resolved_policy": resolved,
         "optimizer_kind": optimizer,
         "pr95_faithful_curriculum_enabled": pr95_enabled,
+        "pr95_muon_policy_requested": requested_muon_policy,
+        "pr95_muon_policy": resolved_muon_policy,
         "native_optimizer_active": resolved == "native_optimizer",
         "optimizer_kind_consumed_by_native_mlx": resolved == "native_optimizer",
         "optimizer_kind_consumed_by_pr95_curriculum": pr95_enabled,
         "effective_optimizer_label": (
-            "pr95_8stage_muon_adamw" if pr95_enabled else optimizer
+            f"pr95_8stage_muon_adamw_{resolved_muon_policy}"
+            if pr95_enabled
+            else optimizer
         ),
         "authority": "macos_mlx_research_signal_false_authority",
         "score_claim": False,
@@ -6561,6 +6589,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     resume_from_checkpoint: str | Path | None = None,
     optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     hi_nerv_optimizer_policy: str = "auto",
+    hi_nerv_pr95_muon_policy: str = "auto",
     optimizer_grad_clip_max_norm: float | None = (
         DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
     ),
@@ -6618,6 +6647,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         requested_policy=hi_nerv_optimizer_policy,
         epochs=int(epochs),
         optimizer_kind=str(optimizer_kind),
+        pr95_muon_policy=str(hi_nerv_pr95_muon_policy),
     )
     optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
         optimizer_kind=str(optimizer_policy.get("optimizer_kind") or optimizer_kind),
@@ -7099,6 +7129,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
+        pr95_staged_curriculum_bound=bool(
+            optimizer_policy.get("pr95_faithful_curriculum_enabled")
+        ),
+        muon_adamw_partition_bound=bool(
+            optimizer_policy.get("pr95_faithful_curriculum_enabled")
+            or optimizer_controls.get("optimizer_kind") == "pact_muon_adamw"
+        ),
     )
     effective_coder_aware_qat = bool(
         launch_curriculum_plan["coder_pressure"]["enabled"]
@@ -7411,6 +7448,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
+        pr95_staged_curriculum_bound=bool(
+            optimizer_policy.get("pr95_faithful_curriculum_enabled")
+        ),
+        muon_adamw_partition_bound=bool(
+            optimizer_policy.get("pr95_faithful_curriculum_enabled")
+            or optimizer_controls.get("optimizer_kind") == "pact_muon_adamw"
+        ),
         receiver_proof_attached=bool(receiver_proof_paths),
         full_video_local_prefilter_attached=has_full_video_mlx_prefilter,
         local_cpu_replay_gate_attached=local_cpu_replay_summary is not None,
@@ -10374,6 +10418,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     pr95_curriculum_enabled = bool(
         optimizer_policy.get("pr95_faithful_curriculum_enabled")
     )
+    pr95_muon_policy = str(
+        optimizer_policy.get("pr95_muon_policy") or "faithful_stage8_only"
+    )
     native_optimizer_active = bool(optimizer_policy.get("native_optimizer_active"))
     effective_optimizer_kind = str(
         optimizer_policy.get("optimizer_kind") or optimizer_kind
@@ -10475,6 +10522,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 optimizer_policy
             ),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+            "pr95_muon_policy": (
+                pr95_muon_policy if pr95_curriculum_enabled else None
+            ),
             "native_optimizer_active": native_optimizer_active,
             "optimizer_kind": effective_optimizer_kind,
             "optimizer_controls": strip_candidate_curriculum_authority_fields(
@@ -10686,6 +10736,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
+        pr95_muon_policy=pr95_muon_policy,
         ema_archive_selection_enabled=True,
         grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
         weight_decay=effective_weight_decay,
@@ -12962,10 +13013,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="auto",
         help=(
             "HiNeRV optimizer authority. auto uses the PR95 8-stage "
-            "Muon+AdamW curriculum only for long AdamW control rows. The "
-            "default pact_muon_adamw is consumed directly by the shared "
-            "score-aware adapter as Pact's partitioned Muon+AdamW optimizer; "
-            "native_optimizer forces --optimizer-kind to be consumed directly."
+            "Muon+AdamW curriculum for long AdamW control rows and for long "
+            "Pact Muon+AdamW rows; short smokes and other native MLX "
+            "optimizers are consumed directly. native_optimizer forces "
+            "--optimizer-kind to be consumed directly."
+        ),
+    )
+    parser.add_argument(
+        "--hi-nerv-pr95-muon-policy",
+        choices=HI_NERV_PR95_MUON_POLICIES,
+        default="auto",
+        help=(
+            "Muon activation policy for HiNeRV PR95-curriculum runs. auto "
+            "preserves faithful_stage8_only for AdamW control rows and uses "
+            "every_stage for the Pact Muon+AdamW default, giving a "
+            "contest-specific PR95-but-harder default without changing short "
+            "native optimizer smokes."
         ),
     )
     parser.add_argument(
@@ -14460,6 +14523,7 @@ def main(argv: list[str] | None = None) -> int:
             resume_from_checkpoint=args.resume_from_checkpoint,
             optimizer_kind=args.optimizer_kind,
             hi_nerv_optimizer_policy=args.hi_nerv_optimizer_policy,
+            hi_nerv_pr95_muon_policy=args.hi_nerv_pr95_muon_policy,
             optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,
             optimizer_weight_decay=args.optimizer_weight_decay,
             optimizer_warmup_epochs=args.optimizer_warmup_epochs,

@@ -5579,7 +5579,7 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
 def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() -> None:
     with pytest.raises(
         runner_mod.CompactRendererMlxSpineRunnerError,
-        match="non-adamw --optimizer-kind would be ignored",
+        match="non-PR95-compatible --optimizer-kind would be ignored",
     ):
         runner_mod._resolve_hi_nerv_optimizer_policy(
             requested_policy="pr95_curriculum",
@@ -5602,21 +5602,42 @@ def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() 
     )
     assert pr95["resolved_policy"] == "pr95_curriculum"
     assert pr95["pr95_faithful_curriculum_enabled"] is True
+    assert pr95["pr95_muon_policy"] == "faithful_stage8_only"
 
 
-def test_hinerv_auto_policy_keeps_pact_muon_adamw_as_adapter_default() -> None:
+def test_hinerv_auto_policy_binds_long_pact_muon_adamw_to_pr95_every_stage() -> None:
     default_policy = runner_mod._resolve_hi_nerv_optimizer_policy(
         requested_policy="auto",
         epochs=29_650,
         optimizer_kind="pact_muon_adamw",
     )
 
-    assert default_policy["resolved_policy"] == "native_optimizer"
+    assert default_policy["resolved_policy"] == "pr95_curriculum"
     assert default_policy["optimizer_kind"] == "pact_muon_adamw"
-    assert default_policy["effective_optimizer_label"] == "pact_muon_adamw"
-    assert default_policy["optimizer_kind_consumed_by_native_mlx"] is True
-    assert default_policy["optimizer_kind_consumed_by_pr95_curriculum"] is False
-    assert default_policy["pr95_faithful_curriculum_enabled"] is False
+    assert default_policy["pr95_muon_policy"] == "every_stage"
+    assert (
+        default_policy["effective_optimizer_label"]
+        == "pr95_8stage_muon_adamw_every_stage"
+    )
+    assert default_policy["optimizer_kind_consumed_by_native_mlx"] is False
+    assert default_policy["optimizer_kind_consumed_by_pr95_curriculum"] is True
+    assert default_policy["pr95_faithful_curriculum_enabled"] is True
+
+
+def test_hinerv_auto_policy_keeps_short_pact_muon_adamw_smokes_native() -> None:
+    smoke_policy = runner_mod._resolve_hi_nerv_optimizer_policy(
+        requested_policy="auto",
+        epochs=2,
+        optimizer_kind="pact_muon_adamw",
+    )
+
+    assert smoke_policy["resolved_policy"] == "native_optimizer"
+    assert smoke_policy["optimizer_kind"] == "pact_muon_adamw"
+    assert smoke_policy["pr95_muon_policy"] is None
+    assert smoke_policy["effective_optimizer_label"] == "pact_muon_adamw"
+    assert smoke_policy["optimizer_kind_consumed_by_native_mlx"] is True
+    assert smoke_policy["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert smoke_policy["pr95_faithful_curriculum_enabled"] is False
 
 
 def test_hinerv_optimizer_controls_default_to_pact_muon_adamw() -> None:
