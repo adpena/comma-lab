@@ -40,6 +40,7 @@ def test_is_terminal_status_covers_dispatch_close_prefixes() -> None:
     assert is_terminal_status("failed_stage")
     assert is_terminal_status("timed_out_3600s_t4_smoke")
     assert is_terminal_status("stopped_operator")
+    assert is_terminal_status("refused_active_full600_hinerv_campaign_running")
     assert is_terminal_status("refused_dispatch_duplicate")
     assert is_terminal_status("falsified_score_1.43_pareto_dominated")
     assert is_terminal_status("retired_config_exact_negative")

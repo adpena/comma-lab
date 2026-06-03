@@ -19,6 +19,7 @@ TERMINAL_PREFIXES = (
     "timed_out",
     "preempted",
     "cancelled",
+    "refused_",
     "refused_dispatch",
     "stale_assumed_dead",
     "stale_superseded",

@@ -207,7 +207,7 @@ def test_placeholder_lane_id_rejected(claims_path, lane_id):
 def test_terminal_prefixes_constants():
     # Spec from .pyc revealed these prefixes — verify they're all present
     expected = {"completed_", "failed_", "timed_out", "preempted", "cancelled",
-                "refused_dispatch", "stale_assumed_dead", "stale_superseded", "stopped_",
+                "refused_", "refused_dispatch", "stale_assumed_dead", "stale_superseded", "stopped_",
                 "falsified_", "retired_", "config_retired_",
                 "measured_implementation_retired_",
                 "stop_attempt_timeout_duplicate_after_primary_negative"}

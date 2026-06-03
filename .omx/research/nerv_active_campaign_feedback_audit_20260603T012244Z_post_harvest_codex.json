@@ -1,0 +1,185 @@
+{
+  "active_claim_count": 2,
+  "active_claim_rows": [
+    {
+      "artifact_roots": [
+        "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_queue_20260602T231600Z_hinerv_segw4_snerv_controls_codex.json",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_live_feedback_segw4_20260602T231600Z/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw4_increase_segnet_distillation_weight_from_stagnat_preserve_pose_guard"
+      ],
+      "artifacts": [
+        {
+          "blockers": [],
+          "bytes": 10599549,
+          "exists": true,
+          "ingestion": {
+            "ingested": true,
+            "match_count": 46,
+            "matches": [
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/hinerv_official_controls_live_feedback_20260602T231654Z_segw4_midrun_codex/nerv_candidate_training_telemetry_feedback.jsonl"
+              },
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/hinerv_official_controls_live_feedback_20260602T231654Z_segw4_midrun_codex/nerv_candidate_training_telemetry_feedback_row.json"
+              },
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/hinerv_official_controls_live_feedback_20260602T231654Z_segw4_midrun_codex/nerv_training_telemetry_feedback.json"
+              },
+              {
+                "last_epoch_max": 628,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T231600Z_hinerv_segw4_snerv_controls_codex.json"
+              },
+              {
+                "last_epoch_max": 410,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T231700Z_feedback_refreshed_codex.json"
+              },
+              {
+                "last_epoch_max": 808,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T232540Z_live_feedback_segw8_codex.json"
+              },
+              {
+                "last_epoch_max": 385,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T233000Z_hinerv_segw8_snerv_controls_codex.json"
+              },
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T234000Z_direct_refresh_segw8_codex.json"
+              },
+              {
+                "last_epoch_max": 2604,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T235401Z_segw8_from_live_refresh_codex.json"
+              },
+              {
+                "last_epoch_max": 808,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_queue_training_feedback_refresh_20260602T232516Z_codex.json"
+              },
+              {
+                "last_epoch_max": 808,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_queue_training_feedback_refresh_20260602T232516Z_codex.jsonl"
+              },
+              {
+                "last_epoch_max": 385,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_queue_training_feedback_refresh_20260602T233000Z_codex/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamw/nerv_candidate_training_telemetry_feedback.jsonl"
+              }
+            ],
+            "max_ingested_epoch": 8008,
+            "stale": false,
+            "stale_epoch_tolerance": 512
+          },
+          "kind": "training_telemetry",
+          "latest_epoch": 8026,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_live_feedback_segw4_20260602T231600Z/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw4_increase_segnet_distillation_weight_from_stagnat_preserve_pose_guard/hi_nerv_mlx_training/telemetry.jsonl"
+        }
+      ],
+      "blockers": [],
+      "frontier_score_claim": false,
+      "instance_job_id": "nerv_hinerv_segw4_ld28ed12_29650ep_20260602T231600Z_running",
+      "lane_id": "lane_nerv_hinerv_segw4_long_mlx_20260602",
+      "platform": "local_mlx",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "training",
+      "timestamp_utc": "2026-06-02T23:09:52Z"
+    },
+    {
+      "artifact_roots": [
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_live_feedback_segw4_20260602T231600Z/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw4_increase_segnet_distillation_weight_from_stagnat_preserve_pose_guard"
+      ],
+      "artifacts": [
+        {
+          "blockers": [],
+          "bytes": 10599549,
+          "exists": true,
+          "ingestion": {
+            "ingested": true,
+            "match_count": 46,
+            "matches": [
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/hinerv_official_controls_live_feedback_20260602T231654Z_segw4_midrun_codex/nerv_candidate_training_telemetry_feedback.jsonl"
+              },
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/hinerv_official_controls_live_feedback_20260602T231654Z_segw4_midrun_codex/nerv_candidate_training_telemetry_feedback_row.json"
+              },
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/hinerv_official_controls_live_feedback_20260602T231654Z_segw4_midrun_codex/nerv_training_telemetry_feedback.json"
+              },
+              {
+                "last_epoch_max": 628,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T231600Z_hinerv_segw4_snerv_controls_codex.json"
+              },
+              {
+                "last_epoch_max": 410,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T231700Z_feedback_refreshed_codex.json"
+              },
+              {
+                "last_epoch_max": 808,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T232540Z_live_feedback_segw8_codex.json"
+              },
+              {
+                "last_epoch_max": 385,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T233000Z_hinerv_segw8_snerv_controls_codex.json"
+              },
+              {
+                "last_epoch_max": 424,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T234000Z_direct_refresh_segw8_codex.json"
+              },
+              {
+                "last_epoch_max": 2604,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_long_training_campaign_plan_20260602T235401Z_segw8_from_live_refresh_codex.json"
+              },
+              {
+                "last_epoch_max": 808,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_queue_training_feedback_refresh_20260602T232516Z_codex.json"
+              },
+              {
+                "last_epoch_max": 808,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_queue_training_feedback_refresh_20260602T232516Z_codex.jsonl"
+              },
+              {
+                "last_epoch_max": 385,
+                "path": "/Users/adpena/Projects/pact/.omx/research/nerv_queue_training_feedback_refresh_20260602T233000Z_codex/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamw/nerv_candidate_training_telemetry_feedback.jsonl"
+              }
+            ],
+            "max_ingested_epoch": 8008,
+            "stale": false,
+            "stale_epoch_tolerance": 512
+          },
+          "kind": "training_telemetry",
+          "latest_epoch": 8026,
+          "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/hinerv_snerv_live_feedback_segw4_20260602T231600Z/hi_nerv_hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000_adamw_feedback_seg_stagnation_lr2.7e-05_segw4_increase_segnet_distillation_weight_from_stagnat_preserve_pose_guard/hi_nerv_mlx_training/telemetry.jsonl"
+        }
+      ],
+      "blockers": [],
+      "frontier_score_claim": false,
+      "instance_job_id": "nerv_hinerv_official_controls_29650ep_20260602T231600Z_segw4_runner_pid97603",
+      "lane_id": "lane_nerv_hinerv_official_controls_long_mlx_20260602",
+      "platform": "local_mlx",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score_claim": false,
+      "status": "active_local_mlx_runner_orphaned_from_queue_wrapper",
+      "timestamp_utc": "2026-06-02T23:09:36Z"
+    }
+  ],
+  "artifact_count": 2,
+  "audited_claim_count": 2,
+  "blocker_count": 0,
+  "blockers": [],
+  "claims_path": "/Users/adpena/Projects/pact/.omx/state/active_lane_dispatch_claims.md",
+  "frontier_score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "research_dir": "/Users/adpena/Projects/pact/.omx/research",
+  "schema": "nerv_active_campaign_feedback_audit.v1",
+  "score_claim": false,
+  "stale_epoch_tolerance": 512
+}

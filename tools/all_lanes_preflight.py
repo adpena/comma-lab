@@ -105,6 +105,10 @@ Currently runs:
            (SNeRV/HiNeRV modelsize curve, control inventory, implementation
             sweep, master-consumer bridge, and rate/allocator bridge all
             remain fail-closed and Cathedral/final-rate visible)
+  Gate #36: NeRV active campaign feedback ingestion
+           (active SNeRV/HiNeRV SSD telemetry/progress roots from dispatch
+            claims must be harvested into planner-visible false-authority
+            feedback or explicitly block more campaign actuation)
   Lane #1: tools/dispatch_dryrun_apogee_intN.py --all-pareto-frontier
            --allow-forensic-byte-only
            (self-protection check: Apogee intN remains byte-only and blocked
@@ -237,6 +241,7 @@ NERV_RATE_ALLOCATOR_QUEUE = TOOLS / "build_nerv_rate_allocator_queue.py"
 NERV_LADDER_ROW_EMISSION_CONTRACT = (
     TOOLS / "build_nerv_ladder_row_emission_contract.py"
 )
+NERV_ACTIVE_CAMPAIGN_FEEDBACK_AUDIT = TOOLS / "audit_nerv_active_campaign_feedback.py"
 REVERSE_ENGINEERING_AUDIT = TOOLS / "audit_reverse_engineering_tree.py"
 HIDDEN_GEMS_REGISTRY = TOOLS / "list_hidden_gems.py"
 HIDDEN_GEMS_READINESS = TOOLS / "audit_hidden_gem_readiness.py"
@@ -1967,6 +1972,67 @@ def _run_nerv_top_priority_stack_gate() -> tuple[bool, str]:
             f"memo_refs={memo_count} blockers={len(bridge_payload.get('blockers') or [])} "
             f"blocked_dispatch={seam_payload.get('blocked_dispatch')} "
             f"stack_rows={len(sweep_payload.get('stack_sweeps') or [])}; "
+            "all authority flags remain false)",
+        )
+
+
+def _run_nerv_active_campaign_feedback_gate() -> tuple[bool, str]:
+    """Ensure live SNeRV/HiNeRV telemetry is visible to planner feedback."""
+
+    with tempfile.TemporaryDirectory(prefix="pact_nerv_active_feedback_") as temp_dir:
+        output = Path(temp_dir) / "nerv_active_campaign_feedback_audit.json"
+        command = [
+            sys.executable,
+            str(NERV_ACTIVE_CAMPAIGN_FEEDBACK_AUDIT),
+            "--claims",
+            str(REPO / ".omx/state/active_lane_dispatch_claims.md"),
+            "--research-dir",
+            str(REPO / ".omx/research"),
+            "--output-json",
+            str(output),
+        ]
+        proc = _run_subprocess(command, capture_output=True, text=True)
+        if proc.returncode != 0:
+            return (
+                False,
+                "NeRV active campaign feedback audit failed:\n"
+                + proc.stdout
+                + proc.stderr,
+            )
+        payload = _load_nerv_preflight_json(output)
+        failures: list[str] = []
+        if payload.get("schema") != "nerv_active_campaign_feedback_audit.v1":
+            failures.append(
+                "active_campaign_feedback:schema:"
+                f"{payload.get('schema')!r}"
+            )
+        _append_nerv_authority_failures(
+            failures,
+            "active_campaign_feedback",
+            payload,
+        )
+        blockers = payload.get("blockers")
+        if not isinstance(blockers, list):
+            failures.append("active_campaign_feedback:blockers_not_list")
+            blockers = []
+        failures.extend(str(blocker) for blocker in blockers)
+        if failures:
+            return (
+                False,
+                "NeRV active campaign feedback failed:\n  "
+                + "\n  ".join(failures[:40])
+                + "\nRun `uv run python tools/harvest_nerv_training_telemetry_feedback.py` "
+                "or `uv run python tools/refresh_nerv_queue_training_feedback.py` "
+                "for the listed SSD telemetry roots before more campaign actuation.\n"
+                + proc.stdout
+                + proc.stderr,
+            )
+        return (
+            True,
+            "NeRV active campaign feedback: PASS "
+            f"(active_claims={payload.get('active_claim_count')} "
+            f"artifacts={payload.get('artifact_count')} "
+            f"blockers={payload.get('blocker_count')}; "
             "all authority flags remain false)",
         )
 
@@ -4505,6 +4571,14 @@ def main(argv: list[str] | None = None) -> int:
             _run_nerv_top_priority_stack_gate,
             "  ✓ Gate #35: NeRV top-priority stack production-hardening surfaces — PASSED",
             "  ✗ Gate #35: NeRV top-priority stack production-hardening surfaces — FAILED",
+        ),
+        PreflightStep(
+            "GATE",
+            36,
+            "NeRV active campaign feedback ingestion",
+            _run_nerv_active_campaign_feedback_gate,
+            "  ✓ Gate #36: NeRV active campaign feedback ingestion — PASSED",
+            "  ✗ Gate #36: NeRV active campaign feedback ingestion — FAILED",
         ),
     ]
     lane_steps = [
