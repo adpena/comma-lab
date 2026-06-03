@@ -204,6 +204,25 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     score_aware_long_training_weight_decay: float | None = 1.0e-4,
     score_aware_long_training_eval_roundtrip_ste: bool = False,
+    segnet_distillation_weight: float = 0.0,
+    pose_distillation_weight: float = 0.0,
+    pose_distillation_loss: str = "mse",
+    pose_distillation_huber_delta: float = 1.0,
+    segnet_distillation_objective: str = "kl_t2",
+    distillation_temperature: float = 2.0,
+    segnet_tau_boundary: float = 1.0,
+    segnet_hinge_margin: float = 1.0,
+    distillation_device: str = "cpu",
+    allow_segnet_only_research: bool = False,
+    coder_aware_qat: bool = False,
+    coder_qat_quant_bits: int = 8,
+    coder_qat_quant_residual_weight: float = 1.0e-3,
+    coder_qat_magnitude_weight: float = 1.0e-4,
+    coder_qat_delta_weight: float = 2.0e-4,
+    coder_qat_c1a_entropy_weight: float = 1.0e-4,
+    coder_qat_c1a_sigma: float = 0.2,
+    coder_qat_c1a_sample_size: int = 512,
+    score_aware_long_training_pr95_faithful_curriculum: bool = False,
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
@@ -401,6 +420,151 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_score_aware_long_training_eval_roundtrip_ste",
                     score_aware_long_training_eval_roundtrip_ste,
+                ),
+            )
+        ),
+        scorer_upstream_dir=scorer_upstream_dir,
+        segnet_distillation_weight=float(
+            candidate.get(
+                "segnet_distillation_weight",
+                candidate.get(
+                    "snerv_segnet_distillation_weight",
+                    segnet_distillation_weight,
+                ),
+            )
+        ),
+        pose_distillation_weight=float(
+            candidate.get(
+                "pose_distillation_weight",
+                candidate.get(
+                    "snerv_pose_distillation_weight",
+                    pose_distillation_weight,
+                ),
+            )
+        ),
+        pose_distillation_loss=str(
+            candidate.get(
+                "pose_distillation_loss",
+                candidate.get("snerv_pose_distillation_loss", pose_distillation_loss),
+            )
+        ),
+        pose_distillation_huber_delta=float(
+            candidate.get(
+                "pose_distillation_huber_delta",
+                candidate.get(
+                    "snerv_pose_distillation_huber_delta",
+                    pose_distillation_huber_delta,
+                ),
+            )
+        ),
+        segnet_distillation_objective=str(
+            candidate.get(
+                "segnet_distillation_objective",
+                candidate.get(
+                    "snerv_segnet_distillation_objective",
+                    segnet_distillation_objective,
+                ),
+            )
+        ),
+        distillation_temperature=float(
+            candidate.get(
+                "distillation_temperature",
+                candidate.get("snerv_distillation_temperature", distillation_temperature),
+            )
+        ),
+        segnet_tau_boundary=float(
+            candidate.get(
+                "segnet_tau_boundary",
+                candidate.get("snerv_segnet_tau_boundary", segnet_tau_boundary),
+            )
+        ),
+        segnet_hinge_margin=float(
+            candidate.get(
+                "segnet_hinge_margin",
+                candidate.get("snerv_segnet_hinge_margin", segnet_hinge_margin),
+            )
+        ),
+        distillation_device=str(
+            candidate.get(
+                "distillation_device",
+                candidate.get("snerv_distillation_device", distillation_device),
+            )
+        ),
+        allow_segnet_only_research=bool(
+            candidate.get(
+                "allow_segnet_only_research",
+                candidate.get(
+                    "snerv_allow_segnet_only_research",
+                    allow_segnet_only_research,
+                ),
+            )
+        ),
+        coder_aware_qat=bool(
+            candidate.get(
+                "coder_aware_qat",
+                candidate.get("snerv_coder_aware_qat", coder_aware_qat),
+            )
+        ),
+        coder_qat_quant_bits=int(
+            candidate.get(
+                "coder_qat_quant_bits",
+                candidate.get("snerv_coder_qat_quant_bits", coder_qat_quant_bits),
+            )
+        ),
+        coder_qat_quant_residual_weight=float(
+            candidate.get(
+                "coder_qat_quant_residual_weight",
+                candidate.get(
+                    "snerv_coder_qat_quant_residual_weight",
+                    coder_qat_quant_residual_weight,
+                ),
+            )
+        ),
+        coder_qat_magnitude_weight=float(
+            candidate.get(
+                "coder_qat_magnitude_weight",
+                candidate.get(
+                    "snerv_coder_qat_magnitude_weight",
+                    coder_qat_magnitude_weight,
+                ),
+            )
+        ),
+        coder_qat_delta_weight=float(
+            candidate.get(
+                "coder_qat_delta_weight",
+                candidate.get("snerv_coder_qat_delta_weight", coder_qat_delta_weight),
+            )
+        ),
+        coder_qat_c1a_entropy_weight=float(
+            candidate.get(
+                "coder_qat_c1a_entropy_weight",
+                candidate.get(
+                    "snerv_coder_qat_c1a_entropy_weight",
+                    coder_qat_c1a_entropy_weight,
+                ),
+            )
+        ),
+        coder_qat_c1a_sigma=float(
+            candidate.get(
+                "coder_qat_c1a_sigma",
+                candidate.get("snerv_coder_qat_c1a_sigma", coder_qat_c1a_sigma),
+            )
+        ),
+        coder_qat_c1a_sample_size=int(
+            candidate.get(
+                "coder_qat_c1a_sample_size",
+                candidate.get(
+                    "snerv_coder_qat_c1a_sample_size",
+                    coder_qat_c1a_sample_size,
+                ),
+            )
+        ),
+        pr95_faithful_curriculum_enabled=bool(
+            candidate.get(
+                "score_aware_long_training_pr95_faithful_curriculum",
+                candidate.get(
+                    "snerv_score_aware_long_training_pr95_faithful_curriculum",
+                    score_aware_long_training_pr95_faithful_curriculum,
                 ),
             )
         ),
@@ -619,6 +783,10 @@ def train_export_snerv_mlx_native(
             for blocker in blockers
             if blocker != "snerv_mlx_score_aware_long_training_not_executed"
         ]
+    long_training_joint_real_teachers_bound = bool(
+        score_aware_long_training_public.get("has_real_segnet_teacher") is True
+        and score_aware_long_training_public.get("has_real_posenet_teacher") is True
+    )
     blockers.extend(
         str(blocker)
         for blocker in score_aware_long_training_public.get("blockers") or ()
@@ -630,6 +798,12 @@ def train_export_snerv_mlx_native(
             num_pairs=effective_num_pairs,
         )
     )
+    if long_training_joint_real_teachers_bound:
+        blockers = [
+            str(blocker)
+            for blocker in blockers
+            if str(blocker) != "snerv_real_segnet_posenet_teacher_loop_not_attached"
+        ]
     if run_archive_export:
         if storage_preflight["preflight_passed"] is not True:
             blockers.append("snerv_mlx_native_receiver_proof_storage_preflight_failed")
@@ -756,6 +930,25 @@ def train_export_snerv_mlx_native(
     payload["score_aware_long_training"] = score_aware_long_training_public
     payload["score_aware_long_training_executed"] = bool(
         selected_archive_metadata.get("score_aware_long_training_executed") is True
+    )
+    payload["score_aware_long_training_real_teachers_bound"] = (
+        long_training_joint_real_teachers_bound
+    )
+    payload["score_aware_long_training_has_real_segnet_teacher"] = bool(
+        score_aware_long_training_public.get("has_real_segnet_teacher") is True
+    )
+    payload["score_aware_long_training_has_real_posenet_teacher"] = bool(
+        score_aware_long_training_public.get("has_real_posenet_teacher") is True
+    )
+    payload["score_aware_long_training_coder_qat_bound"] = bool(
+        score_aware_long_training_public.get("coder_aware_qat_bound") is True
+    )
+    payload["score_aware_long_training_pr95_curriculum_bound"] = bool(
+        score_aware_long_training_public.get("pr95_faithful_curriculum_enabled")
+        is True
+    )
+    payload["score_aware_long_training_muon_adamw_partition_bound"] = bool(
+        score_aware_long_training_public.get("muon_adamw_partition_bound") is True
     )
     payload["score_aware_long_training_kind"] = str(
         selected_archive_metadata.get("score_aware_long_training_kind") or "none"
@@ -921,6 +1114,26 @@ def _run_score_aware_long_training_attachment(
     grad_clip_max_norm: float | None,
     weight_decay: float | None,
     eval_roundtrip_ste: bool,
+    scorer_upstream_dir: str | Path,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    pose_distillation_loss: str,
+    pose_distillation_huber_delta: float,
+    segnet_distillation_objective: str,
+    distillation_temperature: float,
+    segnet_tau_boundary: float,
+    segnet_hinge_margin: float,
+    distillation_device: str,
+    allow_segnet_only_research: bool,
+    coder_aware_qat: bool,
+    coder_qat_quant_bits: int,
+    coder_qat_quant_residual_weight: float,
+    coder_qat_magnitude_weight: float,
+    coder_qat_delta_weight: float,
+    coder_qat_c1a_entropy_weight: float,
+    coder_qat_c1a_sigma: float,
+    coder_qat_c1a_sample_size: int,
+    pr95_faithful_curriculum_enabled: bool,
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     """Run real SNeRV MLX long training before NumPy-portable SNAR export."""
@@ -932,6 +1145,14 @@ def _run_score_aware_long_training_attachment(
         raise SnervMlxNativeExportError(
             f"refusing to overwrite existing score-aware long-training report: {report_path}"
         )
+    seg_weight = float(segnet_distillation_weight)
+    pose_weight = float(pose_distillation_weight)
+    pose_loss = str(pose_distillation_loss)
+    pose_huber_delta = float(pose_distillation_huber_delta)
+    resolved_scorer_upstream_dir = Path(scorer_upstream_dir).expanduser().resolve(
+        strict=False
+    )
+    distillation_requested = bool(seg_weight > 0.0 or pose_weight > 0.0)
     base_payload = {
         "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
         "requested_epochs": int(requested_epochs),
@@ -943,13 +1164,83 @@ def _run_score_aware_long_training_attachment(
         "source_pair_indices": [int(value) for value in source_pair_indices],
         "model_size": model_size.as_jsonable(),
         "human_visual_fidelity_objective": False,
+        "contest_scorer_distillation_objective": distillation_requested,
+        "coder_aware_qat_requested": bool(coder_aware_qat),
+        "pr95_faithful_curriculum_enabled": bool(
+            pr95_faithful_curriculum_enabled
+        ),
         "contest_scorer_distortion_objective": bool(
             _recon_pixel_weight_metadata_is_verified_gradient_manifest(
                 recon_pixel_weight_metadata
             )
         ),
+        "teacher_binding": {
+            "schema": "snerv_mlx_real_scorer_teacher_binding.v1",
+            "requested": distillation_requested,
+            "segnet_distillation_weight": seg_weight,
+            "pose_distillation_weight": pose_weight,
+            "pose_distillation_loss": pose_loss,
+            "pose_distillation_huber_delta": pose_huber_delta,
+            "segnet_distillation_objective": str(segnet_distillation_objective),
+            "distillation_temperature": float(distillation_temperature),
+            "segnet_tau_boundary": float(segnet_tau_boundary),
+            "segnet_hinge_margin": float(segnet_hinge_margin),
+            "distillation_device": str(distillation_device),
+            "scorer_upstream_dir": resolved_scorer_upstream_dir.as_posix(),
+            "has_real_segnet_teacher": False,
+            "has_real_posenet_teacher": False,
+            "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "pose_student_input_preprocess": (
+                "pr95_yuv6" if pose_weight > 0.0 else None
+            ),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "has_real_segnet_teacher": False,
+        "has_real_posenet_teacher": False,
         **FALSE_AUTHORITY,
     }
+    validation_blockers: list[str] = []
+    if seg_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_distillation_weight_negative"
+        )
+    if pose_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_pose_distillation_weight_negative"
+        )
+    if pose_loss not in {"mse", "huber"}:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_pose_distillation_loss_invalid"
+        )
+    if pose_huber_delta <= 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_pose_huber_delta_nonpositive"
+        )
+    if seg_weight > 0.0 and pose_weight <= 0.0 and not allow_segnet_only_research:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_requires_posenet_teacher"
+        )
+    if distillation_requested:
+        required = (
+            resolved_scorer_upstream_dir / "modules.py",
+            resolved_scorer_upstream_dir / "models" / "posenet.safetensors",
+            resolved_scorer_upstream_dir / "models" / "segnet.safetensors",
+        )
+        missing = [path.as_posix() for path in required if not path.is_file()]
+        if missing:
+            validation_blockers.append(
+                "snerv_score_aware_long_training_real_teacher_upstream_missing"
+            )
+    if validation_blockers:
+        payload = {
+            **base_payload,
+            "validation_failures": _ordered_unique(validation_blockers),
+            "blockers": _ordered_unique(validation_blockers),
+        }
+        write_json(report_path, payload)
+        return {**payload, "report_path": report_path.as_posix()}
     if int(requested_epochs) <= 0:
         payload = {
             **base_payload,
@@ -981,8 +1272,22 @@ def _run_score_aware_long_training_attachment(
         import mlx.core as mx
 
         from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+        from tac.substrates._shared.mlx_score_aware.coder_qat import (
+            CoderAwareQATConfig,
+            build_decoder_coder_qat_terms,
+            coder_qat_loss_weights,
+            coder_qat_metadata,
+        )
         from tac.substrates._shared.mlx_score_aware.harness import (
             run_mlx_score_aware_full_main,
+        )
+        from tac.substrates._shared.mlx_score_aware.loss import (
+            build_mlx_posenet_pair_teacher,
+            build_mlx_segnet_pair_teacher,
+        )
+        from tac.substrates.hinton_distilled_scorer_surrogate import (
+            build_learnable_pose_student_head,
+            build_learnable_student_head,
         )
         from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
             SNERV_MLX_RENDERER_SCHEMA,
@@ -995,6 +1300,20 @@ def _run_score_aware_long_training_attachment(
             wavelet="haar",
             model_size=model_size,
         )
+        coder_qat_cfg = CoderAwareQATConfig(
+            enabled=bool(coder_aware_qat),
+            quant_bits=int(coder_qat_quant_bits),
+            quant_residual_weight=float(coder_qat_quant_residual_weight),
+            magnitude_weight=float(coder_qat_magnitude_weight),
+            delta_weight=float(coder_qat_delta_weight),
+            c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+            c1a_sigma=float(coder_qat_c1a_sigma),
+            c1a_sample_size=int(coder_qat_c1a_sample_size),
+        ).validated()
+
+        def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
+            return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
+
         initial_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
         initial_mse = float(np.mean((initial_pairs - pairs) ** 2))
         best_state = model.export_state_dict()
@@ -1056,27 +1375,126 @@ def _run_score_aware_long_training_attachment(
             if recon_pixel_weight is None
             else mx.array(np.asarray(recon_pixel_weight, dtype=np.float32), dtype=mx.float32)
         )
-        bundle = RendererBundle(
-            model=model,
-            target_rgb_0=target0,
-            target_rgb_1=target1,
-            num_pairs=int(pairs.shape[0]),
-            forward_convention="reconstruct_pair_nchw01",
-            recon_pixel_weight=recon_weight_mlx,
-            recon_pixel_weight_normalize="mean",
-            eval_roundtrip_ste_enabled=bool(eval_roundtrip_ste),
-            substrate_artifact_metadata={
+        metadata_forbidden_authority_keys = {
+            "score_claim",
+            "promotion_eligible",
+            "ready_for_exact_eval_dispatch",
+            "rank_or_kill_eligible",
+            "promotable",
+            "score_claim_valid",
+        }
+        teacher_binding_metadata = {
+            key: value
+            for key, value in dict(base_payload["teacher_binding"]).items()
+            if key not in metadata_forbidden_authority_keys
+        }
+        bundle_kwargs: dict[str, Any] = {
+            "model": model,
+            "target_rgb_0": target0,
+            "target_rgb_1": target1,
+            "num_pairs": int(pairs.shape[0]),
+            "forward_convention": "reconstruct_pair_nchw01",
+            "extra_loss_terms": _extra_loss_terms if coder_qat_cfg.enabled else None,
+            "extra_loss_weights": coder_qat_loss_weights(coder_qat_cfg),
+            "recon_pixel_weight": recon_weight_mlx,
+            "recon_pixel_weight_normalize": "mean",
+            "eval_roundtrip_ste_enabled": bool(eval_roundtrip_ste),
+            "pose_student_input_preprocess": "pr95_yuv6"
+            if pose_weight > 0.0
+            else "rgb",
+            "substrate_artifact_metadata": {
                 "schema": "snerv_mlx_score_aware_renderer_bundle.v1",
                 "renderer_schema": SNERV_MLX_RENDERER_SCHEMA,
                 "source_pair_indices": [int(value) for value in source_pair_indices],
                 "receiver_export_path": "SNAR1_numpy_portable_packet_after_training",
                 "human_visual_fidelity_objective": False,
+                "contest_scorer_distillation_objective": distillation_requested,
+                "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+                "pr95_faithful_curriculum_enabled": bool(
+                    pr95_faithful_curriculum_enabled
+                ),
                 "contest_scorer_distortion_objective": bool(
                     _recon_pixel_weight_metadata_is_verified_gradient_manifest(
                         recon_pixel_weight_metadata
                     )
                 ),
+                "teacher_binding": teacher_binding_metadata,
             },
+        }
+        teacher_probe_bundle = RendererBundle(**bundle_kwargs)
+        scorer_teacher = None
+        learnable_student_head = None
+        pose_scorer_teacher = None
+        learnable_pose_student_head = None
+        if seg_weight > 0.0:
+            scorer_teacher = build_mlx_segnet_pair_teacher(
+                teacher_probe_bundle,
+                upstream_dir=resolved_scorer_upstream_dir,
+                device=str(distillation_device),
+            )
+            learnable_student_head = build_learnable_student_head(
+                num_classes=int(scorer_teacher.num_classes),
+                seed=0,
+            )
+        if pose_weight > 0.0:
+            pose_scorer_teacher = build_mlx_posenet_pair_teacher(
+                teacher_probe_bundle,
+                upstream_dir=resolved_scorer_upstream_dir,
+                device=str(distillation_device),
+            )
+            learnable_pose_student_head = build_learnable_pose_student_head(
+                pose_dims=int(pose_scorer_teacher.pose_dims),
+                input_channels=6,
+                seed=1,
+            )
+        teacher_binding = {
+            **dict(base_payload["teacher_binding"]),
+            "has_real_segnet_teacher": scorer_teacher is not None,
+            "has_real_posenet_teacher": pose_scorer_teacher is not None,
+            "segnet_teacher_num_classes": (
+                int(scorer_teacher.num_classes) if scorer_teacher is not None else None
+            ),
+            "posenet_teacher_pose_dims": (
+                int(pose_scorer_teacher.pose_dims)
+                if pose_scorer_teacher is not None
+                else None
+            ),
+            "learnable_student_head_bound": learnable_student_head is not None,
+            "learnable_pose_student_head_bound": (
+                learnable_pose_student_head is not None
+            ),
+        }
+        bundle_kwargs["substrate_artifact_metadata"] = {
+            **dict(bundle_kwargs["substrate_artifact_metadata"]),
+            "teacher_binding": {
+                key: value
+                for key, value in teacher_binding.items()
+                if key not in metadata_forbidden_authority_keys
+            },
+        }
+        bundle = RendererBundle(
+            **bundle_kwargs,
+            distillation_weight=seg_weight,
+            scorer_teacher=scorer_teacher,
+            learnable_student_head=learnable_student_head,
+            distillation_temperature=float(distillation_temperature),
+            segnet_distillation_objective=str(segnet_distillation_objective),
+            segnet_tau_boundary=float(segnet_tau_boundary),
+            segnet_hinge_margin=float(segnet_hinge_margin),
+            distillation_num_classes=(
+                int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
+            ),
+            pose_distillation_weight=pose_weight,
+            pose_distillation_loss=pose_loss,
+            pose_distillation_huber_delta=pose_huber_delta,
+            pose_scorer_teacher=pose_scorer_teacher,
+            learnable_pose_student_head=learnable_pose_student_head,
+            pose_dims=(
+                int(pose_scorer_teacher.pose_dims)
+                if pose_scorer_teacher is not None
+                else 6
+            ),
+            allow_segnet_only_research=bool(allow_segnet_only_research),
         )
         artifact = run_mlx_score_aware_full_main(
             bundle=bundle,
@@ -1092,6 +1510,14 @@ def _run_score_aware_long_training_attachment(
             grad_clip_max_norm=grad_clip_max_norm,
             weight_decay=weight_decay,
             optimizer_kind=str(optimizer_kind),
+            pr95_faithful_curriculum_enabled=bool(
+                pr95_faithful_curriculum_enabled
+            ),
+            pr95_curriculum_total_epochs=(
+                max(8, int(requested_epochs))
+                if pr95_faithful_curriculum_enabled
+                else None
+            ),
             notes=(
                 "SNeRV MLX score-aware train/export attachment: train LF "
                 "latents plus shared HF decoder weights with the canonical "
@@ -1156,6 +1582,15 @@ def _run_score_aware_long_training_attachment(
             ),
             "weight_decay": None if weight_decay is None else float(weight_decay),
             "eval_roundtrip_ste_enabled": bool(eval_roundtrip_ste),
+            "pr95_faithful_curriculum_enabled": bool(
+                pr95_faithful_curriculum_enabled
+            ),
+            "muon_adamw_partition_bound": str(optimizer_kind) == "pact_muon_adamw",
+            "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "coder_aware_qat_bound": bool(coder_qat_cfg.enabled),
+            "teacher_binding": teacher_binding,
+            "has_real_segnet_teacher": scorer_teacher is not None,
+            "has_real_posenet_teacher": pose_scorer_teacher is not None,
             "renderer": model.metadata(),
             "initial_recon_mse_nchw255": initial_mse,
             "live_final_recon_mse_nchw255": live_final_mse,

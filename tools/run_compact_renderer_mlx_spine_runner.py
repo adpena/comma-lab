@@ -2708,6 +2708,25 @@ def _run_snerv_native_mlx_export_attachment(
     score_aware_long_training_grad_clip_max_norm: float | None,
     score_aware_long_training_weight_decay: float | None,
     score_aware_long_training_eval_roundtrip_ste: bool,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    pose_distillation_loss: str,
+    pose_distillation_huber_delta: float,
+    segnet_distillation_objective: str,
+    distillation_temperature: float,
+    segnet_tau_boundary: float,
+    segnet_hinge_margin: float,
+    distillation_device: str,
+    allow_segnet_only_research: bool,
+    coder_aware_qat: bool,
+    coder_qat_quant_bits: int,
+    coder_qat_quant_residual_weight: float,
+    coder_qat_magnitude_weight: float,
+    coder_qat_delta_weight: float,
+    coder_qat_c1a_entropy_weight: float,
+    coder_qat_c1a_sigma: float,
+    coder_qat_c1a_sample_size: int,
+    score_aware_long_training_pr95_faithful_curriculum: bool,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
 
@@ -2793,6 +2812,27 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             score_aware_long_training_eval_roundtrip_ste=bool(
                 score_aware_long_training_eval_roundtrip_ste
+            ),
+            segnet_distillation_weight=float(segnet_distillation_weight),
+            pose_distillation_weight=float(pose_distillation_weight),
+            pose_distillation_loss=str(pose_distillation_loss),
+            pose_distillation_huber_delta=float(pose_distillation_huber_delta),
+            segnet_distillation_objective=str(segnet_distillation_objective),
+            distillation_temperature=float(distillation_temperature),
+            segnet_tau_boundary=float(segnet_tau_boundary),
+            segnet_hinge_margin=float(segnet_hinge_margin),
+            distillation_device=str(distillation_device),
+            allow_segnet_only_research=bool(allow_segnet_only_research),
+            coder_aware_qat=bool(coder_aware_qat),
+            coder_qat_quant_bits=int(coder_qat_quant_bits),
+            coder_qat_quant_residual_weight=float(coder_qat_quant_residual_weight),
+            coder_qat_magnitude_weight=float(coder_qat_magnitude_weight),
+            coder_qat_delta_weight=float(coder_qat_delta_weight),
+            coder_qat_c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+            coder_qat_c1a_sigma=float(coder_qat_c1a_sigma),
+            coder_qat_c1a_sample_size=int(coder_qat_c1a_sample_size),
+            score_aware_long_training_pr95_faithful_curriculum=bool(
+                score_aware_long_training_pr95_faithful_curriculum
             ),
             allow_overwrite=bool(allow_overwrite),
         )
@@ -2880,6 +2920,25 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             "score_aware_long_training_executed": bool(
                 artifact.get("score_aware_long_training_executed")
+            ),
+            "score_aware_long_training": artifact.get("score_aware_long_training"),
+            "score_aware_long_training_real_teachers_bound": bool(
+                artifact.get("score_aware_long_training_real_teachers_bound")
+            ),
+            "score_aware_long_training_has_real_segnet_teacher": bool(
+                artifact.get("score_aware_long_training_has_real_segnet_teacher")
+            ),
+            "score_aware_long_training_has_real_posenet_teacher": bool(
+                artifact.get("score_aware_long_training_has_real_posenet_teacher")
+            ),
+            "score_aware_long_training_coder_qat_bound": bool(
+                artifact.get("score_aware_long_training_coder_qat_bound")
+            ),
+            "score_aware_long_training_pr95_curriculum_bound": bool(
+                artifact.get("score_aware_long_training_pr95_curriculum_bound")
+            ),
+            "score_aware_long_training_muon_adamw_partition_bound": bool(
+                artifact.get("score_aware_long_training_muon_adamw_partition_bound")
             ),
             "native_mlx_train_export_attached": True,
             "native_mlx_full600_export_proof_ready": (
@@ -3365,6 +3424,24 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
     snerv_score_aware_long_training_eval_roundtrip_ste: bool = False,
+    segnet_distillation_weight: float = 0.0,
+    pose_distillation_weight: float = 0.0,
+    pose_distillation_loss: str = "mse",
+    pose_distillation_huber_delta: float = 1.0,
+    segnet_distillation_objective: str = "kl_t2",
+    distillation_temperature: float = 2.0,
+    segnet_tau_boundary: float = 1.0,
+    segnet_hinge_margin: float = 1.0,
+    allow_segnet_only_research: bool = False,
+    coder_aware_qat: bool = False,
+    coder_qat_quant_bits: int = 8,
+    coder_qat_quant_residual_weight: float = 1.0e-3,
+    coder_qat_magnitude_weight: float = 1.0e-4,
+    coder_qat_delta_weight: float = 2.0e-4,
+    coder_qat_c1a_entropy_weight: float = 1.0e-4,
+    coder_qat_c1a_sigma: float = 0.2,
+    coder_qat_c1a_sample_size: int = 512,
+    snerv_score_aware_long_training_pr95_faithful_curriculum: bool = False,
     run_scorer_loop_qat: bool = False,
     snerv_scorer_loop_max_trials: int = 2,
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
@@ -3871,6 +3948,33 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
         ),
+        "snerv_segnet_distillation_weight": float(segnet_distillation_weight),
+        "snerv_pose_distillation_weight": float(pose_distillation_weight),
+        "snerv_pose_distillation_loss": str(pose_distillation_loss),
+        "snerv_pose_distillation_huber_delta": float(
+            pose_distillation_huber_delta
+        ),
+        "snerv_segnet_distillation_objective": str(segnet_distillation_objective),
+        "snerv_distillation_temperature": float(distillation_temperature),
+        "snerv_segnet_tau_boundary": float(segnet_tau_boundary),
+        "snerv_segnet_hinge_margin": float(segnet_hinge_margin),
+        "snerv_distillation_device": str(distillation_device),
+        "snerv_allow_segnet_only_research": bool(allow_segnet_only_research),
+        "snerv_coder_aware_qat": bool(coder_aware_qat),
+        "snerv_coder_qat_quant_bits": int(coder_qat_quant_bits),
+        "snerv_coder_qat_quant_residual_weight": float(
+            coder_qat_quant_residual_weight
+        ),
+        "snerv_coder_qat_magnitude_weight": float(coder_qat_magnitude_weight),
+        "snerv_coder_qat_delta_weight": float(coder_qat_delta_weight),
+        "snerv_coder_qat_c1a_entropy_weight": float(
+            coder_qat_c1a_entropy_weight
+        ),
+        "snerv_coder_qat_c1a_sigma": float(coder_qat_c1a_sigma),
+        "snerv_coder_qat_c1a_sample_size": int(coder_qat_c1a_sample_size),
+        "snerv_score_aware_long_training_pr95_faithful_curriculum": bool(
+            snerv_score_aware_long_training_pr95_faithful_curriculum
+        ),
     }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
@@ -3925,6 +4029,27 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         score_aware_long_training_eval_roundtrip_ste=bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
+        ),
+        segnet_distillation_weight=float(segnet_distillation_weight),
+        pose_distillation_weight=float(pose_distillation_weight),
+        pose_distillation_loss=str(pose_distillation_loss),
+        pose_distillation_huber_delta=float(pose_distillation_huber_delta),
+        segnet_distillation_objective=str(segnet_distillation_objective),
+        distillation_temperature=float(distillation_temperature),
+        segnet_tau_boundary=float(segnet_tau_boundary),
+        segnet_hinge_margin=float(segnet_hinge_margin),
+        distillation_device=str(distillation_device),
+        allow_segnet_only_research=bool(allow_segnet_only_research),
+        coder_aware_qat=bool(coder_aware_qat),
+        coder_qat_quant_bits=int(coder_qat_quant_bits),
+        coder_qat_quant_residual_weight=float(coder_qat_quant_residual_weight),
+        coder_qat_magnitude_weight=float(coder_qat_magnitude_weight),
+        coder_qat_delta_weight=float(coder_qat_delta_weight),
+        coder_qat_c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+        coder_qat_c1a_sigma=float(coder_qat_c1a_sigma),
+        coder_qat_c1a_sample_size=int(coder_qat_c1a_sample_size),
+        score_aware_long_training_pr95_faithful_curriculum=bool(
+            snerv_score_aware_long_training_pr95_faithful_curriculum
         ),
     )
     snerv_mlx_native_file_backed_evidence = (
@@ -4004,6 +4129,44 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         native_mlx_scorer_loop_qat_best_materialized=bool(
             snerv_mlx_native_export.get("scorer_loop_qat_best_materialized")
+        ),
+        native_mlx_real_segnet_teacher_bound=bool(
+            snerv_mlx_native_export.get(
+                "score_aware_long_training_has_real_segnet_teacher"
+            )
+        ),
+        native_mlx_real_posenet_teacher_bound=bool(
+            snerv_mlx_native_export.get(
+                "score_aware_long_training_has_real_posenet_teacher"
+            )
+        ),
+        native_mlx_pr95_curriculum_bound=bool(
+            snerv_mlx_native_export.get(
+                "score_aware_long_training_pr95_curriculum_bound"
+            )
+        ),
+        native_mlx_eval_roundtrip_ste_bound=bool(
+            _nested(
+                snerv_mlx_native_export,
+                "score_aware_long_training",
+                "eval_roundtrip_ste_enabled",
+            )
+        ),
+        native_mlx_differentiable_pose_preprocess_bound=bool(
+            _nested(
+                snerv_mlx_native_export,
+                "score_aware_long_training",
+                "teacher_binding",
+                "has_real_posenet_teacher",
+            )
+        ),
+        native_mlx_coder_qat_bound=bool(
+            snerv_mlx_native_export.get("score_aware_long_training_coder_qat_bound")
+        ),
+        native_mlx_muon_adamw_partition_bound=bool(
+            snerv_mlx_native_export.get(
+                "score_aware_long_training_muon_adamw_partition_bound"
+            )
         ),
         native_mlx_artifact_evidence=snerv_mlx_native_export,
     )
@@ -12785,6 +12948,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--snerv-score-aware-long-training-pr95-faithful-curriculum",
+        action="store_true",
+        help=(
+            "Route SNeRV score-aware long training through the shared PR95 "
+            "8-stage curriculum adapter. This is still false-authority MLX "
+            "training until receiver replay and exact eval pass."
+        ),
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-qat",
         action="store_true",
         help=(
@@ -13451,6 +13623,26 @@ def main(argv: list[str] | None = None) -> int:
             snerv_score_aware_long_training_eval_roundtrip_ste=(
                 args.snerv_score_aware_long_training_eval_roundtrip_ste
             ),
+            segnet_distillation_weight=args.segnet_distillation_weight,
+            pose_distillation_weight=args.pose_distillation_weight,
+            pose_distillation_loss=args.pose_distillation_loss,
+            pose_distillation_huber_delta=args.pose_distillation_huber_delta,
+            segnet_distillation_objective=args.segnet_distillation_objective,
+            distillation_temperature=args.distillation_temperature,
+            segnet_tau_boundary=args.segnet_tau_boundary,
+            segnet_hinge_margin=args.segnet_hinge_margin,
+            allow_segnet_only_research=args.allow_segnet_only_research,
+            coder_aware_qat=bool(args.coder_aware_qat),
+            coder_qat_quant_bits=args.coder_qat_quant_bits,
+            coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
+            coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
+            coder_qat_delta_weight=args.coder_qat_delta_weight,
+            coder_qat_c1a_entropy_weight=args.coder_qat_c1a_entropy_weight,
+            coder_qat_c1a_sigma=args.coder_qat_c1a_sigma,
+            coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
+            snerv_score_aware_long_training_pr95_faithful_curriculum=(
+                args.snerv_score_aware_long_training_pr95_faithful_curriculum
+            ),
             run_scorer_loop_qat=bool(
                 args.coder_aware_qat or args.snerv_scorer_loop_qat
             ),
@@ -13767,6 +13959,15 @@ def _dedupe(values: list[Any]) -> list[Any]:
         seen.add(key)
         out.append(value)
     return out
+
+
+def _nested(mapping: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = mapping
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
 
 
 def _stamp() -> str:

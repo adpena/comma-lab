@@ -690,6 +690,120 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
     assert np.isfinite(frames).all()
 
 
+def test_train_export_long_training_binds_real_scorer_teachers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates._shared.mlx_score_aware.loss as loss_mod
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    fake_upstream = tmp_path / "upstream"
+    (fake_upstream / "models").mkdir(parents=True)
+    (fake_upstream / "modules.py").write_text("# fake scorer custody\n", encoding="utf-8")
+    (fake_upstream / "models" / "posenet.safetensors").write_bytes(b"pose")
+    (fake_upstream / "models" / "segnet.safetensors").write_bytes(b"seg")
+    captured: dict[str, object] = {}
+
+    class FakeSegTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, indices):
+            captured["seg_indices_shape"] = tuple(indices.shape)
+            return mx.zeros((int(indices.shape[0]), 16, 16, 5), dtype=mx.float32)
+
+    class FakePoseTeacher:
+        pose_dims = 6
+        per_dim_scale = mx.ones((6,), dtype=mx.float32)
+
+        def teacher_pose_for_indices(self, indices):
+            captured["pose_indices_shape"] = tuple(indices.shape)
+            return mx.zeros((int(indices.shape[0]), 6), dtype=mx.float32)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    def fake_build_segnet_teacher(bundle, *, upstream_dir, device):
+        captured["segnet_upstream_dir"] = Path(upstream_dir)
+        captured["segnet_device"] = device
+        captured["segnet_bundle_hw"] = tuple(bundle.target_rgb_1.shape[1:3])
+        return FakeSegTeacher()
+
+    def fake_build_posenet_teacher(bundle, *, upstream_dir, device):
+        captured["posenet_upstream_dir"] = Path(upstream_dir)
+        captured["posenet_device"] = device
+        captured["posenet_bundle_hw"] = tuple(bundle.target_rgb_0.shape[1:3])
+        return FakePoseTeacher()
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        loss_mod,
+        "build_mlx_segnet_pair_teacher",
+        fake_build_segnet_teacher,
+    )
+    monkeypatch.setattr(
+        loss_mod,
+        "build_mlx_posenet_pair_teacher",
+        fake_build_posenet_teacher,
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "score_aware_real_teacher_train",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_lr": 1.0e-3,
+            "score_aware_long_training_batch_pairs": 2,
+            "score_aware_long_training_optimizer": "pact_muon_adamw",
+        },
+        scorer_upstream_dir=fake_upstream,
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        segnet_distillation_weight=0.01,
+        pose_distillation_weight=0.001,
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=2.0,
+        segnet_distillation_objective="kl_t2",
+        distillation_device="cpu",
+    )
+
+    assert captured["segnet_upstream_dir"] == fake_upstream.resolve(strict=False)
+    assert captured["posenet_upstream_dir"] == fake_upstream.resolve(strict=False)
+    assert captured["segnet_device"] == "cpu"
+    assert captured["posenet_device"] == "cpu"
+    assert captured["segnet_bundle_hw"] == (16, 16)
+    assert captured["posenet_bundle_hw"] == (16, 16)
+    assert report["score_aware_long_training_executed"] is True
+    assert report["score_aware_long_training_real_teachers_bound"] is True
+    assert report["score_aware_long_training_has_real_segnet_teacher"] is True
+    assert report["score_aware_long_training_has_real_posenet_teacher"] is True
+    assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
+    long_training = report["score_aware_long_training"]
+    assert long_training["has_real_segnet_teacher"] is True
+    assert long_training["has_real_posenet_teacher"] is True
+    assert long_training["teacher_binding"]["pose_distillation_loss"] == "huber"
+    assert long_training["teacher_binding"]["pose_distillation_huber_delta"] == 2.0
+    assert long_training["teacher_binding"]["learnable_student_head_bound"] is True
+    assert long_training["teacher_binding"]["learnable_pose_student_head_bound"] is True
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["score_aware_long_training"]["teacher_binding"][
+        "has_real_segnet_teacher"
+    ] is True
+    assert decoded.metadata["score_aware_long_training"]["teacher_binding"][
+        "has_real_posenet_teacher"
+    ] is True
+
+
 def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

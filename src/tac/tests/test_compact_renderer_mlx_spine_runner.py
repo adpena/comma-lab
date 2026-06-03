@@ -6074,6 +6074,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         long_training_executed = int(
             kwargs.get("score_aware_long_training_epochs") or 0
         ) > 0
+        real_teachers_bound = bool(
+            float(kwargs.get("segnet_distillation_weight") or 0.0) > 0.0
+            and float(kwargs.get("pose_distillation_weight") or 0.0) > 0.0
+        )
         payload = {
             "schema": "snerv_mlx_native_train_export.v1",
             "report_path": report.as_posix(),
@@ -6097,6 +6101,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 else "full_batch_hf_decoder_gradient_descent"
             ),
             "score_aware_long_training_executed": long_training_executed,
+            "score_aware_long_training_real_teachers_bound": real_teachers_bound,
+            "score_aware_long_training_has_real_segnet_teacher": real_teachers_bound,
+            "score_aware_long_training_has_real_posenet_teacher": real_teachers_bound,
             "score_aware_long_training_kind": (
                 "snerv_mlx_score_aware_haar_renderer"
                 if long_training_executed
@@ -6117,6 +6124,35 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 "optimizer_kind": str(
                     kwargs.get("score_aware_long_training_optimizer") or ""
                 ),
+                "eval_roundtrip_ste_enabled": bool(
+                    kwargs.get("score_aware_long_training_eval_roundtrip_ste")
+                ),
+                "has_real_segnet_teacher": real_teachers_bound,
+                "has_real_posenet_teacher": real_teachers_bound,
+                "teacher_binding": {
+                    "schema": "snerv_mlx_real_scorer_teacher_binding.v1",
+                    "requested": real_teachers_bound,
+                    "segnet_distillation_weight": float(
+                        kwargs.get("segnet_distillation_weight") or 0.0
+                    ),
+                    "pose_distillation_weight": float(
+                        kwargs.get("pose_distillation_weight") or 0.0
+                    ),
+                    "pose_distillation_loss": str(
+                        kwargs.get("pose_distillation_loss") or "mse"
+                    ),
+                    "pose_distillation_huber_delta": float(
+                        kwargs.get("pose_distillation_huber_delta") or 1.0
+                    ),
+                    "has_real_segnet_teacher": real_teachers_bound,
+                    "has_real_posenet_teacher": real_teachers_bound,
+                    "allow_segnet_only_research": bool(
+                        kwargs.get("allow_segnet_only_research")
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -6276,6 +6312,14 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_score_aware_long_training_grad_clip_max_norm=0.5,
         snerv_score_aware_long_training_weight_decay=None,
         snerv_score_aware_long_training_eval_roundtrip_ste=True,
+        segnet_distillation_weight=0.025,
+        pose_distillation_weight=0.0025,
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=2.25,
+        segnet_distillation_objective="boundary_decision_tckd",
+        distillation_temperature=3.0,
+        segnet_tau_boundary=0.75,
+        segnet_hinge_margin=1.25,
         prioritized_pair_indices=(7, 2, 7),
         repo_root=REPO_ROOT,
     )
@@ -6303,9 +6347,27 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["score_aware_long_training_grad_clip_max_norm"] == 0.5
     assert native_calls[0]["score_aware_long_training_weight_decay"] is None
     assert native_calls[0]["score_aware_long_training_eval_roundtrip_ste"] is True
+    assert native_calls[0]["segnet_distillation_weight"] == pytest.approx(0.025)
+    assert native_calls[0]["pose_distillation_weight"] == pytest.approx(0.0025)
+    assert native_calls[0]["pose_distillation_loss"] == "huber"
+    assert native_calls[0]["pose_distillation_huber_delta"] == pytest.approx(2.25)
+    assert native_calls[0]["segnet_distillation_objective"] == (
+        "boundary_decision_tckd"
+    )
+    assert native_calls[0]["distillation_temperature"] == pytest.approx(3.0)
+    assert native_calls[0]["segnet_tau_boundary"] == pytest.approx(0.75)
+    assert native_calls[0]["segnet_hinge_margin"] == pytest.approx(1.25)
+    assert native_calls[0]["distillation_device"] == "cpu"
+    assert native_calls[0]["allow_segnet_only_research"] is False
     assert native_calls[0]["modelsize_candidate"][
         "snerv_score_aware_long_training_epochs"
     ] == 13
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_segnet_distillation_weight"
+    ] == pytest.approx(0.025)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_pose_distillation_weight"
+    ] == pytest.approx(0.0025)
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
         Path(native_calls[0]["recon_pixel_weight_manifest_path"])
@@ -6328,6 +6390,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "snerv_mlx_score_aware_haar_renderer"
     )
     assert native["score_aware_long_training_executed"] is True
+    assert native["score_aware_long_training_real_teachers_bound"] is True
+    assert native["score_aware_long_training_has_real_segnet_teacher"] is True
+    assert native["score_aware_long_training_has_real_posenet_teacher"] is True
     assert native["native_mlx_hf_decoder_training"]["requested_steps"] == 11
     assert native["native_mlx_hf_decoder_training"]["learning_rate"] == pytest.approx(
         0.004
@@ -6373,9 +6438,17 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert plan["training_plan"]["native_mlx_file_backed_export_proof_passed"] is False
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
+    assert plan["training_plan"]["native_mlx_real_segnet_teacher_bound"] is True
+    assert plan["training_plan"]["native_mlx_real_posenet_teacher_bound"] is True
+    assert plan["training_plan"]["native_mlx_joint_real_teachers_bound"] is True
+    assert plan["training_plan"]["native_mlx_eval_roundtrip_ste_bound"] is True
+    assert (
+        plan["training_plan"]["native_mlx_differentiable_pose_preprocess_bound"]
+        is True
+    )
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
-    assert "snerv_real_segnet_teacher_missing" in plan["blockers"]
-    assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
     assert "snerv_qat_forward_missing" in plan["blockers"]
     assert "snerv_coder_aware_regularizer_missing" in plan["blockers"]
     assert plan["pr95_stack_binding"]["complete"] is False

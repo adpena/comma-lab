@@ -315,6 +315,13 @@ def build_snerv_candidate_curriculum_plan(
     native_mlx_scorer_loop_qat_ready_for_pose_guard_gate: bool = False,
     native_mlx_scorer_loop_qat_accepted_improvement: bool = False,
     native_mlx_scorer_loop_qat_best_materialized: bool = False,
+    native_mlx_real_segnet_teacher_bound: bool = False,
+    native_mlx_real_posenet_teacher_bound: bool = False,
+    native_mlx_pr95_curriculum_bound: bool = False,
+    native_mlx_eval_roundtrip_ste_bound: bool = False,
+    native_mlx_differentiable_pose_preprocess_bound: bool = False,
+    native_mlx_coder_qat_bound: bool = False,
+    native_mlx_muon_adamw_partition_bound: bool = False,
     native_mlx_artifact_evidence: Mapping[str, Any] | None = None,
     measured_num_pairs: int | None = None,
 ) -> dict[str, Any]:
@@ -392,6 +399,16 @@ def build_snerv_candidate_curriculum_plan(
             native_scorer_loop_planned
             and native_mlx_scorer_loop_qat_accepted_improvement
         )
+    )
+    native_real_teachers_bound = bool(
+        native_mlx_real_segnet_teacher_bound
+        and native_mlx_real_posenet_teacher_bound
+    )
+    effective_real_segnet_teacher = bool(
+        effective_scorer_loop_verified or native_mlx_real_segnet_teacher_bound
+    )
+    effective_real_posenet_teacher = bool(
+        effective_scorer_loop_verified or native_mlx_real_posenet_teacher_bound
     )
     candidate_selected = bool(candidate_row)
     full_video = int(num_pairs) >= CONTEST_PAIR_COUNT
@@ -478,10 +495,20 @@ def build_snerv_candidate_curriculum_plan(
         family="snerv",
         evidence=build_pr95_stack_binding_evidence(
             modelsize_archive_budget=candidate_selected,
-            real_segnet_teacher=effective_scorer_loop_verified,
-            real_posenet_teacher=effective_scorer_loop_verified,
-            qat_forward=effective_scorer_loop_verified,
-            coder_aware_regularizer=effective_scorer_loop_verified,
+            pr95_staged_curriculum=bool(native_mlx_pr95_curriculum_bound),
+            real_segnet_teacher=effective_real_segnet_teacher,
+            real_posenet_teacher=effective_real_posenet_teacher,
+            differentiable_pose_preprocess=bool(
+                native_mlx_differentiable_pose_preprocess_bound
+            ),
+            eval_roundtrip_ste=bool(native_mlx_eval_roundtrip_ste_bound),
+            qat_forward=bool(
+                effective_scorer_loop_verified or native_mlx_coder_qat_bound
+            ),
+            coder_aware_regularizer=bool(
+                effective_scorer_loop_verified or native_mlx_coder_qat_bound
+            ),
+            muon_adamw_partition=bool(native_mlx_muon_adamw_partition_bound),
             archive_in_loop_byte_oracle=bool(byte_feedback.get("feedback_ready")),
             byte_closed_archive_export=measured_archive_bytes is not None,
             receiver_proof=bool(receiver_proof_attached),
@@ -574,6 +601,28 @@ def build_snerv_candidate_curriculum_plan(
             ),
             "native_mlx_scorer_loop_qat_best_materialized": bool(
                 native_mlx_scorer_loop_qat_best_materialized
+            ),
+            "native_mlx_real_segnet_teacher_bound": bool(
+                native_mlx_real_segnet_teacher_bound
+            ),
+            "native_mlx_real_posenet_teacher_bound": bool(
+                native_mlx_real_posenet_teacher_bound
+            ),
+            "native_mlx_joint_real_teachers_bound": native_real_teachers_bound,
+            "effective_real_segnet_teacher": effective_real_segnet_teacher,
+            "effective_real_posenet_teacher": effective_real_posenet_teacher,
+            "native_mlx_pr95_curriculum_bound": bool(
+                native_mlx_pr95_curriculum_bound
+            ),
+            "native_mlx_eval_roundtrip_ste_bound": bool(
+                native_mlx_eval_roundtrip_ste_bound
+            ),
+            "native_mlx_differentiable_pose_preprocess_bound": bool(
+                native_mlx_differentiable_pose_preprocess_bound
+            ),
+            "native_mlx_coder_qat_bound": bool(native_mlx_coder_qat_bound),
+            "native_mlx_muon_adamw_partition_bound": bool(
+                native_mlx_muon_adamw_partition_bound
             ),
             "receiver_proof_attached": bool(receiver_proof_attached),
             "full_video_local_prefilter_attached": bool(
