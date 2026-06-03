@@ -2101,37 +2101,50 @@ def _scan_markers(root: Path, rel: str) -> dict[str, Any]:
             "NotImplementedError",
             "blocking",
             "notimplemented_marker_requires_explicit_blocker",
+            None,
         ),
         (
             "placeholder",
             "blocking",
             "placeholder_marker_requires_implementation_or_blocker",
+            None,
         ),
         (
             "scoreaware_trainer_pending",
             "blocking",
             "scoreaware_trainer_pending_requires_real_training_path",
+            None,
         ),
         (
             "allow_mock_scorer_teacher",
             "blocking",
             "mock_scorer_teacher_escape_hatch_requires_false_authority_guard",
+            'not bool(scoreaware.get("allow_mock_scorer_teacher"))',
         ),
-        ("smoke", "warning", "smoke_marker_not_promotion_authority"),
-        ("proxy", "warning", "proxy_marker_requires_false_authority"),
-        ("random_signed", "warning", "random_search_mode_requires_measured_successor"),
-        ("default=0.0", "warning", "zero_default_requires_config_justification"),
+        ("smoke", "warning", "smoke_marker_not_promotion_authority", None),
+        ("proxy", "warning", "proxy_marker_requires_false_authority", None),
+        (
+            "random_signed",
+            "warning",
+            "random_search_mode_requires_measured_successor",
+            None,
+        ),
+        ("default=0.0", "warning", "zero_default_requires_config_justification", None),
     )
     hits = []
-    for needle, severity, gap_id in marker_specs:
+    for needle, severity, gap_id, guard_marker in marker_specs:
         count = text.count(needle)
         if count:
+            hit_severity = (
+                "guarded" if guard_marker is not None and guard_marker in text else severity
+            )
             hits.append(
                 {
                     "needle": needle,
                     "count": count,
-                    "severity": severity,
+                    "severity": hit_severity,
                     "gap_id": f"{rel}:{gap_id}",
+                    "guard_marker": guard_marker,
                 }
             )
     return {"path": rel, "present": True, "hits": hits}

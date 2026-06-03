@@ -1919,7 +1919,7 @@ def _resolve_execute_modelsize_candidate(
     """
 
     token = str(candidate_id or "auto").strip()
-    if token.lower() in {"none", "manual", "off", "false", "0"}:
+    if _modelsize_candidate_resolution_disabled(token):
         return None
     shared_targets = tuple(float(value) for value in target_modelsize_mparams)
     hinerv_targets = _dedupe_float_tuple(
@@ -2049,6 +2049,55 @@ def _resolve_execute_modelsize_candidate(
         f"unknown {family} --modelsize-candidate-id {token!r}; "
         "rerun plan mode and select one of the emitted candidate_id values"
     )
+
+
+def _modelsize_candidate_resolution_disabled(candidate_id: Any) -> bool:
+    """Return whether the launch requested manual modelsize knobs only."""
+
+    return str(candidate_id or "auto").strip().lower() in {
+        "none",
+        "manual",
+        "off",
+        "false",
+        "0",
+    }
+
+
+def _snerv_official_modelsize_candidate_resolution_blockers(
+    args: argparse.Namespace,
+) -> list[str]:
+    """Block source-named SNeRV capacity flags when candidates are disabled."""
+
+    if getattr(args, "execute_family", None) != "snerv":
+        return []
+    if not _modelsize_candidate_resolution_disabled(
+        getattr(args, "modelsize_candidate_id", "auto")
+    ):
+        return []
+    flag_attrs = (
+        ("--target-modelsize-mparams", "target_modelsize_mparams"),
+        ("--snerv-official-modelsize-mparams", "snerv_official_modelsize_mparams"),
+        ("--snerv-official-enc-strds", "snerv_official_enc_strds"),
+        ("--snerv-official-dec-strds", "snerv_official_dec_strds"),
+    )
+    blockers = [
+        f"snerv_official_modelsize_control_requires_candidate_resolution:{flag}"
+        for flag, attr in flag_attrs
+        if getattr(args, attr, None) is not None
+    ]
+    profile = str(
+        getattr(
+            args,
+            "snerv_modelsize_control_profile",
+            DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
+        )
+    )
+    if profile != DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID:
+        blockers.append(
+            "snerv_official_modelsize_control_requires_candidate_resolution:"
+            "--snerv-modelsize-control-profile"
+        )
+    return blockers
 
 
 def _dedupe_float_tuple(values: tuple[float, ...]) -> tuple[float, ...]:
@@ -8399,9 +8448,123 @@ def _compact_modelsize_budget_row_blockers(row: Mapping[str, Any]) -> list[str]:
         )
     ):
         blockers.append("receiver_closed_byte_proof_missing")
+    blockers.extend(_compact_receiver_closed_identity_blockers(row))
+    if not _compact_modelsize_row_has_source_bound_capacity(row):
+        blockers.append("source_bound_modelsize_or_fc_dim_missing")
     if not _compact_modelsize_row_has_nonrate_signal(row):
         blockers.append("modelsize_budget_row_missing_nonrate_score")
     return blockers
+
+
+def _compact_receiver_closed_identity_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if _compact_first_present_str(
+        row,
+        (
+            "receiver_proof_path",
+            "receiver_proof_report_path",
+            "receiver_closed_proof_path",
+        ),
+    ) is None:
+        blockers.append("receiver_proof_path_missing")
+    if not _compact_is_sha256_hex(
+        _compact_first_present_str(
+            row,
+            (
+                "receiver_proof_sha256",
+                "receiver_proof_report_sha256",
+                "receiver_closed_proof_sha256",
+            ),
+        )
+    ):
+        blockers.append("receiver_proof_sha256_missing_or_invalid")
+    if not _compact_is_sha256_hex(
+        _compact_first_present_str(
+            row,
+            (
+                "archive_sha256",
+                "candidate_archive_sha256",
+                "receiver_archive_sha256",
+                "source_archive_sha256",
+                "archive_zip_sha256",
+            ),
+        )
+    ):
+        blockers.append("archive_sha256_missing_or_invalid")
+    if _compact_first_present_str(
+        row,
+        (
+            "axis_tag",
+            "score_axis_tag",
+            "measured_score_axis_tag",
+            "receiver_proof_axis_tag",
+        ),
+    ) is None:
+        blockers.append("receiver_proof_axis_tag_missing")
+    sample_count = _compact_first_present_int(
+        row,
+        ("sample_pair_count", "sample_pairs", "n_pairs", "num_pairs", "pair_count"),
+    )
+    full_video = any(
+        bool(row.get(key))
+        for key in ("full_video_coverage", "full600_coverage", "full_sample_coverage")
+    )
+    if sample_count is None and not full_video:
+        blockers.append("receiver_proof_full_sample_count_missing")
+    elif sample_count is not None and sample_count < CONTEST_PAIR_COUNT and not full_video:
+        blockers.append("receiver_proof_full_sample_count_incomplete")
+    return blockers
+
+
+def _compact_first_present_str(
+    row: Mapping[str, Any],
+    keys: tuple[str, ...],
+) -> str | None:
+    for key in keys:
+        value = row.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return None
+
+
+def _compact_first_present_int(
+    row: Mapping[str, Any],
+    keys: tuple[str, ...],
+) -> int | None:
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _compact_is_sha256_hex(value: str | None) -> bool:
+    if value is None:
+        return False
+    text = str(value).strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
+
+
+def _compact_modelsize_row_has_source_bound_capacity(row: Mapping[str, Any]) -> bool:
+    if _compact_finite_float_from_keys(row, ("modelsize_mparams",)) is not None:
+        return True
+    if _compact_positive_int_from_keys(row, ("fc_dim",)) is not None:
+        return True
+    official_controls = row.get("official_controls")
+    if isinstance(official_controls, Mapping):
+        return (
+            _compact_finite_float_from_keys(official_controls, ("--modelsize",))
+            is not None
+            or _compact_positive_int_from_keys(official_controls, ("fc_dim",)) is not None
+        )
+    solved = row.get("solved_budget")
+    if isinstance(solved, Mapping):
+        return _compact_modelsize_row_has_source_bound_capacity(solved)
+    return False
 
 
 def _compact_modelsize_row_has_nonrate_signal(row: Mapping[str, Any]) -> bool:
@@ -10643,6 +10806,11 @@ def _planner_row_command_control_blockers(
         ("--epochs", "epochs"),
         ("--num-pairs", "num_pairs"),
         ("--optimizer-kind", "optimizer_kind"),
+        ("--target-modelsize-mparams", "target_modelsize_mparams"),
+        ("--snerv-official-modelsize-mparams", "snerv_official_modelsize_mparams"),
+        ("--snerv-modelsize-control-profile", "snerv_modelsize_control_profile"),
+        ("--snerv-official-enc-strds", "snerv_official_enc_strds"),
+        ("--snerv-official-dec-strds", "snerv_official_dec_strds"),
         ("--hi-nerv-optimizer-policy", "hi_nerv_optimizer_policy"),
         ("--decoder-weight-waterfill-plan-json", "decoder_weight_waterfill_plan_json"),
         ("--recon-pixel-weight-path", "recon_pixel_weight_path"),
@@ -12156,6 +12324,15 @@ def main(argv: list[str] | None = None) -> int:
             "--execute-pr95-stage8-source, --from-pr95-mlx-report, "
             "--from-pr95-stage8-report, --from-snerv-advisory-report, "
             "or --execute-family"
+        )
+    snerv_modelsize_control_blockers = (
+        _snerv_official_modelsize_candidate_resolution_blockers(args)
+    )
+    if snerv_modelsize_control_blockers:
+        raise SystemExit(
+            "SNeRV official modelsize controls require "
+            "--modelsize-candidate-id auto or a concrete candidate id: "
+            + ", ".join(snerv_modelsize_control_blockers)
         )
     ceilings = tuple(args.hard_byte_ceiling or DEFAULT_BASE_RENDERER_BYTE_CEILINGS)
     output_dir = args.output_dir or _default_output_dir()

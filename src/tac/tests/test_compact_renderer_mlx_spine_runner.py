@@ -605,6 +605,55 @@ def test_planner_row_launch_gate_rejects_stale_command_controls(
     assert "planner_row_command_mismatch:--modelsize-candidate-id" in blockers
 
 
+def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        family="snerv",
+        row_id="snerv::candidate::native_rate_aware_training",
+        command_extra=[
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "29650",
+            "--modelsize-candidate-id",
+            "auto",
+            "--snerv-official-modelsize-mparams",
+            "0.05",
+            "--snerv-modelsize-control-profile",
+            "official_cli_default",
+            "--snerv-official-enc-strds",
+            "1,2,2",
+            "--snerv-official-dec-strds",
+            "2,2,1",
+        ],
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="snerv",
+            planner_row_id="snerv::candidate::native_rate_aware_training",
+            planner_row_queue_artifact=[queue_path],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
+            allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            modelsize_candidate_id="auto",
+            snerv_official_modelsize_mparams=[0.07],
+            snerv_modelsize_control_profile="contest_receiver_profile",
+            snerv_official_enc_strds=(1, 3, 2),
+            snerv_official_dec_strds=(2, 2, 1),
+            repo_root=REPO_ROOT,
+        )
+    )
+
+    assert "planner_row_command_mismatch:--snerv-official-modelsize-mparams" in blockers
+    assert "planner_row_command_mismatch:--snerv-modelsize-control-profile" in blockers
+    assert "planner_row_command_mismatch:--snerv-official-enc-strds" in blockers
+    assert "planner_row_command_mismatch:--snerv-official-dec-strds" not in blockers
+
+
 def test_planner_row_launch_gate_rejects_nonrunnable_queue_artifact(
     tmp_path: Path,
 ) -> None:
@@ -1870,6 +1919,57 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
             family="snerv",
             candidate_id="missing-candidate",
             hard_byte_ceilings=(178_000,),
+        )
+
+
+def test_snerv_official_modelsize_controls_require_candidate_resolution() -> None:
+    manual = _parse_args(
+        [
+            "--execute-family",
+            "snerv",
+            "--modelsize-candidate-id",
+            "manual",
+            "--snerv-fc-dim",
+            "13",
+        ]
+    )
+    blocked = _parse_args(
+        [
+            "--execute-family",
+            "snerv",
+            "--modelsize-candidate-id",
+            "manual",
+            "--snerv-official-modelsize-mparams",
+            "0.05",
+            "--snerv-official-enc-strds",
+            "1,2,2",
+        ]
+    )
+
+    assert runner_mod._snerv_official_modelsize_candidate_resolution_blockers(
+        manual
+    ) == []
+    blockers = runner_mod._snerv_official_modelsize_candidate_resolution_blockers(
+        blocked
+    )
+    assert (
+        "snerv_official_modelsize_control_requires_candidate_resolution:"
+        "--snerv-official-modelsize-mparams"
+    ) in blockers
+    assert (
+        "snerv_official_modelsize_control_requires_candidate_resolution:"
+        "--snerv-official-enc-strds"
+    ) in blockers
+    with pytest.raises(SystemExit, match="SNeRV official modelsize controls require"):
+        runner_mod.main(
+            [
+                "--execute-family",
+                "snerv",
+                "--modelsize-candidate-id",
+                "manual",
+                "--snerv-official-modelsize-mparams",
+                "0.05",
+            ]
         )
 
 
@@ -3689,12 +3789,17 @@ def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
                     {
                         "row_id": "tiny",
                         "archive_bytes": 40_000,
+                        "archive_sha256": "a" * 64,
                         "nonrate_score": 95.0,
                         "modelsize_mparams": 0.02,
                         "fc_dim": 8,
                         "receiver_closed": True,
                         "receiver_proof_passed": True,
                         "receiver_archive_replay_verified": True,
+                        "receiver_proof_path": "proofs/tiny.json",
+                        "receiver_proof_sha256": "b" * 64,
+                        "axis_tag": "[macOS-CPU advisory]",
+                        "num_pairs": 600,
                         "score_claim": False,
                         "promotion_eligible": False,
                         "ready_for_exact_eval_dispatch": False,
@@ -3702,12 +3807,17 @@ def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
                     {
                         "row_id": "small",
                         "archive_bytes": 80_000,
+                        "archive_sha256": "c" * 64,
                         "nonrate_score": 80.0,
                         "modelsize_mparams": 0.04,
                         "fc_dim": 16,
                         "receiver_closed": True,
                         "receiver_proof_passed": True,
                         "receiver_archive_replay_verified": True,
+                        "receiver_proof_path": "proofs/small.json",
+                        "receiver_proof_sha256": "d" * 64,
+                        "axis_tag": "[macOS-CPU advisory]",
+                        "num_pairs": 600,
                         "score_claim": False,
                         "promotion_eligible": False,
                         "ready_for_exact_eval_dispatch": False,
@@ -3809,11 +3919,17 @@ def test_hinerv_refusal_filters_modelsize_rows_without_nonrate_score(
     assert source["rows_added"] == 0
     assert source["rows_rejected"] == 1
     assert "modelsize_budget_json_rows_rejected" in source["blockers"]
-    assert source["rejected_rows"][0]["blockers"] == [
+    rejected = set(source["rejected_rows"][0]["blockers"])
+    assert {
         "receiver_closed_modelsize_ladder_schema_required",
         "receiver_closed_byte_proof_missing",
+        "receiver_proof_path_missing",
+        "receiver_proof_sha256_missing_or_invalid",
+        "receiver_proof_axis_tag_missing",
+        "receiver_proof_full_sample_count_missing",
+        "source_bound_modelsize_or_fc_dim_missing",
         "modelsize_budget_row_missing_nonrate_score",
-    ]
+    }.issubset(rejected)
     assert "hi_nerv_real_segnet_teacher_missing" in out["blockers"]
     assert "hi_nerv_real_posenet_teacher_missing" in out["blockers"]
     assert out["score_claim"] is False
@@ -3959,10 +4075,17 @@ def test_hinerv_refusal_rejects_canonical_score_only_modelsize_rows(
     assert out["modelsize_budget_evidence"]["row_count"] == 0
     assert source["rows_seen"] == 1
     assert source["rows_rejected"] == 1
-    assert set(source["rejected_rows"][0]["blockers"]) == {
+    rejected = set(source["rejected_rows"][0]["blockers"])
+    assert {
         "receiver_closed_modelsize_ladder_schema_required",
         "modelsize_budget_row_missing_nonrate_score",
-    }
+        "receiver_proof_path_missing",
+        "receiver_proof_sha256_missing_or_invalid",
+        "archive_sha256_missing_or_invalid",
+        "receiver_proof_axis_tag_missing",
+        "receiver_proof_full_sample_count_missing",
+        "source_bound_modelsize_or_fc_dim_missing",
+    }.issubset(rejected)
 
 
 def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
