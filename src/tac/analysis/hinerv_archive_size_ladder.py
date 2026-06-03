@@ -32,6 +32,8 @@ from tac.analysis.nerv_decoder_weight_waterfill import (
     load_state_npz_from_manifest,
 )
 from tac.analysis.nerv_modelsize_budget import (
+    MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS,
+    MODELSIZE_RATE_AUTHORITY_SURFACE,
     analyze_hinerv_modelsize_candidate,
     build_hinerv_config_from_size_knobs,
 )
@@ -49,6 +51,15 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 
 HINERV_ARCHIVE_SIZE_LADDER_SCHEMA = "hinerv_archive_size_ladder.v1"
+HINERV_MODELSIZE_RECEIVER_CONTRACT_SCHEMA = (
+    "hinerv_archive_size_ladder_modelsize_receiver_contract.v1"
+)
+_NERV_MODELSIZE_CONTROL_CONTRACT_SCHEMA = "nerv_modelsize_control_contract.v1"
+_HINERV_TARGET_MODELSIZE_CONTROL_SEMANTICS = (
+    "local_receiver_visible_grid_search_nearest_target"
+)
+_HINERV_MANUAL_MODELSIZE_CONTROL_SEMANTICS = "manual_receiver_visible_architecture_knobs"
+_HINERV_TARGET_MODELSIZE_CONSUMPTION = "nearest_local_param_count_target"
 REQUIRED_ALLOCATOR_BINDINGS: tuple[str, ...] = (
     "adaptive_quantization_by_decoder_weight_group",
     "ablate_or_zero_groups_with_nonpositive_measured_value",
@@ -166,6 +177,11 @@ def build_hinerv_archive_size_ladder(
             if isinstance(spec.get("modelsize_candidate"), Mapping)
             else None
         )
+        modelsize_receiver_contract = (
+            dict(spec["modelsize_receiver_contract"])
+            if isinstance(spec.get("modelsize_receiver_contract"), Mapping)
+            else _legacy_hinerv_modelsize_receiver_contract(spec)
+        )
         nominal_total_payload_bytes = (
             None
             if modelsize_candidate is None
@@ -208,6 +224,13 @@ def build_hinerv_archive_size_ladder(
                 "family": "hi_nerv",
                 "row_id": row_id,
                 "modelsize_scale": float(spec["modelsize_scale"]),
+                "modelsize_scale_source": modelsize_receiver_contract[
+                    "modelsize_scale_source"
+                ],
+                "modelsize_scale_unit": modelsize_receiver_contract[
+                    "modelsize_scale_unit"
+                ],
+                "modelsize_receiver_contract": modelsize_receiver_contract,
                 "modelsize_candidate": modelsize_candidate,
                 "config": _config_snapshot(cfg),
                 "decoder_codec": row_decoder_codec,
@@ -292,6 +315,7 @@ def build_hinerv_archive_size_ladder(
             if hinerv_modelsize_budget is None
             else hinerv_modelsize_budget.get("schema")
         ),
+        "modelsize_receiver_contract": _hinerv_archive_modelsize_receiver_contract(),
         "archive_export_backend_counts": _archive_export_backend_counts(rows),
         "emit_receiver_proof": bool(emit_receiver_proof),
         "emit_decoder_weight_waterfill_plan": bool(emit_decoder_weight_waterfill_plan),
@@ -410,16 +434,241 @@ def _hinerv_modelsize_candidate_spec(
         decoder_codec=decoder_codec,
         hard_byte_ceiling=int(hard_byte_ceiling),
     )
+    modelsize_receiver_contract = _validate_hinerv_modelsize_receiver_contract(
+        candidate,
+        row_id=row_id,
+    )
     return {
         "row_id": row_id,
-        "modelsize_scale": float(
-            candidate.get("target_modelsize_mparams")
-            or candidate.get("modelsize_mparams")
-            or 0.0
-        ),
+        "modelsize_scale": float(modelsize_receiver_contract["modelsize_scale_value"]),
+        "modelsize_receiver_contract": modelsize_receiver_contract,
         "config": cfg,
         "decoder_codec": decoder_codec,
         "modelsize_candidate": dict(candidate),
+    }
+
+
+def _validate_hinerv_modelsize_receiver_contract(
+    candidate: Mapping[str, Any],
+    *,
+    row_id: str,
+) -> dict[str, Any]:
+    contract = candidate.get("modelsize_control_contract")
+    if not isinstance(contract, Mapping):
+        raise ValueError(
+            "hinerv modelsize candidate must include modelsize_control_contract "
+            f"for {row_id}"
+        )
+
+    errors: list[str] = []
+    target_present = (
+        "target_modelsize_mparams" in candidate
+        and candidate.get("target_modelsize_mparams") is not None
+    )
+    modelsize_mparams = _positive_float(candidate.get("modelsize_mparams"))
+    target_modelsize_mparams = _positive_float(
+        candidate.get("target_modelsize_mparams")
+    )
+    if modelsize_mparams is None:
+        errors.append("modelsize_mparams_positive_required")
+    if target_present and target_modelsize_mparams is None:
+        errors.append("target_modelsize_mparams_positive_required")
+
+    expected_capacity_source = (
+        "local_hinerv_target_modelsize"
+        if target_present
+        else "manual_local_knobs"
+    )
+    if candidate.get("capacity_source") != expected_capacity_source:
+        errors.append(
+            "capacity_source_must_be_"
+            f"{expected_capacity_source}_for_modelsize_scale_source"
+        )
+
+    expected_control_semantics = (
+        _HINERV_TARGET_MODELSIZE_CONTROL_SEMANTICS
+        if target_present
+        else _HINERV_MANUAL_MODELSIZE_CONTROL_SEMANTICS
+    )
+    expected_target_consumption = (
+        _HINERV_TARGET_MODELSIZE_CONSUMPTION if target_present else None
+    )
+    if contract.get("schema") != _NERV_MODELSIZE_CONTROL_CONTRACT_SCHEMA:
+        errors.append("modelsize_control_contract_schema_invalid")
+    if contract.get("family") != "hi_nerv":
+        errors.append("modelsize_control_contract_family_must_be_hi_nerv")
+    if contract.get("control_semantics") != expected_control_semantics:
+        errors.append(
+            "modelsize_control_contract_control_semantics_must_be_"
+            f"{expected_control_semantics}"
+        )
+    if contract.get("shared_target_modelsize_mparams_consumed_as") != (
+        expected_target_consumption
+    ):
+        errors.append(
+            "target_modelsize_mparams_consumption_semantics_invalid"
+        )
+    if contract.get("modelsize_mparams_is_official_upstream_flag") is not False:
+        errors.append("modelsize_mparams_must_not_be_official_upstream_flag")
+    if contract.get("modelsize_mparams_caps_archive_zip_bytes") is not False:
+        errors.append("modelsize_mparams_must_not_cap_archive_zip_bytes")
+    if contract.get("rate_authority_surface") != MODELSIZE_RATE_AUTHORITY_SURFACE:
+        errors.append("rate_authority_surface_must_be_measured_archive_bytes")
+    if contract.get("hard_byte_ceiling_is_archive_budget_filter") is not True:
+        errors.append("hard_byte_ceiling_must_be_archive_budget_filter_only")
+    if candidate.get("requires_archive_byte_oracle") is not True:
+        errors.append("requires_archive_byte_oracle_true_required")
+
+    missing_true_fields = [
+        field
+        for field in MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+        if contract.get(field) is not True
+    ]
+    if missing_true_fields:
+        errors.append(
+            "missing_required_true_contract_fields:"
+            + ",".join(sorted(missing_true_fields))
+        )
+
+    true_authority_fields = [
+        field
+        for field in _NESTED_AUTHORITY_FIELDS
+        if _truthy_authority_value(contract.get(field))
+    ]
+    if true_authority_fields:
+        errors.append(
+            "modelsize_control_contract_true_authority_fields:"
+            + ",".join(sorted(true_authority_fields))
+        )
+
+    if target_present and _nonnegative_float(
+        candidate.get("modelsize_error_mparams")
+    ) is None:
+        errors.append("target_modelsize_mparams_requires_modelsize_error_mparams")
+
+    if errors:
+        raise ValueError(
+            "hinerv modelsize candidate modelsize_control_contract invalid for "
+            f"{row_id}: {errors}"
+        )
+
+    modelsize_scale_value = (
+        float(target_modelsize_mparams)
+        if target_present
+        else float(modelsize_mparams)
+    )
+    modelsize_scale_source = (
+        "target_modelsize_mparams" if target_present else "modelsize_mparams"
+    )
+    return {
+        "schema": HINERV_MODELSIZE_RECEIVER_CONTRACT_SCHEMA,
+        "candidate_id": row_id,
+        "source_contract_schema": contract.get("schema"),
+        "capacity_source": str(candidate.get("capacity_source")),
+        "modelsize_scale_source": modelsize_scale_source,
+        "modelsize_scale_value": modelsize_scale_value,
+        "modelsize_scale_unit": "mparams",
+        "modelsize_mparams": float(modelsize_mparams),
+        "target_modelsize_mparams": (
+            float(target_modelsize_mparams) if target_present else None
+        ),
+        "modelsize_error_mparams": (
+            _nonnegative_float(candidate.get("modelsize_error_mparams"))
+            if target_present
+            else None
+        ),
+        "modelsize_scale_semantics": (
+            "nearest local parameter-count target in millions of parameters"
+            if target_present
+            else "measured local trainable parameter count in millions"
+        ),
+        "target_modelsize_mparams_semantics": (
+            "nearest local parameter-count target, not an official upstream "
+            "--modelsize flag and not an archive-byte cap"
+        ),
+        "modelsize_mparams_semantics": (
+            "local trainable parameter count in millions; never official "
+            "upstream --modelsize for HiNeRV and never archive-byte authority"
+        ),
+        "hard_byte_ceiling_semantics": (
+            "planner filter only; receiver-closed archive bytes remain measured "
+            "authority"
+        ),
+        "archive_bytes_authority": "archive_rows[].archive_bytes",
+        "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
+        "modelsize_mparams_is_official_upstream_flag": False,
+        "modelsize_mparams_caps_archive_zip_bytes": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _legacy_hinerv_modelsize_receiver_contract(
+    spec: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": HINERV_MODELSIZE_RECEIVER_CONTRACT_SCHEMA,
+        "candidate_id": str(spec.get("row_id") or ""),
+        "source_contract_schema": None,
+        "capacity_source": "legacy_hi_nerv_modelsize_config_rows",
+        "modelsize_scale_source": "legacy_modelsize_scale",
+        "modelsize_scale_value": float(spec.get("modelsize_scale") or 0.0),
+        "modelsize_scale_unit": "relative_local_ladder_multiplier",
+        "modelsize_mparams": None,
+        "target_modelsize_mparams": None,
+        "modelsize_error_mparams": None,
+        "modelsize_scale_semantics": (
+            "legacy local config ladder label, not modelsize_mparams, not "
+            "official upstream --modelsize, and not an archive-byte cap"
+        ),
+        "target_modelsize_mparams_semantics": (
+            "not provided for legacy local ladder rows"
+        ),
+        "modelsize_mparams_semantics": (
+            "not provided for legacy local ladder rows; archive bytes are "
+            "measured separately"
+        ),
+        "hard_byte_ceiling_semantics": "not provided for legacy local ladder rows",
+        "archive_bytes_authority": "archive_rows[].archive_bytes",
+        "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
+        "modelsize_mparams_is_official_upstream_flag": False,
+        "modelsize_mparams_caps_archive_zip_bytes": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hinerv_archive_modelsize_receiver_contract() -> dict[str, Any]:
+    return {
+        "schema": HINERV_MODELSIZE_RECEIVER_CONTRACT_SCHEMA,
+        "family": "hi_nerv",
+        "budget_candidate_required_contract_schema": (
+            _NERV_MODELSIZE_CONTROL_CONTRACT_SCHEMA
+        ),
+        "budget_candidate_required_true_fields": list(
+            MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+        ),
+        "modelsize_scale_field_rule": (
+            "legacy rows use relative local ladder labels; modelsize-budget "
+            "candidates use target_modelsize_mparams when present, otherwise "
+            "local modelsize_mparams"
+        ),
+        "target_modelsize_mparams_semantics": (
+            "nearest executable local HiNeRV parameter-count target in millions "
+            "of parameters; not official upstream --modelsize and not an "
+            "archive-byte cap"
+        ),
+        "modelsize_mparams_semantics": (
+            "local trainable parameter count in millions; not official upstream "
+            "--modelsize for HiNeRV and not archive-byte authority"
+        ),
+        "archive_bytes_authority": "archive_rows[].archive_bytes",
+        "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
+        "score_or_exact_promotion_rule": (
+            "score, rank, promotion, and exact-dispatch authority remain false "
+            "until receiver-closed archive bytes and scorer replay are attached"
+        ),
+        "modelsize_mparams_is_official_upstream_flag": False,
+        "modelsize_mparams_caps_archive_zip_bytes": False,
+        **FALSE_AUTHORITY,
     }
 
 
@@ -553,6 +802,14 @@ def _positive_float(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     return number if number > 0.0 else None
+
+
+def _nonnegative_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number >= 0.0 else None
 
 
 def _float_id_token(value: float) -> str:
@@ -692,6 +949,8 @@ def render_hinerv_archive_size_ladder_markdown(report: Mapping[str, Any]) -> str
         f"Decoder codec: `{report.get('decoder_codec')}`",
         f"Decoder codec policy: `{report.get('decoder_codec_policy')}`",
         f"Modelsize budget schema: `{report.get('hinerv_modelsize_budget_schema')}`",
+        "Modelsize receiver contract: "
+        f"`{(report.get('modelsize_receiver_contract') or {}).get('schema')}`",
         "",
         "| row | params | nominal bytes | archive bytes | measured-minus-nominal | rate score [planning/control] | proof ready |",
         "|---|---:|---:|---:|---:|---:|---:|",
@@ -1273,6 +1532,7 @@ def _ordered_unique(items: Iterable[str]) -> list[str]:
 
 __all__ = [
     "HINERV_ARCHIVE_SIZE_LADDER_SCHEMA",
+    "HINERV_MODELSIZE_RECEIVER_CONTRACT_SCHEMA",
     "REQUIRED_ALLOCATOR_BINDINGS",
     "attach_hinerv_archive_ladder_score_rows",
     "build_hinerv_archive_size_ladder",
