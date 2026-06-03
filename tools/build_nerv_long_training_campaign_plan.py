@@ -119,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
     experiment_queue_id = args.experiment_queue_id or (
         f"nerv_long_training_campaign_{_safe_token(args.output_json.stem)}.v1"
     )
+    planner_row_queue_artifact_path = args.output_queue or args.output_json
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_load(args.hinerv_modelsize_budget),
         snerv_modelsize_budget=_load(args.snerv_modelsize_budget),
@@ -142,7 +143,7 @@ def main(argv: list[str] | None = None) -> int:
         snerv_bounded_proof_only=bool(args.snerv_bounded_proof_only),
         snerv_bounded_proof_epochs=int(args.snerv_bounded_proof_epochs),
         experiment_queue_id=experiment_queue_id,
-        planner_row_queue_artifact_path=args.output_json,
+        planner_row_queue_artifact_path=planner_row_queue_artifact_path,
     )
     write_json_artifact(
         args.output_json,

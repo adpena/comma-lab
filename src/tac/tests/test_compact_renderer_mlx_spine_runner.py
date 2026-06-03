@@ -707,6 +707,43 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
     assert "planner_row_command_mismatch:--snerv-official-dec-strds" not in blockers
 
 
+def test_planner_row_launch_gate_accepts_numeric_equivalent_snerv_hfr_gain(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        family="snerv",
+        row_id="snerv::candidate::native_rate_aware_training",
+        command_extra=[
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "29650",
+            "--modelsize-candidate-id",
+            "candidate",
+            "--snerv-hfr-gain",
+            "0",
+        ],
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="snerv",
+            planner_row_id="snerv::candidate::native_rate_aware_training",
+            planner_row_queue_artifact=[queue_path],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
+            allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            modelsize_candidate_id="candidate",
+            snerv_hfr_gain=0.0,
+            repo_root=REPO_ROOT,
+        )
+    )
+
+    assert "planner_row_command_mismatch:--snerv-hfr-gain" not in blockers
+
+
 def test_planner_row_launch_gate_rejects_nonrunnable_queue_artifact(
     tmp_path: Path,
 ) -> None:
@@ -5058,18 +5095,23 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert captured_train_kwargs["coder_qat_c1a_entropy_weight"] == 0.0003
     assert captured_train_kwargs["coder_qat_c1a_sigma"] == 0.35
     assert captured_train_kwargs["coder_qat_c1a_sample_size"] == 64
-    assert captured_train_kwargs["decoder_weight_waterfill_plan"] == waterfill_plan
+    captured_waterfill = captured_train_kwargs["decoder_weight_waterfill_plan"]
+    assert captured_waterfill["schema"] == waterfill_plan["schema"]
+    assert captured_waterfill["rows"] == waterfill_plan["rows"]
+    launch_custody = captured_waterfill["compact_runner_launch_custody"]
+    assert launch_custody["schema"] == (
+        "compact_hi_nerv_decoder_weight_waterfill_launch_custody.v1"
+    )
+    assert launch_custody["path"] == waterfill_plan_path.as_posix()
+    assert launch_custody["sha256"] == runner_mod._sha256_file(waterfill_plan_path)
+    assert launch_custody["source_schema"] == "nerv_decoder_weight_waterfill.v1"
+    assert launch_custody["score_claim"] is False
     assert (
-        captured_train_kwargs["decoder_weight_waterfill_plan"][
-            "receiver_proof_status"
-        ]
+        captured_waterfill["receiver_proof_status"]
         == "runtime_consumption_proof_ready"
     )
-    assert (
-        captured_train_kwargs["decoder_weight_waterfill_plan"]["full_video_coverage"]
-        is True
-    )
-    assert captured_train_kwargs["decoder_weight_waterfill_plan"]["blockers"] == []
+    assert captured_waterfill["full_video_coverage"] is True
+    assert captured_waterfill["blockers"] == []
     assert captured_train_kwargs["recon_pixel_weight_path"] == weight_path
     assert captured_train_kwargs["auto_segnet_boundary_recon_weight"] is False
     assert captured_train_kwargs["recon_pixel_weight_tau"] == 0.5
@@ -5129,6 +5171,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert waterfill["attached"] is True
     assert waterfill["path"] == waterfill_plan_path.as_posix()
     assert waterfill["sha256"] == runner_mod._sha256_file(waterfill_plan_path)
+    assert waterfill["launch_custody"] == launch_custody
     assert waterfill["source_schema"] == "nerv_decoder_weight_waterfill.v1"
     assert waterfill["row_count"] == 1
     assert waterfill["source_blockers"] == []

@@ -517,6 +517,21 @@ def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> N
             "schema": "nerv_decoder_weight_waterfill.v1",
             "family": "hi_nerv",
             "candidate_id": "unit",
+            "compact_runner_launch_custody": {
+                "schema": (
+                    "compact_hi_nerv_decoder_weight_waterfill_launch_custody.v1"
+                ),
+                "path": "/Volumes/VertigoDataTier/pact/unit_waterfill.json",
+                "sha256": "a" * 64,
+                "source_schema": "nerv_decoder_weight_waterfill.v1",
+                "family": "hi_nerv",
+                "candidate_id": "unit",
+                "row_count": 1,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "rank_or_kill_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "rows": [
                 {
                     "group_name": "head_rgb_1.weight",
@@ -538,6 +553,9 @@ def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> N
     assert waterfill["changed_tensor_count"] == 1
     assert waterfill["applied_rows"][0]["group_name"] == "head_rgb_1.weight"
     assert waterfill["applied_rows"][0]["changed"] is True
+    assert waterfill["plan_custody"]["sha256"] == "a" * 64
+    assert waterfill["plan_custody"]["path"].endswith("unit_waterfill.json")
+    assert waterfill["plan_custody"]["score_claim"] is False
     assert "contest_cpu_cuda_exact_eval_not_executed" in waterfill["blockers"]
     assert waterfill["score_claim"] is False
     proof = waterfill["rendered_pixel_proof"]

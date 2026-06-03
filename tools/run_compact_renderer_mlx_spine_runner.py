@@ -6180,6 +6180,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 decoder_weight_waterfill_plan_metadata["blockers"] = [
                     "decoder_weight_waterfill_plan_schema_mismatch"
                 ]
+            decoder_weight_waterfill_plan = (
+                _attach_hi_nerv_decoder_weight_waterfill_launch_custody(
+                    decoder_weight_waterfill_plan,
+                    decoder_weight_waterfill_plan_metadata,
+                )
+            )
+            decoder_weight_waterfill_plan_metadata["launch_custody"] = (
+                decoder_weight_waterfill_plan.get("compact_runner_launch_custody")
+                if decoder_weight_waterfill_plan is not None
+                else None
+            )
     modelsize_budget_rows, modelsize_budget_sources = (
         _load_compact_modelsize_budget_rows(
             (*modelsize_budget_json_paths, *receiver_closed_ladder_json_paths),
@@ -8048,6 +8059,34 @@ def _decoder_weight_waterfill_fake_quant_bits_by_name(
             )
         bits_by_name[group_name] = selected_bits
     return bits_by_name
+
+
+def _attach_hi_nerv_decoder_weight_waterfill_launch_custody(
+    plan: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Attach source-file custody to the plan consumed by train/export paths."""
+
+    if plan is None:
+        return None
+    custody = {
+        "schema": "compact_hi_nerv_decoder_weight_waterfill_launch_custody.v1",
+        "path": metadata.get("path"),
+        "sha256": metadata.get("sha256"),
+        "source_schema": metadata.get("source_schema"),
+        "family": metadata.get("family"),
+        "candidate_id": metadata.get("candidate_id"),
+        "group_count": metadata.get("group_count"),
+        "row_count": metadata.get("row_count"),
+        "source_blockers": list(metadata.get("source_blockers") or []),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    enriched = dict(plan)
+    enriched["compact_runner_launch_custody"] = custody
+    return enriched
 
 
 def _hi_nerv_eval_roundtrip_ste_metadata() -> dict[str, Any]:
@@ -11510,9 +11549,31 @@ def _planner_row_command_control_blockers(
         if expected is None:
             continue
         actual = _namespace_flag_value(args, attr)
-        if actual is None or str(actual) != str(expected):
+        if actual is None or not _planner_row_flag_values_match(
+            flag,
+            actual=str(actual),
+            expected=str(expected),
+        ):
             blockers.append(f"planner_row_command_mismatch:{flag}")
     return _dedupe(blockers)
+
+
+def _planner_row_flag_values_match(flag: str, *, actual: str, expected: str) -> bool:
+    if actual == expected:
+        return True
+    numeric_scalar_flags = {
+        "--target-modelsize-mparams",
+        "--snerv-official-modelsize-mparams",
+        "--snerv-hfr-gain",
+    }
+    if flag not in numeric_scalar_flags:
+        return False
+    if "," in actual or "," in expected:
+        return False
+    try:
+        return float(actual) == float(expected)
+    except ValueError:
+        return False
 
 
 def _command_flag_value(command: Sequence[str], flag: str) -> str | None:

@@ -2605,12 +2605,12 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert rc == 0
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     assert payload["campaign_row_count"] == 2
-    assert payload["planner_row_queue_artifact_path"] == out_json.as_posix()
+    assert payload["planner_row_queue_artifact_path"] == out_queue.as_posix()
     assert payload["candidate_feedback_row_count"] == 1
     assert payload["decoder_weight_waterfill_attached_row_count"] == 1
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert "--planner-row-queue-artifact" in hi["command_argv"]
-    assert hi["command_argv"][hi["command_argv"].index("--planner-row-queue-artifact") + 1] == out_json.as_posix()
+    assert hi["command_argv"][hi["command_argv"].index("--planner-row-queue-artifact") + 1] == out_queue.as_posix()
     assert "--recon-pixel-weight-path" in hi["command_argv"]
     assert "--decoder-weight-waterfill-plan-json" in hi["command_argv"]
     waterfill_sidecar = Path(hi["command_argv"][hi["command_argv"].index("--decoder-weight-waterfill-plan-json") + 1])
@@ -2631,7 +2631,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert "--planner-row-queue-artifact" in snerv_exp["steps"][0]["command"]
     assert snerv_exp["steps"][0]["command"][
         snerv_exp["steps"][0]["command"].index("--planner-row-queue-artifact") + 1
-    ] == out_json.as_posix()
+    ] == out_queue.as_posix()
     assert snerv_exp["blocked"] is False
     assert "--snerv-score-aware-long-training-epochs" in snerv_exp["steps"][0]["command"]
     loaded_queue = load_queue_definition(out_queue)

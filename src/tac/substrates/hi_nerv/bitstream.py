@@ -333,6 +333,9 @@ def apply_decoder_waterfill_actions(
             "decoder_weight_waterfill_plan schema must be "
             "'nerv_decoder_weight_waterfill.v1'"
         )
+    plan_custody = _decoder_weight_waterfill_plan_custody(
+        decoder_weight_waterfill_plan
+    )
     rows = decoder_weight_waterfill_plan.get("rows")
     if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
         raise HiNervBitstreamError("decoder_weight_waterfill_plan rows must be a list")
@@ -350,6 +353,7 @@ def apply_decoder_waterfill_actions(
             "plan_schema": decoder_weight_waterfill_plan.get("schema"),
             "family": decoder_weight_waterfill_plan.get("family"),
             "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+            "plan_custody": plan_custody,
             "input_group_count": len(rows),
             "applied_row_count": 0,
             "blocked_row_count": len(rows),
@@ -466,6 +470,7 @@ def apply_decoder_waterfill_actions(
         "plan_schema": decoder_weight_waterfill_plan.get("schema"),
         "family": decoder_weight_waterfill_plan.get("family"),
         "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+        "plan_custody": plan_custody,
         "input_group_count": len(rows),
         "applied_row_count": len(applied_rows),
         "changed_tensor_count": int(changed),
@@ -517,6 +522,9 @@ def build_decoder_waterfill_fake_quant_forward_plan(
             "decoder_weight_waterfill_plan schema must be "
             "'nerv_decoder_weight_waterfill.v1'"
         )
+    plan_custody = _decoder_weight_waterfill_plan_custody(
+        decoder_weight_waterfill_plan
+    )
     rows = decoder_weight_waterfill_plan.get("rows")
     if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
         raise HiNervBitstreamError("decoder_weight_waterfill_plan rows must be a list")
@@ -533,6 +541,7 @@ def build_decoder_waterfill_fake_quant_forward_plan(
             "plan_schema": decoder_weight_waterfill_plan.get("schema"),
             "family": decoder_weight_waterfill_plan.get("family"),
             "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+            "plan_custody": plan_custody,
             "input_group_count": len(rows),
             "targeted_tensor_count": 0,
             "per_tensor_bits": {},
@@ -650,6 +659,7 @@ def build_decoder_waterfill_fake_quant_forward_plan(
         "plan_schema": decoder_weight_waterfill_plan.get("schema"),
         "family": decoder_weight_waterfill_plan.get("family"),
         "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+        "plan_custody": plan_custody,
         "input_group_count": len(rows),
         "targeted_tensor_count": len(per_tensor_bits),
         "per_tensor_bits": dict(sorted(per_tensor_bits.items())),
@@ -681,6 +691,21 @@ def decoder_waterfill_fake_quant_bits_by_name(
     return {
         str(name): int(bits)
         for name, bits in dict(report.get("per_tensor_bits") or {}).items()
+    }
+
+
+def _decoder_weight_waterfill_plan_custody(
+    decoder_weight_waterfill_plan: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    custody = decoder_weight_waterfill_plan.get("compact_runner_launch_custody")
+    if not isinstance(custody, Mapping):
+        return None
+    return {
+        **dict(custody),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 

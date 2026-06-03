@@ -950,6 +950,102 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert Path(report["report_path"]).is_file()
 
 
+def test_official_primitives_long_training_refusal_writes_source_forward_replay_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_long_training_refusal",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-primitives-long-training-request",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_batch_pairs": 2,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    old_blocker = (
+        "snerv_score_aware_long_training_official_mfu_hfr_tub_renderer_not_bound"
+    )
+    assert old_blocker not in report["blockers"]
+    assert report["score_aware_long_training_executed"] is False
+    assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
+
+    long_training = report["score_aware_long_training"]
+    assert long_training["requested_epochs"] == 1
+    assert long_training["executed"] is False
+    assert old_blocker not in long_training["blockers"]
+    replay = long_training["official_mfu_hfr_tub_source_forward_replay"]
+    assert replay["schema"] == (
+        "snerv_official_mfu_hfr_tub_source_forward_replay_contract.v1"
+    )
+    assert Path(replay["artifact_path"]).is_file()
+    assert len(replay["artifact_sha256"]) == 64
+    assert replay["receiver_official_payload_forward_replay_passed"] is True
+    assert replay["source_forward_replay_bound"] is False
+    assert replay["source_forward_replay_verified"] is False
+    assert replay["score_aware_long_training_renderer_bound"] is False
+    assert replay["official_torch_source_forward_replay_passed"] is False
+    assert replay["selected_packet_authority"]["status"] == (
+        "frame_producing_official_export"
+    )
+    assert replay["official_receiver_tensor_map"][
+        "receiver_tensor_map_verified"
+    ] is True
+    assert replay["official_receiver_runtime_decode_proof"][
+        "receiver_runtime_decode_proven"
+    ] is True
+    assert replay["max_abs_error_nchw255"] < 5.0e-2
+    assert {row["component_id"] for row in replay["component_rows"]} == {
+        "mfu",
+        "hfr",
+        "tub",
+    }
+    assert all(
+        row["receiver_payload_forward_replay_proven"] is True
+        and row["official_source_forward_parity_proven"] is False
+        for row in replay["component_rows"]
+    )
+    assert (
+        "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
+        in replay["blockers"]
+    )
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in replay[
+        "blockers"
+    ]
+    assert "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing" in report[
+        "blockers"
+    ]
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

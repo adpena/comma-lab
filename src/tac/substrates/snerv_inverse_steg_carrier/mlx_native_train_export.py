@@ -51,6 +51,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     encode_official_mfu_hfr_tub_decoder_payload,
+    execute_official_mfu_hfr_tub_decoder_payload,
     inspect_decoder_payload_header,
     pack_snerv_archive,
     unpack_snerv_archive,
@@ -1248,12 +1249,23 @@ def _run_score_aware_long_training_attachment(
         }
         write_json(report_path, payload)
         return {**payload, "report_path": report_path.as_posix()}
+    pairs = np.asarray(pairs_nchw255, dtype=np.float32)
     if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
+        source_forward_replay = _build_official_mfu_hfr_tub_long_training_replay_contract(
+            output_dir=out,
+            pairs_nchw255=pairs,
+            model_size=model_size,
+            source_pair_indices=source_pair_indices,
+            allow_overwrite=allow_overwrite,
+        )
         payload = {
             **base_payload,
-            "blockers": [
-                "snerv_score_aware_long_training_official_mfu_hfr_tub_renderer_not_bound"
-            ],
+            "official_mfu_hfr_tub_source_forward_replay": source_forward_replay,
+            "blockers": _ordered_unique(
+                str(blocker)
+                for blocker in source_forward_replay.get("blockers") or ()
+                if str(blocker)
+            ),
         }
         write_json(report_path, payload)
         return {**payload, "report_path": report_path.as_posix()}
@@ -1267,7 +1279,6 @@ def _run_score_aware_long_training_attachment(
         write_json(report_path, payload)
         return {**payload, "report_path": report_path.as_posix()}
 
-    pairs = np.asarray(pairs_nchw255, dtype=np.float32)
     try:
         import mlx.core as mx
 
@@ -1634,6 +1645,182 @@ def _run_score_aware_long_training_attachment(
         }
         write_json(report_path, payload)
         return {**payload, "report_path": report_path.as_posix()}
+
+
+def _build_official_mfu_hfr_tub_long_training_replay_contract(
+    *,
+    output_dir: str | Path,
+    pairs_nchw255: np.ndarray,
+    model_size: SnervModelSizeConfig,
+    source_pair_indices: Sequence[int],
+    allow_overwrite: bool,
+) -> dict[str, Any]:
+    """Write the executable official-payload replay proof for long-training refusal.
+
+    This is intentionally narrower than official SNeRV parity: it proves that
+    the native export can materialize and replay a frame-producing official
+    MFU/HFR/TUB receiver payload for the requested targets, while keeping the
+    differentiable MLX training graph and upstream-source forward replay as
+    explicit blockers.
+    """
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    artifact_path = out / "snerv_official_mfu_hfr_tub_source_forward_replay_contract.json"
+    if artifact_path.exists() and not allow_overwrite:
+        raise SnervMlxNativeExportError(
+            f"refusing to overwrite existing official source-forward replay contract: {artifact_path}"
+        )
+    pairs = np.asarray(pairs_nchw255, dtype=np.float32)
+    base: dict[str, Any] = {
+        "schema": "snerv_official_mfu_hfr_tub_source_forward_replay_contract.v1",
+        "family": "snerv",
+        "adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        "requested_pair_count": int(pairs.shape[0]) if pairs.ndim >= 1 else 0,
+        "source_pair_indices": [int(value) for value in source_pair_indices],
+        "source_forward_replay_bound": False,
+        "source_forward_replay_verified": False,
+        "source_forward_replay_authority": False,
+        "score_aware_long_training_renderer_bound": False,
+        "receiver_official_payload_forward_replay_passed": False,
+        "official_torch_source_forward_replay_passed": False,
+        "component_rows": [],
+        **FALSE_AUTHORITY,
+    }
+    try:
+        packet = _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
+            pairs,
+            source_pair_indices=tuple(int(value) for value in source_pair_indices),
+            model_size=model_size,
+            metadata_extra={
+                "source_forward_replay_contract_probe": True,
+                "source_faithful_stack": False,
+            },
+        )
+        selected_authority = _selected_packet_official_payload_authority(packet.packet)
+        tensor_map = _official_receiver_tensor_map_from_packet(packet.packet)
+        decoded = unpack_snerv_archive(packet.packet)
+        primitive_proof = execute_official_mfu_hfr_tub_decoder_payload(
+            decoded.sections["decoder_payload"]
+        )
+        frames = decode_snerv_archive_frames(packet.packet)
+        shape_matches = tuple(int(value) for value in frames.shape) == tuple(
+            int(value) for value in pairs.shape
+        )
+        finite = bool(np.isfinite(frames).all())
+        max_abs_error = (
+            float(np.max(np.abs(np.asarray(frames, dtype=np.float32) - pairs)))
+            if shape_matches and finite
+            else None
+        )
+        replay_passed = bool(
+            selected_authority.get("frame_producing_official_export") is True
+            and tensor_map.get("receiver_tensor_map_verified") is True
+            and primitive_proof.get("receiver_runtime_decode_proven") is True
+            and shape_matches
+            and finite
+            and max_abs_error is not None
+            and max_abs_error <= 5.0e-2
+        )
+        component_rows = _official_long_training_replay_component_rows(
+            primitive_proof=primitive_proof,
+            tensor_map=tensor_map,
+            receiver_replay_passed=replay_passed,
+        )
+        blockers = [
+            "" if replay_passed else "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed",
+            "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
+            "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+            "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
+        ]
+        payload = {
+            **base,
+            "packet_bytes": len(packet.packet),
+            "packet_sha256": _sha256_bytes(packet.packet),
+            "selected_packet_authority": selected_authority,
+            "official_receiver_tensor_map": tensor_map,
+            "official_receiver_runtime_decode_proof": primitive_proof,
+            "decoded_frame_shape": [int(value) for value in frames.shape],
+            "target_frame_shape": [int(value) for value in pairs.shape],
+            "decoded_frames_finite": finite,
+            "frame_shape_matches": shape_matches,
+            "max_abs_error_nchw255": max_abs_error,
+            "receiver_official_payload_forward_replay_passed": replay_passed,
+            "component_rows": component_rows,
+            "blockers": _ordered_unique(str(blocker) for blocker in blockers if blocker),
+        }
+    except Exception as exc:
+        payload = {
+            **base,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed",
+                "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+            ],
+        }
+    payload.update(FALSE_AUTHORITY)
+    write_json(artifact_path, payload)
+    payload["artifact_path"] = artifact_path.as_posix()
+    payload["artifact_sha256"] = sha256_file(artifact_path)
+    write_json(artifact_path, payload)
+    return payload
+
+
+def _official_long_training_replay_component_rows(
+    *,
+    primitive_proof: Mapping[str, Any],
+    tensor_map: Mapping[str, Any],
+    receiver_replay_passed: bool,
+) -> list[dict[str, Any]]:
+    executed = primitive_proof.get("executed_components")
+    executed = dict(executed) if isinstance(executed, Mapping) else {}
+    category_counts = tensor_map.get("category_counts")
+    category_counts = dict(category_counts) if isinstance(category_counts, Mapping) else {}
+    component_specs = (
+        (
+            "mfu",
+            "official_mfu",
+            ("official_mfu_weight_payload", "official_mfu_input_payload"),
+            "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+        ),
+        (
+            "hfr",
+            "official_hfr",
+            ("official_hfr_weight_payload",),
+            "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+        ),
+        (
+            "tub",
+            "official_tub",
+            ("official_tub_input_payload",),
+            "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
+        ),
+    )
+    rows: list[dict[str, Any]] = []
+    for component_id, proof_key, categories, source_blocker in component_specs:
+        tensor_payload_present = any(int(category_counts.get(category) or 0) > 0 for category in categories)
+        receiver_component_passed = bool(
+            receiver_replay_passed
+            and executed.get(proof_key) is True
+            and tensor_payload_present
+        )
+        rows.append(
+            {
+                "schema": "snerv_official_mfu_hfr_tub_long_training_replay_component.v1",
+                "component_id": component_id,
+                "receiver_payload_forward_replay_proven": receiver_component_passed,
+                "receiver_tensor_payload_present": tensor_payload_present,
+                "official_source_forward_parity_proven": False,
+                "score_aware_long_training_renderer_bound": False,
+                "blockers": [
+                    "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
+                    source_blocker,
+                ],
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
 
 
 def _run_scorer_loop_qat_attachment(
