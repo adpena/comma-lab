@@ -1,0 +1,114 @@
+{
+  "archive_bytes": 121624,
+  "archive_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch016499_ema_archive_export_20260603T2126Z/archive.zip",
+  "archive_sha256": "1a5784ff7bc1353446f76ba2e87f20055d1e002fcc43b27403eaf48254b16a8b",
+  "blockers": [
+    "macos_mlx_checkpoint_export_false_authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "full_video_scorer_replay_not_executed"
+  ],
+  "candidate_id": "hinerv_np600_ld16_ed8_dc16_mi1fi4_hfg_cnx_lg2c4_cx2k7_int7_mixed_ceil178000",
+  "checkpoint_epoch": 16499,
+  "checkpoint_meta_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch016499_20260603T211727Z.meta.json",
+  "checkpoint_meta_sha256": "8cd9ec3826da2f40f595bc6ed5f20f23d855eb6afc01975640b6a11b17b78b7a",
+  "checkpoint_state_kind": "ema",
+  "checkpoint_state_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/hi_nerv_mlx_training/checkpoints/epoch016499_20260603T211727Z.ema_shadow.state.npsd",
+  "checkpoint_state_sha256": "58916943cfb449089393c871bb59ec6a39f73358e9433230659bbef161decbfd",
+  "decoder_codec": "portfolio_auto",
+  "decoder_codec_resolution": {
+    "explicit_arg": null,
+    "modelsize_candidate_decoder_codec": "int7_mixed",
+    "resolved": "portfolio_auto",
+    "runner_compact_decoder_codec": "portfolio_auto"
+  },
+  "family": "hi_nerv",
+  "hard_byte_ceilings": [
+    178000,
+    216000,
+    285000
+  ],
+  "latent_codec": "int16_brotli_q11",
+  "output_dir": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch016499_ema_archive_export_20260603T2126Z",
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "rate_byte_profile": {
+    "archive_bytes": 121624,
+    "archive_overhead_and_manifest_bytes": 24856,
+    "blockers": [],
+    "dominant_sections": [
+      {
+        "archive_fraction": 0.5368841675985003,
+        "bytes": 65298,
+        "name": "latents_rc",
+        "role": "charged_latent_stream",
+        "sha256": "94e7c3fd652656dd9bc815116fc4e6bd846d17cd4d25987fbb117028a56bc880"
+      },
+      {
+        "archive_fraction": 0.24730316384924028,
+        "bytes": 30078,
+        "name": "decoder_qw",
+        "role": "charged_decoder_or_program_weights",
+        "sha256": "441a23ad18280072c453984cfb8d69ff41701713ff344aa8c2a9f1f0b818188c"
+      },
+      {
+        "archive_fraction": 0.00739985529171874,
+        "bytes": 900,
+        "name": "receiver_state",
+        "role": "charged_decode_constants_or_headers",
+        "sha256": "b0502bb7cd127d69c2810d8527c6052db6240f49dd5f45ace8e3d130cfff4c95"
+      },
+      {
+        "archive_fraction": 0.004045254226139577,
+        "bytes": 492,
+        "name": "rdo_plan",
+        "role": "charged_allocation_hints_no_authority",
+        "sha256": "312715fb80b7e719643b3d74a943ad83eefdc2eb746e4ce43416a857ca9cb4dc"
+      }
+    ],
+    "hprc_bin_bytes": 103838,
+    "manifest_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch016499_ema_archive_export_20260603T2126Z/hprc_representation_spine_hi_nerv_manifest.json",
+    "manifest_sha256": "81ed6214f9e7640d18b9e874debdb6ad96ce43a32476401c1f3b414bafdb09f2",
+    "profile_ready": true,
+    "schema": "hinerv_checkpoint_archive_rate_byte_profile.v1",
+    "section_payload_bytes": 96768,
+    "sections": [
+      {
+        "archive_fraction": 0.24730316384924028,
+        "bytes": 30078,
+        "name": "decoder_qw",
+        "role": "charged_decoder_or_program_weights",
+        "sha256": "441a23ad18280072c453984cfb8d69ff41701713ff344aa8c2a9f1f0b818188c"
+      },
+      {
+        "archive_fraction": 0.5368841675985003,
+        "bytes": 65298,
+        "name": "latents_rc",
+        "role": "charged_latent_stream",
+        "sha256": "94e7c3fd652656dd9bc815116fc4e6bd846d17cd4d25987fbb117028a56bc880"
+      },
+      {
+        "archive_fraction": 0.004045254226139577,
+        "bytes": 492,
+        "name": "rdo_plan",
+        "role": "charged_allocation_hints_no_authority",
+        "sha256": "312715fb80b7e719643b3d74a943ad83eefdc2eb746e4ce43416a857ca9cb4dc"
+      },
+      {
+        "archive_fraction": 0.00739985529171874,
+        "bytes": 900,
+        "name": "receiver_state",
+        "role": "charged_decode_constants_or_headers",
+        "sha256": "b0502bb7cd127d69c2810d8527c6052db6240f49dd5f45ace8e3d130cfff4c95"
+      }
+    ]
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_proof_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch016499_ema_archive_export_20260603T2126Z/receiver_proof/hi_nerv_mlx_receiver_proof.json",
+  "receiver_proof_ready": true,
+  "receiver_proof_sha256": "6af8532afb990576d9c23bc42ceee48936dfd22122bbd03c36f27a72e8046b84",
+  "report_path": "/Users/adpena/Projects/pact/.omx/research/hinerv_epoch016499_ema_archive_export_20260603T2126Z_codex.json",
+  "schema": "hinerv_checkpoint_archive_export.v1",
+  "score_claim": false,
+  "startup_json_path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/compact_renderer_mlx_spine_runner_startup.json",
+  "startup_json_sha256": "3e22d92a48adc9b1f300da19a046e42786ecb9eb902dc85a8ba4d6ee2e15ff97"
+}

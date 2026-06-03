@@ -6,6 +6,9 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-06-03T21:23:48Z | codex | hinerv_epoch16499_ema_archive_export_20260603T2126Z | local_mlx | pending |  | stale_superseded_by_local_export_epoch16499_ema | Pending export claim replaced by completed local export artifact. |
+| 2026-06-03T21:23:48Z | codex | hinerv_epoch16499_ema_archive_export_20260603T2126Z | local_mlx | local-export-epoch16499-ema |  | completed_receiver_proof_archive_bytes_121624 | Export complete: archive.zip 121624 bytes, receiver_proof_ready=true; blockers are macos_mlx_false_authority/full_video_scorer_replay/exact_eval. |
+| 2026-06-03T21:21:19Z | codex | hinerv_epoch16499_ema_archive_export_20260603T2126Z | local_mlx | pending |  | active_exporting | Export latest HiNeRV EMA checkpoint into byte-closed archive plus receiver proof; false-authority local archive/runtime evidence. |
 | 2026-06-03T21:17:55Z | codex | snerv_full600_native_temporal_segw4_pr95bound_20260603T2124Z | local_mlx | pending |  | stale_superseded_by_pid41080 | Pending launch claim replaced by concrete local PID 41080. |
 | 2026-06-03T21:17:55Z | codex | snerv_full600_native_temporal_segw4_pr95bound_20260603T2124Z | local_mlx | local-pid-41080 |  | active_running | Corrected PR95-stage decoder objective consumes segnet_distillation_weight; launch manifest on VertigoDataTier; false-authority MLX local. |
 | 2026-06-03T21:17:08Z | codex | snerv_full600_native_temporal_segw4_pr95bound_20260603T2124Z | local_mlx | pending |  | active_launching | Corrected PR95-stage decoder objective consumes segnet_distillation_weight; fresh SSD output, false-authority MLX local. |
