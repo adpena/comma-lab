@@ -1,0 +1,82 @@
+{
+  "schema": "hinerv_full600_mlx_value_profile_pointer.v1",
+  "created_at_utc": "2026-06-03T22:13:00Z",
+  "family": "hi_nerv",
+  "candidate_id": "hinerv_np600_ld16_ed8_dc16_mi1fi4_hfg_cnx_lg2c4_cx2k7_int7_mixed_ceil178000",
+  "checkpoint_epoch": 19999,
+  "axis_tag": "[macOS-MLX research-signal]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch019999_ema_archive_export_20260603T220645Z_guarded/archive.zip",
+    "bytes": 121828,
+    "sha256": "1523c0fcd5535c2682815ea8a1e82573671effcc86dcb0d7ad74856916096e04"
+  },
+  "export_report": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch019999_ema_archive_export_20260603T220645Z_guarded/hinerv_checkpoint_archive_export.json",
+    "sha256": "2ce36caa200cbba3209d6cc3d2d9ef0fe3641d3012f17cec52cf1e9d210330fa",
+    "modelsize_integrity": {
+      "matches_candidate_controls": true,
+      "observed_total_trainable_params": 159718,
+      "observed_modelsize_mparams": 0.159718,
+      "observed_decoder_channel": 16,
+      "observed_latent_shapes": {
+        "latents_coarse": [600, 8],
+        "latents_mid": [600, 16],
+        "latents_fine": [600, 32]
+      },
+      "prefix_presence": {
+        "feature_grids.": true,
+        "convnext_blocks.": true
+      },
+      "blockers": []
+    }
+  },
+  "cache_report": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch019999_ema_archive_export_20260603T220645Z_guarded/mlx_full600/candidate_cache_report.json",
+    "sha256": "fc8f85e08f900d0e3e2c665f275256778c078a262f7bbf5fe21d5b87c7c72a5a",
+    "cached_pair_count": 600,
+    "raw_pair_count": 600,
+    "cache_bytes_on_ssd": 2764836
+  },
+  "mlx_response": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch019999_ema_archive_export_20260603T220645Z_guarded/mlx_full600/mlx_response_full600.json",
+    "sha256": "218f4fe1730ed692b2c3d2e1921f42c4152049769d884b64267b1507b87438f6",
+    "n_samples": 600,
+    "device": "gpu",
+    "batch_pairs": 1,
+    "canonical_score_advisory": 89.6117192386665,
+    "avg_segnet_dist": 0.5048249476154645,
+    "avg_posenet_dist": 152.47544425964355,
+    "nonrate_score": 89.53059897412552,
+    "rate_term": 0.08112026454096789
+  },
+  "section_value_profile": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_full600_long_native_muon_qat_20260603T191032Z/epoch019999_ema_archive_export_20260603T220645Z_guarded/mlx_full600/compact_renderer_mlx_section_value_profile.json",
+    "sha256": "65d442a645f14d014935f21b9f6f637bd7867aa4637af94bce0616bcc05bff8f",
+    "section_byte_record_count": 4,
+    "scope_status": {
+      "base_mlx_response": "executed",
+      "full_video": "executed",
+      "cache_manifest": "present",
+      "section": "blocked_missing_section_neutralization_or_ablation_evidence"
+    }
+  },
+  "decision": {
+    "exact_gate": "blocked",
+    "reason": "full_video_mlx_advisory_score_far_above_frontier",
+    "continue_training": true,
+    "rate_axis_status": "archive_under_178k_ceiling",
+    "distortion_axis_status": "not_solved",
+    "next_best_action": "continue HiNeRV long training and rerun guarded full600 MLX replay at later EMA checkpoints before any exact CPU/CUDA spend"
+  },
+  "blockers": [
+    "macos_mlx_response_is_advisory_not_score_authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "receiver_proof_not_requested_for_epoch019999_guarded_export",
+    "section_neutralization_or_ablation_replay_missing",
+    "full_video_mlx_advisory_score_far_above_frontier"
+  ]
+}

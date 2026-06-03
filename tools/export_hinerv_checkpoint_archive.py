@@ -28,6 +28,7 @@ from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_kno
 from tac.repo_io import sha256_file, write_json_artifact  # noqa: E402
 from tac.substrates._shared.mlx_score_aware import RendererBundle  # noqa: E402
 from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter  # noqa: E402
+from tac.substrates._shared.numpy_portable_inflate import unpack_state_dict_numpy  # noqa: E402
 from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive  # noqa: E402
 from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX  # noqa: E402
 
@@ -37,6 +38,7 @@ FALSE_AUTHORITY = {
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
 }
+HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC = "portfolio_auto"
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -126,13 +128,19 @@ def export_checkpoint_archive(
         substrate_id="compact_runner_hi_nerv_mlx_checkpoint_export",
     )
     state_path = _checkpoint_state_path(meta, state_kind=state_kind)
-    adapter.import_state_dict(model, state_path)
-    resolved_decoder_codec = str(
-        decoder_codec
-        or command_args.get("compact_decoder_codec")
-        or candidate.get("decoder_codec")
-        or "portfolio_auto"
+    state = unpack_state_dict_numpy(state_path.read_bytes())
+    modelsize_integrity = _modelsize_integrity_profile(
+        state,
+        candidate=candidate,
+        cfg=cfg,
     )
+    adapter.import_state_dict(model, state_path)
+    decoder_codec_resolution = _resolve_decoder_codec(
+        explicit_arg=decoder_codec,
+        command_args=command_args,
+        candidate=candidate,
+    )
+    resolved_decoder_codec = str(decoder_codec_resolution["resolved"])
     resolved_latent_codec = str(
         latent_codec or command_args.get("hi_nerv_latent_codec") or "int16_raw"
     )
@@ -166,6 +174,7 @@ def export_checkpoint_archive(
         "checkpoint_state_kind": state_kind,
         "checkpoint_state_path": state_path.as_posix(),
         "checkpoint_state_sha256": sha256_file(state_path),
+        "modelsize_integrity": modelsize_integrity,
         "startup_json_path": startup_path.as_posix(),
         "startup_json_sha256": sha256_file(startup_path),
         "output_dir": out.as_posix(),
@@ -175,12 +184,7 @@ def export_checkpoint_archive(
         "rate_byte_profile": section_profile,
         "hard_byte_ceilings": list(startup.get("hard_byte_ceilings") or []),
         "decoder_codec": resolved_decoder_codec,
-        "decoder_codec_resolution": {
-            "explicit_arg": decoder_codec,
-            "runner_compact_decoder_codec": command_args.get("compact_decoder_codec"),
-            "modelsize_candidate_decoder_codec": candidate.get("decoder_codec"),
-            "resolved": resolved_decoder_codec,
-        },
+        "decoder_codec_resolution": decoder_codec_resolution,
         "latent_codec": resolved_latent_codec,
         "receiver_proof_path": receiver_proof_path.as_posix() if receiver_proof_path.is_file() else None,
         "receiver_proof_sha256": sha256_file(receiver_proof_path) if receiver_proof_path.is_file() else None,
@@ -190,10 +194,55 @@ def export_checkpoint_archive(
             hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
             receiver_proof=receiver_proof,
             receiver_proof_requested=bool(emit_receiver_proof),
+            modelsize_integrity=modelsize_integrity,
         ),
         **FALSE_AUTHORITY,
     }
     return report
+
+
+def _resolve_decoder_codec(
+    *,
+    explicit_arg: Any,
+    command_args: dict[str, Any],
+    candidate: dict[str, Any],
+) -> dict[str, Any]:
+    """Resolve checkpoint export codec without letting runner defaults mask candidates."""
+
+    explicit = _optional_nonempty_str(explicit_arg)
+    runner = _optional_nonempty_str(command_args.get("compact_decoder_codec"))
+    candidate_codec = _optional_nonempty_str(candidate.get("decoder_codec"))
+    runner_default_like = (
+        runner is None or runner == HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC
+    )
+    if explicit is not None:
+        resolved = explicit
+        source = "explicit_arg"
+    elif candidate_codec is not None and runner_default_like:
+        resolved = candidate_codec
+        source = "modelsize_candidate_decoder_codec"
+    elif runner is not None:
+        resolved = runner
+        source = "runner_compact_decoder_codec"
+    elif candidate_codec is not None:
+        resolved = candidate_codec
+        source = "modelsize_candidate_decoder_codec"
+    else:
+        resolved = HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC
+        source = "checkpoint_export_default"
+    return {
+        "schema": "hinerv_checkpoint_decoder_codec_resolution.v1",
+        "explicit_arg": explicit_arg,
+        "runner_compact_decoder_codec": runner,
+        "runner_compact_decoder_codec_default_like": runner_default_like,
+        "modelsize_candidate_decoder_codec": candidate_codec,
+        "resolved": resolved,
+        "resolution_source": source,
+        "candidate_codec_takes_precedence_over_runner_default": bool(
+            source == "modelsize_candidate_decoder_codec" and runner_default_like
+        ),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _checkpoint_state_path(meta: dict[str, Any], *, state_kind: str) -> Path:
@@ -213,6 +262,7 @@ def _blockers(
     hard_byte_ceilings: Any,
     receiver_proof: dict[str, Any],
     receiver_proof_requested: bool,
+    modelsize_integrity: dict[str, Any],
 ) -> list[str]:
     blockers = [
         "macos_mlx_checkpoint_export_false_authority",
@@ -226,7 +276,110 @@ def _blockers(
         blockers.append("receiver_proof_not_requested")
     elif receiver_proof.get("runtime_consumption_proof_ready") is not True:
         blockers.append("receiver_proof_not_ready")
+    blockers.extend(str(v) for v in modelsize_integrity.get("blockers") or [])
     return blockers
+
+
+def _modelsize_integrity_profile(
+    state: dict[str, Any],
+    *,
+    candidate: dict[str, Any],
+    cfg: Any,
+) -> dict[str, Any]:
+    """Prove candidate size controls are bound to checkpoint tensor shapes."""
+
+    total_params = int(sum(int(getattr(value, "size", 0)) for value in state.values()))
+    expected_total = _optional_int(candidate.get("total_trainable_params"))
+    expected_decoder_channel = int(candidate.get("decoder_channel") or cfg.decoder_channels[-1])
+    expected_num_pairs = int(candidate.get("num_pairs") or cfg.num_pairs)
+    expected_latents = {
+        "latents_coarse": (expected_num_pairs, int(cfg.latent_dim_coarse)),
+        "latents_mid": (expected_num_pairs, int(cfg.latent_dim_mid)),
+        "latents_fine": (expected_num_pairs, int(cfg.latent_dim_fine)),
+    }
+    expected_required_prefixes: dict[str, bool] = {
+        "feature_grids.": bool(candidate.get("use_hierarchical_feature_grid")),
+        "convnext_blocks.": bool(candidate.get("use_convnext_blocks")),
+    }
+    blockers: list[str] = []
+    observed_latents: dict[str, list[int] | None] = {}
+    for key, expected_shape in expected_latents.items():
+        value = state.get(key)
+        observed = None if value is None else [int(v) for v in value.shape]
+        observed_latents[key] = observed
+        if observed != [int(v) for v in expected_shape]:
+            blockers.append(f"hinerv_modelsize_latent_shape_mismatch:{key}")
+    if expected_total is not None and int(expected_total) != total_params:
+        blockers.append("hinerv_modelsize_total_trainable_params_mismatch")
+    conv_weight = state.get("blocks.0.conv.weight")
+    observed_decoder_channel_raw = (
+        int(conv_weight.shape[0])
+        if conv_weight is not None and getattr(conv_weight, "ndim", 0) >= 1
+        else None
+    )
+    observed_decoder_channel = (
+        observed_decoder_channel_raw // 4
+        if observed_decoder_channel_raw is not None
+        else None
+    )
+    if observed_decoder_channel != expected_decoder_channel:
+        blockers.append("hinerv_modelsize_decoder_channel_mismatch")
+    prefix_presence: dict[str, bool] = {}
+    for prefix, required in expected_required_prefixes.items():
+        present = any(str(key).startswith(prefix) for key in state)
+        prefix_presence[prefix] = bool(present)
+        if required and not present:
+            blockers.append(f"hinerv_modelsize_required_tensor_prefix_missing:{prefix}")
+        if not required and present:
+            blockers.append(f"hinerv_modelsize_unexpected_tensor_prefix_present:{prefix}")
+    modelsize_mparams = candidate.get("modelsize_mparams")
+    observed_mparams = float(total_params) / 1_000_000.0
+    if modelsize_mparams is not None and abs(float(modelsize_mparams) - observed_mparams) > 1e-6:
+        blockers.append("hinerv_modelsize_mparams_metadata_mismatch")
+    return {
+        "schema": "hinerv_checkpoint_modelsize_integrity.v1",
+        "profile_ready": True,
+        "candidate_id": candidate.get("candidate_id"),
+        "control_semantics": (
+            (candidate.get("modelsize_control_contract") or {}).get("control_semantics")
+            if isinstance(candidate.get("modelsize_control_contract"), dict)
+            else None
+        ),
+        "modelsize_mparams_caps_archive_zip_bytes": False,
+        "archive_byte_authority_surface": "measured_archive_zip_after_export",
+        "expected_total_trainable_params": expected_total,
+        "observed_total_trainable_params": total_params,
+        "expected_modelsize_mparams": modelsize_mparams,
+        "observed_modelsize_mparams": observed_mparams,
+        "expected_decoder_channel": expected_decoder_channel,
+        "observed_decoder_channel": observed_decoder_channel,
+        "observed_first_block_conv_out_channels": observed_decoder_channel_raw,
+        "decoder_channel_shape_rule": "blocks.0.conv.weight_out_channels_div_4_after_pixelshuffle",
+        "expected_latent_shapes": {
+            key: [int(v) for v in shape] for key, shape in expected_latents.items()
+        },
+        "observed_latent_shapes": observed_latents,
+        "prefix_presence": prefix_presence,
+        "matches_candidate_controls": not blockers,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_nonempty_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _section_profile(output_dir: Path, *, archive_bytes: int) -> dict[str, Any]:
