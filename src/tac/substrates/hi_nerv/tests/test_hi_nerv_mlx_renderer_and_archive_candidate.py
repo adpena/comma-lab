@@ -330,6 +330,50 @@ def test_mlx_decoder_fake_quant_can_target_named_receiver_tensors() -> None:
 
 
 @skip_no_mlx
+def test_mlx_decoder_fake_quant_can_consume_waterfill_plan() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    model = HinervSubstrateMLX(_smoke_cfg())
+    report = model.configure_decoder_fake_quant_forward_from_waterfill_plan(
+        {
+            "schema": "nerv_decoder_weight_waterfill.v1",
+            "family": "hi_nerv",
+            "candidate_id": "unit",
+            "rows": [
+                {
+                    "group_name": "head_rgb_0.weight",
+                    "selected_bits": 6,
+                    "selected_action": "int6",
+                },
+                {
+                    "group_name": "head_rgb_1.weight",
+                    "selected_bits": 32,
+                    "selected_action": "fp32_protect",
+                },
+            ],
+            "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        }
+    )
+    pair_indices = mx.array([0, 1, 2], dtype=mx.int32)
+    output = model(pair_indices)
+    mx.eval(output)
+
+    assert report["configured"] is True
+    assert report["configured_per_tensor_bits"] == {"head_rgb_0.weight": 6}
+    assert model.decoder_fake_quant_bits_by_name == {"head_rgb_0.weight": 6}
+    assert tuple(int(s) for s in output.shape) == (
+        3,
+        2,
+        3,
+        model.cfg.output_height,
+        model.cfg.output_width,
+    )
+    assert report["score_claim"] is False
+
+
+@skip_no_mlx
 def test_mlx_decoder_fake_quant_rejects_invalid_quant_bits() -> None:
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
 

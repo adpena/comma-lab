@@ -20,6 +20,8 @@ from tac.substrates.hi_nerv.bitstream import (
     apply_decoder_pruning,
     apply_decoder_quant_noise,
     apply_decoder_waterfill_actions,
+    build_decoder_waterfill_fake_quant_forward_plan,
+    decoder_waterfill_fake_quant_bits_by_name,
     measure_hi_nerv_decoder_bitstream_roundtrip,
     measure_hi_nerv_official_entropy_receiver_consumption,
     prepare_hi_nerv_decoder_bitstream_state,
@@ -377,6 +379,79 @@ def test_hi_nerv_decoder_waterfill_refuses_actuation_blocked_plan() -> None:
         "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
     ]
     assert torch.equal(changed["stem.weight"], base["stem.weight"])
+
+
+def test_hi_nerv_decoder_waterfill_fake_quant_plan_targets_selected_bits() -> None:
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {
+                "group_name": "stem.weight",
+                "selected_bits": 4,
+                "selected_action": "int4",
+            },
+            {
+                "group_name": "block.weight",
+                "selected_bits": 0,
+                "selected_action": "zero_rle",
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+            },
+            {
+                "group_name": "norm.weight",
+                "selected_bits": 32,
+                "selected_action": "fp32_protect",
+            },
+        ],
+        "blockers": [],
+    }
+
+    report = build_decoder_waterfill_fake_quant_forward_plan(plan)
+
+    assert report["method"] == "decoder_weight_waterfill_fake_quant_targets"
+    assert report["targeted_tensor_count"] == 2
+    assert report["per_tensor_bits"] == {
+        "block.weight": 0,
+        "stem.weight": 4,
+    }
+    assert decoder_waterfill_fake_quant_bits_by_name(plan) == {
+        "block.weight": 0,
+        "stem.weight": 4,
+    }
+    assert "contest_cpu_cuda_exact_eval_not_executed" in report["blockers"]
+    assert report["skipped_rows"][0]["group_name"] == "norm.weight"
+    assert report["skipped_rows"][0]["reason"] == (
+        "decoder_weight_waterfill_full_precision_no_fake_quant"
+    )
+    assert report["score_claim"] is False
+
+
+def test_hi_nerv_decoder_waterfill_fake_quant_plan_blocks_unsafe_actuation() -> None:
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {
+                "group_name": "stem.weight",
+                "selected_bits": 4,
+                "selected_action": "int4",
+            },
+        ],
+        "blockers": [
+            "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+        ],
+    }
+
+    report = build_decoder_waterfill_fake_quant_forward_plan(plan)
+
+    assert report["method"] == "decoder_weight_waterfill_fake_quant_blocked"
+    assert report["per_tensor_bits"] == {}
+    assert report["actuation_blockers"] == [
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+    ]
+    assert report["score_claim"] is False
 
 
 def test_hi_nerv_decoder_waterfill_skips_blocked_rows() -> None:

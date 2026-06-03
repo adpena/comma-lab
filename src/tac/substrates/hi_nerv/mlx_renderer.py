@@ -651,6 +651,51 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         self.decoder_fake_quant_bits = bits
         self.decoder_fake_quant_bits_by_name = normalized
 
+    def configure_decoder_fake_quant_forward_from_waterfill_plan(
+        self,
+        decoder_weight_waterfill_plan: Mapping[str, Any],
+        *,
+        fallback_quant_bits: int | None = None,
+    ) -> dict[str, Any]:
+        """Bind shared decoder waterfill selections into train-time QAT."""
+
+        from tac.substrates.hi_nerv.bitstream import (
+            build_decoder_waterfill_fake_quant_forward_plan,
+        )
+
+        report = build_decoder_waterfill_fake_quant_forward_plan(
+            decoder_weight_waterfill_plan
+        )
+        actuation_blockers = [
+            str(blocker) for blocker in report.get("actuation_blockers") or []
+        ]
+        if actuation_blockers:
+            raise ValueError(
+                "decoder_weight_waterfill_plan is not safe for train-time "
+                f"fake quantization: {actuation_blockers}"
+            )
+        per_tensor_bits = {
+            str(name): int(bits)
+            for name, bits in dict(report.get("per_tensor_bits") or {}).items()
+        }
+        enabled = bool(per_tensor_bits) or fallback_quant_bits is not None
+        self.configure_decoder_fake_quant_forward(
+            enabled=enabled,
+            quant_bits=fallback_quant_bits,
+            per_tensor_bits=per_tensor_bits,
+        )
+        return {
+            **report,
+            "configured": bool(enabled),
+            "fallback_quant_bits": (
+                None if fallback_quant_bits is None else int(fallback_quant_bits)
+            ),
+            "configured_global_quant_bits": (
+                None if self.decoder_fake_quant_bits is None else int(self.decoder_fake_quant_bits)
+            ),
+            "configured_per_tensor_bits": dict(self.decoder_fake_quant_bits_by_name),
+        }
+
     def _fake_quant_bits(self) -> int | None:
         return (
             int(self.decoder_fake_quant_bits)

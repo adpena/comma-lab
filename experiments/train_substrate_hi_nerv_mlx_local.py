@@ -47,7 +47,7 @@ from tac.adaptation.hard_pair_indices import (
 from tac.analysis.nerv_modelsize_ladder import (
     hi_nerv_modelsize_config_rows,
 )
-from tac.repo_io import write_json
+from tac.repo_io import sha256_file, write_json
 from tac.substrates._shared.mlx_score_aware.adapter import (
     DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
@@ -347,12 +347,13 @@ def _full_main(args: argparse.Namespace) -> int:
     local_training_pair_indices = (
         tuple(range(effective_training_num_pairs)) if source_pair_indices is not None else prioritized_pair_indices
     )
+    decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(args)
     model = HinervSubstrateMLX(cfg)
-    if train_time_controls.decoder_fake_quant_forward_enabled:
-        model.configure_decoder_fake_quant_forward(
-            enabled=True,
-            quant_bits=int(train_time_controls.decoder_fake_quant_bits),
-        )
+    decoder_fake_quant_forward = _configure_decoder_fake_quant_forward(
+        model=model,
+        controls=train_time_controls,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+    )
     projection_hook = _build_train_time_decoder_control_callback(
         model=model,
         controls=train_time_controls,
@@ -443,6 +444,7 @@ def _full_main(args: argparse.Namespace) -> int:
             quant_noise_bits=train_time_controls.export_decoder_quant_noise_bits,
             quant_noise_scale=float(train_time_controls.export_decoder_quant_noise_scale),
             quant_noise_seed=int(train_time_controls.export_decoder_quant_noise_seed),
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         ),
         substrate_artifact_metadata={
             "schema": TRAINER_SCHEMA,
@@ -462,10 +464,14 @@ def _full_main(args: argparse.Namespace) -> int:
                 else "identity_local_rows_are_source_pairs"
             ),
             "decoder_codec": str(args.decoder_codec),
-            "decoder_fake_quant_forward": {
-                "enabled": bool(train_time_controls.decoder_fake_quant_forward_enabled),
-                "quant_bits": int(train_time_controls.decoder_fake_quant_bits),
-            },
+            "decoder_fake_quant_forward": _metadata_safe(decoder_fake_quant_forward),
+            "decoder_weight_waterfill_plan": _metadata_safe(
+                _decoder_weight_waterfill_plan_attachment_metadata(
+                    args=args,
+                    plan=decoder_weight_waterfill_plan,
+                    fake_quant_forward=decoder_fake_quant_forward,
+                )
+            ),
             "coder_qat": coder_qat_metadata(coder_qat_cfg),
             "train_time_controls": _metadata_safe(train_time_controls.metadata()),
             "eval_roundtrip_ste_enabled": bool(args.eval_roundtrip_ste),
@@ -589,12 +595,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
     canonicalization = _direct_trainer_canonicalization_contract(mode="smoke")
     train_time_controls = _train_time_control_config_from_args(args)
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
+    decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(args)
     model = HinervSubstrateMLX(cfg)
-    if train_time_controls.decoder_fake_quant_forward_enabled:
-        model.configure_decoder_fake_quant_forward(
-            enabled=True,
-            quant_bits=int(train_time_controls.decoder_fake_quant_bits),
-        )
+    decoder_fake_quant_forward = _configure_decoder_fake_quant_forward(
+        model=model,
+        controls=train_time_controls,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+    )
     idx = mx.array(list(range(min(2, int(cfg.num_pairs)))), dtype=mx.int32)
     output = model(idx)
     mx.eval(output)
@@ -611,6 +618,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
             quant_noise_bits=train_time_controls.export_decoder_quant_noise_bits,
             quant_noise_scale=float(train_time_controls.export_decoder_quant_noise_scale),
             quant_noise_seed=int(train_time_controls.export_decoder_quant_noise_seed),
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
         )
         archive_path = archive_path_obj.as_posix()
     post_export_quality = _maybe_write_post_export_receiver_cache_quality(
@@ -638,6 +646,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_mean": float(mx.mean(output)),
         },
         "decoder_codec": str(args.decoder_codec),
+        "decoder_fake_quant_forward": decoder_fake_quant_forward,
+        "decoder_weight_waterfill_plan": _decoder_weight_waterfill_plan_attachment_metadata(
+            args=args,
+            plan=decoder_weight_waterfill_plan,
+            fake_quant_forward=decoder_fake_quant_forward,
+        ),
         "train_time_controls": train_time_controls.metadata(),
         "prioritized_pair_training": _prioritized_pair_training_metadata(prioritized_pair_indices),
         "archive_path": archive_path,
@@ -714,6 +728,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--decoder-codec", default="int8_mixed")
     parser.add_argument("--decoder-fake-quant-forward", action="store_true")
     parser.add_argument("--decoder-fake-quant-bits", type=int, default=8)
+    parser.add_argument(
+        "--decoder-weight-waterfill-plan-json",
+        type=Path,
+        default=None,
+        help=(
+            "Shared nerv_decoder_weight_waterfill.v1 plan to bind into "
+            "HiNeRV train-time named fake quantization and export-side "
+            "decoder waterfill preparation."
+        ),
+    )
     parser.add_argument("--train-time-decoder-pruning-ratio", type=float, default=0.0)
     parser.add_argument("--train-time-decoder-quant-noise-bits", type=int, default=None)
     parser.add_argument("--train-time-decoder-quant-noise-scale", type=float, default=0.0)
@@ -927,6 +951,147 @@ def _validate_quant_noise_controls(
             f"{field_prefix}_bits must be one of "
             f"{list(_HI_NERV_TRAIN_TIME_QUANT_NOISE_BITS)}"
         )
+
+
+def _resolve_decoder_weight_waterfill_plan_path(args: argparse.Namespace) -> Path | None:
+    path = getattr(args, "decoder_weight_waterfill_plan_json", None)
+    if path is None:
+        return None
+    resolved = Path(path).expanduser()
+    if not resolved.is_absolute():
+        resolved = REPO_ROOT / resolved
+    return resolved.resolve(strict=False)
+
+
+def _decoder_weight_waterfill_plan_from_args(
+    args: argparse.Namespace,
+) -> dict[str, Any] | None:
+    path = _resolve_decoder_weight_waterfill_plan_path(args)
+    if path is None:
+        return None
+    if not path.is_file():
+        raise ValueError(
+            "decoder_weight_waterfill_plan_json must point at an existing "
+            f"file; got {path.as_posix()}"
+        )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("decoder_weight_waterfill_plan_json must contain a JSON object")
+    if payload.get("schema") != "nerv_decoder_weight_waterfill.v1":
+        raise ValueError(
+            "decoder_weight_waterfill_plan_json schema must be "
+            "'nerv_decoder_weight_waterfill.v1'"
+        )
+    rows = payload.get("rows")
+    if not isinstance(rows, list):
+        raise ValueError("decoder_weight_waterfill_plan_json rows must be a list")
+    return payload
+
+
+def _configure_decoder_fake_quant_forward(
+    *,
+    model: Any,
+    controls: HiNervTrainTimeControlConfig,
+    decoder_weight_waterfill_plan: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if decoder_weight_waterfill_plan is not None:
+        if not hasattr(model, "configure_decoder_fake_quant_forward_from_waterfill_plan"):
+            raise RuntimeError(
+                "HiNeRV decoder weight waterfill QAT requires an MLX model with "
+                "configure_decoder_fake_quant_forward_from_waterfill_plan"
+            )
+        fallback_quant_bits = (
+            int(controls.decoder_fake_quant_bits)
+            if bool(controls.decoder_fake_quant_forward_enabled)
+            else None
+        )
+        waterfill_report = model.configure_decoder_fake_quant_forward_from_waterfill_plan(
+            decoder_weight_waterfill_plan,
+            fallback_quant_bits=fallback_quant_bits,
+        )
+        return {
+            "schema": "hi_nerv_decoder_fake_quant_forward_binding.v1",
+            "mode": "decoder_weight_waterfill_plan",
+            "enabled": bool(waterfill_report.get("configured")),
+            "uniform_fake_quant_fallback_enabled": bool(
+                controls.decoder_fake_quant_forward_enabled
+            ),
+            "fallback_quant_bits": fallback_quant_bits,
+            "waterfill_fake_quant_forward": waterfill_report,
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+    if controls.decoder_fake_quant_forward_enabled:
+        model.configure_decoder_fake_quant_forward(
+            enabled=True,
+            quant_bits=int(controls.decoder_fake_quant_bits),
+        )
+        return {
+            "schema": "hi_nerv_decoder_fake_quant_forward_binding.v1",
+            "mode": "uniform_decoder_fake_quant",
+            "enabled": True,
+            "quant_bits": int(controls.decoder_fake_quant_bits),
+            "per_tensor_bits": {},
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+    return {
+        "schema": "hi_nerv_decoder_fake_quant_forward_binding.v1",
+        "mode": "disabled",
+        "enabled": False,
+        "quant_bits": None,
+        "per_tensor_bits": {},
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _decoder_weight_waterfill_plan_attachment_metadata(
+    *,
+    args: argparse.Namespace,
+    plan: dict[str, Any] | None,
+    fake_quant_forward: dict[str, Any] | None,
+) -> dict[str, Any]:
+    path = _resolve_decoder_weight_waterfill_plan_path(args)
+    if plan is None:
+        return {
+            "schema": "hi_nerv_decoder_weight_waterfill_plan_attachment.v1",
+            "attached": False,
+            "path": path.as_posix() if path is not None else None,
+            "train_time_fake_quant_bound": False,
+            "export_bound": False,
+            "blockers": ["hinerv_decoder_weight_waterfill_plan_not_attached"],
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+    rows = plan.get("rows") if isinstance(plan.get("rows"), list) else []
+    waterfill_fake_quant = (
+        fake_quant_forward.get("waterfill_fake_quant_forward")
+        if isinstance(fake_quant_forward, dict)
+        else None
+    )
+    return {
+        "schema": "hi_nerv_decoder_weight_waterfill_plan_attachment.v1",
+        "attached": True,
+        "path": path.as_posix() if path is not None else None,
+        "sha256": sha256_file(path) if path is not None and path.is_file() else None,
+        "bytes": path.stat().st_size if path is not None and path.is_file() else None,
+        "plan_schema": plan.get("schema"),
+        "family": plan.get("family"),
+        "candidate_id": plan.get("candidate_id"),
+        "row_count": len(rows),
+        "train_time_fake_quant_bound": bool(
+            isinstance(fake_quant_forward, dict) and fake_quant_forward.get("enabled")
+        ),
+        "export_bound": True,
+        "fake_quant_forward": _metadata_safe(waterfill_fake_quant),
+        "blockers": [
+            *[str(blocker) for blocker in plan.get("blockers") or []],
+            "contest_cpu_cuda_exact_eval_not_executed",
+        ],
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _build_train_time_decoder_control_callback(
@@ -1765,6 +1930,9 @@ __all__ = [
     "_build_train_time_decoder_control_callback",
     "_coder_qat_config_from_args",
     "_config_from_args",
+    "_configure_decoder_fake_quant_forward",
+    "_decoder_weight_waterfill_plan_attachment_metadata",
+    "_decoder_weight_waterfill_plan_from_args",
     "_metadata_safe",
     "_pr95_full_control_contract",
     "_prioritized_pair_indices_from_args",

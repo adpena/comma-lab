@@ -21,7 +21,10 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _build_staged_scorer_curriculum,
     _coder_qat_config_from_args,
     _config_from_args,
+    _configure_decoder_fake_quant_forward,
     _curriculum_stages_from_args,
+    _decoder_weight_waterfill_plan_attachment_metadata,
+    _decoder_weight_waterfill_plan_from_args,
     _direct_trainer_canonicalization_contract,
     _full_main,
     _metadata_safe,
@@ -34,6 +37,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _resolve_output_dir,
     _train_time_control_config_from_args,
 )
+from tac.repo_io import sha256_file
 from tac.substrates._shared.mlx_score_aware.adapter import (
     DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
 )
@@ -192,6 +196,93 @@ def test_hinerv_train_time_control_config_rejects_ambiguous_or_fake_controls() -
                 ["--full", "--train-time-decoder-quant-noise-scale", "0.1"]
             )
         )
+
+
+def test_hinerv_mlx_trainer_binds_decoder_weight_waterfill_plan(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "waterfill.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_decoder_weight_waterfill.v1",
+                "family": "hi_nerv",
+                "candidate_id": "unit",
+                "rows": [
+                    {
+                        "group_name": "head_rgb_0.weight",
+                        "selected_bits": 4,
+                        "selected_action": "int4",
+                    }
+                ],
+                "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--decoder-weight-waterfill-plan-json",
+            plan_path.as_posix(),
+        ]
+    )
+    controls = _train_time_control_config_from_args(args)
+    plan = _decoder_weight_waterfill_plan_from_args(args)
+
+    class DummyModel:
+        def __init__(self) -> None:
+            self.configured: dict[str, object] | None = None
+
+        def configure_decoder_fake_quant_forward_from_waterfill_plan(
+            self,
+            decoder_weight_waterfill_plan: dict[str, object],
+            *,
+            fallback_quant_bits: int | None = None,
+        ) -> dict[str, object]:
+            from tac.substrates.hi_nerv.bitstream import (
+                build_decoder_waterfill_fake_quant_forward_plan,
+            )
+
+            report = build_decoder_waterfill_fake_quant_forward_plan(
+                decoder_weight_waterfill_plan
+            )
+            self.configured = {
+                "plan": decoder_weight_waterfill_plan,
+                "fallback_quant_bits": fallback_quant_bits,
+                "per_tensor_bits": report["per_tensor_bits"],
+            }
+            return {
+                **report,
+                "configured": bool(report["per_tensor_bits"]),
+                "configured_per_tensor_bits": dict(report["per_tensor_bits"]),
+            }
+
+    model = DummyModel()
+    binding = _configure_decoder_fake_quant_forward(
+        model=model,
+        controls=controls,
+        decoder_weight_waterfill_plan=plan,
+    )
+    attachment = _decoder_weight_waterfill_plan_attachment_metadata(
+        args=args,
+        plan=plan,
+        fake_quant_forward=binding,
+    )
+
+    assert model.configured is not None
+    assert model.configured["per_tensor_bits"] == {"head_rgb_0.weight": 4}
+    assert binding["mode"] == "decoder_weight_waterfill_plan"
+    assert binding["enabled"] is True
+    assert binding["score_claim"] is False
+    assert attachment["attached"] is True
+    assert attachment["path"] == plan_path.resolve(strict=False).as_posix()
+    assert attachment["sha256"] == sha256_file(plan_path)
+    assert attachment["row_count"] == 1
+    assert attachment["train_time_fake_quant_bound"] is True
+    assert attachment["export_bound"] is True
+    assert attachment["fake_quant_forward"]["targeted_tensor_count"] == 1
+    assert attachment["score_claim"] is False
 
 
 def test_hinerv_train_time_decoder_controls_mutate_mlx_decoder_not_latents() -> None:

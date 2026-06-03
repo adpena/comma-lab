@@ -42,6 +42,9 @@ HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA = "hi_nerv_bitstream_roundtrip_measurement.v1
 HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA = (
     "hi_nerv_bitstream_scorer_waterfill_selection.v1"
 )
+HI_NERV_DECODER_WATERFILL_FAKE_QUANT_FORWARD_SCHEMA = (
+    "hi_nerv_decoder_waterfill_fake_quant_forward.v1"
+)
 HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA = (
     "hi_nerv_official_entropy_receiver_consumption.v1"
 )
@@ -482,6 +485,202 @@ def apply_decoder_waterfill_actions(
             ]
         ),
         **FALSE_AUTHORITY,
+    }
+
+
+def build_decoder_waterfill_fake_quant_forward_plan(
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Convert shared decoder waterfill rows into MLX fake-quant targets.
+
+    The shared ``nerv_decoder_weight_waterfill.v1`` plan already names receiver
+    decoder tensors and selected bit actions for export.  This helper exposes
+    the same selections to train-time fake quantization without giving the
+    local MLX signal any promotion authority.
+    """
+
+    if decoder_weight_waterfill_plan is None:
+        return {
+            "schema": HI_NERV_DECODER_WATERFILL_FAKE_QUANT_FORWARD_SCHEMA,
+            "method": "disabled",
+            "plan_attached": False,
+            "per_tensor_bits": {},
+            "targeted_tensor_count": 0,
+            "applied_rows": [],
+            "skipped_rows": [],
+            "blockers": [],
+            "actuation_blockers": [],
+            **FALSE_AUTHORITY,
+        }
+    if decoder_weight_waterfill_plan.get("schema") != "nerv_decoder_weight_waterfill.v1":
+        raise HiNervBitstreamError(
+            "decoder_weight_waterfill_plan schema must be "
+            "'nerv_decoder_weight_waterfill.v1'"
+        )
+    rows = decoder_weight_waterfill_plan.get("rows")
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        raise HiNervBitstreamError("decoder_weight_waterfill_plan rows must be a list")
+
+    blockers: list[str] = [
+        *[str(blocker) for blocker in decoder_weight_waterfill_plan.get("blockers") or ()],
+    ]
+    plan_actuation_blockers = _waterfill_actuation_blockers(blockers)
+    if plan_actuation_blockers:
+        return {
+            "schema": HI_NERV_DECODER_WATERFILL_FAKE_QUANT_FORWARD_SCHEMA,
+            "method": "decoder_weight_waterfill_fake_quant_blocked",
+            "plan_attached": True,
+            "plan_schema": decoder_weight_waterfill_plan.get("schema"),
+            "family": decoder_weight_waterfill_plan.get("family"),
+            "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+            "input_group_count": len(rows),
+            "targeted_tensor_count": 0,
+            "per_tensor_bits": {},
+            "applied_rows": [],
+            "skipped_rows": [
+                {
+                    "group_name": str(
+                        row.get("group_name") or row.get("section_id") or ""
+                    )
+                    if isinstance(row, Mapping)
+                    else "",
+                    "reason": "decoder_weight_waterfill_plan_has_blockers",
+                    "plan_blockers": blockers,
+                    "plan_actuation_blockers": plan_actuation_blockers,
+                    **FALSE_AUTHORITY,
+                }
+                for row in rows
+            ],
+            "blockers": _ordered_unique(blockers),
+            "actuation_blockers": plan_actuation_blockers,
+            **FALSE_AUTHORITY,
+        }
+
+    per_tensor_bits: dict[str, int] = {}
+    applied_rows: list[dict[str, Any]] = []
+    skipped_rows: list[dict[str, Any]] = []
+    actuation_blockers: list[str] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            blocker = "decoder_weight_waterfill_row_not_mapping"
+            blockers.append(blocker)
+            actuation_blockers.append(blocker)
+            skipped_rows.append(
+                {
+                    "group_name": "",
+                    "reason": blocker,
+                    "row_actuation_blockers": [blocker],
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        name = str(row.get("group_name") or row.get("section_id") or "")
+        row_blockers = [str(blocker) for blocker in row.get("blockers") or ()]
+        blockers.extend(row_blockers)
+        if not name:
+            blocker = "decoder_weight_waterfill_row_missing_group_name"
+            blockers.append(blocker)
+            actuation_blockers.append(blocker)
+            skipped_rows.append(
+                {
+                    "group_name": "",
+                    "reason": blocker,
+                    "selected_bits": _waterfill_selected_bits(row),
+                    "selected_action": row.get("selected_action"),
+                    "row_blockers": row_blockers,
+                    "row_actuation_blockers": [blocker],
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        bits = _waterfill_selected_bits(row)
+        row_actuation_blockers = _waterfill_row_actuation_blockers(
+            row_blockers,
+            selected_bits=bits,
+        )
+        if row_actuation_blockers:
+            skipped_rows.append(
+                {
+                    "group_name": name,
+                    "reason": "decoder_weight_waterfill_row_has_blockers",
+                    "selected_bits": bits,
+                    "selected_action": row.get("selected_action"),
+                    "row_blockers": row_blockers,
+                    "row_actuation_blockers": row_actuation_blockers,
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        if bits >= 32:
+            skipped_rows.append(
+                {
+                    "group_name": name,
+                    "reason": "decoder_weight_waterfill_full_precision_no_fake_quant",
+                    "selected_bits": bits,
+                    "selected_action": row.get("selected_action"),
+                    "row_blockers": row_blockers,
+                    "row_actuation_blockers": [],
+                    **FALSE_AUTHORITY,
+                }
+            )
+            continue
+        per_tensor_bits[name] = bits
+        applied_rows.append(
+            {
+                "group_name": name,
+                "selected_bits": bits,
+                "selected_action": row.get("selected_action"),
+                "row_blockers": row_blockers,
+                "row_actuation_blockers": [],
+                **FALSE_AUTHORITY,
+            }
+        )
+
+    no_targets = bool(rows) and not per_tensor_bits
+    if no_targets:
+        blockers.append("decoder_weight_waterfill_fake_quant_no_targets")
+    return {
+        "schema": HI_NERV_DECODER_WATERFILL_FAKE_QUANT_FORWARD_SCHEMA,
+        "method": (
+            "decoder_weight_waterfill_fake_quant_no_targets"
+            if no_targets
+            else "decoder_weight_waterfill_fake_quant_targets"
+        ),
+        "plan_attached": True,
+        "plan_schema": decoder_weight_waterfill_plan.get("schema"),
+        "family": decoder_weight_waterfill_plan.get("family"),
+        "candidate_id": decoder_weight_waterfill_plan.get("candidate_id"),
+        "input_group_count": len(rows),
+        "targeted_tensor_count": len(per_tensor_bits),
+        "per_tensor_bits": dict(sorted(per_tensor_bits.items())),
+        "applied_rows": applied_rows,
+        "skipped_rows": skipped_rows,
+        "blockers": _ordered_unique(blockers),
+        "actuation_blockers": _ordered_unique(
+            [
+                *actuation_blockers,
+                *[
+                    blocker
+                    for row in skipped_rows
+                    for blocker in row.get("row_actuation_blockers", [])
+                ],
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def decoder_waterfill_fake_quant_bits_by_name(
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+) -> dict[str, int]:
+    """Return named fake-quant bits from a shared decoder waterfill plan."""
+
+    report = build_decoder_waterfill_fake_quant_forward_plan(
+        decoder_weight_waterfill_plan
+    )
+    return {
+        str(name): int(bits)
+        for name, bits in dict(report.get("per_tensor_bits") or {}).items()
     }
 
 
@@ -1155,6 +1354,7 @@ __all__ = [
     "HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA",
     "HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA",
     "HI_NERV_DECODER_WATERFILL_ACTION_BITS",
+    "HI_NERV_DECODER_WATERFILL_FAKE_QUANT_FORWARD_SCHEMA",
     "HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA",
     "HI_NERV_OFFICIAL_QUANTNOISE_METHOD",
     "HI_NERV_OFFICIAL_QUANT_AXIS_RULE",
@@ -1167,6 +1367,8 @@ __all__ = [
     "apply_decoder_pruning",
     "apply_decoder_quant_noise",
     "apply_decoder_waterfill_actions",
+    "build_decoder_waterfill_fake_quant_forward_plan",
+    "decoder_waterfill_fake_quant_bits_by_name",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
     "measure_hi_nerv_official_entropy_receiver_consumption",
     "prepare_hi_nerv_decoder_bitstream_state",
