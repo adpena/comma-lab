@@ -373,6 +373,60 @@ def test_arbitrary_file_backed_receiver_proof_content_blocks_row(
     assert "receiver_proof_payload_pass_flag_missing" in payload["blockers"]
 
 
+def test_suffix_only_receiver_proof_schema_does_not_bind_row(tmp_path: Path) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"receiver-closed")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    proof = tmp_path / "fake-generated-proof.json"
+    proof.write_text(
+        (
+            '{"schema":"invented_generated_receiver_proof.v1",'
+            '"receiver_contract_satisfied":true,'
+            '"runtime_consumption_proof_ready":true,'
+            f'"archive_bytes":{archive.stat().st_size},'
+            f'"archive_sha256":"{archive_sha}",'
+            '"blockers":[]}\n'
+        ),
+        encoding="utf-8",
+    )
+
+    payload = build_nerv_trained_ladder_row_payload(
+        family="snerv",
+        archive_path=archive,
+        trainer_metadata={
+            "n_pairs": 600,
+            "modelsize_mparams": 0.04,
+            "fc_dim": 16,
+            "official_controls": _snerv_controls(),
+            "receiver_codec_mode": "snar1",
+            "lf_payload_codec": "portfolio_auto",
+            "decoder_precision_mode": "mixed_magnitude_symmetric",
+            "step_map_codec": "waterfill",
+            "target_bits_per_coeff": 6,
+            "qat_bits": 4,
+        },
+        receiver_proof={
+            "receiver_archive_replay_verified": True,
+            "receiver_proof_path": proof.as_posix(),
+            "receiver_proof_sha256": hashlib.sha256(proof.read_bytes()).hexdigest(),
+        },
+        scorer_eval={
+            "axis_tag": "[contest-CPU unit-test receiver-closed]",
+            "avg_segnet_dist": 0.004,
+            "avg_posenet_dist": 0.002,
+        },
+        repo_root=tmp_path,
+    )
+
+    row = payload["rows"][0]
+    assert payload["status"] == "trained_ladder_row_blocked"
+    assert row["receiver_proof_identity_bound"] is False
+    assert (
+        "receiver_proof_schema_unrecognized:invented_generated_receiver_proof.v1"
+        in payload["blockers"]
+    )
+
+
 def _ready_snerv_payload(
     tmp_path: Path,
     *,

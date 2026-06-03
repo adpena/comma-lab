@@ -10,6 +10,7 @@ the same decoded LF state while every other section stays byte-identical.
 from __future__ import annotations
 
 import hashlib
+import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -382,6 +383,8 @@ def _admission_row(
             hard_byte_ceiling=hard_byte_ceiling,
             candidate_id=candidate_id,
         )
+    target_candidate_id = _candidate_id_or_none(candidate_id)
+    source_report_candidate_id = _candidate_id_or_none(report.get("candidate_id"))
     source_packet = _mapping(report.get("source_packet"))
     candidate_packet = _mapping(report.get("candidate_packet"))
     lf_payload = _mapping(report.get("lf_payload"))
@@ -412,6 +415,12 @@ def _admission_row(
     local_blockers = []
     if not receiver_contract:
         local_blockers.append("snerv_lf_recode_receiver_contract_not_satisfied")
+    if (
+        target_candidate_id is not None
+        and source_report_candidate_id is not None
+        and source_report_candidate_id != target_candidate_id
+    ):
+        local_blockers.append("snerv_lf_recode_candidate_id_mismatch")
     if source_packet_bytes is None:
         local_blockers.append("snerv_lf_recode_source_packet_bytes_missing")
     if candidate_packet_bytes is None:
@@ -454,7 +463,12 @@ def _admission_row(
         "source_index": int(source_index),
         "row_id": f"snerv_lf_recode_{mode}",
         "family": "snerv",
-        "candidate_id": candidate_id or report.get("candidate_id"),
+        "candidate_id": target_candidate_id or source_report_candidate_id,
+        "source_report_candidate_id": source_report_candidate_id,
+        "source_report_schema": str(report.get("schema") or ""),
+        "source_report_path": _source_report_path(report),
+        "source_report_sha256": _source_report_sha256(report),
+        "source_report_producer": _source_report_producer(report),
         "mode": mode,
         "source_packet_bytes": source_packet_bytes,
         "candidate_packet_bytes": candidate_packet_bytes,
@@ -515,7 +529,13 @@ def _invalid_admission_row(
         "source_index": int(source_index),
         "row_id": f"snerv_lf_recode_invalid_{source_index}",
         "family": "snerv",
-        "candidate_id": candidate_id or report.get("candidate_id"),
+        "candidate_id": _candidate_id_or_none(candidate_id)
+        or _candidate_id_or_none(report.get("candidate_id")),
+        "source_report_candidate_id": _candidate_id_or_none(report.get("candidate_id")),
+        "source_report_schema": str(report.get("schema") or ""),
+        "source_report_path": _source_report_path(report),
+        "source_report_sha256": _source_report_sha256(report),
+        "source_report_producer": _source_report_producer(report),
         "mode": str(report.get("mode") or "unknown"),
         "source_packet_bytes": None,
         "candidate_packet_bytes": None,
@@ -565,6 +585,9 @@ def _admission_section_value_row(
         "delta_rate_score": row.get("packet_rate_score_delta"),
         "archive_sha256": row.get("candidate_packet_sha256"),
         "baseline_packet_sha256": row.get("source_packet_sha256"),
+        "source_report_path": row.get("source_report_path"),
+        "source_report_sha256": row.get("source_report_sha256"),
+        "source_report_producer": row.get("source_report_producer"),
         "axis_tag": ADMISSION_AXIS_TAG,
         "receiver_proof_status": (
             "runtime_consumption_proof_ready"
@@ -655,6 +678,67 @@ def _receiver_frame_status(report: Mapping[str, Any]) -> str:
         if status:
             return status
     return "missing"
+
+
+def _candidate_id_or_none(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _source_report_path(report: Mapping[str, Any]) -> str | None:
+    for key in (
+        "source_report_path",
+        "report_path",
+        "_source_report_path",
+        "_report_path",
+        "path",
+    ):
+        value = report.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _source_report_producer(report: Mapping[str, Any]) -> str:
+    for key in ("producer", "tool", "generated_by", "operation"):
+        value = report.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return "snerv_lf_payload_archive_recode"
+
+
+def _source_report_sha256(report: Mapping[str, Any]) -> str:
+    payload = json.dumps(
+        _jsonable_mapping(report),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _jsonable_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key in sorted(str(k) for k in value):
+        out[key] = _jsonable_value(value.get(key))
+    return out
+
+
+def _jsonable_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return _jsonable_mapping(value)
+    if isinstance(value, (list, tuple)):
+        return [_jsonable_value(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return {
+            "ndarray_shape": [int(v) for v in value.shape],
+            "ndarray_dtype": str(value.dtype),
+            "ndarray_sha256": _sha256(np.ascontiguousarray(value).tobytes()),
+        }
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return repr(value)
 
 
 def _lf_plane_equality(

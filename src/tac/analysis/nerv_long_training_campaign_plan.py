@@ -1775,6 +1775,8 @@ def _snerv_lf_recode_selected_mode(
         return None
     if selected.get("local_planner_admitted") is not True:
         return None
+    if _snerv_lf_payload_recode_campaign_blockers(plan):
+        return None
     mode = str(selected.get("mode") or "").strip()
     return mode or None
 
@@ -1787,13 +1789,22 @@ def _snerv_lf_payload_recode_campaign_blockers(
     selected = plan.get("selected_row")
     if not isinstance(selected, Mapping):
         return ["snerv_lf_payload_recode_no_receiver_proven_byte_saving_mode"]
-    blockers: list[str] = []
+    blockers: list[str] = [
+        str(blocker)
+        for blocker in plan.get("blockers") or ()
+        if str(blocker)
+    ]
     over_waterline = selected.get("post_recode_over_waterline_bytes")
     if over_waterline is not None and int(over_waterline) > 0:
         blockers.append("snerv_lf_payload_recode_still_over_hard_byte_ceiling")
     blockers.extend(
         str(blocker)
         for blocker in selected.get("local_admission_blockers") or ()
+        if str(blocker)
+    )
+    blockers.extend(
+        str(blocker)
+        for blocker in selected.get("promotion_blockers") or ()
         if str(blocker)
     )
     return _dedupe(blockers)

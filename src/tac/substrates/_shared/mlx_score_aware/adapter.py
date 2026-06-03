@@ -598,18 +598,25 @@ class MlxScoreAwareAdapter:
                 f"target={tuple(pose_target.shape)}"
             )
 
+        extra_qat_total, extra_qat_parts = self._extra_loss_terms_and_weighted_total(
+            model,
+            batch,
+        )
         cat_entropy_term = None
         if float(stage_verdict.cat_lambda) > 0.0:
-            from tac.substrates._shared.mlx_score_aware.coder_qat import (
-                CoderAwareQATConfig,
-                build_decoder_c1a_entropy_term,
-            )
+            if "coder_qat_c1a_entropy" in extra_qat_parts:
+                cat_entropy_term = extra_qat_parts["coder_qat_c1a_entropy"]
+            else:
+                from tac.substrates._shared.mlx_score_aware.coder_qat import (
+                    CoderAwareQATConfig,
+                    build_decoder_c1a_entropy_term,
+                )
 
-            cat_entropy_term = build_decoder_c1a_entropy_term(
-                model,
-                CoderAwareQATConfig(enabled=True, quant_bits=8),
-                sigma=float(stage_verdict.cat_sigma),
-            )
+                cat_entropy_term = build_decoder_c1a_entropy_term(
+                    model,
+                    CoderAwareQATConfig(enabled=True, quant_bits=8),
+                    sigma=float(stage_verdict.cat_sigma),
+                )
 
         loss_family = str(stage_verdict.loss_family)
         total = pr95_mlx_stage_scorer_surrogate_loss(
@@ -621,6 +628,8 @@ class MlxScoreAwareAdapter:
             cat_entropy_term=cat_entropy_term,
             cat_lambda=float(stage_verdict.cat_lambda),
         )
+        if extra_qat_total is not None:
+            total = total + extra_qat_total
         seg_loss = pr95_mlx_stage_seg_loss(
             loss_family,
             seg_logits_nchw,
@@ -644,9 +653,42 @@ class MlxScoreAwareAdapter:
         }
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
+        parts.update(extra_qat_parts)
         # Keep the symbolic surface reachable for tests and downstream source
         # audits without putting a string into float-only metrics.
         self._pr95_last_stage_loss_surface = PR95_MLX_STAGE_SCORER_LOSS_SURFACE
+        return total, parts
+
+    def _extra_loss_terms_and_weighted_total(
+        self,
+        model: Any,
+        batch: Any,
+    ) -> tuple[Any | None, dict[str, Any]]:
+        """Return configured bundle extra losses and their weighted sum.
+
+        PR95 faithful training must not advertise C1a/QAT controls that only
+        exist in metadata. The shared RendererBundle already carries the real
+        differentiable coder-pressure callback and weights, so the PR95 path
+        consumes that same surface instead of duplicating a PR95-only shim.
+        """
+
+        if self.bundle.extra_loss_terms is None:
+            return None, {}
+        mx = self._mx
+        extra = dict(self.bundle.extra_loss_terms(model, batch))
+        weights = dict(self.bundle.extra_loss_weights)
+        total = None
+        parts: dict[str, Any] = {}
+        for name, value in extra.items():
+            key = str(name)
+            parts[key] = value
+            weight = float(weights.get(key, 0.0))
+            if weight == 0.0:
+                continue
+            term = value * weight
+            total = term if total is None else total + term
+        if total is None and parts:
+            total = mx.array(0.0, dtype=mx.float32)
         return total, parts
 
     def _pr95_stage_loss_part_metrics(
@@ -681,6 +723,10 @@ class MlxScoreAwareAdapter:
             elif name == "pr95_c1a_entropy":
                 out["loss_part_weighted_pr95_c1a_entropy"] = (
                     float(stage_verdict.cat_lambda) * scalar
+                )
+            elif name in self.bundle.extra_loss_weights:
+                out[f"loss_part_weighted_{name}"] = (
+                    float(self.bundle.extra_loss_weights[name]) * scalar
                 )
         out["pr95_stage_loss_parts_active"] = 1.0
         return out
@@ -1782,6 +1828,15 @@ class MlxScoreAwareAdapter:
                     "[MlxScoreAwareAdapter] WARN: renderer notify_global_epoch "
                     f"failed at epoch {global_epoch}: {exc!r}"
                 )
+
+    def post_optimizer_projection(self, *, epoch: int) -> Mapping[str, Any] | None:
+        """Forward optional substrate-owned proximal projection hooks."""
+
+        projection_hook = getattr(self.model, "post_optimizer_projection", None)
+        if not callable(projection_hook):
+            return None
+        report = projection_hook(epoch=int(epoch))
+        return report if isinstance(report, Mapping) else None
 
     def export_state_dict(self, model: Any, path: Path) -> None:
         """Export the model state for checkpointing.

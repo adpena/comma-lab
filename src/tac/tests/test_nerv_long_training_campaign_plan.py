@@ -699,16 +699,15 @@ def test_long_training_campaign_plan_consumes_snerv_lf_recode_admission() -> Non
     assert admission["selected_row"]["packet_byte_delta"] == -30_000
     assert admission["selected_row"]["waterline_crossed_by_recode"] is True
     assert admission["waterline_satisfied_after_selected_recode"] is True
-    assert snerv["snerv_lf_payload_codec_from_admission_plan"] == (
-        "spatial_delta_zigzag_leb128_lzma"
-    )
-    assert "--snerv-scorer-loop-lf-payload-codec" in argv
-    assert argv[argv.index("--snerv-scorer-loop-lf-payload-codec") + 1] == (
-        "spatial_delta_zigzag_leb128_lzma"
-    )
+    assert snerv["snerv_lf_payload_codec_from_admission_plan"] is None
+    assert "--snerv-scorer-loop-lf-payload-codec" not in argv
+    assert "snerv_lf_recode_admission_plan_false_authority" in snerv["blockers"]
+    assert "not_packaged_as_contest_archive_zip" in snerv["blockers"]
+    assert "full_video_scorer_replay_missing" in snerv["blockers"]
     assert queue_metadata["snerv_lf_payload_recode_admission_plan"][
         "selected_mode"
     ] == "spatial_delta_zigzag_leb128_lzma"
+    assert queue_metadata["snerv_lf_payload_codec_from_admission_plan"] is None
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
     assert snerv["score_claim"] is False
     assert snerv["ready_for_exact_eval_dispatch"] is False

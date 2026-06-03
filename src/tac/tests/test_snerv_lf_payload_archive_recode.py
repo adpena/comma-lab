@@ -161,7 +161,10 @@ def test_snerv_lf_payload_recode_admission_consumes_real_snar_recode() -> None:
 def test_snerv_lf_payload_recode_admission_prices_receiver_backed_savings() -> None:
     saving_report = {
         "schema": "snerv_lf_payload_archive_recode.v1",
+        "candidate_id": "snerv-full600",
         "mode": "zero_run_varint",
+        "report_path": "/Volumes/VertigoDataTier/pact/reports/zero_run.json",
+        "producer": "tools/recode_snerv_lf_payload_archive.py",
         "source_packet": {"bytes": 200_000, "sha256": "source-sha"},
         "candidate_packet": {"bytes": 160_000, "sha256": "candidate-sha"},
         "packet_byte_delta": -40_000,
@@ -202,6 +205,14 @@ def test_snerv_lf_payload_recode_admission_prices_receiver_backed_savings() -> N
     assert plan["score_claim"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
     assert plan["selected_mode"] == "zero_run_varint"
+    assert plan["selected_row"]["source_report_candidate_id"] == "snerv-full600"
+    assert plan["selected_row"]["source_report_path"] == (
+        "/Volumes/VertigoDataTier/pact/reports/zero_run.json"
+    )
+    assert len(plan["selected_row"]["source_report_sha256"]) == 64
+    assert plan["selected_row"]["source_report_producer"] == (
+        "tools/recode_snerv_lf_payload_archive.py"
+    )
     assert plan["selected_row"]["waterline_crossed_by_recode"] is True
     assert plan["waterline_satisfied_after_selected_recode"] is True
     assert plan["selected_row"]["post_recode_over_waterline_bytes"] == 0
@@ -225,6 +236,46 @@ def test_snerv_lf_payload_recode_admission_prices_receiver_backed_savings() -> N
     markdown = render_snerv_lf_payload_recode_admission_markdown(plan)
     assert "zero_run_varint" in markdown
     assert "ADMIT_LF_RECODE__CROSSES_BYTE_WATERLINE" in markdown
+
+
+def test_snerv_lf_payload_recode_admission_blocks_cross_candidate_rebinding() -> None:
+    report = {
+        "schema": "snerv_lf_payload_archive_recode.v1",
+        "candidate_id": "snerv-old-candidate",
+        "mode": "zero_run_varint",
+        "source_packet": {"bytes": 200_000, "sha256": "source-sha"},
+        "candidate_packet": {"bytes": 140_000, "sha256": "candidate-sha"},
+        "packet_byte_delta": -60_000,
+        "lf_payload": {
+            "source_bytes": 150_000,
+            "candidate_bytes": 90_000,
+            "byte_delta": -60_000,
+        },
+        "receiver_contract_satisfied": True,
+        "receiver_frame_equality_proof": {"status": "proven_exact"},
+        "blockers": [],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [report],
+        hard_byte_ceiling=178_000,
+        candidate_id="snerv-current-candidate",
+        full_video_coverage=True,
+    )
+
+    row = plan["admission_rows"][0]
+    assert plan["selected_mode"] is None
+    assert row["local_planner_admitted"] is False
+    assert row["candidate_id"] == "snerv-current-candidate"
+    assert row["source_report_candidate_id"] == "snerv-old-candidate"
+    assert "snerv_lf_recode_candidate_id_mismatch" in row[
+        "local_admission_blockers"
+    ]
+    assert "snerv_lf_recode_no_receiver_proven_byte_saving_mode" in plan[
+        "blockers"
+    ]
 
 
 def test_snerv_lf_payload_recode_admission_blocks_invalid_and_non_saving_rows() -> None:

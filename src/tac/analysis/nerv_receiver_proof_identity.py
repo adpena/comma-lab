@@ -240,9 +240,7 @@ def _proof_file_claims_pass(
 
 def _known_receiver_proof_schema(schema: str) -> bool:
     text = schema.strip()
-    return text in KNOWN_RECEIVER_PROOF_SCHEMAS or text.endswith(
-        "_generated_receiver_proof.v1"
-    )
+    return text in KNOWN_RECEIVER_PROOF_SCHEMAS
 
 
 def _first_value(row: Mapping[str, Any], keys: Sequence[Any]) -> Any:
