@@ -6329,6 +6329,23 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     if resolved_resume_from_checkpoint is not None
                     else None
                 ),
+                "prioritized_pair_training": {
+                    "schema": "compact_hi_nerv_prioritized_pair_training.v1",
+                    "enabled": bool(prioritized_pair_indices),
+                    "pair_indices": [int(value) for value in prioritized_pair_indices],
+                    "pair_count": len(prioritized_pair_indices),
+                    "sampling_scope": "training_batch_emphasis_only",
+                    "pair_index_domain": (
+                        "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+                    ),
+                    "arbitrary_source_pair_hydration": False,
+                    "target_hydration_pair_indices_consumed": False,
+                    "requires_num_pairs_covering_pair_ids": bool(
+                        prioritized_pair_indices
+                    ),
+                    "authority": "macos_mlx_research_signal_false_authority",
+                    **FALSE_AUTHORITY,
+                },
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
                     enabled=effective_coder_aware_qat,
@@ -8630,6 +8647,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "pair_indices": [int(value) for value in prioritized_pair_indices],
                 "pair_count": len(prioritized_pair_indices),
                 "sampling_scope": "training_batch_emphasis_only",
+                "pair_index_domain": "decoded_prefix_pair_indices_0_to_num_pairs_minus_1",
+                "arbitrary_source_pair_hydration": False,
+                "target_hydration_pair_indices_consumed": False,
+                "requires_num_pairs_covering_pair_ids": bool(
+                    prioritized_pair_indices
+                ),
                 "authority": "macos_mlx_research_signal_false_authority",
                 "canonical_authority_surface": (
                     "TrainingArtifact top-level false-authority fields"

@@ -580,6 +580,10 @@ def _prioritized_pair_training_metadata(
         "pair_indices": [int(value) for value in pair_indices],
         "pair_count": len(pair_indices),
         "sampling_scope": "local_mlx_training_batch_emphasis_only",
+        "pair_index_domain": "decoded_prefix_pair_indices_0_to_num_pairs_minus_1",
+        "arbitrary_source_pair_hydration": False,
+        "target_hydration_pair_indices_consumed": False,
+        "requires_num_pairs_covering_pair_ids": bool(pair_indices),
         "authority": "macos_mlx_research_signal_false_authority",
         **FALSE_AUTHORITY,
     }
@@ -594,6 +598,10 @@ def _prioritized_pair_training_lineage_metadata(
         "pair_indices": [int(value) for value in pair_indices],
         "pair_count": len(pair_indices),
         "sampling_scope": "local_mlx_training_batch_emphasis_only",
+        "pair_index_domain": "decoded_prefix_pair_indices_0_to_num_pairs_minus_1",
+        "arbitrary_source_pair_hydration": False,
+        "target_hydration_pair_indices_consumed": False,
+        "requires_num_pairs_covering_pair_ids": bool(pair_indices),
         "authority": "macos_mlx_research_signal_false_authority",
         "canonical_authority_surface": (
             "TrainingArtifact top-level false-authority fields"

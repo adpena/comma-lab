@@ -305,6 +305,13 @@ def test_hinerv_mlx_trainer_parses_prioritized_pair_controls(
     assert metadata["schema"] == "hi_nerv_direct_trainer_prioritized_pair_training.v1"
     assert metadata["enabled"] is True
     assert metadata["pair_indices"] == [3, 4, 9]
+    assert (
+        metadata["pair_index_domain"]
+        == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+    )
+    assert metadata["arbitrary_source_pair_hydration"] is False
+    assert metadata["target_hydration_pair_indices_consumed"] is False
+    assert metadata["requires_num_pairs_covering_pair_ids"] is True
     assert metadata["score_claim"] is False
     assert metadata["promotion_eligible"] is False
     assert metadata["ready_for_exact_eval_dispatch"] is False
@@ -315,6 +322,13 @@ def test_hinerv_prioritized_pair_lineage_metadata_has_no_canonical_authority() -
 
     assert metadata["enabled"] is True
     assert metadata["pair_indices"] == [4, 1]
+    assert (
+        metadata["pair_index_domain"]
+        == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+    )
+    assert metadata["arbitrary_source_pair_hydration"] is False
+    assert metadata["target_hydration_pair_indices_consumed"] is False
+    assert metadata["requires_num_pairs_covering_pair_ids"] is True
     assert metadata["canonical_authority_surface"] == (
         "TrainingArtifact top-level false-authority fields"
     )
