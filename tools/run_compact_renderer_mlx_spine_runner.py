@@ -2621,6 +2621,7 @@ def _run_snerv_native_mlx_export_attachment(
     native_mlx_decoder_train_steps: int,
     native_mlx_decoder_train_lr: float,
     native_mlx_decoder_train_ridge: float,
+    native_mlx_decoder_train_optimizer: str,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
 
@@ -2685,6 +2686,7 @@ def _run_snerv_native_mlx_export_attachment(
             native_mlx_decoder_train_steps=int(native_mlx_decoder_train_steps),
             native_mlx_decoder_train_lr=float(native_mlx_decoder_train_lr),
             native_mlx_decoder_train_ridge=float(native_mlx_decoder_train_ridge),
+            native_mlx_decoder_train_optimizer=str(native_mlx_decoder_train_optimizer),
             allow_overwrite=bool(allow_overwrite),
         )
         native_training_export_guard = build_snerv_mlx_native_training_export_guard(
@@ -3246,6 +3248,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_native_mlx_decoder_train_steps: int = 0,
     snerv_native_mlx_decoder_train_lr: float = 1.0e-5,
     snerv_native_mlx_decoder_train_ridge: float = 1.0e-6,
+    snerv_native_mlx_decoder_train_optimizer: str = "pact_guarded_adamw",
     run_scorer_loop_qat: bool = False,
     snerv_scorer_loop_max_trials: int = 2,
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
@@ -3724,6 +3727,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_native_mlx_decoder_train_ridge": float(
             snerv_native_mlx_decoder_train_ridge
         ),
+        "snerv_native_mlx_decoder_train_optimizer": str(
+            snerv_native_mlx_decoder_train_optimizer
+        ),
     }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
@@ -3755,6 +3761,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         native_mlx_decoder_train_steps=int(snerv_native_mlx_decoder_train_steps),
         native_mlx_decoder_train_lr=float(snerv_native_mlx_decoder_train_lr),
         native_mlx_decoder_train_ridge=float(snerv_native_mlx_decoder_train_ridge),
+        native_mlx_decoder_train_optimizer=str(snerv_native_mlx_decoder_train_optimizer),
     )
     snerv_mlx_native_file_backed_evidence = (
         build_snerv_mlx_native_file_backed_evidence(
@@ -12454,6 +12461,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="L2/ridge pressure for SNeRV native MLX HF decoder training.",
     )
     parser.add_argument(
+        "--snerv-native-mlx-decoder-train-optimizer",
+        default="pact_guarded_adamw",
+        choices=(
+            "pact_guarded_adamw",
+            "full_batch_gradient_descent",
+            "adamw",
+            "adam",
+            "lion",
+            "sgd",
+        ),
+        help=(
+            "Optimizer for SNeRV native MLX HF decoder training. The default "
+            "tries MLX AdamW and falls back per subband when the measured loss worsens."
+        ),
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-qat",
         action="store_true",
         help=(
@@ -13093,6 +13116,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_native_mlx_decoder_train_ridge=(
                 args.snerv_native_mlx_decoder_train_ridge
+            ),
+            snerv_native_mlx_decoder_train_optimizer=(
+                args.snerv_native_mlx_decoder_train_optimizer
             ),
             run_scorer_loop_qat=bool(
                 args.coder_aware_qat or args.snerv_scorer_loop_qat

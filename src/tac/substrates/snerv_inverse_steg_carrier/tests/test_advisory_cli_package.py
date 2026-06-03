@@ -258,6 +258,8 @@ def test_advisory_cli_records_native_mlx_training_knobs_as_unconsumed(
             "0.0007",
             "--snerv-native-mlx-decoder-train-ridge",
             "0.000003",
+            "--snerv-native-mlx-decoder-train-optimizer",
+            "sgd",
         ]
     )
     payload = json.loads(report_path.read_text())
@@ -267,6 +269,7 @@ def test_advisory_cli_records_native_mlx_training_knobs_as_unconsumed(
     assert controls["requested_steps"] == 9
     assert controls["learning_rate"] == pytest.approx(0.0007)
     assert controls["ridge"] == pytest.approx(0.000003)
+    assert controls["optimizer"] == "sgd"
     assert controls["consumed_by_cli"] is False
     assert controls["native_mlx_training_executed"] is False
     assert (

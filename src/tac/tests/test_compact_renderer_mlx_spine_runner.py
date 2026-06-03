@@ -2927,6 +2927,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.0003",
             "--snerv-native-mlx-decoder-train-ridge",
             "0.000004",
+            "--snerv-native-mlx-decoder-train-optimizer",
+            "lion",
         ]
     )
 
@@ -2978,6 +2980,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_native_mlx_decoder_train_steps == 7
     assert sn.snerv_native_mlx_decoder_train_lr == 0.0003
     assert sn.snerv_native_mlx_decoder_train_ridge == 0.000004
+    assert sn.snerv_native_mlx_decoder_train_optimizer == "lion"
 
 
 def test_top_priority_family_cli_refuses_missing_planner_row(
@@ -6136,6 +6139,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_native_mlx_decoder_train_steps=11,
         snerv_native_mlx_decoder_train_lr=0.004,
         snerv_native_mlx_decoder_train_ridge=0.0003,
+        snerv_native_mlx_decoder_train_optimizer="adam",
         prioritized_pair_indices=(7, 2, 7),
         repo_root=REPO_ROOT,
     )
@@ -6155,6 +6159,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["native_mlx_decoder_train_steps"] == 11
     assert native_calls[0]["native_mlx_decoder_train_lr"] == pytest.approx(0.004)
     assert native_calls[0]["native_mlx_decoder_train_ridge"] == pytest.approx(0.0003)
+    assert native_calls[0]["native_mlx_decoder_train_optimizer"] == "adam"
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
         Path(native_calls[0]["recon_pixel_weight_manifest_path"])

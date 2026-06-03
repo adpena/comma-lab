@@ -328,6 +328,19 @@ def main(argv: list[str] | None = None) -> int:
         type=float,
         help="Recorded ridge pressure for --snerv-native-mlx-decoder-train-steps.",
     )
+    ap.add_argument(
+        "--snerv-native-mlx-decoder-train-optimizer",
+        default="pact_guarded_adamw",
+        choices=(
+            "pact_guarded_adamw",
+            "full_batch_gradient_descent",
+            "adamw",
+            "adam",
+            "lion",
+            "sgd",
+        ),
+        help="Recorded optimizer for native MLX SNeRV decoder training controls.",
+    )
     ap.add_argument("--out", type=str, default=None)
     ap.add_argument(
         "--packet-out",
@@ -421,6 +434,7 @@ def main(argv: list[str] | None = None) -> int:
         "requested_steps": int(args.snerv_native_mlx_decoder_train_steps),
         "learning_rate": float(args.snerv_native_mlx_decoder_train_lr),
         "ridge": float(args.snerv_native_mlx_decoder_train_ridge),
+        "optimizer": str(args.snerv_native_mlx_decoder_train_optimizer),
         "consumed_by_cli": False,
         "consumed_by_archive_metadata": False,
         "native_mlx_training_executed": False,
