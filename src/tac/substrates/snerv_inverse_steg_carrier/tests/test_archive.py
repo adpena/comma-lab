@@ -230,6 +230,14 @@ def test_quantized_decoder_payload_escalates_large_scales_to_fp32() -> None:
     )
 
 
+def test_decoder_payload_rejects_nonfinite_weights_before_quantization() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=1)
+    decoder.kernels[0]["LH"][0, 0] = np.inf
+
+    with pytest.raises(SnervArchiveError, match="non-finite"):
+        encode_decoder_payload(decoder, codec="int8_symmetric")
+
+
 def test_decoder_payload_roundtrips_nondefault_model_size_controls() -> None:
     model_size = SnervModelSizeConfig(
         fc_dim=10,
@@ -370,6 +378,34 @@ def test_mixed_decoder_payload_accepts_explicit_mode_assignments() -> None:
         )
     with pytest.raises(SnervArchiveError, match="require mixed codec"):
         encode_decoder_payload(decoder, codec="int8_symmetric", mixed_modes=modes)
+
+
+def test_mixed_decoder_payload_promotes_heuristic_fp16_overflow_groups_to_fp32() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=1)
+    decoder.kernels[0]["LH"] = np.full((3, 3), 100_000.0, dtype=np.float64)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", RuntimeWarning)
+        payload = encode_decoder_payload(decoder, codec="mixed_magnitude_symmetric")
+        decoded = decode_decoder_payload(payload)
+
+    header = _read_subpacket_header(payload)
+    assert header["mode_histogram"]["fp32"] == 1
+    assert header["mode_histogram"]["fp16"] == 0
+    assert header["fp32_value_bytes"] == decoder.model_size.feature_count * 4
+    assert np.isfinite(decoded.kernels[0]["LH"]).all()
+
+
+def test_mixed_decoder_payload_rejects_explicit_fp16_overflow_group() -> None:
+    decoder = HfGenerationDecoder.zeros(levels=1)
+    decoder.kernels[0]["LH"] = np.full((3, 3), 100_000.0, dtype=np.float64)
+
+    with pytest.raises(SnervArchiveError, match="fp16 group exceeds float16"):
+        encode_decoder_payload(
+            decoder,
+            codec="mixed_magnitude_symmetric",
+            mixed_modes=("fp16", "zero", "zero"),
+        )
 
 
 def test_quantized_decoder_payload_rejects_corrupt_payload_bytes() -> None:
