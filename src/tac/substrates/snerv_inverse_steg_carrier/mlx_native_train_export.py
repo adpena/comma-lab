@@ -56,8 +56,14 @@ from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (
     export_snerv_archive_bound_candidate_package,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    _DETAIL_KEYS,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
+    HfGenerationDecoder,
     SnervModelSizeConfig,
+    _decoder_features,
+    _hfr_for_model_size,
+    _kernel_storage_shape,
+    _upsample_nn,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
     fit_hf_decoder_weighted_least_squares,
@@ -66,6 +72,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
 from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     WaveletPyramid,
     dwt2_native_synthesis_adjoint,
+    idwt2_multilevel,
 )
 
 SNERV_MLX_NATIVE_TRAIN_EXPORT_SCHEMA = "snerv_mlx_native_train_export.v1"
@@ -157,6 +164,9 @@ def train_export_snerv_mlx_native(
     retain_receiver_output: bool = False,
     receiver_proof_timeout_seconds: int = 1800,
     run_scorer_loop_qat: bool = False,
+    native_mlx_decoder_train_steps: int = 0,
+    native_mlx_decoder_train_lr: float = 1.0e-2,
+    native_mlx_decoder_train_ridge: float = 1.0e-6,
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
@@ -277,6 +287,24 @@ def train_export_snerv_mlx_native(
                 candidate.get("snerv_hf_decoder_saliency_gain", 1.0),
             )
         ),
+        native_mlx_decoder_train_steps=int(
+            candidate.get(
+                "native_mlx_decoder_train_steps",
+                candidate.get("snerv_native_mlx_decoder_train_steps", native_mlx_decoder_train_steps),
+            )
+        ),
+        native_mlx_decoder_train_lr=float(
+            candidate.get(
+                "native_mlx_decoder_train_lr",
+                candidate.get("snerv_native_mlx_decoder_train_lr", native_mlx_decoder_train_lr),
+            )
+        ),
+        native_mlx_decoder_train_ridge=float(
+            candidate.get(
+                "native_mlx_decoder_train_ridge",
+                candidate.get("snerv_native_mlx_decoder_train_ridge", native_mlx_decoder_train_ridge),
+            )
+        ),
         metadata_extra={
             "source_video_path": Path(source_video_path).as_posix(),
             "pair_index_alignment_mode": (
@@ -284,16 +312,8 @@ def train_export_snerv_mlx_native(
                 if explicit_pair_indices
                 else "prefix_source_pair_indices"
             ),
-            "training_backend": (
-                "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
-                if recon_weight is not None
-                else "mlx_target_hydration_numpy_closed_form_decoder_fit"
-            ),
             "human_visual_fidelity_objective": False,
             "contest_scorer_distortion_objective": recon_weight is not None,
-            "score_aware_hf_decoder_fit_executed": recon_weight is not None,
-            "score_aware_long_training_executed": False,
-            "native_mlx_training_executed": False,
         },
     )
     scorer_loop_qat = _run_scorer_loop_qat_attachment(
@@ -317,10 +337,8 @@ def train_export_snerv_mlx_native(
         allow_overwrite=allow_overwrite,
     )
     selected_packet = bytes(closed_form_archive.packet)
-    selected_packet_source = (
-        "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
-        if recon_weight is not None
-        else "mlx_target_hydration_numpy_closed_form_decoder_fit"
+    selected_packet_source = _packet_source_from_snerv_native_metadata(
+        closed_form_archive.metadata
     )
     scorer_loop_qat_public = {
         key: value for key, value in scorer_loop_qat.items() if key != "_best_packet_bytes"
@@ -546,7 +564,15 @@ def train_export_snerv_mlx_native(
     )
     payload["score_aware_hf_decoder_fit_executed"] = bool(selected_recon_consumed)
     payload["score_aware_long_training_executed"] = False
-    payload["native_mlx_training_executed"] = False
+    payload["native_mlx_training_executed"] = bool(
+        selected_archive_metadata.get("native_mlx_training_executed") is True
+    )
+    payload["native_mlx_training_kind"] = str(
+        selected_archive_metadata.get("native_mlx_training_kind") or "none"
+    )
+    payload["native_mlx_hf_decoder_training"] = dict(
+        selected_archive_metadata.get("native_mlx_hf_decoder_training") or {}
+    )
     if selected_recon_consumed:
         payload["recon_pixel_weight"] = {
             **dict(selected_recon_metadata),
@@ -949,6 +975,9 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     recon_pixel_weight: np.ndarray | None = None,
     recon_pixel_weight_metadata: Mapping[str, Any] | None = None,
     hf_decoder_saliency_gain: float = 1.0,
+    native_mlx_decoder_train_steps: int = 0,
+    native_mlx_decoder_train_lr: float = 1.0e-2,
+    native_mlx_decoder_train_ridge: float = 1.0e-6,
     metadata_extra: Mapping[str, Any] | None = None,
 ) -> SnervArchivePacket:
     """Build an SNAR1 packet from NumPy pair frames using existing SNeRV codecs."""
@@ -1018,6 +1047,33 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
             temporal_group_count=channels,
         )
         hf_decoder_fit_mode = SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE
+    mlx_training_report: dict[str, Any] = {
+        "schema": "snerv_native_mlx_hf_decoder_training.v1",
+        "requested_steps": int(native_mlx_decoder_train_steps),
+        "executed": False,
+        "blockers": (
+            ["snerv_native_mlx_decoder_training_not_requested"]
+            if int(native_mlx_decoder_train_steps) <= 0
+            else []
+        ),
+        **FALSE_AUTHORITY,
+    }
+    if int(native_mlx_decoder_train_steps) > 0:
+        decoder, mlx_training_report = _fit_hf_decoder_mlx_full_batch_gradient_descent(
+            pyramids,
+            levels=int(levels),
+            initial_decoder=decoder,
+            detail_weight_pyramids=weight_pyramids,
+            saliency_gain=float(hf_decoder_saliency_gain),
+            temporal_group_count=channels,
+            steps=int(native_mlx_decoder_train_steps),
+            learning_rate=float(native_mlx_decoder_train_lr),
+            ridge=float(native_mlx_decoder_train_ridge),
+        )
+        hf_decoder_fit_mode = (
+            "native_mlx_full_batch_gradient_descent_from_"
+            f"{hf_decoder_fit_mode}"
+        )
 
     lf_quant_planes: list[np.ndarray] = []
     lf_zero_points: list[float] = []
@@ -1139,6 +1195,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "lf_step_allocation_rows": lf_step_allocation_rows,
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": float(hf_decoder_saliency_gain),
+        "native_mlx_hf_decoder_training": mlx_training_report,
         "hf_decoder_weight_domain": (
             "dwt_adjoint_detail_saliency_diagonal"
             if weighted_fit_enabled
@@ -1155,7 +1212,12 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "contest_scorer_distortion_objective": bool(weighted_fit_enabled),
         "score_aware_hf_decoder_fit_executed": bool(weighted_fit_enabled),
         "score_aware_long_training_executed": False,
-        "native_mlx_training_executed": False,
+        "native_mlx_training_executed": bool(mlx_training_report.get("executed") is True),
+        "native_mlx_training_kind": (
+            "hf_decoder_full_batch_gradient_descent"
+            if mlx_training_report.get("executed") is True
+            else "none"
+        ),
         "decoder_payload_codec": str(decoder_payload_codec),
         "snerv_fc_dim": int(model_size.fc_dim),
         "snerv_emb_size": int(model_size.emb_size),
@@ -1170,6 +1232,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "snerv_temporal_mode": model_size.temporal_mode,
         "decoder_feature_count": int(model_size.feature_count),
         **dict(metadata_extra or {}),
+        **FALSE_AUTHORITY,
     }
     archive = pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(lf_zero_points=lf_zero_points),
@@ -1180,6 +1243,269 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     )
     _verify_receiver_frame_decode(archive, reference_shape=pairs.shape)
     return archive
+
+
+def _fit_hf_decoder_mlx_full_batch_gradient_descent(
+    pyramids: list[WaveletPyramid],
+    *,
+    levels: int,
+    initial_decoder: HfGenerationDecoder,
+    detail_weight_pyramids: list[WaveletPyramid] | None,
+    saliency_gain: float,
+    temporal_group_count: int,
+    steps: int,
+    learning_rate: float,
+    ridge: float,
+) -> tuple[HfGenerationDecoder, dict[str, Any]]:
+    if int(steps) <= 0:
+        raise SnervMlxNativeExportError("native MLX decoder train steps must be positive")
+    if float(learning_rate) <= 0.0:
+        raise SnervMlxNativeExportError("native MLX decoder train lr must be positive")
+    if float(ridge) < 0.0:
+        raise SnervMlxNativeExportError("native MLX decoder train ridge must be non-negative")
+    try:
+        import mlx.core as mx
+    except Exception as exc:  # pragma: no cover - exercised on non-MLX hosts.
+        raise SnervMlxNativeExportError(f"MLX import failed for SNeRV decoder training: {exc!s}") from exc
+
+    matrices = _hf_decoder_training_matrices(
+        pyramids,
+        levels=int(levels),
+        model_size=initial_decoder.model_size,
+        detail_weight_pyramids=detail_weight_pyramids,
+        saliency_gain=float(saliency_gain),
+        temporal_group_count=int(temporal_group_count),
+    )
+    kernels: dict[int, dict[str, np.ndarray]] = {}
+    loss_rows: list[dict[str, Any]] = []
+    for lvl in range(int(levels)):
+        kernels[lvl] = {}
+        for subband in _DETAIL_KEYS:
+            row = matrices[(lvl, subband)]
+            x = mx.array(row["features"], dtype=mx.float32)
+            y = mx.array(row["target"], dtype=mx.float32)
+            weights = mx.array(row["weights"], dtype=mx.float32)
+            denom = mx.maximum(mx.sum(weights), mx.array(1.0, dtype=mx.float32))
+            k = mx.array(
+                np.asarray(initial_decoder.kernels[lvl][subband], dtype=np.float32).reshape(-1),
+                dtype=mx.float32,
+            )
+
+            initial_loss = float(
+                _mlx_weighted_linear_loss(
+                    mx,
+                    x=x,
+                    y=y,
+                    weights=weights,
+                    denom=denom,
+                    vec=k,
+                    ridge=float(ridge),
+                ).item()
+            )
+            for _step in range(int(steps)):
+                pred = mx.matmul(x, k)
+                residual = pred - y
+                grad = (2.0 * mx.matmul(mx.transpose(x), weights * residual) / denom) + (
+                    2.0 * float(ridge) * k
+                )
+                k = k - (float(learning_rate) * grad)
+                mx.eval(k)
+            final_loss = float(
+                _mlx_weighted_linear_loss(
+                    mx,
+                    x=x,
+                    y=y,
+                    weights=weights,
+                    denom=denom,
+                    vec=k,
+                    ridge=float(ridge),
+                ).item()
+            )
+            kernels[lvl][subband] = np.asarray(k, dtype=np.float64).reshape(
+                _kernel_storage_shape(initial_decoder.model_size)
+            )
+            loss_rows.append(
+                {
+                    "level": int(lvl),
+                    "subband": subband,
+                    "sample_count": int(row["features"].shape[0]),
+                    "feature_count": int(row["features"].shape[1]),
+                    "initial_loss": initial_loss,
+                    "final_loss": final_loss,
+                    "loss_delta": final_loss - initial_loss,
+                }
+            )
+    return (
+        HfGenerationDecoder(
+            kernels=kernels,
+            levels=int(levels),
+            model_size=initial_decoder.model_size,
+        ),
+        {
+            "schema": "snerv_native_mlx_hf_decoder_training.v1",
+            "executed": True,
+            "optimizer": "full_batch_gradient_descent",
+            "steps": int(steps),
+            "learning_rate": float(learning_rate),
+            "ridge": float(ridge),
+            "saliency_gain": float(saliency_gain),
+            "level_subband_rows": loss_rows,
+            "mean_initial_loss": float(np.mean([row["initial_loss"] for row in loss_rows])),
+            "mean_final_loss": float(np.mean([row["final_loss"] for row in loss_rows])),
+            "all_final_losses_finite": bool(
+                all(np.isfinite(float(row["final_loss"])) for row in loss_rows)
+            ),
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        },
+    )
+
+
+def _hf_decoder_training_matrices(
+    pyramids: list[WaveletPyramid],
+    *,
+    levels: int,
+    model_size: SnervModelSizeConfig,
+    detail_weight_pyramids: list[WaveletPyramid] | None,
+    saliency_gain: float,
+    temporal_group_count: int,
+) -> dict[tuple[int, str], dict[str, np.ndarray]]:
+    if not pyramids:
+        raise SnervMlxNativeExportError("native MLX decoder training needs pyramids")
+    if detail_weight_pyramids is not None and len(detail_weight_pyramids) != len(pyramids):
+        raise SnervMlxNativeExportError("detail weight pyramid count mismatch")
+    feature_count = int(model_size.feature_count)
+    lf_sequence_all = [np.asarray(pyr.lf, dtype=np.float64) for pyr in pyramids]
+    rows: dict[tuple[int, str], dict[str, list[np.ndarray]]] = {
+        (lvl, subband): {"features": [], "target": [], "weights": []}
+        for lvl in range(int(levels))
+        for subband in _DETAIL_KEYS
+    }
+    for pyr_idx, pyr in enumerate(pyramids):
+        temporal_sequence = None
+        temporal_index = None
+        if int(model_size.temporal_context) > 0:
+            temporal_sequence, temporal_index = _flat_temporal_group_for_native_export(
+                lf_sequence_all,
+                flat_index=pyr_idx,
+                group_count=int(temporal_group_count),
+            )
+        approx = np.asarray(pyr.lf, dtype=np.float64)
+        for lvl, (lh, hl, hh) in enumerate(pyr.details):
+            target_hw = (int(lh.shape[0]), int(lh.shape[1]))
+            up = _upsample_nn(approx, target_hw)
+            features = _decoder_features(
+                up,
+                model_size,
+                lf_sequence=temporal_sequence,
+                sequence_index=temporal_index,
+            ).reshape(-1, feature_count)
+            for subband, detail in (("LH", lh), ("HL", hl), ("HH", hh)):
+                correction = _hfr_for_model_size(model_size).correction(
+                    up,
+                    subband=subband,
+                    target_hw=tuple(int(v) for v in detail.shape),
+                )
+                target = np.asarray(detail, dtype=np.float64) - correction
+                weights = _native_export_detail_weights(
+                    detail_weight_pyramids,
+                    pyramid_index=pyr_idx,
+                    level=lvl,
+                    subband=subband,
+                    expected_shape=detail.shape,
+                    saliency_gain=float(saliency_gain),
+                )
+                bucket = rows[(lvl, subband)]
+                bucket["features"].append(features.astype(np.float32))
+                bucket["target"].append(target.reshape(-1).astype(np.float32))
+                bucket["weights"].append(weights.reshape(-1).astype(np.float32))
+            approx = idwt2_multilevel(
+                WaveletPyramid(
+                    coeffs=[approx, (lh, hl, hh)],
+                    levels=1,
+                    wavelet=pyr.wavelet,
+                    orig_hw=(target_hw[0] * 2, target_hw[1] * 2),
+                )
+            )
+    return {
+        key: {
+            "features": np.concatenate(value["features"], axis=0),
+            "target": np.concatenate(value["target"], axis=0),
+            "weights": np.concatenate(value["weights"], axis=0),
+        }
+        for key, value in rows.items()
+    }
+
+
+def _native_export_detail_weights(
+    detail_weight_pyramids: list[WaveletPyramid] | None,
+    *,
+    pyramid_index: int,
+    level: int,
+    subband: str,
+    expected_shape: tuple[int, ...],
+    saliency_gain: float,
+) -> np.ndarray:
+    if detail_weight_pyramids is None:
+        return np.ones(expected_shape, dtype=np.float32)
+    subband_idx = _DETAIL_KEYS.index(subband)
+    raw = np.abs(
+        np.asarray(
+            detail_weight_pyramids[int(pyramid_index)].details[int(level)][subband_idx],
+            dtype=np.float64,
+        )
+    )
+    if raw.shape != expected_shape:
+        raise SnervMlxNativeExportError(
+            f"detail weight shape {raw.shape} != expected {expected_shape}"
+        )
+    if not np.isfinite(raw).all():
+        raise SnervMlxNativeExportError("detail weights contain nonfinite values")
+    mean = float(np.mean(raw))
+    scaled = np.ones(expected_shape, dtype=np.float64) if mean <= 0.0 else raw / mean
+    return np.maximum(1.0e-3, 1.0 + float(saliency_gain) * (scaled - 1.0)).astype(np.float32)
+
+
+def _mlx_weighted_linear_loss(
+    mx: Any,
+    *,
+    x: Any,
+    y: Any,
+    weights: Any,
+    denom: Any,
+    vec: Any,
+    ridge: float,
+) -> Any:
+    residual = mx.matmul(x, vec) - y
+    data = mx.sum(weights * residual * residual) / denom
+    reg = float(ridge) * mx.sum(vec * vec)
+    return data + reg
+
+
+def _packet_source_from_snerv_native_metadata(metadata: Mapping[str, Any]) -> str:
+    if metadata.get("native_mlx_training_executed") is True:
+        return str(metadata.get("hf_decoder_fit_mode") or "native_mlx_hf_decoder_training")
+    if metadata.get("recon_pixel_weight_consumed") is True:
+        return "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
+    return "mlx_target_hydration_numpy_closed_form_decoder_fit"
+
+
+def _flat_temporal_group_for_native_export(
+    lf_sequence_all: Sequence[np.ndarray],
+    *,
+    flat_index: int,
+    group_count: int,
+) -> tuple[Sequence[np.ndarray], int]:
+    group_count = int(group_count)
+    if group_count < 1:
+        raise SnervMlxNativeExportError("temporal group count must be positive")
+    group_start = (int(flat_index) // group_count) * group_count
+    group = lf_sequence_all[group_start : group_start + group_count]
+    if len(group) != group_count:
+        group = lf_sequence_all[max(0, len(lf_sequence_all) - group_count) :]
+    if not group:
+        raise SnervMlxNativeExportError("empty temporal group")
+    return group, min(int(flat_index) - group_start, len(group) - 1)
 
 
 def build_snerv_mlx_native_storage_preflight(

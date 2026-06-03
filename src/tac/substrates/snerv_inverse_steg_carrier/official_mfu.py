@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: MIT
-"""Official SNeRV MFU graph/shape primitive.
+"""Official SNeRV MFU graph and numeric primitives.
 
 This module models the source-backed MFU contract from the official SNeRV
-checkout without importing torch or pretending to execute the learned weights.
-It is intended for trainer/export plumbing: ConvTranspose2d output shapes,
-skip-concat compatibility, and RB channel interfaces are executable here; pixel
-numeric parity remains blocked until real official weights and a torch-to-NumPy
-kernel port are wired.
+checkout without importing torch. It is intended for trainer/export plumbing:
+ConvTranspose2d output shapes, skip-concat compatibility, RB channel interfaces,
+and small numeric reference forwards are executable here. Full source-forward
+parity remains blocked until real official weights are mapped into these
+portable kernels and replayed against the official torch graph.
 """
 
 from __future__ import annotations
@@ -17,6 +17,11 @@ from typing import Final
 
 import numpy as np
 
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OfficialConv2dNchw,
+    leaky_relu01,
+)
+
 OFFICIAL_SNERV_MFU_SOURCE: Final[str] = (
     "SNeRV/model/snerv.py lines 68-71 and 104-109 at "
     "0844a08f9591eea9625f8b961ed91d08030e06d1"
@@ -25,9 +30,8 @@ OFFICIAL_SNERV_RB_SOURCE: Final[str] = (
     "SNeRV/model/residual_block.py ResidualBlocksWithInputConv"
 )
 OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS: Final[tuple[str, ...]] = (
-    "shape_graph_only_no_torch_weighted_convtranspose2d_numeric_kernel",
-    "shape_graph_only_no_residual_block_conv_numeric_kernel",
     "official_weight_tensor_mapping_not_loaded",
+    "full_official_mfu_forward_artifact_not_emitted",
 )
 
 
@@ -187,6 +191,245 @@ class ConvTranspose2dShapeSpec:
 
     def torch_bias_shape(self) -> tuple[int] | None:
         return (int(self.out_channels),) if self.bias else None
+
+
+@dataclass(frozen=True)
+class OfficialConvTranspose2dNchw:
+    """PyTorch-style ``nn.ConvTranspose2d`` weights in NCHW/IOHW layout."""
+
+    weight: np.ndarray
+    bias: np.ndarray | None = None
+    stride: int | tuple[int, int] = 1
+    padding: int | tuple[int, int] = 0
+    output_padding: int | tuple[int, int] = 0
+    dilation: int | tuple[int, int] = 1
+    groups: int = 1
+
+    def __post_init__(self) -> None:
+        weight = np.asarray(self.weight, dtype=np.float64)
+        bias = None if self.bias is None else np.asarray(self.bias, dtype=np.float64)
+        object.__setattr__(self, "weight", weight)
+        object.__setattr__(self, "bias", bias)
+        object.__setattr__(self, "stride", _pair_int(self.stride, "stride"))
+        object.__setattr__(self, "padding", _pair_int(self.padding, "padding", minimum=0))
+        object.__setattr__(
+            self,
+            "output_padding",
+            _pair_int(self.output_padding, "output_padding", minimum=0),
+        )
+        object.__setattr__(self, "dilation", _pair_int(self.dilation, "dilation"))
+        object.__setattr__(self, "groups", int(self.groups))
+        if weight.ndim != 4:
+            raise OfficialSnervMfuError(
+                f"convtranspose weight must be IOHW, got {weight.shape}"
+            )
+        if self.groups <= 0:
+            raise OfficialSnervMfuError("ConvTranspose2d groups must be positive")
+        in_channels = int(weight.shape[0])
+        out_channels = int(weight.shape[1]) * int(self.groups)
+        if in_channels % int(self.groups):
+            raise OfficialSnervMfuError(
+                "ConvTranspose2d input channels must be divisible by groups"
+            )
+        if bias is not None and bias.shape != (out_channels,):
+            raise OfficialSnervMfuError(
+                f"convtranspose bias shape {bias.shape} does not match out channels {out_channels}"
+            )
+
+    @property
+    def in_channels(self) -> int:
+        return int(self.weight.shape[0])
+
+    @property
+    def out_channels(self) -> int:
+        return int(self.weight.shape[1]) * int(self.groups)
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return conv_transpose2d_nchw(
+            x,
+            self.weight,
+            bias=self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            output_padding=self.output_padding,
+            dilation=self.dilation,
+            groups=self.groups,
+        )
+
+
+@dataclass(frozen=True)
+class OfficialResidualBlockNoBN:
+    """Official ``ResidualBlockNoBN``: conv, LeakyReLU(0.1), conv, skip add."""
+
+    conv1: OfficialConv2dNchw
+    conv2: OfficialConv2dNchw
+
+    def __post_init__(self) -> None:
+        if self.conv1.weight.shape[2:] != (3, 3) or self.conv1.padding != 1:
+            raise OfficialSnervMfuError("ResidualBlockNoBN conv1 must be 3x3 padding=1")
+        if self.conv2.weight.shape[2:] != (3, 3) or self.conv2.padding != 1:
+            raise OfficialSnervMfuError("ResidualBlockNoBN conv2 must be 3x3 padding=1")
+        if self.conv1.in_channels != self.conv1.out_channels:
+            raise OfficialSnervMfuError("ResidualBlockNoBN conv1 must preserve channels")
+        if self.conv2.in_channels != self.conv1.out_channels:
+            raise OfficialSnervMfuError("ResidualBlockNoBN conv2 channels mismatch")
+        if self.conv2.out_channels != self.conv1.out_channels:
+            raise OfficialSnervMfuError("ResidualBlockNoBN conv2 must preserve channels")
+
+    @property
+    def channels(self) -> int:
+        return int(self.conv1.in_channels)
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        arr = _ensure_nchw_array(x)
+        if arr.shape[1] != self.channels:
+            raise OfficialSnervMfuError(
+                f"ResidualBlockNoBN expected {self.channels} channels, got {arr.shape[1]}"
+            )
+        out = leaky_relu01(self.conv1.forward(arr))
+        return (arr + self.conv2.forward(out)).astype(np.float64, copy=False)
+
+
+@dataclass(frozen=True)
+class OfficialResidualBlocksWithInputConv:
+    """Official ``ResidualBlocksWithInputConv`` numeric reference."""
+
+    input_conv: OfficialConv2dNchw
+    residual_blocks: tuple[OfficialResidualBlockNoBN, ...]
+
+    def __post_init__(self) -> None:
+        if self.input_conv.weight.shape[2:] != (3, 3) or self.input_conv.padding != 1:
+            raise OfficialSnervMfuError("RB input conv must be 3x3 padding=1")
+        blocks = tuple(self.residual_blocks)
+        object.__setattr__(self, "residual_blocks", blocks)
+        for block in blocks:
+            if block.channels != self.input_conv.out_channels:
+                raise OfficialSnervMfuError(
+                    "RB residual block channels must match input conv output"
+                )
+
+    @property
+    def in_channels(self) -> int:
+        return int(self.input_conv.in_channels)
+
+    @property
+    def out_channels(self) -> int:
+        return int(self.input_conv.out_channels)
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        arr = _ensure_nchw_array(x)
+        if arr.shape[1] != self.in_channels:
+            raise OfficialSnervMfuError(
+                f"RB expected {self.in_channels} input channels, got {arr.shape[1]}"
+            )
+        out = self.input_conv.forward(arr)
+        for block in self.residual_blocks:
+            out = block.forward(out)
+        return out.astype(np.float64, copy=False)
+
+
+@dataclass(frozen=True)
+class OfficialSnervMfuForwardOutput:
+    """Concrete official MFU forward outputs and false-authority metadata."""
+
+    up1: np.ndarray
+    cat_mid: np.ndarray
+    unet1: np.ndarray
+    unet1_up: np.ndarray
+    cat_high: np.ndarray
+    pyr_out: np.ndarray
+
+    def as_jsonable_metadata(self) -> dict[str, object]:
+        return {
+            "schema": "official_snerv_mfu_forward_output.v1",
+            "up1_shape": list(self.up1.shape),
+            "cat_mid_shape": list(self.cat_mid.shape),
+            "unet1_shape": list(self.unet1.shape),
+            "unet1_up_shape": list(self.unet1_up.shape),
+            "cat_high_shape": list(self.cat_high.shape),
+            "pyr_out_shape": list(self.pyr_out.shape),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+            "source_forward_replay_authority": False,
+        }
+
+
+@dataclass(frozen=True)
+class OfficialSnervMfu:
+    """Executable NumPy reference for official SNeRV MFU.
+
+    This is the source-graph numeric primitive:
+    ``ConvTranspose2d -> cat -> ResidualBlocksWithInputConv -> ConvTranspose2d
+    -> cat -> ResidualBlocksWithInputConv``.  It proves portable math against
+    torch when supplied with explicit weights; loading the actual upstream
+    SNeRV checkpoint and emitting a full official source-forward replay remains
+    a separate promotion gate.
+    """
+
+    spec: OfficialSnervMfuSpec
+    upsample_mid: OfficialConvTranspose2dNchw
+    rb_mid: OfficialResidualBlocksWithInputConv
+    upsample_high: OfficialConvTranspose2dNchw
+    rb_high: OfficialResidualBlocksWithInputConv
+
+    def __post_init__(self) -> None:
+        if self.upsample_mid.in_channels != self.spec.low_channels:
+            raise OfficialSnervMfuError("MFU mid upsample input channels mismatch spec")
+        if self.upsample_mid.out_channels != self.spec.low_channels:
+            raise OfficialSnervMfuError("MFU mid upsample output channels mismatch spec")
+        if self.upsample_mid.stride != (self.spec.mid_stride, self.spec.mid_stride):
+            raise OfficialSnervMfuError("MFU mid upsample stride mismatch spec")
+        if self.rb_mid.in_channels != self.spec.low_channels + self.spec.mid_channels:
+            raise OfficialSnervMfuError("MFU mid RB input channels mismatch spec")
+        if self.rb_mid.out_channels != self.spec.mid_channels:
+            raise OfficialSnervMfuError("MFU mid RB output channels mismatch spec")
+        if self.upsample_high.in_channels != self.spec.mid_channels:
+            raise OfficialSnervMfuError("MFU high upsample input channels mismatch spec")
+        if self.upsample_high.out_channels != self.spec.mid_channels:
+            raise OfficialSnervMfuError("MFU high upsample output channels mismatch spec")
+        if self.upsample_high.stride != (self.spec.high_stride, self.spec.high_stride):
+            raise OfficialSnervMfuError("MFU high upsample stride mismatch spec")
+        if self.rb_high.in_channels != self.spec.mid_channels + self.spec.high_channels:
+            raise OfficialSnervMfuError("MFU high RB input channels mismatch spec")
+        if self.rb_high.out_channels != self.spec.high_channels:
+            raise OfficialSnervMfuError("MFU high RB output channels mismatch spec")
+
+    def forward(
+        self,
+        low: np.ndarray,
+        skip_mid: np.ndarray,
+        skip_high: np.ndarray,
+    ) -> OfficialSnervMfuForwardOutput:
+        low_arr = _ensure_nchw_array(low)
+        skip_mid_arr = _ensure_nchw_array(skip_mid)
+        skip_high_arr = _ensure_nchw_array(skip_high)
+        if low_arr.shape[1] != self.spec.low_channels:
+            raise OfficialSnervMfuError(
+                f"low channels {low_arr.shape[1]} do not match spec {self.spec.low_channels}"
+            )
+        if skip_mid_arr.shape[1] != self.spec.mid_channels:
+            raise OfficialSnervMfuError(
+                f"skip_mid channels {skip_mid_arr.shape[1]} do not match spec {self.spec.mid_channels}"
+            )
+        if skip_high_arr.shape[1] != self.spec.high_channels:
+            raise OfficialSnervMfuError(
+                f"skip_high channels {skip_high_arr.shape[1]} do not match spec {self.spec.high_channels}"
+            )
+        up1 = self.upsample_mid.forward(low_arr)
+        cat_mid = concat_nchw_arrays((up1, skip_mid_arr))
+        unet1 = self.rb_mid.forward(cat_mid)
+        unet1_up = self.upsample_high.forward(unet1)
+        cat_high = concat_nchw_arrays((unet1_up, skip_high_arr))
+        pyr_out = self.rb_high.forward(cat_high)
+        return OfficialSnervMfuForwardOutput(
+            up1=up1,
+            cat_mid=cat_mid,
+            unet1=unet1,
+            unet1_up=unet1_up,
+            cat_high=cat_high,
+            pyr_out=pyr_out,
+        )
 
 
 @dataclass(frozen=True)
@@ -482,6 +725,132 @@ def concat_nchw_specs(specs: Iterable[TensorSpec], *, name: str) -> TensorSpec:
     )
 
 
+def concat_nchw_arrays(arrays: Iterable[np.ndarray]) -> np.ndarray:
+    """Execute official ``torch.cat(..., dim=1)`` for NCHW NumPy tensors."""
+
+    parts = tuple(_ensure_nchw_array(array) for array in arrays)
+    if len(parts) < 2:
+        raise OfficialSnervMfuError("skip concat needs at least two tensors")
+    first = parts[0]
+    n, _c, h, w = first.shape
+    for part in parts:
+        if (part.shape[0], part.shape[2], part.shape[3]) != (n, h, w):
+            raise OfficialSnervMfuError(
+                "skip concat requires matching N/H/W; "
+                f"got {first.shape} and {part.shape}"
+            )
+    return np.concatenate(parts, axis=1).astype(np.float64, copy=False)
+
+
+def conv_transpose2d_nchw(
+    x: np.ndarray,
+    weight: np.ndarray,
+    *,
+    bias: np.ndarray | None = None,
+    stride: int | tuple[int, int] = 1,
+    padding: int | tuple[int, int] = 0,
+    output_padding: int | tuple[int, int] = 0,
+    dilation: int | tuple[int, int] = 1,
+    groups: int = 1,
+) -> np.ndarray:
+    """NumPy reference for PyTorch ``F.conv_transpose2d``.
+
+    PyTorch stores ConvTranspose2d weights as ``(in_channels,
+    out_channels/groups, kH, kW)``. This reference intentionally favors
+    exactness and auditability over speed; the official SNeRV MFU kernels are
+    small enough for parity probes, and training paths can lower hot loops
+    after a measured profile.
+    """
+
+    arr = _ensure_nchw_array(x)
+    w64 = np.asarray(weight, dtype=np.float64)
+    if w64.ndim != 4:
+        raise OfficialSnervMfuError(f"weight must be IOHW, got {w64.shape}")
+    stride_pair = _pair_int(stride, "stride")
+    padding_pair = _pair_int(padding, "padding", minimum=0)
+    output_padding_pair = _pair_int(output_padding, "output_padding", minimum=0)
+    dilation_pair = _pair_int(dilation, "dilation")
+    for out_pad, step, dil in zip(
+        output_padding_pair,
+        stride_pair,
+        dilation_pair,
+        strict=True,
+    ):
+        if out_pad >= step and out_pad >= dil:
+            raise OfficialSnervMfuError(
+                "ConvTranspose2d output_padding must be smaller than stride or dilation"
+            )
+    groups_i = int(groups)
+    if groups_i <= 0:
+        raise OfficialSnervMfuError("groups must be positive")
+    n, in_channels, h, w = arr.shape
+    weight_in, out_per_group, kh, kw = w64.shape
+    if in_channels != weight_in:
+        raise OfficialSnervMfuError(
+            f"input channels {in_channels} do not match weight channels {weight_in}"
+        )
+    if in_channels % groups_i:
+        raise OfficialSnervMfuError("input channels must be divisible by groups")
+    out_channels = int(out_per_group) * groups_i
+    if bias is not None:
+        b64 = np.asarray(bias, dtype=np.float64)
+        if b64.shape != (out_channels,):
+            raise OfficialSnervMfuError(
+                f"bias shape {b64.shape} does not match out channels {out_channels}"
+            )
+    else:
+        b64 = None
+
+    out_h = _conv_transpose2d_axis(
+        h,
+        kernel=kh,
+        stride=stride_pair[0],
+        padding=padding_pair[0],
+        output_padding=output_padding_pair[0],
+        dilation=dilation_pair[0],
+    )
+    out_w = _conv_transpose2d_axis(
+        w,
+        kernel=kw,
+        stride=stride_pair[1],
+        padding=padding_pair[1],
+        output_padding=output_padding_pair[1],
+        dilation=dilation_pair[1],
+    )
+    out = np.zeros((n, out_channels, out_h, out_w), dtype=np.float64)
+    in_per_group = in_channels // groups_i
+    for batch in range(n):
+        for group in range(groups_i):
+            in_start = group * in_per_group
+            out_start = group * out_per_group
+            for cin_group in range(in_per_group):
+                cin = in_start + cin_group
+                for ih in range(h):
+                    base_y = ih * stride_pair[0] - padding_pair[0]
+                    for iw in range(w):
+                        value = arr[batch, cin, ih, iw]
+                        if value == 0.0:
+                            continue
+                        base_x = iw * stride_pair[1] - padding_pair[1]
+                        for ky in range(kh):
+                            oy = base_y + ky * dilation_pair[0]
+                            if oy < 0 or oy >= out_h:
+                                continue
+                            for kx in range(kw):
+                                ox = base_x + kx * dilation_pair[1]
+                                if ox < 0 or ox >= out_w:
+                                    continue
+                                out[
+                                    batch,
+                                    out_start : out_start + out_per_group,
+                                    oy,
+                                    ox,
+                                ] += value * w64[cin, :, ky, kx]
+    if b64 is not None:
+        out += b64[None, :, None, None]
+    return out.astype(np.float64, copy=False)
+
+
 def _conv_transpose2d_axis(
     size: int,
     *,
@@ -499,6 +868,13 @@ def _conv_transpose2d_axis(
     if out <= 0:
         raise OfficialSnervMfuError(f"ConvTranspose2d output axis must be positive, got {out}")
     return int(out)
+
+
+def _ensure_nchw_array(x: np.ndarray) -> np.ndarray:
+    arr = np.asarray(x, dtype=np.float64)
+    if arr.ndim != 4:
+        raise OfficialSnervMfuError(f"expected NCHW tensor, got {arr.shape}")
+    return arr
 
 
 def _pair_int(
@@ -535,11 +911,18 @@ __all__ = [
     "OFFICIAL_SNERV_RB_SOURCE",
     "ConvTranspose2dShapeSpec",
     "NchwShape",
+    "OfficialConvTranspose2dNchw",
     "OfficialMfuGraphNode",
     "OfficialMfuShapeTrace",
+    "OfficialResidualBlockNoBN",
+    "OfficialResidualBlocksWithInputConv",
+    "OfficialSnervMfu",
     "OfficialSnervMfuError",
+    "OfficialSnervMfuForwardOutput",
     "OfficialSnervMfuSpec",
     "ResidualBlocksWithInputConvSpec",
     "TensorSpec",
+    "concat_nchw_arrays",
     "concat_nchw_specs",
+    "conv_transpose2d_nchw",
 ]

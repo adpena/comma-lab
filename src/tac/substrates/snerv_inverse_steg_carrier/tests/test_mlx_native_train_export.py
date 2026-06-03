@@ -242,6 +242,46 @@ def test_packet_builder_consumes_joint_recon_pixel_weight_in_decoder_fit() -> No
     )
 
 
+def test_packet_builder_runs_native_mlx_hf_decoder_training() -> None:
+    pytest.importorskip("mlx.core")
+    pairs = _tiny_pairs(pairs=1)
+    pairs[0, 1, 0, 2:13, 3:14] += 9.0
+    pairs = np.clip(pairs, 0.0, 255.0)
+
+    packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+        native_mlx_decoder_train_steps=2,
+        native_mlx_decoder_train_lr=1.0e-4,
+        native_mlx_decoder_train_ridge=1.0e-6,
+    )
+
+    decoded = unpack_snerv_archive(packet.packet)
+    training = decoded.metadata["native_mlx_hf_decoder_training"]
+    assert training["schema"] == "snerv_native_mlx_hf_decoder_training.v1"
+    assert training["executed"] is True
+    assert training["optimizer"] == "full_batch_gradient_descent"
+    assert training["steps"] == 2
+    assert training["learning_rate"] == pytest.approx(1.0e-4)
+    assert training["all_final_losses_finite"] is True
+    assert training["level_subband_rows"]
+    assert decoded.metadata["native_mlx_training_executed"] is True
+    assert decoded.metadata["native_mlx_training_kind"] == (
+        "hf_decoder_full_batch_gradient_descent"
+    )
+    assert decoded.metadata["hf_decoder_fit_mode"].startswith(
+        "native_mlx_full_batch_gradient_descent_from_"
+    )
+    assert training["score_claim"] is False
+    assert training["ready_for_exact_eval_dispatch"] is False
+    assert packet.score_claim is False
+
+
 def test_train_export_hydrates_mlx_targets_and_writes_packet(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -300,6 +340,80 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert report["scorer_loop_qat"]["requested"] is False
     frames = decode_snerv_archive_frames(packet_path.read_bytes())
     assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_train_export_executes_real_mlx_hf_decoder_training(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    pairs[0, 1, 1, 2:14, 2:14] += 17.0
+    pairs = np.clip(pairs, 0.0, 255.0)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    baseline = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "baseline",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+    trained = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "trained",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "native_mlx_decoder_train_steps": 2,
+            "native_mlx_decoder_train_lr": 1.0e-4,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    assert baseline["native_mlx_training_executed"] is False
+    assert trained["native_mlx_training_executed"] is True
+    assert trained["native_mlx_training_kind"] == "hf_decoder_full_batch_gradient_descent"
+    training = trained["native_mlx_hf_decoder_training"]
+    assert training["schema"] == "snerv_native_mlx_hf_decoder_training.v1"
+    assert training["executed"] is True
+    assert training["steps"] == 2
+    assert training["level_subband_rows"]
+    assert training["all_final_losses_finite"] is True
+    assert trained["packet_source"].startswith("native_mlx_full_batch_gradient_descent")
+    assert Path(trained["packet_path"]).read_bytes() != Path(baseline["packet_path"]).read_bytes()
+    decoded = unpack_snerv_archive(Path(trained["packet_path"]).read_bytes())
+    assert decoded.metadata["native_mlx_training_executed"] is True
+    assert decoded.metadata["native_mlx_hf_decoder_training"]["executed"] is True
+    assert decode_snerv_archive_frames(Path(trained["packet_path"]).read_bytes()).shape == (
+        1,
+        2,
+        3,
+        16,
+        16,
+    )
 
 
 def test_train_export_preserves_explicit_source_pair_indices(
