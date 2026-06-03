@@ -739,6 +739,13 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 RequiredSymbol(
                     "snerv",
                     "snerv_official_mfu_hfr_tub_numeric_primitives",
+                    "tac.substrates.snerv_inverse_steg_carrier.official_mfu",
+                    "conv_transpose2d_nchw_mlx",
+                    "official MFU ConvTranspose2d MLX bridge",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_numeric_primitives",
                     "tac.substrates.snerv_inverse_steg_carrier.official_hfr",
                     "OfficialHfrHeads",
                     "official HFR learned-head layout primitive",

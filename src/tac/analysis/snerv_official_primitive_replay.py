@@ -79,14 +79,19 @@ SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS: tuple[SnervPrimitiveReplaySpec, ...] = (
             "OfficialConvTranspose2dNchw",
             "OfficialResidualBlocksWithInputConv",
             "conv_transpose2d_nchw",
+            "conv_transpose2d_nchw_mlx",
+            "SNERV_OFFICIAL_MFU_TORCH_NUMPY_MLX_PARITY_PROOF",
         ),
         test_markers=(
             "test_official_mfu_full_numpy_forward_matches_torch_graph",
+            "test_conv_transpose2d_mlx_modes_match_numpy_reference",
+            "test_official_mfu_mlx_forward_modes_match_numpy_reference",
             "torch.nn.functional.conv_transpose2d",
             "np.testing.assert_allclose",
         ),
         runtime_entrypoint_markers=(
             "class OfficialSnervMfu",
+            "def forward_mlx",
             "low: np.ndarray",
             "class OfficialConvTranspose2dNchw",
         ),
@@ -108,6 +113,7 @@ SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS: tuple[SnervPrimitiveReplaySpec, ...] = (
         receiver_archive_test_markers=(
             "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
             "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames",
             "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
             "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output",
         ),

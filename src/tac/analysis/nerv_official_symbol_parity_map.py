@@ -126,6 +126,10 @@ def _binding_specs() -> tuple[SymbolBinding, ...]:
                     "OfficialSnervMfu",
                 ),
                 (
+                    "tac.substrates.snerv_inverse_steg_carrier.official_mfu",
+                    "conv_transpose2d_nchw_mlx",
+                ),
+                (
                     "tac.substrates.snerv_inverse_steg_carrier.official_hfr",
                     "OfficialHfrHeads",
                 ),
