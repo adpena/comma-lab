@@ -229,11 +229,19 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     assert sweep["status"] == "implementation_sweep_completed_false_authority"
     stack_rows = {row["family"]: row for row in sweep["stack_rows"]}
     assert {
-        "hi_nerv_official_symbol_parity_map_missing",
         "hi_nerv_full600_receiver_proven_candidate_missing",
         "hi_nerv_missing_measured_config_family_ladder",
         "hi_nerv_full_video_decoder_weight_saliency_replay_missing",
     }.issubset(set(stack_rows["hi_nerv"]["blocking_gaps"]))
+    assert "hi_nerv_official_symbol_parity_map_missing" not in stack_rows[
+        "hi_nerv"
+    ]["blocking_gaps"]
+    hi_nerv_source_category = {
+        row["category"]: row for row in stack_rows["hi_nerv"]["category_rows"]
+    }["oss_source_fidelity"]
+    assert hi_nerv_source_category["official_symbol_parity_map"][
+        "local_symbol_map_ready"
+    ] is True
     assert "hi_nerv_missing_integer_bitstream_q_roundtrip" not in stack_rows[
         "hi_nerv"
     ]["blocking_gaps"]
@@ -248,7 +256,6 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     ] == "implemented_or_receiver_proven"
     snerv_blocking_gaps = set(stack_rows["snerv"]["blocking_gaps"])
     assert {
-        "snerv_official_symbol_parity_map_missing",
         "snerv_scorer_loop_decoder_qat_full_video_missing",
         "snerv_missing_measured_fc_dim_modelsize_ladder",
         "snerv_missing_official_stride_stack_parity",
@@ -259,6 +266,13 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "snerv_mlx_native_train_export_surfaces_unproven",
         "snerv_missing_quant_payload_receiver_replay",
     }.issubset(snerv_blocking_gaps)
+    assert "snerv_official_symbol_parity_map_missing" not in snerv_blocking_gaps
+    snerv_source_category = {
+        row["category"]: row for row in stack_rows["snerv"]["category_rows"]
+    }["oss_source_fidelity"]
+    assert snerv_source_category["official_symbol_parity_map"][
+        "local_symbol_map_ready"
+    ] is True
     snerv_features = {
         row["feature_id"]: row for row in stack_rows["snerv"]["official_feature_rows"]
     }

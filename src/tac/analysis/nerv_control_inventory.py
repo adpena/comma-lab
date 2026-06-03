@@ -19,6 +19,9 @@ from tac.analysis.nerv_modelsize_ladder import (
     SCORER_ONLY_OBJECTIVE_AUTHORITY,
     build_nerv_modelsize_ladder,
 )
+from tac.analysis.nerv_official_symbol_parity_map import (
+    build_nerv_official_symbol_parity_map,
+)
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
@@ -1622,7 +1625,16 @@ def _implementation_category_row(
         for hit in row.get("hits", [])
         if hit.get("severity") in {"blocking", "warning"}
     ]
-    blocking_gaps = list(spec.get("intrinsic_gaps", ()))
+    symbol_map = (
+        _official_symbol_parity_map(root, family)
+        if spec["category"] == "oss_source_fidelity"
+        else None
+    )
+    blocking_gaps = _intrinsic_gaps_after_symbol_map(
+        family,
+        spec,
+        symbol_map=symbol_map,
+    )
     blocking_gaps.extend(
         f"{family}_{spec['category']}_missing_file:{path}" for path in missing_files
     )
@@ -1634,6 +1646,7 @@ def _implementation_category_row(
         "status": status,
         "required_files": files,
         "marker_rows": marker_rows,
+        "official_symbol_parity_map": symbol_map,
         "missing_files": missing_files,
         "blocking_gaps": _unique(blocking_gaps),
         "next_action": spec["next_action"],
@@ -1812,6 +1825,54 @@ def _implementation_specs(family: str) -> list[dict[str, Any]]:
             common_exact,
         ]
     return []
+
+
+def _intrinsic_gaps_after_symbol_map(
+    family: str,
+    spec: Mapping[str, Any],
+    *,
+    symbol_map: Mapping[str, Any] | None,
+) -> list[str]:
+    gaps = list(spec.get("intrinsic_gaps", ()))
+    blocker = f"{family}_official_symbol_parity_map_missing"
+    if blocker not in gaps:
+        return gaps
+    if not isinstance(symbol_map, Mapping):
+        return gaps
+    if symbol_map.get("local_symbol_map_ready") is not True:
+        return gaps
+    return [gap for gap in gaps if gap != blocker]
+
+
+def _official_symbol_parity_map(root: Path, family: str) -> dict[str, Any]:
+    try:
+        report = build_nerv_official_symbol_parity_map(
+            repo_root=root,
+            families=(family,),
+        )
+    except Exception as exc:  # pragma: no cover - fail-closed payload.
+        return {
+            "schema": "nerv_official_symbol_parity_map.v1",
+            "family": family,
+            "local_symbol_map_ready": False,
+            "source_pins_verified": False,
+            "blockers": [f"official_symbol_parity_map_error:{type(exc).__name__}"],
+            "error": repr(exc),
+            **FALSE_AUTHORITY,
+        }
+    family_rows = {
+        row["family"]: row for row in report.get("family_rows", ()) if row.get("family")
+    }
+    family_row = dict(family_rows.get(family, {}))
+    return {
+        "schema": report.get("schema"),
+        "family": family,
+        "local_symbol_map_ready": bool(family_row.get("local_symbol_map_ready")),
+        "source_pins_verified": bool(family_row.get("source_pins_verified")),
+        "row_count": int(family_row.get("row_count") or 0),
+        "blockers": list(family_row.get("blockers") or ()),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
