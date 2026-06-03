@@ -10,6 +10,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from tac.adaptation.hard_pair_indices import (
+    HardPairIndicesError,
+    pair_indices_from_mapping,
+)
 from tac.substrates.hprc.mlx_prefilter_coverage import (
     DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY,
     summarize_mlx_prefilter_coverage,
@@ -21,6 +25,7 @@ LEDGER_SCHEMA = "nerv_candidate_byte_feedback_ledger.v1"
 REFRESH_SCHEMA = "nerv_candidate_feedback_refresh.v1"
 TELEMETRY_FEEDBACK_SCHEMA = "nerv_training_telemetry_feedback.v1"
 SAMPLE_GENERALIZATION_GATE_SCHEMA = "nerv_sample_generalization_gate.v1"
+HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA = "hinerv_archive_ladder_candidate_feedback.v1"
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -416,6 +421,155 @@ def build_nerv_candidate_feedback_row(
     }
 
 
+def build_hinerv_archive_ladder_feedback_report(
+    *,
+    archive_ladder_report: Mapping[str, Any],
+    source_report_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Convert HiNeRV archive-ladder rows into planner feedback rows.
+
+    The ladder is full-scope, receiver-closed rate evidence. It is explicitly
+    not scorer evidence, so the generated rows feed measured archive bytes and
+    receiver-proof custody into the long-training planner while preserving
+    blockers for MLX prefilter, local replay, and exact auth.
+    """
+
+    if archive_ladder_report.get("schema") != "hinerv_archive_size_ladder.v1":
+        raise ValueError(
+            "archive_ladder_report must have schema 'hinerv_archive_size_ladder.v1'"
+        )
+    source_path = (
+        Path(source_report_path).expanduser().resolve(strict=False)
+        if source_report_path
+        else None
+    )
+    source_sha = _sha256_file(source_path) if source_path else None
+    num_pairs = _int_or_none(archive_ladder_report.get("num_pairs")) or CONTEST_PAIR_COUNT
+    rows = [
+        _hinerv_archive_ladder_feedback_row(
+            row,
+            num_pairs=int(num_pairs),
+            source_report_path=source_path.as_posix() if source_path else None,
+            source_report_sha256=source_sha,
+        )
+        for row in archive_ladder_report.get("archive_rows") or ()
+        if isinstance(row, Mapping)
+    ]
+    blockers = _dedupe_strings(
+        [
+            "hinerv_archive_ladder_feedback_is_rate_only",
+            "full_video_mlx_prefilter_missing",
+            "local_cpu_replay_gate_missing",
+            "contest_cpu_cuda_exact_eval_not_executed",
+            *(["hinerv_archive_ladder_feedback_rows_missing"] if not rows else []),
+            *[
+                str(blocker)
+                for row in rows
+                for blocker in row.get("direct_feedback_blockers", ())
+                if blocker
+            ],
+        ]
+    )
+    return {
+        "schema": HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA,
+        "source_schema": archive_ladder_report.get("schema"),
+        "source_report_path": source_path.as_posix() if source_path else None,
+        "source_report_sha256": source_sha,
+        "family": "hi_nerv",
+        "feedback_kind": "receiver_closed_archive_ladder_rate_only",
+        "row_count": len(rows),
+        "num_pairs": int(num_pairs),
+        "rows": rows,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hinerv_archive_ladder_feedback_row(
+    row: Mapping[str, Any],
+    *,
+    num_pairs: int,
+    source_report_path: str | None,
+    source_report_sha256: str | None,
+) -> dict[str, Any]:
+    candidate_id = str(row.get("row_id") or row.get("candidate_id") or "").strip()
+    archive_path = str(row.get("archive_path") or "")
+    receiver_proof_path = str(row.get("receiver_proof_path") or "")
+    archive_bytes = _int_or_none(row.get("archive_bytes"))
+    receiver_ready = bool(row.get("runtime_consumption_proof_ready") is True)
+    proof_path_obj = (
+        Path(receiver_proof_path).expanduser().resolve(strict=False)
+        if receiver_proof_path
+        else None
+    )
+    receiver_proof_sha = _sha256_file(proof_path_obj) if proof_path_obj else None
+    direct_blockers: list[str] = []
+    if not candidate_id:
+        direct_blockers.append("hinerv_archive_ladder_feedback_candidate_id_missing")
+    if archive_bytes is None:
+        direct_blockers.append("hinerv_archive_ladder_feedback_archive_bytes_missing")
+    if not archive_path:
+        direct_blockers.append("hinerv_archive_ladder_feedback_archive_path_missing")
+    if not row.get("archive_sha256"):
+        direct_blockers.append("hinerv_archive_ladder_feedback_archive_sha256_missing")
+    if not receiver_ready:
+        direct_blockers.append("hinerv_archive_ladder_feedback_receiver_proof_not_ready")
+    if receiver_ready and not receiver_proof_sha:
+        direct_blockers.append("hinerv_archive_ladder_feedback_receiver_proof_file_missing")
+    sample_blockers = [
+        "representative_distortion_evidence_missing",
+        "hinerv_archive_ladder_nonrate_score_missing",
+        "full600_mlx_scorer_prefilter_required_before_cpu_replay",
+    ]
+    return {
+        "schema": SCHEMA,
+        "created_utc": datetime.now(UTC).isoformat(),
+        "source_report_path": source_report_path,
+        "source_report_sha256": source_report_sha256,
+        "mode": "hinerv_archive_ladder_feedback",
+        "family": "hi_nerv",
+        "candidate_id": candidate_id,
+        "candidate_conditioned": bool(candidate_id),
+        "candidate_num_pairs": int(num_pairs),
+        "measured_num_pairs": int(num_pairs),
+        "feedback_scope": "full600_receiver_closed_archive_ladder_rate_only",
+        "scope_matches_candidate": bool(candidate_id),
+        "feedback_ready": bool(receiver_ready and archive_bytes is not None),
+        "byte_feedback_source": "hinerv_archive_size_ladder",
+        "hard_byte_ceiling": _path_get(row, ("modelsize_candidate", "hard_byte_ceiling")),
+        "nominal_total_payload_bytes": row.get("nominal_total_payload_bytes"),
+        "measured_payload_bytes": None,
+        "measured_archive_bytes": archive_bytes,
+        "measured_minus_nominal_bytes": row.get("measured_minus_nominal_bytes"),
+        "archive_path": archive_path or None,
+        "archive_bytes": archive_bytes,
+        "archive_sha256": row.get("archive_sha256"),
+        "receiver_proof_attached": bool(receiver_ready and receiver_proof_sha),
+        "receiver_proof_path": receiver_proof_path or None,
+        "receiver_proof_sha256": receiver_proof_sha,
+        "receiver_contract_satisfied": bool(receiver_ready),
+        "runtime_consumption_proof_ready": receiver_ready,
+        "full_video_local_prefilter_attached": False,
+        "local_cpu_replay_gate_attached": False,
+        "sample_generalization_blockers": sample_blockers,
+        "sample_generalization_gate": {
+            "schema": SAMPLE_GENERALIZATION_GATE_SCHEMA,
+            "candidate_num_pairs": int(num_pairs),
+            "measured_num_pairs": int(num_pairs),
+            "required_pairs": int(max(CONTEST_PAIR_COUNT, num_pairs)),
+            "byte_feedback_full_scope": True,
+            "representative_distortion_evidence": False,
+            "small_pair_smoke_only": False,
+            "verdict": "rate_only_receiver_closed_ladder_requires_scorer_prefilter",
+            "blockers": sample_blockers,
+            **FALSE_AUTHORITY,
+        },
+        "direct_feedback_blockers": _dedupe_strings(direct_blockers),
+        "source_archive_ladder_row_blockers": list(row.get("blockers") or ()),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _sample_generalization_gate(
     *,
     runner_report: Mapping[str, Any],
@@ -516,6 +670,7 @@ def _sample_generalization_gate(
                 "price_chunked_or_moe_decoders_by_total_archive_zip_bytes_not_per_chunk_smoke_bytes",
             ]
         )
+    blockers.extend(str(blocker) for blocker in hard_pair_coverage.get("blockers") or [])
     return {
         "schema": SAMPLE_GENERALIZATION_GATE_SCHEMA,
         "candidate_num_pairs": int(candidate_pairs),
@@ -616,41 +771,34 @@ def _hard_pair_coverage_evidence(
                         "score_axis_hard_pair_coverage",
                     )
                 )
-                return {
+                pair_indices, parse_blockers, parse_error = _hard_pair_indices_payload(
+                    value
+                )
+                payload = {
                     "schema": "nerv_hard_pair_coverage_evidence.v1",
                     "source_key": source_key,
                     "source_schema": value.get("schema"),
                     "representative_distortion_evidence": representative,
                     "hard_pair_count": _int_or_none(value.get("hard_pair_count")),
-                    "prioritized_pair_indices": _hard_pair_indices_from(value),
+                    "prioritized_pair_indices": pair_indices,
                     "coverage_verdict": value.get("verdict")
                     or value.get("coverage_verdict"),
+                    "blockers": parse_blockers,
                     **FALSE_AUTHORITY,
                 }
+                if parse_error is not None:
+                    payload["hard_pair_indices_parse_error"] = parse_error
+                return payload
     return {}
 
 
-def _hard_pair_indices_from(value: Mapping[str, Any]) -> list[int]:
-    for key in (
-        "prioritized_pair_indices",
-        "hard_pair_indices",
-        "vulnerable_pair_indices",
-        "pair_indices",
-    ):
-        raw = value.get(key)
-        if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, bytearray)):
-            continue
-        out: list[int] = []
-        seen: set[int] = set()
-        for item in raw:
-            parsed = _int_or_none(item)
-            if parsed is None or parsed < 0 or parsed in seen:
-                continue
-            seen.add(parsed)
-            out.append(parsed)
-        if out:
-            return out
-    return []
+def _hard_pair_indices_payload(
+    value: Mapping[str, Any],
+) -> tuple[list[int], list[str], str | None]:
+    try:
+        return list(pair_indices_from_mapping(value)), [], None
+    except HardPairIndicesError as exc:
+        return [], ["hard_pair_indices_parse_failed"], str(exc)
 
 
 def _chunked_micro_row_evidence(
@@ -1878,6 +2026,15 @@ def _relative_improvement(
     return (first_value - last_value) / first_value
 
 
+def _path_get(source: Mapping[str, Any], path: Sequence[str]) -> Any:
+    current: Any = source
+    for key in path:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
 def _family_key(value: str) -> str:
     text = str(value).strip().lower().replace("-", "_")
     if text == "hinerv":
@@ -1886,11 +2043,13 @@ def _family_key(value: str) -> str:
 
 
 __all__ = [
+    "HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA",
     "LEDGER_SCHEMA",
     "REFRESH_SCHEMA",
     "SAMPLE_GENERALIZATION_GATE_SCHEMA",
     "SCHEMA",
     "TELEMETRY_FEEDBACK_SCHEMA",
+    "build_hinerv_archive_ladder_feedback_report",
     "build_nerv_candidate_feedback_row",
     "build_nerv_training_telemetry_feedback_row",
     "recommend_segnet_distillation_weight_for_stagnation",

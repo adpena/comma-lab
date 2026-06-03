@@ -32,17 +32,28 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert report["local_receiver_safe_adapter_present"] is True
     assert report["official_mfu_hfr_tub_parity_proven"] is False
     assert report["blockers"] == ["snerv_official_mfu_hfr_tub_parity_missing"]
+    assert report["official_forward_parity_artifact_row"]["status"] == "missing"
+    states = {row["component_id"]: row for row in report["component_state_rows"]}
+    assert states["mfu"]["classification"] == "receiver_safe_analogue"
+    assert states["hfr"]["classification"] == "receiver_safe_analogue"
+    assert states["tub"]["classification"] == "official_haar_primitive_only"
+    assert all(row["source_forward_parity_proven"] is False for row in states.values())
     assert all(row["status"] == "present" for row in report["official_file_rows"])
     assert all(row["all_markers_present"] for row in report["official_marker_group_rows"])
 
     summary = summarize_snerv_official_source_audit(report)
     assert summary["official_source_markers_present"] is True
     assert summary["official_mfu_hfr_tub_parity_proven"] is False
+    assert {row["classification"] for row in summary["component_states"]} == {
+        "receiver_safe_analogue",
+        "official_haar_primitive_only",
+    }
     assert "snerv_official_mfu_hfr_tub_parity_missing" in summary["blockers"]
 
     md = render_snerv_official_source_parity_markdown(report)
     assert "SNeRV Official Source-Parity Audit" in md
     assert "official MFU/HFR/TUB parity proven: `False`" in md
+    assert "| `tub` | `official_haar_primitive_only` |" in md
 
 
 def test_snerv_official_source_audit_fails_closed_on_missing_official_markers(
@@ -63,6 +74,30 @@ def test_snerv_official_source_audit_fails_closed_on_missing_official_markers(
     assert report["official_source_markers_present"] is False
     assert "snerv_official_source_marker_missing:official_tub_temporal_extension" in (report["blockers"])
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["blockers"]
+
+
+def test_snerv_official_source_audit_rejects_marker_only_parity(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_snerv_repo(tmp_path)
+    local = _write_marker_only_local_snerv_repo(tmp_path)
+
+    report = build_snerv_official_source_parity_audit(
+        official_repo_dir=official,
+        repo_root=local,
+        generated_utc="20260603T000000Z",
+    )
+
+    assert report["official_source_markers_present"] is True
+    assert report["local_receiver_safe_adapter_present"] is True
+    assert report["local_official_parity_marker_row"]["all_markers_present"] is True
+    assert report["official_forward_parity_artifact_row"]["status"] == "missing"
+    assert report["official_mfu_hfr_tub_parity_proven"] is False
+    assert report["blockers"] == ["snerv_official_mfu_hfr_tub_parity_missing"]
+    assert all(
+        "snerv_official_forward_parity_artifact_missing_or_failed" in row["blockers"]
+        for row in report["component_state_rows"]
+    )
 
 
 def _write_minimal_official_snerv_repo(tmp_path: Path) -> Path:
@@ -122,6 +157,24 @@ parser.add_argument('--quant_axis')
 embed_param = 1
 decoder_size = 2
 args.fc_dim = int(np.roots([a, b, c - decoder_size]).max())
+""",
+        encoding="utf-8",
+    )
+    return root
+
+
+def _write_marker_only_local_snerv_repo(tmp_path: Path) -> Path:
+    root = tmp_path / "local"
+    source_root = root / "src/tac/substrates/snerv_inverse_steg_carrier"
+    source_root.mkdir(parents=True)
+    (source_root / "carrier.py").write_text(
+        """
+MultiResolutionFusionUnit = object
+HighFrequencyRestorer = object
+SnervTemporalExtension = object
+SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF = True
+SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF = True
+SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF = True
 """,
         encoding="utf-8",
     )

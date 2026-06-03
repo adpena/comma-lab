@@ -244,7 +244,36 @@ def _load_decoder_weight_waterfill_sources(
         if schema == "hinerv_archive_ladder_waterfill.v1":
             out.extend(_materialize_archive_ladder_waterfill_sidecars(payload, path, sidecar_root))
             continue
+        if schema == "hinerv_archive_size_ladder.v1":
+            out.extend(_load_archive_size_ladder_waterfill_sidecars(payload, path))
+            continue
         raise TypeError(f"{path}: unsupported decoder waterfill source schema {schema!r}")
+    return out
+
+
+def _load_archive_size_ladder_waterfill_sidecars(
+    payload: dict,
+    source_path: Path,
+) -> list[dict]:
+    rows = payload.get("archive_rows")
+    if not isinstance(rows, list):
+        raise TypeError(f"{source_path}: archive size ladder rows must be a list")
+    out: list[dict] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise TypeError(f"{source_path}: archive_rows[{index}] must be an object")
+        plan_path_raw = row.get("decoder_weight_waterfill_plan_path")
+        if not plan_path_raw:
+            continue
+        plan_path = Path(str(plan_path_raw)).expanduser().resolve(strict=False)
+        plan = _load(plan_path)
+        out.append(
+            _waterfill_payload_with_path(
+                plan,
+                plan_path=plan_path,
+                source_path=source_path,
+            )
+        )
     return out
 
 

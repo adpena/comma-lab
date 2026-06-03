@@ -10,6 +10,8 @@ from pathlib import Path
 import pytest
 
 from tac.analysis.nerv_candidate_feedback import (
+    HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA,
+    build_hinerv_archive_ladder_feedback_report,
     build_nerv_candidate_feedback_row,
     build_nerv_training_telemetry_feedback_row,
     refresh_nerv_candidate_feedback_report,
@@ -18,6 +20,7 @@ from tac.analysis.nerv_candidate_feedback import (
     write_refreshed_nerv_candidate_feedback_files,
 )
 from tac.repo_io import ArtifactWriteError
+from tools import harvest_hinerv_archive_ladder_feedback as harvest_ladder_feedback_cli
 from tools.harvest_nerv_training_telemetry_feedback import (
     _effective_stop_reason,
 )
@@ -110,6 +113,100 @@ def _runner_report(tmp_path: Path) -> dict[str, object]:
         },
         "blockers": ["partial_pair_byte_feedback_only"],
     }
+
+
+def test_hinerv_archive_ladder_feedback_preserves_rate_proof_without_score_authority(
+    tmp_path: Path,
+) -> None:
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text('{"runtime_consumption_proof_ready": true}\n', encoding="utf-8")
+    ladder_path = tmp_path / "hinerv_ladder.json"
+    ladder = {
+        "schema": "hinerv_archive_size_ladder.v1",
+        "num_pairs": 600,
+        "archive_rows": [
+            {
+                "row_id": "hinerv_np600_ld4_ed32_dc4_cnx_int2_mixed_ceil36000_tgtmp0p02",
+                "archive_bytes": 45_834,
+                "archive_path": "/Volumes/VertigoDataTier/pact/candidate/archive.zip",
+                "archive_sha256": "0" * 64,
+                "runtime_consumption_proof_ready": True,
+                "receiver_proof_path": proof.as_posix(),
+                "modelsize_candidate": {"hard_byte_ceiling": 36_000},
+                "blockers": [
+                    "hinerv_archive_size_row_has_no_nonrate_score",
+                    "contest_cpu_cuda_exact_eval_not_executed",
+                ],
+            }
+        ],
+    }
+    ladder_path.write_text(json.dumps(ladder), encoding="utf-8")
+
+    report = build_hinerv_archive_ladder_feedback_report(
+        archive_ladder_report=ladder,
+        source_report_path=ladder_path,
+    )
+
+    assert report["schema"] == HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["row_count"] == 1
+    row = report["rows"][0]
+    assert row["schema"] == "nerv_candidate_feedback_row.v1"
+    assert row["family"] == "hi_nerv"
+    assert row["feedback_ready"] is True
+    assert row["receiver_proof_attached"] is True
+    assert row["receiver_proof_sha256"] == hashlib.sha256(proof.read_bytes()).hexdigest()
+    assert row["measured_archive_bytes"] == 45_834
+    assert row["measured_num_pairs"] == 600
+    assert row["full_video_local_prefilter_attached"] is False
+    assert row["local_cpu_replay_gate_attached"] is False
+    assert "hinerv_archive_ladder_nonrate_score_missing" in row["sample_generalization_blockers"]
+    assert row["promotion_eligible"] is False
+
+
+def test_hinerv_archive_ladder_feedback_cli_writes_json_and_jsonl(tmp_path: Path) -> None:
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text("{}\n", encoding="utf-8")
+    ladder = {
+        "schema": "hinerv_archive_size_ladder.v1",
+        "num_pairs": 600,
+        "archive_rows": [
+            {
+                "row_id": "hinerv_candidate",
+                "archive_bytes": 50_000,
+                "archive_path": "/Volumes/VertigoDataTier/pact/candidate/archive.zip",
+                "archive_sha256": "1" * 64,
+                "runtime_consumption_proof_ready": True,
+                "receiver_proof_path": proof.as_posix(),
+            }
+        ],
+    }
+    ladder_path = tmp_path / "ladder.json"
+    output_json = tmp_path / "feedback.json"
+    output_jsonl = tmp_path / "feedback.jsonl"
+    ladder_path.write_text(json.dumps(ladder), encoding="utf-8")
+
+    assert (
+        harvest_ladder_feedback_cli.main(
+            [
+                "--ladder-json",
+                ladder_path.as_posix(),
+                "--output-json",
+                output_json.as_posix(),
+                "--output-jsonl",
+                output_jsonl.as_posix(),
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    rows = [json.loads(line) for line in output_jsonl.read_text(encoding="utf-8").splitlines()]
+    assert payload["schema"] == HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA
+    assert len(rows) == 1
+    assert rows[0]["candidate_id"] == "hinerv_candidate"
+    assert rows[0]["score_claim"] is False
 
 
 def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
@@ -332,6 +429,30 @@ def test_candidate_feedback_accepts_hard_pair_coverage_as_distortion_gate(
     assert "small_pair_distortion_smoke_only_not_representative" not in row[
         "sample_generalization_blockers"
     ]
+
+
+def test_candidate_feedback_hard_pair_coverage_parse_fail_closes(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    report["xray_hardpair_coverage"] = {
+        "schema": "xray_hardpair_coverage.v1",
+        "hard_pair_count": 2,
+        "score_axis_hard_pair_coverage": True,
+        "prioritized_pair_indices": [17, 1.9],
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    coverage = row["sample_generalization_gate"]["hard_pair_coverage"]
+    assert coverage["prioritized_pair_indices"] == []
+    assert coverage["blockers"] == ["hard_pair_indices_parse_failed"]
+    assert "hard_pair_indices_parse_failed" in row["blockers"]
+    assert "hard_pair_indices_parse_failed" in row[
+        "sample_generalization_blockers"
+    ]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def _snerv_native_runner_report(

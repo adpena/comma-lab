@@ -9,6 +9,9 @@ import pytest
 
 from comma_lab.scheduler.experiment_queue import load_queue_definition
 from tac.analysis import nerv_long_training_campaign_plan as plan_module
+from tac.analysis.nerv_candidate_feedback import (
+    build_hinerv_archive_ladder_feedback_report,
+)
 from tac.analysis.nerv_long_training_campaign_plan import (
     DEFAULT_OPTIMIZER_KINDS,
     HINERV_POSE_INSTABILITY_LOW_LR_FLOOR,
@@ -876,6 +879,145 @@ def test_long_training_campaign_plan_routes_hinerv_hard_pair_feedback(
     ] == "17,4,0"
 
 
+def test_long_training_campaign_plan_blocks_invalid_hard_pair_feedback() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "scope_matches_candidate": True,
+                "measured_num_pairs": 600,
+                "hard_pair_coverage": {
+                    "schema": "nerv_hard_pair_coverage_evidence.v1",
+                    "representative_distortion_evidence": True,
+                    "prioritized_pair_indices": [17, 1.9],
+                    "hard_pair_count": 2,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["prioritized_pair_training"]["enabled"] is False
+    assert hi["prioritized_pair_training"]["pair_indices"] == []
+    assert "--prioritized-pair-indices" not in hi["command_argv"]
+    assert "candidate_feedback_prioritized_pair_indices_parse_failed" in hi[
+        "candidate_feedback_evidence_blockers"
+    ]
+    assert "candidate_feedback_prioritized_pair_indices_parse_failed" in hi[
+        "blockers"
+    ]
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
+
+
+def test_long_training_campaign_plan_blocks_bare_snerv_hard_pair_feedback() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "snerv",
+                "candidate_id": _snerv_candidate_id(),
+                "scope_matches_candidate": True,
+                "measured_num_pairs": 600,
+                "hard_pair_indices": [417, 22, 417],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv["prioritized_pair_training"]["enabled"] is False
+    assert snerv["prioritized_pair_training"]["pair_indices"] == []
+    assert "--prioritized-pair-indices" not in snerv["command_argv"]
+    assert "candidate_feedback_prioritized_pair_indices_not_launch_routable" in snerv[
+        "candidate_feedback_evidence_blockers"
+    ]
+    assert "candidate_feedback_prioritized_pair_indices_not_launch_routable" in snerv[
+        "blockers"
+    ]
+    assert snerv["score_claim"] is False
+    assert snerv["ready_for_exact_eval_dispatch"] is False
+
+
+def test_long_training_campaign_plan_routes_snerv_representative_hard_pair_feedback() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "snerv",
+                "candidate_id": _snerv_candidate_id(),
+                "scope_matches_candidate": True,
+                "measured_num_pairs": 600,
+                "hard_pair_coverage": {
+                    "schema": "nerv_hard_pair_coverage_evidence.v1",
+                    "representative_distortion_evidence": True,
+                    "prioritized_pair_indices": [417, 22, 417],
+                    "hard_pair_count": 2,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv["prioritized_pair_training"]["schema"] == (
+        "nerv_prioritized_pair_training_plan.v1"
+    )
+    assert snerv["prioritized_pair_training"]["enabled"] is True
+    assert snerv["prioritized_pair_training"]["pair_indices"] == [417, 22]
+    assert "--prioritized-pair-indices" in snerv["command_argv"]
+    assert (
+        snerv["command_argv"][
+            snerv["command_argv"].index("--prioritized-pair-indices") + 1
+        ]
+        == "417,22"
+    )
+    queue = snerv["experiment_queue_entry"]
+    assert queue["metadata"]["prioritized_pair_training"]["pair_indices"] == [
+        417,
+        22,
+    ]
+    assert queue["steps"][0]["command"] == snerv["command_argv"]
+    assert queue["steps"][0]["command"][
+        queue["steps"][0]["command"].index("--prioritized-pair-indices") + 1
+    ] == "417,22"
+    assert snerv["score_claim"] is False
+    assert snerv["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_blocks_pose_tail_burst_without_pair_indices() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -1150,6 +1292,53 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
     )
     assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" not in snerv["blockers"]
     assert snerv["execution_epochs"] == 29_650
+
+
+def test_long_training_campaign_plan_consumes_hinerv_archive_ladder_feedback(
+    tmp_path: Path,
+) -> None:
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text('{"runtime_consumption_proof_ready": true}\n', encoding="utf-8")
+    ladder_feedback = build_hinerv_archive_ladder_feedback_report(
+        archive_ladder_report={
+            "schema": "hinerv_archive_size_ladder.v1",
+            "num_pairs": 600,
+            "archive_rows": [
+                {
+                    "row_id": "hinerv_tiny",
+                    "archive_bytes": 45_834,
+                    "archive_path": "/Volumes/VertigoDataTier/pact/hinerv_tiny/archive.zip",
+                    "archive_sha256": "2" * 64,
+                    "runtime_consumption_proof_ready": True,
+                    "receiver_proof_path": proof.as_posix(),
+                    "modelsize_candidate": {"hard_byte_ceiling": 178_000},
+                }
+            ],
+        },
+        source_report_path=tmp_path / "archive_ladder.json",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=tuple(ladder_feedback["rows"]),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["candidate_feedback"]["byte_feedback_source"] == "hinerv_archive_size_ladder"
+    assert hi["candidate_feedback"]["receiver_proof_attached"] is True
+    assert hi["curriculum_plan"]["byte_oracle_logging"]["feedback_ready"] is True
+    assert hi["curriculum_plan"]["byte_oracle_logging"]["measured_archive_bytes"] == 45_834
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in hi["blockers"]
+    assert "representative_distortion_evidence_missing" in hi["candidate_feedback_evidence_blockers"]
+    assert hi["cpu_replay_ready"] is False
+    assert hi["exact_gate_ready"] is False
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
 
 
 def test_long_training_campaign_plan_consumes_hinerv_feedback_from_full_row_id() -> None:
@@ -2173,6 +2362,67 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     )
 
     assert rc == 0
+
+
+def test_build_long_training_campaign_plan_cli_extracts_waterfill_from_archive_ladder(
+    tmp_path: Path,
+) -> None:
+    hinerv = tmp_path / "hinerv_budget.json"
+    snerv = tmp_path / "snerv_budget.json"
+    out_json = tmp_path / "campaign.json"
+    waterfill_plan = tmp_path / "decoder_weight_waterfill.json"
+    archive_ladder = tmp_path / "hinerv_archive_ladder.json"
+    hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
+    snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
+    waterfill_plan.write_text(
+        json.dumps(_decoder_weight_waterfill_plan(candidate_id="hinerv_tiny")),
+        encoding="utf-8",
+    )
+    archive_ladder.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_size_ladder.v1",
+                "archive_rows": [
+                    {
+                        "row_id": "hinerv_tiny",
+                        "decoder_weight_waterfill_plan_path": waterfill_plan.as_posix(),
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = cli.main(
+        [
+            "--hinerv-modelsize-budget",
+            hinerv.as_posix(),
+            "--snerv-modelsize-budget",
+            snerv.as_posix(),
+            "--optimizer-kind",
+            "lion",
+            "--epochs",
+            "16",
+            "--max-candidates-per-family",
+            "1",
+            "--decoder-weight-waterfill-source",
+            archive_ladder.as_posix(),
+            "--output-json",
+            out_json.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["decoder_weight_waterfill_source_count"] == 1
+    assert payload["decoder_weight_waterfill_row_count"] == 1
+    assert payload["decoder_weight_waterfill_attached_row_count"] == 1
+    hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["decoder_weight_waterfill_plan"]["attached"] is True
+    assert hi["decoder_weight_waterfill_plan"]["path"] == waterfill_plan.as_posix()
 
 
 def _hinerv_budget() -> dict:

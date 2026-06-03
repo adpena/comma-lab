@@ -42,6 +42,15 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--output-json", type=Path, default=None)
     parser.add_argument("--output-md", type=Path)
+    parser.add_argument(
+        "--official-forward-parity-artifact",
+        type=Path,
+        help=(
+            "Optional JSON proof artifact with schema "
+            "snerv_official_mfu_hfr_tub_forward_parity.v1. A marker constant "
+            "alone is never enough to prove official MFU/HFR/TUB parity."
+        ),
+    )
     parser.add_argument("--expected-output-json-sha256")
     parser.add_argument("--expected-output-md-sha256")
     return parser
@@ -59,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     report = build_snerv_official_source_parity_audit(
         official_repo_dir=args.official_repo_dir,
         repo_root=args.repo_root,
+        official_forward_parity_artifact_path=args.official_forward_parity_artifact,
     )
     json_result = write_json_artifact(
         output_json,

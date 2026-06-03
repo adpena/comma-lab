@@ -17,6 +17,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from tac.adaptation.hard_pair_indices import (
+    HardPairIndicesError,
+    normalize_pair_indices,
+    pair_indices_from_mapping,
+)
 from tac.analysis.nerv_candidate_curriculum import (
     build_hinerv_candidate_curriculum_plan,
     build_snerv_candidate_curriculum_plan,
@@ -636,6 +641,7 @@ def _snerv_campaign_row(
         family="snerv",
         index=candidate_feedback_index,
     )
+    prioritized_pair_indices = _feedback_prioritized_pair_indices(feedback)
     feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
     execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
     quant_bits = min(
@@ -723,6 +729,13 @@ def _snerv_campaign_row(
     if str(candidate.get("snerv_model_size_adapter") or "") == (SNERV_SPECTRA_PRESERVING_ADAPTER):
         insert_at = command.index("--snerv-model-size-adapter")
         command.insert(insert_at, "--snerv-spectra-preserving-adapter")
+    if prioritized_pair_indices:
+        command.extend(
+            [
+                "--prioritized-pair-indices",
+                ",".join(str(value) for value in prioritized_pair_indices),
+            ]
+        )
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
     blockers = _dedupe(
         [
@@ -788,6 +801,9 @@ def _snerv_campaign_row(
             "source_parity": source_parity,
             "candidate_feedback": feedback or None,
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
+            "prioritized_pair_training": _prioritized_pair_training_plan(
+                prioritized_pair_indices
+            ),
         },
     )
 
@@ -1068,51 +1084,75 @@ def _candidate_feedback_evidence_blockers(
     gate = feedback.get("sample_generalization_gate")
     if isinstance(gate, Mapping):
         blockers.extend(str(blocker) for blocker in gate.get("blockers") or [])
+    blockers.extend(_feedback_prioritized_pair_index_blockers(feedback))
     return _dedupe(blockers)
 
 
 def _feedback_prioritized_pair_indices(feedback: Mapping[str, Any]) -> tuple[int, ...]:
     if not isinstance(feedback, Mapping):
         return ()
-    containers: list[Mapping[str, Any]] = []
-    hard_pair = feedback.get("hard_pair_coverage")
-    if isinstance(hard_pair, Mapping):
-        containers.append(hard_pair)
-    gate = feedback.get("sample_generalization_gate")
-    if isinstance(gate, Mapping):
-        nested = gate.get("hard_pair_coverage")
-        if isinstance(nested, Mapping):
-            containers.append(nested)
-        containers.append(gate)
-    containers.append(feedback)
-    for container in containers:
-        for key in (
-            "prioritized_pair_indices",
-            "hard_pair_indices",
-            "vulnerable_pair_indices",
-            "pair_indices",
-        ):
-            normalized = _normalize_pair_index_sequence(container.get(key))
-            if normalized:
-                return normalized
+    if not _feedback_prioritized_pair_indices_routable(feedback):
+        return ()
+    try:
+        return pair_indices_from_mapping(feedback)
+    except HardPairIndicesError:
+        return ()
     return ()
 
 
+def _feedback_prioritized_pair_index_blockers(
+    feedback: Mapping[str, Any],
+) -> list[str]:
+    if not isinstance(feedback, Mapping):
+        return []
+    try:
+        pair_indices = pair_indices_from_mapping(feedback)
+    except HardPairIndicesError:
+        return ["candidate_feedback_prioritized_pair_indices_parse_failed"]
+    if pair_indices and not _feedback_prioritized_pair_indices_routable(feedback):
+        return ["candidate_feedback_prioritized_pair_indices_not_launch_routable"]
+    return []
+
+
+def _feedback_prioritized_pair_indices_routable(feedback: Mapping[str, Any]) -> bool:
+    hard_pair = feedback.get("hard_pair_coverage")
+    if isinstance(hard_pair, Mapping) and _hard_pair_coverage_routable(hard_pair):
+        return True
+    gate = feedback.get("sample_generalization_gate")
+    if isinstance(gate, Mapping):
+        nested = gate.get("hard_pair_coverage")
+        if isinstance(nested, Mapping) and _hard_pair_coverage_routable(nested):
+            return True
+    if str(feedback.get("feedback_kind") or "") == "training_telemetry":
+        return bool(
+            feedback.get("scope_matches_candidate") is True
+            and int(feedback.get("measured_num_pairs") or 0) >= 600
+            and (
+                "launch_hard_pair_prioritized_sampler_successor"
+                in {
+                    str(value)
+                    for value in feedback.get("recommended_launch_mutations") or ()
+                }
+            )
+        )
+    return False
+
+
+def _hard_pair_coverage_routable(coverage: Mapping[str, Any]) -> bool:
+    return bool(
+        coverage.get("representative_distortion_evidence") is True
+        or coverage.get("score_axis_hard_pair_coverage") is True
+        or coverage.get("coverage_valid_for_distortion") is True
+    )
+
+
 def _normalize_pair_index_sequence(value: Any) -> tuple[int, ...]:
-    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+    if value is None:
         return ()
-    out: list[int] = []
-    seen: set[int] = set()
-    for raw in value:
-        try:
-            parsed = int(raw)
-        except (TypeError, ValueError):
-            continue
-        if parsed < 0 or parsed in seen:
-            continue
-        seen.add(parsed)
-        out.append(parsed)
-    return tuple(out)
+    try:
+        return normalize_pair_indices(value)
+    except HardPairIndicesError:
+        return ()
 
 
 def _prioritized_pair_training_plan(pair_indices: Sequence[int]) -> dict[str, Any]:
