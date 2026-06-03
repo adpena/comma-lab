@@ -298,6 +298,52 @@ def test_snerv_fc_dim_and_emb_size_are_receiver_decoder_controls() -> None:
     assert larger_decoder.nominal_rate_score > base.nominal_rate_score
 
 
+def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None:
+    row = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=4,
+        bits_per_coeff=2.0,
+        step_map_bits_per_coeff=1.0,
+        decoder_payload_codec="int4_symmetric",
+        official_modelsize_mparams=0.05,
+        emb_size=0,
+    )
+
+    assert row.modelsize_mparams == 0.05
+    assert row.fc_dim == 11
+    assert row.official_modelsize_solution is not None
+    assert row.official_modelsize_solution["schema"] == (
+        "official_snerv_modelsize_to_fc_dim.v1"
+    )
+    assert row.official_modelsize_solution["fc_dim"] == 11
+    assert row.official_modelsize_solution["score_claim"] is False
+    assert row.official_modelsize_solution["ready_for_exact_eval_dispatch"] is False
+
+    report = build_snerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        per_ceiling_limit=8,
+        official_modelsize_mparams=(0.05,),
+        fc_dims=(),
+    )
+
+    assert report["official_modelsize_mparams"] == [0.05]
+    assert report["official_enc_strds"] == [5, 4, 2, 2, 2]
+    assert report["official_dec_strds"] == [5, 4, 2, 2, 2]
+    assert report["candidate_count"] > 0
+    assert {
+        row["official_modelsize_solution"]["fc_dim"]
+        for row in report["selected_candidates"]
+        if row["official_modelsize_solution"] is not None
+    } == {11}
+    assert all(
+        row["modelsize_mparams"] == 0.05 for row in report["selected_candidates"]
+    )
+
+
 def test_official_nerv_oss_flag_audit_maps_controls_to_local_consumers() -> None:
     audit = official_nerv_oss_flag_audit()
 

@@ -18,6 +18,7 @@ from typing import Any
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_SPECTRA_PRESERVING_ADAPTER,
+    official_snerv_modelsize_to_fc_dim,
 )
 
 CONTEST_RATE_DENOM_BYTES = 37_545_489
@@ -191,6 +192,8 @@ class SnervModelSizeCandidate:
     step_map_bits_per_coeff: float
     decoder_payload_codec: str
     snerv_model_size_adapter: str
+    modelsize_mparams: float | None
+    official_modelsize_solution: dict[str, Any] | None
     fc_dim: int
     emb_size: int
     patch_radius: int
@@ -638,6 +641,9 @@ def analyze_snerv_modelsize_candidate(
     step_map_bits_per_coeff: float,
     decoder_payload_codec: str,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
+    official_modelsize_mparams: float | None = None,
+    official_enc_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
+    official_dec_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
     fc_dim: int = 9,
     emb_size: int = 0,
     patch_radius: int = 1,
@@ -661,6 +667,19 @@ def analyze_snerv_modelsize_candidate(
         SnervModelSizeConfig,
     )
     from tac.substrates.snerv_inverse_steg_carrier.dwt import lf_coeff_count
+
+    official_modelsize_solution = None
+    if official_modelsize_mparams is not None:
+        official_modelsize_solution_obj = official_snerv_modelsize_to_fc_dim(
+            modelsize_mparams=float(official_modelsize_mparams),
+            full_data_length=int(num_pairs) * 2,
+            final_size=int(carrier_hw[0]) * int(carrier_hw[1]),
+            enc_strds=tuple(int(v) for v in official_enc_strds),
+            dec_strds=tuple(int(v) for v in official_dec_strds),
+            emb_size=int(emb_size),
+        )
+        official_modelsize_solution = official_modelsize_solution_obj.as_jsonable()
+        fc_dim = int(official_modelsize_solution_obj.fc_dim)
 
     lf_per_plane = lf_coeff_count(carrier_hw, levels=levels, wavelet=wavelet)
     plane_count = int(num_pairs) * 2 * 3
@@ -714,6 +733,12 @@ def analyze_snerv_modelsize_candidate(
         step_map_bits_per_coeff=float(step_map_bits_per_coeff),
         decoder_payload_codec=str(decoder_payload_codec),
         snerv_model_size_adapter=str(snerv_model_size_adapter),
+        modelsize_mparams=(
+            None
+            if official_modelsize_mparams is None
+            else float(official_modelsize_mparams)
+        ),
+        official_modelsize_solution=official_modelsize_solution,
         fc_dim=int(model_size.fc_dim),
         emb_size=int(model_size.emb_size),
         patch_radius=int(model_size.patch_radius),
@@ -758,6 +783,9 @@ def enumerate_snerv_modelsize_candidates(
     step_map_bits_per_coeffs: tuple[float, ...] = DEFAULT_SNERV_STEP_MAP_BITS_PER_COEFF,
     decoder_codecs: tuple[str, ...] = DEFAULT_SNERV_DECODER_CODECS,
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
+    official_modelsize_mparams: tuple[float, ...] = (),
+    official_enc_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
+    official_dec_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
     patch_radius: int = 1,
@@ -789,6 +817,33 @@ def enumerate_snerv_modelsize_candidates(
                                             snerv_model_size_adapter
                                         ),
                                         fc_dim=int(fc_dim),
+                                        emb_size=int(emb_size),
+                                        patch_radius=int(patch_radius),
+                                        mfu_scales=tuple(int(v) for v in mfu_scales),
+                                        hfr_gain=float(hfr_gain),
+                                        temporal_context=int(temporal_context),
+                                    )
+                                )
+                        for modelsize_mparams in official_modelsize_mparams:
+                            for emb_size in emb_sizes:
+                                rows.append(
+                                    analyze_snerv_modelsize_candidate(
+                                        hard_byte_ceiling=ceiling,
+                                        num_pairs=num_pairs,
+                                        carrier_hw=carrier_hw,
+                                        wavelet=wavelet,
+                                        levels=lvl,
+                                        bits_per_coeff=bits,
+                                        step_map_bits_per_coeff=step_bits,
+                                        decoder_payload_codec=decoder_codec,
+                                        snerv_model_size_adapter=(
+                                            snerv_model_size_adapter
+                                        ),
+                                        official_modelsize_mparams=float(
+                                            modelsize_mparams
+                                        ),
+                                        official_enc_strds=official_enc_strds,
+                                        official_dec_strds=official_dec_strds,
                                         emb_size=int(emb_size),
                                         patch_radius=int(patch_radius),
                                         mfu_scales=tuple(int(v) for v in mfu_scales),
@@ -869,6 +924,9 @@ def build_snerv_modelsize_budget_report(
     wavelet: str = "haar",
     fc_dims: tuple[int, ...] = (9,),
     emb_sizes: tuple[int, ...] = (0,),
+    official_modelsize_mparams: tuple[float, ...] = (),
+    official_enc_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
+    official_dec_strds: tuple[int, ...] = (5, 4, 2, 2, 2),
     snerv_model_size_adapter: str = DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     patch_radius: int = 1,
     mfu_scales: tuple[int, ...] = (1, 2, 4),
@@ -884,6 +942,9 @@ def build_snerv_modelsize_budget_report(
         wavelet=wavelet,
         fc_dims=fc_dims,
         emb_sizes=emb_sizes,
+        official_modelsize_mparams=official_modelsize_mparams,
+        official_enc_strds=official_enc_strds,
+        official_dec_strds=official_dec_strds,
         snerv_model_size_adapter=snerv_model_size_adapter,
         patch_radius=patch_radius,
         mfu_scales=mfu_scales,
@@ -905,6 +966,11 @@ def build_snerv_modelsize_budget_report(
         "wavelet": str(wavelet),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
         "fc_dims": [int(v) for v in fc_dims],
+        "official_modelsize_mparams": [
+            float(v) for v in official_modelsize_mparams
+        ],
+        "official_enc_strds": [int(v) for v in official_enc_strds],
+        "official_dec_strds": [int(v) for v in official_dec_strds],
         "emb_sizes": [int(v) for v in emb_sizes],
         "patch_radius": int(patch_radius),
         "mfu_scales": [int(v) for v in mfu_scales],
