@@ -382,6 +382,27 @@ def _source_features() -> tuple[SourceFeature, ...]:
         ),
         SourceFeature(
             family="hi_nerv",
+            feature_id="hi_nerv_official_forward_parity",
+            official_source_id="hi_nerv_official_repo",
+            implementation_target=(
+                "official HiNeRV torch forward and local portable/MLX forward "
+                "produce matching hashed outputs under a shared input and "
+                "weight manifest"
+            ),
+            required_symbols=(
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_forward_parity",
+                    "tac.substrates.hi_nerv.architecture",
+                    "HINERV_OFFICIAL_FULL_FORWARD_PARITY_PROOF",
+                    "full official/local forward parity proof",
+                ),
+            ),
+            blocker_if_missing="hinerv_official_forward_parity_missing",
+            required_for_long_training=False,
+        ),
+        SourceFeature(
+            family="hi_nerv",
             feature_id="hi_nerv_official_patch_index_path",
             official_source_id="hi_nerv_official_repo",
             implementation_target=(
@@ -1078,7 +1099,7 @@ def _source_audit_rows(
             rows.append(
                 {
                     "family": "hi_nerv",
-                    "feature_id": "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "feature_id": "hi_nerv_official_forward_parity",
                     "audit_kind": "official_source_marker_and_numeric_forward_audit",
                     **summary,
                 }
@@ -1087,7 +1108,7 @@ def _source_audit_rows(
             rows.append(
                 {
                     "family": "hi_nerv",
-                    "feature_id": "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "feature_id": "hi_nerv_official_forward_parity",
                     "audit_kind": "official_source_marker_and_numeric_forward_audit",
                     "schema": schema,
                     "authority": AUTHORITY,

@@ -22,6 +22,7 @@ def test_source_parity_contract_is_false_authority_and_family_scoped() -> None:
     assert set(report["families"]) == {"hi_nerv", "snerv"}
     assert report["required_for_long_training_ready"] is True
     assert report["blockers"] == ()
+    assert "hinerv_official_forward_parity_missing" in report["nonblocking_gaps"]
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["nonblocking_gaps"]
     analogue_rows = {row["surface_id"]: row for row in report["analogue_risk_rows"]}
     assert analogue_rows["snerv_official_mfu_hfr_tub_numeric_primitives"][
@@ -313,12 +314,21 @@ def test_hinerv_official_source_audit_embeds_without_promoting_parity() -> None:
 
     assert report["source_audits"]
     rows = {row["feature_id"]: row for row in report["feature_rows"]}
-    official = rows["hi_nerv_official_feature_grid_convnext_trilinear"]
-    assert official["status"] == "implemented_or_bound"
+    feature_grid = rows["hi_nerv_official_feature_grid_convnext_trilinear"]
+    assert feature_grid["status"] == "implemented_or_bound"
+    assert feature_grid["source_audit_rows"] == ()
+    official = rows["hi_nerv_official_forward_parity"]
+    assert official["status"] == "missing_or_partial"
+    assert official["required_for_long_training"] is False
+    assert official["blockers"] == ("hinerv_official_forward_parity_missing",)
     assert official["source_audit_rows"][0]["official_head_sha"] == "def456"
     assert official["source_audit_rows"][0]["official_source_markers_present"] is True
     assert official["source_audit_rows"][0]["official_forward_parity_proven"] is False
-    assert "hinerv_official_forward_parity_missing" in official["source_audit_rows"][0]["blockers"]
+    assert "hinerv_official_forward_parity_missing" in official[
+        "source_audit_rows"
+    ][0]["blockers"]
+    assert "hinerv_official_forward_parity_missing" in report["nonblocking_gaps"]
+    assert "hinerv_official_forward_parity_missing" not in report["blockers"]
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
