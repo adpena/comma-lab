@@ -1,8 +1,12 @@
 # SPDX-License-Identifier: MIT
-"""HiNeRV-as-renderer — hierarchical NeRV substrate.
+"""Legacy HiNeRV Phase-A renderer.
 
 Per operator directive 2026-05-11 (NeRV-family expansion) + CLAUDE.md HNeRV
 parity discipline (lesson 5: full RGB renderer; lesson 4: inflate ≤200 LOC).
+This module predates the source-faithful ``tac.substrates.hi_nerv`` stack and is
+kept as a research-only compatibility surface. It must not be used as HiNeRV
+production, promotion, or exact-eval authority.
+
 HiNeRV is a sister to MNeRV: both decompose synthesis across multiple scales,
 but where MNeRV uses a Mallat scattering bandpass cascade, HiNeRV uses an
 **explicit learned hierarchy** with separate RGB heads at each scale and a
@@ -63,14 +67,13 @@ from __future__ import annotations
 import hashlib
 import io
 import struct
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
 
 # ── Magic + format ────────────────────────────────────────────────────────
 
@@ -78,6 +81,17 @@ import torch.nn.functional as F
 HINERV_MAGIC: bytes = b"HiNV"
 HINERV_FORMAT_VERSION: int = 1
 HINERV_FORMAT_ID: int = 0x63
+LEGACY_HINERV_PHASE_A_SURFACE: str = "legacy_hinerv_phase_a_renderer.v1"
+LEGACY_HINERV_PHASE_A_BLOCKER: str = (
+    "hi_nerv_legacy_phase_a_trainer_bypasses_official_grid_bitstream_qat"
+)
+LEGACY_HINERV_PHASE_A_MISSING_CONTROLS: tuple[str, ...] = (
+    "official_feature_grid_convnext_trilinear_forward_parity",
+    "official_patch_frame_mode_parity",
+    "official_prune_quantnoise_bitstream_pipeline",
+    "official_torchac_or_measured_receiver_codec_replay",
+    "full600_receiver_closed_archive_proof",
+)
 
 
 # ── Archive grammar ──────────────────────────────────────────────────────
@@ -87,6 +101,9 @@ ARCHIVE_GRAMMAR_HINERV: dict = {
     "format_version": HINERV_FORMAT_VERSION,
     "format_id": HINERV_FORMAT_ID,
     "magic": HINERV_MAGIC.decode("ascii"),
+    "legacy_phase_a_surface": LEGACY_HINERV_PHASE_A_SURFACE,
+    "research_only": True,
+    "blockers": [LEGACY_HINERV_PHASE_A_BLOCKER],
     "sections": [
         {
             "name": "header",
@@ -132,6 +149,29 @@ ARCHIVE_GRAMMAR_HINERV: dict = {
     "schema_keys_in_order": "HiNeRVRenderer.SCHEMA",
     "predicted_total_bytes": "180_000 to 220_000 [predicted; per-level decoders ~3× single-scale params]",
 }
+
+
+def legacy_hinerv_phase_a_false_authority(
+    *, archive_path: str | Path | None = None
+) -> dict[str, object]:
+    """Return the fail-closed authority block for this legacy surface."""
+
+    payload: dict[str, object] = {
+        "schema": "legacy_hinerv_phase_a_false_authority.v1",
+        "surface": LEGACY_HINERV_PHASE_A_SURFACE,
+        "preferred_stack_module": "tac.substrates.hi_nerv",
+        "research_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "official_hi_nerv_stack_bound": False,
+        "blockers": [LEGACY_HINERV_PHASE_A_BLOCKER],
+        "missing_official_controls": list(LEGACY_HINERV_PHASE_A_MISSING_CONTROLS),
+    }
+    if archive_path is not None:
+        payload["archive_path"] = Path(archive_path).as_posix()
+    return payload
 
 
 # ── Config ────────────────────────────────────────────────────────────────
@@ -414,7 +454,7 @@ def train_step_hinerv(
     weights = aux_loss_weights if aux_loss_weights is not None else renderer.config.aux_loss_weights
     aux_loss = torch.zeros(1, device=z.device, dtype=z.dtype).squeeze()
     aux_breakdown: list[float] = []
-    for i, (rgb_stage, w) in enumerate(zip(all_rgbs, weights[:-1])):
+    for rgb_stage, w in zip(all_rgbs, weights[:-1], strict=False):
         # Downsample GT to this stage's spatial size.
         stage_h, stage_w = rgb_stage.shape[-2:]
         gt_flat = gt_pairs_uint8.float().reshape(B * F_pp, C, H_camera, W_camera)

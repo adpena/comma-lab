@@ -63,6 +63,12 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
             "official_haar_dwt1d_lowpass",
             "--snerv-scorer-loop-lf-payload-codec",
             "auto",
+            "--snerv-native-mlx-decoder-train-steps",
+            "5",
+            "--snerv-native-mlx-decoder-train-lr",
+            "0.0008",
+            "--snerv-native-mlx-decoder-train-ridge",
+            "0.000004",
         ]
     )
 
@@ -87,6 +93,15 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
     assert kwargs["snerv_temporal_context"] == 1
     assert kwargs["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert kwargs["lf_payload_codec"] == "auto"
+    controls = trainer._native_mlx_decoder_training_controls(args)
+    assert controls["requested_steps"] == 5
+    assert controls["learning_rate"] == pytest.approx(0.0008)
+    assert controls["ridge"] == pytest.approx(0.000004)
+    assert controls["consumed_by_cli"] is False
+    assert (
+        "snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_scorer_loop_harness"
+        in controls["blockers"]
+    )
 
 
 def test_snerv_scorer_loop_trainer_rejects_local_output_without_opt_in(
@@ -155,6 +170,8 @@ def test_snerv_scorer_loop_trainer_builds_false_authority_report(
     assert report["decoder_feature_count"] == 14
     assert report["lf_payload_codec"] == "portfolio_auto"
     assert report["component_guard_mode"] == "score_primary"
+    assert report["native_mlx_decoder_training_controls"]["requested_steps"] == 0
+    assert report["native_mlx_decoder_training_controls"]["blockers"] == []
     assert report["accepted_improvement"] is True
     assert "paired_contest_cpu_cuda_pass_missing" in report["blockers"]
     assert "official_snerv_mfu_hfr_tub_parity_not_proven" in report["blockers"]
@@ -204,6 +221,10 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
             "official_haar_dwt1d_lowpass",
             "--snerv-scorer-loop-lf-payload-codec",
             "auto",
+            "--snerv-native-mlx-decoder-train-steps",
+            "6",
+            "--snerv-native-mlx-decoder-train-lr",
+            "0.0009",
         ]
     )
 
@@ -230,6 +251,14 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     ).hexdigest()
     assert Path(payload["best_packet_path"]).read_bytes() == _FakeResult.best_packet
     assert payload["best_packet_materialization"]["materialized"] is True
+    controls = payload["native_mlx_decoder_training_controls"]
+    assert controls["requested_steps"] == 6
+    assert controls["learning_rate"] == pytest.approx(0.0009)
+    assert controls["native_mlx_training_executed"] is False
+    assert (
+        "snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_scorer_loop_harness"
+        in payload["blockers"]
+    )
     assert (
         "snerv_native_scorer_loop_best_packet_not_materialized"
         not in payload["blockers"]

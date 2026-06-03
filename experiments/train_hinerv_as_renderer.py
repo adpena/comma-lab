@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""HiNeRV-as-renderer — production trainer with multi-scale auxiliary loss.
+"""Legacy HiNeRV Phase-A trainer with multi-scale auxiliary loss.
 
 Per operator directive 2026-05-11 (NeRV-family expansion). Wires per-stage
 RGB heads + auxiliary multi-scale L1 loss alongside the score-aware Lagrangian.
+
+This is not the current source-faithful HiNeRV production stack. It is retained
+as a research-only compatibility harness; use ``tac.substrates.hi_nerv`` for
+official-grid/bitstream/QAT work.
 
 REPRESENTATION_ARCHIVE_GRAMMAR_BLUEPRINT (per CLAUDE.md Catalog #124)
 ---------------------------------------------------------------------
@@ -47,7 +51,7 @@ PREDICTED_DELTA_SCORE = (
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="HiNeRV-as-renderer production trainer")
+    p = argparse.ArgumentParser(description="Legacy HiNeRV Phase-A research trainer")
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
     p.add_argument("--epochs", type=int, default=200)
@@ -93,8 +97,12 @@ def main(argv: list[str] | None = None) -> int:
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     import random
+
     import numpy as np
-    random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
+
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
 
@@ -103,10 +111,15 @@ def main(argv: list[str] | None = None) -> int:
     print("[hinerv] differentiable rgb_to_yuv6 monkey-patch active")
 
     from tac.hinerv_as_renderer import (
-        HiNeRVConfig, HiNeRVLatentTable, HiNeRVRenderer,
+        HiNeRVConfig,
+        HiNeRVLatentTable,
+        HiNeRVRenderer,
         _make_synthetic_pair_batch_for_smoke,
-        default_pose_surrogate, default_seg_surrogate,
-        export_hinerv_to_archive, train_step_hinerv,
+        default_pose_surrogate,
+        default_seg_surrogate,
+        export_hinerv_to_archive,
+        legacy_hinerv_phase_a_false_authority,
+        train_step_hinerv,
     )
     from tac.lane_12_v2_nerv_as_renderer import RealPairBatchSource
     from tac.training import EMA
@@ -151,7 +164,8 @@ def main(argv: list[str] | None = None) -> int:
 
     from tac.scorer import load_differentiable_scorers
     scorer_pose, scorer_seg = load_differentiable_scorers(REPO_ROOT / "upstream", device=device)
-    scorer_pose.eval(); scorer_seg.eval()
+    scorer_pose.eval()
+    scorer_seg.eval()
     for m in (scorer_pose, scorer_seg):
         for p_ in m.parameters():
             p_.requires_grad_(False)
@@ -169,8 +183,10 @@ def main(argv: list[str] | None = None) -> int:
     batch_size = 1 if args.smoke else args.batch_size
 
     for epoch in range(epochs):
-        renderer.train(); latent_table.train()
-        epoch_loss = 0.0; n_batches = 0
+        renderer.train()
+        latent_table.train()
+        epoch_loss = 0.0
+        n_batches = 0
         if use_synthetic:
             pi, gt = _make_synthetic_pair_batch_for_smoke(
                 batch_size=batch_size, latent_dim=config.latent_dim,
@@ -201,8 +217,10 @@ def main(argv: list[str] | None = None) -> int:
                     max_norm=args.grad_clip_norm,
                 )
             optimizer.step()
-            ema_renderer.update(renderer); ema_latents.update(latent_table)
-            epoch_loss += float(result["loss"].detach()); n_batches += 1
+            ema_renderer.update(renderer)
+            ema_latents.update(latent_table)
+            epoch_loss += float(result["loss"].detach())
+            n_batches += 1
         avg = epoch_loss / max(n_batches, 1)
         if epoch == 0 or (epoch + 1) % args.eval_every_epochs == 0 or epoch == epochs - 1:
             history.append({"epoch": epoch + 1, "avg_loss": avg})
@@ -211,18 +229,24 @@ def main(argv: list[str] | None = None) -> int:
     orig_renderer = {k: v.detach().clone() for k, v in renderer.state_dict().items()}
     orig_latents = {k: v.detach().clone() for k, v in latent_table.state_dict().items()}
     try:
-        ema_renderer.apply(renderer); ema_latents.apply(latent_table)
+        ema_renderer.apply(renderer)
+        ema_latents.apply(latent_table)
         archive_path = args.output_dir / "0.bin"
         archive_sha = export_hinerv_to_archive(
             renderer=renderer, latent_table=latent_table, output_path=archive_path,
         )
     finally:
-        renderer.load_state_dict(orig_renderer); latent_table.load_state_dict(orig_latents)
-        renderer.train(); latent_table.train()
+        renderer.load_state_dict(orig_renderer)
+        latent_table.load_state_dict(orig_latents)
+        renderer.train()
+        latent_table.train()
     archive_bytes = archive_path.stat().st_size
     print(f"[hinerv] archive sha256={archive_sha[:16]} bytes={archive_bytes}")
 
     auth_eval_result = {"status": "deferred_to_external_dispatcher"} if args.auth_eval else None
+    legacy_false_authority = legacy_hinerv_phase_a_false_authority(
+        archive_path=archive_path,
+    )
     provenance = {
         "schema": SCHEMA_VERSION, "lane_id": LANE_ID, "started_at_utc": started_at,
         "device": str(device), "smoke": bool(args.smoke), "epochs": int(epochs),
@@ -237,23 +261,32 @@ def main(argv: list[str] | None = None) -> int:
         "archive_path": str(archive_path), "archive_sha256": archive_sha,
         "archive_bytes": int(archive_bytes), "ema_decay": float(args.ema_decay),
         "predicted_delta_score": PREDICTED_DELTA_SCORE,
+        "research_only": True,
         "score_claim": False, "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
-        "evidence_grade": "[predicted; HiNeRV production trainer; no anchor]",
+        "official_hi_nerv_stack_bound": False,
+        "blockers": legacy_false_authority["blockers"],
+        "legacy_phase_a_false_authority": legacy_false_authority,
+        "evidence_grade": "[research_only; legacy HiNeRV Phase-A trainer; no anchor]",
         "auth_eval_result": auth_eval_result, "history": history,
         "compliance_tags": [
             "ema_0p997_snapshot_restore", "eval_roundtrip_true",
             "no_mps_authoritative", "differentiable_yuv6", "score_aware_lagrangian",
             "multi_scale_aux_loss", "no_synthetic_outside_smoke", "no_tmp_paths",
             "auth_eval_gated_phase_b_option_c", "cuda_required_default",
+            "legacy_phase_a_research_only_fail_closed",
         ],
     }
     (args.output_dir / "provenance.json").write_text(json.dumps(provenance, indent=2))
     print("[hinerv] done")
     if yuv6_token is not None:
         from tac.differentiable_eval_roundtrip import unpatch_upstream_yuv6
-        try: unpatch_upstream_yuv6(yuv6_token)
-        except Exception: pass  # silent-swallow-OK: cleanup unpatch in finalizer; original error already surfaced upstream
+
+        try:
+            unpatch_upstream_yuv6(yuv6_token)
+        except Exception:
+            pass  # silent-swallow-OK: original error already surfaced upstream
     return 0
 
 

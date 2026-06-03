@@ -196,6 +196,28 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=1.0,
     )
+    parser.add_argument(
+        "--snerv-native-mlx-decoder-train-steps",
+        type=int,
+        default=0,
+        help=(
+            "Record a requested native-MLX HF decoder training step count. "
+            "This local CPU scorer-loop harness does not execute native MLX "
+            "decoder training."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-native-mlx-decoder-train-lr",
+        type=float,
+        default=1.0e-5,
+        help="Recorded learning rate for --snerv-native-mlx-decoder-train-steps.",
+    )
+    parser.add_argument(
+        "--snerv-native-mlx-decoder-train-ridge",
+        type=float,
+        default=1.0e-6,
+        help="Recorded ridge pressure for --snerv-native-mlx-decoder-train-steps.",
+    )
     parser.add_argument("--seed", type=int, default=1337)
     return parser
 
@@ -274,9 +296,11 @@ def _build_report(
                 f"reported={reported_bytes} materialized={materialized_bytes}"
             )
     result_blockers = list(payload.get("blockers") or ())
+    native_mlx_decoder_training_controls = _native_mlx_decoder_training_controls(args)
     blockers = [
         *result_blockers,
         *(best_packet_materialization.get("blockers") or ()),
+        *native_mlx_decoder_training_controls["blockers"],
         "full_600_pair_receiver_proof_missing",
         "paired_contest_cpu_cuda_pass_missing",
         "official_snerv_mfu_hfr_tub_parity_not_proven",
@@ -291,6 +315,7 @@ def _build_report(
         "launch_preflight_path": launch_path.as_posix(),
         "storage_preflight": storage_payload,
         "score_loop_kwargs": _score_loop_kwargs_from_args(args),
+        "native_mlx_decoder_training_controls": native_mlx_decoder_training_controls,
         "n_pairs": payload.get("n_pairs"),
         "levels": payload.get("levels"),
         "wavelet": payload.get("wavelet"),
@@ -464,6 +489,26 @@ def _abs_repo_path(path: Path) -> Path:
     if expanded.is_absolute():
         return expanded.resolve(strict=False)
     return (REPO_ROOT / expanded).resolve(strict=False)
+
+
+def _native_mlx_decoder_training_controls(args: argparse.Namespace) -> dict[str, Any]:
+    requested_steps = int(args.snerv_native_mlx_decoder_train_steps)
+    blockers = (
+        ["snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_scorer_loop_harness"]
+        if requested_steps > 0
+        else []
+    )
+    return {
+        "schema": "snerv_native_mlx_decoder_training_cli_control.v1",
+        "requested_steps": requested_steps,
+        "learning_rate": float(args.snerv_native_mlx_decoder_train_lr),
+        "ridge": float(args.snerv_native_mlx_decoder_train_ridge),
+        "consumed_by_cli": False,
+        "consumed_by_archive_metadata": False,
+        "native_mlx_training_executed": False,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _nested(payload: dict[str, Any], *keys: str) -> Any:

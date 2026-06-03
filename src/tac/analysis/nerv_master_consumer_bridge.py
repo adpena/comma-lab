@@ -20,6 +20,7 @@ from tac.substrates.hprc.archive_candidate import (
 SCHEMA = "nerv_master_consumer_bridge.v1"
 AXIS_TAG = "[planning/control]"
 CONTROL_INVENTORY_SCHEMA = "nerv_control_inventory.v1"
+SOURCE_PARITY_CONTRACT_SCHEMA = "nerv_source_parity_contract.v1"
 FALSE_AUTHORITY = {
     **HPRC_FALSE_AUTHORITY,
     "frontier_score_claim": False,
@@ -81,6 +82,7 @@ def build_nerv_master_consumer_bridge(
     control_inventory: Mapping[str, Any],
     implementation_sweep: Mapping[str, Any],
     modelsize_curve: Mapping[str, Any] | None = None,
+    source_parity_contract: Mapping[str, Any] | None = None,
     snerv_scorer_loop_geometry: Mapping[str, Any] | None = None,
     generated_utc: str | None = None,
 ) -> dict[str, Any]:
@@ -103,6 +105,12 @@ def build_nerv_master_consumer_bridge(
             "nerv_modelsize_archive_curve.v1",
             "modelsize_curve",
         )
+    if source_parity_contract is not None:
+        _require_mapping_schema(
+            source_parity_contract,
+            SOURCE_PARITY_CONTRACT_SCHEMA,
+            "source_parity_contract",
+        )
     if snerv_scorer_loop_geometry is not None:
         _require_mapping_schema(
             snerv_scorer_loop_geometry,
@@ -118,6 +126,7 @@ def build_nerv_master_consumer_bridge(
             *_control_inventory_blockers(control_inventory),
             *_string_list(implementation_sweep.get("blockers")),
             *_string_list((modelsize_curve or {}).get("blockers")),
+            *_string_list((source_parity_contract or {}).get("blockers")),
         ]
     )
     units = _stack_units(implementation_sweep) + _control_inventory_units(
@@ -126,6 +135,8 @@ def build_nerv_master_consumer_bridge(
     units.extend(_memo_ref_units(implementation_sweep))
     if modelsize_curve is not None:
         units.extend(_modelsize_units(modelsize_curve))
+    if source_parity_contract is not None:
+        units.extend(_source_parity_units(source_parity_contract))
     if snerv_scorer_loop_geometry is not None:
         units.extend(_snerv_scorer_loop_geometry_units(snerv_scorer_loop_geometry))
     memo_refs = _mapping_list(implementation_sweep.get("related_omx_design_memo_refs"))
@@ -150,6 +161,14 @@ def build_nerv_master_consumer_bridge(
                 "present": False,
                 "schema": None,
                 "blocker": "modelsize_archive_curve_payload_missing",
+            },
+            _surface_ref("source_parity_contract", source_parity_contract)
+            if source_parity_contract is not None
+            else {
+                "surface_id": "source_parity_contract",
+                "present": False,
+                "schema": None,
+                "blocker": "source_parity_contract_payload_missing",
             },
             _surface_ref("snerv_scorer_loop_geometry", snerv_scorer_loop_geometry)
             if snerv_scorer_loop_geometry is not None
@@ -234,6 +253,77 @@ def _control_inventory_units(control_inventory: Mapping[str, Any]) -> list[dict[
         + _binding_surface_units(control_inventory)
         + _control_inventory_evidence_units(control_inventory)
     )
+
+
+def _source_parity_units(report: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Expose source-parity features as reusable master-consumer work units."""
+
+    contract_blockers = _string_list(report.get("blockers"))
+    contract_nonblocking = _string_list(report.get("nonblocking_gaps"))
+    units: list[dict[str, Any]] = []
+    for row in _mapping_list(report.get("feature_rows")):
+        feature_id = str(row.get("feature_id") or "unknown")
+        family = str(row.get("family") or "unknown")
+        row_blockers = _string_list(row.get("blockers"))
+        required = bool(row.get("required_for_long_training"))
+        if row_blockers and required:
+            planner_action = "repair_source_parity_before_long_training"
+        elif row_blockers:
+            planner_action = "close_source_parity_gap_before_promotion_claim"
+        else:
+            planner_action = "consume_bound_source_feature_before_new_glue"
+        units.append(
+            {
+                "unit_id": f"{family}_{feature_id}_source_parity",
+                "unit_type": "source_parity_feature_route",
+                "family": family,
+                "feature_id": feature_id,
+                "official_source_id": row.get("official_source_id"),
+                "implementation_target": row.get("implementation_target"),
+                "status": row.get("status"),
+                "required_for_long_training": required,
+                "contract_schema": report.get("schema"),
+                "contract_required_for_long_training_ready": bool(
+                    report.get("required_for_long_training_ready")
+                ),
+                "source_audit_rows": _mapping_list(row.get("source_audit_rows")),
+                "target_consumers": [
+                    "cathedral_autopilot",
+                    "final_rate_attack",
+                    "bit_allocator",
+                    "sensitivity_map",
+                    "probe_disambiguator",
+                    "continual_learning_posterior",
+                ],
+                "planner_action": planner_action,
+                "blockers": _unique(row_blockers),
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
+    if not units:
+        units.append(
+            {
+                "unit_id": "source_parity_feature_rows_missing",
+                "unit_type": "source_parity_contract_gap",
+                "target_consumers": [
+                    "cathedral_autopilot",
+                    "continual_learning_posterior",
+                ],
+                "planner_action": "regenerate_nerv_source_parity_contract",
+                "contract_schema": report.get("schema"),
+                "blockers": _unique(
+                    [
+                        *contract_blockers,
+                        *contract_nonblocking,
+                        "source_parity_feature_rows_missing",
+                    ]
+                ),
+                "predicted_delta_adjustment": 0.0,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return units
 
 
 def _snerv_scorer_loop_geometry_units(report: Mapping[str, Any]) -> list[dict[str, Any]]:

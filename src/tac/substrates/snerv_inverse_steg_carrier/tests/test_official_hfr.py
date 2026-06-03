@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
+    OFFICIAL_SNERV_HFR_SOURCE_SHA,
     SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF,
     OfficialConv2dNchw,
     OfficialHfrConvBlock,
@@ -16,10 +22,17 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     leaky_relu01,
 )
 
+DEFAULT_OFFICIAL_SNERV_REPO = Path(
+    "/Volumes/VertigoDataTier/pact/experiments/results/"
+    "oss_nerv_source_audit_20260602T113720Z/repos/SNeRV"
+)
+
 
 def test_official_hfr_package_exports_are_available() -> None:
     import tac.substrates.snerv_inverse_steg_carrier as snerv
 
+    assert snerv.OFFICIAL_SNERV_HFR_SOURCE_SHA == OFFICIAL_SNERV_HFR_SOURCE_SHA
+    assert snerv.OFFICIAL_SNERV_HFR_SOURCE_CONTRACT == OFFICIAL_SNERV_HFR_SOURCE_CONTRACT
     assert snerv.OfficialHfrConvBlock is OfficialHfrConvBlock
     assert snerv.OfficialHfrHeads is OfficialHfrHeads
     assert snerv.OfficialConv2dNchw is OfficialConv2dNchw
@@ -27,6 +40,86 @@ def test_official_hfr_package_exports_are_available() -> None:
         SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF
     )
     assert snerv.OFFICIAL_SNERV_HFR_FALSE_AUTHORITY["score_claim"] is False
+
+
+def test_official_hfr_source_contract_is_pinned() -> None:
+    repo = _official_repo()
+
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        91,
+        "idwt = IDWT(wave='haar', mode='periodization').cuda()",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        62,
+        "decoder_layer2 = ConvBlock(ngf1=new_ngf, ngf2=new_ngf, out=3, act='leaky01')",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        63,
+        "decoder_layer3 = ConvBlock(ngf1=new_ngf, ngf2=new_ngf, out=3, act='leaky01')",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        64,
+        "decoder_layer4 = ConvBlock(ngf1=new_ngf, ngf2=new_ngf, out=3, act='leaky01')",
+    )
+    _assert_source_line(repo, "model/snerv.py", 115, "HF_in = pyr_out")
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        116,
+        "lh_out = self.decoder[self.decoder_len](HF_in)",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        117,
+        "hl_out = self.decoder[self.decoder_len+1](HF_in)",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        118,
+        "hh_out = self.decoder[self.decoder_len+2](HF_in)",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv.py",
+        120,
+        "yh_out = torch.stack([lh_out, hl_out, hh_out], dim=2)",
+    )
+    _assert_source_line(repo, "model/snerv.py", 122, "img_out = idwt([yl_out, [yh_out]])")
+    _assert_source_line(
+        repo,
+        "model/layers.py",
+        144,
+        "self.conv1 = nn.Conv2d(kargs['ngf1'], kargs['ngf2'], 1, 1, 0, bias=True)",
+    )
+    _assert_source_line(
+        repo,
+        "model/layers.py",
+        145,
+        "self.conv2 = nn.Conv2d(kargs['ngf2'], kargs['out'], 3, 1, 1)",
+    )
+    _assert_source_line(
+        repo,
+        "model/layers.py",
+        148,
+        "self.act = nn.LeakyReLU(negative_slope=0.1, inplace=True)",
+    )
+    _assert_source_line(
+        repo,
+        "model/layers.py",
+        159,
+        "x = self.act(self.norm(self.conv1(x)))",
+    )
+    _assert_source_line(repo, "model/layers.py", 160, "x = self.conv2(x)")
 
 
 def test_official_hfr_convblock_shape_and_stack_contract() -> None:
@@ -182,3 +275,24 @@ def _head(
             padding=1,
         ),
     )
+
+
+def _official_repo() -> Path:
+    repo = Path(os.environ.get("PACT_SNERV_OFFICIAL_REPO", DEFAULT_OFFICIAL_SNERV_REPO))
+    if not repo.exists():
+        pytest.skip(f"official SNeRV checkout is absent: {repo}")
+    result = subprocess.run(
+        ["git", "-C", repo.as_posix(), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+    assert result.stdout.strip() == OFFICIAL_SNERV_HFR_SOURCE_SHA
+    return repo
+
+
+def _assert_source_line(repo: Path, rel_path: str, line_no: int, snippet: str) -> None:
+    path = repo / rel_path
+    lines = path.read_text(encoding="utf-8").splitlines()
+    assert lines[line_no - 1].strip() == snippet

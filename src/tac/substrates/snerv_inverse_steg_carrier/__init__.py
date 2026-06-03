@@ -32,6 +32,7 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     DEFAULT_SNERV_MODEL_SIZE,
     SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF,
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
@@ -64,6 +65,8 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     FALSE_AUTHORITY as OFFICIAL_SNERV_HFR_FALSE_AUTHORITY,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
+    OFFICIAL_SNERV_HFR_SOURCE_SHA,
     SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF,
     OfficialConv2dNchw,
     OfficialHfrConvBlock,
@@ -112,6 +115,8 @@ __all__ = [
     "DEFAULT_WAVELET",
     "DWT_MODE",
     "OFFICIAL_SNERV_HFR_FALSE_AUTHORITY",
+    "OFFICIAL_SNERV_HFR_SOURCE_CONTRACT",
+    "OFFICIAL_SNERV_HFR_SOURCE_SHA",
     "OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS",
     "OFFICIAL_SNERV_MFU_SOURCE",
     "OFFICIAL_SNERV_RB_SOURCE",
@@ -120,6 +125,7 @@ __all__ = [
     "OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT",
     "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
     "SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF",
+    "SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER",
     "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
     "SNERV_SPECTRA_PRESERVING_ADAPTER",
     "ConvTranspose2dShapeSpec",

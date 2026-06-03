@@ -2792,6 +2792,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--skip-snerv-native-mlx-export",
             "--snerv-native-mlx-receiver-proof-timeout",
             "123",
+            "--snerv-native-mlx-decoder-train-steps",
+            "7",
+            "--snerv-native-mlx-decoder-train-lr",
+            "0.0003",
+            "--snerv-native-mlx-decoder-train-ridge",
+            "0.000004",
         ]
     )
 
@@ -2840,6 +2846,9 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.planner_row_id == "snerv::manual::native_rate_aware_training"
     assert sn.skip_snerv_native_mlx_export is True
     assert sn.snerv_native_mlx_receiver_proof_timeout == 123
+    assert sn.snerv_native_mlx_decoder_train_steps == 7
+    assert sn.snerv_native_mlx_decoder_train_lr == 0.0003
+    assert sn.snerv_native_mlx_decoder_train_ridge == 0.000004
 
 
 def test_top_priority_family_cli_refuses_missing_planner_row(
@@ -5627,6 +5636,26 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
+            "native_mlx_training_executed": int(
+                kwargs.get("native_mlx_decoder_train_steps") or 0
+            )
+            > 0,
+            "native_mlx_training_kind": "full_batch_hf_decoder_gradient_descent",
+            "native_mlx_hf_decoder_training": {
+                "schema": "snerv_native_mlx_hf_decoder_training.v1",
+                "requested_steps": int(
+                    kwargs.get("native_mlx_decoder_train_steps") or 0
+                ),
+                "learning_rate": float(
+                    kwargs.get("native_mlx_decoder_train_lr") or 0.0
+                ),
+                "ridge": float(kwargs.get("native_mlx_decoder_train_ridge") or 0.0),
+                "executed": int(kwargs.get("native_mlx_decoder_train_steps") or 0)
+                > 0,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "scorer_loop_qat": {
                 "executed": bool(kwargs.get("run_scorer_loop_qat")),
                 "receiver_contract_satisfied": bool(kwargs.get("run_scorer_loop_qat")),
@@ -5752,6 +5781,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_scorer_loop_component_guard_mode="pose_seg_hard",
         auto_joint_recon_pixel_weight=True,
         recon_pixel_weight_normalize="none",
+        snerv_native_mlx_decoder_train_steps=11,
+        snerv_native_mlx_decoder_train_lr=0.004,
+        snerv_native_mlx_decoder_train_ridge=0.0003,
         prioritized_pair_indices=(7, 2, 7),
         repo_root=REPO_ROOT,
     )
@@ -5768,6 +5800,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "int2_symmetric"
     )
     assert native_calls[0]["scorer_loop_qat_lf_payload_codec"] == "portfolio_auto"
+    assert native_calls[0]["native_mlx_decoder_train_steps"] == 11
+    assert native_calls[0]["native_mlx_decoder_train_lr"] == pytest.approx(0.004)
+    assert native_calls[0]["native_mlx_decoder_train_ridge"] == pytest.approx(0.0003)
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
         Path(native_calls[0]["recon_pixel_weight_manifest_path"])
@@ -5785,6 +5820,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     )
     assert native["receiver_proof_passed"] is True
     assert native["receiver_contract_satisfied"] is True
+    assert native["native_mlx_training_executed"] is True
+    assert native["native_mlx_training_kind"] == (
+        "full_batch_hf_decoder_gradient_descent"
+    )
+    assert native["native_mlx_hf_decoder_training"]["requested_steps"] == 11
+    assert native["native_mlx_hf_decoder_training"]["learning_rate"] == pytest.approx(
+        0.004
+    )
+    assert native["native_mlx_hf_decoder_training"]["ridge"] == pytest.approx(0.0003)
     assert native["scorer_loop_qat_attached"] is True
     assert native["scorer_loop_qat_receiver_contract_satisfied"] is True
     assert native["scorer_loop_qat_ready_for_pose_guard_gate"] is True

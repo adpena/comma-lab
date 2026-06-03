@@ -61,6 +61,7 @@ __all__ = [
     "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
     "SNERV_OFFICIAL_DEFAULT_DEC_STRDS",
     "SNERV_OFFICIAL_DEFAULT_ENC_STRDS",
+    "SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER",
     "SNERV_OFFICIAL_MODELSIZE_TO_FC_DIM_PROOF",
     "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
     "SNERV_SPECTRA_PRESERVING_ADAPTER",
@@ -87,6 +88,9 @@ _DETAIL_KEYS: Final[tuple[str, str, str]] = ("LH", "HL", "HH")
 _PREDICTOR_TAPS: Final[int] = 9  # 3x3 kernel
 SNERV_SPECTRA_PRESERVING_ADAPTER: Final[str] = (
     "snerv_spectra_preserving_mfu_hfr_temporal_adapter_v1"
+)
+SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER: Final[str] = (
+    "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
 )
 SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF: Final[str] = (
     "receiver_safe_numpy_mfu_hfr_temporal_blocks_no_torch_no_scorer"
@@ -167,7 +171,7 @@ class SnervModelSizeConfig:
         # bytes and decoded pixels rather than only metadata.
         return int(self.fc_dim + self.emb_size + 2 * self.temporal_context)
 
-    def as_jsonable(self) -> dict[str, int | str]:
+    def as_jsonable(self) -> dict[str, object]:
         return {
             "fc_dim": int(self.fc_dim),
             "emb_size": int(self.emb_size),
@@ -178,7 +182,29 @@ class SnervModelSizeConfig:
             "temporal_mode": self.temporal_mode,
             "feature_count": int(self.feature_count),
             "adapter": self.adapter,
+            "official_mfu_hfr_tub_numeric_primitives_requested": bool(
+                self.official_mfu_hfr_tub_numeric_primitives_requested
+            ),
+            "official_mfu_hfr_tub_export_bound": False,
+            "official_mfu_hfr_tub_export_blockers": list(
+                self.official_mfu_hfr_tub_export_blockers
+            ),
         }
+
+    @property
+    def official_mfu_hfr_tub_numeric_primitives_requested(self) -> bool:
+        return self.adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+
+    @property
+    def official_mfu_hfr_tub_export_blockers(self) -> tuple[str, ...]:
+        if not self.official_mfu_hfr_tub_numeric_primitives_requested:
+            return ()
+        return (
+            "snerv_official_neural_decoder_payload_grammar_missing",
+            "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+            "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+            "snerv_official_receiver_runtime_decode_missing",
+        )
 
 
 DEFAULT_SNERV_MODEL_SIZE = SnervModelSizeConfig()

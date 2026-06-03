@@ -258,6 +258,32 @@ def _source_features() -> tuple[SourceFeature, ...]:
         ),
         SourceFeature(
             family="hi_nerv",
+            feature_id="hi_nerv_legacy_phase_a_false_authority_guard",
+            official_source_id="hi_nerv_official_repo",
+            implementation_target=(
+                "legacy tac.hinerv_as_renderer path is explicitly research-only "
+                "and points production work at tac.substrates.hi_nerv"
+            ),
+            required_symbols=(
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_legacy_phase_a_false_authority_guard",
+                    "tac.hinerv_as_renderer",
+                    "LEGACY_HINERV_PHASE_A_BLOCKER",
+                    "legacy Phase-A blocker constant",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_legacy_phase_a_false_authority_guard",
+                    "tac.hinerv_as_renderer",
+                    "legacy_hinerv_phase_a_false_authority",
+                    "fail-closed false-authority payload builder",
+                ),
+            ),
+            blocker_if_missing="hi_nerv_legacy_phase_a_false_authority_guard_missing",
+        ),
+        SourceFeature(
+            family="hi_nerv",
             feature_id="hi_nerv_mlx_tiny_forward_parity",
             official_source_id="hi_nerv_official_repo",
             implementation_target="MLX forward and PyTorch-layout export parity",
@@ -586,6 +612,61 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 "1.0 / (2.0 * np.sqrt(2.0))",
             ),
             blocker_if_missing="snerv_official_tub_haar_dwt1d_temporal_primitive_missing",
+        ),
+        SourceFeature(
+            family="snerv",
+            feature_id="snerv_official_mfu_hfr_tub_numeric_primitives",
+            official_source_id="snerv_spectra_preserving_official_repo",
+            implementation_target=(
+                "portable NumPy/MLX official MFU/HFR/TUB numeric primitives are "
+                "bound as source-graph components; this does not prove full "
+                "official source-forward replay"
+            ),
+            required_symbols=(
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_numeric_primitives",
+                    "tac.substrates.snerv_inverse_steg_carrier.official_mfu",
+                    "OfficialSnervMfu",
+                    "official MFU executable graph primitive",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_numeric_primitives",
+                    "tac.substrates.snerv_inverse_steg_carrier.official_mfu",
+                    "conv_transpose2d_nchw",
+                    "official MFU ConvTranspose2d NumPy reference",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_numeric_primitives",
+                    "tac.substrates.snerv_inverse_steg_carrier.official_hfr",
+                    "OfficialHfrHeads",
+                    "official HFR learned-head layout primitive",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_numeric_primitives",
+                    "tac.substrates.snerv_inverse_steg_carrier.official_hfr",
+                    "conv2d_nchw_mlx",
+                    "official HFR MLX conv reference",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_numeric_primitives",
+                    "tac.substrates.snerv_inverse_steg_carrier.official_tub",
+                    "prepare_official_tub_graph_inputs",
+                    "official SNeRV_T TUB input preparation",
+                ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_official_mfu_hfr_tub_numeric_primitives",
+                    "tac.substrates.snerv_inverse_steg_carrier.official_tub",
+                    "official_output2_fusion_shape",
+                    "official SNeRV_T output_2 fusion shape primitive",
+                ),
+            ),
+            blocker_if_missing="snerv_official_mfu_hfr_tub_numeric_primitives_missing",
         ),
         SourceFeature(
             family="snerv",

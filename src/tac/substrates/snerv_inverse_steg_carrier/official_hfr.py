@@ -23,6 +23,12 @@ import numpy as np
 SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF: Final[str] = (
     "official_snerv_hfr_convblock_three_heads_numpy_nchw"
 )
+OFFICIAL_SNERV_HFR_SOURCE_SHA: Final[str] = (
+    "0844a08f9591eea9625f8b961ed91d08030e06d1"
+)
+OFFICIAL_SNERV_HFR_SOURCE_CONTRACT: Final[str] = (
+    "official_snerv_lines_62_64_91_122_and_layers_144_160_hfr_contract"
+)
 
 FALSE_AUTHORITY: Final[dict[str, bool]] = {
     "score_claim": False,
@@ -349,6 +355,8 @@ def _ensure_nchw_shape(x: Any) -> tuple[int, int, int, int]:
 
 __all__ = [
     "FALSE_AUTHORITY",
+    "OFFICIAL_SNERV_HFR_SOURCE_CONTRACT",
+    "OFFICIAL_SNERV_HFR_SOURCE_SHA",
     "SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF",
     "OfficialConv2dNchw",
     "OfficialHfrConvBlock",

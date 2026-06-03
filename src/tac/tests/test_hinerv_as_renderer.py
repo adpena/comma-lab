@@ -14,6 +14,8 @@ from tac.hinerv_as_renderer import (
     HINERV_FORMAT_ID,
     HINERV_FORMAT_VERSION,
     HINERV_MAGIC,
+    LEGACY_HINERV_PHASE_A_BLOCKER,
+    LEGACY_HINERV_PHASE_A_SURFACE,
     HiNeRVConfig,
     HiNeRVLatentTable,
     HiNeRVRenderer,
@@ -22,9 +24,9 @@ from tac.hinerv_as_renderer import (
     default_pose_surrogate,
     default_seg_surrogate,
     export_hinerv_to_archive,
+    legacy_hinerv_phase_a_false_authority,
     train_step_hinerv,
 )
-
 
 # ── Config ───────────────────────────────────────────────────────────────
 
@@ -57,7 +59,7 @@ def test_config_rejects_zero_final_aux_weight():
 
 
 def test_config_rejects_eval_size_mismatch():
-    with pytest.raises(ValueError, match="eval_size .* != base"):
+    with pytest.raises(ValueError, match=r"eval_size .* != base"):
         HiNeRVConfig(base_h=24, base_w=32, n_levels=3, eval_size=(100, 100))
 
 
@@ -309,5 +311,25 @@ def test_make_synthetic_pair_batch_smoke_shape():
 def test_archive_grammar_hinerv_well_formed():
     g = ARCHIVE_GRAMMAR_HINERV
     assert g["format_id"] == HINERV_FORMAT_ID
+    assert g["legacy_phase_a_surface"] == LEGACY_HINERV_PHASE_A_SURFACE
+    assert g["research_only"] is True
+    assert LEGACY_HINERV_PHASE_A_BLOCKER in g["blockers"]
     section_names = [s["name"] for s in g["sections"]]
     assert "decoder_blob" in section_names
+
+
+def test_legacy_hinerv_phase_a_false_authority_blocks_promotion(tmp_path):
+    archive = tmp_path / "0.bin"
+    payload = legacy_hinerv_phase_a_false_authority(archive_path=archive)
+    assert payload["schema"] == "legacy_hinerv_phase_a_false_authority.v1"
+    assert payload["surface"] == LEGACY_HINERV_PHASE_A_SURFACE
+    assert payload["preferred_stack_module"] == "tac.substrates.hi_nerv"
+    assert payload["research_only"] is True
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["official_hi_nerv_stack_bound"] is False
+    assert LEGACY_HINERV_PHASE_A_BLOCKER in payload["blockers"]
+    assert "official_prune_quantnoise_bitstream_pipeline" in payload[
+        "missing_official_controls"
+    ]

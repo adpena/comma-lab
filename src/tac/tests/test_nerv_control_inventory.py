@@ -174,6 +174,49 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     ]
     assert report["runner_spend_rule"]["score_claim"] is False
     assert report["runner_policy"]["bounded_runner_must_select_from_inventory_rows"]
+    wiring = report["control_wiring_audit"]
+    assert wiring["schema"] == "nerv_control_wiring_audit.v1"
+    assert wiring["score_claim"] is False
+    assert wiring["row_count"] == 9
+    assert wiring["passing_row_count"] == wiring["row_count"]
+    assert wiring["status"] == "control_wiring_static_scan_passed"
+    assert wiring["blockers"] == []
+    wiring_rows = {row["control_id"]: row for row in wiring["rows"]}
+    assert {
+        "shared_target_modelsize_mparams",
+        "hinerv_modelsize_capacity_controls",
+        "snerv_official_modelsize_and_stride_controls",
+        "snerv_receiver_visible_capacity_controls",
+        "snerv_native_mlx_decoder_training_controls",
+        "mlx_optimizer_policy_controls",
+        "coder_aware_qat_and_byte_pressure_controls",
+        "saliency_and_recon_weight_controls",
+        "archive_custody_and_replay_controls",
+    } == set(wiring_rows)
+    assert all(row["missing_marker_count"] == 0 for row in wiring_rows.values())
+    assert any(
+        marker["rel_path"] == "tools/run_compact_renderer_mlx_spine_runner.py"
+        and marker["marker"] == "--target-modelsize-mparams"
+        and marker["present"] is True
+        for marker in wiring_rows["shared_target_modelsize_mparams"][
+            "required_markers"
+        ]
+    )
+    assert any(
+        marker["rel_path"]
+        == "src/tac/analysis/nerv_long_training_campaign_plan.py"
+        and marker["marker"] == "--snerv-native-mlx-decoder-train-steps"
+        and marker["present"] is True
+        for marker in wiring_rows["snerv_native_mlx_decoder_training_controls"][
+            "required_markers"
+        ]
+    )
+    assert wiring_rows["snerv_native_mlx_decoder_training_controls"][
+        "status"
+    ] == "wired_static_scan_passed"
+    assert wiring_rows["saliency_and_recon_weight_controls"][
+        "status"
+    ] == "wired_static_scan_passed"
     ladder = report["modelsize_ladder"]
     assert ladder["schema"] == "nerv_modelsize_ladder.v1"
     assert ladder["score_claim"] is False
@@ -211,25 +254,28 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
         "snerv_missing_official_stride_stack_parity",
         "snerv_mlx_native_train_export_surfaces_unproven",
         "snerv_missing_quant_payload_receiver_replay",
-        "snerv_missing_mfu_blocks",
-        "snerv_missing_official_hfr_heads",
-        "snerv_missing_snerv_t_temporal_path_or_no_go",
     }.issubset(snerv_blocking_gaps)
+    assert "snerv_official_mfu_source_forward_replay_missing" not in snerv_blocking_gaps
+    assert "snerv_official_hfr_source_forward_replay_missing" not in snerv_blocking_gaps
+    assert (
+        "snerv_official_snerv_t_full_tub_source_forward_replay_missing"
+        not in snerv_blocking_gaps
+    )
     snerv_features = {
         row["feature_id"]: row for row in stack_rows["snerv"]["official_feature_rows"]
     }
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "local_binding_status"
-    ] == "missing_or_partial"
+    ] == "implemented_or_receiver_proven"
     assert snerv_features["official_high_frequency_restoration_heads"][
         "local_binding_status"
-    ] == "missing_or_partial"
+    ] == "implemented_or_receiver_proven"
     assert snerv_features["official_temporal_extension_snerv_t"][
         "local_binding_status"
-    ] == "missing_or_partial"
+    ] == "implemented_or_receiver_proven"
     assert snerv_features["official_multi_resolution_fusion_blocks"][
         "missing_markers"
-    ] == ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",)
+    ] == ()
     assert sweep["design_memo_index"]["hi_nerv"]["memo_count"] > 0
     assert sweep["design_memo_index"]["snerv"]["memo_count"] > 0
     assert sweep["design_memo_index"]["hi_nerv"]["memo_paths_are_complete"] is True
@@ -242,6 +288,7 @@ def test_nerv_control_inventory_tracks_hi_nerv_snerv_and_cross_stack_controls() 
     markdown = render_nerv_control_inventory_markdown(report)
     assert "## Implementation Sweep" in markdown
     assert "## Model-Size Ladder" in markdown
+    assert "## Control Wiring Audit" in markdown
     assert "full_video_vjp_master_gradient_authority" in markdown
 
 
@@ -260,6 +307,7 @@ def test_nerv_control_inventory_can_focus_on_snerv_plus_cross_stack_only() -> No
     ]
     assert report["measured_archive_size_ladders"] == {}
     assert report["implementation_sweep"]["status"] == "repo_root_not_supplied"
+    assert report["control_wiring_audit"]["status"] == "repo_root_not_supplied"
 
 
 def test_nerv_control_inventory_accepts_measured_hinerv_archive_size_ladder() -> None:

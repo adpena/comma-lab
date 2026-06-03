@@ -33,6 +33,31 @@ def test_hinerv_generic_resize_path_is_no_longer_a_source_parity_blocker() -> No
     assert "hi_nerv_generic_resolution_path_missing" not in report["blockers"]
 
 
+def test_hinerv_legacy_phase_a_surface_is_fail_closed_in_source_contract() -> None:
+    report = build_nerv_source_parity_contract(
+        repo_root=REPO_ROOT,
+        families=("hi_nerv",),
+    )
+    rows = {row["feature_id"]: row for row in report["feature_rows"]}
+    guard = rows["hi_nerv_legacy_phase_a_false_authority_guard"]
+
+    assert guard["status"] == "implemented_or_bound"
+    assert guard["required_for_long_training"] is True
+    assert guard["blockers"] == ()
+    assert "hi_nerv_legacy_phase_a_false_authority_guard_missing" not in report[
+        "blockers"
+    ]
+    present_symbols = {
+        symbol["symbol"]
+        for symbol in guard["symbol_rows"]
+        if symbol["status"] == "present"
+    }
+    assert {
+        "LEGACY_HINERV_PHASE_A_BLOCKER",
+        "legacy_hinerv_phase_a_false_authority",
+    }.issubset(present_symbols)
+
+
 def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> None:
     report = build_nerv_source_parity_contract(
         repo_root=REPO_ROOT,
@@ -83,6 +108,12 @@ def test_snerv_spectra_preserving_adapter_unblocks_training_but_not_official_par
     assert rows["snerv_official_tub_haar_dwt1d_temporal_primitive"]["status"] == (
         "implemented_or_bound"
     )
+    assert rows["snerv_official_mfu_hfr_tub_numeric_primitives"]["status"] == (
+        "implemented_or_bound"
+    )
+    assert rows["snerv_official_mfu_hfr_tub_numeric_primitives"][
+        "required_for_long_training"
+    ] is True
     assert rows["snerv_receiver_dependency_custody"]["status"] == "implemented_or_bound"
     assert rows["snerv_scalable_layer_admission_policy"]["status"] == ("implemented_or_bound")
     assert rows["snerv_scalable_layer_admission_policy"]["required_for_long_training"] is False
@@ -118,6 +149,25 @@ def test_snerv_spectra_preserving_adapter_unblocks_training_but_not_official_par
     }.issubset(tub_symbols)
     assert tub["blockers"] == ()
     assert {row["status"] for row in tub["source_marker_rows"]} == {"present"}
+    primitive_symbols = {
+        symbol["symbol"]
+        for symbol in rows["snerv_official_mfu_hfr_tub_numeric_primitives"][
+            "symbol_rows"
+        ]
+        if symbol["status"] == "present"
+    }
+    assert {
+        "OfficialSnervMfu",
+        "conv_transpose2d_nchw",
+        "OfficialHfrHeads",
+        "conv2d_nchw_mlx",
+        "prepare_official_tub_graph_inputs",
+        "official_output2_fusion_shape",
+    }.issubset(primitive_symbols)
+    assert (
+        "snerv_official_mfu_hfr_tub_numeric_primitives_missing"
+        not in report["blockers"]
+    )
     controls = {row["control_id"]: row for row in report["control_rows"]}
     assert controls["snerv_fc_dim_modelsize_control"]["status"] == ("implemented_or_declared")
     assert controls["snerv_fc_dim_modelsize_control"]["missing_markers"] == []

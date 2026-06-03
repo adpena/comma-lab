@@ -22,6 +22,8 @@ from typing import Final
 
 import numpy as np
 
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import FALSE_AUTHORITY
+
 OFFICIAL_SNERV_T_SOURCE_SHA: Final[str] = "0844a08f9591eea9625f8b961ed91d08030e06d1"
 OFFICIAL_SNERV_T_TUB_SCHEMA: Final[str] = "official_snerv_t_tub_numpy_graph_inputs.v1"
 OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT: Final[str] = (
@@ -135,8 +137,7 @@ class OfficialTubGraphInputs:
         return {
             "schema": self.schema,
             "source_contract": self.source_contract,
-            "score_claim": bool(self.score_claim),
-            "promotion_eligible": bool(self.promotion_eligible),
+            **FALSE_AUTHORITY,
             "lf_min": float(self.lf_min),
             "lf_max": float(self.lf_max),
             "yl_norm": [float(self.yl_norm[0]), float(self.yl_norm[1])],

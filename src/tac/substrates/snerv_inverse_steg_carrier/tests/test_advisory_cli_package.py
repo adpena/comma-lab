@@ -226,6 +226,59 @@ def test_advisory_cli_forwards_official_modelsize_and_persists_solution(
     assert payload["snerv_fc_dim"] == 11
 
 
+def test_advisory_cli_records_native_mlx_training_knobs_as_unconsumed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = Path(__file__).resolve().parents[5]
+    cli_path = repo_root / "tools/run_snerv_inverse_steg_advisory.py"
+    spec = importlib.util.spec_from_file_location(
+        "run_snerv_inverse_steg_advisory_for_native_control_test",
+        cli_path,
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    fake = _fake_advisory_result(b"SNAR1-native-control")
+    monkeypatch.setattr(module, "run_snerv_advisory", lambda **_kwargs: fake)
+
+    report_path = tmp_path / "advisory_native_controls.json"
+    rc = module.main(
+        [
+            "--n-pairs",
+            "1",
+            "--levels",
+            "1",
+            "--out",
+            str(report_path),
+            "--snerv-native-mlx-decoder-train-steps",
+            "9",
+            "--snerv-native-mlx-decoder-train-lr",
+            "0.0007",
+            "--snerv-native-mlx-decoder-train-ridge",
+            "0.000003",
+        ]
+    )
+    payload = json.loads(report_path.read_text())
+
+    assert rc == 0
+    controls = payload["native_mlx_decoder_training_controls"]
+    assert controls["requested_steps"] == 9
+    assert controls["learning_rate"] == pytest.approx(0.0007)
+    assert controls["ridge"] == pytest.approx(0.000003)
+    assert controls["consumed_by_cli"] is False
+    assert controls["native_mlx_training_executed"] is False
+    assert (
+        "snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_advisory_cli"
+        in controls["blockers"]
+    )
+    assert (
+        "snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_advisory_cli"
+        in payload["blockers"]
+    )
+
+
 def _fake_advisory_result(
     packet: bytes,
     *,

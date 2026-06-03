@@ -22,6 +22,7 @@ from tac.analysis.nerv_modelsize_archive_curve import (
 )
 from tac.analysis.nerv_rate_allocator_bridge import build_nerv_rate_allocator_bridge
 from tac.analysis.nerv_rate_allocator_queue import build_nerv_rate_allocator_work_queue
+from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_contract
 from tac.cathedral.consumer_contract import validate_consumer_module
 from tac.cathedral_consumers import nerv_top_priority_stack_consumer
 
@@ -188,11 +189,16 @@ def test_master_consumer_bridge_and_cathedral_consumer_are_no_authority() -> Non
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    source_parity = build_nerv_source_parity_contract(
+        repo_root=Path(__file__).resolve().parents[3],
+        families=("snerv",),
+    )
 
     bridge = build_nerv_master_consumer_bridge(
         seam=seam,
         control_inventory=control_inventory,
         implementation_sweep=implementation_sweep,
+        source_parity_contract=source_parity,
     )
     assert bridge["schema"] == "nerv_master_consumer_bridge.v1"
     assert bridge["score_claim"] is False
@@ -202,6 +208,31 @@ def test_master_consumer_bridge_and_cathedral_consumer_are_no_authority() -> Non
         unit["unit_type"] == "design_memo_anchor_index"
         for unit in bridge["master_consumer_units"]
     )
+    source_units = [
+        unit
+        for unit in bridge["master_consumer_units"]
+        if unit["unit_type"] == "source_parity_feature_route"
+    ]
+    assert source_units
+    primitive_unit = next(
+        unit
+        for unit in source_units
+        if unit["feature_id"] == "snerv_official_mfu_hfr_tub_numeric_primitives"
+    )
+    assert primitive_unit["planner_action"] == (
+        "consume_bound_source_feature_before_new_glue"
+    )
+    assert primitive_unit["required_for_long_training"] is True
+    parity_unit = next(
+        unit
+        for unit in source_units
+        if unit["feature_id"] == "snerv_official_mfu_hfr_tub_parity"
+    )
+    assert parity_unit["planner_action"] == (
+        "close_source_parity_gap_before_promotion_claim"
+    )
+    assert parity_unit["required_for_long_training"] is False
+    assert "snerv_official_mfu_hfr_tub_parity_missing" in parity_unit["blockers"]
 
     result = nerv_top_priority_stack_consumer.consume_candidate(bridge)
     assert result["schema"] == "nerv_top_priority_stack_consumer_result.v1"

@@ -14,6 +14,9 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_snerv_archive_frames,
     unpack_snerv_archive,
 )
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+)
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
     SNERV_MLX_NATIVE_REPORT_FILENAME,
@@ -205,7 +208,8 @@ def test_packet_builder_consumes_joint_recon_pixel_weight_in_decoder_fit() -> No
     decoded = unpack_snerv_archive(weighted.packet)
     unweighted_decoded = unpack_snerv_archive(unweighted.packet)
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
-    assert decoded.metadata["contest_scorer_distortion_objective"] is True
+    assert decoded.metadata["recon_pixel_weight_verified_gradient_manifest"] is False
+    assert decoded.metadata["contest_scorer_distortion_objective"] is False
     assert decoded.metadata["allocation_mode"] == (
         "joint_p18_p19_lf_waterfill_plus_hf_dwt_adjoint_saliency"
     )
@@ -257,7 +261,7 @@ def test_packet_builder_runs_native_mlx_hf_decoder_training() -> None:
         decoder_payload_codec="int8_symmetric",
         lf_payload_codec="auto",
         native_mlx_decoder_train_steps=2,
-        native_mlx_decoder_train_lr=1.0e-4,
+        native_mlx_decoder_train_lr=1.0e-5,
         native_mlx_decoder_train_ridge=1.0e-6,
     )
 
@@ -267,8 +271,10 @@ def test_packet_builder_runs_native_mlx_hf_decoder_training() -> None:
     assert training["executed"] is True
     assert training["optimizer"] == "full_batch_gradient_descent"
     assert training["steps"] == 2
-    assert training["learning_rate"] == pytest.approx(1.0e-4)
+    assert training["learning_rate"] == pytest.approx(1.0e-5)
     assert training["all_final_losses_finite"] is True
+    assert training["accepted"] is True
+    assert training["any_loss_worsened"] is False
     assert training["level_subband_rows"]
     assert decoded.metadata["native_mlx_training_executed"] is True
     assert decoded.metadata["native_mlx_training_kind"] == (
@@ -280,6 +286,54 @@ def test_packet_builder_runs_native_mlx_hf_decoder_training() -> None:
     assert training["score_claim"] is False
     assert training["ready_for_exact_eval_dispatch"] is False
     assert packet.score_claim is False
+
+
+def test_packet_builder_rejects_worsening_native_mlx_hf_decoder_training() -> None:
+    pytest.importorskip("mlx.core")
+    pairs = _tiny_pairs(pairs=1)
+    pairs[0, 1, 0, 2:13, 3:14] += 9.0
+    pairs = np.clip(pairs, 0.0, 255.0)
+
+    baseline = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+    )
+    divergent = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+        native_mlx_decoder_train_steps=2,
+        native_mlx_decoder_train_lr=1.0e6,
+        native_mlx_decoder_train_ridge=1.0e-6,
+    )
+
+    baseline_decoded = unpack_snerv_archive(baseline.packet)
+    divergent_decoded = unpack_snerv_archive(divergent.packet)
+    training = divergent_decoded.metadata["native_mlx_hf_decoder_training"]
+    assert training["attempted"] is True
+    assert training["accepted"] is False
+    assert training["executed"] is False
+    assert training["blockers"]
+    assert divergent_decoded.metadata["native_mlx_training_executed"] is False
+    assert divergent_decoded.metadata["native_mlx_training_kind"] == "none"
+    assert not divergent_decoded.metadata["hf_decoder_fit_mode"].startswith(
+        "native_mlx_full_batch_gradient_descent"
+    )
+    assert divergent_decoded.sections["decoder_payload"] == (
+        baseline_decoded.sections["decoder_payload"]
+    )
+    assert divergent_decoded.metadata["hf_decoder_fit_mode"] == (
+        baseline_decoded.metadata["hf_decoder_fit_mode"]
+    )
 
 
 def test_train_export_hydrates_mlx_targets_and_writes_packet(
@@ -385,7 +439,7 @@ def test_train_export_executes_real_mlx_hf_decoder_training(
             "bits_per_coeff": 3.0,
             "decoder_payload_codec": "int8_symmetric",
             "native_mlx_decoder_train_steps": 2,
-            "native_mlx_decoder_train_lr": 1.0e-4,
+            "native_mlx_decoder_train_lr": 1.0e-5,
         },
         scorer_upstream_dir="upstream",
         output_height=16,
@@ -402,6 +456,8 @@ def test_train_export_executes_real_mlx_hf_decoder_training(
     assert training["steps"] == 2
     assert training["level_subband_rows"]
     assert training["all_final_losses_finite"] is True
+    assert training["accepted"] is True
+    assert training["any_loss_worsened"] is False
     assert trained["packet_source"].startswith("native_mlx_full_batch_gradient_descent")
     assert Path(trained["packet_path"]).read_bytes() != Path(baseline["packet_path"]).read_bytes()
     decoded = unpack_snerv_archive(Path(trained["packet_path"]).read_bytes())
@@ -414,6 +470,48 @@ def test_train_export_executes_real_mlx_hf_decoder_training(
         16,
         16,
     )
+
+
+def test_train_export_blocks_official_primitives_mode_before_surrogate_hydration(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    def forbidden_decode_mlx_targets(*_args, **_kwargs):
+        raise AssertionError("official primitives mode must fail before target hydration")
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", forbidden_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_blocked",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-primitives-request",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        },
+        scorer_upstream_dir="upstream",
+        run_archive_export=False,
+    )
+
+    assert report["executed"] is False
+    assert report["snerv_official_mfu_hfr_tub_numeric_primitives_requested"] is True
+    assert report["snerv_official_mfu_hfr_tub_export_bound"] is False
+    assert {
+        "snerv_official_neural_decoder_payload_grammar_missing",
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+        "snerv_official_receiver_runtime_decode_missing",
+    }.issubset(set(report["blockers"]))
+    assert report["packet_path"] is None
+    assert report["receiver_proof_passed"] is False
+    binding = report["official_primitive_binding"]
+    assert binding["primitive_modules_available"] is True
+    assert binding["export_consumed_official_mfu"] is False
+    assert binding["export_consumed_official_hfr"] is False
+    assert binding["export_consumed_official_tub"] is False
+    assert Path(report["report_path"]).is_file()
 
 
 def test_train_export_preserves_explicit_source_pair_indices(
@@ -529,6 +627,7 @@ def test_train_export_consumes_file_backed_recon_pixel_weight_with_custody(
         "dwt_adjoint_detail_saliency_diagonal"
     )
     assert decoded.metadata["exact_pixel_weighted_objective"] is False
+    assert decoded.metadata["contest_scorer_distortion_objective"] is False
     assert decoded.metadata["hf_decoder_saliency_gain"] == pytest.approx(2.5)
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
     assert decoded.metadata["recon_pixel_weight_metadata"]["sha256"] == recon["sha256"]
@@ -626,6 +725,8 @@ def test_train_export_certifies_verified_recon_pixel_weight_manifest(
     assert decoded.metadata["recon_pixel_weight_metadata"][
         "producer_manifest_verified"
     ] is True
+    assert decoded.metadata["recon_pixel_weight_verified_gradient_manifest"] is True
+    assert decoded.metadata["contest_scorer_distortion_objective"] is True
 
 
 def test_train_export_refuses_recon_pixel_weight_manifest_sha_mismatch(

@@ -213,6 +213,16 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in snerv_row["source_parity"]["nonblocking_gaps"]
     assert snerv_row["source_parity"]["score_claim"] is False
     assert "--snerv-model-size-adapter" in snerv_row["command_argv"]
+    argv = snerv_row["command_argv"]
+    assert argv[argv.index("--snerv-native-mlx-receiver-proof-timeout") + 1] == "321"
+    assert argv[argv.index("--snerv-native-mlx-decoder-train-steps") + 1] == "5"
+    assert argv[argv.index("--snerv-native-mlx-decoder-train-lr") + 1] == "0.00025"
+    assert argv[argv.index("--snerv-native-mlx-decoder-train-ridge") + 1] == "2e-06"
+    native_training = snerv_row["native_mlx_decoder_training_plan"]
+    assert native_training["schema"] == "snerv_native_mlx_decoder_training_plan.v1"
+    assert native_training["planned_steps"] == 5
+    assert native_training["backend"] == "mlx_metal_full_batch_gradient_descent"
+    assert native_training["score_claim"] is False
     assert (
         snerv_row["command_argv"][snerv_row["command_argv"].index("--snerv-model-size-adapter") + 1]
         == "snerv_fc_dim_emb_size_adapter_v1"
@@ -3107,6 +3117,10 @@ def _snerv_budget() -> dict:
                 "hfr_gain": 0.0,
                 "temporal_context": 0,
                 "temporal_mode": "delta",
+                "snerv_native_mlx_receiver_proof_timeout": 321,
+                "snerv_native_mlx_decoder_train_steps": 5,
+                "snerv_native_mlx_decoder_train_lr": 2.5e-4,
+                "snerv_native_mlx_decoder_train_ridge": 2.0e-6,
                 "decoder_feature_count": 16,
                 "nominal_total_payload_bytes": 190_000,
                 "nominal_under_ceiling": False,

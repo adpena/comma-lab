@@ -2565,6 +2565,9 @@ def _run_snerv_native_mlx_export_attachment(
     recon_pixel_weight_path: str | Path | None,
     recon_pixel_weight_manifest_path: str | Path | None,
     recon_pixel_weight_normalize: str,
+    native_mlx_decoder_train_steps: int,
+    native_mlx_decoder_train_lr: float,
+    native_mlx_decoder_train_ridge: float,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
 
@@ -2626,6 +2629,9 @@ def _run_snerv_native_mlx_export_attachment(
             recon_pixel_weight_path=recon_pixel_weight_path,
             recon_pixel_weight_manifest_path=recon_pixel_weight_manifest_path,
             recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
+            native_mlx_decoder_train_steps=int(native_mlx_decoder_train_steps),
+            native_mlx_decoder_train_lr=float(native_mlx_decoder_train_lr),
+            native_mlx_decoder_train_ridge=float(native_mlx_decoder_train_ridge),
             allow_overwrite=bool(allow_overwrite),
         )
         blockers = list(artifact.get("blockers") or [])
@@ -2667,6 +2673,13 @@ def _run_snerv_native_mlx_export_attachment(
                 **FALSE_AUTHORITY,
             },
             "artifact_schema": artifact.get("schema"),
+            "native_mlx_training_executed": bool(
+                artifact.get("native_mlx_training_executed")
+            ),
+            "native_mlx_training_kind": artifact.get("native_mlx_training_kind"),
+            "native_mlx_hf_decoder_training": artifact.get(
+                "native_mlx_hf_decoder_training"
+            ),
             "artifact_report_path": artifact.get("report_path"),
             "packet_path": artifact.get("packet_path"),
             "packet_bytes": artifact.get("packet_bytes"),
@@ -2697,9 +2710,6 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             "score_aware_long_training_executed": bool(
                 artifact.get("score_aware_long_training_executed")
-            ),
-            "native_mlx_training_executed": bool(
-                artifact.get("native_mlx_training_executed")
             ),
             "native_mlx_train_export_attached": True,
             "native_mlx_full600_export_proof_ready": (
@@ -3172,6 +3182,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     recon_pixel_weight_normalize: str = "mean",
     run_native_mlx_export: bool = False,
     snerv_native_mlx_receiver_proof_timeout_seconds: int = 1800,
+    snerv_native_mlx_decoder_train_steps: int = 0,
+    snerv_native_mlx_decoder_train_lr: float = 1.0e-5,
+    snerv_native_mlx_decoder_train_ridge: float = 1.0e-6,
     run_scorer_loop_qat: bool = False,
     snerv_scorer_loop_max_trials: int = 2,
     snerv_scorer_loop_search_mode: str = "nes_pair_robust",
@@ -3641,6 +3654,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "wavelet": str(wavelet),
         "bits_per_coeff": float(target_bits_per_coeff),
         "step_map_bits_per_coeff": float(step_map_waterfill_bits_per_coeff),
+        "snerv_native_mlx_decoder_train_steps": int(
+            snerv_native_mlx_decoder_train_steps
+        ),
+        "snerv_native_mlx_decoder_train_lr": float(
+            snerv_native_mlx_decoder_train_lr
+        ),
+        "snerv_native_mlx_decoder_train_ridge": float(
+            snerv_native_mlx_decoder_train_ridge
+        ),
     }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
@@ -3669,6 +3691,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         recon_pixel_weight_path=effective_recon_pixel_weight_path,
         recon_pixel_weight_manifest_path=effective_recon_pixel_weight_manifest_path,
         recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
+        native_mlx_decoder_train_steps=int(snerv_native_mlx_decoder_train_steps),
+        native_mlx_decoder_train_lr=float(snerv_native_mlx_decoder_train_lr),
+        native_mlx_decoder_train_ridge=float(snerv_native_mlx_decoder_train_ridge),
     )
     snerv_mlx_native_file_backed_evidence = (
         build_snerv_mlx_native_file_backed_evidence(
@@ -11930,6 +11955,27 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Timeout seconds for the SNeRV MLX-native receiver proof.",
     )
     parser.add_argument(
+        "--snerv-native-mlx-decoder-train-steps",
+        default=0,
+        type=int,
+        help=(
+            "Full-batch MLX gradient steps for the SNeRV HF decoder before "
+            "receiver/archive proof. Zero keeps the closed-form decoder fit."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-native-mlx-decoder-train-lr",
+        default=1.0e-5,
+        type=float,
+        help="Learning rate for --snerv-native-mlx-decoder-train-steps.",
+    )
+    parser.add_argument(
+        "--snerv-native-mlx-decoder-train-ridge",
+        default=1.0e-6,
+        type=float,
+        help="L2/ridge pressure for SNeRV native MLX HF decoder training.",
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-qat",
         action="store_true",
         help=(
@@ -12551,6 +12597,15 @@ def main(argv: list[str] | None = None) -> int:
             run_native_mlx_export=not args.skip_snerv_native_mlx_export,
             snerv_native_mlx_receiver_proof_timeout_seconds=(
                 args.snerv_native_mlx_receiver_proof_timeout
+            ),
+            snerv_native_mlx_decoder_train_steps=(
+                args.snerv_native_mlx_decoder_train_steps
+            ),
+            snerv_native_mlx_decoder_train_lr=(
+                args.snerv_native_mlx_decoder_train_lr
+            ),
+            snerv_native_mlx_decoder_train_ridge=(
+                args.snerv_native_mlx_decoder_train_ridge
             ),
             run_scorer_loop_qat=bool(
                 args.coder_aware_qat or args.snerv_scorer_loop_qat

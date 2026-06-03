@@ -67,6 +67,7 @@ def build_nerv_control_inventory(
         "runner_spend_rule": _runner_spend_rule(),
         "stack_transfer_matrix": _stack_transfer_matrix(),
         "local_binding_surfaces": _local_binding_surfaces(),
+        "control_wiring_audit": _control_wiring_audit(repo_root=repo_root),
         "modelsize_ladder": build_nerv_modelsize_ladder(focus_families=focus),
         "measured_archive_size_ladders": _measured_archive_size_ladders(
             hinerv_archive_size_ladder_report=hinerv_archive_size_ladder_report,
@@ -275,6 +276,18 @@ def render_nerv_control_inventory_markdown(report: Mapping[str, Any]) -> str:
         lines.extend(["", "## Source Review Policy", ""])
         for rule in policy.get("hard_rules", []):
             lines.append(f"- {rule}")
+    wiring = report.get("control_wiring_audit")
+    if isinstance(wiring, Mapping):
+        lines.extend(["", "## Control Wiring Audit", ""])
+        lines.append(
+            f"Status: `{wiring.get('status')}` "
+            f"({wiring.get('passing_row_count', 0)}/{wiring.get('row_count', 0)} pass)"
+        )
+        for row in wiring.get("rows", []):
+            lines.append(
+                f"- `{row['control_id']}`: `{row['status']}` "
+                f"({row.get('missing_marker_count', 0)} missing markers)"
+            )
     lines.extend(["", "## Sources", ""])
     for source in report.get("upstream_sources_checked", []):
         lines.append(f"- [{source['id']}]({source['url']}): {source['control_signal']}")
@@ -344,6 +357,243 @@ def build_nerv_design_implementation_sweep(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _control_wiring_audit(*, repo_root: str | Path | None) -> dict[str, Any]:
+    """Statically prove high-risk controls are executable, not metadata-only.
+
+    This is deliberately a code-path audit, not a score claim. A row passes only
+    when every required marker is present in executable source with comments and
+    docstrings stripped. Missing markers become blockers so fake flags and
+    orphan controls cannot silently enter long HiNeRV/SNeRV campaigns.
+    """
+
+    if repo_root is None:
+        return {
+            "schema": "nerv_control_wiring_audit.v1",
+            "status": "repo_root_not_supplied",
+            "row_count": 0,
+            "passing_row_count": 0,
+            "rows": [],
+            "blockers": ["repo_root_not_supplied_for_control_wiring_audit"],
+            **FALSE_AUTHORITY,
+        }
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    if not root.is_dir():
+        return {
+            "schema": "nerv_control_wiring_audit.v1",
+            "status": "repo_root_missing",
+            "repo_root": root.as_posix(),
+            "row_count": 0,
+            "passing_row_count": 0,
+            "rows": [],
+            "blockers": ["repo_root_missing_for_control_wiring_audit"],
+            **FALSE_AUTHORITY,
+        }
+    source_cache: dict[str, str] = {}
+    rows = [
+        _control_wiring_row(root, source_cache, spec)
+        for spec in _control_wiring_specs()
+    ]
+    blockers = _unique(
+        blocker for row in rows for blocker in row.get("blockers", [])
+    )
+    passing = [row for row in rows if row["status"] == "wired_static_scan_passed"]
+    return {
+        "schema": "nerv_control_wiring_audit.v1",
+        "status": (
+            "control_wiring_static_scan_passed"
+            if not blockers
+            else "control_wiring_static_scan_blocked"
+        ),
+        "repo_root": root.as_posix(),
+        "authority": "static_source_scan_only_not_score_or_runtime_authority",
+        "row_count": len(rows),
+        "passing_row_count": len(passing),
+        "rows": rows,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _control_wiring_specs() -> list[dict[str, Any]]:
+    runner = "tools/run_compact_renderer_mlx_spine_runner.py"
+    campaign = "src/tac/analysis/nerv_long_training_campaign_plan.py"
+    budget = "src/tac/analysis/nerv_modelsize_budget.py"
+    shared_adapter = "src/tac/substrates/_shared/mlx_score_aware/adapter.py"
+    shared_bundle = "src/tac/substrates/_shared/mlx_score_aware/bundle.py"
+    shared_loss = "src/tac/substrates/_shared/mlx_score_aware/loss.py"
+    snerv_export = (
+        "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py"
+    )
+    snerv_carrier = "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+    return [
+        {
+            "control_id": "shared_target_modelsize_mparams",
+            "families": ("hi_nerv", "snerv"),
+            "required_markers": (
+                (runner, "--target-modelsize-mparams"),
+                (runner, "_resolve_execute_modelsize_candidate"),
+                (runner, "target_modelsize_mparams"),
+                (runner, "enumerate_hinerv_modelsize_candidates"),
+                (runner, "enumerate_snerv_modelsize_candidates"),
+                (runner, "_modelsize_control_contract"),
+                (budget, "modelsize_control_precedence_contract"),
+            ),
+        },
+        {
+            "control_id": "hinerv_modelsize_capacity_controls",
+            "families": ("hi_nerv",),
+            "required_markers": (
+                (runner, "--hinerv-target-modelsize-mparams"),
+                (runner, "_hi_nerv_modelsize_candidate_has_official_controls"),
+                (runner, "_bind_hi_nerv_modelsize_launch_pressure"),
+                (runner, "hi_nerv_modelsize_launch_pressure"),
+                (runner, "modelsize_budget_evidence"),
+                (budget, "tag_hinerv_target_modelsize_candidate"),
+            ),
+        },
+        {
+            "control_id": "snerv_official_modelsize_and_stride_controls",
+            "families": ("snerv",),
+            "required_markers": (
+                (runner, "--snerv-official-modelsize-mparams"),
+                (runner, "--snerv-modelsize-control-profile"),
+                (runner, "--snerv-official-enc-strds"),
+                (runner, "--snerv-official-dec-strds"),
+                (runner, "official_modelsize_solution"),
+                (budget, "official_snerv_modelsize_to_fc_dim"),
+                (budget, "snerv_modelsize_control_profile"),
+            ),
+        },
+        {
+            "control_id": "snerv_receiver_visible_capacity_controls",
+            "families": ("snerv",),
+            "required_markers": (
+                (runner, "--snerv-fc-dim"),
+                (runner, "--snerv-emb-size"),
+                (runner, "--snerv-patch-radius"),
+                (runner, "--snerv-mfu-scales"),
+                (runner, "--snerv-hfr-gain"),
+                (runner, "--snerv-temporal-context"),
+                (runner, "--snerv-temporal-mode"),
+                (runner, "resolved_snerv_modelsize_candidate"),
+                (snerv_carrier, "SnervModelSizeConfig"),
+                (snerv_export, "modelsize_candidate"),
+            ),
+        },
+        {
+            "control_id": "snerv_native_mlx_decoder_training_controls",
+            "families": ("snerv",),
+            "required_markers": (
+                (runner, "--snerv-native-mlx-decoder-train-steps"),
+                (runner, "native_mlx_decoder_train_steps"),
+                (campaign, "native_mlx_decoder_training_plan"),
+                (campaign, "--snerv-native-mlx-decoder-train-steps"),
+                (snerv_export, "_fit_hf_decoder_mlx_full_batch_gradient_descent"),
+                (snerv_export, "native_mlx_training_executed"),
+            ),
+        },
+        {
+            "control_id": "mlx_optimizer_policy_controls",
+            "families": ("hi_nerv", "snerv", "selector_v4"),
+            "required_markers": (
+                (runner, "--optimizer-kind"),
+                (runner, "--hi-nerv-optimizer-policy"),
+                (runner, "_resolve_mlx_score_aware_optimizer_controls"),
+                (runner, "_resolve_hi_nerv_optimizer_policy"),
+                (runner, "optimizer_kind_consumed_by_native_mlx"),
+                (shared_adapter, "post_optimizer_projection"),
+            ),
+        },
+        {
+            "control_id": "coder_aware_qat_and_byte_pressure_controls",
+            "families": ("hi_nerv", "snerv", "selector_v4"),
+            "required_markers": (
+                (runner, "--coder-aware-qat"),
+                (runner, "--coder-qat-quant-bits"),
+                (runner, "--coder-qat-c1a-entropy-weight"),
+                (runner, "_build_pact_coder_qat_config_and_metadata"),
+                (shared_adapter, "extra_loss_terms"),
+                (shared_adapter, "CoderAwareQATConfig"),
+            ),
+        },
+        {
+            "control_id": "saliency_and_recon_weight_controls",
+            "families": ("hi_nerv", "snerv"),
+            "required_markers": (
+                (runner, "--recon-pixel-weight-path"),
+                (runner, "--auto-joint-recon-pixel-weight"),
+                (runner, "--auto-segnet-boundary-recon-weight"),
+                (runner, "recon_pixel_weight_path"),
+                (snerv_export, "recon_pixel_weight_path"),
+                (shared_bundle, "recon_pixel_weight"),
+                (shared_loss, "_prepare_recon_pixel_weight"),
+                (shared_loss, "_weighted_recon"),
+            ),
+        },
+        {
+            "control_id": "archive_custody_and_replay_controls",
+            "families": ("hi_nerv", "snerv", "selector_v4"),
+            "required_markers": (
+                (runner, "--run-local-cpu-replay"),
+                (runner, "--run-receiver-proof"),
+                (runner, "--run-post-export-materializers"),
+                (runner, "receiver_contract_satisfied"),
+                (runner, "ready_for_exact_eval_dispatch"),
+                (runner, "contest_cpu_cuda_exact_eval_not_executed"),
+            ),
+        },
+    ]
+
+
+def _control_wiring_row(
+    root: Path,
+    source_cache: dict[str, str],
+    spec: Mapping[str, Any],
+) -> dict[str, Any]:
+    marker_rows = []
+    blockers = []
+    for rel_path, marker in spec.get("required_markers", ()):
+        source = _cached_marker_source(root, source_cache, str(rel_path))
+        present = str(marker) in source
+        marker_row = {
+            "rel_path": str(rel_path),
+            "marker": str(marker),
+            "present": present,
+        }
+        marker_rows.append(marker_row)
+        if not present:
+            blockers.append(
+                "control_marker_missing:"
+                f"{spec['control_id']}:{rel_path}:{marker}"
+            )
+    return {
+        "schema": "nerv_control_wiring_audit_row.v1",
+        "control_id": str(spec["control_id"]),
+        "families": [str(value) for value in spec.get("families", ())],
+        "status": (
+            "wired_static_scan_passed" if not blockers else "wired_static_scan_blocked"
+        ),
+        "required_marker_count": len(marker_rows),
+        "missing_marker_count": len(blockers),
+        "required_markers": marker_rows,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _cached_marker_source(
+    root: Path,
+    source_cache: dict[str, str],
+    rel_path: str,
+) -> str:
+    cached = source_cache.get(rel_path)
+    if cached is not None:
+        return cached
+    source = read_python_source_for_marker_scan(root / rel_path)
+    source_cache[rel_path] = source
+    return source
 
 
 def _measured_archive_size_ladders(
@@ -1632,18 +1882,32 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
             ),
             (
                 "official_multi_resolution_fusion_blocks",
-                "missing_mfu_blocks",
-                ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",),
+                "official_mfu_source_forward_replay_missing",
+                (
+                    "OfficialSnervMfu",
+                    "OfficialConvTranspose2dNchw",
+                    "OfficialResidualBlocksWithInputConv",
+                    "OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS",
+                ),
             ),
             (
                 "official_high_frequency_restoration_heads",
-                "missing_official_hfr_heads",
-                ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",),
+                "official_hfr_source_forward_replay_missing",
+                (
+                    "OfficialHfrHeads",
+                    "OfficialHfrConvBlock",
+                    "SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF",
+                    "OFFICIAL_SNERV_HFR_FALSE_AUTHORITY",
+                ),
             ),
             (
                 "official_temporal_extension_snerv_t",
-                "missing_snerv_t_temporal_path_or_no_go",
-                ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",),
+                "official_snerv_t_full_tub_source_forward_replay_missing",
+                (
+                    "prepare_official_tub_graph_inputs",
+                    "official_output2_fusion_shape",
+                    "OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT",
+                ),
             ),
             (
                 "official_modelsize_fc_dim_budget_binding",

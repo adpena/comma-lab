@@ -83,8 +83,26 @@ def test_official_snerv_t_tub_source_contract_is_pinned() -> None:
     _assert_source_line(
         repo,
         "model/snerv_t.py",
+        131,
+        "embed_lv_n, embed_hv_n = DWT1D(J=1, wave='haar', mode='periodization').cuda()(torch.cat([embed[0:1], embed[2:3]],0).reshape(n,c,h*w).permute(2,1,0))",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
         134,
         "embed_hv_p = self.encoder[1]((embed_lv_p.permute(2,1,0).reshape(1,c,h,w))/2)",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        135,
+        "embed_hv_n = self.encoder[2]((embed_lv_n.permute(2,1,0).reshape(1,c,h,w))/2)",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        136,
+        "img_embed = [embed_curr, torch.cat([embed_hv_p, embed_hv_n],1), yl_norm]",
     )
     _assert_source_line(
         repo,
@@ -98,6 +116,9 @@ def test_official_snerv_t_tub_source_contract_is_pinned() -> None:
         150,
         "output_2 = output_2.view(n, -1, self.fc_h, self.fc_w, h, w).permute(0,1,4,2,5,3).reshape(n,-1,self.fc_h * h, self.fc_w * w)",
     )
+    _assert_source_line(repo, "requirements.txt", 1, "torch==1.8.1")
+    _assert_source_line(repo, "requirements.txt", 13, "pytorch-wavelets==1.3.0")
+    _assert_source_line(repo, "requirements.txt", 14, "PyWavelets==1.4.1")
 
 
 def test_official_tub_graph_inputs_match_haar_lowpass_contract() -> None:
@@ -142,6 +163,8 @@ def test_official_tub_graph_inputs_match_haar_lowpass_contract() -> None:
     assert metadata["shape_metadata"]["temporal_encoder_input_count"] == 2
     assert metadata["score_claim"] is False
     assert metadata["promotion_eligible"] is False
+    assert metadata["rank_or_kill_eligible"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
 
 
 def test_dwt1d_pair_reconstructs_current_and_previous_normalized_lf() -> None:

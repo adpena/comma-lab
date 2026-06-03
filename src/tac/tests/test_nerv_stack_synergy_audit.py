@@ -88,8 +88,8 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "snerv_local_carrier_not_source_faithful_official_snerv_multilayer_stack"
         in stacks["snerv"]["blockers"]
     )
-    assert "snerv_official_mfu_block_missing" in stacks["snerv"]["blockers"]
-    assert "snerv_official_hfr_block_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_official_mfu_source_forward_replay_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_official_hfr_source_forward_replay_missing" in stacks["snerv"]["blockers"]
     assert "snerv_official_snerv_t_full_tub_path_not_source_forward_parity" in stacks["snerv"]["blockers"]
     assert "snerv_official_snerv_t_temporal_path_missing" not in stacks["snerv"]["blockers"]
     assert "snerv_official_haar_j1_parity_missing" in stacks["snerv"]["blockers"]
@@ -103,6 +103,21 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     ]["blockers"]
     assert any(
         row["rel_path"] == "src/tac/analysis/nerv_modelsize_budget.py"
+        and row["present"]
+        for row in stacks["snerv"]["local_surface_files"]
+    )
+    assert any(
+        row["rel_path"] == "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py"
+        and row["present"]
+        for row in stacks["snerv"]["local_surface_files"]
+    )
+    assert any(
+        row["rel_path"] == "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py"
+        and row["present"]
+        for row in stacks["snerv"]["local_surface_files"]
+    )
+    assert any(
+        row["rel_path"] == "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py"
         and row["present"]
         for row in stacks["snerv"]["local_surface_files"]
     )

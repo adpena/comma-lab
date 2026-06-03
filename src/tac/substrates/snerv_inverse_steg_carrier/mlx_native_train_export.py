@@ -57,6 +57,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     _DETAIL_KEYS,
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
     SnervModelSizeConfig,
@@ -73,6 +74,21 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     WaveletPyramid,
     dwt2_native_synthesis_adjoint,
     idwt2_multilevel,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
+    OFFICIAL_SNERV_HFR_SOURCE_SHA,
+    SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
+    OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS,
+    OFFICIAL_SNERV_MFU_SOURCE,
+    OFFICIAL_SNERV_RB_SOURCE,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
+    OFFICIAL_SNERV_T_SOURCE_SHA,
+    OFFICIAL_SNERV_T_TUB_SCHEMA,
+    OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
 )
 
 SNERV_MLX_NATIVE_TRAIN_EXPORT_SCHEMA = "snerv_mlx_native_train_export.v1"
@@ -92,6 +108,7 @@ FALSE_AUTHORITY = {
     "promotion_eligible": False,
     "ready_for_exact_eval_dispatch": False,
 }
+NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 
 
 class SnervMlxNativeExportError(ValueError):
@@ -165,7 +182,7 @@ def train_export_snerv_mlx_native(
     receiver_proof_timeout_seconds: int = 1800,
     run_scorer_loop_qat: bool = False,
     native_mlx_decoder_train_steps: int = 0,
-    native_mlx_decoder_train_lr: float = 1.0e-2,
+    native_mlx_decoder_train_lr: float = 1.0e-5,
     native_mlx_decoder_train_ridge: float = 1.0e-6,
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
@@ -227,6 +244,18 @@ def train_export_snerv_mlx_native(
     )
     effective_num_pairs = len(source_pair_indices)
     explicit_pair_indices = pair_indices is not None
+    if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
+        return _blocked_official_primitives_native_export(
+            output_dir=out,
+            model_size=model_size,
+            candidate=candidate,
+            source_video_path=source_video_path,
+            scorer_upstream_dir=scorer_upstream_dir,
+            source_pair_indices=source_pair_indices,
+            explicit_pair_indices=explicit_pair_indices,
+            num_pairs=effective_num_pairs,
+            started_monotonic=started,
+        )
 
     target0_mlx, target1_mlx = decode_mlx_targets(
         source_video_path,
@@ -313,7 +342,13 @@ def train_export_snerv_mlx_native(
                 else "prefix_source_pair_indices"
             ),
             "human_visual_fidelity_objective": False,
-            "contest_scorer_distortion_objective": recon_weight is not None,
+            "contest_scorer_distortion_objective": (
+                _recon_pixel_weight_metadata_is_verified_gradient_manifest(
+                    recon_weight_metadata
+                )
+                if recon_weight is not None
+                else False
+            ),
         },
     )
     scorer_loop_qat = _run_scorer_loop_qat_attachment(
@@ -976,7 +1011,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     recon_pixel_weight_metadata: Mapping[str, Any] | None = None,
     hf_decoder_saliency_gain: float = 1.0,
     native_mlx_decoder_train_steps: int = 0,
-    native_mlx_decoder_train_lr: float = 1.0e-2,
+    native_mlx_decoder_train_lr: float = 1.0e-5,
     native_mlx_decoder_train_ridge: float = 1.0e-6,
     metadata_extra: Mapping[str, Any] | None = None,
 ) -> SnervArchivePacket:
@@ -1059,7 +1094,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         **FALSE_AUTHORITY,
     }
     if int(native_mlx_decoder_train_steps) > 0:
-        decoder, mlx_training_report = _fit_hf_decoder_mlx_full_batch_gradient_descent(
+        trained_decoder, mlx_training_report = _fit_hf_decoder_mlx_full_batch_gradient_descent(
             pyramids,
             levels=int(levels),
             initial_decoder=decoder,
@@ -1070,10 +1105,12 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
             learning_rate=float(native_mlx_decoder_train_lr),
             ridge=float(native_mlx_decoder_train_ridge),
         )
-        hf_decoder_fit_mode = (
-            "native_mlx_full_batch_gradient_descent_from_"
-            f"{hf_decoder_fit_mode}"
-        )
+        if mlx_training_report.get("executed") is True:
+            decoder = trained_decoder
+            hf_decoder_fit_mode = (
+                "native_mlx_full_batch_gradient_descent_from_"
+                f"{hf_decoder_fit_mode}"
+            )
 
     lf_quant_planes: list[np.ndarray] = []
     lf_zero_points: list[float] = []
@@ -1151,6 +1188,9 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         target_bits_per_coeff=float(step_map_bits_per_coeff),
     )
     decoder_payload = encode_decoder_payload(decoder, codec=decoder_payload_codec)
+    verified_recon_weight = _recon_pixel_weight_metadata_is_verified_gradient_manifest(
+        recon_pixel_weight_metadata
+    )
     metadata = {
         "n_pairs": n_pairs,
         "frames_per_pair": 2,
@@ -1209,7 +1249,10 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "exact_pixel_weighted_objective": False,
         "recon_pixel_weight_consumed": bool(weighted_fit_enabled),
         "recon_pixel_weight_metadata": dict(recon_pixel_weight_metadata or {}),
-        "contest_scorer_distortion_objective": bool(weighted_fit_enabled),
+        "recon_pixel_weight_verified_gradient_manifest": verified_recon_weight,
+        "contest_scorer_distortion_objective": bool(
+            weighted_fit_enabled and verified_recon_weight
+        ),
         "score_aware_hf_decoder_fit_executed": bool(weighted_fit_enabled),
         "score_aware_long_training_executed": False,
         "native_mlx_training_executed": bool(mlx_training_report.get("executed") is True),
@@ -1223,6 +1266,13 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "snerv_emb_size": int(model_size.emb_size),
         "snerv_patch_radius": int(model_size.patch_radius),
         "snerv_model_size_adapter": model_size.adapter,
+        "snerv_official_mfu_hfr_tub_numeric_primitives_requested": bool(
+            model_size.official_mfu_hfr_tub_numeric_primitives_requested
+        ),
+        "snerv_official_mfu_hfr_tub_export_bound": False,
+        "snerv_official_mfu_hfr_tub_export_blockers": list(
+            model_size.official_mfu_hfr_tub_export_blockers
+        ),
         "snerv_spectra_preserving_adapter_enabled": (
             model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
         ),
@@ -1335,15 +1385,39 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
                     "loss_delta": final_loss - initial_loss,
                 }
             )
+    all_final_losses_finite = bool(
+        all(np.isfinite(float(row["final_loss"])) for row in loss_rows)
+    )
+    worsened_rows = [
+        row
+        for row in loss_rows
+        if _native_mlx_loss_worsened(
+            initial=float(row["initial_loss"]),
+            final=float(row["final_loss"]),
+        )
+    ]
+    blockers = [
+        "snerv_native_mlx_decoder_final_loss_nonfinite"
+        if not all_final_losses_finite
+        else "",
+        "snerv_native_mlx_decoder_loss_worsened"
+        if worsened_rows
+        else "",
+    ]
+    blockers = [blocker for blocker in blockers if blocker]
+    accepted = all_final_losses_finite and not blockers
+    trained_decoder = HfGenerationDecoder(
+        kernels=kernels,
+        levels=int(levels),
+        model_size=initial_decoder.model_size,
+    )
     return (
-        HfGenerationDecoder(
-            kernels=kernels,
-            levels=int(levels),
-            model_size=initial_decoder.model_size,
-        ),
+        trained_decoder if accepted else initial_decoder,
         {
             "schema": "snerv_native_mlx_hf_decoder_training.v1",
-            "executed": True,
+            "attempted": True,
+            "executed": bool(accepted),
+            "accepted": bool(accepted),
             "optimizer": "full_batch_gradient_descent",
             "steps": int(steps),
             "learning_rate": float(learning_rate),
@@ -1352,10 +1426,20 @@ def _fit_hf_decoder_mlx_full_batch_gradient_descent(
             "level_subband_rows": loss_rows,
             "mean_initial_loss": float(np.mean([row["initial_loss"] for row in loss_rows])),
             "mean_final_loss": float(np.mean([row["final_loss"] for row in loss_rows])),
-            "all_final_losses_finite": bool(
-                all(np.isfinite(float(row["final_loss"])) for row in loss_rows)
-            ),
-            "blockers": [],
+            "all_final_losses_finite": all_final_losses_finite,
+            "any_loss_worsened": bool(worsened_rows),
+            "worsened_level_subband_rows": [
+                {
+                    "level": int(row["level"]),
+                    "subband": str(row["subband"]),
+                    "initial_loss": float(row["initial_loss"]),
+                    "final_loss": float(row["final_loss"]),
+                    "loss_delta": float(row["loss_delta"]),
+                }
+                for row in worsened_rows
+            ],
+            "loss_worsen_relative_tolerance": NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL,
+            "blockers": blockers,
             **FALSE_AUTHORITY,
         },
     )
@@ -1464,6 +1548,37 @@ def _native_export_detail_weights(
     mean = float(np.mean(raw))
     scaled = np.ones(expected_shape, dtype=np.float64) if mean <= 0.0 else raw / mean
     return np.maximum(1.0e-3, 1.0 + float(saliency_gain) * (scaled - 1.0)).astype(np.float32)
+
+
+def _native_mlx_loss_worsened(*, initial: float, final: float) -> bool:
+    if not np.isfinite(float(initial)) or not np.isfinite(float(final)):
+        return True
+    tolerance = NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL * max(
+        1.0,
+        abs(float(initial)),
+    )
+    return float(final) > float(initial) + tolerance
+
+
+def _recon_pixel_weight_metadata_is_verified_gradient_manifest(
+    metadata: Mapping[str, Any] | None,
+) -> bool:
+    """Return True only for file-backed, finite-gradient P18/P19 custody."""
+
+    if not isinstance(metadata, Mapping):
+        return False
+    producer = metadata.get("producer_manifest")
+    if not isinstance(producer, Mapping):
+        return False
+    return (
+        metadata.get("producer_manifest_verified") is True
+        and metadata.get("verification_status") == "verified_finite_gradient_manifest"
+        and producer.get("status") == "verified_finite_gradient_manifest"
+        and producer.get("consumption_certified") is True
+        and bool(producer.get("weight_sha256"))
+        and bool(metadata.get("sha256"))
+        and str(producer.get("weight_sha256")) == str(metadata.get("sha256"))
+    )
 
 
 def _mlx_weighted_linear_loss(
@@ -1989,12 +2104,101 @@ def _verify_receiver_frame_decode(
         raise SnervMlxNativeExportError("receiver decode produced nonfinite values")
 
 
+def _blocked_official_primitives_native_export(
+    *,
+    output_dir: Path,
+    model_size: SnervModelSizeConfig,
+    candidate: Mapping[str, Any],
+    source_video_path: str | Path,
+    scorer_upstream_dir: str | Path,
+    source_pair_indices: Sequence[int],
+    explicit_pair_indices: bool,
+    num_pairs: int,
+    started_monotonic: float,
+) -> dict[str, Any]:
+    blockers = list(model_size.official_mfu_hfr_tub_export_blockers)
+    payload = {
+        "schema": "snerv_mlx_native_train_export.v1",
+        "output_dir": output_dir.as_posix(),
+        "executed": False,
+        "failure": "official_mfu_hfr_tub_numeric_primitives_requested_but_export_not_bound",
+        "family": "snerv",
+        "source_video_path": Path(source_video_path).as_posix(),
+        "scorer_upstream_dir": Path(scorer_upstream_dir).as_posix(),
+        "num_pairs": int(num_pairs),
+        "source_pair_indices": [int(value) for value in source_pair_indices],
+        "pair_index_alignment_mode": (
+            "explicit_source_pair_indices"
+            if explicit_pair_indices
+            else "prefix_source_pair_indices"
+        ),
+        "candidate_id": candidate.get("candidate_id"),
+        "model_size": model_size.as_jsonable(),
+        "snerv_model_size_adapter": model_size.adapter,
+        "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
+        "snerv_official_mfu_hfr_tub_export_bound": False,
+        "snerv_official_mfu_hfr_tub_export_blockers": blockers,
+        "official_primitive_binding": {
+            "schema": "snerv_official_mfu_hfr_tub_export_binding.v1",
+            "adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "primitive_modules_available": True,
+            "export_consumed_official_mfu": False,
+            "export_consumed_official_hfr": False,
+            "export_consumed_official_tub": False,
+            "blockers": blockers,
+            **FALSE_AUTHORITY,
+        },
+        "packet_path": None,
+        "packet_bytes": None,
+        "packet_sha256": None,
+        "archive_path": None,
+        "archive_bytes": None,
+        "archive_sha256": None,
+        "receiver_proof_path": None,
+        "receiver_proof_passed": False,
+        "receiver_contract_satisfied": False,
+        "native_mlx_training_executed": False,
+        "native_mlx_training_kind": "none",
+        "native_mlx_hf_decoder_training": {
+            "schema": "snerv_native_mlx_hf_decoder_training.v1",
+            "requested_steps": 0,
+            "executed": False,
+            "blockers": [
+                "snerv_official_mfu_hfr_tub_export_blocked_before_decoder_training"
+            ],
+            **FALSE_AUTHORITY,
+        },
+        "blockers": blockers,
+        "elapsed_seconds": float(time.monotonic() - float(started_monotonic)),
+        **FALSE_AUTHORITY,
+    }
+    report_path = output_dir / SNERV_MLX_NATIVE_REPORT_FILENAME
+    write_json(report_path, payload)
+    payload["report_path"] = report_path.as_posix()
+    payload["report_sha256"] = sha256_file(report_path)
+    write_json(report_path, payload)
+    return payload
+
+
 def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeConfig:
     scales = candidate.get("mfu_scales", candidate.get("snerv_mfu_scales", (1, 2, 4)))
     if isinstance(scales, str):
         scales_tuple = tuple(int(v) for v in scales.split(",") if v.strip())
     else:
         scales_tuple = tuple(int(v) for v in scales)
+    adapter = str(
+        candidate.get(
+            "model_size_adapter",
+            candidate.get("snerv_model_size_adapter", "snerv_fc_dim_emb_size_adapter_v1"),
+        )
+    )
+    if bool(
+        candidate.get(
+            "snerv_official_mfu_hfr_tub_numeric_primitives",
+            candidate.get("use_official_snerv_primitives", False),
+        )
+    ):
+        adapter = SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     return SnervModelSizeConfig(
         fc_dim=int(candidate.get("fc_dim", candidate.get("snerv_fc_dim", 9))),
         emb_size=int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0))),
@@ -2015,12 +2219,7 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
                 candidate.get("snerv_temporal_mode", "delta"),
             )
         ),
-        adapter=str(
-            candidate.get(
-                "model_size_adapter",
-                candidate.get("snerv_model_size_adapter", "snerv_fc_dim_emb_size_adapter_v1"),
-            )
-        ),
+        adapter=adapter,
     )
 
 

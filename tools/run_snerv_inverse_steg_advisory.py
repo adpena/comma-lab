@@ -307,6 +307,27 @@ def main(argv: list[str] | None = None) -> int:
             "lossless SQL2 int-stream portfolio; legacy preserves raw-i64+xz."
         ),
     )
+    ap.add_argument(
+        "--snerv-native-mlx-decoder-train-steps",
+        default=0,
+        type=int,
+        help=(
+            "Record a requested native-MLX HF decoder training step count. "
+            "This CPU advisory CLI does not execute MLX decoder training."
+        ),
+    )
+    ap.add_argument(
+        "--snerv-native-mlx-decoder-train-lr",
+        default=1.0e-5,
+        type=float,
+        help="Recorded learning rate for --snerv-native-mlx-decoder-train-steps.",
+    )
+    ap.add_argument(
+        "--snerv-native-mlx-decoder-train-ridge",
+        default=1.0e-6,
+        type=float,
+        help="Recorded ridge pressure for --snerv-native-mlx-decoder-train-steps.",
+    )
     ap.add_argument("--out", type=str, default=None)
     ap.add_argument(
         "--packet-out",
@@ -395,6 +416,34 @@ def main(argv: list[str] | None = None) -> int:
     )
     payload = res.as_jsonable()
     payload.setdefault("schema", "snerv_inverse_steg_advisory.v1")
+    native_mlx_decoder_training_controls = {
+        "schema": "snerv_native_mlx_decoder_training_cli_control.v1",
+        "requested_steps": int(args.snerv_native_mlx_decoder_train_steps),
+        "learning_rate": float(args.snerv_native_mlx_decoder_train_lr),
+        "ridge": float(args.snerv_native_mlx_decoder_train_ridge),
+        "consumed_by_cli": False,
+        "consumed_by_archive_metadata": False,
+        "native_mlx_training_executed": False,
+        "blockers": [
+            "snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_advisory_cli"
+        ]
+        if int(args.snerv_native_mlx_decoder_train_steps) > 0
+        else [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    payload["native_mlx_decoder_training_controls"] = native_mlx_decoder_training_controls
+    if native_mlx_decoder_training_controls["blockers"]:
+        payload["blockers"] = list(
+            dict.fromkeys(
+                [
+                    *(payload.get("blockers") or ()),
+                    *native_mlx_decoder_training_controls["blockers"],
+                ]
+            )
+        )
     out_path = Path(args.out or _default_out())
     if not out_path.is_absolute():
         out_path = REPO_ROOT / out_path

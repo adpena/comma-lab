@@ -18,6 +18,7 @@ from typing import Final
 import numpy as np
 
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    FALSE_AUTHORITY,
     OfficialConv2dNchw,
     leaky_relu01,
 )
@@ -348,9 +349,7 @@ class OfficialSnervMfuForwardOutput:
             "unet1_up_shape": list(self.unet1_up.shape),
             "cat_high_shape": list(self.cat_high.shape),
             "pyr_out_shape": list(self.pyr_out.shape),
-            "score_claim": False,
-            "promotion_eligible": False,
-            "ready_for_exact_eval_dispatch": False,
+            **FALSE_AUTHORITY,
             "source_forward_replay_authority": False,
         }
 
@@ -380,20 +379,38 @@ class OfficialSnervMfu:
             raise OfficialSnervMfuError("MFU mid upsample output channels mismatch spec")
         if self.upsample_mid.stride != (self.spec.mid_stride, self.spec.mid_stride):
             raise OfficialSnervMfuError("MFU mid upsample stride mismatch spec")
+        _validate_official_upsampler_contract(
+            self.upsample_mid,
+            name="MFU mid upsample",
+            stride=self.spec.mid_stride,
+        )
         if self.rb_mid.in_channels != self.spec.low_channels + self.spec.mid_channels:
             raise OfficialSnervMfuError("MFU mid RB input channels mismatch spec")
         if self.rb_mid.out_channels != self.spec.mid_channels:
             raise OfficialSnervMfuError("MFU mid RB output channels mismatch spec")
+        if len(self.rb_mid.residual_blocks) != self.spec.num_blocks:
+            raise OfficialSnervMfuError(
+                "MFU mid RB residual block count mismatch spec"
+            )
         if self.upsample_high.in_channels != self.spec.mid_channels:
             raise OfficialSnervMfuError("MFU high upsample input channels mismatch spec")
         if self.upsample_high.out_channels != self.spec.mid_channels:
             raise OfficialSnervMfuError("MFU high upsample output channels mismatch spec")
         if self.upsample_high.stride != (self.spec.high_stride, self.spec.high_stride):
             raise OfficialSnervMfuError("MFU high upsample stride mismatch spec")
+        _validate_official_upsampler_contract(
+            self.upsample_high,
+            name="MFU high upsample",
+            stride=self.spec.high_stride,
+        )
         if self.rb_high.in_channels != self.spec.mid_channels + self.spec.high_channels:
             raise OfficialSnervMfuError("MFU high RB input channels mismatch spec")
         if self.rb_high.out_channels != self.spec.high_channels:
             raise OfficialSnervMfuError("MFU high RB output channels mismatch spec")
+        if len(self.rb_high.residual_blocks) != self.spec.num_blocks:
+            raise OfficialSnervMfuError(
+                "MFU high RB residual block count mismatch spec"
+            )
 
     def forward(
         self,
@@ -494,6 +511,7 @@ class OfficialMfuShapeTrace:
     numeric_parity_blockers: tuple[str, ...]
     score_claim: bool
     promotion_eligible: bool
+    rank_or_kill_eligible: bool
     ready_for_exact_eval_dispatch: bool
 
     def as_jsonable(self) -> dict[str, object]:
@@ -515,6 +533,7 @@ class OfficialMfuShapeTrace:
             "numeric_parity_blockers": list(self.numeric_parity_blockers),
             "score_claim": self.score_claim,
             "promotion_eligible": self.promotion_eligible,
+            "rank_or_kill_eligible": self.rank_or_kill_eligible,
             "ready_for_exact_eval_dispatch": self.ready_for_exact_eval_dispatch,
         }
 
@@ -698,6 +717,7 @@ class OfficialSnervMfuSpec:
             numeric_parity_blockers=OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS,
             score_claim=False,
             promotion_eligible=False,
+            rank_or_kill_eligible=False,
             ready_for_exact_eval_dispatch=False,
         )
 
@@ -740,6 +760,27 @@ def concat_nchw_arrays(arrays: Iterable[np.ndarray]) -> np.ndarray:
                 f"got {first.shape} and {part.shape}"
             )
     return np.concatenate(parts, axis=1).astype(np.float64, copy=False)
+
+
+def _validate_official_upsampler_contract(
+    module: OfficialConvTranspose2dNchw,
+    *,
+    name: str,
+    stride: int,
+) -> None:
+    expected_hw = (int(stride), int(stride))
+    if module.weight.shape[2:] != expected_hw:
+        raise OfficialSnervMfuError(
+            f"{name} must use official kernel=stride={expected_hw}"
+        )
+    if module.padding != (0, 0):
+        raise OfficialSnervMfuError(f"{name} must use official padding=0")
+    if module.output_padding != (0, 0):
+        raise OfficialSnervMfuError(f"{name} must use official output_padding=0")
+    if module.dilation != (1, 1):
+        raise OfficialSnervMfuError(f"{name} must use official dilation=1")
+    if int(module.groups) != 1:
+        raise OfficialSnervMfuError(f"{name} must use official groups=1")
 
 
 def conv_transpose2d_nchw(

@@ -731,6 +731,30 @@ def _snerv_campaign_row(
         measured_num_pairs=feedback.get("measured_num_pairs"),
     )
     row_id = f"snerv::{candidate_id}::native_rate_aware_training"
+    native_mlx_decoder_train_steps = max(
+        0,
+        int(
+            candidate.get(
+                "snerv_native_mlx_decoder_train_steps",
+                candidate.get("native_mlx_decoder_train_steps", 0),
+            )
+            or 0
+        ),
+    )
+    native_mlx_decoder_train_lr = float(
+        candidate.get(
+            "snerv_native_mlx_decoder_train_lr",
+            candidate.get("native_mlx_decoder_train_lr", 1.0e-5),
+        )
+        or 1.0e-5
+    )
+    native_mlx_decoder_train_ridge = float(
+        candidate.get(
+            "snerv_native_mlx_decoder_train_ridge",
+            candidate.get("native_mlx_decoder_train_ridge", 1.0e-6),
+        )
+        or 1.0e-6
+    )
     command = [
         "uv",
         "run",
@@ -777,6 +801,14 @@ def _snerv_campaign_row(
         str(int(candidate.get("temporal_context") or 0)),
         "--snerv-temporal-mode",
         str(candidate.get("temporal_mode") or "delta"),
+        "--snerv-native-mlx-receiver-proof-timeout",
+        str(int(candidate.get("snerv_native_mlx_receiver_proof_timeout", 1800))),
+        "--snerv-native-mlx-decoder-train-steps",
+        str(int(native_mlx_decoder_train_steps)),
+        "--snerv-native-mlx-decoder-train-lr",
+        _float_token(float(native_mlx_decoder_train_lr)),
+        "--snerv-native-mlx-decoder-train-ridge",
+        _float_token(float(native_mlx_decoder_train_ridge)),
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
@@ -874,6 +906,16 @@ def _snerv_campaign_row(
             "prioritized_pair_training": prioritized_pair_training,
             "snerv_lf_payload_recode_admission_plan": lf_recode_admission_plan,
             "snerv_lf_payload_codec_from_admission_plan": lf_recode_selected_mode,
+            "native_mlx_decoder_training_plan": {
+                "schema": "snerv_native_mlx_decoder_training_plan.v1",
+                "candidate_conditioned": True,
+                "planned_steps": int(native_mlx_decoder_train_steps),
+                "learning_rate": float(native_mlx_decoder_train_lr),
+                "ridge": float(native_mlx_decoder_train_ridge),
+                "backend": "mlx_metal_full_batch_gradient_descent",
+                "consumed_by_command": True,
+                **FALSE_AUTHORITY,
+            },
         },
     )
 

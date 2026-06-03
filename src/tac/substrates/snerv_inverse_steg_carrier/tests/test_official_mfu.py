@@ -12,12 +12,24 @@ from tac.substrates.snerv_inverse_steg_carrier import (
     OfficialConvTranspose2dNchw,
     OfficialResidualBlockNoBN,
     OfficialResidualBlocksWithInputConv,
+    OfficialSnervMfu,
     OfficialSnervMfuError,
     OfficialSnervMfuSpec,
     TensorSpec,
+    concat_nchw_arrays,
     concat_nchw_specs,
     conv_transpose2d_nchw,
 )
+
+
+def test_official_mfu_package_exports_are_available() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier as snerv
+
+    assert snerv.OfficialSnervMfu is OfficialSnervMfu
+    assert snerv.OfficialConvTranspose2dNchw is OfficialConvTranspose2dNchw
+    assert snerv.OfficialResidualBlocksWithInputConv is OfficialResidualBlocksWithInputConv
+    assert snerv.concat_nchw_arrays is concat_nchw_arrays
+    assert snerv.conv_transpose2d_nchw is conv_transpose2d_nchw
 
 
 def test_official_mfu_shape_trace_matches_source_graph_contract() -> None:
@@ -45,6 +57,7 @@ def test_official_mfu_shape_trace_matches_source_graph_contract() -> None:
     assert trace.output.nchw == (1, 8, 32, 40)
     assert trace.score_claim is False
     assert trace.ready_for_exact_eval_dispatch is False
+    assert trace.rank_or_kill_eligible is False
     assert trace.numeric_parity_blockers == OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS
     assert trace.parameter_shapes["decoder_len+3.weight"] == (32, 32, 4, 4)
     assert trace.parameter_shapes["decoder_len+4.main.0.weight"] == (16, 48, 3, 3)
@@ -146,6 +159,185 @@ def test_official_mfu_residual_blocks_match_torch_source_block() -> None:
     np.testing.assert_allclose(block.forward(x), expected.detach().numpy(), atol=1e-12, rtol=1e-12)
 
 
+def test_official_mfu_full_numpy_forward_matches_torch_graph() -> None:
+    torch = pytest.importorskip("torch")
+
+    rng = np.random.default_rng(13)
+    spec = OfficialSnervMfuSpec(
+        low_channels=2,
+        mid_channels=3,
+        high_channels=4,
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=1,
+    )
+    up_mid_w = (rng.standard_normal((2, 2, 2, 2)) * 0.04).astype(np.float64)
+    up_mid_b = (rng.standard_normal(2) * 0.01).astype(np.float64)
+    mid_input_w = (rng.standard_normal((3, 5, 3, 3)) * 0.04).astype(np.float64)
+    mid_input_b = (rng.standard_normal(3) * 0.01).astype(np.float64)
+    mid_conv1_w = (rng.standard_normal((3, 3, 3, 3)) * 0.04).astype(np.float64)
+    mid_conv1_b = (rng.standard_normal(3) * 0.01).astype(np.float64)
+    mid_conv2_w = (rng.standard_normal((3, 3, 3, 3)) * 0.04).astype(np.float64)
+    mid_conv2_b = (rng.standard_normal(3) * 0.01).astype(np.float64)
+    up_high_w = (rng.standard_normal((3, 3, 2, 2)) * 0.04).astype(np.float64)
+    up_high_b = (rng.standard_normal(3) * 0.01).astype(np.float64)
+    high_input_w = (rng.standard_normal((4, 7, 3, 3)) * 0.04).astype(np.float64)
+    high_input_b = (rng.standard_normal(4) * 0.01).astype(np.float64)
+    high_conv1_w = (rng.standard_normal((4, 4, 3, 3)) * 0.04).astype(np.float64)
+    high_conv1_b = (rng.standard_normal(4) * 0.01).astype(np.float64)
+    high_conv2_w = (rng.standard_normal((4, 4, 3, 3)) * 0.04).astype(np.float64)
+    high_conv2_b = (rng.standard_normal(4) * 0.01).astype(np.float64)
+    mfu = OfficialSnervMfu(
+        spec=spec,
+        upsample_mid=OfficialConvTranspose2dNchw(up_mid_w, up_mid_b, stride=2),
+        rb_mid=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(mid_input_w, mid_input_b, padding=1),
+            residual_blocks=(
+                OfficialResidualBlockNoBN(
+                    conv1=OfficialConv2dNchw(mid_conv1_w, mid_conv1_b, padding=1),
+                    conv2=OfficialConv2dNchw(mid_conv2_w, mid_conv2_b, padding=1),
+                ),
+            ),
+        ),
+        upsample_high=OfficialConvTranspose2dNchw(up_high_w, up_high_b, stride=2),
+        rb_high=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(high_input_w, high_input_b, padding=1),
+            residual_blocks=(
+                OfficialResidualBlockNoBN(
+                    conv1=OfficialConv2dNchw(high_conv1_w, high_conv1_b, padding=1),
+                    conv2=OfficialConv2dNchw(high_conv2_w, high_conv2_b, padding=1),
+                ),
+            ),
+        ),
+    )
+    low = rng.standard_normal((1, 2, 2, 3)).astype(np.float64)
+    skip_mid = rng.standard_normal((1, 3, 4, 6)).astype(np.float64)
+    skip_high = rng.standard_normal((1, 4, 8, 12)).astype(np.float64)
+
+    got = mfu.forward(low, skip_mid, skip_high)
+
+    low_t = torch.from_numpy(low)
+    skip_mid_t = torch.from_numpy(skip_mid)
+    skip_high_t = torch.from_numpy(skip_high)
+    up1 = torch.nn.functional.conv_transpose2d(
+        low_t,
+        torch.from_numpy(up_mid_w),
+        bias=torch.from_numpy(up_mid_b),
+        stride=2,
+    )
+    mid_hidden = torch.nn.functional.conv2d(
+        torch.cat([up1, skip_mid_t], dim=1),
+        torch.from_numpy(mid_input_w),
+        bias=torch.from_numpy(mid_input_b),
+        padding=1,
+    )
+    unet1 = mid_hidden + torch.nn.functional.conv2d(
+        torch.nn.functional.leaky_relu(
+            torch.nn.functional.conv2d(
+                mid_hidden,
+                torch.from_numpy(mid_conv1_w),
+                bias=torch.from_numpy(mid_conv1_b),
+                padding=1,
+            ),
+            negative_slope=0.1,
+        ),
+        torch.from_numpy(mid_conv2_w),
+        bias=torch.from_numpy(mid_conv2_b),
+        padding=1,
+    )
+    unet1_up = torch.nn.functional.conv_transpose2d(
+        unet1,
+        torch.from_numpy(up_high_w),
+        bias=torch.from_numpy(up_high_b),
+        stride=2,
+    )
+    high_hidden = torch.nn.functional.conv2d(
+        torch.cat([unet1_up, skip_high_t], dim=1),
+        torch.from_numpy(high_input_w),
+        bias=torch.from_numpy(high_input_b),
+        padding=1,
+    )
+    expected = high_hidden + torch.nn.functional.conv2d(
+        torch.nn.functional.leaky_relu(
+            torch.nn.functional.conv2d(
+                high_hidden,
+                torch.from_numpy(high_conv1_w),
+                bias=torch.from_numpy(high_conv1_b),
+                padding=1,
+            ),
+            negative_slope=0.1,
+        ),
+        torch.from_numpy(high_conv2_w),
+        bias=torch.from_numpy(high_conv2_b),
+        padding=1,
+    )
+
+    np.testing.assert_allclose(got.up1, up1.detach().numpy(), atol=1e-11, rtol=1e-11)
+    np.testing.assert_allclose(got.unet1, unet1.detach().numpy(), atol=1e-11, rtol=1e-11)
+    np.testing.assert_allclose(got.pyr_out, expected.detach().numpy(), atol=1e-11, rtol=1e-11)
+    metadata = got.as_jsonable_metadata()
+    assert metadata["score_claim"] is False
+    assert metadata["rank_or_kill_eligible"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["source_forward_replay_authority"] is False
+
+
+def test_official_mfu_rejects_shape_equivalent_non_source_upsamplers() -> None:
+    rng = np.random.default_rng(14)
+    spec = OfficialSnervMfuSpec(
+        low_channels=2,
+        mid_channels=3,
+        high_channels=4,
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=1,
+    )
+
+    with pytest.raises(OfficialSnervMfuError, match="kernel=stride"):
+        OfficialSnervMfu(
+            spec=spec,
+            upsample_mid=OfficialConvTranspose2dNchw(
+                rng.standard_normal((2, 2, 3, 3)),
+                stride=2,
+                padding=1,
+                output_padding=1,
+            ),
+            rb_mid=_rb(rng, in_ch=5, out_ch=3, blocks=1),
+            upsample_high=OfficialConvTranspose2dNchw(
+                rng.standard_normal((3, 3, 2, 2)),
+                stride=2,
+            ),
+            rb_high=_rb(rng, in_ch=7, out_ch=4, blocks=1),
+        )
+
+
+def test_official_mfu_rejects_residual_block_count_mismatch() -> None:
+    rng = np.random.default_rng(15)
+    spec = OfficialSnervMfuSpec(
+        low_channels=2,
+        mid_channels=3,
+        high_channels=4,
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=2,
+    )
+
+    with pytest.raises(OfficialSnervMfuError, match="block count mismatch"):
+        OfficialSnervMfu(
+            spec=spec,
+            upsample_mid=OfficialConvTranspose2dNchw(
+                rng.standard_normal((2, 2, 2, 2)),
+                stride=2,
+            ),
+            rb_mid=_rb(rng, in_ch=5, out_ch=3, blocks=1),
+            upsample_high=OfficialConvTranspose2dNchw(
+                rng.standard_normal((3, 3, 2, 2)),
+                stride=2,
+            ),
+            rb_high=_rb(rng, in_ch=7, out_ch=4, blocks=2),
+        )
+
+
 def test_official_mfu_rejects_skip_shape_and_channel_mismatches() -> None:
     spec = OfficialSnervMfuSpec(
         low_channels=4,
@@ -187,3 +379,35 @@ def test_official_mfu_accepts_arrays_without_numeric_parity_claim() -> None:
 
     assert trace.output.nchw == (1, 2, 12, 12)
     assert "official_weight_tensor_mapping_not_loaded" in trace.numeric_parity_blockers
+
+
+def _conv(
+    rng: np.random.Generator,
+    *,
+    out_ch: int,
+    in_ch: int,
+) -> OfficialConv2dNchw:
+    return OfficialConv2dNchw(
+        rng.standard_normal((out_ch, in_ch, 3, 3)) * 0.04,
+        rng.standard_normal(out_ch) * 0.01,
+        padding=1,
+    )
+
+
+def _rb(
+    rng: np.random.Generator,
+    *,
+    in_ch: int,
+    out_ch: int,
+    blocks: int,
+) -> OfficialResidualBlocksWithInputConv:
+    return OfficialResidualBlocksWithInputConv(
+        input_conv=_conv(rng, out_ch=out_ch, in_ch=in_ch),
+        residual_blocks=tuple(
+            OfficialResidualBlockNoBN(
+                conv1=_conv(rng, out_ch=out_ch, in_ch=out_ch),
+                conv2=_conv(rng, out_ch=out_ch, in_ch=out_ch),
+            )
+            for _ in range(int(blocks))
+        ),
+    )
