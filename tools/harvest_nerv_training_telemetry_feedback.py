@@ -32,6 +32,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-queue")
     parser.add_argument("--stop-reason")
     parser.add_argument(
+        "--current-segnet-distillation-weight",
+        type=float,
+        help=(
+            "Known launch/current SegNet pressure for PR95-curriculum "
+            "telemetry, where loss-part ratios expose score-scale weights "
+            "rather than the user-facing launch control."
+        ),
+    )
+    parser.add_argument(
         "--training-running",
         action="store_true",
         help=(
@@ -58,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
             stop_reason=args.stop_reason,
             training_running=bool(args.training_running),
         ),
+        current_segnet_distillation_weight=args.current_segnet_distillation_weight,
     )
     if args.output_json:
         write_json_artifact(
@@ -98,6 +108,9 @@ def _summary(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "observed_segnet_distillation_weight": row.get(
             "observed_segnet_distillation_weight"
+        ),
+        "segnet_distillation_weight_source": row.get(
+            "segnet_distillation_weight_source"
         ),
         "recommended_segnet_distillation_weight": row.get(
             "recommended_segnet_distillation_weight"

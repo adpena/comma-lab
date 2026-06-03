@@ -1006,6 +1006,7 @@ def build_nerv_training_telemetry_feedback_row(
     candidate_num_pairs: int,
     source_queue_path: str | Path | None = None,
     stop_reason: str | None = None,
+    current_segnet_distillation_weight: float | None = None,
     pose_loss_instability_threshold: float = _POSE_LOSS_INSTABILITY_THRESHOLD,
     pose_axis_instability_threshold: float = _POSE_AXIS_INSTABILITY_THRESHOLD,
     instability_window_epochs: int = _POSE_INSTABILITY_WINDOW_EPOCHS,
@@ -1033,6 +1034,22 @@ def build_nerv_training_telemetry_feedback_row(
         instability_bad_fraction=float(instability_bad_fraction),
         learning_rate_multiplier=float(learning_rate_multiplier),
     )
+    current_seg_weight = _float_or_none(current_segnet_distillation_weight)
+    if current_seg_weight is not None and current_seg_weight > 0.0:
+        health = {
+            **health,
+            "observed_segnet_distillation_weight": current_seg_weight,
+            "recommended_segnet_distillation_weight": (
+                recommend_segnet_distillation_weight_for_stagnation(
+                    current_seg_weight
+                )
+                if bool(health.get("seg_stagnation_detected"))
+                else None
+            ),
+            "segnet_distillation_weight_source": (
+                "harvest_current_segnet_distillation_weight"
+            ),
+        }
     candidate_pairs = int(candidate_num_pairs)
     measured_pairs = _int_or_none(health.get("num_pairs")) or candidate_pairs
     family_key = _family_key(family)
@@ -1238,6 +1255,9 @@ def build_nerv_training_telemetry_feedback_row(
         "pr95_stage_status": health.get("pr95_stage_status"),
         "observed_segnet_distillation_weight": health.get(
             "observed_segnet_distillation_weight"
+        ),
+        "segnet_distillation_weight_source": health.get(
+            "segnet_distillation_weight_source"
         ),
         "recommended_segnet_distillation_weight": health.get(
             "recommended_segnet_distillation_weight"
@@ -1452,6 +1472,7 @@ def write_nerv_training_telemetry_feedback_files(
     candidate_num_pairs: int,
     source_queue_path: str | Path | None = None,
     stop_reason: str | None = None,
+    current_segnet_distillation_weight: float | None = None,
 ) -> dict[str, Any]:
     """Write a telemetry feedback row plus append-only ledger."""
 
@@ -1464,6 +1485,7 @@ def write_nerv_training_telemetry_feedback_files(
         candidate_num_pairs=int(candidate_num_pairs),
         source_queue_path=source_queue_path,
         stop_reason=stop_reason,
+        current_segnet_distillation_weight=current_segnet_distillation_weight,
     )
     row_path = out / "nerv_candidate_training_telemetry_feedback_row.json"
     ledger_path = out / "nerv_candidate_training_telemetry_feedback.jsonl"

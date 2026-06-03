@@ -941,6 +941,55 @@ def test_training_telemetry_feedback_uses_family_specific_blockers(
     )
 
 
+def test_training_telemetry_feedback_uses_current_segnet_pressure_for_pr95_stage(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "snerv_pr95_stage_seg_stagnation.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pr95_stage_pose_surrogate": 3.0,
+                "loss_part_pr95_stage_seg_surrogate": 1.5,
+                "loss_part_weighted_pr95_stage_pose_surrogate": 3.0,
+                "loss_part_weighted_pr95_stage_seg_surrogate": 150.0,
+                "pr95_stage_index": 1.0,
+                "pr95_stage_uses_muon": 0.0,
+            },
+            "per_axis_decomposition": {
+                "pose": 3.0,
+                "seg": 6.4 - min(epoch, 127) * 0.0005,
+            },
+        }
+        for epoch in range(192)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="snerv",
+        candidate_id="snerv_np600_pr95_stage_current_seg_w2",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+        current_segnet_distillation_weight=2.0,
+    )
+
+    assert row["seg_stagnation_detected"] is True
+    assert row["observed_segnet_distillation_weight"] == 2.0
+    assert row["segnet_distillation_weight_source"] == (
+        "harvest_current_segnet_distillation_weight"
+    )
+    assert row["recommended_segnet_distillation_weight"] == 4.0
+    assert row["training_control_action"] == (
+        "checkpoint_then_supersede_with_higher_segnet_weight"
+    )
+    assert row["training_control_should_stop_current_run"] is True
+
+
 def test_running_training_telemetry_feedback_recommends_checkpoint_supersede_for_flat_segnet(
     tmp_path: Path,
 ) -> None:
@@ -1225,6 +1274,8 @@ def test_harvest_training_telemetry_feedback_tool_output_json_is_guarded(
         "hinerv_np600_guarded_output",
         "--candidate-num-pairs",
         "600",
+        "--current-segnet-distillation-weight",
+        "2.0",
         "--training-running",
         "--output-dir",
         str(tmp_path / "feedback"),
@@ -1235,6 +1286,11 @@ def test_harvest_training_telemetry_feedback_tool_output_json_is_guarded(
     assert harvest_training_feedback_main(argv) == 0
     capsys.readouterr()
     assert output_json.is_file()
+    manifest = json.loads(output_json.read_text(encoding="utf-8"))
+    assert manifest["row"]["observed_segnet_distillation_weight"] == 2.0
+    assert manifest["row"]["segnet_distillation_weight_source"] == (
+        "harvest_current_segnet_distillation_weight"
+    )
     with pytest.raises(ArtifactWriteError, match="refusing to overwrite"):
         harvest_training_feedback_main(argv)
 
