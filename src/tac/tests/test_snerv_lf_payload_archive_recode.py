@@ -7,9 +7,12 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from tac.analysis.snerv_lf_payload_archive_recode import (
     build_snerv_lf_payload_archive_recode,
+    build_snerv_lf_payload_recode_admission_plan,
+    render_snerv_lf_payload_recode_admission_markdown,
 )
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
@@ -118,3 +121,150 @@ def test_recode_snerv_lf_payload_archive_cli_writes_matching_report(
     assert report["candidate_packet"]["file_bytes"] == len(candidate)
     assert report["lf_planes_exact_equal"] is True
     assert report["receiver_contract_satisfied"] is True
+
+
+def test_snerv_lf_payload_recode_admission_consumes_real_snar_recode() -> None:
+    source = _packet(lf_codec="raw_i64")
+    report, _candidate = build_snerv_lf_payload_archive_recode(
+        source,
+        mode="spatial_delta_zigzag_leb128_lzma",
+        frame_proof_max_output_bytes=1,
+    )
+    hard_ceiling = int(report["source_packet"]["bytes"]) - 100
+
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [report],
+        hard_byte_ceiling=hard_ceiling,
+        candidate_id="snerv-real-snar-fixture",
+        full_video_coverage=True,
+    )
+
+    row = plan["selected_row"]
+    assert plan["selected_mode"] == "spatial_delta_zigzag_leb128_lzma"
+    assert plan["local_planner_admitted"] is True
+    assert plan["waterline_satisfied_after_selected_recode"] is True
+    assert row["packet_byte_delta"] == (
+        report["candidate_packet"]["bytes"] - report["source_packet"]["bytes"]
+    )
+    assert row["packet_rate_score_delta"] == pytest.approx(
+        row["packet_byte_delta"] * plan["rate_score_per_byte"]
+    )
+    assert row["waterline_crossed_by_recode"] is True
+    assert row["admission_decision"] == (
+        "admit_lossless_lf_recode_crosses_byte_waterline"
+    )
+    assert row["ablation_decision"] == "no_lf_ablation_required_after_recode_waterline"
+    assert plan["byte_price_plan"]["decision_rows"][0]["economic_decision"] == "cut"
+    assert "paired_contest_cpu_cuda_auth_eval_missing" in plan["blockers"]
+
+
+def test_snerv_lf_payload_recode_admission_prices_receiver_backed_savings() -> None:
+    saving_report = {
+        "schema": "snerv_lf_payload_archive_recode.v1",
+        "mode": "zero_run_varint",
+        "source_packet": {"bytes": 200_000, "sha256": "source-sha"},
+        "candidate_packet": {"bytes": 160_000, "sha256": "candidate-sha"},
+        "packet_byte_delta": -40_000,
+        "lf_payload": {
+            "source_bytes": 150_000,
+            "candidate_bytes": 110_000,
+            "byte_delta": -40_000,
+        },
+        "receiver_contract_satisfied": True,
+        "receiver_frame_equality_proof": {"status": "proven_exact"},
+        "blockers": [
+            "not_packaged_as_contest_archive_zip",
+            "paired_contest_cpu_cuda_auth_eval_missing",
+        ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    weaker_report = {
+        **saving_report,
+        "mode": "int16_brotli",
+        "candidate_packet": {"bytes": 190_000, "sha256": "candidate-sha-2"},
+        "packet_byte_delta": -10_000,
+        "lf_payload": {
+            "source_bytes": 150_000,
+            "candidate_bytes": 140_000,
+            "byte_delta": -10_000,
+        },
+    }
+
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [weaker_report, saving_report],
+        hard_byte_ceiling=178_000,
+        candidate_id="snerv-full600",
+        full_video_coverage=True,
+    )
+
+    assert plan["schema"] == "snerv_lf_payload_recode_admission_plan.v1"
+    assert plan["score_claim"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
+    assert plan["selected_mode"] == "zero_run_varint"
+    assert plan["selected_row"]["waterline_crossed_by_recode"] is True
+    assert plan["waterline_satisfied_after_selected_recode"] is True
+    assert plan["selected_row"]["post_recode_over_waterline_bytes"] == 0
+    assert (
+        plan["verdict"]
+        == "ADMIT_LF_RECODE__CROSSES_BYTE_WATERLINE__FALSE_AUTHORITY"
+    )
+    assert "snerv_lf_recode_admission_plan_false_authority" in plan["blockers"]
+    assert "paired_contest_cpu_cuda_auth_eval_missing" in plan["blockers"]
+    rows = {row["mode"]: row for row in plan["admission_rows"]}
+    assert rows["zero_run_varint"]["local_planner_admitted"] is True
+    assert rows["int16_brotli"]["post_recode_over_waterline_bytes"] == 12_000
+    section_rows = {row["candidate_mode"]: row for row in plan["section_value_rows"]}
+    assert section_rows["zero_run_varint"]["byte_delta"] == -40_000
+    assert section_rows["zero_run_varint"]["delta_nonrate_score"] == 0.0
+    assert section_rows["zero_run_varint"]["full_video_coverage"] is True
+    byte_price_plan = plan["byte_price_plan"]
+    assert byte_price_plan["schema"] == "compact_nerv_byte_price_controller.v1"
+    assert byte_price_plan["source_schema"] == plan["schema"]
+    assert byte_price_plan["score_claim"] is False
+    markdown = render_snerv_lf_payload_recode_admission_markdown(plan)
+    assert "zero_run_varint" in markdown
+    assert "ADMIT_LF_RECODE__CROSSES_BYTE_WATERLINE" in markdown
+
+
+def test_snerv_lf_payload_recode_admission_blocks_invalid_and_non_saving_rows() -> None:
+    non_saving = {
+        "schema": "snerv_lf_payload_archive_recode.v1",
+        "mode": "raw_int64",
+        "source_packet": {"bytes": 170_000, "sha256": "source-sha"},
+        "candidate_packet": {"bytes": 170_128, "sha256": "candidate-sha"},
+        "packet_byte_delta": 128,
+        "lf_payload": {"source_bytes": 100_000, "candidate_bytes": 100_128},
+        "receiver_contract_satisfied": True,
+        "receiver_frame_equality_proof": {"status": "proven_exact"},
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    invalid = {
+        "schema": "orphan_lf_codec_sweep.v0",
+        "mode": "detached_proxy",
+    }
+
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [non_saving, invalid],
+        hard_byte_ceiling=178_000,
+        candidate_id="snerv-full600",
+    )
+
+    assert plan["local_planner_admitted"] is False
+    assert plan["selected_mode"] is None
+    assert (
+        plan["verdict"]
+        == "NO_ADMISSIBLE_LF_RECODE__RERUN_RECEIVER_PROVEN_CODEC_SWEEP"
+    )
+    assert "snerv_lf_recode_no_receiver_proven_byte_saving_mode" in plan["blockers"]
+    rows = {row["mode"]: row for row in plan["admission_rows"]}
+    assert rows["raw_int64"]["local_planner_admitted"] is False
+    assert "snerv_lf_recode_not_byte_saving" in rows["raw_int64"][
+        "local_admission_blockers"
+    ]
+    assert rows["detached_proxy"]["local_planner_admitted"] is False
+    assert "snerv_lf_recode_source_schema_invalid:orphan_lf_codec_sweep.v0" in rows[
+        "detached_proxy"
+    ]["local_admission_blockers"]
+    assert plan["byte_price_plan"]["decision_counts"]["demote"] == 2
