@@ -1976,6 +1976,7 @@ def _resolve_execute_modelsize_candidate(
     snerv_official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
     snerv_temporal_context: int = 0,
     snerv_temporal_modes: tuple[str, ...] = ("delta",),
+    byte_cap_feedback_rows: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any] | None:
     """Resolve an executable NeRV byte-budget candidate for a family launch.
 
@@ -2033,6 +2034,11 @@ def _resolve_execute_modelsize_candidate(
         raise CompactRendererMlxSpineRunnerError(
             f"no {family} modelsize candidates were enumerated"
         )
+    candidates = _attach_byte_cap_controller_predictions(
+        candidates,
+        family=family,
+        byte_cap_feedback_rows=byte_cap_feedback_rows,
+    )
     if token.lower() == "auto":
         if family == "hi_nerv":
             official_candidates = [
@@ -2066,7 +2072,11 @@ def _resolve_execute_modelsize_candidate(
             ]
             if official_candidates:
                 candidates = official_candidates
-        under = [row for row in candidates if bool(row.get("nominal_under_ceiling"))]
+        under = [
+            row
+            for row in candidates
+            if _byte_cap_controller_predicts_under_ceiling(row)
+        ]
         if under:
             tightest_ceiling = min(int(row["hard_byte_ceiling"]) for row in under)
             tightest_under = [
@@ -2086,6 +2096,10 @@ def _resolve_execute_modelsize_candidate(
                 tightest_under,
                 key=lambda row: (
                     int(row["nominal_total_payload_bytes"]),
+                    -int(
+                        _byte_cap_controller_predicted_archive_bytes(row)
+                        or row["nominal_total_payload_bytes"]
+                    ),
                     int(row.get("capacity_source") == "local_hinerv_target_modelsize"),
                     int(row.get("official_modelsize_solution") is not None),
                     float(row.get("modelsize_mparams") or 0.0),
@@ -2095,7 +2109,7 @@ def _resolve_execute_modelsize_candidate(
         return min(
             candidates,
             key=lambda row: (
-                abs(int(row.get("byte_headroom") or 0)),
+                abs(_byte_cap_controller_predicted_headroom(row)),
                 float(row.get("modelsize_error_mparams") or 0.0),
                 -int(row.get("capacity_source") == "local_hinerv_target_modelsize"),
                 -int(row.get("official_modelsize_solution") is not None),
@@ -2111,7 +2125,11 @@ def _resolve_execute_modelsize_candidate(
         candidate_id=token,
     )
     if rebuilt is not None:
-        return rebuilt
+        return _attach_byte_cap_controller_predictions(
+            [rebuilt],
+            family=family,
+            byte_cap_feedback_rows=byte_cap_feedback_rows,
+        )[0]
     raise CompactRendererMlxSpineRunnerError(
         f"unknown {family} --modelsize-candidate-id {token!r}; "
         "rerun plan mode and select one of the emitted candidate_id values"
@@ -2177,6 +2195,262 @@ def _dedupe_float_tuple(values: tuple[float, ...]) -> tuple[float, ...]:
         seen.add(normalized)
         out.append(normalized)
     return tuple(out)
+
+
+def _attach_byte_cap_controller_predictions(
+    candidates: Sequence[Mapping[str, Any]],
+    *,
+    family: str,
+    byte_cap_feedback_rows: Sequence[Mapping[str, Any]] = (),
+) -> list[dict[str, Any]]:
+    """Attach calibrated archive-byte predictions to modelsize candidates."""
+
+    calibration = _byte_cap_calibration(
+        family=family,
+        feedback_rows=byte_cap_feedback_rows,
+    )
+    return [
+        {
+            **dict(candidate),
+            "byte_cap_controller": _byte_cap_controller_prediction(
+                candidate,
+                family=family,
+                calibration=calibration,
+            ),
+        }
+        for candidate in candidates
+    ]
+
+
+def _byte_cap_controller_prediction(
+    candidate: Mapping[str, Any],
+    *,
+    family: str,
+    calibration: Mapping[str, Any],
+) -> dict[str, Any]:
+    nominal = _compact_first_present_int(
+        candidate,
+        (
+            "nominal_total_payload_bytes",
+            "total_payload_bytes",
+            "estimated_total_payload_bytes",
+            "packet_bytes",
+        ),
+    )
+    ceiling = _compact_first_present_int(candidate, ("hard_byte_ceiling",))
+    codec = _candidate_byte_cap_codec(candidate)
+    observations = _byte_cap_matching_observations(calibration, codec=codec)
+    blockers: list[str] = []
+    if nominal is None:
+        blockers.append("byte_cap_controller_candidate_nominal_payload_missing")
+    if ceiling is None:
+        blockers.append("byte_cap_controller_candidate_hard_ceiling_missing")
+    if not observations:
+        blockers.append("byte_cap_controller_measured_archive_feedback_missing")
+    predicted = nominal
+    prediction_rule = "nominal_payload_bytes_uncalibrated"
+    if nominal is not None and observations:
+        max_ratio = max(float(row["archive_to_nominal_ratio"]) for row in observations)
+        max_positive_delta = max(
+            0,
+            max(int(row["archive_minus_nominal_bytes"]) for row in observations),
+        )
+        predicted = max(
+            math.ceil(float(nominal) * max_ratio),
+            int(nominal) + int(max_positive_delta),
+        )
+        prediction_rule = (
+            "max_observed_archive_to_nominal_ratio_plus_positive_overhead"
+        )
+    headroom = None
+    if predicted is not None and ceiling is not None:
+        headroom = int(ceiling) - int(predicted)
+    return {
+        "schema": "compact_modelsize_byte_cap_controller.v1",
+        "family": str(family),
+        "codec": codec,
+        "hard_byte_ceiling": ceiling,
+        "nominal_payload_bytes": nominal,
+        "predicted_archive_bytes": predicted,
+        "predicted_headroom_bytes": headroom,
+        "predicted_under_hard_byte_ceiling": (
+            None if headroom is None else headroom >= 0
+        ),
+        "prediction_rule": prediction_rule,
+        "calibration_observation_count": len(observations),
+        "calibration_source": calibration.get("calibration_source"),
+        "matching_observations": observations,
+        "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
+        "selection_semantics": (
+            "auto modelsize candidates spend only the calibrated bytes that fit "
+            "the hard archive cap; scorer/replay authority remains separate"
+        ),
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _byte_cap_calibration(
+    *,
+    family: str,
+    feedback_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    observations: list[dict[str, Any]] = []
+    rejected_rows: list[dict[str, Any]] = []
+    for index, row in enumerate(feedback_rows):
+        row_family = str(row.get("family") or family)
+        if row_family and row_family != family:
+            continue
+        receiver_closed = _truthy_any(
+            row,
+            (
+                "receiver_closed",
+                "receiver_proof_passed",
+                "receiver_archive_replay_verified",
+                "receiver_contract_satisfied",
+                "byte_closed_receiver_proof",
+            ),
+        )
+        if not receiver_closed:
+            rejected_rows.append(
+                {
+                    "source_index": index,
+                    "row_id": row.get("row_id") or row.get("candidate_id"),
+                    "reason": "byte_cap_feedback_row_not_receiver_closed",
+                }
+            )
+            continue
+        measured = _compact_first_present_int(
+            row,
+            (
+                "measured_archive_bytes",
+                "archive_bytes",
+                "archive_zip_bytes",
+                "candidate_archive_bytes",
+            ),
+        )
+        nominal = _compact_first_present_int(
+            row,
+            (
+                "nominal_total_payload_bytes",
+                "total_payload_bytes",
+                "estimated_total_payload_bytes",
+                "packet_bytes",
+            ),
+        )
+        if measured is None or nominal is None or measured <= 0 or nominal <= 0:
+            rejected_rows.append(
+                {
+                    "source_index": index,
+                    "row_id": row.get("row_id") or row.get("candidate_id"),
+                    "reason": "byte_cap_feedback_row_missing_positive_measured_or_nominal_bytes",
+                }
+            )
+            continue
+        observations.append(
+            {
+                "source_index": index,
+                "source_path": row.get("source_path") or row.get("report_path"),
+                "row_id": row.get("row_id") or row.get("candidate_id"),
+                "family": row_family,
+                "codec": _candidate_byte_cap_codec(row),
+                "measured_archive_bytes": int(measured),
+                "nominal_payload_bytes": int(nominal),
+                "archive_minus_nominal_bytes": int(measured) - int(nominal),
+                "archive_to_nominal_ratio": float(measured) / float(nominal),
+                "receiver_closed": True,
+            }
+        )
+    return {
+        "schema": "compact_modelsize_byte_cap_calibration.v1",
+        "family": str(family),
+        "calibration_source": (
+            "measured_archive_feedback_rows" if observations else "none"
+        ),
+        "observation_count": len(observations),
+        "rejected_feedback_row_count": len(rejected_rows),
+        "rejected_feedback_rows": rejected_rows,
+        "observations": observations,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _byte_cap_matching_observations(
+    calibration: Mapping[str, Any],
+    *,
+    codec: str | None,
+) -> list[dict[str, Any]]:
+    observations = [
+        dict(row)
+        for row in calibration.get("observations", ())
+        if isinstance(row, Mapping)
+    ]
+    if codec:
+        exact = [row for row in observations if row.get("codec") == codec]
+        if exact:
+            return exact
+    return observations
+
+
+def _candidate_byte_cap_codec(row: Mapping[str, Any]) -> str | None:
+    for key in (
+        "decoder_codec",
+        "decoder_payload_codec",
+        "codec",
+        "latent_codec",
+    ):
+        value = row.get(key)
+        if value:
+            return str(value)
+    candidate = row.get("modelsize_candidate")
+    if isinstance(candidate, Mapping):
+        return _candidate_byte_cap_codec(candidate)
+    return None
+
+
+def _byte_cap_controller_predicts_under_ceiling(row: Mapping[str, Any]) -> bool:
+    controller = row.get("byte_cap_controller")
+    if isinstance(controller, Mapping):
+        value = controller.get("predicted_under_hard_byte_ceiling")
+        if value is not None:
+            return bool(value)
+    return bool(row.get("nominal_under_ceiling"))
+
+
+def _byte_cap_controller_predicted_archive_bytes(
+    row: Mapping[str, Any],
+) -> int | None:
+    controller = row.get("byte_cap_controller")
+    if isinstance(controller, Mapping):
+        value = _optional_int(controller.get("predicted_archive_bytes"))
+        if value is not None:
+            return value
+    return _compact_first_present_int(
+        row,
+        (
+            "nominal_total_payload_bytes",
+            "total_payload_bytes",
+            "estimated_total_payload_bytes",
+        ),
+    )
+
+
+def _byte_cap_controller_predicted_headroom(row: Mapping[str, Any]) -> int:
+    controller = row.get("byte_cap_controller")
+    if isinstance(controller, Mapping):
+        value = _optional_int(controller.get("predicted_headroom_bytes"))
+        if value is not None:
+            return int(value)
+    value = _compact_first_present_int(row, ("byte_headroom",))
+    return int(value or 0)
+
+
+def _truthy_any(row: Mapping[str, Any], keys: Sequence[str]) -> bool:
+    return any(row.get(key) is True for key in keys)
 
 
 def _hi_nerv_modelsize_candidate_has_official_controls(row: Mapping[str, Any]) -> bool:
@@ -7426,6 +7700,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         output_dir=out,
         artifact_dict=artifact_dict,
         modelsize_candidate=candidate or None,
+        hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=int(num_pairs),
         receiver_proof_path=receiver_proof_path,
         local_cpu_replay_summary=local_cpu_replay_summary,
@@ -9613,6 +9888,7 @@ def _write_hi_nerv_trained_archive_byte_oracle(
     output_dir: Path,
     artifact_dict: Mapping[str, Any],
     modelsize_candidate: Mapping[str, Any] | None,
+    hard_byte_ceilings: tuple[int, ...],
     num_pairs: int,
     receiver_proof_path: Path | None,
     local_cpu_replay_summary: Mapping[str, Any] | None,
@@ -9678,6 +9954,12 @@ def _write_hi_nerv_trained_archive_byte_oracle(
             "target_modelsize_mparams",
         ),
     )
+    measured_byte_cap = _measured_archive_byte_cap_report(
+        archive_bytes=archive_bytes,
+        archive_sha256=archive_sha256,
+        hard_byte_ceilings=hard_byte_ceilings,
+        candidate=candidate,
+    )
     row: dict[str, Any] = {
         "schema": "hi_nerv_trained_archive_byte_oracle_row.v1",
         "row_id": candidate_id,
@@ -9695,6 +9977,13 @@ def _write_hi_nerv_trained_archive_byte_oracle(
             candidate,
             ("nominal_total_payload_bytes",),
         ),
+        "measured_byte_cap_report": measured_byte_cap,
+        "measured_archive_bytes_under_tightest_hard_ceiling": measured_byte_cap[
+            "under_tightest_hard_byte_ceiling"
+        ],
+        "measured_archive_bytes_delta_vs_tightest_hard_ceiling": measured_byte_cap[
+            "delta_bytes_vs_tightest_hard_byte_ceiling"
+        ],
         "archive_path": archive_path.as_posix() if archive_path is not None else None,
         "archive_bytes": archive_bytes,
         "measured_archive_bytes": archive_bytes,
@@ -9726,6 +10015,7 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         blockers.append("hi_nerv_trained_archive_byte_oracle_archive_bytes_missing")
     if not _compact_is_sha256_hex(archive_sha256):
         blockers.append("hi_nerv_trained_archive_byte_oracle_archive_sha_missing")
+    blockers.extend(measured_byte_cap["blockers"])
     if not proof_passed:
         blockers.append("hi_nerv_receiver_proof_missing_or_not_passed")
     if int(num_pairs) < CONTEST_PAIR_COUNT:
@@ -9756,11 +10046,13 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         ),
         "measured_archive_bytes": archive_bytes,
         "archive_sha256": archive_sha256,
+        "measured_byte_cap_report": measured_byte_cap,
         "feedback_ready": bool(
             archive_bytes is not None
             and _compact_is_sha256_hex(archive_sha256)
             and proof_passed
             and int(num_pairs) >= CONTEST_PAIR_COUNT
+            and not measured_byte_cap["blockers"]
         ),
         "blockers": _dedupe([*blockers, *(ladder.get("blockers") or [])]),
         **FALSE_AUTHORITY,
@@ -9773,6 +10065,58 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         "sha256": _sha256_file(oracle_path),
         "receiver_closed_modelsize_ladder_sha256": _sha256_file(ladder_path),
         "receiver_closed_modelsize_ladder": ladder,
+    }
+
+
+def _measured_archive_byte_cap_report(
+    *,
+    archive_bytes: int | None,
+    archive_sha256: str | None,
+    hard_byte_ceilings: tuple[int, ...],
+    candidate: Mapping[str, Any],
+) -> dict[str, Any]:
+    ceilings = tuple(sorted({int(value) for value in hard_byte_ceilings if int(value) > 0}))
+    tightest = min(ceilings) if ceilings else None
+    candidate_ceiling = _compact_first_present_int(candidate, ("hard_byte_ceiling",))
+    archive_int = None if archive_bytes is None else int(archive_bytes)
+    delta = None if archive_int is None or tightest is None else archive_int - int(tightest)
+    under_tightest = None if delta is None else delta <= 0
+    candidate_delta = (
+        None
+        if archive_int is None or candidate_ceiling is None
+        else archive_int - int(candidate_ceiling)
+    )
+    blockers: list[str] = []
+    if not ceilings:
+        blockers.append("hard_byte_ceiling_not_configured")
+    if archive_int is None:
+        blockers.append("measured_archive_bytes_missing_for_byte_cap")
+    if not _compact_is_sha256_hex(archive_sha256):
+        blockers.append("measured_archive_sha256_missing_for_byte_cap")
+    if candidate and candidate_ceiling is None:
+        blockers.append("selected_modelsize_candidate_missing_hard_byte_ceiling")
+    if delta is not None and delta > 0:
+        blockers.append("measured_archive_bytes_exceed_tightest_hard_ceiling")
+    if candidate_delta is not None and candidate_delta > 0:
+        blockers.append("measured_archive_bytes_exceed_selected_candidate_ceiling")
+    return {
+        "schema": "measured_archive_byte_cap_report.v1",
+        "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
+        "hard_byte_ceilings": list(ceilings),
+        "tightest_hard_byte_ceiling": tightest,
+        "selected_candidate_hard_byte_ceiling": candidate_ceiling,
+        "archive_zip_bytes": archive_int,
+        "archive_sha256": archive_sha256,
+        "delta_bytes_vs_tightest_hard_byte_ceiling": delta,
+        "delta_bytes_vs_selected_candidate_ceiling": candidate_delta,
+        "under_tightest_hard_byte_ceiling": under_tightest,
+        "under_selected_candidate_hard_byte_ceiling": (
+            None if candidate_delta is None else candidate_delta <= 0
+        ),
+        "blockers": _dedupe(blockers),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
@@ -12575,6 +12919,12 @@ def _startup_byte_cap_binding(
         candidate_under_own_cap = bool(candidate_under_own_cap)
     elif candidate_ceiling is not None and nominal_total is not None:
         candidate_under_own_cap = int(nominal_total) <= int(candidate_ceiling)
+    controller = candidate.get("byte_cap_controller")
+    if not isinstance(controller, Mapping):
+        controller = {}
+    predicted_archive_bytes = _optional_int(controller.get("predicted_archive_bytes"))
+    predicted_headroom = _optional_int(controller.get("predicted_headroom_bytes"))
+    predicted_under_cap = controller.get("predicted_under_hard_byte_ceiling")
     blockers: list[str] = []
     if not ceilings:
         blockers.append("hard_byte_ceiling_not_configured")
@@ -12606,6 +12956,12 @@ def _startup_byte_cap_binding(
         "selected_candidate_nominal_under_tightest_hard_ceiling": (
             None if nominal_headroom is None else nominal_headroom >= 0
         ),
+        "calibrated_predicted_archive_bytes": predicted_archive_bytes,
+        "calibrated_predicted_headroom_bytes": predicted_headroom,
+        "calibrated_predicted_under_hard_byte_ceiling": (
+            None if predicted_under_cap is None else bool(predicted_under_cap)
+        ),
+        "byte_cap_controller": _jsonable_lock_value(dict(controller)),
         "hard_byte_ceiling_semantics": (
             "launch_filter_and_export_blocker_until_measured_archive_zip_bytes_exist"
         ),
@@ -14042,6 +14398,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--random-seed", default=0, type=int)
     parser.add_argument("--hard-byte-ceiling", action="append", type=int)
     parser.add_argument(
+        "--modelsize-byte-cap-feedback-json",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Measured archive/export JSON used to calibrate modelsize auto "
+            "selection against charged archive byte caps. Repeatable."
+        ),
+    )
+    parser.add_argument(
         "--hprc-queue-followup-report",
         action="append",
         default=[],
@@ -14107,6 +14473,9 @@ def main(argv: list[str] | None = None) -> int:
             + ", ".join(snerv_modelsize_control_blockers)
         )
     ceilings = tuple(args.hard_byte_ceiling or DEFAULT_BASE_RENDERER_BYTE_CEILINGS)
+    byte_cap_feedback_rows = _load_modelsize_byte_cap_feedback_rows(
+        args.modelsize_byte_cap_feedback_json
+    )
     output_dir = args.output_dir or _default_output_dir()
     scorer_upstream_dir = _resolve_scorer_upstream_dir(
         args.repo_root,
@@ -14164,6 +14533,7 @@ def main(argv: list[str] | None = None) -> int:
                 if args.snerv_temporal_mode is None
                 else (str(args.snerv_temporal_mode),)
             ),
+            byte_cap_feedback_rows=byte_cap_feedback_rows,
         )
     planner_launch_blockers = _planner_row_launch_blockers(args)
     if planner_launch_blockers:
@@ -14828,6 +15198,131 @@ def _optional_existing(path: Any, *, base: Path) -> Path | None:
         return None
     resolved = _resolve(path, base=base)
     return resolved if resolved.is_file() else None
+
+
+def _load_modelsize_byte_cap_feedback_rows(paths: Sequence[Path]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for raw_path in paths:
+        path = Path(raw_path).expanduser().resolve(strict=False)
+        payload = _load_json(path)
+        for row in _extract_modelsize_byte_cap_feedback_rows(payload):
+            row.setdefault("source_path", path.as_posix())
+            rows.append(row)
+    return rows
+
+
+def _extract_modelsize_byte_cap_feedback_rows(
+    payload: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    def visit(node: Any) -> None:
+        if isinstance(node, Mapping):
+            row = _modelsize_byte_cap_feedback_row(node)
+            if row is not None:
+                rows.append(row)
+            for key in (
+                "row",
+                "rows",
+                "archive_rows",
+                "ladder_rows",
+                "receiver_closed_rows",
+                "points",
+                "selected_candidates",
+                "family_rows",
+                "trained_archive_byte_oracle",
+                "modelsize_candidate",
+            ):
+                child = node.get(key)
+                if child is not None:
+                    visit(child)
+        elif isinstance(node, Sequence) and not isinstance(node, (str, bytes, bytearray)):
+            for item in node:
+                visit(item)
+
+    visit(payload)
+    deduped: list[dict[str, Any]] = []
+    seen: set[tuple[Any, ...]] = set()
+    for row in rows:
+        key = (
+            row.get("source_path"),
+            row.get("row_id"),
+            row.get("candidate_id"),
+            row.get("measured_archive_bytes"),
+            row.get("nominal_total_payload_bytes"),
+            row.get("packet_bytes"),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
+
+
+def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] | None:
+    measured = _compact_first_present_int(
+        node,
+        (
+            "measured_archive_bytes",
+            "archive_bytes",
+            "archive_zip_bytes",
+            "candidate_archive_bytes",
+        ),
+    )
+    if measured is None or measured <= 0:
+        return None
+    candidate = node.get("modelsize_candidate")
+    candidate_mapping = candidate if isinstance(candidate, Mapping) else {}
+    nominal = _compact_first_present_int(
+        node,
+        (
+            "nominal_total_payload_bytes",
+            "total_payload_bytes",
+            "estimated_total_payload_bytes",
+            "packet_bytes",
+        ),
+    )
+    if nominal is None:
+        nominal = _compact_first_present_int(
+            candidate_mapping,
+            (
+                "nominal_total_payload_bytes",
+                "total_payload_bytes",
+                "estimated_total_payload_bytes",
+                "packet_bytes",
+            ),
+        )
+    if nominal is None or nominal <= 0:
+        return None
+    row = {
+        "family": node.get("family") or candidate_mapping.get("family"),
+        "row_id": node.get("row_id") or node.get("candidate_id"),
+        "candidate_id": node.get("candidate_id") or candidate_mapping.get("candidate_id"),
+        "measured_archive_bytes": int(measured),
+        "nominal_total_payload_bytes": int(nominal),
+        "hard_byte_ceiling": (
+            _compact_first_present_int(node, ("hard_byte_ceiling",))
+            or _compact_first_present_int(candidate_mapping, ("hard_byte_ceiling",))
+        ),
+        "decoder_codec": (
+            node.get("decoder_codec")
+            or node.get("decoder_payload_codec")
+            or candidate_mapping.get("decoder_codec")
+            or candidate_mapping.get("decoder_payload_codec")
+        ),
+        "receiver_closed": _truthy_any(
+            node,
+            (
+                "receiver_closed",
+                "receiver_proof_passed",
+                "receiver_archive_replay_verified",
+                "receiver_contract_satisfied",
+                "byte_closed_receiver_proof",
+            ),
+        ),
+        "report_path": node.get("report_path"),
+    }
+    return {key: value for key, value in row.items() if value is not None}
 
 
 def _load_json(path: Path) -> dict[str, Any]:

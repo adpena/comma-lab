@@ -2128,6 +2128,86 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         )
 
 
+def test_byte_cap_controller_uses_measured_archive_feedback() -> None:
+    attached = runner_mod._attach_byte_cap_controller_predictions(
+        [
+            {
+                "candidate_id": "small",
+                "family": "hi_nerv",
+                "hard_byte_ceiling": 100,
+                "nominal_total_payload_bytes": 60,
+                "decoder_codec": "int4_scale_bundled",
+                "nominal_under_ceiling": True,
+            },
+            {
+                "candidate_id": "large",
+                "family": "hi_nerv",
+                "hard_byte_ceiling": 100,
+                "nominal_total_payload_bytes": 80,
+                "decoder_codec": "int4_scale_bundled",
+                "nominal_under_ceiling": True,
+            },
+        ],
+        family="hi_nerv",
+        byte_cap_feedback_rows=[
+            {
+                "row_id": "measured_export",
+                "family": "hi_nerv",
+                "nominal_total_payload_bytes": 60,
+                "measured_archive_bytes": 90,
+                "decoder_codec": "int4_scale_bundled",
+                "receiver_proof_passed": True,
+            }
+        ],
+    )
+
+    by_id = {row["candidate_id"]: row for row in attached}
+    assert by_id["small"]["byte_cap_controller"]["predicted_archive_bytes"] == 90
+    assert by_id["small"]["byte_cap_controller"][
+        "predicted_under_hard_byte_ceiling"
+    ] is True
+    assert by_id["large"]["byte_cap_controller"]["predicted_archive_bytes"] == 120
+    assert by_id["large"]["byte_cap_controller"][
+        "predicted_under_hard_byte_ceiling"
+    ] is False
+    assert runner_mod._byte_cap_controller_predicts_under_ceiling(by_id["small"])
+    assert not runner_mod._byte_cap_controller_predicts_under_ceiling(by_id["large"])
+
+
+def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
+    attached = runner_mod._attach_byte_cap_controller_predictions(
+        [
+            {
+                "candidate_id": "candidate",
+                "family": "hi_nerv",
+                "hard_byte_ceiling": 100,
+                "nominal_total_payload_bytes": 80,
+                "decoder_codec": "int4_scale_bundled",
+                "nominal_under_ceiling": True,
+            }
+        ],
+        family="hi_nerv",
+        byte_cap_feedback_rows=[
+            {
+                "row_id": "optimistic_unproven",
+                "family": "hi_nerv",
+                "nominal_total_payload_bytes": 100,
+                "measured_archive_bytes": 50,
+                "decoder_codec": "int4_scale_bundled",
+                "receiver_proof_passed": False,
+            }
+        ],
+    )
+
+    controller = attached[0]["byte_cap_controller"]
+    assert controller["predicted_archive_bytes"] == 80
+    assert controller["prediction_rule"] == "nominal_payload_bytes_uncalibrated"
+    assert controller["calibration_observation_count"] == 0
+    assert "byte_cap_controller_measured_archive_feedback_missing" in controller[
+        "blockers"
+    ]
+
+
 def test_snerv_official_modelsize_controls_require_candidate_resolution() -> None:
     manual = _parse_args(
         [
@@ -4057,6 +4137,7 @@ def test_hinerv_trained_archive_byte_oracle_writes_receiver_closed_ladder(
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 40_000,
         },
+        hard_byte_ceilings=(178_000,),
         num_pairs=2,
         receiver_proof_path=proof,
         local_cpu_replay_summary={
@@ -4076,6 +4157,17 @@ def test_hinerv_trained_archive_byte_oracle_writes_receiver_closed_ladder(
     assert oracle["row"]["receiver_proof_passed"] is True
     assert oracle["row"]["measured_archive_bytes"] == archive.stat().st_size
     assert oracle["row"]["archive_sha256"] == archive_sha
+    assert oracle["measured_byte_cap_report"]["archive_zip_bytes"] == archive.stat().st_size
+    assert (
+        oracle["measured_byte_cap_report"][
+            "delta_bytes_vs_tightest_hard_byte_ceiling"
+        ]
+        == archive.stat().st_size - 178_000
+    )
+    assert (
+        oracle["row"]["measured_archive_bytes_under_tightest_hard_ceiling"]
+        is True
+    )
     assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in oracle[
         "blockers"
     ]
@@ -4085,6 +4177,62 @@ def test_hinerv_trained_archive_byte_oracle_writes_receiver_closed_ladder(
     )
     assert oracle["score_claim"] is False
     assert oracle["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_trained_archive_byte_oracle_blocks_measured_over_cap(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"x" * 64)
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_receiver_proof.v1",
+                "receiver_archive_replay_verified": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    oracle = runner_mod._write_hi_nerv_trained_archive_byte_oracle(
+        output_dir=tmp_path,
+        artifact_dict={
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": archive_sha,
+        },
+        modelsize_candidate={
+            "candidate_id": "hi_nerv_oracle_overcap",
+            "modelsize_mparams": 0.02,
+            "hard_byte_ceiling": 32,
+            "nominal_total_payload_bytes": 16,
+        },
+        hard_byte_ceilings=(32,),
+        num_pairs=600,
+        receiver_proof_path=proof,
+        local_cpu_replay_summary={
+            "axis_tag": "[contest-CPU]",
+            "score_claim": False,
+            "blockers": [],
+        },
+        mlx_prefilter_coverage={"has_full_video_mlx_prefilter": True},
+        repo_root=REPO_ROOT,
+    )
+
+    report = oracle["measured_byte_cap_report"]
+    assert report["archive_zip_bytes"] == 64
+    assert report["delta_bytes_vs_tightest_hard_byte_ceiling"] == 32
+    assert report["under_tightest_hard_byte_ceiling"] is False
+    assert "measured_archive_bytes_exceed_tightest_hard_ceiling" in report[
+        "blockers"
+    ]
+    assert "measured_archive_bytes_exceed_tightest_hard_ceiling" in oracle[
+        "blockers"
+    ]
+    assert oracle["feedback_ready"] is False
 
 
 def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
