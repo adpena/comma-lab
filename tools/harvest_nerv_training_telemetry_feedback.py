@@ -20,6 +20,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.analysis.nerv_candidate_feedback import (  # noqa: E402
     write_nerv_training_telemetry_feedback_files,
 )
+from tac.repo_io import write_json_artifact  # noqa: E402
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -59,11 +60,9 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     if args.output_json:
-        output_json = Path(args.output_json).expanduser().resolve(strict=False)
-        output_json.parent.mkdir(parents=True, exist_ok=True)
-        output_json.write_text(
-            json.dumps(result, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
+        write_json_artifact(
+            Path(args.output_json).expanduser().resolve(strict=False),
+            result,
         )
     print(json.dumps(_summary(result), indent=2, sort_keys=True))
     return 0
@@ -98,6 +97,10 @@ def _summary(result: dict[str, Any]) -> dict[str, Any]:
         ),
         "recommended_segnet_distillation_weight": row.get(
             "recommended_segnet_distillation_weight"
+        ),
+        "training_control_action": row.get("training_control_action"),
+        "training_control_should_stop_current_run": row.get(
+            "training_control_should_stop_current_run"
         ),
         "training_stopped": row.get("training_stopped"),
         "last_epoch": telemetry.get("last_epoch"),

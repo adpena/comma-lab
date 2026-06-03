@@ -57,6 +57,8 @@ _SEG_STAGNATION_WINDOW_EPOCHS = 64
 _SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT = 0.05
 _SEG_STAGNATION_WEIGHT_MULTIPLIER = 2.0
 _SEG_STAGNATION_MAX_DISTILLATION_WEIGHT = 8.0
+_TRAINING_CONTROL_RECENT_WINDOW_EPOCHS = 64
+_TRAINING_CONTROL_MIN_RECENT_RELATIVE_IMPROVEMENT = 0.01
 
 
 def _mapping_or_empty(value: Any) -> dict[str, Any]:
@@ -332,6 +334,12 @@ def build_nerv_training_telemetry_feedback_row(
     if health.get("seg_stagnation_detected"):
         blockers.append("hi_nerv_segnet_stagnation_telemetry_feedback")
     training_stopped = not _is_midrun_feedback_snapshot(stop_reason)
+    training_control = _training_control_recommendation(
+        health=health,
+        training_stopped=training_stopped,
+        measured_pairs=measured_pairs,
+        candidate_pairs=candidate_pairs,
+    )
     return {
         "schema": SCHEMA,
         "feedback_kind": "training_telemetry",
@@ -369,6 +377,15 @@ def build_nerv_training_telemetry_feedback_row(
             else "telemetry_harvest_without_completion_artifact"
         ),
         "training_telemetry": health,
+        "training_control": training_control,
+        "training_control_action": training_control["action"],
+        "training_control_reason": training_control["reason"],
+        "training_control_should_stop_current_run": training_control[
+            "should_stop_current_run"
+        ],
+        "training_control_successor_required": training_control[
+            "successor_required"
+        ],
         "training_row_count": health.get("row_count"),
         "training_first_epoch": health.get("first_epoch"),
         "training_last_epoch": health.get("last_epoch"),
@@ -409,6 +426,11 @@ def build_nerv_training_telemetry_feedback_row(
         "seg_stagnation_last_window_median": health.get(
             "seg_stagnation_last_window_median"
         ),
+        "seg_recent_relative_improvement": health.get(
+            "seg_recent_relative_improvement"
+        ),
+        "seg_recent_window_median": health.get("seg_recent_window_median"),
+        "seg_previous_window_median": health.get("seg_previous_window_median"),
         "observed_segnet_distillation_weight": health.get(
             "observed_segnet_distillation_weight"
         ),
@@ -817,6 +839,20 @@ def _summarize_training_telemetry_health(
         )
     seg_first_window_median = _median(seg_axes[: _SEG_STAGNATION_WINDOW_EPOCHS])
     seg_last_window_median = _median(seg_axes[-_SEG_STAGNATION_WINDOW_EPOCHS:])
+    seg_previous_window_median = _median(
+        seg_axes[
+            -2 * _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS : -_TRAINING_CONTROL_RECENT_WINDOW_EPOCHS
+        ]
+        if len(seg_axes) >= 2 * _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS
+        else []
+    )
+    seg_recent_window_median = _median(
+        seg_axes[-_TRAINING_CONTROL_RECENT_WINDOW_EPOCHS:]
+    )
+    seg_recent_relative_improvement = _relative_improvement(
+        seg_previous_window_median,
+        seg_recent_window_median,
+    )
     seg_relative_improvement = _relative_improvement(
         seg_first_window_median,
         seg_last_window_median,
@@ -878,6 +914,13 @@ def _summarize_training_telemetry_health(
         "seg_stagnation_first_window_median": seg_first_window_median,
         "seg_stagnation_last_window_median": seg_last_window_median,
         "seg_stagnation_relative_improvement": seg_relative_improvement,
+        "seg_recent_window_epochs": _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS,
+        "seg_recent_min_relative_improvement": (
+            _TRAINING_CONTROL_MIN_RECENT_RELATIVE_IMPROVEMENT
+        ),
+        "seg_previous_window_median": seg_previous_window_median,
+        "seg_recent_window_median": seg_recent_window_median,
+        "seg_recent_relative_improvement": seg_recent_relative_improvement,
         "seg_stagnation_detected": seg_stagnation,
         "observed_segnet_distillation_weight": observed_seg_weight,
         "recommended_learning_rate": recommended_lr,
@@ -895,6 +938,77 @@ def _summarize_training_telemetry_health(
 
 def _is_midrun_feedback_snapshot(stop_reason: str | None) -> bool:
     return str(stop_reason or "").strip() in _MIDRUN_STOP_REASONS
+
+
+def _training_control_recommendation(
+    *,
+    health: Mapping[str, Any],
+    training_stopped: bool,
+    measured_pairs: int,
+    candidate_pairs: int,
+) -> dict[str, Any]:
+    """Return a queue-consumable live-training action without mutating jobs."""
+
+    recommended_mutations = list(health.get("recommended_launch_mutations") or [])
+    if training_stopped:
+        action = "terminal_feedback_no_live_training_action"
+        reason = "training_already_terminal_or_not_marked_running"
+        should_stop = False
+        successor_required = bool(recommended_mutations)
+    elif int(measured_pairs) < min(int(candidate_pairs), CONTEST_PAIR_COUNT):
+        action = "continue_running_until_full_video_feedback"
+        reason = "partial_training_telemetry_not_enough_for_lane_control"
+        should_stop = False
+        successor_required = False
+    elif bool(health.get("pose_instability_detected")) and health.get(
+        "recommended_learning_rate"
+    ):
+        action = "checkpoint_then_supersede_with_lower_learning_rate"
+        reason = "active_pose_instability_requires_lower_lr_successor"
+        should_stop = True
+        successor_required = True
+    elif bool(health.get("seg_stagnation_detected")) and health.get(
+        "recommended_segnet_distillation_weight"
+    ):
+        recent_improvement = _float_or_none(
+            health.get("seg_recent_relative_improvement")
+        )
+        recent_flat = bool(
+            recent_improvement is not None
+            and recent_improvement < _TRAINING_CONTROL_MIN_RECENT_RELATIVE_IMPROVEMENT
+        )
+        if recent_flat:
+            action = "checkpoint_then_supersede_with_higher_segnet_weight"
+            reason = "full_video_segnet_stagnation_recent_window_flat"
+            should_stop = True
+            successor_required = True
+        else:
+            action = "continue_running_recheck_segnet_recent_window"
+            reason = "segnet_stagnation_detected_but_recent_window_still_improving"
+            should_stop = False
+            successor_required = True
+    else:
+        action = "continue_running"
+        reason = "no_live_training_replan_trigger"
+        should_stop = False
+        successor_required = False
+    return {
+        "schema": "nerv_training_control_recommendation.v1",
+        "action": action,
+        "reason": reason,
+        "should_stop_current_run": should_stop,
+        "successor_required": successor_required,
+        "recommended_successor_mutations": recommended_mutations,
+        "measured_pairs": int(measured_pairs),
+        "candidate_pairs": int(candidate_pairs),
+        "seg_recent_relative_improvement": health.get(
+            "seg_recent_relative_improvement"
+        ),
+        "seg_recent_min_relative_improvement": (
+            _TRAINING_CONTROL_MIN_RECENT_RELATIVE_IMPROVEMENT
+        ),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _refresh_nested_pr95_stack_binding_blockers(report: dict[str, Any]) -> list[str]:

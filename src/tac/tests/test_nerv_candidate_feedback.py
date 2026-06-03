@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tac.analysis.nerv_candidate_feedback import (
     build_nerv_candidate_feedback_row,
     build_nerv_training_telemetry_feedback_row,
@@ -14,7 +16,13 @@ from tac.analysis.nerv_candidate_feedback import (
     write_nerv_training_telemetry_feedback_files,
     write_refreshed_nerv_candidate_feedback_files,
 )
-from tools.harvest_nerv_training_telemetry_feedback import _effective_stop_reason
+from tac.repo_io import ArtifactWriteError
+from tools.harvest_nerv_training_telemetry_feedback import (
+    _effective_stop_reason,
+)
+from tools.harvest_nerv_training_telemetry_feedback import (
+    main as harvest_training_feedback_main,
+)
 
 
 def _runner_report(tmp_path: Path) -> dict[str, object]:
@@ -372,11 +380,61 @@ def test_training_telemetry_feedback_detects_segnet_stagnation(
     assert row["observed_segnet_distillation_weight"] == 2.0
     assert row["recommended_segnet_distillation_weight"] == 4.0
     assert row["seg_stagnation_relative_improvement"] < 0.05
+    assert row["training_control_action"] == "terminal_feedback_no_live_training_action"
+    assert row["training_control_should_stop_current_run"] is False
     assert "increase_segnet_distillation_weight_from_stagnation_telemetry" in row[
         "recommended_launch_mutations"
     ]
     assert "hi_nerv_segnet_stagnation_telemetry_feedback" in row["blockers"]
     assert row["score_claim"] is False
+
+
+def test_running_training_telemetry_feedback_recommends_checkpoint_supersede_for_flat_segnet(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "running_segnet_flat_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 6.1,
+                "loss_part_weighted_distill": 24.4,
+            },
+            "per_axis_decomposition": {
+                "pose": 1.5,
+                "seg": 6.2 - min(epoch, 127) * 0.0001,
+            },
+        }
+        for epoch in range(192)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+    )
+
+    assert row["training_stopped"] is False
+    assert row["seg_stagnation_detected"] is True
+    assert row["seg_recent_relative_improvement"] < 0.01
+    assert (
+        row["training_control_action"]
+        == "checkpoint_then_supersede_with_higher_segnet_weight"
+    )
+    assert row["training_control_should_stop_current_run"] is True
+    assert row["training_control_successor_required"] is True
+    assert (
+        "increase_segnet_distillation_weight_from_stagnation_telemetry"
+        in row["training_control"]["recommended_successor_mutations"]
+    )
 
 
 def test_write_training_telemetry_feedback_files_writes_manifest_and_ledger(
@@ -432,6 +490,48 @@ def test_training_telemetry_harvester_marks_running_snapshot_explicitly() -> Non
         == "completed"
     )
     assert _effective_stop_reason(stop_reason=None, training_running=False) is None
+
+
+def test_harvest_training_telemetry_feedback_tool_output_json_is_guarded(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 1,
+                "learning_rate": 2.7e-5,
+                "loss_components": {"loss_part_pose_distill": 1.0},
+                "per_axis_decomposition": {"pose": 1.0, "seg": 6.0},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    output_json = tmp_path / "harvest_manifest.json"
+    argv = [
+        "--telemetry",
+        str(telemetry),
+        "--family",
+        "hi_nerv",
+        "--candidate-id",
+        "hinerv_np600_guarded_output",
+        "--candidate-num-pairs",
+        "600",
+        "--training-running",
+        "--output-dir",
+        str(tmp_path / "feedback"),
+        "--output-json",
+        str(output_json),
+    ]
+
+    assert harvest_training_feedback_main(argv) == 0
+    capsys.readouterr()
+    assert output_json.is_file()
+    with pytest.raises(ArtifactWriteError, match="refusing to overwrite"):
+        harvest_training_feedback_main(argv)
 
 
 def test_refresh_nerv_candidate_feedback_report_repairs_batched_mlx_signal(

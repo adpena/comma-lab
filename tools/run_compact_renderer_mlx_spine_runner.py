@@ -2148,6 +2148,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     start_pair: int,
     pair_guard_min_score_improved_fraction: float,
     pair_guard_max_pose_worsened_fraction: float,
+    component_guard_mode: str,
     seed: int,
 ) -> dict[str, Any]:
     """Run SNeRV receiver-priced scorer-loop QAT and persist its result.
@@ -2164,6 +2165,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             "schema": "compact_runner_snerv_scorer_loop_qat_attachment.v1",
             "executed": False,
             "requested": False,
+            "component_guard_mode": str(component_guard_mode),
             "blockers": ["snerv_scorer_loop_qat_not_requested"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -2217,6 +2219,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             pair_guard_max_pose_worsened_fraction=float(
                 pair_guard_max_pose_worsened_fraction
             ),
+            component_guard_mode=str(component_guard_mode),
             seed=int(seed),
         )
         result_payload = (
@@ -2245,6 +2248,9 @@ def _run_snerv_scorer_loop_qat_attachment(
             "qat_bits": int(qat_bits),
             "max_trials": int(max_trials),
             "search_mode": str(search_mode),
+            "component_guard_mode": str(
+                result_payload.get("component_guard_mode") or component_guard_mode
+            ),
             "section_value_pressure_multiplier": float(
                 section_value_pressure_multiplier
             ),
@@ -2276,6 +2282,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             "executed": False,
             "requested": True,
             "failure": repr(exc),
+            "component_guard_mode": str(component_guard_mode),
             "blockers": ["snerv_scorer_loop_qat_failed"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -2557,6 +2564,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_scorer_loop_start_pair: int = 0,
     snerv_scorer_loop_pair_guard_min_score_improved_fraction: float = 0.0,
     snerv_scorer_loop_pair_guard_max_pose_worsened_fraction: float = 1.0,
+    snerv_scorer_loop_component_guard_mode: str = "score_primary",
     random_seed: int = 0,
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
@@ -2931,6 +2939,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         pair_guard_max_pose_worsened_fraction=float(
             snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
         ),
+        component_guard_mode=str(snerv_scorer_loop_component_guard_mode),
         seed=int(random_seed),
     )
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
@@ -2951,8 +2960,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         scorer_loop_qat_search_mode=str(snerv_scorer_loop_search_mode),
         scorer_loop_qat_qat_bits=int(snerv_scorer_loop_qat_bits),
         scorer_loop_qat_decoder_payload_codec=decoder_payload_codec,
-        scorer_loop_qat_component_guard_mode=(
-            "score_primary"
+        scorer_loop_qat_component_guard_mode=str(
+            snerv_scorer_loop_component_guard_mode
         ),
         scorer_loop_qat_device=str(distillation_device),
     )
@@ -3137,6 +3146,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     step_map_waterfill_bits_per_coeff
                 ),
                 "decoder_payload_codec": decoder_payload_codec,
+                "scorer_loop_component_guard_mode": str(
+                    snerv_scorer_loop_component_guard_mode
+                ),
                 "score_linf": float(advisory.score_linf),
                 "score_l2": float(advisory.score_l2),
                 "d_seg_mean_linf": float(advisory.d_seg_mean_linf),
@@ -8929,6 +8941,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=float,
     )
     parser.add_argument(
+        "--snerv-scorer-loop-component-guard-mode",
+        choices=("score_primary", "pose_hard", "pose_seg_hard"),
+        default="score_primary",
+        help=(
+            "SNeRV scorer-loop/QAT acceptance guard. score_primary accepts "
+            "true score wins; pose_hard and pose_seg_hard are stricter "
+            "receiver-priced probes and must remain explicit in metadata."
+        ),
+    )
+    parser.add_argument(
         "--recon-pixel-weight-path",
         type=Path,
         help=(
@@ -9428,6 +9450,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_scorer_loop_pair_guard_max_pose_worsened_fraction=(
                 args.snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
+            ),
+            snerv_scorer_loop_component_guard_mode=(
+                args.snerv_scorer_loop_component_guard_mode
             ),
             random_seed=args.random_seed,
             upstream_dir=scorer_upstream_dir,

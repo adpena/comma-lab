@@ -519,6 +519,7 @@ def _run_scorer_loop_qat_attachment(
             "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
             "requested": False,
             "executed": False,
+            "component_guard_mode": str(component_guard_mode),
             "receiver_contract_satisfied": False,
             "accepted_improvement": False,
             "full_video_coverage": False,
@@ -614,6 +615,9 @@ def _run_scorer_loop_qat_attachment(
             "decoder_payload_codec": str(
                 result_payload.get("decoder_payload_codec") or decoder_payload_codec
             ),
+            "component_guard_mode": str(
+                result_payload.get("component_guard_mode") or component_guard_mode
+            ),
             "accepted_improvement": bool(result_payload.get("accepted_improvement")),
             "receiver_contract_satisfied": bool(
                 result_payload.get("receiver_contract_satisfied")
@@ -638,6 +642,7 @@ def _run_scorer_loop_qat_attachment(
             "failure": repr(exc),
             "receiver_contract_satisfied": False,
             "accepted_improvement": False,
+            "component_guard_mode": str(component_guard_mode),
             "full_video_coverage": False,
             "emitted_packet_uses_scorer_loop_best_decoder": False,
             "blockers": ["snerv_scorer_loop_qat_attachment_failed"],

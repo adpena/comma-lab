@@ -207,6 +207,8 @@ def render_refresh_markdown(report: Mapping[str, Any]) -> str:
                 f"  last_epoch: `{dict(feedback.get('training_telemetry') or {}).get('last_epoch')}`",
                 f"  observed_segnet_weight: `{feedback.get('observed_segnet_distillation_weight')}`",
                 f"  recommended_segnet_weight: `{feedback.get('recommended_segnet_distillation_weight')}`",
+                f"  training_control_action: `{feedback.get('training_control_action')}`",
+                f"  training_control_should_stop: `{feedback.get('training_control_should_stop_current_run')}`",
                 f"  row: `{row.get('row_path')}`",
             ]
         )

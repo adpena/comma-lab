@@ -101,6 +101,11 @@ def test_refresh_queue_training_feedback_harvests_running_hinerv_row(
     assert feedback["training_stopped"] is False
     assert feedback["observed_segnet_distillation_weight"] == 4.0
     assert feedback["recommended_segnet_distillation_weight"] == 8.0
+    assert (
+        feedback["training_control_action"]
+        == "checkpoint_then_supersede_with_higher_segnet_weight"
+    )
+    assert feedback["training_control_should_stop_current_run"] is True
     assert "hi_nerv_segnet_stagnation_telemetry_feedback" in feedback["blockers"]
     assert Path(report["rows"][0]["row_path"]).is_file()
 
@@ -114,6 +119,10 @@ def test_refresh_queue_training_feedback_harvests_running_hinerv_row(
     assert Path(write_result["jsonl_path"]).read_text(encoding="utf-8").count("\n") == 1
     markdown = render_refresh_markdown(report)
     assert "recommended_segnet_weight: `8.0`" in markdown
+    assert (
+        "training_control_action: `checkpoint_then_supersede_with_higher_segnet_weight`"
+        in markdown
+    )
 
     loaded = _load_feedback_sources([tmp_path / "refresh.json"])
     assert len(loaded) == 1
