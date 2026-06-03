@@ -3808,6 +3808,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             "required_pair_file_backed_export_proof_passed"
         )
     )
+    snerv_mlx_native_receiver_proof_passed = bool(
+        snerv_mlx_native_export.get("executed")
+        and snerv_mlx_native_export.get("receiver_proof_passed") is True
+        and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
+    )
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
@@ -3838,7 +3843,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         native_mlx_long_training_bound=bool(
             snerv_mlx_native_export.get("score_aware_long_training_executed")
         ),
-        native_mlx_receiver_proof_passed=snerv_mlx_native_export_verified,
+        native_mlx_receiver_proof_passed=snerv_mlx_native_receiver_proof_passed,
         native_mlx_full600_campaign_ready=bool(
             snerv_mlx_native_export.get("native_mlx_full600_campaign_ready")
         ),

@@ -6245,7 +6245,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     )
     plan = out["candidate_curriculum_plan"]
     assert plan["training_plan"]["native_mlx_train_export_attached"] is True
-    assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is False
+    assert plan["training_plan"]["native_mlx_receiver_proof_passed"] is True
     assert plan["training_plan"]["native_mlx_file_backed_export_proof_passed"] is False
     assert plan["training_plan"]["native_mlx_scorer_loop_qat_attached"] is True
     assert plan["training_plan"]["scorer_loop_qat_attached"] is True
@@ -6264,6 +6264,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in out[
         "blockers"
     ]
+    assert "snerv_mlx_native_receiver_proof_missing_or_failed" not in out["blockers"]
     assert "snerv_mlx_native_export_partial_pair_coverage" in out["blockers"]
     assert "snerv_mlx_native_arbitrary_pair_hydration_not_implemented" not in out[
         "blockers"
