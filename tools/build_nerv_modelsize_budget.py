@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Build false-authority HiNeRV/SNeRV model-size budget artifacts."""
+"""Build planning-grade HiNeRV/SNeRV model-size budget artifacts."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
 )
-from tac.repo_io import sha256_file, write_json_artifact, write_text_artifact  # noqa: E402
+from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,8 +35,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--allow-overwrite",
         action="store_true",
-        help="Allow replacing existing output files.",
+        help=(
+            "Allow replacing existing output files, but only when the matching "
+            "expected-output-* sha256 flag is supplied."
+        ),
     )
+    parser.add_argument("--expected-output-hinerv-json-sha256")
+    parser.add_argument("--expected-output-snerv-json-sha256")
+    parser.add_argument("--expected-output-md-sha256")
     args = parser.parse_args(argv)
 
     hard_byte_ceilings = tuple(
@@ -56,19 +62,13 @@ def main(argv: list[str] | None = None) -> int:
         args.output_hinerv_json,
         hinerv,
         allow_overwrite=bool(args.allow_overwrite),
-        expected_existing_sha256=_expected_existing_sha256(
-            args.output_hinerv_json,
-            allow_overwrite=bool(args.allow_overwrite),
-        ),
+        expected_existing_sha256=args.expected_output_hinerv_json_sha256,
     )
     snerv_result = write_json_artifact(
         args.output_snerv_json,
         snerv,
         allow_overwrite=bool(args.allow_overwrite),
-        expected_existing_sha256=_expected_existing_sha256(
-            args.output_snerv_json,
-            allow_overwrite=bool(args.allow_overwrite),
-        ),
+        expected_existing_sha256=args.expected_output_snerv_json_sha256,
     )
     md_result = None
     if args.output_md is not None:
@@ -76,22 +76,22 @@ def main(argv: list[str] | None = None) -> int:
             args.output_md,
             _render_markdown(hinerv, snerv),
             allow_overwrite=bool(args.allow_overwrite),
-            expected_existing_sha256=_expected_existing_sha256(
-                args.output_md,
-                allow_overwrite=bool(args.allow_overwrite),
-            ),
+            expected_existing_sha256=args.expected_output_md_sha256,
         )
 
     summary = {
         "schema": "nerv_modelsize_budget_build.v1",
+        "inputs": {
+            "hard_byte_ceilings": list(hard_byte_ceilings),
+            "num_pairs": int(args.num_pairs),
+            "per_ceiling_limit": int(args.per_ceiling_limit),
+        },
         "hinerv_output_json": hinerv_result.path,
         "hinerv_output_sha256": hinerv_result.sha256,
         "snerv_output_json": snerv_result.path,
         "snerv_output_sha256": snerv_result.sha256,
         "output_md": None if md_result is None else md_result.path,
         "output_md_sha256": None if md_result is None else md_result.sha256,
-        "hard_byte_ceilings": list(hard_byte_ceilings),
-        "num_pairs": int(args.num_pairs),
         "hinerv_selected_candidate_count": int(hinerv["selected_candidate_count"]),
         "snerv_selected_candidate_count": int(snerv["selected_candidate_count"]),
         "score_claim": False,
@@ -124,12 +124,6 @@ def _render_markdown(hinerv: dict[str, Any], snerv: dict[str, Any]) -> str:
     lines.extend(["", "## Top SNeRV Candidates", ""])
     lines.extend(_candidate_lines(snerv.get("selected_candidates") or []))
     return "\n".join(lines).rstrip() + "\n"
-
-
-def _expected_existing_sha256(path: Path, *, allow_overwrite: bool) -> str | None:
-    if allow_overwrite and path.exists():
-        return sha256_file(path)
-    return None
 
 
 def _candidate_lines(rows: list[dict[str, Any]]) -> list[str]:
