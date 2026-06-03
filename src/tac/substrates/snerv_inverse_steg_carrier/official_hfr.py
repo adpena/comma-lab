@@ -84,7 +84,7 @@ class OfficialConv2dNchw:
         self,
         x: Any,
         *,
-        accumulation_mode: str = "optimized",
+        accumulation_mode: str = "fixed_fp32",
     ) -> Any:
         return conv2d_nchw_mlx(
             x,
@@ -128,7 +128,7 @@ class OfficialHfrConvBlock:
         self,
         pyr_out: Any,
         *,
-        accumulation_mode: str = "optimized",
+        accumulation_mode: str = "fixed_fp32",
     ) -> Any:
         hidden = leaky_relu01_mlx(
             self.conv1.forward_mlx(pyr_out, accumulation_mode=accumulation_mode)
@@ -194,7 +194,7 @@ class OfficialHfrHeads:
         self,
         pyr_out: Any,
         *,
-        accumulation_mode: str = "optimized",
+        accumulation_mode: str = "fixed_fp32",
     ) -> OfficialHfrHeadsOutput:
         import mlx.core as mx
 
@@ -266,14 +266,15 @@ def conv2d_nchw_mlx(
     bias: np.ndarray | None = None,
     padding: int = 0,
     stride: int = 1,
-    accumulation_mode: str = "optimized",
+    accumulation_mode: str = "fixed_fp32",
 ) -> Any:
     """MLX implementation of PyTorch-style NCHW/OIHW Conv2d.
 
-    ``optimized`` uses native ``mx.conv2d`` for MLX training throughput.  Fixed
-    modes delegate to the canonical MLX scorer reference conv to diagnose drift.
-    The returned tensor stays NCHW so PyTorch/NumPy/MLX call sites share one
-    official HFR layout contract.
+    The default ``fixed_fp32`` path delegates to the canonical MLX scorer
+    reference conv so reproduction favors deterministic fixed-order arithmetic.
+    ``optimized`` remains available for MLX training throughput.  The returned
+    tensor stays NCHW so PyTorch/NumPy/MLX call sites share one official HFR
+    layout contract.
     """
 
     import mlx.core as mx
