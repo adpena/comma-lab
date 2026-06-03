@@ -234,6 +234,16 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["exact_gate_ready"] is False
     assert snerv_row["experiment_queue_entry"]["status"] == "queued"
     assert snerv_row["experiment_queue_entry"]["blocked"] is False
+    launch_contract = snerv_row["experiment_queue_entry"]["launch_authority_contract"]
+    assert launch_contract["schema"] == (
+        "nerv_long_training_queue_launch_authority_contract.v1"
+    )
+    assert launch_contract["queue_status_is_local_mlx_plan"] is True
+    assert launch_contract["queue_status_is_receiver_proof"] is False
+    assert launch_contract["queue_status_is_cpu_replay_proof"] is False
+    assert launch_contract["queue_status_is_exact_eval_authority"] is False
+    assert launch_contract["cpu_replay_ready"] is False
+    assert launch_contract["exact_gate_ready"] is False
     assert (
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         not in snerv_row["blockers"]
@@ -1767,6 +1777,11 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert feedback["measured_num_pairs"] == 600
     assert feedback["measured_payload_bytes"] == packet_path.stat().st_size
     assert feedback["measured_archive_bytes"] == archive_path.stat().st_size
+    training_plan = snerv["curriculum_plan"]["training_plan"]
+    assert training_plan["native_mlx_train_export_planned"] is True
+    assert training_plan["native_mlx_train_export_verified"] is True
+    assert training_plan["native_mlx_scorer_loop_qat_planned"] is True
+    assert training_plan["native_mlx_scorer_loop_qat_verified"] is True
     assert "partial_pair_byte_feedback_only" not in snerv["blockers"]
     assert "snerv_snar1_byte_feedback_missing" not in snerv["blockers"]
     assert "snerv_archive_in_loop_byte_oracle_missing" not in snerv["blockers"]

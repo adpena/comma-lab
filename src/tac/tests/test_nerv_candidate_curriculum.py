@@ -325,8 +325,21 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     assert "snerv_mlx_native_adapter_surfaces_present_but_unproven" in plan[
         "blockers"
     ]
+    assert plan["training_plan"]["attachment_authority_contract"] == {
+        "schema": "snerv_training_attachment_authority_contract.v1",
+        "planned_surfaces_are_not_receiver_or_score_authority": True,
+        "queue_ready_is_not_receiver_or_exact_authority": True,
+        "receiver_authority_requires_file_backed_export_and_replay": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
     assert plan["training_plan"]["native_mlx_adapter_surfaces_ready"] is True
     assert plan["training_plan"]["native_mlx_adapter_full600_campaign_ready"] is False
+    assert plan["training_plan"]["native_mlx_train_export_planned"] is False
+    assert plan["training_plan"]["native_mlx_train_export_verified"] is False
+    assert plan["training_plan"]["native_mlx_scorer_loop_qat_planned"] is False
+    assert plan["training_plan"]["native_mlx_scorer_loop_qat_verified"] is False
     assert plan["pr95_stack_binding"]["family"] == "snerv"
     assert plan["pr95_stack_binding"]["complete"] is False
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
@@ -367,6 +380,8 @@ def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
     assert plan["training_plan"]["scorer_loop_qat_receiver_contract_satisfied"] is True
     assert plan["training_plan"]["scorer_loop_qat_ready_for_pose_guard_gate"] is True
     assert plan["training_plan"]["scorer_loop_qat_accepted_improvement"] is True
+    assert plan["training_plan"]["native_mlx_scorer_loop_qat_planned"] is False
+    assert plan["training_plan"]["native_mlx_scorer_loop_qat_verified"] is False
     assert plan["training_plan"]["receiver_proof_attached"] is True
     assert plan["training_plan"]["full_video_local_prefilter_attached"] is True
     assert plan["training_plan"]["local_cpu_replay_gate_attached"] is True
@@ -441,7 +456,15 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_export_evidence(
     )
 
     training_plan = plan["training_plan"]
+    authority_contract = training_plan["attachment_authority_contract"]
+    assert authority_contract["schema"] == (
+        "snerv_training_attachment_authority_contract.v1"
+    )
+    assert authority_contract["planned_surfaces_are_not_receiver_or_score_authority"] is True
+    assert authority_contract["queue_ready_is_not_receiver_or_exact_authority"] is True
     assert training_plan["native_mlx_train_export_attached"] is True
+    assert training_plan["native_mlx_train_export_planned"] is True
+    assert training_plan["native_mlx_train_export_verified"] is True
     assert training_plan["native_mlx_receiver_proof_passed"] is True
     assert training_plan["native_mlx_file_backed_export_proof_passed"] is True
     assert training_plan["native_mlx_export_verified"] is True
@@ -488,6 +511,8 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_scorer_loop_without_over
     assert training_plan["scorer_loop_qat_attached"] is True
     assert training_plan["standalone_scorer_loop_qat_attached"] is False
     assert training_plan["native_mlx_scorer_loop_qat_attached"] is True
+    assert training_plan["native_mlx_scorer_loop_qat_planned"] is True
+    assert training_plan["native_mlx_scorer_loop_qat_verified"] is False
     assert (
         training_plan["native_mlx_scorer_loop_qat_receiver_contract_satisfied"]
         is True
@@ -579,6 +604,10 @@ def test_snerv_candidate_curriculum_keeps_partial_feedback_scope_on_full600_plan
     assert "partial_pair_byte_feedback_only" in plan["blockers"]
     assert "snerv_snar1_byte_feedback_missing" not in plan["blockers"]
     assert "snerv_archive_in_loop_byte_oracle_missing" in plan["blockers"]
+    assert plan["training_plan"]["native_mlx_train_export_planned"] is True
+    assert plan["training_plan"]["native_mlx_train_export_verified"] is False
+    assert plan["training_plan"]["native_mlx_scorer_loop_qat_planned"] is True
+    assert plan["training_plan"]["native_mlx_scorer_loop_qat_verified"] is True
     assert "snerv_native_scorer_loop_best_packet_not_materialized" not in plan[
         "blockers"
     ]

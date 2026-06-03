@@ -978,6 +978,21 @@ def _experiment_for_row(
         "priority": int(priority),
         "status": "queued" if bool(local_mlx_launch_command_ready) else "disabled",
         "blocked": not bool(local_mlx_launch_command_ready),
+        "launch_authority_contract": {
+            "schema": "nerv_long_training_queue_launch_authority_contract.v1",
+            "queue_status_is_local_mlx_plan": bool(local_mlx_launch_command_ready),
+            "queue_status_is_receiver_proof": False,
+            "queue_status_is_cpu_replay_proof": False,
+            "queue_status_is_exact_eval_authority": False,
+            "receiver_proof_required": bool(
+                score_lowering_gate.get("receiver_proof_required")
+            ),
+            "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
+            "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
         "metadata": {
             "schema": "nerv_long_training_campaign_experiment_metadata.v1",

@@ -339,10 +339,18 @@ def build_snerv_candidate_curriculum_plan(
         and native_mlx_receiver_proof_passed
         and native_file_proof_passed
     )
+    native_train_export_planned = bool(native_mlx_train_export_attached)
     standalone_scorer_loop_attached = bool(scorer_loop_qat_attached)
-    native_scorer_loop_attached = bool(native_mlx_scorer_loop_qat_attached)
+    native_scorer_loop_planned = bool(native_mlx_scorer_loop_qat_attached)
+    native_scorer_loop_verified = bool(
+        native_scorer_loop_planned
+        and native_mlx_scorer_loop_qat_receiver_contract_satisfied
+        and native_mlx_scorer_loop_qat_ready_for_pose_guard_gate
+        and native_mlx_scorer_loop_qat_accepted_improvement
+        and native_mlx_scorer_loop_qat_best_materialized
+    )
     effective_scorer_loop_attached = bool(
-        standalone_scorer_loop_attached or native_scorer_loop_attached
+        standalone_scorer_loop_attached or native_scorer_loop_planned
     )
     effective_scorer_loop_receiver_contract = bool(
         (
@@ -350,7 +358,7 @@ def build_snerv_candidate_curriculum_plan(
             and scorer_loop_qat_receiver_contract_satisfied
         )
         or (
-            native_scorer_loop_attached
+            native_scorer_loop_planned
             and native_mlx_scorer_loop_qat_receiver_contract_satisfied
         )
     )
@@ -360,14 +368,14 @@ def build_snerv_candidate_curriculum_plan(
             and scorer_loop_qat_ready_for_pose_guard_gate
         )
         or (
-            native_scorer_loop_attached
+            native_scorer_loop_planned
             and native_mlx_scorer_loop_qat_ready_for_pose_guard_gate
         )
     )
     effective_scorer_loop_accepted = bool(
         (standalone_scorer_loop_attached and scorer_loop_qat_accepted_improvement)
         or (
-            native_scorer_loop_attached
+            native_scorer_loop_planned
             and native_mlx_scorer_loop_qat_accepted_improvement
         )
     )
@@ -427,7 +435,7 @@ def build_snerv_candidate_curriculum_plan(
     if not native_mlx_full600_campaign_ready:
         blockers.append("snerv_mlx_native_full600_campaign_not_ready")
     if (
-        native_scorer_loop_attached
+        native_scorer_loop_planned
         and not native_mlx_scorer_loop_qat_best_materialized
     ):
         blockers.append("snerv_native_scorer_loop_best_packet_not_materialized")
@@ -497,7 +505,18 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_adapter_full600_campaign_ready": bool(
                 native_contract.get("full600_campaign_ready")
             ),
+            "attachment_authority_contract": {
+                "schema": "snerv_training_attachment_authority_contract.v1",
+                "planned_surfaces_are_not_receiver_or_score_authority": True,
+                "queue_ready_is_not_receiver_or_exact_authority": True,
+                "receiver_authority_requires_file_backed_export_and_replay": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "native_mlx_train_export_planned": native_train_export_planned,
             "native_mlx_train_export_attached": bool(native_mlx_train_export_attached),
+            "native_mlx_train_export_verified": native_export_verified,
             "native_mlx_long_training_bound": bool(native_mlx_long_training_bound),
             "native_mlx_receiver_proof_passed": bool(
                 native_mlx_receiver_proof_passed
@@ -519,7 +538,9 @@ def build_snerv_candidate_curriculum_plan(
             "scorer_loop_qat_accepted_improvement": bool(
                 effective_scorer_loop_accepted
             ),
-            "native_mlx_scorer_loop_qat_attached": native_scorer_loop_attached,
+            "native_mlx_scorer_loop_qat_attached": native_scorer_loop_planned,
+            "native_mlx_scorer_loop_qat_planned": native_scorer_loop_planned,
+            "native_mlx_scorer_loop_qat_verified": native_scorer_loop_verified,
             "native_mlx_scorer_loop_qat_receiver_contract_satisfied": bool(
                 native_mlx_scorer_loop_qat_receiver_contract_satisfied
             ),
