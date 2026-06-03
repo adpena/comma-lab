@@ -23,6 +23,7 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
     build_nerv_byte_price_plan,
 )
 from tools import attach_hinerv_archive_ladder_scores as attach_cli
+from tools import build_hinerv_archive_size_ladder as ladder_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -103,7 +104,87 @@ def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None
 
     markdown = render_hinerv_archive_size_ladder_markdown(report)
     assert "HiNeRV archive-size ladder" in markdown
+    assert "Decoder codec policy" in markdown
     assert "hi_nerv_local_tiny" in markdown
+
+
+def test_hinerv_archive_size_ladder_exports_modelsize_budget_candidate_waterfill(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "hinerv_np1_ld4_ed8_dc4_cnx_int4_mixed_ceil36000_tgtmp0p01"
+    report = build_hinerv_archive_size_ladder(
+        output_dir=tmp_path / "archive_ladder",
+        repo_root=REPO_ROOT,
+        num_pairs=1,
+        row_ids=(candidate_id,),
+        hinerv_modelsize_budget={
+            "schema": "nerv_modelsize_budget.v1",
+            "selected_candidates": [
+                {
+                    "schema": "hinerv_modelsize_candidate.v1",
+                    "family": "hi_nerv",
+                    "candidate_id": candidate_id,
+                    "num_pairs": 1,
+                    "latent_dim": 4,
+                    "latent_dim_coarse": 2,
+                    "latent_dim_mid": 4,
+                    "latent_dim_fine": 8,
+                    "embed_dim": 8,
+                    "decoder_channel": 4,
+                    "decoder_channels": [4, 4, 4, 4, 4, 4, 4],
+                    "decoder_codec": "int4_mixed",
+                    "use_hierarchical_feature_grid": False,
+                    "use_convnext_blocks": True,
+                    "local_grid_levels": 2,
+                    "local_grid_channels": 4,
+                    "convnext_mlp_ratio": 2,
+                    "convnext_kernel_size": 7,
+                    "mid_injection_block_index": 1,
+                    "fine_injection_block_index": 4,
+                    "modelsize_mparams": 0.01,
+                    "target_modelsize_mparams": 0.01,
+                    "nominal_total_payload_bytes": 20_000,
+                    "hard_byte_ceiling": 36_000,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+        },
+        decoder_codec="int8_mixed",
+        emit_receiver_proof=False,
+        allow_local_output_dir=True,
+        storage_reserve_free_gb=0.0,
+        emit_decoder_weight_waterfill_plan=True,
+        decoder_weight_waterfill_action_bits=(0, 2, 4, 8, 16, 32),
+    )
+
+    assert report["row_count"] == 1
+    assert report["decoder_codec_policy"] == (
+        "modelsize_budget_candidate_decoder_codec_overrides_top_level_default"
+    )
+    row = report["archive_rows"][0]
+    assert row["row_id"] == candidate_id
+    assert row["decoder_codec"] == "int4_mixed"
+    assert row["modelsize_candidate"]["candidate_id"] == candidate_id
+    assert row["nominal_total_payload_bytes"] == 20_000
+    assert row["measured_minus_nominal_bytes"] == (
+        row["archive_bytes"] - row["nominal_total_payload_bytes"]
+    )
+    assert row["config"]["latent_dim_coarse"] == 2
+    assert row["config"]["latent_dim_mid"] == 4
+    assert row["config"]["latent_dim_fine"] == 8
+    assert row["config"]["embed_dim"] == 8
+    assert row["config"]["decoder_channels"] == [4, 4, 4, 4, 4, 4, 4]
+    assert row["config"]["use_convnext_blocks"] is True
+    assert row["config"]["mid_injection_block_index"] == 1
+    waterfill_path = Path(row["decoder_weight_waterfill_plan_path"])
+    assert waterfill_path.is_file()
+    waterfill = json.loads(waterfill_path.read_text(encoding="utf-8"))
+    assert waterfill["schema"] == NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
+    assert waterfill["candidate_id"] == candidate_id
+    assert waterfill["group_count"] > 0
+    assert waterfill["score_claim"] is False
 
 
 def test_hinerv_archive_size_ladder_reports_missing_requested_row(tmp_path: Path) -> None:
@@ -119,6 +200,145 @@ def test_hinerv_archive_size_ladder_reports_missing_requested_row(tmp_path: Path
     assert report["row_count"] == 0
     assert report["missing_requested_row_ids"] == ["does_not_exist"]
     assert "hinerv_archive_size_ladder_requested_rows_missing" in report["blockers"]
+
+
+def test_build_hinerv_archive_size_ladder_cli_records_invocation(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    output_json = tmp_path / "ladder.json"
+    output_md = tmp_path / "ladder.md"
+
+    rc = ladder_cli.main(
+        [
+            "--output-dir",
+            str(tmp_path / "archive_ladder"),
+            "--output-json",
+            str(output_json),
+            "--output-md",
+            str(output_md),
+            "--repo-root",
+            str(REPO_ROOT),
+            "--num-pairs",
+            "1",
+            "--row-id",
+            "hi_nerv_local_tiny",
+            "--allow-local-output-dir",
+            "--storage-reserve-free-gb",
+            "0",
+        ]
+    )
+
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    assert summary["schema"] == HINERV_ARCHIVE_SIZE_LADDER_SCHEMA
+    assert payload["tool_invocation"]["schema"] == (
+        "hinerv_archive_size_ladder_tool_invocation.v1"
+    )
+    assert payload["tool_invocation"]["tool"] == (
+        "tools/build_hinerv_archive_size_ladder.py"
+    )
+    assert "--row-id" in payload["tool_invocation"]["argv"]
+    assert payload["tool_invocation"]["score_claim"] is False
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "Decoder codec policy" in output_md.read_text(encoding="utf-8")
+
+
+def test_hinerv_archive_size_ladder_consumes_modelsize_budget_candidate(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000"
+    report = build_hinerv_archive_size_ladder(
+        output_dir=tmp_path / "archive_ladder",
+        repo_root=REPO_ROOT,
+        num_pairs=1,
+        row_ids=(candidate_id,),
+        hinerv_modelsize_budget={
+            "schema": "nerv_modelsize_budget.v1",
+            "selected_candidates": [
+                {
+                    "schema": "hinerv_modelsize_candidate.v1",
+                    "family": "hi_nerv",
+                    "candidate_id": candidate_id,
+                    "num_pairs": 1,
+                    "latent_dim": 4,
+                    "embed_dim": 4,
+                    "decoder_channel": 4,
+                    "decoder_codec": "int2_mixed",
+                    "modelsize_mparams": 0.02,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                }
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        decoder_codec="int8_mixed",
+        allow_local_output_dir=True,
+        storage_reserve_free_gb=0.0,
+    )
+
+    assert report["row_count"] == 1
+    assert report["decoder_codec"] == "int8_mixed"
+    assert report["decoder_codec_policy"] == (
+        "modelsize_budget_candidate_decoder_codec_overrides_top_level_default"
+    )
+    assert report["hinerv_modelsize_budget_schema"] == "nerv_modelsize_budget.v1"
+    row = report["archive_rows"][0]
+    assert row["row_id"] == candidate_id
+    assert row["decoder_codec"] == "int2_mixed"
+    assert row["modelsize_candidate"]["candidate_id"] == candidate_id
+    assert row["modelsize_candidate"]["decoder_codec"] == "int2_mixed"
+    assert row["nominal_total_payload_bytes"] is None
+    assert row["measured_minus_nominal_bytes"] is None
+    assert row["config"]["mid_injection_block_index"] == 1
+    assert row["config"]["fine_injection_block_index"] == 4
+    assert Path(row["archive_path"]).is_file()
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_archive_size_ladder_rejects_mismatched_budget_config(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "hinerv_np1_ld4_ed4_dc4_int2_mixed_ceil36000_badchannels"
+    with pytest.raises(ValueError, match="modelsize candidate config mismatch"):
+        build_hinerv_archive_size_ladder(
+            output_dir=tmp_path / "archive_ladder",
+            repo_root=REPO_ROOT,
+            num_pairs=1,
+            row_ids=(candidate_id,),
+            hinerv_modelsize_budget={
+                "schema": "nerv_modelsize_budget.v1",
+                "selected_candidates": [
+                    {
+                        "schema": "hinerv_modelsize_candidate.v1",
+                        "family": "hi_nerv",
+                        "candidate_id": candidate_id,
+                        "num_pairs": 1,
+                        "latent_dim": 4,
+                        "embed_dim": 4,
+                        "decoder_channel": 4,
+                        "decoder_channels": [5, 5, 5, 5, 5, 5, 5],
+                        "decoder_codec": "int2_mixed",
+                        "modelsize_mparams": 0.02,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            decoder_codec="int8_mixed",
+            allow_local_output_dir=True,
+            storage_reserve_free_gb=0.0,
+        )
 
 
 def test_hinerv_archive_size_ladder_rejects_local_output_by_default(

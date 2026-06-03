@@ -31,6 +31,7 @@ from tac.analysis.nerv_decoder_weight_waterfill import (
     load_saliency_json,
     load_state_npz_from_manifest,
 )
+from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_knobs
 from tac.analysis.nerv_modelsize_ladder import (
     SCORER_ONLY_OBJECTIVE_AUTHORITY,
     hi_nerv_modelsize_config_rows,
@@ -60,6 +61,7 @@ def build_hinerv_archive_size_ladder(
     repo_root: str | Path,
     num_pairs: int = 600,
     row_ids: Iterable[str] | None = None,
+    hinerv_modelsize_budget: Mapping[str, Any] | None = None,
     decoder_codec: str = "int8_mixed",
     emit_receiver_proof: bool = False,
     retain_receiver_proof_output: bool = False,
@@ -88,11 +90,11 @@ def build_hinerv_archive_size_ladder(
         else load_saliency_json(decoder_weight_saliency_json)
     )
     selected = {str(row_id) for row_id in row_ids} if row_ids is not None else None
-    specs = [
-        spec
-        for spec in hi_nerv_modelsize_config_rows(num_pairs=int(num_pairs))
-        if selected is None or str(spec["row_id"]) in selected
-    ]
+    specs = _archive_ladder_specs(
+        num_pairs=int(num_pairs),
+        selected=selected,
+        hinerv_modelsize_budget=hinerv_modelsize_budget,
+    )
     missing = sorted(selected - {str(spec["row_id"]) for spec in specs}) if selected else []
     rows = []
     blockers: list[str] = []
@@ -101,6 +103,7 @@ def build_hinerv_archive_size_ladder(
     for spec in specs:
         row_id = str(spec["row_id"])
         cfg = spec["config"]
+        row_decoder_codec = str(spec.get("decoder_codec") or decoder_codec)
         row_dir = out / row_id
         row_dir.mkdir(parents=True, exist_ok=True)
         model, archive_export_backend, backend_claim_blockers = _make_export_model(
@@ -113,12 +116,22 @@ def build_hinerv_archive_size_ladder(
             repo_root=root,
             emit_archive_bound_candidate_package=bool(emit_receiver_proof),
             retain_receiver_proof_output=bool(retain_receiver_proof_output),
-            decoder_codec=str(decoder_codec),
+            decoder_codec=row_decoder_codec,
             source_backend=archive_export_backend,
         )
         proof_path = row_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
         proof = _read_json_if_exists(proof_path)
         state_npz_manifest_path = row_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
+        modelsize_candidate = (
+            dict(spec["modelsize_candidate"])
+            if isinstance(spec.get("modelsize_candidate"), Mapping)
+            else None
+        )
+        nominal_total_payload_bytes = (
+            None
+            if modelsize_candidate is None
+            else _optional_int(modelsize_candidate.get("nominal_total_payload_bytes"))
+        )
         waterfill_path = None
         waterfill_summary = None
         if emit_decoder_weight_waterfill_plan:
@@ -154,14 +167,21 @@ def build_hinerv_archive_size_ladder(
                 "family": "hi_nerv",
                 "row_id": row_id,
                 "modelsize_scale": float(spec["modelsize_scale"]),
+                "modelsize_candidate": modelsize_candidate,
                 "config": _config_snapshot(cfg),
-                "decoder_codec": str(decoder_codec),
+                "decoder_codec": row_decoder_codec,
                 "archive_export_backend": archive_export_backend,
                 "backend_claim_blockers": backend_claim_blockers,
                 "num_parameters": int(model.num_parameters()),
                 "archive_path": archive_path.as_posix(),
                 "archive_sha256": archive_sha256,
                 "archive_bytes": int(archive_bytes),
+                "nominal_total_payload_bytes": nominal_total_payload_bytes,
+                "measured_minus_nominal_bytes": (
+                    None
+                    if nominal_total_payload_bytes is None
+                    else int(archive_bytes) - int(nominal_total_payload_bytes)
+                ),
                 "archive_rate_score_at_contest_price": float(
                     int(archive_bytes) * CONTEST_BYTE_PRICE_SCORE
                 ),
@@ -218,6 +238,16 @@ def build_hinerv_archive_size_ladder(
         ),
         "num_pairs": int(num_pairs),
         "decoder_codec": str(decoder_codec),
+        "decoder_codec_policy": (
+            "modelsize_budget_candidate_decoder_codec_overrides_top_level_default"
+            if hinerv_modelsize_budget is not None
+            else "top_level_decoder_codec_for_all_legacy_ladder_rows"
+        ),
+        "hinerv_modelsize_budget_schema": (
+            None
+            if hinerv_modelsize_budget is None
+            else hinerv_modelsize_budget.get("schema")
+        ),
         "archive_export_backend_counts": _archive_export_backend_counts(rows),
         "emit_receiver_proof": bool(emit_receiver_proof),
         "emit_decoder_weight_waterfill_plan": bool(emit_decoder_weight_waterfill_plan),
@@ -248,6 +278,139 @@ def build_hinerv_archive_size_ladder(
     }
     report["byte_price_plan"] = build_nerv_byte_price_plan(report)
     return report
+
+
+def _archive_ladder_specs(
+    *,
+    num_pairs: int,
+    selected: set[str] | None,
+    hinerv_modelsize_budget: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    if hinerv_modelsize_budget is None:
+        return [
+            spec
+            for spec in hi_nerv_modelsize_config_rows(num_pairs=int(num_pairs))
+            if selected is None or str(spec["row_id"]) in selected
+        ]
+    if hinerv_modelsize_budget.get("schema") != "nerv_modelsize_budget.v1":
+        raise ValueError(
+            "hinerv_modelsize_budget schema must be nerv_modelsize_budget.v1; got "
+            f"{hinerv_modelsize_budget.get('schema')!r}"
+        )
+    out: list[dict[str, Any]] = []
+    for candidate in hinerv_modelsize_budget.get("selected_candidates") or ():
+        if not isinstance(candidate, Mapping) or candidate.get("family") != "hi_nerv":
+            continue
+        row_id = str(candidate.get("candidate_id") or "").strip()
+        if not row_id or (selected is not None and row_id not in selected):
+            continue
+        out.append(_hinerv_modelsize_candidate_spec(candidate, num_pairs=int(num_pairs)))
+    return out
+
+
+def _hinerv_modelsize_candidate_spec(
+    candidate: Mapping[str, Any],
+    *,
+    num_pairs: int,
+) -> dict[str, Any]:
+    row_id = str(candidate.get("candidate_id") or "").strip()
+    latent_dim = _positive_int(candidate.get("latent_dim")) or _positive_int(
+        candidate.get("latent_dim_mid")
+    )
+    embed_dim = _positive_int(candidate.get("embed_dim"))
+    decoder_channel = _positive_int(candidate.get("decoder_channel"))
+    if not row_id or latent_dim is None or embed_dim is None or decoder_channel is None:
+        raise ValueError(
+            "hinerv modelsize candidate must include candidate_id, latent_dim, "
+            "embed_dim, and decoder_channel"
+        )
+    cfg = build_hinerv_config_from_size_knobs(
+        num_pairs=int(candidate.get("num_pairs") or num_pairs),
+        latent_dim=int(latent_dim),
+        embed_dim=int(embed_dim),
+        decoder_channel=int(decoder_channel),
+        use_hierarchical_feature_grid=bool(
+            candidate.get("use_hierarchical_feature_grid", False)
+        ),
+        use_convnext_blocks=bool(candidate.get("use_convnext_blocks", False)),
+        local_grid_levels=int(candidate.get("local_grid_levels") or 2),
+        local_grid_channels=int(candidate.get("local_grid_channels") or 4),
+        convnext_mlp_ratio=int(candidate.get("convnext_mlp_ratio") or 2),
+        convnext_kernel_size=int(candidate.get("convnext_kernel_size") or 7),
+        mid_injection_block_index=_int_or_default(
+            candidate.get("mid_injection_block_index"), 1
+        ),
+        fine_injection_block_index=_int_or_default(
+            candidate.get("fine_injection_block_index"), 4
+        ),
+    )
+    _validate_candidate_config_snapshot(candidate, cfg, row_id=row_id)
+    return {
+        "row_id": row_id,
+        "modelsize_scale": float(
+            candidate.get("target_modelsize_mparams")
+            or candidate.get("modelsize_mparams")
+            or 0.0
+        ),
+        "config": cfg,
+        "decoder_codec": str(candidate.get("decoder_codec") or "int8_mixed"),
+        "modelsize_candidate": dict(candidate),
+    }
+
+
+def _validate_candidate_config_snapshot(
+    candidate: Mapping[str, Any],
+    cfg: Any,
+    *,
+    row_id: str,
+) -> None:
+    snapshot = _config_snapshot(cfg)
+    expected_fields = (
+        "latent_dim_coarse",
+        "latent_dim_mid",
+        "latent_dim_fine",
+        "embed_dim",
+        "decoder_channels",
+        "mid_injection_block_index",
+        "fine_injection_block_index",
+        "use_hierarchical_feature_grid",
+        "use_convnext_blocks",
+        "local_grid_levels",
+        "local_grid_channels",
+        "convnext_mlp_ratio",
+        "convnext_kernel_size",
+        "num_pairs",
+    )
+    mismatches = []
+    for field in expected_fields:
+        if field not in candidate:
+            continue
+        actual = snapshot[field]
+        expected = _normalizable_config_value(candidate[field])
+        if actual != expected:
+            mismatches.append(
+                {
+                    "field": field,
+                    "candidate_value": expected,
+                    "reconstructed_value": actual,
+                }
+            )
+    if mismatches:
+        raise ValueError(
+            "hinerv modelsize candidate config mismatch for "
+            f"{row_id}: {json.dumps(mismatches, sort_keys=True)}"
+        )
+
+
+def _normalizable_config_value(value: Any) -> Any:
+    if isinstance(value, bool):
+        return bool(value)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return [int(item) for item in value]
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return value
 
 
 def _decoder_weight_waterfill_summary(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -380,16 +543,20 @@ def render_hinerv_archive_size_ladder_markdown(report: Mapping[str, Any]) -> str
         f"Schema: `{report.get('schema')}`",
         f"Authority: `{report.get('authority')}`",
         f"Decoder codec: `{report.get('decoder_codec')}`",
+        f"Decoder codec policy: `{report.get('decoder_codec_policy')}`",
+        f"Modelsize budget schema: `{report.get('hinerv_modelsize_budget_schema')}`",
         "",
-        "| row | params | archive bytes | rate score | proof ready |",
-        "|---|---:|---:|---:|---:|",
+        "| row | params | nominal bytes | archive bytes | measured-minus-nominal | rate score | proof ready |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for row in report.get("archive_rows", ()):
         lines.append(
-            "| {row_id} | {params} | {bytes} | {rate:.6f} | {proof} |".format(
+            "| {row_id} | {params} | {nominal} | {bytes} | {delta} | {rate:.6f} | {proof} |".format(
                 row_id=row["row_id"],
                 params=row["num_parameters"],
+                nominal=row.get("nominal_total_payload_bytes"),
                 bytes=row["archive_bytes"],
+                delta=row.get("measured_minus_nominal_bytes"),
                 rate=row["archive_rate_score_at_contest_price"],
                 proof=row.get("runtime_consumption_proof_ready"),
             )
@@ -819,6 +986,20 @@ def _positive_int(value: Any) -> int | None:
     return out if out > 0 else None
 
 
+def _int_or_default(value: Any, default: int) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _config_snapshot(cfg: Any) -> dict[str, Any]:
     return {
         "latent_dim_coarse": int(cfg.latent_dim_coarse),
@@ -827,6 +1008,14 @@ def _config_snapshot(cfg: Any) -> dict[str, Any]:
         "embed_dim": int(cfg.embed_dim),
         "decoder_channels": [int(value) for value in cfg.decoder_channels],
         "num_upsample_blocks": int(cfg.num_upsample_blocks),
+        "mid_injection_block_index": int(cfg.mid_injection_block_index),
+        "fine_injection_block_index": int(cfg.fine_injection_block_index),
+        "use_hierarchical_feature_grid": bool(cfg.use_hierarchical_feature_grid),
+        "use_convnext_blocks": bool(cfg.use_convnext_blocks),
+        "local_grid_levels": int(cfg.local_grid_levels),
+        "local_grid_channels": int(cfg.local_grid_channels),
+        "convnext_mlp_ratio": int(cfg.convnext_mlp_ratio),
+        "convnext_kernel_size": int(cfg.convnext_kernel_size),
         "num_pairs": int(cfg.num_pairs),
         "output_height": int(cfg.output_height),
         "output_width": int(cfg.output_width),

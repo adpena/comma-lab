@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,7 @@ DEFAULT_STORAGE_EXPECTED_BYTES = 512 * 1024 * 1024
 
 
 def main(argv: list[str] | None = None) -> int:
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--output-json", required=True, type=Path)
@@ -36,6 +38,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument("--num-pairs", default=600, type=int)
     parser.add_argument("--row-id", action="append", default=None)
+    parser.add_argument(
+        "--hinerv-modelsize-budget-json",
+        default=None,
+        type=Path,
+        help=(
+            "Optional nerv_modelsize_budget.v1 artifact. When supplied, row ids "
+            "select budget candidate_id values and the ladder exports those exact "
+            "receiver-visible candidate configs instead of the legacy local rows."
+        ),
+    )
     parser.add_argument("--decoder-codec", default="int8_mixed")
     parser.add_argument("--emit-receiver-proof", action="store_true")
     parser.add_argument("--retain-receiver-proof-output", action="store_true")
@@ -63,12 +75,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Free-space reserve required after expected output bytes.",
     )
     args = parser.parse_args(argv)
+    hinerv_modelsize_budget = (
+        None
+        if args.hinerv_modelsize_budget_json is None
+        else json.loads(args.hinerv_modelsize_budget_json.read_text(encoding="utf-8"))
+    )
 
     report = build_hinerv_archive_size_ladder(
         output_dir=args.output_dir,
         repo_root=args.repo_root,
         num_pairs=int(args.num_pairs),
         row_ids=args.row_id,
+        hinerv_modelsize_budget=hinerv_modelsize_budget,
         decoder_codec=str(args.decoder_codec),
         emit_receiver_proof=bool(args.emit_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
@@ -83,6 +101,21 @@ def main(argv: list[str] | None = None) -> int:
             args.decoder_weight_waterfill_action_bits
         ),
     )
+    report["tool_invocation"] = {
+        "schema": "hinerv_archive_size_ladder_tool_invocation.v1",
+        "tool": "tools/build_hinerv_archive_size_ladder.py",
+        "argv": effective_argv,
+        "hinerv_modelsize_budget_json": (
+            None
+            if args.hinerv_modelsize_budget_json is None
+            else args.hinerv_modelsize_budget_json.expanduser()
+            .resolve(strict=False)
+            .as_posix()
+        ),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
     output = args.output_json.expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)
     report["report_path"] = output.as_posix()
