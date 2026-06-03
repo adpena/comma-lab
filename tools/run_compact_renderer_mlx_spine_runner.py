@@ -9027,7 +9027,7 @@ def _hi_nerv_launch_source_faithfulness_report(
     convnext_mlp_ratio: int,
     convnext_kernel_size: int,
     decoder_codec: str,
-    hi_nerv_latent_codec: str,
+    hi_nerv_latent_codec: str = "int16_raw",
 ) -> dict[str, Any]:
     cfg = SimpleNamespace(
         use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
@@ -9204,7 +9204,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mid_injection_block_index: int,
     fine_injection_block_index: int,
     decoder_codec: str,
-    hi_nerv_latent_codec: str,
+    hi_nerv_latent_codec: str = "int16_raw",
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
