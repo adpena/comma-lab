@@ -662,6 +662,7 @@ def _run_scorer_loop_qat_attachment(
             snerv_mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
             snerv_hfr_gain=float(model_size.hfr_gain),
             snerv_temporal_context=int(model_size.temporal_context),
+            snerv_temporal_mode=model_size.temporal_mode,
             decoder_payload_codec=str(decoder_payload_codec),
             lf_payload_codec=str(lf_payload_codec),
             qat_bits=int(qat_bits),
@@ -1073,6 +1074,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "snerv_mfu_scales": [int(v) for v in model_size.mfu_scales],
         "snerv_hfr_gain": float(model_size.hfr_gain),
         "snerv_temporal_context": int(model_size.temporal_context),
+        "snerv_temporal_mode": model_size.temporal_mode,
         "decoder_feature_count": int(model_size.feature_count),
         **dict(metadata_extra or {}),
     }
@@ -1515,6 +1517,12 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
             candidate.get(
                 "temporal_context",
                 candidate.get("snerv_temporal_context", 0),
+            )
+        ),
+        temporal_mode=str(
+            candidate.get(
+                "temporal_mode",
+                candidate.get("snerv_temporal_mode", "delta"),
             )
         ),
         adapter=str(

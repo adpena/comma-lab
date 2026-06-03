@@ -32,6 +32,7 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     DEFAULT_SNERV_MODEL_SIZE,
     SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF,
+    SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
     HighFrequencyRestorer,
@@ -65,6 +66,7 @@ __all__ = [
     "DEFAULT_WAVELET",
     "DWT_MODE",
     "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+    "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
     "SNERV_SPECTRA_PRESERVING_ADAPTER",
     "HfGenerationDecoder",
     "HighFrequencyRestorer",

@@ -192,7 +192,13 @@ def test_quantized_decoder_payload_codecs_roundtrip_receiver_values() -> None:
 
 
 def test_decoder_payload_roundtrips_nondefault_model_size_controls() -> None:
-    model_size = SnervModelSizeConfig(fc_dim=10, emb_size=2, patch_radius=1)
+    model_size = SnervModelSizeConfig(
+        fc_dim=10,
+        emb_size=2,
+        patch_radius=1,
+        temporal_context=1,
+        temporal_mode="official_haar_dwt1d_lowpass",
+    )
     decoder = HfGenerationDecoder.zeros(levels=1, model_size=model_size)
     pattern = np.linspace(-0.06, 0.06, model_size.feature_count, dtype=np.float64)
     decoder.kernels[0]["LH"] = pattern
@@ -211,11 +217,11 @@ def test_decoder_payload_roundtrips_nondefault_model_size_controls() -> None:
         decoded = decode_decoder_payload(payload)
 
         assert header["schema"] == schema
-        assert header["feature_count"] == 12
-        assert header["kernel_shape"] == [12]
+        assert header["feature_count"] == model_size.feature_count
+        assert header["kernel_shape"] == [model_size.feature_count]
         assert header["model_size_config"] == model_size.as_jsonable()
         assert decoded.model_size == model_size
-        assert decoded.kernels[0]["LH"].shape == (12,)
+        assert decoded.kernels[0]["LH"].shape == (model_size.feature_count,)
         np.testing.assert_allclose(
             decoded.kernels[0]["LH"],
             decoder.kernels[0]["LH"],

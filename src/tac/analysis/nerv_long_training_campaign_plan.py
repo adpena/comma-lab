@@ -916,6 +916,13 @@ def _experiment_for_row(
             )
     launch_blockers = _experiment_launch_blockers(blockers)
     runnable = bool(local_mlx_launch_command_ready) and not launch_blockers
+    metadata = dict(row_metadata or {})
+    source_parity = metadata.get("source_parity")
+    source_controls = metadata.get("source_bound_capacity_controls")
+    source_control_blockers = metadata.get("source_bound_capacity_control_blockers")
+    current_command_is_bounded_proof = bool(
+        metadata.get("current_command_is_bounded_proof_not_long_training")
+    )
     return {
         "id": _safe_path_token(row_id),
         "family": str(family),
@@ -930,9 +937,24 @@ def _experiment_for_row(
             "queue_status_is_receiver_proof": False,
             "queue_status_is_cpu_replay_proof": False,
             "queue_status_is_exact_eval_authority": False,
+            "source_parity_contract_consumed": isinstance(source_parity, Mapping),
+            "source_bound_capacity_controls_consumed": isinstance(
+                source_controls,
+                Mapping,
+            ),
+            "source_bound_capacity_control_blockers": list(
+                source_control_blockers or ()
+            ),
+            "current_command_is_bounded_proof_not_long_training": (
+                current_command_is_bounded_proof
+            ),
             "receiver_proof_required": bool(score_lowering_gate.get("receiver_proof_required")),
             "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
             "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
+            "source_parity": source_parity if isinstance(source_parity, Mapping) else None,
+            "source_bound_capacity_controls": (
+                source_controls if isinstance(source_controls, Mapping) else None
+            ),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -940,7 +962,7 @@ def _experiment_for_row(
         "blockers": _dedupe([str(blocker) for blocker in blockers if blocker]),
         "metadata": {
             "schema": "nerv_long_training_campaign_experiment_metadata.v1",
-            **dict(row_metadata or {}),
+            **metadata,
             **FALSE_AUTHORITY,
         },
         "score_lowering_gate": dict(score_lowering_gate),
@@ -2358,6 +2380,11 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "optimizer_control",
         "optimizer_policy",
         "source_faithfulness_controls",
+        "source_bound_capacity_controls",
+        "source_bound_capacity_control_blockers",
+        "source_parity",
+        "current_command_is_bounded_proof_not_long_training",
+        "snerv_bounded_proof_epochs",
         "output_dir_reuse_policy",
     )
     return {

@@ -19,6 +19,7 @@ from typing import Any
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_SPECTRA_PRESERVING_ADAPTER,
+    SNERV_TEMPORAL_MODES,
     official_snerv_modelsize_to_fc_dim,
 )
 
@@ -50,6 +51,7 @@ DEFAULT_SNERV_DECODER_CODECS = (
     "int2_symmetric",
 )
 DEFAULT_SNERV_MODEL_SIZE_ADAPTER = "snerv_fc_dim_emb_size_adapter_v1"
+DEFAULT_SNERV_TEMPORAL_MODE = "delta"
 DEFAULT_SNERV_OFFICIAL_ENC_STRDS = (5, 4, 2, 2, 2)
 DEFAULT_SNERV_OFFICIAL_DEC_STRDS = (5, 4, 2, 2, 2)
 _SNERV_ADAPTER_TO_ID_TOKEN = {
@@ -58,6 +60,13 @@ _SNERV_ADAPTER_TO_ID_TOKEN = {
 }
 _SNERV_ID_TOKEN_TO_ADAPTER = {
     value: key for key, value in _SNERV_ADAPTER_TO_ID_TOKEN.items()
+}
+_SNERV_TEMPORAL_MODE_TO_ID_TOKEN = {
+    "delta": "d",
+    "official_haar_dwt1d_lowpass": "haar1",
+}
+_SNERV_ID_TOKEN_TO_TEMPORAL_MODE = {
+    value: key for key, value in _SNERV_TEMPORAL_MODE_TO_ID_TOKEN.items()
 }
 
 
@@ -92,6 +101,37 @@ def snerv_model_size_adapter_from_id_token(token: str) -> str:
     raise NervModelSizeBudgetError(f"unknown SNeRV adapter id token: {token!r}")
 
 
+def snerv_temporal_mode_id_token(temporal_mode: str) -> str:
+    """Encode a receiver-visible SNeRV temporal mode into a candidate-id token."""
+
+    normalized = str(temporal_mode)
+    if normalized not in SNERV_TEMPORAL_MODES:
+        raise NervModelSizeBudgetError(f"unknown SNeRV temporal mode: {temporal_mode!r}")
+    token = _SNERV_TEMPORAL_MODE_TO_ID_TOKEN.get(normalized)
+    if token is not None:
+        return token
+    return "hx" + normalized.encode("utf-8").hex()
+
+
+def snerv_temporal_mode_from_id_token(token: str) -> str:
+    """Decode a SNeRV temporal-mode candidate-id token."""
+
+    normalized = str(token)
+    known = _SNERV_ID_TOKEN_TO_TEMPORAL_MODE.get(normalized)
+    if known is not None:
+        return known
+    if normalized.startswith("hx"):
+        try:
+            temporal_mode = bytes.fromhex(normalized[2:]).decode("utf-8")
+        except (UnicodeDecodeError, ValueError) as exc:
+            raise NervModelSizeBudgetError(
+                f"invalid SNeRV temporal-mode id token: {token!r}"
+            ) from exc
+        if temporal_mode in SNERV_TEMPORAL_MODES:
+            return temporal_mode
+    raise NervModelSizeBudgetError(f"unknown SNeRV temporal-mode id token: {token!r}")
+
+
 def snerv_modelsize_candidate_id_from_controls(
     *,
     num_pairs: int,
@@ -105,6 +145,7 @@ def snerv_modelsize_candidate_id_from_controls(
     mfu_scales: tuple[int, ...],
     hfr_gain: float,
     temporal_context: int,
+    temporal_mode: str = DEFAULT_SNERV_TEMPORAL_MODE,
     snerv_model_size_adapter: str,
     decoder_payload_codec: str,
     hard_byte_ceiling: int,
@@ -124,11 +165,16 @@ def snerv_modelsize_candidate_id_from_controls(
     feature_label = f"fc{int(fc_dim)}e{int(emb_size)}"
     mfu_label = "-".join(str(int(value)) for value in mfu_scales)
     adapter_label = snerv_model_size_adapter_id_token(snerv_model_size_adapter)
+    temporal_mode_label = (
+        ""
+        if str(temporal_mode) == DEFAULT_SNERV_TEMPORAL_MODE
+        else f"_tm{snerv_temporal_mode_id_token(str(temporal_mode))}"
+    )
     return (
         f"snerv_np{int(num_pairs)}_{wavelet_label}_lv{int(levels)}_"
         f"lfb{bits_label}_stepb{step_label}_{feature_label}_"
         f"p{int(patch_radius)}_mfu{mfu_label}_"
-        f"hfr{hfr_label}_t{int(temporal_context)}_"
+        f"hfr{hfr_label}_t{int(temporal_context)}{temporal_mode_label}_"
         f"ad{adapter_label}{official_label}_"
         f"{decoder_payload_codec}_ceil{int(hard_byte_ceiling)}"
     )
@@ -237,6 +283,7 @@ class SnervModelSizeCandidate:
     mfu_scales: tuple[int, ...]
     hfr_gain: float
     temporal_context: int
+    temporal_mode: str
     decoder_feature_count: int
     lf_coeffs_per_plane: int
     lf_plane_count: int
@@ -279,6 +326,10 @@ class SnervModelSizeCandidate:
             "modelsize_mparams_caps_archive_zip_bytes": False,
             "mutates_receiver_visible_architecture": True,
             "mutates_receiver_visible_fc_dim": True,
+            "mutates_receiver_visible_temporal_basis": (
+                self.temporal_context > 0
+                and self.temporal_mode != DEFAULT_SNERV_TEMPORAL_MODE
+            ),
             "mutates_trained_parameter_count": True,
             "hard_byte_ceiling_is_archive_budget_filter": True,
             "archive_bytes_authority_required": True,
@@ -833,6 +884,7 @@ def analyze_snerv_modelsize_candidate(
     mfu_scales: tuple[int, ...] = (1, 2, 4),
     hfr_gain: float = 0.0,
     temporal_context: int = 0,
+    temporal_mode: str = DEFAULT_SNERV_TEMPORAL_MODE,
 ) -> SnervModelSizeCandidate:
     """Analyze one SNeRV receiver-grammar point against an archive ceiling."""
 
@@ -874,6 +926,7 @@ def analyze_snerv_modelsize_candidate(
         mfu_scales=tuple(int(v) for v in mfu_scales),
         hfr_gain=float(hfr_gain),
         temporal_context=int(temporal_context),
+        temporal_mode=str(temporal_mode),
         adapter=str(snerv_model_size_adapter),
     )
     decoder_weight_count = int(levels) * 3 * int(model_size.feature_count)
@@ -899,6 +952,7 @@ def analyze_snerv_modelsize_candidate(
         mfu_scales=tuple(int(value) for value in model_size.mfu_scales),
         hfr_gain=float(model_size.hfr_gain),
         temporal_context=int(model_size.temporal_context),
+        temporal_mode=str(model_size.temporal_mode),
         snerv_model_size_adapter=str(model_size.adapter),
         decoder_payload_codec=str(decoder_payload_codec),
         hard_byte_ceiling=int(hard_byte_ceiling),
@@ -934,6 +988,7 @@ def analyze_snerv_modelsize_candidate(
         mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
         hfr_gain=float(model_size.hfr_gain),
         temporal_context=int(model_size.temporal_context),
+        temporal_mode=str(model_size.temporal_mode),
         decoder_feature_count=int(model_size.feature_count),
         lf_coeffs_per_plane=lf_per_plane,
         lf_plane_count=plane_count,
@@ -981,6 +1036,7 @@ def enumerate_snerv_modelsize_candidates(
     mfu_scales: tuple[int, ...] = (1, 2, 4),
     hfr_gain: float = 0.0,
     temporal_context: int = 0,
+    temporal_modes: tuple[str, ...] = (DEFAULT_SNERV_TEMPORAL_MODE,),
 ) -> list[SnervModelSizeCandidate]:
     """Enumerate SNeRV LF/HF receiver-grammar capacity points."""
 
@@ -990,56 +1046,60 @@ def enumerate_snerv_modelsize_candidates(
             for bits in bits_per_coeffs:
                 for step_bits in step_map_bits_per_coeffs:
                     for decoder_codec in decoder_codecs:
-                        for fc_dim in fc_dims:
-                            for emb_size in emb_sizes:
-                                rows.append(
-                                    analyze_snerv_modelsize_candidate(
-                                        hard_byte_ceiling=ceiling,
-                                        num_pairs=num_pairs,
-                                        carrier_hw=carrier_hw,
-                                        wavelet=wavelet,
-                                        levels=lvl,
-                                        bits_per_coeff=bits,
-                                        step_map_bits_per_coeff=step_bits,
-                                        decoder_payload_codec=decoder_codec,
-                                        snerv_model_size_adapter=(
-                                            snerv_model_size_adapter
-                                        ),
-                                        fc_dim=int(fc_dim),
-                                        emb_size=int(emb_size),
-                                        patch_radius=int(patch_radius),
-                                        mfu_scales=tuple(int(v) for v in mfu_scales),
-                                        hfr_gain=float(hfr_gain),
-                                        temporal_context=int(temporal_context),
+                        for temporal_mode in temporal_modes:
+                            for fc_dim in fc_dims:
+                                for emb_size in emb_sizes:
+                                    rows.append(
+                                        analyze_snerv_modelsize_candidate(
+                                            hard_byte_ceiling=ceiling,
+                                            num_pairs=num_pairs,
+                                            carrier_hw=carrier_hw,
+                                            wavelet=wavelet,
+                                            levels=lvl,
+                                            bits_per_coeff=bits,
+                                            step_map_bits_per_coeff=step_bits,
+                                            decoder_payload_codec=decoder_codec,
+                                            snerv_model_size_adapter=(
+                                                snerv_model_size_adapter
+                                            ),
+                                            fc_dim=int(fc_dim),
+                                            emb_size=int(emb_size),
+                                            patch_radius=int(patch_radius),
+                                            mfu_scales=tuple(int(v) for v in mfu_scales),
+                                            hfr_gain=float(hfr_gain),
+                                            temporal_context=int(temporal_context),
+                                            temporal_mode=str(temporal_mode),
+                                        )
                                     )
-                                )
                         for modelsize_mparams in official_modelsize_mparams:
-                            for emb_size in emb_sizes:
-                                rows.append(
-                                    analyze_snerv_modelsize_candidate(
-                                        hard_byte_ceiling=ceiling,
-                                        num_pairs=num_pairs,
-                                        carrier_hw=carrier_hw,
-                                        wavelet=wavelet,
-                                        levels=lvl,
-                                        bits_per_coeff=bits,
-                                        step_map_bits_per_coeff=step_bits,
-                                        decoder_payload_codec=decoder_codec,
-                                        snerv_model_size_adapter=(
-                                            snerv_model_size_adapter
-                                        ),
-                                        official_modelsize_mparams=float(
-                                            modelsize_mparams
-                                        ),
-                                        official_enc_strds=official_enc_strds,
-                                        official_dec_strds=official_dec_strds,
-                                        emb_size=int(emb_size),
-                                        patch_radius=int(patch_radius),
-                                        mfu_scales=tuple(int(v) for v in mfu_scales),
-                                        hfr_gain=float(hfr_gain),
-                                        temporal_context=int(temporal_context),
+                            for temporal_mode in temporal_modes:
+                                for emb_size in emb_sizes:
+                                    rows.append(
+                                        analyze_snerv_modelsize_candidate(
+                                            hard_byte_ceiling=ceiling,
+                                            num_pairs=num_pairs,
+                                            carrier_hw=carrier_hw,
+                                            wavelet=wavelet,
+                                            levels=lvl,
+                                            bits_per_coeff=bits,
+                                            step_map_bits_per_coeff=step_bits,
+                                            decoder_payload_codec=decoder_codec,
+                                            snerv_model_size_adapter=(
+                                                snerv_model_size_adapter
+                                            ),
+                                            official_modelsize_mparams=float(
+                                                modelsize_mparams
+                                            ),
+                                            official_enc_strds=official_enc_strds,
+                                            official_dec_strds=official_dec_strds,
+                                            emb_size=int(emb_size),
+                                            patch_radius=int(patch_radius),
+                                            mfu_scales=tuple(int(v) for v in mfu_scales),
+                                            hfr_gain=float(hfr_gain),
+                                            temporal_context=int(temporal_context),
+                                            temporal_mode=str(temporal_mode),
+                                        )
                                     )
-                                )
     return rows
 
 
@@ -1090,6 +1150,21 @@ def select_snerv_modelsize_candidates(
                     continue
                 best_for_level = min(level_blockers, key=lambda row: abs(row.byte_headroom))
             choose(chosen, best_for_level)
+        for temporal_mode in sorted({row.temporal_mode for row in group}):
+            mode_rows = [row for row in under if row.temporal_mode == temporal_mode]
+            if mode_rows:
+                best_for_mode = max(mode_rows, key=_selection_key)
+            else:
+                mode_blockers = [
+                    row for row in group if row.temporal_mode == temporal_mode
+                ]
+                if not mode_blockers:
+                    continue
+                best_for_mode = min(
+                    mode_blockers,
+                    key=lambda row: abs(row.byte_headroom),
+                )
+            choose(chosen, best_for_mode)
         for bits in DEFAULT_SNERV_BITS_PER_COEFF:
             bit_rows = [row for row in under if row.bits_per_coeff == bits]
             if bit_rows:
@@ -1144,6 +1219,7 @@ def build_snerv_modelsize_budget_report(
     mfu_scales: tuple[int, ...] = (1, 2, 4),
     hfr_gain: float = 0.0,
     temporal_context: int = 0,
+    temporal_modes: tuple[str, ...] = (DEFAULT_SNERV_TEMPORAL_MODE,),
 ) -> dict[str, Any]:
     """Return a planner-safe SNeRV model-size budget report."""
 
@@ -1162,6 +1238,7 @@ def build_snerv_modelsize_budget_report(
         mfu_scales=mfu_scales,
         hfr_gain=hfr_gain,
         temporal_context=temporal_context,
+        temporal_modes=temporal_modes,
     )
     selected = select_snerv_modelsize_candidates(
         candidates,
@@ -1188,6 +1265,7 @@ def build_snerv_modelsize_budget_report(
         "mfu_scales": [int(v) for v in mfu_scales],
         "hfr_gain": float(hfr_gain),
         "temporal_context": int(temporal_context),
+        "temporal_modes": [str(v) for v in temporal_modes],
         "hard_byte_ceilings": sorted({int(v) for v in hard_byte_ceilings}),
         "candidate_count": len(candidates),
         "selected_candidate_count": len(selected),
@@ -1505,6 +1583,7 @@ __all__ = [
     "DEFAULT_SNERV_MODEL_SIZE_ADAPTER",
     "DEFAULT_SNERV_OFFICIAL_DEC_STRDS",
     "DEFAULT_SNERV_OFFICIAL_ENC_STRDS",
+    "DEFAULT_SNERV_TEMPORAL_MODE",
     "HinervModelSizeCandidate",
     "NervModelSizeBudgetError",
     "SnervModelSizeCandidate",
@@ -1523,5 +1602,7 @@ __all__ = [
     "snerv_model_size_adapter_from_id_token",
     "snerv_model_size_adapter_id_token",
     "snerv_modelsize_candidate_id_from_controls",
+    "snerv_temporal_mode_from_id_token",
+    "snerv_temporal_mode_id_token",
     "tag_hinerv_target_modelsize_candidate",
 ]

@@ -134,6 +134,7 @@ class SnervAdvisoryResult:
     snerv_mfu_scales: tuple[int, ...]
     snerv_hfr_gain: float
     snerv_temporal_context: int
+    snerv_temporal_mode: str
     decoder_feature_count: int
     hf_decoder_fit_mode: str
     hf_decoder_saliency_gain: float
@@ -378,6 +379,7 @@ def run_snerv_advisory(
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
     snerv_temporal_context: int = 0,
+    snerv_temporal_mode: str = "delta",
 ) -> SnervAdvisoryResult:
     """Run the complete byte-closed SNeRV advisory on ``n_pairs`` real pairs.
 
@@ -406,6 +408,7 @@ def run_snerv_advisory(
         mfu_scales=tuple(snerv_mfu_scales),
         hfr_gain=float(snerv_hfr_gain),
         temporal_context=int(snerv_temporal_context),
+        temporal_mode=str(snerv_temporal_mode),
         adapter=str(snerv_model_size_adapter),
     )
 
@@ -638,6 +641,7 @@ def run_snerv_advisory(
         "snerv_mfu_scales": [int(v) for v in model_size.mfu_scales],
         "snerv_hfr_gain": float(model_size.hfr_gain),
         "snerv_temporal_context": int(model_size.temporal_context),
+        "snerv_temporal_mode": model_size.temporal_mode,
         "decoder_feature_count": int(model_size.feature_count),
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
@@ -822,6 +826,7 @@ def run_snerv_advisory(
         snerv_mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
         snerv_hfr_gain=float(model_size.hfr_gain),
         snerv_temporal_context=int(model_size.temporal_context),
+        snerv_temporal_mode=model_size.temporal_mode,
         decoder_feature_count=int(model_size.feature_count),
         hf_decoder_fit_mode=hf_decoder_fit_mode,
         hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),

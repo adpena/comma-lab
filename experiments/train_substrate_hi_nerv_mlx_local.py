@@ -49,6 +49,22 @@ from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
 
 TRAINER_SCHEMA = "hi_nerv_mlx_score_aware_trainer.v1"
 TRAINER_AUTHORITY = "false_authority_macos_mlx_training_no_contest_score_claim"
+DIRECT_TRAINER_CANONICALIZATION_SCHEMA = (
+    "hi_nerv_direct_trainer_canonicalization_contract.v1"
+)
+DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = (
+    "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
+)
+DIRECT_TRAINER_CANONICALIZATION_BLOCKERS = (
+    "direct_hinerv_trainer_launch_not_compact_runner_owned",
+    "hinerv_direct_trainer_missing_planner_row_id",
+    "hinerv_direct_trainer_source_parity_contract_not_consumed",
+    "hinerv_direct_trainer_source_faithfulness_gate_not_consumed",
+    "hinerv_direct_trainer_pr95_prelaunch_gate_not_consumed",
+    "hinerv_direct_modelsize_row_not_budget_candidate_contract",
+    "hinerv_direct_trainer_full_video_prefilter_not_bound",
+    "hinerv_direct_trainer_local_cpu_replay_gate_not_bound",
+)
 DEFAULT_WORKLOAD_SUBDIR = "hinerv_mlx_local_training"
 MODEL_SIZE_ROWS = tuple(
     row["row_id"] for row in hi_nerv_modelsize_config_rows(num_pairs=600)
@@ -81,6 +97,7 @@ def _full_main(args: argparse.Namespace) -> int:
 
     output_dir, storage_payload = _resolve_output_dir(args)
     cfg = _config_from_args(args)
+    canonicalization = _direct_trainer_canonicalization_contract(mode="full")
     model = HinervSubstrateMLX(cfg)
     if args.decoder_fake_quant_forward:
         model.configure_decoder_fake_quant_forward(
@@ -186,9 +203,11 @@ def _full_main(args: argparse.Namespace) -> int:
                 str(args.pose_student_input_preprocess)
             ),
             "storage_preflight": _metadata_safe(storage_payload),
+            "direct_trainer_canonicalization": _metadata_safe(canonicalization),
             "blockers": [
                 "contest_cpu_cuda_exact_eval_not_executed",
                 "official_hinerv_feature_grid_parity_not_proven",
+                *canonicalization["blockers"],
             ],
         },
         eval_roundtrip_ste_enabled=bool(args.eval_roundtrip_ste),
@@ -201,6 +220,8 @@ def _full_main(args: argparse.Namespace) -> int:
             "authority": TRAINER_AUTHORITY,
             "output_dir": output_dir.as_posix(),
             "storage_preflight": storage_payload,
+            "direct_trainer_canonicalization": canonicalization,
+            "blockers": list(canonicalization["blockers"]),
             "command": sys.argv,
             **FALSE_AUTHORITY,
         },
@@ -283,6 +304,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
 
     output_dir, storage_payload = _resolve_output_dir(args)
     cfg = _config_from_args(args)
+    canonicalization = _direct_trainer_canonicalization_contract(mode="smoke")
     model = HinervSubstrateMLX(cfg)
     if args.decoder_fake_quant_forward:
         model.configure_decoder_fake_quant_forward(
@@ -336,10 +358,12 @@ def _smoke_main(args: argparse.Namespace) -> int:
             if post_export_quality is not None
             else None
         ),
+        "direct_trainer_canonicalization": canonicalization,
         "blockers": [
             "contest_cpu_cuda_exact_eval_not_executed",
             "hi_nerv_smoke_no_training_score",
             "official_hinerv_feature_grid_parity_not_proven",
+            *canonicalization["blockers"],
         ],
         **FALSE_AUTHORITY,
     }
@@ -636,6 +660,36 @@ def _resolve_output_dir(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]
     payload["selected_workload_root"] = output.as_posix()
     payload.update(FALSE_AUTHORITY)
     return output, payload
+
+
+def _direct_trainer_canonicalization_contract(*, mode: str) -> dict[str, Any]:
+    """Describe why this script is not the production launch authority.
+
+    The compact runner owns planner rows, campaign locks, source parity,
+    full-video prefilter, replay gates, and exact-axis handoff. This trainer
+    remains useful as the subprocess implementation behind that runner and for
+    explicitly local research smokes, but direct artifacts must never look like
+    queue-owned launch authority.
+    """
+
+    return {
+        "schema": DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
+        "canonical_runner_entrypoint": DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT,
+        "direct_trainer_role": "runner_subprocess_or_research_smoke_only",
+        "mode": str(mode),
+        "planner_row_required": True,
+        "planner_row_id": None,
+        "source_parity_contract_consumed": False,
+        "source_faithfulness_launch_gate_consumed": False,
+        "pr95_prelaunch_gate_consumed": False,
+        "modelsize_candidate_contract_consumed": False,
+        "compact_runner_startup_marker_present": False,
+        "full_video_mlx_prefilter_bound": False,
+        "local_cpu_replay_gate_bound": False,
+        "trainer_launch_allowed": False,
+        "blockers": list(DIRECT_TRAINER_CANONICALIZATION_BLOCKERS),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _config_snapshot(cfg: Any) -> dict[str, Any]:

@@ -1121,6 +1121,7 @@ def _model_size_from_decoder_header(header: dict[str, Any]) -> SnervModelSizeCon
             mfu_scales=tuple(int(v) for v in raw.get("mfu_scales", (1, 2, 4))),
             hfr_gain=float(raw.get("hfr_gain", 0.0)),
             temporal_context=int(raw.get("temporal_context", 0)),
+            temporal_mode=str(raw.get("temporal_mode", "delta")),
             adapter=str(raw.get("adapter", "snerv_fc_dim_emb_size_adapter_v1")),
         )
     feature_count = int(header.get("feature_count", 9))

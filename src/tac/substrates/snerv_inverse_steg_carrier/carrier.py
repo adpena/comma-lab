@@ -59,6 +59,7 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
 __all__ = [
     "DEFAULT_SNERV_MODEL_SIZE",
     "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+    "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
     "SNERV_SPECTRA_PRESERVING_ADAPTER",
     "HfGenerationDecoder",
     "HighFrequencyRestorer",
@@ -87,8 +88,14 @@ SNERV_SPECTRA_PRESERVING_ADAPTER: Final[str] = (
 SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF: Final[str] = (
     "receiver_safe_numpy_mfu_hfr_temporal_blocks_no_torch_no_scorer"
 )
+SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF: Final[str] = (
+    "official_snerv_t_dwt1d_haar_lowpass_features_numpy_receiver_visible"
+)
 SNERV_OFFICIAL_MODELSIZE_TO_FC_DIM_PROOF: Final[str] = (
     "official_snerv_train_snerv_modelsize_quadratic_fc_dim_resolver_bound"
+)
+SNERV_TEMPORAL_MODES: Final[frozenset[str]] = frozenset(
+    ("delta", "official_haar_dwt1d_lowpass")
 )
 
 
@@ -115,6 +122,7 @@ class SnervModelSizeConfig:
     mfu_scales: tuple[int, ...] = (1, 2, 4)
     hfr_gain: float = 0.0
     temporal_context: int = 0
+    temporal_mode: str = "delta"
     adapter: str = "snerv_fc_dim_emb_size_adapter_v1"
 
     def __post_init__(self) -> None:
@@ -128,6 +136,7 @@ class SnervModelSizeConfig:
         )
         object.__setattr__(self, "hfr_gain", float(self.hfr_gain))
         object.__setattr__(self, "temporal_context", int(self.temporal_context))
+        object.__setattr__(self, "temporal_mode", str(self.temporal_mode))
         if self.fc_dim < 1:
             raise SnervCarrierError("fc_dim must be >= 1")
         if self.emb_size < 0:
@@ -140,6 +149,10 @@ class SnervModelSizeConfig:
             raise SnervCarrierError("hfr_gain must be non-negative")
         if self.temporal_context < 0:
             raise SnervCarrierError("temporal_context must be non-negative")
+        if self.temporal_mode not in SNERV_TEMPORAL_MODES:
+            raise SnervCarrierError(
+                f"temporal_mode must be one of {sorted(SNERV_TEMPORAL_MODES)}"
+            )
 
     @property
     def feature_count(self) -> int:
@@ -157,6 +170,7 @@ class SnervModelSizeConfig:
             "mfu_scales": [int(v) for v in self.mfu_scales],
             "hfr_gain": float(self.hfr_gain),
             "temporal_context": int(self.temporal_context),
+            "temporal_mode": self.temporal_mode,
             "feature_count": int(self.feature_count),
             "adapter": self.adapter,
         }
@@ -494,6 +508,45 @@ class SnervTemporalExtension:
             bank.append(_resize_nn(nxt - center, target))
         return np.stack(bank, axis=-1).astype(np.float64)
 
+    def official_haar_dwt1d_lowpass_features(
+        self,
+        lf_sequence: list[np.ndarray] | tuple[np.ndarray, ...],
+        *,
+        index: int,
+        target_hw: tuple[int, int] | None = None,
+    ) -> np.ndarray:
+        """Return the official SNeRV_T temporal lowpass features in NumPy.
+
+        Official ``model/snerv_t.py`` applies ``DWT1D(J=1, wave='haar')`` to
+        ``[current, prev]`` and ``[current, next]`` LF embeddings, then feeds the
+        lowpass branch divided by two into temporal encoder blocks.  This helper
+        exposes that exact algebra without importing torch/pytorch_wavelets:
+
+        ``lowpass(current, neighbor) / 2 = (current + neighbor) / (2*sqrt(2))``.
+
+        The legacy ``sequence_delta_features`` mode stays available because the
+        contest adapter may empirically prefer motion deltas; this mode is the
+        source-faithful TUB control for planner arbitration.
+        """
+
+        if self.radius < 1:
+            raise SnervCarrierError("temporal radius must be >= 1")
+        if not lf_sequence:
+            raise SnervCarrierError("lf_sequence must be non-empty")
+        idx = int(index)
+        if idx < 0 or idx >= len(lf_sequence):
+            raise SnervCarrierError("temporal index out of range")
+        center = np.asarray(lf_sequence[idx], dtype=np.float64)
+        target = target_hw or center.shape
+        inv_two_sqrt2 = 1.0 / (2.0 * np.sqrt(2.0))
+        bank = []
+        for offset in range(1, self.radius + 1):
+            prev = np.asarray(lf_sequence[max(0, idx - offset)], dtype=np.float64)
+            nxt = np.asarray(lf_sequence[min(len(lf_sequence) - 1, idx + offset)], dtype=np.float64)
+            bank.append(_resize_nn((center + prev) * inv_two_sqrt2, target))
+            bank.append(_resize_nn((center + nxt) * inv_two_sqrt2, target))
+        return np.stack(bank, axis=-1).astype(np.float64)
+
 
 @dataclass(frozen=True)
 class HfGenerationDecoder:
@@ -735,11 +788,20 @@ def _temporal_context_features(
         raise SnervCarrierError(
             "temporal_context>0 requires receiver-visible lf_sequence and sequence_index"
         )
-    return SnervTemporalExtension(radius=radius).sequence_delta_features(
-        lf_sequence,
-        index=int(sequence_index),
-        target_hw=(h, w),
-    )
+    temporal = SnervTemporalExtension(radius=radius)
+    if model_size.temporal_mode == "delta":
+        return temporal.sequence_delta_features(
+            lf_sequence,
+            index=int(sequence_index),
+            target_hw=(h, w),
+        )
+    if model_size.temporal_mode == "official_haar_dwt1d_lowpass":
+        return temporal.official_haar_dwt1d_lowpass_features(
+            lf_sequence,
+            index=int(sequence_index),
+            target_hw=(h, w),
+        )
+    raise SnervCarrierError(f"unsupported temporal_mode {model_size.temporal_mode!r}")
 
 
 def _flat_temporal_group(

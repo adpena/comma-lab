@@ -148,6 +148,18 @@ def main(argv: list[str] | None = None) -> int:
         help="Deterministic HFR residual gain for the SNeRV adapter.",
     )
     ap.add_argument(
+        "--snerv-temporal-context",
+        type=int,
+        default=0,
+        help="Receiver-visible temporal context radius for SNeRV_T-style features.",
+    )
+    ap.add_argument(
+        "--snerv-temporal-mode",
+        choices=("delta", "official_haar_dwt1d_lowpass"),
+        default="delta",
+        help="Receiver-visible temporal basis for SNeRV_T-style features.",
+    )
+    ap.add_argument(
         "--decoder-payload-codec",
         choices=(
             "float32_lzma",
@@ -236,6 +248,8 @@ def main(argv: list[str] | None = None) -> int:
         ),
         snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
         snerv_hfr_gain=args.snerv_hfr_gain,
+        snerv_temporal_context=args.snerv_temporal_context,
+        snerv_temporal_mode=args.snerv_temporal_mode,
         decoder_payload_codec=args.decoder_payload_codec,
         decoder_payload_mixed_modes=_parse_optional_modes(
             args.decoder_payload_mixed_modes
@@ -347,6 +361,7 @@ def main(argv: list[str] | None = None) -> int:
         f"adapter={res.snerv_model_size_adapter} "
         f"mfu_scales={list(res.snerv_mfu_scales)} "
         f"hfr_gain={res.snerv_hfr_gain:g} "
+        f"temporal={res.snerv_temporal_context}:{res.snerv_temporal_mode} "
         f"features={res.decoder_feature_count} "
         f"fit={res.hf_decoder_fit_mode} "
         f"gain={res.hf_decoder_saliency_gain:g} "

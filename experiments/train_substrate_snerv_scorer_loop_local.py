@@ -147,6 +147,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--snerv-hfr-gain", type=float, default=0.0)
     parser.add_argument("--snerv-temporal-context", type=int, default=0)
     parser.add_argument(
+        "--snerv-temporal-mode",
+        choices=("delta", "official_haar_dwt1d_lowpass"),
+        default="delta",
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-lf-payload-codec",
         default="portfolio_auto",
     )
@@ -207,6 +212,7 @@ def _score_loop_kwargs_from_args(args: argparse.Namespace) -> dict[str, Any]:
         "snerv_mfu_scales": _parse_positive_int_csv(args.snerv_mfu_scales),
         "snerv_hfr_gain": float(args.snerv_hfr_gain),
         "snerv_temporal_context": int(args.snerv_temporal_context),
+        "snerv_temporal_mode": str(args.snerv_temporal_mode),
         "lf_payload_codec": str(args.snerv_scorer_loop_lf_payload_codec),
         "qat_bits": int(args.qat_bits),
         "max_trials": int(args.max_trials),
@@ -280,6 +286,7 @@ def _build_report(
         "snerv_mfu_scales": payload.get("snerv_mfu_scales"),
         "snerv_hfr_gain": payload.get("snerv_hfr_gain"),
         "snerv_temporal_context": payload.get("snerv_temporal_context"),
+        "snerv_temporal_mode": payload.get("snerv_temporal_mode"),
         "decoder_feature_count": payload.get("decoder_feature_count"),
         "lf_payload_codec": payload.get("lf_payload_codec"),
         "qat_bits": payload.get("qat_bits"),

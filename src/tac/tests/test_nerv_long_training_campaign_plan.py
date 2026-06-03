@@ -337,6 +337,23 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
     assert official_feature["source_audit_rows"][0]["official_head_sha"] == "0844a08f"
     assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in snerv_row["source_parity"]["nonblocking_gaps"]
     assert snerv_row["source_parity"]["score_claim"] is False
+    queue_entry = snerv_row["experiment_queue_entry"]
+    assert queue_entry["metadata"]["source_parity"]["source_audit_rows"][0][
+        "official_head_sha"
+    ] == "0844a08f"
+    assert queue_entry["metadata"]["source_bound_capacity_controls"]["schema"] == (
+        "snerv_source_bound_capacity_controls.v1"
+    )
+    launch_contract = queue_entry["launch_authority_contract"]
+    assert launch_contract["source_parity_contract_consumed"] is True
+    assert launch_contract["source_bound_capacity_controls_consumed"] is True
+    assert launch_contract["source_parity"]["source_audit_rows"][0][
+        "official_source_markers_present"
+    ] is True
+    assert launch_contract["source_bound_capacity_controls"]["schema"] == (
+        "snerv_source_bound_capacity_controls.v1"
+    )
+    assert launch_contract["score_claim"] is False
 
 
 def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> None:

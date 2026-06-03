@@ -84,6 +84,7 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
     )
     hfr_gain = float(_attr(advisory_result, "snerv_hfr_gain") or 0.0)
     temporal_context = int(_attr(advisory_result, "snerv_temporal_context") or 0)
+    temporal_mode = str(_attr(advisory_result, "snerv_temporal_mode") or "delta")
     mfu_enabled = "mfu_hfr_temporal" in adapter
     controls: dict[str, Any] = {
         "source_faithful_stack": False,
@@ -97,6 +98,7 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
         "mfu_enabled": bool(mfu_enabled),
         "hfr_enabled": bool(hfr_gain > 0.0),
         "snerv_t_enabled": bool(temporal_context > 0),
+        "snerv_temporal_mode": temporal_mode,
     }
     wavelet = _attr(advisory_result, "wavelet")
     levels = _attr(advisory_result, "levels")
@@ -166,6 +168,7 @@ def _trainer_metadata(
             advisory_result,
             "snerv_temporal_context",
         ),
+        "snerv_temporal_mode": _attr(advisory_result, "snerv_temporal_mode"),
         "decoder_feature_count": _int_attr(advisory_result, "decoder_feature_count"),
         "receiver_codec_mode": archive_path_kind,
         "lf_payload_codec": "snerv_lf_quant_payload.v1",

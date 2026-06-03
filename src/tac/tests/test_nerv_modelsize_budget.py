@@ -15,6 +15,8 @@ from tac.analysis.nerv_modelsize_budget import (
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
     snerv_model_size_adapter_id_token,
+    snerv_temporal_mode_from_id_token,
+    snerv_temporal_mode_id_token,
 )
 from tac.substrates.hi_nerv.architecture import HinervSubstrate
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
@@ -273,6 +275,7 @@ def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:
     assert row.mfu_scales == (1, 3)
     assert row.hfr_gain == 0.25
     assert row.temporal_context == 1
+    assert row.temporal_mode == "delta"
     assert row.lf_plane_count == 600 * 2 * 3
     assert row.lf_coeff_count_total == row.lf_plane_count * row.lf_coeffs_per_plane
     assert row.nominal_lf_payload_bytes == int(
@@ -331,6 +334,37 @@ def test_snerv_modelsize_candidate_id_tokens_losslessly_bind_receiver_controls()
     assert row.candidate_id == (
         "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_"
         "p3_mfu1-5_hfr0p375_t2_adspectra_int2_symmetric_ceil36000"
+    )
+    official_temporal = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=36_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=2,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int2_symmetric",
+        fc_dim=11,
+        emb_size=2,
+        patch_radius=3,
+        mfu_scales=(1, 5),
+        hfr_gain=0.375,
+        temporal_context=2,
+        temporal_mode="official_haar_dwt1d_lowpass",
+        snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+    )
+    assert official_temporal.candidate_id == (
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_"
+        "p3_mfu1-5_hfr0p375_t2_tmhaar1_adspectra_int2_symmetric_ceil36000"
+    )
+    assert official_temporal.temporal_mode == "official_haar_dwt1d_lowpass"
+    assert official_temporal.as_dict()["modelsize_control_contract"][
+        "mutates_receiver_visible_temporal_basis"
+    ] is True
+    assert snerv_temporal_mode_id_token("official_haar_dwt1d_lowpass") == "haar1"
+    assert (
+        snerv_temporal_mode_from_id_token("haar1")
+        == "official_haar_dwt1d_lowpass"
     )
     official_row = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=178_000,

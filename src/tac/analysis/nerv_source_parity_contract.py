@@ -546,6 +546,13 @@ def _source_features() -> tuple[SourceFeature, ...]:
                     "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
                     "local receiver-safe adapter proof constant",
                 ),
+                RequiredSymbol(
+                    "snerv",
+                    "snerv_receiver_safe_mfu_hfr_temporal_adapter",
+                    "tac.substrates.snerv_inverse_steg_carrier.carrier",
+                    "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
+                    "official SNeRV_T Haar/DWT1D temporal primitive proof",
+                ),
             ),
             blocker_if_missing="snerv_receiver_safe_mfu_hfr_temporal_adapter_missing",
         ),

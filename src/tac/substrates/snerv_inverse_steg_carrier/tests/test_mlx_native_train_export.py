@@ -616,6 +616,8 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
             "decoder_payload_codec": "int8_symmetric",
             "snerv_fc_dim": 5,
             "snerv_mfu_scales": (1, 2),
+            "snerv_temporal_context": 1,
+            "snerv_temporal_mode": "official_haar_dwt1d_lowpass",
         },
         scorer_upstream_dir="upstream",
         output_height=16,
@@ -636,6 +638,8 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert captured["component_guard_mode"] == "pose_seg_hard"
     assert captured["snerv_fc_dim"] == 5
     assert captured["snerv_mfu_scales"] == (1, 2)
+    assert captured["snerv_temporal_context"] == 1
+    assert captured["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     scorer_loop = report["scorer_loop_qat"]
     assert scorer_loop["requested"] is True
     assert scorer_loop["executed"] is True

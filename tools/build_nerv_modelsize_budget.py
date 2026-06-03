@@ -107,6 +107,25 @@ def main(argv: list[str] | None = None) -> int:
         help="Comma-separated official SNeRV decoder strides.",
     )
     parser.add_argument(
+        "--snerv-temporal-context",
+        type=int,
+        default=0,
+        help=(
+            "Receiver-visible SNeRV temporal context radius to include in "
+            "budget candidates. Use with --snerv-temporal-mode for SNeRV_T "
+            "Haar/DWT1D controls."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-temporal-mode",
+        action="append",
+        choices=("delta", "official_haar_dwt1d_lowpass"),
+        help=(
+            "SNeRV temporal basis candidate. Repeatable. Defaults to delta "
+            "when omitted."
+        ),
+    )
+    parser.add_argument(
         "--allow-overwrite",
         action="store_true",
         help=(
@@ -146,6 +165,7 @@ def main(argv: list[str] | None = None) -> int:
             ]
         )
     )
+    snerv_temporal_modes = tuple(args.snerv_temporal_mode or ("delta",))
     hinerv = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=int(args.num_pairs),
@@ -161,6 +181,8 @@ def main(argv: list[str] | None = None) -> int:
         official_modelsize_mparams=snerv_official_modelsize_mparams,
         official_enc_strds=tuple(int(v) for v in args.snerv_official_enc_strds),
         official_dec_strds=tuple(int(v) for v in args.snerv_official_dec_strds),
+        temporal_context=int(args.snerv_temporal_context),
+        temporal_modes=snerv_temporal_modes,
     )
     hinerv_result = write_json_artifact(
         args.output_hinerv_json,
@@ -202,6 +224,8 @@ def main(argv: list[str] | None = None) -> int:
             "snerv_official_dec_strds": [
                 int(v) for v in args.snerv_official_dec_strds
             ],
+            "snerv_temporal_context": int(args.snerv_temporal_context),
+            "snerv_temporal_modes": list(snerv_temporal_modes),
         },
         "hinerv_output_json": hinerv_result.path,
         "hinerv_output_sha256": hinerv_result.sha256,

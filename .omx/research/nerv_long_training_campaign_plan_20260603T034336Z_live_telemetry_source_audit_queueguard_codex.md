@@ -1,0 +1,197 @@
+# NeRV Long-Training Campaign Plan
+
+Schema: `nerv_long_training_campaign_plan.v1`
+Rows: `36`
+Launchable local rows: `0`
+Blocked rows: `36`
+Score claim: `False`
+Ready for exact dispatch: `False`
+
+## Rows
+
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::adamax`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamax`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::muon`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `muon`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::adamax`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamax`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::muon`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `muon`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::adamax`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamax`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::muon`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `muon`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::adadelta`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adadelta`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::adafactor`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adafactor`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::adagrad`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adagrad`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::adam`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adam`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::rmsprop`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `rmsprop`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_int8_mixed_ceil216000::sgd`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `sgd`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::adadelta`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adadelta`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::adafactor`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adafactor`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::adagrad`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adagrad`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::adam`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adam`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::rmsprop`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `rmsprop`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed24_dc24_hfg_portfolio_auto_ceil216000::sgd`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `sgd`
+  blockers: `10`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::adadelta`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adadelta`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::adafactor`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adafactor`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::adagrad`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adagrad`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::adam`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adam`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::rmsprop`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `rmsprop`
+  blockers: `9`
+- `hi_nerv::hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02::sgd`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `sgd`
+  blockers: `9`
+- `snerv::snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc19e0_p1_mfu1-2-4_hfr0_t0_adbase_oms0p1_int8_symmetric_ceil216000::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `True`
+  optimizer: `None`
+  blockers: `24`
+- `snerv::snerv_np600_haar_lv5_lfb2_stepb1_fc19e0_p1_mfu1-2-4_hfr0_t0_adbase_oms0p1_int8_symmetric_ceil285000::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `True`
+  optimizer: `None`
+  blockers: `24`
+- `snerv::snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc19e0_p1_mfu1-2-4_hfr0_t0_adbase_oms0p1_int8_symmetric_ceil285000::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `True`
+  optimizer: `None`
+  blockers: `24`
+
+## Blockers
+
+- `campaign_plan_is_not_execution`
+- `exact_cpu_cuda_not_launched_by_campaign_plan`
+- `snerv_native_rate_pressure_in_loop_not_yet_training_authority`

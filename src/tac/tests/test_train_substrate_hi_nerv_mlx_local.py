@@ -7,12 +7,14 @@ import pytest
 
 from comma_lab.storage_tiers import StorageTierError
 from experiments.train_substrate_hi_nerv_mlx_local import (
+    DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
     TRAINER_SCHEMA,
     _build_parser,
     _build_staged_scorer_curriculum,
     _coder_qat_config_from_args,
     _config_from_args,
     _curriculum_stages_from_args,
+    _direct_trainer_canonicalization_contract,
     _metadata_safe,
     _pose_student_input_channels,
     _receiver_cache_quality_manifest_summary,
@@ -195,15 +197,40 @@ def test_hinerv_mlx_trainer_parser_requires_mode() -> None:
     assert TRAINER_SCHEMA == "hi_nerv_mlx_score_aware_trainer.v1"
 
 
+def test_hinerv_direct_trainer_canonicalization_contract_blocks_authority() -> None:
+    contract = _direct_trainer_canonicalization_contract(mode="full")
+
+    assert contract["schema"] == DIRECT_TRAINER_CANONICALIZATION_SCHEMA
+    assert contract["canonical_runner_entrypoint"] == (
+        "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
+    )
+    assert contract["direct_trainer_role"] == (
+        "runner_subprocess_or_research_smoke_only"
+    )
+    assert contract["planner_row_required"] is True
+    assert contract["planner_row_id"] is None
+    assert contract["source_parity_contract_consumed"] is False
+    assert contract["pr95_prelaunch_gate_consumed"] is False
+    assert contract["trainer_launch_allowed"] is False
+    assert "hinerv_direct_trainer_missing_planner_row_id" in contract["blockers"]
+    assert "hinerv_direct_trainer_local_cpu_replay_gate_not_bound" in contract[
+        "blockers"
+    ]
+    assert contract["score_claim"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+
+
 def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
-    for optimizer_kind in ("rmsprop", "lion", "adafactor"):
+    for optimizer_kind in ("rmsprop", "lion", "adafactor", "muon", "pact_muon_adamw"):
         args = _build_parser().parse_args(
             ["--full", "--optimizer-kind", optimizer_kind]
         )
         assert args.optimizer_kind == optimizer_kind
 
     with pytest.raises(SystemExit):
-        _build_parser().parse_args(["--full", "--optimizer-kind", "muon"])
+        _build_parser().parse_args(
+            ["--full", "--optimizer-kind", "definitely_not_optimizer"]
+        )
 
 
 def test_hinerv_mlx_trainer_metadata_safe_drops_nested_authority_keys() -> None:

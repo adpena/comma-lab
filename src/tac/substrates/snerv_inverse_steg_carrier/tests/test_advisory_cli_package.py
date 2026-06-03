@@ -69,6 +69,10 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
             "1,3",
             "--snerv-hfr-gain",
             "0.25",
+            "--snerv-temporal-context",
+            "1",
+            "--snerv-temporal-mode",
+            "official_haar_dwt1d_lowpass",
             "--package-timeout-seconds",
             "120",
             "--trained-ladder-row-out",
@@ -114,6 +118,8 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     )
     assert captured_kwargs["snerv_mfu_scales"] == (1, 3)
     assert captured_kwargs["snerv_hfr_gain"] == 0.25
+    assert captured_kwargs["snerv_temporal_context"] == 1
+    assert captured_kwargs["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
 
 
 def _fake_advisory_result(packet: bytes):
@@ -162,6 +168,7 @@ def _fake_advisory_result(packet: bytes):
         snerv_mfu_scales=(1, 3),
         snerv_hfr_gain=0.25,
         snerv_temporal_context=0,
+        snerv_temporal_mode="delta",
         decoder_feature_count=9,
         hf_decoder_fit_mode="least_squares",
         hf_decoder_saliency_gain=1.0,

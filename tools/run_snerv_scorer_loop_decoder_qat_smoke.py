@@ -55,6 +55,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--snerv-hfr-gain", type=float, default=0.0)
     parser.add_argument("--snerv-temporal-context", type=int, default=0)
     parser.add_argument(
+        "--snerv-temporal-mode",
+        default="delta",
+        choices=("delta", "official_haar_dwt1d_lowpass"),
+    )
+    parser.add_argument(
         "--snerv-scorer-loop-lf-payload-codec",
         default="portfolio_auto",
     )
@@ -114,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
         snerv_hfr_gain=args.snerv_hfr_gain,
         snerv_temporal_context=args.snerv_temporal_context,
+        snerv_temporal_mode=args.snerv_temporal_mode,
         lf_payload_codec=args.snerv_scorer_loop_lf_payload_codec,
         qat_bits=args.qat_bits,
         max_trials=args.max_trials,
@@ -150,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  adapter: {result.snerv_model_size_adapter}")
     print(f"  mfu_scales: {list(result.snerv_mfu_scales)}")
     print(f"  hfr_gain: {result.snerv_hfr_gain:g}")
+    print(f"  temporal_mode: {result.snerv_temporal_mode}")
     print(f"  decoder_feature_count: {result.decoder_feature_count}")
     print(f"  lf_payload_codec: {result.lf_payload_codec}")
     print(f"  baseline_score_linf: {result.baseline.score_linf}")

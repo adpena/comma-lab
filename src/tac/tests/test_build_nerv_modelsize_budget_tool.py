@@ -51,6 +51,8 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "snerv_official_dec_strds": [5, 4, 2, 2, 2],
         "snerv_official_enc_strds": [5, 4, 2, 2, 2],
         "snerv_official_modelsize_mparams": [],
+        "snerv_temporal_context": 0,
+        "snerv_temporal_modes": ["delta"],
     }
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
@@ -195,6 +197,51 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_snerv_modelsize(
         and row["capacity_source"] == "official_snerv_modelsize"
         for row in selected
         if row["candidate_id"].find("_fc11e0_") >= 0
+    )
+
+
+def test_build_nerv_modelsize_budget_tool_exposes_snerv_temporal_modes(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    hinerv = tmp_path / "hinerv.json"
+    snerv = tmp_path / "snerv.json"
+
+    rc = tool.main(
+        [
+            "--output-hinerv-json",
+            str(hinerv),
+            "--output-snerv-json",
+            str(snerv),
+            "--hard-byte-ceiling",
+            "178000",
+            "--num-pairs",
+            "17",
+            "--per-ceiling-limit",
+            "8",
+            "--snerv-temporal-context",
+            "1",
+            "--snerv-temporal-mode",
+            "delta",
+            "--snerv-temporal-mode",
+            "official_haar_dwt1d_lowpass",
+        ]
+    )
+
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["inputs"]["snerv_temporal_context"] == 1
+    assert summary["inputs"]["snerv_temporal_modes"] == [
+        "delta",
+        "official_haar_dwt1d_lowpass",
+    ]
+    payload = json.loads(snerv.read_text(encoding="utf-8"))
+    assert payload["temporal_context"] == 1
+    assert payload["temporal_modes"] == ["delta", "official_haar_dwt1d_lowpass"]
+    assert any(
+        row["temporal_mode"] == "official_haar_dwt1d_lowpass"
+        and "_tmhaar1_" in row["candidate_id"]
+        for row in payload["selected_candidates"]
     )
 
 

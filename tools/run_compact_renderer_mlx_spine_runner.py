@@ -63,7 +63,11 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     enumerate_snerv_modelsize_candidates,
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
+    snerv_temporal_mode_from_id_token,
     tag_hinerv_target_modelsize_candidate,
+)
+from tac.analysis.nerv_source_parity_contract import (  # noqa: E402
+    build_nerv_source_parity_contract,
 )
 from tac.analysis.nerv_stack_synergy_audit import (  # noqa: E402
     build_nerv_stack_synergy_audit,
@@ -1861,6 +1865,8 @@ def _resolve_execute_modelsize_candidate(
     snerv_official_modelsize_mparams: tuple[float, ...] = (),
     snerv_official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
     snerv_official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
+    snerv_temporal_context: int = 0,
+    snerv_temporal_modes: tuple[str, ...] = ("delta",),
 ) -> dict[str, Any] | None:
     """Resolve an executable NeRV byte-budget candidate for a family launch.
 
@@ -1898,6 +1904,8 @@ def _resolve_execute_modelsize_candidate(
                 official_modelsize_mparams=snerv_targets,
                 official_enc_strds=tuple(int(value) for value in snerv_official_enc_strds),
                 official_dec_strds=tuple(int(value) for value in snerv_official_dec_strds),
+                temporal_context=int(snerv_temporal_context),
+                temporal_modes=tuple(str(value) for value in snerv_temporal_modes),
             )
         ]
     else:
@@ -2005,7 +2013,7 @@ _SNERV_MODEL_SIZE_ID_RE = re.compile(
     r"p(?P<patch_radius>\d+)_"
     r"mfu(?P<mfu_scales>\d+(?:-\d+)*)_"
     r"hfr(?P<hfr_gain>\d+(?:p\d+)?)_"
-    r"t(?P<temporal_context>\d+)_"
+    r"t(?P<temporal_context>\d+)(?:_tm(?P<temporal_mode_token>[A-Za-z0-9]+))?_"
     r"ad(?P<adapter_token>[A-Za-z0-9]+)"
     r"(?:_oms(?P<official_modelsize>\d+(?:p\d+)?))?_"
     r"(?P<decoder_payload_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
@@ -2124,6 +2132,11 @@ def _modelsize_candidate_from_self_describing_id(
                 int(matched.group("temporal_context"))
                 if "temporal_context" in groups
                 else 0
+            ),
+            temporal_mode=(
+                snerv_temporal_mode_from_id_token(groups["temporal_mode_token"])
+                if groups.get("temporal_mode_token") is not None
+                else "delta"
             ),
             snerv_model_size_adapter=(
                 snerv_model_size_adapter_from_id_token(
@@ -2248,6 +2261,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     snerv_mfu_scales: tuple[int, ...],
     snerv_hfr_gain: float,
     snerv_temporal_context: int,
+    snerv_temporal_mode: str,
     max_trials: int,
     search_mode: str,
     perturb_scale: float,
@@ -2314,6 +2328,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             snerv_mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
             snerv_hfr_gain=float(snerv_hfr_gain),
             snerv_temporal_context=int(snerv_temporal_context),
+            snerv_temporal_mode=str(snerv_temporal_mode),
             decoder_payload_codec=str(decoder_payload_codec),
             lf_payload_codec=str(lf_payload_codec),
             qat_bits=int(qat_bits),
@@ -2362,6 +2377,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             "snerv_mfu_scales": [int(v) for v in snerv_mfu_scales],
             "snerv_hfr_gain": float(snerv_hfr_gain),
             "snerv_temporal_context": int(snerv_temporal_context),
+            "snerv_temporal_mode": str(snerv_temporal_mode),
             "qat_bits": int(qat_bits),
             "lf_payload_codec": str(
                 result_payload.get("lf_payload_codec") or lf_payload_codec
@@ -2445,6 +2461,7 @@ def _run_snerv_native_mlx_export_attachment(
     scorer_loop_qat_component_guard_mode: str,
     scorer_loop_qat_device: str,
     recon_pixel_weight_path: str | Path | None,
+    recon_pixel_weight_manifest_path: str | Path | None,
     recon_pixel_weight_normalize: str,
 ) -> dict[str, Any]:
     """Run the native MLX SNeRV train/export/archive bridge.
@@ -2500,6 +2517,7 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             scorer_loop_qat_device=str(scorer_loop_qat_device),
             recon_pixel_weight_path=recon_pixel_weight_path,
+            recon_pixel_weight_manifest_path=recon_pixel_weight_manifest_path,
             recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
             allow_overwrite=bool(allow_overwrite),
         )
@@ -2509,6 +2527,20 @@ def _run_snerv_native_mlx_export_attachment(
         if artifact.get("receiver_proof_passed") is not True:
             blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
         native_scorer_loop = dict(artifact.get("scorer_loop_qat") or {})
+        native_mlx_full600_export_proof_ready = int(num_pairs) >= CONTEST_PAIR_COUNT
+        native_mlx_full600_campaign_ready = bool(
+            native_mlx_full600_export_proof_ready
+            and artifact.get("score_aware_long_training_executed") is True
+            and artifact.get("native_mlx_training_executed") is True
+            and artifact.get("receiver_proof_passed") is True
+        )
+        if native_mlx_full600_export_proof_ready and not native_mlx_full600_campaign_ready:
+            blockers.extend(
+                [
+                    "snerv_mlx_native_export_closed_form_not_training",
+                    "snerv_mlx_native_full600_not_campaign_ready_without_learned_training",
+                ]
+            )
         payload = {
             "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
             "executed": True,
@@ -2551,7 +2583,15 @@ def _run_snerv_native_mlx_export_attachment(
                 artifact.get("native_mlx_training_executed")
             ),
             "native_mlx_train_export_attached": True,
-            "native_mlx_full600_campaign_ready": int(num_pairs) >= CONTEST_PAIR_COUNT,
+            "native_mlx_full600_export_proof_ready": (
+                native_mlx_full600_export_proof_ready
+            ),
+            "native_mlx_full600_campaign_ready": native_mlx_full600_campaign_ready,
+            "recon_pixel_weight_manifest_path": (
+                Path(recon_pixel_weight_manifest_path).as_posix()
+                if recon_pixel_weight_manifest_path is not None
+                else None
+            ),
             "recon_pixel_weight": artifact.get("recon_pixel_weight"),
             "blockers": _dedupe(blockers),
             "artifact": artifact,
@@ -2914,6 +2954,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
     snerv_temporal_context_override: int | None = None,
+    snerv_temporal_mode_override: str | None = None,
     recon_pixel_weight_path: str | Path | None = None,
     auto_joint_recon_pixel_weight: bool = False,
     recon_pixel_weight_normalize: str = "mean",
@@ -2972,6 +3013,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         )
     out.mkdir(parents=True, exist_ok=True)
     effective_recon_pixel_weight_path = recon_pixel_weight_path
+    effective_recon_pixel_weight_manifest_path: str | Path | None = None
     recon_pixel_weight_auto_discovery: dict[str, Any] | None = None
     if auto_joint_recon_pixel_weight:
         if recon_pixel_weight_path is not None:
@@ -2986,6 +3028,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             repo_root=root,
             num_pairs=int(num_pairs),
         )
+        if recon_pixel_weight_auto_discovery is not None:
+            selected_manifest_path = recon_pixel_weight_auto_discovery.get(
+                "selected_manifest_path"
+            )
+            if selected_manifest_path:
+                effective_recon_pixel_weight_manifest_path = str(
+                    selected_manifest_path
+                )
 
     planner = _score_aware_carrier_training_plan(
         "snerv",
@@ -3041,6 +3091,19 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     0
                     if snerv_temporal_context_override is None
                     else int(snerv_temporal_context_override)
+                ),
+            ),
+        )
+    )
+    snerv_temporal_mode = str(
+        candidate.get(
+            "temporal_mode",
+            candidate.get(
+                "snerv_temporal_mode",
+                (
+                    "delta"
+                    if snerv_temporal_mode_override is None
+                    else str(snerv_temporal_mode_override)
                 ),
             ),
         )
@@ -3167,6 +3230,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         snerv_mfu_scales=resolved_snerv_mfu_scales,
         snerv_hfr_gain=resolved_snerv_hfr_gain,
         snerv_temporal_context=snerv_temporal_context,
+        snerv_temporal_mode=snerv_temporal_mode,
     )
     packet_path = out / "snerv_inverse_steg_advisory.snar"
     packet_path.write_bytes(advisory.receiver_archive_packet)
@@ -3309,6 +3373,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         snerv_mfu_scales=resolved_snerv_mfu_scales,
         snerv_hfr_gain=resolved_snerv_hfr_gain,
         snerv_temporal_context=snerv_temporal_context,
+        snerv_temporal_mode=snerv_temporal_mode,
         max_trials=int(snerv_scorer_loop_max_trials),
         search_mode=str(snerv_scorer_loop_search_mode),
         perturb_scale=float(snerv_scorer_loop_perturb_scale),
@@ -3332,13 +3397,29 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         component_guard_mode=str(snerv_scorer_loop_component_guard_mode),
         seed=int(random_seed),
     )
+    resolved_snerv_modelsize_candidate = {
+        **candidate,
+        "fc_dim": int(snerv_fc_dim),
+        "emb_size": int(snerv_emb_size),
+        "patch_radius": int(snerv_patch_radius),
+        "mfu_scales": [int(v) for v in resolved_snerv_mfu_scales],
+        "hfr_gain": float(resolved_snerv_hfr_gain),
+        "temporal_context": int(snerv_temporal_context),
+        "temporal_mode": str(snerv_temporal_mode),
+        "snerv_model_size_adapter": str(snerv_model_size_adapter),
+        "decoder_payload_codec": str(decoder_payload_codec),
+        "levels": int(levels),
+        "wavelet": str(wavelet),
+        "bits_per_coeff": float(target_bits_per_coeff),
+        "step_map_bits_per_coeff": float(step_map_waterfill_bits_per_coeff),
+    }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
         output_dir=out / "snerv_mlx_native_export",
         num_pairs=int(num_pairs),
         source_video_path=resolved_source_video,
         scorer_upstream_dir=scorer_upstream,
-        modelsize_candidate=candidate or None,
+        modelsize_candidate=resolved_snerv_modelsize_candidate,
         repo_root=root,
         allow_overwrite=bool(allow_overwrite),
         retain_receiver_output=bool(keep_local_replay_inflated),
@@ -3356,6 +3437,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         scorer_loop_qat_device=str(distillation_device),
         recon_pixel_weight_path=effective_recon_pixel_weight_path,
+        recon_pixel_weight_manifest_path=effective_recon_pixel_weight_manifest_path,
         recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
     )
     snerv_mlx_native_file_backed_evidence = (
@@ -3510,6 +3592,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "path": (
                     Path(effective_recon_pixel_weight_path).as_posix()
                     if effective_recon_pixel_weight_path is not None
+                    else None
+                ),
+                "manifest_path": (
+                    Path(effective_recon_pixel_weight_manifest_path).as_posix()
+                    if effective_recon_pixel_weight_manifest_path is not None
                     else None
                 ),
                 "normalize": str(recon_pixel_weight_normalize),
@@ -3825,11 +3912,24 @@ def adapt_snerv_advisory_report_to_spine(
         output_dir=out,
         repo_root=root,
     )
+    source_parity_contract = build_nerv_source_parity_contract(
+        repo_root=root,
+        families=("snerv",),
+    )
+    source_parity_blockers = [
+        f"source_parity:{blocker}"
+        for blocker in source_parity_contract.get("blockers") or ()
+    ]
+    source_parity_nonblocking_gaps = [
+        f"source_parity:{gap}"
+        for gap in source_parity_contract.get("nonblocking_gaps") or ()
+    ]
     blockers = _dedupe(
         [
             "contest_cpu_cuda_exact_eval_not_executed",
             "snerv_mlx_native_adapter_surfaces_present_but_unproven",
             "snerv_longer_staged_score_aware_training_not_executed",
+            *source_parity_blockers,
             *(
                 []
                 if receiver_proof.get("runtime_consumption_proof_passed") is True
@@ -3878,6 +3978,20 @@ def adapt_snerv_advisory_report_to_spine(
             "post_export_materializer_plan": post_export_materializer_plan,
             "post_export_materializer_execution": post_export_materializer_execution,
             "snerv_binary_profile": snerv_binary_profile,
+            "source_parity_contract": source_parity_contract,
+            "source_parity_required_for_long_training_ready": bool(
+                source_parity_contract.get("required_for_long_training_ready")
+            ),
+            "source_parity_blockers": source_parity_blockers,
+            "source_parity_nonblocking_gaps": source_parity_nonblocking_gaps,
+            "legacy_advisory_ingest_contract": {
+                "schema": "snerv_legacy_advisory_ingest_contract.v1",
+                "source_parity_consumed": True,
+                "legacy_advisory_is_not_long_training_authority": True,
+                "legacy_advisory_is_not_score_authority": True,
+                "exact_cpu_cuda_required_for_promotion": True,
+                **FALSE_AUTHORITY,
+            },
             "local_cpu_replay_summary_paths": [
                 path.as_posix() for path in local_cpu_replay_paths
             ],
@@ -10252,6 +10366,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Manual SNeRV temporal context override for no-candidate probes.",
     )
     parser.add_argument(
+        "--snerv-temporal-mode",
+        default=None,
+        choices=("delta", "official_haar_dwt1d_lowpass"),
+        help=(
+            "Manual SNeRV temporal basis override for no-candidate probes. "
+            "Planner rows win when they specify temporal_mode."
+        ),
+    )
+    parser.add_argument(
         "--skip-snerv-native-mlx-export",
         action="store_true",
         help=(
@@ -10484,6 +10607,14 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_official_dec_strds=tuple(
                 int(value) for value in args.snerv_official_dec_strds
+            ),
+            snerv_temporal_context=(
+                0 if args.snerv_temporal_context is None else int(args.snerv_temporal_context)
+            ),
+            snerv_temporal_modes=(
+                ("delta",)
+                if args.snerv_temporal_mode is None
+                else (str(args.snerv_temporal_mode),)
             ),
         )
     planner_launch_blockers = _planner_row_launch_blockers(args)
@@ -10850,6 +10981,7 @@ def main(argv: list[str] | None = None) -> int:
             snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
             snerv_hfr_gain=args.snerv_hfr_gain,
             snerv_temporal_context_override=args.snerv_temporal_context,
+            snerv_temporal_mode_override=args.snerv_temporal_mode,
             recon_pixel_weight_path=args.recon_pixel_weight_path,
             auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
             recon_pixel_weight_normalize=args.recon_pixel_weight_normalize,

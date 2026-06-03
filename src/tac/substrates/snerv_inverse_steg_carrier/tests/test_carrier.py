@@ -14,6 +14,7 @@ import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF,
+    SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
     HighFrequencyRestorer,
@@ -331,6 +332,32 @@ def test_temporal_extension_exposes_lf_motion_without_hidden_sidecars():
     assert np.any(features[:, :, 1] != 0)
 
 
+def test_official_temporal_haar_dwt1d_lowpass_matches_source_formula():
+    """NO-FAKE: official SNeRV_T temporal mode is the Haar lowpass algebra."""
+
+    center = np.arange(12, dtype=np.float64).reshape(3, 4)
+    prev = center - 2.0
+    nxt = center + 4.0
+    features = SnervTemporalExtension(radius=1).official_haar_dwt1d_lowpass_features(
+        [prev, center, nxt],
+        index=1,
+    )
+
+    expected_prev = (center + prev) / (2.0 * np.sqrt(2.0))
+    expected_next = (center + nxt) / (2.0 * np.sqrt(2.0))
+    assert SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF.startswith("official_snerv_t")
+    assert features.shape == (3, 4, 2)
+    np.testing.assert_allclose(features[:, :, 0], expected_prev)
+    np.testing.assert_allclose(features[:, :, 1], expected_next)
+    assert not np.allclose(
+        features,
+        SnervTemporalExtension(radius=1).sequence_delta_features(
+            [prev, center, nxt],
+            index=1,
+        ),
+    )
+
+
 def test_temporal_context_changes_decoder_capacity_and_requires_lf_sequence():
     """NO-FAKE: temporal_context changes bytes and decoded pixels, not metadata only."""
 
@@ -390,6 +417,60 @@ def test_temporal_context_changes_decoder_capacity_and_requires_lf_sequence():
         sequence_index=1,
     )
     assert not np.allclose(actual, perturbed)
+
+
+def test_official_temporal_mode_changes_decoder_fit_and_decode():
+    """NO-FAKE: official Haar-DWT1D mode is receiver-consumed, not metadata."""
+
+    yy, xx = np.mgrid[0:48, 0:64].astype(np.float64)
+    frames = [
+        np.clip(
+            125.0
+            + 38.0 * np.sin((xx - 2.0 * i) / 7.0)
+            + 22.0 * np.cos((yy + i) / 5.0),
+            0.0,
+            255.0,
+        )
+        for i in range(4)
+    ]
+    pyrs = [encode_frame_lf(frame, levels=2, wavelet="haar") for frame in frames]
+    delta = fit_hf_decoder_least_squares(
+        pyrs,
+        levels=2,
+        model_size=SnervModelSizeConfig(fc_dim=9, temporal_context=1),
+        temporal_group_count=1,
+    )
+    official = fit_hf_decoder_least_squares(
+        pyrs,
+        levels=2,
+        model_size=SnervModelSizeConfig(
+            fc_dim=9,
+            temporal_context=1,
+            temporal_mode="official_haar_dwt1d_lowpass",
+        ),
+        temporal_group_count=1,
+    )
+
+    assert official.model_size.temporal_mode == "official_haar_dwt1d_lowpass"
+    assert official.byte_cost() == delta.byte_cost()
+    assert not np.allclose(delta.kernels[0]["LH"], official.kernels[0]["LH"])
+
+    p1 = pyrs[1]
+    q, sc, zr = quantize_lf(p1.lf, n_levels=128)
+    code = SnervFrameCode(
+        lf_quant=q,
+        lf_scale=sc,
+        lf_zero=zr,
+        lf_shape=p1.lf.shape,
+        levels=2,
+        wavelet=p1.wavelet,
+        orig_hw=frames[1].shape,
+    )
+    lfs = [p.lf for p in pyrs]
+    assert not np.allclose(
+        decode_frame(code, delta, lf_sequence=lfs, sequence_index=1),
+        decode_frame(code, official, lf_sequence=lfs, sequence_index=1),
+    )
 
 
 def test_generate_hf_produces_correct_shapes():

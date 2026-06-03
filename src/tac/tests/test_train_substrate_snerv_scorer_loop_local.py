@@ -57,6 +57,8 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
             "0.25",
             "--snerv-temporal-context",
             "1",
+            "--snerv-temporal-mode",
+            "official_haar_dwt1d_lowpass",
             "--snerv-scorer-loop-lf-payload-codec",
             "auto",
         ]
@@ -80,6 +82,7 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
     assert kwargs["snerv_mfu_scales"] == (1, 3)
     assert kwargs["snerv_hfr_gain"] == pytest.approx(0.25)
     assert kwargs["snerv_temporal_context"] == 1
+    assert kwargs["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert kwargs["lf_payload_codec"] == "auto"
 
 
@@ -192,6 +195,10 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
             "1,3",
             "--snerv-hfr-gain",
             "0.25",
+            "--snerv-temporal-context",
+            "1",
+            "--snerv-temporal-mode",
+            "official_haar_dwt1d_lowpass",
             "--snerv-scorer-loop-lf-payload-codec",
             "auto",
         ]
@@ -204,6 +211,8 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert calls["snerv_spectra_preserving_adapter"] is True
     assert calls["snerv_mfu_scales"] == (1, 3)
     assert calls["snerv_hfr_gain"] == pytest.approx(0.25)
+    assert calls["snerv_temporal_context"] == 1
+    assert calls["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert calls["lf_payload_codec"] == "auto"
     assert calls["component_guard_mode"] == "score_primary"
     payload = json.loads(research_json.read_text(encoding="utf-8"))
@@ -211,6 +220,7 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
     assert payload["best_packet_materialized"] is True
+    assert payload["snerv_temporal_mode"] == "delta"
     assert payload["best_packet_bytes"] == len(_FakeResult.best_packet)
     assert payload["best_packet_sha256"] == hashlib.sha256(
         _FakeResult.best_packet
@@ -244,6 +254,7 @@ class _FakeResult:
             "snerv_mfu_scales": [1, 3],
             "snerv_hfr_gain": 0.25,
             "snerv_temporal_context": 0,
+            "snerv_temporal_mode": "delta",
             "decoder_feature_count": 14,
             "lf_payload_codec": "portfolio_auto",
             "qat_bits": 8,

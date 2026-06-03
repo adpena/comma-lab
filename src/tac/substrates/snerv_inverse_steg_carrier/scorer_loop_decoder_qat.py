@@ -188,6 +188,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     snerv_mfu_scales: tuple[int, ...]
     snerv_hfr_gain: float
     snerv_temporal_context: int
+    snerv_temporal_mode: str
     decoder_feature_count: int
     decoder_payload_codec: str
     lf_payload_codec: str
@@ -283,6 +284,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
     snerv_temporal_context: int = 0,
+    snerv_temporal_mode: str = "delta",
     decoder_payload_codec: str = "float32_lzma",
     lf_payload_codec: str = "portfolio_auto",
     qat_bits: int = 8,
@@ -371,6 +373,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         mfu_scales=tuple(int(v) for v in snerv_mfu_scales),
         hfr_gain=float(snerv_hfr_gain),
         temporal_context=int(snerv_temporal_context),
+        temporal_mode=str(snerv_temporal_mode),
         adapter=adapter,
     )
 
@@ -697,6 +700,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         snerv_mfu_scales=tuple(int(v) for v in model_size.mfu_scales),
         snerv_hfr_gain=float(model_size.hfr_gain),
         snerv_temporal_context=int(model_size.temporal_context),
+        snerv_temporal_mode=model_size.temporal_mode,
         decoder_feature_count=int(model_size.feature_count),
         decoder_payload_codec=str(decoder_payload_codec),
         lf_payload_codec=str(lf_payload_codec),
@@ -1577,6 +1581,7 @@ def _pack_receiver_archive(
             "snerv_mfu_scales": [int(v) for v in prepared.model_size.mfu_scales],
             "snerv_hfr_gain": float(prepared.model_size.hfr_gain),
             "snerv_temporal_context": int(prepared.model_size.temporal_context),
+            "snerv_temporal_mode": prepared.model_size.temporal_mode,
             "decoder_feature_count": int(prepared.model_size.feature_count),
         },
     )

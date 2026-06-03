@@ -79,6 +79,7 @@ def test_scorer_loop_smoke_defaults_to_portfolio_lf_payload_codec() -> None:
     sig = inspect.signature(run_snerv_scorer_loop_decoder_qat_smoke)
 
     assert sig.parameters["lf_payload_codec"].default == "portfolio_auto"
+    assert sig.parameters["snerv_temporal_mode"].default == "delta"
 
 
 def test_scorer_loop_progress_callback_emits_eval_row() -> None:

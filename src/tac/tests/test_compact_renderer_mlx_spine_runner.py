@@ -1245,6 +1245,14 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
         ),
         hard_byte_ceilings=(178_000,),
     )
+    sn_temporal = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=(
+            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
+            "mfu1-5_hfr0p375_t2_tmhaar1_adspectra_int2_symmetric_ceil36000"
+        ),
+        hard_byte_ceilings=(178_000,),
+    )
 
     assert hi is not None
     assert hi["candidate_id"] == (
@@ -1304,6 +1312,10 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert sn_spectra["snerv_model_size_adapter"] == (
         SNERV_SPECTRA_PRESERVING_ADAPTER
     )
+    assert sn_temporal is not None
+    assert sn_temporal["temporal_context"] == 2
+    assert sn_temporal["temporal_mode"] == "official_haar_dwt1d_lowpass"
+    assert sn_temporal["candidate_id"].find("_tmhaar1_") >= 0
     with pytest.raises(CompactRendererMlxSpineRunnerError):
         _resolve_execute_modelsize_candidate(
             family="snerv",
@@ -4762,6 +4774,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             snerv_mfu_scales=kwargs["snerv_mfu_scales"],
             snerv_hfr_gain=kwargs["snerv_hfr_gain"],
             snerv_temporal_context=kwargs["snerv_temporal_context"],
+            snerv_temporal_mode=kwargs["snerv_temporal_mode"],
             decoder_feature_count=(
                 int(kwargs["snerv_fc_dim"]) + int(kwargs["snerv_emb_size"])
             ),
@@ -4918,6 +4931,30 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     )
     recon_weight_path = tmp_path / "joint_recon_weight.npy"
     np.save(recon_weight_path, np.ones((384, 512), dtype=np.float32))
+    recon_weight_manifest_path = tmp_path / "joint_recon_weight_manifest.json"
+    recon_weight_manifest_path.write_text("{}", encoding="utf-8")
+    recon_weight_discovery = {
+        "schema": "compact_auto_joint_recon_pixel_weight_discovery.v1",
+        "status": "selected_verified_joint_p18_p19_weight",
+        "num_pairs": 2,
+        "selected_manifest_path": recon_weight_manifest_path.as_posix(),
+        "selected_manifest_sha256": runner_mod._sha256_file(recon_weight_manifest_path),
+        "selected_weight_path": recon_weight_path.as_posix(),
+        "selected_weight_sha256": runner_mod._sha256_file(recon_weight_path),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    def fake_discover_joint_recon_pixel_weight_path(**kwargs):
+        assert kwargs["num_pairs"] == 2
+        return recon_weight_path, recon_weight_discovery
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_discover_joint_recon_pixel_weight_path",
+        fake_discover_joint_recon_pixel_weight_path,
+    )
 
     out = execute_snerv_inverse_steg_advisory_and_adapt(
         output_dir=tmp_path / "snerv_native_gate",
@@ -4943,7 +4980,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_scorer_loop_search_mode="top_weight_coordinate",
         snerv_scorer_loop_qat_bits=4,
         snerv_scorer_loop_component_guard_mode="pose_seg_hard",
-        recon_pixel_weight_path=recon_weight_path,
+        auto_joint_recon_pixel_weight=True,
         recon_pixel_weight_normalize="none",
         repo_root=REPO_ROOT,
     )
@@ -4960,6 +4997,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     )
     assert native_calls[0]["scorer_loop_qat_lf_payload_codec"] == "portfolio_auto"
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
+    assert (
+        Path(native_calls[0]["recon_pixel_weight_manifest_path"])
+        == recon_weight_manifest_path
+    )
     assert native_calls[0]["recon_pixel_weight_normalize"] == "none"
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
@@ -4973,6 +5014,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert Path(native["artifact_report_path"]).is_file()
     recon_weight = out["snerv_recon_pixel_weight"]
     assert recon_weight["requested"] is True
+    assert recon_weight["manifest_path"] == recon_weight_manifest_path.as_posix()
+    assert recon_weight["auto_discovery"] == recon_weight_discovery
     assert recon_weight["enabled"] is False
     assert recon_weight["native_export_consumed"] is False
     assert recon_weight["primary_archive_consumed"] is False
@@ -5063,6 +5106,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
             snerv_mfu_scales=kwargs["snerv_mfu_scales"],
             snerv_hfr_gain=kwargs["snerv_hfr_gain"],
             snerv_temporal_context=0,
+            snerv_temporal_mode=kwargs["snerv_temporal_mode"],
             decoder_feature_count=9,
             beats_frontier_rate=True,
             receiver_archive_replay_verified=True,
@@ -5190,6 +5234,7 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
             "emb_size": 2,
             "patch_radius": 1,
             "temporal_context": 1,
+            "temporal_mode": "official_haar_dwt1d_lowpass",
             "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 150_000,
@@ -5229,6 +5274,10 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_advisory_kwargs["snerv_fc_dim"] == 11
     assert captured_advisory_kwargs["snerv_emb_size"] == 2
     assert captured_advisory_kwargs["snerv_temporal_context"] == 1
+    assert (
+        captured_advisory_kwargs["snerv_temporal_mode"]
+        == "official_haar_dwt1d_lowpass"
+    )
     assert captured_advisory_kwargs["snerv_mfu_scales"] == (1, 3)
     assert captured_advisory_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["n_pairs"] == 2
@@ -5242,6 +5291,10 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["snerv_fc_dim"] == 11
     assert captured_qat_kwargs["snerv_emb_size"] == 2
     assert captured_qat_kwargs["snerv_temporal_context"] == 1
+    assert (
+        captured_qat_kwargs["snerv_temporal_mode"]
+        == "official_haar_dwt1d_lowpass"
+    )
     assert captured_qat_kwargs["snerv_mfu_scales"] == (1, 3)
     assert captured_qat_kwargs["snerv_hfr_gain"] == 0.25
     assert captured_qat_kwargs["qat_bits"] == 4
@@ -5722,6 +5775,14 @@ def test_snerv_native_export_bypasses_pr95_prelaunch_only_for_local_proof(
         "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         in out["candidate_curriculum_plan"]["blockers"]
     )
+    native = out["snerv_mlx_native_export"]
+    assert native["native_mlx_full600_export_proof_ready"] is True
+    assert native["native_mlx_full600_campaign_ready"] is False
+    assert "snerv_mlx_native_export_closed_form_not_training" in native["blockers"]
+    assert (
+        "snerv_mlx_native_full600_not_campaign_ready_without_learned_training"
+        in native["blockers"]
+    )
     assert out["score_aware_training"]["mlx_native_training_required_next"] is True
     assert out["score_claim"] is False
     assert out["ready_for_exact_eval_dispatch"] is False
@@ -5810,6 +5871,20 @@ def test_adapt_snerv_advisory_report_consumes_existing_runtime_package(
     )["rows"][0]["command"]
     assert out["post_export_materializer_execution"]["requested"] is False
     assert "paired_contest_cpu_cuda_auth_eval_missing" in out["blockers"]
+    assert out["source_parity_contract"]["schema"] == (
+        "nerv_source_parity_contract.v1"
+    )
+    assert out["source_parity_required_for_long_training_ready"] is True
+    assert out["source_parity_blockers"] == []
+    assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in out[
+        "source_parity_nonblocking_gaps"
+    ]
+    legacy_contract = out["legacy_advisory_ingest_contract"]
+    assert legacy_contract["schema"] == "snerv_legacy_advisory_ingest_contract.v1"
+    assert legacy_contract["source_parity_consumed"] is True
+    assert legacy_contract["legacy_advisory_is_not_score_authority"] is True
+    assert legacy_contract["score_claim"] is False
+    assert legacy_contract["ready_for_exact_eval_dispatch"] is False
 
 
 def test_adapt_snerv_advisory_report_uses_package_dir_archive_fallback(

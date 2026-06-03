@@ -94,6 +94,7 @@ def test_snerv_spectra_preserving_adapter_unblocks_training_but_not_official_par
         "HighFrequencyRestorer",
         "SnervTemporalExtension",
         "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+        "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
     }.issubset(present_symbols)
     assert rows["snerv_receiver_safe_mfu_hfr_temporal_adapter"]["status"] == ("implemented_or_bound")
     official = rows["snerv_official_mfu_hfr_tub_parity"]
