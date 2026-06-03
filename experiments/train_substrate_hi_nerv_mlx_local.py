@@ -41,6 +41,7 @@ from tac.analysis.nerv_modelsize_ladder import (
 )
 from tac.repo_io import write_json
 from tac.substrates._shared.mlx_score_aware.adapter import (
+    DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
@@ -431,7 +432,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--optimizer-kind",
         choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
-        default="adamw",
+        default=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     )
     parser.add_argument("--cosine-decay", action="store_true")
     parser.add_argument("--cosine-decay-total-epochs", type=int, default=None)

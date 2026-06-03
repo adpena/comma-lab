@@ -266,6 +266,49 @@ def test_hi_nerv_decoder_waterfill_skips_blocked_rows() -> None:
     )
 
 
+def test_hi_nerv_decoder_waterfill_fails_closed_when_no_groups_match() -> None:
+    base = _state()
+    plan = {
+        "schema": "nerv_decoder_weight_waterfill.v1",
+        "family": "hi_nerv",
+        "candidate_id": "unit",
+        "rows": [
+            {
+                "group_name": "missing.weight",
+                "selected_bits": 4,
+                "selected_action": "int4",
+            },
+        ],
+        "blockers": [],
+    }
+
+    changed, report = apply_decoder_waterfill_actions(
+        base,
+        decoder_weight_waterfill_plan=plan,
+    )
+
+    assert report["method"] == "decoder_weight_waterfill_no_matching_groups"
+    assert report["applied_row_count"] == 0
+    assert report["blocked_row_count"] == 1
+    assert report["changed_tensor_count"] == 0
+    assert "decoder_weight_waterfill_group_missing:missing.weight" in report[
+        "blockers"
+    ]
+    assert "decoder_weight_waterfill_no_matching_groups_applied" in report[
+        "blockers"
+    ]
+    assert "decoder_weight_waterfill_no_matching_groups_applied" in report[
+        "actuation_blockers"
+    ]
+    assert report["skipped_rows"][0]["group_name"] == "missing.weight"
+    assert report["skipped_rows"][0]["reason"] == (
+        "decoder_weight_waterfill_group_missing"
+    )
+    assert report["score_claim"] is False
+    for name, tensor in base.items():
+        assert torch.equal(changed[name], tensor)
+
+
 def test_hi_nerv_bitstream_waterfill_selector_admits_only_positive_value_per_byte() -> None:
     rows = [
         {

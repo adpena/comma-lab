@@ -20,6 +20,9 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _receiver_cache_quality_manifest_summary,
     _resolve_output_dir,
 )
+from tac.substrates._shared.mlx_score_aware.adapter import (
+    DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
+)
 
 
 def test_hinerv_mlx_trainer_binds_modelsize_row_and_overrides() -> None:
@@ -221,6 +224,9 @@ def test_hinerv_direct_trainer_canonicalization_contract_blocks_authority() -> N
 
 
 def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
+    default_args = _build_parser().parse_args(["--full"])
+    assert default_args.optimizer_kind == DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+
     for optimizer_kind in ("rmsprop", "lion", "adafactor", "muon", "pact_muon_adamw"):
         args = _build_parser().parse_args(
             ["--full", "--optimizer-kind", optimizer_kind]

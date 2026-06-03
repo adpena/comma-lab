@@ -576,6 +576,101 @@ def test_running_training_telemetry_feedback_recommends_checkpoint_supersede_for
     )
 
 
+def test_training_telemetry_feedback_treats_pr95_pre_final_no_muon_as_expected(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "pr95_stage5_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 5.8,
+                "pr95_stage_index": 5.0,
+                "pr95_stage_uses_muon": 0.0,
+            },
+            "per_axis_decomposition": {"pose": 2.0, "seg": 5.8},
+        }
+        for epoch in range(18_160, 18_166)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+    )
+
+    assert row["training_stopped"] is False
+    assert row["pr95_curriculum_observed"] is True
+    assert row["pr95_current_stage_index"] == 5
+    assert row["pr95_stage_uses_muon_current"] is False
+    assert row["pr95_final_stage_reached"] is False
+    assert row["pr95_final_stage_muon_expected_currently"] is False
+    assert row["pr95_final_stage_muon_missing"] is False
+    assert (
+        row["optimizer_stage_assessment"]
+        == "pr95_curriculum_pre_final_muon_not_expected"
+    )
+    assert row["pr95_stage_status"][
+        "canonical_final_muon_stage_start_epoch"
+    ] == 24_650
+    assert row["pr95_stage_status"][
+        "observed_stage_matches_canonical_epoch"
+    ] is True
+    assert "hi_nerv_pr95_final_stage_muon_missing_telemetry" not in row["blockers"]
+
+
+def test_training_telemetry_feedback_flags_pr95_final_stage_without_muon(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "pr95_stage8_missing_muon_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 5.8,
+                "pr95_stage_index": 8.0,
+                "pr95_stage_uses_muon": 0.0,
+            },
+            "per_axis_decomposition": {"pose": 2.0, "seg": 5.8},
+        }
+        for epoch in range(24_650, 24_656)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+    )
+
+    assert row["pr95_final_stage_reached"] is True
+    assert row["pr95_final_stage_muon_expected_currently"] is True
+    assert row["pr95_final_stage_muon_missing"] is True
+    assert row["optimizer_stage_assessment"] == "pr95_final_stage_muon_missing"
+    assert row["pr95_stage_status"][
+        "observed_stage_matches_canonical_epoch"
+    ] is True
+    assert "hi_nerv_pr95_final_stage_muon_missing_telemetry" in row["blockers"]
+    assert "fix_pr95_final_stage_muon_optimizer_routing" in row[
+        "recommended_launch_mutations"
+    ]
+
+
 def test_write_training_telemetry_feedback_files_writes_manifest_and_ledger(
     tmp_path: Path,
 ) -> None:

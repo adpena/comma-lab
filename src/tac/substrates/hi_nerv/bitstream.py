@@ -278,6 +278,7 @@ def apply_decoder_waterfill_actions(
     blockers: list[str] = [
         *[str(blocker) for blocker in decoder_weight_waterfill_plan.get("blockers") or ()],
     ]
+    actuation_blockers: list[str] = []
     plan_actuation_blockers = _waterfill_actuation_blockers(blockers)
     if plan_actuation_blockers:
         return state, {
@@ -318,7 +319,20 @@ def apply_decoder_waterfill_actions(
         row_blockers = [str(blocker) for blocker in row.get("blockers") or ()]
         name = str(row.get("group_name") or row.get("section_id") or "")
         if not name:
-            blockers.append("decoder_weight_waterfill_row_missing_group_name")
+            blocker = "decoder_weight_waterfill_row_missing_group_name"
+            blockers.append(blocker)
+            actuation_blockers.append(blocker)
+            skipped_rows.append(
+                {
+                    "group_name": "",
+                    "reason": blocker,
+                    "selected_bits": _waterfill_selected_bits(row),
+                    "selected_action": row.get("selected_action"),
+                    "row_blockers": row_blockers,
+                    "row_actuation_blockers": [blocker],
+                    **FALSE_AUTHORITY,
+                }
+            )
             continue
         bits = _waterfill_selected_bits(row)
         row_actuation_blockers = _waterfill_row_actuation_blockers(
@@ -338,7 +352,20 @@ def apply_decoder_waterfill_actions(
             )
             continue
         if name not in state:
-            blockers.append(f"decoder_weight_waterfill_group_missing:{name}")
+            blocker = f"decoder_weight_waterfill_group_missing:{name}"
+            blockers.append(blocker)
+            actuation_blockers.append(blocker)
+            skipped_rows.append(
+                {
+                    "group_name": name,
+                    "reason": "decoder_weight_waterfill_group_missing",
+                    "selected_bits": bits,
+                    "selected_action": row.get("selected_action"),
+                    "row_blockers": row_blockers,
+                    "row_actuation_blockers": [blocker],
+                    **FALSE_AUTHORITY,
+                }
+            )
             continue
         before = state[name]
         before_sha = _tensor_sha256(before)
@@ -362,8 +389,16 @@ def apply_decoder_waterfill_actions(
                 **FALSE_AUTHORITY,
             }
         )
+    no_matching_groups = bool(rows) and not applied_rows
+    if no_matching_groups:
+        blockers.append("decoder_weight_waterfill_no_matching_groups_applied")
+        actuation_blockers.append("decoder_weight_waterfill_no_matching_groups_applied")
     return state, {
-        "method": "decoder_weight_waterfill_selected_actions",
+        "method": (
+            "decoder_weight_waterfill_no_matching_groups"
+            if no_matching_groups
+            else "decoder_weight_waterfill_selected_actions"
+        ),
         "plan_attached": True,
         "plan_schema": decoder_weight_waterfill_plan.get("schema"),
         "family": decoder_weight_waterfill_plan.get("family"),
@@ -377,9 +412,14 @@ def apply_decoder_waterfill_actions(
         "skipped_rows": skipped_rows,
         "blockers": _ordered_unique(blockers),
         "actuation_blockers": _ordered_unique(
-            blocker
-            for row in skipped_rows
-            for blocker in row.get("row_actuation_blockers", [])
+            [
+                *actuation_blockers,
+                *[
+                    blocker
+                    for row in skipped_rows
+                    for blocker in row.get("row_actuation_blockers", [])
+                ],
+            ]
         ),
         **FALSE_AUTHORITY,
     }

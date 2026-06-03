@@ -50,6 +50,7 @@ SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS: tuple[str, ...] = (
     "muon",
     "pact_muon_adamw",
 )
+DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND = "pact_muon_adamw"
 MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS: tuple[str, ...] = (
     "adamw",
     "sgd",
@@ -205,7 +206,7 @@ class MlxScoreAwareAdapter:
         warmup_epochs: int = 0,
         warmup_steps_per_epoch: int = 1,
         weight_decay: float | None = None,
-        optimizer_kind: str = "pact_muon_adamw",
+        optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
         cosine_decay_enabled: bool = False,
         cosine_decay_total_epochs: int | None = None,
         cosine_decay_min_lr_ratio: float = 1e-2,
@@ -1646,5 +1647,8 @@ class MlxScoreAwareAdapter:
 
 
 __all__ = [
+    "DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND",
+    "MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS",
+    "SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS",
     "MlxScoreAwareAdapter",
 ]

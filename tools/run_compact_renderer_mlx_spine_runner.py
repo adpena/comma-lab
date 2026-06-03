@@ -84,6 +84,7 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
 )
 from tac.substrates._shared.mlx_score_aware.adapter import (  # noqa: E402
+    DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS,
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
@@ -2723,7 +2724,9 @@ def _resolve_hi_nerv_optimizer_policy(
             "hi_nerv_optimizer_policy must be one of "
             f"{HI_NERV_OPTIMIZER_POLICIES}; got {requested_policy!r}"
         )
-    optimizer = str(optimizer_kind or "pact_muon_adamw").strip().lower()
+    optimizer = str(
+        optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    ).strip().lower()
     if policy == "auto":
         # Preserve the PR95-faithful control row for the historical default,
         # but let non-AdamW rows genuinely exercise native macOS/MLX optimizers.
@@ -2781,7 +2784,9 @@ def _resolve_mlx_score_aware_optimizer_controls(
 ) -> dict[str, Any]:
     """Resolve concrete optimizer controls before the MLX adapter is built."""
 
-    kind = str(optimizer_kind or "pact_muon_adamw").strip().lower()
+    kind = str(
+        optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    ).strip().lower()
     if kind not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
         raise CompactRendererMlxSpineRunnerError(
             "optimizer_kind must be one of "
@@ -2879,7 +2884,9 @@ def _resolve_pact_compact_optimizer_policy(
     """Declare native-optimizer routing for Pact compact runner families."""
 
     controls = dict(optimizer_controls or {})
-    optimizer = str(controls.get("optimizer_kind") or "pact_muon_adamw").strip().lower()
+    optimizer = str(
+        controls.get("optimizer_kind") or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    ).strip().lower()
     return {
         "schema": "compact_pact_native_optimizer_policy.v1",
         "family": str(family),
@@ -4917,7 +4924,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
     coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
     coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
-    optimizer_kind: str = "pact_muon_adamw",
+    optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     optimizer_grad_clip_max_norm: float | None = (
         DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
     ),
@@ -5227,7 +5234,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
     telemetry_flush_interval_epochs: int = 1,
-    optimizer_kind: str = "pact_muon_adamw",
+    optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     hi_nerv_optimizer_policy: str = "auto",
     optimizer_grad_clip_max_norm: float | None = (
         DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
@@ -6198,7 +6205,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
     coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
     coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
-    optimizer_kind: str = "pact_muon_adamw",
+    optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     optimizer_grad_clip_max_norm: float | None = (
         DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
     ),
@@ -9900,7 +9907,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--optimizer-kind",
         choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
-        default="pact_muon_adamw",
+        default=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
         help=(
             "Native MLX optimizer for score-aware compact training. HiNeRV, "
             "PACT-NeRV-VQ, and selector-v4 consume this directly; SNeRV "

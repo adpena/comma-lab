@@ -1648,7 +1648,7 @@ def test_pact_compact_runners_forward_optimizer_and_shared_qat_metadata(
 
 def test_mlx_optimizer_controls_default_to_pact_muon_adamw() -> None:
     controls = runner_mod._resolve_mlx_score_aware_optimizer_controls(
-        optimizer_kind="pact_muon_adamw",
+        optimizer_kind=None,
         requested_weight_decay=None,
         grad_clip_max_norm=1.0,
         warmup_epochs=0,
@@ -1659,13 +1659,19 @@ def test_mlx_optimizer_controls_default_to_pact_muon_adamw() -> None:
         run_epochs=128,
     )
 
-    assert controls["optimizer_kind"] == "pact_muon_adamw"
+    assert controls["optimizer_kind"] == runner_mod.DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
     assert controls["weight_decay_effective"] == pytest.approx(1.0e-4)
     assert controls["weight_decay_defaulted"] is True
     assert controls["grad_clip_max_norm"] == pytest.approx(1.0)
     assert controls["borrowed_pr95_partition_rule"] is True
     assert controls["score_claim"] is False
     assert controls["ready_for_exact_eval_dispatch"] is False
+
+
+def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
+    args = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "1"])
+
+    assert args.optimizer_kind == runner_mod.DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
 
 
 def test_mlx_optimizer_controls_reject_weight_decay_for_no_decay_kind() -> None:

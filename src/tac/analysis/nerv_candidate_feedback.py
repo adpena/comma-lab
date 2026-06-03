@@ -59,6 +59,65 @@ _SEG_STAGNATION_WEIGHT_MULTIPLIER = 2.0
 _SEG_STAGNATION_MAX_DISTILLATION_WEIGHT = 8.0
 _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS = 64
 _TRAINING_CONTROL_MIN_RECENT_RELATIVE_IMPROVEMENT = 0.01
+_PR95_FINAL_MUON_STAGE_INDEX = 8
+
+
+def _bool_metric_or_none(value: Any) -> bool | None:
+    numeric = _float_or_none(value)
+    if numeric is not None:
+        return bool(numeric >= 0.5)
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"true", "yes", "on"}:
+        return True
+    if text in {"false", "no", "off"}:
+        return False
+    return None
+
+
+def _canonical_pr95_stage_status(
+    *,
+    current_epoch: int | None,
+    current_stage_index: int | None,
+) -> dict[str, Any]:
+    """Return canonical PR95 stage context for telemetry interpretation."""
+
+    status: dict[str, Any] = {
+        "schema": "nerv_training_pr95_stage_status.v1",
+        "current_epoch": current_epoch,
+        "observed_current_stage_index": current_stage_index,
+        "canonical_total_epoch_budget": None,
+        "canonical_final_muon_stage_index": _PR95_FINAL_MUON_STAGE_INDEX,
+        "canonical_final_muon_stage_start_epoch": None,
+        "canonical_expected_stage_index": None,
+        "observed_stage_matches_canonical_epoch": None,
+        "blockers": [],
+    }
+    try:
+        from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
+            PR95FaithfulCurriculumFactory,
+        )
+
+        factory = PR95FaithfulCurriculumFactory()
+        status["canonical_total_epoch_budget"] = factory.total_epoch_budget
+        for stage_index, start_epoch, _end_epoch in factory.stage_epoch_boundaries:
+            if int(stage_index) == _PR95_FINAL_MUON_STAGE_INDEX:
+                status["canonical_final_muon_stage_start_epoch"] = int(start_epoch)
+                break
+        if current_epoch is not None:
+            expected_stage = int(factory.current_stage_index(int(current_epoch)))
+            status["canonical_expected_stage_index"] = expected_stage
+            if current_stage_index is not None:
+                status["observed_stage_matches_canonical_epoch"] = (
+                    int(current_stage_index) == expected_stage
+                )
+    except Exception as exc:
+        status["blockers"] = [
+            "canonical_pr95_stage_status_unavailable",
+            f"canonical_pr95_stage_status_error:{type(exc).__name__}",
+        ]
+    return status
 
 
 def _mapping_or_empty(value: Any) -> dict[str, Any]:
@@ -471,6 +530,8 @@ def build_nerv_training_telemetry_feedback_row(
         blockers.append("hi_nerv_pose_instability_telemetry_feedback")
     if health.get("seg_stagnation_detected"):
         blockers.append("hi_nerv_segnet_stagnation_telemetry_feedback")
+    if health.get("pr95_final_stage_muon_missing"):
+        blockers.append("hi_nerv_pr95_final_stage_muon_missing_telemetry")
     training_stopped = not _is_midrun_feedback_snapshot(stop_reason)
     training_control = _training_control_recommendation(
         health=health,
@@ -569,6 +630,27 @@ def build_nerv_training_telemetry_feedback_row(
         ),
         "seg_recent_window_median": health.get("seg_recent_window_median"),
         "seg_previous_window_median": health.get("seg_previous_window_median"),
+        "optimizer_control_observed": bool(
+            health.get("optimizer_control_observed")
+        ),
+        "optimizer_stage_assessment": health.get("optimizer_stage_assessment"),
+        "optimizer_muon_observed": bool(health.get("optimizer_muon_observed")),
+        "pact_muon_adamw_observed": bool(
+            health.get("pact_muon_adamw_observed")
+        ),
+        "pr95_curriculum_observed": bool(health.get("pr95_curriculum_observed")),
+        "pr95_current_stage_index": health.get("pr95_current_stage_index"),
+        "pr95_stage_uses_muon_current": health.get(
+            "pr95_stage_uses_muon_current"
+        ),
+        "pr95_final_stage_reached": bool(health.get("pr95_final_stage_reached")),
+        "pr95_final_stage_muon_expected_currently": bool(
+            health.get("pr95_final_stage_muon_expected_currently")
+        ),
+        "pr95_final_stage_muon_missing": bool(
+            health.get("pr95_final_stage_muon_missing")
+        ),
+        "pr95_stage_status": health.get("pr95_stage_status"),
         "observed_segnet_distillation_weight": health.get(
             "observed_segnet_distillation_weight"
         ),
@@ -876,6 +958,9 @@ def _summarize_training_telemetry_health(
     seg_axes: list[float] = []
     segnet_distillation_weights: list[float] = []
     learning_rates: list[float] = []
+    pr95_stage_indices: list[int] = []
+    pr95_stage_uses_muon_flags: list[bool] = []
+    pact_muon_flags: list[bool] = []
     bad_epochs: list[int] = []
     window_size = max(1, int(instability_window_epochs))
     bad_fraction_threshold = min(max(float(instability_bad_fraction), 0.0), 1.0)
@@ -894,6 +979,20 @@ def _summarize_training_telemetry_health(
             learning_rates.append(lr)
         loss_components = row.get("loss_components")
         per_axis = row.get("per_axis_decomposition")
+        if isinstance(loss_components, Mapping):
+            stage_index = _int_or_none(loss_components.get("pr95_stage_index"))
+            if stage_index is not None:
+                pr95_stage_indices.append(stage_index)
+            stage_uses_muon = _bool_metric_or_none(
+                loss_components.get("pr95_stage_uses_muon")
+            )
+            if stage_uses_muon is not None:
+                pr95_stage_uses_muon_flags.append(stage_uses_muon)
+            pact_uses_muon = _bool_metric_or_none(
+                loss_components.get("pact_optimizer_uses_muon")
+            )
+            if pact_uses_muon is not None:
+                pact_muon_flags.append(pact_uses_muon)
         pose_loss = (
             _float_or_none(loss_components.get("loss_part_pose_distill"))
             if isinstance(loss_components, Mapping)
@@ -1016,12 +1115,58 @@ def _summarize_training_telemetry_health(
                 "treat_previous_hi_nerv_run_as_segnet_fit_failure_not_rate_negative",
             ]
         )
+    current_stage_index = pr95_stage_indices[-1] if pr95_stage_indices else None
+    current_stage_uses_muon = (
+        pr95_stage_uses_muon_flags[-1] if pr95_stage_uses_muon_flags else None
+    )
+    last_epoch = max(epochs) if epochs else None
+    pr95_curriculum_observed = bool(pr95_stage_indices)
+    pact_muon_observed = any(pact_muon_flags)
+    pr95_muon_observed = any(pr95_stage_uses_muon_flags)
+    pr95_final_stage_reached = bool(
+        any(stage >= _PR95_FINAL_MUON_STAGE_INDEX for stage in pr95_stage_indices)
+    )
+    pr95_final_stage_muon_expected = bool(
+        current_stage_index is not None
+        and current_stage_index >= _PR95_FINAL_MUON_STAGE_INDEX
+    )
+    pr95_final_stage_muon_missing = bool(
+        pr95_final_stage_muon_expected and current_stage_uses_muon is False
+    )
+    pr95_pre_final_no_muon_expected = bool(
+        current_stage_index is not None
+        and current_stage_index < _PR95_FINAL_MUON_STAGE_INDEX
+        and current_stage_uses_muon is False
+    )
+    pr95_stage_status = _canonical_pr95_stage_status(
+        current_epoch=last_epoch,
+        current_stage_index=current_stage_index,
+    )
+    if pr95_final_stage_muon_missing:
+        mutations.extend(
+            [
+                "fix_pr95_final_stage_muon_optimizer_routing",
+                "treat_previous_hi_nerv_run_as_optimizer_wiring_failure_not_rate_negative",
+            ]
+        )
+    if pr95_final_stage_muon_missing:
+        optimizer_stage_assessment = "pr95_final_stage_muon_missing"
+    elif pr95_pre_final_no_muon_expected:
+        optimizer_stage_assessment = "pr95_curriculum_pre_final_muon_not_expected"
+    elif pr95_muon_observed:
+        optimizer_stage_assessment = "pr95_curriculum_final_muon_observed"
+    elif pact_muon_observed:
+        optimizer_stage_assessment = "pact_muon_adamw_partition_observed"
+    elif pr95_curriculum_observed:
+        optimizer_stage_assessment = "pr95_curriculum_stage_observed"
+    else:
+        optimizer_stage_assessment = "optimizer_control_telemetry_missing"
     return {
         "schema": TELEMETRY_FEEDBACK_SCHEMA,
         "row_count": len(rows),
         "num_pairs": CONTEST_PAIR_COUNT,
         "first_epoch": min(epochs) if epochs else None,
-        "last_epoch": max(epochs) if epochs else None,
+        "last_epoch": last_epoch,
         "observed_learning_rate": observed_lr,
         "pose_loss_instability_threshold": float(pose_loss_instability_threshold),
         "pose_axis_instability_threshold": float(pose_axis_instability_threshold),
@@ -1060,6 +1205,22 @@ def _summarize_training_telemetry_health(
         "seg_recent_window_median": seg_recent_window_median,
         "seg_recent_relative_improvement": seg_recent_relative_improvement,
         "seg_stagnation_detected": seg_stagnation,
+        "optimizer_control_observed": bool(
+            pr95_curriculum_observed or pact_muon_flags
+        ),
+        "optimizer_stage_assessment": optimizer_stage_assessment,
+        "optimizer_muon_observed": bool(pr95_muon_observed or pact_muon_observed),
+        "pact_muon_adamw_observed": bool(pact_muon_observed),
+        "pr95_curriculum_observed": pr95_curriculum_observed,
+        "pr95_current_stage_index": current_stage_index,
+        "pr95_stage_uses_muon_current": current_stage_uses_muon,
+        "pr95_final_stage_reached": pr95_final_stage_reached,
+        "pr95_final_stage_muon_expected_currently": (
+            pr95_final_stage_muon_expected
+        ),
+        "pr95_final_stage_muon_missing": pr95_final_stage_muon_missing,
+        "pr95_pre_final_no_muon_expected": pr95_pre_final_no_muon_expected,
+        "pr95_stage_status": pr95_stage_status,
         "observed_segnet_distillation_weight": observed_seg_weight,
         "recommended_learning_rate": recommended_lr,
         "recommended_learning_rate_multiplier": (

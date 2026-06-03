@@ -683,6 +683,8 @@ def _snerv_campaign_row(
         _float_token(float(candidate.get("hfr_gain") or 0.0)),
         "--snerv-temporal-context",
         str(int(candidate.get("temporal_context") or 0)),
+        "--snerv-temporal-mode",
+        str(candidate.get("temporal_mode") or "delta"),
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
@@ -1317,6 +1319,7 @@ def _snerv_source_bound_control_blockers(candidate: Mapping[str, Any]) -> list[s
         "mfu_scales",
         "hfr_gain",
         "temporal_context",
+        "temporal_mode",
         "hard_byte_ceiling",
     ):
         if key not in candidate:
@@ -1357,6 +1360,7 @@ def _snerv_source_bound_controls(candidate: Mapping[str, Any]) -> dict[str, Any]
         "mfu_scales": list(candidate.get("mfu_scales") or ()),
         "hfr_gain": candidate.get("hfr_gain"),
         "temporal_context": candidate.get("temporal_context"),
+        "temporal_mode": candidate.get("temporal_mode"),
         "decoder_feature_count": candidate.get("decoder_feature_count"),
         **FALSE_AUTHORITY,
     }
@@ -1375,6 +1379,7 @@ def _snerv_expected_candidate_id_from_controls(candidate: Mapping[str, Any]) -> 
         mfu_scales=tuple(int(value) for value in candidate["mfu_scales"]),
         hfr_gain=float(candidate["hfr_gain"]),
         temporal_context=int(candidate["temporal_context"]),
+        temporal_mode=str(candidate["temporal_mode"]),
         snerv_model_size_adapter=str(candidate["snerv_model_size_adapter"]),
         decoder_payload_codec=str(candidate["decoder_payload_codec"]),
         hard_byte_ceiling=int(candidate["hard_byte_ceiling"]),

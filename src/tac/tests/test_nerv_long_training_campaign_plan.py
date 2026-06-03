@@ -217,6 +217,8 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["command_argv"][snerv_row["command_argv"].index("--snerv-hfr-gain") + 1] == "0"
     assert "--snerv-temporal-context" in snerv_row["command_argv"]
     assert snerv_row["command_argv"][snerv_row["command_argv"].index("--snerv-temporal-context") + 1] == "0"
+    assert "--snerv-temporal-mode" in snerv_row["command_argv"]
+    assert snerv_row["command_argv"][snerv_row["command_argv"].index("--snerv-temporal-mode") + 1] == "delta"
     assert snerv_row["command_argv"][snerv_row["command_argv"].index("--distillation-device") + 1] == "gpu"
     assert "--planner-row-id" in snerv_row["command_argv"]
     assert snerv_row["command_argv"][snerv_row["command_argv"].index("--planner-row-id") + 1] == snerv_row["row_id"]
@@ -368,6 +370,7 @@ def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> 
         "mfu_scales",
         "hfr_gain",
         "temporal_context",
+        "temporal_mode",
     ):
         legacy.pop(key, None)
     snerv_budget["selected_candidates"] = [legacy]
@@ -384,10 +387,45 @@ def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert "snerv_source_bound_control_missing:wavelet" in snerv_row["blockers"]
     assert "snerv_source_bound_control_missing:fc_dim" in snerv_row["blockers"]
+    assert "snerv_source_bound_control_missing:temporal_mode" in snerv_row["blockers"]
     assert snerv_row["source_bound_capacity_control_blockers"]
     assert snerv_row["local_mlx_launch_command_ready"] is False
     assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
-    assert snerv_row["implementation_status"] == "source_bound_capacity_controls_incomplete"
+
+
+def test_long_training_campaign_plan_executes_snerv_official_temporal_mode() -> None:
+    snerv_budget = _snerv_budget()
+    candidate = dict(snerv_budget["selected_candidates"][0])
+    candidate["temporal_context"] = 2
+    candidate["temporal_mode"] = "official_haar_dwt1d_lowpass"
+    candidate["candidate_id"] = (
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_"
+        "p1_mfu1-2-4_hfr0_t2_tmhaar1_adbase_int4_symmetric_ceil178000"
+    )
+    snerv_budget["selected_candidates"] = [candidate]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv_row["source_bound_capacity_controls"]["candidate_id_matches_source_controls"] is True
+    assert snerv_row["source_bound_capacity_controls"]["temporal_mode"] == "official_haar_dwt1d_lowpass"
+    assert not snerv_row["source_bound_capacity_control_blockers"]
+    assert snerv_row["command_argv"][snerv_row["command_argv"].index("--snerv-temporal-context") + 1] == "2"
+    assert (
+        snerv_row["command_argv"][snerv_row["command_argv"].index("--snerv-temporal-mode") + 1]
+        == "official_haar_dwt1d_lowpass"
+    )
+    queue_command = snerv_row["experiment_queue_entry"]["steps"][0]["command"]
+    assert queue_command == snerv_row["command_argv"]
+    assert queue_command[queue_command.index("--snerv-temporal-mode") + 1] == "official_haar_dwt1d_lowpass"
+    assert snerv_row["implementation_status"] == "native_rate_aware_long_training_queue_ready"
 
 
 def test_long_training_campaign_plan_blocks_snerv_id_control_mismatch() -> None:
@@ -1888,6 +1926,7 @@ def _snerv_budget() -> dict:
                 "mfu_scales": [1, 2, 4],
                 "hfr_gain": 0.0,
                 "temporal_context": 0,
+                "temporal_mode": "delta",
                 "decoder_feature_count": 16,
                 "nominal_total_payload_bytes": 190_000,
                 "nominal_under_ceiling": False,
