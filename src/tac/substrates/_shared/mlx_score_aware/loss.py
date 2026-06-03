@@ -696,16 +696,17 @@ def build_mlx_posenet_pair_teacher(
     posenet, _segnet = load_default_scorers(str(upstream_path), device=device)
     posenet.eval()
     pose_dims = int(bundle.pose_dims)
-    # Both target frames as numpy (n_pairs, 384, 512, 3) in [0, 1] -> 0..255.
-    tgt0 = np.array(bundle.target_rgb_0) * 255.0
-    tgt1 = np.array(bundle.target_rgb_1) * 255.0
     chunk = 16
     pose_chunks = []
     with torch.inference_mode():
         for start in range(0, n_pairs, chunk):
             end = min(start + chunk, n_pairs)
-            f0 = tgt0[start:end]  # (b, 384, 512, 3)
-            f1 = tgt1[start:end]
+            # Keep full-video PoseNet teacher construction chunk-local. A
+            # full600 target pair is large enough that materializing both
+            # frames as full NumPy float32 videos can kill concurrent MLX
+            # training before the runner emits a startup report.
+            f0 = np.array(bundle.target_rgb_0[start:end], dtype=np.float32) * 255.0
+            f1 = np.array(bundle.target_rgb_1[start:end], dtype=np.float32) * 255.0
             # PoseNet.preprocess_input expects (b, t=2, c=3, H, W) per
             # upstream/modules.py — NCHW frames stacked over the time axis.
             f0_nchw = np.transpose(f0, (0, 3, 1, 2))  # (b, 3, 384, 512)

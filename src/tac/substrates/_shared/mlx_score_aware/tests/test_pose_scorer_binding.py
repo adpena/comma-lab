@@ -310,6 +310,68 @@ def test_build_mlx_posenet_pair_teacher_shapes_and_provider_contract() -> None:
 
 
 @mlx_only
+def test_build_mlx_posenet_pair_teacher_reads_targets_in_chunks(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    """PoseNet teacher construction must not materialize full target videos."""
+    import numpy as np
+    import torch
+
+    class _SliceOnlyTarget:
+        def __init__(self, num_pairs: int, value: float) -> None:
+            self.shape = (num_pairs, 384, 512, 3)
+            self._value = value
+            self.slice_requests: list[tuple[int, int]] = []
+
+        def __getitem__(self, item):
+            if not isinstance(item, slice):
+                raise AssertionError(f"expected chunk slice, got {item!r}")
+            start = 0 if item.start is None else int(item.start)
+            stop = self.shape[0] if item.stop is None else int(item.stop)
+            self.slice_requests.append((start, stop))
+            return np.full((stop - start, 384, 512, 3), self._value, dtype=np.float32)
+
+        def __array__(self, dtype=None):
+            raise AssertionError("full-video target materialization is forbidden")
+
+    class _FakePoseNet:
+        def eval(self) -> None:
+            return None
+
+        def preprocess_input(self, x):
+            return x
+
+        def __call__(self, x):
+            return {"pose": torch.ones((int(x.shape[0]), 12), dtype=torch.float32)}
+
+    def _fake_load_default_scorers(_upstream_path: str, *, device: str):
+        return _FakePoseNet(), object()
+
+    monkeypatch.setattr("tac.scorer.load_default_scorers", _fake_load_default_scorers)
+    models = tmp_path / "models"
+    models.mkdir()
+    (models / "posenet.safetensors").write_bytes(b"fake-posenet")
+    num_pairs = 17
+    target0 = _SliceOnlyTarget(num_pairs, 0.25)
+    target1 = _SliceOnlyTarget(num_pairs, 0.75)
+    recon_bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+        num_pairs=num_pairs,
+        forward_convention="call_b2chw_255",
+        distillation_weight=0.0,
+    )
+    teacher = build_mlx_posenet_pair_teacher(
+        recon_bundle, upstream_dir=tmp_path, device="cpu"
+    )
+    assert teacher.num_pairs == num_pairs
+    assert teacher.pose_dims == 6
+    assert target0.slice_requests == [(0, 16), (16, 17)]
+    assert target1.slice_requests == [(0, 16), (16, 17)]
+
+
+@mlx_only
 def test_build_mlx_posenet_teacher_rejects_wrong_size_targets() -> None:
     """Targets not at contest (384, 512) are refused for shape alignment."""
     import mlx.core as mx
