@@ -127,6 +127,40 @@ def test_decode_frames_supports_call_b2chw_255() -> None:
     np.testing.assert_allclose(np.array(rgb_1), np.array(target_1), atol=1e-6)
 
 
+def test_source_pair_priorities_sample_local_hydrated_rows() -> None:
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    target_0, target_1 = _targets()
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        source_pair_indices=(7, 2),
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="source_pair_priority_test",
+        prioritized_pair_indices=(7,),
+    )
+
+    batch = adapter.sample_batch(batch_size=1, seed=0)
+    observed = adapter.batch_observability(batch)
+
+    assert np.array(batch).tolist() == [0]
+    assert observed is not None
+    assert observed["requested_priority_pair_indices"] == [7]
+    assert observed["priority_local_pair_indices_in_batch"] == [0]
+    assert observed["priority_source_pair_indices_in_batch"] == [7]
+    assert observed["source_pair_indices"] == [7]
+    assert observed["priority_pair_alignment_mode"] == (
+        "source_priority_pairs_to_local_rows"
+    )
+    assert observed["pair_index_alignment_mode"] == (
+        "local_target_rows_to_source_pair_indices"
+    )
+
+
 def test_score_aware_loss_recon_distill_and_extra_terms_are_composed() -> None:
     target_0, target_1 = _targets()
 

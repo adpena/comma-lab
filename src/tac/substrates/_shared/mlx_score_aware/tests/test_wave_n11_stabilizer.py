@@ -128,6 +128,52 @@ def test_adapter_priority_pair_sampling_consumes_hard_pair_indices(
     assert observed["ready_for_exact_eval_dispatch"] is False
 
 
+def test_adapter_priority_pair_sampling_maps_source_ids_to_local_rows(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """Hydrated hard-pair batches prioritize source-video ids, not local rows."""
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+
+    hydrated_bundle = RendererBundle(
+        model=minimal_bundle.model,
+        target_rgb_0=minimal_bundle.target_rgb_0,
+        target_rgb_1=minimal_bundle.target_rgb_1,
+        num_pairs=minimal_bundle.num_pairs,
+        forward_convention=minimal_bundle.forward_convention,
+        source_pair_indices=(417, 22, 105, 8),
+    )
+    a = MlxScoreAwareAdapter(
+        hydrated_bundle,
+        prioritized_pair_indices=(105, 417, 999),
+        **adapter_kwargs,
+    )
+
+    batch = a.sample_batch(batch_size=2, seed=0)
+    observed = a.batch_observability(batch)
+
+    assert [int(value) for value in batch.tolist()] == [2, 0]
+    assert observed["sampling_policy"] == "priority_pairs_then_random_fill"
+    assert observed["requested_priority_pair_indices"] == [105, 417, 999]
+    assert observed["prioritized_pair_count"] == 2
+    assert observed["priority_pair_indices_in_batch"] == [2, 0]
+    assert observed["priority_local_pair_indices_in_batch"] == [2, 0]
+    assert observed["priority_source_pair_indices_in_batch"] == [105, 417]
+    assert observed["unresolved_priority_pair_indices"] == [999]
+    assert observed["priority_pair_alignment_mode"] == (
+        "source_priority_pairs_to_local_rows"
+    )
+    assert observed["pair_indices"] == [2, 0]
+    assert observed["source_pair_indices"] == [105, 417]
+    assert observed["pair_index_alignment_mode"] == (
+        "local_target_rows_to_source_pair_indices"
+    )
+    assert observed["random_fill_count"] == 0
+    assert observed["score_claim"] is False
+    assert observed["ready_for_exact_eval_dispatch"] is False
+
+
 def test_adapter_priority_pair_sampling_rotates_by_seed(
     minimal_bundle,
     adapter_kwargs,
