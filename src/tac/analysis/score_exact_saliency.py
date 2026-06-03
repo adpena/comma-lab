@@ -63,6 +63,7 @@ from __future__ import annotations
 
 import sys
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -192,6 +193,61 @@ def decode_real_pairs(
     pairs = torch.stack(pair_tensors)  # (num_pairs, 2, H, W, 3) uint8
     pairs = pairs.permute(0, 1, 4, 2, 3).float().contiguous().to(device)
     return pairs  # (num_pairs, 2, 3, H, W)
+
+
+def decode_real_pair_indices(
+    video_path: str | Path,
+    pair_indices: Sequence[int],
+    *,
+    device: torch.device | str = "cpu",
+) -> torch.Tensor:
+    """Decode arbitrary real frame-pairs while preserving requested order."""
+
+    from tac.adaptation.hard_pair_indices import normalize_pair_indices
+
+    normalized = normalize_pair_indices(pair_indices, field="pair_indices")
+    if not normalized:
+        raise RuntimeError("pair_indices must contain at least one pair")
+    device = torch.device(device)
+    video_path = Path(video_path)
+    if not video_path.is_absolute():
+        video_path = REPO_ROOT / video_path
+    upstream = REPO_ROOT / "upstream"
+    if str(upstream) not in sys.path:
+        sys.path.insert(0, str(upstream))
+    import av  # type: ignore
+    from frame_utils import yuv420_to_rgb  # type: ignore
+
+    wanted_frame_idx: set[int] = set()
+    for pair_idx in normalized:
+        wanted_frame_idx.add(2 * pair_idx)
+        wanted_frame_idx.add(2 * pair_idx + 1)
+    frames_needed = max(wanted_frame_idx) + 1
+
+    container = av.open(str(video_path))
+    stream = container.streams.video[0]
+    kept: dict[int, torch.Tensor] = {}
+    idx = 0
+    for frame in container.decode(stream):
+        if idx in wanted_frame_idx:
+            kept[idx] = yuv420_to_rgb(frame)  # (H, W, 3) uint8
+        idx += 1
+        if idx >= frames_needed:
+            break
+    container.close()
+    if len(kept) < len(wanted_frame_idx):
+        raise RuntimeError(
+            f"decoded only {idx} frames from {video_path}, needed frame "
+            f"{frames_needed - 1} for pair_indices {list(normalized)}"
+        )
+
+    pair_tensors: list[torch.Tensor] = []
+    for pair_idx in normalized:
+        pair = torch.stack([kept[2 * pair_idx], kept[2 * pair_idx + 1]])
+        pair_tensors.append(pair)
+    pairs = torch.stack(pair_tensors)
+    pairs = pairs.permute(0, 1, 4, 2, 3).float().contiguous().to(device)
+    return pairs
 
 
 def stream_real_pairs(

@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,8 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _direct_trainer_canonicalization_contract,
     _metadata_safe,
     _pose_student_input_channels,
+    _prioritized_pair_indices_from_args,
+    _prioritized_pair_training_metadata,
     _receiver_cache_quality_manifest_summary,
     _resolve_output_dir,
 )
@@ -237,6 +240,75 @@ def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
         _build_parser().parse_args(
             ["--full", "--optimizer-kind", "definitely_not_optimizer"]
         )
+
+
+def test_hinerv_mlx_trainer_parses_prioritized_pair_controls(
+    tmp_path: Path,
+) -> None:
+    pair_file = tmp_path / "sample_generalization_gate.json"
+    pair_file.write_text(
+        '{"sample_generalization_gate":{"hard_pair_coverage":'
+        '{"prioritized_pair_indices":[9,4,9]}}}',
+        encoding="utf-8",
+    )
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--prioritized-pair-indices",
+            "3,4,3",
+            "--prioritized-pair-indices-file",
+            str(pair_file),
+        ]
+    )
+
+    pair_indices = _prioritized_pair_indices_from_args(args)
+    metadata = _prioritized_pair_training_metadata(pair_indices)
+
+    assert pair_indices == (3, 4, 9)
+    assert metadata["schema"] == "hi_nerv_direct_trainer_prioritized_pair_training.v1"
+    assert metadata["enabled"] is True
+    assert metadata["pair_indices"] == [3, 4, 9]
+    assert metadata["promotion_authority"] is False
+    assert metadata["contest_score_authority"] is False
+    assert "score_claim" not in metadata
+    assert "promotion_eligible" not in metadata
+    assert "ready_for_exact_eval_dispatch" not in metadata
+
+
+def test_hinerv_mlx_trainer_rejects_out_of_range_prioritized_pairs() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--num-pairs",
+            "4",
+            "--prioritized-pair-indices",
+            "3,4",
+        ]
+    )
+
+    with pytest.raises(ValueError, match="out-of-range"):
+        _prioritized_pair_indices_from_args(args)
+
+
+def test_hinerv_mlx_trainer_forwards_prioritized_pairs_to_harness() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    run_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+
+    assert run_calls
+    assert any(
+        any(keyword.arg == "prioritized_pair_indices" for keyword in call.keywords)
+        for call in run_calls
+    )
 
 
 def test_hinerv_mlx_trainer_metadata_safe_drops_nested_authority_keys() -> None:

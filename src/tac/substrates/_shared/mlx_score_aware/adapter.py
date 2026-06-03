@@ -1607,6 +1607,57 @@ class MlxScoreAwareAdapter:
         blob_path = path.with_suffix(path.suffix + ".npsd")
         blob_path.write_bytes(blob)
 
+    def import_state_dict(self, model: Any, path: Path) -> None:
+        """Import a checkpoint emitted by :meth:`export_state_dict`.
+
+        This is the resume-side sister of the NumPy-portable ``.npsd`` export.
+        It deliberately refuses partial or shape-mismatched state so the
+        canonical long-training resume path cannot pretend that metadata-only
+        restoration recovered real MLX weights.
+        """
+
+        require_mlx_for_harness()
+        import mlx.core as mx
+        import numpy as np
+        from mlx.utils import tree_flatten, tree_unflatten
+
+        from tac.substrates._shared.numpy_portable_inflate import (
+            unpack_state_dict_numpy,
+        )
+
+        requested = Path(path)
+        state_path = requested
+        if not state_path.is_file():
+            suffixed = requested.with_suffix(requested.suffix + ".npsd")
+            if suffixed.is_file():
+                state_path = suffixed
+        if not state_path.is_file():
+            raise FileNotFoundError(f"MLX checkpoint state file not found: {requested}")
+        restored = unpack_state_dict_numpy(state_path.read_bytes())
+        current_flat = {
+            _tree_name_to_saliency_group(name): value
+            for name, value in tree_flatten(model.parameters())
+        }
+        restored_keys = set(restored)
+        current_keys = set(current_flat)
+        if restored_keys != current_keys:
+            missing = sorted(current_keys - restored_keys)[:10]
+            extra = sorted(restored_keys - current_keys)[:10]
+            raise ValueError(
+                "MLX checkpoint key set mismatch; refusing fake/partial resume "
+                f"(missing={missing}, extra={extra})"
+            )
+        flat_updates: list[tuple[str, Any]] = []
+        for name, current in current_flat.items():
+            arr = np.asarray(restored[name])
+            if tuple(arr.shape) != tuple(current.shape):
+                raise ValueError(
+                    "MLX checkpoint shape mismatch for "
+                    f"{name!r}: checkpoint={arr.shape} model={tuple(current.shape)}"
+                )
+            flat_updates.append((name, mx.array(arr.astype(arr.dtype, copy=False))))
+        model.update(tree_unflatten(flat_updates))
+
     def export_archive(
         self, model: Any, output_dir: Path
     ) -> tuple[Path, str, int] | None:

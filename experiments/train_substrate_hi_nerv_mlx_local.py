@@ -36,6 +36,13 @@ from comma_lab.storage_tiers import (
     plan_experiment_storage,
     require_selected_storage,
 )
+from tac.adaptation.hard_pair_indices import (
+    HardPairIndicesError,
+    load_pair_indices_file,
+    merge_pair_indices,
+    parse_pair_indices_csv,
+    validate_pair_indices_in_range,
+)
 from tac.analysis.nerv_modelsize_ladder import (
     hi_nerv_modelsize_config_rows,
 )
@@ -99,6 +106,7 @@ def _full_main(args: argparse.Namespace) -> int:
     output_dir, storage_payload = _resolve_output_dir(args)
     cfg = _config_from_args(args)
     canonicalization = _direct_trainer_canonicalization_contract(mode="full")
+    prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     model = HinervSubstrateMLX(cfg)
     if args.decoder_fake_quant_forward:
         model.configure_decoder_fake_quant_forward(
@@ -203,6 +211,9 @@ def _full_main(args: argparse.Namespace) -> int:
             "pose_student_input_channels": _pose_student_input_channels(
                 str(args.pose_student_input_preprocess)
             ),
+            "prioritized_pair_training": _prioritized_pair_training_metadata(
+                prioritized_pair_indices
+            ),
             "storage_preflight": _metadata_safe(storage_payload),
             "direct_trainer_canonicalization": _metadata_safe(canonicalization),
             "blockers": [
@@ -222,6 +233,9 @@ def _full_main(args: argparse.Namespace) -> int:
             "output_dir": output_dir.as_posix(),
             "storage_preflight": storage_payload,
             "direct_trainer_canonicalization": canonicalization,
+            "prioritized_pair_training": _prioritized_pair_training_metadata(
+                prioritized_pair_indices
+            ),
             "blockers": list(canonicalization["blockers"]),
             "command": sys.argv,
             **FALSE_AUTHORITY,
@@ -249,6 +263,7 @@ def _full_main(args: argparse.Namespace) -> int:
         cosine_decay_total_epochs=args.cosine_decay_total_epochs,
         cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         ema_archive_selection_enabled=bool(args.ema_archive_selection),
+        prioritized_pair_indices=prioritized_pair_indices,
         notes=(
             "HiNeRV MLX-local score-aware training through the canonical "
             "mlx_score_aware harness, with optional real SegNet/PoseNet teacher "
@@ -306,6 +321,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
     output_dir, storage_payload = _resolve_output_dir(args)
     cfg = _config_from_args(args)
     canonicalization = _direct_trainer_canonicalization_contract(mode="smoke")
+    prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     model = HinervSubstrateMLX(cfg)
     if args.decoder_fake_quant_forward:
         model.configure_decoder_fake_quant_forward(
@@ -351,6 +367,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_mean": float(mx.mean(output)),
         },
         "decoder_codec": str(args.decoder_codec),
+        "prioritized_pair_training": _prioritized_pair_training_metadata(
+            prioritized_pair_indices
+        ),
         "archive_path": archive_path,
         "archive_sha256": archive_sha256,
         "archive_bytes": archive_bytes,
@@ -397,6 +416,26 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--upstream-dir", type=Path, default=Path("upstream"))
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch-pairs", type=int, default=8)
+    parser.add_argument(
+        "--prioritized-pair-indices",
+        default="",
+        help=(
+            "Comma-separated hard-pair/sensitivity pair indices to emphasize "
+            "inside MLX training batches. This is false-authority local "
+            "sampling only; promotion still requires receiver proof and "
+            "contest CPU/CUDA replay."
+        ),
+    )
+    parser.add_argument(
+        "--prioritized-pair-indices-file",
+        type=Path,
+        default=None,
+        help=(
+            "JSON/list/text artifact containing prioritized_pair_indices, "
+            "hard_pair_indices, pair_indices, or sample-generalization "
+            "hard-pair coverage."
+        ),
+    )
     parser.add_argument("--full-lr", type=float, default=1.0e-3)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=25)
@@ -499,6 +538,43 @@ def _coder_qat_config_from_args(args: argparse.Namespace) -> Any:
         magnitude_weight=float(args.coder_qat_magnitude_weight),
         delta_weight=float(args.coder_qat_delta_weight),
     ).validated()
+
+
+def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, ...]:
+    try:
+        merged = merge_pair_indices(
+            parse_pair_indices_csv(
+                str(getattr(args, "prioritized_pair_indices", "") or ""),
+                field="prioritized_pair_indices",
+            ),
+            load_pair_indices_file(
+                getattr(args, "prioritized_pair_indices_file", None),
+                base=REPO_ROOT,
+                field="prioritized_pair_indices_file",
+            ),
+        )
+        return validate_pair_indices_in_range(
+            merged,
+            num_pairs=int(args.num_pairs),
+            field="prioritized_pair_indices",
+        )
+    except HardPairIndicesError as exc:
+        raise ValueError(f"invalid HiNeRV prioritized pair indices: {exc}") from exc
+
+
+def _prioritized_pair_training_metadata(
+    pair_indices: tuple[int, ...],
+) -> dict[str, Any]:
+    return {
+        "schema": "hi_nerv_direct_trainer_prioritized_pair_training.v1",
+        "enabled": bool(pair_indices),
+        "pair_indices": [int(value) for value in pair_indices],
+        "pair_count": len(pair_indices),
+        "sampling_scope": "local_mlx_training_batch_emphasis_only",
+        "authority": "macos_mlx_research_signal_false_authority",
+        "promotion_authority": False,
+        "contest_score_authority": False,
+    }
 
 
 def _pose_student_input_channels(preprocess: str) -> int:
@@ -881,6 +957,8 @@ __all__ = [
     "_coder_qat_config_from_args",
     "_config_from_args",
     "_metadata_safe",
+    "_prioritized_pair_indices_from_args",
+    "_prioritized_pair_training_metadata",
     "_resolve_output_dir",
     "main",
 ]

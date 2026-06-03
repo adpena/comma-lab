@@ -19,10 +19,12 @@ from typing import Any
 import numpy as np
 import torch
 
+from tac.adaptation.hard_pair_indices import normalize_pair_indices
 from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import measure_pair_d_seg_d_pose
 from tac.analysis.score_exact_saliency import (
     compute_s_pose_fisher,
     compute_s_seg_flip_risk,
+    decode_real_pair_indices,
     decode_real_pairs,
     load_score_exact_scorers,
 )
@@ -100,6 +102,7 @@ class SnervPairEval:
     d_seg_linf: float
     d_pose_linf: float
     score_linf_without_rate: float
+    source_pair_index: int | None = None
 
     def as_jsonable(self) -> dict[str, Any]:
         return asdict(self)
@@ -181,6 +184,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     schema: str
     axis_tag: str
     n_pairs: int
+    source_pair_indices: tuple[int, ...]
     levels: int
     wavelet: str
     target_bits_per_coeff: float
@@ -251,6 +255,7 @@ class _CodeRecord:
 @dataclass(frozen=True)
 class _PreparedState:
     pairs: torch.Tensor
+    source_pair_indices: tuple[int, ...]
     codes: tuple[_CodeRecord, ...]
     lf_quant_planes: tuple[np.ndarray, ...]
     lf_zero_points: tuple[float, ...]
@@ -272,6 +277,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     target_bits_per_coeff: float = 5.0,
     pair_stride: int = 1,
     start_pair: int = 0,
+    pair_indices: tuple[int, ...] | None = None,
     upstream_dir: str = "upstream",
     video_path: str = "upstream/videos/0.mkv",
     device: str = "cpu",
@@ -388,6 +394,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
         target_bits_per_coeff=target_bits_per_coeff,
         pair_stride=pair_stride,
         start_pair=start_pair,
+        pair_indices=pair_indices,
         video_path=video_path,
         device=device,
         step_map_bins=step_map_bins,
@@ -692,7 +699,8 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     return SnervScorerLoopDecoderQatSmokeResult(
         schema=SCHEMA,
         axis_tag=AXIS_TAG,
-        n_pairs=int(n_pairs),
+        n_pairs=int(prepared.pairs.shape[0]),
+        source_pair_indices=tuple(int(value) for value in prepared.source_pair_indices),
         levels=int(levels),
         wavelet=wavelet,
         target_bits_per_coeff=float(target_bits_per_coeff),
@@ -1240,18 +1248,38 @@ def _prepare_state(
     target_bits_per_coeff: float,
     pair_stride: int,
     start_pair: int,
+    pair_indices: tuple[int, ...] | None,
     video_path: str,
     device: str,
     step_map_bins: int,
     model_size: SnervModelSizeConfig,
 ) -> _PreparedState:
-    pairs = decode_real_pairs(
-        video_path,
-        n_pairs,
-        pair_stride=pair_stride,
-        start_pair=start_pair,
-        device=device,
-    )
+    if pair_indices is not None:
+        source_pair_indices = normalize_pair_indices(
+            pair_indices,
+            field="snerv_qat_pair_indices",
+        )
+        if not source_pair_indices:
+            raise SnervScorerLoopDecoderQatError(
+                "pair_indices must contain at least one pair"
+            )
+        pairs = decode_real_pair_indices(
+            video_path,
+            source_pair_indices,
+            device=device,
+        )
+        n_pairs = len(source_pair_indices)
+    else:
+        source_pair_indices = tuple(
+            int(start_pair) + i * int(pair_stride) for i in range(int(n_pairs))
+        )
+        pairs = decode_real_pairs(
+            video_path,
+            n_pairs,
+            pair_stride=pair_stride,
+            start_pair=start_pair,
+            device=device,
+        )
     h, w = int(pairs.shape[-2]), int(pairs.shape[-1])
     train_pyrs = []
     records: list[tuple[int, int, int, Any]] = []
@@ -1329,6 +1357,7 @@ def _prepare_state(
 
     return _PreparedState(
         pairs=pairs,
+        source_pair_indices=tuple(int(value) for value in source_pair_indices),
         codes=tuple(code_records),
         lf_quant_planes=tuple(q_planes),
         lf_zero_points=tuple(zeros),
@@ -1395,6 +1424,7 @@ def _evaluate_decoder(
                     100.0 * d_seg_pair
                     + float(np.sqrt(10.0 * max(d_pose_pair, 0.0)))
                 ),
+                source_pair_index=int(prepared.source_pair_indices[pair_idx]),
             )
         )
     d_seg = float(np.mean(dsegs))

@@ -200,6 +200,91 @@ def test_compact_family_interrupted_report_preserves_false_authority_evidence(
     assert payload["ready_for_exact_eval_dispatch"] is False
 
 
+def test_recover_interrupted_report_from_startup_marker_summarizes_telemetry(
+    tmp_path: Path,
+) -> None:
+    out = tmp_path / "hi_nerv_run"
+    train_dir = out / "hi_nerv_mlx_training"
+    train_dir.mkdir(parents=True)
+    startup = out / runner_mod.COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "pid": 123,
+                "execute_family": "hi_nerv",
+                "planner_row_id": "hi_nerv::hinerv_np600::adamw",
+                "modelsize_candidate_id": "hinerv_np600",
+                "modelsize_candidate": {"candidate_id": "hinerv_np600"},
+                "output_dir": out.as_posix(),
+                "source_video_path": "/Volumes/VertigoDataTier/pact/upstream/videos/0.mkv",
+                "hard_byte_ceilings": [178_000, 285_000],
+                "command_args": {"execute_family": "hi_nerv"},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    telemetry = train_dir / "telemetry.jsonl"
+    telemetry.write_text(
+        "\n".join(
+            [
+                json.dumps({"epoch": 0, "loss": 9.0}, sort_keys=True),
+                json.dumps(
+                    {
+                        "captured_at_utc": "2026-06-03T06:19:19Z",
+                        "epoch": 26805,
+                        "learning_rate": 2.7e-5,
+                        "loss": 25.21,
+                        "loss_components": {
+                            "loss_part_distill": 5.64,
+                            "loss_part_pose_distill": 2.52,
+                            "loss_part_pr95_c1a_entropy": 6.68,
+                            "pr95_stage_index": 8.0,
+                            "pr95_stage_uses_muon": 1.0,
+                        },
+                        "per_axis_decomposition": {
+                            "pose": 2.28,
+                            "seg": 5.65,
+                        },
+                    },
+                    sort_keys=True,
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = runner_mod._write_compact_family_interrupted_report_from_startup_marker(
+        output_dir=out,
+        reason="unit_test_recovery",
+    )
+
+    payload = json.loads(Path(report["report_path"]).read_text(encoding="utf-8"))
+    telemetry_summary = payload["telemetry_summary"]
+    assert payload["mode"] == "recovered_interrupted_compact_family_run"
+    assert payload["recovered"] is True
+    assert payload["execute_family"] == "hi_nerv"
+    assert payload["training_started"] is True
+    assert payload["training_executed"] is False
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert "hi_nerv_training_interrupted_before_export" in payload["blockers"]
+    assert telemetry_summary["row_count"] == 2
+    assert telemetry_summary["last_epoch"] == 26805
+    assert telemetry_summary["last_loss_components"]["pr95_stage_index"] == 8.0
+    assert telemetry_summary["last_loss_components"]["pr95_stage_uses_muon"] == 1.0
+    assert telemetry_summary["last_per_axis_decomposition"]["pose"] == 2.28
+    evidence_paths = {row["path"] for row in payload["evidence_files"]}
+    assert startup.as_posix() in evidence_paths
+    assert telemetry.as_posix() in evidence_paths
+
+
 def test_write_decoder_weight_saliency_artifact_missing_fails_closed(
     tmp_path: Path,
 ) -> None:
@@ -778,6 +863,45 @@ def test_parse_prioritized_pair_indices_arg() -> None:
     assert runner_mod._normalize_nonnegative_int_sequence("3,1,3") == (3, 1)
     with pytest.raises(CompactRendererMlxSpineRunnerError):
         runner_mod._parse_nonnegative_int_csv("2,-1")
+
+
+def test_parse_prioritized_pair_indices_file_arg(tmp_path: Path) -> None:
+    pair_file = tmp_path / "feedback.json"
+    pair_file.write_text(
+        '{"sample_generalization_gate":{"hard_pair_coverage":'
+        '{"prioritized_pair_indices":[8,2,8]}}}',
+        encoding="utf-8",
+    )
+    args = runner_mod._parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--num-pairs",
+            "10",
+            "--prioritized-pair-indices",
+            "3,2",
+            "--prioritized-pair-indices-file",
+            str(pair_file),
+        ]
+    )
+
+    assert runner_mod._prioritized_pair_indices_from_args(args) == (3, 2, 8)
+
+
+def test_parse_prioritized_pair_indices_rejects_out_of_range() -> None:
+    args = runner_mod._parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--num-pairs",
+            "4",
+            "--prioritized-pair-indices",
+            "3,4",
+        ]
+    )
+
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="out-of-range"):
+        runner_mod._prioritized_pair_indices_from_args(args)
 
 
 def test_adapt_pr95_mlx_report_emits_spine_acquisition_and_runner(

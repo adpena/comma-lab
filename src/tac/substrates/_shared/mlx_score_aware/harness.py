@@ -57,6 +57,8 @@ def run_mlx_score_aware_full_main(
     telemetry_flush_interval_epochs: int | None = None,
     early_stopping_patience: int | None = None,
     curriculum_stages: Any | None = None,
+    checkpoint_dir: Any | None = None,
+    resume_from_checkpoint: Any | None = None,
     inflate_py_path: Any | None = None,
     notes: str = "",
     on_epoch_end: Callable[[Any], None] | None = None,
@@ -109,6 +111,13 @@ def run_mlx_score_aware_full_main(
             disabled; MLX-local runs are cheap so we run the full budget).
         curriculum_stages: optional ``tuple[CurriculumStage, ...]``; default is
             a single full-budget stage.
+        checkpoint_dir: optional canonical checkpoint directory. Long compact
+            carrier campaigns pass an SSD-backed directory so periodic
+            checkpoints are recoverable before final archive export.
+        resume_from_checkpoint: optional canonical checkpoint metadata JSON to
+            resume from. The canonical trainer validates substrate, lane, and
+            curriculum hash and the MLX adapter performs a real ``.npsd`` state
+            restore, so resume cannot degrade into metadata-only continuation.
         inflate_py_path: optional path to the substrate ``inflate.py`` to
             verify numpy-portability before training (8th directive).
         notes: substantive rationale (Catalog #287 placeholder rejected by the
@@ -218,6 +227,12 @@ def run_mlx_score_aware_full_main(
             telemetry_flush_interval_epochs
             if telemetry_flush_interval_epochs is not None
             else DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS
+        ),
+        checkpoint_dir=Path(checkpoint_dir) if checkpoint_dir is not None else None,
+        resume_from_checkpoint=(
+            Path(resume_from_checkpoint)
+            if resume_from_checkpoint is not None
+            else None
         ),
         early_stopping_patience=(
             epochs + 1

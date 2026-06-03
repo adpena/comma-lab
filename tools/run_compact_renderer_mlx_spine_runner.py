@@ -39,6 +39,14 @@ from comma_lab.local_submission_replay import (  # noqa: E402
     run_local_submission_replay,
     stage_local_replay_submission,
 )
+from tac.adaptation.hard_pair_indices import (  # noqa: E402
+    HardPairIndicesError,
+    load_pair_indices_file,
+    merge_pair_indices,
+    normalize_pair_indices,
+    parse_pair_indices_csv,
+    validate_pair_indices_in_range,
+)
 from tac.analysis.nerv_candidate_curriculum import (  # noqa: E402
     build_hinerv_candidate_curriculum_plan,
     build_snerv_candidate_curriculum_plan,
@@ -124,7 +132,10 @@ from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract impor
     build_snerv_mlx_native_adapter_contract,
     build_snerv_mlx_native_file_backed_evidence,
 )
-from tac.training.long_training_canonical import LongTrainingStopRequested  # noqa: E402
+from tac.training.long_training_canonical import (  # noqa: E402
+    DEFAULT_CHECKPOINT_INTERVAL_EPOCHS,
+    LongTrainingStopRequested,
+)
 from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
     emit_compact_renderer_spine_adapter,
 )
@@ -132,6 +143,7 @@ from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
 COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA = "compact_renderer_mlx_spine_runner.v1"
 ACTIVE_CAMPAIGN_LOCK_SCHEMA = "compact_renderer_active_campaign_lock.v1"
 ACTIVE_FAMILY_PROCESS_REFUSAL_SCHEMA = "compact_renderer_active_family_process_refusal.v1"
+DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS = DEFAULT_CHECKPOINT_INTERVAL_EPOCHS
 RAW_NERV_MODELSIZE_BUDGET_SCHEMAS = frozenset(
     {"nerv_modelsize_budget.v1", "snerv_modelsize_budget.v1"}
 )
@@ -2285,6 +2297,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     seg_slack: float,
     pair_stride: int,
     start_pair: int,
+    prioritized_pair_indices: tuple[int, ...],
     pair_guard_min_score_improved_fraction: float,
     pair_guard_max_pose_worsened_fraction: float,
     component_guard_mode: str,
@@ -2329,6 +2342,11 @@ def _run_snerv_scorer_loop_qat_attachment(
             target_bits_per_coeff=float(target_bits_per_coeff),
             pair_stride=int(pair_stride),
             start_pair=int(start_pair),
+            pair_indices=(
+                tuple(int(value) for value in prioritized_pair_indices)
+                if prioritized_pair_indices
+                else None
+            ),
             upstream_dir=Path(upstream_dir).as_posix(),
             video_path=Path(source_video_path).as_posix(),
             device=str(distillation_device),
@@ -2964,6 +2982,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     post_export_materializer_max_experiments: int | None = 1,
     distillation_device: str = "cpu",
     modelsize_candidate: Mapping[str, Any] | None = None,
+    prioritized_pair_indices: tuple[int, ...] = (),
     step_map_coder_mode: str | None = None,
     snerv_spectra_preserving_adapter: bool = False,
     snerv_model_size_adapter_override: str | None = None,
@@ -3233,6 +3252,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     local_proof_prelaunch_blockers = list(prelaunch_blockers)
     advisory = run_snerv_advisory(
         n_pairs=int(num_pairs),
+        pair_indices=(
+            tuple(int(value) for value in prioritized_pair_indices)
+            if prioritized_pair_indices
+            else None
+        ),
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
@@ -3407,6 +3431,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         seg_slack=float(snerv_scorer_loop_seg_slack),
         pair_stride=int(snerv_scorer_loop_pair_stride),
         start_pair=int(snerv_scorer_loop_start_pair),
+        prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         pair_guard_min_score_improved_fraction=float(
             snerv_scorer_loop_pair_guard_min_score_improved_fraction
         ),
@@ -4181,6 +4206,9 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     distillation_device: str,
     requested_distillation_device: str | None,
     allow_segnet_only_research: bool,
+    checkpoint_interval_epochs: int,
+    checkpoint_dir: str | Path | None,
+    resume_from_checkpoint: str | Path | None,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -4208,6 +4236,10 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     )
 
     pairs = int(num_pairs)
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     requested_distillation_device = str(
         requested_distillation_device or distillation_device
     )
@@ -4325,6 +4357,16 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
                 "scope": "real_pytorch_segnet_posenet_teacher_cache",
             },
             "allow_segnet_only_research": bool(allow_segnet_only_research),
+            "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_dir": (
+                Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
+            ),
+            "resume_from_checkpoint": (
+                Path(resume_from_checkpoint).as_posix()
+                if resume_from_checkpoint is not None
+                else None
+            ),
+            "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -4402,7 +4444,9 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         learning_rate=float(learning_rate),
         ema_decay=float(ema_decay),
         seed=int(random_seed),
-        checkpoint_interval_epochs=max(1, int(epochs)),
+        checkpoint_interval_epochs=checkpoint_interval,
+        checkpoint_dir=checkpoint_dir,
+        resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=False,
         notes=(
@@ -4439,6 +4483,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     distillation_device: str = "cpu",
     requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
+    checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
+    checkpoint_dir: str | Path | None = None,
+    resume_from_checkpoint: str | Path | None = None,
     scorer_upstream_dir: str | Path | None = None,
     run_receiver_proof: bool = False,
     receiver_proof_runtime_dir: str | Path = DEFAULT_PR95_RECEIVER_RUNTIME_DIR,
@@ -4456,6 +4503,14 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
 
     root = Path(repo_root).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
+    resolved_checkpoint_dir = _resolve_optional_compact_family_path(
+        checkpoint_dir,
+        base=root,
+    )
+    resolved_resume_from_checkpoint = _resolve_optional_compact_family_path(
+        resume_from_checkpoint,
+        base=root,
+    )
     out = Path(output_dir).expanduser().resolve(strict=False)
     if out.exists() and any(out.iterdir()) and not allow_overwrite:
         raise CompactRendererMlxSpineRunnerError(
@@ -4485,6 +4540,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             distillation_device=distillation_device,
             requested_distillation_device=requested_distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
+            checkpoint_interval_epochs=checkpoint_interval_epochs,
+            checkpoint_dir=resolved_checkpoint_dir,
+            resume_from_checkpoint=resolved_resume_from_checkpoint,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -4500,6 +4558,16 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             {
                 "execute_family": "pr95_hnerv",
                 "failure": repr(exc),
+                "checkpoint_dir": (
+                    resolved_checkpoint_dir.as_posix()
+                    if resolved_checkpoint_dir is not None
+                    else None
+                ),
+                "resume_from_checkpoint": (
+                    resolved_resume_from_checkpoint.as_posix()
+                    if resolved_resume_from_checkpoint is not None
+                    else None
+                ),
                 "scorer_upstream_snapshot": _scorer_upstream_metadata(
                     scorer_upstream
                 ),
@@ -4946,6 +5014,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     optimizer_cosine_decay_enabled: bool = False,
     optimizer_cosine_decay_total_epochs: int | None = None,
     optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
+    checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -4957,6 +5026,10 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     """Train/export a tiny real-video PACT-NeRV-VQ candidate through the spine."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
     optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
         optimizer_kind=optimizer_kind,
@@ -5025,6 +5098,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             optimizer_kind=optimizer_kind,
             optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
+            checkpoint_interval_epochs=checkpoint_interval,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -5163,6 +5237,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                 "effective_weight_decay": optimizer_controls.get(
                     "weight_decay_effective"
                 ),
+                "checkpoint_interval_epochs": checkpoint_interval,
                 "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
@@ -5246,6 +5321,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
     telemetry_flush_interval_epochs: int = 1,
+    checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
     optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     hi_nerv_optimizer_policy: str = "auto",
     optimizer_grad_clip_max_norm: float | None = (
@@ -5275,6 +5351,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     root = Path(repo_root).expanduser().resolve(strict=False)
     prioritized_pair_indices = _normalize_nonnegative_int_sequence(
         prioritized_pair_indices
+    )
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
     )
     out = Path(output_dir).expanduser().resolve(strict=False)
     scorer_upstream = _resolve_scorer_upstream_dir(root, upstream_dir)
@@ -5741,6 +5821,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mlx_prefilter_scorer_batch_pairs=mlx_prefilter_scorer_batch_pairs,
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=telemetry_flush_interval_epochs,
+            checkpoint_interval_epochs=checkpoint_interval,
             optimizer_kind=str(optimizer_kind),
             hi_nerv_optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
@@ -5798,6 +5879,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
                 "hi_nerv_optimizer_policy": optimizer_policy,
                 "hi_nerv_optimizer_controls": optimizer_controls,
+                "checkpoint_interval_epochs": checkpoint_interval,
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
                 "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
@@ -6232,6 +6314,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     optimizer_cosine_decay_enabled: bool = False,
     optimizer_cosine_decay_total_epochs: int | None = None,
     optimizer_cosine_decay_min_lr_ratio: float = 1e-2,
+    checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -6243,6 +6326,10 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     """Train/export a tiny real-video PACT-NeRV-SELECTOR-V4 candidate."""
 
     root = Path(repo_root).expanduser().resolve(strict=False)
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     scorer_upstream = _resolve_scorer_upstream_dir(root, scorer_upstream_dir)
     optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
         optimizer_kind=optimizer_kind,
@@ -6310,6 +6397,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             optimizer_kind=optimizer_kind,
             optimizer_policy=optimizer_policy,
             optimizer_controls=optimizer_controls,
+            checkpoint_interval_epochs=checkpoint_interval,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -6463,6 +6551,7 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
                 "effective_weight_decay": optimizer_controls.get(
                     "weight_decay_effective"
                 ),
+                "checkpoint_interval_epochs": checkpoint_interval,
                 "coder_aware_qat": coder_qat_metadata_row,
                 "decoder_codec": str(decoder_codec),
                 "authority": "macos_mlx_research_signal_false_authority",
@@ -8088,6 +8177,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mlx_prefilter_scorer_batch_pairs: int,
     mlx_prefilter_progress_every: int,
     telemetry_flush_interval_epochs: int,
+    checkpoint_interval_epochs: int,
     optimizer_kind: str,
     hi_nerv_optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
@@ -8144,6 +8234,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_huber_delta must be > 0"
         )
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     if (
         segnet_distillation_weight > 0.0
         and pose_distillation_weight <= 0.0
@@ -8303,6 +8397,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 optimizer_control
             ),
             "effective_weight_decay": effective_weight_decay,
+            "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "prioritized_pair_training": {
                 "schema": "compact_hi_nerv_prioritized_pair_training.v1",
                 "enabled": bool(prioritized_pair_indices),
@@ -8310,9 +8406,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "pair_count": len(prioritized_pair_indices),
                 "sampling_scope": "training_batch_emphasis_only",
                 "authority": "macos_mlx_research_signal_false_authority",
-                "score_claim": False,
-                "promotion_eligible": False,
-                "ready_for_exact_eval_dispatch": False,
+                "promotion_authority": False,
+                "contest_score_authority": False,
             },
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_fake_quant_forward": {
@@ -8480,7 +8575,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         learning_rate=float(learning_rate),
         ema_decay=float(ema_decay),
         seed=int(random_seed),
-        checkpoint_interval_epochs=max(1, int(epochs)),
+        checkpoint_interval_epochs=checkpoint_interval,
         telemetry_flush_interval_epochs=max(1, int(telemetry_flush_interval_epochs)),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs)),
@@ -8586,6 +8681,7 @@ def _run_pact_nerv_vq_mlx_smoke(
     optimizer_kind: str,
     optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
+    checkpoint_interval_epochs: int,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -8610,6 +8706,10 @@ def _run_pact_nerv_vq_mlx_smoke(
     from tac.substrates.pact_nerv_vq.mlx_renderer import PactNervVqSubstrateMLX
 
     pairs = int(num_pairs)
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if segnet_distillation_weight < 0.0:
@@ -8628,6 +8728,10 @@ def _run_pact_nerv_vq_mlx_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_huber_delta must be > 0"
         )
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     if (
         segnet_distillation_weight > 0.0
         and pose_distillation_weight <= 0.0
@@ -8737,6 +8841,8 @@ def _run_pact_nerv_vq_mlx_smoke(
                 optimizer_control
             ),
             "effective_weight_decay": effective_weight_decay,
+            "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -8815,7 +8921,7 @@ def _run_pact_nerv_vq_mlx_smoke(
         learning_rate=float(learning_rate),
         ema_decay=float(ema_decay),
         seed=int(random_seed),
-        checkpoint_interval_epochs=max(1, int(epochs)),
+        checkpoint_interval_epochs=checkpoint_interval,
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs))
@@ -8877,6 +8983,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     optimizer_kind: str,
     optimizer_policy: Mapping[str, Any],
     optimizer_controls: Mapping[str, Any],
+    checkpoint_interval_epochs: int,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -8906,6 +9013,10 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     )
 
     pairs = int(num_pairs)
+    checkpoint_interval = _resolve_checkpoint_interval_epochs(
+        checkpoint_interval_epochs,
+        epochs=epochs,
+    )
     if pairs < 1:
         raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if int(selector_palette_size) < 2:
@@ -9054,6 +9165,8 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
                 optimizer_control
             ),
             "effective_weight_decay": effective_weight_decay,
+            "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "scorer_upstream_snapshot": _scorer_upstream_metadata(
                 scorer_upstream_dir
             ),
@@ -9132,7 +9245,7 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
         learning_rate=float(learning_rate),
         ema_decay=float(ema_decay),
         seed=int(random_seed),
-        checkpoint_interval_epochs=max(1, int(epochs)),
+        checkpoint_interval_epochs=checkpoint_interval,
         telemetry_flush_interval_epochs=1,
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=max(8, int(epochs))
@@ -9239,39 +9352,61 @@ def _parse_positive_int_csv(value: str) -> tuple[int, ...]:
 
 
 def _parse_nonnegative_int_csv(value: str) -> tuple[int, ...]:
-    text = str(value or "").strip()
-    if not text:
-        return ()
-    parts = [part.strip() for part in text.split(",") if part.strip()]
-    return _normalize_nonnegative_int_sequence(parts)
+    try:
+        return parse_pair_indices_csv(value, field="prioritized_pair_indices")
+    except HardPairIndicesError as exc:
+        raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
 
 
 def _normalize_nonnegative_int_sequence(value: Sequence[Any] | None) -> tuple[int, ...]:
-    if value is None:
-        return ()
-    if isinstance(value, str):
-        return _parse_nonnegative_int_csv(value)
-    if isinstance(value, (bytes, bytearray)):
-        raise CompactRendererMlxSpineRunnerError(
-            "prioritized pair indices must be text or a sequence of integers"
+    try:
+        return normalize_pair_indices(value, field="prioritized_pair_indices")
+    except HardPairIndicesError as exc:
+        raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
+
+
+def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, ...]:
+    try:
+        merged = merge_pair_indices(
+            parse_pair_indices_csv(
+                str(getattr(args, "prioritized_pair_indices", "") or ""),
+                field="prioritized_pair_indices",
+            ),
+            load_pair_indices_file(
+                getattr(args, "prioritized_pair_indices_file", None),
+                base=getattr(args, "repo_root", REPO_ROOT),
+                field="prioritized_pair_indices_file",
+            ),
         )
-    out: list[int] = []
-    seen: set[int] = set()
-    for part in value:
-        try:
-            parsed = int(part)
-        except (TypeError, ValueError) as exc:
-            raise CompactRendererMlxSpineRunnerError(
-                f"invalid non-negative integer {part!r} in comma-separated list"
-            ) from exc
-        if parsed < 0:
-            raise CompactRendererMlxSpineRunnerError(
-                f"invalid negative integer {part!r} in comma-separated list"
-            )
-        if parsed not in seen:
-            seen.add(parsed)
-            out.append(parsed)
-    return tuple(out)
+        return validate_pair_indices_in_range(
+            merged,
+            num_pairs=int(getattr(args, "num_pairs", 0)),
+            field="prioritized_pair_indices",
+        )
+    except HardPairIndicesError as exc:
+        raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
+
+
+def _resolve_checkpoint_interval_epochs(value: Any, *, epochs: int) -> int:
+    """Return a positive periodic checkpoint cadence for long compact runs."""
+
+    if isinstance(value, bool):
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_interval_epochs must be a positive integer, not bool"
+        )
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            f"checkpoint_interval_epochs must be a positive integer; got {value!r}"
+        ) from exc
+    if parsed <= 0:
+        raise CompactRendererMlxSpineRunnerError(
+            f"checkpoint_interval_epochs must be > 0; got {parsed}"
+        )
+    if int(epochs) <= 0:
+        raise CompactRendererMlxSpineRunnerError(f"epochs must be > 0; got {epochs!r}")
+    return parsed
 
 
 def _checkpoint_summary(row: dict[str, Any], *, base: Path) -> dict[str, Any]:
@@ -9327,6 +9462,19 @@ def _jsonable_lock_value(value: Any) -> Any:
             for key, item in sorted(value.items(), key=lambda kv: str(kv[0]))
         }
     return value
+
+
+def _resolve_optional_compact_family_path(
+    value: str | Path | None,
+    *,
+    base: Path,
+) -> Path | None:
+    if value is None:
+        return None
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = base / path
+    return path.resolve(strict=False)
 
 
 def _active_campaign_lock_payload(
@@ -9778,6 +9926,160 @@ def _write_compact_family_interrupted_report(
     return {**report, "report_path": path.as_posix()}
 
 
+def _write_compact_family_interrupted_report_from_startup_marker(
+    *,
+    output_dir: Path,
+    reason: str,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Recover fail-closed terminal custody from startup+telemetry artifacts."""
+
+    output_dir = Path(output_dir).expanduser().resolve(strict=False)
+    report_path = output_dir / "compact_renderer_mlx_spine_runner_report.json"
+    if report_path.is_file() and not overwrite:
+        existing = _load_json(report_path)
+        return {**existing, "report_path": report_path.as_posix(), "recovered": False}
+    startup_path = output_dir / COMPACT_FAMILY_STARTUP_MARKER_FILENAME
+    if not startup_path.is_file():
+        raise CompactRendererMlxSpineRunnerError(
+            f"startup marker missing for interrupted run recovery: {startup_path}"
+        )
+    startup = _load_json(startup_path)
+    family = str(startup.get("execute_family") or "").strip() or None
+    telemetry_summary = _compact_family_telemetry_summary(output_dir)
+    training_started = bool(telemetry_summary.get("row_count"))
+    report = {
+        "schema": COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+        "mode": "recovered_interrupted_compact_family_run",
+        "created_utc": datetime.now(UTC).isoformat(),
+        "recovered": True,
+        "recovery_reason": str(reason),
+        "interruption_reason": str(reason),
+        "startup_marker_path": startup_path.as_posix(),
+        "startup_marker_sha256": _sha256_file(startup_path),
+        "startup_marker": _jsonable_lock_value(startup),
+        "pid": startup.get("pid"),
+        "execute_family": family,
+        "planner_row_id": startup.get("planner_row_id"),
+        "modelsize_candidate_id": startup.get("modelsize_candidate_id"),
+        "modelsize_candidate": startup.get("modelsize_candidate"),
+        "campaign_identity": startup.get("campaign_identity"),
+        "output_dir": output_dir.as_posix(),
+        "source_video_path": startup.get("source_video_path"),
+        "hard_byte_ceilings": list(startup.get("hard_byte_ceilings") or []),
+        "command_args": startup.get("command_args"),
+        "evidence_files": _compact_family_interruption_evidence_files(output_dir),
+        "telemetry_summary": telemetry_summary,
+        "training_executed": False,
+        "training_started": training_started,
+        "score_authority": "false_macos_mlx_research_signal",
+        "score_claim": False,
+        "frontier_score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "false_authority_flags": [
+            "recovered_interrupted_run_before_terminal_export_or_receiver_proof",
+            "macos_mlx_research_signal_until_archive_receiver_and_exact_eval",
+        ],
+        "blockers": _compact_family_interruption_blockers(family or ""),
+    }
+    _write_json(report_path, report)
+    return {**report, "report_path": report_path.as_posix()}
+
+
+def _compact_family_telemetry_summary(output_dir: Path) -> dict[str, Any]:
+    candidates = (
+        output_dir / "hi_nerv_mlx_training" / "telemetry.jsonl",
+        output_dir / "snerv_mlx_training" / "telemetry.jsonl",
+        output_dir / "telemetry.jsonl",
+    )
+    telemetry_path = next((path for path in candidates if path.is_file()), None)
+    if telemetry_path is None:
+        return {
+            "schema": "compact_family_interrupted_telemetry_summary.v1",
+            "present": False,
+            "row_count": 0,
+        }
+    first_row: dict[str, Any] | None = None
+    last_row: dict[str, Any] | None = None
+    row_count = 0
+    with telemetry_path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                row = json.loads(text)
+            except json.JSONDecodeError:
+                row = {
+                    "line_number": line_number,
+                    "parse_error": "invalid_json",
+                }
+            row_dict = (
+                dict(row)
+                if isinstance(row, Mapping)
+                else {"line_number": line_number, "non_mapping_row": True}
+            )
+            if first_row is None:
+                first_row = row_dict
+            last_row = row_dict
+            row_count += 1
+    loss_components = (
+        dict(last_row.get("loss_components") or {}) if isinstance(last_row, Mapping) else {}
+    )
+    per_axis = (
+        dict(last_row.get("per_axis_decomposition") or {})
+        if isinstance(last_row, Mapping)
+        else {}
+    )
+    return {
+        "schema": "compact_family_interrupted_telemetry_summary.v1",
+        "present": True,
+        "path": telemetry_path.as_posix(),
+        "bytes": telemetry_path.stat().st_size,
+        "sha256": _sha256_file(telemetry_path),
+        "row_count": row_count,
+        "first_epoch": _optional_int(first_row.get("epoch") if first_row else None),
+        "last_epoch": _optional_int(last_row.get("epoch") if last_row else None),
+        "last_captured_at_utc": (last_row or {}).get("captured_at_utc"),
+        "last_learning_rate": _optional_float((last_row or {}).get("learning_rate")),
+        "last_loss": _optional_float((last_row or {}).get("loss")),
+        "last_per_axis_decomposition": _jsonable_lock_value(per_axis),
+        "last_loss_components": {
+            "pr95_stage_index": _optional_float(loss_components.get("pr95_stage_index")),
+            "pr95_stage_uses_muon": _optional_float(
+                loss_components.get("pr95_stage_uses_muon")
+            ),
+            "loss_part_distill": _optional_float(loss_components.get("loss_part_distill")),
+            "loss_part_pose_distill": _optional_float(
+                loss_components.get("loss_part_pose_distill")
+            ),
+            "loss_part_pr95_c1a_entropy": _optional_float(
+                loss_components.get("loss_part_pr95_c1a_entropy")
+            ),
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _optional_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_float(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 def _write_active_family_process_refusal(
     *,
     lock_dir: Path,
@@ -9990,6 +10292,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "inside MLX training batches. This is false-authority training "
             "sampling only; full-video MLX prefilter and CPU replay gates still "
             "decide promotion."
+        ),
+    )
+    parser.add_argument(
+        "--prioritized-pair-indices-file",
+        type=Path,
+        default=None,
+        help=(
+            "JSON/list/text artifact containing prioritized_pair_indices, "
+            "hard_pair_indices, pair_indices, or sample-generalization "
+            "hard-pair coverage to emphasize in MLX batches."
         ),
     )
     parser.add_argument("--learning-rate", default=1e-3, type=float)
@@ -10339,6 +10651,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--checkpoint-interval-epochs",
+        default=DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
+        type=int,
+        help=(
+            "Canonical long-training checkpoint cadence for MLX compact-family "
+            "runs. Default protects long PR95-style HiNeRV runs from losing "
+            "weights before terminal archive export; reports remain "
+            "false-authority until receiver proof and exact replay."
+        ),
+    )
+    parser.add_argument(
         "--coder-aware-qat",
         action="store_true",
         help=(
@@ -10647,9 +10970,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    prioritized_pair_indices = _parse_nonnegative_int_csv(
-        args.prioritized_pair_indices
-    )
+    prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     args.requested_distillation_device = str(args.distillation_device)
     args.distillation_device = _resolve_torch_scorer_device_alias(
         args.distillation_device
@@ -10908,6 +11229,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.distillation_device,
             ),
             allow_segnet_only_research=args.allow_segnet_only_research,
+            checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             scorer_upstream_dir=scorer_upstream_dir,
             run_receiver_proof=args.run_receiver_proof,
             receiver_proof_runtime_dir=args.pr95_receiver_runtime_dir,
@@ -10978,6 +11300,7 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_cosine_decay_min_lr_ratio=(
                 args.optimizer_cosine_decay_min_lr_ratio
             ),
+            checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
@@ -11038,6 +11361,7 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_cosine_decay_min_lr_ratio=(
                 args.optimizer_cosine_decay_min_lr_ratio
             ),
+            checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             run_post_export_materializers=args.run_post_export_materializers,
             post_export_materializer_max_steps=(
                 args.post_export_materializer_max_steps
@@ -11072,6 +11396,7 @@ def main(argv: list[str] | None = None) -> int:
             post_export_materializer_max_experiments=post_export_materializer_max_experiments,
             distillation_device=args.distillation_device,
             modelsize_candidate=modelsize_candidate,
+            prioritized_pair_indices=prioritized_pair_indices,
             snerv_spectra_preserving_adapter=args.snerv_spectra_preserving_adapter,
             snerv_model_size_adapter_override=args.snerv_model_size_adapter,
             snerv_fc_dim_override=args.snerv_fc_dim,
@@ -11185,6 +11510,7 @@ def main(argv: list[str] | None = None) -> int:
             mlx_prefilter_scorer_device=args.mlx_prefilter_scorer_device,
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
+            checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             optimizer_kind=args.optimizer_kind,
             hi_nerv_optimizer_policy=args.hi_nerv_optimizer_policy,
             optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,

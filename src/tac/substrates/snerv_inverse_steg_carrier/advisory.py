@@ -43,6 +43,7 @@ from typing import Any
 import numpy as np
 import torch
 
+from tac.adaptation.hard_pair_indices import normalize_pair_indices
 from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
     allocate_l2_uniform,
     measure_pairs_d_seg_d_pose_batched,
@@ -50,6 +51,7 @@ from tac.analysis.inverse_steganalysis_linf_vs_l2_gate import (
 from tac.analysis.score_exact_saliency import (
     compute_s_pose_fisher,
     compute_s_seg_flip_risk,
+    decode_real_pair_indices,
     decode_real_pairs,
     load_score_exact_scorers,
 )
@@ -119,6 +121,7 @@ class SnervAdvisoryResult:
     """Honest byte-closed advisory for the SNeRV carrier on real frames."""
 
     n_pairs: int
+    source_pair_indices: tuple[int, ...]
     levels: int
     wavelet: str
     carrier_hw: tuple[int, int]
@@ -358,6 +361,7 @@ def run_snerv_advisory(
     target_bits_per_coeff: float = 5.0,
     pair_stride: int = 1,
     start_pair: int = 0,
+    pair_indices: tuple[int, ...] | None = None,
     pr101_frontier_bytes: int = 178_493,
     video_path: str = "upstream/videos/0.mkv",
     upstream_dir: str | None = None,
@@ -397,9 +401,30 @@ def run_snerv_advisory(
         upstream_dir=upstream_dir or "upstream",
         device=device,
     )
-    pairs = decode_real_pairs(
-        video_path, n_pairs, pair_stride=pair_stride, start_pair=start_pair, device=device
-    )  # (n_pairs, 2, 3, H, W)
+    if pair_indices is not None:
+        source_pair_indices = normalize_pair_indices(
+            pair_indices,
+            field="snerv_advisory_pair_indices",
+        )
+        if not source_pair_indices:
+            raise RuntimeError("pair_indices must contain at least one pair")
+        pairs = decode_real_pair_indices(
+            video_path,
+            source_pair_indices,
+            device=device,
+        )
+        n_pairs = len(source_pair_indices)
+    else:
+        source_pair_indices = tuple(
+            int(start_pair) + i * int(pair_stride) for i in range(int(n_pairs))
+        )
+        pairs = decode_real_pairs(
+            video_path,
+            n_pairs,
+            pair_stride=pair_stride,
+            start_pair=start_pair,
+            device=device,
+        )  # (n_pairs, 2, 3, H, W)
     H, W = int(pairs.shape[-2]), int(pairs.shape[-1])
     model_size = SnervModelSizeConfig(
         fc_dim=snerv_fc_dim,
@@ -812,6 +837,7 @@ def run_snerv_advisory(
 
     return SnervAdvisoryResult(
         n_pairs=n_pairs,
+        source_pair_indices=tuple(int(value) for value in source_pair_indices),
         levels=levels,
         wavelet=wavelet,
         carrier_hw=(H, W),

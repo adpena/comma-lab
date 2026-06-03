@@ -100,6 +100,7 @@ class SnervMlxNativeArtifact:
     packet_bytes: int
     packet_sha256: str
     num_pairs: int
+    source_pair_indices: tuple[int, ...]
     levels: int
     wavelet: str
     target_bits_per_coeff: float
@@ -420,6 +421,7 @@ def train_export_snerv_mlx_native(
         packet_bytes=len(selected_packet),
         packet_sha256=_sha256_bytes(selected_packet),
         num_pairs=int(num_pairs),
+        source_pair_indices=tuple(range(int(num_pairs))),
         levels=levels,
         wavelet=wavelet,
         target_bits_per_coeff=target_bits_per_coeff,
