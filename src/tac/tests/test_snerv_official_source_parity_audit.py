@@ -158,6 +158,124 @@ def test_snerv_official_forward_parity_artifact_round_trips_falsification(
     )
 
 
+def test_snerv_official_forward_parity_artifact_rejects_boolean_only_pass(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_snerv_repo(tmp_path)
+    local = _write_marker_only_local_snerv_repo(tmp_path)
+    artifact_path = tmp_path / "forged_pass.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+                "official_mfu_hfr_tub_forward_parity_passed": True,
+                "component_rows": [
+                    {
+                        "component_id": "mfu",
+                        "source_forward_parity_proven": True,
+                    },
+                    {
+                        "component_id": "hfr",
+                        "source_forward_parity_proven": True,
+                    },
+                    {
+                        "component_id": "tub",
+                        "source_forward_parity_proven": True,
+                    },
+                ],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_snerv_official_source_parity_audit(
+        official_repo_dir=official,
+        repo_root=local,
+        official_forward_parity_artifact_path=artifact_path,
+        generated_utc="20260603T000000Z",
+    )
+
+    artifact_row = report["official_forward_parity_artifact_row"]
+    assert artifact_row["parity_passed"] is False
+    assert "snerv_official_forward_parity_weight_manifest_missing" in artifact_row[
+        "blockers"
+    ]
+    assert "snerv_official_forward_parity_source_replay_missing" in artifact_row[
+        "blockers"
+    ]
+    assert any(
+        blocker.startswith("numeric_max_abs_error_missing:mfu")
+        for blocker in artifact_row["blockers"]
+    )
+    assert report["official_mfu_hfr_tub_parity_proven"] is False
+    assert "snerv_official_mfu_hfr_tub_parity_missing" in report["blockers"]
+
+
+def test_snerv_official_forward_parity_artifact_accepts_numeric_replay_evidence(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_snerv_repo(tmp_path)
+    local = _write_marker_only_local_snerv_repo(tmp_path)
+    artifact_path = tmp_path / "numeric_pass.json"
+    component_rows = [
+        _numeric_component_row("mfu"),
+        _numeric_component_row("hfr"),
+        _numeric_component_row("tub"),
+    ]
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+                "official_weight_manifest": {
+                    "state_dict_sha256": "1" * 64,
+                    "state_dict_key_count": 9,
+                },
+                "source_forward_replay": {
+                    "backend": "torch_vs_numpy",
+                    "input_bundle_sha256": "2" * 64,
+                },
+                "official_mfu_hfr_tub_forward_parity_passed": True,
+                "official_mfu_hfr_tub_forward_parity_falsified": False,
+                "component_rows": component_rows,
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_snerv_official_source_parity_audit(
+        official_repo_dir=official,
+        repo_root=local,
+        official_forward_parity_artifact_path=artifact_path,
+        generated_utc="20260603T000000Z",
+    )
+
+    artifact_row = report["official_forward_parity_artifact_row"]
+    assert artifact_row["parity_passed"] is True
+    assert artifact_row["blockers"] == []
+    assert report["official_mfu_hfr_tub_parity_proven"] is True
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def _numeric_component_row(component_id: str) -> dict[str, object]:
+    return {
+        "component_id": component_id,
+        "source_forward_parity_proven": True,
+        "max_abs_error": 0.0,
+        "tolerance": 1.0e-6,
+        "input_sha256": "3" * 64,
+        "official_output_sha256": "4" * 64,
+        "portable_output_sha256": "4" * 64,
+        "official_weight_sha256": "5" * 64,
+    }
+
+
 def _write_minimal_official_snerv_repo(tmp_path: Path) -> Path:
     root = tmp_path / "SNeRV"
     (root / "model").mkdir(parents=True)

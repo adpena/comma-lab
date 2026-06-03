@@ -38,6 +38,7 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "source_faithful_stack_claim": False,
     "ready_for_exact_eval_dispatch": False,
 }
+REQUIRED_FORWARD_PARITY_COMPONENT_IDS: tuple[str, ...] = ("mfu", "hfr", "tub")
 
 REQUIRED_OFFICIAL_FILES: tuple[str, ...] = (
     "model/snerv.py",
@@ -615,17 +616,22 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
             **FALSE_AUTHORITY,
         }
     artifact_schema = str(payload.get("schema") or "")
-    parity_passed = bool(
-        artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
-        and payload.get("official_mfu_hfr_tub_forward_parity_passed") is True
-        and payload.get("score_claim") is False
-        and payload.get("ready_for_exact_eval_dispatch") is False
-    )
     component_rows = [
         dict(row)
         for row in payload.get("component_rows") or ()
         if isinstance(row, Mapping)
     ]
+    evidence_blockers = _forward_parity_artifact_evidence_blockers(
+        payload,
+        component_rows=component_rows,
+    )
+    parity_passed = bool(
+        artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
+        and payload.get("official_mfu_hfr_tub_forward_parity_passed") is True
+        and payload.get("score_claim") is False
+        and payload.get("ready_for_exact_eval_dispatch") is False
+        and not evidence_blockers
+    )
     parity_falsified = bool(
         artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
         and (
@@ -642,6 +648,7 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
         blockers.append("snerv_official_forward_parity_artifact_score_claim_not_false")
     if payload.get("ready_for_exact_eval_dispatch") is not False:
         blockers.append("snerv_official_forward_parity_artifact_exact_flag_not_false")
+    blockers.extend(evidence_blockers)
     return {
         "schema": "snerv_official_forward_parity_artifact_row.v1",
         "path": artifact_path.as_posix(),
@@ -656,6 +663,130 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _forward_parity_artifact_evidence_blockers(
+    payload: Mapping[str, Any],
+    *,
+    component_rows: Sequence[Mapping[str, Any]],
+) -> list[str]:
+    blockers: list[str] = []
+    weight_manifest = payload.get("official_weight_manifest")
+    if not isinstance(weight_manifest, Mapping):
+        blockers.append("snerv_official_forward_parity_weight_manifest_missing")
+    else:
+        if not _is_sha256_hex(weight_manifest.get("state_dict_sha256")):
+            blockers.append(
+                "snerv_official_forward_parity_weight_manifest_sha256_missing"
+            )
+        key_count = _int_or_none(
+            weight_manifest.get("state_dict_key_count")
+            or weight_manifest.get("weight_key_count")
+        )
+        entries = weight_manifest.get("weight_entries")
+        if key_count is None and not (
+            isinstance(entries, Sequence) and not isinstance(entries, (str, bytes))
+        ):
+            blockers.append(
+                "snerv_official_forward_parity_weight_manifest_keys_missing"
+            )
+    source_replay = payload.get("source_forward_replay")
+    if not isinstance(source_replay, Mapping):
+        blockers.append("snerv_official_forward_parity_source_replay_missing")
+    else:
+        backend = str(source_replay.get("backend") or "")
+        if backend not in {
+            "torch_vs_numpy",
+            "torch_vs_mlx",
+            "torch_vs_portable",
+            "official_torch_vs_portable",
+        }:
+            blockers.append("snerv_official_forward_parity_source_replay_backend_invalid")
+        if not _is_sha256_hex(source_replay.get("input_bundle_sha256")):
+            blockers.append(
+                "snerv_official_forward_parity_source_replay_input_sha256_missing"
+            )
+    by_component = {
+        str(row.get("component_id") or ""): row
+        for row in component_rows
+        if isinstance(row, Mapping)
+    }
+    for component_id in REQUIRED_FORWARD_PARITY_COMPONENT_IDS:
+        row = by_component.get(component_id)
+        if row is None:
+            blockers.append(
+                f"snerv_official_forward_parity_component_missing:{component_id}"
+            )
+            continue
+        blockers.extend(
+            f"{blocker}:{component_id}"
+            for blocker in _forward_parity_component_blockers(row)
+        )
+    return _ordered_unique(blockers)
+
+
+def _forward_parity_component_blockers(row: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if row.get("source_forward_parity_proven") is not True:
+        blockers.append("component_not_proven")
+    tolerance = _float_or_none(row.get("tolerance") or row.get("max_abs_tolerance"))
+    max_abs_error = _float_or_none(
+        _first_not_none(row, ("max_abs_error", "max_error", "max_abs_delta"))
+    )
+    if tolerance is None or tolerance < 0.0:
+        blockers.append("numeric_tolerance_missing")
+    if max_abs_error is None:
+        blockers.append("numeric_max_abs_error_missing")
+    elif tolerance is not None and max_abs_error > tolerance:
+        blockers.append("numeric_max_abs_error_exceeds_tolerance")
+    for field in (
+        "input_sha256",
+        "official_output_sha256",
+        "portable_output_sha256",
+    ):
+        if not _is_sha256_hex(row.get(field)):
+            blockers.append(f"{field}_missing")
+    if row.get("official_output_sha256") != row.get("portable_output_sha256"):
+        blockers.append("official_portable_output_sha256_mismatch")
+    if not (
+        _is_sha256_hex(row.get("official_weight_sha256"))
+        or isinstance(row.get("official_weight_keys"), Sequence)
+        and not isinstance(row.get("official_weight_keys"), (str, bytes))
+    ):
+        blockers.append("official_weight_identity_missing")
+    return blockers
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if out != out:
+        return None
+    return out
+
+
+def _first_not_none(row: Mapping[str, Any], keys: Sequence[str]) -> Any:
+    for key in keys:
+        value = row.get(key)
+        if value is not None:
+            return value
+    return None
+
+
+def _int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _is_sha256_hex(value: Any) -> bool:
+    if value is None:
+        return False
+    text = str(value).strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def _component_state_rows(
