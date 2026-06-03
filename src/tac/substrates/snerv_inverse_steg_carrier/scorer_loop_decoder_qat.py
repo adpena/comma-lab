@@ -41,6 +41,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     pack_snerv_archive,
+    resolve_decoder_payload_codec,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_SPECTRA_PRESERVING_ADAPTER,
@@ -1694,6 +1695,8 @@ def _pack_receiver_archive(
     decoder_payload_codec: str = "float32_lzma",
     lf_payload_codec: str = "portfolio_auto",
 ) -> SnervArchivePacket:
+    decoder_payload_codec_requested = str(decoder_payload_codec)
+    decoder_payload_codec_resolved = resolve_decoder_payload_codec(decoder_payload_codec_requested)
     return pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(
             lf_zero_points=list(prepared.lf_zero_points),
@@ -1704,7 +1707,7 @@ def _pack_receiver_archive(
         ),
         decoder_payload=encode_decoder_payload(
             decoder,
-            codec=decoder_payload_codec,
+            codec=decoder_payload_codec_resolved,
         ),
         step_map_packet=prepared.step_map_packet,
         metadata={
@@ -1717,7 +1720,8 @@ def _pack_receiver_archive(
             "orig_hw": list(prepared.orig_hw),
             "lf_plane_count": len(prepared.lf_quant_planes),
             "hf_decoder_fit_mode": "scorer_loop_decoder_qat_smoke",
-            "decoder_payload_codec": str(decoder_payload_codec),
+            "decoder_payload_codec": decoder_payload_codec_resolved,
+            "decoder_payload_codec_requested": decoder_payload_codec_requested,
             "lf_payload_codec": str(lf_payload_codec),
             "snerv_model_size_adapter": prepared.model_size.adapter,
             "snerv_spectra_preserving_adapter_enabled": (

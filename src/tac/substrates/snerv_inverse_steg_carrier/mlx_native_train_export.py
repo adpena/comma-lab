@@ -54,6 +54,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     execute_official_mfu_hfr_tub_decoder_payload,
     inspect_decoder_payload_header,
     pack_snerv_archive,
+    resolve_decoder_payload_codec,
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (
@@ -2352,7 +2353,9 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         map_importance=step_map_importance,
         target_bits_per_coeff=float(step_map_bits_per_coeff),
     )
-    decoder_payload = encode_decoder_payload(decoder, codec=decoder_payload_codec)
+    decoder_payload_codec_requested = str(decoder_payload_codec)
+    decoder_payload_codec_resolved = resolve_decoder_payload_codec(decoder_payload_codec_requested)
+    decoder_payload = encode_decoder_payload(decoder, codec=decoder_payload_codec_resolved)
     native_training_export_guard = build_snerv_mlx_native_training_export_guard(
         {
             "native_mlx_training_executed": bool(mlx_training_report.get("executed") is True),
@@ -2423,7 +2426,8 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
             if mlx_training_report.get("executed") is True
             else "none"
         ),
-        "decoder_payload_codec": str(decoder_payload_codec),
+        "decoder_payload_codec": decoder_payload_codec_resolved,
+        "decoder_payload_codec_requested": decoder_payload_codec_requested,
         "snerv_fc_dim": int(model_size.fc_dim),
         "snerv_emb_size": int(model_size.emb_size),
         "snerv_patch_radius": int(model_size.patch_radius),

@@ -76,6 +76,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_quant_payload,
     inspect_decoder_payload_header,
     pack_snerv_archive,
+    resolve_decoder_payload_codec,
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
@@ -637,9 +638,11 @@ def run_snerv_advisory(
         )
     else:
         raise RuntimeError(f"unknown HF decoder fit mode: {hf_decoder_fit_mode!r}")
+    decoder_payload_codec_requested = str(decoder_payload_codec)
+    decoder_payload_codec_resolved = resolve_decoder_payload_codec(decoder_payload_codec_requested)
     decoder_bytes = encode_decoder_payload(
         decoder,
-        codec=decoder_payload_codec,
+        codec=decoder_payload_codec_resolved,
         mixed_modes=decoder_payload_mixed_modes,
     )
     decoder_payload_header = inspect_decoder_payload_header(decoder_bytes)
@@ -832,7 +835,8 @@ def run_snerv_advisory(
         "hf_decoder_fit_mode": hf_decoder_fit_mode,
         "hf_decoder_saliency_gain": hf_decoder_saliency_gain,
         "hf_decoder_saliency_component": hf_decoder_saliency_component,
-        "decoder_payload_codec": decoder_payload_codec,
+        "decoder_payload_codec": decoder_payload_codec_resolved,
+        "decoder_payload_codec_requested": decoder_payload_codec_requested,
         "decoder_payload_mixed_modes": (
             list(decoder_payload_mixed_modes)
             if decoder_payload_mixed_modes is not None
