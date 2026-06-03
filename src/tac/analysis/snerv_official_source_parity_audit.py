@@ -151,6 +151,105 @@ LOCAL_RECEIVER_SAFE_MARKERS: tuple[str, ...] = (
 
 LOCAL_OFFICIAL_PARITY_MARKERS: tuple[str, ...] = ("SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF",)
 
+_SNERV_FORWARD_PARITY_COMPONENT_SPECS: tuple[dict[str, Any], ...] = (
+    {
+        "component_id": "mfu",
+        "official_group_id": "official_mfu_multi_resolution_fusion",
+        "official_source_markers": (
+            ("model/snerv.py", "upsample_5 = nn.ConvTranspose2d"),
+            ("model/snerv.py", "decoder_layer5 = RB("),
+            ("model/snerv.py", "upsample_6 = nn.ConvTranspose2d"),
+            ("model/snerv.py", "decoder_layer6 = RB("),
+            ("model/snerv.py", "up1 = self.decoder[self.decoder_len+3](embed_list[-3])"),
+            ("model/snerv.py", "unet1 = self.decoder[self.decoder_len+4](torch.cat([up1, embed_list[-2]], dim=1))"),
+            ("model/snerv.py", "pyr_out = self.decoder[self.decoder_len+6](torch.cat([unet1_up, embed_list[-1]], dim=1))"),
+        ),
+        "local_receiver_markers": (
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "class MultiResolutionFusionUnit"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "_box_pool_upsample"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "_central_gradients"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "_patch_features"),
+        ),
+        "local_source_forward_markers": (
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "nn.ConvTranspose2d"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "decoder_layer5 = RB("),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "torch.cat([up1, embed_list[-2]]"),
+        ),
+        "classification": "source_forward_parity_falsified_receiver_safe_analogue_only",
+        "blocker": "snerv_mfu_source_forward_parity_falsified_receiver_safe_analogue_only",
+        "evidence_summary": (
+            "Official MFU is a learned ConvTranspose2d/RB pyramid over decoder embed_list; "
+            "local MFU is a deterministic NumPy LF feature bank with pooled, gradient, and patch bases."
+        ),
+    },
+    {
+        "component_id": "hfr",
+        "official_group_id": "official_hfr_high_frequency_restoration",
+        "official_source_markers": (
+            ("model/snerv.py", "decoder_layer2 = ConvBlock"),
+            ("model/snerv.py", "decoder_layer3 = ConvBlock"),
+            ("model/snerv.py", "decoder_layer4 = ConvBlock"),
+            ("model/snerv.py", "HF_in = pyr_out"),
+            ("model/snerv.py", "lh_out = self.decoder[self.decoder_len](HF_in)"),
+            ("model/snerv.py", "hl_out = self.decoder[self.decoder_len+1](HF_in)"),
+            ("model/snerv.py", "hh_out = self.decoder[self.decoder_len+2](HF_in)"),
+            ("model/snerv.py", "yh_out = torch.stack([lh_out, hl_out, hh_out], dim=2)"),
+        ),
+        "local_receiver_markers": (
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "class HighFrequencyRestorer"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "context - _box_pool_upsample(context, 3)"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "_central_gradients(edge)"),
+        ),
+        "local_source_forward_markers": (
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "decoder_layer2 = ConvBlock"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "HF_in = pyr_out"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "lh_out = self.decoder[self.decoder_len](HF_in)"),
+        ),
+        "classification": "source_forward_parity_falsified_receiver_safe_analogue_only",
+        "blocker": "snerv_hfr_source_forward_parity_falsified_receiver_safe_analogue_only",
+        "evidence_summary": (
+            "Official HFR is three learned ConvBlock detail heads fed by pyr_out; "
+            "local HFR is deterministic LF-edge correction added to stored or generated detail subbands."
+        ),
+    },
+    {
+        "component_id": "tub",
+        "official_group_id": "official_tub_temporal_extension",
+        "official_source_markers": (
+            ("model/snerv_t.py", "DWT1D(J=1, wave='haar', mode='periodization')"),
+            ("model/snerv_t.py", "embed_lv_p, embed_hv_p"),
+            ("model/snerv_t.py", "embed_lv_n, embed_hv_n"),
+            ("model/snerv_t.py", "embed_hv_p = self.encoder[1]((embed_lv_p"),
+            ("model/snerv_t.py", "embed_hv_n = self.encoder[2]((embed_lv_n"),
+            ("model/snerv_t.py", "output_2 = self.decoder[self.decoder_len-1]"),
+            ("model/snerv_t.py", "output = layer(output, output_2)"),
+        ),
+        "local_receiver_markers": (
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "class SnervTemporalExtension"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "official_haar_dwt1d_lowpass_features"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "(center + prev) * inv_two_sqrt2"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "(center + nxt) * inv_two_sqrt2"),
+        ),
+        "local_source_forward_markers": (
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "self.encoder[1]((embed_lv_p"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "self.decoder[self.decoder_len-1]"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "output = layer(output, output_2)"),
+        ),
+        "primitive_parity_markers": (
+            ("model/snerv_t.py", "DWT1D(J=1, wave='haar', mode='periodization')"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "1.0 / (2.0 * np.sqrt(2.0))"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "(center + prev) * inv_two_sqrt2"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/carrier.py", "(center + nxt) * inv_two_sqrt2"),
+        ),
+        "classification": "official_haar_temporal_lowpass_primitive_proven_full_tub_falsified",
+        "blocker": "snerv_tub_full_source_forward_parity_falsified_primitive_only",
+        "evidence_summary": (
+            "Local TUB exposes the official Haar lowpass divided by two algebra, "
+            "but it does not implement the official temporal encoders or output_2 decoder fusion graph."
+        ),
+    },
+)
+
 
 def build_snerv_official_source_parity_audit(
     *,
