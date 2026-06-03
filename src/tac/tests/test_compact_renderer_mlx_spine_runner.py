@@ -6425,7 +6425,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
 
     assert native_calls
     assert native_calls[0]["num_pairs"] == 2
-    assert native_calls[0]["pair_indices"] == (7, 2)
+    assert native_calls[0]["pair_indices"] is None
+    assert native_calls[0]["prioritized_pair_indices"] == (7, 2)
     assert native_calls[0]["run_scorer_loop_qat"] is True
     assert native_calls[0]["scorer_loop_qat_max_trials"] == 1
     assert native_calls[0]["scorer_loop_qat_search_mode"] == "top_weight_coordinate"
@@ -6475,9 +6476,12 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["recon_pixel_weight_normalize"] == "none"
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
-    assert native["source_pair_indices"] == [7, 2]
+    assert native["source_pair_indices"] == [0, 1]
     assert native["prioritized_pair_training"]["enabled"] is True
     assert native["prioritized_pair_training"]["pair_indices"] == [7, 2]
+    assert native["prioritized_pair_training"]["sampling_scope"] == (
+        "score_aware_training_batches_not_target_hydration"
+    )
     assert (
         native["prioritized_pair_training"]["consumed_by_native_mlx_train_export"]
         is True

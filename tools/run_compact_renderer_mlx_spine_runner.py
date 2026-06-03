@@ -2772,10 +2772,9 @@ def _run_snerv_native_mlx_export_attachment(
             scorer_upstream_dir=Path(scorer_upstream_dir),
             repo_root=Path(repo_root),
             run_archive_export=True,
-            pair_indices=(
-                tuple(int(value) for value in prioritized_pair_indices)
-                if prioritized_pair_indices
-                else None
+            pair_indices=None,
+            prioritized_pair_indices=tuple(
+                int(value) for value in prioritized_pair_indices
             ),
             retain_receiver_output=bool(retain_receiver_output),
             receiver_proof_timeout_seconds=int(receiver_proof_timeout_seconds),
@@ -2887,7 +2886,7 @@ def _run_snerv_native_mlx_export_attachment(
                 "pair_indices": [int(value) for value in prioritized_pair_indices],
                 "pair_count": len(prioritized_pair_indices),
                 "consumed_by_native_mlx_train_export": bool(prioritized_pair_indices),
-                "sampling_scope": "snerv_native_mlx_target_hydration_pair_subset",
+                "sampling_scope": "score_aware_training_batches_not_target_hydration",
                 **FALSE_AUTHORITY,
             },
             "artifact_schema": artifact.get("schema"),

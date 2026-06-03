@@ -236,6 +236,7 @@ def train_export_snerv_mlx_native(
     recon_pixel_weight_manifest_path: str | Path | None = None,
     recon_pixel_weight_normalize: str = "mean",
     pair_indices: Sequence[Any] | str | None = None,
+    prioritized_pair_indices: Sequence[Any] | str | None = None,
     allow_overwrite: bool = False,
 ) -> dict[str, Any]:
     """Hydrate real targets on MLX, export a NumPy-portable SNAR1 archive.
@@ -276,6 +277,10 @@ def train_export_snerv_mlx_native(
     source_pair_indices = _source_pair_indices_for_native_export(
         int(num_pairs),
         pair_indices=pair_indices,
+    )
+    priority_pair_indices = normalize_pair_indices(
+        prioritized_pair_indices,
+        field="prioritized_pair_indices",
     )
     effective_num_pairs = len(source_pair_indices)
     explicit_pair_indices = pair_indices is not None
@@ -579,6 +584,7 @@ def train_export_snerv_mlx_native(
                 ),
             )
         ),
+        prioritized_pair_indices=priority_pair_indices,
         allow_overwrite=allow_overwrite,
     )
     pairs_for_packet = (
@@ -1158,6 +1164,7 @@ def _run_score_aware_long_training_attachment(
     coder_qat_c1a_sample_size: int,
     pr95_faithful_curriculum_enabled: bool,
     pr95_muon_policy: str,
+    prioritized_pair_indices: tuple[int, ...],
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     """Run real SNeRV MLX long training before NumPy-portable SNAR export."""
@@ -1194,6 +1201,14 @@ def _run_score_aware_long_training_attachment(
             pr95_faithful_curriculum_enabled
         ),
         "pr95_muon_policy": str(pr95_muon_policy),
+        "prioritized_pair_training": {
+            "schema": "snerv_mlx_score_aware_long_training_priority_pairs.v1",
+            "enabled": bool(prioritized_pair_indices),
+            "pair_indices": [int(value) for value in prioritized_pair_indices],
+            "pair_count": len(prioritized_pair_indices),
+            "sampling_scope": "score_aware_training_batches_not_target_hydration",
+            **FALSE_AUTHORITY,
+        },
         "contest_scorer_distortion_objective": bool(
             _recon_pixel_weight_metadata_is_verified_gradient_manifest(
                 recon_pixel_weight_metadata
@@ -1594,6 +1609,9 @@ def _run_score_aware_long_training_attachment(
                 else None
             ),
             pr95_muon_policy=str(pr95_muon_policy),
+            prioritized_pair_indices=tuple(
+                int(value) for value in prioritized_pair_indices
+            ),
             notes=(
                 "SNeRV MLX score-aware train/export attachment: train LF "
                 "latents plus shared HF decoder weights with the canonical "
