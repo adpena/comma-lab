@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
 )
 from tac.substrates.snerv_inverse_steg_carrier.trained_ladder_bridge import (
@@ -225,6 +226,61 @@ def test_bridge_records_receiver_visible_mfu_hfr_adapter_controls(
     ]
 
 
+def test_bridge_records_official_mfu_hfr_tub_primitives_fail_closed_until_export_bound(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-official-primitives-packet"
+    packet_path = tmp_path / "official_primitives.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            snerv_mfu_scales=(1, 2, 4),
+            snerv_hfr_gain=0.125,
+            snerv_temporal_context=1,
+            snerv_temporal_mode="official_haar_dwt1d_lowpass",
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    controls = payload["rows"][0]["official_controls"]
+    assert controls["source_faithful_stack"] is False
+    assert controls["adapter"] == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    assert controls["mfu_enabled"] is True
+    assert controls["receiver_safe_mfu_adapter_present"] is False
+    assert controls["official_mfu_hfr_tub_numeric_primitives_requested"] is True
+    assert controls["official_mfu_hfr_tub_primitives_present"] is True
+    assert controls["official_mfu_hfr_tub_export_bound"] is False
+    assert controls["official_parity_status"] == (
+        "official_mfu_hfr_tub_numeric_primitives_present__receiver_export_"
+        "and_source_forward_replay_required"
+    )
+    assert controls["official_mfu_hfr_tub_export_blockers"] == [
+        "snerv_official_neural_decoder_payload_grammar_missing",
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+        "snerv_official_receiver_runtime_decode_missing",
+    ]
+    assert controls["hfr_enabled"] is True
+    assert controls["snerv_t_enabled"] is True
+    assert controls["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
+    assert "required_emission_field_false:official_controls.mfu_enabled" not in payload[
+        "blockers"
+    ]
+    assert "required_emission_field_false:official_controls.hfr_enabled" not in payload[
+        "blockers"
+    ]
+    assert (
+        "required_emission_field_false:official_controls.source_faithful_stack"
+        in payload["blockers"]
+    )
+
+
 def test_bridge_records_official_modelsize_solution_without_score_authority(
     tmp_path: Path,
 ) -> None:
@@ -322,6 +378,10 @@ def test_bridge_keeps_official_mfu_hfr_tub_parity_status_fail_closed_when_contro
         target_bits_per_coeff=2.5,
         official_controls={
             "official_parity_status": "official_mfu_hfr_tub_parity_proven",
+            "official_mfu_hfr_tub_numeric_primitives_requested": True,
+            "official_mfu_hfr_tub_primitives_present": True,
+            "official_mfu_hfr_tub_export_bound": True,
+            "official_mfu_hfr_tub_export_blockers": [],
         },
         repo_root=tmp_path,
     )
@@ -332,8 +392,16 @@ def test_bridge_keeps_official_mfu_hfr_tub_parity_status_fail_closed_when_contro
         "parity_still_required"
     )
     assert controls["official_control_override_guard"]["ignored_overrides"] == {
-        "official_parity_status": "official_mfu_hfr_tub_parity_proven"
+        "official_mfu_hfr_tub_export_blockers": [],
+        "official_mfu_hfr_tub_export_bound": True,
+        "official_mfu_hfr_tub_numeric_primitives_requested": True,
+        "official_mfu_hfr_tub_primitives_present": True,
+        "official_parity_status": "official_mfu_hfr_tub_parity_proven",
     }
+    assert controls["official_mfu_hfr_tub_numeric_primitives_requested"] is False
+    assert controls["official_mfu_hfr_tub_primitives_present"] is False
+    assert controls["official_mfu_hfr_tub_export_bound"] is False
+    assert controls["official_mfu_hfr_tub_export_blockers"] == []
     assert controls["official_control_override_guard"]["ready_for_exact_eval_dispatch"] is False
 
 

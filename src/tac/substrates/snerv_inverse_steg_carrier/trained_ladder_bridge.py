@@ -11,6 +11,10 @@ from typing import Any
 from tac.analysis.nerv_trained_ladder_row_emitter import (
     build_nerv_trained_ladder_row_payload,
 )
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+    SNERV_SPECTRA_PRESERVING_ADAPTER,
+)
 
 SNERV_ADVISORY_TRAINED_LADDER_BRIDGE_SCHEMA = (
     "snerv_advisory_trained_ladder_bridge.v1"
@@ -20,8 +24,21 @@ SNERV_ADVISORY_TRAINER_METADATA_SCHEMA = (
 )
 SNERV_ADVISORY_SCORER_EVAL_SCHEMA = "snerv_advisory_component_eval.v1"
 SNERV_PACKET_RECEIVER_PROOF_SCHEMA = "snerv_advisory_packet_receiver_replay.v1"
+SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS = (
+    "snerv_official_neural_decoder_payload_grammar_missing",
+    "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+    "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+    "snerv_official_receiver_runtime_decode_missing",
+)
 PROTECTED_OFFICIAL_CONTROL_FIELDS = frozenset(
-    ("source_faithful_stack", "official_parity_status")
+    (
+        "source_faithful_stack",
+        "official_parity_status",
+        "official_mfu_hfr_tub_numeric_primitives_requested",
+        "official_mfu_hfr_tub_primitives_present",
+        "official_mfu_hfr_tub_export_bound",
+        "official_mfu_hfr_tub_export_blockers",
+    )
 )
 
 
@@ -91,17 +108,46 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
     hfr_gain = float(_attr(advisory_result, "snerv_hfr_gain") or 0.0)
     temporal_context = int(_attr(advisory_result, "snerv_temporal_context") or 0)
     temporal_mode = str(_attr(advisory_result, "snerv_temporal_mode") or "delta")
-    mfu_enabled = "mfu_hfr_temporal" in adapter
-    controls: dict[str, Any] = {
-        "source_faithful_stack": False,
-        "official_parity_status": (
+    official_primitives_requested = (
+        adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+    receiver_safe_mfu_adapter_present = (
+        adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
+        or "mfu_hfr_temporal" in adapter
+    )
+    mfu_enabled = bool(
+        receiver_safe_mfu_adapter_present or official_primitives_requested
+    )
+    if official_primitives_requested:
+        official_parity_status = (
+            "official_mfu_hfr_tub_numeric_primitives_present__receiver_export_"
+            "and_source_forward_replay_required"
+        )
+    elif receiver_safe_mfu_adapter_present:
+        official_parity_status = (
             "receiver_safe_mfu_hfr_temporal_adapter_present__official_oss_"
             "parity_still_required"
-            if mfu_enabled
-            else "blocked_official_mfu_hfr_not_implemented"
-        ),
+        )
+    else:
+        official_parity_status = "blocked_official_mfu_hfr_not_implemented"
+    controls: dict[str, Any] = {
+        "source_faithful_stack": False,
+        "official_parity_status": official_parity_status,
         "adapter": adapter,
         "mfu_enabled": bool(mfu_enabled),
+        "receiver_safe_mfu_adapter_present": bool(receiver_safe_mfu_adapter_present),
+        "official_mfu_hfr_tub_numeric_primitives_requested": bool(
+            official_primitives_requested
+        ),
+        "official_mfu_hfr_tub_primitives_present": bool(
+            official_primitives_requested
+        ),
+        "official_mfu_hfr_tub_export_bound": False,
+        "official_mfu_hfr_tub_export_blockers": (
+            list(SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS)
+            if official_primitives_requested
+            else []
+        ),
         "hfr_enabled": bool(hfr_gain > 0.0),
         "snerv_t_enabled": bool(temporal_context > 0),
         "snerv_temporal_mode": temporal_mode,
