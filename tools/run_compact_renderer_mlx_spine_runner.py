@@ -8424,6 +8424,18 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     repo_root: Path,
     candidate_curriculum_plan: Mapping[str, Any] | None = None,
 ) -> Any:
+    pairs = int(num_pairs)
+    if pairs < 1:
+        raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
+    try:
+        prioritized_pair_indices = validate_pair_indices_in_range(
+            prioritized_pair_indices,
+            num_pairs=pairs,
+            field="prioritized_pair_indices",
+        )
+    except HardPairIndicesError as exc:
+        raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
+
     from tac.substrates._shared.mlx_score_aware import (
         CoderAwareQATConfig,
         RendererBundle,
@@ -8443,7 +8455,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         build_learnable_student_head,
     )
 
-    pairs = int(num_pairs)
     requested_distillation_device = str(
         requested_distillation_device or distillation_device
     )
@@ -8453,8 +8464,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     effective_prefilter_scorer_device = str(
         mlx_prefilter_scorer_device or requested_distillation_device
     )
-    if pairs < 1:
-        raise CompactRendererMlxSpineRunnerError("num_pairs must be >= 1")
     if segnet_distillation_weight < 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "segnet_distillation_weight must be >= 0"
