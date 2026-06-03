@@ -32,6 +32,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     execute_official_mfu_hfr_tub_decoder_payload,
     is_official_mfu_hfr_tub_decoder_payload,
     pack_snerv_archive,
+    resolve_decoder_payload_codec,
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
@@ -275,6 +276,27 @@ def test_decoder_payload_roundtrips_nondefault_model_size_controls() -> None:
             atol=tolerance,
             rtol=0.0,
         )
+
+
+def test_decoder_payload_portfolio_auto_resolves_to_mixed_receiver_codec() -> None:
+    model_size = SnervModelSizeConfig(fc_dim=5, emb_size=0, patch_radius=1)
+    decoder = HfGenerationDecoder.zeros(levels=1, model_size=model_size)
+    decoder.kernels[0]["LH"] = np.linspace(-0.04, 0.04, model_size.feature_count)
+
+    assert resolve_decoder_payload_codec("portfolio_auto") == "mixed_magnitude_symmetric"
+    payload = encode_decoder_payload(decoder, codec="portfolio_auto")
+    header = _read_subpacket_header(payload)
+    decoded = decode_decoder_payload(payload)
+
+    assert header["schema"] == "snerv_decoder_payload.v3"
+    assert header["codec"] == "mixed_magnitude_symmetric"
+    assert decoded.model_size == model_size
+    np.testing.assert_allclose(
+        decoded.kernels[0]["LH"],
+        decoder.kernels[0]["LH"],
+        atol=0.02,
+        rtol=0.0,
+    )
 
 
 def test_mixed_decoder_payload_uses_per_kernel_modes_and_roundtrip_values() -> None:
