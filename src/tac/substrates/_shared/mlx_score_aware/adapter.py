@@ -128,6 +128,8 @@ _MLX_OPTIMIZER_PROVENANCE_BY_KIND: dict[str, dict[str, Any]] = {
 }
 PACT_MUON_ADAMW_MUON_LR_MULTIPLIER = 2.0e-4 / 3.0e-5
 PACT_MUON_ADAMW_LATENT_LR_MULTIPLIER = 10.0
+PR95_STAGE_BASE_SEG_WEIGHT = 100.0
+PR95_STAGE_BASE_POSE_WEIGHT = 1.0
 
 DECODER_GRADIENT_SALIENCY_SCHEMA = "mlx_decoder_weight_gradient_saliency.v1"
 _DECODER_SALIENCY_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
@@ -619,12 +621,20 @@ class MlxScoreAwareAdapter:
                 )
 
         loss_family = str(stage_verdict.loss_family)
+        (
+            seg_control_multiplier,
+            pose_control_multiplier,
+            effective_seg_weight,
+            effective_pose_weight,
+        ) = self._pr95_stage_score_weight_controls()
         total = pr95_mlx_stage_scorer_surrogate_loss(
             seg_logits_nchw=seg_logits_nchw,
             targets_hard_nhw=targets_hard_nhw,
             pose_pred_first6=pose_pred[:, :6],
             pose_target_first6=pose_target[:, :6],
             loss_family=loss_family,
+            seg_weight=effective_seg_weight,
+            pose_weight=effective_pose_weight,
             cat_entropy_term=cat_entropy_term,
             cat_lambda=float(stage_verdict.cat_lambda),
         )
@@ -650,6 +660,18 @@ class MlxScoreAwareAdapter:
                 family_index, dtype=mx.float32
             ),
             "pr95_stage_loss_surface_active": mx.array(1.0, dtype=mx.float32),
+            "pr95_stage_seg_control_multiplier": mx.array(
+                seg_control_multiplier, dtype=mx.float32
+            ),
+            "pr95_stage_pose_control_multiplier": mx.array(
+                pose_control_multiplier, dtype=mx.float32
+            ),
+            "pr95_stage_effective_seg_weight": mx.array(
+                effective_seg_weight, dtype=mx.float32
+            ),
+            "pr95_stage_effective_pose_weight": mx.array(
+                effective_pose_weight, dtype=mx.float32
+            ),
         }
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
@@ -658,6 +680,31 @@ class MlxScoreAwareAdapter:
         # audits without putting a string into float-only metrics.
         self._pr95_last_stage_loss_surface = PR95_MLX_STAGE_SCORER_LOSS_SURFACE
         return total, parts
+
+    def _pr95_stage_score_weight_controls(self) -> tuple[float, float, float, float]:
+        """Return launch-controlled PR95 scorer weights for decoder training.
+
+        PR95's source-faithful scorer Lagrangian prices SegNet at ``100`` and
+        PoseNet at ``1``. A zero bundle distillation weight historically meant
+        "use the PR95 stage default" for this curriculum path, while positive
+        SNeRV/HiNeRV launch weights are operator controls that must change the
+        decoder objective, not just student-head training telemetry.
+        """
+
+        seg_control = float(getattr(self.bundle, "distillation_weight", 0.0))
+        pose_control = float(
+            getattr(self.bundle, "pose_distillation_weight", 0.0)
+        )
+        if seg_control == 0.0:
+            seg_control = 1.0
+        if pose_control == 0.0:
+            pose_control = 1.0
+        return (
+            seg_control,
+            pose_control,
+            PR95_STAGE_BASE_SEG_WEIGHT * seg_control,
+            PR95_STAGE_BASE_POSE_WEIGHT * pose_control,
+        )
 
     def _extra_loss_terms_and_weighted_total(
         self,
@@ -710,16 +757,24 @@ class MlxScoreAwareAdapter:
             return {"pr95_stage_loss_part_probe_failed": 1.0}
 
         out: dict[str, float] = {}
+        (
+            seg_control_multiplier,
+            pose_control_multiplier,
+            effective_seg_weight,
+            effective_pose_weight,
+        ) = self._pr95_stage_score_weight_controls()
         for name, value in parts.items():
             mx.eval(value)
             scalar = float(value.item())
             out[f"loss_part_{name}"] = scalar
             if name == "pr95_stage_seg_surrogate":
                 out["loss_part_weighted_pr95_stage_seg_surrogate"] = (
-                    100.0 * scalar
+                    effective_seg_weight * scalar
                 )
             elif name == "pr95_stage_pose_surrogate":
-                out["loss_part_weighted_pr95_stage_pose_surrogate"] = scalar
+                out["loss_part_weighted_pr95_stage_pose_surrogate"] = (
+                    effective_pose_weight * scalar
+                )
             elif name == "pr95_c1a_entropy":
                 out["loss_part_weighted_pr95_c1a_entropy"] = (
                     float(stage_verdict.cat_lambda) * scalar
@@ -729,6 +784,10 @@ class MlxScoreAwareAdapter:
                     float(self.bundle.extra_loss_weights[name]) * scalar
                 )
         out["pr95_stage_loss_parts_active"] = 1.0
+        out["pr95_stage_seg_control_multiplier"] = seg_control_multiplier
+        out["pr95_stage_pose_control_multiplier"] = pose_control_multiplier
+        out["pr95_stage_effective_seg_weight"] = effective_seg_weight
+        out["pr95_stage_effective_pose_weight"] = effective_pose_weight
         return out
 
     def _train_student_heads(

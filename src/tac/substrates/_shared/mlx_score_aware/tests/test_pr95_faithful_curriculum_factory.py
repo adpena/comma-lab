@@ -864,6 +864,97 @@ def test_pr95_curriculum_path_respects_zero_student_head_stage_weight() -> None:
     assert "loss_part_pr95_stage_pose_surrogate" in metrics
 
 
+@requires_mlx
+def test_pr95_curriculum_stage_loss_consumes_launch_score_weight_controls_NO_FAKE() -> None:
+    """SNeRV/HiNeRV score pressure controls must change decoder loss, not telemetry only."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import (
+        PR95_STAGE_BASE_POSE_WEIGHT,
+        PR95_STAGE_BASE_SEG_WEIGHT,
+        MlxScoreAwareAdapter,
+    )
+
+    base_bundle = _make_minimal_pr95_score_bundle()
+    controlled_bundle = _make_minimal_pr95_score_bundle()
+    controlled_bundle.distillation_weight = 4.0
+    controlled_bundle.pose_distillation_weight = 0.5
+    base_adapter = MlxScoreAwareAdapter(
+        base_bundle,
+        substrate_id="test_substrate_base",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    controlled_adapter = MlxScoreAwareAdapter(
+        controlled_bundle,
+        substrate_id="test_substrate_controlled",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    base_adapter.notify_global_epoch(0)
+    controlled_adapter.notify_global_epoch(0)
+    batch = base_adapter.sample_batch(batch_size=2, seed=0)
+    stage = base_adapter._pr95_curriculum_factory.current_stage_verdict(0)
+    base_total, base_parts = base_adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage,
+        model=base_adapter.model,
+    )
+    controlled_total, controlled_parts = controlled_adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage,
+        model=controlled_adapter.model,
+    )
+    mx.eval(base_total, controlled_total, *base_parts.values(), *controlled_parts.values())
+
+    seg = float(base_parts["pr95_stage_seg_surrogate"].item())
+    pose = float(base_parts["pr95_stage_pose_surrogate"].item())
+    expected_delta = (
+        (4.0 - 1.0) * PR95_STAGE_BASE_SEG_WEIGHT * seg
+        + (0.5 - 1.0) * PR95_STAGE_BASE_POSE_WEIGHT * pose
+    )
+
+    assert float(controlled_parts["pr95_stage_seg_control_multiplier"].item()) == pytest.approx(4.0)
+    assert float(controlled_parts["pr95_stage_pose_control_multiplier"].item()) == pytest.approx(0.5)
+    assert float(controlled_parts["pr95_stage_effective_seg_weight"].item()) == pytest.approx(400.0)
+    assert float(controlled_parts["pr95_stage_effective_pose_weight"].item()) == pytest.approx(0.5)
+    assert float(controlled_total.item()) - float(base_total.item()) == pytest.approx(
+        expected_delta,
+        rel=1e-5,
+    )
+
+
+@requires_mlx
+def test_pr95_curriculum_zero_launch_score_weight_preserves_source_default() -> None:
+    """Zero keeps the PR95 source Lagrangian default so legacy rows stay byte-stable."""
+
+    from tac.substrates._shared.mlx_score_aware.adapter import (
+        PR95_STAGE_BASE_POSE_WEIGHT,
+        PR95_STAGE_BASE_SEG_WEIGHT,
+        MlxScoreAwareAdapter,
+    )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.distillation_weight = 0.0
+    bundle.pose_distillation_weight = 0.0
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate_zero_controls",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+
+    assert adapter._pr95_stage_score_weight_controls() == pytest.approx(
+        (
+            1.0,
+            1.0,
+            PR95_STAGE_BASE_SEG_WEIGHT,
+            PR95_STAGE_BASE_POSE_WEIGHT,
+        )
+    )
+
+
 # ---------- Section 5: NO FAKE end-to-end verification (param mutation) ----------
 
 
