@@ -60,6 +60,7 @@ TRAINER_AUTHORITY = "false_authority_macos_mlx_training_no_contest_score_claim"
 DIRECT_TRAINER_CANONICALIZATION_SCHEMA = (
     "hi_nerv_direct_trainer_canonicalization_contract.v1"
 )
+DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA = "hi_nerv_direct_trainer_launch_refusal.v1"
 DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = (
     "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
 )
@@ -81,6 +82,15 @@ MODEL_SIZE_ROWS = tuple(
 
 def _full_main(args: argparse.Namespace) -> int:
     """Run canonical MLX score-aware training for the current HiNeRV carrier."""
+
+    canonicalization = _direct_trainer_canonicalization_contract(mode="full")
+    launch_refusal = _direct_trainer_launch_refusal_payload(
+        canonicalization,
+        mode="full",
+    )
+    if launch_refusal is not None:
+        print(json.dumps(launch_refusal, sort_keys=True), file=sys.stderr)
+        return 2
 
     from tac.substrates._shared.mlx_score_aware import (
         RendererBundle,
@@ -105,7 +115,6 @@ def _full_main(args: argparse.Namespace) -> int:
 
     output_dir, storage_payload = _resolve_output_dir(args)
     cfg = _config_from_args(args)
-    canonicalization = _direct_trainer_canonicalization_contract(mode="full")
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     model = HinervSubstrateMLX(cfg)
     if args.decoder_fake_quant_forward:
@@ -765,6 +774,39 @@ def _direct_trainer_canonicalization_contract(*, mode: str) -> dict[str, Any]:
         "local_cpu_replay_gate_bound": False,
         "trainer_launch_allowed": False,
         "blockers": list(DIRECT_TRAINER_CANONICALIZATION_BLOCKERS),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _direct_trainer_launch_refusal_payload(
+    canonicalization: dict[str, Any],
+    *,
+    mode: str,
+) -> dict[str, Any] | None:
+    if str(mode) == "smoke":
+        return None
+    if canonicalization.get("trainer_launch_allowed") is True:
+        return None
+    blockers = [
+        "hinerv_direct_full_trainer_launch_blocked_by_canonicalization_contract",
+        *[str(blocker) for blocker in canonicalization.get("blockers") or []],
+    ]
+    return {
+        "schema": DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
+        "authority": TRAINER_AUTHORITY,
+        "mode": str(mode),
+        "training_executed": False,
+        "export_executed": False,
+        "trainer_launch_allowed": False,
+        "launch_refusal_reason": (
+            "HiNeRV direct --full trainer launch is blocked by its "
+            "canonicalization contract; use the compact runner for production "
+            "launch custody, or --smoke for explicit unscored research smoke."
+        ),
+        "canonical_runner_entrypoint": DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT,
+        "allowed_direct_research_mode": "--smoke",
+        "direct_trainer_canonicalization": _metadata_safe(canonicalization),
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 

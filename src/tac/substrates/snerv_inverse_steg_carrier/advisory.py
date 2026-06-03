@@ -83,6 +83,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SnervFrameCode,
     SnervModelSizeConfig,
     decode_frame,
+    dequantize_lf,
     encode_frame_lf,
     fit_hf_decoder_least_squares,
     fit_hf_decoder_weighted_least_squares,
@@ -209,6 +210,59 @@ class SnervAdvisoryResult:
             "redacted": True,
         }
         return d
+
+
+def _decode_receiver_codes_into_pairs(
+    *,
+    records: list[_LfRecord],
+    codes: list[SnervFrameCode],
+    decoder,
+    reference_pairs: torch.Tensor,
+) -> torch.Tensor:
+    """Decode advisory frames with the same temporal grouping as SNAR1 replay."""
+
+    if len(records) != len(codes):
+        raise RuntimeError(
+            f"receiver code count {len(codes)} != record count {len(records)}"
+        )
+    recon = reference_pairs.clone()
+    temporal_context = int(decoder.model_size.temporal_context)
+    temporal_group_count = int(reference_pairs.shape[2]) if temporal_context > 0 else 1
+    decoded_lfs = [
+        dequantize_lf(
+            code.lf_quant,
+            code.lf_scale,
+            code.lf_zero,
+            per_element_steps=code.per_element_steps,
+        )
+        for code in codes
+    ]
+    for flat_idx, (record, code) in enumerate(zip(records, codes, strict=True)):
+        lf_sequence = None
+        sequence_index = None
+        if temporal_context > 0:
+            group = flat_idx % temporal_group_count
+            lf_sequence = decoded_lfs[group::temporal_group_count]
+            sequence_index = flat_idx // temporal_group_count
+        recon_frame = np.asarray(
+            np.clip(
+                decode_frame(
+                    code,
+                    decoder,
+                    lf_sequence=lf_sequence,
+                    sequence_index=sequence_index,
+                ),
+                0.0,
+                255.0,
+            ),
+            dtype=np.float32,
+        )
+        recon[
+            record.pair_index,
+            record.frame_index,
+            record.channel_index,
+        ] = torch.from_numpy(recon_frame).to(recon)
+    return recon
 
 
 def _entropy_code_lf_quant(lf_quant_per_frame: list[np.ndarray]) -> bytes:
@@ -591,58 +645,64 @@ def run_snerv_advisory(
         constant_importance_quantile=step_map_constant_importance_quantile,
         waterfill_bits_per_coeff=step_map_waterfill_bits_per_coeff,
     )
+    linf_codes: list[SnervFrameCode] = []
     for record, receiver_steps in zip(linf_records, receiver_step_maps, strict=True):
         q_linf, sc_linf, zr_linf = quantize_lf(
             record.lf,
             per_element_steps=receiver_steps,
         )
-        lf_zero_points_linf.append(float(zr_linf))
+        zr_linf_receiver = float(np.asarray(zr_linf, dtype="<f4"))
+        lf_zero_points_linf.append(zr_linf_receiver)
         lf_quant_linf.append(q_linf)
         code_linf = SnervFrameCode(
             lf_quant=q_linf,
             lf_scale=sc_linf,
-            lf_zero=zr_linf,
+            lf_zero=zr_linf_receiver,
             lf_shape=record.lf.shape,
             levels=levels,
             wavelet=wavelet,
             orig_hw=(H, W),
             per_element_steps=receiver_steps,
         )
-        recon_linf = decode_frame(code_linf, receiver_decoder)
-        recon_pairs_linf[
-            record.pair_index,
-            record.frame_index,
-            record.channel_index,
-        ] = torch.from_numpy(np.clip(recon_linf, 0.0, 255.0)).to(recon_pairs_linf)
+        linf_codes.append(code_linf)
+    recon_pairs_linf = _decode_receiver_codes_into_pairs(
+        records=linf_records,
+        codes=linf_codes,
+        decoder=receiver_decoder,
+        reference_pairs=pairs,
+    )
 
     l2_steps_packet, receiver_l2_step_maps = _encode_decode_linf_steps_packet(
         l2_step_maps,
         bins=step_map_coder_bins,
         mode="uniform",
     )
+    l2_codes: list[SnervFrameCode] = []
     for record, receiver_steps in zip(l2_records, receiver_l2_step_maps, strict=True):
         q_l2, sc_l2, zr_l2 = quantize_lf(
             record.lf,
             per_element_steps=receiver_steps,
         )
-        lf_zero_points_l2.append(float(zr_l2))
+        zr_l2_receiver = float(np.asarray(zr_l2, dtype="<f4"))
+        lf_zero_points_l2.append(zr_l2_receiver)
         lf_quant_l2.append(q_l2)
         code_l2 = SnervFrameCode(
             lf_quant=q_l2,
             lf_scale=sc_l2,
-            lf_zero=zr_l2,
+            lf_zero=zr_l2_receiver,
             lf_shape=record.lf.shape,
             levels=levels,
             wavelet=wavelet,
             orig_hw=(H, W),
             per_element_steps=receiver_steps,
         )
-        recon_l2 = decode_frame(code_l2, receiver_decoder)
-        recon_pairs_l2[
-            record.pair_index,
-            record.frame_index,
-            record.channel_index,
-        ] = torch.from_numpy(np.clip(recon_l2, 0.0, 255.0)).to(recon_pairs_l2)
+        l2_codes.append(code_l2)
+    recon_pairs_l2 = _decode_receiver_codes_into_pairs(
+        records=l2_records,
+        codes=l2_codes,
+        decoder=receiver_decoder,
+        reference_pairs=pairs,
+    )
 
     # ---- 6. Charge the receiver-visible packet (the rate numerator) ----
     common_archive_metadata = {

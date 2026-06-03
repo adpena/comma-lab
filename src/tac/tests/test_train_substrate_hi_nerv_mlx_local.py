@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import ast
+import builtins
+import json
 from pathlib import Path
 
 import pytest
@@ -9,6 +11,7 @@ import pytest
 from comma_lab.storage_tiers import StorageTierError
 from experiments.train_substrate_hi_nerv_mlx_local import (
     DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
+    DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
     TRAINER_SCHEMA,
     _build_parser,
     _build_staged_scorer_curriculum,
@@ -16,6 +19,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _config_from_args,
     _curriculum_stages_from_args,
     _direct_trainer_canonicalization_contract,
+    _full_main,
     _metadata_safe,
     _pose_student_input_channels,
     _prioritized_pair_indices_from_args,
@@ -224,6 +228,38 @@ def test_hinerv_direct_trainer_canonicalization_contract_blocks_authority() -> N
     ]
     assert contract["score_claim"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    real_import = builtins.__import__
+
+    def import_tripwire(name: str, *args: object, **kwargs: object) -> object:
+        if name == "tac.substrates._shared.mlx_score_aware":
+            raise AssertionError("run_mlx_score_aware_full_main must not be reached")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", import_tripwire)
+    args = _build_parser().parse_args(["--full"])
+
+    assert _full_main(args) == 2
+
+    captured = capsys.readouterr()
+    payload = json.loads(captured.err)
+    assert payload["schema"] == DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA
+    assert payload["mode"] == "full"
+    assert payload["training_executed"] is False
+    assert payload["export_executed"] is False
+    assert payload["trainer_launch_allowed"] is False
+    assert payload["allowed_direct_research_mode"] == "--smoke"
+    assert (
+        "hinerv_direct_full_trainer_launch_blocked_by_canonicalization_contract"
+        in payload["blockers"]
+    )
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
 
 
 def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
