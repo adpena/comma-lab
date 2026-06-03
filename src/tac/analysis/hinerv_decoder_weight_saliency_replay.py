@@ -502,7 +502,7 @@ def _replay_row(
             if grad is None:
                 missing_grad_names.add(name)
                 continue
-            g = grad.detach().to(device="cpu", dtype=torch.float64)
+            g = grad.detach().to(device="cpu").to(dtype=torch.float64)
             grad_sum_sq[name] += float(torch.sum(g * g).item())
             grad_abs_sum[name] += float(torch.sum(torch.abs(g)).item())
             grad_count[name] += int(g.numel())
