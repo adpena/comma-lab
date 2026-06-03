@@ -32,6 +32,10 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert report["ready_for_exact_eval_dispatch"] is False
     assert report["official_source_markers_present"] is True
     assert report["local_receiver_safe_adapter_present"] is True
+    primitive = report["official_mfu_hfr_tub_primitive_replay_binding"]
+    assert primitive["all_primitive_source_replay_proven"] is True
+    assert primitive["full_stack_source_forward_replay_proven"] is False
+    assert primitive["receiver_export_bound"] is False
     assert report["official_mfu_hfr_tub_parity_proven"] is False
     assert report["blockers"] == ["snerv_official_mfu_hfr_tub_parity_missing"]
     assert report["official_forward_parity_artifact_row"]["status"] == "missing"
@@ -57,6 +61,8 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
 
     summary = summarize_snerv_official_source_audit(report)
     assert summary["official_source_markers_present"] is True
+    assert summary["official_mfu_hfr_tub_primitives_proven"] is True
+    assert summary["full_stack_source_forward_replay_proven"] is False
     assert summary["official_mfu_hfr_tub_parity_proven"] is False
     assert {row["classification"] for row in summary["component_states"]} == {
         "source_forward_parity_falsified_receiver_safe_analogue_only",
@@ -67,6 +73,7 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     md = render_snerv_official_source_parity_markdown(report)
     assert "SNeRV Official Source-Parity Audit" in md
     assert "official MFU/HFR/TUB parity proven: `False`" in md
+    assert "official MFU/HFR/TUB primitive replay proven: `True`" in md
     assert "official MFU/HFR/TUB parity falsified: `False`" in md
     assert (
         "| `tub` | "
@@ -128,6 +135,9 @@ def test_snerv_official_forward_parity_artifact_round_trips_falsification(
         generated_utc="20260603T000000Z",
     )
     assert artifact["score_claim"] is False
+    primitive = artifact["official_mfu_hfr_tub_primitive_replay_binding"]
+    assert primitive["all_primitive_source_replay_proven"] is True
+    assert primitive["full_stack_source_forward_replay_proven"] is False
     assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is False
     assert artifact["official_mfu_hfr_tub_forward_parity_falsified"] is True
     artifact_states = {row["component_id"]: row for row in artifact["component_rows"]}

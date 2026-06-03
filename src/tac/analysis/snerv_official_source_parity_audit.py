@@ -22,6 +22,9 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
+from tac.analysis.snerv_official_primitive_replay import (
+    build_snerv_official_primitive_replay_binding,
+)
 from tac.analysis.source_marker_scan import read_python_source_for_marker_scan
 
 SCHEMA = "snerv_official_source_parity_audit.v1"
@@ -281,6 +284,9 @@ def build_snerv_official_source_parity_audit(
     forward_parity_artifact_row = _forward_parity_artifact_row(
         official_forward_parity_artifact_path
     )
+    primitive_replay_binding = build_snerv_official_primitive_replay_binding(
+        repo_root=local_root,
+    )
     official_markers_present = not missing_files and all(row["all_markers_present"] for row in official_group_rows)
     local_receiver_safe_adapter_present = bool(local_receiver_safe_row["all_markers_present"])
     official_parity_proven = bool(
@@ -327,6 +333,7 @@ def build_snerv_official_source_parity_audit(
         "official_marker_group_rows": official_group_rows,
         "local_receiver_safe_marker_row": local_receiver_safe_row,
         "local_official_parity_marker_row": local_official_parity_row,
+        "official_mfu_hfr_tub_primitive_replay_binding": primitive_replay_binding,
         "official_forward_parity_artifact_row": forward_parity_artifact_row,
         "component_state_rows": component_state_rows,
         "official_source_markers_present": official_markers_present,
@@ -367,6 +374,9 @@ def build_snerv_official_mfu_hfr_tub_forward_parity_artifact(
         marker_group_id="local_official_mfu_hfr_tub_parity_proof",
         markers=LOCAL_OFFICIAL_PARITY_MARKERS,
     )
+    primitive_replay_binding = build_snerv_official_primitive_replay_binding(
+        repo_root=local_root,
+    )
     component_rows = _component_state_rows(
         official_root=official_root,
         local_root=local_root,
@@ -392,6 +402,7 @@ def build_snerv_official_mfu_hfr_tub_forward_parity_artifact(
         "local_repo_root": local_root.as_posix(),
         "official_file_rows": file_rows,
         "official_marker_group_rows": official_group_rows,
+        "official_mfu_hfr_tub_primitive_replay_binding": primitive_replay_binding,
         "component_rows": component_rows,
         "official_mfu_hfr_tub_forward_parity_passed": parity_passed,
         "official_mfu_hfr_tub_forward_parity_falsified": parity_falsified,
@@ -415,6 +426,9 @@ def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str
     forward_row = report.get("official_forward_parity_artifact_row")
     if not isinstance(forward_row, Mapping):
         forward_row = {}
+    primitive_binding = report.get("official_mfu_hfr_tub_primitive_replay_binding")
+    if not isinstance(primitive_binding, Mapping):
+        primitive_binding = {}
     return {
         "schema": str(report.get("schema") or ""),
         "authority": str(report.get("authority") or ""),
@@ -426,6 +440,12 @@ def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str
         "local_receiver_safe_adapter_present": bool(report.get("local_receiver_safe_adapter_present")),
         "official_mfu_hfr_tub_parity_proven": bool(report.get("official_mfu_hfr_tub_parity_proven")),
         "official_mfu_hfr_tub_parity_falsified": bool(forward_row.get("parity_falsified")),
+        "official_mfu_hfr_tub_primitives_proven": bool(
+            primitive_binding.get("all_primitive_source_replay_proven")
+        ),
+        "full_stack_source_forward_replay_proven": bool(
+            primitive_binding.get("full_stack_source_forward_replay_proven")
+        ),
         "component_states": [
             {
                 "component_id": row.get("component_id"),
@@ -454,6 +474,9 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
     forward_row = report.get("official_forward_parity_artifact_row")
     if not isinstance(forward_row, Mapping):
         forward_row = {}
+    primitive_binding = report.get("official_mfu_hfr_tub_primitive_replay_binding")
+    if not isinstance(primitive_binding, Mapping):
+        primitive_binding = {}
     lines = [
         "# SNeRV Official Source-Parity Audit",
         "",
@@ -466,6 +489,7 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
         "",
         f"- official source markers present: `{bool(report.get('official_source_markers_present'))}`",
         f"- local receiver-safe adapter present: `{bool(report.get('local_receiver_safe_adapter_present'))}`",
+        f"- official MFU/HFR/TUB primitive replay proven: `{bool(primitive_binding.get('all_primitive_source_replay_proven'))}`",
         f"- official MFU/HFR/TUB parity proven: `{bool(report.get('official_mfu_hfr_tub_parity_proven'))}`",
         f"- official MFU/HFR/TUB parity falsified: `{bool(forward_row.get('parity_falsified'))}`",
         f"- score claim: `{bool(report.get('score_claim'))}`",

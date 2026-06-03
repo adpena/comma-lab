@@ -1,0 +1,1051 @@
+{
+  "authority": "false_authority_source_audit_no_score_claim",
+  "blockers": [
+    "snerv_official_mfu_hfr_tub_parity_missing"
+  ],
+  "component_state_rows": [
+    {
+      "blockers": [
+        "snerv_mfu_local_source_forward_markers_missing",
+        "snerv_official_mfu_hfr_tub_parity_marker_missing",
+        "snerv_official_forward_parity_artifact_falsifies_parity",
+        "snerv_mfu_source_forward_parity_falsified_receiver_safe_analogue_only"
+      ],
+      "classification": "source_forward_parity_falsified_receiver_safe_analogue_only",
+      "component_id": "mfu",
+      "evidence_summary": "Official MFU is a learned ConvTranspose2d/RB pyramid over decoder embed_list; local MFU is a deterministic NumPy LF feature bank with pooled, gradient, and patch bases.",
+      "forward_parity_artifact_passed": false,
+      "local_parity_marker_present": false,
+      "local_receiver_marker_rows": [
+        {
+          "marker": "class MultiResolutionFusionUnit",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "_box_pool_upsample",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "_central_gradients",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "_patch_features",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        }
+      ],
+      "local_source_forward_marker_rows": [
+        {
+          "marker": "nn.ConvTranspose2d",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "decoder_layer5 = RB(",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "torch.cat([up1, embed_list[-2]]",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        }
+      ],
+      "local_source_forward_markers_present": false,
+      "official_group_id": "official_mfu_multi_resolution_fusion",
+      "official_marker_group_present": true,
+      "official_markers_present": true,
+      "official_source_marker_rows": [
+        {
+          "marker": "upsample_5 = nn.ConvTranspose2d",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "decoder_layer5 = RB(",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "upsample_6 = nn.ConvTranspose2d",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "decoder_layer6 = RB(",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "up1 = self.decoder[self.decoder_len+3](embed_list[-3])",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "unet1 = self.decoder[self.decoder_len+4](torch.cat([up1, embed_list[-2]], dim=1))",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "pyr_out = self.decoder[self.decoder_len+6](torch.cat([unet1_up, embed_list[-1]], dim=1))",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        }
+      ],
+      "primitive_parity_marker_rows": [],
+      "primitive_parity_markers_present": false,
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_safe_analogue_present": true,
+      "schema": "snerv_official_component_state.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": true,
+      "source_forward_parity_proven": false
+    },
+    {
+      "blockers": [
+        "snerv_hfr_local_source_forward_markers_missing",
+        "snerv_official_mfu_hfr_tub_parity_marker_missing",
+        "snerv_official_forward_parity_artifact_falsifies_parity",
+        "snerv_hfr_source_forward_parity_falsified_receiver_safe_analogue_only"
+      ],
+      "classification": "source_forward_parity_falsified_receiver_safe_analogue_only",
+      "component_id": "hfr",
+      "evidence_summary": "Official HFR is three learned ConvBlock detail heads fed by pyr_out; local HFR is deterministic LF-edge correction added to stored or generated detail subbands.",
+      "forward_parity_artifact_passed": false,
+      "local_parity_marker_present": false,
+      "local_receiver_marker_rows": [
+        {
+          "marker": "class HighFrequencyRestorer",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "context - _box_pool_upsample(context, 3)",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "_central_gradients(edge)",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        }
+      ],
+      "local_source_forward_marker_rows": [
+        {
+          "marker": "decoder_layer2 = ConvBlock",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "HF_in = pyr_out",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "lh_out = self.decoder[self.decoder_len](HF_in)",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        }
+      ],
+      "local_source_forward_markers_present": false,
+      "official_group_id": "official_hfr_high_frequency_restoration",
+      "official_marker_group_present": true,
+      "official_markers_present": true,
+      "official_source_marker_rows": [
+        {
+          "marker": "decoder_layer2 = ConvBlock",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "decoder_layer3 = ConvBlock",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "decoder_layer4 = ConvBlock",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "HF_in = pyr_out",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "lh_out = self.decoder[self.decoder_len](HF_in)",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "hl_out = self.decoder[self.decoder_len+1](HF_in)",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "hh_out = self.decoder[self.decoder_len+2](HF_in)",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        },
+        {
+          "marker": "yh_out = torch.stack([lh_out, hl_out, hh_out], dim=2)",
+          "present": true,
+          "rel_path": "model/snerv.py"
+        }
+      ],
+      "primitive_parity_marker_rows": [],
+      "primitive_parity_markers_present": false,
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_safe_analogue_present": true,
+      "schema": "snerv_official_component_state.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": true,
+      "source_forward_parity_proven": false
+    },
+    {
+      "blockers": [
+        "snerv_tub_local_source_forward_markers_missing",
+        "snerv_official_mfu_hfr_tub_parity_marker_missing",
+        "snerv_official_forward_parity_artifact_falsifies_parity",
+        "snerv_tub_full_source_forward_parity_falsified_primitive_only"
+      ],
+      "classification": "official_haar_temporal_lowpass_primitive_proven_full_tub_falsified",
+      "component_id": "tub",
+      "evidence_summary": "Local TUB exposes the official Haar lowpass divided by two algebra, but it does not implement the official temporal encoders or output_2 decoder fusion graph.",
+      "forward_parity_artifact_passed": false,
+      "local_parity_marker_present": false,
+      "local_receiver_marker_rows": [
+        {
+          "marker": "class SnervTemporalExtension",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "official_haar_dwt1d_lowpass_features",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "(center + prev) * inv_two_sqrt2",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "(center + nxt) * inv_two_sqrt2",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        }
+      ],
+      "local_source_forward_marker_rows": [
+        {
+          "marker": "self.encoder[1]((embed_lv_p",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "self.decoder[self.decoder_len-1]",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        },
+        {
+          "marker": "output = layer(output, output_2)",
+          "present": false,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+        }
+      ],
+      "local_source_forward_markers_present": false,
+      "official_group_id": "official_tub_temporal_extension",
+      "official_marker_group_present": true,
+      "official_markers_present": true,
+      "official_source_marker_rows": [
+        {
+          "marker": "DWT1D(J=1, wave='haar', mode='periodization')",
+          "present": true,
+          "rel_path": "model/snerv_t.py"
+        },
+        {
+          "marker": "embed_lv_p, embed_hv_p",
+          "present": true,
+          "rel_path": "model/snerv_t.py"
+        },
+        {
+          "marker": "embed_lv_n, embed_hv_n",
+          "present": true,
+          "rel_path": "model/snerv_t.py"
+        },
+        {
+          "marker": "embed_hv_p = self.encoder[1]((embed_lv_p",
+          "present": true,
+          "rel_path": "model/snerv_t.py"
+        },
+        {
+          "marker": "embed_hv_n = self.encoder[2]((embed_lv_n",
+          "present": true,
+          "rel_path": "model/snerv_t.py"
+        },
+        {
+          "marker": "output_2 = self.decoder[self.decoder_len-1]",
+          "present": true,
+          "rel_path": "model/snerv_t.py"
+        },
+        {
+          "marker": "output = layer(output, output_2)",
+          "present": true,
+          "rel_path": "model/snerv_t.py"
+        }
+      ],
+      "primitive_parity_marker_rows": [
+        {
+          "marker": "DWT1D(J=1, wave='haar', mode='periodization')",
+          "present": true,
+          "rel_path": "model/snerv_t.py",
+          "root": "official"
+        },
+        {
+          "marker": "1.0 / (2.0 * np.sqrt(2.0))",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+          "root": "local"
+        },
+        {
+          "marker": "(center + prev) * inv_two_sqrt2",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+          "root": "local"
+        },
+        {
+          "marker": "(center + nxt) * inv_two_sqrt2",
+          "present": true,
+          "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+          "root": "local"
+        }
+      ],
+      "primitive_parity_markers_present": true,
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_safe_analogue_present": true,
+      "schema": "snerv_official_component_state.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": true,
+      "source_forward_parity_proven": false
+    }
+  ],
+  "family": "snerv",
+  "generated_utc": "20260603T155452Z",
+  "local_official_parity_marker_row": {
+    "all_markers_present": false,
+    "marker_group_id": "local_official_mfu_hfr_tub_parity_proof",
+    "markers": [
+      "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF"
+    ],
+    "missing_markers": [
+      "SNERV_OFFICIAL_MFU_HFR_TUB_PARITY_PROOF"
+    ],
+    "present_markers": [],
+    "source_root": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier"
+  },
+  "local_receiver_safe_adapter_present": true,
+  "local_receiver_safe_marker_row": {
+    "all_markers_present": true,
+    "marker_group_id": "local_receiver_safe_mfu_hfr_temporal_adapter",
+    "markers": [
+      "MultiResolutionFusionUnit",
+      "HighFrequencyRestorer",
+      "SnervTemporalExtension",
+      "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+      "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF"
+    ],
+    "missing_markers": [],
+    "present_markers": [
+      "MultiResolutionFusionUnit",
+      "HighFrequencyRestorer",
+      "SnervTemporalExtension",
+      "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+      "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF"
+    ],
+    "source_root": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier"
+  },
+  "local_repo_root": "/Users/adpena/Projects/pact",
+  "next_actions": [
+    "implement source-forward official MFU/HFR/TUB behavior proof or explicitly supersede it with same-axis receiver evidence"
+  ],
+  "official_file_rows": [
+    {
+      "bytes": 23710,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV/model/snerv.py",
+      "rel_path": "model/snerv.py",
+      "sha256": "110547e253228737b192977fb9ce8f2934e2d8ebe1a284c2217ac32f24e33a47",
+      "status": "present"
+    },
+    {
+      "bytes": 17627,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV/model/snerv_t.py",
+      "rel_path": "model/snerv_t.py",
+      "sha256": "c743182311128973f24c217172ee229554d4639fd54ab36ce28c468552a39805",
+      "status": "present"
+    },
+    {
+      "bytes": 19605,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV/model/layers.py",
+      "rel_path": "model/layers.py",
+      "sha256": "ab284c91f5971d83151dd9e53150dd2b194f7b1ae9af79bc1193b973d385dac2",
+      "status": "present"
+    },
+    {
+      "bytes": 27633,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV/train_snerv.py",
+      "rel_path": "train_snerv.py",
+      "sha256": "9b6cc2860b94246da26df4d72dc5e9df5c925525bf411ade0d64fa623bd396c0",
+      "status": "present"
+    }
+  ],
+  "official_forward_parity_artifact_row": {
+    "artifact_blockers": [
+      "snerv_mfu_local_source_forward_markers_missing",
+      "snerv_official_mfu_hfr_tub_parity_marker_missing",
+      "snerv_official_forward_parity_artifact_missing_or_failed",
+      "snerv_mfu_source_forward_parity_falsified_receiver_safe_analogue_only",
+      "snerv_hfr_local_source_forward_markers_missing",
+      "snerv_hfr_source_forward_parity_falsified_receiver_safe_analogue_only",
+      "snerv_tub_local_source_forward_markers_missing",
+      "snerv_tub_full_source_forward_parity_falsified_primitive_only"
+    ],
+    "artifact_schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+    "blockers": [
+      "snerv_official_forward_parity_artifact_not_passing",
+      "snerv_official_forward_parity_weight_manifest_missing",
+      "snerv_official_forward_parity_source_replay_missing",
+      "component_not_proven:mfu",
+      "numeric_tolerance_missing:mfu",
+      "numeric_max_abs_error_missing:mfu",
+      "input_sha256_missing:mfu",
+      "official_output_sha256_missing:mfu",
+      "portable_output_sha256_missing:mfu",
+      "official_weight_identity_missing:mfu",
+      "component_not_proven:hfr",
+      "numeric_tolerance_missing:hfr",
+      "numeric_max_abs_error_missing:hfr",
+      "input_sha256_missing:hfr",
+      "official_output_sha256_missing:hfr",
+      "portable_output_sha256_missing:hfr",
+      "official_weight_identity_missing:hfr",
+      "component_not_proven:tub",
+      "numeric_tolerance_missing:tub",
+      "numeric_max_abs_error_missing:tub",
+      "input_sha256_missing:tub",
+      "official_output_sha256_missing:tub",
+      "portable_output_sha256_missing:tub",
+      "official_weight_identity_missing:tub"
+    ],
+    "bytes": 23260,
+    "component_rows": [
+      {
+        "blockers": [
+          "snerv_mfu_local_source_forward_markers_missing",
+          "snerv_official_mfu_hfr_tub_parity_marker_missing",
+          "snerv_official_forward_parity_artifact_missing_or_failed",
+          "snerv_mfu_source_forward_parity_falsified_receiver_safe_analogue_only"
+        ],
+        "classification": "source_forward_parity_falsified_receiver_safe_analogue_only",
+        "component_id": "mfu",
+        "evidence_summary": "Official MFU is a learned ConvTranspose2d/RB pyramid over decoder embed_list; local MFU is a deterministic NumPy LF feature bank with pooled, gradient, and patch bases.",
+        "forward_parity_artifact_passed": false,
+        "local_parity_marker_present": false,
+        "local_receiver_marker_rows": [
+          {
+            "marker": "class MultiResolutionFusionUnit",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "_box_pool_upsample",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "_central_gradients",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "_patch_features",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          }
+        ],
+        "local_source_forward_marker_rows": [
+          {
+            "marker": "nn.ConvTranspose2d",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "decoder_layer5 = RB(",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "torch.cat([up1, embed_list[-2]]",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          }
+        ],
+        "local_source_forward_markers_present": false,
+        "official_group_id": "official_mfu_multi_resolution_fusion",
+        "official_marker_group_present": true,
+        "official_markers_present": true,
+        "official_source_marker_rows": [
+          {
+            "marker": "upsample_5 = nn.ConvTranspose2d",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "decoder_layer5 = RB(",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "upsample_6 = nn.ConvTranspose2d",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "decoder_layer6 = RB(",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "up1 = self.decoder[self.decoder_len+3](embed_list[-3])",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "unet1 = self.decoder[self.decoder_len+4](torch.cat([up1, embed_list[-2]], dim=1))",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "pyr_out = self.decoder[self.decoder_len+6](torch.cat([unet1_up, embed_list[-1]], dim=1))",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          }
+        ],
+        "primitive_parity_marker_rows": [],
+        "primitive_parity_markers_present": false,
+        "production_hardened_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_safe_analogue_present": true,
+        "schema": "snerv_official_component_state.v1",
+        "score_claim": false,
+        "source_faithful_stack_claim": false,
+        "source_forward_parity_falsified": true,
+        "source_forward_parity_proven": false
+      },
+      {
+        "blockers": [
+          "snerv_hfr_local_source_forward_markers_missing",
+          "snerv_official_mfu_hfr_tub_parity_marker_missing",
+          "snerv_official_forward_parity_artifact_missing_or_failed",
+          "snerv_hfr_source_forward_parity_falsified_receiver_safe_analogue_only"
+        ],
+        "classification": "source_forward_parity_falsified_receiver_safe_analogue_only",
+        "component_id": "hfr",
+        "evidence_summary": "Official HFR is three learned ConvBlock detail heads fed by pyr_out; local HFR is deterministic LF-edge correction added to stored or generated detail subbands.",
+        "forward_parity_artifact_passed": false,
+        "local_parity_marker_present": false,
+        "local_receiver_marker_rows": [
+          {
+            "marker": "class HighFrequencyRestorer",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "context - _box_pool_upsample(context, 3)",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "_central_gradients(edge)",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          }
+        ],
+        "local_source_forward_marker_rows": [
+          {
+            "marker": "decoder_layer2 = ConvBlock",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "HF_in = pyr_out",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "lh_out = self.decoder[self.decoder_len](HF_in)",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          }
+        ],
+        "local_source_forward_markers_present": false,
+        "official_group_id": "official_hfr_high_frequency_restoration",
+        "official_marker_group_present": true,
+        "official_markers_present": true,
+        "official_source_marker_rows": [
+          {
+            "marker": "decoder_layer2 = ConvBlock",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "decoder_layer3 = ConvBlock",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "decoder_layer4 = ConvBlock",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "HF_in = pyr_out",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "lh_out = self.decoder[self.decoder_len](HF_in)",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "hl_out = self.decoder[self.decoder_len+1](HF_in)",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "hh_out = self.decoder[self.decoder_len+2](HF_in)",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          },
+          {
+            "marker": "yh_out = torch.stack([lh_out, hl_out, hh_out], dim=2)",
+            "present": true,
+            "rel_path": "model/snerv.py"
+          }
+        ],
+        "primitive_parity_marker_rows": [],
+        "primitive_parity_markers_present": false,
+        "production_hardened_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_safe_analogue_present": true,
+        "schema": "snerv_official_component_state.v1",
+        "score_claim": false,
+        "source_faithful_stack_claim": false,
+        "source_forward_parity_falsified": true,
+        "source_forward_parity_proven": false
+      },
+      {
+        "blockers": [
+          "snerv_tub_local_source_forward_markers_missing",
+          "snerv_official_mfu_hfr_tub_parity_marker_missing",
+          "snerv_official_forward_parity_artifact_missing_or_failed",
+          "snerv_tub_full_source_forward_parity_falsified_primitive_only"
+        ],
+        "classification": "official_haar_temporal_lowpass_primitive_proven_full_tub_falsified",
+        "component_id": "tub",
+        "evidence_summary": "Local TUB exposes the official Haar lowpass divided by two algebra, but it does not implement the official temporal encoders or output_2 decoder fusion graph.",
+        "forward_parity_artifact_passed": false,
+        "local_parity_marker_present": false,
+        "local_receiver_marker_rows": [
+          {
+            "marker": "class SnervTemporalExtension",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "official_haar_dwt1d_lowpass_features",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "(center + prev) * inv_two_sqrt2",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "(center + nxt) * inv_two_sqrt2",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          }
+        ],
+        "local_source_forward_marker_rows": [
+          {
+            "marker": "self.encoder[1]((embed_lv_p",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "self.decoder[self.decoder_len-1]",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          },
+          {
+            "marker": "output = layer(output, output_2)",
+            "present": false,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py"
+          }
+        ],
+        "local_source_forward_markers_present": false,
+        "official_group_id": "official_tub_temporal_extension",
+        "official_marker_group_present": true,
+        "official_markers_present": true,
+        "official_source_marker_rows": [
+          {
+            "marker": "DWT1D(J=1, wave='haar', mode='periodization')",
+            "present": true,
+            "rel_path": "model/snerv_t.py"
+          },
+          {
+            "marker": "embed_lv_p, embed_hv_p",
+            "present": true,
+            "rel_path": "model/snerv_t.py"
+          },
+          {
+            "marker": "embed_lv_n, embed_hv_n",
+            "present": true,
+            "rel_path": "model/snerv_t.py"
+          },
+          {
+            "marker": "embed_hv_p = self.encoder[1]((embed_lv_p",
+            "present": true,
+            "rel_path": "model/snerv_t.py"
+          },
+          {
+            "marker": "embed_hv_n = self.encoder[2]((embed_lv_n",
+            "present": true,
+            "rel_path": "model/snerv_t.py"
+          },
+          {
+            "marker": "output_2 = self.decoder[self.decoder_len-1]",
+            "present": true,
+            "rel_path": "model/snerv_t.py"
+          },
+          {
+            "marker": "output = layer(output, output_2)",
+            "present": true,
+            "rel_path": "model/snerv_t.py"
+          }
+        ],
+        "primitive_parity_marker_rows": [
+          {
+            "marker": "DWT1D(J=1, wave='haar', mode='periodization')",
+            "present": true,
+            "rel_path": "model/snerv_t.py",
+            "root": "official"
+          },
+          {
+            "marker": "1.0 / (2.0 * np.sqrt(2.0))",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+            "root": "local"
+          },
+          {
+            "marker": "(center + prev) * inv_two_sqrt2",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+            "root": "local"
+          },
+          {
+            "marker": "(center + nxt) * inv_two_sqrt2",
+            "present": true,
+            "rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+            "root": "local"
+          }
+        ],
+        "primitive_parity_markers_present": true,
+        "production_hardened_claim": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_safe_analogue_present": true,
+        "schema": "snerv_official_component_state.v1",
+        "score_claim": false,
+        "source_faithful_stack_claim": false,
+        "source_forward_parity_falsified": true,
+        "source_forward_parity_proven": false
+      }
+    ],
+    "parity_falsified": true,
+    "parity_passed": false,
+    "path": "/Users/adpena/Projects/pact/.omx/research/snerv_official_mfu_hfr_tub_forward_parity_20260603T_primitive_binding_codex.json",
+    "production_hardened_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "snerv_official_forward_parity_artifact_row.v1",
+    "score_claim": false,
+    "sha256": "19d658b4d307bc368ca06f2f282a033f6f0f82bb7b51f4aa1c7808eabef8172a",
+    "source_faithful_stack_claim": false,
+    "status": "present"
+  },
+  "official_marker_group_rows": [
+    {
+      "all_markers_present": true,
+      "description": "Official SNeRV analyzes LF/HF with Haar DWT and reconstructs with IDWT.",
+      "group_id": "official_haar_dwt_lf_hf_split",
+      "markers": [
+        "DWT",
+        "IDWT",
+        "haar",
+        "periodization",
+        "yl_norm",
+        "yh_out"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "model/snerv.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official SNeRV fuses multi-resolution decoder embeddings before the LF/HF heads.",
+      "group_id": "official_mfu_multi_resolution_fusion",
+      "markers": [
+        "ConvTranspose2d",
+        "RB",
+        "torch.cat",
+        "embed_list",
+        "pyr_out",
+        "decoder_len+3",
+        "decoder_len+4",
+        "decoder_len+5",
+        "decoder_len+6"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "model/snerv.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official SNeRV predicts LH/HL/HH heads from the fused pyramid output.",
+      "group_id": "official_hfr_high_frequency_restoration",
+      "markers": [
+        "lh_out",
+        "hl_out",
+        "hh_out",
+        "torch.stack",
+        "HF_in",
+        "idwt"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "model/snerv.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official SNeRV_T binds neighbor-frame temporal DWT features into the decoder.",
+      "group_id": "official_tub_temporal_extension",
+      "markers": [
+        "SNeRV_T",
+        "DWT1D",
+        "input_p",
+        "input_n",
+        "embed_hv_p",
+        "embed_hv_n",
+        "temp_emb_layer",
+        "UpsampleBlock"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "model/snerv_t.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official training solves fc_dim from --modelsize and the parameter budget.",
+      "group_id": "official_modelsize_fc_dim_solver",
+      "markers": [
+        "--modelsize",
+        "--fc_dim",
+        "embed_param",
+        "decoder_size",
+        "np.roots",
+        "args.fc_dim"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "train_snerv.py"
+      ]
+    },
+    {
+      "all_markers_present": true,
+      "description": "Official training exposes separate model and embedding quantization controls.",
+      "group_id": "official_quantized_payload_controls",
+      "markers": [
+        "quant_model_bit",
+        "quant_embed_bit",
+        "quant_embed2_bit",
+        "quant_axis"
+      ],
+      "missing_markers": [],
+      "source_files": [
+        "train_snerv.py"
+      ]
+    }
+  ],
+  "official_mfu_hfr_tub_parity_proven": false,
+  "official_mfu_hfr_tub_primitive_replay_binding": {
+    "all_primitive_source_replay_proven": true,
+    "authority": "false_authority_primitive_replay_not_receiver_export",
+    "component_rows": [
+      {
+        "authority": "false_authority_primitive_replay_not_full_receiver_export",
+        "component_id": "mfu",
+        "feature_id": "official_multi_resolution_fusion_blocks",
+        "frontier_score_claim": false,
+        "full_stack_source_forward_replay_proven": false,
+        "missing_source_markers": [],
+        "missing_test_markers": [],
+        "primitive_source_replay_proven": true,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "snerv_official_primitive_source_replay_status.v1",
+        "score_claim": false,
+        "source_markers": [
+          "OfficialSnervMfu",
+          "OfficialConvTranspose2dNchw",
+          "OfficialResidualBlocksWithInputConv",
+          "conv_transpose2d_nchw"
+        ],
+        "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
+        "source_present": true,
+        "source_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
+        "status": "primitive_source_replay_proven_full_stack_missing",
+        "test_markers": [
+          "test_official_mfu_full_numpy_forward_matches_torch_graph",
+          "torch.nn.functional.conv_transpose2d",
+          "np.testing.assert_allclose"
+        ],
+        "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_mfu.py",
+        "test_present": true,
+        "test_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_mfu.py"
+      },
+      {
+        "authority": "false_authority_primitive_replay_not_full_receiver_export",
+        "component_id": "hfr",
+        "feature_id": "official_high_frequency_restoration_heads",
+        "frontier_score_claim": false,
+        "full_stack_source_forward_replay_proven": false,
+        "missing_source_markers": [],
+        "missing_test_markers": [],
+        "primitive_source_replay_proven": true,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "snerv_official_primitive_source_replay_status.v1",
+        "score_claim": false,
+        "source_markers": [
+          "OfficialHfrHeads",
+          "OfficialHfrConvBlock",
+          "conv2d_nchw_mlx",
+          "SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF"
+        ],
+        "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
+        "source_present": true,
+        "source_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
+        "status": "primitive_source_replay_proven_full_stack_missing",
+        "test_markers": [
+          "test_official_hfr_numpy_matches_torch_convblock",
+          "torch.nn.Conv2d",
+          "test_official_hfr_mlx_default_is_fixed_reference_and_repeatable"
+        ],
+        "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_hfr.py",
+        "test_present": true,
+        "test_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_hfr.py"
+      },
+      {
+        "authority": "false_authority_primitive_replay_not_full_receiver_export",
+        "component_id": "tub",
+        "feature_id": "official_temporal_extension_snerv_t",
+        "frontier_score_claim": false,
+        "full_stack_source_forward_replay_proven": false,
+        "missing_source_markers": [],
+        "missing_test_markers": [],
+        "primitive_source_replay_proven": true,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "snerv_official_primitive_source_replay_status.v1",
+        "score_claim": false,
+        "source_markers": [
+          "prepare_official_tub_graph_inputs",
+          "official_output2_fusion_shape",
+          "OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT"
+        ],
+        "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+        "source_present": true,
+        "source_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+        "status": "primitive_source_replay_proven_full_stack_missing",
+        "test_markers": [
+          "test_official_snerv_t_tub_source_contract_is_pinned",
+          "test_official_tub_graph_inputs_match_haar_lowpass_contract",
+          "test_dwt1d_pair_reconstructs_current_and_previous_normalized_lf"
+        ],
+        "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_tub.py",
+        "test_present": true,
+        "test_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_tub.py"
+      }
+    ],
+    "frontier_score_claim": false,
+    "full_stack_source_forward_replay_proven": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_export_bound": false,
+    "schema": "snerv_official_mfu_hfr_tub_primitive_replay_binding.v1",
+    "score_claim": false
+  },
+  "official_repo": {
+    "head_sha": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+    "repo_url": "https://github.com/qwertja/SNeRV",
+    "repo_url_git": "https://github.com/qwertja/SNeRV.git",
+    "required_files": [
+      "model/snerv.py",
+      "model/snerv_t.py",
+      "model/layers.py",
+      "train_snerv.py"
+    ],
+    "root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV"
+  },
+  "official_source_markers_present": true,
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_official_source_parity_audit.v1",
+  "score_claim": false,
+  "source_faithful_stack_claim": false
+}
