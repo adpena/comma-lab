@@ -999,6 +999,7 @@ def test_compact_family_startup_marker_records_inverse_modelsize_target(
     assert byte_binding["nominal_headroom_against_tightest_hard_ceiling"] == 14_000
     assert byte_binding["selected_candidate_nominal_under_tightest_hard_ceiling"] is True
     assert byte_binding["selected_candidate_nominal_under_own_hard_ceiling"] is True
+    assert byte_binding["calibrated_predicted_archive_bytes"] is None
     assert byte_binding["modelsize_mparams_caps_archive_zip_bytes"] is False
     assert byte_binding["archive_bytes_authority_required"] is True
     assert byte_binding["blockers"] == [
@@ -2205,6 +2206,88 @@ def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
     assert controller["calibration_observation_count"] == 0
     assert "byte_cap_controller_measured_archive_feedback_missing" in controller[
         "blockers"
+    ]
+
+
+def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> None:
+    nominal = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+    )
+    assert nominal is not None
+    assert nominal["nominal_total_payload_bytes"] <= 178_000
+
+    calibrated = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        byte_cap_feedback_rows=[
+            {
+                "family": "hi_nerv",
+                "row_id": "prior_export",
+                "decoder_codec": nominal["decoder_codec"],
+                "nominal_total_payload_bytes": nominal[
+                    "nominal_total_payload_bytes"
+                ],
+                "measured_archive_bytes": nominal[
+                    "nominal_total_payload_bytes"
+                ]
+                + 20_000,
+                "receiver_proof_passed": True,
+            }
+        ],
+    )
+
+    assert calibrated is not None
+    assert calibrated["hard_byte_ceiling"] == 178_000
+    assert calibrated["nominal_total_payload_bytes"] < nominal[
+        "nominal_total_payload_bytes"
+    ]
+    controller = calibrated["byte_cap_controller"]
+    assert controller["calibration_observation_count"] == 1
+    assert controller["predicted_under_hard_byte_ceiling"] is True
+    assert controller["predicted_archive_bytes"] <= 178_000
+
+
+def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "export.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv-row",
+                "archive_bytes": 123_456,
+                "decoder_codec": "int4_mixed",
+                "receiver_proof_passed": True,
+                "modelsize_candidate": {
+                    "candidate_id": "hinerv-row",
+                    "family": "hi_nerv",
+                    "hard_byte_ceiling": 178_000,
+                    "nominal_total_payload_bytes": 111_111,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = runner_mod._load_modelsize_byte_cap_feedback_rows([path])
+
+    assert rows == [
+        {
+            "family": "hi_nerv",
+            "row_id": "hinerv-row",
+            "candidate_id": "hinerv-row",
+            "measured_archive_bytes": 123_456,
+            "nominal_total_payload_bytes": 111_111,
+            "hard_byte_ceiling": 178_000,
+            "decoder_codec": "int4_mixed",
+            "receiver_closed": True,
+            "source_path": path.resolve(strict=False).as_posix(),
+        }
     ]
 
 
