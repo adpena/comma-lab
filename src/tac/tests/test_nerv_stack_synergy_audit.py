@@ -108,6 +108,19 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     assert patch_binding["bound"] is True
     assert patch_binding["full_patch_frame_equivalence_replay_proven"] is False
     assert not patch_binding["blockers"]
+    official_source_binding = stacks["hi_nerv"]["official_source_audit_binding"]
+    assert official_source_binding["schema"] == (
+        "hinerv_official_source_audit_stack_binding.v1"
+    )
+    assert official_source_binding["artifact_supplied"] is False
+    assert official_source_binding["official_forward_replay_ran"] is False
+    assert official_source_binding["full_upstream_source_forward_replay_proven"] is False
+    assert "hinerv_official_source_audit_artifact_not_supplied" in (
+        official_source_binding["blockers"]
+    )
+    assert "hinerv_official_source_audit_artifact_not_supplied" not in stacks[
+        "hi_nerv"
+    ]["blockers"]
     assert {row["source_id"] for row in patch_binding["source_rows"]} == {
         "official_patch",
         "official_patch_tests",
@@ -266,3 +279,75 @@ def test_nerv_stack_synergy_audit_references_related_memos_and_upstream_controls
         for row in stacks["hi_nerv"]["related_memos"]
     )
     assert audit["shared_synergy_surface_count"] > 0
+
+
+def test_nerv_stack_synergy_audit_consumes_hinerv_official_forward_falsification_without_promotion() -> None:
+    audit = build_nerv_stack_synergy_audit(
+        repo_root=REPO_ROOT,
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        memo_limit_per_stack=4,
+        marker_limit_per_stack=4,
+        hinerv_official_source_audit={
+            "schema": "hinerv_official_source_parity_audit.v1",
+            "authority": "false_authority_source_audit_no_score_claim",
+            "official_forward_parity_proven": False,
+            "official_forward_parity_artifact_row": {
+                "status": "present",
+                "path": "/Volumes/VertigoDataTier/pact/evidence/hinerv_forward.json",
+                "bytes": 1234,
+                "sha256": "a" * 64,
+                "parity_passed": False,
+                "parity_falsified": True,
+                "falsification_accepted": True,
+            },
+            "component_state_rows": [
+                {
+                    "component_id": "core_hierarchical_renderer",
+                    "source_forward_parity_proven": False,
+                    "source_forward_parity_falsified": True,
+                    "official_source_forward_replay": {
+                        "backend": "official_torch_cpu_full_hinerv_forward",
+                        "replay_ran": True,
+                        "input_bundle_sha256": "b" * 64,
+                        "official_output_sha256": "c" * 64,
+                        "official_weight_sha256": "d" * 64,
+                        "score_claim": False,
+                        "promotion_eligible": False,
+                        "rank_or_kill_eligible": False,
+                        "ready_for_exact_eval_dispatch": False,
+                    },
+                },
+            ],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    stacks = {row["stack_id"]: row for row in audit["stacks"]}
+    binding = stacks["hi_nerv"]["official_source_audit_binding"]
+    assert binding["artifact_supplied"] is True
+    assert binding["audit_schema_valid"] is True
+    assert binding["official_forward_replay_ran"] is True
+    assert binding["official_forward_replay_backend"] == (
+        "official_torch_cpu_full_hinerv_forward"
+    )
+    assert binding["official_forward_input_bundle_sha256"] == "b" * 64
+    assert binding["official_forward_output_sha256"] == "c" * 64
+    assert binding["official_weight_sha256"] == "d" * 64
+    assert binding["official_forward_parity_proven"] is False
+    assert binding["official_forward_parity_falsified"] is True
+    assert binding["falsification_accepted"] is True
+    assert binding["full_upstream_source_forward_replay_proven"] is False
+    assert binding["blockers"] == []
+    assert binding["score_claim"] is False
+    assert binding["ready_for_exact_eval_dispatch"] is False
+    assert stacks["hi_nerv"]["source_faithfulness"][
+        "source_faithful_upstream_hinerv"
+    ] is False
+    assert (
+        "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid"
+        in stacks["hi_nerv"]["blockers"]
+    )

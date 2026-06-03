@@ -42,6 +42,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--memo-limit-per-stack", type=int, default=40)
     parser.add_argument("--marker-limit-per-stack", type=int, default=80)
+    parser.add_argument(
+        "--hinerv-official-source-audit",
+        type=Path,
+        help=(
+            "Optional hinerv_official_source_parity_audit.v1 JSON. The stack "
+            "audit consumes it as false-authority source-forward evidence only."
+        ),
+    )
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
 
@@ -52,12 +60,20 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"output exists; pass --overwrite: {out}")
     out.parent.mkdir(parents=True, exist_ok=True)
     ceilings = tuple(args.hard_byte_ceiling or [178_000, 216_000])
+    hinerv_official_source_audit = (
+        None
+        if args.hinerv_official_source_audit is None
+        else json.loads(
+            Path(args.hinerv_official_source_audit).read_text(encoding="utf-8")
+        )
+    )
     audit = build_nerv_stack_synergy_audit(
         repo_root=args.repo_root,
         hard_byte_ceilings=ceilings,
         num_pairs=args.num_pairs,
         memo_limit_per_stack=args.memo_limit_per_stack,
         marker_limit_per_stack=args.marker_limit_per_stack,
+        hinerv_official_source_audit=hinerv_official_source_audit,
     )
     out.write_text(json.dumps(audit, indent=2, sort_keys=True) + "\n")
     print(

@@ -121,6 +121,7 @@ def build_nerv_stack_synergy_audit(
     num_pairs: int,
     memo_limit_per_stack: int = 40,
     marker_limit_per_stack: int = 80,
+    hinerv_official_source_audit: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a fail-closed audit for HiNeRV and SNeRV stack readiness."""
 
@@ -137,6 +138,7 @@ def build_nerv_stack_synergy_audit(
             oss=oss,
             memo_limit=memo_limit_per_stack,
             marker_limit=marker_limit_per_stack,
+            hinerv_official_source_audit=hinerv_official_source_audit,
         ),
         _snerv_stack_audit(
             root=root,
@@ -192,6 +194,7 @@ def _hi_nerv_stack_audit(
     oss: dict[str, Any],
     memo_limit: int,
     marker_limit: int,
+    hinerv_official_source_audit: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     files = [_file_record(root, rel) for rel in HI_NERV_SURFACES]
     memos = _related_memos(
@@ -212,6 +215,9 @@ def _hi_nerv_stack_audit(
         _hi_nerv_official_feature_grid_convnext_binding(root)
     )
     official_patch_binding = _hi_nerv_official_patch_binding(root)
+    official_source_audit_binding = _hi_nerv_official_source_audit_binding(
+        hinerv_official_source_audit
+    )
     strict_receiver_binding = _hi_nerv_strict_receiver_load_binding(root)
     archive_candidate_binding = _hi_nerv_archive_candidate_binding(root)
     pr95_binding = build_pr95_stack_binding_requirements(
@@ -320,6 +326,7 @@ def _hi_nerv_stack_audit(
         "official_grid_trilinear_binding": official_grid_binding,
         "official_feature_grid_convnext_binding": official_feature_grid_convnext_binding,
         "official_patch_index_binding": official_patch_binding,
+        "official_source_audit_binding": official_source_audit_binding,
         "strict_receiver_load_binding": strict_receiver_binding,
         "archive_candidate_binding": archive_candidate_binding,
         "pr95_stack_binding": pr95_binding,
@@ -537,6 +544,91 @@ def _hi_nerv_official_patch_binding(root: Path) -> dict[str, Any]:
         "source_rows": rows,
         "blockers": blockers,
         "authority": "false_authority_receiver_binding_no_full_patch_replay_claim",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hi_nerv_official_source_audit_binding(
+    audit: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Bind optional official HiNeRV source-forward audit evidence."""
+
+    if not isinstance(audit, Mapping):
+        return {
+            "schema": "hinerv_official_source_audit_stack_binding.v1",
+            "artifact_supplied": False,
+            "audit_schema_valid": False,
+            "official_forward_replay_ran": False,
+            "official_forward_parity_proven": False,
+            "official_forward_parity_falsified": False,
+            "falsification_accepted": False,
+            "full_upstream_source_forward_replay_proven": False,
+            "blockers": [
+                "hinerv_official_source_audit_artifact_not_supplied",
+            ],
+            "authority": "false_authority_optional_stack_binding_no_score_claim",
+            **FALSE_AUTHORITY,
+        }
+    schema_valid = audit.get("schema") == "hinerv_official_source_parity_audit.v1"
+    forward_row = audit.get("official_forward_parity_artifact_row")
+    if not isinstance(forward_row, Mapping):
+        forward_row = {}
+    component_rows = [
+        row
+        for row in audit.get("component_state_rows") or ()
+        if isinstance(row, Mapping)
+    ]
+    core_row = next(
+        (
+            row
+            for row in component_rows
+            if row.get("component_id") == "core_hierarchical_renderer"
+        ),
+        {},
+    )
+    replay = core_row.get("official_source_forward_replay")
+    if not isinstance(replay, Mapping):
+        replay = {}
+    blockers = []
+    if not schema_valid:
+        blockers.append("hinerv_official_source_audit_schema_invalid")
+    if forward_row.get("status") != "present":
+        blockers.append("hinerv_official_forward_parity_artifact_not_present")
+    if replay.get("replay_ran") is not True:
+        blockers.append("hinerv_official_torch_forward_replay_not_ran")
+    if (
+        forward_row.get("parity_passed") is not True
+        and forward_row.get("falsification_accepted") is not True
+    ):
+        blockers.append("hinerv_official_forward_falsification_not_accepted")
+    return {
+        "schema": "hinerv_official_source_audit_stack_binding.v1",
+        "artifact_supplied": True,
+        "audit_schema_valid": schema_valid,
+        "audit_authority": audit.get("authority"),
+        "official_forward_artifact_status": forward_row.get("status"),
+        "official_forward_artifact_path": forward_row.get("path"),
+        "official_forward_artifact_sha256": forward_row.get("sha256"),
+        "official_forward_artifact_bytes": forward_row.get("bytes"),
+        "official_forward_replay_ran": bool(replay.get("replay_ran")),
+        "official_forward_replay_backend": replay.get("backend"),
+        "official_forward_input_bundle_sha256": replay.get("input_bundle_sha256"),
+        "official_forward_output_sha256": replay.get("official_output_sha256"),
+        "official_weight_sha256": replay.get("official_weight_sha256"),
+        "official_forward_parity_proven": bool(
+            audit.get("official_forward_parity_proven")
+        ),
+        "official_forward_parity_falsified": bool(forward_row.get("parity_falsified")),
+        "falsification_accepted": bool(forward_row.get("falsification_accepted")),
+        "full_upstream_source_forward_replay_proven": bool(
+            audit.get("official_forward_parity_proven")
+        ),
+        "remaining_blockers": [
+            "hinerv_local_portable_full_forward_adapter_missing",
+            "hinerv_official_forward_replay_is_source_only",
+        ],
+        "blockers": blockers,
+        "authority": "false_authority_official_source_forward_evidence_no_score_claim",
         **FALSE_AUTHORITY,
     }
 
