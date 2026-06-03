@@ -13,6 +13,7 @@ waterfill, and coder-QAT choices, but it is not scorer or promotion authority.
 from __future__ import annotations
 
 import hashlib
+import math
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -41,7 +42,15 @@ HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA = "hi_nerv_bitstream_roundtrip_measurement.v1
 HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA = (
     "hi_nerv_bitstream_scorer_waterfill_selection.v1"
 )
+HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA = (
+    "hi_nerv_official_entropy_receiver_consumption.v1"
+)
 HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE = RATE_COEFFICIENT / CONTEST_REFERENCE_BYTES
+HI_NERV_OFFICIAL_QUANT_AXIS_RULE = "official_compute_best_quant_axis_thres_0p05"
+HI_NERV_OFFICIAL_QUANTNOISE_METHOD = "official_quantnoise_random_quantized_mix"
+HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER = (
+    "hinerv_official_torchac_encode_decode_not_bound"
+)
 HI_NERV_SUPPORTED_DECODER_CODECS: tuple[str, ...] = (
     "portfolio_auto",
     "int8_mixed",
@@ -188,7 +197,13 @@ def apply_decoder_quant_noise(
     noise_scale: float = 0.0,
     seed: int = 0,
 ) -> tuple[dict[str, torch.Tensor], dict[str, Any]]:
-    """Apply deterministic QuantNoise on the symmetric receiver quant grid."""
+    """Apply deterministic official-style QuantNoise on the receiver grid.
+
+    Official HiNeRV ``QuantNoise`` randomly replaces values with their
+    quantized/dequantized counterpart during training.  The local export path is
+    deterministic via ``seed`` and keeps authority fail-closed because this is
+    not the official torchac source-forward replay.
+    """
 
     scale = float(noise_scale)
     if quant_bits is None or scale == 0.0:
@@ -196,52 +211,89 @@ def apply_decoder_quant_noise(
             "method": "disabled",
             "quant_bits": quant_bits,
             "noise_scale": scale,
+            "noise_ratio": scale,
             "seed": int(seed),
             "changed_tensor_count": 0,
             "max_abs_delta": 0.0,
+            "blockers": [],
+            **FALSE_AUTHORITY,
         }
     bits = int(quant_bits)
     if bits not in set(HI_NERV_QUANT_NOISE_BITS):
         raise HiNervBitstreamError(
             "quant_noise_bits must be one of 2, 4, 6, 7, 8"
         )
-    if scale < 0.0:
-        raise HiNervBitstreamError("quant_noise_scale must be non-negative")
+    if scale < 0.0 or scale > 1.0:
+        raise HiNervBitstreamError("quant_noise_scale/noise_ratio must be in [0, 1]")
 
     rng = np.random.default_rng(int(seed))
-    qmax = (1 << (bits - 1)) - 1
     out: dict[str, torch.Tensor] = {}
     max_delta = 0.0
     changed = 0
+    selected_values = 0
+    changed_values = 0
+    tensor_rows: list[dict[str, Any]] = []
     for name, tensor in _clone_state(decoder_state_dict).items():
-        if not torch.is_floating_point(tensor) or tensor.numel() == 0:
+        if not _is_official_quant_target_tensor(name, tensor):
             out[name] = tensor
             continue
-        arr = tensor.detach().to("cpu", dtype=torch.float32).numpy()
-        abs_max = float(np.max(np.abs(arr))) if arr.size else 0.0
-        if abs_max <= 0.0:
-            out[name] = tensor
-            continue
-        step = abs_max / float(qmax)
-        nonzero_mask = arr != 0.0
-        noise = rng.uniform(-0.5, 0.5, size=arr.shape).astype(np.float32)
-        delta = np.where(nonzero_mask, noise * (step * scale), 0.0).astype(
-            np.float32,
-            copy=False,
+        q_tensor, dequant, quant_meta = _official_quantize_dequant_tensor(
+            tensor,
+            bits=bits,
         )
-        arr_noisy = arr + delta
-        max_delta = max(max_delta, float(np.max(np.abs(delta))))
-        changed += 1
-        out[name] = torch.from_numpy(arr_noisy).to(dtype=tensor.dtype, device=tensor.device)
+        arr = tensor.detach().to("cpu", dtype=torch.float32)
+        if float(torch.max(torch.abs(arr)).item()) <= 0.0:
+            out[name] = tensor
+            continue
+        nonzero_mask = arr != 0.0
+        replacement_mask_np = rng.random(tuple(arr.shape)) < scale
+        replacement_mask = torch.from_numpy(replacement_mask_np).to(dtype=torch.bool)
+        replacement_mask &= nonzero_mask
+        delta = torch.where(replacement_mask, dequant - arr, torch.zeros_like(arr))
+        actual_changed = delta != 0.0
+        selected_here = int(replacement_mask.sum().item())
+        changed_here = int(actual_changed.sum().item())
+        if delta.numel():
+            max_delta = max(max_delta, float(torch.max(torch.abs(delta)).item()))
+        selected_values += selected_here
+        changed_values += changed_here
+        changed += int(changed_here > 0)
+        arr_noisy = torch.where(replacement_mask, dequant, arr)
+        out[name] = arr_noisy.to(dtype=tensor.dtype, device=tensor.device)
+        tensor_rows.append(
+            {
+                "tensor_name": name,
+                "shape": [int(v) for v in tensor.shape],
+                "quant_axis": quant_meta["axis"],
+                "scale_shape": quant_meta["scale_shape"],
+                "scale_min": quant_meta["scale_min"],
+                "scale_max": quant_meta["scale_max"],
+                "selected_value_count": selected_here,
+                "actual_changed_value_count": changed_here,
+                "unique_quantized_symbol_count": int(torch.unique(q_tensor).numel()),
+                "sha256_before": _tensor_sha256(tensor),
+                "sha256_after": _tensor_sha256(out[name]),
+            }
+        )
     return out, {
-        "method": "uniform_symmetric_quant_grid_noise",
+        "method": HI_NERV_OFFICIAL_QUANTNOISE_METHOD,
         "quant_bits": bits,
         "noise_scale": scale,
+        "noise_ratio": scale,
         "seed": int(seed),
+        "official_quant_axis_rule": HI_NERV_OFFICIAL_QUANT_AXIS_RULE,
         "changed_tensor_count": changed,
+        "selected_value_count": selected_values,
+        "actual_changed_value_count": changed_values,
         "max_abs_delta": max_delta,
         "preserves_existing_zero_symbols": True,
+        "tensor_rows": tensor_rows,
         "shape_preserved": _state_shapes(decoder_state_dict) == _state_shapes(out),
+        "blockers": [
+            "hinerv_official_quantnoise_source_forward_replay_missing",
+            HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER,
+        ],
+        **FALSE_AUTHORITY,
     }
 
 
@@ -483,6 +535,10 @@ def measure_hi_nerv_decoder_bitstream_roundtrip(
             }
         )
     rows.sort(key=lambda row: int(row["blob_bytes"]))
+    entropy_consumption = measure_hi_nerv_official_entropy_receiver_consumption(
+        prepared.state_dict,
+        quant_bits=quant_noise_bits or 8,
+    )
     selection = select_hi_nerv_bitstream_codec_by_scorer_waterfill(
         rows,
         scorer_value_rows=None,
@@ -495,11 +551,115 @@ def measure_hi_nerv_decoder_bitstream_roundtrip(
         "decoder_codecs": list(_validate_codecs(decoder_codecs)),
         "rows": rows,
         "best_row": rows[0] if rows else None,
+        "official_entropy_receiver_consumption": entropy_consumption,
         "portfolio_selection": selection,
         "blockers": [
             "hi_nerv_bitstream_roundtrip_is_local_rate_distortion_evidence_only",
             "contest_cpu_cuda_exact_eval_not_executed",
             "score_sensitivity_replay_not_attached",
+            HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER,
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def measure_hi_nerv_official_entropy_receiver_consumption(
+    decoder_state_dict: Mapping[str, torch.Tensor],
+    *,
+    quant_bits: int = 8,
+) -> dict[str, Any]:
+    """Build a deterministic official-like entropy consumption manifest.
+
+    The manifest consumes the actual receiver tensors after local pruning/QAT
+    preparation and models the source HiNeRV contract: official per-axis
+    quantization, pruned-zero removal, separate mask streams, and torchac CDF
+    streams.  It intentionally does not fabricate a torchac byte stream.
+    """
+
+    bits = int(quant_bits)
+    if bits not in set(HI_NERV_QUANT_NOISE_BITS):
+        raise HiNervBitstreamError(
+            "official entropy quant_bits must be one of 2, 4, 6, 7, 8"
+        )
+    rows: list[dict[str, Any]] = []
+    total_payload_symbols = 0
+    total_unique_symbols = 0
+    total_removed_values = 0
+    total_payload_entropy_bytes = 0
+    total_mask_entropy_bytes = 0
+    mask_stream_count = 0
+    for name, tensor in sorted(_clone_state(decoder_state_dict).items()):
+        if not _is_official_quant_target_tensor(name, tensor):
+            continue
+        q_tensor, _dequant, quant_meta = _official_quantize_dequant_tensor(
+            tensor,
+            bits=bits,
+        )
+        prunable = _is_prunable_tensor(name, tensor)
+        mask = tensor.detach().to("cpu") != 0 if prunable else torch.ones_like(
+            q_tensor,
+            dtype=torch.bool,
+        )
+        payload_symbols = q_tensor.detach().to("cpu")[mask]
+        removed_values = int(q_tensor.numel() - payload_symbols.numel())
+        unique_payload_symbols = int(torch.unique(payload_symbols).numel()) if payload_symbols.numel() else 0
+        payload_entropy_bytes = _ideal_entropy_bytes(payload_symbols)
+        mask_entropy_bytes = 0
+        mask_zero_count = 0
+        if prunable and removed_values > 0:
+            mask_zero_count = int((~mask).sum().item())
+            mask_entropy_bytes = _ideal_entropy_bytes(mask.to(dtype=torch.int16))
+            mask_stream_count += 1
+        total_payload_symbols += int(payload_symbols.numel())
+        total_unique_symbols += unique_payload_symbols
+        total_removed_values += removed_values
+        total_payload_entropy_bytes += payload_entropy_bytes
+        total_mask_entropy_bytes += mask_entropy_bytes
+        rows.append(
+            {
+                "tensor_name": name,
+                "shape": [int(v) for v in tensor.shape],
+                "quant_bits": bits,
+                "quant_axis": quant_meta["axis"],
+                "scale_shape": quant_meta["scale_shape"],
+                "payload_symbol_count": int(payload_symbols.numel()),
+                "removed_zero_value_count": removed_values,
+                "unique_payload_symbol_count": unique_payload_symbols,
+                "ideal_payload_entropy_bytes": payload_entropy_bytes,
+                "mask_stream_required": bool(mask_entropy_bytes > 0),
+                "mask_symbol_count": int(mask.numel()) if mask_entropy_bytes > 0 else 0,
+                "mask_zero_count": mask_zero_count,
+                "ideal_mask_entropy_bytes": mask_entropy_bytes,
+                "torchac_cdf_required": bool(payload_symbols.numel() > 0),
+                "torchac_byte_stream_present": False,
+                **FALSE_AUTHORITY,
+            }
+        )
+    return {
+        "schema": HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA,
+        "family": "hi_nerv",
+        "official_source_contract": (
+            "quant_model + remove pruned zeros + torchac encode/decode CDF streams"
+        ),
+        "official_quant_axis_rule": HI_NERV_OFFICIAL_QUANT_AXIS_RULE,
+        "quant_bits": bits,
+        "tensor_row_count": len(rows),
+        "mask_stream_count": mask_stream_count,
+        "payload_symbol_count": total_payload_symbols,
+        "unique_payload_symbol_count_sum": total_unique_symbols,
+        "removed_zero_value_count": total_removed_values,
+        "ideal_payload_entropy_bytes_lower_bound": total_payload_entropy_bytes,
+        "ideal_mask_entropy_bytes_lower_bound": total_mask_entropy_bytes,
+        "ideal_total_entropy_bytes_lower_bound": (
+            total_payload_entropy_bytes + total_mask_entropy_bytes
+        ),
+        "torchac_encode_decode_bound": False,
+        "torchac_byte_streams_present": False,
+        "rows": rows,
+        "blockers": [
+            HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER,
+            "hinerv_official_zip_model_container_not_emitted",
+            "hinerv_official_torchac_cdf_streams_not_serialized",
         ],
         **FALSE_AUTHORITY,
     }
@@ -816,6 +976,80 @@ def _symmetric_quant_dequant_tensor(tensor: torch.Tensor, *, bits: int) -> torch
     return dequant.to(device=tensor.device)
 
 
+def _official_quant_axis(tensor: torch.Tensor, *, threshold: float = 0.05) -> int | None:
+    best_axis: int | None = None
+    best_axis_dim = 0
+    numel = int(tensor.numel())
+    if numel <= 0:
+        return None
+    for axis, dim in enumerate(tensor.shape):
+        dim_int = int(dim)
+        if numel / dim_int >= numel * float(threshold):
+            continue
+        if dim_int > best_axis_dim:
+            best_axis = axis
+            best_axis_dim = dim_int
+    return best_axis
+
+
+def _official_quantize_dequant_tensor(
+    tensor: torch.Tensor,
+    *,
+    bits: int,
+) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any]]:
+    if bits not in set(HI_NERV_QUANT_NOISE_BITS):
+        raise HiNervBitstreamError(
+            "official symmetric quant/dequant bits must be one of 2, 4, 6, 7, 8"
+        )
+    arr = tensor.detach().to("cpu", dtype=torch.float32)
+    if arr.numel() == 0:
+        return (
+            torch.empty_like(arr, dtype=torch.int32),
+            arr.clone(),
+            {
+                "axis": None,
+                "scale_shape": [],
+                "scale_min": 0.0,
+                "scale_max": 0.0,
+            },
+        )
+    axis = _official_quant_axis(arr)
+    quant_range = (2.0**bits) - 1.0
+    x_max = (
+        torch.max(torch.abs(arr), dim=axis, keepdim=True).values
+        if axis is not None
+        else torch.max(torch.abs(arr))
+    )
+    x_scale = (2.0 * x_max / quant_range) + 1.0e-6
+    q = torch.round(arr / x_scale).clamp(
+        -(2 ** (bits - 1)),
+        (2 ** (bits - 1)) - 1,
+    )
+    dequant = (q.to(dtype=arr.dtype) * x_scale).to(dtype=torch.float32)
+    scale_flat = x_scale.detach().reshape(-1)
+    return (
+        q.to(dtype=torch.int32),
+        dequant,
+        {
+            "axis": axis,
+            "scale_shape": [int(v) for v in x_scale.shape],
+            "scale_min": float(scale_flat.min().item()) if scale_flat.numel() else 0.0,
+            "scale_max": float(scale_flat.max().item()) if scale_flat.numel() else 0.0,
+        },
+    )
+
+
+def _ideal_entropy_bytes(symbols: torch.Tensor) -> int:
+    flat = symbols.detach().to("cpu").reshape(-1)
+    count = int(flat.numel())
+    if count <= 0:
+        return 0
+    _values, counts = torch.unique(flat, return_counts=True)
+    probabilities = counts.to(dtype=torch.float64) / float(count)
+    entropy_bits = float(-(counts.to(dtype=torch.float64) * torch.log2(probabilities)).sum().item())
+    return math.ceil(entropy_bits / 8.0)
+
+
 def _tensor_sha256(tensor: torch.Tensor) -> str:
     arr = tensor.detach().to("cpu").contiguous().numpy()
     h = hashlib.sha256()
@@ -841,6 +1075,16 @@ def _is_prunable_tensor(name: str, tensor: torch.Tensor) -> bool:
         and "norm" not in lowered
         and "bias" not in lowered
         and "gamma" not in lowered
+    )
+
+
+def _is_official_quant_target_tensor(name: str, tensor: torch.Tensor) -> bool:
+    lowered = str(name).lower()
+    return (
+        torch.is_floating_point(tensor)
+        and tensor.numel() > 0
+        and tensor.dim() > 1
+        and "mask" not in lowered
     )
 
 
@@ -907,6 +1151,10 @@ __all__ = [
     "HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA",
     "HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA",
     "HI_NERV_DECODER_WATERFILL_ACTION_BITS",
+    "HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA",
+    "HI_NERV_OFFICIAL_QUANTNOISE_METHOD",
+    "HI_NERV_OFFICIAL_QUANT_AXIS_RULE",
+    "HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER",
     "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
     "HI_NERV_QUANT_NOISE_BITS",
     "HI_NERV_SUPPORTED_DECODER_CODECS",
@@ -916,6 +1164,7 @@ __all__ = [
     "apply_decoder_quant_noise",
     "apply_decoder_waterfill_actions",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
+    "measure_hi_nerv_official_entropy_receiver_consumption",
     "prepare_hi_nerv_decoder_bitstream_state",
     "select_hi_nerv_bitstream_codec_by_scorer_waterfill",
 ]

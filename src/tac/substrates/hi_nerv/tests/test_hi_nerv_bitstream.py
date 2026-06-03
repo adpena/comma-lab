@@ -11,12 +11,17 @@ from tac.substrates.hi_nerv.bitstream import (
     HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE,
     HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA,
     HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA,
+    HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA,
+    HI_NERV_OFFICIAL_QUANT_AXIS_RULE,
+    HI_NERV_OFFICIAL_QUANTNOISE_METHOD,
+    HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER,
     HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF,
     HiNervBitstreamError,
     apply_decoder_pruning,
     apply_decoder_quant_noise,
     apply_decoder_waterfill_actions,
     measure_hi_nerv_decoder_bitstream_roundtrip,
+    measure_hi_nerv_official_entropy_receiver_consumption,
     prepare_hi_nerv_decoder_bitstream_state,
     select_hi_nerv_bitstream_codec_by_scorer_waterfill,
 )
@@ -74,12 +79,54 @@ def test_hi_nerv_bitstream_quant_noise_accepts_official_six_seven_bits() -> None
             seed=bits,
         )
 
-        assert report["method"] == "uniform_symmetric_quant_grid_noise"
+        assert report["method"] == HI_NERV_OFFICIAL_QUANTNOISE_METHOD
         assert report["quant_bits"] == bits
+        assert report["noise_ratio"] == 0.5
+        assert report["official_quant_axis_rule"] == HI_NERV_OFFICIAL_QUANT_AXIS_RULE
         assert report["changed_tensor_count"] > 0
+        assert report["selected_value_count"] > 0
+        assert report["actual_changed_value_count"] > 0
         assert report["max_abs_delta"] > 0.0
         assert report["preserves_existing_zero_symbols"] is True
+        assert report["score_claim"] is False
+        assert HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER in report["blockers"]
         assert not torch.equal(changed["block.weight"], base["block.weight"])
+
+
+def test_hi_nerv_bitstream_quant_noise_is_official_random_replacement_deterministic() -> None:
+    base = {
+        "wide.weight": torch.linspace(-1.0, 1.0, steps=48).reshape(24, 2),
+        "bias": torch.linspace(-0.2, 0.2, steps=24),
+    }
+
+    changed_a, report_a = apply_decoder_quant_noise(
+        base,
+        quant_bits=4,
+        noise_scale=1.0,
+        seed=99,
+    )
+    changed_b, report_b = apply_decoder_quant_noise(
+        base,
+        quant_bits=4,
+        noise_scale=1.0,
+        seed=99,
+    )
+
+    assert torch.equal(changed_a["wide.weight"], changed_b["wide.weight"])
+    assert torch.equal(changed_a["bias"], changed_b["bias"])
+    assert torch.equal(changed_a["bias"], base["bias"])
+    assert report_a["actual_changed_value_count"] == report_b[
+        "actual_changed_value_count"
+    ]
+    wide_row = next(
+        row for row in report_a["tensor_rows"] if row["tensor_name"] == "wide.weight"
+    )
+    assert wide_row["quant_axis"] == 0
+    assert wide_row["selected_value_count"] == base["wide.weight"].numel()
+    assert torch.count_nonzero(changed_a["wide.weight"] != base["wide.weight"]).item() == (
+        wide_row["actual_changed_value_count"]
+    )
+    assert report_a["score_claim"] is False
 
 
 def test_hi_nerv_bitstream_roundtrip_measures_codec_portfolio() -> None:
@@ -107,6 +154,16 @@ def test_hi_nerv_bitstream_roundtrip_measures_codec_portfolio() -> None:
     assert report["portfolio_selection"]["byte_price_plan"]["schema"] == (
         "compact_nerv_byte_price_controller.v1"
     )
+    assert report["official_entropy_receiver_consumption"]["schema"] == (
+        HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA
+    )
+    assert report["official_entropy_receiver_consumption"][
+        "torchac_encode_decode_bound"
+    ] is False
+    assert HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER in report["blockers"]
+    assert HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER in report[
+        "official_entropy_receiver_consumption"
+    ]["blockers"]
     assert "hi_nerv_bitstream_scorer_value_replay_missing" in report[
         "portfolio_selection"
     ]["blockers"]
@@ -124,6 +181,37 @@ def test_hi_nerv_bitstream_roundtrip_measures_codec_portfolio() -> None:
         assert row["shape_preserved"] is True
         assert row["roundtrip_error"]["missing"] == []
         assert row["roundtrip_error"]["unexpected"] == []
+
+
+def test_hi_nerv_official_entropy_receiver_manifest_consumes_pruned_zero_masks() -> None:
+    prepared = prepare_hi_nerv_decoder_bitstream_state(
+        _state(),
+        pruning_ratio=0.30,
+        quant_noise_bits=4,
+        quant_noise_scale=1.0,
+        quant_noise_seed=5,
+    )
+
+    manifest = measure_hi_nerv_official_entropy_receiver_consumption(
+        prepared.state_dict,
+        quant_bits=4,
+    )
+
+    assert manifest["schema"] == HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA
+    assert manifest["score_claim"] is False
+    assert manifest["promotion_eligible"] is False
+    assert manifest["torchac_encode_decode_bound"] is False
+    assert manifest["torchac_byte_streams_present"] is False
+    assert manifest["removed_zero_value_count"] > 0
+    assert manifest["ideal_total_entropy_bytes_lower_bound"] > 0
+    assert HI_NERV_OFFICIAL_TORCHAC_PARITY_BLOCKER in manifest["blockers"]
+    pruned_rows = [row for row in manifest["rows"] if row["mask_stream_required"]]
+    assert pruned_rows, "pruned decoder tensors must require receiver mask streams"
+    assert all(row["torchac_byte_stream_present"] is False for row in manifest["rows"])
+    assert any(
+        row["payload_symbol_count"] < int(torch.numel(prepared.state_dict[row["tensor_name"]]))
+        for row in pruned_rows
+    )
 
 
 def test_hi_nerv_decoder_waterfill_actions_mutate_real_tensors() -> None:
@@ -469,6 +557,11 @@ def test_hi_nerv_bitstream_pruning_rejects_invalid_ratio() -> None:
 def test_hi_nerv_bitstream_quant_noise_rejects_invalid_bits() -> None:
     with pytest.raises(HiNervBitstreamError, match="quant_noise_bits"):
         apply_decoder_quant_noise(_state(), quant_bits=3, noise_scale=0.5)
+
+
+def test_hi_nerv_bitstream_quant_noise_rejects_non_probability_noise_ratio() -> None:
+    with pytest.raises(HiNervBitstreamError, match="noise_ratio"):
+        apply_decoder_quant_noise(_state(), quant_bits=4, noise_scale=1.5)
 
 
 def test_hi_nerv_bitstream_roundtrip_rejects_unknown_codec() -> None:
