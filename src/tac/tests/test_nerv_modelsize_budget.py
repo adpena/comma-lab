@@ -51,6 +51,9 @@ def test_hinerv_modelsize_closed_form_matches_real_module() -> None:
     assert row.nominal_decoder_payload_bytes == (
         row.decoder_trainable_params * 4 + 7
     ) // 8
+    assert row.capacity_source == "manual_local_knobs"
+    assert row.target_modelsize_mparams is None
+    assert row.modelsize_error_mparams is None
     assert row.score_claim is False
     assert row.ready_for_exact_eval_dispatch is False
 
@@ -122,6 +125,48 @@ def test_hinerv_modelsize_budget_report_is_false_authority_and_budgeted() -> Non
     assert "selection_strategy" in report["budget_math"]
 
 
+def test_hinerv_target_modelsize_selects_real_capacity_rows() -> None:
+    report = build_hinerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=17,
+        per_ceiling_limit=8,
+        target_modelsize_mparams=(0.03,),
+        use_hierarchical_feature_grid_options=(False, True),
+        use_convnext_blocks_options=(False, True),
+    )
+
+    assert report["target_modelsize_mparams"] == [0.03]
+    selected = [
+        row
+        for row in report["selected_candidates"]
+        if row["capacity_source"] == "local_hinerv_target_modelsize"
+    ]
+    assert selected
+    row = min(selected, key=lambda item: item["modelsize_error_mparams"])
+    assert row["target_modelsize_mparams"] == 0.03
+    assert row["modelsize_error_mparams"] == pytest.approx(
+        abs(row["modelsize_mparams"] - 0.03)
+    )
+    assert row["candidate_id"].endswith("_tgtmp0p03")
+
+    cfg = build_hinerv_config_from_size_knobs(
+        num_pairs=17,
+        latent_dim=row["latent_dim"],
+        embed_dim=row["embed_dim"],
+        decoder_channel=row["decoder_channel"],
+        use_hierarchical_feature_grid=row["use_hierarchical_feature_grid"],
+        use_convnext_blocks=row["use_convnext_blocks"],
+        local_grid_levels=row["local_grid_levels"],
+        local_grid_channels=row["local_grid_channels"],
+        convnext_mlp_ratio=row["convnext_mlp_ratio"],
+        convnext_kernel_size=row["convnext_kernel_size"],
+    )
+    assert row["total_trainable_params"] == HinervSubstrate(cfg).num_parameters()
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_hinerv_modelsize_knobs_are_real_capacity_and_codec_controls() -> None:
     small = analyze_hinerv_modelsize_candidate(
         hard_byte_ceiling=178_000,
@@ -160,6 +205,28 @@ def test_hinerv_modelsize_knobs_are_real_capacity_and_codec_controls() -> None:
         wider.nominal_decoder_payload_bytes
     )
     assert same_wider_int2.nominal_rate_score < wider.nominal_rate_score
+
+
+def test_hinerv_target_modelsize_rows_are_false_authority_nearest_rows() -> None:
+    report = build_hinerv_modelsize_budget_report(
+        hard_byte_ceilings=(36_000,),
+        num_pairs=600,
+        per_ceiling_limit=4,
+        target_modelsize_mparams=(0.02,),
+    )
+
+    targeted = [
+        row
+        for row in report["selected_candidates"]
+        if row["capacity_source"] == "local_hinerv_target_modelsize"
+    ]
+    assert targeted
+    assert report["target_modelsize_mparams"] == [0.02]
+    assert all(row["target_modelsize_mparams"] == 0.02 for row in targeted)
+    assert all(row["modelsize_error_mparams"] is not None for row in targeted)
+    assert all(row["score_claim"] is False for row in targeted)
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in targeted)
+    assert all("_tgtmp0p02" in row["candidate_id"] for row in targeted)
 
 
 def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:

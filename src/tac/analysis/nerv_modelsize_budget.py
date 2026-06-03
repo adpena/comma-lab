@@ -13,7 +13,7 @@ stop launching one arbitrary compact HiNeRV point.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from math import ceil
 from typing import Any
 
@@ -167,6 +167,9 @@ class HinervModelSizeCandidate:
     nominal_under_ceiling: bool
     byte_headroom: int
     modelsize_mparams: float
+    capacity_source: str
+    target_modelsize_mparams: float | None
+    modelsize_error_mparams: float | None
     upstream_modelsize_analogue: str
     requires_archive_byte_oracle: bool
     score_claim: bool
@@ -458,6 +461,9 @@ def analyze_hinerv_modelsize_candidate(
         nominal_under_ceiling=bool(headroom >= 0),
         byte_headroom=headroom,
         modelsize_mparams=float(total_params / 1_000_000.0),
+        capacity_source="manual_local_knobs",
+        target_modelsize_mparams=None,
+        modelsize_error_mparams=None,
         upstream_modelsize_analogue=(
             "local repeated-channel HiNeRV analogue of upstream "
             "HNeRV/SNeRV --modelsize parameter budget; real authority is the "
@@ -468,6 +474,77 @@ def analyze_hinerv_modelsize_candidate(
         promotion_eligible=False,
         ready_for_exact_eval_dispatch=False,
     )
+
+
+def tag_hinerv_target_modelsize_candidate(
+    row: HinervModelSizeCandidate,
+    *,
+    target_modelsize_mparams: float,
+) -> HinervModelSizeCandidate:
+    """Attach explicit inverse-target provenance to a real HiNeRV knob row."""
+
+    target = float(target_modelsize_mparams)
+    if target <= 0.0:
+        raise NervModelSizeBudgetError("target_modelsize_mparams must be positive")
+    return replace(
+        row,
+        candidate_id=f"{row.candidate_id}_tgtmp{_float_id_token(target)}",
+        capacity_source="local_hinerv_target_modelsize",
+        target_modelsize_mparams=target,
+        modelsize_error_mparams=abs(float(row.modelsize_mparams) - target),
+        upstream_modelsize_analogue=(
+            row.upstream_modelsize_analogue
+            + "; selected by local inverse target-modelsize search over "
+            "receiver-visible HiNeRV knobs, not an upstream official equation"
+        ),
+    )
+
+
+def _select_hinerv_target_modelsize_rows(
+    base_rows: list[HinervModelSizeCandidate],
+    *,
+    target_modelsize_mparams: tuple[float, ...],
+) -> list[HinervModelSizeCandidate]:
+    """Pick nearest executable local HiNeRV rows for each target mparam budget."""
+
+    tagged: list[HinervModelSizeCandidate] = []
+    targets = tuple(float(value) for value in target_modelsize_mparams)
+    for target in targets:
+        if target <= 0.0:
+            raise NervModelSizeBudgetError(
+                "target_modelsize_mparams entries must be positive"
+            )
+    if not targets:
+        return tagged
+    ceilings = sorted({row.hard_byte_ceiling for row in base_rows})
+    codecs = sorted({row.decoder_codec for row in base_rows})
+    for ceiling in ceilings:
+        for target in targets:
+            for codec in codecs:
+                rows = [
+                    row
+                    for row in base_rows
+                    if row.hard_byte_ceiling == ceiling and row.decoder_codec == codec
+                ]
+                if not rows:
+                    continue
+                chosen = min(
+                    rows,
+                    key=lambda row: (
+                        abs(float(row.modelsize_mparams) - target),
+                        not bool(row.nominal_under_ceiling),
+                        abs(int(row.byte_headroom)),
+                        -int(row.nominal_total_payload_bytes),
+                        -int(row.total_trainable_params),
+                    ),
+                )
+                tagged.append(
+                    tag_hinerv_target_modelsize_candidate(
+                        chosen,
+                        target_modelsize_mparams=target,
+                    )
+                )
+    return tagged
 
 
 def enumerate_hinerv_modelsize_candidates(
@@ -484,6 +561,7 @@ def enumerate_hinerv_modelsize_candidates(
     local_grid_channels: int = 4,
     convnext_mlp_ratio: int = 2,
     convnext_kernel_size: int = 7,
+    target_modelsize_mparams: tuple[float, ...] = (),
 ) -> list[HinervModelSizeCandidate]:
     """Enumerate local HiNeRV capacity points for queue planning."""
 
@@ -515,7 +593,13 @@ def enumerate_hinerv_modelsize_candidates(
                                         convnext_kernel_size=convnext_kernel_size,
                                     )
                                 )
-    return rows
+    return [
+        *rows,
+        *_select_hinerv_target_modelsize_rows(
+            rows,
+            target_modelsize_mparams=target_modelsize_mparams,
+        ),
+    ]
 
 
 def select_hinerv_modelsize_candidates(
@@ -533,6 +617,22 @@ def select_hinerv_modelsize_candidates(
         group = [row for row in candidates if row.hard_byte_ceiling == ceiling]
         under = [row for row in group if row.nominal_under_ceiling]
         chosen: dict[str, HinervModelSizeCandidate] = {}
+        target_rows = [
+            row for row in group if row.capacity_source == "local_hinerv_target_modelsize"
+        ]
+        target_rows.sort(
+            key=lambda row: (
+                float(row.target_modelsize_mparams or 0.0),
+                float(row.modelsize_error_mparams or 0.0),
+                not bool(row.nominal_under_ceiling),
+                abs(int(row.byte_headroom)),
+                -int(row.nominal_total_payload_bytes),
+            )
+        )
+        for row in target_rows:
+            if len(chosen) >= per_ceiling_limit:
+                break
+            chosen[row.candidate_id] = row
         for codec in DEFAULT_HINERV_DECODER_CODECS:
             codec_rows = [row for row in under if row.decoder_codec == codec]
             if not codec_rows:
@@ -594,6 +694,7 @@ def build_hinerv_modelsize_budget_report(
     per_ceiling_limit: int = 8,
     use_hierarchical_feature_grid_options: tuple[bool, ...] = (False, True),
     use_convnext_blocks_options: tuple[bool, ...] = (False, True),
+    target_modelsize_mparams: tuple[float, ...] = (),
 ) -> dict[str, Any]:
     """Return a planner-safe local HiNeRV model-size budget report."""
 
@@ -602,6 +703,7 @@ def build_hinerv_modelsize_budget_report(
         num_pairs=num_pairs,
         use_hierarchical_feature_grid_options=use_hierarchical_feature_grid_options,
         use_convnext_blocks_options=use_convnext_blocks_options,
+        target_modelsize_mparams=target_modelsize_mparams,
     )
     selected = select_hinerv_modelsize_candidates(
         candidates,
@@ -619,6 +721,7 @@ def build_hinerv_modelsize_budget_report(
             bool(v) for v in use_hierarchical_feature_grid_options
         ],
         "use_convnext_blocks_options": [bool(v) for v in use_convnext_blocks_options],
+        "target_modelsize_mparams": [float(v) for v in target_modelsize_mparams],
         "candidate_count": len(candidates),
         "selected_candidate_count": len(selected),
         "selected_candidates": [row.as_dict() for row in selected],
@@ -629,8 +732,10 @@ def build_hinerv_modelsize_budget_report(
             "selection_strategy": (
                 "for each byte ceiling, retain the best byte-plausible point "
                 "from every available decoder codec family before filling with "
-                "highest-capacity candidates; exact archive bytes and scorer "
-                "replay arbitrate the quantization ladder"
+                "highest-capacity candidates; when target_modelsize_mparams is "
+                "provided, first retain the nearest executable local HiNeRV knob "
+                "row per codec; exact archive bytes and scorer replay arbitrate "
+                "the quantization ladder"
             ),
             "real_authority": (
                 "trained byte-closed archive.zip bytes measured after "
@@ -1362,4 +1467,5 @@ __all__ = [
     "snerv_model_size_adapter_from_id_token",
     "snerv_model_size_adapter_id_token",
     "snerv_modelsize_candidate_id_from_controls",
+    "tag_hinerv_target_modelsize_candidate",
 ]

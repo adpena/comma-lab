@@ -73,6 +73,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--hinerv-target-modelsize-mparams",
+        action="append",
+        type=float,
+        help=(
+            "Local HiNeRV inverse capacity target, in millions of params. "
+            "Selects the nearest receiver-visible architecture row and remains "
+            "false-authority until archive bytes and receiver proof land."
+        ),
+    )
+    parser.add_argument(
         "--snerv-official-enc-strds",
         type=_parse_int_tuple,
         default=DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
@@ -105,10 +115,14 @@ def main(argv: list[str] | None = None) -> int:
     snerv_official_modelsize_mparams = tuple(
         float(value) for value in (args.snerv_official_modelsize_mparams or ())
     )
+    hinerv_target_modelsize_mparams = tuple(
+        float(value) for value in (args.hinerv_target_modelsize_mparams or ())
+    )
     hinerv = build_hinerv_modelsize_budget_report(
         hard_byte_ceilings=hard_byte_ceilings,
         num_pairs=int(args.num_pairs),
         per_ceiling_limit=int(args.per_ceiling_limit),
+        target_modelsize_mparams=hinerv_target_modelsize_mparams,
     )
     snerv = build_snerv_modelsize_budget_report(
         hard_byte_ceilings=hard_byte_ceilings,
@@ -147,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
             "hard_byte_ceilings": list(hard_byte_ceilings),
             "num_pairs": int(args.num_pairs),
             "per_ceiling_limit": int(args.per_ceiling_limit),
+            "hinerv_target_modelsize_mparams": list(hinerv_target_modelsize_mparams),
             "snerv_fc_dims": list(snerv_fc_dims),
             "snerv_emb_sizes": list(snerv_emb_sizes),
             "snerv_official_modelsize_mparams": list(

@@ -1,0 +1,34 @@
+# NeRV Model-Size Budgets
+
+False-authority planning artifact. These rows price model-size controls
+before byte-closed archive export, receiver proof, local replay, or exact auth.
+
+## Summary
+
+- HiNeRV selected candidates: `48`
+- SNeRV selected candidates: `52`
+- Num pairs: `600`
+- Score claim: `False`
+- Ready for exact eval: `False`
+
+## Top HiNeRV Candidates
+
+- `hinerv_np600_ld4_ed32_dc4_cnx_int8_mixed_ceil36000_tgtmp0p02` payload=`28422` nominal_under_ceiling=`True`
+- `hinerv_np600_ld4_ed32_dc4_cnx_portfolio_auto_ceil36000_tgtmp0p02` payload=`28422` nominal_under_ceiling=`True`
+- `hinerv_np600_ld4_ed32_dc4_cnx_int4_mixed_ceil36000_tgtmp0p02` payload=`22611` nominal_under_ceiling=`True`
+- `hinerv_np600_ld4_ed32_dc4_cnx_int2_mixed_ceil36000_tgtmp0p02` payload=`19706` nominal_under_ceiling=`True`
+- `hinerv_np600_ld8_ed24_dc8_int2_mixed_ceil36000_tgtmp0p04` payload=`39362` nominal_under_ceiling=`False`
+- `hinerv_np600_ld8_ed24_dc8_int4_mixed_ceil36000_tgtmp0p04` payload=`45123` nominal_under_ceiling=`False`
+- `hinerv_np600_ld8_ed24_dc8_int8_mixed_ceil36000_tgtmp0p04` payload=`56646` nominal_under_ceiling=`False`
+- `hinerv_np600_ld8_ed24_dc8_portfolio_auto_ceil36000_tgtmp0p04` payload=`56646` nominal_under_ceiling=`False`
+
+## Top SNeRV Candidates
+
+- `snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`11074653` nominal_under_ceiling=`False`
+- `snerv_np600_haar_lv3_lfb1p5_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`2780267` nominal_under_ceiling=`False`
+- `snerv_np600_haar_lv4_lfb1p5_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`706681` nominal_under_ceiling=`False`
+- `snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`188296` nominal_under_ceiling=`False`
+- `snerv_np600_haar_lv5_lfb2_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`231496` nominal_under_ceiling=`False`
+- `snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`274696` nominal_under_ceiling=`False`
+- `snerv_np600_haar_lv5_lfb3_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`317896` nominal_under_ceiling=`False`
+- `snerv_np600_haar_lv5_lfb4_stepb0p5_fc3e0_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil36000` payload=`404296` nominal_under_ceiling=`False`

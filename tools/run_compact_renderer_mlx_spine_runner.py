@@ -63,6 +63,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     enumerate_snerv_modelsize_candidates,
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
+    tag_hinerv_target_modelsize_candidate,
 )
 from tac.analysis.nerv_stack_synergy_audit import (  # noqa: E402
     build_nerv_stack_synergy_audit,
@@ -168,6 +169,12 @@ HI_NERV_OPTIMIZER_POLICIES = (
 )
 DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM = 1.0
 DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_WEIGHT_DECAY = 1.0e-4
+DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT = 1.0e-3
+DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT = 1.0e-4
+DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT = 2.0e-4
+DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT = 1.0e-4
+DEFAULT_PACT_CODER_QAT_C1A_SIGMA = 0.2
+DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE = 512
 COMPACT_FAMILY_STARTUP_MARKER_FILENAME = (
     "compact_renderer_mlx_spine_runner_startup.json"
 )
@@ -1845,6 +1852,7 @@ def _resolve_execute_modelsize_candidate(
     candidate_id: str,
     hard_byte_ceilings: tuple[int, ...],
     num_pairs: int = CONTEST_PAIR_COUNT,
+    hinerv_target_modelsize_mparams: tuple[float, ...] = (),
     snerv_official_modelsize_mparams: tuple[float, ...] = (),
     snerv_official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_ENC_STRDS,
     snerv_official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_OFFICIAL_DEC_STRDS,
@@ -1866,6 +1874,9 @@ def _resolve_execute_modelsize_candidate(
             for row in enumerate_hinerv_modelsize_candidates(
                 hard_byte_ceilings=hard_byte_ceilings,
                 num_pairs=int(num_pairs),
+                target_modelsize_mparams=tuple(
+                    float(value) for value in hinerv_target_modelsize_mparams
+                ),
             )
         ]
     elif family == "snerv":
@@ -1890,6 +1901,14 @@ def _resolve_execute_modelsize_candidate(
             f"no {family} modelsize candidates were enumerated"
         )
     if token.lower() == "auto":
+        if family == "hi_nerv" and hinerv_target_modelsize_mparams:
+            target_candidates = [
+                row
+                for row in candidates
+                if row.get("capacity_source") == "local_hinerv_target_modelsize"
+            ]
+            if target_candidates:
+                candidates = target_candidates
         if family == "snerv" and snerv_official_modelsize_mparams:
             official_candidates = [
                 row
@@ -1904,10 +1923,21 @@ def _resolve_execute_modelsize_candidate(
             tightest_under = [
                 row for row in under if int(row["hard_byte_ceiling"]) == tightest_ceiling
             ]
+            if family == "hi_nerv" and hinerv_target_modelsize_mparams:
+                return min(
+                    tightest_under,
+                    key=lambda row: (
+                        float(row.get("modelsize_error_mparams") or 0.0),
+                        int(row["nominal_total_payload_bytes"]),
+                        -float(row.get("modelsize_mparams") or 0.0),
+                        int(row.get("total_trainable_params", 0)),
+                    ),
+                )
             return max(
                 tightest_under,
                 key=lambda row: (
                     int(row["nominal_total_payload_bytes"]),
+                    int(row.get("capacity_source") == "local_hinerv_target_modelsize"),
                     int(row.get("official_modelsize_solution") is not None),
                     float(row.get("modelsize_mparams") or 0.0),
                     int(row.get("total_trainable_params", 0)),
@@ -1917,6 +1947,8 @@ def _resolve_execute_modelsize_candidate(
             candidates,
             key=lambda row: (
                 abs(int(row.get("byte_headroom") or 0)),
+                float(row.get("modelsize_error_mparams") or 0.0),
+                -int(row.get("capacity_source") == "local_hinerv_target_modelsize"),
                 -int(row.get("official_modelsize_solution") is not None),
                 -float(row.get("modelsize_mparams") or 0.0),
                 int(row["hard_byte_ceiling"]),
@@ -1941,7 +1973,8 @@ _HINERV_MODEL_SIZE_ID_RE = re.compile(
     r"^hinerv_np(?P<num_pairs>\d+)_ld(?P<latent_dim>\d+)_"
     r"ed(?P<embed_dim>\d+)_dc(?P<decoder_channel>\d+)"
     r"(?P<control_suffix>(?:_hfg)?(?:_cnx)?)_"
-    r"(?P<decoder_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
+    r"(?P<decoder_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)"
+    r"(?:_tgtmp(?P<target_modelsize>\d+(?:p\d+)?))?$"
 )
 _SNERV_MODEL_SIZE_ID_RE = re.compile(
     r"^snerv_np(?P<num_pairs>\d+)_(?P<wavelet>[A-Za-z0-9]+)_"
@@ -1998,7 +2031,7 @@ def _modelsize_candidate_from_self_describing_id(
         if match is None:
             return None
         control_suffix = match.group("control_suffix") or ""
-        row = analyze_hinerv_modelsize_candidate(
+        row_obj = analyze_hinerv_modelsize_candidate(
             hard_byte_ceiling=int(match.group("hard_byte_ceiling")),
             num_pairs=int(match.group("num_pairs")),
             latent_dim=int(match.group("latent_dim")),
@@ -2007,7 +2040,14 @@ def _modelsize_candidate_from_self_describing_id(
             decoder_codec=match.group("decoder_codec"),
             use_hierarchical_feature_grid="_hfg" in control_suffix,
             use_convnext_blocks="_cnx" in control_suffix,
-        ).as_dict()
+        )
+        target_modelsize = match.group("target_modelsize")
+        if target_modelsize is not None:
+            row_obj = tag_hinerv_target_modelsize_candidate(
+                row_obj,
+                target_modelsize_mparams=_float_token(target_modelsize),
+            )
+        row = row_obj.as_dict()
         if row["candidate_id"] != token:
             return None
     elif family == "snerv":
@@ -4566,9 +4606,14 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
-    coder_qat_quant_residual_weight: float = 1.0e-4,
-    coder_qat_magnitude_weight: float = 0.0,
-    coder_qat_delta_weight: float = 0.0,
+    coder_qat_quant_residual_weight: float = (
+        DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT
+    ),
+    coder_qat_magnitude_weight: float = DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT,
+    coder_qat_delta_weight: float = DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT,
+    coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
+    coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+    coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -4617,6 +4662,9 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
+            coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+            coder_qat_c1a_sigma=coder_qat_c1a_sigma,
+            coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -4743,6 +4791,9 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
                     "quant_residual_weight": float(coder_qat_quant_residual_weight),
                     "magnitude_weight": float(coder_qat_magnitude_weight),
                     "delta_weight": float(coder_qat_delta_weight),
+                    "c1a_entropy_weight": float(coder_qat_c1a_entropy_weight),
+                    "c1a_sigma": float(coder_qat_c1a_sigma),
+                    "c1a_sample_size": int(coder_qat_c1a_sample_size),
                     "authority": "false_macos_mlx_research_signal",
                 },
                 "decoder_codec": str(decoder_codec),
@@ -4809,9 +4860,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     allow_segnet_only_research: bool = False,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
-    coder_qat_quant_residual_weight: float = 1.0e-4,
-    coder_qat_magnitude_weight: float = 0.0,
-    coder_qat_delta_weight: float = 0.0,
+    coder_qat_quant_residual_weight: float = (
+        DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT
+    ),
+    coder_qat_magnitude_weight: float = DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT,
+    coder_qat_delta_weight: float = DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT,
+    coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
+    coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+    coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
     decoder_weight_waterfill_plan_json: str | Path | None = None,
     recon_pixel_weight_path: str | Path | None = None,
     auto_joint_recon_pixel_weight: bool = False,
@@ -5174,6 +5230,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
+            coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+            coder_qat_c1a_sigma=coder_qat_c1a_sigma,
+            coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
             recon_pixel_weight_path=effective_recon_pixel_weight_path,
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
             recon_pixel_weight_auto_discovery=recon_pixel_weight_auto_discovery,
@@ -5509,6 +5568,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     quant_residual_weight=coder_qat_quant_residual_weight,
                     magnitude_weight=coder_qat_magnitude_weight,
                     delta_weight=coder_qat_delta_weight,
+                    c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+                    c1a_sigma=coder_qat_c1a_sigma,
+                    c1a_sample_size=coder_qat_c1a_sample_size,
                 ),
                 "decoder_weight_waterfill_plan": decoder_weight_waterfill_plan_metadata,
                 "eval_roundtrip_ste": _eval_roundtrip_ste_report_metadata(
@@ -5649,9 +5711,14 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
     scorer_upstream_dir: str | Path | None = None,
     coder_aware_qat: bool = False,
     coder_qat_quant_bits: int = 8,
-    coder_qat_quant_residual_weight: float = 1.0e-4,
-    coder_qat_magnitude_weight: float = 0.0,
-    coder_qat_delta_weight: float = 0.0,
+    coder_qat_quant_residual_weight: float = (
+        DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT
+    ),
+    coder_qat_magnitude_weight: float = DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT,
+    coder_qat_delta_weight: float = DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT,
+    coder_qat_c1a_entropy_weight: float = DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
+    coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+    coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
     run_post_export_materializers: bool = False,
     post_export_materializer_max_steps: int = 1,
     post_export_materializer_max_parallel: int = 0,
@@ -5699,6 +5766,9 @@ def execute_pact_nerv_selector_v4_mlx_smoke_and_adapt(
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=coder_qat_magnitude_weight,
             coder_qat_delta_weight=coder_qat_delta_weight,
+            coder_qat_c1a_entropy_weight=coder_qat_c1a_entropy_weight,
+            coder_qat_c1a_sigma=coder_qat_c1a_sigma,
+            coder_qat_c1a_sample_size=coder_qat_c1a_sample_size,
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -5974,6 +6044,9 @@ def _coder_qat_report_metadata(
     quant_residual_weight: float,
     magnitude_weight: float,
     delta_weight: float,
+    c1a_entropy_weight: float = 0.0,
+    c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+    c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
 ) -> dict[str, Any]:
     """Return machine-readable coder-QAT metadata for runner reports."""
 
@@ -5987,6 +6060,13 @@ def _coder_qat_report_metadata(
         "quant_residual_weight": float(quant_residual_weight),
         "magnitude_weight": float(magnitude_weight),
         "delta_weight": float(delta_weight),
+        "c1a_entropy_weight": float(c1a_entropy_weight),
+        "c1a_sigma": float(c1a_sigma),
+        "c1a_sample_size": int(c1a_sample_size),
+        "c1a_source": (
+            "PR95 cat_entropy_v2 soft categorical entropy adapted to selected "
+            "decoder weights"
+        ),
         "authority": "false_macos_mlx_research_signal",
     }
 
@@ -7076,6 +7156,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     coder_qat_quant_residual_weight: float,
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
+    coder_qat_c1a_entropy_weight: float,
+    coder_qat_c1a_sigma: float,
+    coder_qat_c1a_sample_size: int,
     recon_pixel_weight_path: str | Path | None,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None,
     recon_pixel_weight_auto_discovery: Mapping[str, Any] | None,
@@ -7206,6 +7289,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         quant_residual_weight=float(coder_qat_quant_residual_weight),
         magnitude_weight=float(coder_qat_magnitude_weight),
         delta_weight=float(coder_qat_delta_weight),
+        c1a_entropy_weight=float(coder_qat_c1a_entropy_weight),
+        c1a_sigma=float(coder_qat_c1a_sigma),
+        c1a_sample_size=int(coder_qat_c1a_sample_size),
     ).validated()
     decoder_waterfill_fake_quant_bits_by_name = (
         _decoder_weight_waterfill_fake_quant_bits_by_name(decoder_weight_waterfill_plan)
@@ -7562,6 +7648,9 @@ def _run_pact_nerv_vq_mlx_smoke(
     coder_qat_quant_residual_weight: float,
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
+    coder_qat_c1a_entropy_weight: float,
+    coder_qat_c1a_sigma: float,
+    coder_qat_c1a_sample_size: int,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -7813,6 +7902,9 @@ def _run_pact_nerv_selector_v4_mlx_smoke(
     coder_qat_quant_residual_weight: float,
     coder_qat_magnitude_weight: float,
     coder_qat_delta_weight: float,
+    coder_qat_c1a_entropy_weight: float,
+    coder_qat_c1a_sigma: float,
+    coder_qat_c1a_sample_size: int,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -8936,6 +9028,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--hinerv-target-modelsize-mparams",
+        action="append",
+        type=float,
+        help=(
+            "For --execute-family hi_nerv and --modelsize-candidate-id auto, "
+            "select the nearest local receiver-visible HiNeRV architecture row "
+            "to this target parameter budget. Repeatable; false-authority until "
+            "trained archive bytes and receiver proof land."
+        ),
+    )
+    parser.add_argument(
         "--planner-row-id",
         default="",
         help=(
@@ -9175,11 +9278,39 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--coder-qat-quant-bits", default=8, type=int)
     parser.add_argument(
         "--coder-qat-quant-residual-weight",
-        default=1.0e-4,
+        default=DEFAULT_PACT_CODER_QAT_QUANT_RESIDUAL_WEIGHT,
         type=float,
     )
-    parser.add_argument("--coder-qat-magnitude-weight", default=0.0, type=float)
-    parser.add_argument("--coder-qat-delta-weight", default=0.0, type=float)
+    parser.add_argument(
+        "--coder-qat-magnitude-weight",
+        default=DEFAULT_PACT_CODER_QAT_MAGNITUDE_WEIGHT,
+        type=float,
+    )
+    parser.add_argument(
+        "--coder-qat-delta-weight",
+        default=DEFAULT_PACT_CODER_QAT_DELTA_WEIGHT,
+        type=float,
+    )
+    parser.add_argument(
+        "--coder-qat-c1a-entropy-weight",
+        default=DEFAULT_PACT_CODER_QAT_C1A_ENTROPY_WEIGHT,
+        type=float,
+        help=(
+            "PR95-style soft categorical entropy pressure on selected decoder "
+            "weights during coder-aware QAT. False-authority until archive "
+            "bytes and receiver proof land."
+        ),
+    )
+    parser.add_argument(
+        "--coder-qat-c1a-sigma",
+        default=DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+        type=float,
+    )
+    parser.add_argument(
+        "--coder-qat-c1a-sample-size",
+        default=DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
+        type=int,
+    )
     parser.add_argument(
         "--decoder-weight-waterfill-plan-json",
         type=Path,
@@ -9469,6 +9600,9 @@ def main(argv: list[str] | None = None) -> int:
             candidate_id=args.modelsize_candidate_id,
             hard_byte_ceilings=ceilings,
             num_pairs=CONTEST_PAIR_COUNT,
+            hinerv_target_modelsize_mparams=tuple(
+                float(value) for value in (args.hinerv_target_modelsize_mparams or ())
+            ),
             snerv_official_modelsize_mparams=tuple(
                 float(value) for value in (args.snerv_official_modelsize_mparams or ())
             ),
@@ -9892,6 +10026,9 @@ def main(argv: list[str] | None = None) -> int:
             coder_qat_quant_residual_weight=args.coder_qat_quant_residual_weight,
             coder_qat_magnitude_weight=args.coder_qat_magnitude_weight,
             coder_qat_delta_weight=args.coder_qat_delta_weight,
+            coder_qat_c1a_entropy_weight=args.coder_qat_c1a_entropy_weight,
+            coder_qat_c1a_sigma=args.coder_qat_c1a_sigma,
+            coder_qat_c1a_sample_size=args.coder_qat_c1a_sample_size,
             decoder_weight_waterfill_plan_json=(
                 args.decoder_weight_waterfill_plan_json
             ),

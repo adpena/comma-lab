@@ -1046,6 +1046,29 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     assert hi["family"] == "hi_nerv"
     assert hi["hard_byte_ceiling"] == 178_000
     assert hi["nominal_under_ceiling"] is True
+    target_hi = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        num_pairs=17,
+        hinerv_target_modelsize_mparams=(0.03,),
+    )
+    assert target_hi is not None
+    assert target_hi["family"] == "hi_nerv"
+    assert target_hi["capacity_source"] == "local_hinerv_target_modelsize"
+    assert target_hi["target_modelsize_mparams"] == 0.03
+    assert target_hi["modelsize_error_mparams"] == pytest.approx(
+        abs(target_hi["modelsize_mparams"] - 0.03)
+    )
+    assert target_hi["candidate_id"].endswith("_tgtmp0p03")
+    reparsed_target_hi = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id=target_hi["candidate_id"],
+        hard_byte_ceilings=(178_000,),
+        num_pairs=17,
+    )
+    assert reparsed_target_hi == target_hi
+    assert target_hi["ready_for_exact_eval_dispatch"] is False
     assert sn is not None
     assert sn["family"] == "snerv"
     assert sn["hard_byte_ceiling"] == 285_000
@@ -1064,6 +1087,19 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         official_sn["fc_dim"]
     )
     assert official_sn["ready_for_exact_eval_dispatch"] is False
+    target_hi = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(36_000,),
+        hinerv_target_modelsize_mparams=(0.02,),
+    )
+    assert target_hi is not None
+    assert target_hi["family"] == "hi_nerv"
+    assert target_hi["capacity_source"] == "local_hinerv_target_modelsize"
+    assert target_hi["target_modelsize_mparams"] == 0.02
+    assert target_hi["modelsize_error_mparams"] is not None
+    assert "_tgtmp0p02" in target_hi["candidate_id"]
+    assert target_hi["ready_for_exact_eval_dispatch"] is False
     explicit = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id=hi["candidate_id"],
@@ -1097,6 +1133,13 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
         candidate_id="hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000",
         hard_byte_ceilings=(178_000,),
     )
+    hi_target = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id=(
+            "hinerv_np600_ld4_ed12_dc12_hfg_cnx_int4_mixed_ceil36000_tgtmp0p02"
+        ),
+        hard_byte_ceilings=(178_000,),
+    )
     sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="snerv_np600_lv2_lfb1p5_stepb0p5_int2_symmetric_ceil36000",
@@ -1123,6 +1166,10 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert hi["candidate_id"] == (
         "hinerv_np600_ld4_ed12_dc12_int4_mixed_ceil36000"
     )
+    assert hi_target is not None
+    assert hi_target["capacity_source"] == "local_hinerv_target_modelsize"
+    assert hi_target["target_modelsize_mparams"] == 0.02
+    assert hi_target["candidate_id"].endswith("_tgtmp0p02")
     assert hi["num_pairs"] == 600
     assert hi["hard_byte_ceiling"] == 36_000
     assert hi["decoder_codec"] == "int4_mixed"
