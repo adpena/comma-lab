@@ -29,6 +29,10 @@ SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS = (
     "snerv_official_mfu_hfr_tub_weight_mapping_missing",
     "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
 )
+SNERV_OFFICIAL_MFU_HFR_TUB_POST_EXPORT_BLOCKERS = (
+    "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+    "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+)
 PROTECTED_OFFICIAL_CONTROL_FIELDS = frozenset(
     (
         "source_faithful_stack",
@@ -110,6 +114,11 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
     official_primitives_requested = (
         adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     )
+    official_export_bound = _official_mfu_hfr_tub_export_bound(advisory_result)
+    official_export_blockers = _official_mfu_hfr_tub_export_blockers(
+        advisory_result,
+        export_bound=official_export_bound,
+    )
     receiver_safe_mfu_adapter_present = (
         adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
         or "mfu_hfr_temporal" in adapter
@@ -118,10 +127,16 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
         receiver_safe_mfu_adapter_present or official_primitives_requested
     )
     if official_primitives_requested:
-        official_parity_status = (
-            "official_mfu_hfr_tub_numeric_primitives_present__receiver_export_"
-            "and_source_forward_replay_required"
-        )
+        if official_export_bound:
+            official_parity_status = (
+                "official_mfu_hfr_tub_receiver_payload_bound__source_forward_"
+                "replay_required"
+            )
+        else:
+            official_parity_status = (
+                "official_mfu_hfr_tub_numeric_primitives_present__receiver_export_"
+                "and_source_forward_replay_required"
+            )
     elif receiver_safe_mfu_adapter_present:
         official_parity_status = (
             "receiver_safe_mfu_hfr_temporal_adapter_present__official_oss_"
@@ -141,11 +156,9 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
         "official_mfu_hfr_tub_primitives_present": bool(
             official_primitives_requested
         ),
-        "official_mfu_hfr_tub_export_bound": False,
+        "official_mfu_hfr_tub_export_bound": bool(official_export_bound),
         "official_mfu_hfr_tub_export_blockers": (
-            list(SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS)
-            if official_primitives_requested
-            else []
+            official_export_blockers if official_primitives_requested else []
         ),
         "hfr_enabled": bool(hfr_gain > 0.0),
         "snerv_t_enabled": bool(temporal_context > 0),
@@ -217,6 +230,50 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
             ),
         }
     return controls
+
+
+def _official_mfu_hfr_tub_export_bound(advisory_result: Any) -> bool:
+    """Return whether advisory evidence proves receiver-bound official payload."""
+
+    if _attr(advisory_result, "snerv_official_mfu_hfr_tub_export_bound") is True:
+        return True
+    binding = _attr(advisory_result, "official_primitive_binding")
+    if isinstance(binding, Mapping):
+        return bool(
+            binding.get("official_export_bound") is True
+            and binding.get("export_bound_to_receiver_packet") is True
+            and binding.get("official_receiver_payload_contract_emitted") is True
+            and binding.get("receiver_runtime_decode_authority") is True
+        )
+    return False
+
+
+def _official_mfu_hfr_tub_export_blockers(
+    advisory_result: Any,
+    *,
+    export_bound: bool,
+) -> list[str]:
+    """Project official-payload blockers from actual export evidence, fail closed."""
+
+    raw = _attr(advisory_result, "blockers")
+    observed = [str(value) for value in raw] if isinstance(raw, (list, tuple)) else []
+    official_observed = [
+        value
+        for value in observed
+        if value.startswith("snerv_official_mfu_hfr_tub_")
+    ]
+    if export_bound:
+        blockers = [
+            value
+            for value in official_observed
+            if value
+            != "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+        ]
+        for fallback in SNERV_OFFICIAL_MFU_HFR_TUB_POST_EXPORT_BLOCKERS:
+            if fallback not in blockers:
+                blockers.append(fallback)
+        return blockers
+    return list(SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS)
 
 
 def _merge_official_controls_fail_closed(
