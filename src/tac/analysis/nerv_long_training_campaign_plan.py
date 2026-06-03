@@ -205,15 +205,34 @@ def build_nerv_long_training_campaign_plan(
         "optimizer_kinds": list(optimizers),
         "optimizer_control_policy": {
             "schema": OPTIMIZER_CONTROL_SCHEMA,
-            "backend": "mlx.optimizers",
+            "backend": "mixed_mlx_optimizers_and_pact_pr95_partition_adapter",
             "native_mlx_on_apple_silicon": True,
             "apple_specific_algorithm_claim": False,
+            "applies_to": [
+                "hi_nerv_shared_mlx_scoreaware_runner_rows",
+                "future_snerv_learned_scoreaware_decoder_rows_after_binding",
+            ],
+            "does_not_apply_to": [
+                "snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"
+            ],
             "native_mlx_optimizer_kinds": list(optimizers),
             "first_pass_optimizer_kinds": sorted(FIRST_PASS_OPTIMIZER_KINDS),
+            "default_optimizer_kind": "pact_muon_adamw",
+            "default_optimizer_backend": "tac.local_acceleration.pr95_hnerv_mlx",
+            "borrowed_from_pr95": (
+                "Muon-vs-AdamW parameter partition and Newton-Schulz Muon "
+                "update helper"
+            ),
+            "original_pact_contest_adaptation": (
+                "default score-aware NeRV optimizer control with false-authority "
+                "MLX telemetry, byte/coder pressure, and per-run optimizer "
+                "control metadata"
+            ),
             "notes": (
-                "Lion, Muon, AdamW, Adamax, and the other listed optimizers "
-                "are treated as native MLX implementations available on "
-                "Apple silicon, not as Apple-invented optimizer algorithms."
+                "pact_muon_adamw is Pact's PR95-derived partitioned default; "
+                "Lion, AdamW, Adamax, and the other listed controls are direct "
+                "MLX optimizer baselines on Apple silicon, not Apple-invented "
+                "optimizer algorithms."
             ),
         },
         "epochs": int(epochs),
@@ -683,6 +702,7 @@ def _snerv_campaign_row(
             "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes"
             if candidate.get("nominal_under_ceiling") is not True
             else "",
+            "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
             *source_control_blockers,
             *list(curriculum.get("blockers") or []),
         ]
@@ -709,6 +729,7 @@ def _snerv_campaign_row(
         blockers=blockers,
         extra={
             "optimizer_kind": None,
+            "optimizer_control": _snerv_optimizer_control_blocker(),
             "quant_bits": int(quant_bits),
             "planned_long_training_epochs": int(epochs),
             "execution_epochs": int(execution_epochs),
@@ -1203,6 +1224,39 @@ def _snerv_expected_candidate_id_from_controls(candidate: Mapping[str, Any]) -> 
         decoder_payload_codec=str(candidate["decoder_payload_codec"]),
         hard_byte_ceiling=int(candidate["hard_byte_ceiling"]),
     )
+
+
+def _snerv_optimizer_control_blocker() -> dict[str, Any]:
+    return {
+        "schema": OPTIMIZER_CONTROL_SCHEMA,
+        "optimizer_kind": None,
+        "backend": (
+            "mlx_target_hydration_numpy_closed_form_decoder_fit_plus_"
+            "scorer_loop_qat"
+        ),
+        "native_mlx_on_apple_silicon": True,
+        "apple_specific_algorithm_claim": False,
+        "first_pass_priority": False,
+        "borrowed_from_pr95": False,
+        "original_pact_contest_adaptation": False,
+        "pact_muon_adamw_default_inherited": False,
+        "not_applicable_reason": (
+            "Current SNeRV rows materialize source-bound closed-form/native "
+            "packets plus optional scorer-loop QAT; they do not yet expose a "
+            "learned optimizer-controlled decoder-weight training loop."
+        ),
+        "blocked_until": (
+            "snerv_learned_nonlinear_or_shared_mlx_scoreaware_decoder_training_"
+            "loop_bound_to_receiver_grammar"
+        ),
+        "required_next_implementation": [
+            "source_faithful_snerv_mfu_hfr_tub_forward_parity",
+            "receiver_visible_mixed_precision_or_decoder_delta_grammar",
+            "pose_guarded_scorer_loop_decoder_weight_qat",
+            "full600_byte_closed_receiver_archive_replay",
+        ],
+        **FALSE_AUTHORITY,
+    }
 
 
 def _int_csv(values: Any) -> str:

@@ -63,7 +63,7 @@ Ready for exact dispatch: `False`
   family: `snerv`
   launchable_mlx: `True`
   optimizer: `None`
-  blockers: `19`
+  blockers: `20`
 
 ## Blockers
 

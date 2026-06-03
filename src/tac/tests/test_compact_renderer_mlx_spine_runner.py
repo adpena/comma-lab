@@ -3884,7 +3884,14 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" in out[
         "blockers"
     ]
-    assert "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs" in out[
+    assert out["score_aware_training"]["optimizer_kind"] == "pact_muon_adamw"
+    assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
+        "native_optimizer"
+    )
+    assert out["score_aware_training"]["optimizer_controls"][
+        "weight_decay_effective"
+    ] == pytest.approx(1.0e-4)
+    assert "hi_nerv_pr95_faithful_curriculum_requires_min_8_epochs" not in out[
         "blockers"
     ]
     assert "hi_nerv_receiver_proof_missing" not in out["blockers"]

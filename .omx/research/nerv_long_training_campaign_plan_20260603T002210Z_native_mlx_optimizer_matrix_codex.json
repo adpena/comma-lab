@@ -721,12 +721,15 @@
       "local_mlx_launch_command_ready": true,
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
-        "backend": "mlx.optimizers",
+        "backend": "tac.local_acceleration.pr95_hnerv_mlx",
+        "borrowed_from_pr95": true,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": true,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "pact_muon_adamw",
+        "original_pact_contest_adaptation": true,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Pact default borrows PR95's Muon-vs-AdamW partition rule and the existing MLX Newton-Schulz step, then applies it to the score-aware NeRV train loop with false-authority telemetry.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -1556,11 +1559,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": true,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "adamax",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -2390,11 +2396,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "pr95_curriculum",
         "first_pass_priority": true,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "adamw",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": false,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -3224,11 +3233,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": true,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "lion",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -4058,11 +4070,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": false,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "adadelta",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -4892,11 +4907,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": false,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "adafactor",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -5726,11 +5744,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": false,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "adagrad",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -6560,11 +6581,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": false,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "adam",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -7394,11 +7418,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": false,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "rmsprop",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -8228,11 +8255,14 @@
       "optimizer_control": {
         "apple_specific_algorithm_claim": false,
         "backend": "mlx.optimizers",
+        "borrowed_from_pr95": false,
         "default_hinerv_optimizer_policy": "native_optimizer",
         "first_pass_priority": false,
         "native_mlx_on_apple_silicon": true,
         "optimizer_kind": "sgd",
+        "original_pact_contest_adaptation": false,
         "pr95_curriculum_optimizer_swallow_guard": true,
+        "provenance_note": "Direct native MLX optimizer control row.",
         "ready_for_exact_eval_dispatch": false,
         "schema": "nerv_optimizer_control_surface.v1",
         "score_claim": false
@@ -8352,6 +8382,7 @@
     {
       "blockers": [
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
         "snerv_mlx_native_adapter_surfaces_present_but_unproven",
         "snerv_mlx_native_receiver_proof_missing_or_failed",
         "snerv_mlx_native_full600_campaign_not_ready",
@@ -9065,6 +9096,7 @@
         "blocked": false,
         "blockers": [
           "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+          "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
           "snerv_mlx_native_adapter_surfaces_present_but_unproven",
           "snerv_mlx_native_receiver_proof_missing_or_failed",
           "snerv_mlx_native_full600_campaign_not_ready",
@@ -9151,6 +9183,7 @@
           "promotable": false,
           "promotion_blockers": [
             "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+            "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
             "snerv_mlx_native_adapter_surfaces_present_but_unproven",
             "snerv_mlx_native_receiver_proof_missing_or_failed",
             "snerv_mlx_native_full600_campaign_not_ready",
@@ -9284,12 +9317,40 @@
       "implementation_status": "native_rate_aware_long_training_queue_ready",
       "local_mlx_executable": true,
       "local_mlx_launch_command_ready": true,
+      "optimizer_control": {
+        "apple_specific_algorithm_claim": false,
+        "backend": "mlx_target_hydration_numpy_closed_form_decoder_fit_plus_scorer_loop_qat",
+        "blocked_until": "snerv_learned_nonlinear_or_shared_mlx_scoreaware_decoder_training_loop_bound_to_receiver_grammar",
+        "borrowed_from_pr95": false,
+        "dispatch_attempted": false,
+        "first_pass_priority": false,
+        "gpu_launched": false,
+        "native_mlx_on_apple_silicon": true,
+        "not_applicable_reason": "Current SNeRV rows materialize source-bound closed-form/native packets plus optional scorer-loop QAT; they do not yet expose a learned optimizer-controlled decoder-weight training loop.",
+        "optimizer_kind": null,
+        "original_pact_contest_adaptation": false,
+        "pact_muon_adamw_default_inherited": false,
+        "promotable": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "required_next_implementation": [
+          "source_faithful_snerv_mfu_hfr_tub_forward_parity",
+          "receiver_visible_mixed_precision_or_decoder_delta_grammar",
+          "pose_guarded_scorer_loop_decoder_weight_qat",
+          "full600_byte_closed_receiver_archive_replay"
+        ],
+        "schema": "nerv_optimizer_control_surface.v1",
+        "score_claim": false,
+        "score_claim_valid": false
+      },
       "optimizer_kind": null,
       "planned_long_training_epochs": 29650,
       "priority": 12,
       "promotable": false,
       "promotion_blockers": [
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
         "snerv_mlx_native_adapter_surfaces_present_but_unproven",
         "snerv_mlx_native_receiver_proof_missing_or_failed",
         "snerv_mlx_native_full600_campaign_not_ready",
@@ -9365,6 +9426,7 @@
         "promotable": false,
         "promotion_blockers": [
           "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+          "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
           "snerv_mlx_native_adapter_surfaces_present_but_unproven",
           "snerv_mlx_native_receiver_proof_missing_or_failed",
           "snerv_mlx_native_full600_campaign_not_ready",
@@ -11802,6 +11864,7 @@
         "blocked": false,
         "blockers": [
           "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+          "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
           "snerv_mlx_native_adapter_surfaces_present_but_unproven",
           "snerv_mlx_native_receiver_proof_missing_or_failed",
           "snerv_mlx_native_full600_campaign_not_ready",
@@ -11888,6 +11951,7 @@
           "promotable": false,
           "promotion_blockers": [
             "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
+            "snerv_optimizer_control_requires_learned_scoreaware_training_loop",
             "snerv_mlx_native_adapter_surfaces_present_but_unproven",
             "snerv_mlx_native_receiver_proof_missing_or_failed",
             "snerv_mlx_native_full600_campaign_not_ready",
@@ -12038,7 +12102,17 @@
   "objective": "Make HiNeRV and SNeRV full-stack PR95-or-better carriers: modelsize-byte constrained, real SegNet/PoseNet scorer-bound, QAT/coder pressured, MLX-first, NumPy-portable, receiver-proven, CPU replay gated, and exact-auth only after local wins.",
   "optimizer_control_policy": {
     "apple_specific_algorithm_claim": false,
-    "backend": "mlx.optimizers",
+    "applies_to": [
+      "hi_nerv_shared_mlx_scoreaware_runner_rows",
+      "future_snerv_learned_scoreaware_decoder_rows_after_binding"
+    ],
+    "backend": "mixed_mlx_optimizers_and_pact_pr95_partition_adapter",
+    "borrowed_from_pr95": "Muon-vs-AdamW parameter partition and Newton-Schulz Muon update helper",
+    "default_optimizer_backend": "tac.local_acceleration.pr95_hnerv_mlx",
+    "default_optimizer_kind": "pact_muon_adamw",
+    "does_not_apply_to": [
+      "snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"
+    ],
     "first_pass_optimizer_kinds": [
       "adamax",
       "adamw",
@@ -12058,7 +12132,8 @@
       "adadelta",
       "sgd"
     ],
-    "notes": "Lion, Muon, AdamW, Adamax, and the other listed optimizers are treated as native MLX implementations available on Apple silicon, not as Apple-invented optimizer algorithms.",
+    "notes": "pact_muon_adamw is Pact's PR95-derived partitioned default; Lion, AdamW, Adamax, and the other listed controls are direct MLX optimizer baselines on Apple silicon, not Apple-invented optimizer algorithms.",
+    "original_pact_contest_adaptation": "default score-aware NeRV optimizer control with false-authority MLX telemetry, byte/coder pressure, and per-run optimizer control metadata",
     "schema": "nerv_optimizer_control_surface.v1"
   },
   "optimizer_kinds": [

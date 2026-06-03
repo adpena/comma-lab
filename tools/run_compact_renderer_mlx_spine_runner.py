@@ -7258,11 +7258,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "scope": "real_pytorch_segnet_posenet_teacher_cache",
             },
             "allow_segnet_only_research": bool(allow_segnet_only_research),
-            "optimizer_policy": optimizer_policy,
+            "optimizer_policy": strip_candidate_curriculum_authority_fields(
+                optimizer_policy
+            ),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
             "native_optimizer_active": native_optimizer_active,
             "optimizer_kind": effective_optimizer_kind,
-            "optimizer_controls": optimizer_control,
+            "optimizer_controls": strip_candidate_curriculum_authority_fields(
+                optimizer_control
+            ),
             "effective_weight_decay": effective_weight_decay,
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "decoder_fake_quant_forward": {

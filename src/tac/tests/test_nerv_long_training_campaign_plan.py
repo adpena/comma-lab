@@ -64,6 +64,13 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         row["optimizer_policy"]["native_mlx_optimizer_expected"] is True
         for row in hi_rows
     )
+    assert report["optimizer_control_policy"]["applies_to"] == [
+        "hi_nerv_shared_mlx_scoreaware_runner_rows",
+        "future_snerv_learned_scoreaware_decoder_rows_after_binding",
+    ]
+    assert report["optimizer_control_policy"]["does_not_apply_to"] == [
+        "snerv_current_closed_form_native_export_and_scorer_loop_qat_rows"
+    ]
     assert all(
         row["command_argv"][
             row["command_argv"].index("--hi-nerv-optimizer-policy") + 1
@@ -79,6 +86,17 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         == "gpu"
         for row in hi_rows
     )
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv["optimizer_kind"] is None
+    assert snerv["optimizer_control"]["optimizer_kind"] is None
+    assert snerv["optimizer_control"]["backend"] == (
+        "mlx_target_hydration_numpy_closed_form_decoder_fit_plus_scorer_loop_qat"
+    )
+    assert snerv["optimizer_control"]["pact_muon_adamw_default_inherited"] is False
+    assert snerv["optimizer_control"]["score_claim"] is False
+    assert "snerv_optimizer_control_requires_learned_scoreaware_training_loop" in snerv[
+        "blockers"
+    ]
     assert all(
         row["command_argv"][
             row["command_argv"].index("--mlx-prefilter-scorer-device") + 1
@@ -1439,6 +1457,12 @@ def test_pact_muon_adamw_hinerv_row_is_default_first_priority() -> None:
     assert hi_rows[0]["optimizer_control"]["borrowed_from_pr95"] is True
     assert hi_rows[0]["optimizer_control"]["original_pact_contest_adaptation"] is True
     assert hi_rows[0]["optimizer_policy"]["requested_policy"] == "native_optimizer"
+    assert report["optimizer_control_policy"]["default_optimizer_kind"] == (
+        "pact_muon_adamw"
+    )
+    assert report["optimizer_control_policy"]["default_optimizer_backend"] == (
+        "tac.local_acceleration.pr95_hnerv_mlx"
+    )
 
 
 def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) -> None:
