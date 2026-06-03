@@ -6,6 +6,7 @@
 
 | timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |
 |---|---|---|---|---|---|---|---|
+| 2026-06-03T00:59:31Z | codex:gpt-5 | lane_snerv_score_aware_decoder_fit_20260601 | macos_mlx_local | snerv_scorer_loop_smoke_4pair_20260603T010000Z |  | refused_dispatch_no_process_no_artifact | Closing phantom 4-pair local scorer-loop claim: ps found no run_snerv_scorer_loop process and artifact search found no 010000/4pair result on local or SSD; no score claim. |
 | 2026-06-03T00:58:43Z | codex:gpt-5 | lane_snerv_score_aware_decoder_fit_20260601 | macos_mlx_local | snerv_scorer_loop_smoke_4pair_20260603T010000Z | 2026-06-03T01:45Z | active_local_scorer_loop_smoke | 4-pair work-order scorer-loop decoder/QAT smoke; false-authority local/advisory only; SSD-backed output; zero byte-growth guard |
 | 2026-06-03T00:57:52Z | codex:gpt-5 | lane_snerv_score_aware_decoder_fit_20260601 | macos_mlx_local | snerv_scorer_loop_smoke_20260603T005553Z |  | completed_local_scorer_loop_smoke | 1-pair scorer-loop decoder/QAT smoke completed; false-authority local/advisory only; best_linf 7.075948609433537 to 6.818066793808045; zero byte-growth guard; artifact on SSD |
 | 2026-06-03T00:56:02Z | codex:gpt-5 | lane_snerv_score_aware_decoder_fit_20260601 | macos_mlx_local | snerv_scorer_loop_smoke_20260603T005553Z | 2026-06-03T01:20Z | active_local_scorer_loop_smoke | 1-pair scorer-loop decoder/QAT smoke after work-order routing; false-authority local/advisory only; SSD-backed output |
