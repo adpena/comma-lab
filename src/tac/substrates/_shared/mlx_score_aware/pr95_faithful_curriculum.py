@@ -153,11 +153,14 @@ module as a downstream consumer per Catalog #344 producer/consumer chain.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 __all__ = [
     "CANONICAL_PR95_TOTAL_EPOCHS",
+    "PR95_MUON_POLICY_EVERY_STAGE",
+    "PR95_MUON_POLICY_FAITHFUL_STAGE8_ONLY",
+    "SUPPORTED_PR95_MUON_POLICIES",
     "PR95FaithfulCurriculumError",
     "PR95FaithfulCurriculumFactory",
     "PR95FaithfulCurriculumStageVerdict",
@@ -182,6 +185,13 @@ CANONICAL_PR95_TOTAL_EPOCHS: int = sum(epochs for _, epochs in _CANONICAL_PR95_S
 assert CANONICAL_PR95_TOTAL_EPOCHS == 29_650, (
     f"PR95 L14 8-stage canonical sum is 29650 epochs; got "
     f"{CANONICAL_PR95_TOTAL_EPOCHS}; check _CANONICAL_PR95_STAGE_EPOCHS."
+)
+
+PR95_MUON_POLICY_FAITHFUL_STAGE8_ONLY = "faithful_stage8_only"
+PR95_MUON_POLICY_EVERY_STAGE = "every_stage"
+SUPPORTED_PR95_MUON_POLICIES = (
+    PR95_MUON_POLICY_FAITHFUL_STAGE8_ONLY,
+    PR95_MUON_POLICY_EVERY_STAGE,
 )
 
 
@@ -209,6 +219,7 @@ class PR95FaithfulCurriculumStageVerdict:
     cat_sigma: float
     cat_lambda: float
     uses_muon: bool
+    muon_policy: str
 
 
 class PR95FaithfulCurriculumFactory:
@@ -250,6 +261,8 @@ class PR95FaithfulCurriculumFactory:
     def __init__(
         self,
         total_epoch_budget: int = CANONICAL_PR95_TOTAL_EPOCHS,
+        *,
+        muon_policy: str = PR95_MUON_POLICY_FAITHFUL_STAGE8_ONLY,
     ) -> None:
         if total_epoch_budget < 8:
             raise PR95FaithfulCurriculumError(
@@ -258,7 +271,14 @@ class PR95FaithfulCurriculumFactory:
                 f"{total_epoch_budget}. Canonical full curriculum is "
                 f"{CANONICAL_PR95_TOTAL_EPOCHS} per L14."
             )
+        muon_policy = str(muon_policy)
+        if muon_policy not in SUPPORTED_PR95_MUON_POLICIES:
+            raise PR95FaithfulCurriculumError(
+                "muon_policy must be one of "
+                f"{SUPPORTED_PR95_MUON_POLICIES}; got {muon_policy!r}"
+            )
         self._total_epoch_budget = int(total_epoch_budget)
+        self._muon_policy = muon_policy
         # Compute per-stage epoch boundaries (half-open [start, end) ranges).
         self._stage_boundaries: list[tuple[int, int, int]] = self._compute_stage_boundaries(
             total_epoch_budget
@@ -276,6 +296,11 @@ class PR95FaithfulCurriculumFactory:
     def is_canonical_pr95_budget(self) -> bool:
         """True iff total_epoch_budget == CANONICAL_PR95_TOTAL_EPOCHS (29,650)."""
         return self._total_epoch_budget == CANONICAL_PR95_TOTAL_EPOCHS
+
+    @property
+    def muon_policy(self) -> str:
+        """Return the Muon activation policy for this curriculum instance."""
+        return self._muon_policy
 
     @property
     def stage_epoch_boundaries(self) -> tuple[tuple[int, int, int], ...]:
@@ -390,6 +415,10 @@ class PR95FaithfulCurriculumFactory:
                 f"stage_index {stage_index} descriptor {descriptor_id} missing "
                 f"training_config"
             )
+        uses_muon = bool(training_config.get("stage_uses_muon") or False)
+        if self._muon_policy == PR95_MUON_POLICY_EVERY_STAGE:
+            optimizer_config = replace(optimizer_config, use_muon=True)
+            uses_muon = True
         # Look up the (start_epoch, end_epoch) for this stage in our scaled
         # boundaries. Stage indices in _stage_boundaries are 1-indexed.
         boundary = next(
@@ -412,7 +441,8 @@ class PR95FaithfulCurriculumFactory:
             qat_active=bool(training_config.get("stage_uses_qat") or False),
             cat_sigma=float(training_config.get("stage_cat_sigma") or 0.0),
             cat_lambda=float(training_config.get("stage_cat_lambda") or 0.0),
-            uses_muon=bool(training_config.get("stage_uses_muon") or False),
+            uses_muon=uses_muon,
+            muon_policy=self._muon_policy,
         )
 
     @staticmethod

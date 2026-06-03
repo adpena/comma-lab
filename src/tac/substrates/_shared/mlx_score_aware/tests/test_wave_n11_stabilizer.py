@@ -554,6 +554,59 @@ def test_train_step_default_pact_muon_adamw_uses_real_partition(
     assert "latents" in step_summary["adamw_parameter_names"]
 
 
+def test_train_step_lion_emits_native_optimizer_binding_telemetry(
+    adapter_kwargs,
+):
+    """Native optimizer sweeps must be self-describing in telemetry rows."""
+
+    import mlx.core as mx
+    import mlx.nn as mlx_nn
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+
+    class TinyRenderer(mlx_nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.latents = mx.ones((4, 3)) * 0.2
+            self.decoder_weight = mx.eye(3) * 0.5
+
+        def reconstruct_pair(self, batch):
+            n = batch.shape[0]
+            latent = self.latents[batch]
+            mixed = latent @ self.decoder_weight
+            rgb0 = mx.broadcast_to(mx.reshape(mixed, (n, 3, 1, 1)), (n, 3, 4, 4))
+            rgb1 = rgb0 * 0.5
+            return rgb0, rgb1
+
+    bundle = RendererBundle(
+        model=TinyRenderer(),
+        target_rgb_0=mx.zeros((4, 4, 4, 3)),
+        target_rgb_1=mx.zeros((4, 4, 4, 3)),
+        num_pairs=4,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        optimizer_kind="lion",
+        weight_decay=0.0,
+        **adapter_kwargs,
+    )
+
+    metrics = adapter.train_step(
+        batch=mx.array([0, 1], dtype=mx.int32),
+        learning_rate=3.0e-5,
+        loss_weights={},
+    )
+
+    assert metrics["native_mlx_optimizer_active"] == pytest.approx(1.0)
+    assert metrics["native_mlx_optimizer_kind_lion"] == pytest.approx(1.0)
+    assert metrics["native_mlx_optimizer_kind_adamw"] == pytest.approx(0.0)
+    assert metrics["native_mlx_optimizer_kind_muon"] == pytest.approx(0.0)
+    assert metrics["native_mlx_optimizer_weight_decay"] == pytest.approx(0.0)
+    assert metrics["native_mlx_optimizer_weight_decay_explicit"] == pytest.approx(1.0)
+
+
 def test_build_optimizer_warmup_only_uses_linear_schedule(
     minimal_bundle, adapter_kwargs
 ):

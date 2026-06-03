@@ -363,9 +363,14 @@ def test_harness_signature_accepts_pr95_faithful_curriculum_kwargs() -> None:
     assert "ema_archive_selection_enabled" in params, (
         "harness signature missing EMA archive selector kwarg; wire-in is FAKE if absent"
     )
+    assert "pr95_muon_policy" in params, (
+        "harness signature missing PR95 Muon policy kwarg; contest optimizer "
+        "control is FAKE if absent"
+    )
     # Defaults must preserve backward compat (default off).
     assert params["pr95_faithful_curriculum_enabled"].default is False
     assert params["pr95_curriculum_total_epochs"].default is None
+    assert params["pr95_muon_policy"].default == "faithful_stage8_only"
     assert params["ema_archive_selection_enabled"].default is False
 
 
@@ -387,7 +392,11 @@ def test_harness_source_constructs_adapter_with_pr95_kwargs() -> None:
         "MlxScoreAwareAdapter is not constructed in harness module; harness "
         "may have regressed (FAKE wire-in regression)"
     )
-    canonical_kwargs = {"pr95_faithful_curriculum_enabled", "pr95_curriculum_total_epochs"}
+    canonical_kwargs = {
+        "pr95_faithful_curriculum_enabled",
+        "pr95_curriculum_total_epochs",
+        "pr95_muon_policy",
+    }
     for call in found_calls:
         kw_names = {kw.arg for kw in call.keywords if kw.arg is not None}
         missing = canonical_kwargs - kw_names
@@ -576,12 +585,14 @@ def test_harness_construction_propagates_pr95_state_into_adapter() -> None:
         substrate_id="wire_in_full_chain_test",
         pr95_faithful_curriculum_enabled=True,
         pr95_curriculum_total_epochs=100,
+        pr95_muon_policy="every_stage",
     )
     assert adapter._pr95_faithful_curriculum_enabled is True
     assert adapter._pr95_curriculum_factory is not None
     assert adapter._pr95_optimizer_state is not None
     # The factory's total_epoch_budget must reflect what the harness passed.
     assert adapter._pr95_curriculum_factory.total_epoch_budget == 100
+    assert adapter._pr95_curriculum_factory.muon_policy == "every_stage"
     # notify_global_epoch must advance internal state.
     adapter.notify_global_epoch(42)
     assert adapter._pr95_global_epoch == 42

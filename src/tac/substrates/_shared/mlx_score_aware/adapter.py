@@ -184,6 +184,7 @@ class MlxScoreAwareAdapter:
         substrate_id: str,
         pr95_faithful_curriculum_enabled: bool = False,
         pr95_curriculum_total_epochs: int | None = None,
+        pr95_muon_policy: str = "faithful_stage8_only",
         # Wave N+11 Z7-Mamba-2 stabilizer recipe (Slot 1 RESUME 1e2b78163
         # IMPLEMENTATION-LEVEL falsification + Wave N+10 NaN-at-ep-16-18
         # signature reactivation criteria per task #1481). All defaults are
@@ -233,6 +234,11 @@ class MlxScoreAwareAdapter:
                 curriculum; defaults to the canonical 29,650 per L14.
                 Required when ``pr95_faithful_curriculum_enabled=True``;
                 ignored otherwise.
+            pr95_muon_policy: Muon activation policy for the PR95 curriculum.
+                ``faithful_stage8_only`` preserves PR95 source fidelity; the
+                explicit contest control ``every_stage`` keeps the same PR95
+                stage loss/QAT schedule but routes Muon-eligible tensors
+                through the real PR95-derived Muon branch from stage 1 onward.
             grad_clip_max_norm: Wave N+11 stabilizer. If not None and > 0,
                 applies ``mlx.optimizers.clip_grad_norm(grads, max_norm)``
                 after value_and_grad but before optimizer.update. Mamba-2
@@ -368,6 +374,13 @@ class MlxScoreAwareAdapter:
         self._pr95_faithful_curriculum_enabled = bool(
             pr95_faithful_curriculum_enabled
         )
+        self._pr95_muon_policy = str(pr95_muon_policy)
+        if self._pr95_muon_policy not in {"faithful_stage8_only", "every_stage"}:
+            raise ValueError(
+                "pr95_muon_policy must be one of "
+                "('faithful_stage8_only', 'every_stage'); got "
+                f"{pr95_muon_policy!r}"
+            )
         self._pr95_curriculum_factory: Any = None
         self._pr95_optimizer_state: Any = None
         self._pr95_global_epoch: int = 0
@@ -395,6 +408,7 @@ class MlxScoreAwareAdapter:
                     if pr95_curriculum_total_epochs is not None
                     else CANONICAL_PR95_TOTAL_EPOCHS
                 ),
+                muon_policy=self._pr95_muon_policy,
             )
             self._pr95_optimizer_state = Pr95MlxOptimizerState()
         # Sibling optimizer for the learnable student head (real-scorer-bound
@@ -1002,6 +1016,15 @@ class MlxScoreAwareAdapter:
                 "emitted_by_train_step": True,
                 "required_when_score_terms_enabled": True,
             },
+            "pr95_curriculum_controls": {
+                "schema": "mlx_pr95_curriculum_controls.v1",
+                "pr95_faithful_curriculum_enabled": (
+                    self._pr95_faithful_curriculum_enabled
+                ),
+                "pr95_muon_policy": self._pr95_muon_policy,
+                "source_faithful_default": "faithful_stage8_only",
+                "contest_specific_policies": ["every_stage"],
+            },
         }
         metadata["decoder_weight_gradient_saliency"] = (
             self.decoder_weight_gradient_saliency_summary()
@@ -1331,6 +1354,7 @@ class MlxScoreAwareAdapter:
             "pr95_faithful_muon_adamw_partition_enabled": (
                 self._pr95_faithful_curriculum_enabled
             ),
+            "pr95_muon_policy": self._pr95_muon_policy,
             "pact_native_muon_adamw_partition_enabled": (
                 self._wave_n11_optimizer_kind == "pact_muon_adamw"
             ),
@@ -1626,7 +1650,52 @@ class MlxScoreAwareAdapter:
         )
 
         mx.eval(*eval_targets)
-        return {"total": float(loss_value.item()), **post_update_metrics}
+        native_optimizer_metrics = {
+            "native_mlx_optimizer_active": 1.0,
+            "native_mlx_optimizer_kind_adadelta": float(
+                self._wave_n11_optimizer_kind == "adadelta"
+            ),
+            "native_mlx_optimizer_kind_adafactor": float(
+                self._wave_n11_optimizer_kind == "adafactor"
+            ),
+            "native_mlx_optimizer_kind_adagrad": float(
+                self._wave_n11_optimizer_kind == "adagrad"
+            ),
+            "native_mlx_optimizer_kind_adam": float(
+                self._wave_n11_optimizer_kind == "adam"
+            ),
+            "native_mlx_optimizer_kind_adamax": float(
+                self._wave_n11_optimizer_kind == "adamax"
+            ),
+            "native_mlx_optimizer_kind_adamw": float(
+                self._wave_n11_optimizer_kind == "adamw"
+            ),
+            "native_mlx_optimizer_kind_lion": float(
+                self._wave_n11_optimizer_kind == "lion"
+            ),
+            "native_mlx_optimizer_kind_muon": float(
+                self._wave_n11_optimizer_kind == "muon"
+            ),
+            "native_mlx_optimizer_kind_rmsprop": float(
+                self._wave_n11_optimizer_kind == "rmsprop"
+            ),
+            "native_mlx_optimizer_kind_sgd": float(
+                self._wave_n11_optimizer_kind == "sgd"
+            ),
+            "native_mlx_optimizer_weight_decay": (
+                0.0
+                if self._wave_n11_weight_decay is None
+                else float(self._wave_n11_weight_decay)
+            ),
+            "native_mlx_optimizer_weight_decay_explicit": float(
+                self._wave_n11_weight_decay is not None
+            ),
+        }
+        return {
+            "total": float(loss_value.item()),
+            **native_optimizer_metrics,
+            **post_update_metrics,
+        }
 
     def _train_step_pact_muon_adamw(
         self,
@@ -1850,6 +1919,15 @@ class MlxScoreAwareAdapter:
             "total": float(loss_value.item()),
             "pr95_stage_index": float(stage_verdict.stage_index),
             "pr95_stage_uses_muon": float(int(stage_verdict.uses_muon)),
+            "pr95_stage_optimizer_use_muon": float(
+                int(bool(_summary.get("use_muon")))
+            ),
+            "pr95_stage_muon_tensor_count": float(
+                int(_summary.get("muon_tensor_count") or 0)
+            ),
+            "pr95_stage_adamw_tensor_count": float(
+                int(_summary.get("adamw_tensor_count") or 0)
+            ),
             "pr95_stage_cat_lambda": float(stage_verdict.cat_lambda),
             "pr95_stage_cat_sigma": float(stage_verdict.cat_sigma),
             **post_update_metrics,

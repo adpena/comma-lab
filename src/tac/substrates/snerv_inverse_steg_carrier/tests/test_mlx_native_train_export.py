@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
+import inspect
 import json
 from pathlib import Path
 
@@ -50,6 +52,95 @@ def _tiny_pairs(*, pairs: int = 1) -> np.ndarray:
                     + yy * (0.4 + 0.1 * frame_idx)
                 )
     return np.clip(out, 0.0, 255.0)
+
+
+def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    public_sig = inspect.signature(train_export_snerv_mlx_native)
+    assert "score_aware_long_training_pr95_muon_policy" in public_sig.parameters
+    assert (
+        public_sig.parameters[
+            "score_aware_long_training_pr95_muon_policy"
+        ].default
+        == "faithful_stage8_only"
+    )
+    attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
+    assert "pr95_muon_policy" in attachment_sig.parameters
+
+    source = Path(mod.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    attachment_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "_run_score_aware_long_training_attachment"
+    ]
+    assert attachment_calls
+    assert any(
+        "pr95_muon_policy" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in attachment_calls
+    )
+    harness_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    assert harness_calls
+    assert any(
+        "pr95_muon_policy" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in harness_calls
+    )
+
+
+def test_pr95_every_stage_muon_blocks_when_snerv_has_no_matrix_targets(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "zero_muon_every_stage",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_pr95_faithful_curriculum": True,
+            "score_aware_long_training_pr95_muon_policy": "every_stage",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    long_training = report["score_aware_long_training"]
+    assert report["score_aware_long_training_executed"] is False
+    assert long_training["executed"] is False
+    assert (
+        "snerv_pr95_every_stage_muon_has_no_eligible_matrix_tensors"
+        in long_training["blockers"]
+    )
+    assert long_training["pr95_optimizer_coverage"]["muon_tensor_count"] == 0
+    assert long_training["pr95_optimizer_coverage"]["adamw_tensor_count"] > 0
 
 
 def test_packet_builder_emits_receiver_decodable_snar1() -> None:

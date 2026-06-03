@@ -86,6 +86,46 @@ def test_factory_refuses_total_epoch_budget_below_8() -> None:
 
 
 @requires_mlx
+def test_factory_refuses_unknown_muon_policy() -> None:
+    """Muon policy is executable optimizer control, so unknown values fail."""
+    from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
+        PR95FaithfulCurriculumError,
+        PR95FaithfulCurriculumFactory,
+    )
+
+    with pytest.raises(PR95FaithfulCurriculumError, match="muon_policy"):
+        PR95FaithfulCurriculumFactory(total_epoch_budget=80, muon_policy="maybe")
+
+
+@requires_mlx
+def test_factory_every_stage_muon_policy_activates_stage_1_muon() -> None:
+    """Contest policy keeps PR95 stages but routes Muon from stage 1 onward."""
+    from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
+        PR95_MUON_POLICY_EVERY_STAGE,
+        PR95_MUON_POLICY_FAITHFUL_STAGE8_ONLY,
+        PR95FaithfulCurriculumFactory,
+    )
+
+    faithful = PR95FaithfulCurriculumFactory(total_epoch_budget=80)
+    faithful_stage1 = faithful.current_stage_verdict(0)
+    assert faithful.muon_policy == PR95_MUON_POLICY_FAITHFUL_STAGE8_ONLY
+    assert faithful_stage1.uses_muon is False
+    assert faithful_stage1.optimizer_config.use_muon is False
+
+    contest = PR95FaithfulCurriculumFactory(
+        total_epoch_budget=80,
+        muon_policy=PR95_MUON_POLICY_EVERY_STAGE,
+    )
+    contest_stage1 = contest.current_stage_verdict(0)
+    assert contest.muon_policy == PR95_MUON_POLICY_EVERY_STAGE
+    assert contest_stage1.muon_policy == PR95_MUON_POLICY_EVERY_STAGE
+    assert contest_stage1.uses_muon is True
+    assert contest_stage1.optimizer_config.use_muon is True
+    assert contest_stage1.descriptor_id == faithful_stage1.descriptor_id
+    assert contest_stage1.loss_family == faithful_stage1.loss_family
+
+
+@requires_mlx
 def test_factory_smoke_budget_proportionally_scales_stages() -> None:
     """A small smoke budget (100 epochs) scales per-stage epochs proportionally."""
     from tac.substrates._shared.mlx_score_aware.pr95_faithful_curriculum import (
@@ -603,6 +643,35 @@ def test_train_step_returns_stage_index_in_metrics_when_curriculum_enabled() -> 
     assert "loss_part_pr95_stage_scorer_surrogate" in metrics
     assert metrics["pr95_stage_index"] == 1.0
     assert metrics["pr95_stage_uses_muon"] == 0.0  # stage 1 uses AdamW only.
+
+
+@requires_mlx
+def test_train_step_every_stage_muon_policy_uses_muon_in_stage_1() -> None:
+    """The contest policy is a real train_step optimizer branch, not metadata."""
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+        pr95_muon_policy="every_stage",
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0},
+    )
+
+    assert metrics["pr95_stage_index"] == 1.0
+    assert metrics["pr95_stage_uses_muon"] == 1.0
+    assert adapter._pr95_curriculum_factory.muon_policy == "every_stage"
+    assert adapter.artifact_metadata()["score_aware_training"][
+        "pr95_curriculum_controls"
+    ]["pr95_muon_policy"] == "every_stage"
 
 
 @requires_mlx

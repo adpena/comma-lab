@@ -3048,6 +3048,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--snerv-score-aware-long-training-weight-decay",
             "-1",
             "--snerv-score-aware-long-training-eval-roundtrip-ste",
+            "--snerv-score-aware-long-training-pr95-muon-policy",
+            "every_stage",
         ]
     )
 
@@ -3110,6 +3112,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_score_aware_long_training_grad_clip_max_norm == 0.75
     assert sn.snerv_score_aware_long_training_weight_decay == -1.0
     assert sn.snerv_score_aware_long_training_eval_roundtrip_ste is True
+    assert sn.snerv_score_aware_long_training_pr95_muon_policy == "every_stage"
 
 
 def test_top_priority_family_cli_refuses_missing_planner_row(
@@ -5069,6 +5072,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
             "mid_injection_block_index": 2,
             "fine_injection_block_index": 5,
             "decoder_codec": "int4_mixed",
+            "hi_nerv_latent_codec": "int16_brotli_q11",
             "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 160_000,
@@ -5115,6 +5119,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert captured_train_kwargs["embed_dim"] == 16
     assert captured_train_kwargs["decoder_channel"] == 6
     assert captured_train_kwargs["decoder_codec"] == "int4_mixed"
+    assert captured_train_kwargs["hi_nerv_latent_codec"] == "int16_brotli_q11"
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
     assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002
@@ -5192,7 +5197,11 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert selection["launch_embed_dim"] == 16
     assert selection["launch_decoder_channel"] == 6
     assert selection["launch_decoder_codec"] == "int4_mixed"
+    assert selection["launch_hi_nerv_latent_codec"] == "int16_brotli_q11"
     assert out["score_aware_training"]["decoder_codec"] == "int4_mixed"
+    assert out["score_aware_training"]["hi_nerv_latent_codec"] == (
+        "int16_brotli_q11"
+    )
     waterfill = out["score_aware_training"]["decoder_weight_waterfill_plan"]
     assert waterfill["attached"] is True
     assert waterfill["path"] == waterfill_plan_path.as_posix()

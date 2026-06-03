@@ -224,6 +224,7 @@ def train_export_snerv_mlx_native(
     coder_qat_c1a_sigma: float = 0.2,
     coder_qat_c1a_sample_size: int = 512,
     score_aware_long_training_pr95_faithful_curriculum: bool = False,
+    score_aware_long_training_pr95_muon_policy: str = "faithful_stage8_only",
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
@@ -566,6 +567,15 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_score_aware_long_training_pr95_faithful_curriculum",
                     score_aware_long_training_pr95_faithful_curriculum,
+                ),
+            )
+        ),
+        pr95_muon_policy=str(
+            candidate.get(
+                "score_aware_long_training_pr95_muon_policy",
+                candidate.get(
+                    "snerv_score_aware_long_training_pr95_muon_policy",
+                    score_aware_long_training_pr95_muon_policy,
                 ),
             )
         ),
@@ -948,8 +958,20 @@ def train_export_snerv_mlx_native(
         score_aware_long_training_public.get("pr95_faithful_curriculum_enabled")
         is True
     )
+    payload["score_aware_long_training_pr95_muon_policy"] = str(
+        score_aware_long_training_public.get("pr95_muon_policy")
+        or "faithful_stage8_only"
+    )
+    payload["score_aware_long_training_pr95_faithful_optimizer_schedule_bound"] = bool(
+        score_aware_long_training_public.get("pr95_faithful_curriculum_enabled")
+        is True
+    )
     payload["score_aware_long_training_muon_adamw_partition_bound"] = bool(
         score_aware_long_training_public.get("muon_adamw_partition_bound") is True
+    )
+    payload["score_aware_long_training_pact_native_muon_adamw_partition_bound"] = bool(
+        score_aware_long_training_public.get("pact_native_muon_adamw_partition_bound")
+        is True
     )
     payload["score_aware_long_training_kind"] = str(
         selected_archive_metadata.get("score_aware_long_training_kind") or "none"
@@ -1135,6 +1157,7 @@ def _run_score_aware_long_training_attachment(
     coder_qat_c1a_sigma: float,
     coder_qat_c1a_sample_size: int,
     pr95_faithful_curriculum_enabled: bool,
+    pr95_muon_policy: str,
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     """Run real SNeRV MLX long training before NumPy-portable SNAR export."""
@@ -1170,6 +1193,7 @@ def _run_score_aware_long_training_attachment(
         "pr95_faithful_curriculum_enabled": bool(
             pr95_faithful_curriculum_enabled
         ),
+        "pr95_muon_policy": str(pr95_muon_policy),
         "contest_scorer_distortion_objective": bool(
             _recon_pixel_weight_metadata_is_verified_gradient_manifest(
                 recon_pixel_weight_metadata
@@ -1282,6 +1306,9 @@ def _run_score_aware_long_training_attachment(
     try:
         import mlx.core as mx
 
+        from tac.local_acceleration.pr95_hnerv_mlx import (
+            partition_pr95_mlx_parameter_names,
+        )
         from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
         from tac.substrates._shared.mlx_score_aware.coder_qat import (
             CoderAwareQATConfig,
@@ -1311,6 +1338,42 @@ def _run_score_aware_long_training_attachment(
             wavelet="haar",
             model_size=model_size,
         )
+        pr95_optimizer_split = partition_pr95_mlx_parameter_names(
+            model.parameters()
+        )
+        pr95_optimizer_coverage = {
+            "schema": "snerv_pr95_optimizer_parameter_coverage.v1",
+            "pr95_faithful_curriculum_enabled": bool(
+                pr95_faithful_curriculum_enabled
+            ),
+            "pr95_muon_policy": str(pr95_muon_policy),
+            "muon_tensor_count": len(pr95_optimizer_split.get("muon") or []),
+            "adamw_tensor_count": len(pr95_optimizer_split.get("adamw") or []),
+            "muon_parameter_names": list(pr95_optimizer_split.get("muon") or []),
+            "adamw_parameter_names": list(pr95_optimizer_split.get("adamw") or []),
+            "vector_decoder_kernels_are_not_matrix_muon_targets": True,
+            **FALSE_AUTHORITY,
+        }
+        if (
+            pr95_faithful_curriculum_enabled
+            and str(pr95_muon_policy) == "every_stage"
+            and int(pr95_optimizer_coverage["muon_tensor_count"]) <= 0
+        ):
+            payload = {
+                **base_payload,
+                "executed": False,
+                "training_completed": False,
+                "pr95_optimizer_coverage": pr95_optimizer_coverage,
+                "blockers": [
+                    "snerv_pr95_every_stage_muon_has_no_eligible_matrix_tensors"
+                ],
+                "recommended_next_optimizer_controls": [
+                    "disable_pr95_faithful_curriculum_for_sneRV_vector_kernel_lion_smoke",
+                    "or_add_a_source-faithful_matrix_decoder_before_muon",
+                ],
+            }
+            write_json(report_path, payload)
+            return {**payload, "report_path": report_path.as_posix()}
         coder_qat_cfg = CoderAwareQATConfig(
             enabled=bool(coder_aware_qat),
             quant_bits=int(coder_qat_quant_bits),
@@ -1424,6 +1487,7 @@ def _run_score_aware_long_training_attachment(
                 "pr95_faithful_curriculum_enabled": bool(
                     pr95_faithful_curriculum_enabled
                 ),
+                "pr95_muon_policy": str(pr95_muon_policy),
                 "contest_scorer_distortion_objective": bool(
                     _recon_pixel_weight_metadata_is_verified_gradient_manifest(
                         recon_pixel_weight_metadata
@@ -1529,6 +1593,7 @@ def _run_score_aware_long_training_attachment(
                 if pr95_faithful_curriculum_enabled
                 else None
             ),
+            pr95_muon_policy=str(pr95_muon_policy),
             notes=(
                 "SNeRV MLX score-aware train/export attachment: train LF "
                 "latents plus shared HF decoder weights with the canonical "
@@ -1596,7 +1661,24 @@ def _run_score_aware_long_training_attachment(
             "pr95_faithful_curriculum_enabled": bool(
                 pr95_faithful_curriculum_enabled
             ),
-            "muon_adamw_partition_bound": str(optimizer_kind) == "pact_muon_adamw",
+            "pr95_muon_policy": str(pr95_muon_policy),
+            "pr95_optimizer_coverage": pr95_optimizer_coverage,
+            "optimizer_binding_mode": (
+                "pr95_faithful_curriculum"
+                if pr95_faithful_curriculum_enabled
+                else str(optimizer_kind)
+            ),
+            "pr95_faithful_optimizer_schedule_bound": bool(
+                pr95_faithful_curriculum_enabled
+            ),
+            "pact_native_muon_adamw_partition_bound": bool(
+                str(optimizer_kind) == "pact_muon_adamw"
+                and not pr95_faithful_curriculum_enabled
+            ),
+            "muon_adamw_partition_bound": bool(
+                str(optimizer_kind) == "pact_muon_adamw"
+                or pr95_faithful_curriculum_enabled
+            ),
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "coder_aware_qat_bound": bool(coder_qat_cfg.enabled),
             "teacher_binding": teacher_binding,

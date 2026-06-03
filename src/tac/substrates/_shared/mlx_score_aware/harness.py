@@ -64,6 +64,7 @@ def run_mlx_score_aware_full_main(
     on_epoch_end: Callable[[Any], None] | None = None,
     pr95_faithful_curriculum_enabled: bool = False,
     pr95_curriculum_total_epochs: int | None = None,
+    pr95_muon_policy: str = "faithful_stage8_only",
     # Wave N+11 Z7-Mamba-2 stabilizer recipe (forwarded to adapter; see
     # MlxScoreAwareAdapter.__init__ for canonical contract docstring).
     # All None/0/"adamw"/False defaults preserve byte-stable legacy behavior.
@@ -144,6 +145,11 @@ def run_mlx_score_aware_full_main(
             ignored otherwise. Smaller budgets (e.g. 100 for an MLX
             smoke) scale per ``PR95FaithfulCurriculumFactory`` canonical
             proportional-ratio rule.
+        pr95_muon_policy: Muon activation policy for PR95-curriculum runs.
+            ``faithful_stage8_only`` is source-faithful PR95; ``every_stage``
+            is an explicit contest-specific optimizer control that keeps the
+            PR95 stage loss/QAT curriculum but turns on the same real Muon
+            branch for all stages.
         prioritized_pair_indices: optional hard-pair/sensitivity pair indices
             sampled before random fill by the shared MLX adapter. This is local
             training emphasis and telemetry only; it does not create full-video
@@ -202,6 +208,7 @@ def run_mlx_score_aware_full_main(
         substrate_id=substrate_id,
         pr95_faithful_curriculum_enabled=pr95_faithful_curriculum_enabled,
         pr95_curriculum_total_epochs=pr95_curriculum_total_epochs,
+        pr95_muon_policy=pr95_muon_policy,
         # Wave N+11 stabilizer kwargs (forwarded; defaults are
         # legacy-preserving so sister substrates remain byte-stable).
         grad_clip_max_norm=grad_clip_max_norm,
