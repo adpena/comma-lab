@@ -289,6 +289,8 @@ def build_snerv_official_source_parity_audit(
         and forward_parity_artifact_row["parity_passed"]
     )
     component_state_rows = _component_state_rows(
+        official_root=official_root,
+        local_root=local_root,
         official_group_rows=official_group_rows,
         local_receiver_safe_row=local_receiver_safe_row,
         local_official_parity_row=local_official_parity_row,
@@ -335,12 +337,83 @@ def build_snerv_official_source_parity_audit(
     }
 
 
+def build_snerv_official_mfu_hfr_tub_forward_parity_artifact(
+    *,
+    official_repo_dir: str | Path,
+    repo_root: str | Path,
+    generated_utc: str | None = None,
+) -> dict[str, Any]:
+    """Build a false-authority proof/falsification artifact for MFU/HFR/TUB.
+
+    This is deliberately source-backed and conservative.  It can prove local
+    source-forward marker coverage is still absent, but it never grants score,
+    promotion, or exact-eval authority.
+    """
+
+    official_root = Path(official_repo_dir)
+    local_root = Path(repo_root)
+    if generated_utc is None:
+        generated_utc = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    file_rows = [_file_row(official_root, rel_path) for rel_path in REQUIRED_OFFICIAL_FILES]
+    official_group_rows = [_official_marker_group_row(official_root, group) for group in OFFICIAL_MARKER_GROUPS]
+    local_receiver_safe_row = _local_marker_row(
+        local_root,
+        marker_group_id="local_receiver_safe_mfu_hfr_temporal_adapter",
+        markers=LOCAL_RECEIVER_SAFE_MARKERS,
+    )
+    local_official_parity_row = _local_marker_row(
+        local_root,
+        marker_group_id="local_official_mfu_hfr_tub_parity_proof",
+        markers=LOCAL_OFFICIAL_PARITY_MARKERS,
+    )
+    component_rows = _component_state_rows(
+        official_root=official_root,
+        local_root=local_root,
+        official_group_rows=official_group_rows,
+        local_receiver_safe_row=local_receiver_safe_row,
+        local_official_parity_row=local_official_parity_row,
+        forward_parity_artifact_row={"parity_passed": False},
+    )
+    parity_passed = all(bool(row["source_forward_parity_proven"]) for row in component_rows)
+    parity_falsified = any(bool(row["source_forward_parity_falsified"]) for row in component_rows)
+    return {
+        "schema": FORWARD_PARITY_ARTIFACT_SCHEMA,
+        "authority": AUTHORITY,
+        "generated_utc": generated_utc,
+        "family": "snerv",
+        "official_repo": {
+            "repo_url": OFFICIAL_REPO_URL,
+            "repo_url_git": OFFICIAL_REPO_URL_GIT,
+            "root": official_root.as_posix(),
+            "head_sha": _git_head_sha(official_root),
+            "required_files": list(REQUIRED_OFFICIAL_FILES),
+        },
+        "local_repo_root": local_root.as_posix(),
+        "official_file_rows": file_rows,
+        "official_marker_group_rows": official_group_rows,
+        "component_rows": component_rows,
+        "official_mfu_hfr_tub_forward_parity_passed": parity_passed,
+        "official_mfu_hfr_tub_forward_parity_falsified": parity_falsified,
+        "blockers": _ordered_unique(
+            [
+                blocker
+                for row in component_rows
+                for blocker in row.get("blockers") or ()
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
 def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str, Any]:
     """Return a compact row-safe summary of a SNeRV official-source audit."""
 
     official_repo = report.get("official_repo")
     if not isinstance(official_repo, Mapping):
         official_repo = {}
+    forward_row = report.get("official_forward_parity_artifact_row")
+    if not isinstance(forward_row, Mapping):
+        forward_row = {}
     return {
         "schema": str(report.get("schema") or ""),
         "authority": str(report.get("authority") or ""),
@@ -351,12 +424,16 @@ def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str
         "official_source_markers_present": bool(report.get("official_source_markers_present")),
         "local_receiver_safe_adapter_present": bool(report.get("local_receiver_safe_adapter_present")),
         "official_mfu_hfr_tub_parity_proven": bool(report.get("official_mfu_hfr_tub_parity_proven")),
+        "official_mfu_hfr_tub_parity_falsified": bool(forward_row.get("parity_falsified")),
         "component_states": [
             {
                 "component_id": row.get("component_id"),
                 "classification": row.get("classification"),
                 "source_forward_parity_proven": bool(
                     row.get("source_forward_parity_proven")
+                ),
+                "source_forward_parity_falsified": bool(
+                    row.get("source_forward_parity_falsified")
                 ),
             }
             for row in report.get("component_state_rows") or ()
@@ -373,6 +450,9 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
     official_repo = report.get("official_repo")
     if not isinstance(official_repo, Mapping):
         official_repo = {}
+    forward_row = report.get("official_forward_parity_artifact_row")
+    if not isinstance(forward_row, Mapping):
+        forward_row = {}
     lines = [
         "# SNeRV Official Source-Parity Audit",
         "",
@@ -386,6 +466,7 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
         f"- official source markers present: `{bool(report.get('official_source_markers_present'))}`",
         f"- local receiver-safe adapter present: `{bool(report.get('local_receiver_safe_adapter_present'))}`",
         f"- official MFU/HFR/TUB parity proven: `{bool(report.get('official_mfu_hfr_tub_parity_proven'))}`",
+        f"- official MFU/HFR/TUB parity falsified: `{bool(forward_row.get('parity_falsified'))}`",
         f"- score claim: `{bool(report.get('score_claim'))}`",
         "",
         "## Component States",
@@ -495,6 +576,8 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
             "bytes": 0,
             "sha256": None,
             "parity_passed": False,
+            "parity_falsified": False,
+            "component_rows": [],
             "blockers": ["snerv_official_forward_parity_artifact_missing"],
             **FALSE_AUTHORITY,
         }
@@ -508,6 +591,8 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
             "bytes": 0,
             "sha256": None,
             "parity_passed": False,
+            "parity_falsified": False,
+            "component_rows": [],
             "blockers": ["snerv_official_forward_parity_artifact_missing"],
             **FALSE_AUTHORITY,
         }
@@ -523,6 +608,8 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
             "bytes": len(data),
             "sha256": sha256(data).hexdigest(),
             "parity_passed": False,
+            "parity_falsified": False,
+            "component_rows": [],
             "error": str(exc),
             "blockers": ["snerv_official_forward_parity_artifact_unreadable"],
             **FALSE_AUTHORITY,
@@ -533,6 +620,18 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
         and payload.get("official_mfu_hfr_tub_forward_parity_passed") is True
         and payload.get("score_claim") is False
         and payload.get("ready_for_exact_eval_dispatch") is False
+    )
+    component_rows = [
+        dict(row)
+        for row in payload.get("component_rows") or ()
+        if isinstance(row, Mapping)
+    ]
+    parity_falsified = bool(
+        artifact_schema == FORWARD_PARITY_ARTIFACT_SCHEMA
+        and (
+            payload.get("official_mfu_hfr_tub_forward_parity_falsified") is True
+            or any(row.get("source_forward_parity_falsified") is True for row in component_rows)
+        )
     )
     blockers = []
     if artifact_schema != FORWARD_PARITY_ARTIFACT_SCHEMA:
@@ -551,6 +650,9 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
         "bytes": len(data),
         "sha256": sha256(data).hexdigest(),
         "parity_passed": parity_passed,
+        "parity_falsified": parity_falsified,
+        "component_rows": component_rows,
+        "artifact_blockers": list(payload.get("blockers") or ()),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -558,43 +660,95 @@ def _forward_parity_artifact_row(path: str | Path | None) -> dict[str, Any]:
 
 def _component_state_rows(
     *,
+    official_root: Path,
+    local_root: Path,
     official_group_rows: Sequence[Mapping[str, Any]],
     local_receiver_safe_row: Mapping[str, Any],
     local_official_parity_row: Mapping[str, Any],
     forward_parity_artifact_row: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     official_by_group = {str(row.get("group_id")): row for row in official_group_rows}
-    local_present = {str(v) for v in local_receiver_safe_row.get("present_markers") or ()}
     parity_marker_present = bool(local_official_parity_row.get("all_markers_present"))
     artifact_passed = bool(forward_parity_artifact_row.get("parity_passed"))
+    artifact_falsified = bool(forward_parity_artifact_row.get("parity_falsified"))
+    artifact_component_rows = {
+        str(row.get("component_id")): row
+        for row in forward_parity_artifact_row.get("component_rows") or ()
+        if isinstance(row, Mapping)
+    }
 
-    def build_row(
-        *,
-        component_id: str,
-        official_group_id: str,
-        local_markers: tuple[str, ...],
-        analogue_classification: str,
-    ) -> dict[str, Any]:
-        official_row = official_by_group.get(official_group_id, {})
-        official_markers_present = bool(official_row.get("all_markers_present"))
-        receiver_safe = all(marker in local_present for marker in local_markers)
+    rows: list[dict[str, Any]] = []
+    for spec in _SNERV_FORWARD_PARITY_COMPONENT_SPECS:
+        component_id = str(spec["component_id"])
+        official_group_id = str(spec["official_group_id"])
+        official_group_row = official_by_group.get(official_group_id, {})
+        official_group_markers_present = bool(official_group_row.get("all_markers_present"))
+        official_source_scan = _file_marker_rows(
+            official_root,
+            spec.get("official_source_markers") or (),
+        )
+        local_receiver_scan = _file_marker_rows(
+            local_root,
+            spec.get("local_receiver_markers") or (),
+        )
+        local_source_forward_scan = _file_marker_rows(
+            local_root,
+            spec.get("local_source_forward_markers") or (),
+        )
+        primitive_parity_scan = _mixed_file_marker_rows(
+            official_root=official_root,
+            local_root=local_root,
+            markers=spec.get("primitive_parity_markers") or (),
+        )
+        official_source_markers_present = bool(
+            official_group_markers_present
+            and official_source_scan["all_markers_present"]
+        )
+        receiver_safe = bool(local_receiver_scan["all_markers_present"])
+        local_source_forward_markers_present = bool(
+            local_source_forward_scan["all_markers_present"]
+        )
         source_forward = bool(
-            official_markers_present
+            official_source_markers_present
             and receiver_safe
+            and local_source_forward_markers_present
             and parity_marker_present
             and artifact_passed
         )
+        artifact_component = artifact_component_rows.get(component_id, {})
+        source_forward_falsified = bool(
+            artifact_component.get("source_forward_parity_falsified")
+            or (
+                official_source_markers_present
+                and receiver_safe
+                and not local_source_forward_markers_present
+            )
+        )
         if source_forward:
             classification = "official_source_forward_parity_proven"
+        elif source_forward_falsified:
+            classification = str(spec["classification"])
         elif receiver_safe:
-            classification = analogue_classification
+            classification = "receiver_safe_analogue"
         else:
             classification = "missing_or_partial"
+        artifact_blocker = ""
+        if not artifact_passed:
+            artifact_blocker = (
+                "snerv_official_forward_parity_artifact_falsifies_parity"
+                if artifact_falsified
+                else "snerv_official_forward_parity_artifact_missing_or_failed"
+            )
         blockers = _ordered_unique(
             [
                 (
                     f"snerv_official_source_marker_missing:{official_group_id}"
-                    if not official_markers_present
+                    if not official_group_markers_present
+                    else ""
+                ),
+                (
+                    f"snerv_{component_id}_official_source_forward_markers_missing"
+                    if not official_source_scan["all_markers_present"]
                     else ""
                 ),
                 (
@@ -603,61 +757,122 @@ def _component_state_rows(
                     else ""
                 ),
                 (
+                    f"snerv_{component_id}_local_source_forward_markers_missing"
+                    if not local_source_forward_markers_present
+                    else ""
+                ),
+                (
                     "snerv_official_mfu_hfr_tub_parity_marker_missing"
                     if not parity_marker_present
                     else ""
                 ),
                 (
-                    "snerv_official_forward_parity_artifact_missing_or_failed"
+                    artifact_blocker
                     if not artifact_passed
                     else ""
                 ),
+                "" if (source_forward or not source_forward_falsified) else str(spec["blocker"]),
             ]
         )
-        return {
+        rows.append(
+            {
             "schema": "snerv_official_component_state.v1",
             "component_id": component_id,
             "official_group_id": official_group_id,
-            "official_markers_present": official_markers_present,
+            "official_markers_present": official_source_markers_present,
+            "official_marker_group_present": official_group_markers_present,
+            "official_source_marker_rows": official_source_scan["marker_rows"],
             "receiver_safe_analogue_present": receiver_safe,
-            "local_receiver_markers": list(local_markers),
+            "local_receiver_marker_rows": local_receiver_scan["marker_rows"],
+            "local_source_forward_markers_present": local_source_forward_markers_present,
+            "local_source_forward_marker_rows": local_source_forward_scan["marker_rows"],
+            "primitive_parity_markers_present": bool(
+                spec.get("primitive_parity_markers")
+                and primitive_parity_scan["all_markers_present"]
+            ),
+            "primitive_parity_marker_rows": primitive_parity_scan["marker_rows"],
             "local_parity_marker_present": parity_marker_present,
             "forward_parity_artifact_passed": artifact_passed,
             "source_forward_parity_proven": source_forward,
+            "source_forward_parity_falsified": source_forward_falsified,
             "classification": classification,
+            "evidence_summary": str(spec["evidence_summary"]),
             "blockers": blockers,
             **FALSE_AUTHORITY,
-        }
+            }
+        ),
+    return rows
 
-    return [
-        build_row(
-            component_id="mfu",
-            official_group_id="official_mfu_multi_resolution_fusion",
-            local_markers=(
-                "MultiResolutionFusionUnit",
-                "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
-            ),
-            analogue_classification="receiver_safe_analogue",
-        ),
-        build_row(
-            component_id="hfr",
-            official_group_id="official_hfr_high_frequency_restoration",
-            local_markers=(
-                "HighFrequencyRestorer",
-                "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
-            ),
-            analogue_classification="receiver_safe_analogue",
-        ),
-        build_row(
-            component_id="tub",
-            official_group_id="official_tub_temporal_extension",
-            local_markers=(
-                "SnervTemporalExtension",
-                "SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF",
-            ),
-            analogue_classification="official_haar_primitive_only",
-        ),
-    ]
+
+def _file_marker_rows(
+    root: Path,
+    markers: Sequence[Sequence[str] | tuple[str, str]],
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    cache: dict[str, str] = {}
+    for marker_spec in markers:
+        rel_path = str(marker_spec[0])
+        marker = str(marker_spec[1])
+        if rel_path not in cache:
+            path = root / rel_path
+            cache[rel_path] = (
+                read_python_source_for_marker_scan(path) if path.is_file() else ""
+            )
+        rows.append(
+            {
+                "rel_path": rel_path,
+                "marker": marker,
+                "present": marker in cache[rel_path],
+            }
+        )
+    return {
+        "marker_rows": rows,
+        "all_markers_present": all(row["present"] for row in rows),
+        "missing_markers": [
+            f"{row['rel_path']}::{row['marker']}"
+            for row in rows
+            if not row["present"]
+        ],
+    }
+
+
+def _mixed_file_marker_rows(
+    *,
+    official_root: Path,
+    local_root: Path,
+    markers: Sequence[Sequence[str] | tuple[str, str]],
+) -> dict[str, Any]:
+    rows: list[dict[str, Any]] = []
+    official_cache: dict[str, str] = {}
+    local_cache: dict[str, str] = {}
+    for marker_spec in markers:
+        rel_path = str(marker_spec[0])
+        marker = str(marker_spec[1])
+        root_kind = "local" if rel_path.startswith("src/") else "official"
+        cache = local_cache if root_kind == "local" else official_cache
+        root = local_root if root_kind == "local" else official_root
+        if rel_path not in cache:
+            path = root / rel_path
+            cache[rel_path] = (
+                read_python_source_for_marker_scan(path) if path.is_file() else ""
+            )
+        rows.append(
+            {
+                "root": root_kind,
+                "rel_path": rel_path,
+                "marker": marker,
+                "present": marker in cache[rel_path],
+            }
+        )
+    return {
+        "marker_rows": rows,
+        "all_markers_present": all(row["present"] for row in rows),
+        "missing_markers": [
+            f"{row['root']}::{row['rel_path']}::{row['marker']}"
+            for row in rows
+            if not row["present"]
+        ],
+    }
 
 
 def _git_head_sha(path: Path) -> str | None:
@@ -714,6 +929,7 @@ __all__ = [
     "OFFICIAL_REPO_URL",
     "REQUIRED_OFFICIAL_FILES",
     "SCHEMA",
+    "build_snerv_official_mfu_hfr_tub_forward_parity_artifact",
     "build_snerv_official_source_parity_audit",
     "render_snerv_official_source_parity_markdown",
     "summarize_snerv_official_source_audit",
