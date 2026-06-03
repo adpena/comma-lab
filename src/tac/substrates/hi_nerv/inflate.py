@@ -26,7 +26,6 @@ from tac.substrates._shared.inflate_runtime import (
 )
 
 from .architecture import (
-    LATENT_STATE_KEYS,
     HinervConfig,
     HinervSubstrate,
     validate_decoder_state_dict,
@@ -75,25 +74,20 @@ def build_model_from_archive(
         cfg,
         context="hi_nerv_archive_decoder_state",
     )
-    load_result = model.load_state_dict(arc.decoder_state_dict, strict=False)
-    expected_missing = set(LATENT_STATE_KEYS)
-    actual_missing = {str(key) for key in load_result.missing_keys}
-    if actual_missing != expected_missing or load_result.unexpected_keys:
-        raise ValueError(
-            "hi_nerv_archive_decoder_state load mismatch: "
-            f"missing={load_result.missing_keys}, "
-            f"unexpected={load_result.unexpected_keys}"
-        )
-    with torch.no_grad():
-        model.latents_coarse.copy_(
-            arc.latents_coarse.to(device=device, dtype=model.latents_coarse.dtype)
-        )
-        model.latents_mid.copy_(
-            arc.latents_mid.to(device=device, dtype=model.latents_mid.dtype)
-        )
-        model.latents_fine.copy_(
-            arc.latents_fine.to(device=device, dtype=model.latents_fine.dtype)
-        )
+    full_state = dict(arc.decoder_state_dict)
+    full_state["latents_coarse"] = arc.latents_coarse.to(
+        device=device,
+        dtype=model.latents_coarse.dtype,
+    )
+    full_state["latents_mid"] = arc.latents_mid.to(
+        device=device,
+        dtype=model.latents_mid.dtype,
+    )
+    full_state["latents_fine"] = arc.latents_fine.to(
+        device=device,
+        dtype=model.latents_fine.dtype,
+    )
+    model.load_state_dict(full_state, strict=True)
     return arc, cfg, model
 
 

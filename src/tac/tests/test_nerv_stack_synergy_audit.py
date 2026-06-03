@@ -109,6 +109,18 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
     } == {"bitstream", "mlx_renderer", "runner", "waterfill"}
     assert "hinerv_torchac_style_bitstream_pipeline_missing" in stacks["hi_nerv"]["blockers"]
     assert "hinerv_decoder_weight_saliency_waterfill_not_in_trainer" in stacks["hi_nerv"]["blockers"]
+    assert "hinerv_receiver_load_strict_false_schema_drift_risk" not in stacks[
+        "hi_nerv"
+    ]["blockers"]
+    strict_receiver = stacks["hi_nerv"]["strict_receiver_load_binding"]
+    assert strict_receiver["schema"] == "hinerv_strict_receiver_load_binding.v1"
+    assert strict_receiver["bound"] is True
+    assert strict_receiver["strict_receiver_load"] is True
+    assert not strict_receiver["blockers"]
+    assert {row["source_id"] for row in strict_receiver["source_rows"]} == {
+        "inflate",
+        "receiver_tests",
+    }
     assert "hi_nerv_real_posenet_teacher_missing" in stacks["hi_nerv"]["blockers"]
     assert "hi_nerv_qat_forward_missing" not in stacks["hi_nerv"]["blockers"]
     assert "hi_nerv_coder_aware_regularizer_missing" not in stacks["hi_nerv"]["blockers"]

@@ -12,6 +12,7 @@ import torch
 
 from tac.substrates.hi_nerv.architecture import (
     HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF,
+    LATENT_STATE_KEYS,
     ConvNeXtBlock,
     HierarchicalFeatureGrid,
     HinervConfig,
@@ -266,6 +267,45 @@ def test_receiver_rejects_shape_corrupt_decoder_weight_before_rendering():
         assert "head_rgb_0.bias" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("expected receiver to reject corrupt decoder shape")
+
+
+def test_receiver_loads_complete_archive_state_strictly(monkeypatch):
+    cfg = _smoke_cfg()
+    torch.manual_seed(26)
+    model = HinervSubstrate(cfg).eval()
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"].clone(),
+        sd["latents_mid"].clone(),
+        sd["latents_fine"].clone(),
+        _smoke_meta(cfg),
+    )
+
+    observed: dict[str, object] = {}
+    original = HinervSubstrate.load_state_dict
+
+    def capture_load_state_dict(self, state_dict, strict=True, *args, **kwargs):
+        observed["strict"] = strict
+        observed["keys"] = set(state_dict)
+        return original(self, state_dict, strict, *args, **kwargs)
+
+    monkeypatch.setattr(
+        HinervSubstrate,
+        "load_state_dict",
+        capture_load_state_dict,
+    )
+
+    _, _, rebuilt = build_model_from_archive(blob)
+
+    assert rebuilt.training is False
+    assert observed["strict"] is True
+    assert set(LATENT_STATE_KEYS).issubset(observed["keys"])
+    assert set(decoder_sd).issubset(observed["keys"])
 
 
 # ENCODE_INFLATE_ROUNDTRIP — Catalog #139 byte-mutation smoke

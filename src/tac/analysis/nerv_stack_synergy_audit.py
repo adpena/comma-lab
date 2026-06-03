@@ -220,6 +220,7 @@ def _hi_nerv_stack_audit(
         _hi_nerv_official_feature_grid_convnext_binding(root)
     )
     official_patch_binding = _hi_nerv_official_patch_binding(root)
+    strict_receiver_binding = _hi_nerv_strict_receiver_load_binding(root)
     blockers = [
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle",
         "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid",
@@ -249,7 +250,11 @@ def _hi_nerv_stack_audit(
         "hinerv_decoder_weight_saliency_waterfill_not_in_trainer",
         "hinerv_pr95_c1a_muon_ema_archive_schedule_not_fully_bound_to_real_trainer",
         "hinerv_legacy_full_trainer_archive_is_not_hermetic",
-        "hinerv_receiver_load_strict_false_schema_drift_risk",
+        (
+            ""
+            if strict_receiver_binding["bound"]
+            else "hinerv_receiver_load_strict_false_schema_drift_risk"
+        ),
         "hinerv_legacy_trainer_rate_proxy_not_codec_matched",
         "hinerv_exact_cpu_cuda_eval_missing_for_current_candidates",
         *pr95_binding["blockers"],
@@ -304,6 +309,7 @@ def _hi_nerv_stack_audit(
         "official_grid_trilinear_binding": official_grid_binding,
         "official_feature_grid_convnext_binding": official_feature_grid_convnext_binding,
         "official_patch_index_binding": official_patch_binding,
+        "strict_receiver_load_binding": strict_receiver_binding,
         "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "byte ceiling selects capacity candidate before launch",
@@ -518,6 +524,54 @@ def _hi_nerv_official_patch_binding(root: Path) -> dict[str, Any]:
         "source_rows": rows,
         "blockers": blockers,
         "authority": "false_authority_receiver_binding_no_full_patch_replay_claim",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hi_nerv_strict_receiver_load_binding(root: Path) -> dict[str, Any]:
+    """Return whether the HiNeRV receiver fails closed on archive schema drift."""
+
+    source_specs = {
+        "inflate": (
+            "src/tac/substrates/hi_nerv/inflate.py",
+            (
+                "full_state = dict(arc.decoder_state_dict)",
+                "full_state[\"latents_coarse\"]",
+                "full_state[\"latents_mid\"]",
+                "full_state[\"latents_fine\"]",
+                "model.load_state_dict(full_state, strict=True)",
+            ),
+        ),
+        "receiver_tests": (
+            "src/tac/substrates/hi_nerv/tests/test_hi_nerv_roundtrip.py",
+            (
+                "test_receiver_loads_complete_archive_state_strictly",
+                "observed[\"strict\"] is True",
+                "LATENT_STATE_KEYS",
+            ),
+        ),
+    }
+    rows = _marker_binding_rows(root, source_specs)
+    inflate_path = root / "src/tac/substrates/hi_nerv/inflate.py"
+    inflate_text = (
+        inflate_path.read_text(encoding="utf-8", errors="replace")
+        if inflate_path.is_file()
+        else ""
+    )
+    blockers = [
+        f"hinerv_strict_receiver_load_marker_missing:{row['source_id']}:{marker}"
+        for row in rows
+        for marker in row["missing_markers"]
+    ]
+    if "strict=False" in inflate_text:
+        blockers.append("hinerv_receiver_inflate_still_uses_strict_false")
+    return {
+        "schema": "hinerv_strict_receiver_load_binding.v1",
+        "bound": not blockers,
+        "strict_receiver_load": not blockers,
+        "source_rows": rows,
+        "blockers": blockers,
+        "authority": "false_authority_receiver_schema_guard_no_score_claim",
         **FALSE_AUTHORITY,
     }
 
