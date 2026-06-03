@@ -610,6 +610,9 @@ def test_training_telemetry_feedback_treats_pr95_pre_final_no_muon_as_expected(
     assert row["training_stopped"] is False
     assert row["pr95_curriculum_observed"] is True
     assert row["pr95_current_stage_index"] == 5
+    assert row["pr95_canonical_expected_stage_index"] == 5
+    assert row["pr95_authoritative_stage_index"] == 5
+    assert row["pr95_stage_mismatch_detected"] is False
     assert row["pr95_stage_uses_muon_current"] is False
     assert row["pr95_final_stage_reached"] is False
     assert row["pr95_final_stage_muon_expected_currently"] is False
@@ -625,6 +628,58 @@ def test_training_telemetry_feedback_treats_pr95_pre_final_no_muon_as_expected(
         "observed_stage_matches_canonical_epoch"
     ] is True
     assert "hi_nerv_pr95_final_stage_muon_missing_telemetry" not in row["blockers"]
+
+
+def test_training_telemetry_feedback_blocks_stale_pr95_stage_before_final_muon(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "pr95_stale_stage5_at_final_epoch_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 5.8,
+                "pr95_stage_index": 5.0,
+                "pr95_stage_uses_muon": 0.0,
+            },
+            "per_axis_decomposition": {"pose": 2.0, "seg": 5.8},
+        }
+        for epoch in range(24_650, 24_656)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld28_ed12_dc32_hfg_cnx_int4_mixed_ceil285000",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+    )
+
+    assert row["pr95_current_stage_index"] == 5
+    assert row["pr95_canonical_expected_stage_index"] == 8
+    assert row["pr95_authoritative_stage_index"] == 8
+    assert row["pr95_stage_mismatch_detected"] is True
+    assert row["pr95_final_stage_reached"] is True
+    assert row["pr95_final_stage_muon_expected_currently"] is True
+    assert row["pr95_final_stage_muon_missing"] is True
+    assert row["pr95_stage_status"][
+        "observed_stage_matches_canonical_epoch"
+    ] is False
+    assert row["optimizer_stage_assessment"] == "pr95_final_stage_muon_missing"
+    assert "hi_nerv_pr95_stage_index_mismatch_telemetry" in row["blockers"]
+    assert "hi_nerv_pr95_final_stage_muon_missing_telemetry" in row["blockers"]
+    assert "fix_pr95_stage_telemetry_or_curriculum_epoch_routing" in row[
+        "recommended_launch_mutations"
+    ]
+    assert "fix_pr95_final_stage_muon_optimizer_routing" in row[
+        "recommended_launch_mutations"
+    ]
 
 
 def test_training_telemetry_feedback_flags_pr95_final_stage_without_muon(
@@ -659,6 +714,9 @@ def test_training_telemetry_feedback_flags_pr95_final_stage_without_muon(
     )
 
     assert row["pr95_final_stage_reached"] is True
+    assert row["pr95_canonical_expected_stage_index"] == 8
+    assert row["pr95_authoritative_stage_index"] == 8
+    assert row["pr95_stage_mismatch_detected"] is False
     assert row["pr95_final_stage_muon_expected_currently"] is True
     assert row["pr95_final_stage_muon_missing"] is True
     assert row["optimizer_stage_assessment"] == "pr95_final_stage_muon_missing"
