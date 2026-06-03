@@ -38,6 +38,8 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
             "3",
             "--byte-pressure-multiplier",
             "2.5",
+            "--section-value-pressure-multiplier",
+            "1.75",
             "--max-archive-byte-growth",
             "128",
             "--pose-slack",
@@ -72,6 +74,7 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
     assert kwargs["search_mode"] == "nes_pair_robust"
     assert kwargs["max_trials"] == 3
     assert kwargs["byte_pressure_multiplier"] == pytest.approx(2.5)
+    assert kwargs["section_value_pressure_multiplier"] == pytest.approx(1.75)
     assert kwargs["max_archive_byte_growth"] == 128
     assert kwargs["pose_slack"] == pytest.approx(0.01)
     assert kwargs["seg_slack"] == pytest.approx(0.02)

@@ -169,6 +169,15 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--perturb-scale", type=float, default=0.02)
     parser.add_argument("--byte-pressure-multiplier", type=float, default=1.0)
+    parser.add_argument(
+        "--section-value-pressure-multiplier",
+        type=float,
+        default=1.0,
+        help=(
+            "Multiplier for train-time SNAR1 optional-section neutralization "
+            "pressure, matching tools/run_snerv_scorer_loop_decoder_qat_smoke.py."
+        ),
+    )
     parser.add_argument("--max-archive-byte-growth", type=int, default=None)
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seg-slack", type=float, default=0.0)
@@ -219,6 +228,9 @@ def _score_loop_kwargs_from_args(args: argparse.Namespace) -> dict[str, Any]:
         "search_mode": str(args.search_mode),
         "perturb_scale": float(args.perturb_scale),
         "byte_pressure_multiplier": float(args.byte_pressure_multiplier),
+        "section_value_pressure_multiplier": float(
+            args.section_value_pressure_multiplier
+        ),
         "max_archive_byte_growth": (
             None
             if args.max_archive_byte_growth is None
