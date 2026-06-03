@@ -18,12 +18,16 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_decoder_payload,
     decode_lf_metadata_payload,
     decode_lf_quant_payload,
+    decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frame_planes,
     decode_snerv_archive_frames,
     decode_snerv_archive_step_maps,
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
+    encode_official_mfu_hfr_tub_decoder_payload,
+    execute_official_mfu_hfr_tub_decoder_payload,
+    is_official_mfu_hfr_tub_decoder_payload,
     pack_snerv_archive,
     unpack_snerv_archive,
 )
@@ -35,6 +39,17 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     encode_frame_lf,
     fit_hf_decoder_least_squares,
     quantize_lf,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OfficialConv2dNchw,
+    OfficialHfrConvBlock,
+    OfficialHfrHeads,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
+    OfficialConvTranspose2dNchw,
+    OfficialResidualBlocksWithInputConv,
+    OfficialSnervMfu,
+    OfficialSnervMfuSpec,
 )
 
 
@@ -342,6 +357,90 @@ def test_quantized_decoder_payload_rejects_corrupt_payload_bytes() -> None:
         decode_decoder_payload(bytes(payload))
 
 
+def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> None:
+    bundle = _official_payload_fixture()
+    payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    header = _read_subpacket_header(payload)
+
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+    proof = decoded.execute()
+    proof2 = execute_official_mfu_hfr_tub_decoder_payload(payload)
+
+    assert is_official_mfu_hfr_tub_decoder_payload(payload) is True
+    assert header["schema"] == "snerv_decoder_payload.official_mfu_hfr_tub.v1"
+    assert header["codec"] == "official_numpy_float64_lzma"
+    assert header["tensor_count"] == len(header["tensor_manifest"])
+    assert decoded.schema == header["schema"]
+    assert proof["schema"].endswith("receiver_runtime_proof.v1")
+    assert proof["receiver_runtime_decode_proven"] is True
+    assert proof["executed_components"] == {
+        "official_mfu": True,
+        "official_hfr": True,
+        "official_tub": True,
+    }
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+    assert proof["source_forward_replay_authority"] is False
+    assert proof["output_bundle_sha256"] == proof2["output_bundle_sha256"]
+    assert proof["mfu_output"]["pyr_out_shape"] == [1, 1, 8, 8]
+    assert proof["hfr_output"]["yh_out_shape"] == [1, 3, 3, 8, 8]
+    assert proof["tub_output"]["shape_metadata"]["temporal_encoder_input_count"] == 2
+
+    with pytest.raises(SnervArchiveError, match="requires decode_official"):
+        decode_decoder_payload(payload)
+
+
+def test_archive_can_carry_official_mfu_hfr_tub_receiver_payload() -> None:
+    bundle = _official_payload_fixture()
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    step_packet = encode_step_maps([np.ones((2, 2), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((2, 2), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [4, 4],
+        },
+    )
+
+    decoded = unpack_snerv_archive(archive.packet)
+    proof = decoded.execute_official_mfu_hfr_tub_payload()
+
+    assert proof["receiver_bound_official_primitive_payload"] is True
+    assert proof["payload_sha256"] == decoded.decode_official_mfu_hfr_tub_payload().payload_sha256
+    with pytest.raises(SnervArchiveError, match="requires decode_official"):
+        decoded.decode_decoder()
+
+
+def test_official_mfu_hfr_tub_decoder_payload_is_hash_checked() -> None:
+    payload = bytearray(
+        encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())
+    )
+    payload[-1] ^= 0x01
+
+    with pytest.raises(SnervArchiveError, match="compressed sha256 mismatch"):
+        decode_official_mfu_hfr_tub_decoder_payload(bytes(payload))
+
+
+def test_official_mfu_hfr_tub_payload_bytes_change_receiver_output() -> None:
+    a = _official_payload_fixture(seed=19)
+    b = _official_payload_fixture(seed=19)
+    b["low"] = np.asarray(b["low"], dtype=np.float64).copy()
+    b["low"][0, 0, 0, 0] += 0.5
+    proof_a = execute_official_mfu_hfr_tub_decoder_payload(
+        encode_official_mfu_hfr_tub_decoder_payload(**a)
+    )
+    proof_b = execute_official_mfu_hfr_tub_decoder_payload(
+        encode_official_mfu_hfr_tub_decoder_payload(**b)
+    )
+
+    assert proof_a["output_bundle_sha256"] != proof_b["output_bundle_sha256"]
+
+
 def test_archive_decoded_sections_reconstruct_receiver_frame() -> None:
     rng = np.random.default_rng(7)
     yy, xx = np.mgrid[0:32, 0:48].astype(np.float64)
@@ -617,6 +716,80 @@ def test_archive_receiver_module_imports_no_torch_or_scorer() -> None:
         src = f.read()
     assert "import torch" not in src
     assert "load_score_exact_scorers" not in src
+
+
+def _official_payload_fixture(seed: int = 17) -> dict[str, object]:
+    rng = np.random.default_rng(seed)
+    spec = OfficialSnervMfuSpec(
+        low_channels=1,
+        mid_channels=1,
+        high_channels=1,
+        mid_stride=2,
+        high_stride=2,
+        num_blocks=0,
+    )
+    mfu = OfficialSnervMfu(
+        spec=spec,
+        upsample_mid=OfficialConvTranspose2dNchw(
+            rng.standard_normal((1, 1, 2, 2)) * 0.04,
+            rng.standard_normal(1) * 0.01,
+            stride=2,
+        ),
+        rb_mid=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(
+                rng.standard_normal((1, 2, 3, 3)) * 0.04,
+                rng.standard_normal(1) * 0.01,
+                padding=1,
+            ),
+            residual_blocks=(),
+        ),
+        upsample_high=OfficialConvTranspose2dNchw(
+            rng.standard_normal((1, 1, 2, 2)) * 0.04,
+            rng.standard_normal(1) * 0.01,
+            stride=2,
+        ),
+        rb_high=OfficialResidualBlocksWithInputConv(
+            input_conv=OfficialConv2dNchw(
+                rng.standard_normal((1, 2, 3, 3)) * 0.04,
+                rng.standard_normal(1) * 0.01,
+                padding=1,
+            ),
+            residual_blocks=(),
+        ),
+    )
+    hfr_heads = OfficialHfrHeads(
+        lh_head=_official_hfr_head(rng),
+        hl_head=_official_hfr_head(rng),
+        hh_head=_official_hfr_head(rng),
+    )
+    yy, xx = np.mgrid[0:8, 0:8].astype(np.float64)
+    return {
+        "mfu": mfu,
+        "hfr_heads": hfr_heads,
+        "low": rng.standard_normal((1, 1, 2, 2)) * 0.2,
+        "skip_mid": rng.standard_normal((1, 1, 4, 4)) * 0.2,
+        "skip_high": rng.standard_normal((1, 1, 8, 8)) * 0.2,
+        "tub_current": np.stack([np.sin(xx / 3.0) + np.cos(yy / 4.0)], axis=0),
+        "tub_previous": np.stack([np.sin((xx - 1.0) / 3.0) + np.cos(yy / 4.0)], axis=0),
+        "tub_next_frame": np.stack([np.sin((xx + 1.0) / 3.0) + np.cos(yy / 4.0)], axis=0),
+        "temporal_encoder_output_shape": (1, 4, 4, 4),
+        "fc_hw": (2, 2),
+        "output2_decoder_output_shape": (2, 8, 4, 4),
+    }
+
+
+def _official_hfr_head(rng: np.random.Generator) -> OfficialHfrConvBlock:
+    return OfficialHfrConvBlock(
+        conv1=OfficialConv2dNchw(
+            rng.standard_normal((2, 1, 1, 1)) * 0.04,
+            rng.standard_normal(2) * 0.01,
+        ),
+        conv2=OfficialConv2dNchw(
+            rng.standard_normal((3, 2, 3, 3)) * 0.04,
+            rng.standard_normal(3) * 0.01,
+            padding=1,
+        ),
+    )
 
 
 def _rewrite_header(packet: bytes, mutator) -> bytes:

@@ -15,7 +15,7 @@ import hashlib
 import json
 import lzma
 import struct
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -51,6 +51,28 @@ from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     inspect_lf_quant_payload_v2,
     is_lf_quant_payload_v2,
 )
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    FALSE_AUTHORITY,
+    OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
+    OFFICIAL_SNERV_HFR_SOURCE_SHA,
+    OfficialConv2dNchw,
+    OfficialHfrConvBlock,
+    OfficialHfrHeads,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
+    OFFICIAL_SNERV_MFU_SOURCE,
+    OFFICIAL_SNERV_T_MFU_SOURCE,
+    OfficialConvTranspose2dNchw,
+    OfficialResidualBlockNoBN,
+    OfficialResidualBlocksWithInputConv,
+    OfficialSnervMfu,
+    OfficialSnervMfuSpec,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
+    OFFICIAL_SNERV_T_SOURCE_SHA,
+    OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
+    prepare_official_tub_graph_inputs,
+)
 
 SNERV_ARCHIVE_SCHEMA = "snerv_inverse_steg_archive.v1"
 SNERV_ARCHIVE_MAGIC = b"SNAR1"
@@ -67,8 +89,15 @@ LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA = SPATIAL_DELTA_ZIGZAG_LEB128_CODEC
 DECODER_PAYLOAD_V1_SCHEMA = "snerv_decoder_payload.v1"
 DECODER_PAYLOAD_V2_SCHEMA = "snerv_decoder_payload.v2"
 DECODER_PAYLOAD_V3_SCHEMA = "snerv_decoder_payload.v3"
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA = (
+    "snerv_decoder_payload.official_mfu_hfr_tub.v1"
+)
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PROOF_SCHEMA = (
+    "snerv_decoder_payload.official_mfu_hfr_tub.receiver_runtime_proof.v1"
+)
 DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
 DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
+DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
 DECODER_PAYLOAD_QUANTIZED_CODECS = {
     "int8_symmetric": 8,
     "int4_symmetric": 4,
@@ -150,6 +179,20 @@ class DecodedSnervArchive:
 
         return decode_decoder_payload(self.sections["decoder_payload"])
 
+    def decode_official_mfu_hfr_tub_payload(self) -> OfficialMfuHfrTubReceiverPayload:
+        """Decode receiver-bound official MFU/HFR/TUB primitive payload bytes."""
+
+        return decode_official_mfu_hfr_tub_decoder_payload(
+            self.sections["decoder_payload"]
+        )
+
+    def execute_official_mfu_hfr_tub_payload(self) -> dict[str, Any]:
+        """Run official MFU/HFR/TUB primitives from archived decoder bytes."""
+
+        return execute_official_mfu_hfr_tub_decoder_payload(
+            self.sections["decoder_payload"]
+        )
+
     def decode_frame_planes(self, *, clip_to_uint8_range: bool = True) -> list[np.ndarray]:
         """Decode receiver-visible LF planes into ordered reconstructed frames.
 
@@ -172,6 +215,162 @@ class DecodedSnervArchive:
             self,
             clip_to_uint8_range=clip_to_uint8_range,
         )
+
+
+@dataclass(frozen=True)
+class OfficialMfuHfrTubReceiverPayload:
+    """Receiver-bound official MFU/HFR/TUB payload decoded from SNAR1 bytes."""
+
+    header: dict[str, Any]
+    tensors: dict[str, np.ndarray]
+    payload_sha256: str
+    payload_bytes: int
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    rank_or_kill_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    @property
+    def schema(self) -> str:
+        return str(self.header["schema"])
+
+    def build_mfu(self) -> OfficialSnervMfu:
+        """Hydrate official MFU executable primitives from decoded tensors."""
+
+        spec = _official_mfu_spec_from_header(self.header)
+        return OfficialSnervMfu(
+            spec=spec,
+            upsample_mid=OfficialConvTranspose2dNchw(
+                self.tensors["mfu.upsample_mid.weight"],
+                self.tensors["mfu.upsample_mid.bias"],
+                stride=spec.mid_stride,
+            ),
+            rb_mid=_official_rb_from_tensors(
+                self.tensors,
+                prefix="mfu.rb_mid",
+                num_blocks=spec.num_blocks,
+            ),
+            upsample_high=OfficialConvTranspose2dNchw(
+                self.tensors["mfu.upsample_high.weight"],
+                self.tensors["mfu.upsample_high.bias"],
+                stride=spec.high_stride,
+            ),
+            rb_high=_official_rb_from_tensors(
+                self.tensors,
+                prefix="mfu.rb_high",
+                num_blocks=spec.num_blocks,
+            ),
+        )
+
+    def build_hfr_heads(self) -> OfficialHfrHeads:
+        """Hydrate official HFR executable primitives from decoded tensors."""
+
+        return OfficialHfrHeads(
+            lh_head=_official_hfr_head_from_tensors(self.tensors, prefix="hfr.lh"),
+            hl_head=_official_hfr_head_from_tensors(self.tensors, prefix="hfr.hl"),
+            hh_head=_official_hfr_head_from_tensors(self.tensors, prefix="hfr.hh"),
+        )
+
+    def mfu_inputs(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return archived official MFU input bundle."""
+
+        return (
+            self.tensors["inputs.mfu.low"],
+            self.tensors["inputs.mfu.skip_mid"],
+            self.tensors["inputs.mfu.skip_high"],
+        )
+
+    def tub_inputs(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Return archived official TUB source frame triplet."""
+
+        return (
+            self.tensors["inputs.tub.current"],
+            self.tensors["inputs.tub.previous"],
+            self.tensors["inputs.tub.next_frame"],
+        )
+
+    def execute(self) -> dict[str, Any]:
+        """Execute receiver-side official primitives and return hashed proof."""
+
+        low, skip_mid, skip_high = self.mfu_inputs()
+        mfu_out = self.build_mfu().forward(low, skip_mid, skip_high)
+        hfr_out = self.build_hfr_heads().forward(mfu_out.pyr_out)
+        current, previous, next_frame = self.tub_inputs()
+        tub_cfg = dict(self.header.get("tub_config") or {})
+        temporal_shape = tub_cfg.get("temporal_encoder_output_shape")
+        fc_hw = tub_cfg.get("fc_hw")
+        decoder_shape = tub_cfg.get("output2_decoder_output_shape")
+        tub_out = prepare_official_tub_graph_inputs(
+            current,
+            previous,
+            next_frame,
+            temporal_encoder_output_shape=(
+                tuple(int(v) for v in temporal_shape)
+                if temporal_shape is not None
+                else None
+            ),
+            fc_hw=tuple(int(v) for v in fc_hw) if fc_hw is not None else None,
+            output2_decoder_output_shape=(
+                tuple(int(v) for v in decoder_shape)
+                if decoder_shape is not None
+                else None
+            ),
+        )
+        output_tensors = {
+            "mfu.pyr_out": mfu_out.pyr_out,
+            "hfr.yh_out": hfr_out.yh_out,
+            "tub.normalized_lf": tub_out.normalized_lf,
+            "tub.prev_lowpass_over_2": tub_out.prev_lowpass_over_2,
+            "tub.next_lowpass_over_2": tub_out.next_lowpass_over_2,
+        }
+        output_rows = [
+            _tensor_manifest_row(name, np.asarray(array, dtype="<f8"))
+            for name, array in output_tensors.items()
+        ]
+        return {
+            "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PROOF_SCHEMA,
+            "payload_schema": self.schema,
+            "payload_sha256": self.payload_sha256,
+            "payload_bytes": int(self.payload_bytes),
+            "receiver_bound_official_primitive_payload": True,
+            "receiver_runtime_decode_proven": True,
+            "executed_components": {
+                "official_mfu": True,
+                "official_hfr": True,
+                "official_tub": True,
+            },
+            "source_contracts": dict(self.header.get("source_contracts") or {}),
+            "tensor_count": len(self.tensors),
+            "tensor_manifest_sha256": _sha256(
+                json.dumps(
+                    self.header.get("tensor_manifest", []),
+                    separators=(",", ":"),
+                    sort_keys=True,
+                ).encode("utf-8")
+            ),
+            "mfu_output": mfu_out.as_jsonable_metadata(),
+            "hfr_output": hfr_out.as_jsonable(),
+            "tub_output": tub_out.as_jsonable_metadata(),
+            "output_tensors": output_rows,
+            "output_bundle_sha256": _sha256(
+                b"".join(np.asarray(v, dtype="<f8").tobytes() for v in output_tensors.values())
+            ),
+            "source_forward_replay_authority": False,
+            "contest_scorer_authority": False,
+            **FALSE_AUTHORITY,
+        }
+
+    def as_jsonable(self) -> dict[str, Any]:
+        """Return payload metadata without embedding tensor bytes."""
+
+        return {
+            "schema": self.schema,
+            "payload_sha256": self.payload_sha256,
+            "payload_bytes": int(self.payload_bytes),
+            "header": dict(self.header),
+            "tensor_count": len(self.tensors),
+            **FALSE_AUTHORITY,
+        }
 
 
 def pack_snerv_archive(
@@ -635,6 +834,95 @@ def encode_decoder_payload(
     raise SnervArchiveError(f"unsupported decoder payload codec: {codec!r}")
 
 
+def encode_official_mfu_hfr_tub_decoder_payload(
+    *,
+    mfu: OfficialSnervMfu,
+    hfr_heads: OfficialHfrHeads,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+    tub_current: np.ndarray,
+    tub_previous: np.ndarray,
+    tub_next_frame: np.ndarray,
+    temporal_encoder_output_shape: tuple[int, int, int, int] | None = None,
+    fc_hw: tuple[int, int] | None = None,
+    output2_decoder_output_shape: tuple[int, int, int, int] | None = None,
+) -> bytes:
+    """Encode executable official MFU/HFR/TUB receiver primitive bytes.
+
+    This is not a contest-score claim. It is the receiver/runtime custody
+    surface for official primitive tensors and inputs: the decoder section can
+    now carry bytes that are decoded into the official NumPy primitives instead
+    of only carrying the local linear HF surrogate.
+    """
+
+    tensors = _official_payload_tensor_dict(
+        mfu=mfu,
+        hfr_heads=hfr_heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=tub_current,
+        tub_previous=tub_previous,
+        tub_next_frame=tub_next_frame,
+    )
+    tensor_manifest, raw = _pack_tensor_manifest(tensors)
+    compressed = lzma.compress(
+        raw,
+        format=lzma.FORMAT_XZ,
+        preset=9 | lzma.PRESET_EXTREME,
+    )
+    spec = mfu.spec
+    tub_config = {
+        "temporal_encoder_output_shape": (
+            [int(v) for v in temporal_encoder_output_shape]
+            if temporal_encoder_output_shape is not None
+            else None
+        ),
+        "fc_hw": [int(v) for v in fc_hw] if fc_hw is not None else None,
+        "output2_decoder_output_shape": (
+            [int(v) for v in output2_decoder_output_shape]
+            if output2_decoder_output_shape is not None
+            else None
+        ),
+    }
+    header = {
+        "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+        "codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC,
+        "dtype": "float64_le",
+        "mfu_spec": {
+            "low_channels": int(spec.low_channels),
+            "mid_channels": int(spec.mid_channels),
+            "high_channels": int(spec.high_channels),
+            "mid_stride": int(spec.mid_stride),
+            "high_stride": int(spec.high_stride),
+            "num_blocks": int(spec.num_blocks),
+            "source": str(spec.source),
+        },
+        "hfr_in_channels": int(hfr_heads.in_channels),
+        "tub_config": tub_config,
+        "source_contracts": {
+            "mfu": str(spec.source),
+            "mfu_non_temporal": OFFICIAL_SNERV_MFU_SOURCE,
+            "mfu_temporal": OFFICIAL_SNERV_T_MFU_SOURCE,
+            "hfr": OFFICIAL_SNERV_HFR_SOURCE_CONTRACT,
+            "hfr_source_sha": OFFICIAL_SNERV_HFR_SOURCE_SHA,
+            "tub": OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
+            "tub_source_sha": OFFICIAL_SNERV_T_SOURCE_SHA,
+        },
+        "tensor_manifest": tensor_manifest,
+        "tensor_count": len(tensor_manifest),
+        "raw_tensor_bytes": len(raw),
+        "raw_tensor_sha256": _sha256(raw),
+        "compressed_bytes": len(compressed),
+        "compressed_sha256": _sha256(compressed),
+        "receiver_runtime_decode_proven_by_payload": False,
+        "source_forward_replay_authority": False,
+        **FALSE_AUTHORITY,
+    }
+    return _pack_subpacket(SNERV_DECODER_MAGIC, header, compressed)
+
+
 def _encode_decoder_payload_v1(
     *,
     levels: int,
@@ -827,8 +1115,14 @@ def decode_decoder_payload(payload: bytes) -> HfGenerationDecoder:
             DECODER_PAYLOAD_V1_SCHEMA,
             DECODER_PAYLOAD_V2_SCHEMA,
             DECODER_PAYLOAD_V3_SCHEMA,
+            DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         ),
     )
+    if header["schema"] == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA:
+        raise SnervArchiveError(
+            "official MFU/HFR/TUB payload requires "
+            "decode_official_mfu_hfr_tub_decoder_payload"
+        )
     levels = int(header["levels"])
     if header["schema"] == DECODER_PAYLOAD_V3_SCHEMA:
         return _decode_decoder_payload_mixed(header, compressed)
@@ -864,9 +1158,310 @@ def inspect_decoder_payload_header(payload: bytes) -> dict[str, Any]:
             DECODER_PAYLOAD_V1_SCHEMA,
             DECODER_PAYLOAD_V2_SCHEMA,
             DECODER_PAYLOAD_V3_SCHEMA,
+            DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         ),
     )
     return dict(header)
+
+
+def is_official_mfu_hfr_tub_decoder_payload(payload: bytes) -> bool:
+    """Return true when ``payload`` is the official primitive decoder schema."""
+
+    try:
+        header = inspect_decoder_payload_header(payload)
+    except SnervArchiveError:
+        return False
+    return header.get("schema") == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA
+
+
+def decode_official_mfu_hfr_tub_decoder_payload(
+    payload: bytes,
+) -> OfficialMfuHfrTubReceiverPayload:
+    """Decode official MFU/HFR/TUB receiver primitive payload bytes."""
+
+    header, compressed = _unpack_subpacket(
+        payload,
+        magic=SNERV_DECODER_MAGIC,
+        schema=DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    )
+    if str(header.get("codec")) != DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC:
+        raise SnervArchiveError(
+            f"unsupported official primitive payload codec: {header.get('codec')!r}"
+        )
+    if _sha256(compressed) != str(header["compressed_sha256"]):
+        raise SnervArchiveError("official primitive payload compressed sha256 mismatch")
+    try:
+        raw = lzma.decompress(compressed)
+    except lzma.LZMAError as exc:
+        raise SnervArchiveError("official primitive payload decompression failed") from exc
+    if len(raw) != int(header["raw_tensor_bytes"]):
+        raise SnervArchiveError("official primitive payload raw byte count mismatch")
+    if _sha256(raw) != str(header["raw_tensor_sha256"]):
+        raise SnervArchiveError("official primitive payload raw sha256 mismatch")
+    tensors = _unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    payload_obj = OfficialMfuHfrTubReceiverPayload(
+        header=dict(header),
+        tensors=tensors,
+        payload_sha256=_sha256(bytes(payload)),
+        payload_bytes=len(bytes(payload)),
+    )
+    _validate_official_payload_exec_surfaces(payload_obj)
+    return payload_obj
+
+
+def execute_official_mfu_hfr_tub_decoder_payload(payload: bytes) -> dict[str, Any]:
+    """Decode and execute official MFU/HFR/TUB primitive bytes."""
+
+    return decode_official_mfu_hfr_tub_decoder_payload(payload).execute()
+
+
+def _official_payload_tensor_dict(
+    *,
+    mfu: OfficialSnervMfu,
+    hfr_heads: OfficialHfrHeads,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+    tub_current: np.ndarray,
+    tub_previous: np.ndarray,
+    tub_next_frame: np.ndarray,
+) -> dict[str, np.ndarray]:
+    tensors: dict[str, np.ndarray] = {
+        "mfu.upsample_mid.weight": mfu.upsample_mid.weight,
+        "mfu.upsample_high.weight": mfu.upsample_high.weight,
+        "inputs.mfu.low": low,
+        "inputs.mfu.skip_mid": skip_mid,
+        "inputs.mfu.skip_high": skip_high,
+        "inputs.tub.current": tub_current,
+        "inputs.tub.previous": tub_previous,
+        "inputs.tub.next_frame": tub_next_frame,
+    }
+    _store_optional_bias(
+        tensors,
+        "mfu.upsample_mid.bias",
+        mfu.upsample_mid.bias,
+    )
+    _store_optional_bias(
+        tensors,
+        "mfu.upsample_high.bias",
+        mfu.upsample_high.bias,
+    )
+    _store_rb_tensors(tensors, "mfu.rb_mid", mfu.rb_mid)
+    _store_rb_tensors(tensors, "mfu.rb_high", mfu.rb_high)
+    _store_hfr_head_tensors(tensors, "hfr.lh", hfr_heads.lh_head)
+    _store_hfr_head_tensors(tensors, "hfr.hl", hfr_heads.hl_head)
+    _store_hfr_head_tensors(tensors, "hfr.hh", hfr_heads.hh_head)
+    return tensors
+
+
+def _store_optional_bias(
+    tensors: dict[str, np.ndarray],
+    key: str,
+    value: np.ndarray | None,
+) -> None:
+    tensors[key] = (
+        np.zeros((0,), dtype=np.float64)
+        if value is None
+        else np.asarray(value, dtype=np.float64)
+    )
+
+
+def _store_conv2d_tensors(
+    tensors: dict[str, np.ndarray],
+    prefix: str,
+    conv: OfficialConv2dNchw,
+) -> None:
+    tensors[f"{prefix}.weight"] = conv.weight
+    _store_optional_bias(tensors, f"{prefix}.bias", conv.bias)
+
+
+def _store_rb_tensors(
+    tensors: dict[str, np.ndarray],
+    prefix: str,
+    block: OfficialResidualBlocksWithInputConv,
+) -> None:
+    _store_conv2d_tensors(tensors, f"{prefix}.input_conv", block.input_conv)
+    for idx, residual in enumerate(block.residual_blocks):
+        _store_conv2d_tensors(tensors, f"{prefix}.block{idx}.conv1", residual.conv1)
+        _store_conv2d_tensors(tensors, f"{prefix}.block{idx}.conv2", residual.conv2)
+
+
+def _store_hfr_head_tensors(
+    tensors: dict[str, np.ndarray],
+    prefix: str,
+    head: OfficialHfrConvBlock,
+) -> None:
+    _store_conv2d_tensors(tensors, f"{prefix}.conv1", head.conv1)
+    _store_conv2d_tensors(tensors, f"{prefix}.conv2", head.conv2)
+
+
+def _pack_tensor_manifest(
+    tensors: Mapping[str, np.ndarray],
+) -> tuple[list[dict[str, Any]], bytes]:
+    rows: list[dict[str, Any]] = []
+    chunks: list[bytes] = []
+    offset = 0
+    for name in sorted(tensors):
+        arr = np.asarray(tensors[name], dtype="<f8")
+        if not np.all(np.isfinite(arr)):
+            raise SnervArchiveError(f"official primitive tensor {name!r} is non-finite")
+        contiguous = np.ascontiguousarray(arr, dtype="<f8")
+        blob = contiguous.tobytes()
+        rows.append(
+            {
+                "name": str(name),
+                "dtype": "float64_le",
+                "shape": [int(v) for v in contiguous.shape],
+                "offset": int(offset),
+                "nbytes": len(blob),
+                "sha256": _sha256(blob),
+            }
+        )
+        chunks.append(blob)
+        offset += len(blob)
+    return rows, b"".join(chunks)
+
+
+def _unpack_tensor_manifest(
+    raw: bytes,
+    manifest: Sequence[Mapping[str, Any]],
+) -> dict[str, np.ndarray]:
+    tensors: dict[str, np.ndarray] = {}
+    cursor = 0
+    for row in manifest:
+        name = str(row.get("name") or "")
+        if not name:
+            raise SnervArchiveError("official primitive tensor manifest missing name")
+        if name in tensors:
+            raise SnervArchiveError(f"duplicate official primitive tensor {name!r}")
+        if row.get("dtype") != "float64_le":
+            raise SnervArchiveError(f"unsupported official primitive dtype for {name!r}")
+        offset = int(row.get("offset", -1))
+        nbytes = int(row.get("nbytes", -1))
+        if offset != cursor or nbytes < 0:
+            raise SnervArchiveError("official primitive tensor manifest is noncontiguous")
+        blob = raw[offset : offset + nbytes]
+        if len(blob) != nbytes:
+            raise SnervArchiveError(f"official primitive tensor {name!r} truncated")
+        if _sha256(blob) != str(row.get("sha256")):
+            raise SnervArchiveError(f"official primitive tensor {name!r} sha256 mismatch")
+        shape = tuple(int(v) for v in row.get("shape") or ())
+        expected = int(np.prod(shape, dtype=np.int64)) * np.dtype("<f8").itemsize
+        if expected != nbytes:
+            raise SnervArchiveError(f"official primitive tensor {name!r} shape/byte mismatch")
+        tensors[name] = np.frombuffer(blob, dtype="<f8").reshape(shape).copy()
+        cursor += nbytes
+    if cursor != len(raw):
+        raise SnervArchiveError("official primitive tensor manifest left trailing bytes")
+    return tensors
+
+
+def _official_mfu_spec_from_header(header: Mapping[str, Any]) -> OfficialSnervMfuSpec:
+    raw = header.get("mfu_spec")
+    if not isinstance(raw, Mapping):
+        raise SnervArchiveError("official primitive payload missing mfu_spec")
+    return OfficialSnervMfuSpec(
+        low_channels=int(raw["low_channels"]),
+        mid_channels=int(raw["mid_channels"]),
+        high_channels=int(raw["high_channels"]),
+        mid_stride=int(raw["mid_stride"]),
+        high_stride=int(raw["high_stride"]),
+        num_blocks=int(raw["num_blocks"]),
+        source=str(raw.get("source", OFFICIAL_SNERV_MFU_SOURCE)),
+    )
+
+
+def _official_rb_from_tensors(
+    tensors: Mapping[str, np.ndarray],
+    *,
+    prefix: str,
+    num_blocks: int,
+) -> OfficialResidualBlocksWithInputConv:
+    return OfficialResidualBlocksWithInputConv(
+        input_conv=OfficialConv2dNchw(
+            tensors[f"{prefix}.input_conv.weight"],
+            _optional_tensor(tensors, f"{prefix}.input_conv.bias"),
+            padding=1,
+        ),
+        residual_blocks=tuple(
+            OfficialResidualBlockNoBN(
+                conv1=OfficialConv2dNchw(
+                    tensors[f"{prefix}.block{idx}.conv1.weight"],
+                    _optional_tensor(tensors, f"{prefix}.block{idx}.conv1.bias"),
+                    padding=1,
+                ),
+                conv2=OfficialConv2dNchw(
+                    tensors[f"{prefix}.block{idx}.conv2.weight"],
+                    _optional_tensor(tensors, f"{prefix}.block{idx}.conv2.bias"),
+                    padding=1,
+                ),
+            )
+            for idx in range(int(num_blocks))
+        ),
+    )
+
+
+def _official_hfr_head_from_tensors(
+    tensors: Mapping[str, np.ndarray],
+    *,
+    prefix: str,
+) -> OfficialHfrConvBlock:
+    return OfficialHfrConvBlock(
+        conv1=OfficialConv2dNchw(
+            tensors[f"{prefix}.conv1.weight"],
+            _optional_tensor(tensors, f"{prefix}.conv1.bias"),
+            padding=0,
+        ),
+        conv2=OfficialConv2dNchw(
+            tensors[f"{prefix}.conv2.weight"],
+            _optional_tensor(tensors, f"{prefix}.conv2.bias"),
+            padding=1,
+        ),
+    )
+
+
+def _optional_tensor(
+    tensors: Mapping[str, np.ndarray],
+    key: str,
+) -> np.ndarray | None:
+    arr = np.asarray(tensors[key], dtype=np.float64)
+    return None if arr.size == 0 else arr
+
+
+def _validate_official_payload_exec_surfaces(
+    payload: OfficialMfuHfrTubReceiverPayload,
+) -> None:
+    required = {
+        "inputs.mfu.low",
+        "inputs.mfu.skip_mid",
+        "inputs.mfu.skip_high",
+        "inputs.tub.current",
+        "inputs.tub.previous",
+        "inputs.tub.next_frame",
+    }
+    missing = sorted(required.difference(payload.tensors))
+    if missing:
+        raise SnervArchiveError(
+            "official primitive payload missing tensors: " + ", ".join(missing)
+        )
+    payload.build_mfu()
+    payload.build_hfr_heads()
+    payload.mfu_inputs()
+    payload.tub_inputs()
+
+
+def _tensor_manifest_row(name: str, array: np.ndarray) -> dict[str, Any]:
+    arr = np.ascontiguousarray(np.asarray(array, dtype="<f8"))
+    blob = arr.tobytes()
+    return {
+        "name": str(name),
+        "dtype": "float64_le",
+        "shape": [int(v) for v in arr.shape],
+        "bytes": len(blob),
+        "sha256": _sha256(blob),
+        "min": float(np.min(arr)) if arr.size else None,
+        "max": float(np.max(arr)) if arr.size else None,
+    }
 
 
 def _decode_decoder_payload_mixed(
@@ -1045,6 +1640,256 @@ def _decode_decoder_payload_quantized(
         values=values,
         model_size=model_size,
     )
+
+
+def _official_payload_tensor_dict(
+    *,
+    mfu: OfficialSnervMfu,
+    hfr_heads: OfficialHfrHeads,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+    tub_current: np.ndarray,
+    tub_previous: np.ndarray,
+    tub_next_frame: np.ndarray,
+) -> dict[str, np.ndarray]:
+    tensors: dict[str, np.ndarray] = {
+        "mfu.upsample_mid.weight": mfu.upsample_mid.weight,
+        "mfu.upsample_mid.bias": _required_bias(mfu.upsample_mid.bias, "mfu.upsample_mid.bias"),
+        "mfu.upsample_high.weight": mfu.upsample_high.weight,
+        "mfu.upsample_high.bias": _required_bias(mfu.upsample_high.bias, "mfu.upsample_high.bias"),
+        "inputs.mfu.low": low,
+        "inputs.mfu.skip_mid": skip_mid,
+        "inputs.mfu.skip_high": skip_high,
+        "inputs.tub.current": tub_current,
+        "inputs.tub.previous": tub_previous,
+        "inputs.tub.next_frame": tub_next_frame,
+    }
+    tensors.update(_official_rb_to_tensors(mfu.rb_mid, prefix="mfu.rb_mid"))
+    tensors.update(_official_rb_to_tensors(mfu.rb_high, prefix="mfu.rb_high"))
+    tensors.update(_official_hfr_heads_to_tensors(hfr_heads))
+    return tensors
+
+
+def _official_rb_to_tensors(
+    rb: OfficialResidualBlocksWithInputConv,
+    *,
+    prefix: str,
+) -> dict[str, np.ndarray]:
+    tensors = {
+        f"{prefix}.input_conv.weight": rb.input_conv.weight,
+        f"{prefix}.input_conv.bias": _required_bias(
+            rb.input_conv.bias,
+            f"{prefix}.input_conv.bias",
+        ),
+    }
+    for idx, block in enumerate(rb.residual_blocks):
+        base = f"{prefix}.block{idx}"
+        tensors[f"{base}.conv1.weight"] = block.conv1.weight
+        tensors[f"{base}.conv1.bias"] = _required_bias(
+            block.conv1.bias,
+            f"{base}.conv1.bias",
+        )
+        tensors[f"{base}.conv2.weight"] = block.conv2.weight
+        tensors[f"{base}.conv2.bias"] = _required_bias(
+            block.conv2.bias,
+            f"{base}.conv2.bias",
+        )
+    return tensors
+
+
+def _official_hfr_heads_to_tensors(heads: OfficialHfrHeads) -> dict[str, np.ndarray]:
+    tensors: dict[str, np.ndarray] = {}
+    for name, head in (
+        ("lh", heads.lh_head),
+        ("hl", heads.hl_head),
+        ("hh", heads.hh_head),
+    ):
+        base = f"hfr.{name}"
+        tensors[f"{base}.conv1.weight"] = head.conv1.weight
+        tensors[f"{base}.conv1.bias"] = _required_bias(
+            head.conv1.bias,
+            f"{base}.conv1.bias",
+        )
+        tensors[f"{base}.conv2.weight"] = head.conv2.weight
+        tensors[f"{base}.conv2.bias"] = _required_bias(
+            head.conv2.bias,
+            f"{base}.conv2.bias",
+        )
+    return tensors
+
+
+def _required_bias(value: np.ndarray | None, name: str) -> np.ndarray:
+    if value is None:
+        raise SnervArchiveError(f"official primitive payload missing required bias {name!r}")
+    return value
+
+
+def _pack_tensor_manifest(
+    tensors: dict[str, np.ndarray],
+) -> tuple[list[dict[str, Any]], bytes]:
+    if not tensors:
+        raise SnervArchiveError("official primitive payload requires tensors")
+    manifest = []
+    raw_parts = []
+    for name in sorted(tensors):
+        arr = _canonical_float64_tensor(tensors[name], name=name)
+        blob = arr.tobytes()
+        manifest.append(_tensor_manifest_row(name, arr))
+        raw_parts.append(blob)
+    return manifest, b"".join(raw_parts)
+
+
+def _unpack_tensor_manifest(
+    raw: bytes,
+    manifest: Sequence[dict[str, Any]],
+) -> dict[str, np.ndarray]:
+    if not manifest:
+        raise SnervArchiveError("official primitive tensor manifest is empty")
+    cursor = 0
+    seen: set[str] = set()
+    out: dict[str, np.ndarray] = {}
+    for row in manifest:
+        name = str(row.get("name"))
+        if not name:
+            raise SnervArchiveError("official primitive tensor manifest missing name")
+        if name in seen:
+            raise SnervArchiveError(f"duplicate official primitive tensor {name!r}")
+        shape = tuple(int(v) for v in row.get("shape", ()))
+        if not shape or any(v <= 0 for v in shape):
+            raise SnervArchiveError(f"official primitive tensor {name!r} has bad shape")
+        if str(row.get("dtype")) != "float64_le":
+            raise SnervArchiveError(
+                f"official primitive tensor {name!r} has unsupported dtype"
+            )
+        nbytes = int(np.prod(shape)) * np.dtype("<f8").itemsize
+        if int(row.get("bytes", -1)) != nbytes:
+            raise SnervArchiveError(
+                f"official primitive tensor {name!r} byte count mismatch"
+            )
+        segment = raw[cursor : cursor + nbytes]
+        if len(segment) != nbytes:
+            raise SnervArchiveError(f"official primitive tensor {name!r} is truncated")
+        if _sha256(segment) != str(row.get("sha256")):
+            raise SnervArchiveError(
+                f"official primitive tensor {name!r} sha256 mismatch"
+            )
+        arr = np.frombuffer(segment, dtype="<f8").copy().reshape(shape)
+        if not np.all(np.isfinite(arr)):
+            raise SnervArchiveError(
+                f"official primitive tensor {name!r} contains non-finite values"
+            )
+        out[name] = arr
+        seen.add(name)
+        cursor += nbytes
+    if cursor != len(raw):
+        raise SnervArchiveError("official primitive payload has unused raw tensor bytes")
+    return out
+
+
+def _tensor_manifest_row(name: str, arr: np.ndarray) -> dict[str, Any]:
+    canonical = _canonical_float64_tensor(arr, name=name)
+    blob = canonical.tobytes()
+    return {
+        "name": str(name),
+        "shape": [int(v) for v in canonical.shape],
+        "dtype": "float64_le",
+        "bytes": len(blob),
+        "sha256": _sha256(blob),
+    }
+
+
+def _canonical_float64_tensor(value: np.ndarray, *, name: str) -> np.ndarray:
+    arr = np.asarray(value, dtype="<f8")
+    if arr.size == 0:
+        raise SnervArchiveError(f"official primitive tensor {name!r} is empty")
+    if not np.all(np.isfinite(arr)):
+        raise SnervArchiveError(
+            f"official primitive tensor {name!r} contains non-finite values"
+        )
+    return np.ascontiguousarray(arr, dtype="<f8")
+
+
+def _official_mfu_spec_from_header(header: dict[str, Any]) -> OfficialSnervMfuSpec:
+    raw = header.get("mfu_spec")
+    if not isinstance(raw, dict):
+        raise SnervArchiveError("official primitive payload missing mfu_spec")
+    return OfficialSnervMfuSpec(
+        low_channels=int(raw["low_channels"]),
+        mid_channels=int(raw["mid_channels"]),
+        high_channels=int(raw["high_channels"]),
+        mid_stride=int(raw["mid_stride"]),
+        high_stride=int(raw["high_stride"]),
+        num_blocks=int(raw["num_blocks"]),
+        source=str(raw.get("source") or OFFICIAL_SNERV_MFU_SOURCE),
+    )
+
+
+def _official_rb_from_tensors(
+    tensors: dict[str, np.ndarray],
+    *,
+    prefix: str,
+    num_blocks: int,
+) -> OfficialResidualBlocksWithInputConv:
+    return OfficialResidualBlocksWithInputConv(
+        input_conv=OfficialConv2dNchw(
+            _tensor(tensors, f"{prefix}.input_conv.weight"),
+            _tensor(tensors, f"{prefix}.input_conv.bias"),
+            padding=1,
+        ),
+        residual_blocks=tuple(
+            OfficialResidualBlockNoBN(
+                conv1=OfficialConv2dNchw(
+                    _tensor(tensors, f"{prefix}.block{idx}.conv1.weight"),
+                    _tensor(tensors, f"{prefix}.block{idx}.conv1.bias"),
+                    padding=1,
+                ),
+                conv2=OfficialConv2dNchw(
+                    _tensor(tensors, f"{prefix}.block{idx}.conv2.weight"),
+                    _tensor(tensors, f"{prefix}.block{idx}.conv2.bias"),
+                    padding=1,
+                ),
+            )
+            for idx in range(int(num_blocks))
+        ),
+    )
+
+
+def _official_hfr_head_from_tensors(
+    tensors: dict[str, np.ndarray],
+    *,
+    prefix: str,
+) -> OfficialHfrConvBlock:
+    return OfficialHfrConvBlock(
+        conv1=OfficialConv2dNchw(
+            _tensor(tensors, f"{prefix}.conv1.weight"),
+            _tensor(tensors, f"{prefix}.conv1.bias"),
+            padding=0,
+        ),
+        conv2=OfficialConv2dNchw(
+            _tensor(tensors, f"{prefix}.conv2.weight"),
+            _tensor(tensors, f"{prefix}.conv2.bias"),
+            padding=1,
+        ),
+    )
+
+
+def _tensor(tensors: dict[str, np.ndarray], name: str) -> np.ndarray:
+    try:
+        return tensors[name]
+    except KeyError as exc:
+        raise SnervArchiveError(
+            f"official primitive payload missing tensor {name!r}"
+        ) from exc
+
+
+def _validate_official_payload_exec_surfaces(
+    payload: OfficialMfuHfrTubReceiverPayload,
+) -> None:
+    payload.build_mfu()
+    payload.build_hfr_heads()
+    payload.mfu_inputs()
+    payload.tub_inputs()
 
 
 def _decoder_to_flat_values(
