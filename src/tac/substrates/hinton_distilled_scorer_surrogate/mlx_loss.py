@@ -891,7 +891,7 @@ class RealSegNetTeacherLogitsCache:
     ``ready_for_exact_eval_dispatch=False``, ``rank_or_kill_eligible=False``).
     """
 
-    teacher_logits_thwk: Any  # MLX float32 (T, H, W, K)
+    teacher_logits_thwk: Any  # MLX float16/float32 (T, H, W, K)
     frame_count: int
     height: int
     width: int
@@ -922,7 +922,9 @@ class RealSegNetTeacherLogitsCache:
             MLX float32 array of shape ``(B, H, W, K)``.
         """
         _require_mlx()
-        return self.teacher_logits_thwk[indices]
+        import mlx.core as mx
+
+        return self.teacher_logits_thwk[indices].astype(mx.float32)
 
 
 def build_real_segnet_teacher_cache(

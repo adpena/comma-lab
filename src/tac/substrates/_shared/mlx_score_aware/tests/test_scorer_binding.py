@@ -277,6 +277,31 @@ def test_real_scorer_distill_grad_is_reachable_finite_nonzero_and_scorer_bound()
 
 
 @mlx_only
+def test_real_segnet_teacher_cache_stores_fp16_and_returns_fp32() -> None:
+    """Keep full-video teacher memory bounded without changing loss dtype."""
+    import mlx.core as mx
+
+    num_pairs = 2
+    model = _dreamer_model(num_pairs)
+    t0, t1 = _real_video_targets(num_pairs)
+    recon_bundle = RendererBundle(
+        model=model,
+        target_rgb_0=t0,
+        target_rgb_1=t1,
+        num_pairs=num_pairs,
+        forward_convention="call_b2chw_255",
+        distillation_weight=0.0,
+    )
+    teacher = build_mlx_segnet_pair_teacher(recon_bundle, device="cpu")
+
+    assert teacher.teacher_logits_thwk.dtype == mx.float16
+    logits = teacher.teacher_logits_for_indices(mx.array([0, 1], dtype=mx.int32))
+    mx.eval(logits)
+    assert logits.dtype == mx.float32
+    assert tuple(logits.shape[:3]) == (2, 384, 512)
+
+
+@mlx_only
 def test_real_scorer_distill_grad_differs_from_mock() -> None:
     """The real scorer teacher carries information the pixel-cosine mock cannot.
 

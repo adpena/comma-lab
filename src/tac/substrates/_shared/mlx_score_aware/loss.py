@@ -594,9 +594,11 @@ def build_mlx_segnet_pair_teacher(
     segnet.eval()
     mlx_segnet = MLXSegNetAdapter(segnet)
     # One gradient-free SegNet forward per pair target SegNet frame, chunked to
-    # keep memory bounded. SegNet preprocess expects RGB in 0..255 (no internal
-    # /255 per the upstream cache builder convention), so scale the [0,1]
-    # target up.
+    # keep memory bounded. Store the teacher cache as fp16 and cast the active
+    # batch back to fp32 at lookup time: the teacher is gradient-blocked and the
+    # full-video logits cache is a major memory term for 600-pair HiNeRV/SNeRV
+    # runs. SegNet preprocess expects RGB in 0..255 (no internal /255 per the
+    # upstream cache builder convention), so scale the [0,1] target up.
     chunk = 16
     logits_chunks = []
     for start in range(0, n_pairs, chunk):
@@ -604,10 +606,10 @@ def build_mlx_segnet_pair_teacher(
         x = tgt[start:end] * 255.0  # (b, 384, 512, 3) MLX
         out = mx.stop_gradient(mlx_segnet(x))  # (b, 384, 512, K) MLX
         mx.eval(out)
-        logits_chunks.append(np.array(out).astype(np.float32))
+        logits_chunks.append(np.array(out).astype(np.float16))
     logits_np = np.concatenate(logits_chunks, axis=0)  # (n_pairs, 384, 512, K)
     return RealSegNetTeacherLogitsCache(
-        teacher_logits_thwk=mx.array(logits_np),
+        teacher_logits_thwk=mx.array(logits_np).astype(mx.float16),
         frame_count=int(logits_np.shape[0]),
         height=int(logits_np.shape[1]),
         width=int(logits_np.shape[2]),
