@@ -98,6 +98,34 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_PROOF_SCHEMA = (
 DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
 DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
+OFFICIAL_MFU_HFR_TUB_REQUIRED_TENSOR_KEYS: tuple[str, ...] = (
+    "mfu.upsample_mid.weight",
+    "mfu.upsample_mid.bias",
+    "mfu.rb_mid.input_conv.weight",
+    "mfu.rb_mid.input_conv.bias",
+    "mfu.upsample_high.weight",
+    "mfu.upsample_high.bias",
+    "mfu.rb_high.input_conv.weight",
+    "mfu.rb_high.input_conv.bias",
+    "hfr.lh.conv1.weight",
+    "hfr.lh.conv1.bias",
+    "hfr.lh.conv2.weight",
+    "hfr.lh.conv2.bias",
+    "hfr.hl.conv1.weight",
+    "hfr.hl.conv1.bias",
+    "hfr.hl.conv2.weight",
+    "hfr.hl.conv2.bias",
+    "hfr.hh.conv1.weight",
+    "hfr.hh.conv1.bias",
+    "hfr.hh.conv2.weight",
+    "hfr.hh.conv2.bias",
+    "inputs.mfu.low",
+    "inputs.mfu.skip_mid",
+    "inputs.mfu.skip_high",
+    "inputs.tub.current",
+    "inputs.tub.previous",
+    "inputs.tub.next_frame",
+)
 DECODER_PAYLOAD_QUANTIZED_CODECS = {
     "int8_symmetric": 8,
     "int4_symmetric": 4,

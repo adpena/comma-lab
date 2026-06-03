@@ -347,6 +347,8 @@ def _receiver_runtime_decode_row(
 ) -> dict[str, Any]:
     source_path = root / spec.source_path
     test_path = root / spec.test_path
+    archive_path = root / RECEIVER_ARCHIVE_PATH
+    archive_test_path = root / RECEIVER_ARCHIVE_TEST_PATH
     source_text = (
         read_python_source_for_marker_scan(source_path)
         if source_path.is_file()
@@ -357,20 +359,58 @@ def _receiver_runtime_decode_row(
         if test_path.is_file()
         else ""
     )
+    archive_text = (
+        read_python_source_for_marker_scan(archive_path)
+        if archive_path.is_file()
+        else ""
+    )
+    archive_test_text = (
+        archive_test_path.read_text(encoding="utf-8", errors="replace")
+        if archive_test_path.is_file()
+        else ""
+    )
     source_identity = _file_identity_row(source_path)
     test_identity = _file_identity_row(test_path)
+    archive_identity = _file_identity_row(archive_path)
+    archive_test_identity = _file_identity_row(archive_test_path)
     missing_entrypoints = [
         marker for marker in spec.runtime_entrypoint_markers if marker not in source_text
     ]
     missing_numeric_markers = [
         marker for marker in spec.test_markers if marker not in test_text
     ]
+    missing_archive_markers = [
+        marker
+        for marker in spec.receiver_archive_runtime_markers
+        if marker not in archive_text
+    ]
+    missing_archive_test_markers = [
+        marker
+        for marker in spec.receiver_archive_test_markers
+        if marker not in archive_test_text
+    ]
     forbidden_import_markers = [
         marker for marker in FORBIDDEN_RECEIVER_IMPORT_MARKERS if marker in source_text
+    ]
+    archive_forbidden_import_markers = [
+        marker for marker in FORBIDDEN_RECEIVER_IMPORT_MARKERS if marker in archive_text
     ]
     runtime_import_safe = bool(source_path.is_file() and not forbidden_import_markers)
     numeric_test_present = bool(test_path.is_file() and not missing_numeric_markers)
     entrypoint_present = bool(source_path.is_file() and not missing_entrypoints)
+    archive_decode_present = bool(
+        archive_path.is_file()
+        and archive_test_path.is_file()
+        and not missing_archive_markers
+        and not missing_archive_test_markers
+        and not archive_forbidden_import_markers
+    )
+    decode_proven = bool(
+        runtime_import_safe
+        and numeric_test_present
+        and entrypoint_present
+        and archive_decode_present
+    )
     blockers = _ordered_unique(
         [
             f"official_{spec.component_id}_runtime_module_missing"
@@ -391,7 +431,25 @@ def _receiver_runtime_decode_row(
                 f"official_{spec.component_id}_receiver_forbidden_import:{marker}"
                 for marker in forbidden_import_markers
             ],
-            *spec.receiver_decode_blockers,
+            "snerv_official_receiver_archive_runtime_module_missing"
+            if not archive_path.is_file()
+            else "",
+            "snerv_official_receiver_archive_runtime_test_missing"
+            if not archive_test_path.is_file()
+            else "",
+            *[
+                f"official_{spec.component_id}_receiver_archive_marker_missing:{marker}"
+                for marker in missing_archive_markers
+            ],
+            *[
+                f"official_{spec.component_id}_receiver_archive_test_marker_missing:{marker}"
+                for marker in missing_archive_test_markers
+            ],
+            *[
+                f"official_{spec.component_id}_receiver_archive_forbidden_import:{marker}"
+                for marker in archive_forbidden_import_markers
+            ],
+            *(() if archive_decode_present else spec.receiver_decode_blockers),
         ]
     )
     return {
@@ -404,22 +462,40 @@ def _receiver_runtime_decode_row(
         "numeric_test_path": spec.test_path,
         "numeric_test_bytes": test_identity["bytes"],
         "numeric_test_sha256": test_identity["sha256"],
+        "receiver_archive_runtime_path": RECEIVER_ARCHIVE_PATH,
+        "receiver_archive_runtime_bytes": archive_identity["bytes"],
+        "receiver_archive_runtime_sha256": archive_identity["sha256"],
+        "receiver_archive_test_path": RECEIVER_ARCHIVE_TEST_PATH,
+        "receiver_archive_test_bytes": archive_test_identity["bytes"],
+        "receiver_archive_test_sha256": archive_test_identity["sha256"],
         "runtime_entrypoint_markers": list(spec.runtime_entrypoint_markers),
         "missing_runtime_entrypoint_markers": missing_entrypoints,
+        "receiver_archive_runtime_markers": list(spec.receiver_archive_runtime_markers),
+        "missing_receiver_archive_runtime_markers": missing_archive_markers,
+        "receiver_archive_test_markers": list(spec.receiver_archive_test_markers),
+        "missing_receiver_archive_test_markers": missing_archive_test_markers,
         "forbidden_receiver_import_markers": list(FORBIDDEN_RECEIVER_IMPORT_MARKERS),
         "present_forbidden_receiver_import_markers": forbidden_import_markers,
+        "present_receiver_archive_forbidden_import_markers": archive_forbidden_import_markers,
         "runtime_module_import_safe": runtime_import_safe,
         "runtime_entrypoints_present": entrypoint_present,
         "numeric_source_replay_test_present": numeric_test_present,
-        "receiver_runtime_decode_proven": False,
-        "receiver_export_bound": False,
+        "receiver_archive_payload_decode_present": archive_decode_present,
+        "receiver_runtime_decode_proven": decode_proven,
+        "receiver_archive_payload_bound": decode_proven,
+        "receiver_export_bound": decode_proven,
+        "native_mlx_export_bound": False,
         "blockers": blockers,
         "status": (
-            "numeric_source_replay_bound_receiver_decode_missing"
-            if runtime_import_safe and entrypoint_present and numeric_test_present
-            else "receiver_runtime_decode_contract_incomplete"
+            "receiver_runtime_decode_proven_source_forward_missing"
+            if decode_proven
+            else (
+                "numeric_source_replay_bound_receiver_decode_missing"
+                if runtime_import_safe and entrypoint_present and numeric_test_present
+                else "receiver_runtime_decode_contract_incomplete"
+            )
         ),
-        "authority": "false_authority_runtime_decode_contract_not_byte_closed",
+        "authority": "false_authority_runtime_decode_contract_not_source_forward_or_scorer",
         **FALSE_AUTHORITY,
     }
 
