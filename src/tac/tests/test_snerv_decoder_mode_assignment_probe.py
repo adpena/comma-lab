@@ -20,6 +20,10 @@ def test_parse_mode_plan_accepts_heuristic_and_explicit_modes() -> None:
     assert label == "explicit_zero1_int41_fp161"
     assert modes == ("fp16", "int4", "zero")
 
+    label, modes = probe.parse_mode_plan("f32,i4,0", levels=1)
+    assert label == "explicit_zero1_int41_fp321"
+    assert modes == ("fp32", "int4", "zero")
+
 
 def test_parse_mode_plan_rejects_wrong_count() -> None:
     with pytest.raises(probe.SnervDecoderModeProbeError, match="expected 6"):

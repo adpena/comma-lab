@@ -50,7 +50,7 @@ def test_waterfill_mode_assignment_compiles_archive_order_modes() -> None:
     assert row["probe_receiver_packet_dir"].startswith("/Volumes/VertigoDataTier/")
 
 
-def test_fp32_protect_maps_to_fp16_but_blocks_export() -> None:
+def test_fp32_protect_maps_to_receiver_consumed_fp32_mode() -> None:
     report = build_snerv_waterfill_mode_assignment(
         _waterfill_report(
             [
@@ -64,12 +64,14 @@ def test_fp32_protect_maps_to_fp16_but_blocks_export() -> None:
     )
 
     row = report["rows"][0]
-    assert row["modes"] == ["fp16", "int8", "fp16"]
+    assert row["modes"] == ["fp32", "int8", "fp16"]
+    assert row["mode_histogram"]["fp32"] == 1
     assert row["ready_for_local_advisory_probe"] is True
     assert row["ready_for_receiver_mode_export"] is False
-    assert "mixed_decoder_modes_do_not_support_fp32" in row["blockers"]
-    assert "fp32_protect_downgraded_to_fp16_requires_receiver_replay" in row["blockers"]
+    assert "mixed_decoder_modes_do_not_support_fp32" not in row["blockers"]
+    assert "fp32_protect_downgraded_to_fp16_requires_receiver_replay" not in row["blockers"]
     assert "decoder_weight_saliency_missing_for_some_groups" in row["blockers"]
+    assert "probe_fp16_protect_substitution_before_export" not in report["next_actions"]
 
 
 def test_missing_decoder_group_blocks_probe() -> None:

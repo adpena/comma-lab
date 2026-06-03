@@ -216,16 +216,10 @@ def _mode_for_action(row: Mapping[str, Any]) -> tuple[str, list[str]]:
     blockers: list[str] = []
     if action == "zero_rle" or bits == 0:
         return "zero", blockers
-    if action in {"int2", "int4", "int8", "fp16"}:
+    if action in {"int2", "int4", "int8", "fp16", "fp32"}:
         return action, blockers
     if action == "fp32_protect" or bits == 32:
-        blockers.extend(
-            [
-                "mixed_decoder_modes_do_not_support_fp32",
-                "fp32_protect_downgraded_to_fp16_requires_receiver_replay",
-            ]
-        )
-        return "fp16", blockers
+        return "fp32", blockers
     blockers.append(f"selected_action_not_compilable:{action or 'missing'}")
     return "fp16", blockers
 
@@ -270,8 +264,6 @@ def _next_actions(rows: Sequence[Mapping[str, Any]]) -> list[str]:
     actions = []
     if any("decoder_weight_saliency_missing_for_some_groups" in row.get("blockers", ()) for row in rows):
         actions.append("run_decoder_weight_saliency_or_vjp_before_mode_export")
-    if any("fp32_protect_downgraded_to_fp16_requires_receiver_replay" in row.get("blockers", ()) for row in rows):
-        actions.append("probe_fp16_protect_substitution_before_export")
     if any("full_video_coverage_missing" in row.get("blockers", ()) for row in rows):
         actions.append("rerun_on_full600_receiver_closed_snar_rows")
     if any(row.get("ready_for_local_advisory_probe") for row in rows):

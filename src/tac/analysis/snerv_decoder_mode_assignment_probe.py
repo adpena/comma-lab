@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Fail-closed SNeRV decoder mixed-mode assignment probe.
 
-The mixed decoder payload grammar can protect some HF kernels with fp16/int8,
+The mixed decoder payload grammar can protect some HF kernels with fp32/fp16/int8,
 push many to int4/int2, and drop others to zero. This module compares explicit
 receiver-decoded mode plans through the existing SNeRV advisory path without
 turning the local advisory score into promotion authority.
@@ -39,6 +39,12 @@ MODE_ALIASES = {
     "f16": "fp16",
     "float16": "fp16",
     "fp16": "fp16",
+    "32": "fp32",
+    "f32": "fp32",
+    "float32": "fp32",
+    "fp32": "fp32",
+    "fp32_protect": "fp32",
+    "fp32protect": "fp32",
 }
 HEURISTIC_MODE_PLAN_NAMES = {
     "",
@@ -326,13 +332,13 @@ def _normalize_mode_token(raw: str) -> str:
     token = str(raw or "").strip().lower().replace("-", "")
     if token not in MODE_ALIASES:
         raise SnervDecoderModeProbeError(
-            f"unknown decoder mode {raw!r}; expected one of zero,int2,int4,int8,fp16"
+            f"unknown decoder mode {raw!r}; expected one of zero,int2,int4,int8,fp16,fp32"
         )
     return MODE_ALIASES[token]
 
 
 def _mode_histogram(modes: Sequence[str]) -> dict[str, int]:
-    histogram = dict.fromkeys(("zero", "int2", "int4", "int8", "fp16"), 0)
+    histogram = dict.fromkeys(("zero", "int2", "int4", "int8", "fp16", "fp32"), 0)
     for mode in modes:
         histogram[mode] += 1
     return histogram

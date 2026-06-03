@@ -248,7 +248,7 @@ def test_mixed_decoder_payload_uses_per_kernel_modes_and_roundtrip_values() -> N
 
     assert header["schema"] == "snerv_decoder_payload.v3"
     assert header["codec"] == "mixed_magnitude_symmetric"
-    assert header["quantizer"] == "mixed_per_kernel_zero_int2_int4_int8_fp16"
+    assert header["quantizer"] == "mixed_per_kernel_zero_int2_int4_int8_fp16_fp32"
     assert header["mode_code_bits"] == 3
     assert header["mode_histogram"] == {
         "zero": 1,
@@ -256,6 +256,7 @@ def test_mixed_decoder_payload_uses_per_kernel_modes_and_roundtrip_values() -> N
         "int4": 1,
         "int8": 1,
         "fp16": 1,
+        "fp32": 0,
     }
     assert header["mode_code_bytes"] == 3
     assert header["scale_count"] == 4
@@ -277,8 +278,8 @@ def test_mixed_decoder_payload_accepts_explicit_mode_assignments() -> None:
         for subband in ("LH", "HL", "HH")
     ]
     pattern = np.linspace(-1.0, 1.0, 9, dtype=np.float64).reshape(3, 3)
-    magnitudes = [0.0, 0.008, 0.025, 0.08, 0.2, 0.0]
-    modes = ("zero", "int2", "int4", "int8", "fp16", "zero")
+    magnitudes = [0.0, 0.008, 0.025, 0.08, 0.2, 0.33333334]
+    modes = ("zero", "int2", "int4", "int8", "fp16", "fp32")
     for magnitude, (lvl, subband) in zip(magnitudes, groups, strict=True):
         decoder.kernels[lvl][subband] = pattern * magnitude
 
@@ -293,17 +294,26 @@ def test_mixed_decoder_payload_accepts_explicit_mode_assignments() -> None:
     assert header["schema"] == "snerv_decoder_payload.v3"
     assert header["mode_assignment_source"] == "explicit"
     assert header["mode_histogram"] == {
-        "zero": 2,
+        "zero": 1,
         "int2": 1,
         "int4": 1,
         "int8": 1,
         "fp16": 1,
+        "fp32": 1,
     }
+    assert header["fp32_value_bytes"] == decoder.model_size.feature_count * 4
     for (lvl, subband), mode in zip(groups, modes, strict=True):
         expected = decoder.kernels[lvl][subband]
         actual = decoded.kernels[lvl][subband]
         if mode == "zero":
             np.testing.assert_array_equal(actual, np.zeros((3, 3)))
+        elif mode == "fp32":
+            np.testing.assert_allclose(
+                actual,
+                expected.astype(np.float32),
+                atol=0.0,
+                rtol=0.0,
+            )
         else:
             np.testing.assert_allclose(actual, expected, atol=0.01, rtol=0.0)
 

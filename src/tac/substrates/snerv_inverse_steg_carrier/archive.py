@@ -80,6 +80,7 @@ DECODER_PAYLOAD_MIXED_MODE_TO_CODE = {
     "int4": 2,
     "int8": 3,
     "fp16": 4,
+    "fp32": 5,
 }
 DECODER_PAYLOAD_MIXED_CODE_TO_MODE = {
     code: mode for mode, code in DECODER_PAYLOAD_MIXED_MODE_TO_CODE.items()
@@ -736,6 +737,7 @@ def _encode_decoder_payload_mixed(
     scales = []
     q_parts: list[bytes] = []
     fp16_parts: list[bytes] = []
+    fp32_parts: list[bytes] = []
     max_abs_error = 0.0
     mean_abs_errors = []
     histogram = dict.fromkeys(DECODER_PAYLOAD_MIXED_MODE_TO_CODE, 0)
@@ -753,6 +755,10 @@ def _encode_decoder_payload_mixed(
             payload = np.asarray(group, dtype="<f2").tobytes()
             fp16_parts.append(payload)
             dequant = np.frombuffer(payload, dtype="<f2").astype(np.float64)
+        elif mode == "fp32":
+            payload = np.asarray(group, dtype="<f4").tobytes()
+            fp32_parts.append(payload)
+            dequant = np.frombuffer(payload, dtype="<f4").astype(np.float64)
         else:
             bits = int(mode.removeprefix("int"))
             qmax = (1 << (bits - 1)) - 1
@@ -769,7 +775,14 @@ def _encode_decoder_payload_mixed(
     scale_payload = np.asarray(scales, dtype="<f2").tobytes()
     q_payload = b"".join(q_parts)
     fp16_payload = b"".join(fp16_parts)
-    raw_payload = mode_code_payload + scale_payload + q_payload + fp16_payload
+    fp32_payload = b"".join(fp32_parts)
+    raw_payload = (
+        mode_code_payload
+        + scale_payload
+        + q_payload
+        + fp16_payload
+        + fp32_payload
+    )
     header = {
         "schema": DECODER_PAYLOAD_V3_SCHEMA,
         "levels": levels,
@@ -778,7 +791,7 @@ def _encode_decoder_payload_mixed(
         "feature_count": feature_count,
         "model_size_config": model_size.as_jsonable(),
         "codec": DECODER_PAYLOAD_MIXED_CODEC,
-        "quantizer": "mixed_per_kernel_zero_int2_int4_int8_fp16",
+        "quantizer": "mixed_per_kernel_zero_int2_int4_int8_fp16_fp32",
         "mode_assignment_source": (
             "explicit" if mode_plan is not None else "magnitude_heuristic"
         ),
@@ -792,6 +805,7 @@ def _encode_decoder_payload_mixed(
         "scale_bytes": len(scale_payload),
         "packed_q_bytes": len(q_payload),
         "fp16_value_bytes": len(fp16_payload),
+        "fp32_value_bytes": len(fp32_payload),
         "value_count": int(values.size),
         "raw_reference_sha256": _sha256(raw_reference),
         "raw_reference_bytes": len(raw_reference),
@@ -871,14 +885,20 @@ def _decode_decoder_payload_mixed(
     scale_bytes = int(header["scale_bytes"])
     q_bytes = int(header["packed_q_bytes"])
     fp16_bytes = int(header["fp16_value_bytes"])
-    if len(payload) != mode_code_bytes + scale_bytes + q_bytes + fp16_bytes:
+    fp32_bytes = int(header.get("fp32_value_bytes", 0))
+    expected_payload_bytes = (
+        mode_code_bytes + scale_bytes + q_bytes + fp16_bytes + fp32_bytes
+    )
+    if len(payload) != expected_payload_bytes:
         raise SnervArchiveError("decoder mixed payload byte count mismatch")
     mode_code_payload = payload[:mode_code_bytes]
     scale_payload = payload[mode_code_bytes : mode_code_bytes + scale_bytes]
     q_payload = payload[
         mode_code_bytes + scale_bytes : mode_code_bytes + scale_bytes + q_bytes
     ]
-    fp16_payload = payload[mode_code_bytes + scale_bytes + q_bytes :]
+    float_payload = payload[mode_code_bytes + scale_bytes + q_bytes :]
+    fp16_payload = float_payload[:fp16_bytes]
+    fp32_payload = float_payload[fp16_bytes : fp16_bytes + fp32_bytes]
     mode_codes = unpack_fixed_width_uints(
         mode_code_payload,
         bits=int(header["mode_code_bits"]),
@@ -889,6 +909,7 @@ def _decode_decoder_payload_mixed(
     scale_cursor = 0
     q_cursor = 0
     fp16_cursor = 0
+    fp32_cursor = 0
     for group_idx, raw_code in enumerate(mode_codes.tolist()):
         mode = DECODER_PAYLOAD_MIXED_CODE_TO_MODE.get(int(raw_code))
         if mode is None:
@@ -904,6 +925,14 @@ def _decode_decoder_payload_mixed(
                 raise SnervArchiveError("decoder mixed fp16 payload truncated")
             values[start:stop] = np.frombuffer(segment, dtype="<f2").astype(np.float64)
             fp16_cursor += nbytes
+            continue
+        if mode == "fp32":
+            nbytes = feature_count * np.dtype("<f4").itemsize
+            segment = fp32_payload[fp32_cursor : fp32_cursor + nbytes]
+            if len(segment) != nbytes:
+                raise SnervArchiveError("decoder mixed fp32 payload truncated")
+            values[start:stop] = np.frombuffer(segment, dtype="<f4").astype(np.float64)
+            fp32_cursor += nbytes
             continue
         bits = int(mode.removeprefix("int"))
         qmax = (1 << (bits - 1)) - 1
@@ -928,6 +957,8 @@ def _decode_decoder_payload_mixed(
         raise SnervArchiveError("decoder mixed payload has unused q bytes")
     if fp16_cursor != len(fp16_payload):
         raise SnervArchiveError("decoder mixed payload has unused fp16 bytes")
+    if fp32_cursor != len(fp32_payload):
+        raise SnervArchiveError("decoder mixed payload has unused fp32 bytes")
     return _decoder_from_flat_values(
         levels=levels,
         values=values,
@@ -966,6 +997,10 @@ def _normalize_mixed_decoder_kernel_mode(raw: str) -> str:
         "float16": "fp16",
         "f16": "fp16",
         "half": "fp16",
+        "float32": "fp32",
+        "f32": "fp32",
+        "single": "fp32",
+        "fp32_protect": "fp32",
     }
     mode = aliases.get(mode, mode)
     if mode not in DECODER_PAYLOAD_MIXED_MODE_TO_CODE:
