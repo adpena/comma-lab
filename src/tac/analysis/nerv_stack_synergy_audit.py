@@ -16,11 +16,12 @@ before a carrier can spend contest auth evaluation.
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
 from tac.analysis.nerv_modelsize_budget import (
+    MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
     official_nerv_oss_flag_audit,
@@ -204,6 +205,15 @@ def _hi_nerv_stack_audit(
         num_pairs=num_pairs,
         per_ceiling_limit=6,
     )
+    modelsize_budget_binding = _hi_nerv_modelsize_budget_binding(budget)
+    quantnoise_binding = _hi_nerv_quantnoise_control_binding(root)
+    official_grid_binding = _hi_nerv_official_grid_binding(root)
+    official_feature_grid_convnext_binding = (
+        _hi_nerv_official_feature_grid_convnext_binding(root)
+    )
+    official_patch_binding = _hi_nerv_official_patch_binding(root)
+    strict_receiver_binding = _hi_nerv_strict_receiver_load_binding(root)
+    archive_candidate_binding = _hi_nerv_archive_candidate_binding(root)
     pr95_binding = build_pr95_stack_binding_requirements(
         family="hi_nerv",
         evidence=build_pr95_stack_binding_evidence(
@@ -212,15 +222,15 @@ def _hi_nerv_stack_audit(
             ema_archive_selection=True,
             qat_forward=True,
             coder_aware_regularizer=True,
+            modelsize_archive_budget=modelsize_budget_binding[
+                "modelsize_archive_budget_bound"
+            ],
+            byte_closed_archive_export=archive_candidate_binding[
+                "byte_closed_archive_export_bound"
+            ],
+            receiver_proof=archive_candidate_binding["receiver_proof_bound"],
         ),
     )
-    quantnoise_binding = _hi_nerv_quantnoise_control_binding(root)
-    official_grid_binding = _hi_nerv_official_grid_binding(root)
-    official_feature_grid_convnext_binding = (
-        _hi_nerv_official_feature_grid_convnext_binding(root)
-    )
-    official_patch_binding = _hi_nerv_official_patch_binding(root)
-    strict_receiver_binding = _hi_nerv_strict_receiver_load_binding(root)
     blockers = [
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle",
         "hinerv_local_architecture_not_source_faithful_upstream_hinerv_feature_grid",
@@ -305,11 +315,13 @@ def _hi_nerv_stack_audit(
         "related_memos": memos,
         "partial_markers": markers,
         "modelsize_budget": budget,
+        "modelsize_budget_binding": modelsize_budget_binding,
         "quantnoise_control_binding": quantnoise_binding,
         "official_grid_trilinear_binding": official_grid_binding,
         "official_feature_grid_convnext_binding": official_feature_grid_convnext_binding,
         "official_patch_index_binding": official_patch_binding,
         "strict_receiver_load_binding": strict_receiver_binding,
+        "archive_candidate_binding": archive_candidate_binding,
         "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "byte ceiling selects capacity candidate before launch",
@@ -321,6 +333,7 @@ def _hi_nerv_stack_audit(
             "decoder fake-quant forward is wired; exact byte oracle still chooses int2/int4/int8/fp16 per candidate",
             "coder-aware regularization and recon_pixel_weight must be candidate-specific",
             "decoder-weight saliency/waterfill must feed the real MLX trainer, not only posthoc export",
+            "archive_candidate export is byte-closed and receiver-proven, but trainer eval still needs in-loop archive bytes",
             "PR95 C1a/Muon/EMA/archive-eval stages remain mandatory control-arm bindings, not optional polish",
         ],
         "anti_arbitrariness_requirements": [
@@ -331,7 +344,7 @@ def _hi_nerv_stack_audit(
         "adversarial_review_findings": [
             {
                 "severity": "P0",
-                "finding": "legacy train_substrate_hi_nerv archive is non-hermetic",
+                "finding": "legacy train_substrate_hi_nerv archive is non-hermetic; archive_candidate is the receiver-proven export route",
                 "evidence": "experiments/train_substrate_hi_nerv.py writes inflate.py imports from HERE/src/tac but zips only 0.bin/inflate.sh/inflate.py",
                 "required_gate": "clean-temp unzip inflate smoke with no repo PYTHONPATH",
             },
@@ -576,6 +589,136 @@ def _hi_nerv_strict_receiver_load_binding(root: Path) -> dict[str, Any]:
     }
 
 
+def _hi_nerv_modelsize_budget_binding(budget: Mapping[str, Any]) -> dict[str, Any]:
+    """Return whether HiNeRV capacity choices are bound to byte ceilings."""
+
+    selected = [
+        row
+        for row in budget.get("selected_candidates") or ()
+        if isinstance(row, Mapping)
+    ]
+    blockers: list[str] = []
+    if budget.get("schema") != "nerv_modelsize_budget.v1":
+        blockers.append("hinerv_modelsize_budget_schema_not_bound")
+    if not budget.get("hard_byte_ceilings"):
+        blockers.append("hinerv_modelsize_budget_hard_byte_ceilings_missing")
+    if not selected:
+        blockers.append("hinerv_modelsize_budget_selected_candidates_missing")
+    contract_rows: list[dict[str, Any]] = []
+    for row in selected:
+        candidate_id = str(row.get("candidate_id") or "unknown")
+        contract = row.get("modelsize_control_contract")
+        hard_ceiling = row.get("hard_byte_ceiling")
+        nominal = row.get("nominal_total_payload_bytes")
+        contract_missing: list[str] = []
+        if not isinstance(contract, Mapping):
+            contract_missing.append("modelsize_control_contract")
+        else:
+            for key in MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS:
+                if contract.get(key) is not True:
+                    contract_missing.append(str(key))
+        if not isinstance(hard_ceiling, int) or hard_ceiling <= 0:
+            contract_missing.append("hard_byte_ceiling")
+        if not isinstance(nominal, int) or nominal <= 0:
+            contract_missing.append("nominal_total_payload_bytes")
+        if contract_missing:
+            blockers.append(
+                "hinerv_modelsize_budget_candidate_contract_missing:"
+                f"{candidate_id}:{','.join(contract_missing)}"
+            )
+        contract_rows.append(
+            {
+                "candidate_id": candidate_id,
+                "hard_byte_ceiling": hard_ceiling,
+                "nominal_total_payload_bytes": nominal,
+                "nominal_under_ceiling": row.get("nominal_under_ceiling"),
+                "decoder_codec": row.get("decoder_codec"),
+                "missing_contract_fields": contract_missing,
+            }
+        )
+    return {
+        "schema": "hinerv_modelsize_budget_binding.v1",
+        "bound": not blockers,
+        "modelsize_archive_budget_bound": not blockers,
+        "trained_archive_byte_oracle_bound": False,
+        "selected_candidate_count": len(selected),
+        "hard_byte_ceilings": list(budget.get("hard_byte_ceilings") or []),
+        "contract_required_true_fields": list(
+            MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+        ),
+        "candidate_contract_rows": contract_rows,
+        "blockers": blockers,
+        "remaining_train_loop_blockers": [
+            "hinerv_modelsize_candidates_require_trained_archive_byte_oracle",
+            "hinerv_modelsize_candidates_require_full_video_mlx_prefilter",
+        ],
+        "authority": "false_authority_modelsize_budget_no_trained_archive_claim",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hi_nerv_archive_candidate_binding(root: Path) -> dict[str, Any]:
+    """Return whether HiNeRV MLX export is byte-closed and receiver-proven."""
+
+    source_specs = {
+        "archive_candidate": (
+            "src/tac/substrates/hi_nerv/archive_candidate.py",
+            (
+                "export_hi_nerv_mlx_archive",
+                "_write_and_reload_exported_state_via_numpy_bridge",
+                "write_contest_runtime(",
+                "build_archive_zip(",
+                "\"archive_bytes_are_authority_for_rate\": True",
+                "write_representation_spine_projection",
+                "emit_archive_bound_candidate_runtime_package(",
+                "proof_schema=HI_NERV_MLX_RECEIVER_PROOF_SCHEMA",
+                "expected_receiver_output_bytes=_expected_receiver_output_bytes(cfg)",
+            ),
+        ),
+        "archive_candidate_tests": (
+            "src/tac/substrates/hi_nerv/tests/test_hi_nerv_mlx_renderer_and_archive_candidate.py",
+            (
+                "test_archive_export_emits_receiver_proof_and_hprc_spine",
+                "assert archive_bytes == archive_path.stat().st_size",
+                "assert proof[\"runtime_consumption_proof_ready\"] is True",
+                "assert package[\"receiver_proof\"][\"receiver_contract_satisfied\"] is True",
+                "assert spine_extra[\"hi_nerv_bitstream_preparation\"] == bitstream_report",
+                "assert portability[\"canonical_npz_bridge_used\"] is True",
+            ),
+        ),
+        "runtime_bridge": (
+            "src/tac/optimization/archive_bound_candidate_runtime_bridge.py",
+            (
+                "run_generated_inflate_receiver_proof",
+                "\"receiver_contract_satisfied\": passed",
+                "expected_receiver_output_bytes",
+                "build_archive_bound_candidate_runtime_package",
+            ),
+        ),
+    }
+    rows = _marker_binding_rows(root, source_specs)
+    blockers = [
+        f"hinerv_archive_candidate_binding_marker_missing:{row['source_id']}:{marker}"
+        for row in rows
+        for marker in row["missing_markers"]
+    ]
+    bound = not blockers
+    return {
+        "schema": "hinerv_archive_candidate_binding.v1",
+        "bound": bound,
+        "byte_closed_archive_export_bound": bound,
+        "receiver_proof_bound": bound,
+        "archive_in_loop_byte_oracle_bound": False,
+        "source_rows": rows,
+        "blockers": blockers,
+        "remaining_train_loop_blockers": [
+            "hinerv_archive_candidate_is_export_time_not_trainer_in_loop_byte_oracle",
+        ],
+        "authority": "false_authority_archive_runtime_binding_no_score_claim",
+        **FALSE_AUTHORITY,
+    }
+
+
 def _marker_binding_rows(
     root: Path,
     source_specs: dict[str, tuple[str, tuple[str, ...]]],
@@ -618,9 +761,14 @@ def _snerv_stack_audit(
         num_pairs=num_pairs,
         per_ceiling_limit=6,
     )
+    modelsize_budget_binding = _snerv_modelsize_budget_binding(budget)
     pr95_binding = build_pr95_stack_binding_requirements(
         family="snerv",
-        evidence=build_pr95_stack_binding_evidence(),
+        evidence=build_pr95_stack_binding_evidence(
+            modelsize_archive_budget=modelsize_budget_binding[
+                "modelsize_archive_budget_bound"
+            ],
+        ),
     )
     native_contract = build_snerv_mlx_native_adapter_contract()
     official_primitive_replay = build_snerv_official_primitive_replay_binding(
@@ -632,14 +780,15 @@ def _snerv_stack_audit(
         if native_contract.get("surfaces_ready")
         else "snerv_mlx_native_train_export_adapter_missing"
     )
+    official_primitive_blockers = _snerv_official_mfu_hfr_tub_stack_blockers(
+        official_primitive_replay
+    )
     blockers = [
         *native_adapter_blockers,
         "snerv_execute_family_uses_cpu_advisory_not_mlx_native_training",
         "snerv_modelsize_candidate_consumption_requires_real_snar1_archive_byte_oracle",
         "snerv_local_carrier_not_source_faithful_official_snerv_multilayer_stack",
-        "snerv_official_mfu_source_forward_replay_missing",
-        "snerv_official_hfr_source_forward_replay_missing",
-        "snerv_official_snerv_t_full_tub_path_not_source_forward_parity",
+        *official_primitive_blockers,
         "snerv_official_haar_j1_parity_missing",
         "snerv_receiver_dwt_custody_missing",
         "snerv_scorer_loop_qat_is_bounded_smoke_not_production_trainer",
@@ -665,7 +814,13 @@ def _snerv_stack_audit(
             "local_role": "contest_adapter_store_lf_generate_hf_snar1_packet",
             "missing_upstream_axes": [
                 "official multi-layer scalable neural representation",
-                "MFU/HFR/TUB-style blocks",
+                (
+                    "MFU/HFR/TUB primitive replay is proven but not receiver/export-bound"
+                    if official_primitive_replay.get(
+                        "all_primitive_source_replay_proven"
+                    )
+                    else "MFU/HFR/TUB-style blocks"
+                ),
                 "full temporal SNeRV-T/SNeRV-T-2D source-forward training path beyond the proven Haar DWT1D primitive",
                 "official Haar/J=1 mode parity",
                 "receiver DWT custody and source/runtime hash proof",
@@ -681,6 +836,7 @@ def _snerv_stack_audit(
         "related_memos": memos,
         "partial_markers": markers,
         "modelsize_budget": budget,
+        "modelsize_budget_binding": modelsize_budget_binding,
         "pr95_stack_binding": pr95_binding,
         "planner_curriculum_links": [
             "LF level and precision select rate before advisory launch",
@@ -720,6 +876,112 @@ def _snerv_stack_audit(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _snerv_modelsize_budget_binding(budget: Mapping[str, Any]) -> dict[str, Any]:
+    """Return whether SNeRV fc_dim/modelsize choices are byte-budget bound."""
+
+    selected = [
+        row
+        for row in budget.get("selected_candidates") or ()
+        if isinstance(row, Mapping)
+    ]
+    blockers: list[str] = []
+    if budget.get("schema") != "snerv_modelsize_budget.v1":
+        blockers.append("snerv_modelsize_budget_schema_not_bound")
+    if not budget.get("hard_byte_ceilings"):
+        blockers.append("snerv_modelsize_budget_hard_byte_ceilings_missing")
+    if not selected:
+        blockers.append("snerv_modelsize_budget_selected_candidates_missing")
+    contract_rows: list[dict[str, Any]] = []
+    for row in selected:
+        candidate_id = str(row.get("candidate_id") or "unknown")
+        contract = row.get("modelsize_control_contract")
+        hard_ceiling = row.get("hard_byte_ceiling")
+        nominal = row.get("nominal_total_payload_bytes")
+        contract_missing: list[str] = []
+        if not isinstance(contract, Mapping):
+            contract_missing.append("modelsize_control_contract")
+        else:
+            for key in MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS:
+                if contract.get(key) is not True:
+                    contract_missing.append(str(key))
+        if not isinstance(hard_ceiling, int) or hard_ceiling <= 0:
+            contract_missing.append("hard_byte_ceiling")
+        if not isinstance(nominal, int) or nominal <= 0:
+            contract_missing.append("nominal_total_payload_bytes")
+        if contract_missing:
+            blockers.append(
+                "snerv_modelsize_budget_candidate_contract_missing:"
+                f"{candidate_id}:{','.join(contract_missing)}"
+            )
+        contract_rows.append(
+            {
+                "candidate_id": candidate_id,
+                "hard_byte_ceiling": hard_ceiling,
+                "nominal_total_payload_bytes": nominal,
+                "nominal_under_ceiling": row.get("nominal_under_ceiling"),
+                "fc_dim": row.get("fc_dim"),
+                "modelsize_mparams": row.get("modelsize_mparams"),
+                "snerv_model_size_adapter": row.get("snerv_model_size_adapter"),
+                "missing_contract_fields": contract_missing,
+            }
+        )
+    under_ceiling_count = sum(
+        1 for row in selected if row.get("nominal_under_ceiling") is True
+    )
+    return {
+        "schema": "snerv_modelsize_budget_binding.v1",
+        "bound": not blockers,
+        "modelsize_archive_budget_bound": not blockers,
+        "real_snar1_archive_byte_oracle_bound": False,
+        "selected_candidate_count": len(selected),
+        "selected_nominal_under_ceiling_count": under_ceiling_count,
+        "hard_byte_ceilings": list(budget.get("hard_byte_ceilings") or []),
+        "contract_required_true_fields": list(
+            MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS
+        ),
+        "candidate_contract_rows": contract_rows,
+        "blockers": blockers,
+        "remaining_train_loop_blockers": [
+            "snerv_modelsize_candidates_require_real_snar1_archive_byte_oracle",
+            "snerv_modelsize_candidates_require_full_video_mlx_prefilter",
+        ],
+        "authority": "false_authority_snerv_modelsize_budget_no_snar1_rate_claim",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_official_mfu_hfr_tub_stack_blockers(
+    official_primitive_replay: Mapping[str, Any],
+) -> list[str]:
+    """Return the exact remaining MFU/HFR/TUB blocker names for SNeRV."""
+
+    rows = [
+        row
+        for row in official_primitive_replay.get("component_rows") or ()
+        if isinstance(row, Mapping)
+    ]
+    component_ids = {str(row.get("component_id")) for row in rows}
+    blockers: list[str] = []
+    if official_primitive_replay.get("all_primitive_source_replay_proven") is not True:
+        blocker_by_component = {
+            "mfu": "snerv_official_mfu_source_forward_replay_missing",
+            "hfr": "snerv_official_hfr_source_forward_replay_missing",
+            "tub": "snerv_official_snerv_t_full_tub_path_not_source_forward_parity",
+        }
+        for component_id, blocker in blocker_by_component.items():
+            row = next((item for item in rows if item.get("component_id") == component_id), None)
+            if row is None or row.get("primitive_source_replay_proven") is not True:
+                blockers.append(blocker)
+        for component_id in sorted({"mfu", "hfr", "tub"} - component_ids):
+            blockers.append(f"snerv_official_{component_id}_primitive_replay_row_missing")
+        return blockers
+    if official_primitive_replay.get("full_stack_source_forward_replay_proven") is not True:
+        blockers.append("snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing")
+    if official_primitive_replay.get("receiver_export_bound") is not True:
+        blockers.append("snerv_official_mfu_hfr_tub_receiver_export_not_bound")
+    return blockers
 
 
 def _ordered_unique_nonempty(values: Iterable[Any]) -> list[str]:

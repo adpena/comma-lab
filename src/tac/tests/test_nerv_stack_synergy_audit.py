@@ -29,6 +29,20 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         assert len(stack["blockers"]) == len(set(stack["blockers"]))
     assert stacks["hi_nerv"]["modelsize_budget"]["schema"] == "nerv_modelsize_budget.v1"
     assert stacks["snerv"]["modelsize_budget"]["schema"] == "snerv_modelsize_budget.v1"
+    modelsize_binding = stacks["hi_nerv"]["modelsize_budget_binding"]
+    assert modelsize_binding["schema"] == "hinerv_modelsize_budget_binding.v1"
+    assert modelsize_binding["bound"] is True
+    assert modelsize_binding["modelsize_archive_budget_bound"] is True
+    assert modelsize_binding["trained_archive_byte_oracle_bound"] is False
+    assert modelsize_binding["selected_candidate_count"] > 0
+    assert not modelsize_binding["blockers"]
+    snerv_modelsize_binding = stacks["snerv"]["modelsize_budget_binding"]
+    assert snerv_modelsize_binding["schema"] == "snerv_modelsize_budget_binding.v1"
+    assert snerv_modelsize_binding["bound"] is True
+    assert snerv_modelsize_binding["modelsize_archive_budget_bound"] is True
+    assert snerv_modelsize_binding["real_snar1_archive_byte_oracle_bound"] is False
+    assert snerv_modelsize_binding["selected_candidate_count"] > 0
+    assert not snerv_modelsize_binding["blockers"]
     assert stacks["hi_nerv"]["pr95_stack_binding"]["schema"] == (
         "pr95_stack_binding_requirements.v1"
     )
@@ -63,6 +77,9 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "hinerv_modelsize_candidate_consumption_requires_trained_archive_byte_oracle"
         in stacks["hi_nerv"]["blockers"]
     )
+    assert "hi_nerv_modelsize_archive_budget_missing" not in stacks["hi_nerv"][
+        "blockers"
+    ]
     assert "hinerv_official_convnext_feature_grid_path_missing" not in stacks[
         "hi_nerv"
     ]["blockers"]
@@ -121,10 +138,32 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "inflate",
         "receiver_tests",
     }
+    archive_candidate = stacks["hi_nerv"]["archive_candidate_binding"]
+    assert archive_candidate["schema"] == "hinerv_archive_candidate_binding.v1"
+    assert archive_candidate["bound"] is True
+    assert archive_candidate["byte_closed_archive_export_bound"] is True
+    assert archive_candidate["receiver_proof_bound"] is True
+    assert archive_candidate["archive_in_loop_byte_oracle_bound"] is False
+    assert not archive_candidate["blockers"]
+    assert {row["source_id"] for row in archive_candidate["source_rows"]} == {
+        "archive_candidate",
+        "archive_candidate_tests",
+        "runtime_bridge",
+    }
+    assert "hi_nerv_byte_closed_archive_export_missing" not in stacks[
+        "hi_nerv"
+    ]["blockers"]
+    assert "hi_nerv_receiver_proof_missing" not in stacks["hi_nerv"]["blockers"]
+    assert "hi_nerv_archive_in_loop_byte_oracle_missing" in stacks["hi_nerv"][
+        "blockers"
+    ]
     assert "hi_nerv_real_posenet_teacher_missing" in stacks["hi_nerv"]["blockers"]
     assert "hi_nerv_qat_forward_missing" not in stacks["hi_nerv"]["blockers"]
     assert "hi_nerv_coder_aware_regularizer_missing" not in stacks["hi_nerv"]["blockers"]
     assert "snerv_pr95_staged_curriculum_missing" in stacks["snerv"]["blockers"]
+    assert "snerv_modelsize_archive_budget_missing" not in stacks["snerv"][
+        "blockers"
+    ]
     assert (
         "hinerv_execute_family_does_not_yet_consume_modelsize_candidate_id"
         not in stacks["hi_nerv"]["blockers"]
@@ -133,9 +172,22 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "snerv_local_carrier_not_source_faithful_official_snerv_multilayer_stack"
         in stacks["snerv"]["blockers"]
     )
-    assert "snerv_official_mfu_source_forward_replay_missing" in stacks["snerv"]["blockers"]
-    assert "snerv_official_hfr_source_forward_replay_missing" in stacks["snerv"]["blockers"]
-    assert "snerv_official_snerv_t_full_tub_path_not_source_forward_parity" in stacks["snerv"]["blockers"]
+    assert "snerv_official_mfu_source_forward_replay_missing" not in stacks[
+        "snerv"
+    ]["blockers"]
+    assert "snerv_official_hfr_source_forward_replay_missing" not in stacks[
+        "snerv"
+    ]["blockers"]
+    assert "snerv_official_snerv_t_full_tub_path_not_source_forward_parity" not in stacks[
+        "snerv"
+    ]["blockers"]
+    assert (
+        "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
+        in stacks["snerv"]["blockers"]
+    )
+    assert "snerv_official_mfu_hfr_tub_receiver_export_not_bound" in stacks[
+        "snerv"
+    ]["blockers"]
     replay = stacks["snerv"]["official_mfu_hfr_tub_primitive_replay_binding"]
     assert replay["all_primitive_source_replay_proven"] is True
     assert replay["full_stack_source_forward_replay_proven"] is False
