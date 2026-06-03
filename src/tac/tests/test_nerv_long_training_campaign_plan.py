@@ -814,6 +814,42 @@ def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> No
     assert snerv["execution_epochs"] == 29_650
 
 
+def test_long_training_campaign_plan_consumes_hinerv_feedback_from_full_row_id() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hi_nerv::hinerv_tiny::lion",
+                "scope_matches_candidate": True,
+                "receiver_proof_attached": True,
+                "full_video_local_prefilter_attached": True,
+                "local_cpu_replay_gate_attached": True,
+                "measured_archive_bytes": 111_000,
+                "measured_num_pairs": 600,
+            },
+        ),
+    )
+
+    assert report["candidate_feedback_source_count"] == 1
+    assert report["candidate_feedback_row_count"] == 1
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["candidate_feedback"]["candidate_id"] == "hi_nerv::hinerv_tiny::lion"
+    assert hi["candidate_feedback"]["candidate_id_match"] is True
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" not in hi[
+        "blockers"
+    ]
+    assert "hi_nerv_receiver_proof_missing" not in hi["blockers"]
+    assert "hi_nerv_full_video_local_prefilter_missing" not in hi["blockers"]
+    assert "hi_nerv_local_cpu_replay_gate_missing" not in hi["blockers"]
+
+
 def test_long_training_campaign_plan_applies_hinerv_pose_instability_feedback(
 ) -> None:
     report = build_nerv_long_training_campaign_plan(
