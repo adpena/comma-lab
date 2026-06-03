@@ -141,6 +141,7 @@ DECODER_PAYLOAD_QUANTIZED_CODECS = {
     "int4_symmetric": 4,
     "int2_symmetric": 2,
 }
+DECODER_PAYLOAD_AUTO_ALIASES = frozenset({"auto", "portfolio", "portfolio_auto"})
 DECODER_SCALE_DTYPE_TO_NUMPY = {
     "float16_le": np.dtype("<f2"),
     "float32_le": np.dtype("<f4"),
@@ -161,6 +162,27 @@ DECODER_PAYLOAD_MIXED_CODE_TO_MODE = {
 
 class SnervArchiveError(ValueError):
     """Raised when the SNeRV receiver archive packet is malformed."""
+
+
+def resolve_decoder_payload_codec(codec: str | None) -> str:
+    """Resolve launch-time decoder codec controls to a receiver codec.
+
+    LF payloads have a true portfolio codec.  Decoder payloads currently expose
+    the mixed per-kernel codec as the receiver-safe adaptive policy, so generic
+    launch controls such as ``portfolio_auto`` must resolve before metadata and
+    bytes are packed.
+    """
+
+    normalized = str(DECODER_PAYLOAD_LEGACY_CODEC if codec is None else codec).strip().lower()
+    if normalized in DECODER_PAYLOAD_AUTO_ALIASES:
+        return DECODER_PAYLOAD_MIXED_CODEC
+    if normalized in {DECODER_PAYLOAD_LEGACY_CODEC, "fp32_lzma", "float32", "legacy"}:
+        return DECODER_PAYLOAD_LEGACY_CODEC
+    if normalized in DECODER_PAYLOAD_QUANTIZED_CODECS:
+        return normalized
+    if normalized in {DECODER_PAYLOAD_MIXED_CODEC, "mixed_per_kernel_symmetric", "mixed_symmetric"}:
+        return DECODER_PAYLOAD_MIXED_CODEC
+    raise SnervArchiveError(f"unsupported decoder payload codec: {codec!r}")
 
 
 @dataclass(frozen=True)
@@ -1059,13 +1081,8 @@ def encode_decoder_payload(
     raw = _decoder_float32_payload(values, context="decoder raw reference")
     if not raw:
         raise SnervArchiveError("decoder payload must be non-empty")
-    normalized = str(codec).strip().lower()
-    if normalized in {
-        DECODER_PAYLOAD_LEGACY_CODEC,
-        "fp32_lzma",
-        "float32",
-        "legacy",
-    }:
+    normalized = resolve_decoder_payload_codec(codec)
+    if normalized == DECODER_PAYLOAD_LEGACY_CODEC:
         if mixed_modes is not None:
             raise SnervArchiveError("mixed decoder modes require mixed codec")
         return _encode_decoder_payload_v1(
@@ -1084,11 +1101,7 @@ def encode_decoder_payload(
             codec=normalized,
             raw_reference=raw,
         )
-    if normalized in {
-        DECODER_PAYLOAD_MIXED_CODEC,
-        "mixed_per_kernel_symmetric",
-        "mixed_symmetric",
-    }:
+    if normalized == DECODER_PAYLOAD_MIXED_CODEC:
         return _encode_decoder_payload_mixed(
             levels=levels,
             values=values,

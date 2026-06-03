@@ -37,6 +37,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     pack_snerv_archive,
+    resolve_decoder_payload_codec,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     _DETAIL_KEYS,
@@ -137,12 +138,13 @@ def export_snerv_checkpoint_archive(
         or command_args.get("step_map_waterfill_bits_per_coeff")
         or 4.0
     )
-    resolved_decoder_codec = str(
+    requested_decoder_codec = str(
         decoder_codec
         or candidate.get("decoder_payload_codec")
         or command_args.get("decoder_payload_codec")
         or "mixed_magnitude_symmetric"
     )
+    resolved_decoder_codec = resolve_decoder_payload_codec(requested_decoder_codec)
     resolved_lf_codec = str(
         lf_payload_codec
         or candidate.get("lf_payload_codec")
@@ -211,6 +213,7 @@ def export_snerv_checkpoint_archive(
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
         "decoder_codec": resolved_decoder_codec,
+        "decoder_codec_requested": requested_decoder_codec,
         "lf_payload_codec": resolved_lf_codec,
         "target_bits_per_coeff": float(target_bits_per_coeff),
         "step_map_bits_per_coeff": float(step_map_bits_per_coeff),
@@ -319,7 +322,8 @@ def build_snerv_checkpoint_packet(
             "blockers": [],
             **FALSE_AUTHORITY,
         },
-        "decoder_payload_codec": str(decoder_payload_codec),
+        "decoder_payload_codec": resolve_decoder_payload_codec(decoder_payload_codec),
+        "decoder_payload_codec_requested": str(decoder_payload_codec),
         "snerv_fc_dim": int(model_size.fc_dim),
         "snerv_emb_size": int(model_size.emb_size),
         "snerv_patch_radius": int(model_size.patch_radius),
@@ -338,7 +342,10 @@ def build_snerv_checkpoint_packet(
     archive = pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(lf_zero_points=lf_zero_points),
         lf_payload=encode_lf_quant_payload(lf_quant_planes, codec=lf_payload_codec),
-        decoder_payload=encode_decoder_payload(decoder, codec=decoder_payload_codec),
+        decoder_payload=encode_decoder_payload(
+            decoder,
+            codec=resolve_decoder_payload_codec(decoder_payload_codec),
+        ),
         step_map_packet=step_packet.packet,
         metadata=metadata,
     )
