@@ -5,13 +5,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from tac.analysis.snerv_official_source_forward_harness import (
     DEFAULT_OFFICIAL_SNERV_REPO,
     OFFICIAL_SNERV_SHA,
     SCHEMA,
+    TRAINED_CHECKPOINT_MAPPING_SCHEMA,
     build_snerv_official_source_forward_harness_artifact,
+    build_snerv_official_trained_checkpoint_mapping_manifest,
 )
 from tac.analysis.snerv_official_source_parity_audit import (
     build_snerv_official_source_parity_audit,
@@ -24,6 +27,68 @@ def _official_repo() -> Path:
     if not DEFAULT_OFFICIAL_SNERV_REPO.exists():
         pytest.skip(f"official SNeRV checkout is absent: {DEFAULT_OFFICIAL_SNERV_REPO}")
     return DEFAULT_OFFICIAL_SNERV_REPO
+
+
+def test_snerv_official_trained_checkpoint_mapping_manifest_proves_mfu_hfr() -> None:
+    state = _minimal_official_decoder_state(decoder_len=8)
+
+    manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
+        state,
+        decoder_len=None,
+        state_dict_kind="unit_test_official_checkpoint",
+        source="unit-test",
+    )
+
+    assert manifest["schema"] == TRAINED_CHECKPOINT_MAPPING_SCHEMA
+    assert manifest["official_trained_checkpoint_loaded"] is True
+    assert manifest["decoder_len"] == 8
+    assert manifest["decoder_len_source"] == "inferred_from_decoder_prefixes"
+    assert manifest["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert manifest["official_tub_temporal_encoder_weight_mapping_proven"] is False
+    assert manifest["mapped_weight_key_count"] == len(state)
+    receiver_keys = {row["receiver_key"] for row in manifest["weight_entries"]}
+    assert "hfr.lh.conv1.weight" in receiver_keys
+    assert "mfu.upsample_mid.weight" in receiver_keys
+    assert "mfu.rb_high.residual_blocks.0.conv2.bias" in receiver_keys
+    rows = {row["component_id"]: row for row in manifest["component_rows"]}
+    assert rows["hfr"]["trained_checkpoint_weight_mapping_proven"] is True
+    assert rows["mfu"]["trained_checkpoint_weight_mapping_proven"] is True
+    assert rows["tub"]["trained_checkpoint_weight_mapping_proven"] is False
+    assert "snerv_official_tub_encoder_decoder_weights_not_loaded" in rows["tub"][
+        "blockers"
+    ]
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in manifest[
+        "blockers"
+    ]
+    assert manifest["score_claim"] is False
+    assert manifest["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_official_trained_checkpoint_mapping_manifest_blocks_missing_hfr() -> None:
+    state = {
+        key: value
+        for key, value in _minimal_official_decoder_state(decoder_len=8).items()
+        if not key.startswith(("decoder.8.", "decoder.9.", "decoder.10."))
+    }
+
+    manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
+        state,
+        decoder_len=8,
+        state_dict_kind="unit_test_official_checkpoint",
+        source="unit-test",
+    )
+
+    assert manifest["official_trained_checkpoint_loaded"] is True
+    assert manifest["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is False
+    rows = {row["component_id"]: row for row in manifest["component_rows"]}
+    assert rows["mfu"]["trained_checkpoint_weight_mapping_proven"] is True
+    assert rows["hfr"]["trained_checkpoint_weight_mapping_proven"] is False
+    assert "snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete" in rows[
+        "hfr"
+    ]["blockers"]
+    assert "snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete" in manifest[
+        "blockers"
+    ]
 
 
 def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
@@ -123,3 +188,32 @@ def test_snerv_source_audit_consumes_harness_artifact_without_fake_pass(
     assert "component_not_proven:mfu" not in artifact_row["blockers"]
     assert "component_not_proven:hfr" not in artifact_row["blockers"]
     assert report["official_mfu_hfr_tub_parity_proven"] is False
+
+
+def _minimal_official_decoder_state(decoder_len: int) -> dict[str, np.ndarray]:
+    state: dict[str, np.ndarray] = {}
+    for offset in range(3):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.conv1.weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+        state[f"{prefix}.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.conv2.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (3, 5):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.weight"] = np.zeros((3, 3, 2, 2), dtype=np.float32)
+        state[f"{prefix}.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (4, 6):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.main.0.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.main.0.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv1.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv2.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    return state

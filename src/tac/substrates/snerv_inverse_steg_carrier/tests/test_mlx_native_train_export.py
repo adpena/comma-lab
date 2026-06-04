@@ -2230,6 +2230,14 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         train_export["official_trained_checkpoint_source_forward_replay_verified"]
         is False
     )
+    train_manifest = train_export["official_trained_checkpoint_mapping_manifest"]
+    assert train_manifest["schema"] == (
+        "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
+    )
+    assert train_manifest["official_trained_checkpoint_loaded"] is False
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in train_manifest[
+        "blockers"
+    ]
     assert (
         "snerv_official_mfu_hfr_tub_weight_mapping_missing"
         in train_export["authority_blockers"]
@@ -2261,6 +2269,11 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert (
         replay["official_trained_checkpoint_source_forward_replay_verified"] is False
     )
+    replay_manifest = replay["official_trained_checkpoint_mapping_manifest"]
+    assert replay_manifest["official_trained_checkpoint_loaded"] is False
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in replay_manifest[
+        "blockers"
+    ]
     assert replay["official_torch_source_forward_replay_passed"] is False
     assert replay["official_tub_fixture_source_forward_replay_proven"] is True
     assert replay["official_tub_source_forward_fixture_replay"][

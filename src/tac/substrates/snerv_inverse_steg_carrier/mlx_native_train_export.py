@@ -31,6 +31,9 @@ from tac.analysis.nerv_candidate_curriculum import (
 from tac.analysis.snerv_official_primitive_replay import (
     build_snerv_official_receiver_runtime_decode_contract,
 )
+from tac.analysis.snerv_official_source_forward_harness import (
+    build_snerv_official_trained_checkpoint_mapping_manifest,
+)
 from tac.analysis.snerv_official_tub_source_forward_replay import (
     TUB_PRESERVED_BLOCKERS,
     build_snerv_official_tub_source_forward_replay_artifact,
@@ -2634,6 +2637,15 @@ def _run_score_aware_long_training_attachment(
             "trained_weight_mapping_to_long_training_bound": False,
             "official_trained_checkpoint_state_dict_loaded": False,
             "official_trained_checkpoint_state_dict_mapping_verified": False,
+            "official_trained_checkpoint_mapping_manifest": (
+                build_snerv_official_trained_checkpoint_mapping_manifest(
+                    None,
+                    state_dict_kind=(
+                        "missing_upstream_official_checkpoint_for_mlx_long_training"
+                    ),
+                    source="snerv_mlx_native_train_export",
+                )
+            ),
             "official_trained_checkpoint_source_forward_replay_verified": False,
             "source_forward_replay_authority": False,
             **FALSE_AUTHORITY,
@@ -3817,6 +3829,15 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
         "trained_weight_mapping_to_long_training_bound": False,
         "official_trained_checkpoint_loaded": False,
         "official_trained_checkpoint_state_dict_mapping_verified": False,
+        "official_trained_checkpoint_mapping_manifest": (
+            build_snerv_official_trained_checkpoint_mapping_manifest(
+                None,
+                state_dict_kind=(
+                    "missing_upstream_official_checkpoint_for_mlx_long_training"
+                ),
+                source="snerv_mlx_native_train_export_replay_contract",
+            )
+        ),
         "official_trained_checkpoint_source_forward_replay_verified": False,
         "receiver_official_payload_forward_replay_passed": False,
         "official_torch_source_forward_replay_passed": False,
@@ -3964,6 +3985,15 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
         "trained_weight_mapping_to_long_training_bound": False,
         "official_trained_checkpoint_loaded": False,
         "official_trained_checkpoint_state_dict_mapping_verified": False,
+        "official_trained_checkpoint_mapping_manifest": (
+            build_snerv_official_trained_checkpoint_mapping_manifest(
+                None,
+                state_dict_kind=(
+                    "missing_upstream_official_checkpoint_for_mlx_long_training"
+                ),
+                source="snerv_mlx_native_train_export_deferred_replay_contract",
+            )
+        ),
         "official_trained_checkpoint_source_forward_replay_verified": False,
         "receiver_official_payload_forward_replay_passed": False,
         "official_torch_source_forward_replay_passed": False,

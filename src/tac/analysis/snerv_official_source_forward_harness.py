@@ -49,6 +49,9 @@ from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
 
 SCHEMA = "snerv_official_mfu_hfr_tub_forward_parity.v1"
 SOURCE_REPLAY_SCHEMA = "snerv_official_mfu_hfr_tub_source_forward_harness.v1"
+TRAINED_CHECKPOINT_MAPPING_SCHEMA = (
+    "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
+)
 OFFICIAL_SNERV_SHA = "0844a08f9591eea9625f8b961ed91d08030e06d1"
 OFFICIAL_REPO_URL = "https://github.com/qwertja/SNeRV"
 OFFICIAL_REPO_URL_GIT = "https://github.com/qwertja/SNeRV.git"
@@ -65,6 +68,168 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "source_faithful_stack_claim": False,
     "ready_for_exact_eval_dispatch": False,
 }
+
+OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_forward_replay_missing"
+)
+
+
+def build_snerv_official_trained_checkpoint_mapping_manifest(
+    state_dict: Mapping[str, Any] | None = None,
+    *,
+    decoder_len: int | None = None,
+    state_dict_kind: str = "official_trained_checkpoint_state_dict",
+    source: str | None = None,
+) -> dict[str, Any]:
+    """Classify official trained checkpoint coverage without claiming parity.
+
+    This is the executable boundary between PR95-style source-faithful export
+    discipline and local receiver payloads.  It only proves that the trained
+    official state_dict exposes the MFU/HFR/TUB keys a receiver adapter would
+    need; actual upstream source-forward replay remains a separate blocker.
+    """
+
+    raw_state = dict(state_dict or {})
+    if not raw_state:
+        return {
+            "schema": TRAINED_CHECKPOINT_MAPPING_SCHEMA,
+            "state_dict_kind": state_dict_kind,
+            "state_dict_source": source,
+            "state_dict_key_count": 0,
+            "decoder_len": decoder_len,
+            "decoder_len_source": "provided" if decoder_len is not None else None,
+            "official_trained_checkpoint_loaded": False,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+            "official_tub_temporal_encoder_weight_mapping_proven": False,
+            "state_dict_sha256": None,
+            "mapped_weight_key_count": 0,
+            "weight_entries": [],
+            "component_rows": [],
+            "blockers": [
+                "snerv_official_trained_checkpoint_state_dict_not_loaded",
+                OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_BLOCKER,
+            ],
+            **FALSE_AUTHORITY,
+        }
+
+    inferred_decoder_len = decoder_len
+    decoder_len_source = "provided"
+    if inferred_decoder_len is None:
+        inferred_decoder_len = _infer_official_decoder_len(raw_state)
+        decoder_len_source = "inferred_from_decoder_prefixes"
+    if inferred_decoder_len is None:
+        return {
+            "schema": TRAINED_CHECKPOINT_MAPPING_SCHEMA,
+            "state_dict_kind": state_dict_kind,
+            "state_dict_source": source,
+            "state_dict_key_count": len(raw_state),
+            "decoder_len": None,
+            "decoder_len_source": None,
+            "official_trained_checkpoint_loaded": True,
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+            "official_tub_temporal_encoder_weight_mapping_proven": False,
+            "state_dict_sha256": _hash_state_dict_exact(raw_state),
+            "mapped_weight_key_count": 0,
+            "weight_entries": [],
+            "component_rows": [],
+            "blockers": [
+                "snerv_official_trained_checkpoint_decoder_len_not_resolved",
+                OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_BLOCKER,
+            ],
+            **FALSE_AUTHORITY,
+        }
+
+    groups = _official_checkpoint_group_prefixes(int(inferred_decoder_len))
+    entries: list[dict[str, Any]] = []
+    for key in sorted(raw_state):
+        group = _official_group_for_key(key, groups)
+        if group is None:
+            continue
+        array = _state_value_array(raw_state[key])
+        entries.append(
+            {
+                "key": key,
+                "receiver_key": _receiver_key_for_official_key(
+                    key,
+                    int(inferred_decoder_len),
+                ),
+                "component_id": _component_for_group(group),
+                "official_group": group,
+                "shape": [int(value) for value in array.shape],
+                "dtype": str(array.dtype),
+                "sha256": _hash_array_exact(array),
+                "f64_sha256": _hash_array(array),
+                "byte_count": int(np.ascontiguousarray(array).nbytes),
+            }
+        )
+    present_groups = {str(row["official_group"]) for row in entries}
+    component_rows = [
+        _checkpoint_mapping_component_row(
+            component_id="hfr",
+            required_groups=("hfr_lh", "hfr_hl", "hfr_hh"),
+            present_groups=present_groups,
+            entries=entries,
+            source_blocker="snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+        ),
+        _checkpoint_mapping_component_row(
+            component_id="mfu",
+            required_groups=(
+                "mfu_upsample_mid",
+                "mfu_rb_mid",
+                "mfu_upsample_high",
+                "mfu_rb_high",
+            ),
+            present_groups=present_groups,
+            entries=entries,
+            source_blocker="snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+        ),
+        _checkpoint_mapping_component_row(
+            component_id="tub",
+            required_groups=(
+                "tub_temporal_encoder_1",
+                "tub_temporal_encoder_2",
+                "tub_output2_decoder",
+            ),
+            present_groups=present_groups,
+            entries=entries,
+            source_blocker="snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
+        ),
+    ]
+    mfu_hfr_proven = all(
+        row["trained_checkpoint_weight_mapping_proven"] is True
+        for row in component_rows
+        if row["component_id"] in {"mfu", "hfr"}
+    )
+    tub_proven = bool(
+        next(row for row in component_rows if row["component_id"] == "tub")[
+            "trained_checkpoint_weight_mapping_proven"
+        ]
+    )
+    blockers = [
+        blocker
+        for row in component_rows
+        for blocker in row.get("blockers", ())
+    ]
+    blockers.append(OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_BLOCKER)
+    return {
+        "schema": TRAINED_CHECKPOINT_MAPPING_SCHEMA,
+        "state_dict_kind": state_dict_kind,
+        "state_dict_source": source,
+        "state_dict_key_count": len(raw_state),
+        "decoder_len": int(inferred_decoder_len),
+        "decoder_len_source": decoder_len_source,
+        "official_trained_checkpoint_loaded": True,
+        "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": mfu_hfr_proven,
+        "official_tub_temporal_encoder_weight_mapping_proven": tub_proven,
+        "state_dict_sha256": _hash_state_dict_exact(raw_state),
+        "mapped_weight_key_count": len(entries),
+        "mapped_weight_byte_count": int(sum(int(row["byte_count"]) for row in entries)),
+        "mapped_weight_entries_sha256": _hash_weight_entries(entries),
+        "weight_entries": entries,
+        "component_rows": component_rows,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
 
 
 @dataclass(frozen=True)
@@ -657,6 +822,123 @@ def _selected_decoder_weight_keys(
     return sorted(key for key in state_dict if key.startswith(prefixes))
 
 
+def _infer_official_decoder_len(state_dict: Mapping[str, Any]) -> int | None:
+    indices: set[int] = set()
+    for key in state_dict:
+        parts = str(key).split(".")
+        if len(parts) < 3 or parts[0] != "decoder":
+            continue
+        try:
+            indices.add(int(parts[1]))
+        except ValueError:
+            continue
+    if not indices:
+        return None
+    candidates = []
+    for start in sorted(indices):
+        groups = _official_checkpoint_group_prefixes(start)
+        present = {
+            group
+            for group, prefixes in groups.items()
+            if any(str(key).startswith(prefixes) for key in state_dict)
+        }
+        hfr_mfu_count = len(
+            present
+            & {
+                "hfr_lh",
+                "hfr_hl",
+                "hfr_hh",
+                "mfu_upsample_mid",
+                "mfu_rb_mid",
+                "mfu_upsample_high",
+                "mfu_rb_high",
+            }
+        )
+        if hfr_mfu_count:
+            candidates.append((hfr_mfu_count, start))
+    if not candidates:
+        return None
+    candidates.sort()
+    return int(candidates[-1][1])
+
+
+def _official_checkpoint_group_prefixes(decoder_len: int) -> dict[str, tuple[str, ...]]:
+    return {
+        "hfr_lh": (f"decoder.{decoder_len}.",),
+        "hfr_hl": (f"decoder.{decoder_len + 1}.",),
+        "hfr_hh": (f"decoder.{decoder_len + 2}.",),
+        "mfu_upsample_mid": (f"decoder.{decoder_len + 3}.",),
+        "mfu_rb_mid": (f"decoder.{decoder_len + 4}.",),
+        "mfu_upsample_high": (f"decoder.{decoder_len + 5}.",),
+        "mfu_rb_high": (f"decoder.{decoder_len + 6}.",),
+        "tub_temporal_encoder_1": ("encoder.1.",),
+        "tub_temporal_encoder_2": ("encoder.2.",),
+        "tub_output2_decoder": (f"decoder.{decoder_len - 1}.",),
+    }
+
+
+def _official_group_for_key(
+    key: str,
+    groups: Mapping[str, tuple[str, ...]],
+) -> str | None:
+    for group, prefixes in groups.items():
+        if any(str(key).startswith(prefix) for prefix in prefixes):
+            return group
+    return None
+
+
+def _component_for_group(group: str) -> str:
+    if group.startswith("hfr_"):
+        return "hfr"
+    if group.startswith("mfu_"):
+        return "mfu"
+    if group.startswith("tub_"):
+        return "tub"
+    return "unknown"
+
+
+def _checkpoint_mapping_component_row(
+    *,
+    component_id: str,
+    required_groups: Sequence[str],
+    present_groups: set[str],
+    entries: Sequence[Mapping[str, Any]],
+    source_blocker: str,
+) -> dict[str, Any]:
+    missing_groups = [group for group in required_groups if group not in present_groups]
+    component_entries = [
+        row for row in entries if str(row.get("component_id")) == component_id
+    ]
+    mapping_proven = not missing_groups and bool(component_entries)
+    blockers = (
+        [source_blocker]
+        if mapping_proven
+        else [
+            f"snerv_official_trained_checkpoint_{component_id}_weight_mapping_incomplete",
+            source_blocker,
+        ]
+    )
+    if component_id == "tub" and not mapping_proven:
+        blockers.append("snerv_official_tub_encoder_decoder_weights_not_loaded")
+    return {
+        "schema": "snerv_official_trained_checkpoint_component_mapping.v1",
+        "component_id": component_id,
+        "required_groups": list(required_groups),
+        "present_groups": [group for group in required_groups if group in present_groups],
+        "missing_groups": missing_groups,
+        "trained_checkpoint_weight_mapping_proven": mapping_proven,
+        "source_forward_parity_proven": False,
+        "source_forward_replay_authority": False,
+        "mapped_weight_key_count": len(component_entries),
+        "mapped_weight_byte_count": int(
+            sum(int(row.get("byte_count") or 0) for row in component_entries)
+        ),
+        "mapped_weight_entries_sha256": _hash_weight_entries(component_entries),
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _assign_sparse_source_fixture_weights(model: Any, decoder_len: int) -> None:
     state = model.state_dict()
     for key in _selected_decoder_weight_keys(state, decoder_len):
@@ -788,9 +1070,41 @@ def _tensor_array(tensor: Any) -> np.ndarray:
     return np.asarray(tensor.detach().cpu().numpy(), dtype=np.float64)
 
 
+def _state_value_array(value: Any) -> np.ndarray:
+    if hasattr(value, "detach") and callable(value.detach):
+        value = value.detach()
+    if hasattr(value, "cpu") and callable(value.cpu):
+        value = value.cpu()
+    if hasattr(value, "numpy") and callable(value.numpy):
+        value = value.numpy()
+    return np.asarray(value)
+
+
 def _hash_array(array: np.ndarray) -> str:
     arr = np.ascontiguousarray(np.asarray(array, dtype="<f8"))
     return _hash_bytes(arr.tobytes())
+
+
+def _hash_array_exact(array: np.ndarray) -> str:
+    arr = np.ascontiguousarray(np.asarray(array))
+    h = sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(b"\0")
+    h.update(json.dumps(list(arr.shape), sort_keys=True).encode("utf-8"))
+    h.update(b"\0")
+    h.update(arr.tobytes())
+    return h.hexdigest()
+
+
+def _hash_state_dict_exact(state_dict: Mapping[str, Any]) -> str:
+    h = sha256()
+    for key in sorted(state_dict):
+        array = _state_value_array(state_dict[key])
+        h.update(str(key).encode("utf-8"))
+        h.update(b"\0")
+        h.update(_hash_array_exact(array).encode("utf-8"))
+        h.update(b"\0")
+    return h.hexdigest()
 
 
 def _hash_named_arrays(arrays: Mapping[str, np.ndarray]) -> str:
@@ -865,5 +1179,7 @@ __all__ = [
     "OFFICIAL_SNERV_SHA",
     "SCHEMA",
     "SOURCE_REPLAY_SCHEMA",
+    "TRAINED_CHECKPOINT_MAPPING_SCHEMA",
     "build_snerv_official_source_forward_harness_artifact",
+    "build_snerv_official_trained_checkpoint_mapping_manifest",
 ]
