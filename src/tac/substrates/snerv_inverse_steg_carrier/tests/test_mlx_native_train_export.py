@@ -1075,6 +1075,12 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert report["executed"] is True
     assert report["snerv_official_mfu_hfr_tub_numeric_primitives_requested"] is True
     assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_export_bound_semantics"] == (
+        "receiver_payload_bound_not_source_forward_parity"
+    )
+    assert report["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert report["snerv_official_mfu_hfr_tub_source_forward_replay_authority"] is False
     assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert report["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] is False
     assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in report["blockers"]
@@ -1088,6 +1094,12 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert binding["primitive_modules_available"] is True
     assert binding["export_bound_to_receiver_packet"] is True
     assert binding["official_export_bound"] is True
+    assert binding["official_export_bound_semantics"] == (
+        "receiver_payload_bound_not_source_forward_parity"
+    )
+    assert binding["official_receiver_payload_bound"] is True
+    assert binding["official_source_forward_replay_bound"] is False
+    assert binding["source_forward_replay_bound_by_export"] is False
     assert binding["surrogate_receiver_payload_contract_emitted"] is False
     assert binding["official_receiver_payload_contract_available"] is True
     assert binding["official_receiver_payload_contract_emitted"] is True
@@ -1147,6 +1159,15 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert binding["selected_packet_frame_producing_official_export"] is True
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound_semantics"] == (
+        "receiver_payload_bound_not_source_forward_parity"
+    )
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert (
+        decoded.metadata["snerv_official_mfu_hfr_tub_source_forward_replay_authority"]
+        is False
+    )
     assert decoded.metadata["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert decoded.metadata["source_faithful_stack"] is False
     assert "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high" in decoded.metadata[
@@ -1280,6 +1301,8 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         "snerv_mlx_official_mfu_hfr_tub_score_renderer"
     )
     assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert report["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
     assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert (
         "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
@@ -1352,6 +1375,8 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     ]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert decoded.metadata["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
     assert decoded.metadata["score_aware_long_training_executed"] is True
     assert decoded.metadata["score_aware_long_training"]["executed"] is True
     assert decoded.metadata["score_aware_long_training"]["official_mfu_hfr_tub_train_export"][

@@ -165,6 +165,12 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
             official_primitives_requested
         ),
         "official_mfu_hfr_tub_export_bound": bool(official_export_bound),
+        "official_mfu_hfr_tub_export_bound_semantics": (
+            "receiver_payload_bound_not_source_forward_parity"
+        ),
+        "official_mfu_hfr_tub_receiver_payload_bound": bool(official_export_bound),
+        "official_mfu_hfr_tub_source_forward_replay_bound": False,
+        "official_mfu_hfr_tub_source_forward_replay_authority": False,
         "official_mfu_hfr_tub_export_blockers": (
             official_export_blockers if official_primitives_requested else []
         ),
@@ -248,7 +254,12 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
 
 
 def _official_mfu_hfr_tub_export_bound(advisory_result: Any) -> bool:
-    """Return whether advisory evidence proves receiver-bound official payload."""
+    """Return whether advisory evidence proves receiver-bound official payload.
+
+    This deliberately does not imply source-forward official SNeRV parity.
+    Bootstrap packets may execute official NumPy primitives in the receiver
+    while still lacking upstream graph/weight replay.
+    """
 
     binding = _attr(advisory_result, "official_primitive_binding")
     if isinstance(binding, Mapping):

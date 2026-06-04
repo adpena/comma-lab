@@ -256,6 +256,9 @@ def test_bridge_records_official_mfu_hfr_tub_primitives_fail_closed_until_export
     assert controls["official_mfu_hfr_tub_numeric_primitives_requested"] is True
     assert controls["official_mfu_hfr_tub_primitives_present"] is True
     assert controls["official_mfu_hfr_tub_export_bound"] is False
+    assert controls["official_mfu_hfr_tub_receiver_payload_bound"] is False
+    assert controls["official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert controls["official_mfu_hfr_tub_source_forward_replay_authority"] is False
     assert controls["official_parity_status"] == (
         "official_mfu_hfr_tub_numeric_primitives_present__receiver_export_"
         "and_source_forward_replay_required"
@@ -305,6 +308,8 @@ def test_bridge_refuses_top_level_official_export_bound_without_binding(
 
     controls = payload["rows"][0]["official_controls"]
     assert controls["official_mfu_hfr_tub_export_bound"] is False
+    assert controls["official_mfu_hfr_tub_receiver_payload_bound"] is False
+    assert controls["official_mfu_hfr_tub_source_forward_replay_bound"] is False
     assert controls["official_receiver_tensor_map_verified"] is False
     assert controls["official_receiver_tensor_map_custody"]["blockers"] == [
         "snerv_official_receiver_tensor_map_binding_missing"
@@ -356,6 +361,12 @@ def test_bridge_consumes_receiver_bound_official_payload_evidence(
 
     controls = payload["rows"][0]["official_controls"]
     assert controls["official_mfu_hfr_tub_export_bound"] is True
+    assert controls["official_mfu_hfr_tub_export_bound_semantics"] == (
+        "receiver_payload_bound_not_source_forward_parity"
+    )
+    assert controls["official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert controls["official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert controls["official_mfu_hfr_tub_source_forward_replay_authority"] is False
     assert controls["official_parity_status"] == (
         "official_mfu_hfr_tub_receiver_payload_bound__source_forward_"
         "replay_required"

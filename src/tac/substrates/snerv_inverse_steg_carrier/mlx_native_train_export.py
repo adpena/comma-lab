@@ -1074,6 +1074,30 @@ def train_export_snerv_mlx_native(
             selected_archive_metadata.get("snerv_official_mfu_hfr_tub_export_bound")
             is True
         )
+        payload["snerv_official_mfu_hfr_tub_export_bound_semantics"] = str(
+            selected_archive_metadata.get(
+                "snerv_official_mfu_hfr_tub_export_bound_semantics"
+            )
+            or "receiver_payload_bound_not_source_forward_parity"
+        )
+        payload["snerv_official_mfu_hfr_tub_receiver_payload_bound"] = bool(
+            selected_archive_metadata.get(
+                "snerv_official_mfu_hfr_tub_receiver_payload_bound"
+            )
+            is True
+        )
+        payload["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] = bool(
+            selected_archive_metadata.get(
+                "snerv_official_mfu_hfr_tub_source_forward_replay_bound"
+            )
+            is True
+        )
+        payload["snerv_official_mfu_hfr_tub_source_forward_replay_authority"] = bool(
+            selected_archive_metadata.get(
+                "snerv_official_mfu_hfr_tub_source_forward_replay_authority"
+            )
+            is True
+        )
         payload["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] = not bool(
             payload["snerv_official_mfu_hfr_tub_export_bound"]
         )
@@ -3167,6 +3191,12 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         "snerv_model_size_adapter": model_size.adapter,
         "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
         "snerv_official_mfu_hfr_tub_export_bound": True,
+        "snerv_official_mfu_hfr_tub_export_bound_semantics": (
+            "receiver_payload_bound_not_source_forward_parity"
+        ),
+        "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
+        "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
+        "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
         "snerv_official_mfu_hfr_tub_frame_producing_export": True,
         "source_faithful_stack": False,
         "official_source_parity_blockers": [
@@ -4217,6 +4247,12 @@ def _official_primitives_packet_metadata(
             "snar1_linear_hf_generation_decoder_not_official_neural_graph"
         ),
         "snerv_official_mfu_hfr_tub_export_bound": False,
+        "snerv_official_mfu_hfr_tub_export_bound_semantics": (
+            "receiver_payload_bound_not_source_forward_parity"
+        ),
+        "snerv_official_mfu_hfr_tub_receiver_payload_bound": False,
+        "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
+        "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
         "snerv_official_mfu_hfr_tub_export_blockers": [str(blocker) for blocker in blockers],
         "snerv_official_mfu_hfr_tub_binding_schema": official_binding.get("schema"),
         "source_faithful_stack": False,
@@ -4257,6 +4293,14 @@ def _receiver_bound_official_primitives_export_binding(
     out["official_export_bound"] = bool(
         selected_authority["frame_producing_official_export"]
     )
+    out["official_export_bound_semantics"] = (
+        "receiver_payload_bound_not_source_forward_parity"
+    )
+    out["official_receiver_payload_bound"] = bool(
+        selected_authority["official_decoder_payload_selected"]
+    )
+    out["official_source_forward_replay_bound"] = False
+    out["source_forward_replay_bound_by_export"] = False
     out["surrogate_receiver_payload_contract_emitted"] = not bool(
         selected_authority["frame_producing_official_export"]
     )
