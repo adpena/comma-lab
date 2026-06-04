@@ -632,6 +632,12 @@ def build_nerv_full_video_mlx_scorer_feedback_row(
         or _int_or_none(_path_get(export, ("modelsize_candidate", "hard_byte_ceiling")))
         or _min_positive_int(export.get("hard_byte_ceilings"))
     )
+    observed_seg_weight, observed_seg_weight_source = (
+        _infer_full_video_feedback_segnet_distillation_weight(
+            export=export,
+            explicit_weight=current_segnet_distillation_weight,
+        )
+    )
     full_video = bool(int(measured_pairs) >= max(int(candidate_pairs), CONTEST_PAIR_COUNT))
     response_false_authority_blockers = _mlx_response_authority_blockers(mlx_response)
     direct_blockers: list[str] = []
@@ -665,7 +671,7 @@ def build_nerv_full_video_mlx_scorer_feedback_row(
         avg_pose=avg_pose,
         archive_under_ceiling=archive_under_ceiling,
         full_video=full_video,
-        current_segnet_distillation_weight=current_segnet_distillation_weight,
+        current_segnet_distillation_weight=observed_seg_weight,
         max_mlx_score_for_local_replay=max_mlx_score_for_local_replay,
     )
     recommended_mutations = list(
@@ -810,7 +816,8 @@ def build_nerv_full_video_mlx_scorer_feedback_row(
         ),
         "observed_learning_rate": None,
         "recommended_learning_rate": None,
-        "observed_segnet_distillation_weight": current_segnet_distillation_weight,
+        "observed_segnet_distillation_weight": observed_seg_weight,
+        "segnet_distillation_weight_source": observed_seg_weight_source,
         "recommended_segnet_distillation_weight": scorer_control.get(
             "recommended_segnet_distillation_weight"
         ),
@@ -843,9 +850,12 @@ def write_nerv_full_video_mlx_scorer_feedback_files(
 
     out = Path(output_dir).expanduser().resolve(strict=False)
     out.mkdir(parents=True, exist_ok=True)
+    export_report = _attach_startup_json_to_archive_export_report(
+        archive_export_report
+    )
     row = build_nerv_full_video_mlx_scorer_feedback_row(
         mlx_response=mlx_response,
-        archive_export_report=archive_export_report,
+        archive_export_report=export_report,
         mlx_response_path=mlx_response_path,
         archive_export_report_path=archive_export_report_path,
         candidate_id=candidate_id,
@@ -877,6 +887,35 @@ def write_nerv_full_video_mlx_scorer_feedback_files(
         encoding="utf-8",
     )
     return manifest
+
+
+def _attach_startup_json_to_archive_export_report(
+    archive_export_report: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    export = dict(archive_export_report or {})
+    if "runner_startup_json" in export or "startup_json" in export:
+        return export
+    startup_path_raw = (
+        export.get("startup_json_path")
+        or export.get("runner_startup_json_path")
+        or export.get("compact_renderer_mlx_spine_runner_startup_json_path")
+    )
+    if not startup_path_raw:
+        return export
+    startup_path = Path(str(startup_path_raw)).expanduser()
+    try:
+        startup_payload = json.loads(startup_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        export["startup_json_load_blocker"] = (
+            "archive_export_startup_json_path_unreadable"
+        )
+        return export
+    export["runner_startup_json"] = startup_payload
+    export["runner_startup_json_path"] = startup_path.as_posix()
+    startup_sha = _sha256_file(startup_path)
+    if startup_sha is not None:
+        export["runner_startup_json_sha256"] = startup_sha
+    return export
 
 
 def _hinerv_archive_ladder_feedback_row(
@@ -2518,6 +2557,29 @@ def _full_video_mlx_response_training_control(
         "recommended_launch_mutations": _dedupe_strings(mutations),
         **FALSE_AUTHORITY,
     }
+
+
+def _infer_full_video_feedback_segnet_distillation_weight(
+    *,
+    export: Mapping[str, Any],
+    explicit_weight: float | None,
+) -> tuple[float | None, str | None]:
+    explicit = _float_or_none(explicit_weight)
+    if explicit is not None:
+        return explicit, "harvest_current_segnet_distillation_weight"
+    export_paths = (
+        ("command_args", "segnet_distillation_weight"),
+        ("campaign_identity", "argv", "segnet_distillation_weight"),
+        ("startup_json", "campaign_identity", "argv", "segnet_distillation_weight"),
+        ("runner_startup_json", "campaign_identity", "argv", "segnet_distillation_weight"),
+        ("training_config", "segnet_distillation_weight"),
+        ("config", "segnet_distillation_weight"),
+    )
+    for path in export_paths:
+        value = _float_or_none(_path_get(export, path))
+        if value is not None:
+            return value, ".".join(path)
+    return None, None
 
 
 def _min_positive_int(value: Any) -> int | None:

@@ -348,6 +348,63 @@ def test_full_video_mlx_response_feedback_binds_archive_export_and_false_authori
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_full_video_mlx_response_feedback_infers_segnet_weight_from_export(
+    tmp_path: Path,
+) -> None:
+    export = _checkpoint_export(tmp_path)
+    export["command_args"] = {"segnet_distillation_weight": 16.0}
+
+    row = build_nerv_full_video_mlx_scorer_feedback_row(
+        mlx_response=_mlx_response(),
+        archive_export_report=export,
+    )
+
+    assert row["observed_segnet_distillation_weight"] == 16.0
+    assert row["segnet_distillation_weight_source"] == (
+        "command_args.segnet_distillation_weight"
+    )
+    assert row["recommended_segnet_distillation_weight"] is None
+    assert (
+        "increase_segnet_distillation_weight_from_full_video_mlx_response"
+        not in row["recommended_launch_mutations"]
+    )
+    control = row["full_video_mlx_response_control"]
+    assert control["observed_segnet_distillation_weight"] == 16.0
+    assert control["recommended_segnet_distillation_weight"] is None
+
+
+def test_full_video_mlx_feedback_writer_loads_export_startup_json_weight(
+    tmp_path: Path,
+) -> None:
+    startup = tmp_path / "compact_renderer_mlx_spine_runner_startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "campaign_identity": {
+                    "argv": {"segnet_distillation_weight": 16.0}
+                }
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    export = _checkpoint_export(tmp_path)
+    export["startup_json_path"] = startup.as_posix()
+
+    manifest = write_nerv_full_video_mlx_scorer_feedback_files(
+        mlx_response=_mlx_response(),
+        archive_export_report=export,
+        output_dir=tmp_path / "feedback",
+    )
+
+    row = manifest["row"]
+    assert row["observed_segnet_distillation_weight"] == 16.0
+    assert row["segnet_distillation_weight_source"] == (
+        "runner_startup_json.campaign_identity.argv.segnet_distillation_weight"
+    )
+    assert row["recommended_segnet_distillation_weight"] is None
+
+
 def test_full_video_mlx_response_feedback_fails_closed_on_archive_sha_mismatch(
     tmp_path: Path,
 ) -> None:
