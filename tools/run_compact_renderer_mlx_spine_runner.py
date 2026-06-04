@@ -1981,6 +1981,7 @@ def _resolve_execute_modelsize_candidate(
     snerv_model_size_adapter: str | None = None,
     snerv_temporal_context: int = 0,
     snerv_temporal_modes: tuple[str, ...] = ("delta",),
+    snerv_official_skip_high_modes: tuple[str, ...] = ("full",),
     byte_cap_feedback_rows: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any] | None:
     """Resolve an executable NeRV byte-budget candidate for a family launch.
@@ -2034,6 +2035,9 @@ def _resolve_execute_modelsize_candidate(
                 modelsize_control_profile_id=str(snerv_modelsize_control_profile_id),
                 temporal_context=int(snerv_temporal_context),
                 temporal_modes=tuple(str(value) for value in snerv_temporal_modes),
+                official_skip_high_modes=tuple(
+                    str(value) for value in snerv_official_skip_high_modes
+                ),
             )
         ]
     else:
@@ -2556,6 +2560,7 @@ _SNERV_MODEL_SIZE_ID_RE = re.compile(
     r"t(?P<temporal_context>\d+)(?:_tm(?P<temporal_mode_token>[A-Za-z0-9]+))?_"
     r"ad(?P<adapter_token>[A-Za-z0-9]+)"
     r"(?:_oms(?P<official_modelsize>\d+(?:p\d+)?))?_"
+    r"(?:(?:sk|_sk)(?P<official_skip_high_mode_token>[A-Za-z0-9]+)_)?"
     r"(?P<decoder_payload_codec>.+)_ceil(?P<hard_byte_ceiling>\d+)$"
 )
 _SNERV_PARTIAL_MODEL_SIZE_ID_RE = re.compile(
@@ -2707,6 +2712,15 @@ def _modelsize_candidate_from_self_describing_id(
                 _float_token(groups["official_modelsize"])
                 if groups.get("official_modelsize") is not None
                 else None
+            ),
+            official_skip_high_mode=(
+                "shared_mean"
+                if groups.get("official_skip_high_mode_token") == "sharedmean"
+                else (
+                    groups.get("official_skip_high_mode_token")
+                    if groups.get("official_skip_high_mode_token") is not None
+                    else "full"
+                )
             ),
         ).as_dict()
         if partial_match is not None or legacy_match is not None:
@@ -14941,6 +14955,11 @@ def main(argv: list[str] | None = None) -> int:
                 ("delta",)
                 if args.snerv_temporal_mode is None
                 else (str(args.snerv_temporal_mode),)
+            ),
+            snerv_official_skip_high_modes=(
+                (str(args.snerv_official_skip_high_mode),)
+                if args.snerv_official_skip_high_mode is not None
+                else ("full",)
             ),
             byte_cap_feedback_rows=byte_cap_feedback_rows,
         )

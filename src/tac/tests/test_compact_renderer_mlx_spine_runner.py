@@ -17,6 +17,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from tac.analysis.nerv_modelsize_budget import enumerate_snerv_modelsize_candidates
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
@@ -2604,7 +2605,7 @@ def test_snerv_modelsize_resolution_uses_effective_spectra_adapter() -> None:
     candidate = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
-        hard_byte_ceilings=(178_000,),
+        hard_byte_ceilings=(216_000,),
         snerv_official_modelsize_mparams=(0.05,),
         snerv_model_size_adapter=runner_mod._effective_snerv_modelsize_adapter_for_resolution(
             args
@@ -2812,6 +2813,28 @@ def test_execute_snerv_modelsize_auto_fails_closed_when_no_nominal_candidate_und
             ),
             snerv_temporal_modes=("official_haar_dwt1d_lowpass",),
         )
+
+
+def test_snerv_modelsize_candidates_include_official_skip_high_mode_in_identity() -> None:
+    rows = enumerate_snerv_modelsize_candidates(
+        hard_byte_ceilings=(36_000,),
+        num_pairs=600,
+        levels=(2,),
+        bits_per_coeffs=(1.5,),
+        step_map_bits_per_coeffs=(0.5,),
+        decoder_codecs=("int2_symmetric",),
+        official_modelsize_mparams=(0.05,),
+        snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        temporal_modes=("official_haar_dwt1d_lowpass",),
+        official_skip_high_modes=("full", "shared_mean"),
+    )
+
+    keyed = {row.official_skip_high_mode: row.as_dict() for row in rows}
+    assert set(keyed) == {"full", "shared_mean"}
+    assert "_sksharedmean_" not in keyed["full"]["candidate_id"]
+    assert "_sksharedmean_" in keyed["shared_mean"]["candidate_id"]
+    assert keyed["shared_mean"]["snerv_official_skip_high_mode"] == "shared_mean"
+    assert keyed["shared_mean"]["candidate_id"] != keyed["full"]["candidate_id"]
 
 
 def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
@@ -3043,6 +3066,15 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
         ),
         hard_byte_ceilings=(178_000,),
     )
+    sn_shared_mean = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=(
+            "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
+            "mfu1-5_hfr0p375_t2_adspectra_sksharedmean_"
+            "int2_symmetric_ceil36000"
+        ),
+        hard_byte_ceilings=(178_000,),
+    )
 
     assert hi is not None
     assert hi["candidate_id"] == (
@@ -3111,6 +3143,14 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
     assert sn_temporal["temporal_context"] == 2
     assert sn_temporal["temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert sn_temporal["candidate_id"].find("_tmhaar1_") >= 0
+    assert sn_shared_mean is not None
+    assert sn_shared_mean["official_skip_high_mode"] == "shared_mean"
+    assert sn_shared_mean["snerv_official_skip_high_mode"] == "shared_mean"
+    assert sn_shared_mean["candidate_id"] == (
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p3_"
+        "mfu1-5_hfr0p375_t2_adspectra_sksharedmean_"
+        "int2_symmetric_ceil36000"
+    )
     with pytest.raises(CompactRendererMlxSpineRunnerError):
         _resolve_execute_modelsize_candidate(
             family="snerv",
