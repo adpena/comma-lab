@@ -2173,6 +2173,14 @@ def train_export_snerv_mlx_native(
     selected_section_bytes = {
         str(name): len(blob) for name, blob in selected_archive.sections.items()
     }
+    selected_packet_sha256 = _sha256_bytes(selected_packet)
+    selected_decoder_payload_codec = str(
+        selected_archive_metadata.get("decoder_payload_codec")
+        or active_decoder_payload_codec
+    )
+    selected_lf_payload_codec = str(
+        selected_archive_metadata.get("lf_payload_codec") or active_lf_payload_codec
+    )
     receiver_target_profile = _snerv_receiver_frame_reconstruction_profile(
         selected_packet,
         reference_pairs_nchw255=pairs_nchw255,
@@ -2202,8 +2210,12 @@ def train_export_snerv_mlx_native(
     byte_cap_control = _build_snerv_mlx_native_byte_cap_control(
         candidate=candidate,
         hard_byte_ceiling=hard_byte_ceiling,
+        packet_source=selected_packet_source,
+        packet_sha256=selected_packet_sha256,
         packet_bytes=len(selected_packet),
         section_bytes=selected_section_bytes,
+        decoder_payload_codec=selected_decoder_payload_codec,
+        lf_payload_codec=selected_lf_payload_codec,
         official_receiver_tensor_map=(
             _official_receiver_tensor_map_from_packet(selected_packet)
             if official_primitives_requested
@@ -2330,8 +2342,8 @@ def train_export_snerv_mlx_native(
         step_map_coder_groups=tuple(
             dict(group) for group in selected_archive_metadata.get("step_map_coder_groups") or ()
         ),
-        decoder_payload_codec=active_decoder_payload_codec,
-        lf_payload_codec=active_lf_payload_codec,
+        decoder_payload_codec=selected_decoder_payload_codec,
+        lf_payload_codec=selected_lf_payload_codec,
         model_size=model_size.as_jsonable(),
         bridge_drift=bridge,
         receiver_target_reconstruction_profile=receiver_target_profile,
@@ -7329,8 +7341,12 @@ def _build_snerv_mlx_native_byte_cap_control(
     *,
     candidate: Mapping[str, Any],
     hard_byte_ceiling: int | None,
+    packet_source: str,
+    packet_sha256: str,
     packet_bytes: int,
     section_bytes: Mapping[str, int] | None = None,
+    decoder_payload_codec: str | None = None,
+    lf_payload_codec: str | None = None,
     official_receiver_tensor_map: Mapping[str, Any] | None = None,
     archive_bytes: int | None,
     archive_sha256: str | None,
@@ -7384,7 +7400,13 @@ def _build_snerv_mlx_native_byte_cap_control(
         "schema": "snerv_mlx_native_hard_byte_ceiling_control.v1",
         "attached": hard_byte_ceiling is not None,
         "hard_byte_ceiling": hard_byte_ceiling,
+        "packet_source": str(packet_source),
+        "packet_sha256": str(packet_sha256),
         "packet_bytes": int(packet_bytes),
+        "decoder_payload_codec": (
+            str(decoder_payload_codec) if decoder_payload_codec else None
+        ),
+        "lf_payload_codec": str(lf_payload_codec) if lf_payload_codec else None,
         "section_bytes": measured_section_bytes,
         "section_pressure_rows": section_pressure_rows,
         "official_decoder_payload_component_rows": official_component_rows,

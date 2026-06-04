@@ -3156,7 +3156,11 @@ def test_byte_cap_control_reports_lf_pressure_without_under_ceiling_blocker() ->
     cap = _build_snerv_mlx_native_byte_cap_control(
         candidate={"candidate_id": "under-cap"},
         hard_byte_ceiling=512,
+        packet_source="unit_selected_packet",
+        packet_sha256="b" * 64,
         packet_bytes=300,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="portfolio_auto",
         section_bytes={
             "metadata_payload": 12,
             "lf_payload": 190,
@@ -3174,6 +3178,10 @@ def test_byte_cap_control_reports_lf_pressure_without_under_ceiling_blocker() ->
     assert cap["enforced"] is True
     assert cap["archive_bytes_authoritative"] is True
     assert cap["authority"] == "measured_receiver_proven_archive_zip_bytes"
+    assert cap["packet_source"] == "unit_selected_packet"
+    assert cap["packet_sha256"] == "b" * 64
+    assert cap["decoder_payload_codec"] == "int8_symmetric"
+    assert cap["lf_payload_codec"] == "portfolio_auto"
     assert cap["under_hard_byte_ceiling"] is True
     assert cap["delta_bytes_vs_hard_byte_ceiling"] == -152
     assert cap["lf_payload_bytes"] == 190
@@ -3188,7 +3196,11 @@ def test_byte_cap_control_rejects_archive_bytes_without_receiver_proof() -> None
     cap = _build_snerv_mlx_native_byte_cap_control(
         candidate={"candidate_id": "proof-missing"},
         hard_byte_ceiling=512,
+        packet_source="unit_selected_packet",
+        packet_sha256="b" * 64,
         packet_bytes=300,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="portfolio_auto",
         section_bytes={
             "metadata_payload": 12,
             "lf_payload": 190,
@@ -3221,7 +3233,11 @@ def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
     cap = _build_snerv_mlx_native_byte_cap_control(
         candidate={"candidate_id": "official-pressure"},
         hard_byte_ceiling=700,
+        packet_source="official_mfu_hfr_tub_mlx_trained_payload_atoms",
+        packet_sha256="b" * 64,
         packet_bytes=800,
+        decoder_payload_codec="official_mfu_hfr_tub_payload",
+        lf_payload_codec="none",
         section_bytes={
             "metadata_payload": 16,
             "lf_payload": 80,
@@ -3871,6 +3887,12 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["blockers"] == ["snerv_scorer_loop_qat_auxiliary_warning"]
     assert report["packet_source"] == "scorer_loop_qat_best_receiver_packet"
     assert report["packet_sha256"] == best_packet_sha256
+    assert report["byte_cap_control"]["packet_source"] == report["packet_source"]
+    assert report["byte_cap_control"]["packet_sha256"] == best_packet_sha256
+    assert report["byte_cap_control"]["decoder_payload_codec"] == (
+        report["decoder_payload_codec"]
+    )
+    assert report["byte_cap_control"]["lf_payload_codec"] == report["lf_payload_codec"]
     assert Path(report["packet_path"]).read_bytes() == best_packet
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
     assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" not in report["blockers"]
