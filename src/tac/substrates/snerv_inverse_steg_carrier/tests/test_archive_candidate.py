@@ -41,11 +41,16 @@ def test_snerv_archive_bound_package_runs_receiver_proof(tmp_path: Path) -> None
     )
     proof_payload = package["receiver_proof"]
     row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    manifest = row["runtime_adapter_manifest"]
 
     assert (tmp_path / "archive.zip").is_file()
     assert (tmp_path / "submission" / "inflate.sh").stat().st_mode & stat.S_IXUSR
+    assert not (tmp_path / "submission" / "0.bin").exists()
     assert proof_payload["runtime_consumption_proof_passed"] is True
     assert proof_payload["receiver_contract_satisfied"] is True
+    assert proof_payload["archive_dir_for_inflate"].endswith(
+        "archive_extracted_for_receiver_proof"
+    )
     assert proof_payload["receiver_output_retained"] is False
     assert proof_payload["receiver_output_bytes"] == 2 * CAMERA_HW[0] * CAMERA_HW[1] * 3
     assert package["score_claim"] is False
@@ -54,25 +59,14 @@ def test_snerv_archive_bound_package_runs_receiver_proof(tmp_path: Path) -> None
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "snerv_packet_not_full_600_pairs" in row["blockers"]
     assert "paired_contest_cpu_cuda_auth_eval_missing" in row["blockers"]
+    assert manifest["archive_zip_payload_only"] is True
+    assert manifest["archive_member_name"] == "x"
+    assert manifest["runtime_source_outside_archive_zip"] is True
+    assert manifest["upstream_evaluate_rate_uses_archive_zip_stat_only"] is True
 
     with zipfile.ZipFile(tmp_path / "archive.zip") as zf:
-        names = set(zf.namelist())
-    assert {
-        "0.bin",
-        "inflate.sh",
-        "inflate.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/inflate.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/dwt.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/lf_payload_codec.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
-        "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
-        "src/tac/substrates/_shared/int_stream_codec.py",
-        "src/tac/codec/receiver_integer_plane_codec.py",
-        "src/tac/analysis/snerv_step_map_coder.py",
-    }.issubset(names)
+        assert zf.namelist() == ["x"]
+        assert zf.read("x") == archive.packet
 
 
 def test_haar_package_uses_numpy_receiver_dwt_without_pywavelets_blocker(

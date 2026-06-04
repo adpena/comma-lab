@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
 """SNeRV SNAR1 contest inflate runtime.
 
-Consumes ``archive_dir/0.bin`` SNAR1 bytes, decodes receiver-visible frames, and
-writes one contest raw RGB file. This module is scorer-free and torch-free; the
-final camera-size lowering is a small NumPy bilinear renderer.
+Consumes one SNAR member from ``archive_dir`` (preferring the byte-minimal
+``x`` convention, with ``0.bin`` fallback), decodes receiver-visible frames,
+and writes one contest raw RGB file. This module is scorer-free and torch-free;
+the final camera-size lowering is a small NumPy bilinear renderer.
 """
 
 from __future__ import annotations
@@ -76,13 +77,33 @@ def main_cli() -> int:
     archive_dir = Path(sys.argv[1])
     output_dir = Path(sys.argv[2])
     file_list_path = Path(sys.argv[3])
-    archive_bytes = (archive_dir / "0.bin").read_bytes()
+    archive_bytes = _read_archive_bytes(archive_dir)
     for line in file_list_path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line:
             continue
         inflate_one_video(archive_bytes, _raw_output_path(output_dir, line))
     return 0
+
+
+def _read_archive_bytes(archive_dir: Path) -> bytes:
+    """Read the single charged archive member, accepting ``x`` or ``0.bin``.
+
+    The upstream evaluator extracts ``archive.zip`` before calling
+    ``inflate.sh``; it does not prescribe the member name. ``x`` saves charged
+    ZIP filename bytes versus ``0.bin``. Ambiguity fails closed so a stale
+    sidecar cannot silently choose the wrong packet.
+    """
+
+    candidates = [archive_dir / "x", archive_dir / "0.bin"]
+    present = [path for path in candidates if path.is_file()]
+    if len(present) != 1:
+        names = ", ".join(path.name for path in present) or "none"
+        raise SnervInflateError(
+            "expected exactly one SNeRV archive member named 'x' or '0.bin'; "
+            f"found {names}"
+        )
+    return present[0].read_bytes()
 
 
 def _resize_nchw_bilinear(frames: np.ndarray, *, out_hw: tuple[int, int]) -> np.ndarray:
@@ -147,6 +168,7 @@ def _raw_output_path(output_dir: Path, video_name: str) -> Path:
 
 __all__ = [
     "SnervInflateError",
+    "_read_archive_bytes",
     "inflate_one_video",
     "main_cli",
     "snerv_frames_to_raw_bytes",

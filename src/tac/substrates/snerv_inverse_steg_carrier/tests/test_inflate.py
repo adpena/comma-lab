@@ -16,6 +16,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 from tac.substrates.snerv_inverse_steg_carrier.inflate import (
     CAMERA_HW,
     SnervInflateError,
+    _read_archive_bytes,
     inflate_one_video,
     snerv_frames_to_raw_bytes,
 )
@@ -76,6 +77,48 @@ def test_inflate_cli_rejects_unsafe_file_list(tmp_path: Path) -> None:
 
     assert result.returncode != 0
     assert "unsafe file_list" in result.stderr
+
+
+def test_inflate_cli_accepts_byte_minimal_x_member(tmp_path: Path) -> None:
+    _proof, archive = build_snerv_receiver_archive_proof(
+        bins=4,
+        levels=1,
+        hw=(16, 24),
+        full_frame_packet=True,
+    )
+    archive_dir = tmp_path / "archive"
+    out_dir = tmp_path / "out"
+    archive_dir.mkdir()
+    (archive_dir / "x").write_bytes(archive.packet)
+    file_list = tmp_path / "file_list.txt"
+    file_list.write_text("0.mkv\n", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "tac.substrates.snerv_inverse_steg_carrier.inflate",
+            str(archive_dir),
+            str(out_dir),
+            str(file_list),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (out_dir / "0.raw").stat().st_size == 2 * CAMERA_HW[0] * CAMERA_HW[1] * 3
+
+
+def test_inflate_archive_member_reader_rejects_ambiguous_x_and_0bin(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "x").write_bytes(b"x")
+    (tmp_path / "0.bin").write_bytes(b"zero")
+
+    with pytest.raises(SnervInflateError, match="expected exactly one"):
+        _read_archive_bytes(tmp_path)
 
 
 def test_inflate_module_imports_no_torch_or_scorer() -> None:

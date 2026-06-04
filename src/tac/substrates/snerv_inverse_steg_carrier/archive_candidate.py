@@ -16,8 +16,12 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
 from tac.repo_io import sha256_file
+from tac.submission_archive import (
+    MINIMAL_SINGLE_MEMBER_NAME,
+    safe_extract_zip,
+    write_minimal_single_member_archive,
+)
 from tac.substrates._shared.pact_nerv_full_main import (
-    build_archive_zip,
     write_contest_runtime,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
@@ -81,7 +85,7 @@ def export_snerv_archive_bound_candidate_package(
     receiver_proof_timeout_seconds: int = 1800,
     mlx_triage_argv: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """Emit ``0.bin``, ``archive.zip``, runtime, and receiver proof for SNAR."""
+    """Emit packet custody, payload-only ``archive.zip``, runtime, and proof."""
 
     root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[4]
     out_dir = Path(output_dir)
@@ -100,16 +104,17 @@ def export_snerv_archive_bound_candidate_package(
 
     submission_dir = out_dir / "submission"
     write_snerv_contest_runtime(submission_dir, repo_root=root)
-    (submission_dir / "0.bin").write_bytes(bin_bytes)
 
     archive_zip_path = out_dir / "archive.zip"
-    build_archive_zip(
+    archive_build = write_minimal_single_member_archive(
         archive_zip_path,
-        bin_bytes=bin_bytes,
-        submission_dir=submission_dir,
+        bin_bytes,
+        member_name=MINIMAL_SINGLE_MEMBER_NAME,
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
+    archive_extract_dir = out_dir / "archive_extracted_for_receiver_proof"
+    safe_extract_zip(archive_zip_path, archive_extract_dir)
 
     receiver_dwt_dependency = _receiver_dwt_dependency_mode(decoded.metadata)
     extra_blockers = ["paired_contest_cpu_cuda_auth_eval_missing"]
@@ -127,7 +132,7 @@ def export_snerv_archive_bound_candidate_package(
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
         submission_dir=submission_dir,
-        archive_dir_for_inflate=submission_dir,
+        archive_dir_for_inflate=archive_extract_dir,
         output_dir=out_dir,
         repo_root=root,
         receiver_contract_kind=receiver_contract_kind,
@@ -148,12 +153,22 @@ def export_snerv_archive_bound_candidate_package(
             "camera_hw": list(CAMERA_HW),
             "numpy_receiver_raw_writer": True,
             "receiver_dwt_dependency": receiver_dwt_dependency,
+            "archive_zip_build": archive_build,
+            "archive_member_name": archive_build["member_name"],
+            "archive_zip_payload_only": True,
+            "runtime_source_outside_archive_zip": True,
+            "upstream_evaluate_rate_uses_archive_zip_stat_only": True,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
         candidate_row_schema="snerv_inverse_steg_archive_bound_candidate_row.v1",
         wrapper_schema=SNERV_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        input_artifacts=[
+            archive_zip_path.as_posix(),
+            bin_path.as_posix(),
+            (archive_extract_dir / MINIMAL_SINGLE_MEMBER_NAME).as_posix(),
+        ],
         extra_blockers=extra_blockers,
         mlx_triage_argv=mlx_triage_argv,
     )
