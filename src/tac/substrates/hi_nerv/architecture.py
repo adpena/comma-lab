@@ -66,6 +66,33 @@ LATENT_STATE_KEYS: tuple[str, str, str] = (
 HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF: str = (
     "receiver_visible_hierarchical_feature_grid_convnext_trilinear_v1"
 )
+HINERV_LOCAL_FEATURE_GRID_CONVNEXT_RECEIVER_PROOF: str = (
+    "receiver_visible_local_hierarchical_feature_grid_convnext_modulo_sampler_v1"
+)
+HINERV_FEATURE_GRID_CONVNEXT_SOURCE_FORWARD_BLOCKERS: tuple[str, ...] = (
+    "hinerv_official_feature_grid_source_forward_parity_missing",
+    "hinerv_core_hierarchical_renderer_source_forward_replay_missing",
+    "hinerv_local_feature_grid_sampler_differs_from_official_grid_trilinear3d",
+)
+
+
+def hi_nerv_feature_grid_convnext_authority_status() -> dict[str, object]:
+    """Return the false-authority split for the local feature-grid path."""
+
+    return {
+        "schema": "hinerv_feature_grid_convnext_authority_status.v1",
+        "local_receiver_visible": True,
+        "local_receiver_proof": HINERV_LOCAL_FEATURE_GRID_CONVNEXT_RECEIVER_PROOF,
+        "legacy_receiver_proof_alias": HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF,
+        "official_grid_trilinear3d_temporal_only_bound": True,
+        "local_runtime_uses_modulo_sampler": True,
+        "official_core_forward_parity_proven": False,
+        "blockers": HINERV_FEATURE_GRID_CONVNEXT_SOURCE_FORWARD_BLOCKERS,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 @dataclass(frozen=True)

@@ -338,8 +338,10 @@ def _source_features() -> tuple[SourceFeature, ...]:
             feature_id="hi_nerv_official_feature_grid_convnext_trilinear",
             official_source_id="hi_nerv_official_repo",
             implementation_target=(
-                "official hierarchical feature grids, ConvNeXt blocks, and "
-                "trilinear multi-scale upsampling are bound or explicitly forked"
+                "receiver-visible local hierarchical feature grids and "
+                "ConvNeXt blocks are bound alongside the official temporal-only "
+                "GridTrilinear3D primitive; source-forward renderer parity is "
+                "tracked separately"
             ),
             required_symbols=(
                 RequiredSymbol(
@@ -347,7 +349,21 @@ def _source_features() -> tuple[SourceFeature, ...]:
                     "hi_nerv_official_feature_grid_convnext_trilinear",
                     "tac.substrates.hi_nerv.architecture",
                     "HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF",
-                    "receiver-visible proof constant",
+                    "legacy receiver-visible proof alias",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "tac.substrates.hi_nerv.architecture",
+                    "HINERV_LOCAL_FEATURE_GRID_CONVNEXT_RECEIVER_PROOF",
+                    "local receiver-visible proof constant",
+                ),
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_feature_grid_convnext_trilinear",
+                    "tac.substrates.hi_nerv.architecture",
+                    "hi_nerv_feature_grid_convnext_authority_status",
+                    "false-authority source-forward split",
                 ),
                 RequiredSymbol(
                     "hi_nerv",
@@ -379,6 +395,27 @@ def _source_features() -> tuple[SourceFeature, ...]:
                 ),
             ),
             blocker_if_missing=("hi_nerv_official_feature_grid_convnext_trilinear_missing"),
+        ),
+        SourceFeature(
+            family="hi_nerv",
+            feature_id="hi_nerv_official_feature_grid_source_forward_parity",
+            official_source_id="hi_nerv_official_repo",
+            implementation_target=(
+                "official HiNeRV hierarchical feature-grid/ConvNeXt core "
+                "forward parity proves the local receiver path is source-forward "
+                "equivalent, not just receiver-visible"
+            ),
+            required_symbols=(
+                RequiredSymbol(
+                    "hi_nerv",
+                    "hi_nerv_official_feature_grid_source_forward_parity",
+                    "tac.substrates.hi_nerv.architecture",
+                    "HINERV_OFFICIAL_FULL_FORWARD_PARITY_PROOF",
+                    "full official/local core forward parity proof",
+                ),
+            ),
+            blocker_if_missing="hinerv_official_feature_grid_source_forward_parity_missing",
+            required_for_long_training=False,
         ),
         SourceFeature(
             family="hi_nerv",
@@ -974,6 +1011,27 @@ def _analogue_risk_rows(families: tuple[str, ...]) -> tuple[dict[str, Any], ...]
                         "hi_nerv_official_symbol_parity_map_missing",
                         "hi_nerv_tiny_forward_parity_against_oss_missing",
                         "hi_nerv_measured_modelsize_budget_ladder_missing",
+                    ),
+                ),
+                _analogue_risk_row(
+                    family="hi_nerv",
+                    surface_id="hi_nerv_local_feature_grid_convnext_analogue",
+                    analogue_surface=(
+                        "local modulo-sampled HierarchicalFeatureGrid and "
+                        "ConvNeXt receiver path"
+                    ),
+                    insufficient_for=(
+                        "official_hinerv_feature_grid_convnext_source_forward_authority"
+                    ),
+                    why=(
+                        "the local path is receiver-visible and archive-roundtrips, "
+                        "but official HiNeRV GridTrilinear3D is temporal-only and "
+                        "the core renderer source-forward replay is still unproven"
+                    ),
+                    remaining_blockers=(
+                        "hinerv_official_feature_grid_source_forward_parity_missing",
+                        "hinerv_core_hierarchical_renderer_source_forward_replay_missing",
+                        "hinerv_local_feature_grid_sampler_differs_from_official_grid_trilinear3d",
                     ),
                 ),
                 _analogue_risk_row(

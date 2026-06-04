@@ -11,12 +11,14 @@ from __future__ import annotations
 import torch
 
 from tac.substrates.hi_nerv.architecture import (
+    HINERV_LOCAL_FEATURE_GRID_CONVNEXT_RECEIVER_PROOF,
     HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF,
     LATENT_STATE_KEYS,
     ConvNeXtBlock,
     HierarchicalFeatureGrid,
     HinervConfig,
     HinervSubstrate,
+    hi_nerv_feature_grid_convnext_authority_status,
     trilinear_upsample,
 )
 from tac.substrates.hi_nerv.archive import (
@@ -547,6 +549,14 @@ def test_official_feature_grid_convnext_mode_is_receiver_visible() -> None:
     model = HinervSubstrate(cfg).eval()
 
     assert HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF
+    assert HINERV_LOCAL_FEATURE_GRID_CONVNEXT_RECEIVER_PROOF
+    authority = hi_nerv_feature_grid_convnext_authority_status()
+    assert authority["local_receiver_visible"] is True
+    assert authority["official_grid_trilinear3d_temporal_only_bound"] is True
+    assert authority["official_core_forward_parity_proven"] is False
+    assert "hinerv_official_feature_grid_source_forward_parity_missing" in authority[
+        "blockers"
+    ]
     assert any(isinstance(module, HierarchicalFeatureGrid) for module in model.modules())
     assert any(isinstance(module, ConvNeXtBlock) for module in model.modules())
     assert "feature_grids.0.grids.0" in model.state_dict()

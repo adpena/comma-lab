@@ -67404,6 +67404,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "hinerv_fresh_eyes_blocker_burndown_codex_20260604",
+      "name": "HiNeRV fresh-eyes blocker burndown",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/nerv_source_parity_contract.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "60 focused pytest checks: source parity, official audit, HiNeRV roundtrip, stack synergy, control inventory"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_hinerv_fresh_eyes_blocker_burndown_20260604T054312Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -67413,5 +67454,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-03T17:31:40Z"
+  "updated_at": "2026-06-04T06:10:10Z"
 }

@@ -23,6 +23,10 @@ def test_source_parity_contract_is_false_authority_and_family_scoped() -> None:
     assert report["required_for_long_training_ready"] is True
     assert report["blockers"] == ()
     assert "hinerv_official_forward_parity_missing" in report["nonblocking_gaps"]
+    assert (
+        "hinerv_official_feature_grid_source_forward_parity_missing"
+        in report["nonblocking_gaps"]
+    )
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["nonblocking_gaps"]
     analogue_rows = {row["surface_id"]: row for row in report["analogue_risk_rows"]}
     assert analogue_rows["snerv_official_mfu_hfr_tub_numeric_primitives"][
@@ -41,6 +45,7 @@ def test_source_parity_contract_is_false_authority_and_family_scoped() -> None:
         "snerv_official_mfu_hfr_tub_numeric_primitives",
         "snerv_local_modelsize_analogue",
         "hi_nerv_local_target_modelsize",
+        "hi_nerv_local_feature_grid_convnext_analogue",
         "hi_nerv_mlx_backend_drift",
         "pr95_hnerv_mlx_control_arm",
     }.issubset(analogue_ids)
@@ -88,10 +93,21 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
 
     assert report["required_for_long_training_ready"] is True
     assert "hi_nerv_official_feature_grid_convnext_trilinear_missing" not in report["blockers"]
+    assert "hinerv_official_feature_grid_source_forward_parity_missing" not in report["blockers"]
+    assert (
+        "hinerv_official_feature_grid_source_forward_parity_missing"
+        in report["nonblocking_gaps"]
+    )
     assert "hi_nerv_official_patch_index_path_missing" not in report["blockers"]
     assert "hi_nerv_prune_quantnoise_receiver_bitstream_pipeline_missing" not in report["blockers"]
     assert "hi_nerv_official_torchac_entropy_coder_missing" not in report["blockers"]
     assert rows["hi_nerv_official_feature_grid_convnext_trilinear"]["status"] == ("implemented_or_bound")
+    official_grid_forward = rows["hi_nerv_official_feature_grid_source_forward_parity"]
+    assert official_grid_forward["status"] == "missing_or_partial"
+    assert official_grid_forward["required_for_long_training"] is False
+    assert official_grid_forward["blockers"] == (
+        "hinerv_official_feature_grid_source_forward_parity_missing",
+    )
     assert rows["hi_nerv_official_patch_index_path"]["status"] == ("implemented_or_bound")
     assert rows["hi_nerv_prune_quantnoise_receiver_bitstream_pipeline"]["status"] == ("implemented_or_bound")
     assert rows["hi_nerv_official_torchac_entropy_coder_parity"]["status"] == ("implemented_or_bound")
@@ -103,6 +119,8 @@ def test_hinerv_grid_convnext_and_receiver_bitstream_pipeline_are_bound() -> Non
     }
     assert "OfficialGridTrilinear3D" in feature_present_symbols
     assert "official_grid_trilinear3d_forward" in feature_present_symbols
+    assert "HINERV_LOCAL_FEATURE_GRID_CONVNEXT_RECEIVER_PROOF" in feature_present_symbols
+    assert "hi_nerv_feature_grid_convnext_authority_status" in feature_present_symbols
     patch_present_symbols = {
         symbol["symbol"]
         for symbol in rows["hi_nerv_official_patch_index_path"]["symbol_rows"]
@@ -158,6 +176,15 @@ def test_source_parity_contract_records_insufficient_analogue_surfaces() -> None
     )
     assert risks["hi_nerv_local_target_modelsize"]["insufficient_for"] == (
         "official_hinerv_config_family_authority"
+    )
+    assert risks["hi_nerv_local_feature_grid_convnext_analogue"][
+        "insufficient_for"
+    ] == "official_hinerv_feature_grid_convnext_source_forward_authority"
+    assert (
+        "hinerv_local_feature_grid_sampler_differs_from_official_grid_trilinear3d"
+        in risks["hi_nerv_local_feature_grid_convnext_analogue"][
+            "remaining_blockers"
+        ]
     )
     assert risks["hi_nerv_mlx_backend_drift"]["insufficient_for"] == (
         "contest_cpu_cuda_auth_eval_authority"
@@ -326,6 +353,12 @@ def test_hinerv_official_source_audit_embeds_without_promoting_parity() -> None:
     feature_grid = rows["hi_nerv_official_feature_grid_convnext_trilinear"]
     assert feature_grid["status"] == "implemented_or_bound"
     assert feature_grid["source_audit_rows"] == ()
+    official_grid_forward = rows["hi_nerv_official_feature_grid_source_forward_parity"]
+    assert official_grid_forward["status"] == "missing_or_partial"
+    assert official_grid_forward["source_audit_rows"] == ()
+    assert "hinerv_official_feature_grid_source_forward_parity_missing" in report[
+        "nonblocking_gaps"
+    ]
     official = rows["hi_nerv_official_forward_parity"]
     assert official["status"] == "missing_or_partial"
     assert official["required_for_long_training"] is False
