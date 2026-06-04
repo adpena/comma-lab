@@ -2677,6 +2677,8 @@ def test_native_export_modelsize_candidate_consumes_official_fc_dim_solution() -
     model_size = _model_size_from_candidate(
         {
             "candidate_id": "official-modelsize-only",
+            "fc_dim": 3,
+            "snerv_fc_dim": 5,
             "modelsize_mparams": 0.05,
             "official_modelsize_solution": {
                 "schema": "official_snerv_modelsize_to_fc_dim.v1",
@@ -2695,6 +2697,8 @@ def test_native_export_modelsize_candidate_recomputes_fc_dim_when_formula_inputs
     model_size = _model_size_from_candidate(
         {
             "candidate_id": "official-modelsize-formula",
+            "fc_dim": 3,
+            "snerv_fc_dim": 5,
             "modelsize_mparams": 0.05,
             "full_data_length": 1200,
             "final_size": 384 * 512,

@@ -6638,10 +6638,6 @@ def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:
 
 
 def _fc_dim_resolution_from_candidate(candidate: Mapping[str, Any]) -> tuple[int, str]:
-    if candidate.get("fc_dim") is not None:
-        return int(candidate["fc_dim"]), "explicit_fc_dim"
-    if candidate.get("snerv_fc_dim") is not None:
-        return int(candidate["snerv_fc_dim"]), "explicit_snerv_fc_dim"
     solution = candidate.get("official_modelsize_solution")
     if isinstance(solution, Mapping) and solution.get("fc_dim") is not None:
         return int(solution["fc_dim"]), "official_modelsize_solution"
@@ -6684,6 +6680,10 @@ def _fc_dim_resolution_from_candidate(candidate: Mapping[str, Any]) -> tuple[int
             "modelsize_mparams requires official_modelsize_solution or "
             "official formula inputs; missing " + ", ".join(missing)
         )
+    if candidate.get("fc_dim") is not None:
+        return int(candidate["fc_dim"]), "explicit_fc_dim"
+    if candidate.get("snerv_fc_dim") is not None:
+        return int(candidate["snerv_fc_dim"]), "explicit_snerv_fc_dim"
     return 9, "fallback_default_missing_official_modelsize_inputs"
 
 
