@@ -17,7 +17,7 @@ import hashlib
 import json
 import shutil
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -697,6 +697,213 @@ def _build_snerv_train_time_section_byte_control(
     }
 
 
+def _snerv_train_time_section_byte_metric_payload_from_packet(
+    packet: SnervArchivePacket,
+    *,
+    packet_source: str,
+    packet_builder_scope: str,
+    refresh_call: int,
+    refresh_every_steps: int,
+) -> dict[str, Any]:
+    """Return live SNAR1 section bytes in the shared loss-adapter shape."""
+
+    section_bytes = {
+        str(name): int(value)
+        for name, value in dict(packet.section_bytes).items()
+        if int(value) > 0
+    }
+    if not section_bytes:
+        raise SnervMlxNativeExportError(
+            "live SNeRV train-time packet emitted no positive section bytes"
+        )
+    archive_bytes = _positive_int_or_none(packet.total_bytes) or len(packet.packet)
+    return {
+        "schema": "snerv_live_train_time_section_byte_metrics.v1",
+        "archive_bytes": int(archive_bytes),
+        "section_bytes": dict(sorted(section_bytes.items())),
+        "authority": "macos_mlx_research_signal_false_authority",
+        "byte_basis": "current_receiver_snar1_packet_sections",
+        "live_profile": {
+            "packet_source": str(packet_source),
+            "packet_builder_scope": str(packet_builder_scope),
+            "refresh_call": int(refresh_call),
+            "refresh_every_steps": int(refresh_every_steps),
+            "packet_sha256": _sha256_bytes(packet.packet),
+            "packet_schema": packet.schema,
+        },
+        "blockers": [
+            "live_metrics_are_snar1_packet_bytes_until_export_zip_replay"
+        ],
+    }
+
+
+def _build_snerv_live_train_time_section_byte_metrics_callback(
+    *,
+    model_size: SnervModelSizeConfig,
+    levels: int,
+    wavelet: str,
+    source_pair_indices: tuple[int, ...],
+    target_bits_per_coeff: float,
+    step_map_bits_per_coeff: float,
+    decoder_payload_codec: str,
+    lf_payload_codec: str,
+    recon_pixel_weight: np.ndarray | None,
+    recon_pixel_weight_metadata: Mapping[str, Any] | None,
+    hf_decoder_saliency_gain: float,
+    train_time_section_byte_control: Mapping[str, Any],
+    batch_size: int,
+    refresh_every_steps: int | None,
+) -> tuple[
+    Callable[[Any, Any, Mapping[str, float]], Mapping[str, Any] | None] | None,
+    dict[str, Any],
+]:
+    """Build a live current-state SNAR1 byte callback for MLX dual ascent."""
+
+    static_payload_obj = train_time_section_byte_control.get("metrics_payload")
+    static_payload = (
+        dict(static_payload_obj) if isinstance(static_payload_obj, Mapping) else None
+    )
+    refresh_every = max(1, int(refresh_every_steps or 25))
+    metadata: dict[str, Any] = {
+        "schema": "snerv_live_train_time_section_byte_metrics_callback.v1",
+        "attached": static_payload is not None,
+        "active": False,
+        "refresh_every_steps": int(refresh_every),
+        "refresh_calls": 0,
+        "cache_hits": 0,
+        "fallback_count": 0,
+        "uses_current_renderer_state": True,
+        "writes_artifacts": False,
+        "authority_class": "macos_mlx_research_signal_false_authority",
+        "packet_builder_scope": (
+            "official_mfu_hfr_tub_current_component_packet"
+            if model_size.official_mfu_hfr_tub_numeric_primitives_requested
+            else "rendered_pairs_numpy_portable_snar1_rebuild"
+        ),
+        "blockers": [],
+    }
+    if static_payload is None:
+        metadata["blockers"] = [
+            "snerv_live_section_byte_callback_requires_startup_metrics_payload"
+        ]
+        return None, metadata
+
+    cache: dict[str, Any] = {}
+
+    def _fallback_payload(reason: str) -> Mapping[str, Any] | None:
+        metadata["fallback_count"] = int(metadata.get("fallback_count", 0)) + 1
+        metadata["last_fallback_reason"] = str(reason)
+        payload = dict(static_payload)
+        payload["schema"] = "snerv_train_time_section_byte_metrics_fallback.v1"
+        payload["live_profile"] = {
+            "fallback_reason": str(reason),
+            "refresh_every_steps": int(refresh_every),
+            "packet_builder_scope": metadata["packet_builder_scope"],
+        }
+        payload["blockers"] = _ordered_unique(
+            [
+                *(
+                    str(blocker)
+                    for blocker in payload.get("blockers", ())
+                    if str(blocker)
+                ),
+                str(reason),
+            ]
+        )
+        return payload
+
+    def _build_live_payload(model_obj: Any) -> Mapping[str, Any] | None:
+        call_index = int(metadata.get("refresh_calls", 0)) + 1
+        metadata["refresh_calls"] = call_index
+        if bool(model_size.official_mfu_hfr_tub_numeric_primitives_requested):
+            export_components = getattr(model_obj, "export_official_components", None)
+            if not callable(export_components):
+                return _fallback_payload(
+                    "snerv_official_live_section_byte_export_components_missing"
+                )
+            packet = _build_official_mfu_hfr_tub_packet_from_components(
+                export_components(),
+                source_pair_indices=source_pair_indices,
+                model_size=model_size,
+                metadata_extra={
+                    "live_train_time_section_byte_probe": True,
+                    "score_aware_long_training_packet_probe": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+            )
+            packet_source = "current_official_renderer_components"
+        else:
+            render_pairs = getattr(model_obj, "render_pairs_nchw255", None)
+            if not callable(render_pairs):
+                return _fallback_payload(
+                    "snerv_live_section_byte_render_pairs_missing"
+                )
+            rendered_pairs = np.asarray(
+                render_pairs(batch_size=max(1, int(batch_size))),
+                dtype=np.float32,
+            )
+            packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+                rendered_pairs,
+                levels=int(levels),
+                wavelet=str(wavelet),
+                target_bits_per_coeff=float(target_bits_per_coeff),
+                step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+                decoder_payload_codec=str(decoder_payload_codec),
+                lf_payload_codec=str(lf_payload_codec),
+                model_size=model_size,
+                source_pair_indices=source_pair_indices,
+                recon_pixel_weight=recon_pixel_weight,
+                recon_pixel_weight_metadata=recon_pixel_weight_metadata,
+                hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
+                native_mlx_decoder_train_steps=0,
+                metadata_extra={
+                    "live_train_time_section_byte_probe": True,
+                    "score_aware_long_training_packet_probe": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+            )
+            packet_source = "current_renderer_rendered_pairs"
+        payload = _snerv_train_time_section_byte_metric_payload_from_packet(
+            packet,
+            packet_source=packet_source,
+            packet_builder_scope=str(metadata["packet_builder_scope"]),
+            refresh_call=call_index,
+            refresh_every_steps=refresh_every,
+        )
+        metadata["active"] = True
+        metadata["last_archive_bytes"] = int(payload["archive_bytes"])
+        metadata["last_section_bytes"] = dict(payload["section_bytes"])
+        metadata["last_packet_source"] = packet_source
+        cache.clear()
+        cache.update(payload)
+        return dict(payload)
+
+    def _callback(
+        model_obj: Any,
+        _idx: Any,
+        _loss_weights: Mapping[str, float],
+    ) -> Mapping[str, Any] | None:
+        call_count = int(metadata.get("callback_calls", 0)) + 1
+        metadata["callback_calls"] = call_count
+        should_refresh = not cache or ((call_count - 1) % refresh_every == 0)
+        if not should_refresh:
+            metadata["cache_hits"] = int(metadata.get("cache_hits", 0)) + 1
+            return dict(cache)
+        try:
+            return _build_live_payload(model_obj)
+        except Exception as exc:  # Train-time byte pressure must fail soft.
+            metadata["last_exception"] = f"{type(exc).__name__}: {exc}"
+            return _fallback_payload(
+                f"snerv_live_section_byte_refresh_failed_{type(exc).__name__}"
+            )
+
+    return _callback, metadata
+
+
 def _positive_int_or_none(value: Any) -> int | None:
     try:
         out = int(value)
@@ -911,6 +1118,7 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_epochs: int = 0,
     score_aware_long_training_lr: float = 1.0e-3,
     score_aware_long_training_batch_pairs: int = 2,
+    score_aware_long_training_section_byte_refresh_every_steps: int = 25,
     score_aware_long_training_optimizer: str = "pact_muon_adamw",
     score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     score_aware_long_training_weight_decay: float | None = 1.0e-4,
@@ -1141,6 +1349,18 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_score_aware_long_training_batch_pairs",
                     score_aware_long_training_batch_pairs,
+                ),
+            )
+        ),
+        section_byte_refresh_every_steps=int(
+            candidate.get(
+                "score_aware_long_training_section_byte_refresh_every_steps",
+                candidate.get(
+                    "snerv_score_aware_long_training_section_byte_refresh_every_steps",
+                    candidate.get(
+                        "train_time_section_byte_refresh_every_steps",
+                        score_aware_long_training_section_byte_refresh_every_steps,
+                    ),
                 ),
             )
         ),
@@ -2262,6 +2482,7 @@ def _run_score_aware_long_training_attachment(
     hard_byte_ceiling: int | None,
     learning_rate: float,
     batch_pairs: int,
+    section_byte_refresh_every_steps: int,
     optimizer_kind: str,
     grad_clip_max_norm: float | None,
     weight_decay: float | None,
@@ -2344,6 +2565,7 @@ def _run_score_aware_long_training_attachment(
         "executed": False,
         "training_kind": training_kind,
         "optimizer_kind": str(optimizer_kind),
+        "section_byte_refresh_every_steps": int(section_byte_refresh_every_steps),
         "checkpoint_retention": {
             "schema": "snerv_mlx_score_aware_checkpoint_retention.v1",
             "keep_last_n": checkpoint_retention_keep_last_n,
@@ -2759,6 +2981,25 @@ def _run_score_aware_long_training_attachment(
             coder_qat_loss_weight_map,
             hard_byte_ceiling=hard_byte_ceiling,
         )
+        (
+            live_train_time_section_byte_metrics,
+            live_train_time_section_byte_metrics_metadata,
+        ) = _build_snerv_live_train_time_section_byte_metrics_callback(
+            model_size=model_size,
+            levels=int(levels),
+            wavelet=str(wavelet),
+            source_pair_indices=source_pair_indices,
+            target_bits_per_coeff=float(target_bits_per_coeff),
+            step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+            decoder_payload_codec=str(decoder_payload_codec),
+            lf_payload_codec=str(lf_payload_codec),
+            recon_pixel_weight=recon_pixel_weight,
+            recon_pixel_weight_metadata=recon_pixel_weight_metadata,
+            hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
+            train_time_section_byte_control=train_time_section_byte_control,
+            batch_size=max(1, int(batch_pairs)),
+            refresh_every_steps=int(section_byte_refresh_every_steps),
+        )
         archive_section_qat_blockers = [
             str(blocker)
             for blocker in archive_section_qat_policy.get("blockers") or ()
@@ -2890,6 +3131,9 @@ def _run_score_aware_long_training_attachment(
                         train_time_section_byte_control
                     )
                 ),
+                "live_train_time_section_byte_metrics": (
+                    live_train_time_section_byte_metrics_metadata
+                ),
                 "pr95_faithful_curriculum_enabled": bool(
                     pr95_faithful_curriculum_enabled
                 ),
@@ -2910,7 +3154,9 @@ def _run_score_aware_long_training_attachment(
         }
         if train_time_section_byte_control.get("metrics_payload") is not None:
             bundle_kwargs["train_time_section_byte_metrics"] = (
-                _train_time_section_byte_metrics
+                live_train_time_section_byte_metrics
+                if live_train_time_section_byte_metrics is not None
+                else _train_time_section_byte_metrics
             )
         teacher_probe_bundle = RendererBundle(**bundle_kwargs)
         scorer_teacher = None
@@ -3418,6 +3664,9 @@ def _run_score_aware_long_training_attachment(
             "train_time_section_byte_control": train_time_section_byte_control,
             "train_time_section_byte_control_bound": bool(
                 train_time_section_byte_control.get("active") is True
+            ),
+            "live_train_time_section_byte_metrics": (
+                live_train_time_section_byte_metrics_metadata
             ),
             "latent_qat_bound": bool(latent_qat_cfg.enabled),
             "teacher_binding": teacher_binding,

@@ -9,6 +9,7 @@ import inspect
 import json
 import sys
 import types
+from collections.abc import Mapping
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -16,6 +17,7 @@ import numpy as np
 import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    SnervArchivePacket,
     decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frames,
     unpack_snerv_archive,
@@ -314,6 +316,195 @@ def test_snerv_train_time_section_byte_control_binds_decoder_and_lf_only() -> No
     pending = {row["section_name"] for row in control["pending_section_rows"]}
     assert {"metadata_payload", "step_map_packet"}.issubset(pending)
     assert control["blockers"] == []
+
+
+def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    calls: list[np.ndarray] = []
+
+    class FakeModel:
+        def render_pairs_nchw255(self, *, batch_size: int) -> np.ndarray:
+            value = 10.0 + len(calls)
+            rendered = np.full((2, 2, 3, 16, 16), value, dtype=np.float32)
+            calls.append(rendered.copy())
+            assert batch_size == 2
+            return rendered
+
+    def fake_packet_builder(pairs_nchw255: np.ndarray, **kwargs) -> SnervArchivePacket:
+        packet_index = len(calls)
+        assert np.asarray(pairs_nchw255).shape == (2, 2, 3, 16, 16)
+        assert kwargs["native_mlx_decoder_train_steps"] == 0
+        packet = f"SNAR-live-{packet_index}".encode("ascii")
+        return SnervArchivePacket(
+            packet=packet,
+            schema="snerv_inverse_steg_archive.v1",
+            section_order=(
+                "metadata_payload",
+                "lf_payload",
+                "decoder_payload",
+                "step_map_packet",
+            ),
+            section_bytes={
+                "metadata_payload": 11,
+                "lf_payload": 100 + packet_index,
+                "decoder_payload": 200 + packet_index,
+                "step_map_packet": 3,
+            },
+            section_sha256={},
+            section_reports={},
+            metadata={"packet_index": packet_index},
+            header_bytes=7,
+            total_bytes=314 + packet_index,
+        )
+
+    monkeypatch.setattr(
+        mod,
+        "build_snerv_mlx_native_packet_from_numpy_pairs",
+        fake_packet_builder,
+    )
+    callback, metadata = mod._build_snerv_live_train_time_section_byte_metrics_callback(
+        model_size=SnervModelSizeConfig(fc_dim=4, emb_size=1, patch_radius=1),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(0, 1),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        train_time_section_byte_control={
+            "metrics_payload": {
+                "schema": "snerv_train_time_section_byte_metrics.v1",
+                "archive_bytes": 10,
+                "section_bytes": {"decoder_payload": 5},
+            }
+        },
+        batch_size=2,
+        refresh_every_steps=2,
+    )
+
+    assert callback is not None
+    first = dict(callback(FakeModel(), None, {}))
+    second = dict(callback(FakeModel(), None, {}))
+    third = dict(callback(FakeModel(), None, {}))
+
+    assert first["archive_bytes"] == 315
+    assert first["section_bytes"]["decoder_payload"] == 201
+    assert second == first
+    assert third["archive_bytes"] == 316
+    assert third["section_bytes"]["lf_payload"] == 102
+    assert len(calls) == 2
+    assert metadata["active"] is True
+    assert metadata["refresh_calls"] == 2
+    assert metadata["cache_hits"] == 1
+    assert metadata["last_section_bytes"]["decoder_payload"] == 202
+    assert [
+        key
+        for key, value in third.items()
+        if isinstance(value, int | float) and not isinstance(value, bool)
+    ] == ["archive_bytes"]
+
+
+def test_snerv_live_section_byte_metrics_callback_uses_official_components(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    captured: dict[str, object] = {}
+    official_model_size = SnervModelSizeConfig(
+        fc_dim=4,
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+    )
+
+    class FakeOfficialModel:
+        def export_official_components(self) -> dict[str, np.ndarray]:
+            captured["export_official_components_called"] = True
+            return {"low": np.zeros((1, 6, 8, 8), dtype=np.float32)}
+
+        def render_pairs_nchw255(self, *, batch_size: int) -> np.ndarray:
+            raise AssertionError(
+                "official live byte metrics must not refit rendered pairs"
+            )
+
+    def fake_official_packet_builder(
+        components: Mapping[str, object],
+        **kwargs,
+    ) -> SnervArchivePacket:
+        captured["components"] = components
+        captured["source_pair_indices"] = kwargs["source_pair_indices"]
+        captured["model_size_adapter"] = kwargs["model_size"].adapter
+        return SnervArchivePacket(
+            packet=b"SNAR-official-live",
+            schema="snerv_inverse_steg_archive.v1",
+            section_order=(
+                "metadata_payload",
+                "lf_payload",
+                "decoder_payload",
+                "step_map_packet",
+            ),
+            section_bytes={
+                "metadata_payload": 9,
+                "decoder_payload": 321,
+            },
+            section_sha256={},
+            section_reports={},
+            metadata={"official": True},
+            header_bytes=5,
+            total_bytes=400,
+        )
+
+    monkeypatch.setattr(
+        mod,
+        "_build_official_mfu_hfr_tub_packet_from_components",
+        fake_official_packet_builder,
+    )
+    callback, metadata = mod._build_snerv_live_train_time_section_byte_metrics_callback(
+        model_size=official_model_size,
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(3,),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        train_time_section_byte_control={
+            "metrics_payload": {
+                "schema": "snerv_train_time_section_byte_metrics.v1",
+                "archive_bytes": 10,
+                "section_bytes": {"decoder_payload": 5},
+            }
+        },
+        batch_size=1,
+        refresh_every_steps=1,
+    )
+
+    assert callback is not None
+    payload = dict(callback(FakeOfficialModel(), None, {}))
+    assert payload["archive_bytes"] == 400
+    assert payload["section_bytes"] == {
+        "decoder_payload": 321,
+        "metadata_payload": 9,
+    }
+    assert payload["live_profile"]["packet_source"] == (
+        "current_official_renderer_components"
+    )
+    assert metadata["packet_builder_scope"] == (
+        "official_mfu_hfr_tub_current_component_packet"
+    )
+    assert captured["export_official_components_called"] is True
+    assert captured["source_pair_indices"] == (3,)
+    assert (
+        captured["model_size_adapter"]
+        == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
 
 
 def test_snerv_archive_section_qat_policy_fails_closed_on_empty_weights() -> None:
@@ -1384,6 +1575,13 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         "decoder_payload": "coder_qat_quant_residual",
         "lf_payload": "latent_qat_quant_residual",
     }
+    live_section_metrics = long_training["live_train_time_section_byte_metrics"]
+    assert live_section_metrics["schema"] == (
+        "snerv_live_train_time_section_byte_metrics_callback.v1"
+    )
+    assert live_section_metrics["active"] is True
+    assert live_section_metrics["uses_current_renderer_state"] is True
+    assert live_section_metrics["last_section_bytes"]["decoder_payload"] > 0
     assert long_training["latent_qat_bound"] is True
     assert (
         report["score_aware_long_training_scorer_input_distribution_guard_bound"]
