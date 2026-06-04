@@ -219,15 +219,20 @@ def _resolve_decoder_codec(
     if explicit is not None:
         resolved = explicit
         source = "explicit_arg"
+    elif candidate_codec is not None and runner_default_like:
+        resolved = candidate_codec
+        source = "modelsize_candidate_decoder_codec"
     elif runner is not None:
         resolved = runner
         source = "runner_compact_decoder_codec"
-    elif candidate_codec is not None:
-        resolved = HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC
-        source = "checkpoint_export_default"
     else:
         resolved = HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC
         source = "checkpoint_export_default"
+    candidate_propagates = source == "modelsize_candidate_decoder_codec"
+    candidate_ignored = candidate_codec is not None and not candidate_propagates
+    blockers = (
+        ["candidate_decoder_codec_not_export_authority"] if candidate_ignored else []
+    )
     return {
         "schema": "hinerv_checkpoint_decoder_codec_resolution.v1",
         "explicit_arg": explicit_arg,
@@ -239,11 +244,16 @@ def _resolve_decoder_codec(
         "candidate_codec_takes_precedence_over_runner_default": bool(
             source == "modelsize_candidate_decoder_codec" and runner_default_like
         ),
-        "modelsize_candidate_decoder_codec_is_capacity_authority": False,
+        "modelsize_candidate_decoder_codec_propagates_to_export": candidate_propagates,
+        "modelsize_candidate_decoder_codec_is_capacity_authority": candidate_propagates,
         "candidate_codec_advisory_reason": (
-            "modelsize candidates describe graph capacity; decoder codec promotion is "
-            "measured by portfolio_auto or an explicit runner/export override"
+            "modelsize candidate decoder_codec propagated through checkpoint export "
+            "because runner codec was absent/default-like"
+            if candidate_propagates
+            else "modelsize candidates describe graph capacity; decoder codec promotion is "
+            "measured by the resolved export codec"
         ),
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 

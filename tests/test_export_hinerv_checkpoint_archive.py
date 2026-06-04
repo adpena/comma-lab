@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 TOOL_PATH = (
@@ -55,6 +57,107 @@ def test_checkpoint_state_path_fails_closed_for_missing_meta_key() -> None:
         tool._checkpoint_state_path({}, state_kind="live")
 
 
+def test_candidate_decoder_codec_reaches_archive_export_when_runner_is_default(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tool = _load_tool()
+    state_path = tmp_path / "epoch0001.ema_shadow.state.npsd"
+    state_path.write_bytes(b"state")
+    meta_path = tmp_path / "checkpoint_meta.json"
+    meta_path.write_text(
+        json.dumps(
+            {
+                "global_epoch": 11,
+                "ema_shadow_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup_path = tmp_path / "startup.json"
+    startup_path.write_text(
+        json.dumps(
+            {
+                "modelsize_candidate": {
+                    "candidate_id": "hinerv_candidate_codec_export",
+                    "num_pairs": 2,
+                    "latent_dim": 8,
+                    "embed_dim": 8,
+                    "decoder_channel": 6,
+                    "decoder_codec": "int7_mixed",
+                },
+                "command_args": {
+                    "num_pairs": 2,
+                    "compact_decoder_codec": "portfolio_auto",
+                },
+                "hard_byte_ceilings": [1000],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    class _FakeModel:
+        def __init__(self, cfg: object) -> None:
+            self.cfg = cfg
+
+    class _FakeAdapter:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def import_state_dict(self, _model: object, _path: Path) -> None:
+            pass
+
+    captured: dict[str, object] = {}
+
+    def _fake_export(_model: object, output_dir: Path, **kwargs: object):
+        captured.update(kwargs)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        archive_path = output_dir / "archive.zip"
+        archive_path.write_bytes(b"archive")
+        return archive_path, "fake_sha256", archive_path.stat().st_size
+
+    monkeypatch.setattr(tool, "HinervSubstrateMLX", _FakeModel)
+    monkeypatch.setattr(tool, "RendererBundle", lambda **kwargs: kwargs)
+    monkeypatch.setattr(tool, "MlxScoreAwareAdapter", _FakeAdapter)
+    monkeypatch.setattr(
+        tool,
+        "unpack_state_dict_numpy",
+        lambda _payload: {"any": np.zeros((1,), dtype=np.float32)},
+    )
+    monkeypatch.setattr(
+        tool,
+        "_modelsize_integrity_profile",
+        lambda *_args, **_kwargs: {
+            "schema": "hinerv_checkpoint_modelsize_integrity.v1",
+            "profile_ready": True,
+            "matches_candidate_controls": True,
+            "blockers": [],
+        },
+    )
+    monkeypatch.setattr(tool, "export_hi_nerv_mlx_archive", _fake_export)
+
+    report = tool.export_checkpoint_archive(
+        startup_json=startup_path,
+        checkpoint_meta=meta_path,
+        output_dir=tmp_path / "out",
+        repo_root=tmp_path,
+    )
+
+    assert report["decoder_codec"] == "int7_mixed"
+    assert captured["decoder_codec"] == "int7_mixed"
+    assert (
+        report["decoder_codec_resolution"]["resolution_source"]
+        == "modelsize_candidate_decoder_codec"
+    )
+    assert (
+        report["decoder_codec_resolution"][
+            "modelsize_candidate_decoder_codec_propagates_to_export"
+        ]
+        is True
+    )
+    assert "candidate_decoder_codec_not_export_authority" not in report["blockers"]
+
+
 def test_blockers_price_archive_and_receiver_proof() -> None:
     tool = _load_tool()
 
@@ -63,6 +166,7 @@ def test_blockers_price_archive_and_receiver_proof() -> None:
         hard_byte_ceilings=[178_000, 216_000],
         receiver_proof={},
         receiver_proof_requested=False,
+        modelsize_integrity={"blockers": []},
     )
     assert "archive_bytes_exceed_tightest_hard_ceiling" not in blockers
     assert "receiver_proof_not_requested" in blockers
@@ -73,6 +177,7 @@ def test_blockers_price_archive_and_receiver_proof() -> None:
         hard_byte_ceilings=[178_000, 216_000],
         receiver_proof={},
         receiver_proof_requested=True,
+        modelsize_integrity={"blockers": []},
     )
     assert "archive_bytes_exceed_tightest_hard_ceiling" in blockers
     assert "receiver_proof_not_ready" in blockers
@@ -82,6 +187,7 @@ def test_blockers_price_archive_and_receiver_proof() -> None:
         hard_byte_ceilings=[178_000],
         receiver_proof={"runtime_consumption_proof_ready": True},
         receiver_proof_requested=True,
+        modelsize_integrity={"blockers": []},
     )
     assert "archive_bytes_exceed_tightest_hard_ceiling" not in blockers
     assert "receiver_proof_not_ready" not in blockers
