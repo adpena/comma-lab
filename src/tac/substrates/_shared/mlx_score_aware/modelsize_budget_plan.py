@@ -88,6 +88,12 @@ _SOURCE_BOUND_CAPACITY_PATHS = (
     ("solved_budget", "official_controls", "--modelsize"),
     ("solved_budget", "official_controls", "fc_dim"),
 )
+_CAPACITY_CONTROL_CONTAINER_KEYS = (
+    "modelsize_candidate",
+    "_modelsize_candidate",
+    "candidate",
+    "selected_candidate",
+)
 _SOURCE_BOUND_CONTRACT_REQUIRED_TRUE_FIELDS = (
     "nominal_payload_bytes_are_planner_prior_only",
     "nominal_under_ceiling_is_not_promotion_authority",
@@ -379,6 +385,8 @@ def _resolve_hard_byte_ceiling(
             row,
             (
                 "hard_byte_ceiling",
+                "hard_byte_ceiling_requested_by_candidate_or_startup",
+                "hard_byte_ceiling_enforced_by_export",
                 "archive_byte_ceiling",
                 "byte_ceiling",
                 "max_archive_bytes",
@@ -627,9 +635,12 @@ def _is_sha256_hex(value: str | None) -> bool:
 
 
 def _has_source_bound_capacity_control(row: Mapping[str, Any]) -> bool:
-    contract = row.get("modelsize_control_contract")
-    if isinstance(contract, Mapping):
-        return _modelsize_control_contract_is_source_bound(contract)
+    for candidate in _iter_capacity_control_rows(row):
+        contract = candidate.get("modelsize_control_contract")
+        if isinstance(contract, Mapping) and _modelsize_control_contract_is_source_bound(
+            contract
+        ):
+            return True
     return False
 
 
@@ -654,9 +665,18 @@ def _modelsize_control_contract_is_source_bound(contract: Mapping[str, Any]) -> 
 
 def _has_capacity_control_marker(row: Mapping[str, Any]) -> bool:
     return any(
-        _lookup_path(row, path) is not None
+        _lookup_path(candidate, path) is not None
+        for candidate in _iter_capacity_control_rows(row)
         for path in _SOURCE_BOUND_CAPACITY_PATHS
     )
+
+
+def _iter_capacity_control_rows(row: Mapping[str, Any]) -> Iterable[Mapping[str, Any]]:
+    yield row
+    for key in _CAPACITY_CONTROL_CONTAINER_KEYS:
+        value = row.get(key)
+        if isinstance(value, Mapping):
+            yield value
 
 
 def _lookup_path(row: Mapping[str, Any], path: Sequence[str]) -> Any:

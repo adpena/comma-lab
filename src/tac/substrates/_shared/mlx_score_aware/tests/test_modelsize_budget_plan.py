@@ -317,6 +317,45 @@ def test_modelsize_budget_plan_blocks_bare_modelsize_labels_as_fake_controls() -
     )
 
 
+def test_modelsize_budget_plan_accepts_exporter_nested_control_contract() -> None:
+    rows = [
+        {
+            "row_id": "export_tiny",
+            "archive_bytes": 20_000,
+            "nonrate_score": 0.240,
+            "modelsize_candidate": {
+                "modelsize_mparams": 0.04,
+                "modelsize_control_contract": _source_bound_modelsize_contract(
+                    "snerv"
+                ),
+            },
+            **_receiver_proof_fields("export_tiny"),
+        },
+        {
+            "row_id": "export_small",
+            "archive_bytes": 40_000,
+            "nonrate_score": 0.205,
+            "hard_byte_ceiling_requested_by_candidate_or_startup": 50_000,
+            "modelsize_candidate": {
+                "fc_dim": 16,
+                "modelsize_control_contract": _source_bound_modelsize_contract(
+                    "snerv"
+                ),
+            },
+            **_receiver_proof_fields("export_small"),
+        },
+    ]
+
+    plan = build_modelsize_budget_plan(rows, carrier_id="snerv")
+
+    assert plan["status"] == "receiver_closed_modelsize_budget_selected"
+    assert plan["hard_byte_ceiling"] == 50_000
+    assert plan["selected_under_hard_byte_ceiling"] is True
+    assert all(point["source_bound_capacity_control"] for point in plan["points"])
+    assert "source_bound_modelsize_or_fc_dim_missing" not in plan["blockers"]
+    assert "modelsize_control_contract_missing_or_invalid" not in plan["blockers"]
+
+
 def test_modelsize_budget_plan_rejects_bare_receiver_proof_boolean_as_advisory() -> None:
     plan = build_modelsize_budget_plan(
         [

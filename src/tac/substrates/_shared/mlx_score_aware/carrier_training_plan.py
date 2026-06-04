@@ -368,7 +368,14 @@ def _modelsize_budget_plan(
 
 
 def _receiver_closed_modelsize_budget_ready(plan: Mapping[str, Any]) -> bool:
+    blockers = {str(blocker) for blocker in plan.get("blockers", ())}
+    fake_or_unbound_control_blockers = {
+        "source_bound_modelsize_or_fc_dim_missing",
+        "modelsize_control_contract_missing_or_invalid",
+    }
     return (
         plan.get("status") == _RECEIVER_CLOSED_MODELSIZE_STATUS
         and plan.get("receiver_closed_selected_archive_bytes") is not None
+        and not (blockers & fake_or_unbound_control_blockers)
+        and plan.get("selected_under_hard_byte_ceiling") is not False
     )

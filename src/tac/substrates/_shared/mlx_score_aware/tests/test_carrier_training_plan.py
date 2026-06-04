@@ -28,6 +28,26 @@ def _all_stack_ready() -> dict[str, bool]:
     }
 
 
+def _source_bound_modelsize_contract(family: str = "hi_nerv") -> dict[str, object]:
+    return {
+        "schema": "nerv_modelsize_control_contract.v1",
+        "family": family,
+        "control_semantics": "unit_receiver_visible_capacity_control",
+        "modelsize_mparams_caps_archive_zip_bytes": False,
+        "nominal_payload_bytes_are_planner_prior_only": True,
+        "nominal_under_ceiling_is_not_promotion_authority": True,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": True,
+        "trained_archive_export_required_for_score_or_rate_claim": True,
+        "archive_bytes_authority_required": True,
+        "mutates_receiver_visible_architecture": family == "hi_nerv",
+        "mutates_receiver_visible_fc_dim": family == "snerv",
+        "mutates_trained_parameter_count": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _receiver_closed_modelsize_rows() -> list[dict[str, object]]:
     return [
         {
@@ -43,6 +63,7 @@ def _receiver_closed_modelsize_rows() -> list[dict[str, object]]:
             "receiver_proof_sha256": "b" * 64,
             "receiver_proof_axis_tag": "[macOS-CPU advisory]",
             "num_pairs": 600,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
         },
         {
             "row_id": "small",
@@ -57,6 +78,7 @@ def _receiver_closed_modelsize_rows() -> list[dict[str, object]]:
             "receiver_proof_sha256": "d" * 64,
             "receiver_proof_axis_tag": "[macOS-CPU advisory]",
             "num_pairs": 600,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
         },
         {
             "row_id": "medium",
@@ -71,7 +93,19 @@ def _receiver_closed_modelsize_rows() -> list[dict[str, object]]:
             "receiver_proof_sha256": "f" * 64,
             "receiver_proof_axis_tag": "[macOS-CPU advisory]",
             "num_pairs": 600,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
         },
+    ]
+
+
+def _unbound_receiver_closed_modelsize_rows() -> list[dict[str, object]]:
+    return [
+        {
+            key: value
+            for key, value in row.items()
+            if key != "modelsize_control_contract"
+        }
+        for row in _receiver_closed_modelsize_rows()
     ]
 
 
@@ -285,9 +319,39 @@ def test_advisory_modelsize_budget_blocks_training_ready() -> None:
         is None
     )
     assert "receiver_closed_modelsize_budget_ladder_missing" in row["dispatch_blockers"]
+
+
+def test_unbound_modelsize_controls_block_long_training_readiness() -> None:
+    row = build_score_aware_carrier_training_plan(
+        {
+            "d_seg": 0.025,
+            "advisory_score": 0.19,
+            "g3_adjoint_exact": True,
+            "latent_jvp_norm_max": 2.0e-3,
+            "modelsize_knob_present": True,
+            "modelsize_budget_rows": _unbound_receiver_closed_modelsize_rows(),
+            **_all_stack_ready(),
+        },
+        carrier_id="snerv",
+    )
+
     assert (
-        "modelsize_budget:modelsize_budget_selection_is_advisory_or_projected"
+        row["modelsize_budget_plan_status"]
+        == "receiver_closed_modelsize_budget_selected"
+    )
+    assert row["modelsize_budget_receiver_closed_ready"] is False
+    assert row["score_aware_training_ready"] is False
+    assert (
+        "modelsize_budget:source_bound_modelsize_or_fc_dim_missing"
         in row["dispatch_blockers"]
+    )
+    assert (
+        "modelsize_budget:modelsize_control_contract_missing_or_invalid"
+        in row["dispatch_blockers"]
+    )
+    assert (
+        row["planner_action"]
+        == "run_receiver_closed_modelsize_ladder_before_score_aware_training"
     )
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
