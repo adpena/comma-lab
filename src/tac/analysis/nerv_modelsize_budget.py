@@ -824,6 +824,47 @@ def build_hinerv_config_from_size_knobs(
     )
 
 
+def build_hinerv_config_from_modelsize_candidate(candidate: Mapping[str, Any]):
+    """Build the receiver-visible HiNeRV config encoded by a size candidate."""
+
+    if not isinstance(candidate, Mapping):
+        raise NervModelSizeBudgetError("HiNeRV modelsize candidate must be a mapping")
+    if candidate.get("schema") != "hinerv_modelsize_candidate.v1":
+        raise NervModelSizeBudgetError(
+            "HiNeRV modelsize candidate schema must be hinerv_modelsize_candidate.v1"
+        )
+    if candidate.get("family") != "hi_nerv":
+        raise NervModelSizeBudgetError(
+            "HiNeRV modelsize candidate family must be hi_nerv"
+        )
+    return build_hinerv_config_from_size_knobs(
+        num_pairs=int(candidate["num_pairs"]),
+        latent_dim=int(candidate["latent_dim"]),
+        embed_dim=int(candidate["embed_dim"]),
+        decoder_channel=int(candidate["decoder_channel"]),
+        use_hierarchical_feature_grid=bool(
+            candidate.get("use_hierarchical_feature_grid")
+        ),
+        use_convnext_blocks=bool(candidate.get("use_convnext_blocks")),
+        local_grid_levels=int(candidate.get("local_grid_levels", 2)),
+        local_grid_channels=int(candidate.get("local_grid_channels", 4)),
+        convnext_mlp_ratio=int(candidate.get("convnext_mlp_ratio", 2)),
+        convnext_kernel_size=int(candidate.get("convnext_kernel_size", 7)),
+        mid_injection_block_index=int(
+            candidate.get(
+                "mid_injection_block_index",
+                HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
+            )
+        ),
+        fine_injection_block_index=int(
+            candidate.get(
+                "fine_injection_block_index",
+                HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
+            )
+        ),
+    )
+
+
 def _count_hinerv_params(cfg: Any) -> tuple[int, int, int]:
     """Closed-form parameter count for ``tac.substrates.hi_nerv.architecture``."""
 
@@ -2306,6 +2347,7 @@ __all__ = [
     "SnervModelSizeCandidate",
     "analyze_hinerv_modelsize_candidate",
     "analyze_snerv_modelsize_candidate",
+    "build_hinerv_config_from_modelsize_candidate",
     "build_hinerv_config_from_size_knobs",
     "build_hinerv_modelsize_budget_report",
     "build_snerv_modelsize_budget_report",

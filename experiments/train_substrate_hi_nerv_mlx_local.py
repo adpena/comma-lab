@@ -48,7 +48,7 @@ from tac.adaptation.hard_pair_indices import (
 )
 from tac.analysis.nerv_modelsize_budget import (
     MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS,
-    build_hinerv_config_from_size_knobs,
+    build_hinerv_config_from_modelsize_candidate,
     modelsize_control_precedence_contract,
 )
 from tac.analysis.nerv_modelsize_ladder import (
@@ -884,26 +884,7 @@ def _config_from_args(
     )
     if candidate:
         _reject_modelsize_candidate_cli_config_overrides(args)
-        cfg = build_hinerv_config_from_size_knobs(
-            num_pairs=int(candidate["num_pairs"]),
-            latent_dim=int(candidate["latent_dim"]),
-            embed_dim=int(candidate["embed_dim"]),
-            decoder_channel=int(candidate["decoder_channel"]),
-            use_hierarchical_feature_grid=bool(
-                candidate.get("use_hierarchical_feature_grid")
-            ),
-            use_convnext_blocks=bool(candidate.get("use_convnext_blocks")),
-            local_grid_levels=int(candidate.get("local_grid_levels", 2)),
-            local_grid_channels=int(candidate.get("local_grid_channels", 4)),
-            convnext_mlp_ratio=int(candidate.get("convnext_mlp_ratio", 2)),
-            convnext_kernel_size=int(candidate.get("convnext_kernel_size", 7)),
-            mid_injection_block_index=int(
-                candidate.get("mid_injection_block_index", 1)
-            ),
-            fine_injection_block_index=int(
-                candidate.get("fine_injection_block_index", 4)
-            ),
-        )
+        cfg = build_hinerv_config_from_modelsize_candidate(candidate)
         if int(args.output_height) != int(cfg.output_height) or int(
             args.output_width
         ) != int(cfg.output_width):

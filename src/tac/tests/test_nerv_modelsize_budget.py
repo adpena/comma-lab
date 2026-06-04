@@ -15,6 +15,7 @@ from tac.analysis.nerv_modelsize_budget import (
     NervModelSizeBudgetError,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
+    build_hinerv_config_from_modelsize_candidate,
     build_hinerv_config_from_size_knobs,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
@@ -113,6 +114,45 @@ def test_hinerv_modelsize_counts_official_grid_convnext_controls() -> None:
     assert row.total_trainable_params == model.num_parameters()
     assert row.decoder_trainable_params > row.latent_trainable_params
     assert row.score_claim is False
+
+
+def test_hinerv_modelsize_candidate_builds_same_receiver_config() -> None:
+    row = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=17,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=10,
+        decoder_codec="int4_mixed",
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+        mid_injection_block_index=1,
+        fine_injection_block_index=4,
+    )
+    cfg_from_candidate = build_hinerv_config_from_modelsize_candidate(row.as_dict())
+    cfg_from_knobs = build_hinerv_config_from_size_knobs(
+        num_pairs=17,
+        latent_dim=12,
+        embed_dim=16,
+        decoder_channel=10,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=3,
+        mid_injection_block_index=1,
+        fine_injection_block_index=4,
+    )
+
+    assert cfg_from_candidate == cfg_from_knobs
+    assert HinervSubstrate(cfg_from_candidate).num_parameters() == (
+        row.total_trainable_params
+    )
 
 
 def test_hinerv_modelsize_candidate_id_separates_graph_controls() -> None:

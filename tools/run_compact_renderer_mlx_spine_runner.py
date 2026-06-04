@@ -75,6 +75,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     SNERV_MODELSIZE_CONTROL_PROFILES,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
+    build_hinerv_config_from_modelsize_candidate,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
     enumerate_hinerv_modelsize_candidates,
@@ -8177,6 +8178,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
             candidate_curriculum_plan=launch_curriculum_plan,
+            modelsize_candidate=candidate or None,
         )
     except Exception as exc:
         blocker_report = _base_report(
@@ -11350,6 +11352,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     repo_root: Path,
     pr95_curriculum_total_epochs: int | None = None,
     candidate_curriculum_plan: Mapping[str, Any] | None = None,
+    modelsize_candidate: Mapping[str, Any] | None = None,
     sparse_prioritized_target_hydration: bool = False,
 ) -> Any:
     pairs = int(num_pairs)
@@ -11392,7 +11395,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         decode_mlx_targets,
         run_mlx_score_aware_full_main,
     )
-    from tac.substrates.hi_nerv.architecture import HinervConfig
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
     from tac.substrates.hinton_distilled_scorer_surrogate import (
@@ -11454,28 +11456,79 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "pass either --recon-pixel-weight-path or "
             "--auto-segnet-boundary-recon-weight, not both"
         )
-    cfg = HinervConfig(
-        latent_dim_coarse=max(1, int(latent_dim) // 2),
-        latent_dim_mid=max(1, int(latent_dim)),
-        latent_dim_fine=max(1, int(latent_dim) * 2),
-        embed_dim=max(1, int(embed_dim)),
-        initial_grid_h=3,
-        initial_grid_w=4,
-        decoder_channels=tuple([max(1, int(decoder_channel))] * 7),
-        sin_frequency=30.0,
-        num_upsample_blocks=7,
-        mid_injection_block_index=int(mid_injection_block_index),
-        fine_injection_block_index=int(fine_injection_block_index),
-        num_pairs=pairs,
-        output_height=384,
-        output_width=512,
-        use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
-        use_convnext_blocks=bool(use_convnext_blocks),
-        local_grid_levels=int(local_grid_levels),
-        local_grid_channels=int(local_grid_channels),
-        convnext_mlp_ratio=int(convnext_mlp_ratio),
-        convnext_kernel_size=int(convnext_kernel_size),
-    )
+    candidate_for_config = dict(modelsize_candidate or {})
+    if candidate_for_config:
+        if hard_byte_ceiling is None:
+            candidate_hard_byte_ceiling = int(
+                candidate_for_config.get("hard_byte_ceiling") or 0
+            )
+            if candidate_hard_byte_ceiling <= 0:
+                raise CompactRendererMlxSpineRunnerError(
+                    "HiNeRV modelsize candidate hard_byte_ceiling must be positive"
+                )
+            hard_byte_ceiling = candidate_hard_byte_ceiling
+        cfg = build_hinerv_config_from_modelsize_candidate(candidate_for_config)
+        expected = {
+            "num_pairs": int(pairs),
+            "latent_dim_mid": max(1, int(latent_dim)),
+            "embed_dim": max(1, int(embed_dim)),
+            "decoder_channel": max(1, int(decoder_channel)),
+            "use_hierarchical_feature_grid": bool(use_hierarchical_feature_grid),
+            "use_convnext_blocks": bool(use_convnext_blocks),
+            "local_grid_levels": int(local_grid_levels),
+            "local_grid_channels": int(local_grid_channels),
+            "convnext_mlp_ratio": int(convnext_mlp_ratio),
+            "convnext_kernel_size": int(convnext_kernel_size),
+            "mid_injection_block_index": int(mid_injection_block_index),
+            "fine_injection_block_index": int(fine_injection_block_index),
+        }
+        observed = {
+            "num_pairs": int(cfg.num_pairs),
+            "latent_dim_mid": int(cfg.latent_dim_mid),
+            "embed_dim": int(cfg.embed_dim),
+            "decoder_channel": int(cfg.decoder_channels[0]),
+            "use_hierarchical_feature_grid": bool(cfg.use_hierarchical_feature_grid),
+            "use_convnext_blocks": bool(cfg.use_convnext_blocks),
+            "local_grid_levels": int(cfg.local_grid_levels),
+            "local_grid_channels": int(cfg.local_grid_channels),
+            "convnext_mlp_ratio": int(cfg.convnext_mlp_ratio),
+            "convnext_kernel_size": int(cfg.convnext_kernel_size),
+            "mid_injection_block_index": int(cfg.mid_injection_block_index),
+            "fine_injection_block_index": int(cfg.fine_injection_block_index),
+        }
+        mismatches = [
+            key for key, value in expected.items() if observed.get(key) != value
+        ]
+        if mismatches:
+            raise CompactRendererMlxSpineRunnerError(
+                "HiNeRV modelsize candidate and launch knobs diverged for "
+                + ", ".join(mismatches)
+            )
+    else:
+        from tac.substrates.hi_nerv.architecture import HinervConfig
+
+        cfg = HinervConfig(
+            latent_dim_coarse=max(1, int(latent_dim) // 2),
+            latent_dim_mid=max(1, int(latent_dim)),
+            latent_dim_fine=max(1, int(latent_dim) * 2),
+            embed_dim=max(1, int(embed_dim)),
+            initial_grid_h=3,
+            initial_grid_w=4,
+            decoder_channels=tuple([max(1, int(decoder_channel))] * 7),
+            sin_frequency=30.0,
+            num_upsample_blocks=7,
+            mid_injection_block_index=int(mid_injection_block_index),
+            fine_injection_block_index=int(fine_injection_block_index),
+            num_pairs=pairs,
+            output_height=384,
+            output_width=512,
+            use_hierarchical_feature_grid=bool(use_hierarchical_feature_grid),
+            use_convnext_blocks=bool(use_convnext_blocks),
+            local_grid_levels=int(local_grid_levels),
+            local_grid_channels=int(local_grid_channels),
+            convnext_mlp_ratio=int(convnext_mlp_ratio),
+            convnext_kernel_size=int(convnext_kernel_size),
+        )
     target_rgb_0, target_rgb_1 = decode_mlx_targets(
         source_video_path,
         num_pairs=hydrated_target_pair_count,
@@ -11577,6 +11630,30 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             cfg=cfg,
             decoder_codec=str(decoder_codec),
         ),
+        "modelsize_candidate_consumption": {
+            "schema": "compact_hi_nerv_runner_modelsize_candidate_consumption.v1",
+            "attached": bool(candidate_for_config),
+            "candidate_id": candidate_for_config.get("candidate_id"),
+            "candidate_schema": candidate_for_config.get("schema"),
+            "capacity_source": candidate_for_config.get("capacity_source"),
+            "target_modelsize_mparams": candidate_for_config.get(
+                "target_modelsize_mparams"
+            ),
+            "modelsize_mparams": candidate_for_config.get("modelsize_mparams"),
+            "hard_byte_ceiling": int(hard_byte_ceiling)
+            if hard_byte_ceiling is not None
+            else None,
+            "decoder_codec": str(decoder_codec),
+            "latent_codec": str(hi_nerv_latent_codec),
+            "consumed_by_runner_config": bool(candidate_for_config),
+            "consumed_by_decoder_codec": bool(candidate_for_config),
+            "consumed_by_archive_export_hard_byte_ceiling": bool(
+                candidate_for_config and hard_byte_ceiling is not None
+            ),
+            "modelsize_control_contract": strip_candidate_curriculum_authority_fields(
+                _modelsize_control_contract(candidate_for_config) or {}
+            ),
+        },
         "config": {
             "latent_dim_coarse": int(cfg.latent_dim_coarse),
             "latent_dim_mid": int(cfg.latent_dim_mid),

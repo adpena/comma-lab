@@ -2202,10 +2202,54 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         random_seed=0,
         scorer_upstream_dir=REPO_ROOT / "upstream",
         repo_root=REPO_ROOT,
+        modelsize_candidate={
+            "schema": "hinerv_modelsize_candidate.v1",
+            "family": "hi_nerv",
+            "candidate_id": "hinerv-private-smoke-candidate",
+            "num_pairs": 2,
+            "latent_dim": 4,
+            "embed_dim": 4,
+            "decoder_channel": 4,
+            "decoder_codec": "portfolio_auto",
+            "hi_nerv_latent_codec": "int16_brotli_q11",
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 120_000,
+            "nominal_under_ceiling": True,
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": True,
+            "local_grid_levels": 2,
+            "local_grid_channels": 4,
+            "convnext_mlp_ratio": 2,
+            "convnext_kernel_size": 7,
+            "mid_injection_block_index": 1,
+            "fine_injection_block_index": 4,
+            "modelsize_control_contract": {
+                "schema": "nerv_modelsize_control_contract.v1",
+                "family": "hi_nerv",
+                "control_semantics": "local_receiver_visible_grid_search_nearest_target",
+                "archive_bytes_authority_required": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
     )
 
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
     training = metadata["score_aware_training"]
+    consumption = metadata["modelsize_candidate_consumption"]
+    assert consumption["attached"] is True
+    assert consumption["candidate_id"] == "hinerv-private-smoke-candidate"
+    assert consumption["consumed_by_runner_config"] is True
+    assert consumption["consumed_by_decoder_codec"] is True
+    assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is True
+    assert consumption["hard_byte_ceiling"] == 178_000
+    assert metadata["config"]["latent_dim_mid"] == 4
+    assert metadata["config"]["embed_dim"] == 4
+    assert metadata["config"]["decoder_channels"] == [4, 4, 4, 4, 4, 4, 4]
     assert captured["run_pr95_enabled"] is True
     assert captured["run_pr95_curriculum_total_epochs"] == 29_650
     assert training["pr95_faithful_curriculum_enabled"] is True
