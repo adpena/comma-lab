@@ -3,24 +3,34 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 from .bootstrap import bootstrap_upstream
-from .evaluate import evaluate_submission
+from .evaluate import evaluate_external_submission_dir, evaluate_submission
 from .install import install_submission
 from .lock import submission_lock
 from .lossless_review_tracker import (
     doctor_repo as lossless_review_doctor_repo,
+)
+from .lossless_review_tracker import (
     scan_repo as lossless_review_scan_repo,
+)
+from .lossless_review_tracker import (
     status_payload as lossless_review_status_payload,
+)
+from .lossless_review_tracker import (
     sync_repo as lossless_review_sync_repo,
 )
 from .lossless_state_sync import (
     doctor_repo as lossless_doctor_repo,
+)
+from .lossless_state_sync import (
     promote_record as lossless_promote_record,
+)
+from .lossless_state_sync import (
     sync_repo as lossless_sync_repo,
 )
 from .paths import default_upstream_root, repo_root, upstream_snapshot_path
@@ -86,10 +96,11 @@ def cmd_install_submission(args: argparse.Namespace) -> int:
 
 
 def cmd_show_prompt(args: argparse.Namespace) -> int:
-    if args.name == "top":
-        prompt_path = repo_root() / "PROMPT.md"
-    else:
-        prompt_path = repo_root() / "prompts" / f"{args.name}.md"
+    prompt_path = (
+        repo_root() / "PROMPT.md"
+        if args.name == "top"
+        else repo_root() / "prompts" / f"{args.name}.md"
+    )
     if not prompt_path.exists():
         print(f"Prompt not found: {prompt_path}", file=sys.stderr)
         return 1
@@ -109,6 +120,25 @@ def cmd_eval_submission(args: argparse.Namespace) -> int:
         keep_inflated=args.keep_inflated,
     )
     print(summary.to_json())
+    return 0
+
+
+def cmd_eval_external_submission(args: argparse.Namespace) -> int:
+    summary = evaluate_external_submission_dir(
+        submission_dir=Path(args.submission_dir),
+        device=args.device,
+        upstream_root=Path(args.upstream_root) if args.upstream_root else None,
+        artifact_dir=Path(args.artifact_dir),
+        keep_inflated=args.keep_inflated,
+        min_free_bytes=args.min_free_bytes,
+        require_upstream_venv=not args.no_require_upstream_venv,
+    )
+    payload = summary.to_dict()
+    if args.output_json:
+        output = Path(args.output_json)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    print(json.dumps(payload, indent=2, sort_keys=True))
     return 0
 
 
@@ -417,6 +447,24 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--report-copy", default=None, help="optional repo-local path to copy the raw report to after evaluation")
     p.add_argument("--keep-inflated", action="store_true", help="preserve raw inflated scratch after success for debugging")
     p.set_defaults(func=cmd_eval_submission)
+
+    p = sub.add_parser(
+        "eval-external-submission",
+        help="evaluate an already materialized submission dir with upstream evaluate.sh and certified cleanup",
+    )
+    p.add_argument("--submission-dir", required=True)
+    p.add_argument("--device", default="cpu", choices=["cpu", "cuda", "mps"])
+    p.add_argument("--upstream-root", default=None)
+    p.add_argument("--artifact-dir", required=True, help="durable output dir for logs/report/manifest")
+    p.add_argument("--output-json", default=None)
+    p.add_argument("--min-free-bytes", type=int, default=5 * 1024 * 1024 * 1024)
+    p.add_argument("--keep-inflated", action="store_true", help="preserve raw inflated scratch after success for debugging")
+    p.add_argument(
+        "--no-require-upstream-venv",
+        action="store_true",
+        help="use the current Python environment; recorded in the output JSON",
+    )
+    p.set_defaults(func=cmd_eval_external_submission)
 
     p = sub.add_parser("smoke-submission", help="package/sync/inflate a submission and verify raw output count, geometry, and sampled RGB semantics before scorer runs")
     p.add_argument("name", choices=["exact_current", "robust_current"])

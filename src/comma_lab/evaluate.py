@@ -7,8 +7,12 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
+from typing import Any
 
 from .install import install_payload_bytes, install_payload_manifest, install_submission
 from .lock import submission_lock
@@ -50,6 +54,46 @@ class EvaluationSummary:
         return json.dumps(asdict(self), indent=2, sort_keys=True)
 
 
+@dataclass
+class ExternalEvaluationSummary:
+    schema: str
+    generated_at_utc: str
+    axis_tag: str
+    submission_dir: str
+    upstream_root: str
+    device: str
+    command: list[str]
+    returncode: int
+    wall_seconds: float
+    report_path: str
+    report_copy_path: str | None
+    stdout_path: str
+    stderr_path: str
+    python_environment: dict[str, Any]
+    archive_zip: dict[str, Any]
+    submission_manifest_before_eval: dict[str, Any]
+    inflated_outputs_manifest: dict[str, Any]
+    parsed_report: dict[str, float | int] | None
+    score_claim: bool
+    score_claim_valid: bool
+    promotion_eligible: bool
+    promotable: bool
+    rank_or_kill_eligible: bool
+    ready_for_exact_eval_dispatch: bool
+    dispatch_attempted: bool
+    gpu_launched: bool
+    inflated_dir: str
+    inflated_dir_retained: bool
+    inflated_dir_cleanup: str
+    blockers: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    def to_json(self) -> str:
+        return json.dumps(self.to_dict(), indent=2, sort_keys=True)
+
+
 def _upstream_env(upstream_root: Path) -> dict[str, str]:
     venv_bin = upstream_root / ".venv" / "bin"
     python_bin = venv_bin / "python"
@@ -77,6 +121,79 @@ def _run(cmd: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> Non
     )
 
 
+def _sha256_file(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _file_manifest(root: Path) -> dict[str, Any]:
+    files: list[dict[str, Any]] = []
+    for path in sorted(p for p in root.rglob("*") if p.is_file() and not p.is_symlink()):
+        rel = path.relative_to(root).as_posix()
+        files.append(
+            {
+                "path": rel,
+                "bytes": int(path.stat().st_size),
+                "sha256": _sha256_file(path),
+            }
+        )
+    aggregate = sha256()
+    for row in files:
+        aggregate.update(str(row["path"]).encode("utf-8"))
+        aggregate.update(b"\0")
+        aggregate.update(str(row["bytes"]).encode("ascii"))
+        aggregate.update(b"\0")
+        aggregate.update(str(row["sha256"]).encode("ascii"))
+        aggregate.update(b"\0")
+    return {
+        "root": root.as_posix(),
+        "file_count": len(files),
+        "bytes": sum(int(row["bytes"]) for row in files),
+        "tree_sha256": aggregate.hexdigest(),
+        "files": files,
+    }
+
+
+def _file_manifest_excluding(root: Path, excluded_top_level: set[str]) -> dict[str, Any]:
+    files: list[dict[str, Any]] = []
+    for path in sorted(p for p in root.rglob("*") if p.is_file() and not p.is_symlink()):
+        rel_path = path.relative_to(root)
+        if rel_path.parts and rel_path.parts[0] in excluded_top_level:
+            continue
+        rel = rel_path.as_posix()
+        files.append(
+            {
+                "path": rel,
+                "bytes": int(path.stat().st_size),
+                "sha256": _sha256_file(path),
+            }
+        )
+    aggregate = sha256()
+    for row in files:
+        aggregate.update(str(row["path"]).encode("utf-8"))
+        aggregate.update(b"\0")
+        aggregate.update(str(row["bytes"]).encode("ascii"))
+        aggregate.update(b"\0")
+        aggregate.update(str(row["sha256"]).encode("ascii"))
+        aggregate.update(b"\0")
+    return {
+        "root": root.as_posix(),
+        "excluded_top_level": sorted(excluded_top_level),
+        "file_count": len(files),
+        "bytes": sum(int(row["bytes"]) for row in files),
+        "tree_sha256": aggregate.hexdigest(),
+        "files": files,
+    }
+
+
+def _write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
 def _parse_report(report_path: Path) -> dict[str, float | int]:
     text = report_path.read_text()
     values: dict[str, float | int] = {}
@@ -87,6 +204,17 @@ def _parse_report(report_path: Path) -> dict[str, float | int]:
         raw = match.group(1).replace(",", "")
         values[key] = int(raw) if key.endswith("bytes") else float(raw)
     return values
+
+
+def _parse_report_if_present(report_path: Path, blockers: list[str]) -> dict[str, float | int] | None:
+    if not report_path.is_file():
+        blockers.append("upstream_report_missing")
+        return None
+    try:
+        return _parse_report(report_path)
+    except (OSError, ValueError) as exc:
+        blockers.append(f"upstream_report_unparseable:{type(exc).__name__}")
+        return None
 
 
 def _score(seg_distortion: float, pose_distortion: float, rate: float) -> float:
@@ -215,3 +343,176 @@ def evaluate_submission(
             inflated_dir_retained=keep_inflated,
             inflated_dir_cleanup=inflated_dir_cleanup,
         )
+
+
+def evaluate_external_submission_dir(
+    *,
+    submission_dir: Path,
+    device: str,
+    upstream_root: Path | None = None,
+    artifact_dir: Path,
+    keep_inflated: bool = False,
+    min_free_bytes: int = 5 * 1024 * 1024 * 1024,
+    require_upstream_venv: bool = True,
+) -> ExternalEvaluationSummary:
+    """Run upstream evaluate.sh on an already-materialized submission dir.
+
+    This is the pipeline-safe path for candidate bundles that are not tracked
+    under ``submissions/<name>``. It captures stdout/stderr, records archive and
+    inflated-output hashes, and deletes success-only inflated raw output only
+    after a rebuild certificate exists in the returned JSON.
+    """
+
+    root = repo_root()
+    upstream_root = upstream_root or default_upstream_root()
+    submission = submission_dir.expanduser().resolve(strict=False)
+    artifact_dir = artifact_dir.expanduser().resolve(strict=False)
+    if device not in {"cpu", "cuda", "mps"}:
+        raise ValueError(f"unsupported device: {device}")
+    if not submission.is_dir():
+        raise FileNotFoundError(f"submission dir not found: {submission}")
+    archive_zip = submission / "archive.zip"
+    inflate_sh = submission / "inflate.sh"
+    if not archive_zip.is_file():
+        raise FileNotFoundError(f"archive.zip not found: {archive_zip}")
+    if not inflate_sh.is_file():
+        raise FileNotFoundError(f"inflate.sh not found: {inflate_sh}")
+    inflated_dir = submission / "inflated"
+    if inflated_dir.exists():
+        raise FileExistsError(
+            f"refusing to run with pre-existing inflated output; certify or remove first: {inflated_dir}"
+        )
+    free_bytes = shutil.disk_usage(submission).free
+    if free_bytes < min_free_bytes:
+        raise OSError(
+            f"insufficient free space for upstream eval: free={free_bytes} required={min_free_bytes}"
+        )
+
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    report_path = submission / "report.txt"
+    if report_path.exists():
+        report_path.unlink()
+    stdout_path = artifact_dir / "upstream_evaluate_stdout.txt"
+    stderr_path = artifact_dir / "upstream_evaluate_stderr.txt"
+    report_copy_path = artifact_dir / "report.txt"
+
+    submission_manifest = _file_manifest_excluding(
+        submission,
+        excluded_top_level={"archive", "inflated"},
+    )
+    archive_row = {
+        "path": archive_zip.as_posix(),
+        "bytes": int(archive_zip.stat().st_size),
+        "sha256": _sha256_file(archive_zip),
+    }
+    command = [
+        "bash",
+        str(upstream_root / "evaluate.sh"),
+        "--submission-dir",
+        str(submission),
+        "--device",
+        device,
+    ]
+    env = _upstream_env(upstream_root) if require_upstream_venv else os.environ.copy()
+    env["COMMA_CHALLENGE_ROOT"] = str(upstream_root)
+    python_environment = {
+        "require_upstream_venv": require_upstream_venv,
+        "python_executable": (
+            str(upstream_root / ".venv" / "bin" / "python")
+            if require_upstream_venv
+            else sys.executable
+        ),
+        "comma_challenge_root": str(upstream_root),
+    }
+
+    started = time.monotonic()
+    completed = subprocess.run(
+        command,
+        cwd=root,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    wall_seconds = time.monotonic() - started
+    _write_text(stdout_path, completed.stdout)
+    _write_text(stderr_path, completed.stderr)
+
+    blockers: list[str] = []
+    if completed.returncode != 0:
+        blockers.append(f"upstream_evaluate_returncode_nonzero:{completed.returncode}")
+
+    parsed = _parse_report_if_present(report_path, blockers)
+    copied_report: str | None = None
+    if report_path.is_file():
+        shutil.copy2(report_path, report_copy_path)
+        copied_report = report_copy_path.as_posix()
+
+    inflated_manifest = (
+        _file_manifest(inflated_dir)
+        if inflated_dir.is_dir()
+        else {
+            "root": inflated_dir.as_posix(),
+            "file_count": 0,
+            "bytes": 0,
+            "tree_sha256": None,
+            "files": [],
+        }
+    )
+    if completed.returncode == 0 and int(inflated_manifest["file_count"]) <= 0:
+        blockers.append("upstream_inflated_outputs_missing")
+
+    if completed.returncode == 0:
+        if keep_inflated:
+            inflated_cleanup = "retained_by_request_after_success"
+            inflated_retained = True
+        else:
+            shutil.rmtree(inflated_dir, ignore_errors=True)
+            inflated_cleanup = "deleted_after_success_with_manifest_certificate"
+            inflated_retained = False
+    else:
+        inflated_cleanup = (
+            "retained_after_failed_evaluation_for_diagnosis"
+            if inflated_dir.exists()
+            else "no_inflated_output_after_failed_evaluation"
+        )
+        inflated_retained = inflated_dir.exists()
+
+    return ExternalEvaluationSummary(
+        schema="comma_lab.external_upstream_evaluation.v1",
+        generated_at_utc=datetime.now(UTC).isoformat(),
+        axis_tag=f"[upstream-{device}:false-authority]",
+        submission_dir=submission.as_posix(),
+        upstream_root=upstream_root.as_posix(),
+        device=device,
+        command=command,
+        returncode=int(completed.returncode),
+        wall_seconds=wall_seconds,
+        report_path=report_path.as_posix(),
+        report_copy_path=copied_report,
+        stdout_path=stdout_path.as_posix(),
+        stderr_path=stderr_path.as_posix(),
+        python_environment=python_environment,
+        archive_zip=archive_row,
+        submission_manifest_before_eval=submission_manifest,
+        inflated_outputs_manifest={
+            **inflated_manifest,
+            "certified_rebuildable": completed.returncode == 0,
+            "rebuild_command": command,
+            "source_archive_zip_sha256": archive_row["sha256"],
+            "source_submission_manifest_tree_sha256": submission_manifest["tree_sha256"],
+        },
+        parsed_report=parsed,
+        score_claim=False,
+        score_claim_valid=False,
+        promotion_eligible=False,
+        promotable=False,
+        rank_or_kill_eligible=False,
+        ready_for_exact_eval_dispatch=False,
+        dispatch_attempted=False,
+        gpu_launched=device == "cuda",
+        inflated_dir=inflated_dir.as_posix(),
+        inflated_dir_retained=inflated_retained,
+        inflated_dir_cleanup=inflated_cleanup,
+        blockers=blockers,
+    )
