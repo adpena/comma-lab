@@ -69,6 +69,9 @@ HINERV_OFFICIAL_FEATURE_GRID_CONVNEXT_PROOF: str = (
 HINERV_LOCAL_FEATURE_GRID_CONVNEXT_RECEIVER_PROOF: str = (
     "receiver_visible_local_hierarchical_feature_grid_convnext_modulo_sampler_v1"
 )
+HINERV_OFFICIAL_HIERARCHICAL_RENDERER_SOURCE_FORWARD_PROOF: str = (
+    "official_hinerv_core_forward_replay_maps_or_rejects_local_portable_v1"
+)
 HINERV_FEATURE_GRID_CONVNEXT_SOURCE_FORWARD_BLOCKERS: tuple[str, ...] = (
     "hinerv_official_feature_grid_source_forward_parity_missing",
     "hinerv_core_hierarchical_renderer_source_forward_replay_missing",

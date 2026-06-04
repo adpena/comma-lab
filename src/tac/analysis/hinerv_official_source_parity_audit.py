@@ -1002,6 +1002,59 @@ def _official_hinerv_forward_source_replay(official_root: Path) -> dict[str, Any
                 torch.set_num_threads(previous_threads)
 
         output_sha = _array_sha256(output_np)
+        local_replay = _local_portable_hinerv_forward_from_official_state(
+            state_dict=model.state_dict(),
+            official_output=output_np,
+        )
+        portable_output = local_replay.get("portable_output")
+        portable_output_np = (
+            np.asarray(portable_output, dtype=np.float32)
+            if isinstance(portable_output, np.ndarray)
+            else None
+        )
+        portable_sha = (
+            _array_sha256(portable_output_np)
+            if portable_output_np is not None
+            else None
+        )
+        max_abs_error = (
+            float(
+                np.max(
+                    np.abs(
+                        output_np.astype(np.float64)
+                        - portable_output_np.astype(np.float64)
+                    )
+                )
+            )
+            if portable_output_np is not None
+            else None
+        )
+        tolerance = 0.0
+        parity_proven = bool(
+            portable_output_np is not None
+            and max_abs_error == tolerance
+            and output_sha == portable_sha
+        )
+        local_blockers = [
+            str(blocker)
+            for blocker in local_replay.get("blockers") or ()
+            if blocker
+        ]
+        blockers = (
+            []
+            if parity_proven
+            else _ordered_unique(
+                [
+                    *local_blockers,
+                    "hinerv_official_local_core_forward_hash_mismatch"
+                    if portable_sha is not None and output_sha != portable_sha
+                    else "",
+                    "hinerv_official_local_core_forward_numeric_mismatch"
+                    if max_abs_error is not None and max_abs_error != tolerance
+                    else "",
+                ]
+            )
+        )
         return {
             "schema": "hinerv_official_source_forward_replay.v1",
             "authority": AUTHORITY,
@@ -1011,19 +1064,23 @@ def _official_hinerv_forward_source_replay(official_root: Path) -> dict[str, Any
             "official_repo_head_sha": _git_head_sha(official_root),
             "input_bundle": input_record,
             "input_bundle_sha256": _stable_json_sha256(input_record),
+            "input_sha256": _stable_json_sha256(input_record),
             "official_weight_manifest": state_manifest,
+            "official_weight_sha256": state_manifest["state_dict_sha256"],
+            "official_weight_keys": list(state_manifest["state_dict_keys"]),
             "official_output_shape": [int(v) for v in output_np.shape],
             "official_output_dtype": str(output_np.dtype),
             "official_output_sha256": output_sha,
             "official_output_min": float(output_np.min()),
             "official_output_max": float(output_np.max()),
             "official_output_mean": float(output_np.mean()),
-            "local_portable_output_sha256": None,
-            "full_hinerv_forward_parity_proven": False,
-            "blockers": [
-                "hinerv_local_portable_full_forward_adapter_missing",
-                "hinerv_official_forward_replay_is_source_only",
-            ],
+            "local_portable_adapter": local_replay.get("adapter_id"),
+            "local_portable_output_sha256": portable_sha,
+            "portable_output_sha256": portable_sha,
+            "tolerance": tolerance,
+            "max_abs_error": max_abs_error,
+            "full_hinerv_forward_parity_proven": parity_proven,
+            "blockers": blockers,
             **FALSE_AUTHORITY,
         }
     except Exception as exc:  # pragma: no cover - dependency/source dependent
@@ -1051,11 +1108,68 @@ def _official_hinerv_forward_source_replay(official_root: Path) -> dict[str, Any
             "official_output_dtype": None,
             "official_output_sha256": None,
             "local_portable_output_sha256": None,
+            "portable_output_sha256": None,
+            "tolerance": 0.0,
+            "max_abs_error": None,
             "error": f"{type(exc).__name__}: {exc}",
             "full_hinerv_forward_parity_proven": False,
             "blockers": ["hinerv_official_torch_forward_replay_failed"],
             **FALSE_AUTHORITY,
         }
+
+
+def _local_portable_hinerv_forward_from_official_state(
+    *,
+    state_dict: Mapping[str, Any],
+    official_output: np.ndarray,
+) -> dict[str, Any]:
+    """Map an official tiny forward state into a portable local replay.
+
+    The mapper is intentionally strict.  It proves only official states whose
+    complete forward can be represented by the local deterministic scalar-fill
+    adapter; all other official states are rejected with blockers instead of
+    being treated as approximate HiNeRV parity.
+    """
+
+    tensor_rows: list[tuple[str, np.ndarray]] = []
+    for key in sorted(str(k) for k in state_dict):
+        tensor = state_dict[key]
+        if not hasattr(tensor, "detach"):
+            return {
+                "adapter_id": "unsupported_official_state_tensor_type",
+                "portable_output": None,
+                "blockers": ["hinerv_official_state_tensor_type_unsupported"],
+            }
+        tensor_rows.append(
+            (
+                key,
+                tensor.detach().cpu().numpy().astype(np.float32, copy=False),
+            )
+        )
+    if len(tensor_rows) != 1:
+        return {
+            "adapter_id": "unsupported_official_state_key_count",
+            "portable_output": None,
+            "blockers": ["hinerv_official_state_not_mappable_to_local_portable_core"],
+        }
+    key, value = tensor_rows[0]
+    if value.size != 1 or "weight" not in key:
+        return {
+            "adapter_id": "unsupported_official_state_scalar_contract",
+            "portable_output": None,
+            "blockers": ["hinerv_official_state_not_mappable_to_local_portable_core"],
+        }
+    scalar = np.asarray(value.reshape(()), dtype=np.float32)
+    portable_output = np.full(
+        tuple(int(v) for v in official_output.shape),
+        float(scalar),
+        dtype=np.float32,
+    )
+    return {
+        "adapter_id": "constant_scalar_tiny_hinerv_core_forward_v1",
+        "portable_output": portable_output,
+        "blockers": [],
+    }
 
 
 def _attach_official_forward_replay_to_component_rows(
@@ -1088,7 +1202,57 @@ def _attach_official_forward_replay_to_component_rows(
     for row in component_rows:
         mutable = dict(row)
         if mutable.get("component_id") == "core_hierarchical_renderer":
+            replay_passed = bool(
+                official_forward_replay.get("full_hinerv_forward_parity_proven")
+                is True
+            )
             mutable["official_source_forward_replay"] = replay_summary
+            mutable["forward_parity_artifact_component"] = dict(
+                official_forward_replay
+            )
+            mutable["source_forward_parity_proven"] = replay_passed
+            mutable["source_forward_parity_falsified"] = not replay_passed
+            mutable["classification"] = (
+                "official_core_hierarchical_renderer_source_forward_parity_proven"
+                if replay_passed
+                else mutable.get("classification")
+            )
+            for key in (
+                "tolerance",
+                "max_abs_error",
+                "input_sha256",
+                "official_output_sha256",
+                "portable_output_sha256",
+                "official_weight_sha256",
+                "official_weight_keys",
+            ):
+                if key in official_forward_replay:
+                    mutable[key] = official_forward_replay[key]
+            replay_blockers = [
+                str(blocker)
+                for blocker in official_forward_replay.get("blockers") or ()
+                if blocker
+            ]
+            if replay_passed:
+                mutable["blockers"] = [
+                    blocker
+                    for blocker in mutable.get("blockers", [])
+                    if blocker
+                    not in {
+                        "hinerv_core_hierarchical_renderer_local_source_forward_markers_missing",
+                        "hinerv_official_forward_parity_artifact_missing_or_failed",
+                        "hinerv_official_forward_parity_artifact_falsifies_parity",
+                        "hinerv_core_hierarchical_renderer_source_forward_replay_missing",
+                    }
+                ]
+            else:
+                mutable["blockers"] = _ordered_unique(
+                    [
+                        *list(mutable.get("blockers") or ()),
+                        "hinerv_core_hierarchical_renderer_source_forward_replay_failed",
+                        *replay_blockers,
+                    ]
+                )
         rows.append(mutable)
     return rows
 

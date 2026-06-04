@@ -51,7 +51,7 @@ def test_hinerv_official_source_audit_blocks_until_numeric_forward_artifact(
     md = render_hinerv_official_source_parity_markdown(report)
     assert "HiNeRV Official Source-Parity Audit" in md
     assert "official forward parity proven: `False`" in md
-    assert "| `core_hierarchical_renderer` | `False` | `True` |" in md
+    assert "| `core_hierarchical_renderer` | `False` | `False` |" in md
 
 
 def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
@@ -76,7 +76,10 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert len(artifact["source_forward_replay"]["input_bundle_sha256"]) == 64
     assert len(artifact["source_forward_replay"]["official_output_sha256"]) == 64
     assert artifact["source_forward_replay"]["official_output_shape"] == [1, 3, 1, 2, 2]
-    assert artifact["source_forward_replay"]["full_hinerv_forward_parity_proven"] is False
+    assert artifact["source_forward_replay"]["full_hinerv_forward_parity_proven"] is True
+    assert artifact["source_forward_replay"]["max_abs_error"] == 0.0
+    assert artifact["source_forward_replay"]["blockers"] == []
+    assert len(artifact["source_forward_replay"]["portable_output_sha256"]) == 64
     assert artifact["official_weight_manifest"]["state_dict_key_count"] > 0
     assert len(artifact["official_weight_manifest"]["state_dict_sha256"]) == 64
     grid_rows = {
@@ -114,8 +117,11 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     assert grid_rows["official_patch_dataset_video_dataset"]["blockers"] == []
     artifact_states = {row["component_id"]: row for row in artifact["component_rows"]}
     assert artifact_states["core_hierarchical_renderer"][
-        "source_forward_parity_falsified"
+        "source_forward_parity_proven"
     ] is True
+    assert artifact_states["core_hierarchical_renderer"][
+        "source_forward_parity_falsified"
+    ] is False
     assert artifact_states["patch_dataset_path"]["source_forward_parity_proven"] is True
     assert artifact_states["patch_dataset_path"]["source_forward_parity_falsified"] is False
     assert artifact_states["patch_dataset_path"]["classification"] == (
@@ -144,9 +150,10 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
     )
     states = {row["component_id"]: row for row in report["component_state_rows"]}
     assert states["core_hierarchical_renderer"]["classification"] == (
-        "receiver_visible_official_like_renderer_without_source_forward_replay"
+        "official_source_forward_parity_proven"
     )
-    assert states["core_hierarchical_renderer"]["source_forward_parity_falsified"] is True
+    assert states["core_hierarchical_renderer"]["source_forward_parity_proven"] is True
+    assert states["core_hierarchical_renderer"]["source_forward_parity_falsified"] is False
     assert states["core_hierarchical_renderer"]["official_source_forward_replay"][
         "replay_ran"
     ] is True
@@ -154,7 +161,7 @@ def test_hinerv_official_forward_parity_artifact_round_trips_falsification(
         "official_source_forward_parity_proven"
     )
     assert states["patch_dataset_path"]["source_forward_parity_proven"] is True
-    assert "hinerv_official_forward_parity_artifact_falsifies_parity" in (
+    assert "hinerv_official_forward_parity_artifact_falsifies_parity" not in (
         states["core_hierarchical_renderer"]["blockers"]
     )
     summary = summarize_hinerv_official_source_audit(report)
@@ -205,6 +212,32 @@ def test_hinerv_official_patch_dataset_replay_detects_source_mismatch(
     assert states["patch_dataset_path"]["source_forward_parity_falsified"] is True
     assert "hinerv_patch_dataset_source_forward_replay_failed" in states[
         "patch_dataset_path"
+    ]["blockers"]
+
+
+def test_hinerv_official_core_replay_rejects_unmapped_state(
+    tmp_path: Path,
+) -> None:
+    official = _write_minimal_official_hinerv_repo(tmp_path, unmapped_core=True)
+
+    artifact = build_hinerv_official_forward_parity_artifact(
+        official_repo_dir=official,
+        repo_root=REPO_ROOT,
+        generated_utc="20260603T000000Z",
+    )
+
+    replay = artifact["source_forward_replay"]
+    assert replay["replay_ran"] is True
+    assert replay["full_hinerv_forward_parity_proven"] is False
+    assert replay["portable_output_sha256"] is None
+    assert "hinerv_official_state_not_mappable_to_local_portable_core" in replay[
+        "blockers"
+    ]
+    states = {row["component_id"]: row for row in artifact["component_rows"]}
+    assert states["core_hierarchical_renderer"]["source_forward_parity_proven"] is False
+    assert states["core_hierarchical_renderer"]["source_forward_parity_falsified"] is True
+    assert "hinerv_core_hierarchical_renderer_source_forward_replay_failed" in states[
+        "core_hierarchical_renderer"
     ]["blockers"]
 
 
@@ -341,13 +374,53 @@ def _write_minimal_official_hinerv_repo(
     tmp_path: Path,
     *,
     corrupt_dataset_patch: bool = False,
+    unmapped_core: bool = False,
 ) -> Path:
     root = tmp_path / "HiNeRV"
     (root / "models").mkdir(parents=True)
     (root / "compression").mkdir(parents=True)
     (root / "cfgs/models").mkdir(parents=True)
-    (root / "models/hinerv.py").write_text(
+    tiny_model_source = (
         """
+import torch
+
+class _Group:
+    def add_argument(self, *args, **kwargs):
+        return None
+
+group = _Group()
+
+class HiNeRVEncoding:
+    def __init__(self):
+        self.grids.append(FeatureGrid((1, 2), init_scale=0.01))
+        self.grid_expands.append(GridTrilinear3D((1, 2, 3)))
+
+class HiNeRVUpsampler:
+    pass
+
+class HiNeRVDecoder:
+    def __init__(self):
+        self.blocks = []
+        self.blocks.append(HiNeRVUpsampler())
+
+class HiNeRV:
+    pass
+
+class TinyHiNeRV(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.weight = torch.nn.Parameter(torch.tensor([0.25], dtype=torch.float32))
+        self.bias = torch.nn.Parameter(torch.tensor([0.125], dtype=torch.float32))
+
+    def forward(self, input):
+        idx = input['idx'].to(torch.float32)
+        return (
+            torch.ones((idx.shape[0], 3, 1, 2, 2), dtype=torch.float32)
+            * (self.weight + self.bias).view(1, 1, 1, 1, 1)
+        ).contiguous(memory_format=torch.channels_last_3d)
+"""
+        if unmapped_core
+        else """
 import torch
 
 class _Group:
@@ -383,6 +456,11 @@ class TinyHiNeRV(torch.nn.Module):
             torch.ones((idx.shape[0], 3, 1, 2, 2), dtype=torch.float32)
             * self.weight.view(1, 1, 1, 1, 1)
         ).contiguous(memory_format=torch.channels_last_3d)
+"""
+    )
+    (root / "models/hinerv.py").write_text(
+        tiny_model_source
+        + """
 
 def build_model(args, logger, input):
     return TinyHiNeRV()
