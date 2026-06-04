@@ -18,6 +18,8 @@ def test_snerv_official_primitive_replay_binding_splits_authority() -> None:
     payload = build_snerv_official_primitive_replay_binding(repo_root=REPO)
 
     assert payload["schema"] == "snerv_official_mfu_hfr_tub_primitive_replay_binding.v1"
+    assert payload["all_primitive_numeric_graph_replay_proven"] is True
+    assert payload["all_receiver_primitive_replay_proven"] is True
     assert payload["all_primitive_source_replay_proven"] is True
     assert payload["full_stack_source_forward_replay_proven"] is False
     assert payload["receiver_export_self_consistency_verified"] is True
@@ -36,6 +38,7 @@ def test_snerv_official_primitive_replay_binding_splits_authority() -> None:
     runtime = payload["official_receiver_runtime_decode_contract"]
     assert runtime["schema"] == RECEIVER_RUNTIME_DECODE_SCHEMA
     assert runtime["all_runtime_modules_import_safe"] is True
+    assert runtime["all_numeric_graph_replay_tests_hashed"] is True
     assert runtime["all_numeric_source_replay_tests_hashed"] is True
     assert runtime["receiver_runtime_decode_proven"] is True
     assert runtime["receiver_export_self_consistency_verified"] is True
@@ -51,6 +54,8 @@ def test_snerv_official_primitive_replay_binding_splits_authority() -> None:
     rows = {row["component_id"]: row for row in payload["component_rows"]}
     assert set(rows) == {"mfu", "hfr", "tub"}
     assert rows["mfu"]["feature_id"] == "official_multi_resolution_fusion_blocks"
+    assert rows["mfu"]["primitive_numeric_graph_replay_proven"] is True
+    assert rows["mfu"]["receiver_primitive_replay_proven"] is True
     assert rows["mfu"]["primitive_source_replay_proven"] is True
     assert rows["mfu"]["full_stack_source_forward_replay_proven"] is False
     assert rows["mfu"]["missing_source_markers"] == []
@@ -74,6 +79,8 @@ def test_snerv_primitive_source_replay_status_is_feature_keyed() -> None:
 
     assert row is not None
     assert row["component_id"] == "hfr"
+    assert row["primitive_numeric_graph_replay_proven"] is True
+    assert row["receiver_primitive_replay_proven"] is True
     assert row["primitive_source_replay_proven"] is True
     assert row["status"] == "primitive_source_replay_proven_full_stack_missing"
     assert row["receiver_runtime_decode_row"]["status"] == (
@@ -98,6 +105,7 @@ def test_snerv_receiver_runtime_decode_contract_is_hash_backed_and_fail_closed()
 
     assert payload["schema"] == RECEIVER_RUNTIME_DECODE_SCHEMA
     assert payload["all_runtime_modules_import_safe"] is True
+    assert payload["all_numeric_graph_replay_tests_hashed"] is True
     assert payload["all_numeric_source_replay_tests_hashed"] is True
     assert payload["receiver_runtime_decode_proven"] is True
     assert payload["receiver_export_self_consistency_verified"] is True

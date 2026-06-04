@@ -456,8 +456,15 @@ def summarize_snerv_official_source_audit(report: Mapping[str, Any]) -> dict[str
         "local_receiver_safe_adapter_present": bool(report.get("local_receiver_safe_adapter_present")),
         "official_mfu_hfr_tub_parity_proven": bool(report.get("official_mfu_hfr_tub_parity_proven")),
         "official_mfu_hfr_tub_parity_falsified": bool(forward_row.get("parity_falsified")),
+        "official_mfu_hfr_tub_receiver_primitives_proven": bool(
+            primitive_binding.get("all_receiver_primitive_replay_proven")
+        ),
+        "official_mfu_hfr_tub_numeric_graph_replay_proven": bool(
+            primitive_binding.get("all_primitive_numeric_graph_replay_proven")
+        ),
         "official_mfu_hfr_tub_primitives_proven": bool(
-            primitive_binding.get("all_primitive_source_replay_proven")
+            primitive_binding.get("all_receiver_primitive_replay_proven")
+            or primitive_binding.get("all_primitive_source_replay_proven")
         ),
         "official_receiver_runtime_decode_proven": bool(
             receiver_runtime.get("receiver_runtime_decode_proven")
@@ -520,7 +527,8 @@ def render_snerv_official_source_parity_markdown(report: Mapping[str, Any]) -> s
         "",
         f"- official source markers present: `{bool(report.get('official_source_markers_present'))}`",
         f"- local receiver-safe adapter present: `{bool(report.get('local_receiver_safe_adapter_present'))}`",
-        f"- official MFU/HFR/TUB primitive replay proven: `{bool(primitive_binding.get('all_primitive_source_replay_proven'))}`",
+        f"- official MFU/HFR/TUB receiver primitive replay proven: `{bool(primitive_binding.get('all_receiver_primitive_replay_proven') or primitive_binding.get('all_primitive_source_replay_proven'))}`",
+        f"- official MFU/HFR/TUB numeric graph replay proven: `{bool(primitive_binding.get('all_primitive_numeric_graph_replay_proven'))}`",
         f"- official receiver runtime decode proven: `{bool(receiver_runtime.get('receiver_runtime_decode_proven'))}`",
         f"- official receiver source-forward replay bound: `{bool(receiver_runtime.get('receiver_source_forward_replay_bound') and primitive_binding.get('receiver_source_forward_replay_bound'))}`",
         f"- official MFU/HFR/TUB parity proven: `{bool(report.get('official_mfu_hfr_tub_parity_proven'))}`",

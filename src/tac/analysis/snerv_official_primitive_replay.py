@@ -252,7 +252,9 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
 
     root = Path(repo_root)
     rows = [_primitive_replay_row(root, spec) for spec in SNERV_OFFICIAL_PRIMITIVE_REPLAY_SPECS]
-    all_proven = all(bool(row["primitive_source_replay_proven"]) for row in rows)
+    all_numeric_proven = all(
+        bool(row["primitive_numeric_graph_replay_proven"]) for row in rows
+    )
     receiver_contract = build_snerv_official_receiver_runtime_decode_contract(
         repo_root=root,
     )
@@ -260,7 +262,9 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
     return {
         "schema": SCHEMA,
         "component_rows": rows,
-        "all_primitive_source_replay_proven": all_proven,
+        "all_primitive_numeric_graph_replay_proven": all_numeric_proven,
+        "all_receiver_primitive_replay_proven": all_numeric_proven,
+        "all_primitive_source_replay_proven": all_numeric_proven,
         "full_stack_source_forward_replay_proven": False,
         "receiver_export_self_consistency_verified": bool(
             receiver_contract["receiver_export_self_consistency_verified"]
@@ -340,6 +344,7 @@ def build_snerv_official_receiver_runtime_decode_contract(
         "schema": RECEIVER_RUNTIME_DECODE_SCHEMA,
         "component_rows": rows,
         "all_runtime_modules_import_safe": runtime_safe,
+        "all_numeric_graph_replay_tests_hashed": numeric_bound,
         "all_numeric_source_replay_tests_hashed": numeric_bound,
         "receiver_runtime_decode_proven": decode_proven,
         "receiver_export_self_consistency_verified": self_consistency_verified,
@@ -408,6 +413,8 @@ def _primitive_replay_row(root: Path, spec: SnervPrimitiveReplaySpec) -> dict[st
         "test_markers": list(spec.test_markers),
         "missing_source_markers": missing_source,
         "missing_test_markers": missing_tests,
+        "primitive_numeric_graph_replay_proven": proven,
+        "receiver_primitive_replay_proven": proven,
         "primitive_source_replay_proven": proven,
         "numeric_source_replay_test_present": bool(
             runtime_decode["numeric_source_replay_test_present"]
