@@ -29,6 +29,7 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill  # noqa: E402
 from tac.repo_io import sha256_file, write_json_artifact  # noqa: E402
+from tac.substrates._shared.mlx_score_aware.targets import decode_mlx_targets  # noqa: E402
 from tac.substrates._shared.numpy_portable_inflate import unpack_state_dict_numpy  # noqa: E402
 from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
     SnervArchivePacket,
@@ -46,9 +47,11 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     quantize_lf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (  # noqa: E402
+    SCORER_HW,
     _build_official_mfu_hfr_tub_packet_from_components,
     _model_size_from_candidate,
     _official_passthrough_mfu,
+    _write_snerv_native_receiver_decoded_mlx_prefilter,
     export_snerv_mlx_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (  # noqa: E402
@@ -81,6 +84,19 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--emit-receiver-proof", action="store_true")
     parser.add_argument("--retain-receiver-proof-output", action="store_true")
     parser.add_argument("--receiver-proof-timeout-seconds", default=1800, type=int)
+    parser.add_argument(
+        "--write-mlx-prefilter-profile",
+        action="store_true",
+        help=(
+            "Decode the selected SNAR1 packet through the receiver and write a "
+            "false-authority full-video MLX scorer prefilter profile."
+        ),
+    )
+    parser.add_argument("--mlx-prefilter-scorer-device", default="cpu")
+    parser.add_argument("--mlx-prefilter-scorer-batch-pairs", default=1, type=int)
+    parser.add_argument("--mlx-prefilter-progress-every", default=50, type=int)
+    parser.add_argument("--source-video-path", default=None, type=Path)
+    parser.add_argument("--scorer-upstream-dir", default=None, type=Path)
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument("--output-json", default=None, type=Path)
     return parser
@@ -98,6 +114,12 @@ def main(argv: list[str] | None = None) -> int:
         emit_receiver_proof=bool(args.emit_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
         receiver_proof_timeout_seconds=int(args.receiver_proof_timeout_seconds),
+        write_mlx_prefilter_profile=bool(args.write_mlx_prefilter_profile),
+        mlx_prefilter_scorer_device=str(args.mlx_prefilter_scorer_device),
+        mlx_prefilter_scorer_batch_pairs=int(args.mlx_prefilter_scorer_batch_pairs),
+        mlx_prefilter_progress_every=int(args.mlx_prefilter_progress_every),
+        source_video_path=args.source_video_path,
+        scorer_upstream_dir=args.scorer_upstream_dir,
         repo_root=args.repo_root,
     )
     output_json = args.output_json or args.output_dir / "snerv_checkpoint_archive_export.json"
@@ -118,6 +140,12 @@ def export_snerv_checkpoint_archive(
     emit_receiver_proof: bool = False,
     retain_receiver_proof_output: bool = False,
     receiver_proof_timeout_seconds: int = 1800,
+    write_mlx_prefilter_profile: bool = False,
+    mlx_prefilter_scorer_device: str = "cpu",
+    mlx_prefilter_scorer_batch_pairs: int = 1,
+    mlx_prefilter_progress_every: int = 50,
+    source_video_path: str | Path | None = None,
+    scorer_upstream_dir: str | Path | None = None,
     repo_root: str | Path = REPO_ROOT,
 ) -> dict[str, Any]:
     startup_path = Path(startup_json).expanduser().resolve(strict=False)
@@ -208,6 +236,21 @@ def export_snerv_checkpoint_archive(
     archive_path = receiver_proof.get("archive_path") if receiver_proof else None
     archive_bytes = receiver_proof.get("archive_bytes") if receiver_proof else None
     archive_sha256 = receiver_proof.get("archive_sha256") if receiver_proof else None
+    mlx_prefilter_profile = _maybe_write_receiver_decoded_mlx_prefilter(
+        requested=bool(write_mlx_prefilter_profile),
+        output_dir=out / "local_mlx_prefilter",
+        packet=packet,
+        startup=startup,
+        command_args=command_args,
+        archive_bytes=int(archive_bytes) if archive_bytes is not None else None,
+        archive_sha256=str(archive_sha256) if archive_sha256 else None,
+        source_video_path=source_video_path,
+        scorer_upstream_dir=scorer_upstream_dir,
+        scorer_device=str(mlx_prefilter_scorer_device),
+        scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
+        progress_every=int(mlx_prefilter_progress_every),
+        repo_root=root,
+    )
     report = {
         "schema": "snerv_checkpoint_archive_export.v1",
         "family": "snerv",
@@ -240,7 +283,15 @@ def export_snerv_checkpoint_archive(
         "receiver_proof_path": receiver_proof.get("proof_path") if receiver_proof else None,
         "receiver_proof_passed": receiver_proof.get("runtime_consumption_proof_passed") is True,
         "receiver_contract_satisfied": receiver_proof.get("receiver_contract_satisfied") is True,
-        "blockers": _blockers(receiver_proof=receiver_proof, receiver_proof_requested=bool(emit_receiver_proof)),
+        "local_mlx_prefilter_profile": mlx_prefilter_profile,
+        "local_mlx_prefilter_profile_path": mlx_prefilter_profile.get("profile_path"),
+        "local_mlx_prefilter_progress_path": mlx_prefilter_profile.get("progress_path"),
+        "local_mlx_prefilter_written": mlx_prefilter_profile.get("written") is True,
+        "blockers": _blockers(
+            receiver_proof=receiver_proof,
+            receiver_proof_requested=bool(emit_receiver_proof),
+            mlx_prefilter_profile=mlx_prefilter_profile,
+        ),
         **FALSE_AUTHORITY,
     }
     return report
@@ -605,23 +656,182 @@ def _checkpoint_state_path(meta: dict[str, Any], *, state_kind: str) -> Path:
     return path
 
 
+def _maybe_write_receiver_decoded_mlx_prefilter(
+    *,
+    requested: bool,
+    output_dir: str | Path,
+    packet: SnervArchivePacket,
+    startup: dict[str, Any],
+    command_args: dict[str, Any],
+    archive_bytes: int | None,
+    archive_sha256: str | None,
+    source_video_path: str | Path | None,
+    scorer_upstream_dir: str | Path | None,
+    scorer_device: str,
+    scorer_batch_pairs: int,
+    progress_every: int,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    metadata = dict(packet.metadata)
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    base = {
+        "schema": "snerv_checkpoint_receiver_decoded_mlx_prefilter_request.v1",
+        "requested": bool(requested),
+        "profile_path": (out / "local_mlx_prefilter_profile.json").as_posix(),
+        "progress_path": (out / "local_mlx_prefilter_progress.jsonl").as_posix(),
+        "packet_sha256": _sha256_bytes(packet.packet),
+        "packet_bytes": int(packet.total_bytes),
+        "receiver_decoded_selected_packet": True,
+        **FALSE_AUTHORITY,
+    }
+    if not requested:
+        return {
+            **base,
+            "written": False,
+            "blockers": ["snerv_checkpoint_mlx_prefilter_not_requested"],
+        }
+    source_video = _resolve_source_video_path(
+        explicit=source_video_path,
+        startup=startup,
+        command_args=command_args,
+        repo_root=repo_root,
+    )
+    upstream_dir = _resolve_scorer_upstream_dir(
+        explicit=scorer_upstream_dir,
+        command_args=command_args,
+        repo_root=repo_root,
+    )
+    source_pair_indices = _packet_source_pair_indices(metadata)
+    output_hw = _packet_output_hw(metadata)
+    if archive_bytes is None or archive_sha256 is None:
+        return _write_snerv_native_receiver_decoded_mlx_prefilter(
+            requested=True,
+            output_dir=out,
+            selected_packet=packet.packet,
+            target0_np=np.empty((0, output_hw[0], output_hw[1], 3), dtype=np.float32),
+            target1_np=np.empty((0, output_hw[0], output_hw[1], 3), dtype=np.float32),
+            archive_bytes=archive_bytes,
+            archive_sha256=archive_sha256,
+            source_video_path=source_video,
+            scorer_upstream_dir=upstream_dir,
+            scorer_device=scorer_device,
+            scorer_batch_pairs=scorer_batch_pairs,
+            progress_every=progress_every,
+            allow_overwrite=False,
+        )
+    target0_mlx, target1_mlx = decode_mlx_targets(
+        source_video,
+        num_pairs=len(source_pair_indices),
+        output_height=int(output_hw[0]),
+        output_width=int(output_hw[1]),
+        pair_indices=source_pair_indices,
+    )
+    target0_np = np.asarray(target0_mlx, dtype=np.float32)
+    target1_np = np.asarray(target1_mlx, dtype=np.float32)
+    return _write_snerv_native_receiver_decoded_mlx_prefilter(
+        requested=True,
+        output_dir=out,
+        selected_packet=packet.packet,
+        target0_np=target0_np,
+        target1_np=target1_np,
+        archive_bytes=archive_bytes,
+        archive_sha256=archive_sha256,
+        source_video_path=source_video,
+        scorer_upstream_dir=upstream_dir,
+        scorer_device=scorer_device,
+        scorer_batch_pairs=scorer_batch_pairs,
+        progress_every=progress_every,
+        allow_overwrite=False,
+    )
+
+
+def _resolve_source_video_path(
+    *,
+    explicit: str | Path | None,
+    startup: dict[str, Any],
+    command_args: dict[str, Any],
+    repo_root: str | Path,
+) -> Path:
+    value = (
+        explicit
+        or startup.get("source_video_path")
+        or command_args.get("source_video_path")
+        or Path(repo_root) / "upstream" / "videos" / "0.mkv"
+    )
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = Path(repo_root) / path
+    return path.resolve(strict=False)
+
+
+def _resolve_scorer_upstream_dir(
+    *,
+    explicit: str | Path | None,
+    command_args: dict[str, Any],
+    repo_root: str | Path,
+) -> Path:
+    value = explicit or command_args.get("scorer_upstream_dir") or Path(repo_root) / "upstream"
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = Path(repo_root) / path
+    return path.resolve(strict=False)
+
+
+def _packet_source_pair_indices(metadata: dict[str, Any]) -> tuple[int, ...]:
+    n_pairs = int(metadata.get("n_pairs") or 0)
+    raw = metadata.get("source_pair_indices")
+    if raw is None:
+        return tuple(range(n_pairs))
+    if not isinstance(raw, list | tuple):
+        raise ValueError("SNAR1 metadata source_pair_indices must be a list when present")
+    out = tuple(int(value) for value in raw)
+    if len(out) != n_pairs:
+        raise ValueError(
+            "SNAR1 metadata source_pair_indices length mismatch: "
+            f"{len(out)} != {n_pairs}"
+        )
+    return out
+
+
+def _packet_output_hw(metadata: dict[str, Any]) -> tuple[int, int]:
+    raw = metadata.get("carrier_hw") or metadata.get("orig_hw")
+    if isinstance(raw, list | tuple) and len(raw) == 2:
+        height, width = (int(raw[0]), int(raw[1]))
+        if height > 0 and width > 0:
+            return height, width
+    return int(SCORER_HW[0]), int(SCORER_HW[1])
+
+
 def _blockers(
     *,
     receiver_proof: dict[str, Any],
     receiver_proof_requested: bool,
+    mlx_prefilter_profile: dict[str, Any],
 ) -> list[str]:
     blockers = [
         "macos_mlx_checkpoint_export_false_authority",
         "contest_cpu_cuda_exact_eval_not_executed",
-        "full_video_scorer_replay_not_executed",
     ]
+    if mlx_prefilter_profile.get("written") is True:
+        blockers.extend(
+            str(blocker)
+            for blocker in mlx_prefilter_profile.get("blockers") or ()
+            if str(blocker)
+        )
+    else:
+        blockers.append("full_video_scorer_replay_not_executed")
+        blockers.extend(
+            str(blocker)
+            for blocker in mlx_prefilter_profile.get("blockers") or ()
+            if str(blocker)
+        )
     if not receiver_proof_requested:
         blockers.append("receiver_proof_not_requested")
     elif receiver_proof.get("runtime_consumption_proof_passed") is not True:
         blockers.append("receiver_proof_not_passed")
     if receiver_proof_requested and receiver_proof.get("receiver_contract_satisfied") is not True:
         blockers.append("receiver_contract_not_satisfied")
-    return blockers
+    return list(dict.fromkeys(blockers))
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -655,6 +865,8 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "archive_bytes": report.get("archive_bytes"),
         "receiver_proof_passed": report.get("receiver_proof_passed"),
         "receiver_contract_satisfied": report.get("receiver_contract_satisfied"),
+        "local_mlx_prefilter_written": report.get("local_mlx_prefilter_written"),
+        "local_mlx_prefilter_profile_path": report.get("local_mlx_prefilter_profile_path"),
         "blockers": report.get("blockers"),
         "score_claim": report.get("score_claim"),
     }
