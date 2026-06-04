@@ -1423,6 +1423,7 @@ def _run_score_aware_long_training_attachment(
                 ),
                 output_hw=(int(pairs.shape[-2]), int(pairs.shape[-1])),
                 model_size=model_size,
+                skip_high_mode=model_size.official_skip_high_mode,
                 tub_current=np.asarray(
                     official_components["tub_current"],
                     dtype=np.float32,
@@ -2838,10 +2839,17 @@ def _official_mfu_hfr_tub_bootstrap_components_from_pairs(
     ll_h, ll_w = (int(v) for v in ll.shape[-2:])
 
     mfu = _official_passthrough_mfu(channels=channels)
+    skip_high_mode = str(model_size.official_skip_high_mode)
+    hfr_fit_ll = ll
+    if skip_high_mode == "shared_mean":
+        hfr_fit_ll = np.broadcast_to(
+            np.mean(ll, axis=0, keepdims=True, dtype=np.float64),
+            ll.shape,
+        ).copy()
     hfr_heads = OfficialHfrHeads(
-        lh_head=_fit_official_hfr_head_from_ll(ll, lh),
-        hl_head=_fit_official_hfr_head_from_ll(ll, hl),
-        hh_head=_fit_official_hfr_head_from_ll(ll, hh),
+        lh_head=_fit_official_hfr_head_from_ll(hfr_fit_ll, lh),
+        hl_head=_fit_official_hfr_head_from_ll(hfr_fit_ll, hl),
+        hh_head=_fit_official_hfr_head_from_ll(hfr_fit_ll, hh),
     )
     low = np.zeros((target_frames.shape[0], channels, ll_h // 4, ll_w // 4), dtype=np.float64)
     skip_mid = np.zeros((target_frames.shape[0], channels, ll_h // 2, ll_w // 2), dtype=np.float64)
@@ -2852,6 +2860,8 @@ def _official_mfu_hfr_tub_bootstrap_components_from_pairs(
         "low": low,
         "skip_mid": skip_mid,
         "skip_high": skip_high,
+        "skip_high_mode": skip_high_mode,
+        "skip_high_full_shape": tuple(int(v) for v in skip_high.shape),
         "tub_current": target_chw,
         "tub_previous": previous_chw,
         "tub_next_frame": target_chw,
@@ -2879,6 +2889,7 @@ def _official_mfu_hfr_tub_bootstrap_components_from_pairs(
             ),
             "sample_policy": "linspace_flat_nhw_deterministic",
             "human_visual_fidelity_objective": False,
+            "official_skip_high_mode": skip_high_mode,
             **FALSE_AUTHORITY,
         },
     }
@@ -2896,16 +2907,20 @@ def _build_official_mfu_hfr_tub_packet_from_components(
     low = np.asarray(components["low"], dtype=np.float64)
     skip_mid = np.asarray(components["skip_mid"], dtype=np.float64)
     skip_high = np.asarray(components["skip_high"], dtype=np.float64)
-    n_frames = int(skip_high.shape[0])
+    skip_high_mode = str(components.get("skip_high_mode") or model_size.official_skip_high_mode)
+    skip_high_full_shape = tuple(
+        int(v) for v in components.get("skip_high_full_shape") or skip_high.shape
+    )
+    n_frames = int(skip_high_full_shape[0])
     if n_frames <= 0 or n_frames % 2:
         raise SnervMlxNativeExportError(
             f"official MFU/HFR/TUB components require even frame count; got {n_frames}"
         )
     n_pairs = n_frames // 2
     frames_per_pair = 2
-    channels = int(skip_high.shape[1])
-    h = int(skip_high.shape[-2]) * 2
-    w = int(skip_high.shape[-1]) * 2
+    channels = int(skip_high_full_shape[1])
+    h = int(skip_high_full_shape[-2]) * 2
+    w = int(skip_high_full_shape[-1]) * 2
     official_payload = encode_official_mfu_hfr_tub_decoder_payload(
         mfu=components["mfu"],
         hfr_heads=components["hfr_heads"],
@@ -2922,6 +2937,7 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         output2_decoder_output_shape=tuple(
             int(v) for v in components.get("output2_decoder_output_shape") or (2, 8, max(1, h // 4), max(1, w // 4))
         ),
+        skip_high_codec=skip_high_mode,
     )
     step_packet = encode_step_maps_waterfill(
         [np.ones((1, 1), dtype=np.float32)],
@@ -2946,6 +2962,8 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         "step_map_coder_groups": [dict(group) for group in step_packet.groups],
         "allocation_mode": "official_mfu_hfr_tub_frame_producing_bootstrap",
         "hf_decoder_fit_mode": "official_hfr_heads_least_squares_from_haar_ll",
+        "official_skip_high_mode": skip_high_mode,
+        "official_skip_high_full_shape": [int(v) for v in skip_high_full_shape],
         **(
             {"official_hfr_bootstrap": components["official_hfr_bootstrap"]}
             if isinstance(components.get("official_hfr_bootstrap"), Mapping)
@@ -2958,6 +2976,11 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         "snerv_official_mfu_hfr_tub_export_bound": True,
         "snerv_official_mfu_hfr_tub_frame_producing_export": True,
         "source_faithful_stack": False,
+        "official_source_parity_blockers": [
+            "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high",
+            "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing",
+            "snerv_official_tub_batched_temporal_context_source_forward_replay_missing",
+        ],
         **FALSE_AUTHORITY,
     }
     archive = pack_snerv_archive(
@@ -4528,9 +4551,10 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
         )
     ):
         adapter = SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
-    fc_dim = _fc_dim_from_candidate(candidate)
+    fc_dim, fc_dim_source = _fc_dim_resolution_from_candidate(candidate)
     return SnervModelSizeConfig(
         fc_dim=fc_dim,
+        fc_dim_source=fc_dim_source,
         emb_size=int(candidate.get("emb_size", candidate.get("snerv_emb_size", 0))),
         patch_radius=int(candidate.get("patch_radius", candidate.get("snerv_patch_radius", 1))),
         mfu_scales=scales_tuple,
@@ -4547,18 +4571,28 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
                 candidate.get("snerv_temporal_mode", "delta"),
             )
         ),
+        official_skip_high_mode=str(
+            candidate.get(
+                "official_skip_high_mode",
+                candidate.get("snerv_official_skip_high_mode", "full"),
+            )
+        ),
         adapter=adapter,
     )
 
 
 def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:
+    return _fc_dim_resolution_from_candidate(candidate)[0]
+
+
+def _fc_dim_resolution_from_candidate(candidate: Mapping[str, Any]) -> tuple[int, str]:
     if candidate.get("fc_dim") is not None:
-        return int(candidate["fc_dim"])
+        return int(candidate["fc_dim"]), "explicit_fc_dim"
     if candidate.get("snerv_fc_dim") is not None:
-        return int(candidate["snerv_fc_dim"])
+        return int(candidate["snerv_fc_dim"]), "explicit_snerv_fc_dim"
     solution = candidate.get("official_modelsize_solution")
     if isinstance(solution, Mapping) and solution.get("fc_dim") is not None:
-        return int(solution["fc_dim"])
+        return int(solution["fc_dim"]), "official_modelsize_solution"
     modelsize = candidate.get("modelsize_mparams", candidate.get("official_modelsize_mparams"))
     if modelsize is not None:
         full_data_length = candidate.get("full_data_length")
@@ -4583,8 +4617,8 @@ def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:
                     lower_width=int(candidate.get("lower_width", 12)),
                     saturate_stages=int(candidate.get("saturate_stages", -1)),
                 ).fc_dim
-            )
-    return 9
+            ), "official_modelsize_formula"
+    return 9, "fallback_default_missing_official_modelsize_inputs"
 
 
 def _int_tuple_or_default(value: Any, default: tuple[int, ...]) -> tuple[int, ...]:

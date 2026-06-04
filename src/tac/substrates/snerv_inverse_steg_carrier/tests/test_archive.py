@@ -562,6 +562,45 @@ def test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames() -> None:
     assert not np.allclose(frames[0, 0], frames[0, 1])
 
 
+def test_official_mfu_hfr_tub_shared_skip_high_payload_expands_receiver_state() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    full_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    shared_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        skip_high_codec="shared_mean",
+    )
+    full_header = _read_subpacket_header(full_payload)
+    shared_header = _read_subpacket_header(shared_payload)
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(shared_payload)
+    proof = decoded.execute()
+
+    assert shared_header["skip_high_storage"]["codec"] == "shared_mean_float64"
+    assert shared_header["skip_high_storage"]["source_shape"] == [2, 1, 8, 8]
+    assert shared_header["skip_high_storage"]["stored_shape"] == [1, 1, 8, 8]
+    assert shared_header["skip_high_storage"]["raw_byte_savings"] == 512
+    assert shared_header["raw_tensor_bytes"] < full_header["raw_tensor_bytes"]
+    assert len(shared_payload) < len(full_payload)
+    assert decoded.tensors["inputs.mfu.skip_high"].shape == (2, 1, 8, 8)
+    np.testing.assert_allclose(
+        decoded.tensors["inputs.mfu.skip_high"][0],
+        decoded.tensors["inputs.mfu.skip_high"][1],
+    )
+    assert proof["receiver_runtime_decode_proven"] is True
+    assert proof["score_claim"] is False
+
+
 def test_official_mfu_hfr_tub_decoder_payload_is_hash_checked() -> None:
     payload = bytearray(
         encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())

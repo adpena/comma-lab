@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frames,
     unpack_snerv_archive,
 )
@@ -1145,6 +1146,13 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
     assert decoded.metadata["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert decoded.metadata["source_faithful_stack"] is False
+    assert "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high" in decoded.metadata[
+        "official_source_parity_blockers"
+    ]
+    assert (
+        "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing"
+        in decoded.metadata["official_source_parity_blockers"]
+    )
     official_frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
     assert official_frames.shape == (
         2,
@@ -1159,6 +1167,64 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert Path(report["report_path"]).is_file()
+
+
+def test_train_export_official_primitives_shared_skip_high_is_receiver_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_shared_skip_high",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-shared-skip-high",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "snerv_fc_dim": 9,
+            "snerv_official_skip_high_mode": "shared_mean",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    official_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
+
+    assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert decoded.metadata["official_skip_high_mode"] == "shared_mean"
+    assert decoded.metadata["official_skip_high_full_shape"] == [4, 3, 8, 8]
+    assert "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high" in decoded.metadata[
+        "official_source_parity_blockers"
+    ]
+    storage = official_payload.header["skip_high_storage"]
+    assert storage["codec"] == "shared_mean_float64"
+    assert storage["source_shape"] == [4, 3, 8, 8]
+    assert storage["stored_shape"] == [1, 3, 8, 8]
+    assert storage["raw_byte_savings"] == 4608
+    assert official_payload.tensors["inputs.mfu.skip_high"].shape == (4, 3, 8, 8)
+    assert frames.shape == (2, 2, 3, 16, 16)
+    assert np.isfinite(frames).all()
+    assert official_payload.score_claim is False
 
 
 def test_official_primitives_long_training_exports_trained_official_payload(
@@ -1600,6 +1666,7 @@ def test_native_export_modelsize_candidate_consumes_official_fc_dim_solution() -
     )
 
     assert model_size.fc_dim == 11
+    assert model_size.fc_dim_source == "official_modelsize_solution"
     assert model_size.feature_count == 11
 
 
@@ -1616,7 +1683,23 @@ def test_native_export_modelsize_candidate_recomputes_fc_dim_when_formula_inputs
     )
 
     assert model_size.fc_dim == 11
+    assert model_size.fc_dim_source == "official_modelsize_formula"
     assert model_size.feature_count == 11
+
+
+def test_native_export_modelsize_candidate_records_fallback_fc_dim_source() -> None:
+    model_size = _model_size_from_candidate(
+        {
+            "candidate_id": "official-modelsize-missing-formula-inputs",
+            "modelsize_mparams": 0.05,
+        }
+    )
+
+    assert model_size.fc_dim == 9
+    assert model_size.fc_dim_source == "fallback_default_missing_official_modelsize_inputs"
+    assert model_size.as_jsonable()["fc_dim_source"] == (
+        "fallback_default_missing_official_modelsize_inputs"
+    )
 
 
 def test_train_export_preserves_explicit_source_pair_indices(

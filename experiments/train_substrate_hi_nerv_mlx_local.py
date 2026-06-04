@@ -10,6 +10,7 @@ but contest CPU/CUDA replay is the only score/rank surface.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -62,6 +63,9 @@ PR95_FULL_CONTROL_CONTRACT_SCHEMA = "hi_nerv_pr95_full_control_contract.v1"
 CANONICAL_PR95_FULL_EPOCHS = 29_650
 HI_NERV_TRAIN_TIME_CONTROL_SCHEMA = "hi_nerv_train_time_controls.v1"
 HI_NERV_TRAIN_TIME_DECODER_CONTROL_REPORT_SCHEMA = "hi_nerv_train_time_decoder_control_report.v1"
+HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA = (
+    "hi_nerv_train_time_decoder_mutation_identity.v1"
+)
 DIRECT_TRAINER_CANONICALIZATION_SCHEMA = "hi_nerv_direct_trainer_canonicalization_contract.v1"
 DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA = "hi_nerv_direct_trainer_launch_refusal.v1"
 DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
@@ -1158,11 +1162,13 @@ def _apply_train_time_decoder_controls(
 
     flat_items = list(tree_flatten(model.parameters()))
     flat = dict(flat_items)
+    before_parameter_arrays = _capture_parameter_arrays(flat_items)
     selected = [
         (key, _mlx_tree_key_name(key), value)
         for key, value in flat_items
         if _is_train_time_decoder_control_tensor(_mlx_tree_key_name(key), value)
     ]
+    selected_names = {name for _key, name, _value in selected}
     if not selected:
         raise RuntimeError(
             "HiNeRV train-time decoder controls selected no decoder tensors; "
@@ -1246,6 +1252,19 @@ def _apply_train_time_decoder_controls(
             "HiNeRV train-time decoder controls were enabled but changed no "
             "decoder tensors"
         )
+    after_parameter_arrays = _capture_parameter_arrays(list(flat.items()))
+    mutation_identity = _build_train_time_decoder_mutation_identity(
+        before_parameter_arrays=before_parameter_arrays,
+        after_parameter_arrays=after_parameter_arrays,
+        selected_tensor_names=selected_names,
+    )
+    non_decoder_changed = mutation_identity["non_decoder_changed_tensor_names"]
+    if non_decoder_changed:
+        raise RuntimeError(
+            "HiNeRV train-time decoder controls changed non-decoder tensors: "
+            + ", ".join(str(name) for name in non_decoder_changed)
+        )
+    changed_names = set(mutation_identity["changed_tensor_names"])
 
     model.update(tree_unflatten(list(flat.items())))
     mx.eval(model.parameters())
@@ -1261,6 +1280,7 @@ def _apply_train_time_decoder_controls(
         pruning_threshold=pruning_threshold,
         quant_noise_changed_tensor_count=quant_noise_changed,
         quant_noise_max_abs_delta=max_abs_quant_delta,
+        mutation_identity=mutation_identity,
     )
 
 
@@ -1277,8 +1297,9 @@ def _train_time_decoder_control_report(
     pruning_threshold: float | None = None,
     quant_noise_changed_tensor_count: int = 0,
     quant_noise_max_abs_delta: float = 0.0,
+    mutation_identity: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    return {
+    report = {
         "schema": HI_NERV_TRAIN_TIME_DECODER_CONTROL_REPORT_SCHEMA,
         "epoch": int(epoch),
         "applied": bool(applied),
@@ -1302,6 +1323,139 @@ def _train_time_decoder_control_report(
             "changed_tensor_count": int(quant_noise_changed_tensor_count),
             "max_abs_delta": float(quant_noise_max_abs_delta),
         },
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
+    if mutation_identity is not None:
+        report["mutation_identity"] = mutation_identity
+    return report
+
+
+def _capture_parameter_arrays(flat_items: list[tuple[Any, Any]]) -> dict[str, Any]:
+    import numpy as np
+
+    return {
+        _mlx_tree_key_name(key): np.asarray(value, dtype=np.float32).copy()
+        for key, value in flat_items
+    }
+
+
+def _numpy_array_sha256(value: Any) -> str:
+    import numpy as np
+
+    arr = np.ascontiguousarray(np.asarray(value))
+    h = hashlib.sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(b"\0")
+    h.update(",".join(str(int(v)) for v in arr.shape).encode("utf-8"))
+    h.update(b"\0")
+    h.update(arr.tobytes(order="C"))
+    return h.hexdigest()
+
+
+def _named_array_state_sha256(arrays: dict[str, Any]) -> str:
+    h = hashlib.sha256()
+    for name in sorted(arrays):
+        h.update(str(name).encode("utf-8"))
+        h.update(b"\0")
+        h.update(_numpy_array_sha256(arrays[name]).encode("utf-8"))
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def _build_train_time_decoder_mutation_identity(
+    *,
+    before_parameter_arrays: dict[str, Any],
+    after_parameter_arrays: dict[str, Any],
+    selected_tensor_names: set[str],
+) -> dict[str, Any]:
+    import numpy as np
+
+    selected = sorted(str(name) for name in selected_tensor_names)
+    changed_rows: list[dict[str, Any]] = []
+    total_changed_values = 0
+    total_values_in_changed_tensors = 0
+    aggregate_abs_delta = 0.0
+    max_abs_delta = 0.0
+    for name in sorted(set(before_parameter_arrays) | set(after_parameter_arrays)):
+        before = before_parameter_arrays.get(name)
+        after = after_parameter_arrays.get(name)
+        if before is None or after is None:
+            raise RuntimeError(
+                "HiNeRV train-time decoder controls changed parameter tree shape "
+                f"at {name!r}"
+            )
+        before_arr = np.asarray(before, dtype=np.float32)
+        after_arr = np.asarray(after, dtype=np.float32)
+        if before_arr.shape != after_arr.shape:
+            raise RuntimeError(
+                "HiNeRV train-time decoder controls changed tensor shape "
+                f"for {name!r}: {before_arr.shape} -> {after_arr.shape}"
+            )
+        before_sha = _numpy_array_sha256(before_arr)
+        after_sha = _numpy_array_sha256(after_arr)
+        if before_sha == after_sha:
+            continue
+        delta = after_arr.astype(np.float64) - before_arr.astype(np.float64)
+        abs_delta = np.abs(delta)
+        changed_value_count = int(np.count_nonzero(delta != 0.0))
+        numel = int(after_arr.size)
+        total_changed_values += changed_value_count
+        total_values_in_changed_tensors += numel
+        aggregate_abs_delta += float(np.sum(abs_delta))
+        max_abs_delta = max(max_abs_delta, float(np.max(abs_delta)) if numel else 0.0)
+        changed_rows.append(
+            {
+                "tensor_name": name,
+                "shape": [int(v) for v in after_arr.shape],
+                "numel": numel,
+                "selected_by_decoder_control": name in selected_tensor_names,
+                "sha256_before": before_sha,
+                "sha256_after": after_sha,
+                "changed_value_count": changed_value_count,
+                "zero_count_before": int(np.count_nonzero(before_arr == 0.0)),
+                "zero_count_after": int(np.count_nonzero(after_arr == 0.0)),
+                "max_abs_delta": float(np.max(abs_delta)) if numel else 0.0,
+                "mean_abs_delta": float(np.mean(abs_delta)) if numel else 0.0,
+            }
+        )
+    changed_names = [row["tensor_name"] for row in changed_rows]
+    non_decoder_changed = [
+        str(name)
+        for name in changed_names
+        if str(name) not in selected_tensor_names
+    ]
+    before_selected = {
+        name: before_parameter_arrays[name]
+        for name in selected
+        if name in before_parameter_arrays
+    }
+    after_selected = {
+        name: after_parameter_arrays[name]
+        for name in selected
+        if name in after_parameter_arrays
+    }
+    return {
+        "schema": HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA,
+        "selector_include_substrings": list(_HI_NERV_DECODER_CONTROL_INCLUDE_SUBSTRINGS),
+        "selector_exclude_substrings": list(_HI_NERV_DECODER_CONTROL_EXCLUDE_SUBSTRINGS),
+        "selected_tensor_count": len(selected),
+        "selected_tensor_names": selected,
+        "changed_tensor_count": len(changed_rows),
+        "changed_tensor_names": changed_names,
+        "non_decoder_changed_tensor_names": non_decoder_changed,
+        "decoder_only_mutation": not non_decoder_changed,
+        "selected_state_sha256_before": _named_array_state_sha256(before_selected),
+        "selected_state_sha256_after": _named_array_state_sha256(after_selected),
+        "changed_rows": changed_rows,
+        "changed_value_count": int(total_changed_values),
+        "changed_tensor_value_count": int(total_values_in_changed_tensors),
+        "max_abs_delta": float(max_abs_delta),
+        "mean_abs_delta_over_changed_tensors": (
+            float(aggregate_abs_delta / total_values_in_changed_tensors)
+            if total_values_in_changed_tensors
+            else 0.0
+        ),
         "authority": TRAINER_AUTHORITY,
         **FALSE_AUTHORITY,
     }

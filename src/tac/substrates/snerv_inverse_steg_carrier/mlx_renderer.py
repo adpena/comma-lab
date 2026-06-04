@@ -687,6 +687,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         skip_high: np.ndarray,
         output_hw: tuple[int, int],
         model_size: SnervModelSizeConfig | None = None,
+        skip_high_mode: str | None = None,
         tub_current: np.ndarray | None = None,
         tub_previous: np.ndarray | None = None,
         tub_next_frame: np.ndarray | None = None,
@@ -715,10 +716,21 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         self.model_size = model_size or SnervModelSizeConfig(
             adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1"
         )
+        requested_skip_high_mode = str(
+            skip_high_mode or self.model_size.official_skip_high_mode
+        ).strip().lower()
+        if requested_skip_high_mode not in {"full", "shared_mean"}:
+            raise SnervMlxRendererError(
+                "official skip_high_mode must be 'full' or 'shared_mean'"
+            )
+        self.skip_high_mode = requested_skip_high_mode
+        self.skip_high_full_shape = tuple(int(v) for v in skip_high_np.shape)
         self.num_pairs = int(skip_high_np.shape[0]) // 2
         self.output_hw = (int(output_hw[0]), int(output_hw[1]))
         self.low = mx.array(low_np, dtype=mx.float32)  # type: ignore[union-attr]
         self.skip_mid = mx.array(skip_mid_np, dtype=mx.float32)  # type: ignore[union-attr]
+        if self.skip_high_mode == "shared_mean":
+            skip_high_np = np.mean(skip_high_np, axis=0, keepdims=True, dtype=np.float32)
         self.skip_high = mx.array(skip_high_np, dtype=mx.float32)  # type: ignore[union-attr]
         self._hfr_head_names = ("lh", "hl", "hh")
         self._import_hfr_heads(hfr_heads)
@@ -776,7 +788,16 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         frame_indices = (idx.reshape((-1, 1)) * 2 + frame_offsets).reshape((-1,))
         low = mx.take(self.low, frame_indices, axis=0)  # type: ignore[union-attr]
         skip_mid = mx.take(self.skip_mid, frame_indices, axis=0)  # type: ignore[union-attr]
-        skip_high = mx.take(self.skip_high, frame_indices, axis=0)  # type: ignore[union-attr]
+        if self.skip_high_mode == "shared_mean":
+            skip_high = mx.broadcast_to(  # type: ignore[union-attr]
+                self.skip_high,
+                (
+                    int(frame_indices.shape[0]),
+                    *(int(v) for v in self.skip_high.shape[1:]),
+                ),
+            )
+        else:
+            skip_high = mx.take(self.skip_high, frame_indices, axis=0)  # type: ignore[union-attr]
         mfu_out = self.mfu.forward_mlx(
             low,
             skip_mid,
@@ -891,6 +912,8 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             "low": state["low"].astype(np.float64),
             "skip_mid": state["skip_mid"].astype(np.float64),
             "skip_high": state["skip_high"].astype(np.float64),
+            "skip_high_mode": self.skip_high_mode,
+            "skip_high_full_shape": tuple(int(v) for v in self.skip_high_full_shape),
             "tub_current": self._tub_current_np.astype(np.float64),
             "tub_previous": self._tub_previous_np.astype(np.float64),
             "tub_next_frame": self._tub_next_frame_np.astype(np.float64),
@@ -910,6 +933,8 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
                 "num_blocks": int(self.mfu.spec.num_blocks),
             },
             "model_size": self.model_size.as_jsonable(),
+            "official_skip_high_mode": self.skip_high_mode,
+            "skip_high_full_shape": [int(v) for v in self.skip_high_full_shape],
             "trainable_parameter_count": int(self.num_parameters()),
             "trainable_payload_atoms": [
                 "inputs.mfu.low",

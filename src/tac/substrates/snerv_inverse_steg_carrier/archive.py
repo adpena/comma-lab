@@ -108,6 +108,16 @@ DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SOURCE_FORWARD_SCHEMA = (
 DECODER_PAYLOAD_LEGACY_CODEC = "float32_lzma"
 DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
+OFFICIAL_SKIP_HIGH_CODEC_FULL = "full_float64"
+OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN = "shared_mean_float64"
+OFFICIAL_SKIP_HIGH_MODE_TO_CODEC = {
+    "full": OFFICIAL_SKIP_HIGH_CODEC_FULL,
+    "full_float64": OFFICIAL_SKIP_HIGH_CODEC_FULL,
+    OFFICIAL_SKIP_HIGH_CODEC_FULL: OFFICIAL_SKIP_HIGH_CODEC_FULL,
+    "shared": OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+    "shared_mean": OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+    OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN: OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+}
 OFFICIAL_MFU_HFR_TUB_REQUIRED_TENSOR_KEYS: tuple[str, ...] = (
     "mfu.upsample_mid.weight",
     "mfu.upsample_mid.bias",
@@ -1255,6 +1265,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     temporal_encoder_output_shape: tuple[int, int, int, int] | None = None,
     fc_hw: tuple[int, int] | None = None,
     output2_decoder_output_shape: tuple[int, int, int, int] | None = None,
+    skip_high_codec: str | None = None,
 ) -> bytes:
     """Encode executable official MFU/HFR/TUB receiver primitive bytes.
 
@@ -1264,12 +1275,16 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     of only carrying the local linear HF surrogate.
     """
 
+    skip_high_plan = _official_skip_high_storage_plan(
+        skip_high,
+        codec=skip_high_codec,
+    )
     tensors = _official_payload_tensor_dict(
         mfu=mfu,
         hfr_heads=hfr_heads,
         low=low,
         skip_mid=skip_mid,
-        skip_high=skip_high,
+        skip_high=skip_high_plan["stored"],
         tub_current=tub_current,
         tub_previous=tub_previous,
         tub_next_frame=tub_next_frame,
@@ -1299,7 +1314,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         hfr_heads=hfr_heads,
         low=low,
         skip_mid=skip_mid,
-        skip_high=skip_high,
+        skip_high=skip_high_plan["effective"],
         tub_current=tub_current,
         tub_previous=tub_previous,
         tub_next_frame=tub_next_frame,
@@ -1335,6 +1350,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "raw_tensor_sha256": _sha256(raw),
         "compressed_bytes": len(compressed),
         "compressed_sha256": _sha256(compressed),
+        "skip_high_storage": skip_high_plan["metadata"],
         "receiver_self_consistency_reference": self_consistency_reference,
         "receiver_self_consistency_reference_sha256": _json_sha256(
             self_consistency_reference
@@ -1641,6 +1657,7 @@ def decode_official_mfu_hfr_tub_decoder_payload(
     if _sha256(raw) != str(header["raw_tensor_sha256"]):
         raise SnervArchiveError("official primitive payload raw sha256 mismatch")
     tensors = _unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
+    tensors = _expand_official_skip_high_storage(header, tensors)
     payload_obj = OfficialMfuHfrTubReceiverPayload(
         header=dict(header),
         tensors=tensors,
@@ -1649,6 +1666,103 @@ def decode_official_mfu_hfr_tub_decoder_payload(
     )
     _validate_official_payload_exec_surfaces(payload_obj)
     return payload_obj
+
+
+def _normalize_official_skip_high_codec(codec: str | None) -> str:
+    raw = "full" if codec is None else str(codec).strip().lower()
+    try:
+        return OFFICIAL_SKIP_HIGH_MODE_TO_CODEC[raw]
+    except KeyError as exc:
+        raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}") from exc
+
+
+def _official_skip_high_storage_plan(
+    skip_high: np.ndarray,
+    *,
+    codec: str | None,
+) -> dict[str, Any]:
+    full = _canonical_float64_tensor(skip_high, name="inputs.mfu.skip_high")
+    if full.ndim != 4:
+        raise SnervArchiveError(
+            f"official skip_high must be NCHW, got {tuple(full.shape)}"
+        )
+    normalized = _normalize_official_skip_high_codec(codec)
+    if normalized == OFFICIAL_SKIP_HIGH_CODEC_FULL:
+        stored = full
+        effective = full
+    elif normalized == OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN:
+        stored = np.mean(full, axis=0, keepdims=True, dtype=np.float64)
+        effective = np.broadcast_to(stored, full.shape).copy()
+    else:  # pragma: no cover - guarded by normalizer
+        raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}")
+    stored = _canonical_float64_tensor(stored, name="inputs.mfu.skip_high")
+    effective = _canonical_float64_tensor(effective, name="inputs.mfu.skip_high.expanded")
+    full_raw_bytes = int(full.size) * np.dtype("<f8").itemsize
+    stored_raw_bytes = int(stored.size) * np.dtype("<f8").itemsize
+    return {
+        "stored": stored,
+        "effective": effective,
+        "metadata": {
+            "schema": "snerv_official_skip_high_storage.v1",
+            "codec": normalized,
+            "source_shape": [int(v) for v in full.shape],
+            "stored_shape": [int(v) for v in stored.shape],
+            "effective_shape": [int(v) for v in effective.shape],
+            "source_raw_bytes": full_raw_bytes,
+            "stored_raw_bytes": stored_raw_bytes,
+            "raw_byte_savings": full_raw_bytes - stored_raw_bytes,
+            "receiver_expands_skip_high": normalized
+            == OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+            "lossless_relative_to_source_skip_high": normalized
+            == OFFICIAL_SKIP_HIGH_CODEC_FULL,
+            "train_time_tied_state_required_for_exact_compact_export": normalized
+            != OFFICIAL_SKIP_HIGH_CODEC_FULL,
+            **FALSE_AUTHORITY,
+        },
+    }
+
+
+def _expand_official_skip_high_storage(
+    header: Mapping[str, Any],
+    tensors: dict[str, np.ndarray],
+) -> dict[str, np.ndarray]:
+    storage = header.get("skip_high_storage")
+    if storage is None:
+        return tensors
+    if not isinstance(storage, Mapping):
+        raise SnervArchiveError("official skip_high storage metadata must be an object")
+    codec = _normalize_official_skip_high_codec(str(storage.get("codec", "full")))
+    skip_high = _tensor(tensors, "inputs.mfu.skip_high")
+    source_shape = tuple(int(v) for v in storage.get("source_shape") or ())
+    stored_shape = tuple(int(v) for v in storage.get("stored_shape") or ())
+    if stored_shape and tuple(skip_high.shape) != stored_shape:
+        raise SnervArchiveError(
+            "official compact skip_high stored shape mismatch; "
+            f"manifest={tuple(skip_high.shape)} header={stored_shape}"
+        )
+    if codec == OFFICIAL_SKIP_HIGH_CODEC_FULL:
+        if source_shape and tuple(skip_high.shape) != source_shape:
+            raise SnervArchiveError(
+                "official full skip_high source shape mismatch; "
+                f"manifest={tuple(skip_high.shape)} header={source_shape}"
+            )
+        return tensors
+    if codec != OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN:
+        raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}")
+    if len(source_shape) != 4 or any(v <= 0 for v in source_shape):
+        raise SnervArchiveError("official shared skip_high source shape is invalid")
+    if skip_high.ndim != 4 or int(skip_high.shape[0]) != 1:
+        raise SnervArchiveError(
+            "official shared skip_high payload must store exactly one NCHW frame"
+        )
+    if tuple(skip_high.shape[1:]) != tuple(source_shape[1:]):
+        raise SnervArchiveError(
+            "official shared skip_high channel/spatial shape mismatch"
+        )
+    expanded = np.broadcast_to(skip_high, source_shape).astype(np.float64, copy=True)
+    out = dict(tensors)
+    out["inputs.mfu.skip_high"] = expanded
+    return out
 
 
 def execute_official_mfu_hfr_tub_decoder_payload(payload: bytes) -> dict[str, Any]:
@@ -2557,6 +2671,8 @@ def _model_size_from_decoder_header(header: dict[str, Any]) -> SnervModelSizeCon
             hfr_gain=float(raw.get("hfr_gain", 0.0)),
             temporal_context=int(raw.get("temporal_context", 0)),
             temporal_mode=str(raw.get("temporal_mode", "delta")),
+            official_skip_high_mode=str(raw.get("official_skip_high_mode", "full")),
+            fc_dim_source=str(raw.get("fc_dim_source", "decoder_header")),
             adapter=str(raw.get("adapter", "snerv_fc_dim_emb_size_adapter_v1")),
         )
     feature_count = int(header.get("feature_count", 9))

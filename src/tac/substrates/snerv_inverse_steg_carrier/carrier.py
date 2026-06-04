@@ -121,6 +121,9 @@ SNERV_OFFICIAL_DEFAULT_DEC_STRDS: Final[tuple[int, ...]] = (5, 4, 2, 2, 2)
 SNERV_TEMPORAL_MODES: Final[frozenset[str]] = frozenset(
     ("delta", "official_haar_dwt1d_lowpass")
 )
+SNERV_OFFICIAL_SKIP_HIGH_MODES: Final[frozenset[str]] = frozenset(
+    ("full", "shared_mean")
+)
 
 
 class SnervCarrierError(ValueError):
@@ -163,6 +166,8 @@ class SnervModelSizeConfig:
     temporal_context: int = 0
     temporal_mode: str = "delta"
     adapter: str = SNERV_BASE_MODEL_SIZE_ADAPTER
+    official_skip_high_mode: str = "full"
+    fc_dim_source: str = "constructor"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "fc_dim", int(self.fc_dim))
@@ -176,6 +181,12 @@ class SnervModelSizeConfig:
         object.__setattr__(self, "hfr_gain", float(self.hfr_gain))
         object.__setattr__(self, "temporal_context", int(self.temporal_context))
         object.__setattr__(self, "temporal_mode", str(self.temporal_mode))
+        object.__setattr__(
+            self,
+            "official_skip_high_mode",
+            str(self.official_skip_high_mode).strip().lower(),
+        )
+        object.__setattr__(self, "fc_dim_source", str(self.fc_dim_source).strip())
         object.__setattr__(
             self,
             "adapter",
@@ -197,6 +208,13 @@ class SnervModelSizeConfig:
             raise SnervCarrierError(
                 f"temporal_mode must be one of {sorted(SNERV_TEMPORAL_MODES)}"
             )
+        if self.official_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES:
+            raise SnervCarrierError(
+                "official_skip_high_mode must be one of "
+                f"{sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES)}"
+            )
+        if not self.fc_dim_source:
+            raise SnervCarrierError("fc_dim_source must be non-empty")
 
     @property
     def feature_count(self) -> int:
@@ -215,6 +233,8 @@ class SnervModelSizeConfig:
             "hfr_gain": float(self.hfr_gain),
             "temporal_context": int(self.temporal_context),
             "temporal_mode": self.temporal_mode,
+            "official_skip_high_mode": self.official_skip_high_mode,
+            "fc_dim_source": self.fc_dim_source,
             "feature_count": int(self.feature_count),
             "adapter": self.adapter,
             "official_mfu_hfr_tub_numeric_primitives_requested": bool(

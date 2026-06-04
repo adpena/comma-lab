@@ -13,12 +13,14 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
     DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
     HI_NERV_TRAIN_TIME_CONTROL_SCHEMA,
+    HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA,
     PR95_FULL_CONTROL_CONTRACT_SCHEMA,
     TRAINER_SCHEMA,
     HiNervTrainTimeControlConfig,
     _apply_train_time_decoder_controls,
     _build_parser,
     _build_staged_scorer_curriculum,
+    _build_train_time_decoder_mutation_identity,
     _coder_qat_config_from_args,
     _config_from_args,
     _configure_decoder_fake_quant_forward,
@@ -343,8 +345,48 @@ def test_hinerv_train_time_decoder_controls_mutate_mlx_decoder_not_latents() -> 
         before_decoder == 0.0
     )
     assert np.array_equal(after_latents, before_latents)
+    mutation_identity = report["mutation_identity"]
+    assert mutation_identity["schema"] == HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA
+    assert mutation_identity["decoder_only_mutation"] is True
+    assert mutation_identity["non_decoder_changed_tensor_names"] == []
+    assert mutation_identity["selected_tensor_names"] == ["decoder.weight"]
+    assert mutation_identity["changed_tensor_names"] == ["decoder.weight"]
+    assert mutation_identity["changed_rows"][0]["selected_by_decoder_control"] is True
+    assert mutation_identity["changed_rows"][0]["sha256_before"] != mutation_identity[
+        "changed_rows"
+    ][0]["sha256_after"]
+    assert mutation_identity["selected_state_sha256_before"] != mutation_identity[
+        "selected_state_sha256_after"
+    ]
+    assert mutation_identity["changed_value_count"] > 0
+    assert mutation_identity["score_claim"] is False
+    assert mutation_identity["ready_for_exact_eval_dispatch"] is False
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_train_time_decoder_mutation_identity_flags_non_decoder_delta() -> None:
+    import numpy as np
+
+    identity = _build_train_time_decoder_mutation_identity(
+        before_parameter_arrays={
+            "decoder.weight": np.array([1.0, 2.0], dtype=np.float32),
+            "latents": np.array([3.0], dtype=np.float32),
+        },
+        after_parameter_arrays={
+            "decoder.weight": np.array([1.0, 2.0], dtype=np.float32),
+            "latents": np.array([4.0], dtype=np.float32),
+        },
+        selected_tensor_names={"decoder.weight"},
+    )
+
+    assert identity["schema"] == HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA
+    assert identity["decoder_only_mutation"] is False
+    assert identity["changed_tensor_names"] == ["latents"]
+    assert identity["non_decoder_changed_tensor_names"] == ["latents"]
+    assert identity["changed_rows"][0]["selected_by_decoder_control"] is False
+    assert identity["score_claim"] is False
+    assert identity["ready_for_exact_eval_dispatch"] is False
 
 
 def test_hinerv_mlx_trainer_pose_student_channels_match_preprocess() -> None:
