@@ -3640,6 +3640,28 @@ def _run_snerv_native_mlx_export_attachment(
         if artifact.get("receiver_proof_passed") is not True:
             blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
         native_scorer_loop = dict(artifact.get("scorer_loop_qat") or {})
+        snerv_score_aware_long_training = dict(
+            artifact.get("score_aware_long_training") or {}
+        )
+        snerv_training_telemetry_contract = (
+            snerv_score_aware_long_training.get("training_telemetry_contract")
+        )
+        if bool(artifact.get("score_aware_long_training_executed")):
+            if isinstance(snerv_training_telemetry_contract, Mapping):
+                blockers.extend(
+                    str(blocker)
+                    for blocker in snerv_training_telemetry_contract.get("blockers")
+                    or []
+                    if str(blocker)
+                )
+                if not bool(snerv_training_telemetry_contract.get("passed")):
+                    blockers.append(
+                        "snerv_score_aware_long_training_telemetry_contract_failed"
+                    )
+            else:
+                blockers.append(
+                    "snerv_score_aware_long_training_telemetry_contract_missing"
+                )
         receiver_reconstruction = _snerv_receiver_reconstruction_summary(
             target_profile=artifact.get("receiver_target_reconstruction_profile"),
             export_profile=artifact.get("receiver_export_reconstruction_profile"),
@@ -3653,6 +3675,8 @@ def _run_snerv_native_mlx_export_attachment(
             and artifact.get("native_mlx_training_executed") is True
             and artifact.get("receiver_proof_passed") is True
             and receiver_reconstruction["receiver_reconstruction_verified"] is True
+            and isinstance(snerv_training_telemetry_contract, Mapping)
+            and snerv_training_telemetry_contract.get("passed") is True
         )
         if native_mlx_full600_export_proof_ready and not native_mlx_full600_campaign_ready:
             blockers.extend(
@@ -3755,7 +3779,12 @@ def _run_snerv_native_mlx_export_attachment(
             "score_aware_long_training_executed": bool(
                 artifact.get("score_aware_long_training_executed")
             ),
-            "score_aware_long_training": artifact.get("score_aware_long_training"),
+            "score_aware_long_training": snerv_score_aware_long_training,
+            "score_aware_long_training_telemetry_contract": (
+                dict(snerv_training_telemetry_contract)
+                if isinstance(snerv_training_telemetry_contract, Mapping)
+                else None
+            ),
             "score_aware_long_training_real_teachers_bound": bool(
                 artifact.get("score_aware_long_training_real_teachers_bound")
             ),
@@ -9038,7 +9067,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         family="hi_nerv",
     )
     substrate_metadata = artifact_dict.get("substrate_artifact_metadata")
+    training_telemetry_contract = None
     if isinstance(substrate_metadata, dict):
+        training_telemetry_contract = substrate_metadata.get(
+            "training_telemetry_contract"
+        )
         scoreaware_metadata = substrate_metadata.get("score_aware_training")
         if isinstance(scoreaware_metadata, dict):
             scoreaware_metadata["decoder_weight_gradient_saliency_artifact"] = (
@@ -9225,6 +9258,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers.extend(score_aware_training_plan.get("blockers") or [])
     blockers.extend(candidate_curriculum_plan.get("blockers") or [])
     blockers.extend(trained_archive_byte_oracle.get("blockers") or [])
+    if isinstance(training_telemetry_contract, Mapping):
+        blockers.extend(training_telemetry_contract.get("blockers") or [])
+        if not bool(training_telemetry_contract.get("passed")):
+            blockers.append("hi_nerv_score_aware_training_telemetry_contract_failed")
+    else:
+        blockers.append("hi_nerv_score_aware_training_telemetry_contract_missing")
     blockers.extend(local_cpu_replay_blockers)
     if post_export_receiver_cache_quality is None:
         blockers.append("hi_nerv_post_export_receiver_cache_quality_not_requested")
@@ -13415,6 +13454,26 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pose_instability_monitor.as_dict()
     )
     artifact_dict = artifact.as_dict() if hasattr(artifact, "as_dict") else dict(artifact)
+    training_telemetry_contract = _compact_score_aware_training_telemetry_contract(
+        artifact_dict.get("telemetry_path"),
+        family="hi_nerv",
+        segnet_distillation_weight=float(segnet_distillation_weight),
+        pose_distillation_weight=float(pose_distillation_weight),
+        pr95_faithful_curriculum_enabled=bool(pr95_curriculum_enabled),
+        coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
+        train_time_section_byte_control_bound=bool(
+            train_time_section_byte_control.get("active") is True
+        ),
+        scorer_input_distribution_guard_weight=float(
+            scorer_input_distribution_guard_weight
+        ),
+    )
+    _attach_hi_nerv_training_telemetry_contract(
+        artifact=artifact,
+        artifact_dict=artifact_dict,
+        output_dir=output_dir,
+        contract=training_telemetry_contract,
+    )
     profile_path = output_dir / "local_mlx_prefilter_profile.json"
     progress_path = output_dir / "local_mlx_prefilter_progress.jsonl"
     archive_bytes = artifact_dict.get("archive_bytes")
@@ -13667,6 +13726,220 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
     }
+
+
+def _compact_score_aware_training_telemetry_contract(
+    telemetry_path: str | Path | None,
+    *,
+    family: str,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    pr95_faithful_curriculum_enabled: bool,
+    coder_aware_qat_bound: bool,
+    train_time_section_byte_control_bound: bool,
+    scorer_input_distribution_guard_weight: float,
+) -> dict[str, Any]:
+    """Validate that a compact long run actually actuated score controls."""
+
+    family_key = str(family).strip().lower()
+    path = Path(telemetry_path).expanduser() if telemetry_path else Path("")
+    expected_seg = float(segnet_distillation_weight) > 0.0
+    expected_pose = float(pose_distillation_weight) > 0.0
+    expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
+    expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
+    expected_any = bool(expected_seg or expected_pose or expected_section or expected_guard)
+    blockers: list[str] = []
+    row_count = 0
+    malformed_rows = 0
+    seg_loss_observed = False
+    pose_loss_observed = False
+    pr95_seg_loss_observed = False
+    pr95_pose_loss_observed = False
+    guard_loss_observed = False
+    section_rate_observed = False
+    seg_dual_observed = False
+    pose_dual_observed = False
+    if not path.is_file():
+        blockers = [f"{family_key}_score_aware_training_telemetry_missing"] if expected_any else []
+        return {
+            "schema": "compact_score_aware_training_telemetry_contract.v1",
+            "family": family_key,
+            "telemetry_path": path.as_posix() if telemetry_path else None,
+            "telemetry_exists": False,
+            "row_count": 0,
+            "passed": not blockers,
+            "blockers": blockers,
+            "authority": "macos_mlx_research_signal_false_authority",
+        }
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                row = json.loads(text)
+            except json.JSONDecodeError:
+                malformed_rows += 1
+                continue
+            if not isinstance(row, Mapping):
+                malformed_rows += 1
+                continue
+            row_count += 1
+            seg_loss_observed = seg_loss_observed or _telemetry_finite(row, "loss_part_distill")
+            pose_loss_observed = pose_loss_observed or _telemetry_finite(
+                row,
+                "loss_part_pose_distill",
+            )
+            pr95_seg_loss_observed = pr95_seg_loss_observed or _telemetry_finite(
+                row,
+                "loss_part_pr95_stage_seg_surrogate",
+            )
+            pr95_pose_loss_observed = pr95_pose_loss_observed or _telemetry_finite(
+                row,
+                "loss_part_pr95_stage_pose_surrogate",
+            )
+            guard_loss_observed = guard_loss_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_scorer_input_distribution_guard",
+                    "loss_part_pr95_stage_scorer_input_distribution_guard",
+                )
+            )
+            section_rate_observed = section_rate_observed or any(
+                key.startswith("train_time_section_rate_score__")
+                and _finite_json_number(value)
+                for key, value in _telemetry_items(row)
+            )
+            seg_dual_observed = seg_dual_observed or _telemetry_float_equals(
+                row,
+                f"dual_ascent_missing_metric__{family_key}_segnet_last_frame_distill",
+                0.0,
+            )
+            pose_dual_observed = pose_dual_observed or _telemetry_float_equals(
+                row,
+                f"dual_ascent_missing_metric__{family_key}_posenet_yuv6_pair_distill",
+                0.0,
+            )
+    if row_count <= 0:
+        blockers.append(f"{family_key}_score_aware_training_telemetry_empty")
+    if malformed_rows:
+        blockers.append(f"{family_key}_score_aware_training_telemetry_malformed_rows")
+    if expected_seg and not seg_loss_observed:
+        blockers.append(f"{family_key}_score_aware_training_segnet_loss_metric_missing")
+    if expected_pose and not pose_loss_observed:
+        blockers.append(f"{family_key}_score_aware_training_posenet_loss_metric_missing")
+    if expected_seg and not seg_dual_observed:
+        blockers.append(f"{family_key}_score_aware_training_dual_segnet_metric_never_observed")
+    if expected_pose and not pose_dual_observed:
+        blockers.append(f"{family_key}_score_aware_training_dual_posenet_metric_never_observed")
+    if expected_section and not section_rate_observed:
+        blockers.append(f"{family_key}_score_aware_training_section_rate_metric_missing")
+    if expected_guard and not guard_loss_observed:
+        blockers.append(f"{family_key}_score_aware_training_scorer_input_guard_metric_missing")
+    if pr95_faithful_curriculum_enabled and pr95_seg_loss_observed and not seg_loss_observed:
+        blockers.append(f"{family_key}_score_aware_training_pr95_seg_alias_missing")
+    if pr95_faithful_curriculum_enabled and pr95_pose_loss_observed and not pose_loss_observed:
+        blockers.append(f"{family_key}_score_aware_training_pr95_pose_alias_missing")
+    blockers = _dedupe(blockers)
+    return {
+        "schema": "compact_score_aware_training_telemetry_contract.v1",
+        "family": family_key,
+        "telemetry_path": path.as_posix(),
+        "telemetry_exists": True,
+        "row_count": int(row_count),
+        "malformed_row_count": int(malformed_rows),
+        "expected_segnet_dual": bool(expected_seg),
+        "expected_posenet_dual": bool(expected_pose),
+        "expected_section_rate_metrics": bool(expected_section),
+        "expected_scorer_input_guard_metric": bool(expected_guard),
+        "segnet_loss_metric_observed": bool(seg_loss_observed),
+        "posenet_loss_metric_observed": bool(pose_loss_observed),
+        "segnet_dual_metric_observed": bool(seg_dual_observed),
+        "posenet_dual_metric_observed": bool(pose_dual_observed),
+        "section_rate_metric_observed": bool(section_rate_observed),
+        "scorer_input_guard_metric_observed": bool(guard_loss_observed),
+        "pr95_stage_seg_loss_observed": bool(pr95_seg_loss_observed),
+        "pr95_stage_pose_loss_observed": bool(pr95_pose_loss_observed),
+        "passed": not blockers,
+        "blockers": blockers,
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+
+
+def _telemetry_value(row: Mapping[str, Any], key: str) -> Any:
+    if key in row:
+        return row.get(key)
+    loss_components = row.get("loss_components")
+    if isinstance(loss_components, Mapping) and key in loss_components:
+        return loss_components.get(key)
+    return None
+
+
+def _telemetry_items(row: Mapping[str, Any]) -> tuple[tuple[str, Any], ...]:
+    items: list[tuple[str, Any]] = [(str(key), value) for key, value in row.items()]
+    loss_components = row.get("loss_components")
+    if isinstance(loss_components, Mapping):
+        items.extend((str(key), value) for key, value in loss_components.items())
+    return tuple(items)
+
+
+def _telemetry_finite(row: Mapping[str, Any], key: str) -> bool:
+    return _finite_json_number(_telemetry_value(row, key))
+
+
+def _telemetry_float_equals(row: Mapping[str, Any], key: str, expected: float) -> bool:
+    value = _telemetry_value(row, key)
+    return _finite_json_number(value) and float(value) == float(expected)
+
+
+def _finite_json_number(value: Any) -> bool:
+    if value is None or isinstance(value, bool):
+        return False
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(numeric)
+
+
+def _attach_hi_nerv_training_telemetry_contract(
+    *,
+    artifact: Any,
+    artifact_dict: dict[str, Any],
+    output_dir: str | Path,
+    contract: Mapping[str, Any],
+) -> None:
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["training_telemetry_contract"] = dict(contract)
+        training = metadata.get("score_aware_training")
+        if isinstance(training, dict):
+            training["training_telemetry_contract"] = dict(contract)
+    artifact_metadata = getattr(artifact, "substrate_artifact_metadata", None)
+    if isinstance(artifact_metadata, dict):
+        artifact_metadata["training_telemetry_contract"] = dict(contract)
+        training = artifact_metadata.get("score_aware_training")
+        if isinstance(training, dict):
+            training["training_telemetry_contract"] = dict(contract)
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
+        "training_artifact.json"
+    )
+    if not artifact_path.is_file():
+        return
+    try:
+        persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    persisted_metadata = dict(persisted.get("substrate_artifact_metadata") or {})
+    persisted_metadata["training_telemetry_contract"] = dict(contract)
+    training = persisted_metadata.get("score_aware_training")
+    if isinstance(training, dict):
+        training["training_telemetry_contract"] = dict(contract)
+    persisted["substrate_artifact_metadata"] = persisted_metadata
+    artifact_path.write_text(
+        json.dumps(persisted, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _attach_hi_nerv_post_export_receiver_cache_quality(

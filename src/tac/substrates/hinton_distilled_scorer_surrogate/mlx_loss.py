@@ -898,6 +898,7 @@ class RealSegNetTeacherLogitsCache:
     num_classes: int
     upstream_segnet_safetensors_sha256: str | None = None
     cache_build_seconds: float | None = None
+    live_segnet_adapter: Any | None = None
 
     def __post_init__(self) -> None:
         _require_mlx()
@@ -925,6 +926,28 @@ class RealSegNetTeacherLogitsCache:
         import mlx.core as mx
 
         return self.teacher_logits_thwk[indices].astype(mx.float32)
+
+    def teacher_logits_for_frames_nhwc01(self, frames_bhwc01: Any) -> Any:
+        """Run the live MLX SegNet teacher on decoded candidate RGB frames.
+
+        ``teacher_logits_for_indices`` caches the reference/target teacher
+        distribution. This method is the train-time calibration sister: it
+        evaluates the same real SegNet adapter on the candidate frames so the
+        tiny learnable student head cannot drift into an uncalibrated surrogate
+        geometry while the renderer optimizes against it.
+        """
+        _require_mlx()
+        import mlx.core as mx
+
+        if self.live_segnet_adapter is None:
+            raise RuntimeError(
+                "RealSegNetTeacherLogitsCache has no live_segnet_adapter; "
+                "candidate-frame SegNet calibration requires the cache built by "
+                "build_mlx_segnet_pair_teacher or another provider exposing "
+                "teacher_logits_for_frames_nhwc01."
+            )
+        x = mx.clip(frames_bhwc01, 0.0, 1.0) * 255.0
+        return self.live_segnet_adapter(x).astype(mx.float32)
 
 
 def build_real_segnet_teacher_cache(

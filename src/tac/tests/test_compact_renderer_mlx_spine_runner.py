@@ -923,6 +923,13 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
                 "executed": True,
                 "epochs": 8,
                 "optimizer": "pact_muon_adamw",
+                "training_telemetry_contract": {
+                    "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+                    "telemetry_exists": True,
+                    "row_count": 1,
+                    "passed": True,
+                    "blockers": [],
+                },
             },
             "scorer_loop_qat": {
                 "executed": True,
@@ -1046,8 +1053,169 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert out["receiver_reconstruction_verified"] is True
     assert out["receiver_reconstruction"]["target_mse_nchw255"] == pytest.approx(0.75)
     assert out["receiver_reconstruction"]["export_mse_nchw255"] == pytest.approx(0.0)
+    assert out["score_aware_long_training_telemetry_contract"]["passed"] is True
     assert out["native_mlx_full600_campaign_ready"] is True
     assert out["score_claim"] is False
+
+
+def test_snerv_native_export_attachment_blocks_failed_training_telemetry_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as native_mod
+
+    def fake_train_export_snerv_mlx_native(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        packet = out / "snerv_mlx_native_packet.snar"
+        archive = out / "archive.zip"
+        proof = out / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+        packet.write_bytes(b"SNAR1 fake packet")
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", packet.read_bytes())
+        proof.parent.mkdir()
+        proof.write_text(
+            json.dumps(
+                {
+                    "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                    "receiver_contract_satisfied": True,
+                    "runtime_consumption_proof_passed": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        return {
+            "schema": "snerv_mlx_native_train_export.v1",
+            "num_pairs": 600,
+            "packet_path": packet.as_posix(),
+            "packet_bytes": packet.stat().st_size,
+            "packet_sha256": runner_mod._sha256_file(packet),
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "receiver_proof_path": proof.as_posix(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "receiver_target_reconstruction_profile": (
+                _fake_snerv_receiver_reconstruction_profile(
+                    profile_id="selected_packet_vs_source_targets",
+                    reference_kind="source_targets_nchw255",
+                    mse=0.75,
+                    max_abs=1.5,
+                )
+            ),
+            "receiver_export_reconstruction_profile": (
+                _fake_snerv_receiver_reconstruction_profile(
+                    profile_id="selected_packet_vs_export_reference",
+                    reference_kind="export_reference_nchw255",
+                    mse=0.0,
+                    max_abs=0.0,
+                )
+            ),
+            "native_mlx_training_executed": True,
+            "native_mlx_training_kind": "score_aware_long_training",
+            "score_aware_long_training_executed": True,
+            "score_aware_long_training": {
+                "executed": True,
+                "epochs": 8,
+                "training_telemetry_contract": {
+                    "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+                    "telemetry_exists": True,
+                    "row_count": 1,
+                    "passed": False,
+                    "blockers": ["unit_snerv_training_control_missing"],
+                },
+            },
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        native_mod,
+        "train_export_snerv_mlx_native",
+        fake_train_export_snerv_mlx_native,
+    )
+
+    out = runner_mod._run_snerv_native_mlx_export_attachment(
+        requested=True,
+        output_dir=tmp_path / "snerv_native_attachment_bad_telemetry",
+        num_pairs=600,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        scorer_upstream_dir=REPO_ROOT / "upstream",
+        modelsize_candidate={"candidate_id": "snerv-bad-telemetry-test"},
+        prioritized_pair_indices=(),
+        scorer_error_pair_sampling_weights={},
+        scorer_error_pair_curriculum={},
+        repo_root=REPO_ROOT,
+        allow_overwrite=False,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=12,
+        run_scorer_loop_qat=False,
+        scorer_loop_qat_max_trials=0,
+        scorer_loop_qat_search_mode="learned_random_subspace",
+        scorer_loop_qat_qat_bits=4,
+        scorer_loop_qat_decoder_payload_codec="int4_symmetric",
+        scorer_loop_qat_lf_payload_codec="int4_symmetric",
+        scorer_loop_qat_component_guard_mode="score_primary",
+        scorer_loop_qat_device="gpu",
+        recon_pixel_weight_path=None,
+        recon_pixel_weight_manifest_path=None,
+        recon_pixel_weight_normalize="mean",
+        native_mlx_decoder_train_steps=0,
+        native_mlx_decoder_train_lr=1e-5,
+        native_mlx_decoder_train_ridge=1e-6,
+        native_mlx_decoder_train_optimizer="closed_form",
+        score_aware_long_training_epochs=8,
+        score_aware_long_training_lr=1e-3,
+        score_aware_long_training_batch_pairs=2,
+        score_aware_long_training_optimizer="pact_muon_adamw",
+        score_aware_long_training_grad_clip_max_norm=None,
+        score_aware_long_training_weight_decay=0.01,
+        score_aware_long_training_eval_roundtrip_ste=True,
+        score_aware_long_training_section_byte_refresh_every_steps=25,
+        checkpoint_retention_keep_last_n=2,
+        checkpoint_retention_keep_best_n=1,
+        checkpoint_retention_keep_every_n_epochs=None,
+        checkpoint_retention_cold_store_roots=(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=0.5,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_tau_boundary=1.25,
+        segnet_hinge_margin=0.5,
+        distillation_device="mps",
+        allow_segnet_only_research=False,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0002,
+        coder_qat_c1a_entropy_weight=0.0001,
+        coder_qat_c1a_sigma=0.2,
+        coder_qat_c1a_sample_size=512,
+        score_aware_long_training_pr95_faithful_curriculum=True,
+        score_aware_long_training_pr95_muon_policy="faithful_stage8_only",
+        write_mlx_prefilter_profile=False,
+        mlx_prefilter_scorer_device=None,
+        mlx_prefilter_scorer_batch_pairs=1,
+        mlx_prefilter_progress_every=0,
+    )
+
+    assert out["receiver_reconstruction_verified"] is True
+    assert out["score_aware_long_training_telemetry_contract"]["passed"] is False
+    assert "unit_snerv_training_control_missing" in out["blockers"]
+    assert "snerv_score_aware_long_training_telemetry_contract_failed" in out[
+        "blockers"
+    ]
+    assert out["native_mlx_full600_campaign_ready"] is False
 
 
 def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) -> None:
@@ -1281,6 +1449,97 @@ def test_recover_interrupted_report_from_startup_marker_summarizes_telemetry(
     assert checkpoint_meta.as_posix() in evidence_paths
     assert checkpoint_live.as_posix() in evidence_paths
     assert checkpoint_ema.as_posix() in evidence_paths
+
+
+def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_distill": 1.25,
+                    "loss_part_pose_distill": 2.5,
+                    "loss_part_pr95_stage_seg_surrogate": 1.25,
+                    "loss_part_pr95_stage_pose_surrogate": 2.5,
+                    "loss_part_pr95_stage_scorer_input_distribution_guard": 0.125,
+                    "train_time_section_rate_score__decoder_payload": 0.002,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        pr95_faithful_curriculum_enabled=True,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=2.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["blockers"] == []
+    assert contract["segnet_dual_metric_observed"] is True
+    assert contract["posenet_dual_metric_observed"] is True
+    assert contract["section_rate_metric_observed"] is True
+    assert contract["scorer_input_guard_metric_observed"] is True
+
+
+def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_pr95_stage_seg_surrogate": 9.0,
+                    "loss_part_pr95_stage_pose_surrogate": 7.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 1.0,
+                    "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        pr95_faithful_curriculum_enabled=True,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=2.0,
+    )
+
+    assert contract["passed"] is False
+    assert "hi_nerv_score_aware_training_pr95_seg_alias_missing" in contract[
+        "blockers"
+    ]
+    assert "hi_nerv_score_aware_training_pr95_pose_alias_missing" in contract[
+        "blockers"
+    ]
+    assert "hi_nerv_score_aware_training_dual_segnet_metric_never_observed" in contract[
+        "blockers"
+    ]
+    assert "hi_nerv_score_aware_training_section_rate_metric_missing" in contract[
+        "blockers"
+    ]
 
 
 def test_write_decoder_weight_saliency_artifact_missing_fails_closed(
