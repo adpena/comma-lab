@@ -30,6 +30,24 @@ def _candidate() -> dict[str, Any]:
     }
 
 
+def _snerv_candidate(*, official: bool = False) -> dict[str, Any]:
+    row = {
+        "candidate_id": "snerv_full600_ceil180k",
+        "num_pairs": 600,
+        "hard_byte_ceiling": 180_000,
+        "nominal_total_payload_bytes": 160_000,
+        "levels": 3,
+        "bits_per_coeff": 2.5,
+        "step_map_bits_per_coeff": 4.0,
+        "decoder_payload_codec": "snar1",
+    }
+    if official:
+        row["snerv_model_size_adapter"] = (
+            "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+        )
+    return row
+
+
 def _requirement(plan: dict[str, Any], requirement_id: str) -> dict[str, Any]:
     rows = plan["pr95_stack_binding"]["rows"]
     for row in rows:
@@ -99,6 +117,7 @@ def test_hinerv_prelaunch_gate_consumes_eval_roundtrip_ste_evidence() -> None:
         coder_qat_quant_bits=4,
         recon_pixel_weight_attached=True,
         eval_roundtrip_ste_attached=True,
+        scorer_input_distribution_guard_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
     )
@@ -137,16 +156,7 @@ def test_hinerv_partial_pair_byte_feedback_remains_advisory_only() -> None:
 
 def test_snerv_prelaunch_stays_blocked_until_native_mlx_training_exists() -> None:
     plan = build_snerv_candidate_curriculum_plan(
-        candidate={
-            "candidate_id": "snerv_full600_ceil180k",
-            "num_pairs": 600,
-            "hard_byte_ceiling": 180_000,
-            "nominal_total_payload_bytes": 160_000,
-            "levels": 3,
-            "bits_per_coeff": 2.5,
-            "step_map_bits_per_coeff": 4.0,
-            "decoder_payload_codec": "snar1",
-        },
+        candidate=_snerv_candidate(),
         requested_epochs=8,
         num_pairs=600,
         step_map_coder_mode="waterfill",
@@ -167,16 +177,7 @@ def test_snerv_prelaunch_stays_blocked_until_native_mlx_training_exists() -> Non
 
 def test_snerv_prelaunch_consumes_native_scorer_loop_but_keeps_materialization_blocker() -> None:
     plan = build_snerv_candidate_curriculum_plan(
-        candidate={
-            "candidate_id": "snerv_full600_ceil180k",
-            "num_pairs": 600,
-            "hard_byte_ceiling": 180_000,
-            "nominal_total_payload_bytes": 160_000,
-            "levels": 3,
-            "bits_per_coeff": 2.5,
-            "step_map_bits_per_coeff": 4.0,
-            "decoder_payload_codec": "snar1",
-        },
+        candidate=_snerv_candidate(),
         requested_epochs=8,
         num_pairs=600,
         step_map_coder_mode="waterfill",
@@ -197,9 +198,96 @@ def test_snerv_prelaunch_consumes_native_scorer_loop_but_keeps_materialization_b
     assert training_plan["standalone_scorer_loop_qat_attached"] is False
     assert training_plan["native_mlx_scorer_loop_qat_attached"] is True
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
-    assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
-    assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
+    assert "snerv_real_segnet_teacher_missing" in plan["blockers"]
+    assert "snerv_real_posenet_teacher_missing" in plan["blockers"]
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
         "blockers"
     ]
     assert plan["score_claim"] is False
+
+
+def test_snerv_official_receiver_payload_does_not_close_source_forward_authority() -> None:
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=_snerv_candidate(official=True),
+        requested_epochs=8,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=160_000,
+        measured_archive_bytes=161_000,
+        native_mlx_train_export_attached=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+        native_mlx_long_training_bound=True,
+        native_mlx_artifact_evidence={
+            "schema": "snerv_mlx_native_train_export.v1",
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
+            "snerv_official_mfu_hfr_tub_export_bound": True,
+            "snerv_official_mfu_hfr_tub_export_bound_semantics": (
+                "receiver_payload_bound_not_source_forward_parity"
+            ),
+            "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
+            "snerv_official_mfu_hfr_tub_frame_producing_export": True,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
+            "source_faithful_stack": False,
+            "score_aware_long_training": {
+                "official_mfu_hfr_tub_source_forward_replay": {
+                    "blockers": [
+                        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
+                    ]
+                }
+            },
+        },
+    )
+
+    split = plan["official_source_forward_authority_split"]
+    assert split["receiver_payload_bound"] is True
+    assert split["receiver_bound_training_evidence_usable"] is True
+    assert split["full_source_forward_authority_proven"] is False
+    assert split["launch_semantics"] == (
+        "receiver_bound_training_allowed_but_official_source_authority_false"
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in plan["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
+        in plan["blockers"]
+    )
+
+
+def test_snerv_official_source_forward_authority_can_close_independently() -> None:
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=_snerv_candidate(official=True),
+        requested_epochs=8,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=160_000,
+        measured_archive_bytes=161_000,
+        native_mlx_train_export_attached=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+        native_mlx_long_training_bound=True,
+        native_mlx_artifact_evidence={
+            "schema": "snerv_mlx_native_train_export.v1",
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
+            "snerv_official_mfu_hfr_tub_export_bound": True,
+            "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
+            "snerv_official_mfu_hfr_tub_frame_producing_export": True,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_bound": True,
+            "source_forward_replay_verified": True,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_authority": True,
+            "source_faithful_stack": True,
+        },
+    )
+
+    split = plan["official_source_forward_authority_split"]
+    assert split["full_source_forward_authority_proven"] is True
+    assert split["launch_semantics"] == (
+        "official_source_forward_parity_available_false_authority_until_score_gate"
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        not in plan["blockers"]
+    )

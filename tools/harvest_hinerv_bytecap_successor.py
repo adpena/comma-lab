@@ -57,6 +57,14 @@ FALSE_AUTHORITY = {
     "rank_or_kill_eligible": False,
     "ready_for_exact_eval_dispatch": False,
 }
+_EXPORT_REPORT_ALLOWED_HARVEST_BLOCKERS = {
+    "macos_mlx_checkpoint_export_false_authority",
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "mlx_local_replay_not_contest_auth_axis",
+    "hinerv_receiver_raw_cache_prefilter_false_authority",
+    "archive_bytes_exceed_tightest_hard_ceiling",
+    "hard_byte_ceiling_export_bypassed_for_measurement",
+}
 
 
 class HarvestError(RuntimeError):
@@ -481,6 +489,12 @@ def validate_export_proof(report: Mapping[str, Any]) -> dict[str, Any]:
     receiver_sha = str(report.get("receiver_proof_sha256") or "")
     if report.get("receiver_proof_ready") is not True:
         blockers.append("receiver_proof_not_ready")
+    if report.get("receiver_proof_passed") is not True:
+        blockers.append("runtime_consumption_proof_not_passed")
+    if report.get("receiver_contract_satisfied") is not True:
+        blockers.append("receiver_contract_not_satisfied")
+    if report.get("receiver_closed") is not True:
+        blockers.append("receiver_closed_not_satisfied")
     if receiver_path is None or not receiver_path.is_file():
         blockers.append("receiver_proof_path_missing")
     elif receiver_sha and sha256_file(receiver_path) != receiver_sha:
@@ -490,12 +504,29 @@ def validate_export_proof(report: Mapping[str, Any]) -> dict[str, Any]:
         blockers.append("full_video_mlx_prefilter_profile_not_written")
     if prefilter_path is None or not prefilter_path.is_file():
         blockers.append("full_video_mlx_prefilter_profile_missing")
+    prefilter_report = report.get("local_mlx_prefilter_profile")
+    if not isinstance(prefilter_report, Mapping):
+        blockers.append("full_video_mlx_prefilter_profile_payload_missing")
+    else:
+        if prefilter_report.get("written") is not True:
+            blockers.append("full_video_mlx_prefilter_profile_not_written")
+        blockers.extend(_critical_prefilter_blockers(prefilter_report))
+        profile_sha = str(prefilter_report.get("profile_sha256") or "")
+        if (
+            profile_sha
+            and prefilter_path is not None
+            and prefilter_path.is_file()
+            and sha256_file(prefilter_path) != profile_sha
+        ):
+            blockers.append("full_video_mlx_prefilter_profile_sha256_mismatch")
     checkpoint_meta = _path_from_report(report, "checkpoint_meta_path")
     checkpoint_state = _path_from_report(report, "checkpoint_state_path")
     if checkpoint_meta is None or not checkpoint_meta.is_file():
         blockers.append("checkpoint_meta_path_missing_in_export_report")
     if checkpoint_state is None or not checkpoint_state.is_file():
         blockers.append("checkpoint_state_path_missing_in_export_report")
+    critical_export_blockers = _critical_export_report_blockers(report)
+    blockers.extend(critical_export_blockers)
     ceiling = _optional_int(report.get("hard_byte_ceiling_requested_by_candidate_or_startup"))
     overrun = None
     if archive_bytes is not None and ceiling is not None:
@@ -518,9 +549,63 @@ def validate_export_proof(report: Mapping[str, Any]) -> dict[str, Any]:
         "archive_path": archive_path.as_posix() if archive_path else None,
         "receiver_proof_path": receiver_path.as_posix() if receiver_path else None,
         "local_mlx_prefilter_profile_path": prefilter_path.as_posix() if prefilter_path else None,
+        "critical_export_report_blockers": critical_export_blockers,
         "blockers": list(dict.fromkeys(blockers)),
         **FALSE_AUTHORITY,
     }
+
+
+def _critical_export_report_blockers(report: Mapping[str, Any]) -> list[str]:
+    """Return export blockers that invalidate the self-harvest proof gate.
+
+    The harvester may complete a false-authority local measurement with the
+    expected exact-eval and over-cap blockers still present. Receiver failures,
+    prefilter/cache-quality failures, and schema/custody blockers must keep the
+    terminal row failed instead of becoming a completed measurement.
+    """
+
+    return [
+        str(blocker)
+        for blocker in report.get("blockers") or ()
+        if str(blocker)
+        and str(blocker) not in _EXPORT_REPORT_ALLOWED_HARVEST_BLOCKERS
+    ]
+
+
+def _critical_prefilter_blockers(prefilter_report: Mapping[str, Any]) -> list[str]:
+    allowed = {
+        "mlx_local_replay_not_contest_auth_axis",
+        "hinerv_receiver_raw_cache_prefilter_false_authority",
+    }
+    blockers = [
+        str(blocker)
+        for blocker in prefilter_report.get("blockers") or ()
+        if str(blocker) and str(blocker) not in allowed
+    ]
+    gate = prefilter_report.get("cache_quality_gate")
+    if isinstance(gate, Mapping):
+        blockers.extend(_critical_cache_quality_blockers(gate))
+    return list(dict.fromkeys(blockers))
+
+
+def _critical_cache_quality_blockers(gate: Mapping[str, Any]) -> list[str]:
+    blockers = [
+        str(blocker)
+        for blocker in gate.get("blockers") or ()
+        if str(blocker)
+    ]
+    if gate.get("fit_gate_passed") is not True:
+        blockers.append("mlx_prefilter_cache_quality_gate_not_passed")
+    if gate.get("candidate_cache_nondegenerate") is not True:
+        blockers.append("mlx_prefilter_cache_quality_gate_degenerate_candidate_cache")
+    verdict = gate.get("verdict")
+    if (
+        isinstance(verdict, str)
+        and verdict
+        and verdict != "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+    ):
+        blockers.append(f"mlx_prefilter_cache_quality_verdict:{verdict}")
+    return list(dict.fromkeys(blockers))
 
 
 def terminal_status_for_proof(proof: Mapping[str, Any]) -> str:

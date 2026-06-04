@@ -118,6 +118,9 @@ def test_validate_export_proof_fails_closed_when_receiver_or_prefilter_missing(
             "archive_sha256": tool.sha256_file(archive),
             "archive_bytes": archive.stat().st_size,
             "receiver_proof_ready": False,
+            "receiver_proof_passed": False,
+            "receiver_contract_satisfied": False,
+            "receiver_closed": False,
             "receiver_proof_path": None,
             "local_mlx_prefilter_written": False,
             "local_mlx_prefilter_profile_path": None,
@@ -128,11 +131,79 @@ def test_validate_export_proof_fails_closed_when_receiver_or_prefilter_missing(
 
     assert proof["proof_ready"] is False
     assert "receiver_proof_not_ready" in proof["blockers"]
+    assert "runtime_consumption_proof_not_passed" in proof["blockers"]
+    assert "receiver_contract_not_satisfied" in proof["blockers"]
+    assert "receiver_closed_not_satisfied" in proof["blockers"]
     assert "full_video_mlx_prefilter_profile_not_written" in proof["blockers"]
     assert tool.terminal_status_for_proof(proof) == "failed_self_harvest_proof_missing"
 
 
 def test_overcap_receiver_proof_profile_closes_as_completed_measurement(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    receiver = tmp_path / "receiver_proof.json"
+    receiver.write_text('{"runtime_consumption_proof_ready":true}\n', encoding="utf-8")
+    profile = tmp_path / "local_mlx_prefilter_profile.json"
+    profile.write_text('{"written":true}\n', encoding="utf-8")
+    profile_sha = tool.sha256_file(profile)
+    meta = _write_checkpoint_meta(tmp_path, name="final_epoch000001", epoch=1)
+    state = Path(json.loads(meta.read_text())["ema_shadow_state_path"])
+
+    proof = tool.validate_export_proof(
+        {
+            "schema": "hinerv_checkpoint_archive_export.v1",
+            "archive_path": archive.as_posix(),
+            "archive_sha256": tool.sha256_file(archive),
+            "archive_bytes": archive.stat().st_size,
+            "hard_byte_ceiling_requested_by_candidate_or_startup": 5,
+            "receiver_proof_ready": True,
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "receiver_closed": True,
+            "receiver_proof_path": receiver.as_posix(),
+            "receiver_proof_sha256": tool.sha256_file(receiver),
+            "local_mlx_prefilter_written": True,
+            "local_mlx_prefilter_profile_path": profile.as_posix(),
+            "local_mlx_prefilter_profile": {
+                "written": True,
+                "profile_sha256": profile_sha,
+                "blockers": [
+                    "mlx_local_replay_not_contest_auth_axis",
+                    "hinerv_receiver_raw_cache_prefilter_false_authority",
+                ],
+                "cache_quality_gate": {
+                    "fit_gate_passed": True,
+                    "candidate_cache_nondegenerate": True,
+                    "verdict": "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY",
+                    "blockers": [],
+                },
+            },
+            "blockers": [
+                "macos_mlx_checkpoint_export_false_authority",
+                "contest_cpu_cuda_exact_eval_not_executed",
+                "mlx_local_replay_not_contest_auth_axis",
+                "hinerv_receiver_raw_cache_prefilter_false_authority",
+                "archive_bytes_exceed_tightest_hard_ceiling",
+                "hard_byte_ceiling_export_bypassed_for_measurement",
+            ],
+            "checkpoint_meta_path": meta.as_posix(),
+            "checkpoint_state_path": state.as_posix(),
+        }
+    )
+
+    assert proof["proof_ready"] is True
+    assert proof["archive_overrun_bytes"] == archive.stat().st_size - 5
+    assert proof["verdict"] == "overcap_receiver_proof_profiled"
+    assert (
+        tool.terminal_status_for_proof(proof)
+        == "completed_overcap_measurement_receiver_proof_profiled"
+    )
+
+
+def test_validate_export_proof_requires_receiver_contract_satisfied(
     tmp_path: Path,
 ) -> None:
     tool = _load_tool()
@@ -151,24 +222,101 @@ def test_overcap_receiver_proof_profile_closes_as_completed_measurement(
             "archive_path": archive.as_posix(),
             "archive_sha256": tool.sha256_file(archive),
             "archive_bytes": archive.stat().st_size,
-            "hard_byte_ceiling_requested_by_candidate_or_startup": 5,
             "receiver_proof_ready": True,
+            "receiver_proof_passed": False,
+            "receiver_contract_satisfied": False,
+            "receiver_closed": False,
             "receiver_proof_path": receiver.as_posix(),
             "receiver_proof_sha256": tool.sha256_file(receiver),
             "local_mlx_prefilter_written": True,
             "local_mlx_prefilter_profile_path": profile.as_posix(),
+            "local_mlx_prefilter_profile": {
+                "written": True,
+                "profile_sha256": tool.sha256_file(profile),
+                "cache_quality_gate": {
+                    "fit_gate_passed": True,
+                    "candidate_cache_nondegenerate": True,
+                    "verdict": "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY",
+                    "blockers": [],
+                },
+                "blockers": [
+                    "mlx_local_replay_not_contest_auth_axis",
+                    "hinerv_receiver_raw_cache_prefilter_false_authority",
+                ],
+            },
             "checkpoint_meta_path": meta.as_posix(),
             "checkpoint_state_path": state.as_posix(),
         }
     )
 
-    assert proof["proof_ready"] is True
-    assert proof["archive_overrun_bytes"] == archive.stat().st_size - 5
-    assert proof["verdict"] == "overcap_receiver_proof_profiled"
-    assert (
-        tool.terminal_status_for_proof(proof)
-        == "completed_overcap_measurement_receiver_proof_profiled"
+    assert proof["proof_ready"] is False
+    assert "runtime_consumption_proof_not_passed" in proof["blockers"]
+    assert "receiver_contract_not_satisfied" in proof["blockers"]
+    assert "receiver_closed_not_satisfied" in proof["blockers"]
+    assert tool.terminal_status_for_proof(proof) == "failed_self_harvest_proof_missing"
+
+
+def test_validate_export_proof_rejects_prefilter_quality_blocker(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    receiver = tmp_path / "receiver_proof.json"
+    receiver.write_text('{"runtime_consumption_proof_ready":true}\n', encoding="utf-8")
+    profile = tmp_path / "local_mlx_prefilter_profile.json"
+    profile.write_text('{"written":true}\n', encoding="utf-8")
+    meta = _write_checkpoint_meta(tmp_path, name="final_epoch000001", epoch=1)
+    state = Path(json.loads(meta.read_text())["ema_shadow_state_path"])
+
+    proof = tool.validate_export_proof(
+        {
+            "schema": "hinerv_checkpoint_archive_export.v1",
+            "archive_path": archive.as_posix(),
+            "archive_sha256": tool.sha256_file(archive),
+            "archive_bytes": archive.stat().st_size,
+            "receiver_proof_ready": True,
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "receiver_closed": True,
+            "receiver_proof_path": receiver.as_posix(),
+            "receiver_proof_sha256": tool.sha256_file(receiver),
+            "local_mlx_prefilter_written": True,
+            "local_mlx_prefilter_profile_path": profile.as_posix(),
+            "local_mlx_prefilter_profile": {
+                "written": True,
+                "profile_sha256": tool.sha256_file(profile),
+                "cache_quality_gate": {
+                    "fit_gate_passed": False,
+                    "candidate_cache_nondegenerate": False,
+                    "verdict": "FIT_OR_SCALE_FAILURE",
+                    "blockers": ["candidate_posenet_yuv6_cache_degenerate"],
+                },
+                "blockers": [
+                    "mlx_local_replay_not_contest_auth_axis",
+                    "hinerv_receiver_raw_cache_prefilter_false_authority",
+                ],
+            },
+            "blockers": [
+                "contest_cpu_cuda_exact_eval_not_executed",
+                "candidate_posenet_yuv6_cache_degenerate",
+            ],
+            "checkpoint_meta_path": meta.as_posix(),
+            "checkpoint_state_path": state.as_posix(),
+        }
     )
+
+    assert proof["proof_ready"] is False
+    assert "candidate_posenet_yuv6_cache_degenerate" in proof["blockers"]
+    assert "mlx_prefilter_cache_quality_gate_not_passed" in proof["blockers"]
+    assert (
+        "mlx_prefilter_cache_quality_gate_degenerate_candidate_cache"
+        in proof["blockers"]
+    )
+    assert "mlx_prefilter_cache_quality_verdict:FIT_OR_SCALE_FAILURE" in proof[
+        "blockers"
+    ]
+    assert tool.terminal_status_for_proof(proof) == "failed_self_harvest_proof_missing"
 
 
 def test_require_path_under_ssd_roots_rejects_local_path(tmp_path: Path) -> None:

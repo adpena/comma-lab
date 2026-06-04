@@ -409,6 +409,7 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
         "planned_surfaces_are_not_receiver_or_score_authority": True,
         "queue_ready_is_not_receiver_or_exact_authority": True,
         "receiver_authority_requires_file_backed_export_and_replay": True,
+        "official_receiver_payload_is_not_source_forward_authority": True,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

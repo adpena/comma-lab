@@ -30,6 +30,7 @@ from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract impor
 
 SCHEMA = "nerv_candidate_curriculum_plan.v1"
 BYTE_FEEDBACK_SCHEMA = "nerv_candidate_byte_feedback.v1"
+SNERV_OFFICIAL_MFU_HFR_TUB_ADAPTER = "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -79,6 +80,226 @@ def _dedupe(values: list[str]) -> list[str]:
             out.append(text)
             seen.add(text)
     return out
+
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def _artifact_mappings(root: Mapping[str, Any] | None) -> list[Mapping[str, Any]]:
+    """Return shallow metadata maps that exporter variants use for custody fields."""
+
+    if not isinstance(root, Mapping):
+        return []
+    maps: list[Mapping[str, Any]] = [root]
+    for key in (
+        "packet_metadata_summary",
+        "selected_archive_metadata",
+        "selected_official_authority",
+        "official_primitive_binding",
+        "official_receiver_tensor_map_custody",
+    ):
+        child = root.get(key)
+        if isinstance(child, Mapping):
+            maps.append(child)
+    score_training = root.get("score_aware_long_training")
+    if isinstance(score_training, Mapping):
+        official_replay = score_training.get(
+            "official_mfu_hfr_tub_source_forward_replay"
+        )
+        if isinstance(official_replay, Mapping):
+            maps.append(official_replay)
+    return maps
+
+
+def _any_true(maps: list[Mapping[str, Any]], *keys: str) -> bool:
+    return any(row.get(key) is True for row in maps for key in keys)
+
+
+def _string_field(maps: list[Mapping[str, Any]], *keys: str) -> str:
+    for row in maps:
+        for key in keys:
+            value = row.get(key)
+            if value not in (None, ""):
+                return str(value)
+    return ""
+
+
+def _collect_blockers(
+    maps: list[Mapping[str, Any]],
+    *keys: str,
+    official_only: bool = False,
+) -> list[str]:
+    values: list[str] = []
+    for row in maps:
+        for key in keys:
+            raw = row.get(key)
+            if isinstance(raw, str):
+                items = [raw]
+            elif isinstance(raw, (list, tuple, set)):
+                items = list(raw)
+            else:
+                continue
+            for item in items:
+                text = str(item)
+                if not text:
+                    continue
+                if official_only and not (
+                    "snerv_official" in text
+                    or "source_forward" in text
+                    or "source_parity" in text
+                    or "tub" in text
+                    or "mfu_hfr" in text
+                ):
+                    continue
+                values.append(text.removeprefix("source_parity:"))
+    return _dedupe(values)
+
+
+def _build_snerv_official_source_forward_authority_split(
+    *,
+    candidate: Mapping[str, Any],
+    artifact_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Keep official receiver custody separate from source-forward authority."""
+
+    artifact = _as_mapping(artifact_evidence)
+    maps = _artifact_mappings(artifact)
+    adapter = str(candidate.get("snerv_model_size_adapter") or "")
+    official_requested = bool(
+        adapter == SNERV_OFFICIAL_MFU_HFR_TUB_ADAPTER
+        or _any_true(
+            maps,
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested",
+            "official_mfu_hfr_tub_numeric_primitives_requested",
+            "official_mfu_hfr_tub_primitives_present",
+        )
+    )
+    if not official_requested:
+        return {
+            "schema": "snerv_official_source_forward_authority_split.v1",
+            "official_adapter_requested": False,
+            "full_source_forward_authority_proven": False,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
+
+    export_bound = _any_true(
+        maps,
+        "snerv_official_mfu_hfr_tub_export_bound",
+        "official_mfu_hfr_tub_export_bound",
+    )
+    receiver_payload_bound = _any_true(
+        maps,
+        "snerv_official_mfu_hfr_tub_receiver_payload_bound",
+        "official_mfu_hfr_tub_receiver_payload_bound",
+        "receiver_payload_bound",
+        "trained_receiver_payload_export_bound",
+    )
+    frame_producing_export = _any_true(
+        maps,
+        "snerv_official_mfu_hfr_tub_frame_producing_export",
+        "official_mfu_hfr_tub_frame_producing_export",
+    )
+    source_forward_bound = _any_true(
+        maps,
+        "snerv_official_mfu_hfr_tub_source_forward_replay_bound",
+        "official_mfu_hfr_tub_source_forward_replay_bound",
+        "source_forward_replay_bound",
+        "source_forward_replay_bound_by_export",
+        "receiver_source_forward_replay_bound",
+    )
+    source_forward_verified = _any_true(
+        maps,
+        "source_forward_replay_verified",
+        "source_forward_replay_verified_by_export",
+        "source_forward_parity_proven",
+        "full_tub_source_forward_parity_proven",
+        "full_stack_source_forward_replay_proven",
+    )
+    source_forward_authority = _any_true(
+        maps,
+        "snerv_official_mfu_hfr_tub_source_forward_replay_authority",
+        "official_mfu_hfr_tub_source_forward_replay_authority",
+        "source_forward_replay_authority",
+    )
+    source_faithful_stack = _any_true(maps, "source_faithful_stack")
+    export_semantics = _string_field(
+        maps,
+        "snerv_official_mfu_hfr_tub_export_bound_semantics",
+        "official_mfu_hfr_tub_export_bound_semantics",
+        "official_parity_status",
+    )
+    official_blockers = _collect_blockers(
+        maps,
+        "snerv_official_mfu_hfr_tub_export_blockers",
+        "official_source_parity_blockers",
+        "source_forward_blockers",
+        "blockers",
+        "required_blockers",
+        "nonblocking_gaps",
+        official_only=True,
+    )
+    blockers: list[str] = []
+    if not export_bound:
+        blockers.append("snerv_official_mfu_hfr_tub_export_not_bound")
+    if not receiver_payload_bound:
+        blockers.append("snerv_official_mfu_hfr_tub_receiver_payload_not_bound")
+    if not frame_producing_export:
+        blockers.append("snerv_official_mfu_hfr_tub_frame_producing_export_missing")
+    source_authority_ready = bool(
+        source_forward_bound
+        and source_forward_verified
+        and source_forward_authority
+        and source_faithful_stack
+    )
+    if not source_authority_ready:
+        blockers.append(
+            "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        )
+        if not official_blockers:
+            official_blockers.append(
+                "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
+            )
+    full_source_forward_authority_proven = bool(
+        official_requested
+        and export_bound
+        and receiver_payload_bound
+        and frame_producing_export
+        and source_authority_ready
+        and not official_blockers
+    )
+    if full_source_forward_authority_proven:
+        launch_semantics = (
+            "official_source_forward_parity_available_false_authority_until_score_gate"
+        )
+    elif receiver_payload_bound:
+        launch_semantics = (
+            "receiver_bound_training_allowed_but_official_source_authority_false"
+        )
+    else:
+        launch_semantics = "official_training_waits_on_receiver_payload_binding"
+    return {
+        "schema": "snerv_official_source_forward_authority_split.v1",
+        "official_adapter_requested": True,
+        "candidate_adapter": adapter,
+        "export_bound": export_bound,
+        "receiver_payload_bound": receiver_payload_bound,
+        "frame_producing_export": frame_producing_export,
+        "source_forward_replay_bound": source_forward_bound,
+        "source_forward_replay_verified": source_forward_verified,
+        "source_forward_replay_authority": source_forward_authority,
+        "source_faithful_stack": source_faithful_stack,
+        "export_bound_semantics": export_semantics,
+        "receiver_payload_bound_is_byte_runtime_custody_only": True,
+        "source_forward_authority_required_for_pr95_faithful_claim": True,
+        "receiver_bound_training_evidence_usable": bool(receiver_payload_bound),
+        "full_source_forward_authority_proven": full_source_forward_authority_proven,
+        "official_blockers": _dedupe(official_blockers),
+        "launch_semantics": launch_semantics,
+        "blockers": _dedupe([*blockers, *official_blockers]),
+        **FALSE_AUTHORITY,
+    }
 
 
 def strip_candidate_curriculum_authority_fields(value: Any) -> Any:
@@ -537,6 +758,12 @@ def build_snerv_candidate_curriculum_plan(
         effective_scorer_loop_verified or native_mlx_real_posenet_teacher_bound
     )
     candidate_selected = bool(candidate_row)
+    official_source_forward_split = (
+        _build_snerv_official_source_forward_authority_split(
+            candidate=candidate_row,
+            artifact_evidence=native_mlx_artifact_evidence,
+        )
+    )
     full_video = int(num_pairs) >= CONTEST_PAIR_COUNT
     levels = _int(candidate_row.get("levels"), 3)
     lf_bits = _num(candidate_row.get("bits_per_coeff"), 2.5)
@@ -578,6 +805,7 @@ def build_snerv_candidate_curriculum_plan(
             == "snerv_mlx_native_adapter_surfaces_present_but_unproven"
         )
     ]
+    blockers.extend(official_source_forward_split.get("blockers") or [])
     if not bool(native_contract.get("surfaces_ready")):
         blockers.append("snerv_mlx_native_train_export_adapter_missing")
     elif not native_export_verified:
@@ -701,10 +929,14 @@ def build_snerv_candidate_curriculum_plan(
                 "planned_surfaces_are_not_receiver_or_score_authority": True,
                 "queue_ready_is_not_receiver_or_exact_authority": True,
                 "receiver_authority_requires_file_backed_export_and_replay": True,
+                "official_receiver_payload_is_not_source_forward_authority": True,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             },
+            "official_source_forward_authority_split": (
+                official_source_forward_split
+            ),
             "native_mlx_train_export_planned": native_train_export_planned,
             "native_mlx_train_export_attached": bool(native_mlx_train_export_attached),
             "native_mlx_train_export_verified": native_export_verified,
@@ -786,6 +1018,7 @@ def build_snerv_candidate_curriculum_plan(
             ),
             "local_cpu_replay_gate_attached": bool(local_cpu_replay_gate_attached),
         },
+        "official_source_forward_authority_split": official_source_forward_split,
         "byte_oracle_logging": byte_feedback,
         "pr95_stack_binding": pr95_binding,
         "long_campaign_prelaunch_gate": long_campaign_prelaunch_gate,
