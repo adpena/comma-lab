@@ -59,6 +59,38 @@ def _tiny_pairs(*, pairs: int = 1) -> np.ndarray:
     return np.clip(out, 0.0, 255.0)
 
 
+def _fake_tub_fixture_replay_passed() -> dict[str, object]:
+    return {
+        "schema": "snerv_official_tub_source_forward_replay.v1",
+        "family": "snerv",
+        "component_id": "tub",
+        "source_forward_replay_executed": True,
+        "official_tub_temporal_encoder_output2_source_fixture_replay_passed": True,
+        "source_fixture_scope": "deterministic_official_source_fixture_not_trained_checkpoint",
+        "closed_blockers": [
+            "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
+            "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+        ],
+        "preserved_blockers": [
+            "snerv_official_trained_checkpoint_state_dict_not_loaded",
+            "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+            "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+            "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        ],
+        "blockers": [
+            "snerv_official_trained_checkpoint_state_dict_not_loaded",
+            "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+            "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+            "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+        ],
+        "score_claim": False,
+        "frontier_score_claim": False,
+        "rank_or_kill_eligible": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
@@ -1311,6 +1343,11 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         return target0, target1
 
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        mod,
+        "build_snerv_official_tub_source_forward_replay_artifact",
+        lambda: _fake_tub_fixture_replay_passed(),
+    )
 
     report = train_export_snerv_mlx_native(
         output_dir=tmp_path / "official_long_training_bound",
@@ -1357,7 +1394,9 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
         not in report["blockers"]
     )
-    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in report[
+    stale_blocker = "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+    assert stale_blocker not in report["blockers"]
+    assert "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing" in report[
         "blockers"
     ]
 
@@ -1390,6 +1429,10 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert replay["train_renderer_bound"] is True
     assert replay["trained_weight_mapping_to_long_training_bound"] is True
     assert replay["official_torch_source_forward_replay_passed"] is False
+    assert replay["official_tub_fixture_source_forward_replay_proven"] is True
+    assert replay["official_tub_source_forward_fixture_replay"][
+        "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+    ] is True
     assert replay["selected_packet_authority"]["status"] == (
         "frame_producing_official_export"
     )
@@ -1415,8 +1458,16 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
         not in replay["blockers"]
     )
-    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in replay[
+    assert stale_blocker not in replay["blockers"]
+    assert "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing" in replay[
         "blockers"
+    ]
+    tub_row = {
+        row["component_id"]: row for row in replay["component_rows"]
+    }["tub"]
+    assert tub_row["official_tub_fixture_source_forward_replay_proven"] is True
+    assert "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing" in tub_row[
+        "official_tub_fixture_closed_blockers"
     ]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
@@ -1550,6 +1601,11 @@ def test_official_primitives_full_video_long_training_defers_replay_gate(
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
     monkeypatch.setattr(
         mod,
+        "build_snerv_official_tub_source_forward_replay_artifact",
+        lambda: _fake_tub_fixture_replay_passed(),
+    )
+    monkeypatch.setattr(
+        mod,
         "_build_official_mfu_hfr_tub_long_training_replay_contract",
         fail_if_expensive_replay_is_called,
     )
@@ -1600,10 +1656,14 @@ def test_official_primitives_full_video_long_training_defers_replay_gate(
     assert replay["receiver_official_payload_forward_replay_passed"] is False
     assert replay["score_aware_long_training_renderer_bound"] is True
     assert replay["train_renderer_bound"] is True
+    assert replay["official_tub_fixture_source_forward_replay_proven"] is True
     assert replay_on_disk["score_aware_long_training_renderer_bound"] is True
     assert replay_on_disk["train_renderer_bound"] is True
     assert blocker in replay["blockers"]
-    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in replay[
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" not in replay[
+        "blockers"
+    ]
+    assert "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing" in replay[
         "blockers"
     ]
     assert all(

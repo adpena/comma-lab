@@ -31,6 +31,10 @@ from tac.analysis.nerv_candidate_curriculum import (
 from tac.analysis.snerv_official_primitive_replay import (
     build_snerv_official_receiver_runtime_decode_contract,
 )
+from tac.analysis.snerv_official_tub_source_forward_replay import (
+    TUB_PRESERVED_BLOCKERS,
+    build_snerv_official_tub_source_forward_replay_artifact,
+)
 from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill
 from tac.contest_eval_contract import build_upstream_eval_contract
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
@@ -972,6 +976,23 @@ def train_export_snerv_mlx_native(
         "official_mfu_hfr_tub_source_forward_replay"
     )
     if isinstance(long_training_official_replay, Mapping):
+        if _official_tub_fixture_replay_passed(
+            long_training_official_replay.get(
+                "official_tub_source_forward_fixture_replay"
+            )
+        ):
+            blockers = [
+                str(blocker)
+                for blocker in blockers
+                if str(blocker)
+                != "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+            ]
+            official_primitives_blockers = [
+                str(blocker)
+                for blocker in official_primitives_blockers
+                if str(blocker)
+                != "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+            ]
         blockers.extend(
             str(blocker)
             for blocker in long_training_official_replay.get("blockers") or ()
@@ -2383,6 +2404,7 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
         **FALSE_AUTHORITY,
     }
     try:
+        tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training()
         packet = _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
             pairs,
             source_pair_indices=tuple(int(value) for value in source_pair_indices),
@@ -2421,12 +2443,16 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             primitive_proof=primitive_proof,
             tensor_map=tensor_map,
             receiver_replay_passed=replay_passed,
+            tub_fixture_replay=tub_fixture_replay,
+        )
+        source_forward_blockers = _official_source_forward_blockers_from_tub_fixture(
+            tub_fixture_replay
         )
         blockers = [
             "" if replay_passed else "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed",
             "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
-            "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
             "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
+            *source_forward_blockers,
         ]
         payload = {
             **base,
@@ -2435,6 +2461,10 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             "selected_packet_authority": selected_authority,
             "official_receiver_tensor_map": tensor_map,
             "official_receiver_runtime_decode_proof": primitive_proof,
+            "official_tub_source_forward_fixture_replay": tub_fixture_replay,
+            "official_tub_fixture_source_forward_replay_proven": _official_tub_fixture_replay_passed(
+                tub_fixture_replay
+            ),
             "decoded_frame_shape": [int(value) for value in frames.shape],
             "target_frame_shape": [int(value) for value in pairs.shape],
             "decoded_frames_finite": finite,
@@ -2445,13 +2475,20 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             "blockers": _ordered_unique(str(blocker) for blocker in blockers if blocker),
         }
     except Exception as exc:
+        tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training()
         payload = {
             **base,
             "failure": f"{type(exc).__name__}: {exc}",
+            "official_tub_source_forward_fixture_replay": tub_fixture_replay,
+            "official_tub_fixture_source_forward_replay_proven": _official_tub_fixture_replay_passed(
+                tub_fixture_replay
+            ),
             "blockers": [
                 "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed",
                 "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
-                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                *_official_source_forward_blockers_from_tub_fixture(
+                    tub_fixture_replay
+                ),
             ],
         }
     payload.update(FALSE_AUTHORITY)
@@ -2479,6 +2516,16 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
             f"refusing to overwrite existing official source-forward replay contract: {artifact_path}"
         )
     blocker = "snerv_official_mfu_hfr_tub_receiver_payload_replay_deferred_full_video"
+    tub_fixture_replay = _build_official_tub_fixture_replay_for_long_training()
+    source_forward_blockers = _official_source_forward_blockers_from_tub_fixture(
+        tub_fixture_replay
+    )
+    tub_fixture_passed = _official_tub_fixture_replay_passed(tub_fixture_replay)
+    tub_source_blockers = (
+        _official_tub_fixture_preserved_blockers(tub_fixture_replay)
+        if tub_fixture_passed
+        else ["snerv_official_mfu_hfr_tub_source_forward_replay_missing"]
+    )
     payload: dict[str, Any] = {
         "schema": "snerv_official_mfu_hfr_tub_source_forward_replay_contract.v1",
         "family": "snerv",
@@ -2491,6 +2538,8 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
         "score_aware_long_training_renderer_bound": False,
         "receiver_official_payload_forward_replay_passed": False,
         "official_torch_source_forward_replay_passed": False,
+        "official_tub_source_forward_fixture_replay": tub_fixture_replay,
+        "official_tub_fixture_source_forward_replay_proven": tub_fixture_passed,
         "deferred_for_full_video_training_start": True,
         "defer_threshold_pairs": int(SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS),
         "defer_reason": (
@@ -2528,7 +2577,11 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
                 "blockers": [
                     "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
                     blocker,
-                    source_blocker,
+                    *(
+                        tub_source_blockers
+                        if component_id == "tub"
+                        else [source_blocker]
+                    ),
                 ],
                 **FALSE_AUTHORITY,
             }
@@ -2551,8 +2604,8 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
             (
                 blocker,
                 "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
-                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
                 "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
+                *source_forward_blockers,
             )
         ),
         **FALSE_AUTHORITY,
@@ -2569,6 +2622,7 @@ def _official_long_training_replay_component_rows(
     primitive_proof: Mapping[str, Any],
     tensor_map: Mapping[str, Any],
     receiver_replay_passed: bool,
+    tub_fixture_replay: Mapping[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     executed = primitive_proof.get("executed_components")
     executed = dict(executed) if isinstance(executed, Mapping) else {}
@@ -2602,6 +2656,15 @@ def _official_long_training_replay_component_rows(
             and executed.get(proof_key) is True
             and tensor_payload_present
         )
+        tub_fixture_passed = bool(
+            component_id == "tub"
+            and _official_tub_fixture_replay_passed(tub_fixture_replay)
+        )
+        source_blockers = (
+            _official_tub_fixture_preserved_blockers(tub_fixture_replay)
+            if tub_fixture_passed
+            else [source_blocker]
+        )
         rows.append(
             {
                 "schema": "snerv_official_mfu_hfr_tub_long_training_replay_component.v1",
@@ -2609,15 +2672,79 @@ def _official_long_training_replay_component_rows(
                 "receiver_payload_forward_replay_proven": receiver_component_passed,
                 "receiver_tensor_payload_present": tensor_payload_present,
                 "official_source_forward_parity_proven": False,
+                "official_tub_fixture_source_forward_replay_proven": tub_fixture_passed,
+                "official_tub_fixture_closed_blockers": (
+                    list(tub_fixture_replay.get("closed_blockers") or ())
+                    if tub_fixture_passed and isinstance(tub_fixture_replay, Mapping)
+                    else []
+                ),
                 "score_aware_long_training_renderer_bound": False,
                 "blockers": [
                     "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
-                    source_blocker,
+                    *source_blockers,
                 ],
                 **FALSE_AUTHORITY,
             }
         )
     return rows
+
+
+def _build_official_tub_fixture_replay_for_long_training() -> dict[str, Any]:
+    """Run or fail closed the cheap SNeRV_T output_2 source fixture replay."""
+
+    try:
+        payload = build_snerv_official_tub_source_forward_replay_artifact()
+    except Exception as exc:  # pragma: no cover - defensive fail-closed path.
+        return {
+            "schema": "snerv_official_tub_source_forward_replay.v1",
+            "family": "snerv",
+            "component_id": "tub",
+            "source_forward_replay_executed": False,
+            "official_tub_temporal_encoder_output2_source_fixture_replay_passed": False,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                "snerv_official_tub_temporal_encoder_output2_fixture_failed",
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+            ],
+            **FALSE_AUTHORITY,
+        }
+    return dict(payload)
+
+
+def _official_tub_fixture_replay_passed(
+    replay: Mapping[str, Any] | None,
+) -> bool:
+    return bool(
+        isinstance(replay, Mapping)
+        and replay.get(
+            "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+        )
+        is True
+    )
+
+
+def _official_tub_fixture_preserved_blockers(
+    replay: Mapping[str, Any] | None,
+) -> list[str]:
+    if isinstance(replay, Mapping):
+        preserved = replay.get("preserved_blockers")
+        if isinstance(preserved, Sequence) and not isinstance(preserved, (str, bytes)):
+            return _ordered_unique([str(value) for value in preserved])
+    return list(TUB_PRESERVED_BLOCKERS)
+
+
+def _official_source_forward_blockers_from_tub_fixture(
+    replay: Mapping[str, Any] | None,
+) -> list[str]:
+    blockers = [
+        "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+        "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+    ]
+    if _official_tub_fixture_replay_passed(replay):
+        blockers.extend(_official_tub_fixture_preserved_blockers(replay))
+    else:
+        blockers.append("snerv_official_mfu_hfr_tub_source_forward_replay_missing")
+    return _ordered_unique(blockers)
 
 
 def _official_long_training_replay_with_renderer_binding(

@@ -107,6 +107,39 @@ def test_dual_ascent_rejects_missing_target() -> None:
         )
 
 
+def test_dual_ascent_metadata_strips_nested_authority_keys() -> None:
+    controller = TrainTimeDualAscentController.from_config(
+        {
+            "schema": TRAIN_TIME_DUAL_ASCENT_SCHEMA,
+            "enabled": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "constraints": [
+                {
+                    "constraint_id": "seg_distill",
+                    "metric_name": "loss_part_distill",
+                    "loss_weight_key": "distill",
+                    "target": 1.0,
+                }
+            ],
+            "contest_grounding": {
+                "score_claim": False,
+                "nested": {
+                    "ready_for_exact_eval_dispatch": False,
+                    "safe_note": "metadata survives",
+                },
+            },
+        }
+    )
+
+    metadata = controller.as_metadata()["metadata"]
+    assert "score_claim" not in metadata
+    assert "promotion_eligible" not in metadata
+    assert "score_claim" not in metadata["contest_grounding"]
+    assert "ready_for_exact_eval_dispatch" not in metadata["contest_grounding"]["nested"]
+    assert metadata["contest_grounding"]["nested"]["safe_note"] == "metadata survives"
+
+
 def test_default_nerv_dual_ascent_config_prices_active_scorer_and_coder_terms() -> None:
     config = build_default_nerv_train_time_dual_ascent_config(
         family="hi_nerv",

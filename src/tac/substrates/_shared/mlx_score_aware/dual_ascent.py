@@ -279,11 +279,13 @@ class TrainTimeDualAscentController:
         return cls(
             enabled=bool(config.get("enabled", bool(constraints))),
             constraints=constraints,
-            metadata={
-                key: value
-                for key, value in dict(config).items()
-                if key not in {"constraints"} and key not in _FORBIDDEN_ARTIFACT_METADATA_KEYS
-            },
+            metadata=_strip_forbidden_artifact_metadata_keys(
+                {
+                    key: value
+                    for key, value in dict(config).items()
+                    if key != "constraints"
+                }
+            ),
         )
 
     def effective_loss_weights(
@@ -390,7 +392,7 @@ class TrainTimeDualAscentController:
                 }
                 for cid, state in sorted(self._states.items())
             },
-            "metadata": dict(self.metadata),
+            "metadata": _strip_forbidden_artifact_metadata_keys(self.metadata),
             "authority": "macos_mlx_research_signal_false_authority",
         }
 
@@ -548,6 +550,22 @@ def _nonnegative_weight(value: Any) -> float:
     if not math.isfinite(out) or out <= 0.0:
         return 0.0
     return out
+
+
+def _strip_forbidden_artifact_metadata_keys(value: Any) -> Any:
+    """Return a JSON-like copy safe for nested MLX artifact metadata."""
+
+    if isinstance(value, Mapping):
+        return {
+            str(key): _strip_forbidden_artifact_metadata_keys(item)
+            for key, item in value.items()
+            if str(key) not in _FORBIDDEN_ARTIFACT_METADATA_KEYS
+        }
+    if isinstance(value, list):
+        return [_strip_forbidden_artifact_metadata_keys(item) for item in value]
+    if isinstance(value, tuple):
+        return [_strip_forbidden_artifact_metadata_keys(item) for item in value]
+    return value
 
 
 def _constraint_satisfied(metric: float, target: float, direction: str) -> bool:
