@@ -372,7 +372,7 @@ def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     )
     assert "analogue_surface_not_rate_spend_authority" in analogue_order["blockers"]
     assert analogue_order["payload"]["insufficient_for"] == (
-        "byte_closed_official_snerv_export_runtime"
+        "upstream_official_snerv_source_forward_authority"
     )
     assert "route_bitmask_and_zero_packing_to_rate_allocator" in orders
     assert "route_master_gradient_xray_stack_to_rate_allocator" in orders

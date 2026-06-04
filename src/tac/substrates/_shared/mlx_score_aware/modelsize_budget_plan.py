@@ -88,6 +88,18 @@ _SOURCE_BOUND_CAPACITY_PATHS = (
     ("solved_budget", "official_controls", "--modelsize"),
     ("solved_budget", "official_controls", "fc_dim"),
 )
+_SOURCE_BOUND_CONTRACT_REQUIRED_TRUE_FIELDS = (
+    "nominal_payload_bytes_are_planner_prior_only",
+    "nominal_under_ceiling_is_not_promotion_authority",
+    "receiver_closed_archive_bytes_required_for_under_ceiling_claim",
+    "trained_archive_export_required_for_score_or_rate_claim",
+    "archive_bytes_authority_required",
+)
+_SOURCE_BOUND_CONTRACT_MUTATION_KEYS = (
+    "mutates_receiver_visible_architecture",
+    "mutates_receiver_visible_fc_dim",
+    "mutates_trained_parameter_count",
+)
 
 
 class ModelSizeBudgetPlanError(ValueError):
@@ -542,6 +554,8 @@ def _classify_point_evidence(
         blockers.append("measured_archive_byte_field_missing")
     if not source_bound_capacity:
         blockers.append("source_bound_modelsize_or_fc_dim_missing")
+        if _has_capacity_control_marker(row):
+            blockers.append("modelsize_control_contract_missing_or_invalid")
 
     receiver_closed = (
         proof_present
@@ -613,6 +627,32 @@ def _is_sha256_hex(value: str | None) -> bool:
 
 
 def _has_source_bound_capacity_control(row: Mapping[str, Any]) -> bool:
+    contract = row.get("modelsize_control_contract")
+    if isinstance(contract, Mapping):
+        return _modelsize_control_contract_is_source_bound(contract)
+    return False
+
+
+def _modelsize_control_contract_is_source_bound(contract: Mapping[str, Any]) -> bool:
+    if contract.get("schema") != "nerv_modelsize_control_contract.v1":
+        return False
+    if contract.get("invalid_control_row") is True:
+        return False
+    authority_split = contract.get("authority_split")
+    if isinstance(authority_split, Mapping) and authority_split.get(
+        "invalid_control_row"
+    ) is True:
+        return False
+    if contract.get("modelsize_mparams_caps_archive_zip_bytes") is not False:
+        return False
+    if not all(
+        contract.get(key) is True for key in _SOURCE_BOUND_CONTRACT_REQUIRED_TRUE_FIELDS
+    ):
+        return False
+    return any(_truthy(contract.get(key)) for key in _SOURCE_BOUND_CONTRACT_MUTATION_KEYS)
+
+
+def _has_capacity_control_marker(row: Mapping[str, Any]) -> bool:
     return any(
         _lookup_path(row, path) is not None
         for path in _SOURCE_BOUND_CAPACITY_PATHS

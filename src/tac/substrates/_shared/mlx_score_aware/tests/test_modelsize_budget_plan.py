@@ -18,6 +18,26 @@ def _receiver_proof_fields(label: str) -> dict[str, object]:
     }
 
 
+def _source_bound_modelsize_contract(family: str = "hi_nerv") -> dict[str, object]:
+    return {
+        "schema": "nerv_modelsize_control_contract.v1",
+        "family": family,
+        "control_semantics": "unit_receiver_visible_capacity_control",
+        "modelsize_mparams_caps_archive_zip_bytes": False,
+        "nominal_payload_bytes_are_planner_prior_only": True,
+        "nominal_under_ceiling_is_not_promotion_authority": True,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": True,
+        "trained_archive_export_required_for_score_or_rate_claim": True,
+        "archive_bytes_authority_required": True,
+        "mutates_receiver_visible_architecture": family == "hi_nerv",
+        "mutates_receiver_visible_fc_dim": family == "snerv",
+        "mutates_trained_parameter_count": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
     rows = [
         {
@@ -25,6 +45,7 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
             "archive_bytes": 20_000,
             "nonrate_score": 0.240,
             "modelsize_mparams": 0.04,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("tiny"),
         },
         {
@@ -32,6 +53,7 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
             "archive_bytes": 40_000,
             "nonrate_score": 0.205,
             "modelsize_mparams": 0.08,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("small"),
         },
         {
@@ -39,6 +61,7 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
             "archive_bytes": 80_000,
             "nonrate_score": 0.200,
             "modelsize_mparams": 0.16,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("medium"),
         },
     ]
@@ -51,6 +74,7 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
     assert plan["selected_archive_bytes"] == 40_000
     assert plan["receiver_closed_selected_archive_bytes"] == 40_000
     assert plan["point_count_by_evidence"] == {"receiver_closed_measured_bytes": 3}
+    assert all(point["source_bound_capacity_control"] is True for point in plan["points"])
     first, second = plan["marginal_steps"]
     assert first["spend_rule"] == "spend_modelsize_byte"
     assert first["marginal_improvement_per_byte"] > CONTEST_BYTE_PRICE_SCORE
@@ -67,6 +91,7 @@ def test_modelsize_budget_plan_respects_hard_byte_ceiling() -> None:
             "archive_bytes": 20_000,
             "nonrate_score": 0.240,
             "modelsize_mparams": 0.04,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("tiny"),
         },
         {
@@ -74,6 +99,7 @@ def test_modelsize_budget_plan_respects_hard_byte_ceiling() -> None:
             "archive_bytes": 40_000,
             "nonrate_score": 0.205,
             "modelsize_mparams": 0.08,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("small"),
         },
         {
@@ -81,6 +107,7 @@ def test_modelsize_budget_plan_respects_hard_byte_ceiling() -> None:
             "archive_bytes": 80_000,
             "nonrate_score": 0.010,
             "modelsize_mparams": 0.16,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("medium_over_cap"),
         },
     ]
@@ -108,6 +135,7 @@ def test_modelsize_budget_plan_blocks_when_no_point_fits_hard_byte_ceiling() -> 
             "archive_bytes": 20_000,
             "nonrate_score": 0.240,
             "modelsize_mparams": 0.04,
+            "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
             **_receiver_proof_fields("tiny_over_cap"),
         },
         {
@@ -115,6 +143,7 @@ def test_modelsize_budget_plan_blocks_when_no_point_fits_hard_byte_ceiling() -> 
             "archive_bytes": 40_000,
             "nonrate_score": 0.205,
             "modelsize_mparams": 0.08,
+            "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
             **_receiver_proof_fields("small_over_cap"),
         },
     ]
@@ -260,6 +289,34 @@ def test_modelsize_budget_plan_blocks_unbound_capacity_controls() -> None:
     )
 
 
+def test_modelsize_budget_plan_blocks_bare_modelsize_labels_as_fake_controls() -> None:
+    plan = build_modelsize_budget_plan(
+        [
+            {
+                "row_id": "bare_mparams",
+                "archive_bytes": 20_000,
+                "nonrate_score": 0.240,
+                "modelsize_mparams": 0.04,
+                **_receiver_proof_fields("bare_mparams"),
+            },
+            {
+                "row_id": "bare_fc_dim",
+                "archive_bytes": 40_000,
+                "nonrate_score": 0.205,
+                "fc_dim": 16,
+                **_receiver_proof_fields("bare_fc_dim"),
+            },
+        ],
+        carrier_id="snerv",
+    )
+
+    assert "source_bound_modelsize_or_fc_dim_missing" in plan["blockers"]
+    assert "modelsize_control_contract_missing_or_invalid" in plan["blockers"]
+    assert all(
+        point["source_bound_capacity_control"] is False for point in plan["points"]
+    )
+
+
 def test_modelsize_budget_plan_rejects_bare_receiver_proof_boolean_as_advisory() -> None:
     plan = build_modelsize_budget_plan(
         [
@@ -268,6 +325,7 @@ def test_modelsize_budget_plan_rejects_bare_receiver_proof_boolean_as_advisory()
                 "archive_bytes": 20_000,
                 "nonrate_score": 0.240,
                 "modelsize_mparams": 0.04,
+                "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
                 "receiver_proof_passed": True,
             },
             {
@@ -275,6 +333,7 @@ def test_modelsize_budget_plan_rejects_bare_receiver_proof_boolean_as_advisory()
                 "archive_bytes": 40_000,
                 "nonrate_score": 0.205,
                 "modelsize_mparams": 0.08,
+                "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
                 "receiver_proof_passed": True,
             },
         ],
@@ -301,6 +360,7 @@ def test_modelsize_budget_plan_hard_ceiling_selects_best_under_cap() -> None:
             "archive_bytes": 40_000,
             "nonrate_score": 0.250,
             "modelsize_mparams": 0.04,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("tiny"),
         },
         {
@@ -308,6 +368,7 @@ def test_modelsize_budget_plan_hard_ceiling_selects_best_under_cap() -> None:
             "archive_bytes": 100_000,
             "nonrate_score": 0.190,
             "modelsize_mparams": 0.08,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("small"),
         },
         {
@@ -315,6 +376,7 @@ def test_modelsize_budget_plan_hard_ceiling_selects_best_under_cap() -> None:
             "archive_bytes": 240_000,
             "nonrate_score": 0.010,
             "modelsize_mparams": 0.20,
+            "modelsize_control_contract": _source_bound_modelsize_contract(),
             **_receiver_proof_fields("wide_over_cap"),
         },
     ]
@@ -347,6 +409,7 @@ def test_modelsize_budget_plan_hard_ceiling_blocks_when_no_candidate_fits() -> N
             "archive_bytes": 200_000,
             "nonrate_score": 0.250,
             "modelsize_mparams": 0.08,
+            "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
             **_receiver_proof_fields("small_over_cap"),
         },
         {
@@ -354,6 +417,7 @@ def test_modelsize_budget_plan_hard_ceiling_blocks_when_no_candidate_fits() -> N
             "archive_bytes": 260_000,
             "nonrate_score": 0.120,
             "modelsize_mparams": 0.16,
+            "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
             **_receiver_proof_fields("wide_over_cap"),
         },
     ]
