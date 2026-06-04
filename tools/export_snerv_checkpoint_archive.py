@@ -29,6 +29,9 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.mlx_cache_quality_gate import build_mlx_cache_quality_gate  # noqa: E402
+from tac.analysis.snerv_official_source_forward_harness import (  # noqa: E402
+    build_snerv_official_trained_checkpoint_mapping_manifest,
+)
 from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill  # noqa: E402
 from tac.local_acceleration.mlx_preprocess import (  # noqa: E402
     CAMERA_HW,
@@ -1574,6 +1577,13 @@ def _official_checkpoint_export_binding(
         "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
         "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
     ]
+    official_state_manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
+        None,
+        state_dict_kind=(
+            "checkpoint_export_has_receiver_atoms_not_upstream_official_state_dict"
+        ),
+        source="export_snerv_checkpoint_archive.official_checkpoint_export_binding",
+    )
     return {
         "schema": "snerv_official_checkpoint_export_binding.v1",
         "requested": requested,
@@ -1598,6 +1608,7 @@ def _official_checkpoint_export_binding(
         "official_tensor_category_counts": dict(
             receiver_tensor_map.get("category_counts") or {}
         ),
+        "official_trained_checkpoint_mapping_manifest": official_state_manifest,
         "official_export_bound": False,
         "official_export_bound_semantics": (
             "checkpoint_export_receiver_payload_binding_not_source_forward_parity"

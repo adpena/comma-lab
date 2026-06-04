@@ -158,6 +158,14 @@ def test_official_checkpoint_export_report_classifies_receiver_payload(
     assert binding["official_receiver_tensor_map_verified"] is True
     assert binding["selected_packet_status"] == "frame_producing_official_export"
     assert binding["selected_packet_decoded_frame_shape"] == [1, 2, 3, 16, 16]
+    manifest = binding["official_trained_checkpoint_mapping_manifest"]
+    assert manifest["schema"] == (
+        "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
+    )
+    assert manifest["official_trained_checkpoint_loaded"] is False
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in manifest[
+        "blockers"
+    ]
     assert binding["official_export_bound"] is False
     assert binding["source_forward_replay_authority"] is False
     assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in (
