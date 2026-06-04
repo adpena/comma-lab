@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
+import textwrap
 from types import SimpleNamespace
 
 import numpy as np
@@ -12,6 +16,7 @@ from safetensors.torch import load_file
 pytest.importorskip("mlx.core")
 
 from tac.local_acceleration.mlx_scorer_adapters import (
+    mlx_sigmoid,
     run_mlx_batchnorm2d_nchw,
     run_mlx_conv2d_nchw,
     run_mlx_conv2d_relu_nchw,
@@ -59,6 +64,84 @@ from tac.local_acceleration.mlx_scorer_adapters import (
 )
 
 
+def test_mlx_sigmoid_gradient_avoids_manual_exp_nan_on_saturated_inputs() -> None:
+    import mlx.core as mx
+
+    code = textwrap.dedent(
+        """
+        import json
+        import numpy as np
+        import mlx.core as mx
+        from tac.local_acceleration.mlx_scorer_adapters import (
+            mlx_sigmoid,
+            temporary_mlx_device,
+        )
+
+        saturated = np.array(
+            [-1000.0, -100.0, -90.0, -80.0, 0.0, 80.0, 100.0, 1000.0],
+            dtype=np.float32,
+        )
+
+        def manual_loss_fn(values):
+            return mx.sum(1.0 / (1.0 + mx.exp(-values)))
+
+        def loss_fn(values):
+            return mx.sum(mlx_sigmoid(values))
+
+        out = {}
+        for device in ("cpu", "gpu"):
+            with temporary_mlx_device(device):
+                x = mx.array(saturated)
+                manual_loss, manual_grad = mx.value_and_grad(manual_loss_fn)(x)
+                loss, grad = mx.value_and_grad(loss_fn)(x)
+                mx.eval(manual_loss, manual_grad, loss, grad)
+                try:
+                    mx.synchronize()
+                except AttributeError:
+                    pass
+            out[device] = {
+                "manual_grad_finite": bool(np.isfinite(np.asarray(manual_grad)).all()),
+                "intrinsic_grad_finite": bool(np.isfinite(np.asarray(grad)).all()),
+            }
+        print(json.dumps(out, sort_keys=True))
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    assert payload["cpu"]["manual_grad_finite"] is False
+    assert payload["cpu"]["intrinsic_grad_finite"] is True
+    assert payload["gpu"]["manual_grad_finite"] is False
+    assert payload["gpu"]["intrinsic_grad_finite"] is True
+
+    saturated = np.array(
+        [-1000.0, -100.0, -90.0, -80.0, 0.0, 80.0, 100.0, 1000.0],
+        dtype=np.float32,
+    )
+
+    def loss_fn(values: mx.array) -> mx.array:
+        return mx.sum(mlx_sigmoid(values))
+
+    for device in ("cpu", "gpu"):
+        with temporary_mlx_device(device):
+            x = mx.array(saturated)
+            loss, grad = mx.value_and_grad(loss_fn)(x)
+            mx.eval(loss, grad)
+            try:
+                mx.synchronize()
+            except AttributeError:
+                pass
+
+        grad_np = np.asarray(grad)
+        assert np.isfinite(grad_np).all()
+        assert grad_np[0] == 0.0
+        assert grad_np[-1] == 0.0
+
+
 def _max_abs(lhs: np.ndarray, rhs: np.ndarray) -> float:
     return float(np.max(np.abs(lhs.astype(np.float32) - rhs.astype(np.float32))))
 
@@ -93,6 +176,14 @@ def test_conv2d_adapter_matches_torch_nchw(
 
     assert actual.shape == expected.shape
     assert _max_abs(actual, expected) < 1.0e-5
+
+
+def test_grouped_strided_conv_uses_reference_path_for_metal_backward_crux() -> None:
+    conv = nn.Conv2d(8, 16, kernel_size=3, stride=2, padding=1, groups=8, bias=False)
+
+    adapter = torch_conv2d_to_mlx(conv)
+
+    assert type(adapter).__name__ == "MLXReferenceConv2dAdapter"
 
 
 def test_batchnorm2d_adapter_matches_torch_eval_nchw() -> None:
@@ -615,7 +706,9 @@ def test_distortion_scorer_responses_and_components_match_torch_on_mlx_cpu() -> 
         )
 
     assert _max_abs(actual_ref["posenet"]["pose"], expected_ref["posenet"]["pose"].detach().numpy()) < 2.0e-3
+    assert _max_abs(actual_cand["posenet"]["pose"], expected_cand["posenet"]["pose"].detach().numpy()) < 2.0e-3
     assert _max_abs(actual_ref["segnet"], expected_ref["segnet"].detach().numpy()) < 1.0e-2
+    assert _max_abs(actual_cand["segnet"], expected_cand["segnet"].detach().numpy()) < 1.0e-2
     actual_components = scorer_distortion_components_numpy(actual_ref, actual_cand)
     assert _max_abs(actual_components["posenet"], expected_pose) < 2.0e-5
     assert _max_abs(actual_components["segnet"], expected_seg) == 0.0

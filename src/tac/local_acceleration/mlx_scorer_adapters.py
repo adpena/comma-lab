@@ -15,6 +15,7 @@ from typing import Any
 import numpy as np
 
 __all__ = [
+    "load_mlx_distortion_scorer_adapter_from_upstream",
     "mlx_reference_conv2d_nhwc",
     "nchw_to_nhwc",
     "nhwc_to_nchw",
@@ -41,7 +42,6 @@ __all__ = [
     "run_mlx_unet_decoder_block_nchw",
     "run_mlx_unet_decoder_nchw",
     "scorer_distortion_components_numpy",
-    "load_mlx_distortion_scorer_adapter_from_upstream",
     "temporary_mlx_device",
     "torch_batchnorm2d_to_mlx",
     "torch_conv2d_relu_to_mlx",
@@ -1066,6 +1066,14 @@ def torch_conv2d_to_mlx(torch_conv: Any) -> Any:
     import mlx.core as mx
     import mlx.nn as nn
 
+    if int(torch_conv.groups) > 1 and _pair(torch_conv.stride) != (1, 1):
+        # MLX Metal reverse-mode currently produces extreme gradients for
+        # grouped/depthwise strided Conv2d on the real scorer activations. The
+        # fixed-order reference path preserves forward parity and CPU/GPU
+        # gradient parity for this narrow downsample class while leaving dense
+        # and non-strided grouped Conv2d on the native fast path.
+        return MLXReferenceConv2dAdapter(torch_conv, accumulation_mode="fixed_fp32")
+
     conv = nn.Conv2d(
         int(torch_conv.in_channels),
         int(torch_conv.out_channels),
@@ -1241,7 +1249,7 @@ def torch_distortion_net_to_mlx(torch_distortion_net: Any) -> MLXDistortionScore
 
 
 def load_mlx_distortion_scorer_adapter_from_upstream(
-    upstream_dir: str | "Path",
+    upstream_dir: str | Path,
     *,
     device: str = "cpu",
 ) -> MLXDistortionScorerAdapter:
@@ -1440,17 +1448,39 @@ def run_mlx_distortion_scorer_nchw(
 
     import mlx.core as mx
 
-    outputs = adapter(
-        mx.array(nchw_to_nhwc(posenet_yuv6_pair_nchw)),
-        mx.array(nchw_to_nhwc(segnet_last_rgb_nchw)),
-    )
-    return {
-        "posenet": {
-            name: _mlx_array_to_numpy(value)
-            for name, value in outputs["posenet"].items()
-        },
-        "segnet": nhwc_to_nchw(_mlx_array_to_numpy(outputs["segnet"])),
+    try:
+        mx.synchronize()
+        mx.clear_cache()
+    except AttributeError:
+        pass
+
+    # Materialize PoseNet before building the SegNet graph. On MLX, fusing the
+    # two independent scorer branches into one lazy forward, or reusing the MLX
+    # cache after a SegNet branch, can corrupt the next PoseNet response in
+    # repeated CPU calls. This forward-only NumPy bridge pays the cache-clear
+    # cost so component reports stay upstream-faithful. Differentiable VJP code
+    # calls the branches directly and keeps its own graph boundaries.
+    posenet_outputs = adapter.posenet(mx.array(nchw_to_nhwc(posenet_yuv6_pair_nchw)))
+    posenet_numpy = {
+        name: _mlx_array_to_numpy(value)
+        for name, value in posenet_outputs.items()
     }
+    try:
+        mx.synchronize()
+        mx.clear_cache()
+    except AttributeError:
+        pass
+    segnet_output = adapter.segnet(mx.array(nchw_to_nhwc(segnet_last_rgb_nchw)))
+    result = {
+        "posenet": posenet_numpy,
+        "segnet": nhwc_to_nchw(_mlx_array_to_numpy(segnet_output)),
+    }
+    try:
+        mx.synchronize()
+        mx.clear_cache()
+    except AttributeError:
+        pass
+    return result
 
 
 def run_mlx_efficientnet_stage_nchw(
@@ -1567,7 +1597,7 @@ def mlx_silu(x: Any) -> Any:
 def mlx_sigmoid(x: Any) -> Any:
     import mlx.core as mx
 
-    return 1.0 / (1.0 + mx.exp(-x))
+    return mx.sigmoid(x)
 
 
 def scorer_distortion_components_numpy(
@@ -1639,7 +1669,12 @@ def _mlx_array_to_numpy(array: Any) -> np.ndarray:
         mx.synchronize()
     except AttributeError:
         pass
-    return np.asarray(array)
+    # Keep the MLX/NumPy boundary ownership-explicit. ``np.asarray(mx_array)``
+    # can expose MLX-managed storage; later scorer calls may reuse that storage,
+    # which produced intermittent PoseNet component drift and rare bus errors in
+    # DistortionNet replay. Return an owned contiguous copy at every public
+    # adapter boundary.
+    return np.ascontiguousarray(np.asarray(array).copy())
 
 
 def _pair(value: Any) -> tuple[int, int]:
@@ -1710,6 +1745,10 @@ class temporary_mlx_device:
         self._old_device = mx.default_device()
         kind = mx.cpu if self._device_type == "cpu" else mx.gpu
         mx.set_default_device(mx.Device(kind))
+        try:
+            mx.clear_cache()
+        except AttributeError:
+            pass
 
     def __exit__(self, *_exc: object) -> None:
         if self._old_device is not None:
@@ -1719,4 +1758,12 @@ class temporary_mlx_device:
                 mx.synchronize()
             except AttributeError:
                 pass
+            try:
+                mx.clear_cache()
+            except AttributeError:
+                pass
             mx.set_default_device(self._old_device)
+            try:
+                mx.clear_cache()
+            except AttributeError:
+                pass
