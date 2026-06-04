@@ -15865,6 +15865,8 @@ def _modelsize_byte_cap_feedback_row(
             node,
             source_path=source_path,
         )
+    if not _modelsize_byte_cap_scope_matches_candidate(node, candidate_mapping):
+        return None
     # Checkpoint exports also carry top-level ``packet_bytes``. That is the
     # realized receiver packet size, not the modelsize ladder's nominal payload
     # estimate, so nested candidate metadata must win when present.
@@ -15923,6 +15925,27 @@ def _modelsize_byte_cap_feedback_row(
         "report_path": node.get("report_path"),
     }
     return {key: value for key, value in row.items() if value is not None}
+
+
+def _modelsize_byte_cap_scope_matches_candidate(
+    node: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> bool:
+    if not candidate:
+        return True
+    measured_pairs = _compact_first_present_int(
+        node,
+        ("measured_num_pairs", "candidate_num_pairs", "num_pairs"),
+    )
+    metadata = node.get("snar1_metadata")
+    if measured_pairs is None and isinstance(metadata, Mapping):
+        measured_pairs = _compact_first_present_int(metadata, ("n_pairs", "num_pairs"))
+    candidate_pairs = _compact_first_present_int(candidate, ("num_pairs",))
+    return not (
+        measured_pairs is not None
+        and candidate_pairs is not None
+        and int(measured_pairs) != int(candidate_pairs)
+    )
 
 
 def _startup_modelsize_candidate_from_node(

@@ -24,6 +24,12 @@ SNERV_ADVISORY_TRAINER_METADATA_SCHEMA = (
 )
 SNERV_ADVISORY_SCORER_EVAL_SCHEMA = "snerv_advisory_component_eval.v1"
 SNERV_PACKET_RECEIVER_PROOF_SCHEMA = "snerv_advisory_packet_receiver_replay.v1"
+FALSE_AUTHORITY = {
+    "score_claim": False,
+    "promotion_eligible": False,
+    "rank_or_kill_eligible": False,
+    "ready_for_exact_eval_dispatch": False,
+}
 SNERV_OFFICIAL_MFU_HFR_TUB_EXPORT_BLOCKERS = (
     "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
     "snerv_official_mfu_hfr_tub_weight_mapping_missing",
@@ -114,6 +120,9 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
         adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     )
     official_export_bound = _official_mfu_hfr_tub_export_bound(advisory_result)
+    official_tensor_map_custody = _official_receiver_tensor_map_custody(
+        advisory_result
+    )
     official_export_blockers = _official_mfu_hfr_tub_export_blockers(
         advisory_result,
         export_bound=official_export_bound,
@@ -163,6 +172,13 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
         "snerv_t_enabled": bool(temporal_context > 0),
         "snerv_temporal_mode": temporal_mode,
     }
+    if official_primitives_requested:
+        controls["official_receiver_tensor_map_verified"] = bool(
+            official_tensor_map_custody["receiver_tensor_map_verified"]
+        )
+        controls["official_receiver_tensor_map_custody"] = (
+            official_tensor_map_custody
+        )
     wavelet = _attr(advisory_result, "wavelet")
     levels = _attr(advisory_result, "levels")
     fc_dim = _int_attr(advisory_result, "snerv_fc_dim")
@@ -234,8 +250,6 @@ def _actual_controls(advisory_result: Any) -> dict[str, Any]:
 def _official_mfu_hfr_tub_export_bound(advisory_result: Any) -> bool:
     """Return whether advisory evidence proves receiver-bound official payload."""
 
-    if _attr(advisory_result, "snerv_official_mfu_hfr_tub_export_bound") is True:
-        return True
     binding = _attr(advisory_result, "official_primitive_binding")
     if isinstance(binding, Mapping):
         return bool(
@@ -283,13 +297,131 @@ def _official_mfu_hfr_tub_export_blockers(
 
 
 def _official_receiver_tensor_map_verified(advisory_result: Any) -> bool:
+    return bool(
+        _official_receiver_tensor_map_custody(advisory_result)[
+            "receiver_tensor_map_verified"
+        ]
+    )
+
+
+def _official_receiver_tensor_map_custody(advisory_result: Any) -> dict[str, Any]:
+    """Return row/hash-backed official receiver tensor-map custody evidence."""
+
     binding = _attr(advisory_result, "official_primitive_binding")
     if not isinstance(binding, Mapping):
-        return False
+        return _tensor_map_custody_row(
+            blockers=["snerv_official_receiver_tensor_map_binding_missing"]
+        )
     tensor_map = binding.get("official_receiver_tensor_map")
-    return isinstance(tensor_map, Mapping) and bool(
-        tensor_map.get("receiver_tensor_map_verified") is True
+    if not isinstance(tensor_map, Mapping):
+        return _tensor_map_custody_row(
+            blockers=["snerv_official_receiver_tensor_map_missing"]
+        )
+
+    blockers: list[str] = []
+    raw_blockers = tensor_map.get("blockers")
+    if isinstance(raw_blockers, (list, tuple)):
+        blockers.extend(str(value) for value in raw_blockers if str(value))
+    elif raw_blockers:
+        blockers.append(str(raw_blockers))
+
+    rows_raw = tensor_map.get("rows")
+    rows = list(rows_raw) if isinstance(rows_raw, (list, tuple)) else []
+    manifest_sha = str(tensor_map.get("tensor_manifest_sha256") or "")
+    row_count = _int_mapping_value(tensor_map, "row_count") or 0
+    total_tensor_bytes = _int_mapping_value(tensor_map, "total_tensor_bytes") or 0
+    official_payload_selected = bool(
+        tensor_map.get("official_decoder_payload_selected") is True
     )
+
+    if tensor_map.get("receiver_tensor_map_verified") is not True:
+        blockers.append("snerv_official_receiver_tensor_map_verified_flag_false")
+    if not official_payload_selected:
+        blockers.append("snerv_official_receiver_tensor_map_payload_not_official")
+    if not rows:
+        blockers.append("snerv_official_receiver_tensor_map_rows_missing")
+    if row_count <= 0:
+        blockers.append("snerv_official_receiver_tensor_map_row_count_missing")
+    elif rows and row_count != len(rows):
+        blockers.append("snerv_official_receiver_tensor_map_row_count_mismatch")
+    if total_tensor_bytes <= 0:
+        blockers.append("snerv_official_receiver_tensor_map_bytes_missing")
+    if not _is_sha256_hex(manifest_sha):
+        blockers.append("snerv_official_receiver_tensor_map_manifest_sha_missing")
+
+    row_names: list[str] = []
+    for raw_row in rows:
+        if not isinstance(raw_row, Mapping):
+            blockers.append("snerv_official_receiver_tensor_map_malformed_row")
+            continue
+        name = str(raw_row.get("name") or "")
+        if name:
+            row_names.append(name)
+        row_bytes = _int_mapping_value(raw_row, "bytes") or 0
+        if row_bytes <= 0:
+            blockers.append("snerv_official_receiver_tensor_map_row_bytes_missing")
+        if not _is_sha256_hex(str(raw_row.get("sha256") or "")):
+            blockers.append("snerv_official_receiver_tensor_map_row_sha_missing")
+
+    verified = not _unique_texts(blockers)
+    return _tensor_map_custody_row(
+        receiver_tensor_map_verified=verified,
+        official_decoder_payload_selected=official_payload_selected,
+        row_count=row_count,
+        total_tensor_bytes=total_tensor_bytes,
+        tensor_manifest_sha256=manifest_sha if _is_sha256_hex(manifest_sha) else None,
+        row_names=row_names,
+        category_counts=tensor_map.get("category_counts"),
+        category_bytes=tensor_map.get("category_bytes"),
+        blockers=blockers,
+    )
+
+
+def _tensor_map_custody_row(
+    *,
+    receiver_tensor_map_verified: bool = False,
+    official_decoder_payload_selected: bool = False,
+    row_count: int = 0,
+    total_tensor_bytes: int = 0,
+    tensor_manifest_sha256: str | None = None,
+    row_names: list[str] | None = None,
+    category_counts: Any = None,
+    category_bytes: Any = None,
+    blockers: list[str] | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema": "snerv_official_receiver_tensor_map_custody.v1",
+        "receiver_tensor_map_verified": bool(receiver_tensor_map_verified),
+        "official_decoder_payload_selected": bool(official_decoder_payload_selected),
+        "row_count": int(row_count),
+        "total_tensor_bytes": int(total_tensor_bytes),
+        "tensor_manifest_sha256": tensor_manifest_sha256,
+        "row_names": list(row_names or []),
+        "category_counts": dict(category_counts)
+        if isinstance(category_counts, Mapping)
+        else {},
+        "category_bytes": dict(category_bytes)
+        if isinstance(category_bytes, Mapping)
+        else {},
+        "blockers": _unique_texts(blockers or []),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _is_sha256_hex(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdefABCDEF" for char in value)
+
+
+def _unique_texts(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        out.append(text)
+    return out
 
 
 def _merge_official_controls_fail_closed(

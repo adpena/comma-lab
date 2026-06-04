@@ -1651,6 +1651,66 @@ def test_long_training_campaign_plan_byte_cap_preflight_reads_startup_candidate_
     assert preflight["predicted_under_hard_byte_ceiling"] is True
 
 
+def test_long_training_campaign_plan_promotes_hinerv_candidate_with_byte_feedback_into_limit(
+    tmp_path: Path,
+) -> None:
+    hinerv_budget = _hinerv_budget()
+    stale = dict(hinerv_budget["selected_candidates"][0])
+    calibrated = {
+        **stale,
+        "candidate_id": "hinerv_calibrated_bytecap",
+        "decoder_codec": "int2_mixed",
+        "nominal_total_payload_bytes": 96_000,
+        "byte_headroom": 82_000,
+    }
+    hinerv_budget["selected_candidates"] = [stale]
+    export = tmp_path / "hinerv_export.json"
+    export.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": calibrated["candidate_id"],
+                "archive_bytes": 101_000,
+                "decoder_codec": "int2_mixed",
+                "receiver_proof_ready": True,
+                "modelsize_candidate": calibrated,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=hinerv_budget,
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(export.as_posix(),),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+
+    assert hi["candidate"]["candidate_id"] == calibrated["candidate_id"]
+    assert hi["budget_candidate_id"] == calibrated["candidate_id"]
+    assert hi["runner_modelsize_candidate_id"] == "auto"
+    assert hi["modelsize_candidate_selection_mode"] == (
+        "calibrated_auto_from_modelsize_byte_cap_feedback"
+    )
+    assert (
+        "hi_nerv_modelsize_byte_cap_feedback_observation_missing"
+        not in hi["blockers"]
+    )
+    preflight = hi["modelsize_byte_cap_preflight"]
+    assert preflight["matching_observation_count"] == 1
+    assert preflight["predicted_archive_bytes"] == 101_000
+    assert preflight["predicted_under_hard_byte_ceiling"] is True
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_consumes_snerv_binary_profile_receiver_proof_feedback(
     tmp_path: Path,
 ) -> None:
@@ -1774,6 +1834,41 @@ def test_long_training_campaign_cli_discovers_snerv_binary_profile_receiver_feed
     )
 
     assert profile.resolve(strict=False) in discovered
+
+
+def test_long_training_campaign_plan_rejects_partial_snerv_binary_profile_byte_feedback(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="1" * 64,
+    )
+    payload = json.loads(profile.read_text(encoding="utf-8"))
+    payload["snar1_metadata"]["n_pairs"] = 2
+    profile.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    assert profile.resolve(strict=False) not in cli._discover_modelsize_byte_cap_feedback_paths(
+        [tmp_path],
+        limit=8,
+    )
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(scalar),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(profile.as_posix(),),
+    )
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert snerv["modelsize_byte_cap_preflight"]["observation_count"] == 0
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
+        "blockers"
+    ]
 
 
 def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> None:
@@ -4058,6 +4153,7 @@ def _write_snerv_binary_profile_receiver_feedback(
                 "input_kind": "contest_archive_zip",
                 "input_path": archive.as_posix(),
                 "input_sha256": archive_sha256,
+                "snar1_metadata": {"n_pairs": int(candidate["num_pairs"])},
                 "snar1_packet_bytes": 87_418,
                 "score_claim": False,
                 "promotion_eligible": False,

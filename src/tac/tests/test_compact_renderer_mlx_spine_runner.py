@@ -194,6 +194,7 @@ def _write_snerv_binary_profile_receiver_feedback(
                 "input_kind": "contest_archive_zip",
                 "input_path": archive.as_posix(),
                 "input_sha256": archive_sha256,
+                "snar1_metadata": {"n_pairs": int(candidate["num_pairs"])},
                 "snar1_packet_bytes": 87_418,
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -3142,6 +3143,23 @@ def test_modelsize_byte_cap_feedback_loader_accepts_snerv_binary_profile_with_re
             "source_path": profile.resolve(strict=False).as_posix(),
         }
     ]
+
+
+def test_modelsize_byte_cap_feedback_loader_rejects_partial_snerv_binary_profile(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="2" * 64,
+    )
+    payload = json.loads(profile.read_text(encoding="utf-8"))
+    payload["snar1_metadata"]["n_pairs"] = 2
+    profile.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    assert runner_mod._load_modelsize_byte_cap_feedback_rows([profile]) == []
 
 
 def test_byte_cap_controller_keeps_snerv_skip_mode_feedback_candidate_scoped(

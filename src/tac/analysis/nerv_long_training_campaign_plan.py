@@ -219,6 +219,13 @@ def build_nerv_long_training_campaign_plan(
         decoder_weight_waterfill_index=decoder_weight_waterfill_index,
         limit=max_candidates_per_family,
     )
+    hi_candidates = _merge_modelsize_byte_cap_feedback_candidates(
+        selected_candidates=hi_candidates,
+        modelsize_budget=hinerv_modelsize_budget,
+        family="hi_nerv",
+        feedback_paths=byte_cap_feedback_paths,
+        limit=max_candidates_per_family,
+    )
     snerv_candidates = _selected_candidates(
         snerv_modelsize_budget,
         family="snerv",
@@ -2054,6 +2061,11 @@ def _modelsize_byte_cap_feedback_observations(
                     row,
                     source_path=path,
                 )
+            if not _modelsize_byte_cap_scope_matches_candidate(
+                row,
+                candidate_mapping,
+            ):
+                continue
             nominal = _first_present_int(
                 candidate_mapping,
                 (
@@ -2075,6 +2087,29 @@ def _modelsize_byte_cap_feedback_observations(
                 )
             if measured is None or nominal is None or measured <= 0 or nominal <= 0:
                 continue
+            payload_bytes = _first_present_int(
+                row,
+                ("measured_payload_bytes", "packet_bytes", "snar1_packet_bytes"),
+            )
+            archive_path = _modelsize_byte_cap_first_path(
+                row,
+                source_path=path,
+                keys=("archive_path", "input_path", "candidate_archive_path"),
+            )
+            packet_path = _modelsize_byte_cap_packet_path(
+                row,
+                source_path=path,
+                archive_path=archive_path,
+            )
+            report_path = _modelsize_byte_cap_report_path(
+                row,
+                source_path=path,
+                archive_path=archive_path,
+            )
+            measured_pairs = _modelsize_byte_cap_measured_pairs(
+                row,
+                candidate_mapping,
+            )
             observations.append(
                 {
                     "source_path": path.as_posix(),
@@ -2082,11 +2117,24 @@ def _modelsize_byte_cap_feedback_observations(
                     "family": row_family,
                     "codec": _modelsize_byte_cap_codec(row),
                     "measured_archive_bytes": int(measured),
+                    "measured_payload_bytes": (
+                        None if payload_bytes is None else int(payload_bytes)
+                    ),
+                    "measured_num_pairs": measured_pairs,
                     "nominal_payload_bytes": int(nominal),
                     "archive_minus_nominal_bytes": int(measured) - int(nominal),
                     "archive_to_nominal_ratio": float(measured) / float(nominal),
                     "receiver_closed": True,
                     "receiver_proof_path": receiver_closed.get("proof_path"),
+                    "archive_path": archive_path.as_posix() if archive_path else None,
+                    "archive_sha256": row.get("input_sha256")
+                    or row.get("archive_sha256"),
+                    "packet_path": packet_path.as_posix() if packet_path else None,
+                    "packet_sha256": row.get("snar1_packet_sha256")
+                    or row.get("packet_sha256"),
+                    "artifact_report_path": (
+                        report_path.as_posix() if report_path else None
+                    ),
                     "candidate_id": (
                         row.get("candidate_id")
                         or candidate_mapping.get("candidate_id")
@@ -2106,6 +2154,116 @@ def _modelsize_byte_cap_feedback_observations(
                 }
             )
     return observations
+
+
+def _modelsize_byte_cap_scope_matches_candidate(
+    row: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> bool:
+    if not candidate:
+        return True
+    measured_pairs = _first_present_int(
+        row,
+        ("measured_num_pairs", "candidate_num_pairs", "num_pairs"),
+    )
+    metadata = row.get("snar1_metadata")
+    if measured_pairs is None and isinstance(metadata, Mapping):
+        measured_pairs = _first_present_int(metadata, ("n_pairs", "num_pairs"))
+    candidate_pairs = _first_present_int(candidate, ("num_pairs",))
+    return not (
+        measured_pairs is not None
+        and candidate_pairs is not None
+        and int(measured_pairs) != int(candidate_pairs)
+    )
+
+
+def _modelsize_byte_cap_measured_pairs(
+    row: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+) -> int | None:
+    measured_pairs = _first_present_int(
+        row,
+        ("measured_num_pairs", "candidate_num_pairs", "num_pairs"),
+    )
+    metadata = row.get("snar1_metadata")
+    if measured_pairs is None and isinstance(metadata, Mapping):
+        measured_pairs = _first_present_int(metadata, ("n_pairs", "num_pairs"))
+    if measured_pairs is None:
+        measured_pairs = _first_present_int(candidate, ("num_pairs",))
+    return measured_pairs
+
+
+def _modelsize_byte_cap_first_path(
+    row: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+    keys: Sequence[str],
+) -> Path | None:
+    for key in keys:
+        value = row.get(key)
+        if value:
+            return Path(str(value)).expanduser().resolve(strict=False)
+    return source_path
+
+
+def _modelsize_byte_cap_packet_path(
+    row: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+    archive_path: Path | None,
+) -> Path | None:
+    explicit = _modelsize_byte_cap_first_path(
+        row,
+        source_path=None,
+        keys=("packet_path", "snar1_packet_path"),
+    )
+    if explicit and explicit.is_file():
+        return explicit
+    candidates: list[Path] = []
+    for artifact_path in _modelsize_byte_cap_row_artifact_paths(
+        row,
+        source_path=source_path,
+    ):
+        for parent in _self_and_parents(artifact_path):
+            candidates.append(parent / "snerv_mlx_native_packet.snar")
+    if archive_path is not None:
+        candidates.extend(
+            [
+                archive_path.parent.parent / "snerv_mlx_native_packet.snar",
+                archive_path.parent / "snerv_mlx_native_packet.snar",
+            ]
+        )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate.resolve(strict=False)
+    return explicit
+
+
+def _modelsize_byte_cap_report_path(
+    row: Mapping[str, Any],
+    *,
+    source_path: Path | None,
+    archive_path: Path | None,
+) -> Path | None:
+    explicit = _modelsize_byte_cap_first_path(
+        row,
+        source_path=None,
+        keys=("artifact_report_path", "report_path"),
+    )
+    if explicit and explicit.is_file():
+        return explicit
+    if source_path is not None and Path(source_path).is_file():
+        return Path(source_path).resolve(strict=False)
+    if archive_path is not None:
+        for candidate in (
+            archive_path.parent / "archive_bound_candidate_adapter_package.json",
+            archive_path.parent.parent
+            / "snerv_score_aware_long_training"
+            / "snerv_score_aware_long_training.json",
+        ):
+            if candidate.is_file():
+                return candidate.resolve(strict=False)
+    return explicit
 
 
 def _modelsize_byte_cap_startup_candidate(

@@ -280,6 +280,45 @@ def test_bridge_records_official_mfu_hfr_tub_primitives_fail_closed_until_export
     )
 
 
+def test_bridge_refuses_top_level_official_export_bound_without_binding(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-top-level-official-bound-only"
+    packet_path = tmp_path / "top_level_bound_only.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            snerv_mfu_scales=(1, 2, 4),
+            snerv_hfr_gain=0.125,
+            snerv_temporal_context=1,
+            snerv_temporal_mode="official_haar_dwt1d_lowpass",
+            snerv_official_mfu_hfr_tub_export_bound=True,
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    controls = payload["rows"][0]["official_controls"]
+    assert controls["official_mfu_hfr_tub_export_bound"] is False
+    assert controls["official_receiver_tensor_map_verified"] is False
+    assert controls["official_receiver_tensor_map_custody"]["blockers"] == [
+        "snerv_official_receiver_tensor_map_binding_missing"
+    ]
+    assert controls["official_mfu_hfr_tub_export_blockers"] == [
+        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+    ]
+    assert controls["source_faithful_stack"] is False
+    assert payload["rows"][0]["score_claim"] is False
+    assert payload["rows"][0]["ready_for_exact_eval_dispatch"] is False
+
+
 def test_bridge_consumes_receiver_bound_official_payload_evidence(
     tmp_path: Path,
 ) -> None:
@@ -302,9 +341,7 @@ def test_bridge_consumes_receiver_bound_official_payload_evidence(
                 "export_bound_to_receiver_packet": True,
                 "official_receiver_payload_contract_emitted": True,
                 "receiver_runtime_decode_authority": True,
-                "official_receiver_tensor_map": {
-                    "receiver_tensor_map_verified": True,
-                },
+                "official_receiver_tensor_map": _official_tensor_map(),
             },
             blockers=[
                 "snerv_official_mfu_hfr_tub_weight_mapping_missing",
@@ -330,6 +367,71 @@ def test_bridge_consumes_receiver_bound_official_payload_evidence(
     assert controls["official_mfu_hfr_tub_export_blockers"] == [
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
     ]
+    assert controls["official_receiver_tensor_map_verified"] is True
+    custody = controls["official_receiver_tensor_map_custody"]
+    assert custody["receiver_tensor_map_verified"] is True
+    assert custody["row_count"] == 2
+    assert custody["total_tensor_bytes"] == 28
+    assert custody["tensor_manifest_sha256"] == "b" * 64
+    assert custody["blockers"] == []
+    assert controls["source_faithful_stack"] is False
+    assert payload["rows"][0]["score_claim"] is False
+    assert payload["rows"][0]["ready_for_exact_eval_dispatch"] is False
+
+
+def test_bridge_refuses_boolean_only_official_receiver_tensor_map(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-official-forged-tensor-map"
+    packet_path = tmp_path / "official_forged_tensor_map.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            snerv_mfu_scales=(1, 2, 4),
+            snerv_hfr_gain=0.125,
+            snerv_temporal_context=1,
+            snerv_temporal_mode="official_haar_dwt1d_lowpass",
+            snerv_official_mfu_hfr_tub_export_bound=True,
+            official_primitive_binding={
+                "official_export_bound": True,
+                "export_bound_to_receiver_packet": True,
+                "official_receiver_payload_contract_emitted": True,
+                "receiver_runtime_decode_authority": True,
+                "official_receiver_tensor_map": {
+                    "receiver_tensor_map_verified": True,
+                },
+            },
+            blockers=[
+                "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+            ],
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    controls = payload["rows"][0]["official_controls"]
+    assert controls["official_mfu_hfr_tub_export_bound"] is True
+    assert controls["official_receiver_tensor_map_verified"] is False
+    custody = controls["official_receiver_tensor_map_custody"]
+    assert custody["receiver_tensor_map_verified"] is False
+    assert "snerv_official_receiver_tensor_map_rows_missing" in custody["blockers"]
+    assert (
+        "snerv_official_receiver_tensor_map_manifest_sha_missing"
+        in custody["blockers"]
+    )
+    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" in controls[
+        "official_mfu_hfr_tub_export_blockers"
+    ]
+    assert (
+        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+        not in controls["official_mfu_hfr_tub_export_blockers"]
+    )
     assert controls["source_faithful_stack"] is False
     assert payload["rows"][0]["score_claim"] is False
     assert payload["rows"][0]["ready_for_exact_eval_dispatch"] is False
@@ -489,3 +591,41 @@ def _advisory(packet: bytes, **overrides: object) -> SimpleNamespace:
         axis_tag="[macOS-CPU advisory]",
         **values,
     )
+
+
+def _official_tensor_map() -> dict[str, object]:
+    return {
+        "schema": "snerv_official_mfu_hfr_tub_receiver_tensor_map.v1",
+        "receiver_tensor_map_verified": True,
+        "official_decoder_payload_selected": True,
+        "row_count": 2,
+        "total_tensor_bytes": 28,
+        "category_counts": {"hfr": 1, "mfu": 1},
+        "category_bytes": {"hfr": 12, "mfu": 16},
+        "tensor_manifest_sha256": "b" * 64,
+        "rows": [
+            {
+                "name": "mfu.upsample_mid.weight",
+                "category": "mfu",
+                "shape": [1, 1, 2, 2],
+                "dtype": "float32",
+                "bytes": 16,
+                "manifest_byte_key": "nbytes",
+                "sha256": "a" * 64,
+            },
+            {
+                "name": "hfr.lh.conv1.weight",
+                "category": "hfr",
+                "shape": [3, 1, 1, 1],
+                "dtype": "float32",
+                "bytes": 12,
+                "manifest_byte_key": "nbytes",
+                "sha256": "c" * 64,
+            },
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }

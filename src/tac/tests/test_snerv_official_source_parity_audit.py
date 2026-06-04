@@ -51,9 +51,11 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in (
         runtime["blockers"]
     )
+    assert runtime["native_mlx_export_bound"] is True
+    assert runtime["official_export_bound"] is True
     assert (
         "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-        in runtime["blockers"]
+        not in runtime["blockers"]
     )
     assert report["official_mfu_hfr_tub_parity_proven"] is False
     assert report["blockers"] == ["snerv_official_mfu_hfr_tub_parity_missing"]

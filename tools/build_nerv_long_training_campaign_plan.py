@@ -309,7 +309,10 @@ def _is_receiver_proof_snerv_binary_profile(
     if _positive_int(payload.get("charged_archive_bytes")) is None:
         return False
     startup = _startup_payload_for_artifact(path, payload)
-    if not isinstance(startup.get("modelsize_candidate"), dict):
+    candidate = startup.get("modelsize_candidate")
+    if not isinstance(candidate, dict):
+        return False
+    if not _snerv_binary_profile_scope_matches_candidate(payload, candidate):
         return False
     proof = _receiver_proof_payload_for_artifact(path, payload)
     if not proof:
@@ -328,13 +331,27 @@ def _is_receiver_proof_snerv_binary_profile(
         return False
     proof_archive_bytes = _positive_int(proof.get("archive_bytes"))
     profile_archive_bytes = _positive_int(payload.get("charged_archive_bytes"))
-    if (
+    return not (
         proof_archive_bytes is not None
         and profile_archive_bytes is not None
         and int(proof_archive_bytes) != int(profile_archive_bytes)
-    ):
-        return False
-    return True
+    )
+
+
+def _snerv_binary_profile_scope_matches_candidate(
+    payload: dict,
+    candidate: dict,
+) -> bool:
+    metadata = payload.get("snar1_metadata")
+    measured_pairs = _positive_int(payload.get("measured_num_pairs"))
+    if measured_pairs is None and isinstance(metadata, dict):
+        measured_pairs = _positive_int(metadata.get("n_pairs"))
+    candidate_pairs = _positive_int(candidate.get("num_pairs"))
+    return not (
+        measured_pairs is not None
+        and candidate_pairs is not None
+        and int(measured_pairs) != int(candidate_pairs)
+    )
 
 
 def _startup_payload_for_artifact(path: Path, payload: dict) -> dict:
