@@ -313,8 +313,17 @@ def _queue_rows_for_recode_admission(
                     required_savings_bytes=over_waterline,
                 )
             )
+            rows.append(
+                _step_map_compaction_work_order_row(
+                    campaign_row=campaign_row,
+                    evidence=evidence,
+                    output_root=output_root,
+                    required_savings_bytes=over_waterline,
+                )
+            )
             representation_precedence_blockers = [
-                "snerv_snar_header_minimization_result_precedes_lf_representation_change"
+                "snerv_snar_header_minimization_result_precedes_lf_representation_change",
+                "snerv_step_map_packet_compaction_precedes_lf_representation_change",
             ]
         elif _header_rewrite_should_precede_lf_representation(evidence):
             rows.append(
@@ -408,6 +417,81 @@ def _header_minimization_result_row(
         blocked=True,
         blockers=blockers,
         command_argv=[],
+        output_root=output_root,
+        required_lf_savings_bytes=required_savings_bytes,
+        lf_payload_bytes=_positive_int(evidence.get("candidate_lf_payload_bytes")),
+    )
+
+
+def _step_map_compaction_work_order_row(
+    *,
+    campaign_row: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+    output_root: Path,
+    required_savings_bytes: int,
+) -> dict[str, Any]:
+    summary = evidence.get("snar_header_minimization_report")
+    summary = summary if isinstance(summary, Mapping) else {}
+    packet_path = str(summary.get("candidate_packet_path") or "").strip()
+    full_video_replay_proven = _header_minimization_full_video_receiver_proven(
+        evidence,
+    )
+    candidate_binding_satisfied = _header_minimization_candidate_binding_satisfied(
+        campaign_row,
+        evidence,
+    )
+    token = _campaign_candidate_token(campaign_row, "snar_step_map_compacted")
+    out_dir = output_root / token
+    blockers: list[str] = []
+    if not packet_path:
+        blockers.append("snerv_step_map_compaction_source_packet_missing")
+    if not candidate_binding_satisfied:
+        blockers.append("snerv_step_map_compaction_candidate_id_binding_missing")
+    if not full_video_replay_proven:
+        blockers.append("snerv_step_map_compaction_requires_header_full_video_proof")
+    ceiling = _positive_int(campaign_row.get("hard_byte_ceiling"))
+    command = (
+        []
+        if blockers
+        else [
+            "uv",
+            "run",
+            "python",
+            "tools/materialize_snerv_step_map_compaction.py",
+            "--packet",
+            packet_path,
+            "--candidate-id",
+            str(campaign_row.get("candidate_id") or ""),
+            "--wire-format",
+            "snar2",
+            "--output-packet",
+            (out_dir / "candidate.stepmap.snar2").as_posix(),
+            "--output-archive-zip",
+            (out_dir / "archive.zip").as_posix(),
+            "--output-package-dir",
+            (out_dir / "runtime_package").as_posix(),
+            "--output-json",
+            (out_dir / "snerv_step_map_compaction.json").as_posix(),
+            "--full-video-receiver-proof",
+            *(
+                []
+                if ceiling is None
+                else ["--hard-byte-ceiling", str(ceiling)]
+            ),
+        ]
+    )
+    return _base_row(
+        campaign_row=campaign_row,
+        evidence=evidence,
+        representation_candidate_id="snerv_step_map_packet_compaction_materialization",
+        work_order_type="snar_step_map_packet_compaction_materialization",
+        planner_action=(
+            "run_receiver_proven_step_map_constant_shape_partition_compaction"
+        ),
+        priority=13,
+        blocked=bool(blockers),
+        blockers=blockers,
+        command_argv=command,
         output_root=output_root,
         required_lf_savings_bytes=required_savings_bytes,
         lf_payload_bytes=_positive_int(evidence.get("candidate_lf_payload_bytes")),
@@ -545,7 +629,7 @@ def _header_minimization_candidate_binding_satisfied(
     if not isinstance(binding, Mapping):
         return False
     bound_candidate_id = str(binding.get("candidate_id") or "").strip()
-    return bool(candidate_id and bound_candidate_id and candidate_id == bound_candidate_id)
+    return _candidate_ids_compatible(candidate_id, bound_candidate_id)
 
 
 def _lossless_recode_probe_row(
@@ -802,6 +886,7 @@ def _recode_admission_evidence_from_campaign_row(
     header_minimization = _matching_header_minimization(
         packet_sha256=candidate_packet_sha256,
         candidate_id=candidate_id,
+        hard_byte_ceiling=campaign_row.get("hard_byte_ceiling"),
         header_minimizations=header_minimizations,
     )
     blockers = [
@@ -906,6 +991,7 @@ def _matching_header_minimization(
     *,
     packet_sha256: Any,
     candidate_id: Any,
+    hard_byte_ceiling: Any = None,
     header_minimizations: Mapping[str, Sequence[Mapping[str, Any]]],
 ) -> Mapping[str, Any] | None:
     sha = str(packet_sha256 or "").strip()
@@ -919,10 +1005,54 @@ def _matching_header_minimization(
         report_candidate_id = _header_minimization_candidate_id(report)
         if candidate_text and report_candidate_id == candidate_text:
             return report
+    alias_matches = [
+        report
+        for report in reports
+        if _candidate_ids_compatible(
+            candidate_text,
+            _header_minimization_candidate_id(report),
+        )
+    ]
+    if alias_matches:
+        ceiling_match = _single_hard_byte_ceiling_match(
+            alias_matches,
+            hard_byte_ceiling=hard_byte_ceiling,
+        )
+        return ceiling_match or alias_matches[0]
     for report in reports:
         if not _header_minimization_candidate_id(report):
             return report
     return None
+
+
+def _single_hard_byte_ceiling_match(
+    reports: Sequence[Mapping[str, Any]],
+    *,
+    hard_byte_ceiling: Any,
+) -> Mapping[str, Any] | None:
+    ceiling = _positive_int(hard_byte_ceiling)
+    if ceiling is None:
+        return None
+    matches = [
+        report
+        for report in reports
+        if _header_minimization_has_hard_byte_ceiling(report, ceiling)
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _header_minimization_has_hard_byte_ceiling(
+    report: Mapping[str, Any],
+    ceiling: int,
+) -> bool:
+    rows = report.get("hard_byte_ceiling_rows")
+    if not isinstance(rows, Sequence):
+        return False
+    return any(
+        isinstance(row, Mapping)
+        and _positive_int(row.get("hard_byte_ceiling")) == ceiling
+        for row in rows
+    )
 
 
 def _header_minimization_candidate_id(report: Mapping[str, Any]) -> str | None:
@@ -934,6 +1064,48 @@ def _header_minimization_candidate_id(report: Mapping[str, Any]) -> str | None:
         if text:
             return text
     return None
+
+
+def _candidate_ids_compatible(expected: Any, observed: Any) -> bool:
+    expected_text = str(expected or "").strip()
+    observed_text = str(observed or "").strip()
+    if not expected_text or not observed_text:
+        return False
+    if expected_text == observed_text:
+        return True
+    expected_aliases = _candidate_id_aliases(expected_text)
+    observed_aliases = _candidate_id_aliases(observed_text)
+    if expected_aliases.intersection(observed_aliases):
+        return True
+    for left in expected_aliases:
+        for right in observed_aliases:
+            shorter = min(len(left), len(right))
+            if shorter >= 24 and (left in right or right in left):
+                return True
+    return False
+
+
+def _candidate_id_aliases(value: str) -> set[str]:
+    aliases: set[str] = set()
+    pending = [value.strip()]
+    prefixes = (
+        "native_rate_aware_training_",
+        "auto_bytecap__",
+        "snerv__auto_bytecap__",
+    )
+    suffixes = ("_los",)
+    while pending:
+        text = pending.pop()
+        if not text or text in aliases:
+            continue
+        aliases.add(text)
+        for prefix in prefixes:
+            if text.startswith(prefix):
+                pending.append(text[len(prefix) :])
+        for suffix in suffixes:
+            if text.endswith(suffix):
+                pending.append(text[: -len(suffix)])
+    return aliases
 
 
 def _header_profile_summary(profile: Mapping[str, Any] | None) -> dict[str, Any] | None:

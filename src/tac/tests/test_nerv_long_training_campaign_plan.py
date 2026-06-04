@@ -1338,6 +1338,128 @@ def test_long_training_campaign_plan_accepts_full_video_header_minimization_proo
     assert result["score_claim"] is False
 
 
+def test_long_training_campaign_plan_queues_step_map_compaction_after_snar2_proof() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_lf_payload_recode_sources=(
+            _snerv_lf_recode_report(
+                mode="auto",
+                source_packet_bytes=2_347_142,
+                candidate_packet_bytes=1_485_285,
+                candidate_packet_header_bytes=1_346_233,
+                candidate_packet_path="/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
+                source_lf_bytes=879_633,
+                candidate_lf_bytes=17_779,
+            ),
+        ),
+        snerv_snar_header_minimization_report_sources=(
+            _snerv_snar_header_minimization_report(
+                source_packet_sha256="b" * 64,
+                candidate_id=_snerv_candidate_id(),
+                full_video_receiver_contract_satisfied=True,
+            ),
+        ),
+    )
+
+    reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
+    rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
+    step_map = rows_by_type["snar_step_map_packet_compaction_materialization"]
+    assert reroute_queue["local_executable_command_row_count"] == 1
+    assert step_map["blocked"] is False
+    assert step_map["planner_action"] == (
+        "run_receiver_proven_step_map_constant_shape_partition_compaction"
+    )
+    assert step_map["command_argv"][:4] == [
+        "uv",
+        "run",
+        "python",
+        "tools/materialize_snerv_step_map_compaction.py",
+    ]
+    assert step_map["command_argv"][
+        step_map["command_argv"].index("--packet") + 1
+    ] == "/Volumes/VertigoDataTier/pact/snerv_test/candidate.minimized.snar"
+    assert step_map["command_argv"][
+        step_map["command_argv"].index("--candidate-id") + 1
+    ] == _snerv_candidate_id()
+    assert step_map["command_argv"][
+        step_map["command_argv"].index("--wire-format") + 1
+    ] == "snar2"
+    assert step_map["command_argv"][
+        step_map["command_argv"].index("--output-packet") + 1
+    ].endswith("/candidate.stepmap.snar2")
+    assert "--output-package-dir" in step_map["command_argv"]
+    assert "--full-video-receiver-proof" in step_map["command_argv"]
+    assert "--hard-byte-ceiling" in step_map["command_argv"]
+    assert step_map["dispatch_allowed"] is False
+    assert step_map["local_mlx_long_training_allowed"] is False
+    assert step_map["score_claim"] is False
+    representation_rows = [
+        row
+        for row in reroute_queue["queue_rows"]
+        if row["work_order_type"] == "lf_representation_change_candidate"
+    ]
+    assert all(
+        "snerv_step_map_packet_compaction_precedes_lf_representation_change"
+        in row["blockers"]
+        for row in representation_rows
+    )
+
+
+def test_long_training_campaign_plan_accepts_header_minimization_candidate_alias_for_step_map_queue() -> None:
+    alias_candidate_id = f"native_rate_aware_training_{_snerv_candidate_id()}_los"
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_lf_payload_recode_sources=(
+            _snerv_lf_recode_report(
+                mode="auto",
+                source_packet_bytes=2_347_142,
+                candidate_packet_bytes=1_485_285,
+                candidate_packet_header_bytes=1_346_233,
+                candidate_packet_path="/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
+                source_lf_bytes=879_633,
+                candidate_lf_bytes=17_779,
+            ),
+        ),
+        snerv_snar_header_minimization_report_sources=(
+            _snerv_snar_header_minimization_report(
+                source_packet_sha256="b" * 64,
+                candidate_id=alias_candidate_id,
+                full_video_receiver_contract_satisfied=True,
+            ),
+        ),
+    )
+
+    reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
+    rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
+    result = rows_by_type["snar_header_minimization_result"]
+    step_map = rows_by_type["snar_step_map_packet_compaction_materialization"]
+    assert result["snar_header_minimization_report"]["candidate_binding"][
+        "candidate_id"
+    ] == alias_candidate_id
+    assert (
+        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
+        not in result["blockers"]
+    )
+    assert step_map["blocked"] is False
+    assert (
+        "snerv_step_map_compaction_candidate_id_binding_missing"
+        not in step_map["blockers"]
+    )
+    assert step_map["command_argv"][
+        step_map["command_argv"].index("--candidate-id") + 1
+    ] == _snerv_candidate_id()
+
+
 def test_long_training_campaign_plan_prefers_candidate_bound_header_minimization() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),

@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 from tac.analysis.snerv_step_map_coder import (
+    ADAPTIVE_BINARY_MAGIC,
     ADAPTIVE_MAGIC,
     MAGIC,
     SnervStepMapCoderError,
@@ -312,6 +313,35 @@ def test_large_constant_group_uses_binary_shared_shape_payload() -> None:
         assert got.shape == ref.shape
         assert np.unique(got).size == 1
         assert np.all(got > 0)
+
+
+def test_adaptive_binary_header_removes_constant_group_json_indices() -> None:
+    maps = [
+        np.full((8, 12), np.exp2(0.25 + index * 0.01), dtype=np.float32)
+        for index in range(32)
+    ]
+    json_packet = encode_step_maps_adaptive(
+        maps,
+        map_importance=np.arange(len(maps), dtype=np.float64),
+        bin_choices=(16, 4),
+        constant_importance_quantile=1.0,
+    )
+    binary_packet = encode_step_maps_adaptive(
+        maps,
+        map_importance=np.arange(len(maps), dtype=np.float64),
+        bin_choices=(16, 4),
+        constant_importance_quantile=1.0,
+        binary_header=True,
+    )
+    decoded = decode_step_maps(binary_packet.packet)
+
+    assert json_packet.packet.startswith(ADAPTIVE_MAGIC)
+    assert binary_packet.packet.startswith(ADAPTIVE_BINARY_MAGIC)
+    assert b"map_indices" not in binary_packet.packet
+    assert binary_packet.total_bytes < json_packet.total_bytes
+    assert binary_packet.header_bytes < json_packet.header_bytes
+    for ref, got in zip(maps, decoded, strict=True):
+        np.testing.assert_array_equal(got, ref)
 
 
 def test_mixed_shape_constant_groups_use_binary_payload_per_large_shape() -> None:

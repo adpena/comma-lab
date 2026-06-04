@@ -21,6 +21,7 @@ import json
 import lzma
 import math
 import struct
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -30,8 +31,21 @@ SCHEMA = "snerv_step_map_coder.v1"
 ADAPTIVE_SCHEMA = "snerv_step_map_coder.adaptive.v1"
 MAGIC = b"SNSM1"
 ADAPTIVE_MAGIC = b"SNSA1"
+ADAPTIVE_BINARY_MAGIC = b"SNSA2"
 HEADER_LEN_FMT = "<I"
 COMPACT_CONSTANT_SHARED_SHAPE_MIN_MAPS = 8
+_ADAPTIVE_BINARY_HEADER_FMT = "<IHH"
+_ADAPTIVE_BINARY_GROUP_FMT = "<BBBBhIIIIIIdd"
+_ADAPTIVE_BINARY_KIND_CONSTANT_SHARED_F64_LZMA = 1
+_ADAPTIVE_BINARY_KIND_CONSTANT_SHARED_SINGLE_VALUE = 2
+_ADAPTIVE_BINARY_KIND_CONSTANT_FILL = 3
+_ADAPTIVE_BINARY_KIND_FP16_LZMA = 4
+_ADAPTIVE_BINARY_KIND_LOG2_QUANTIZED = 5
+_ADAPTIVE_BINARY_INDEX_CONTIGUOUS = 0
+_ADAPTIVE_BINARY_INDEX_U16 = 1
+_ADAPTIVE_BINARY_INDEX_U32 = 2
+_ADAPTIVE_BINARY_SHAPE_SHARED = 0
+_ADAPTIVE_BINARY_SHAPE_PER_MAP = 1
 
 
 class SnervStepMapCoderError(ValueError):
@@ -203,6 +217,7 @@ def encode_step_maps_adaptive(
     high_quantile: float = 0.75,
     low_quantile: float = 0.25,
     constant_importance_quantile: float | None = None,
+    binary_header: bool = False,
 ) -> AdaptiveStepMapPacket:
     """Encode maps with per-map precision selected by saliency importance.
 
@@ -307,10 +322,18 @@ def encode_step_maps_adaptive(
         "utf-8"
     )
     packet_bytes = (
-        ADAPTIVE_MAGIC
-        + struct.pack(HEADER_LEN_FMT, len(header_bytes))
-        + header_bytes
-        + bytes(payload)
+        _pack_adaptive_binary_packet(
+            map_count=len(arrays),
+            groups=groups,
+            payload=bytes(payload),
+        )
+        if binary_header
+        else (
+            ADAPTIVE_MAGIC
+            + struct.pack(HEADER_LEN_FMT, len(header_bytes))
+            + header_bytes
+            + bytes(payload)
+        )
     )
     decoded = decode_step_maps(packet_bytes)
     rel_errors = []
@@ -323,9 +346,7 @@ def encode_step_maps_adaptive(
         map_count=len(arrays),
         groups=tuple(groups),
         payload_bytes=len(payload),
-        header_bytes=len(header_bytes)
-        + len(ADAPTIVE_MAGIC)
-        + struct.calcsize(HEADER_LEN_FMT),
+        header_bytes=len(packet_bytes) - len(payload),
         total_bytes=len(packet_bytes),
         fp32_lzma_baseline_bytes=_fp32_lzma_baseline(arrays),
         max_relative_error=float(rel.max()),
@@ -397,6 +418,8 @@ def encode_step_maps_waterfill(
 def decode_step_maps(packet: bytes) -> list[np.ndarray]:
     """Decode a packet produced by :func:`encode_step_maps`."""
 
+    if packet.startswith(ADAPTIVE_BINARY_MAGIC):
+        return _decode_adaptive_binary_step_maps(packet)
     if packet.startswith(ADAPTIVE_MAGIC):
         return _decode_adaptive_step_maps(packet)
     if not packet.startswith(MAGIC):
@@ -619,6 +642,387 @@ def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
     if any(arr is None for arr in out):
         raise SnervStepMapCoderError("adaptive packet left maps undecoded")
     return [arr for arr in out if arr is not None]
+
+
+def _pack_adaptive_binary_packet(
+    *,
+    map_count: int,
+    groups: list[dict[str, Any]],
+    payload: bytes,
+) -> bytes:
+    metadata = bytearray(ADAPTIVE_BINARY_MAGIC)
+    metadata.extend(
+        struct.pack(
+            _ADAPTIVE_BINARY_HEADER_FMT,
+            int(map_count),
+            len(groups),
+            0,
+        )
+    )
+    for group in groups:
+        indices = [int(idx) for idx in group["map_indices"]]
+        if not indices:
+            raise SnervStepMapCoderError("binary adaptive group has no map indices")
+        kind = _adaptive_binary_kind(group)
+        index_mode, index_bytes = _adaptive_binary_index_bytes(indices)
+        shape_mode, shape_bytes = _adaptive_binary_shape_bytes(group, len(indices))
+        float0 = 0.0
+        float1 = 0.0
+        if kind == _ADAPTIVE_BINARY_KIND_CONSTANT_SHARED_SINGLE_VALUE:
+            float0 = float(group["log2_value"])
+        elif kind == _ADAPTIVE_BINARY_KIND_LOG2_QUANTIZED:
+            float0 = float(group["log_min"])
+            float1 = float(group["log_step"])
+        metadata.extend(
+            struct.pack(
+                _ADAPTIVE_BINARY_GROUP_FMT,
+                kind,
+                index_mode,
+                shape_mode,
+                int(group.get("bits_per_code", 0)),
+                int(group.get("bins", 0)),
+                len(indices),
+                int(group.get("payload_offset", 0)),
+                int(group.get("payload_bytes", 0)),
+                int(group.get("packed_code_bytes", 0)),
+                int(group.get("raw_bytes", 0)),
+                int(group.get("code_count", 0)),
+                float0,
+                float1,
+            )
+        )
+        metadata.extend(index_bytes)
+        metadata.extend(shape_bytes)
+        if kind == _ADAPTIVE_BINARY_KIND_CONSTANT_FILL:
+            log2_values = [float(value) for value in group["log2_values"]]
+            if len(log2_values) != len(indices):
+                raise SnervStepMapCoderError(
+                    "binary adaptive constant group map count mismatch"
+                )
+            metadata.extend(struct.pack(f"<{len(log2_values)}d", *log2_values))
+    return bytes(metadata) + payload
+
+
+def _adaptive_binary_kind(group: Mapping[str, Any]) -> int:
+    kind = str(group.get("kind") or "")
+    if kind == "constant_log2_shared_shape_f64_lzma":
+        return _ADAPTIVE_BINARY_KIND_CONSTANT_SHARED_F64_LZMA
+    if kind == "constant_log2_shared_shape":
+        return _ADAPTIVE_BINARY_KIND_CONSTANT_SHARED_SINGLE_VALUE
+    if kind == "constant_log2_fill":
+        return _ADAPTIVE_BINARY_KIND_CONSTANT_FILL
+    if kind == "fp16_steps_lzma":
+        return _ADAPTIVE_BINARY_KIND_FP16_LZMA
+    if kind in {"", "log2_quantized_codes"}:
+        return _ADAPTIVE_BINARY_KIND_LOG2_QUANTIZED
+    raise SnervStepMapCoderError(f"unsupported adaptive binary group kind: {kind!r}")
+
+
+def _adaptive_binary_index_bytes(indices: list[int]) -> tuple[int, bytes]:
+    if indices == list(range(indices[0], indices[0] + len(indices))):
+        return _ADAPTIVE_BINARY_INDEX_CONTIGUOUS, struct.pack("<I", int(indices[0]))
+    if max(indices) <= 0xFFFF:
+        return (
+            _ADAPTIVE_BINARY_INDEX_U16,
+            struct.pack(f"<{len(indices)}H", *indices),
+        )
+    return (
+        _ADAPTIVE_BINARY_INDEX_U32,
+        struct.pack(f"<{len(indices)}I", *indices),
+    )
+
+
+def _adaptive_binary_shape_bytes(
+    group: Mapping[str, Any],
+    map_count: int,
+) -> tuple[int, bytes]:
+    if "shape" in group:
+        shapes = [tuple(int(v) for v in group["shape"])] * map_count
+    else:
+        shapes = [tuple(int(v) for v in shape) for shape in group["shapes"]]
+    if len(shapes) != map_count:
+        raise SnervStepMapCoderError("binary adaptive shape count mismatch")
+    ndims = {len(shape) for shape in shapes}
+    if len(ndims) != 1:
+        raise SnervStepMapCoderError("binary adaptive groups require stable rank")
+    ndim = ndims.pop()
+    if ndim <= 0 or ndim > 255:
+        raise SnervStepMapCoderError("binary adaptive shape rank invalid")
+    if any(dim < 0 or dim > 0xFFFF for shape in shapes for dim in shape):
+        raise SnervStepMapCoderError("binary adaptive shape dimension too large")
+    if len(set(shapes)) == 1:
+        return (
+            _ADAPTIVE_BINARY_SHAPE_SHARED,
+            struct.pack(f"<B{ndim}H", ndim, *shapes[0]),
+        )
+    dims = [dim for shape in shapes for dim in shape]
+    return (
+        _ADAPTIVE_BINARY_SHAPE_PER_MAP,
+        struct.pack(f"<B{len(dims)}H", ndim, *dims),
+    )
+
+
+def _decode_adaptive_binary_step_maps(packet: bytes) -> list[np.ndarray]:
+    offset = len(ADAPTIVE_BINARY_MAGIC)
+    header_size = struct.calcsize(_ADAPTIVE_BINARY_HEADER_FMT)
+    if len(packet) < offset + header_size:
+        raise SnervStepMapCoderError("truncated binary adaptive SNeRV header")
+    map_count, group_count, _flags = struct.unpack(
+        _ADAPTIVE_BINARY_HEADER_FMT,
+        packet[offset : offset + header_size],
+    )
+    offset += header_size
+    if map_count <= 0:
+        raise SnervStepMapCoderError("binary adaptive map_count must be positive")
+    out: list[np.ndarray | None] = [None] * int(map_count)
+    groups: list[dict[str, Any]] = []
+    group_size = struct.calcsize(_ADAPTIVE_BINARY_GROUP_FMT)
+    for group_index in range(int(group_count)):
+        if len(packet) < offset + group_size:
+            raise SnervStepMapCoderError("truncated binary adaptive group")
+        (
+            kind,
+            index_mode,
+            shape_mode,
+            bits_per_code,
+            bins,
+            group_map_count,
+            payload_offset,
+            payload_bytes,
+            packed_code_bytes,
+            raw_bytes,
+            code_count,
+            float0,
+            float1,
+        ) = struct.unpack(
+            _ADAPTIVE_BINARY_GROUP_FMT,
+            packet[offset : offset + group_size],
+        )
+        offset += group_size
+        indices, offset = _read_adaptive_binary_indices(
+            packet,
+            offset=offset,
+            index_mode=int(index_mode),
+            map_count=int(group_map_count),
+        )
+        shapes, offset = _read_adaptive_binary_shapes(
+            packet,
+            offset=offset,
+            shape_mode=int(shape_mode),
+            map_count=int(group_map_count),
+        )
+        log2_values: list[float] | None = None
+        if kind == _ADAPTIVE_BINARY_KIND_CONSTANT_FILL:
+            raw_len = int(group_map_count) * np.dtype("<f8").itemsize
+            if len(packet) < offset + raw_len:
+                raise SnervStepMapCoderError(
+                    "truncated binary adaptive constant values"
+                )
+            log2_values = list(
+                struct.unpack(
+                    f"<{int(group_map_count)}d",
+                    packet[offset : offset + raw_len],
+                )
+            )
+            offset += raw_len
+        groups.append(
+            {
+                "group_index": group_index,
+                "kind": int(kind),
+                "indices": indices,
+                "shapes": shapes,
+                "payload_offset": int(payload_offset),
+                "payload_bytes": int(payload_bytes),
+                "packed_code_bytes": int(packed_code_bytes),
+                "raw_bytes": int(raw_bytes),
+                "code_count": int(code_count),
+                "bits_per_code": int(bits_per_code),
+                "bins": int(bins),
+                "float0": float(float0),
+                "float1": float(float1),
+                "log2_values": log2_values,
+            }
+        )
+    payload = packet[offset:]
+    seen_indices: set[int] = set()
+    payload_ranges: list[tuple[int, int, int]] = []
+    for group in groups:
+        indices = group["indices"]
+        for idx in indices:
+            if idx < 0 or idx >= map_count:
+                raise SnervStepMapCoderError(
+                    f"binary adaptive map index {idx} outside map_count {map_count}"
+                )
+            if idx in seen_indices:
+                raise SnervStepMapCoderError(
+                    f"duplicate binary adaptive map index {idx}"
+                )
+            seen_indices.add(idx)
+        shapes = group["shapes"]
+        kind = int(group["kind"])
+        if kind == _ADAPTIVE_BINARY_KIND_CONSTANT_SHARED_SINGLE_VALUE:
+            if int(group["payload_bytes"]) != 0:
+                raise SnervStepMapCoderError(
+                    "binary adaptive shared constant group must not carry payload"
+                )
+            shape = shapes[0]
+            for idx in indices:
+                out[idx] = np.full(shape, np.exp2(group["float0"]), dtype=np.float32)
+            continue
+        if kind == _ADAPTIVE_BINARY_KIND_CONSTANT_FILL:
+            if int(group["payload_bytes"]) != 0:
+                raise SnervStepMapCoderError(
+                    "binary adaptive constant group must not carry payload"
+                )
+            values = group["log2_values"]
+            if not isinstance(values, list) or len(values) != len(indices):
+                raise SnervStepMapCoderError(
+                    "binary adaptive constant group map count mismatch"
+                )
+            for idx, shape, log2_value in zip(indices, shapes, values, strict=True):
+                out[idx] = np.full(shape, np.exp2(log2_value), dtype=np.float32)
+            continue
+        start = int(group["payload_offset"])
+        end = start + int(group["payload_bytes"])
+        if start < 0 or end > len(payload) or end < start:
+            raise SnervStepMapCoderError("binary adaptive payload bounds invalid")
+        if end == start:
+            raise SnervStepMapCoderError("binary adaptive payload must be non-empty")
+        payload_ranges.append((start, end, int(group["group_index"])))
+        raw = lzma.decompress(payload[start:end])
+        if kind == _ADAPTIVE_BINARY_KIND_CONSTANT_SHARED_F64_LZMA:
+            expected = len(indices) * np.dtype("<f8").itemsize
+            if len(raw) != expected:
+                raise SnervStepMapCoderError(
+                    f"binary adaptive constant raw bytes {len(raw)} != expected {expected}"
+                )
+            values = np.frombuffer(raw, dtype="<f8")
+            shape = shapes[0]
+            for idx, log2_value in zip(indices, values, strict=True):
+                out[idx] = np.full(
+                    shape,
+                    np.exp2(float(log2_value)),
+                    dtype=np.float32,
+                )
+            continue
+        if kind == _ADAPTIVE_BINARY_KIND_FP16_LZMA:
+            expected = int(group["raw_bytes"])
+            if len(raw) != expected:
+                raise SnervStepMapCoderError(
+                    f"binary adaptive fp16 raw bytes {len(raw)} != expected {expected}"
+                )
+            cursor = 0
+            for idx, shape in zip(indices, shapes, strict=True):
+                n = int(np.prod(shape))
+                nbytes = n * np.dtype("<f2").itemsize
+                view = np.frombuffer(raw[cursor : cursor + nbytes], dtype="<f2")
+                if view.size != n:
+                    raise SnervStepMapCoderError(
+                        "truncated binary adaptive fp16 group"
+                    )
+                out[idx] = view.reshape(shape).astype(np.float32)
+                cursor += nbytes
+            if cursor != len(raw):
+                raise SnervStepMapCoderError("unused binary adaptive fp16 bytes")
+            continue
+        if kind == _ADAPTIVE_BINARY_KIND_LOG2_QUANTIZED:
+            codes = _unpack_codes(
+                raw,
+                int(group["code_count"]),
+                int(group["bits_per_code"]),
+            )
+            values = np.exp2(
+                group["float0"] + codes.astype(np.float64) * group["float1"]
+            )
+            cursor = 0
+            for idx, shape in zip(indices, shapes, strict=True):
+                n = int(np.prod(shape))
+                out[idx] = values[cursor : cursor + n].reshape(shape).astype(
+                    np.float32
+                )
+                cursor += n
+            if cursor != values.size:
+                raise SnervStepMapCoderError(
+                    "unused binary adaptive codes after group decode"
+                )
+            continue
+        raise SnervStepMapCoderError(f"unknown binary adaptive group kind {kind}")
+    _validate_adaptive_payload_coverage(payload_ranges, payload_len=len(payload))
+    if any(arr is None for arr in out):
+        raise SnervStepMapCoderError("binary adaptive packet left maps undecoded")
+    return [arr for arr in out if arr is not None]
+
+
+def _read_adaptive_binary_indices(
+    packet: bytes,
+    *,
+    offset: int,
+    index_mode: int,
+    map_count: int,
+) -> tuple[list[int], int]:
+    if map_count <= 0:
+        raise SnervStepMapCoderError("binary adaptive group has no map indices")
+    if index_mode == _ADAPTIVE_BINARY_INDEX_CONTIGUOUS:
+        size = struct.calcsize("<I")
+        if len(packet) < offset + size:
+            raise SnervStepMapCoderError("truncated binary adaptive index range")
+        (start,) = struct.unpack("<I", packet[offset : offset + size])
+        return list(range(int(start), int(start) + map_count)), offset + size
+    if index_mode == _ADAPTIVE_BINARY_INDEX_U16:
+        size = map_count * struct.calcsize("<H")
+        if len(packet) < offset + size:
+            raise SnervStepMapCoderError("truncated binary adaptive u16 indices")
+        return (
+            list(struct.unpack(f"<{map_count}H", packet[offset : offset + size])),
+            offset + size,
+        )
+    if index_mode == _ADAPTIVE_BINARY_INDEX_U32:
+        size = map_count * struct.calcsize("<I")
+        if len(packet) < offset + size:
+            raise SnervStepMapCoderError("truncated binary adaptive u32 indices")
+        return (
+            list(struct.unpack(f"<{map_count}I", packet[offset : offset + size])),
+            offset + size,
+        )
+    raise SnervStepMapCoderError(f"unknown binary adaptive index mode {index_mode}")
+
+
+def _read_adaptive_binary_shapes(
+    packet: bytes,
+    *,
+    offset: int,
+    shape_mode: int,
+    map_count: int,
+) -> tuple[list[tuple[int, ...]], int]:
+    if len(packet) < offset + 1:
+        raise SnervStepMapCoderError("truncated binary adaptive shape rank")
+    ndim = int(packet[offset])
+    offset += 1
+    if ndim <= 0:
+        raise SnervStepMapCoderError("binary adaptive shape rank invalid")
+    if shape_mode == _ADAPTIVE_BINARY_SHAPE_SHARED:
+        size = ndim * struct.calcsize("<H")
+        if len(packet) < offset + size:
+            raise SnervStepMapCoderError("truncated binary adaptive shared shape")
+        shape = tuple(
+            int(v) for v in struct.unpack(f"<{ndim}H", packet[offset : offset + size])
+        )
+        return [shape] * map_count, offset + size
+    if shape_mode == _ADAPTIVE_BINARY_SHAPE_PER_MAP:
+        count = map_count * ndim
+        size = count * struct.calcsize("<H")
+        if len(packet) < offset + size:
+            raise SnervStepMapCoderError("truncated binary adaptive per-map shapes")
+        dims = [
+            int(v)
+            for v in struct.unpack(f"<{count}H", packet[offset : offset + size])
+        ]
+        shapes = [
+            tuple(dims[i : i + ndim])
+            for i in range(0, len(dims), ndim)
+        ]
+        return shapes, offset + size
+    raise SnervStepMapCoderError(f"unknown binary adaptive shape mode {shape_mode}")
 
 
 def _validate_adaptive_payload_coverage(
