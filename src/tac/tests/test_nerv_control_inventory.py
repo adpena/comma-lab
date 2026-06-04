@@ -13,6 +13,9 @@ from tac.analysis.nerv_control_inventory import (
     build_nerv_control_inventory,
     render_nerv_control_inventory_markdown,
 )
+from tac.analysis.snerv_checkpoint_export_lf_payload_codec_report import (
+    build_snerv_lf_payload_codec_report_from_checkpoint_export,
+)
 from tools import build_nerv_control_inventory as inventory_tool
 from tools.build_nerv_control_inventory import main as inventory_tool_main
 
@@ -990,6 +993,7 @@ def test_nerv_control_inventory_accepts_snerv_lf_payload_codec_sweep_reports() -
     assert measured["source_packet_bytes"] == 444
     assert measured["source_packet_sha256"] == "4" * 64
     assert measured["source_packet_metadata"] == {"n_pairs": 2}
+    assert measured["plane_count"] == 16
     assert measured["selected_mode"] == "portfolio_auto"
     assert measured["selected_payload_bytes"] == 80
     assert measured["section_value_row_count"] == 1
@@ -998,6 +1002,42 @@ def test_nerv_control_inventory_accepts_snerv_lf_payload_codec_sweep_reports() -
     markdown = render_nerv_control_inventory_markdown(report)
     assert "## SNeRV LF Payload Codec" in markdown
     assert "portfolio_auto" in markdown
+
+
+def test_snerv_checkpoint_export_lf_payload_report_routes_to_inventory() -> None:
+    export_report = _snerv_checkpoint_export_report()
+    converted = build_snerv_lf_payload_codec_report_from_checkpoint_export(
+        export_report,
+        source_artifact_path=".omx/research/snerv_checkpoint_archive_export.json",
+    )
+
+    report = build_nerv_control_inventory(
+        focus_families=("snerv",),
+        snerv_lf_payload_codec_sweep_reports=(converted,),
+    )
+
+    measured = report["snerv_lf_payload_codec_sweep_reports"]["snerv"]
+    assert measured["schema"] == "snerv_lf_payload_codec_sweep.v1"
+    assert measured["source_kind"] == "snar1_packet"
+    assert measured["source_packet_path"].endswith("snerv_checkpoint_packet.bin")
+    assert measured["source_packet_bytes"] == 12345
+    assert measured["source_packet_sha256"] == "a" * 64
+    assert measured["plane_count"] == 3600
+    assert measured["selected_mode"] == "portfolio_auto"
+    assert measured["selected_payload_bytes"] == 321
+    assert measured["selected_packet_schema"] == "snerv_lf_quant_payload.v2"
+    assert measured["selected_mode_histogram"] == {
+        "signed_int2_escape_varint": 9,
+        "zero_run_varint": 3,
+    }
+    assert measured["section_value_rows"][0]["row_kind"] == (
+        "existing_section_accounting"
+    )
+    assert measured["section_value_rows"][0]["byte_delta"] == 0
+    assert measured["byte_price_decision_counts"] == {"observe": 1}
+    assert "checkpoint_export_lf_accounting_not_recode_candidate" in measured[
+        "blockers"
+    ]
 
 
 def test_build_nerv_control_inventory_cli_accepts_hinerv_waterfill_report(
@@ -1626,3 +1666,80 @@ def test_build_nerv_control_inventory_cli_accepts_snerv_lf_payload_codec_sweep(
     assert measured["source_packet_sha256"] == "4" * 64
     assert measured["byte_price_decision_counts"] == {"demote": 1}
     assert payload["score_claim"] is False
+
+
+def test_build_nerv_control_inventory_cli_accepts_snerv_checkpoint_export_lf_report(
+    tmp_path: Path,
+) -> None:
+    export_path = tmp_path / "snerv_checkpoint_archive_export.json"
+    output_json = tmp_path / "inventory.json"
+    export_text = json.dumps(_snerv_checkpoint_export_report())
+    export_path.write_text(export_text, encoding="utf-8")
+
+    rc = inventory_tool_main(
+        [
+            "--focus-family",
+            "snerv",
+            "--repo-root",
+            str(REPO),
+            "--snerv-checkpoint-export-json",
+            str(export_path),
+            "--output-json",
+            str(output_json),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(output_json.read_text(encoding="utf-8"))
+    measured = payload["snerv_lf_payload_codec_sweep_reports"]["snerv"]
+    assert measured["source_artifact_path"] == export_path.as_posix()
+    assert measured["source_artifact_bytes"] == len(export_text.encode("utf-8"))
+    assert measured["source_artifact_sha256"] == hashlib.sha256(
+        export_text.encode("utf-8")
+    ).hexdigest()
+    assert measured["selected_mode"] == "portfolio_auto"
+    assert measured["selected_payload_bytes"] == 321
+    assert measured["byte_price_decision_counts"] == {"observe": 1}
+    assert payload["score_claim"] is False
+
+
+def _snerv_checkpoint_export_report() -> dict[str, object]:
+    return {
+        "schema": "snerv_checkpoint_archive_export.v1",
+        "report_path": ".omx/research/snerv_checkpoint_archive_export.json",
+        "packet_path": (
+            "/Volumes/VertigoDataTier/pact/snerv/snerv_checkpoint_packet.bin"
+        ),
+        "packet_bytes": 12345,
+        "packet_sha256": "a" * 64,
+        "packet_metadata_summary": {"n_pairs": 2},
+        "packet_section_report_summary": {
+            "schema": "snerv_checkpoint_packet_section_report_summary.v1",
+            "lf_payload_codec_report": {
+                "schema": "snerv_lf_quant_payload.v2",
+                "report_status": "receiver_visible_lf_payload_accounting_verified",
+                "section_name": "lf_payload",
+                "section_bytes": 321,
+                "packet_bytes": 321,
+                "raw_i64_bytes": 8192,
+                "payload_bytes": 200,
+                "plane_count": 3600,
+                "mode_histogram": {
+                    "signed_int2_escape_varint": 9,
+                    "zero_run_varint": 3,
+                },
+                "wrapper_histogram": {"brotli": 12},
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        },
+        "lf_payload_codec": "portfolio_auto",
+        "receiver_proof_passed": True,
+        "local_mlx_prefilter_written": True,
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }

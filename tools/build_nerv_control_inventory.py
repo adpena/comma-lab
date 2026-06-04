@@ -22,6 +22,9 @@ from tac.analysis.nerv_control_inventory import (  # noqa: E402
     build_nerv_control_inventory,
     render_nerv_control_inventory_markdown,
 )
+from tac.analysis.snerv_checkpoint_export_lf_payload_codec_report import (  # noqa: E402
+    build_snerv_lf_payload_codec_report_from_checkpoint_export,
+)
 from tac.repo_io import write_json  # noqa: E402
 
 RESEARCH_DIR = REPO_ROOT / ".omx" / "research"
@@ -122,6 +125,16 @@ def main(argv: list[str] | None = None) -> int:
             "Defaults to all latest matching research reports."
         ),
     )
+    parser.add_argument(
+        "--snerv-checkpoint-export-json",
+        default=None,
+        type=Path,
+        action="append",
+        help=(
+            "Optional SNeRV checkpoint archive export JSON. Its receiver-visible "
+            "LF payload report is converted into the LF codec inventory route."
+        ),
+    )
     args = parser.parse_args(argv)
 
     focus = tuple(args.focus_family or ("hi_nerv", "snerv"))
@@ -174,6 +187,9 @@ def main(argv: list[str] | None = None) -> int:
         args.snerv_lf_payload_codec_sweep_json,
         pattern="snerv_lf_payload_codec_sweep*.json",
         schema="snerv_lf_payload_codec_sweep.v1",
+    )
+    snerv_lf_payload_codec_sweep_reports.extend(
+        _checkpoint_export_lf_payload_reports(args.snerv_checkpoint_export_json)
     )
     report = build_nerv_control_inventory(
         focus_families=focus,
@@ -246,6 +262,21 @@ def _load_optional_reports(
         if payload.get("schema") == schema:
             payload.setdefault("source_artifact_path", candidate.as_posix())
             reports.append(payload)
+    return reports
+
+
+def _checkpoint_export_lf_payload_reports(
+    paths: list[Path] | None,
+) -> list[dict[str, Any]]:
+    reports: list[dict[str, Any]] = []
+    for path in paths or ():
+        payload = _load_json(path)
+        reports.append(
+            build_snerv_lf_payload_codec_report_from_checkpoint_export(
+                payload,
+                source_artifact_path=path,
+            )
+        )
     return reports
 
 
