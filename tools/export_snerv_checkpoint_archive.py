@@ -791,20 +791,23 @@ def _maybe_write_receiver_decoded_mlx_prefilter(
         return cache_profile
     output_hw = _packet_output_hw(metadata)
     if archive_bytes is None or archive_sha256 is None:
-        return _write_snerv_native_receiver_decoded_mlx_prefilter(
-            requested=True,
-            output_dir=out,
-            selected_packet=packet.packet,
-            target0_np=np.empty((0, output_hw[0], output_hw[1], 3), dtype=np.float32),
-            target1_np=np.empty((0, output_hw[0], output_hw[1], 3), dtype=np.float32),
-            archive_bytes=archive_bytes,
-            archive_sha256=archive_sha256,
-            source_video_path=source_video,
-            scorer_upstream_dir=upstream_dir,
-            scorer_device=scorer_device,
-            scorer_batch_pairs=effective_batch_pairs,
-            progress_every=progress_every,
-            allow_overwrite=False,
+        return _attach_prefilter_batch_control(
+            _write_snerv_native_receiver_decoded_mlx_prefilter(
+                requested=True,
+                output_dir=out,
+                selected_packet=packet.packet,
+                target0_np=np.empty((0, output_hw[0], output_hw[1], 3), dtype=np.float32),
+                target1_np=np.empty((0, output_hw[0], output_hw[1], 3), dtype=np.float32),
+                archive_bytes=archive_bytes,
+                archive_sha256=archive_sha256,
+                source_video_path=source_video,
+                scorer_upstream_dir=upstream_dir,
+                scorer_device=scorer_device,
+                scorer_batch_pairs=effective_batch_pairs,
+                progress_every=progress_every,
+                allow_overwrite=False,
+            ),
+            base=base,
         )
     target0_mlx, target1_mlx = decode_mlx_targets(
         source_video,
@@ -815,21 +818,43 @@ def _maybe_write_receiver_decoded_mlx_prefilter(
     )
     target0_np = np.asarray(target0_mlx, dtype=np.float32)
     target1_np = np.asarray(target1_mlx, dtype=np.float32)
-    return _write_snerv_native_receiver_decoded_mlx_prefilter(
-        requested=True,
-        output_dir=out,
-        selected_packet=packet.packet,
-        target0_np=target0_np,
-        target1_np=target1_np,
-        archive_bytes=archive_bytes,
-        archive_sha256=archive_sha256,
-        source_video_path=source_video,
-        scorer_upstream_dir=upstream_dir,
-        scorer_device=scorer_device,
-        scorer_batch_pairs=effective_batch_pairs,
-        progress_every=progress_every,
-        allow_overwrite=False,
+    return _attach_prefilter_batch_control(
+        _write_snerv_native_receiver_decoded_mlx_prefilter(
+            requested=True,
+            output_dir=out,
+            selected_packet=packet.packet,
+            target0_np=target0_np,
+            target1_np=target1_np,
+            archive_bytes=archive_bytes,
+            archive_sha256=archive_sha256,
+            source_video_path=source_video,
+            scorer_upstream_dir=upstream_dir,
+            scorer_device=scorer_device,
+            scorer_batch_pairs=effective_batch_pairs,
+            progress_every=progress_every,
+            allow_overwrite=False,
+        ),
+        base=base,
     )
+
+
+def _attach_prefilter_batch_control(
+    profile: dict[str, Any],
+    *,
+    base: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        **base,
+        **dict(profile),
+        "scorer_batch_pairs_requested": base.get("scorer_batch_pairs_requested"),
+        "scorer_batch_pairs_effective": base.get("scorer_batch_pairs_effective"),
+        "scorer_batch_pairs_normalized_to_singleton": base.get(
+            "scorer_batch_pairs_normalized_to_singleton"
+        ),
+        "scorer_batch_pairs_normalization": base.get(
+            "scorer_batch_pairs_normalization"
+        ),
+    }
 
 
 def _maybe_write_receiver_raw_cache_mlx_prefilter(
