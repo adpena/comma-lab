@@ -350,6 +350,10 @@ def test_unbound_modelsize_controls_block_long_training_readiness() -> None:
         in row["dispatch_blockers"]
     )
     assert (
+        "receiver_closed_modelsize_budget_ladder_not_source_bound"
+        in row["dispatch_blockers"]
+    )
+    assert (
         row["planner_action"]
         == "run_receiver_closed_modelsize_ladder_before_score_aware_training"
     )

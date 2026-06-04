@@ -2456,6 +2456,15 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["bundle_num_pairs"] = int(bundle.num_pairs)
         captured["bundle_source_pair_indices"] = tuple(bundle.source_pair_indices or ())
         captured["model_num_pairs"] = int(bundle.model.cfg.num_pairs)
+        captured["bundle_scorer_input_distribution_guard_weight"] = float(
+            bundle.scorer_input_distribution_guard_weight
+        )
+        captured["bundle_scorer_input_distribution_guard_saturation_margin"] = float(
+            bundle.scorer_input_distribution_guard_saturation_margin
+        )
+        captured["bundle_scorer_input_distribution_guard_temperature"] = float(
+            bundle.scorer_input_distribution_guard_temperature
+        )
         captured["run_prioritized_pair_indices"] = tuple(
             kwargs["prioritized_pair_indices"]
         )
@@ -2523,6 +2532,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
         segnet_hinge_margin=1.0,
+        scorer_input_distribution_guard_weight=0.25,
+        scorer_input_distribution_guard_saturation_margin=0.03,
+        scorer_input_distribution_guard_temperature=0.02,
         distillation_device="cpu",
         requested_distillation_device=None,
         allow_segnet_only_research=False,
@@ -2562,6 +2574,15 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured["bundle_num_pairs"] == 10
     assert captured["bundle_source_pair_indices"] == ()
     assert captured["model_num_pairs"] == 10
+    assert captured["bundle_scorer_input_distribution_guard_weight"] == pytest.approx(
+        0.25
+    )
+    assert captured[
+        "bundle_scorer_input_distribution_guard_saturation_margin"
+    ] == pytest.approx(0.03)
+    assert captured[
+        "bundle_scorer_input_distribution_guard_temperature"
+    ] == pytest.approx(0.02)
     assert captured["run_prioritized_pair_indices"] == (7, 2)
     assert captured["run_pr95_curriculum_total_epochs"] == 8
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
@@ -2581,6 +2602,12 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     )
     assert training["pr95_curriculum_total_epochs"] is None
     assert training["pr95_curriculum_total_epochs_consumed"] is False
+    guard = training["scorer_input_distribution_guard"]
+    assert guard["enabled"] is True
+    assert guard["bound_to_renderer_bundle"] is True
+    assert guard["weight"] == pytest.approx(0.25)
+    assert guard["saturation_margin"] == pytest.approx(0.03)
+    assert guard["temperature"] == pytest.approx(0.02)
 
 
 def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
@@ -5358,6 +5385,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "2.0",
             "--pose-loss-stage-weight",
             "1.5",
+            "--scorer-input-distribution-guard-weight",
+            "0.125",
+            "--scorer-input-distribution-guard-saturation-margin",
+            "0.03125",
+            "--scorer-input-distribution-guard-temperature",
+            "0.015625",
             "--mlx-prefilter-scorer-batch-pairs",
             "8",
             "--mlx-prefilter-scorer-device",
@@ -5454,6 +5487,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--snerv-score-aware-long-training-weight-decay",
             "-1",
             "--snerv-score-aware-long-training-eval-roundtrip-ste",
+            "--scorer-input-distribution-guard-weight",
+            "0.5",
+            "--scorer-input-distribution-guard-saturation-margin",
+            "0.04",
+            "--scorer-input-distribution-guard-temperature",
+            "0.02",
             "--snerv-score-aware-long-training-pr95-muon-policy",
             "every_stage",
         ]
@@ -5472,6 +5511,11 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.recon_loss_stage_weight == 0.25
     assert hi.segnet_loss_stage_weight == 2.0
     assert hi.pose_loss_stage_weight == 1.5
+    assert hi.scorer_input_distribution_guard_weight == pytest.approx(0.125)
+    assert hi.scorer_input_distribution_guard_saturation_margin == pytest.approx(
+        0.03125
+    )
+    assert hi.scorer_input_distribution_guard_temperature == pytest.approx(0.015625)
     assert hi.mlx_prefilter_scorer_batch_pairs == 8
     assert hi.mlx_prefilter_scorer_device == "gpu"
     assert hi.mlx_prefilter_progress_every == 10
@@ -5521,6 +5565,9 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_score_aware_long_training_grad_clip_max_norm == 0.75
     assert sn.snerv_score_aware_long_training_weight_decay == -1.0
     assert sn.snerv_score_aware_long_training_eval_roundtrip_ste is True
+    assert sn.scorer_input_distribution_guard_weight == pytest.approx(0.5)
+    assert sn.scorer_input_distribution_guard_saturation_margin == pytest.approx(0.04)
+    assert sn.scorer_input_distribution_guard_temperature == pytest.approx(0.02)
     assert sn.snerv_score_aware_long_training_pr95_muon_policy == "every_stage"
 
 
@@ -6575,8 +6622,20 @@ def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
     assert out["modelsize_budget_evidence"]["row_count"] == 2
     assert out["modelsize_budget_evidence"]["sources"][0]["rows_added"] == 2
     plan = out["score_aware_carrier_training_plan"]
-    assert plan["planner_action"] == "run_score_aware_decoder_weight_training_full_main"
-    assert plan["modelsize_budget_receiver_closed_ready"] is True
+    assert (
+        plan["planner_action"]
+        == "run_receiver_closed_modelsize_ladder_before_score_aware_training"
+    )
+    assert plan["modelsize_budget_receiver_closed_ready"] is False
+    assert "modelsize_budget:source_bound_modelsize_or_fc_dim_missing" in plan[
+        "dispatch_blockers"
+    ]
+    assert "modelsize_budget:modelsize_control_contract_missing_or_invalid" in plan[
+        "dispatch_blockers"
+    ]
+    assert "receiver_closed_modelsize_budget_ladder_not_source_bound" in plan[
+        "dispatch_blockers"
+    ]
     assert plan["evidence_summary"]["receiver_closed_selected_modelsize_archive_bytes"] == 80_000
     assert out["score_aware_training_config_gate"]["launch_allowed"] is False
     assert out["score_claim"] is False
@@ -9380,6 +9439,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "score_aware_long_training_real_teachers_bound": real_teachers_bound,
             "score_aware_long_training_has_real_segnet_teacher": real_teachers_bound,
             "score_aware_long_training_has_real_posenet_teacher": real_teachers_bound,
+            "score_aware_long_training_scorer_input_distribution_guard_bound": bool(
+                float(
+                    kwargs.get(
+                        "score_aware_long_training_scorer_input_distribution_guard_weight"
+                    )
+                    or 0.0
+                )
+                > 0.0
+            ),
             "score_aware_long_training_kind": (
                 "snerv_mlx_score_aware_haar_renderer"
                 if long_training_executed
@@ -9403,6 +9471,36 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 "eval_roundtrip_ste_enabled": bool(
                     kwargs.get("score_aware_long_training_eval_roundtrip_ste")
                 ),
+                "scorer_input_distribution_guard": {
+                    "schema": "snerv_mlx_score_aware_scorer_input_distribution_guard.v1",
+                    "enabled": bool(
+                        float(
+                            kwargs.get(
+                                "score_aware_long_training_scorer_input_distribution_guard_weight"
+                            )
+                            or 0.0
+                        )
+                        > 0.0
+                    ),
+                    "weight": float(
+                        kwargs.get(
+                            "score_aware_long_training_scorer_input_distribution_guard_weight"
+                        )
+                        or 0.0
+                    ),
+                    "saturation_margin": float(
+                        kwargs.get(
+                            "score_aware_long_training_scorer_input_distribution_guard_saturation_margin"
+                        )
+                        or 0.0
+                    ),
+                    "temperature": float(
+                        kwargs.get(
+                            "score_aware_long_training_scorer_input_distribution_guard_temperature"
+                        )
+                        or 0.0
+                    ),
+                },
                 "has_real_segnet_teacher": real_teachers_bound,
                 "has_real_posenet_teacher": real_teachers_bound,
                 "teacher_binding": {
@@ -9621,6 +9719,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_score_aware_long_training_grad_clip_max_norm=0.5,
         snerv_score_aware_long_training_weight_decay=None,
         snerv_score_aware_long_training_eval_roundtrip_ste=True,
+        scorer_input_distribution_guard_weight=0.375,
+        scorer_input_distribution_guard_saturation_margin=0.03125,
+        scorer_input_distribution_guard_temperature=0.015625,
         snerv_official_skip_high_mode_override="shared_mean",
         segnet_distillation_weight=0.025,
         pose_distillation_weight=0.0025,
@@ -9658,6 +9759,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["score_aware_long_training_grad_clip_max_norm"] == 0.5
     assert native_calls[0]["score_aware_long_training_weight_decay"] is None
     assert native_calls[0]["score_aware_long_training_eval_roundtrip_ste"] is True
+    assert native_calls[0][
+        "score_aware_long_training_scorer_input_distribution_guard_weight"
+    ] == pytest.approx(0.375)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_input_distribution_guard_saturation_margin"
+    ] == pytest.approx(0.03125)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_input_distribution_guard_temperature"
+    ] == pytest.approx(0.015625)
     assert native_calls[0]["segnet_distillation_weight"] == pytest.approx(0.025)
     assert native_calls[0]["pose_distillation_weight"] == pytest.approx(0.0025)
     assert native_calls[0]["pose_distillation_loss"] == "huber"
@@ -9689,6 +9799,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["modelsize_candidate"][
         "snerv_pose_distillation_weight"
     ] == pytest.approx(0.0025)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_weight"
+    ] == pytest.approx(0.375)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_saturation_margin"
+    ] == pytest.approx(0.03125)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature"
+    ] == pytest.approx(0.015625)
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
         Path(native_calls[0]["recon_pixel_weight_manifest_path"])

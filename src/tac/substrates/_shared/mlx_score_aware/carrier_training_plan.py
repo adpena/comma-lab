@@ -247,17 +247,23 @@ def build_score_aware_carrier_training_plan(
         route = "run_score_aware_decoder_weight_training_full_main"
     if fit_status == "locally_plausible" and not missing_stack and modelsize_budget_ready:
         route = "run_byte_closed_local_replay_gate_before_exact_auth"
+    modelsize_budget_readiness_blockers: list[str] = []
+    if not modelsize_budget_ready:
+        if modelsize_budget_plan.get("status") == _RECEIVER_CLOSED_MODELSIZE_STATUS:
+            modelsize_budget_readiness_blockers.append(
+                "receiver_closed_modelsize_budget_ladder_not_source_bound"
+            )
+        else:
+            modelsize_budget_readiness_blockers.append(
+                "receiver_closed_modelsize_budget_ladder_missing"
+            )
 
     blockers = _ordered_unique(
         [
             *fit_blockers,
             *latent_blockers,
             *(f"missing_training_stack:{item}" for item in missing_stack),
-            *(
-                []
-                if modelsize_budget_ready
-                else ["receiver_closed_modelsize_budget_ladder_missing"]
-            ),
+            *modelsize_budget_readiness_blockers,
             *(
                 f"modelsize_budget:{blocker}"
                 for blocker in modelsize_budget_plan.get("blockers", [])

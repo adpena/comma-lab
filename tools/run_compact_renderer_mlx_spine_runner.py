@@ -3438,6 +3438,9 @@ def _run_snerv_native_mlx_export_attachment(
     score_aware_long_training_grad_clip_max_norm: float | None,
     score_aware_long_training_weight_decay: float | None,
     score_aware_long_training_eval_roundtrip_ste: bool,
+    score_aware_long_training_scorer_input_distribution_guard_weight: float = 0.0,
+    score_aware_long_training_scorer_input_distribution_guard_saturation_margin: float = 0.02,
+    score_aware_long_training_scorer_input_distribution_guard_temperature: float = 0.01,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
     checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
     checkpoint_retention_keep_every_n_epochs: int | None = None,
@@ -3559,6 +3562,15 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             score_aware_long_training_eval_roundtrip_ste=bool(
                 score_aware_long_training_eval_roundtrip_ste
+            ),
+            score_aware_long_training_scorer_input_distribution_guard_weight=float(
+                score_aware_long_training_scorer_input_distribution_guard_weight
+            ),
+            score_aware_long_training_scorer_input_distribution_guard_saturation_margin=float(
+                score_aware_long_training_scorer_input_distribution_guard_saturation_margin
+            ),
+            score_aware_long_training_scorer_input_distribution_guard_temperature=float(
+                score_aware_long_training_scorer_input_distribution_guard_temperature
             ),
             score_aware_long_training_checkpoint_retention_keep_last_n=(
                 checkpoint_retention_keep_last_n
@@ -4291,6 +4303,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
     snerv_score_aware_long_training_eval_roundtrip_ste: bool = False,
+    scorer_input_distribution_guard_weight: float = 0.0,
+    scorer_input_distribution_guard_saturation_margin: float = 0.02,
+    scorer_input_distribution_guard_temperature: float = 0.01,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
     checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
     checkpoint_retention_keep_every_n_epochs: int | None = None,
@@ -4683,6 +4698,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
         ),
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_weight": (
+            float(scorer_input_distribution_guard_weight)
+        ),
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_saturation_margin": (
+            float(scorer_input_distribution_guard_saturation_margin)
+        ),
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature": (
+            float(scorer_input_distribution_guard_temperature)
+        ),
         "snerv_segnet_distillation_weight": float(segnet_distillation_weight),
         "snerv_pose_distillation_weight": float(pose_distillation_weight),
         "snerv_pose_distillation_loss": str(pose_distillation_loss),
@@ -4792,6 +4816,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             score_aware_long_training_eval_roundtrip_ste=bool(
                 snerv_score_aware_long_training_eval_roundtrip_ste
             ),
+            score_aware_long_training_scorer_input_distribution_guard_weight=float(
+                scorer_input_distribution_guard_weight
+            ),
+            score_aware_long_training_scorer_input_distribution_guard_saturation_margin=float(
+                scorer_input_distribution_guard_saturation_margin
+            ),
+            score_aware_long_training_scorer_input_distribution_guard_temperature=float(
+                scorer_input_distribution_guard_temperature
+            ),
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
             checkpoint_retention_keep_every_n_epochs=(
@@ -4898,6 +4931,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
             native_mlx_scorer_loop_qat_best_materialized=bool(
                 snerv_mlx_native_export.get("scorer_loop_qat_best_materialized")
+            ),
+            native_mlx_scorer_input_distribution_guard_bound=bool(
+                snerv_mlx_native_export.get(
+                    "score_aware_long_training_scorer_input_distribution_guard_bound"
+                )
             ),
             native_mlx_real_segnet_teacher_bound=bool(
                 snerv_mlx_native_export.get(
@@ -5590,6 +5628,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
         ),
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_weight": (
+            float(scorer_input_distribution_guard_weight)
+        ),
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_saturation_margin": (
+            float(scorer_input_distribution_guard_saturation_margin)
+        ),
+        "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature": (
+            float(scorer_input_distribution_guard_temperature)
+        ),
         "snerv_segnet_distillation_weight": float(segnet_distillation_weight),
         "snerv_pose_distillation_weight": float(pose_distillation_weight),
         "snerv_pose_distillation_loss": str(pose_distillation_loss),
@@ -5685,6 +5732,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         score_aware_long_training_eval_roundtrip_ste=bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
+        ),
+        score_aware_long_training_scorer_input_distribution_guard_weight=float(
+            scorer_input_distribution_guard_weight
+        ),
+        score_aware_long_training_scorer_input_distribution_guard_saturation_margin=float(
+            scorer_input_distribution_guard_saturation_margin
+        ),
+        score_aware_long_training_scorer_input_distribution_guard_temperature=float(
+            scorer_input_distribution_guard_temperature
         ),
         checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
         checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
@@ -5805,6 +5861,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         native_mlx_scorer_loop_qat_best_materialized=bool(
             snerv_mlx_native_export.get("scorer_loop_qat_best_materialized")
+        ),
+        native_mlx_scorer_input_distribution_guard_bound=bool(
+            snerv_mlx_native_export.get(
+                "score_aware_long_training_scorer_input_distribution_guard_bound"
+            )
         ),
         native_mlx_real_segnet_teacher_bound=bool(
             snerv_mlx_native_export.get(
@@ -7742,6 +7803,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     distillation_temperature: float = 2.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
+    scorer_input_distribution_guard_weight: float = 0.0,
+    scorer_input_distribution_guard_saturation_margin: float = 0.02,
+    scorer_input_distribution_guard_temperature: float = 0.01,
     distillation_device: str = "cpu",
     requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
@@ -7868,6 +7932,21 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     effective_requested_distillation_device = str(
         requested_distillation_device or distillation_device
     )
+    scorer_input_distribution_guard_enabled = (
+        float(scorer_input_distribution_guard_weight) > 0.0
+    )
+    if float(scorer_input_distribution_guard_weight) < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_input_distribution_guard_weight must be >= 0"
+        )
+    if not (0.0 < float(scorer_input_distribution_guard_saturation_margin) < 0.5):
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_input_distribution_guard_saturation_margin must be in (0, 0.5)"
+        )
+    if float(scorer_input_distribution_guard_temperature) <= 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_input_distribution_guard_temperature must be > 0"
+        )
     effective_mlx_prefilter_scorer_device = (
         _resolve_mlx_prefilter_scorer_device_alias(
             mlx_prefilter_scorer_device,
@@ -8515,6 +8594,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
+        scorer_input_distribution_guard_attached=scorer_input_distribution_guard_enabled,
         pr95_staged_curriculum_bound=bool(
             optimizer_policy.get("pr95_faithful_curriculum_enabled")
         ),
@@ -8631,6 +8711,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             distillation_temperature=distillation_temperature,
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
+            scorer_input_distribution_guard_weight=float(
+                scorer_input_distribution_guard_weight
+            ),
+            scorer_input_distribution_guard_saturation_margin=float(
+                scorer_input_distribution_guard_saturation_margin
+            ),
+            scorer_input_distribution_guard_temperature=float(
+                scorer_input_distribution_guard_temperature
+            ),
             distillation_device=distillation_device,
             requested_distillation_device=effective_requested_distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
@@ -8913,6 +9002,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
+        scorer_input_distribution_guard_attached=scorer_input_distribution_guard_enabled,
         pr95_staged_curriculum_bound=bool(
             optimizer_policy.get("pr95_faithful_curriculum_enabled")
         ),
@@ -12032,6 +12122,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     distillation_temperature: float,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
+    scorer_input_distribution_guard_weight: float = 0.0,
+    scorer_input_distribution_guard_saturation_margin: float = 0.02,
+    scorer_input_distribution_guard_temperature: float = 0.01,
     distillation_device: str,
     requested_distillation_device: str | None,
     allow_segnet_only_research: bool,
@@ -12529,6 +12622,22 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 optimizer_control
             ),
             "stage_loss_weights": stage_weights,
+            "scorer_input_distribution_guard": {
+                "schema": "compact_hi_nerv_scorer_input_distribution_guard.v1",
+                "enabled": bool(float(scorer_input_distribution_guard_weight) > 0.0),
+                "bound_to_renderer_bundle": bool(
+                    float(scorer_input_distribution_guard_weight) > 0.0
+                ),
+                "weight": float(scorer_input_distribution_guard_weight),
+                "saturation_margin": float(
+                    scorer_input_distribution_guard_saturation_margin
+                ),
+                "temperature": float(scorer_input_distribution_guard_temperature),
+                "target_surface": (
+                    "decoded_rgb01_vs_target_rgb01_mean_std_soft_saturation"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
             "checkpoint_retention": {
@@ -12756,6 +12865,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         if pose_scorer_teacher is not None
         else 6,
         allow_segnet_only_research=bool(allow_segnet_only_research),
+        scorer_input_distribution_guard_weight=float(
+            scorer_input_distribution_guard_weight
+        ),
+        scorer_input_distribution_guard_saturation_margin=float(
+            scorer_input_distribution_guard_saturation_margin
+        ),
+        scorer_input_distribution_guard_temperature=float(
+            scorer_input_distribution_guard_temperature
+        ),
     )
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
@@ -16224,6 +16342,36 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--segnet-tau-boundary", default=1.0, type=float)
     parser.add_argument("--segnet-hinge-margin", default=1.0, type=float)
     parser.add_argument(
+        "--scorer-input-distribution-guard-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Weight for the real score-aware decoded-RGB distribution guard. "
+            "When >0 it is bound into the MLX RendererBundle loss for HiNeRV "
+            "and SNeRV so long runs learn scorer-compatible RGB statistics "
+            "instead of only matching proxy reconstruction."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-distribution-guard-saturation-margin",
+        default=0.02,
+        type=float,
+        help=(
+            "Soft saturation margin for --scorer-input-distribution-guard-weight. "
+            "Must be in (0, 0.5); false-authority until receiver proof and exact "
+            "contest replay pass."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-distribution-guard-temperature",
+        default=0.01,
+        type=float,
+        help=(
+            "Softplus temperature for the scorer input distribution guard. "
+            "Must be >0; forwarded to the actual training loss, not metadata-only."
+        ),
+    )
+    parser.add_argument(
         "--recon-loss-stage-weight",
         default=1.0,
         type=float,
@@ -17546,6 +17694,15 @@ def main(argv: list[str] | None = None) -> int:
             snerv_score_aware_long_training_eval_roundtrip_ste=(
                 args.snerv_score_aware_long_training_eval_roundtrip_ste
             ),
+            scorer_input_distribution_guard_weight=(
+                args.scorer_input_distribution_guard_weight
+            ),
+            scorer_input_distribution_guard_saturation_margin=(
+                args.scorer_input_distribution_guard_saturation_margin
+            ),
+            scorer_input_distribution_guard_temperature=(
+                args.scorer_input_distribution_guard_temperature
+            ),
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
             checkpoint_retention_keep_every_n_epochs=(
@@ -17644,6 +17801,15 @@ def main(argv: list[str] | None = None) -> int:
             distillation_temperature=args.distillation_temperature,
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
+            scorer_input_distribution_guard_weight=(
+                args.scorer_input_distribution_guard_weight
+            ),
+            scorer_input_distribution_guard_saturation_margin=(
+                args.scorer_input_distribution_guard_saturation_margin
+            ),
+            scorer_input_distribution_guard_temperature=(
+                args.scorer_input_distribution_guard_temperature
+            ),
             distillation_device=args.distillation_device,
             requested_distillation_device=getattr(
                 args,
