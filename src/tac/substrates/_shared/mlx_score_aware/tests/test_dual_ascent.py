@@ -70,8 +70,11 @@ def test_dual_ascent_ratcheting_tightens_after_satisfied_constraint() -> None:
     )
 
     metrics = controller.observe({"loss_part_pose_distill": 8.0})
-    assert metrics["dual_ascent_target__pose"] == pytest.approx(7.2)
-    assert metrics["dual_ascent_lambda__pose"] == pytest.approx(2.8)
+    assert metrics["dual_ascent_target__pose"] == pytest.approx(10.0)
+    assert metrics["dual_ascent_next_target__pose"] == pytest.approx(7.2)
+    assert metrics["dual_ascent_violation__pose"] == pytest.approx(-2.0)
+    assert metrics["dual_ascent_lambda__pose"] == pytest.approx(0.0)
+    assert controller.as_metadata()["state"]["pose"]["target"] == pytest.approx(7.2)
 
 
 def test_dual_ascent_projects_lambda_down_when_constraint_satisfied() -> None:

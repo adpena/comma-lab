@@ -948,7 +948,9 @@ class MlxScoreAwareAdapter:
             pose_control_multiplier,
             effective_seg_weight,
             effective_pose_weight,
-        ) = self._pr95_stage_score_weight_controls()
+        ) = self._pr95_stage_score_weight_controls(loss_weights=loss_weights)
+        seg_stage_weight = component_loss_weight(loss_weights, "distill")
+        pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
         seg_loss = pr95_mlx_stage_seg_loss(
             loss_family,
             seg_logits_nchw,
@@ -1020,6 +1022,12 @@ class MlxScoreAwareAdapter:
             "pr95_stage_pose_control_multiplier": mx.array(
                 pose_control_multiplier, dtype=mx.float32
             ),
+            "pr95_stage_distill_weight": mx.array(
+                seg_stage_weight, dtype=mx.float32
+            ),
+            "pr95_stage_pose_distill_weight": mx.array(
+                pose_stage_weight, dtype=mx.float32
+            ),
             "pr95_stage_effective_seg_weight": mx.array(
                 effective_seg_weight, dtype=mx.float32
             ),
@@ -1043,7 +1051,11 @@ class MlxScoreAwareAdapter:
         self._pr95_last_stage_loss_surface = PR95_MLX_STAGE_SCORER_LOSS_SURFACE
         return total, parts
 
-    def _pr95_stage_score_weight_controls(self) -> tuple[float, float, float, float]:
+    def _pr95_stage_score_weight_controls(
+        self,
+        *,
+        loss_weights: Mapping[str, float] | None = None,
+    ) -> tuple[float, float, float, float]:
         """Return launch-controlled PR95 scorer weights for decoder training.
 
         Generic score-aware launches use literal operator controls as decoder
@@ -1071,11 +1083,13 @@ class MlxScoreAwareAdapter:
             if self._pr95_stage_source_weight_amplification_enabled
             else 1.0
         )
+        seg_stage_weight = component_loss_weight(loss_weights, "distill")
+        pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
         return (
             seg_control,
             pose_control,
-            seg_base * seg_control,
-            pose_base * pose_control,
+            seg_base * seg_control * seg_stage_weight,
+            pose_base * pose_control * pose_stage_weight,
         )
 
     def _extra_loss_terms_and_weighted_total(
@@ -1138,7 +1152,7 @@ class MlxScoreAwareAdapter:
             pose_control_multiplier,
             effective_seg_weight,
             effective_pose_weight,
-        ) = self._pr95_stage_score_weight_controls()
+        ) = self._pr95_stage_score_weight_controls(loss_weights=loss_weights)
         for name, value in parts.items():
             mx.eval(value)
             scalar = float(value.item())
@@ -2128,8 +2142,35 @@ class MlxScoreAwareAdapter:
         """
 
         out = {str(key): float(value) for key, value in dict(metrics).items()}
+        self._add_dual_ascent_metric_aliases(out)
         out.update(self._train_time_dual_ascent.observe(out))
         return out
+
+    def _add_dual_ascent_metric_aliases(self, metrics: dict[str, float]) -> None:
+        """Expose active PR95-stage scorer terms under canonical dual keys.
+
+        The shared dual-ascent defaults are intentionally family-neutral:
+        ``loss_part_distill`` for SegNet last-frame pressure and
+        ``loss_part_pose_distill`` for PoseNet pair/YUV6 pressure. PR95-stage
+        training computes those terms through source-faithful stage losses, but
+        names them by stage surface. Alias them here so one controller observes
+        scorer distortion across native, PR95, HiNeRV, and SNeRV runs.
+        """
+
+        if (
+            "loss_part_distill" not in metrics
+            and "loss_part_pr95_stage_seg_surrogate" in metrics
+        ):
+            metrics["loss_part_distill"] = metrics[
+                "loss_part_pr95_stage_seg_surrogate"
+            ]
+        if (
+            "loss_part_pose_distill" not in metrics
+            and "loss_part_pr95_stage_pose_surrogate" in metrics
+        ):
+            metrics["loss_part_pose_distill"] = metrics[
+                "loss_part_pr95_stage_pose_surrogate"
+            ]
 
     def _train_time_section_byte_metrics(
         self,

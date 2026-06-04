@@ -1008,6 +1008,127 @@ def test_pr95_curriculum_stage_loss_consumes_launch_score_weight_controls_NO_FAK
 
 
 @requires_mlx
+def test_pr95_curriculum_stage_loss_consumes_dynamic_dual_weights_NO_FAKE() -> None:
+    """Dual-ascent scorer weights must alter PR95-stage decoder loss."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+    stage = adapter._pr95_curriculum_factory.current_stage_verdict(0)
+
+    base_total, base_parts = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage,
+        model=adapter.model,
+        loss_weights={"distill": 1.0, "pose_distill": 1.0},
+    )
+    dual_total, dual_parts = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage,
+        model=adapter.model,
+        loss_weights={"distill": 2.5, "pose_distill": 0.25},
+    )
+    mx.eval(base_total, dual_total, *base_parts.values(), *dual_parts.values())
+
+    seg = float(base_parts["pr95_stage_seg_surrogate"].item())
+    pose = float(base_parts["pr95_stage_pose_surrogate"].item())
+    expected_delta = (2.5 - 1.0) * seg + (0.25 - 1.0) * pose
+
+    assert float(dual_parts["pr95_stage_distill_weight"].item()) == pytest.approx(2.5)
+    assert float(dual_parts["pr95_stage_pose_distill_weight"].item()) == pytest.approx(
+        0.25
+    )
+    assert float(dual_parts["pr95_stage_effective_seg_weight"].item()) == pytest.approx(
+        2.5
+    )
+    assert float(
+        dual_parts["pr95_stage_effective_pose_weight"].item()
+    ) == pytest.approx(0.25)
+    assert float(dual_total.item()) - float(base_total.item()) == pytest.approx(
+        expected_delta,
+        rel=1e-5,
+    )
+
+
+@requires_mlx
+def test_pr95_curriculum_dual_ascent_observes_stage_surrogate_aliases_NO_FAKE() -> None:
+    """PR95-stage SegNet/Pose metrics must feed shared dual-ascent controls."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=8,
+        train_time_dual_ascent_config={
+            "enabled": True,
+            "constraints": [
+                {
+                    "constraint_id": "hi_nerv_segnet_last_frame_distill",
+                    "metric_name": "loss_part_distill",
+                    "loss_weight_key": "distill",
+                    "target": 0.0,
+                    "dual_lr": 0.2,
+                    "max_lambda": 6.0,
+                },
+                {
+                    "constraint_id": "hi_nerv_posenet_yuv6_pair_distill",
+                    "metric_name": "loss_part_pose_distill",
+                    "loss_weight_key": "pose_distill",
+                    "target": 0.0,
+                    "dual_lr": 0.2,
+                    "max_lambda": 6.0,
+                },
+            ],
+        },
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+    mx.eval(adapter.model.parameters())
+
+    assert metrics["loss_part_distill"] == pytest.approx(
+        metrics["loss_part_pr95_stage_seg_surrogate"]
+    )
+    assert metrics["loss_part_pose_distill"] == pytest.approx(
+        metrics["loss_part_pr95_stage_pose_surrogate"]
+    )
+    assert metrics[
+        "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "dual_ascent_metric__hi_nerv_segnet_last_frame_distill"
+    ] == pytest.approx(metrics["loss_part_pr95_stage_seg_surrogate"])
+    assert metrics[
+        "dual_ascent_metric__hi_nerv_posenet_yuv6_pair_distill"
+    ] == pytest.approx(metrics["loss_part_pr95_stage_pose_surrogate"])
+    assert metrics["dual_ascent_lambda__hi_nerv_segnet_last_frame_distill"] > 0.0
+    assert metrics["dual_ascent_lambda__hi_nerv_posenet_yuv6_pair_distill"] > 0.0
+
+
+@requires_mlx
 def test_pr95_curriculum_zero_launch_score_weight_uses_unamplified_default() -> None:
     """Zero keeps a 1:1 default unless source amplification is explicitly requested."""
 

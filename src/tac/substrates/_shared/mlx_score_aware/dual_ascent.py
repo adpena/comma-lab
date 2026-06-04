@@ -338,18 +338,10 @@ class TrainTimeDualAscentController:
                 state.initial_metric = metric
                 state.target = metric * float(constraint.target_fraction_of_initial)
                 bootstrapped = True
-            elif (
-                constraint.target_ratchet_fraction is not None
-                and _constraint_satisfied(metric, state.target, constraint.direction)
-            ):
-                ratcheted = metric * float(constraint.target_ratchet_fraction)
-                if constraint.direction == "upper_bound":
-                    state.target = min(state.target, ratcheted)
-                else:
-                    state.target = max(state.target, ratcheted)
+            current_target = float(state.target)
             violation = _constraint_violation(
                 metric,
-                float(state.target),
+                current_target,
                 constraint.direction,
             )
             state.last_violation = violation
@@ -365,8 +357,20 @@ class TrainTimeDualAscentController:
                     constraint.max_lambda,
                 )
                 state.update_count += 1
+            next_target = current_target
+            if (
+                constraint.target_ratchet_fraction is not None
+                and _constraint_satisfied(metric, current_target, constraint.direction)
+            ):
+                ratcheted = metric * float(constraint.target_ratchet_fraction)
+                if constraint.direction == "upper_bound":
+                    state.target = min(current_target, ratcheted)
+                else:
+                    state.target = max(current_target, ratcheted)
+                next_target = float(state.target)
             telemetry[f"dual_ascent_metric__{key}"] = metric
-            telemetry[f"dual_ascent_target__{key}"] = float(state.target)
+            telemetry[f"dual_ascent_target__{key}"] = current_target
+            telemetry[f"dual_ascent_next_target__{key}"] = next_target
             telemetry[f"dual_ascent_violation__{key}"] = violation
             telemetry[f"dual_ascent_lambda__{key}"] = state.lambda_value
             telemetry[f"dual_ascent_update_count__{key}"] = float(state.update_count)
