@@ -681,6 +681,8 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
             "1,2,2",
             "--snerv-official-dec-strds",
             "2,2,1",
+            "--snerv-official-skip-high-mode",
+            "shared_mean",
         ],
     )
 
@@ -698,6 +700,7 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
             snerv_modelsize_control_profile="contest_receiver_profile",
             snerv_official_enc_strds=(1, 3, 2),
             snerv_official_dec_strds=(2, 2, 1),
+            snerv_official_skip_high_mode="full",
             repo_root=REPO_ROOT,
         )
     )
@@ -705,6 +708,7 @@ def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
     assert "planner_row_command_mismatch:--snerv-official-modelsize-mparams" in blockers
     assert "planner_row_command_mismatch:--snerv-modelsize-control-profile" in blockers
     assert "planner_row_command_mismatch:--snerv-official-enc-strds" in blockers
+    assert "planner_row_command_mismatch:--snerv-official-skip-high-mode" in blockers
     assert "planner_row_command_mismatch:--snerv-official-dec-strds" not in blockers
 
 
@@ -2793,6 +2797,23 @@ def test_execute_modelsize_auto_fails_closed_when_calibrated_feedback_has_no_und
         )
 
 
+def test_execute_snerv_modelsize_auto_fails_closed_when_no_nominal_candidate_under_cap() -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="snerv_modelsize_auto_no_candidate_under_hard_byte_ceiling",
+    ):
+        _resolve_execute_modelsize_candidate(
+            family="snerv",
+            candidate_id="auto",
+            hard_byte_ceilings=(178_000,),
+            snerv_official_modelsize_mparams=(0.05,),
+            snerv_model_size_adapter=(
+                "snerv_official_mfu_hfr_tub_primitives_adapter"
+            ),
+            snerv_temporal_modes=("official_haar_dwt1d_lowpass",),
+        )
+
+
 def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
     tmp_path: Path,
 ) -> None:
@@ -3991,6 +4012,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "2",
             "--snerv-hfr-gain",
             "0.25",
+            "--snerv-official-skip-high-mode",
+            "shared_mean",
             "--snerv-temporal-context",
             "4",
             "--planner-row-id",
@@ -4068,6 +4091,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_emb_size == 5
     assert sn.snerv_patch_radius == 2
     assert sn.snerv_hfr_gain == 0.25
+    assert sn.snerv_official_skip_high_mode == "shared_mean"
     assert sn.snerv_temporal_context == 4
     assert sn.planner_row_id == "snerv::manual::native_rate_aware_training"
     assert sn.skip_snerv_native_mlx_export is True
@@ -7459,6 +7483,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_score_aware_long_training_grad_clip_max_norm=0.5,
         snerv_score_aware_long_training_weight_decay=None,
         snerv_score_aware_long_training_eval_roundtrip_ste=True,
+        snerv_official_skip_high_mode_override="shared_mean",
         segnet_distillation_weight=0.025,
         pose_distillation_weight=0.0025,
         pose_distillation_loss="huber",
@@ -7514,6 +7539,12 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["modelsize_candidate"]["official_modelsize_solution"][
         "fc_dim"
     ] == 11
+    assert native_calls[0]["modelsize_candidate"]["official_skip_high_mode"] == (
+        "shared_mean"
+    )
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_official_skip_high_mode"
+    ] == "shared_mean"
     assert native_calls[0]["modelsize_candidate"][
         "snerv_segnet_distillation_weight"
     ] == pytest.approx(0.025)
@@ -7980,6 +8011,46 @@ def test_snerv_runner_refuses_conflicting_candidate_adapter_flag(
                 "ready_for_exact_eval_dispatch": False,
             },
             snerv_spectra_preserving_adapter=True,
+            repo_root=REPO_ROOT,
+        )
+
+
+def test_snerv_runner_refuses_conflicting_skip_high_mode_flag(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="official_skip_high_mode conflicts",
+    ):
+        execute_snerv_inverse_steg_advisory_and_adapt(
+            output_dir=tmp_path / "snerv_skip_conflict",
+            num_pairs=2,
+            epochs=3,
+            source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+            modelsize_candidate={
+                "schema": "snerv_modelsize_candidate.v1",
+                "family": "snerv",
+                "candidate_id": "snerv-skip-conflict",
+                "wavelet": "haar",
+                "levels": 2,
+                "bits_per_coeff": 1.5,
+                "step_map_bits_per_coeff": 0.5,
+                "decoder_payload_codec": "int2_symmetric",
+                "snerv_model_size_adapter": (
+                    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+                ),
+                "official_skip_high_mode": "full",
+                "fc_dim": 11,
+                "emb_size": 2,
+                "num_pairs": 600,
+                "hard_byte_ceiling": 178_000,
+                "nominal_total_payload_bytes": 150_000,
+                "nominal_under_ceiling": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            snerv_official_skip_high_mode_override="shared_mean",
             repo_root=REPO_ROOT,
         )
 

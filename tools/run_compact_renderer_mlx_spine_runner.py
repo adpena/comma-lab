@@ -2134,7 +2134,7 @@ def _resolve_execute_modelsize_candidate(
                 f"predicted_archive_bytes={_byte_cap_controller_predicted_archive_bytes(best)} "
                 f"hard_byte_ceiling={best.get('hard_byte_ceiling')}"
             )
-        return min(
+        best_uncalibrated = min(
             candidates,
             key=lambda row: (
                 abs(_byte_cap_controller_predicted_headroom(row)),
@@ -2144,6 +2144,13 @@ def _resolve_execute_modelsize_candidate(
                 -float(row.get("modelsize_mparams") or 0.0),
                 int(row["hard_byte_ceiling"]),
             ),
+        )
+        raise CompactRendererMlxSpineRunnerError(
+            f"{family}_modelsize_auto_no_candidate_under_hard_byte_ceiling: "
+            f"best_candidate={best_uncalibrated.get('candidate_id')} "
+            f"predicted_archive_bytes={_byte_cap_controller_predicted_archive_bytes(best_uncalibrated)} "
+            f"hard_byte_ceiling={best_uncalibrated.get('hard_byte_ceiling')} "
+            "measured_archive_feedback_required"
         )
     for row in candidates:
         if row["candidate_id"] == token:
@@ -12934,6 +12941,7 @@ def _planner_row_command_control_blockers(
         ("--snerv-patch-radius", "snerv_patch_radius"),
         ("--snerv-mfu-scales", "snerv_mfu_scales"),
         ("--snerv-hfr-gain", "snerv_hfr_gain"),
+        ("--snerv-official-skip-high-mode", "snerv_official_skip_high_mode"),
         ("--snerv-temporal-context", "snerv_temporal_context"),
         ("--snerv-temporal-mode", "snerv_temporal_mode"),
     )
