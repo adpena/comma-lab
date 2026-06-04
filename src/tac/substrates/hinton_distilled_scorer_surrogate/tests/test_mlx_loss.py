@@ -37,6 +37,7 @@ from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     LearnablePoseStudentHead,
     MockTeacherLogitsProvider,
     RealPoseNetTeacherCache,
+    RealSegNetTeacherLogitsCache,
     build_learnable_pose_student_head,
     build_real_segnet_teacher_cache,
     hinton_distilled_kl_t2_loss,
@@ -155,6 +156,39 @@ def test_real_posenet_teacher_cache_indexes_pair_pose() -> None:
     assert tuple(cache.per_dim_scale.shape) == (3,)
     assert cache.upstream_posenet_safetensors_sha256 == "a" * 64
     assert cache.cache_build_seconds == pytest.approx(1.25)
+
+
+def test_real_segnet_teacher_cache_live_candidate_path_uses_rgb255_domain() -> None:
+    seen: dict[str, object] = {}
+
+    class RecordingLiveSegNet:
+        def __call__(self, frames):
+            seen["min"] = float(mx.min(frames).item())
+            seen["max"] = float(mx.max(frames).item())
+            seen["shape"] = tuple(frames.shape)
+            return mx.ones((*frames.shape[:3], 5), dtype=mx.float16)
+
+    cache = RealSegNetTeacherLogitsCache(
+        teacher_logits_thwk=mx.zeros((1, 2, 2, 5), dtype=mx.float16),
+        frame_count=1,
+        height=2,
+        width=2,
+        num_classes=5,
+        live_segnet_adapter=RecordingLiveSegNet(),
+    )
+    frames = mx.array(
+        [[[[0.0, 0.5, 1.0], [1.5, -0.5, 0.25]], [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]]],
+        dtype=mx.float32,
+    )
+
+    logits = cache.teacher_logits_for_frames_nhwc01(frames)
+    mx.eval(logits)
+
+    assert seen["shape"] == (1, 2, 2, 3)
+    assert seen["min"] == pytest.approx(0.0)
+    assert seen["max"] == pytest.approx(255.0)
+    assert logits.dtype == mx.float32
+    assert tuple(logits.shape) == (1, 2, 2, 5)
 
 
 def test_real_posenet_teacher_cache_rejects_shape_mismatch() -> None:
