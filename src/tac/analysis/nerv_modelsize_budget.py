@@ -14,8 +14,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, replace
+from functools import lru_cache
 from math import ceil
 from typing import Any
+
+import numpy as np
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_BASE_MODEL_SIZE_ADAPTER,
@@ -248,6 +251,38 @@ DEFAULT_SNERV_MODELSIZE_DEC_STRDS = tuple(
         "dec_strds"
     ]
 )
+
+
+@lru_cache(maxsize=1)
+def _snerv_official_dummy_lf_section_bytes() -> tuple[int, int, int]:
+    """Return exact SNAR1 dummy LF/step/metadata bytes for official payloads.
+
+    Official MFU/HFR/TUB packets render frames from the decoder payload and
+    store only a one-plane dummy LF section plus a one-cell dummy step map.
+    The modelsize prior must mirror that receiver grammar; otherwise the
+    byte-cap selector falsely prices official packets as raw level-1 LF grids.
+    """
+
+    from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill
+    from tac.substrates.snerv_inverse_steg_carrier.archive import (
+        LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
+        encode_lf_metadata_payload,
+        encode_lf_quant_payload,
+    )
+
+    lf_bytes = len(
+        encode_lf_quant_payload(
+            [np.zeros((1, 1), dtype=np.int64)],
+            codec=LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
+        )
+    )
+    step_packet = encode_step_maps_waterfill(
+        [np.ones((1, 1), dtype=np.float32)],
+        map_importance=np.ones((1,), dtype=np.float64),
+        target_bits_per_coeff=1.0,
+    )
+    metadata_bytes = len(encode_lf_metadata_payload(lf_zero_points=[0.0]))
+    return int(lf_bytes), len(step_packet.packet), int(metadata_bytes)
 # Backwards-compatible import aliases.  New code should read the named
 # ``modelsize_control_profile_id`` instead of treating these as upstream CLI
 # defaults.
@@ -1289,6 +1324,16 @@ def analyze_snerv_modelsize_candidate(
     step_payload = ceil(lf_total * float(step_map_bits_per_coeff) / 8.0)
     decoder_payload = ceil(decoder_weight_count * decoder_bits / 8.0) + int(levels) * 12
     metadata_payload = int(plane_count * 4)
+    stored_lf_per_plane = int(lf_per_plane)
+    stored_plane_count = int(plane_count)
+    stored_lf_total = int(lf_total)
+    if snerv_model_size_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER:
+        lf_payload, step_payload, metadata_payload = (
+            _snerv_official_dummy_lf_section_bytes()
+        )
+        stored_lf_per_plane = 1
+        stored_plane_count = 1
+        stored_lf_total = 1
     header_overhead = 1024
     total_payload = (
         lf_payload + step_payload + decoder_payload + metadata_payload + header_overhead
@@ -1348,9 +1393,9 @@ def analyze_snerv_modelsize_candidate(
         temporal_mode=str(model_size.temporal_mode),
         official_skip_high_mode=str(model_size.official_skip_high_mode),
         decoder_feature_count=int(model_size.feature_count),
-        lf_coeffs_per_plane=lf_per_plane,
-        lf_plane_count=plane_count,
-        lf_coeff_count_total=lf_total,
+        lf_coeffs_per_plane=stored_lf_per_plane,
+        lf_plane_count=stored_plane_count,
+        lf_coeff_count_total=stored_lf_total,
         hf_decoder_weight_count=decoder_weight_count,
         nominal_lf_payload_bytes=lf_payload,
         nominal_step_map_payload_bytes=step_payload,

@@ -620,6 +620,10 @@ def test_snerv_official_primitives_modelsize_enumeration_uses_source_haar_j1() -
         for row in rows
     )
     assert all("_haar_lv1_" in row.candidate_id for row in rows)
+    assert all(row.lf_plane_count == 1 for row in rows)
+    assert all(row.lf_coeff_count_total == 1 for row in rows)
+    assert all(row.nominal_lf_payload_bytes < 1_000 for row in rows)
+    assert all(row.nominal_step_map_payload_bytes < 1_000 for row in rows)
 
 
 def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None:

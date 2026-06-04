@@ -2806,7 +2806,7 @@ def test_execute_snerv_modelsize_auto_fails_closed_when_no_nominal_candidate_und
         _resolve_execute_modelsize_candidate(
             family="snerv",
             candidate_id="auto",
-            hard_byte_ceilings=(178_000,),
+            hard_byte_ceilings=(1_000,),
             snerv_official_modelsize_mparams=(0.05,),
             snerv_model_size_adapter=(
                 "snerv_official_mfu_hfr_tub_primitives_adapter"
