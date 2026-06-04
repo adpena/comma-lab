@@ -92,6 +92,15 @@ REQUIREMENTS: tuple[StackRequirement, ...] = (
         "Proxy loss must see the same quantized surface the scorer consumes.",
     ),
     StackRequirement(
+        "scorer_input_distribution_guard",
+        "scorer_input_distribution_guard",
+        "scorer-input value-domain guard is active",
+        "PR95 stayed on the challenge scorer input manifold during long fitting",
+        "Tiny compact carriers can satisfy rate while emitting saturated RGB; "
+        "training must preserve scorer-consumable mean/std/saturation before "
+        "SegNet/PoseNet losses become trustworthy.",
+    ),
+    StackRequirement(
         "ema_archive_selection",
         "ema_archive_selection",
         "EMA weights are evaluated and selected by archive score",
@@ -172,6 +181,7 @@ PRELAUNCH_REQUIREMENT_IDS: frozenset[str] = frozenset(
         "real_posenet_teacher",
         "differentiable_pose_preprocess",
         "eval_roundtrip_ste",
+        "scorer_input_distribution_guard",
         "ema_archive_selection",
         "qat_forward",
         "coder_aware_regularizer",
@@ -290,6 +300,7 @@ def build_pr95_stack_binding_evidence(
     real_posenet_teacher: bool = False,
     differentiable_pose_preprocess: bool = False,
     eval_roundtrip_ste: bool = False,
+    scorer_input_distribution_guard: bool = False,
     ema_archive_selection: bool = False,
     qat_forward: bool = False,
     coder_aware_regularizer: bool = False,
@@ -313,6 +324,9 @@ def build_pr95_stack_binding_evidence(
         "real_posenet_teacher": bool(real_posenet_teacher),
         "differentiable_pose_preprocess": bool(differentiable_pose_preprocess),
         "eval_roundtrip_ste": bool(eval_roundtrip_ste),
+        "scorer_input_distribution_guard": bool(
+            scorer_input_distribution_guard
+        ),
         "ema_archive_selection": bool(ema_archive_selection),
         "qat_forward": bool(qat_forward),
         "coder_aware_regularizer": bool(coder_aware_regularizer),

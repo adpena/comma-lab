@@ -215,6 +215,7 @@ def build_hinerv_candidate_curriculum_plan(
     coder_qat_quant_bits: int,
     recon_pixel_weight_attached: bool,
     eval_roundtrip_ste_attached: bool = False,
+    scorer_input_distribution_guard_attached: bool = False,
     differentiable_pose_preprocess_attached: bool = False,
     ema_archive_selection_attached: bool = False,
     pr95_staged_curriculum_bound: bool | None = None,
@@ -320,6 +321,9 @@ def build_hinerv_candidate_curriculum_plan(
                 differentiable_pose_preprocess_attached
             ),
             eval_roundtrip_ste=bool(eval_roundtrip_ste_attached),
+            scorer_input_distribution_guard=bool(
+                scorer_input_distribution_guard_attached
+            ),
             ema_archive_selection=bool(ema_archive_selection_attached),
             qat_forward=effective_coder_regularizer,
             coder_aware_regularizer=effective_coder_regularizer,
@@ -361,6 +365,9 @@ def build_hinerv_candidate_curriculum_plan(
             "pose_distillation_weight": float(pose_distillation_weight),
             "joint_p18_p19_weight_attached": bool(recon_pixel_weight_attached),
             "eval_roundtrip_ste_attached": bool(eval_roundtrip_ste_attached),
+            "scorer_input_distribution_guard_attached": bool(
+                scorer_input_distribution_guard_attached
+            ),
             "ema_archive_selection_attached": bool(
                 ema_archive_selection_attached
             ),
@@ -429,6 +436,7 @@ def build_snerv_candidate_curriculum_plan(
     native_mlx_real_posenet_teacher_bound: bool = False,
     native_mlx_pr95_curriculum_bound: bool = False,
     native_mlx_eval_roundtrip_ste_bound: bool = False,
+    native_mlx_scorer_input_distribution_guard_bound: bool = False,
     native_mlx_differentiable_pose_preprocess_bound: bool = False,
     native_mlx_coder_qat_bound: bool = False,
     native_mlx_muon_adamw_partition_bound: bool = False,
@@ -641,6 +649,9 @@ def build_snerv_candidate_curriculum_plan(
                 native_mlx_differentiable_pose_preprocess_bound
             ),
             eval_roundtrip_ste=bool(native_mlx_eval_roundtrip_ste_bound),
+            scorer_input_distribution_guard=bool(
+                native_mlx_scorer_input_distribution_guard_bound
+            ),
             qat_forward=bool(
                 effective_scorer_loop_verified or native_mlx_coder_qat_bound
             ),
@@ -758,6 +769,9 @@ def build_snerv_candidate_curriculum_plan(
             ),
             "native_mlx_eval_roundtrip_ste_bound": bool(
                 native_mlx_eval_roundtrip_ste_bound
+            ),
+            "native_mlx_scorer_input_distribution_guard_bound": bool(
+                native_mlx_scorer_input_distribution_guard_bound
             ),
             "native_mlx_differentiable_pose_preprocess_bound": bool(
                 native_mlx_differentiable_pose_preprocess_bound

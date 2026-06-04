@@ -72,6 +72,7 @@ def test_pr95_long_campaign_prelaunch_gate_excludes_post_run_proofs() -> None:
             real_posenet_teacher=True,
             differentiable_pose_preprocess=True,
             eval_roundtrip_ste=True,
+            scorer_input_distribution_guard=True,
             ema_archive_selection=True,
             qat_forward=True,
             coder_aware_regularizer=True,
