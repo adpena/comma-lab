@@ -16,7 +16,10 @@ from tac.substrates.snerv_inverse_steg_carrier import (
     OFFICIAL_SNERV_T_TUB_SCHEMA,
     OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS,
     OfficialTubError,
+    official_output2_fusion_mlx,
+    official_output2_fusion_numpy,
     official_output2_fusion_shape,
+    official_output2_fusion_torch,
     prepare_official_tub_graph_inputs,
 )
 
@@ -296,6 +299,63 @@ def test_official_tub_output2_fusion_shape_matches_source_split_concat_shuffle()
     assert shape.as_jsonable()["fused_output2_shape"] == [2, 3, 8, 15]
 
 
+def test_official_tub_output2_fusion_numpy_matches_source_split_concat_shuffle() -> None:
+    temporal = np.arange(1 * 12 * 2 * 3, dtype=np.float64).reshape(1, 12, 2, 3)
+    decoder_output = np.arange(2 * 18 * 2 * 3, dtype=np.float64).reshape(2, 18, 2, 3)
+
+    out = official_output2_fusion_numpy(temporal, decoder_output, fc_hw=(2, 3))
+
+    expected_decoder_input = np.concatenate([temporal[:, :6], temporal[:, 6:]], axis=0)
+    expected_shuffled = (
+        decoder_output.reshape(2, -1, 2, 3, 2, 3)
+        .transpose(0, 1, 4, 2, 5, 3)
+        .reshape(2, -1, 4, 9)
+    )
+    np.testing.assert_array_equal(out.prev_half, temporal[:, :6])
+    np.testing.assert_array_equal(out.next_half, temporal[:, 6:])
+    np.testing.assert_array_equal(out.decoder_input, expected_decoder_input)
+    np.testing.assert_array_equal(out.output2_fused, expected_shuffled)
+    metadata = out.as_jsonable_metadata()
+    assert metadata["score_claim"] is False
+    assert metadata["promotion_eligible"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["portable_output2_fusion_primitive_proven"] is True
+    assert metadata["shape"]["decoder_input_shape"] == [2, 6, 2, 3]
+    assert metadata["shape"]["fused_output2_shape"] == [2, 3, 4, 9]
+
+
+def test_official_tub_output2_fusion_torch_matches_numpy_reference() -> None:
+    torch = pytest.importorskip("torch")
+    temporal = np.arange(1 * 12 * 2 * 3, dtype=np.float64).reshape(1, 12, 2, 3)
+    decoder_output = np.arange(2 * 18 * 2 * 3, dtype=np.float64).reshape(2, 18, 2, 3)
+    reference = official_output2_fusion_numpy(temporal, decoder_output, fc_hw=(2, 3))
+
+    decoder_input, fused = official_output2_fusion_torch(
+        torch.tensor(temporal, dtype=torch.float64),
+        torch.tensor(decoder_output, dtype=torch.float64),
+        fc_hw=(2, 3),
+    )
+
+    np.testing.assert_array_equal(decoder_input.detach().cpu().numpy(), reference.decoder_input)
+    np.testing.assert_array_equal(fused.detach().cpu().numpy(), reference.output2_fused)
+
+
+def test_official_tub_output2_fusion_mlx_matches_numpy_reference() -> None:
+    mx = pytest.importorskip("mlx.core")
+    temporal = np.arange(1 * 12 * 2 * 3, dtype=np.float32).reshape(1, 12, 2, 3)
+    decoder_output = np.arange(2 * 18 * 2 * 3, dtype=np.float32).reshape(2, 18, 2, 3)
+    reference = official_output2_fusion_numpy(temporal, decoder_output, fc_hw=(2, 3))
+
+    decoder_input, fused = official_output2_fusion_mlx(
+        mx.array(temporal),
+        mx.array(decoder_output),
+        fc_hw=(2, 3),
+    )
+
+    np.testing.assert_array_equal(np.asarray(decoder_input), reference.decoder_input)
+    np.testing.assert_array_equal(np.asarray(fused), reference.output2_fused)
+
+
 def test_prepare_can_attach_output2_shape_metadata() -> None:
     current = np.arange(16, dtype=np.float64).reshape(4, 4)
     out = prepare_official_tub_graph_inputs(
@@ -326,6 +386,18 @@ def test_official_tub_rejects_non_source_inputs() -> None:
         )
     with pytest.raises(OfficialTubError, match="even temporal channels"):
         official_output2_fusion_shape((1, 5, 2, 2))
+    with pytest.raises(OfficialTubError, match="even temporal channels"):
+        official_output2_fusion_numpy(
+            np.zeros((1, 5, 2, 2)),
+            np.zeros((2, 8, 2, 2)),
+            fc_hw=(2, 2),
+        )
+    with pytest.raises(OfficialTubError, match="batch must be 2"):
+        official_output2_fusion_numpy(
+            np.zeros((1, 8, 2, 2)),
+            np.zeros((1, 8, 2, 2)),
+            fc_hw=(2, 2),
+        )
     with pytest.raises(OfficialTubError, match="requires fc_hw"):
         official_output2_fusion_shape(
             (1, 8, 3, 5),
@@ -336,4 +408,10 @@ def test_official_tub_rejects_non_source_inputs() -> None:
             (1, 8, 3, 5),
             fc_hw=(2, 3),
             decoder_output_shape=(2, 25, 4, 6),
+        )
+    with pytest.raises(OfficialTubError, match="contains NaN or Inf"):
+        official_output2_fusion_numpy(
+            np.full((1, 8, 2, 2), np.nan),
+            np.zeros((2, 8, 2, 2)),
+            fc_hw=(2, 2),
         )

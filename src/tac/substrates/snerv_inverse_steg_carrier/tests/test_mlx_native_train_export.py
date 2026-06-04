@@ -70,17 +70,20 @@ def _fake_tub_fixture_replay_passed() -> dict[str, object]:
         "closed_blockers": [
             "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
             "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+            "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing",
         ],
         "preserved_blockers": [
             "snerv_official_trained_checkpoint_state_dict_not_loaded",
             "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
-            "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+            "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+            "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
             "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
         ],
         "blockers": [
             "snerv_official_trained_checkpoint_state_dict_not_loaded",
             "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
-            "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+            "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+            "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
             "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
         ],
         "score_claim": False,

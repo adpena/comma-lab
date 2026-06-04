@@ -30,6 +30,7 @@ import numpy as np
 
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
+    official_output2_fusion_numpy,
     prepare_official_tub_graph_inputs,
 )
 
@@ -52,11 +53,13 @@ FALSE_AUTHORITY: dict[str, bool] = {
 TUB_CLOSED_BY_FIXTURE_REPLAY: tuple[str, ...] = (
     "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
     "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+    "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing",
 )
 TUB_PRESERVED_BLOCKERS: tuple[str, ...] = (
     "snerv_official_trained_checkpoint_state_dict_not_loaded",
     "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
-    "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+    "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+    "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
     "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
 )
 PYTORCH_WAVELETS_BLOCKER = "snerv_official_pytorch_wavelets_runtime_dependency_missing"
@@ -163,6 +166,9 @@ def build_snerv_official_tub_source_forward_replay_artifact(
     )
     replay_passed = bool(
         payload["graph_input_parity"]["graph_input_parity_passed"]
+        and payload["portable_output2_fusion"][
+            "portable_output2_fusion_receiver_mapping_proven"
+        ]
         and payload["full_forward_equivalence"]["manual_replay_matches_official_forward"]
         and payload["temporal_path"]["output_tensors_finite"]
     )
@@ -190,10 +196,12 @@ def build_snerv_official_tub_source_forward_replay_artifact(
             "shim_score_authority": False,
         },
         "graph_input_parity": payload["graph_input_parity"],
+        "portable_output2_fusion": payload["portable_output2_fusion"],
         "temporal_path": payload["temporal_path"],
         "full_forward_equivalence": payload["full_forward_equivalence"],
         "component_rows": [
             payload["graph_input_parity"],
+            payload["portable_output2_fusion"],
             payload["temporal_path"],
             payload["full_forward_equivalence"],
         ],
@@ -242,6 +250,11 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
         fc_hw=(int(model.fc_h), int(model.fc_w)),
         output2_decoder_output_shape=tuple(int(v) for v in manual["output2_raw"].shape),
     )
+    portable_fusion = official_output2_fusion_numpy(
+        manual["temporal_encoder_concat"],
+        manual["output2_raw"],
+        fc_hw=(int(model.fc_h), int(model.fc_w)),
+    )
     graph_arrays = {
         "lf_triplet": manual["lf_triplet"],
         "normalized_lf": manual["normalized_lf"],
@@ -255,6 +268,15 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
         "next_lowpass_over_2": portable.next_lowpass_over_2,
     }
     graph_error = _max_abs_error(graph_arrays, portable_arrays)
+    fusion_source_arrays = {
+        "output2_decoder_input": manual["output2_decoder_input"],
+        "output2_shuffled": manual["output2_shuffled"],
+    }
+    fusion_portable_arrays = {
+        "output2_decoder_input": portable_fusion.decoder_input,
+        "output2_shuffled": portable_fusion.output2_fused,
+    }
+    fusion_error = _max_abs_error(fusion_source_arrays, fusion_portable_arrays)
 
     official_embed0 = _tensor_array(embed_list[0][0])
     official_temporal_concat = _tensor_array(embed_list[0][1])
@@ -299,6 +321,29 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
             == _hash_named_arrays(portable_arrays),
             "output_shapes": _shape_map(graph_arrays),
             "blockers": [],
+            **FALSE_AUTHORITY,
+        },
+        "portable_output2_fusion": {
+            "schema": COMPONENT_SCHEMA,
+            "component_id": "tub_output2_portable_fusion",
+            "classification": (
+                "official_snerv_t_output2_split_concat_shuffle_matches_numpy_receiver_primitive"
+            ),
+            "portable_output2_fusion_receiver_mapping_proven": fusion_error == 0.0,
+            "max_abs_error": fusion_error,
+            "source_output_sha256": _hash_named_arrays(fusion_source_arrays),
+            "portable_output_sha256": _hash_named_arrays(fusion_portable_arrays),
+            "output_hashes_bit_identical": _hash_named_arrays(fusion_source_arrays)
+            == _hash_named_arrays(fusion_portable_arrays),
+            "output_shapes": _shape_map(fusion_source_arrays),
+            "portable_primitive_metadata": portable_fusion.as_jsonable_metadata(),
+            "closed_blockers": [
+                "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing"
+            ],
+            "blockers": [
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+            ],
             **FALSE_AUTHORITY,
         },
         "temporal_path": {
@@ -387,9 +432,11 @@ def _manual_tub_source_replay(
     )
     decoder0_shuffled = output
     emb_ch = temporal_concat.size(1) // 2
-    output2 = model.decoder[model.decoder_len - 1](
-        torch.cat([temporal_concat[:, 0:emb_ch], temporal_concat[:, emb_ch:]], 0)
+    output2_decoder_input = torch.cat(
+        [temporal_concat[:, 0:emb_ch], temporal_concat[:, emb_ch:]],
+        0,
     )
+    output2 = model.decoder[model.decoder_len - 1](output2_decoder_input)
     output2_raw = output2
     out2_n, _out2_c, out2_h, out2_w = output2.shape
     output2 = (
@@ -421,6 +468,7 @@ def _manual_tub_source_replay(
         "temporal_encoder_next": _tensor_array(temporal_next),
         "temporal_encoder_concat": _tensor_array(temporal_concat),
         "decoder0_shuffled": _tensor_array(decoder0_shuffled),
+        "output2_decoder_input": _tensor_array(output2_decoder_input),
         "output2_raw": _tensor_array(output2_raw),
         "output2_shuffled": _tensor_array(output2_shuffled),
         "final_decoder_output": _tensor_array(output),

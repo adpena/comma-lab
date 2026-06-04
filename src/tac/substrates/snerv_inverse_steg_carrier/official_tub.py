@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Portable official SNeRV_T temporal-upsampling-branch input primitives.
+"""Portable official SNeRV_T temporal-upsampling-branch primitives.
 
 This module mirrors the official OSS ``model/snerv_t.py`` graph-input contract
 without importing torch or ``pytorch_wavelets``.  It is a NumPy-first primitive
@@ -9,7 +9,8 @@ for source-faithful TUB input preparation only:
 * apply one-level Haar 2D DWT and keep the LF branch;
 * normalize LF globally across all three LF tensors;
 * build the two official temporal encoder inputs from DWT1D Haar lowpass / 2;
-* expose shape metadata for the temporal encoder and ``output_2`` fusion path.
+* expose shape metadata for the temporal encoder and ``output_2`` fusion path;
+* execute the official ``output_2`` split/batch-concat/pixel-shuffle algebra.
 
 The output is parser/training substrate evidence, not contest score authority.
 """
@@ -18,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import sqrt
-from typing import Final
+from typing import Any, Final
 
 import numpy as np
 
@@ -79,6 +80,62 @@ class OfficialOutput2FusionShape:
                 if self.fused_output2_shape is not None
                 else None
             ),
+        }
+
+
+@dataclass(frozen=True)
+class OfficialOutput2FusionResult:
+    """Portable official ``output_2`` temporal fusion result.
+
+    This is the receiver-safe algebra from upstream ``snerv_t.py`` lines
+    142-150.  It deliberately excludes the learned temporal encoder and decoder
+    weights; those remain separate trained-weight mapping/export blockers.
+    """
+
+    source_contract: str
+    score_claim: bool
+    promotion_eligible: bool
+    temporal_encoder_concat: np.ndarray
+    prev_half: np.ndarray
+    next_half: np.ndarray
+    decoder_input: np.ndarray
+    decoder_output_raw: np.ndarray
+    output2_fused: np.ndarray
+    shape: OfficialOutput2FusionShape
+    portable_output2_fusion_primitive_proven: bool = True
+
+    def __post_init__(self) -> None:
+        truthy_authority = [
+            name
+            for name, value in (
+                ("score_claim", self.score_claim),
+                ("promotion_eligible", self.promotion_eligible),
+            )
+            if bool(value)
+        ]
+        if truthy_authority:
+            raise OfficialTubError(
+                "official output_2 portable fusion is not score authority; "
+                "refused truthy authority fields: "
+                + ", ".join(truthy_authority)
+            )
+
+    def as_jsonable_metadata(self) -> dict[str, object]:
+        return {
+            "source_contract": self.source_contract,
+            "portable_output2_fusion_primitive_proven": bool(
+                self.portable_output2_fusion_primitive_proven
+            ),
+            **FALSE_AUTHORITY,
+            "shape": self.shape.as_jsonable(),
+            "output_shapes": {
+                "temporal_encoder_concat": list(self.temporal_encoder_concat.shape),
+                "prev_half": list(self.prev_half.shape),
+                "next_half": list(self.next_half.shape),
+                "decoder_input": list(self.decoder_input.shape),
+                "decoder_output_raw": list(self.decoder_output_raw.shape),
+                "output2_fused": list(self.output2_fused.shape),
+            },
         }
 
 
@@ -351,6 +408,153 @@ def official_output2_fusion_shape(
     )
 
 
+def official_output2_fusion_numpy(
+    temporal_encoder_concat: np.ndarray,
+    decoder_output: np.ndarray,
+    *,
+    fc_hw: tuple[int, int],
+) -> OfficialOutput2FusionResult:
+    """Execute official SNeRV_T ``output_2`` split/concat/shuffle in NumPy.
+
+    The caller supplies the learned decoder output exactly where upstream
+    ``self.decoder[self.decoder_len-1](...)`` returns it.  This primitive owns
+    only the deterministic receiver algebra around that learned module.
+    """
+
+    temporal = _as_finite_nchw_array(
+        temporal_encoder_concat,
+        name="temporal_encoder_concat",
+    )
+    raw = _as_finite_nchw_array(decoder_output, name="decoder_output")
+    shape = official_output2_fusion_shape(
+        tuple(int(v) for v in temporal.shape),
+        fc_hw=fc_hw,
+        decoder_output_shape=tuple(int(v) for v in raw.shape),
+    )
+    emb_ch = int(shape.emb_ch)
+    prev_half = np.ascontiguousarray(temporal[:, :emb_ch, :, :], dtype=np.float64)
+    next_half = np.ascontiguousarray(temporal[:, emb_ch:, :, :], dtype=np.float64)
+    decoder_input = np.ascontiguousarray(
+        np.concatenate([prev_half, next_half], axis=0),
+        dtype=np.float64,
+    )
+    fc_h, fc_w = shape.fc_hw or _validate_hw(fc_hw, name="fc_hw")
+    out_n, out_c, out_h, out_w = raw.shape
+    fused = (
+        raw.reshape(out_n, -1, fc_h, fc_w, out_h, out_w)
+        .transpose(0, 1, 4, 2, 5, 3)
+        .reshape(out_n, -1, fc_h * out_h, fc_w * out_w)
+    )
+    return OfficialOutput2FusionResult(
+        source_contract=OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
+        score_claim=False,
+        promotion_eligible=False,
+        temporal_encoder_concat=np.ascontiguousarray(temporal, dtype=np.float64),
+        prev_half=prev_half,
+        next_half=next_half,
+        decoder_input=decoder_input,
+        decoder_output_raw=np.ascontiguousarray(raw, dtype=np.float64),
+        output2_fused=np.ascontiguousarray(fused, dtype=np.float64),
+        shape=shape,
+    )
+
+
+def official_output2_fusion_mlx(
+    temporal_encoder_concat: Any,
+    decoder_output: Any,
+    *,
+    fc_hw: tuple[int, int],
+) -> tuple[Any, Any]:
+    """Execute official ``output_2`` fusion with MLX tensors.
+
+    Returns ``(decoder_input, output2_fused)`` so local MLX training can keep
+    gradients inside MLX while sharing the same source-shape contract as the
+    NumPy receiver primitive.
+    """
+
+    import mlx.core as mx
+
+    temporal_shape = _validate_finite_backend_nchw(
+        temporal_encoder_concat,
+        name="temporal_encoder_concat",
+        backend="mlx",
+    )
+    raw_shape = _validate_finite_backend_nchw(
+        decoder_output,
+        name="decoder_output",
+        backend="mlx",
+    )
+    shape = official_output2_fusion_shape(
+        temporal_shape,
+        fc_hw=fc_hw,
+        decoder_output_shape=raw_shape,
+    )
+    emb_ch = int(shape.emb_ch)
+    temporal = mx.array(temporal_encoder_concat)
+    raw = mx.array(decoder_output)
+    decoder_input = mx.concatenate(
+        (temporal[:, :emb_ch, :, :], temporal[:, emb_ch:, :, :]),
+        axis=0,
+    )
+    fc_h, fc_w = shape.fc_hw or _validate_hw(fc_hw, name="fc_hw")
+    out_n, _out_c, out_h, out_w = raw_shape
+    fused = mx.reshape(
+        mx.transpose(
+            mx.reshape(raw, (out_n, -1, fc_h, fc_w, out_h, out_w)),
+            (0, 1, 4, 2, 5, 3),
+        ),
+        (out_n, -1, fc_h * out_h, fc_w * out_w),
+    )
+    return decoder_input, fused
+
+
+def official_output2_fusion_torch(
+    temporal_encoder_concat: Any,
+    decoder_output: Any,
+    *,
+    fc_hw: tuple[int, int],
+) -> tuple[Any, Any]:
+    """Execute official ``output_2`` fusion with PyTorch tensors.
+
+    This mirrors upstream ``snerv_t.py`` directly and preserves autograd for
+    contest/Linux reproduction without making Torch a receiver dependency.
+    """
+
+    temporal_shape = _validate_finite_backend_nchw(
+        temporal_encoder_concat,
+        name="temporal_encoder_concat",
+        backend="torch",
+    )
+    raw_shape = _validate_finite_backend_nchw(
+        decoder_output,
+        name="decoder_output",
+        backend="torch",
+    )
+    shape = official_output2_fusion_shape(
+        temporal_shape,
+        fc_hw=fc_hw,
+        decoder_output_shape=raw_shape,
+    )
+    import torch
+
+    emb_ch = int(shape.emb_ch)
+    decoder_input = torch.cat(
+        [
+            temporal_encoder_concat[:, :emb_ch, :, :],
+            temporal_encoder_concat[:, emb_ch:, :, :],
+        ],
+        0,
+    )
+    fc_h, fc_w = shape.fc_hw or _validate_hw(fc_hw, name="fc_hw")
+    out_n, _out_c, out_h, out_w = raw_shape
+    fused = (
+        decoder_output.reshape(out_n, -1, fc_h, fc_w, out_h, out_w)
+        .permute(0, 1, 4, 2, 5, 3)
+        .reshape(out_n, -1, fc_h * out_h, fc_w * out_w)
+    )
+    return decoder_input, fused
+
+
 def _stack_triplet(
     current: np.ndarray,
     previous: np.ndarray,
@@ -443,16 +647,51 @@ def _validate_nchw_shape(
     return n, c, h, w
 
 
+def _as_finite_nchw_array(array: np.ndarray, *, name: str) -> np.ndarray:
+    arr = np.asarray(array, dtype=np.float64)
+    _validate_nchw_shape(tuple(int(v) for v in arr.shape), name=name)
+    if not np.all(np.isfinite(arr)):
+        raise OfficialTubError(f"{name} contains NaN or Inf")
+    return arr
+
+
+def _validate_finite_backend_nchw(
+    array: Any,
+    *,
+    name: str,
+    backend: str,
+) -> tuple[int, int, int, int]:
+    shape = _validate_nchw_shape(
+        tuple(int(v) for v in getattr(array, "shape", ())),
+        name=name,
+    )
+    if backend == "torch":
+        import torch
+
+        finite = bool(torch.isfinite(array).all().item())
+    else:
+        import mlx.core as mx
+
+        finite = bool(mx.all(mx.isfinite(mx.array(array))).item())
+    if not finite:
+        raise OfficialTubError(f"{name} contains NaN or Inf")
+    return shape
+
+
 __all__ = [
     "OFFICIAL_SNERV_T_SOURCE_SHA",
     "OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE",
     "OFFICIAL_SNERV_T_TUB_SCHEMA",
     "OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT",
     "OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS",
+    "OfficialOutput2FusionResult",
     "OfficialOutput2FusionShape",
     "OfficialTubError",
     "OfficialTubGraphInputs",
     "OfficialTubShapeMetadata",
+    "official_output2_fusion_mlx",
+    "official_output2_fusion_numpy",
     "official_output2_fusion_shape",
+    "official_output2_fusion_torch",
     "prepare_official_tub_graph_inputs",
 ]

@@ -52,6 +52,18 @@ def test_snerv_official_tub_source_forward_replay_executes_output2_path() -> Non
     assert graph["max_abs_error"] == 0.0
     assert graph["output_hashes_bit_identical"] is True
 
+    fusion = artifact["portable_output2_fusion"]
+    assert fusion["portable_output2_fusion_receiver_mapping_proven"] is True
+    assert fusion["max_abs_error"] == 0.0
+    assert fusion["output_hashes_bit_identical"] is True
+    assert fusion["output_shapes"]["output2_decoder_input"] == [2, 3, 1, 1]
+    assert fusion["output_shapes"]["output2_shuffled"] == [2, 6, 2, 2]
+    assert (
+        "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing"
+        in fusion["closed_blockers"]
+    )
+    assert len(fusion["source_output_sha256"]) == 64
+
     temporal = artifact["temporal_path"]
     assert temporal["source_forward_fixture_replay_passed"] is True
     assert temporal["output_tensors_finite"] is True
@@ -85,6 +97,14 @@ def test_snerv_official_tub_replay_preserves_dependency_and_checkpoint_blockers(
     assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in artifact["blockers"]
     assert (
         "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing"
+        not in artifact["blockers"]
+    )
+    assert (
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing"
+        in artifact["blockers"]
+    )
+    assert (
+        "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
         in artifact["blockers"]
     )
     if importlib.util.find_spec("pytorch_wavelets") is None:
