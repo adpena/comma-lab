@@ -2938,6 +2938,7 @@ def _build_official_mfu_hfr_tub_packet_from_components(
             int(v) for v in components.get("output2_decoder_output_shape") or (2, 8, max(1, h // 4), max(1, w // 4))
         ),
         skip_high_codec=skip_high_mode,
+        tub_input_codec="unused_synthetic",
     )
     step_packet = encode_step_maps_waterfill(
         [np.ones((1, 1), dtype=np.float32)],
@@ -2964,6 +2965,7 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         "hf_decoder_fit_mode": "official_hfr_heads_least_squares_from_haar_ll",
         "official_skip_high_mode": skip_high_mode,
         "official_skip_high_full_shape": [int(v) for v in skip_high_full_shape],
+        "official_tub_input_storage_mode": "unused_synthetic",
         **(
             {"official_hfr_bootstrap": components["official_hfr_bootstrap"]}
             if isinstance(components.get("official_hfr_bootstrap"), Mapping)

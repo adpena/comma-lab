@@ -601,6 +601,34 @@ def test_official_mfu_hfr_tub_shared_skip_high_payload_expands_receiver_state() 
     assert proof["score_claim"] is False
 
 
+def test_official_mfu_hfr_tub_unused_tub_inputs_compact_without_score_authority() -> None:
+    bundle = _official_payload_fixture()
+    full_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    compact_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_input_codec="unused_synthetic",
+    )
+    compact_header = _read_subpacket_header(compact_payload)
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(compact_payload)
+    proof = decoded.execute()
+
+    assert compact_header["tub_input_storage"]["codec"] == "unused_synthetic_float64"
+    assert compact_header["tub_input_storage"][
+        "receiver_frame_synthesis_uses_tub_inputs"
+    ] is False
+    assert compact_header["tub_input_storage"][
+        "lossless_relative_to_source_tub_inputs"
+    ] is False
+    assert compact_header["source_forward_replay_authority"] is False
+    assert len(compact_payload) < len(full_payload)
+    assert np.count_nonzero(decoded.tensors["inputs.tub.current"]) == 2
+    assert np.count_nonzero(decoded.tensors["inputs.tub.previous"]) == 2
+    assert np.count_nonzero(decoded.tensors["inputs.tub.next_frame"]) == 2
+    assert proof["receiver_runtime_decode_proven"] is True
+    assert proof["source_forward_replay_authority"] is False
+    assert proof["score_claim"] is False
+
+
 def test_official_mfu_hfr_tub_decoder_payload_is_hash_checked() -> None:
     payload = bytearray(
         encode_official_mfu_hfr_tub_decoder_payload(**_official_payload_fixture())

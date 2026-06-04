@@ -110,6 +110,8 @@ DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
 OFFICIAL_SKIP_HIGH_CODEC_FULL = "full_float64"
 OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN = "shared_mean_float64"
+OFFICIAL_TUB_INPUT_CODEC_FULL = "full_float64"
+OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC = "unused_synthetic_float64"
 OFFICIAL_SKIP_HIGH_MODE_TO_CODEC = {
     "full": OFFICIAL_SKIP_HIGH_CODEC_FULL,
     "full_float64": OFFICIAL_SKIP_HIGH_CODEC_FULL,
@@ -117,6 +119,16 @@ OFFICIAL_SKIP_HIGH_MODE_TO_CODEC = {
     "shared": OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
     "shared_mean": OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
     OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN: OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+}
+OFFICIAL_TUB_INPUT_MODE_TO_CODEC = {
+    "full": OFFICIAL_TUB_INPUT_CODEC_FULL,
+    "full_float64": OFFICIAL_TUB_INPUT_CODEC_FULL,
+    OFFICIAL_TUB_INPUT_CODEC_FULL: OFFICIAL_TUB_INPUT_CODEC_FULL,
+    "unused_zero": OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
+    "unused_zeros": OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
+    "unused_synthetic": OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
+    "unused_synthetic_float64": OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
+    OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC: OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC,
 }
 OFFICIAL_MFU_HFR_TUB_REQUIRED_TENSOR_KEYS: tuple[str, ...] = (
     "mfu.upsample_mid.weight",
@@ -1266,6 +1278,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     fc_hw: tuple[int, int] | None = None,
     output2_decoder_output_shape: tuple[int, int, int, int] | None = None,
     skip_high_codec: str | None = None,
+    tub_input_codec: str | None = None,
 ) -> bytes:
     """Encode executable official MFU/HFR/TUB receiver primitive bytes.
 
@@ -1279,15 +1292,21 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         skip_high,
         codec=skip_high_codec,
     )
+    tub_input_plan = _official_tub_input_storage_plan(
+        current=tub_current,
+        previous=tub_previous,
+        next_frame=tub_next_frame,
+        codec=tub_input_codec,
+    )
     tensors = _official_payload_tensor_dict(
         mfu=mfu,
         hfr_heads=hfr_heads,
         low=low,
         skip_mid=skip_mid,
         skip_high=skip_high_plan["stored"],
-        tub_current=tub_current,
-        tub_previous=tub_previous,
-        tub_next_frame=tub_next_frame,
+        tub_current=tub_input_plan["stored"]["current"],
+        tub_previous=tub_input_plan["stored"]["previous"],
+        tub_next_frame=tub_input_plan["stored"]["next_frame"],
     )
     tensor_manifest, raw = _pack_tensor_manifest(tensors)
     compressed = lzma.compress(
@@ -1315,9 +1334,9 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         low=low,
         skip_mid=skip_mid,
         skip_high=skip_high_plan["effective"],
-        tub_current=tub_current,
-        tub_previous=tub_previous,
-        tub_next_frame=tub_next_frame,
+        tub_current=tub_input_plan["effective"]["current"],
+        tub_previous=tub_input_plan["effective"]["previous"],
+        tub_next_frame=tub_input_plan["effective"]["next_frame"],
         tub_config=tub_config,
     )
     header = {
@@ -1351,6 +1370,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "compressed_bytes": len(compressed),
         "compressed_sha256": _sha256(compressed),
         "skip_high_storage": skip_high_plan["metadata"],
+        "tub_input_storage": tub_input_plan["metadata"],
         "receiver_self_consistency_reference": self_consistency_reference,
         "receiver_self_consistency_reference_sha256": _json_sha256(
             self_consistency_reference
@@ -1676,6 +1696,14 @@ def _normalize_official_skip_high_codec(codec: str | None) -> str:
         raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}") from exc
 
 
+def _normalize_official_tub_input_codec(codec: str | None) -> str:
+    raw = "full" if codec is None else str(codec).strip().lower()
+    try:
+        return OFFICIAL_TUB_INPUT_MODE_TO_CODEC[raw]
+    except KeyError as exc:
+        raise SnervArchiveError(f"unsupported official tub input codec: {codec!r}") from exc
+
+
 def _official_skip_high_storage_plan(
     skip_high: np.ndarray,
     *,
@@ -1762,6 +1790,74 @@ def _expand_official_skip_high_storage(
     expanded = np.broadcast_to(skip_high, source_shape).astype(np.float64, copy=True)
     out = dict(tensors)
     out["inputs.mfu.skip_high"] = expanded
+    return out
+
+
+def _official_tub_input_storage_plan(
+    *,
+    current: np.ndarray,
+    previous: np.ndarray,
+    next_frame: np.ndarray,
+    codec: str | None,
+) -> dict[str, Any]:
+    source = {
+        "current": _canonical_float64_tensor(current, name="inputs.tub.current"),
+        "previous": _canonical_float64_tensor(previous, name="inputs.tub.previous"),
+        "next_frame": _canonical_float64_tensor(next_frame, name="inputs.tub.next_frame"),
+    }
+    normalized = _normalize_official_tub_input_codec(codec)
+    if normalized == OFFICIAL_TUB_INPUT_CODEC_FULL:
+        stored = source
+        effective = source
+    elif normalized == OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC:
+        stored = {
+            key: _unused_tub_placeholder(value)
+            for key, value in source.items()
+        }
+        effective = stored
+    else:  # pragma: no cover - guarded by normalizer
+        raise SnervArchiveError(f"unsupported official tub input codec: {codec!r}")
+    source_raw_bytes = sum(
+        int(value.size) * np.dtype("<f8").itemsize for value in source.values()
+    )
+    stored_raw_bytes = sum(
+        int(value.size) * np.dtype("<f8").itemsize for value in stored.values()
+    )
+    return {
+        "stored": stored,
+        "effective": effective,
+        "metadata": {
+            "schema": "snerv_official_tub_input_storage.v1",
+            "codec": normalized,
+            "source_shapes": {
+                key: [int(v) for v in value.shape] for key, value in source.items()
+            },
+            "stored_shapes": {
+                key: [int(v) for v in value.shape] for key, value in stored.items()
+            },
+            "source_raw_bytes": int(source_raw_bytes),
+            "stored_raw_bytes": int(stored_raw_bytes),
+            "receiver_frame_synthesis_uses_tub_inputs": False,
+            "lossless_relative_to_source_tub_inputs": (
+                normalized == OFFICIAL_TUB_INPUT_CODEC_FULL
+            ),
+            "source_forward_replay_authority": False,
+            "contest_scorer_authority": False,
+            **FALSE_AUTHORITY,
+        },
+    }
+
+
+def _unused_tub_placeholder(source: np.ndarray) -> np.ndarray:
+    """Return a deterministic non-constant placeholder for unused TUB inputs."""
+
+    out = np.zeros_like(source, dtype=np.float64)
+    flat = out.reshape(-1)
+    if flat.size == 0:
+        return out
+    flat[0] = 1.0
+    if flat.size > 1:
+        flat[-1] = -1.0
     return out
 
 
