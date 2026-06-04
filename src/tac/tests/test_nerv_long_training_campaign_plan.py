@@ -19,6 +19,7 @@ from tac.analysis.nerv_long_training_campaign_plan import (
     build_nerv_long_training_campaign_plan,
     render_nerv_long_training_campaign_plan_markdown,
 )
+from tac.analysis.nerv_modelsize_budget import analyze_snerv_modelsize_candidate
 from tac.substrates._shared.mlx_score_aware.adapter import (
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
@@ -566,6 +567,47 @@ def test_long_training_campaign_plan_blocks_snerv_id_control_mismatch() -> None:
     assert snerv_row["source_bound_capacity_controls"]["expected_candidate_id"] != snerv_row["candidate_id"]
     assert snerv_row["local_mlx_launch_command_ready"] is False
     assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+
+
+def test_long_training_campaign_plan_binds_snerv_official_skip_high_mode_id() -> None:
+    snerv_budget = _snerv_budget()
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        carrier_hw=(384, 512),
+        wavelet="haar",
+        levels=1,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        official_modelsize_mparams=0.05,
+        temporal_mode="official_haar_dwt1d_lowpass",
+        official_skip_high_mode="channel_mean",
+    ).as_dict()
+    snerv_budget["selected_candidates"] = [candidate]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert "snerv_candidate_id_source_bound_controls_mismatch" not in snerv_row[
+        "blockers"
+    ]
+    assert snerv_row["source_bound_capacity_controls"][
+        "candidate_id_matches_source_controls"
+    ] is True
+    assert snerv_row["source_bound_capacity_controls"]["official_skip_high_mode"] == (
+        "channel_mean"
+    )
+    argv = snerv_row["command_argv"]
+    assert argv[argv.index("--snerv-official-skip-high-mode") + 1] == "channel_mean"
 
 
 def test_long_training_campaign_plan_scrubs_nested_candidate_authority() -> None:
