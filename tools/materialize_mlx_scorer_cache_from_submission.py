@@ -757,7 +757,7 @@ def _write_snerv_direct_cache_from_payload(
     pair_indices_filter: list[int] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     from tac.substrates.snerv_inverse_steg_carrier.archive import (
-        decode_snerv_archive_frames,
+        decode_snerv_archive_pair_frames_from_decoded,
         unpack_snerv_archive,
     )
 
@@ -778,12 +778,16 @@ def _write_snerv_direct_cache_from_payload(
     if pair_count < 1:
         raise SystemExit("SNeRV direct cache has no complete frame pairs")
 
-    frames = decode_snerv_archive_frames(packet_bytes, clip_to_uint8_range=True)
+    frames = decode_snerv_archive_pair_frames_from_decoded(
+        decoded,
+        selected_pair_indices,
+        clip_to_uint8_range=True,
+    )
     if frames.ndim != 5 or frames.shape[1] != 2 or frames.shape[2] != 3:
         raise SystemExit(f"SNeRV direct cache expected frames (pairs,2,3,H,W), got {frames.shape}")
-    if frames.shape[0] < raw_pair_count:
+    if frames.shape[0] != pair_count:
         raise SystemExit(
-            f"SNeRV direct cache decoded {frames.shape[0]} pairs, expected at least {raw_pair_count}"
+            f"SNeRV direct cache decoded {frames.shape[0]} selected pairs, expected {pair_count}"
         )
     h, w = int(frames.shape[3]), int(frames.shape[4])
     scorer_pair_indices = np.array(
@@ -793,8 +797,7 @@ def _write_snerv_direct_cache_from_payload(
 
     def pair_batches():
         for start in range(0, pair_count, int(batch_pairs)):
-            chunk_indices = selected_pair_indices[start : start + int(batch_pairs)]
-            chunk = frames[np.asarray(chunk_indices, dtype=np.int64)]
+            chunk = frames[start : start + int(batch_pairs)]
             chunk = np.transpose(chunk, (0, 1, 3, 4, 2))
             yield np.ascontiguousarray(np.rint(chunk).clip(0, 255).astype(np.uint8))
 
@@ -851,7 +854,7 @@ def _write_snerv_direct_cache_from_payload(
             "local_acquisition_max_pairs": local_acquisition_max_pairs,
             "raw_file_written": False,
             "rebuilds_from_archive_bytes": True,
-            "lowering": "decode_snerv_archive_frames_nchw_to_uint8_hwc",
+            "lowering": "decode_snerv_archive_pair_frames_nchw_to_uint8_hwc",
         },
         "receiver_proof_required_for_promotion": True,
         **FALSE_AUTHORITY,

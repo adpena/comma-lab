@@ -258,7 +258,12 @@ class DecodedSnervArchive:
             self.sections["decoder_payload"]
         )
 
-    def decode_frame_planes(self, *, clip_to_uint8_range: bool = True) -> list[np.ndarray]:
+    def decode_frame_planes(
+        self,
+        *,
+        clip_to_uint8_range: bool = True,
+        frame_plane_indices: Sequence[int] | None = None,
+    ) -> list[np.ndarray]:
         """Decode receiver-visible LF planes into ordered reconstructed frames.
 
         This is the scorer-free inflate primitive for the SNAR1 packet: it consumes
@@ -271,6 +276,7 @@ class DecodedSnervArchive:
         return decode_snerv_archive_frame_planes_from_decoded(
             self,
             clip_to_uint8_range=clip_to_uint8_range,
+            frame_plane_indices=frame_plane_indices,
         )
 
     def decode_frames(self, *, clip_to_uint8_range: bool = True) -> np.ndarray:
@@ -278,6 +284,20 @@ class DecodedSnervArchive:
 
         return decode_snerv_archive_frames_from_decoded(
             self,
+            clip_to_uint8_range=clip_to_uint8_range,
+        )
+
+    def decode_pair_frames(
+        self,
+        pair_indices: Sequence[int],
+        *,
+        clip_to_uint8_range: bool = True,
+    ) -> np.ndarray:
+        """Decode selected pair tensors without rendering unselected frames."""
+
+        return decode_snerv_archive_pair_frames_from_decoded(
+            self,
+            pair_indices,
             clip_to_uint8_range=clip_to_uint8_range,
         )
 
@@ -772,14 +792,34 @@ def decode_snerv_archive_frames(
     )
 
 
+def decode_snerv_archive_pair_frames(
+    packet: bytes,
+    pair_indices: Sequence[int],
+    *,
+    clip_to_uint8_range: bool = True,
+) -> np.ndarray:
+    """Decode selected receiver pairs as ``(len(pair_indices), 2, 3, H, W)``."""
+
+    return unpack_snerv_archive(packet).decode_pair_frames(
+        pair_indices,
+        clip_to_uint8_range=clip_to_uint8_range,
+    )
+
+
 def decode_snerv_archive_frame_planes_from_decoded(
     decoded: DecodedSnervArchive,
     *,
     clip_to_uint8_range: bool = True,
+    frame_plane_indices: Sequence[int] | None = None,
 ) -> list[np.ndarray]:
     """Decode archived LF planes into receiver frames from an unpacked archive."""
 
     if is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
+        if frame_plane_indices is not None:
+            raise SnervArchiveError(
+                "selected-frame decode is not supported for official MFU/HFR/TUB "
+                "proof payloads"
+            )
         return decoded.decode_official_mfu_hfr_tub_payload().decode_frame_planes(
             clip_to_uint8_range=clip_to_uint8_range,
         )
@@ -793,6 +833,10 @@ def decode_snerv_archive_frame_planes_from_decoded(
     step_maps = decoded.decode_step_maps()
     decoder = decoded.decode_decoder()
     _validate_replay_counts(lf_planes, zeros, step_maps)
+    selected = _validate_frame_plane_indices(
+        frame_plane_indices,
+        plane_count=len(lf_planes),
+    )
 
     codes: list[SnervFrameCode] = []
     decoded_lfs: list[np.ndarray] = []
@@ -825,8 +869,10 @@ def decode_snerv_archive_frame_planes_from_decoded(
     if int(decoder.model_size.temporal_context) > 0:
         temporal_group_count = _metadata_int(metadata, "channels", default=1, minimum=1)
 
+    decode_indices = range(len(codes)) if selected is None else selected
     out: list[np.ndarray] = []
-    for idx, code in enumerate(codes):
+    for idx in decode_indices:
+        code = codes[idx]
         lf_sequence = None
         sequence_index = None
         if int(decoder.model_size.temporal_context) > 0:
@@ -843,6 +889,41 @@ def decode_snerv_archive_frame_planes_from_decoded(
             frame = np.clip(frame, 0.0, 255.0)
         out.append(np.asarray(frame, dtype=np.float32))
     return out
+
+
+def decode_snerv_archive_pair_frames_from_decoded(
+    decoded: DecodedSnervArchive,
+    pair_indices: Sequence[int],
+    *,
+    clip_to_uint8_range: bool = True,
+) -> np.ndarray:
+    """Decode selected receiver pairs without reconstructing all pair frames."""
+
+    metadata = decoded.metadata
+    n_pairs = _metadata_int(metadata, "n_pairs", minimum=1)
+    frames_per_pair = _metadata_int(metadata, "frames_per_pair", default=2, minimum=1)
+    channels = _metadata_int(metadata, "channels", default=3, minimum=1)
+    h, w = _metadata_hw(metadata)
+    clean_pair_indices = _validate_pair_indices(pair_indices, n_pairs=n_pairs)
+    frame_plane_indices = _frame_plane_indices_for_pairs(
+        clean_pair_indices,
+        frames_per_pair=frames_per_pair,
+        channels=channels,
+    )
+    planes = decode_snerv_archive_frame_planes_from_decoded(
+        decoded,
+        clip_to_uint8_range=clip_to_uint8_range,
+        frame_plane_indices=frame_plane_indices,
+    )
+    expected = len(clean_pair_indices) * frames_per_pair * channels
+    if len(planes) != expected:
+        raise SnervArchiveError(
+            f"receiver replay decoded {len(planes)} selected planes, expected {expected}"
+        )
+    arr = np.stack(planes, axis=0)
+    return arr.reshape(len(clean_pair_indices), frames_per_pair, channels, h, w).astype(
+        np.float32
+    )
 
 
 def decode_snerv_archive_frames_from_decoded(
@@ -869,6 +950,55 @@ def decode_snerv_archive_frames_from_decoded(
         )
     arr = np.stack(planes, axis=0)
     return arr.reshape(n_pairs, frames_per_pair, channels, h, w).astype(np.float32)
+
+
+def _validate_pair_indices(pair_indices: Sequence[int], *, n_pairs: int) -> list[int]:
+    out = [int(idx) for idx in pair_indices]
+    if not out:
+        raise SnervArchiveError("pair_indices must be non-empty")
+    invalid = [idx for idx in out if idx < 0 or idx >= int(n_pairs)]
+    if invalid:
+        preview = invalid[:8]
+        suffix = "" if len(invalid) <= 8 else f" ... +{len(invalid) - 8} more"
+        raise SnervArchiveError(
+            f"pair_indices outside [0,{int(n_pairs)}): {preview}{suffix}"
+        )
+    return out
+
+
+def _frame_plane_indices_for_pairs(
+    pair_indices: Sequence[int],
+    *,
+    frames_per_pair: int,
+    channels: int,
+) -> list[int]:
+    stride = int(frames_per_pair) * int(channels)
+    return [
+        int(pair_index) * stride + int(frame_index) * int(channels) + int(channel)
+        for pair_index in pair_indices
+        for frame_index in range(int(frames_per_pair))
+        for channel in range(int(channels))
+    ]
+
+
+def _validate_frame_plane_indices(
+    frame_plane_indices: Sequence[int] | None,
+    *,
+    plane_count: int,
+) -> list[int] | None:
+    if frame_plane_indices is None:
+        return None
+    out = [int(idx) for idx in frame_plane_indices]
+    if not out:
+        raise SnervArchiveError("frame_plane_indices must be non-empty when provided")
+    invalid = [idx for idx in out if idx < 0 or idx >= int(plane_count)]
+    if invalid:
+        preview = invalid[:8]
+        suffix = "" if len(invalid) <= 8 else f" ... +{len(invalid) - 8} more"
+        raise SnervArchiveError(
+            f"frame_plane_indices outside [0,{int(plane_count)}): {preview}{suffix}"
+        )
+    return out
 
 
 def encode_lf_metadata_payload(

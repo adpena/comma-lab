@@ -29,6 +29,7 @@ from tac.substrates.hprc.learned_receiver import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_snerv_archive_frames,
+    decode_snerv_archive_pair_frames,
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
@@ -737,12 +738,14 @@ def test_submission_mlx_cache_can_render_hi_nerv_direct_without_raw_scratch(
 def test_submission_mlx_cache_can_render_snerv_direct_without_raw_scratch(
     tmp_path: Path,
 ) -> None:
-    frames = np.zeros((1, 2, 3, 16, 16), dtype=np.float32)
+    frames = np.zeros((2, 2, 3, 16, 16), dtype=np.float32)
     frames[0, 0, 0] = np.arange(16, dtype=np.float32)[None, :]
     frames[0, 1, 1] = np.arange(16, dtype=np.float32)[:, None] * 3.0
+    frames[1, 0, 2] = 23.0 + np.arange(16, dtype=np.float32)[None, :]
+    frames[1, 1, 0] = 41.0 + np.arange(16, dtype=np.float32)[:, None]
     pyramids = [
         encode_frame_lf(frames[pair, frame, channel], levels=1, wavelet="haar")
-        for pair in range(1)
+        for pair in range(2)
         for frame in range(2)
         for channel in range(3)
     ]
@@ -761,7 +764,7 @@ def test_submission_mlx_cache_can_render_snerv_direct_without_raw_scratch(
         decoder_payload=encode_decoder_payload(decoder),
         step_map_packet=step_packet.packet,
         metadata={
-            "n_pairs": 1,
+            "n_pairs": 2,
             "frames_per_pair": 2,
             "channels": 3,
             "lf_plane_count": len(q_planes),
@@ -803,6 +806,8 @@ def test_submission_mlx_cache_can_render_snerv_direct_without_raw_scratch(
             "--report-output",
             str(report),
             "--receiver-direct-cache",
+            "--pair-ranges",
+            "1",
             "--batch-pairs",
             "1",
             "--allow-large-tensor-cache",
@@ -817,8 +822,13 @@ def test_submission_mlx_cache_can_render_snerv_direct_without_raw_scratch(
     stdout = json.loads(result.stdout)
     payload = json.loads(report.read_text(encoding="utf-8"))
     manifest = json.loads((cache_dir / "manifest.json").read_text(encoding="utf-8"))
+    pair_indices = np.load(cache_dir / "pair_indices.npy")
     decoded = decode_snerv_archive_frames(packet_bytes)
-    expected_raw = np.rint(np.transpose(decoded, (0, 1, 3, 4, 2))).clip(0, 255).astype(
+    selected_decoded = decode_snerv_archive_pair_frames(packet_bytes, [1])
+    np.testing.assert_array_equal(selected_decoded, decoded[1:2])
+    expected_raw = np.rint(
+        np.transpose(selected_decoded, (0, 1, 3, 4, 2))
+    ).clip(0, 255).astype(
         np.uint8
     )
 
@@ -826,10 +836,11 @@ def test_submission_mlx_cache_can_render_snerv_direct_without_raw_scratch(
     assert payload["inflate_executed"] is False
     assert payload["receiver_direct_cache"] is True
     assert payload["raw_path"] is None
-    assert payload["raw_pair_count"] == 1
+    assert payload["raw_pair_count"] == 2
     assert payload["cached_pair_count"] == 1
     assert payload["direct_receiver_cache_report"]["source_family"] == "snerv"
     assert payload["direct_receiver_cache_report"]["archive_magic"] == "SNAR1"
+    assert payload["direct_receiver_cache_report"]["selected_pair_ranges"] == [[1, 1]]
     assert (
         payload["candidate_cache_identity_mode"]
         == "snerv_direct_receiver_render_cache_identity_audited_false_authority"
@@ -841,9 +852,11 @@ def test_submission_mlx_cache_can_render_snerv_direct_without_raw_scratch(
     assert audit["source"]["archive_magic"] == "SNAR1"
     assert audit["cache"]["raw_sha256"] == manifest["raw_sha256"]
     assert audit["direct_render"]["lowering"] == (
-        "decode_snerv_archive_frames_nchw_to_uint8_hwc"
+        "decode_snerv_archive_pair_frames_nchw_to_uint8_hwc"
     )
+    assert audit["direct_render"]["selected_pair_ranges"] == [[1, 1]]
     assert manifest["source_kind"] == "snerv_direct_receiver_render"
     assert manifest["pair_count"] == 1
+    assert pair_indices.tolist() == [[2, 3]]
     assert manifest["raw_sha256"] == hashlib.sha256(expected_raw.tobytes()).hexdigest()
     assert not (work_dir / "inflated").exists()
