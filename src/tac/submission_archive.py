@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import io
 import json
 import logging
 import re
@@ -24,7 +25,7 @@ import struct
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     # R41 fix: ruff F821 flagged torch.Tensor string annotations as undefined
@@ -37,6 +38,8 @@ logger = logging.getLogger(__name__)
 
 DETERMINISTIC_ZIP_DATE_TIME = (1980, 1, 1, 0, 0, 0)
 DETERMINISTIC_ZIP_FILE_MODE = 0o644
+MINIMAL_SINGLE_MEMBER_NAME = "x"
+MINIMAL_SINGLE_MEMBER_ARCHIVE_SCHEMA = "minimal_single_member_archive_zip.v1"
 _FORBIDDEN_ARCHIVE_MEMBER_NAMES = {
     "__MACOSX",
     ".DS_Store",
@@ -121,6 +124,137 @@ def write_deterministic_zip_file(
         compress_type=compress_type,
         compresslevel=compresslevel,
     )
+
+
+def build_minimal_single_member_archive_bytes(
+    payload: bytes,
+    *,
+    member_name: str = MINIMAL_SINGLE_MEMBER_NAME,
+    compresslevels: tuple[int, ...] = (1, 6, 9),
+) -> tuple[bytes, dict[str, Any]]:
+    """Return the smallest deterministic single-member contest ZIP candidate.
+
+    Upstream ``evaluate.py`` charges ``submission_dir/archive.zip`` by
+    ``stat().st_size``. Runtime source outside that ZIP is not part of the rate
+    term, so charged archives should carry only the receiver-consumed packet and
+    use the shortest runtime-compatible member name. This helper compares
+    ``ZIP_STORED`` and requested ``ZIP_DEFLATED`` levels because already-coded
+    neural packets often expand under DEFLATE.
+    """
+
+    if not isinstance(payload, (bytes, bytearray, memoryview)):
+        raise TypeError("payload must be bytes-like")
+    packet = bytes(payload)
+    member_name = validate_archive_member_name(str(member_name))
+    if "/" in member_name:
+        raise ValueError(
+            "minimal single-member archive member_name must not contain '/' "
+            f"(got {member_name!r})"
+        )
+
+    candidate_specs: list[tuple[str, int, int | None]] = [
+        ("stored", zipfile.ZIP_STORED, None)
+    ]
+    for level in compresslevels:
+        if int(level) < 0 or int(level) > 9:
+            raise ValueError(f"ZIP deflate level must be in [0,9], got {level!r}")
+        candidate_specs.append(("deflated", zipfile.ZIP_DEFLATED, int(level)))
+
+    candidates: list[dict[str, Any]] = []
+    best_bytes: bytes | None = None
+    best_index = -1
+    for method_name, compress_type, compresslevel in candidate_specs:
+        archive_bytes = _single_member_zip_bytes(
+            packet,
+            member_name=member_name,
+            compress_type=compress_type,
+            compresslevel=compresslevel,
+        )
+        row = {
+            "method": method_name,
+            "compress_type": int(compress_type),
+            "compresslevel": compresslevel,
+            "archive_bytes": len(archive_bytes),
+            "delta_bytes_vs_payload": len(archive_bytes) - len(packet),
+        }
+        candidates.append(row)
+        if best_bytes is None or len(archive_bytes) < len(best_bytes):
+            best_bytes = archive_bytes
+            best_index = len(candidates) - 1
+
+    if best_bytes is None:  # defensive; candidate_specs is never empty.
+        raise RuntimeError("no ZIP candidates were built")
+    selected = dict(candidates[best_index])
+    for index, row in enumerate(candidates):
+        row["selected"] = index == best_index
+    report = {
+        "schema": MINIMAL_SINGLE_MEMBER_ARCHIVE_SCHEMA,
+        "member_name": member_name,
+        "member_names": [member_name],
+        "payload_bytes": len(packet),
+        "payload_sha256": hashlib.sha256(packet).hexdigest(),
+        "archive_bytes": len(best_bytes),
+        "archive_sha256": hashlib.sha256(best_bytes).hexdigest(),
+        "selected_method": selected["method"],
+        "selected_compress_type": selected["compress_type"],
+        "selected_compresslevel": selected["compresslevel"],
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+        "member_name_bytes_charged_twice": 2 * len(member_name.encode("utf-8")),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    return best_bytes, report
+
+
+def write_minimal_single_member_archive(
+    output_path: Path | str,
+    payload: bytes,
+    *,
+    member_name: str = MINIMAL_SINGLE_MEMBER_NAME,
+    compresslevels: tuple[int, ...] = (1, 6, 9),
+) -> dict[str, Any]:
+    """Write the smallest deterministic single-member archive and return custody."""
+
+    archive_bytes, report = build_minimal_single_member_archive_bytes(
+        payload,
+        member_name=member_name,
+        compresslevels=compresslevels,
+    )
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(archive_bytes)
+    return {
+        **report,
+        "path": out.as_posix(),
+        "bytes": len(archive_bytes),
+        "sha256": hashlib.sha256(archive_bytes).hexdigest(),
+    }
+
+
+def _single_member_zip_bytes(
+    payload: bytes,
+    *,
+    member_name: str,
+    compress_type: int,
+    compresslevel: int | None,
+) -> bytes:
+    buf = io.BytesIO()
+    zip_kwargs: dict[str, Any] = {
+        "mode": "w",
+        "compression": compress_type,
+        "allowZip64": False,
+    }
+    if compresslevel is not None and compress_type != zipfile.ZIP_STORED:
+        zip_kwargs["compresslevel"] = int(compresslevel)
+    info = deterministic_zip_info(member_name, compress_type=compress_type)
+    with zipfile.ZipFile(buf, **zip_kwargs) as zf:
+        write_kwargs: dict[str, Any] = {"compress_type": compress_type}
+        if compresslevel is not None and compress_type != zipfile.ZIP_STORED:
+            write_kwargs["compresslevel"] = int(compresslevel)
+        zf.writestr(info, payload, **write_kwargs)
+    return buf.getvalue()
 
 
 def _canonical_json_bytes(payload: dict) -> bytes:

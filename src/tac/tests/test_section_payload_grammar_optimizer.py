@@ -37,6 +37,17 @@ def _stored_zip(member_name: str, payload: bytes) -> bytes:
     return buf.getvalue()
 
 
+def _stored_zip_members(members: dict[str, bytes]) -> bytes:
+    buf = BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name, payload in members.items():
+            info = zipfile.ZipInfo(name)
+            info.compress_type = zipfile.ZIP_STORED
+            info.date_time = (1980, 1, 1, 0, 0, 0)
+            zf.writestr(info, payload)
+    return buf.getvalue()
+
+
 def test_section_coder_candidates_reuse_shared_portfolio_fail_closed() -> None:
     payload = bytes([0]) * 512 + bytes(range(32)) * 4
 
@@ -208,6 +219,35 @@ def test_single_member_zip_archive_sections_are_extracted_with_provenance() -> N
         "archive_zip_sha256"
     ]
     assert report["blockers"]
+
+
+def test_explicit_zip_member_sections_are_extracted_from_runtime_archive() -> None:
+    member_payload = b"A" * 64 + b"BC" * 32
+    archive = _stored_zip_members(
+        {
+            "0.bin": member_payload,
+            "inflate.py": b"print('inflate')\n",
+            "inflate.sh": b"#!/bin/sh\npython inflate.py \"$@\"\n",
+        }
+    )
+
+    sections, manifest = sections_from_single_member_zip_archive(
+        archive,
+        member_name="0.bin",
+        spans=[
+            {"name": "alpha", "start": 0, "length": 64},
+            {"name": "beta", "start": 64, "length": 64},
+        ],
+    )
+
+    assert manifest["source_kind"] == "zip_archive_member"
+    assert manifest["zip_member_count"] == 3
+    assert manifest["zip_member_name"] == "0.bin"
+    assert manifest["zip_overhead_scope"] == (
+        "archive_zip_bytes_minus_selected_member_compress_size"
+    )
+    assert sections[0]["payload"] == b"A" * 64
+    assert sections[1]["payload"] == b"BC" * 32
 
 
 def test_archive_section_telemetry_converts_to_zip_spans() -> None:

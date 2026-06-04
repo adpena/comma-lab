@@ -13,9 +13,11 @@ from tac.submission_archive import (
     RENDERER_COMPACT_MANIFEST,
     TYPED_SIDECHANNEL_CONTRACT_MEMBER,
     TypedSidechannelMember,
+    build_minimal_single_member_archive_bytes,
     build_submission_archive,
     deterministic_zip_directory,
     validate_archive,
+    write_minimal_single_member_archive,
 )
 
 
@@ -205,3 +207,38 @@ def test_deterministic_zip_directory_flags_hidden_system_junk(
 
     with pytest.raises(ValueError, match="hidden/system archive member"):
         deterministic_zip_directory(source, tmp_path / "archive.zip")
+
+
+def test_minimal_single_member_archive_uses_short_name_and_selects_best_method(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    payload = b"A" * 4096
+
+    report = write_minimal_single_member_archive(archive, payload)
+
+    assert report["schema"] == "minimal_single_member_archive_zip.v1"
+    assert report["member_name"] == "x"
+    assert report["member_name_bytes_charged_twice"] == 2
+    assert report["candidate_count"] >= 2
+    assert report["archive_bytes"] == archive.stat().st_size
+    assert any(row["method"] == "stored" for row in report["candidates"])
+    assert any(row["method"] == "deflated" for row in report["candidates"])
+    assert report["archive_bytes"] == min(
+        int(row["archive_bytes"]) for row in report["candidates"]
+    )
+    with zipfile.ZipFile(archive) as zf:
+        assert zf.namelist() == ["x"]
+        assert zf.read("x") == payload
+
+
+def test_minimal_single_member_archive_can_choose_stored_for_already_coded_bytes() -> None:
+    payload = bytes(range(256))
+
+    archive_bytes, report = build_minimal_single_member_archive_bytes(
+        payload,
+        compresslevels=(),
+    )
+
+    assert report["selected_method"] == "stored"
+    assert report["archive_bytes"] == len(archive_bytes)

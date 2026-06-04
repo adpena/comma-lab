@@ -65,16 +65,21 @@ import hashlib
 import os
 import re
 import socket
+import zipfile
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from tac.submission_archive import (
+    MINIMAL_SINGLE_MEMBER_NAME,
+    build_minimal_single_member_archive_bytes,
+    validate_zip_member_infos,
+)
 from tac.submission_packet.builder import (
     DEFAULT_INFLATE_PY_LOC_BUDGET,
     SubmissionBundleResult,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -220,6 +225,22 @@ CANONICAL_AXIS_TAGS: frozenset[str] = frozenset(
         "[macOS-MLX research-signal]",
         "[predicted]",
     }
+)
+
+_ARCHIVE_RUNTIME_OR_DOC_NAMES: frozenset[str] = frozenset(
+    {
+        "inflate.sh",
+        "inflate.py",
+        "README.md",
+        "readme.md",
+        "report.txt",
+        "archive_manifest.json",
+    }
+)
+_ARCHIVE_RUNTIME_OR_DOC_PREFIXES: tuple[str, ...] = (
+    "src/",
+    "tac/",
+    "__pycache__/",
 )
 
 
@@ -917,11 +938,18 @@ def lint_archive_zip(
     expected_sha256: str,
     expected_size_bytes: int,
 ) -> tuple[LintFinding, ...]:
-    """Lint an archive.zip against expected sha + size invariants.
+    """Lint an archive.zip against expected bytes and charged-surface invariants.
 
     Per CLAUDE.md "Bit-level deconstruction and entropy discipline":
     the archive bytes ARE the contest-charged surface; sha + size
     mismatch invalidates every downstream consumer.
+
+    Upstream ``evaluate.py`` charges ``submission_dir/archive.zip`` by
+    ``stat().st_size``. Runtime files may live next to ``archive.zip`` for
+    inflate, but putting ``inflate.py``, ``inflate.sh``, vendored ``src/`` code,
+    README/report text, or other human-readable docs into the charged ZIP is a
+    submission-byte bug. This helper makes that byte-surface rule part of the
+    canonical linter instead of a manual review note.
     """
     findings: list[LintFinding] = []
     if not path.exists():
@@ -979,6 +1007,162 @@ def lint_archive_zip(
                 ),
             )
         )
+
+    findings.extend(_lint_archive_zip_shape(path, actual_size=actual_size))
+
+    return tuple(findings)
+
+
+def _lint_archive_zip_shape(
+    path: Path,
+    *,
+    actual_size: int,
+) -> tuple[LintFinding, ...]:
+    findings: list[LintFinding] = []
+    try:
+        with zipfile.ZipFile(path, "r") as zf:
+            infos = [info for info in zf.infolist() if not info.is_dir()]
+            try:
+                names = validate_zip_member_infos(infos)
+            except ValueError as exc:
+                findings.append(
+                    LintFinding(
+                        surface=LintSurface.ARCHIVE_ZIP.value,
+                        severity=LintSeverity.ERROR.value,
+                        rule="archive_zip_member_contract_invalid",
+                        file_path=str(path),
+                        line_number=None,
+                        matched_text=_truncate(str(exc)),
+                        fix_suggestion=(
+                            "Rebuild archive.zip through tac.submission_archive "
+                            "so ZIP members are deterministic and zip-slip safe."
+                        ),
+                    )
+                )
+                return tuple(findings)
+
+            runtime_members = [
+                name
+                for name in names
+                if name in _ARCHIVE_RUNTIME_OR_DOC_NAMES
+                or any(name.startswith(prefix) for prefix in _ARCHIVE_RUNTIME_OR_DOC_PREFIXES)
+            ]
+            if runtime_members:
+                findings.append(
+                    LintFinding(
+                        surface=LintSurface.ARCHIVE_ZIP.value,
+                        severity=LintSeverity.ERROR.value,
+                        rule="archive_zip_contains_runtime_or_docs_rate_bytes",
+                        file_path=str(path),
+                        line_number=None,
+                        matched_text=_truncate(",".join(runtime_members)),
+                        fix_suggestion=(
+                            "Keep runtime/docs beside archive.zip, not inside it; "
+                            "build the charged payload with "
+                            "tac.submission_archive.write_minimal_single_member_archive."
+                        ),
+                    )
+                )
+
+            if len(names) != 1:
+                findings.append(
+                    LintFinding(
+                        surface=LintSurface.ARCHIVE_ZIP.value,
+                        severity=LintSeverity.ERROR.value,
+                        rule="archive_zip_not_single_member_payload",
+                        file_path=str(path),
+                        line_number=None,
+                        matched_text=_truncate(",".join(names)),
+                        fix_suggestion=(
+                            "Use one receiver-consumed payload member in archive.zip; "
+                            "move runtime or manifest sidecars outside the charged ZIP."
+                        ),
+                    )
+                )
+                return tuple(findings)
+
+            info = infos[0]
+            member_name = names[0]
+            if info.compress_type not in {zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED}:
+                findings.append(
+                    LintFinding(
+                        surface=LintSurface.ARCHIVE_ZIP.value,
+                        severity=LintSeverity.ERROR.value,
+                        rule="archive_zip_unsupported_compression_method",
+                        file_path=str(path),
+                        line_number=None,
+                        matched_text=f"member={member_name} method={info.compress_type}",
+                        fix_suggestion=(
+                            "Use ZIP_STORED or ZIP_DEFLATED via "
+                            "tac.submission_archive.write_minimal_single_member_archive."
+                        ),
+                    )
+                )
+                return tuple(findings)
+
+            payload = zf.read(member_name)
+    except zipfile.BadZipFile as exc:
+        return (
+            LintFinding(
+                surface=LintSurface.ARCHIVE_ZIP.value,
+                severity=LintSeverity.ERROR.value,
+                rule="archive_zip_bad_zip",
+                file_path=str(path),
+                line_number=None,
+                matched_text=_truncate(str(exc)),
+                fix_suggestion=(
+                    "Rebuild archive.zip through tac.submission_archive; "
+                    "the contest-charged archive must be a valid ZIP."
+                ),
+            ),
+        )
+
+    same_member_bytes, same_member_report = build_minimal_single_member_archive_bytes(
+        payload,
+        member_name=member_name,
+    )
+    if len(same_member_bytes) < actual_size:
+        findings.append(
+            LintFinding(
+                surface=LintSurface.ARCHIVE_ZIP.value,
+                severity=LintSeverity.ERROR.value,
+                rule="archive_zip_container_not_minimal_for_member",
+                file_path=str(path),
+                line_number=None,
+                matched_text=(
+                    f"actual={actual_size} minimal={len(same_member_bytes)} "
+                    f"method={same_member_report['selected_method']}"
+                ),
+                fix_suggestion=(
+                    "Rebuild archive.zip with the canonical minimal single-member "
+                    "builder so stored-vs-deflated is selected by measured bytes."
+                ),
+            )
+        )
+
+    if member_name != MINIMAL_SINGLE_MEMBER_NAME:
+        x_bytes, _x_report = build_minimal_single_member_archive_bytes(
+            payload,
+            member_name=MINIMAL_SINGLE_MEMBER_NAME,
+        )
+        if len(x_bytes) < actual_size:
+            findings.append(
+                LintFinding(
+                    surface=LintSurface.ARCHIVE_ZIP.value,
+                    severity=LintSeverity.WARN.value,
+                    rule="archive_zip_single_member_name_not_minimal",
+                    file_path=str(path),
+                    line_number=None,
+                    matched_text=(
+                        f"member={member_name} actual={actual_size} "
+                        f"x_member={len(x_bytes)}"
+                    ),
+                    fix_suggestion=(
+                        "Prefer member name 'x' when the runtime accepts it; "
+                        "SNeRV archive materialization does this by default."
+                    ),
+                )
+            )
 
     return tuple(findings)
 
@@ -1194,7 +1378,6 @@ def lint_submission_bundle(
         SubmissionLinterError: when canonical surfaces cannot be parsed
             (missing builder paths, malformed bundle).
     """
-    started = _utc_now_iso()
     started_perf = datetime.datetime.now(datetime.UTC)
 
     if not isinstance(submission_bundle_result, SubmissionBundleResult):

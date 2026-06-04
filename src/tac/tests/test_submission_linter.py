@@ -21,6 +21,7 @@ from pathlib import Path
 
 import pytest
 
+from tac.submission_archive import write_minimal_single_member_archive
 from tac.submission_packet import (
     CANONICAL_AXIS_TAGS,
     EMDASH_CHARACTER,
@@ -28,12 +29,12 @@ from tac.submission_packet import (
     FORBIDDEN_PUBLIC_PR_TOKENS,
     LINTER_SCHEMA_VERSION,
     PHASE_5_LAYER_VERSION,
+    TONE_VIOLATION_PATTERNS,
     LintFinding,
     LintSeverity,
     LintSurface,
     LintVerdict,
     SubmissionLinterError,
-    TONE_VIOLATION_PATTERNS,
     lint_archive_zip,
     lint_compliance_placeholder,
     lint_inflate_py,
@@ -43,11 +44,6 @@ from tac.submission_packet import (
     lint_tone,
 )
 from tac.submission_packet.builder import (
-    DEFAULT_INFLATE_DEPS_BUDGET,
-    DEFAULT_INFLATE_PY_LOC_BUDGET,
-    SUBMISSION_BUNDLE_SCHEMA_VERSION,
-    DependencyClosureManifest,
-    SelectInflateDeviceRouting,
     SubmissionBundleResult,
     build_submission_bundle,
 )
@@ -58,7 +54,6 @@ from tac.submission_packet.linter import (
     _line_at,
     _truncate,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -107,22 +102,21 @@ def fresh_submission_bundle(tmp_path: Path) -> SubmissionBundleResult:
     import hashlib
 
     from tac.submission_packet import (
+        COMPRESSION_PIPELINE_SCHEMA_VERSION,
         ArchiveGrammarManifest,
         ArchiveSectionSpec,
         ByteMutationSmokeVerdict,
         CompressionPipelineResult,
-        COMPRESSION_PIPELINE_SCHEMA_VERSION,
         OperationalMechanismStatus,
         SectionKind,
     )
 
     now = datetime.datetime.now(datetime.UTC).isoformat()
 
-    # Build a minimal canonical archive.zip per Phase 3 sister convention.
+    # Build a minimal canonical archive.zip per upstream charged-byte convention.
     archive_path = tmp_path / "archive_src.zip"
     payload = b"hello-world" * 100  # 1100 bytes
-    with zipfile.ZipFile(archive_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("0.bin", payload)
+    write_minimal_single_member_archive(archive_path, payload)
     archive_bytes = archive_path.read_bytes()
     archive_sha = hashlib.sha256(archive_bytes).hexdigest()
     section_sha = hashlib.sha256(payload).hexdigest()
@@ -165,14 +159,14 @@ def fresh_submission_bundle(tmp_path: Path) -> SubmissionBundleResult:
     )
 
     spec = ArchiveSectionSpec(
-        section_name="0.bin",
+        section_name="x",
         offset_in_archive=0,
         length_in_archive=len(payload),
         sha256_of_section=section_sha,
         section_kind=SectionKind.OTHER.value,
         operational_mechanism_status=OperationalMechanismStatus.OPERATIONAL.value,
         distinguishing_feature_name=None,
-        member_name="0.bin",
+        member_name="x",
     )
     grammar = ArchiveGrammarManifest(
         schema_version="archive_grammar_v1_20260526",
@@ -865,14 +859,79 @@ class TestLintArchiveZip:
         import hashlib
 
         path = tmp_path / "archive.zip"
-        with zipfile.ZipFile(path, "w") as zf:
-            zf.writestr("0.bin", b"hello")
+        write_minimal_single_member_archive(path, b"hello")
         actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
         actual_size = path.stat().st_size
         findings = lint_archive_zip(
             path, expected_sha256=actual_sha, expected_size_bytes=actual_size
         )
         assert findings == ()
+
+    def test_runtime_inside_archive_zip_is_blocking_error(self, tmp_path: Path) -> None:
+        import hashlib
+
+        path = tmp_path / "archive.zip"
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("0.bin", b"payload")
+            zf.writestr("inflate.py", b"print('runtime')\n")
+            zf.writestr("src/tac/helper.py", b"VALUE = 1\n")
+        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        findings = lint_archive_zip(
+            path,
+            expected_sha256=actual_sha,
+            expected_size_bytes=path.stat().st_size,
+        )
+
+        assert any(
+            f.rule == "archive_zip_contains_runtime_or_docs_rate_bytes"
+            and f.severity == "error"
+            for f in findings
+        )
+        assert any(
+            f.rule == "archive_zip_not_single_member_payload"
+            and f.severity == "error"
+            for f in findings
+        )
+
+    def test_nonminimal_single_member_name_warned(self, tmp_path: Path) -> None:
+        import hashlib
+
+        path = tmp_path / "archive.zip"
+        write_minimal_single_member_archive(path, b"payload", member_name="0.bin")
+        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        findings = lint_archive_zip(
+            path,
+            expected_sha256=actual_sha,
+            expected_size_bytes=path.stat().st_size,
+        )
+
+        assert any(
+            f.rule == "archive_zip_single_member_name_not_minimal"
+            and f.severity == "warn"
+            for f in findings
+        )
+
+    def test_nonminimal_container_for_same_member_is_blocking_error(
+        self, tmp_path: Path
+    ) -> None:
+        import hashlib
+
+        path = tmp_path / "archive.zip"
+        payload = b"\x00" * 1024
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_STORED) as zf:
+            zf.writestr("x", payload)
+        actual_sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        findings = lint_archive_zip(
+            path,
+            expected_sha256=actual_sha,
+            expected_size_bytes=path.stat().st_size,
+        )
+
+        assert any(
+            f.rule == "archive_zip_container_not_minimal_for_member"
+            and f.severity == "error"
+            for f in findings
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1043,8 +1102,8 @@ class TestLintSubmissionBundleIntegration:
 
 class TestCathedralConsumerContract:
     def test_consumer_satisfies_canonical_contract(self) -> None:
-        from tac.cathedral.consumer_contract import validate_consumer_module
         import tac.cathedral_consumers.submission_linter_consumer as m
+        from tac.cathedral.consumer_contract import validate_consumer_module
 
         registration = validate_consumer_module(m)
         assert registration.contract_compliant is True

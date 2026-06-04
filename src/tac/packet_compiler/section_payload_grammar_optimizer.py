@@ -113,13 +113,17 @@ def sections_from_single_member_zip_archive(
     archive_sha = hashlib.sha256(archive_bytes).hexdigest()
     with zipfile.ZipFile(io.BytesIO(archive_bytes), "r") as zf:
         infos = zf.infolist()
-        if len(infos) != 1:
-            raise ValueError(f"expected a single-member ZIP archive, got {len(infos)}")
-        info = infos[0]
-        if member_name is not None and info.filename != member_name:
+        if len(infos) != 1 and member_name is None:
             raise ValueError(
-                f"ZIP member mismatch: expected {member_name!r}, got {info.filename!r}"
+                f"expected a single-member ZIP archive or explicit member, got {len(infos)}"
             )
+        if member_name is None:
+            info = infos[0]
+        else:
+            matches = [candidate for candidate in infos if candidate.filename == member_name]
+            if not matches:
+                raise ValueError(f"ZIP member not found: {member_name!r}")
+            info = matches[0]
         member_bytes = zf.read(info.filename)
     member_sha = hashlib.sha256(member_bytes).hexdigest()
     span_rows = _normalize_spans(spans, member_len=len(member_bytes), member_name=info.filename)
@@ -146,17 +150,25 @@ def sections_from_single_member_zip_archive(
         blockers.append("section_spans_do_not_cover_member_contiguously")
     manifest = {
         "schema": SECTION_PAYLOAD_SOURCE_MANIFEST_SCHEMA,
-        "source_kind": "single_member_zip_archive",
+        "source_kind": (
+            "single_member_zip_archive"
+            if len(infos) == 1
+            else "zip_archive_member"
+        ),
         "archive_zip_bytes": len(archive_bytes),
         "archive_zip_sha256": archive_sha,
-        "zip_member_count": 1,
+        "zip_member_count": len(infos),
         "zip_member_name": info.filename,
         "zip_member_file_size": int(info.file_size),
         "zip_member_compress_size": int(info.compress_size),
         "zip_member_compress_type": int(info.compress_type),
         "zip_member_is_stored": info.compress_type == zipfile.ZIP_STORED,
         "zip_overhead_bytes": overhead_bytes,
-        "zip_overhead_scope": "archive_zip_bytes_minus_member_compress_size",
+        "zip_overhead_scope": (
+            "archive_zip_bytes_minus_member_compress_size"
+            if len(infos) == 1
+            else "archive_zip_bytes_minus_selected_member_compress_size"
+        ),
         "member_payload_bytes": len(member_bytes),
         "member_payload_sha256": member_sha,
         "section_count": len(section_manifest_rows),
