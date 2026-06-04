@@ -643,6 +643,85 @@ def test_snerv_candidate_curriculum_consumes_native_mlx_scorer_loop_without_over
     assert plan["score_claim"] is False
 
 
+def test_snerv_candidate_curriculum_promotes_file_backed_scorer_loop_to_long_training_ready(
+    tmp_path: Path,
+) -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        levels=5,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+    ).as_dict()
+
+    report = tmp_path / "native_export.json"
+    packet = tmp_path / "native_packet.snar"
+    archive = tmp_path / "archive.zip"
+    proof = tmp_path / "receiver_proof.json"
+    report.write_text('{"schema":"snerv_native_export_unit"}\n', encoding="utf-8")
+    packet.write_bytes(b"packet")
+    archive.write_bytes(b"archive")
+    proof.write_text(
+        json.dumps(
+            {
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=29_650,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=190_000,
+        measured_archive_bytes=191_000,
+        native_mlx_train_export_attached=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+        native_mlx_scorer_loop_qat_attached=True,
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=True,
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=True,
+        native_mlx_scorer_loop_qat_accepted_improvement=True,
+        native_mlx_scorer_loop_qat_best_materialized=True,
+        native_mlx_artifact_evidence={
+            "num_pairs": 600,
+            "artifact_report_path": report.as_posix(),
+            "packet_path": packet.as_posix(),
+            "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+            "archive_path": archive.as_posix(),
+            "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+            "receiver_proof_path": proof.as_posix(),
+            "scorer_loop_qat": {
+                "executed": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "accepted_improvement": True,
+                "emitted_packet_uses_scorer_loop_best_decoder": True,
+            },
+        },
+    )
+
+    training_plan = plan["training_plan"]
+    assert training_plan["native_mlx_train_export_verified"] is True
+    assert training_plan["native_mlx_scorer_loop_qat_verified"] is True
+    assert (
+        training_plan["native_mlx_scorer_loop_file_backed_long_training_ready"]
+        is True
+    )
+    assert training_plan["learned_scoreaware_mlx_training_required_next"] is False
+    assert (
+        "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
+        not in plan["blockers"]
+    )
+    assert plan["score_claim"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
+
+
 def test_snerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:
     candidate = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=216_000,

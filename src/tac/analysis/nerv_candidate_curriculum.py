@@ -384,6 +384,14 @@ def build_snerv_candidate_curriculum_plan(
         and native_mlx_scorer_loop_qat_accepted_improvement
         and native_mlx_scorer_loop_qat_best_materialized
     )
+    native_scorer_loop_file_backed_ready = bool(
+        native_export_verified
+        and native_mlx_full600_campaign_ready
+        and native_scorer_loop_verified
+    )
+    long_training_or_materialized_scorer_loop_bound = bool(
+        native_mlx_long_training_bound or native_scorer_loop_file_backed_ready
+    )
     standalone_scorer_loop_verified = False
     effective_scorer_loop_verified = bool(
         standalone_scorer_loop_verified or native_scorer_loop_verified
@@ -477,7 +485,7 @@ def build_snerv_candidate_curriculum_plan(
         blockers.extend(native_file_evidence.get("blockers") or [])
     if not effective_scorer_loop_attached:
         blockers.append("snerv_scorer_loop_qat_not_attached")
-    if not native_mlx_long_training_bound:
+    if not long_training_or_materialized_scorer_loop_bound:
         blockers.append(
             "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only"
         )
@@ -578,9 +586,12 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_train_export_verified": native_export_verified,
             "native_mlx_export_attachment_is_learned_training": False,
             "learned_scoreaware_mlx_training_required_next": (
-                not bool(native_mlx_long_training_bound)
+                not long_training_or_materialized_scorer_loop_bound
             ),
             "native_mlx_long_training_bound": bool(native_mlx_long_training_bound),
+            "native_mlx_scorer_loop_file_backed_long_training_ready": (
+                native_scorer_loop_file_backed_ready
+            ),
             "native_mlx_receiver_proof_passed": bool(
                 native_mlx_receiver_proof_passed
             ),
