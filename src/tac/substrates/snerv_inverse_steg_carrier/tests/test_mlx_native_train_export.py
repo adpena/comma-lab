@@ -111,7 +111,7 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         public_sig.parameters[
             "score_aware_long_training_pr95_muon_policy"
         ].default
-        == "faithful_stage8_only"
+        == "every_stage"
     )
     attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
     assert "pr95_muon_policy" in attachment_sig.parameters

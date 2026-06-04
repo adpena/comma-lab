@@ -1151,7 +1151,7 @@ def train_export_snerv_mlx_native(
     coder_qat_c1a_sigma: float = 0.2,
     coder_qat_c1a_sample_size: int = 512,
     score_aware_long_training_pr95_faithful_curriculum: bool = False,
-    score_aware_long_training_pr95_muon_policy: str = "faithful_stage8_only",
+    score_aware_long_training_pr95_muon_policy: str = "every_stage",
     write_mlx_prefilter_profile: bool = False,
     mlx_prefilter_scorer_device: str = "cpu",
     mlx_prefilter_scorer_batch_pairs: int = 1,
@@ -2130,7 +2130,7 @@ def train_export_snerv_mlx_native(
     )
     payload["score_aware_long_training_pr95_muon_policy"] = str(
         score_aware_long_training_public.get("pr95_muon_policy")
-        or "faithful_stage8_only"
+        or "every_stage"
     )
     payload["score_aware_long_training_pr95_faithful_optimizer_schedule_bound"] = bool(
         score_aware_long_training_public.get("pr95_faithful_curriculum_enabled")

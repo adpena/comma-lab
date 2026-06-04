@@ -4418,7 +4418,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     coder_qat_c1a_sigma: float = 0.2,
     coder_qat_c1a_sample_size: int = 512,
     snerv_score_aware_long_training_pr95_faithful_curriculum: bool = False,
-    snerv_score_aware_long_training_pr95_muon_policy: str = "faithful_stage8_only",
+    snerv_score_aware_long_training_pr95_muon_policy: str = "every_stage",
     mlx_prefilter_scorer_device: str | None = None,
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
@@ -17416,7 +17416,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--snerv-score-aware-long-training-pr95-muon-policy",
         choices=("faithful_stage8_only", "every_stage"),
-        default="faithful_stage8_only",
+        default="every_stage",
         help=(
             "Muon activation policy inside the PR95 curriculum. "
             "faithful_stage8_only preserves PR95 source parity; every_stage "
