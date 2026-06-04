@@ -76,7 +76,18 @@ def test_xray_mlx_prefilter_error_anatomy_reports_pair_and_pixel_tails(
     assert report["schema"] == "mlx_prefilter_error_anatomy.v1"
     assert report["score_claim"] is False
     assert report["component_summary"]["n_pairs"] == 2
+    scorer_contract = report["upstream_scorer_contract"]
+    assert scorer_contract["segnet"]["frame_domain"] == "last frame only: x[:, -1, ...]"
+    assert scorer_contract["segnet"]["resize_hw"] == [384, 512]
+    assert scorer_contract["posenet"]["yuv6_hw_after_2x2_pack"] == [192, 256]
+    assert scorer_contract["posenet"]["channel_order_12"][-1] == "frame1_V"
+    assert scorer_contract["score"]["byte_price_score_units"] == 25.0 / 37_545_489
     assert report["pixel_summary"]["computed"] is True
+    scale = report["pixel_summary"]["metrics"]["segnet_cache"]["scale_diagnostics"]
+    assert scale["channels"][0]["label"] == "R"
+    assert scale["aggregate"]["rmse_before_identity_affine"] == 1.0
+    assert scale["aggregate"]["rmse_after_identity_affine"] == 0.0
+    assert "inspect_segnet_cache_denorm_scale_offset_and_target_normalization" in report["diagnostic_recommended_next_actions"]
     assert report["top_pairs"]["combined"][0]["pair_idx"] == 0
     assert report["top_pairs"]["pose"][0]["pair_idx"] == 1
     assert report["top_pairs"]["segnet_cache_delta"][0]["segnet_cache_mean_abs_delta"] == 1.0
@@ -156,6 +167,11 @@ def test_xray_mlx_prefilter_error_anatomy_merges_rich_prefilter_manifest(
 
     assert report["pixel_summary"]["computed"] is True
     assert report["rows"][0]["segnet_cache_mean_abs_delta"] == 2.0
+    pose_scale = report["pixel_summary"]["metrics"]["posenet_cache"]["scale_diagnostics"]
+    assert pose_scale["channels"][0]["label"] == "frame0_y00"
+    assert pose_scale["channels"][5]["label"] == "frame0_V"
+    assert pose_scale["channels"][6]["label"] == "frame1_y00"
+    assert pose_scale["channels"][11]["label"] == "frame1_V"
     assert report["direct_full_scorer_vjp_work_order"]["ready_for_vjp_materialization"] is True
 
 

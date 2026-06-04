@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import json
 import math
 import shlex
@@ -400,6 +401,307 @@ def _per_pair_delta_stats(
     }
 
 
+def _channel_axis(shape: tuple[int, ...], *, expected_channels: int | None) -> int:
+    if len(shape) < 3:
+        raise ValueError(f"cache tensor must include pair and channel/spatial axes, got {shape}")
+    candidates = [axis for axis in range(1, len(shape)) if expected_channels is not None and shape[axis] == expected_channels]
+    if candidates:
+        return candidates[-1]
+    small_channel_axes = [axis for axis in range(1, len(shape)) if shape[axis] in (1, 3, 6, 12)]
+    if small_channel_axes:
+        return small_channel_axes[-1]
+    return len(shape) - 1
+
+
+def _expected_channels_for_cache(key: str) -> int | None:
+    if key == "segnet_last_rgb":
+        return 3
+    if key == "posenet_yuv6_pair":
+        return 12
+    return None
+
+
+def _channel_label(key: str, idx: int, count: int) -> str:
+    if key == "segnet_last_rgb" and count == 3:
+        return ("R", "G", "B")[idx]
+    if key == "posenet_yuv6_pair" and count == 12:
+        frame = idx // 6
+        channel = ("y00", "y10", "y01", "y11", "U", "V")[idx % 6]
+        return f"frame{frame}_{channel}"
+    return f"ch{idx}"
+
+
+def _move_channel_axis_to_front(chunk: np.ndarray, channel_axis: int) -> np.ndarray:
+    # Drop pair dimension into the sample axis and keep one compact channel axis.
+    moved = np.moveaxis(chunk, channel_axis, 1)
+    return moved.reshape((-1, moved.shape[1], int(np.prod(moved.shape[2:], dtype=np.int64)))).transpose(1, 0, 2).reshape(
+        moved.shape[1],
+        -1,
+    )
+
+
+def _affine_from_sums(
+    *,
+    n: float,
+    sum_x: float,
+    sum_y: float,
+    sum_xx: float,
+    sum_yy: float,
+    sum_xy: float,
+    sum_sq_diff: float | None = None,
+) -> dict[str, float | None]:
+    if n <= 0.0:
+        return {
+            "slope": None,
+            "intercept": None,
+            "corr": None,
+            "r_squared": None,
+            "rmse_before": None,
+            "rmse_after": None,
+            "rmse_reduction_fraction": None,
+            "sse_after": None,
+        }
+    mean_x = sum_x / n
+    mean_y = sum_y / n
+    exx = sum_xx / n
+    eyy = sum_yy / n
+    exy = sum_xy / n
+    var_x = max(0.0, exx - mean_x * mean_x)
+    var_y = max(0.0, eyy - mean_y * mean_y)
+    cov_xy = exy - mean_x * mean_y
+    if var_x > 0.0:
+        slope = cov_xy / var_x
+        intercept = mean_y - slope * mean_x
+    else:
+        slope = 0.0
+        intercept = mean_y
+    sse_after = (
+        sum_yy
+        - 2.0 * slope * sum_xy
+        - 2.0 * intercept * sum_y
+        + slope * slope * sum_xx
+        + 2.0 * slope * intercept * sum_x
+        + intercept * intercept * n
+    )
+    sse_after = max(0.0, sse_after)
+    rmse_after = math.sqrt(sse_after / n)
+    rmse_before = math.sqrt(max(0.0, sum_sq_diff / n)) if sum_sq_diff is not None else None
+    corr = cov_xy / math.sqrt(var_x * var_y) if var_x > 0.0 and var_y > 0.0 else None
+    sst_y = max(0.0, sum_yy - sum_y * sum_y / n)
+    r_squared = 1.0 - (sse_after / sst_y) if sst_y > 0.0 else None
+    reduction = (
+        1.0 - (rmse_after / rmse_before)
+        if rmse_before is not None and rmse_before > 0.0
+        else None
+    )
+    return {
+        "slope": _as_finite_float(slope, label="affine.slope"),
+        "intercept": _as_finite_float(intercept, label="affine.intercept"),
+        "corr": _as_finite_float(corr, label="affine.corr") if corr is not None else None,
+        "r_squared": _as_finite_float(r_squared, label="affine.r_squared") if r_squared is not None else None,
+        "rmse_before": _as_finite_float(rmse_before, label="affine.rmse_before") if rmse_before is not None else None,
+        "rmse_after": _as_finite_float(rmse_after, label="affine.rmse_after"),
+        "rmse_reduction_fraction": _as_finite_float(reduction, label="affine.reduction") if reduction is not None else None,
+        "sse_after": _as_finite_float(sse_after, label="affine.sse_after"),
+    }
+
+
+def _stream_channel_scale_diagnostics(
+    *,
+    cache_key: str,
+    candidate: np.ndarray,
+    reference: np.ndarray,
+    n_pairs: int,
+    chunk_pairs: int,
+) -> dict[str, Any]:
+    if candidate.shape[0] < n_pairs or reference.shape[0] < n_pairs:
+        raise ValueError(
+            f"cache arrays shorter than component pairs: {candidate.shape[0]} and {reference.shape[0]} vs {n_pairs}"
+        )
+    if candidate.shape[1:] != reference.shape[1:]:
+        raise ValueError(f"cache array shape mismatch: {candidate.shape[1:]} vs {reference.shape[1:]}")
+    expected_channels = _expected_channels_for_cache(cache_key)
+    channel_axis = _channel_axis(tuple(candidate.shape), expected_channels=expected_channels)
+    channel_count = int(candidate.shape[channel_axis])
+    n = np.zeros(channel_count, dtype=np.float64)
+    sum_x = np.zeros(channel_count, dtype=np.float64)
+    sum_y = np.zeros(channel_count, dtype=np.float64)
+    sum_xx = np.zeros(channel_count, dtype=np.float64)
+    sum_yy = np.zeros(channel_count, dtype=np.float64)
+    sum_xy = np.zeros(channel_count, dtype=np.float64)
+    sum_abs_diff = np.zeros(channel_count, dtype=np.float64)
+    sum_sq_diff = np.zeros(channel_count, dtype=np.float64)
+    sum_diff = np.zeros(channel_count, dtype=np.float64)
+    max_abs_diff = np.full(channel_count, -np.inf, dtype=np.float64)
+    cand_min = np.full(channel_count, np.inf, dtype=np.float64)
+    cand_max = np.full(channel_count, -np.inf, dtype=np.float64)
+    ref_min = np.full(channel_count, np.inf, dtype=np.float64)
+    ref_max = np.full(channel_count, -np.inf, dtype=np.float64)
+    cand_zeroish = np.zeros(channel_count, dtype=np.float64)
+    cand_fullish = np.zeros(channel_count, dtype=np.float64)
+    ref_zeroish = np.zeros(channel_count, dtype=np.float64)
+    ref_fullish = np.zeros(channel_count, dtype=np.float64)
+
+    cross_sum_xy = np.zeros((channel_count, channel_count), dtype=np.float64) if channel_count <= 4 else None
+    for start in range(0, n_pairs, chunk_pairs):
+        stop = min(n_pairs, start + chunk_pairs)
+        cand = _move_channel_axis_to_front(np.asarray(candidate[start:stop], dtype=np.float64), channel_axis)
+        ref = _move_channel_axis_to_front(np.asarray(reference[start:stop], dtype=np.float64), channel_axis)
+        diff = cand - ref
+        abs_diff = np.abs(diff)
+        samples = cand.shape[1]
+        n += samples
+        sum_x += np.sum(cand, axis=1)
+        sum_y += np.sum(ref, axis=1)
+        sum_xx += np.sum(cand * cand, axis=1)
+        sum_yy += np.sum(ref * ref, axis=1)
+        sum_xy += np.sum(cand * ref, axis=1)
+        sum_abs_diff += np.sum(abs_diff, axis=1)
+        sum_sq_diff += np.sum(diff * diff, axis=1)
+        sum_diff += np.sum(diff, axis=1)
+        max_abs_diff = np.maximum(max_abs_diff, np.max(abs_diff, axis=1))
+        cand_min = np.minimum(cand_min, np.min(cand, axis=1))
+        cand_max = np.maximum(cand_max, np.max(cand, axis=1))
+        ref_min = np.minimum(ref_min, np.min(ref, axis=1))
+        ref_max = np.maximum(ref_max, np.max(ref, axis=1))
+        cand_zeroish += np.sum(cand <= 0.5, axis=1)
+        cand_fullish += np.sum(cand >= 254.5, axis=1)
+        ref_zeroish += np.sum(ref <= 0.5, axis=1)
+        ref_fullish += np.sum(ref >= 254.5, axis=1)
+        if cross_sum_xy is not None:
+            cross_sum_xy += cand @ ref.T
+
+    channels: list[dict[str, Any]] = []
+    sse_after_total = 0.0
+    for idx in range(channel_count):
+        affine = _affine_from_sums(
+            n=float(n[idx]),
+            sum_x=float(sum_x[idx]),
+            sum_y=float(sum_y[idx]),
+            sum_xx=float(sum_xx[idx]),
+            sum_yy=float(sum_yy[idx]),
+            sum_xy=float(sum_xy[idx]),
+            sum_sq_diff=float(sum_sq_diff[idx]),
+        )
+        sse_after_total += float(affine.get("sse_after") or 0.0)
+        channels.append(
+            {
+                "channel": idx,
+                "label": _channel_label(cache_key, idx, channel_count),
+                "samples": int(n[idx]),
+                "candidate_mean": _as_finite_float(sum_x[idx] / n[idx], label=f"{cache_key}.cand.mean[{idx}]"),
+                "candidate_std": _as_finite_float(
+                    math.sqrt(max(0.0, sum_xx[idx] / n[idx] - (sum_x[idx] / n[idx]) ** 2)),
+                    label=f"{cache_key}.cand.std[{idx}]",
+                ),
+                "candidate_min": _as_finite_float(cand_min[idx], label=f"{cache_key}.cand.min[{idx}]"),
+                "candidate_max": _as_finite_float(cand_max[idx], label=f"{cache_key}.cand.max[{idx}]"),
+                "candidate_zeroish_fraction": _as_finite_float(cand_zeroish[idx] / n[idx], label="cand.zeroish"),
+                "candidate_fullish_fraction": _as_finite_float(cand_fullish[idx] / n[idx], label="cand.fullish"),
+                "reference_mean": _as_finite_float(sum_y[idx] / n[idx], label=f"{cache_key}.ref.mean[{idx}]"),
+                "reference_std": _as_finite_float(
+                    math.sqrt(max(0.0, sum_yy[idx] / n[idx] - (sum_y[idx] / n[idx]) ** 2)),
+                    label=f"{cache_key}.ref.std[{idx}]",
+                ),
+                "reference_min": _as_finite_float(ref_min[idx], label=f"{cache_key}.ref.min[{idx}]"),
+                "reference_max": _as_finite_float(ref_max[idx], label=f"{cache_key}.ref.max[{idx}]"),
+                "reference_zeroish_fraction": _as_finite_float(ref_zeroish[idx] / n[idx], label="ref.zeroish"),
+                "reference_fullish_fraction": _as_finite_float(ref_fullish[idx] / n[idx], label="ref.fullish"),
+                "delta_mean_signed": _as_finite_float(sum_diff[idx] / n[idx], label=f"{cache_key}.diff.mean[{idx}]"),
+                "delta_mean_abs": _as_finite_float(sum_abs_diff[idx] / n[idx], label=f"{cache_key}.diff.mae[{idx}]"),
+                "delta_rmse": _as_finite_float(math.sqrt(sum_sq_diff[idx] / n[idx]), label=f"{cache_key}.diff.rmse[{idx}]"),
+                "delta_max_abs": _as_finite_float(max_abs_diff[idx], label=f"{cache_key}.diff.max[{idx}]"),
+                "candidate_to_reference_affine": {key: value for key, value in affine.items() if key != "sse_after"},
+            }
+        )
+
+    rmse_before = math.sqrt(float(np.sum(sum_sq_diff) / np.sum(n)))
+    rmse_after = math.sqrt(sse_after_total / float(np.sum(n)))
+    channel_order_probe = _channel_order_probe(
+        channel_count=channel_count,
+        n=n,
+        sum_x=sum_x,
+        sum_y=sum_y,
+        sum_xx=sum_xx,
+        sum_yy=sum_yy,
+        sum_sq_diff=sum_sq_diff,
+        cross_sum_xy=cross_sum_xy,
+    )
+    return {
+        "cache_key": cache_key,
+        "shape": [int(v) for v in candidate.shape],
+        "channel_axis": int(channel_axis),
+        "channel_count": channel_count,
+        "channels": channels,
+        "aggregate": {
+            "rmse_before_identity_affine": _as_finite_float(rmse_before, label=f"{cache_key}.aggregate.rmse_before"),
+            "rmse_after_identity_affine": _as_finite_float(rmse_after, label=f"{cache_key}.aggregate.rmse_after"),
+            "rmse_reduction_fraction": _as_finite_float(
+                1.0 - (rmse_after / rmse_before) if rmse_before > 0.0 else 0.0,
+                label=f"{cache_key}.aggregate.rmse_reduction",
+            ),
+            "likely_affine_scale_or_offset_issue": bool(rmse_before >= 1.0 and rmse_after <= 0.5 * rmse_before),
+            "candidate_any_heavy_clipping": bool(np.max((cand_zeroish + cand_fullish) / n) >= 0.1),
+            "reference_any_heavy_clipping": bool(np.max((ref_zeroish + ref_fullish) / n) >= 0.1),
+        },
+        "channel_order_probe": channel_order_probe,
+    }
+
+
+def _channel_order_probe(
+    *,
+    channel_count: int,
+    n: np.ndarray,
+    sum_x: np.ndarray,
+    sum_y: np.ndarray,
+    sum_xx: np.ndarray,
+    sum_yy: np.ndarray,
+    sum_sq_diff: np.ndarray,
+    cross_sum_xy: np.ndarray | None,
+) -> dict[str, Any]:
+    if cross_sum_xy is None or channel_count < 2 or channel_count > 4:
+        return {
+            "eligible": False,
+            "reason": "channel_count_not_in_2_to_4_or_cross_stats_disabled",
+            "channel_count": int(channel_count),
+        }
+    pair_sse = np.zeros((channel_count, channel_count), dtype=np.float64)
+    for cand_idx in range(channel_count):
+        for ref_idx in range(channel_count):
+            affine = _affine_from_sums(
+                n=float(n[cand_idx]),
+                sum_x=float(sum_x[cand_idx]),
+                sum_y=float(sum_y[ref_idx]),
+                sum_xx=float(sum_xx[cand_idx]),
+                sum_yy=float(sum_yy[ref_idx]),
+                sum_xy=float(cross_sum_xy[cand_idx, ref_idx]),
+            )
+            pair_sse[cand_idx, ref_idx] = float(affine.get("sse_after") or 0.0)
+    identity = tuple(range(channel_count))
+    identity_sse = float(sum(pair_sse[idx, idx] for idx in range(channel_count)))
+    best_perm = identity
+    best_sse = identity_sse
+    for perm in itertools.permutations(range(channel_count)):
+        sse = float(sum(pair_sse[perm[ref_idx], ref_idx] for ref_idx in range(channel_count)))
+        if sse < best_sse:
+            best_sse = sse
+            best_perm = perm
+    total_n = float(np.sum(n))
+    identity_rmse = math.sqrt(max(0.0, identity_sse / total_n))
+    best_rmse = math.sqrt(max(0.0, best_sse / total_n))
+    reduction = 1.0 - (best_rmse / identity_rmse) if identity_rmse > 0.0 else 0.0
+    return {
+        "eligible": True,
+        "channel_count": int(channel_count),
+        "identity_candidate_channel_for_each_reference_channel": list(identity),
+        "best_candidate_channel_for_each_reference_channel": [int(v) for v in best_perm],
+        "identity_rmse_after_affine": _as_finite_float(identity_rmse, label="channel_order.identity_rmse"),
+        "best_permutation_rmse_after_affine": _as_finite_float(best_rmse, label="channel_order.best_rmse"),
+        "best_permutation_rmse_reduction_fraction": _as_finite_float(reduction, label="channel_order.reduction"),
+        "possible_channel_order_issue": bool(best_perm != identity and reduction >= 0.25),
+    }
+
+
 def _attach_pixel_xray(
     *,
     rows: list[dict[str, Any]],
@@ -410,6 +712,7 @@ def _attach_pixel_xray(
 ) -> tuple[dict[str, Any], list[str]]:
     blockers: list[str] = []
     stats_by_name: dict[str, dict[str, np.ndarray]] = {}
+    scale_diagnostics_by_name: dict[str, dict[str, Any]] = {}
     for key, row_prefix in (("segnet_last_rgb", "segnet_cache"), ("posenet_yuv6_pair", "posenet_cache")):
         candidate_path = _cache_array_path(candidate_cache, key)
         reference_path = _cache_array_path(reference_cache, key)
@@ -429,6 +732,13 @@ def _attach_pixel_xray(
             changed_eps=changed_eps,
         )
         stats_by_name[row_prefix] = stats
+        scale_diagnostics_by_name[row_prefix] = _stream_channel_scale_diagnostics(
+            cache_key=key,
+            candidate=candidate,
+            reference=reference,
+            n_pairs=len(rows),
+            chunk_pairs=chunk_pairs,
+        )
         for idx, row in enumerate(rows):
             row[f"{row_prefix}_mean_abs_delta"] = _as_finite_float(stats["mean_abs"][idx], label=f"{key}.mean_abs[{idx}]")
             row[f"{row_prefix}_rmse_delta"] = _as_finite_float(stats["rmse"][idx], label=f"{key}.rmse[{idx}]")
@@ -447,7 +757,32 @@ def _attach_pixel_xray(
             }
             for metric, values in stats.items()
         }
+        if row_prefix in scale_diagnostics_by_name:
+            summary[row_prefix]["scale_diagnostics"] = scale_diagnostics_by_name[row_prefix]
     return summary, blockers
+
+
+def _diagnostic_next_actions(pixel_summary: Mapping[str, Any]) -> list[str]:
+    actions = ["run_small_reference_fit_before_long_training_when_fit_gate_failed"]
+    metrics = pixel_summary.get("metrics")
+    if not isinstance(metrics, Mapping):
+        return actions
+    for row_prefix, payload in metrics.items():
+        if not isinstance(payload, Mapping):
+            continue
+        diagnostics = payload.get("scale_diagnostics")
+        if not isinstance(diagnostics, Mapping):
+            continue
+        aggregate = diagnostics.get("aggregate")
+        if isinstance(aggregate, Mapping):
+            if aggregate.get("likely_affine_scale_or_offset_issue") is True:
+                actions.append(f"inspect_{row_prefix}_denorm_scale_offset_and_target_normalization")
+            if aggregate.get("candidate_any_heavy_clipping") is True:
+                actions.append(f"inspect_{row_prefix}_clamp_uint8_cast_and_output_activation")
+        channel_order = diagnostics.get("channel_order_probe")
+        if isinstance(channel_order, Mapping) and channel_order.get("possible_channel_order_issue") is True:
+            actions.append(f"inspect_{row_prefix}_channel_order_mapping")
+    return _ordered_unique(actions)
 
 
 def _top_rows(rows: list[dict[str, Any]], field: str, top_k: int) -> list[dict[str, Any]]:
@@ -592,6 +927,54 @@ def _analysis_dimensions() -> list[dict[str, Any]]:
     ]
 
 
+def _upstream_scorer_contract() -> dict[str, Any]:
+    return {
+        "schema": "upstream_eval_scorer_contract.v1",
+        "source_files": ["upstream/evaluate.py", "upstream/modules.py", "upstream/frame_utils.py"],
+        "output_video_tensor": {
+            "shape": ["batch", 2, 874, 1164, 3],
+            "dtype": "uint8/RGB before DistortionNet float cast",
+            "camera_size_wh": [1164, 874],
+            "seq_len": 2,
+        },
+        "segnet": {
+            "frame_domain": "last frame only: x[:, -1, ...]",
+            "input_tensor": "segnet_last_rgb",
+            "resize_hw": [384, 512],
+            "classes": 5,
+            "distortion": "mean(argmax(candidate_logits) != argmax(reference_logits))",
+            "score_derivative_wrt_average_distortion": 100.0,
+        },
+        "posenet": {
+            "frame_domain": "both frames in each pair",
+            "input_tensor": "posenet_yuv6_pair",
+            "rgb_resize_hw_before_yuv6": [384, 512],
+            "yuv6_hw_after_2x2_pack": [192, 256],
+            "channel_order_12": [
+                "frame0_y00",
+                "frame0_y10",
+                "frame0_y01",
+                "frame0_y11",
+                "frame0_U",
+                "frame0_V",
+                "frame1_y00",
+                "frame1_y10",
+                "frame1_y01",
+                "frame1_y11",
+                "frame1_U",
+                "frame1_V",
+            ],
+            "distortion": "MSE on first half of PoseNet pose head dimensions",
+            "score_derivative_wrt_average_distortion": "5/sqrt(10*d_pose)",
+        },
+        "score": {
+            "formula": "100*d_seg + sqrt(10*d_pose) + 25*(archive_zip_bytes/uncompressed_total_bytes)",
+            "contest_rate_normalizer_bytes": CONTEST_RATE_NORMALIZER_BYTES,
+            "byte_price_score_units": 25.0 / CONTEST_RATE_NORMALIZER_BYTES,
+        },
+    }
+
+
 def build_report_from_profile(
     *,
     mlx_profile: str | Path,
@@ -727,7 +1110,9 @@ def build_report_from_profile(
             **FALSE_AUTHORITY,
         },
         "component_summary": component_summary,
+        "upstream_scorer_contract": _upstream_scorer_contract(),
         "pixel_summary": pixel_summary,
+        "diagnostic_recommended_next_actions": _diagnostic_next_actions(pixel_summary),
         "top_pairs": {
             "combined": _top_rows(rows, "component_score_no_rate", top_k),
             "pose": _top_rows(rows, "pose_score_contribution", top_k),
@@ -822,6 +1207,7 @@ def _markdown_summary(report: Mapping[str, Any]) -> str:
     component = report["component_summary"]
     archive = report.get("archive") or {}
     vjp = report.get("direct_full_scorer_vjp_work_order") or {}
+    pixel_metrics = (report.get("pixel_summary") or {}).get("metrics") if isinstance(report.get("pixel_summary"), Mapping) else None
     lines = [
         f"# MLX Prefilter Error Anatomy: {report.get('label')}",
         "",
@@ -836,11 +1222,38 @@ def _markdown_summary(report: Mapping[str, Any]) -> str:
         f"- Archive rate term: `{archive.get('rate_term')}`",
         f"- Direct full-scorer VJP ready: `{vjp.get('ready_for_vjp_materialization')}`",
         f"- Blockers: `{', '.join(str(item) for item in report.get('blockers', []))}`",
+        f"- Diagnostic next actions: `{', '.join(str(item) for item in report.get('diagnostic_recommended_next_actions', []))}`",
         "",
+        "## Scale / Domain Diagnostics",
+        "| tensor | identity rmse | affine rmse | affine reduction | channel-order issue | clipping |",
+        "| --- | ---: | ---: | ---: | --- | --- |",
+    ]
+    if isinstance(pixel_metrics, Mapping):
+        for tensor_name, payload in pixel_metrics.items():
+            diagnostics = payload.get("scale_diagnostics") if isinstance(payload, Mapping) else None
+            aggregate = diagnostics.get("aggregate") if isinstance(diagnostics, Mapping) else None
+            channel_order = diagnostics.get("channel_order_probe") if isinstance(diagnostics, Mapping) else None
+            if not isinstance(aggregate, Mapping):
+                continue
+            clipping = bool(aggregate.get("candidate_any_heavy_clipping") or aggregate.get("reference_any_heavy_clipping"))
+            lines.append(
+                "| {tensor} | {before:.6g} | {after:.6g} | {reduction:.6g} | {order} | {clipping} |".format(
+                    tensor=str(tensor_name),
+                    before=float(aggregate.get("rmse_before_identity_affine") or 0.0),
+                    after=float(aggregate.get("rmse_after_identity_affine") or 0.0),
+                    reduction=float(aggregate.get("rmse_reduction_fraction") or 0.0),
+                    order=bool(isinstance(channel_order, Mapping) and channel_order.get("possible_channel_order_issue")),
+                    clipping=clipping,
+                )
+            )
+    lines.extend(
+        [
+            "",
         "## Top Combined Pairs",
         "| pair | frames | component | seg | pose | seg_cache_mae | pose_cache_mae |",
         "| ---: | --- | ---: | ---: | ---: | ---: | ---: |",
-    ]
+        ]
+    )
     for row in (report.get("top_pairs", {}).get("combined") or [])[:16]:
         lines.append(
             "| {pair} | {frames} | {component:.6g} | {seg:.6g} | {pose:.6g} | {seg_mae:.6g} | {pose_mae:.6g} |".format(
