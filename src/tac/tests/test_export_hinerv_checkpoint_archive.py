@@ -5,6 +5,7 @@ import numpy as np
 
 from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_knobs
 from tools.export_hinerv_checkpoint_archive import (
+    _blockers,
     _modelsize_integrity_profile,
     _resolve_decoder_codec,
 )
@@ -49,6 +50,25 @@ def test_hinerv_checkpoint_decoder_codec_keeps_explicit_arg_authority() -> None:
     assert resolution["modelsize_candidate_decoder_codec_propagates_to_export"] is False
     assert resolution["modelsize_candidate_decoder_codec_is_capacity_authority"] is False
     assert resolution["blockers"] == ["candidate_decoder_codec_not_export_authority"]
+
+
+def test_hinerv_checkpoint_export_blocks_candidate_decoder_codec_override() -> None:
+    resolution = _resolve_decoder_codec(
+        explicit_arg="int4_mixed",
+        command_args={"compact_decoder_codec": "portfolio_auto"},
+        candidate={"decoder_codec": "int7_mixed"},
+    )
+
+    blockers = _blockers(
+        archive_bytes=120_000,
+        hard_byte_ceilings=[178_000],
+        receiver_proof={"runtime_consumption_proof_ready": True},
+        receiver_proof_requested=True,
+        modelsize_integrity={"blockers": []},
+        decoder_codec_resolution=resolution,
+    )
+
+    assert "candidate_decoder_codec_not_export_authority" in blockers
 
 
 def test_hinerv_checkpoint_decoder_codec_keeps_nondefault_runner_codec() -> None:

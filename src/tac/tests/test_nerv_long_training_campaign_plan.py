@@ -1747,6 +1747,63 @@ def test_long_training_campaign_plan_consumes_snerv_binary_profile_receiver_proo
     ]
     assert preflight["matching_observations"][0]["receiver_closed"] is True
     assert preflight["score_claim"] is False
+    feedback = snerv["candidate_feedback"]
+    assert feedback["byte_feedback_source"] == "modelsize_byte_cap_receiver_proof"
+    assert feedback["feedback_scope"] == "full600_native_file_backed_snar1_export"
+    assert feedback["feedback_ready"] is True
+    assert feedback["native_mlx_receiver_proof_passed"] is True
+    assert feedback["native_mlx_full600_campaign_ready"] is True
+    training_plan = snerv["curriculum_plan"]["training_plan"]
+    assert training_plan["native_mlx_train_export_verified"] is True
+    assert training_plan["native_mlx_file_backed_export_proof_passed"] is True
+    assert "snerv_snar1_byte_feedback_missing" not in snerv["blockers"]
+    assert "snerv_mlx_native_receiver_proof_missing_or_failed" not in snerv[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_file_backed_export_proof_missing_or_failed" not in snerv[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_full600_campaign_not_ready" not in snerv["blockers"]
+
+
+def test_long_training_campaign_plan_rejects_snerv_byte_feedback_failed_receiver_contract(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="a" * 64,
+    )
+    payload = json.loads(profile.read_text(encoding="utf-8"))
+    proof_path = (
+        Path(payload["input_path"]).parent
+        / "receiver_proof"
+        / "snerv_inverse_steg_receiver_proof.json"
+    )
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    proof["receiver_contract_satisfied"] = False
+    proof["blockers"] = ["synthetic_receiver_contract_failed"]
+    proof_path.write_text(json.dumps(proof, sort_keys=True), encoding="utf-8")
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(scalar),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(profile.as_posix(),),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert snerv["modelsize_byte_cap_preflight"]["observation_count"] == 0
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
+        "blockers"
+    ]
+    assert "snerv_mlx_native_full600_campaign_not_ready" in snerv["blockers"]
 
 
 def test_long_training_campaign_plan_refuses_snerv_byte_feedback_from_wrong_skip_mode(
@@ -4104,11 +4161,14 @@ def _write_snerv_binary_profile_receiver_feedback(
         / "snerv_mlx_native_archive_bound_package"
     )
     archive = package / "archive.zip"
+    packet = package.parent / "snerv_mlx_native_packet.snar"
     proof = package / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
     profile_dir = tmp_path / "binary_profile"
     startup = run_root / "compact_renderer_mlx_spine_runner_startup.json"
     archive.parent.mkdir(parents=True, exist_ok=True)
     archive.write_bytes(b"synthetic archive bytes")
+    packet.write_bytes(b"SNAR1 synthetic packet bytes")
+    actual_archive_sha = _sha256(archive)
     startup.write_text(
         json.dumps(
             {
@@ -4131,7 +4191,7 @@ def _write_snerv_binary_profile_receiver_feedback(
                 "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
                 "archive_bytes": int(archive_bytes),
                 "archive_path": archive.as_posix(),
-                "archive_sha256": archive_sha256,
+                "archive_sha256": actual_archive_sha,
                 "runtime_consumption_proof_ready": True,
                 "runtime_consumption_proof_passed": True,
                 "receiver_contract_satisfied": True,
@@ -4152,9 +4212,10 @@ def _write_snerv_binary_profile_receiver_feedback(
                 "charged_archive_bytes": int(archive_bytes),
                 "input_kind": "contest_archive_zip",
                 "input_path": archive.as_posix(),
-                "input_sha256": archive_sha256,
+                "input_sha256": actual_archive_sha,
                 "snar1_metadata": {"n_pairs": int(candidate["num_pairs"])},
-                "snar1_packet_bytes": 87_418,
+                "snar1_packet_bytes": packet.stat().st_size,
+                "snar1_packet_sha256": _sha256(packet),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,

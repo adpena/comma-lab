@@ -767,6 +767,11 @@ def _snerv_campaign_row(
     modelsize_byte_cap_blockers = list(
         modelsize_byte_cap_preflight.get("blockers") or []
     )
+    feedback = _snerv_feedback_with_modelsize_byte_cap_evidence(
+        feedback=feedback,
+        candidate=candidate,
+        modelsize_byte_cap_preflight=modelsize_byte_cap_preflight,
+    )
     prioritized_pair_indices = _feedback_prioritized_pair_indices(feedback)
     feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
     execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
@@ -2125,7 +2130,9 @@ def _modelsize_byte_cap_feedback_observations(
                     "archive_minus_nominal_bytes": int(measured) - int(nominal),
                     "archive_to_nominal_ratio": float(measured) / float(nominal),
                     "receiver_closed": True,
+                    "receiver_closed_status": receiver_closed.get("status"),
                     "receiver_proof_path": receiver_closed.get("proof_path"),
+                    "receiver_contract_satisfied": True,
                     "archive_path": archive_path.as_posix() if archive_path else None,
                     "archive_sha256": row.get("input_sha256")
                     or row.get("archive_sha256"),
@@ -3300,6 +3307,137 @@ def _candidate_feedback_for(
         row=fallback_rows[0],
         target_candidate=candidate,
     )
+
+
+def _snerv_feedback_with_modelsize_byte_cap_evidence(
+    *,
+    feedback: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    modelsize_byte_cap_preflight: Mapping[str, Any],
+) -> dict[str, Any]:
+    if _family_key(str(candidate.get("family") or "")) != "snerv":
+        return dict(feedback)
+    matching = [
+        row
+        for row in modelsize_byte_cap_preflight.get("matching_observations") or ()
+        if isinstance(row, Mapping)
+    ]
+    if not matching:
+        return dict(feedback)
+    observation = dict(matching[0])
+    candidate_id = str(candidate.get("candidate_id") or "").strip()
+    if not candidate_id:
+        return dict(feedback)
+    candidate_pairs = _first_present_int(candidate, ("num_pairs",)) or 0
+    measured_pairs = _first_present_int(observation, ("measured_num_pairs",)) or 0
+    scope_matches = bool(candidate_pairs > 0 and measured_pairs == candidate_pairs)
+    archive_bytes = _first_present_int(observation, ("measured_archive_bytes",))
+    packet_bytes = _first_present_int(observation, ("measured_payload_bytes",))
+    packet_path = _existing_path(observation.get("packet_path"))
+    archive_path = _existing_path(observation.get("archive_path"))
+    proof_path = _existing_path(observation.get("receiver_proof_path"))
+    report_path = _existing_path(observation.get("artifact_report_path"))
+    packet_sha = str(observation.get("packet_sha256") or "").strip()
+    archive_sha = str(observation.get("archive_sha256") or "").strip()
+    if packet_path is not None and not packet_sha:
+        packet_sha = _sha256_file(packet_path)
+    if archive_path is not None and not archive_sha:
+        archive_sha = _sha256_file(archive_path)
+    proof_sha = _sha256_file(proof_path) if proof_path is not None else None
+    receiver_closed = bool(
+        observation.get("receiver_closed") is True
+        and observation.get("receiver_contract_satisfied") is True
+        and str(observation.get("receiver_closed_status") or "")
+        in {"inline_receiver_closed", "associated_receiver_proof"}
+    )
+    file_backed = bool(
+        scope_matches
+        and receiver_closed
+        and packet_path is not None
+        and archive_path is not None
+        and proof_path is not None
+        and report_path is not None
+        and packet_bytes is not None
+        and archive_bytes is not None
+    )
+    bridged: dict[str, Any] = {
+        "schema": NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA,
+        "feedback_kind": "modelsize_byte_cap_receiver_proof",
+        "feedback_scope": (
+            "full600_native_file_backed_snar1_export"
+            if file_backed
+            else "modelsize_byte_cap_receiver_proof_bytes_only"
+        ),
+        "byte_feedback_source": "modelsize_byte_cap_receiver_proof",
+        "family": "snerv",
+        "candidate_id": candidate_id,
+        "candidate_num_pairs": int(candidate_pairs),
+        "measured_num_pairs": int(measured_pairs or candidate_pairs),
+        "scope_matches_candidate": scope_matches,
+        "feedback_ready": bool(scope_matches and archive_bytes is not None),
+        "measured_payload_bytes": packet_bytes,
+        "measured_archive_bytes": archive_bytes,
+        "receiver_proof_attached": proof_path is not None,
+        "receiver_proof_path": proof_path.as_posix() if proof_path else None,
+        "receiver_proof_sha256": proof_sha,
+        "native_mlx_receiver_proof_passed": receiver_closed,
+        "native_mlx_full600_campaign_ready": file_backed,
+        "snerv_mlx_native_export_executed": file_backed,
+        "snerv_mlx_native_export_artifact_report_path": (
+            report_path.as_posix() if report_path else None
+        ),
+        "snerv_mlx_native_export_packet_path": (
+            packet_path.as_posix() if packet_path else None
+        ),
+        "snerv_mlx_native_export_packet_sha256": packet_sha or None,
+        "snerv_mlx_native_export_archive_path": (
+            archive_path.as_posix() if archive_path else None
+        ),
+        "snerv_mlx_native_export_archive_sha256": archive_sha or None,
+        "snerv_mlx_native_export_receiver_proof_path": (
+            proof_path.as_posix() if proof_path else None
+        ),
+        "snerv_mlx_native_export_receiver_proof_sha256": proof_sha,
+        "snerv_mlx_native_export_receiver_proof_passed": receiver_closed,
+        "snerv_mlx_native_export_receiver_contract_satisfied": receiver_closed,
+        "snerv_mlx_native_file_backed_export_evidence": (
+            {
+                "schema": "snerv_mlx_native_train_export.v1",
+                "executed": True,
+                "num_pairs": int(measured_pairs or candidate_pairs),
+                "candidate_id": candidate_id,
+                "artifact_report_path": report_path.as_posix(),
+                "packet_path": packet_path.as_posix(),
+                "packet_sha256": packet_sha,
+                "archive_path": archive_path.as_posix(),
+                "archive_sha256": archive_sha,
+                "receiver_proof_path": proof_path.as_posix(),
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "file_backed_export_proof_passed": True,
+                "required_pair_file_backed_export_proof_passed": True,
+                "blockers": [],
+                **FALSE_AUTHORITY,
+            }
+            if file_backed
+            else None
+        ),
+        **FALSE_AUTHORITY,
+    }
+    out = dict(feedback)
+    for key, value in bridged.items():
+        if value is None:
+            continue
+        if key not in out or out.get(key) in (None, False, [], {}):
+            out[key] = value
+    return out
+
+
+def _existing_path(value: Any) -> Path | None:
+    if not value:
+        return None
+    path = Path(str(value)).expanduser().resolve(strict=False)
+    return path if path.is_file() else None
 
 
 def _family_level_candidate_feedback_rows(

@@ -208,6 +208,7 @@ def export_checkpoint_archive(
             receiver_proof=receiver_proof,
             receiver_proof_requested=bool(emit_receiver_proof),
             modelsize_integrity=modelsize_integrity,
+            decoder_codec_resolution=decoder_codec_resolution,
         ),
         **FALSE_AUTHORITY,
     }
@@ -351,6 +352,7 @@ def _blockers(
     receiver_proof: dict[str, Any],
     receiver_proof_requested: bool,
     modelsize_integrity: dict[str, Any],
+    decoder_codec_resolution: dict[str, Any],
 ) -> list[str]:
     blockers = [
         "macos_mlx_checkpoint_export_false_authority",
@@ -365,6 +367,7 @@ def _blockers(
     elif receiver_proof.get("runtime_consumption_proof_ready") is not True:
         blockers.append("receiver_proof_not_ready")
     blockers.extend(str(v) for v in modelsize_integrity.get("blockers") or [])
+    blockers.extend(str(v) for v in decoder_codec_resolution.get("blockers") or [])
     return blockers
 
 

@@ -145,11 +145,14 @@ def _write_snerv_binary_profile_receiver_feedback(
         / "snerv_mlx_native_archive_bound_package"
     )
     archive = package / "archive.zip"
+    packet = package.parent / "snerv_mlx_native_packet.snar"
     proof = package / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
     profile_dir = tmp_path / "binary_profile"
     startup = run_root / "compact_renderer_mlx_spine_runner_startup.json"
     archive.parent.mkdir(parents=True, exist_ok=True)
     archive.write_bytes(b"synthetic archive bytes")
+    packet.write_bytes(b"SNAR1 synthetic packet bytes")
+    actual_archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
     startup.write_text(
         json.dumps(
             {
@@ -172,7 +175,7 @@ def _write_snerv_binary_profile_receiver_feedback(
                 "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
                 "archive_bytes": int(archive_bytes),
                 "archive_path": archive.as_posix(),
-                "archive_sha256": archive_sha256,
+                "archive_sha256": actual_archive_sha,
                 "runtime_consumption_proof_ready": True,
                 "runtime_consumption_proof_passed": True,
                 "receiver_contract_satisfied": True,
@@ -193,9 +196,10 @@ def _write_snerv_binary_profile_receiver_feedback(
                 "charged_archive_bytes": int(archive_bytes),
                 "input_kind": "contest_archive_zip",
                 "input_path": archive.as_posix(),
-                "input_sha256": archive_sha256,
+                "input_sha256": actual_archive_sha,
                 "snar1_metadata": {"n_pairs": int(candidate["num_pairs"])},
-                "snar1_packet_bytes": 87_418,
+                "snar1_packet_bytes": packet.stat().st_size,
+                "snar1_packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
