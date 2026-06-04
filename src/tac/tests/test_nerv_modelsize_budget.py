@@ -18,8 +18,10 @@ from tac.analysis.nerv_modelsize_budget import (
     build_hinerv_config_from_size_knobs,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
+    enumerate_hinerv_modelsize_candidates,
     enumerate_snerv_modelsize_candidates,
     official_nerv_oss_flag_audit,
+    select_hinerv_modelsize_candidates,
     snerv_model_size_adapter_from_id_token,
     snerv_model_size_adapter_id_token,
     snerv_modelsize_control_profile,
@@ -338,6 +340,46 @@ def test_hinerv_target_modelsize_rows_are_false_authority_nearest_rows() -> None
     assert contract["mutates_receiver_visible_architecture"] is True
     assert contract["archive_bytes_authority_required"] is True
     assert all(contract[key] is True for key in MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS)
+
+
+def test_hinerv_target_modelsize_demotes_over_ceiling_closeness() -> None:
+    rows = enumerate_hinerv_modelsize_candidates(
+        hard_byte_ceilings=(50_000,),
+        num_pairs=17,
+        latent_dims=(12, 24),
+        embed_dims=(24, 32),
+        decoder_channels=(12,),
+        decoder_codecs=("int8_mixed",),
+        use_hierarchical_feature_grid_options=(False,),
+        use_convnext_blocks_options=(False,),
+        target_modelsize_mparams=(0.05,),
+    )
+    targeted = [
+        row for row in rows if row.capacity_source == "local_hinerv_target_modelsize"
+    ]
+    under = [row for row in targeted if row.nominal_under_ceiling]
+    over = [row for row in targeted if not row.nominal_under_ceiling]
+
+    assert under
+    assert over
+    best_under = min(
+        under,
+        key=lambda row: float(row.modelsize_error_mparams or 0.0),
+    )
+    best_over = min(
+        over,
+        key=lambda row: float(row.modelsize_error_mparams or 0.0),
+    )
+    assert best_over.modelsize_error_mparams < best_under.modelsize_error_mparams
+    assert best_over.byte_headroom < 0
+    assert best_under.byte_headroom >= 0
+
+    selected = select_hinerv_modelsize_candidates(rows, per_ceiling_limit=1)
+
+    assert selected[0].candidate_id == best_under.candidate_id
+    assert selected[0].nominal_under_ceiling is True
+    assert selected[0].score_claim is False
+    assert best_over.candidate_id not in {row.candidate_id for row in selected}
 
 
 def test_snerv_modelsize_budget_report_prices_receiver_grammar() -> None:

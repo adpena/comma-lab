@@ -1012,7 +1012,7 @@ def _select_hinerv_target_modelsize_rows(
     *,
     target_modelsize_mparams: tuple[float, ...],
 ) -> list[HinervModelSizeCandidate]:
-    """Pick nearest executable local HiNeRV rows for each target mparam budget."""
+    """Pick local HiNeRV target rows without letting over-cap closeness win."""
 
     tagged: list[HinervModelSizeCandidate] = []
     targets = tuple(float(value) for value in target_modelsize_mparams)
@@ -1035,22 +1035,42 @@ def _select_hinerv_target_modelsize_rows(
                 ]
                 if not rows:
                     continue
-                chosen = min(
-                    rows,
-                    key=lambda row: (
-                        abs(float(row.modelsize_mparams) - target),
-                        not bool(row.nominal_under_ceiling),
+                target_value = float(target)
+
+                def target_key(
+                    row: HinervModelSizeCandidate,
+                    target_value: float = target_value,
+                ) -> tuple[float, ...]:
+                    return (
+                        abs(float(row.modelsize_mparams) - target_value),
                         abs(int(row.byte_headroom)),
                         -int(row.nominal_total_payload_bytes),
                         -int(row.total_trainable_params),
-                    ),
-                )
-                tagged.append(
-                    tag_hinerv_target_modelsize_candidate(
-                        chosen,
-                        target_modelsize_mparams=target,
                     )
-                )
+
+                under_rows = [row for row in rows if row.nominal_under_ceiling]
+                ranked = sorted(rows, key=target_key)
+                chosen_rows: list[HinervModelSizeCandidate] = []
+                if under_rows:
+                    best_under = min(under_rows, key=target_key)
+                    chosen_rows.append(best_under)
+                    best_over = next(
+                        (row for row in ranked if not row.nominal_under_ceiling),
+                        None,
+                    )
+                    if best_over is not None and target_key(best_over) < target_key(
+                        best_under
+                    ):
+                        chosen_rows.append(best_over)
+                else:
+                    chosen_rows.append(ranked[0])
+                for chosen in chosen_rows:
+                    tagged.append(
+                        tag_hinerv_target_modelsize_candidate(
+                            chosen,
+                            target_modelsize_mparams=target,
+                        )
+                    )
     return tagged
 
 
@@ -1129,14 +1149,16 @@ def select_hinerv_modelsize_candidates(
         ]
         target_rows.sort(
             key=lambda row: (
+                not bool(row.nominal_under_ceiling),
                 float(row.target_modelsize_mparams or 0.0),
                 float(row.modelsize_error_mparams or 0.0),
-                not bool(row.nominal_under_ceiling),
                 abs(int(row.byte_headroom)),
                 -int(row.nominal_total_payload_bytes),
             )
         )
-        for row in target_rows:
+        target_under = [row for row in target_rows if row.nominal_under_ceiling]
+        target_over = [row for row in target_rows if not row.nominal_under_ceiling]
+        for row in target_under:
             if len(chosen) >= per_ceiling_limit:
                 break
             chosen[row.candidate_id] = row
@@ -1168,10 +1190,22 @@ def select_hinerv_modelsize_candidates(
             if len(chosen) >= per_ceiling_limit:
                 break
             chosen.setdefault(row.candidate_id, row)
-        selected.extend(list(chosen.values())[:per_ceiling_limit])
-        if not under:
+        if under:
+            for row in target_over:
+                if len(chosen) >= per_ceiling_limit:
+                    break
+                chosen.setdefault(row.candidate_id, row)
+        else:
+            for row in target_over:
+                if len(chosen) >= per_ceiling_limit:
+                    break
+                chosen.setdefault(row.candidate_id, row)
             group.sort(key=lambda row: abs(row.byte_headroom))
-            selected.extend(group[: min(2, per_ceiling_limit)])
+            for row in group:
+                if len(chosen) >= min(2, per_ceiling_limit):
+                    break
+                chosen.setdefault(row.candidate_id, row)
+        selected.extend(list(chosen.values())[:per_ceiling_limit])
     return selected
 
 
@@ -1249,9 +1283,10 @@ def build_hinerv_modelsize_budget_report(
                 "for each byte ceiling, retain the best byte-plausible point "
                 "from every available decoder codec family before filling with "
                 "highest-capacity candidates; when target_modelsize_mparams is "
-                "provided, first retain the nearest executable local HiNeRV knob "
-                "row per codec; exact archive bytes and scorer replay arbitrate "
-                "the quantization ladder"
+                "provided, hard-byte-ceiling-satisfied target rows outrank "
+                "over-ceiling target closeness; over-ceiling target matches remain "
+                "demote-only evidence until exact archive bytes and scorer replay "
+                "arbitrate the quantization ladder"
             ),
             "official_controls_only": bool(official_controls_only),
             "real_authority": (
