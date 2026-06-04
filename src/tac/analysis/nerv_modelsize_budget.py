@@ -1349,10 +1349,15 @@ def analyze_snerv_modelsize_candidate(
         adapter=str(snerv_model_size_adapter),
     )
     snerv_model_size_adapter = str(model_size.adapter)
+    effective_bits_per_coeff = float(bits_per_coeff)
+    effective_step_map_bits_per_coeff = float(step_map_bits_per_coeff)
+    if snerv_model_size_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER:
+        effective_bits_per_coeff = 1.0
+        effective_step_map_bits_per_coeff = 1.0
     decoder_weight_count = int(levels) * 3 * int(model_size.feature_count)
     decoder_bits = snerv_decoder_codec_nominal_bits(decoder_payload_codec)
-    lf_payload = ceil(lf_total * float(bits_per_coeff) / 8.0)
-    step_payload = ceil(lf_total * float(step_map_bits_per_coeff) / 8.0)
+    lf_payload = ceil(lf_total * effective_bits_per_coeff / 8.0)
+    step_payload = ceil(lf_total * effective_step_map_bits_per_coeff / 8.0)
     skip_high_payload = 0
     decoder_payload = ceil(decoder_weight_count * decoder_bits / 8.0) + int(levels) * 12
     metadata_payload = int(plane_count * 4)
@@ -1381,8 +1386,8 @@ def analyze_snerv_modelsize_candidate(
         num_pairs=int(num_pairs),
         wavelet=str(wavelet),
         levels=int(levels),
-        bits_per_coeff=float(bits_per_coeff),
-        step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+        bits_per_coeff=effective_bits_per_coeff,
+        step_map_bits_per_coeff=effective_step_map_bits_per_coeff,
         fc_dim=int(model_size.fc_dim),
         emb_size=int(model_size.emb_size),
         patch_radius=int(model_size.patch_radius),
@@ -1405,8 +1410,8 @@ def analyze_snerv_modelsize_candidate(
         carrier_hw=(int(carrier_hw[0]), int(carrier_hw[1])),
         wavelet=str(wavelet),
         levels=int(levels),
-        bits_per_coeff=float(bits_per_coeff),
-        step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+        bits_per_coeff=effective_bits_per_coeff,
+        step_map_bits_per_coeff=effective_step_map_bits_per_coeff,
         decoder_payload_codec=str(decoder_payload_codec),
         snerv_model_size_adapter=str(model_size.adapter),
         capacity_source=(
@@ -1488,12 +1493,18 @@ def enumerate_snerv_modelsize_candidates(
     rows: list[SnervModelSizeCandidate] = []
     canonical_adapter = normalize_snerv_model_size_adapter(snerv_model_size_adapter)
     effective_levels = tuple(int(v) for v in levels)
+    effective_bits_per_coeffs = tuple(float(v) for v in bits_per_coeffs)
+    effective_step_map_bits_per_coeffs = tuple(
+        float(v) for v in step_map_bits_per_coeffs
+    )
     if canonical_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER:
         effective_levels = SNERV_OFFICIAL_MFU_HFR_TUB_LEVELS
+        effective_bits_per_coeffs = (1.0,)
+        effective_step_map_bits_per_coeffs = (1.0,)
     for ceiling in sorted({int(v) for v in hard_byte_ceilings if int(v) > 0}):
         for lvl in effective_levels:
-            for bits in bits_per_coeffs:
-                for step_bits in step_map_bits_per_coeffs:
+            for bits in effective_bits_per_coeffs:
+                for step_bits in effective_step_map_bits_per_coeffs:
                     for decoder_codec in decoder_codecs:
                         for official_skip_high_mode in official_skip_high_modes:
                             for temporal_mode in temporal_modes:
@@ -1787,6 +1798,25 @@ def select_snerv_modelsize_candidates(
                     key=lambda row: abs(row.byte_headroom),
                 )
             choose(chosen, best_for_mode)
+        for skip_high_mode in sorted({row.official_skip_high_mode for row in group}):
+            skip_rows = [
+                row for row in under if row.official_skip_high_mode == skip_high_mode
+            ]
+            if skip_rows:
+                best_for_skip = max(skip_rows, key=_selection_key)
+            else:
+                skip_blockers = [
+                    row
+                    for row in group
+                    if row.official_skip_high_mode == skip_high_mode
+                ]
+                if not skip_blockers:
+                    continue
+                best_for_skip = min(
+                    skip_blockers,
+                    key=lambda row: abs(row.byte_headroom),
+                )
+            choose(chosen, best_for_skip)
         for bits in DEFAULT_SNERV_BITS_PER_COEFF:
             bit_rows = [row for row in under if row.bits_per_coeff == bits]
             if bit_rows:

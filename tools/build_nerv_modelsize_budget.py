@@ -27,7 +27,9 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
 )
 from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_OFFICIAL_SKIP_HIGH_MODES,
+    normalize_snerv_model_size_adapter,
 )
 
 
@@ -215,8 +217,16 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     snerv_temporal_modes = tuple(args.snerv_temporal_mode or ("delta",))
+    snerv_model_size_adapter = normalize_snerv_model_size_adapter(
+        str(args.snerv_model_size_adapter)
+    )
     snerv_official_skip_high_modes = tuple(
-        args.snerv_official_skip_high_mode or ("full",)
+        args.snerv_official_skip_high_mode
+        or (
+            tuple(SNERV_OFFICIAL_SKIP_HIGH_MODES)
+            if snerv_model_size_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+            else ("full",)
+        )
     )
     snerv_profile = snerv_modelsize_control_profile(
         str(args.snerv_modelsize_control_profile)
@@ -245,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
         fc_dims=snerv_fc_dims,
         emb_sizes=snerv_emb_sizes,
         official_modelsize_mparams=snerv_official_modelsize_mparams,
-        snerv_model_size_adapter=str(args.snerv_model_size_adapter),
+        snerv_model_size_adapter=snerv_model_size_adapter,
         official_enc_strds=snerv_official_enc_strds,
         official_dec_strds=snerv_official_dec_strds,
         modelsize_control_profile_id=str(args.snerv_modelsize_control_profile),
@@ -290,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
             "snerv_official_modelsize_mparams": list(
                 snerv_official_modelsize_mparams
             ),
-            "snerv_model_size_adapter": str(args.snerv_model_size_adapter),
+            "snerv_model_size_adapter": snerv_model_size_adapter,
             "snerv_modelsize_control_profile_id": str(
                 args.snerv_modelsize_control_profile
             ),

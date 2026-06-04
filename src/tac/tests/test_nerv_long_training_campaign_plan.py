@@ -506,11 +506,13 @@ def test_long_training_campaign_plan_executes_snerv_official_mfu_hfr_tub_adapter
     candidate.update(
         {
             "candidate_id": (
-                "snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_"
+                "snerv_np600_haar_lv1_lfb1_stepb1_fc11e0_"
                 "p1_mfu1-2-4_hfr0_t0_adofficial_oms0p05_"
                 "int2_symmetric_ceil178000"
             ),
             "levels": 1,
+            "bits_per_coeff": 1.0,
+            "step_map_bits_per_coeff": 1.0,
             "decoder_payload_codec": "int2_symmetric",
             "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
             "emb_size": 0,
@@ -1647,6 +1649,95 @@ def test_long_training_campaign_plan_byte_cap_preflight_reads_startup_candidate_
     preflight = hi["modelsize_byte_cap_preflight"]
     assert preflight["matching_observation_count"] == 1
     assert preflight["predicted_under_hard_byte_ceiling"] is True
+
+
+def test_long_training_campaign_plan_consumes_snerv_binary_profile_receiver_proof_feedback(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="a" * 64,
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(scalar),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(profile.as_posix(),),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in snerv[
+        "blockers"
+    ]
+    preflight = snerv["modelsize_byte_cap_preflight"]
+    assert preflight["observation_count"] == 1
+    assert preflight["matching_observation_count"] == 1
+    assert preflight["predicted_archive_bytes"] == 91_445
+    assert preflight["predicted_under_hard_byte_ceiling"] is True
+    assert preflight["matching_observations"][0]["candidate_id"] == scalar[
+        "candidate_id"
+    ]
+    assert preflight["matching_observations"][0]["receiver_closed"] is True
+    assert preflight["score_claim"] is False
+
+
+def test_long_training_campaign_plan_refuses_snerv_byte_feedback_from_wrong_skip_mode(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    full = _snerv_official_skip_candidate("full")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="b" * 64,
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(full),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(profile.as_posix(),),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
+        "blockers"
+    ]
+    preflight = snerv["modelsize_byte_cap_preflight"]
+    assert preflight["observation_count"] == 1
+    assert preflight["matching_observation_count"] == 0
+
+
+def test_long_training_campaign_cli_discovers_snerv_binary_profile_receiver_feedback(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="e" * 64,
+    )
+
+    discovered = cli._discover_modelsize_byte_cap_feedback_paths(
+        [tmp_path],
+        limit=8,
+    )
+
+    assert profile.resolve(strict=False) in discovered
 
 
 def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> None:
@@ -3830,6 +3921,113 @@ def _snerv_budget() -> dict:
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _snerv_budget_with_candidate(candidate: dict) -> dict:
+    return {
+        "schema": "snerv_modelsize_budget.v1",
+        "selected_candidates": [candidate],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_official_skip_candidate(mode: str) -> dict:
+    return analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        wavelet="haar",
+        levels=1,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        official_modelsize_mparams=0.05,
+        emb_size=0,
+        patch_radius=1,
+        mfu_scales=(1, 2, 4),
+        hfr_gain=0.0,
+        temporal_context=0,
+        temporal_mode="official_haar_dwt1d_lowpass",
+        official_skip_high_mode=mode,
+    ).as_dict()
+
+
+def _write_snerv_binary_profile_receiver_feedback(
+    tmp_path: Path,
+    *,
+    candidate: dict,
+    archive_bytes: int,
+    archive_sha256: str,
+) -> Path:
+    run_root = tmp_path / "snerv_run"
+    package = (
+        run_root
+        / "snerv_mlx_native_export"
+        / "native_train_export"
+        / "snerv_mlx_native_archive_bound_package"
+    )
+    archive = package / "archive.zip"
+    proof = package / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+    profile_dir = tmp_path / "binary_profile"
+    startup = run_root / "compact_renderer_mlx_spine_runner_startup.json"
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    archive.write_bytes(b"synthetic archive bytes")
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "execute_family": "snerv",
+                "modelsize_candidate": candidate,
+                "modelsize_candidate_id": "auto",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    proof.parent.mkdir(parents=True, exist_ok=True)
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                "archive_bytes": int(archive_bytes),
+                "archive_path": archive.as_posix(),
+                "archive_sha256": archive_sha256,
+                "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile = profile_dir / "snerv_binary_profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_binary_profile.v1",
+                "charged_archive_bytes": int(archive_bytes),
+                "input_kind": "contest_archive_zip",
+                "input_path": archive.as_posix(),
+                "input_sha256": archive_sha256,
+                "snar1_packet_bytes": 87_418,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return profile
 
 
 def _snerv_candidate_id() -> str:

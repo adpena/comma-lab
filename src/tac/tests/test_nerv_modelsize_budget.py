@@ -622,6 +622,9 @@ def test_snerv_official_primitives_modelsize_enumeration_uses_source_haar_j1() -
     assert all("_haar_lv1_" in row.candidate_id for row in rows)
     assert all(row.lf_plane_count == 1 for row in rows)
     assert all(row.lf_coeff_count_total == 1 for row in rows)
+    assert all(row.bits_per_coeff == 1.0 for row in rows)
+    assert all(row.step_map_bits_per_coeff == 1.0 for row in rows)
+    assert all("_lfb1_stepb1_" in row.candidate_id for row in rows)
     assert all(row.nominal_lf_payload_bytes < 1_000 for row in rows)
     assert all(row.nominal_step_map_payload_bytes < 1_000 for row in rows)
 
@@ -648,6 +651,8 @@ def test_snerv_official_skip_high_modes_are_charged_by_storage_shape() -> None:
     assert rows["shared_mean"].nominal_skip_high_payload_bytes == 1_179_648
     assert rows["channel_mean"].nominal_skip_high_payload_bytes == 24
     assert rows["scalar_mean"].nominal_skip_high_payload_bytes == 8
+    assert {row.bits_per_coeff for row in rows.values()} == {1.0}
+    assert {row.step_map_bits_per_coeff for row in rows.values()} == {1.0}
     assert rows["shared_mean"].nominal_under_ceiling is False
     assert rows["channel_mean"].nominal_under_ceiling is True
     assert rows["scalar_mean"].nominal_under_ceiling is True

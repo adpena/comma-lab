@@ -257,7 +257,11 @@ def _discover_modelsize_byte_cap_feedback_paths(
         root = Path(raw_root).expanduser().resolve(strict=False)
         if not root.is_dir():
             continue
-        for name in ("export_report.json", "hinerv_checkpoint_archive_export.json"):
+        for name in (
+            "export_report.json",
+            "hinerv_checkpoint_archive_export.json",
+            "snerv_binary_profile.json",
+        ):
             for path in root.rglob(name):
                 if _is_receiver_proof_modelsize_byte_cap_export(path):
                     candidates.append((path.stat().st_mtime, path))
@@ -270,6 +274,8 @@ def _is_receiver_proof_modelsize_byte_cap_export(path: Path) -> bool:
         payload = _load(path)
     except (OSError, TypeError, json.JSONDecodeError):
         return False
+    if payload.get("schema") == "snerv_binary_profile.v1":
+        return _is_receiver_proof_snerv_binary_profile(path, payload)
     if payload.get("schema") not in {
         "hinerv_checkpoint_archive_export.v1",
         "snerv_checkpoint_archive_export.v1",
@@ -294,6 +300,106 @@ def _is_receiver_proof_modelsize_byte_cap_export(path: Path) -> bool:
         return int(payload.get("archive_bytes") or 0) > 0
     except (TypeError, ValueError):
         return False
+
+
+def _is_receiver_proof_snerv_binary_profile(
+    path: Path,
+    payload: dict,
+) -> bool:
+    if _positive_int(payload.get("charged_archive_bytes")) is None:
+        return False
+    startup = _startup_payload_for_artifact(path, payload)
+    if not isinstance(startup.get("modelsize_candidate"), dict):
+        return False
+    proof = _receiver_proof_payload_for_artifact(path, payload)
+    if not proof:
+        return False
+    runtime_ready = bool(
+        proof.get("runtime_consumption_proof_ready")
+        or proof.get("runtime_consumption_proof_passed")
+        or proof.get("receiver_proof_ready")
+        or proof.get("receiver_proof_passed")
+    )
+    if not (runtime_ready and proof.get("receiver_contract_satisfied") is True):
+        return False
+    proof_archive_sha = str(proof.get("archive_sha256") or "").strip().lower()
+    profile_archive_sha = str(payload.get("input_sha256") or "").strip().lower()
+    if proof_archive_sha and profile_archive_sha and proof_archive_sha != profile_archive_sha:
+        return False
+    proof_archive_bytes = _positive_int(proof.get("archive_bytes"))
+    profile_archive_bytes = _positive_int(payload.get("charged_archive_bytes"))
+    if (
+        proof_archive_bytes is not None
+        and profile_archive_bytes is not None
+        and int(proof_archive_bytes) != int(profile_archive_bytes)
+    ):
+        return False
+    return True
+
+
+def _startup_payload_for_artifact(path: Path, payload: dict) -> dict:
+    for artifact_path in _artifact_reference_paths(path, payload):
+        for parent in _self_and_parents(artifact_path):
+            startup = parent / "compact_renderer_mlx_spine_runner_startup.json"
+            if not startup.is_file():
+                continue
+            try:
+                loaded = _load(startup)
+            except (OSError, TypeError, json.JSONDecodeError):
+                continue
+            return loaded
+    return {}
+
+
+def _receiver_proof_payload_for_artifact(path: Path, payload: dict) -> dict:
+    for artifact_path in _artifact_reference_paths(path, payload):
+        for parent in _self_and_parents(artifact_path):
+            for name in (
+                "snerv_inverse_steg_receiver_proof.json",
+                "hi_nerv_mlx_receiver_proof.json",
+            ):
+                for proof in (parent / name, parent / "receiver_proof" / name):
+                    if not proof.is_file():
+                        continue
+                    try:
+                        loaded = _load(proof)
+                    except (OSError, TypeError, json.JSONDecodeError):
+                        continue
+                    return loaded
+    return {}
+
+
+def _artifact_reference_paths(path: Path, payload: dict) -> list[Path]:
+    out = [Path(path).expanduser().resolve(strict=False)]
+    for key in (
+        "input_path",
+        "archive_path",
+        "source_archive_path",
+        "candidate_archive_path",
+        "proof_path",
+        "receiver_proof_path",
+        "report_path",
+    ):
+        value = payload.get(key)
+        if not value:
+            continue
+        candidate = Path(str(value)).expanduser().resolve(strict=False)
+        if candidate not in out:
+            out.append(candidate)
+    return out
+
+
+def _self_and_parents(path: Path) -> list[Path]:
+    base = path if path.is_dir() else path.parent
+    return [base, *list(base.parents)]
+
+
+def _positive_int(value: object) -> int | None:
+    try:
+        parsed = int(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _load_feedback_sources(paths: list[Path]) -> list[dict]:

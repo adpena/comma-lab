@@ -238,6 +238,61 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_snerv_modelsize(
     )
 
 
+def test_build_nerv_modelsize_budget_tool_enumerates_official_skip_ladder_by_default(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    hinerv = tmp_path / "hinerv.json"
+    snerv = tmp_path / "snerv.json"
+
+    rc = tool.main(
+        [
+            "--output-hinerv-json",
+            str(hinerv),
+            "--output-snerv-json",
+            str(snerv),
+            "--hard-byte-ceiling",
+            "178000",
+            "--num-pairs",
+            "600",
+            "--per-ceiling-limit",
+            "8",
+            "--snerv-model-size-adapter",
+            "snerv_official_mfu_hfr_tub_primitives_adapter",
+            "--snerv-official-modelsize-mparams",
+            "0.05",
+            "--snerv-temporal-mode",
+            "official_haar_dwt1d_lowpass",
+        ]
+    )
+
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert set(summary["inputs"]["snerv_official_skip_high_modes"]) == {
+        "full",
+        "shared_mean",
+        "channel_mean",
+        "scalar_mean",
+    }
+    payload = json.loads(snerv.read_text(encoding="utf-8"))
+    selected_modes = {
+        row["official_skip_high_mode"] for row in payload["selected_candidates"]
+    }
+    assert {"channel_mean", "scalar_mean"} <= selected_modes
+    full_rows = [
+        row
+        for row in payload["selected_candidates"]
+        if row["official_skip_high_mode"] == "full"
+    ]
+    assert full_rows
+    assert all(row["nominal_under_ceiling"] is False for row in full_rows)
+    assert all(
+        row["nominal_under_ceiling"] is True
+        for row in payload["selected_candidates"]
+        if row["official_skip_high_mode"] in {"channel_mean", "scalar_mean"}
+    )
+
+
 def test_build_nerv_modelsize_budget_tool_exposes_snerv_temporal_modes(
     tmp_path: Path,
     capsys,
@@ -322,7 +377,7 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_adapter_skip_high_mod
     assert rc == 0
     summary = json.loads(capsys.readouterr().out)
     assert summary["inputs"]["snerv_model_size_adapter"] == (
-        "snerv_official_mfu_hfr_tub_primitives_adapter"
+        "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
     )
     assert summary["inputs"]["snerv_official_skip_high_modes"] == [
         "full",

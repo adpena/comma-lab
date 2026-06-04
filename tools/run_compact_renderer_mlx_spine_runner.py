@@ -135,6 +135,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
     SnervArchiveError,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_OFFICIAL_SKIP_HIGH_MODES,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     normalize_snerv_model_size_adapter,
@@ -2205,6 +2206,28 @@ def _effective_snerv_modelsize_adapter_for_resolution(args: argparse.Namespace) 
     return explicit_adapter or DEFAULT_SNERV_MODEL_SIZE_ADAPTER
 
 
+def _snerv_auto_skip_high_modes_for_resolution(
+    *,
+    explicit_mode: str | None,
+    model_size_adapter: str,
+) -> tuple[str, ...]:
+    """Enumerate compact official SNeRV skip modes unless the user pinned one.
+
+    The executor still consumes exactly one resolved candidate.  This helper
+    only broadens ``auto`` candidate discovery so the rate-plausible compact
+    modes compete against the historically huge ``full`` mode by default.
+    """
+
+    if explicit_mode is not None:
+        return (str(explicit_mode),)
+    if (
+        normalize_snerv_model_size_adapter(str(model_size_adapter))
+        == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    ):
+        return tuple(str(value) for value in SNERV_OFFICIAL_SKIP_HIGH_MODES)
+    return ("full",)
+
+
 def _modelsize_candidate_resolution_disabled(candidate_id: Any) -> bool:
     """Return whether the launch requested manual modelsize knobs only."""
 
@@ -2308,7 +2331,11 @@ def _byte_cap_controller_prediction(
     )
     ceiling = _compact_first_present_int(candidate, ("hard_byte_ceiling",))
     codec = _candidate_byte_cap_codec(candidate)
-    observations = _byte_cap_matching_observations(calibration, codec=codec)
+    observations = _byte_cap_matching_observations(
+        calibration,
+        candidate=candidate,
+        codec=codec,
+    )
     blockers: list[str] = []
     if nominal is None:
         blockers.append("byte_cap_controller_candidate_nominal_payload_missing")
@@ -2395,6 +2422,7 @@ def _byte_cap_calibration(
         measured = _compact_first_present_int(
             row,
             (
+                "charged_archive_bytes",
                 "measured_archive_bytes",
                 "archive_bytes",
                 "archive_zip_bytes",
@@ -2424,12 +2452,14 @@ def _byte_cap_calibration(
                 "source_index": index,
                 "source_path": row.get("source_path") or row.get("report_path"),
                 "row_id": row.get("row_id") or row.get("candidate_id"),
+                "candidate_id": row.get("candidate_id"),
                 "family": row_family,
                 "codec": _candidate_byte_cap_codec(row),
                 "measured_archive_bytes": int(measured),
                 "nominal_payload_bytes": int(nominal),
                 "archive_minus_nominal_bytes": int(measured) - int(nominal),
                 "archive_to_nominal_ratio": float(measured) / float(nominal),
+                "source_bound_controls": _byte_cap_candidate_match_controls(row),
                 "receiver_closed": True,
             }
         )
@@ -2452,6 +2482,7 @@ def _byte_cap_calibration(
 def _byte_cap_matching_observations(
     calibration: Mapping[str, Any],
     *,
+    candidate: Mapping[str, Any],
     codec: str | None,
 ) -> list[dict[str, Any]]:
     observations = [
@@ -2459,6 +2490,31 @@ def _byte_cap_matching_observations(
         for row in calibration.get("observations", ())
         if isinstance(row, Mapping)
     ]
+    candidate_id = str(candidate.get("candidate_id") or "")
+    if candidate_id:
+        exact_id = [
+            row
+            for row in observations
+            if str(row.get("candidate_id") or "") == candidate_id
+        ]
+        if exact_id:
+            return exact_id
+    target_controls = _byte_cap_candidate_match_controls(candidate)
+    exact_controls = [
+        row
+        for row in observations
+        if _byte_cap_controls_match(row.get("source_bound_controls"), target_controls)
+    ]
+    if exact_controls:
+        return exact_controls
+    scoped_rows = [
+        row
+        for row in observations
+        if row.get("candidate_id")
+        or _byte_cap_controls_are_candidate_scoped(row.get("source_bound_controls"))
+    ]
+    if scoped_rows:
+        return []
     if codec:
         exact = [row for row in observations if row.get("codec") == codec]
         if exact:
@@ -2480,6 +2536,77 @@ def _candidate_byte_cap_codec(row: Mapping[str, Any]) -> str | None:
     if isinstance(candidate, Mapping):
         return _candidate_byte_cap_codec(candidate)
     return None
+
+
+def _byte_cap_candidate_match_controls(candidate: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "family",
+        "num_pairs",
+        "hard_byte_ceiling",
+        "decoder_codec",
+        "decoder_payload_codec",
+        "wavelet",
+        "levels",
+        "bits_per_coeff",
+        "step_map_bits_per_coeff",
+        "snerv_model_size_adapter",
+        "fc_dim",
+        "emb_size",
+        "patch_radius",
+        "mfu_scales",
+        "hfr_gain",
+        "temporal_context",
+        "temporal_mode",
+        "official_skip_high_mode",
+        "use_hierarchical_feature_grid",
+        "use_convnext_blocks",
+        "local_grid_levels",
+        "local_grid_channels",
+        "convnext_mlp_ratio",
+        "convnext_kernel_size",
+    )
+    out: dict[str, Any] = {}
+    for key in keys:
+        if key not in candidate:
+            continue
+        value = candidate[key]
+        if isinstance(value, tuple):
+            value = list(value)
+        out[key] = value
+    return out
+
+
+def _byte_cap_controls_match(
+    source_controls: Any,
+    target_controls: Mapping[str, Any],
+) -> bool:
+    if not isinstance(source_controls, Mapping) or not source_controls:
+        return False
+    if not target_controls:
+        return False
+    for key, source_value in source_controls.items():
+        if key not in target_controls:
+            return False
+        target_value = target_controls[key]
+        if isinstance(source_value, tuple):
+            source_value = list(source_value)
+        if isinstance(target_value, tuple):
+            target_value = list(target_value)
+        if source_value != target_value:
+            return False
+    return True
+
+
+def _byte_cap_controls_are_candidate_scoped(source_controls: Any) -> bool:
+    if not isinstance(source_controls, Mapping) or not source_controls:
+        return False
+    generic_keys = {
+        "family",
+        "decoder_codec",
+        "decoder_payload_codec",
+        "hard_byte_ceiling",
+    }
+    return any(str(key) not in generic_keys for key in source_controls)
 
 
 def _byte_cap_controller_predicts_under_ceiling(row: Mapping[str, Any]) -> bool:
@@ -14969,9 +15096,10 @@ def main(argv: list[str] | None = None) -> int:
                 else (str(args.snerv_temporal_mode),)
             ),
             snerv_official_skip_high_modes=(
-                (str(args.snerv_official_skip_high_mode),)
-                if args.snerv_official_skip_high_mode is not None
-                else ("full",)
+                _snerv_auto_skip_high_modes_for_resolution(
+                    explicit_mode=args.snerv_official_skip_high_mode,
+                    model_size_adapter=snerv_modelsize_adapter_for_resolution,
+                )
             ),
             byte_cap_feedback_rows=byte_cap_feedback_rows,
         )
@@ -15654,7 +15782,10 @@ def _load_modelsize_byte_cap_feedback_rows(paths: Sequence[Path]) -> list[dict[s
     for raw_path in paths:
         path = Path(raw_path).expanduser().resolve(strict=False)
         payload = _load_json(path)
-        for row in _extract_modelsize_byte_cap_feedback_rows(payload):
+        for row in _extract_modelsize_byte_cap_feedback_rows(
+            payload,
+            source_path=path,
+        ):
             row.setdefault("source_path", path.as_posix())
             rows.append(row)
     return rows
@@ -15662,12 +15793,14 @@ def _load_modelsize_byte_cap_feedback_rows(paths: Sequence[Path]) -> list[dict[s
 
 def _extract_modelsize_byte_cap_feedback_rows(
     payload: Mapping[str, Any],
+    *,
+    source_path: Path | None = None,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
 
     def visit(node: Any) -> None:
         if isinstance(node, Mapping):
-            row = _modelsize_byte_cap_feedback_row(node)
+            row = _modelsize_byte_cap_feedback_row(node, source_path=source_path)
             if row is not None:
                 rows.append(row)
             for key in (
@@ -15708,10 +15841,15 @@ def _extract_modelsize_byte_cap_feedback_rows(
     return deduped
 
 
-def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] | None:
+def _modelsize_byte_cap_feedback_row(
+    node: Mapping[str, Any],
+    *,
+    source_path: Path | None = None,
+) -> dict[str, Any] | None:
     measured = _compact_first_present_int(
         node,
         (
+            "charged_archive_bytes",
             "measured_archive_bytes",
             "archive_bytes",
             "archive_zip_bytes",
@@ -15723,7 +15861,10 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
     candidate = node.get("modelsize_candidate")
     candidate_mapping = candidate if isinstance(candidate, Mapping) else {}
     if not candidate_mapping:
-        candidate_mapping = _startup_modelsize_candidate_from_node(node)
+        candidate_mapping = _startup_modelsize_candidate_from_node(
+            node,
+            source_path=source_path,
+        )
     # Checkpoint exports also carry top-level ``packet_bytes``. That is the
     # realized receiver packet size, not the modelsize ladder's nominal payload
     # estimate, so nested candidate metadata must win when present.
@@ -15749,7 +15890,11 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
     if nominal is None or nominal <= 0:
         return None
     row = {
-        "family": node.get("family") or candidate_mapping.get("family"),
+        "family": (
+            node.get("family")
+            or candidate_mapping.get("family")
+            or ("snerv" if node.get("schema") == "snerv_binary_profile.v1" else None)
+        ),
         "row_id": node.get("row_id") or node.get("candidate_id"),
         "candidate_id": node.get("candidate_id") or candidate_mapping.get("candidate_id"),
         "measured_archive_bytes": int(measured),
@@ -15764,36 +15909,179 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
             or candidate_mapping.get("decoder_codec")
             or candidate_mapping.get("decoder_payload_codec")
         ),
-        "receiver_closed": _truthy_any(
-            node,
-            (
-                "receiver_closed",
-                "receiver_proof_ready",
-                "receiver_proof_passed",
-                "runtime_consumption_proof_ready",
-                "receiver_archive_replay_verified",
-                "receiver_contract_satisfied",
-                "byte_closed_receiver_proof",
-            ),
+        "source_bound_controls": (
+            _byte_cap_candidate_match_controls(candidate_mapping)
+            if candidate_mapping
+            else {}
+        ),
+        "receiver_closed": bool(
+            _modelsize_byte_cap_row_receiver_closed(
+                node,
+                source_path=source_path,
+            )
         ),
         "report_path": node.get("report_path"),
     }
     return {key: value for key, value in row.items() if value is not None}
 
 
-def _startup_modelsize_candidate_from_node(node: Mapping[str, Any]) -> dict[str, Any]:
+def _startup_modelsize_candidate_from_node(
+    node: Mapping[str, Any],
+    *,
+    source_path: Path | None = None,
+) -> dict[str, Any]:
     path_value = node.get("startup_json_path")
-    if not path_value:
-        return {}
-    try:
-        path = Path(str(path_value)).expanduser().resolve(strict=False)
-        if not path.is_file():
-            return {}
-        startup = _load_json(path)
-    except (OSError, ValueError, json.JSONDecodeError, CompactRendererMlxSpineRunnerError):
-        return {}
-    candidate = startup.get("modelsize_candidate")
-    return dict(candidate) if isinstance(candidate, Mapping) else {}
+    startup_paths: list[Path] = []
+    if path_value:
+        startup_paths.append(Path(str(path_value)).expanduser().resolve(strict=False))
+    for artifact_path in _modelsize_byte_cap_row_artifact_paths(
+        node,
+        source_path=source_path,
+    ):
+        startup_paths.extend(
+            candidate
+            for candidate in _startup_paths_from_artifact(artifact_path)
+            if candidate not in startup_paths
+        )
+    for path in startup_paths:
+        try:
+            if not path.is_file():
+                continue
+            startup = _load_json(path)
+        except (OSError, ValueError, json.JSONDecodeError, CompactRendererMlxSpineRunnerError):
+            continue
+        candidate = startup.get("modelsize_candidate")
+        if isinstance(candidate, Mapping):
+            return dict(candidate)
+    return {}
+
+
+def _modelsize_byte_cap_row_receiver_closed(
+    node: Mapping[str, Any],
+    *,
+    source_path: Path | None = None,
+) -> dict[str, Any]:
+    if _truthy_any(
+        node,
+        (
+            "receiver_closed",
+            "receiver_proof_ready",
+            "receiver_proof_passed",
+            "runtime_consumption_proof_ready",
+            "receiver_archive_replay_verified",
+            "receiver_contract_satisfied",
+            "byte_closed_receiver_proof",
+        ),
+    ):
+        return {"status": "inline_receiver_closed"}
+    for proof_path in _modelsize_byte_cap_receiver_proof_paths(
+        node,
+        source_path=source_path,
+    ):
+        try:
+            proof = _load_json(proof_path)
+        except (OSError, ValueError, json.JSONDecodeError, CompactRendererMlxSpineRunnerError):
+            continue
+        runtime_ready = bool(
+            proof.get("runtime_consumption_proof_ready")
+            or proof.get("runtime_consumption_proof_passed")
+            or proof.get("receiver_proof_ready")
+            or proof.get("receiver_proof_passed")
+        )
+        if not (runtime_ready and proof.get("receiver_contract_satisfied") is True):
+            continue
+        proof_archive_sha = str(proof.get("archive_sha256") or "").strip().lower()
+        node_archive_sha = str(
+            node.get("input_sha256") or node.get("archive_sha256") or ""
+        ).strip().lower()
+        if proof_archive_sha and node_archive_sha and proof_archive_sha != node_archive_sha:
+            continue
+        proof_archive_bytes = _compact_first_present_int(
+            proof,
+            ("archive_bytes", "measured_archive_bytes", "archive_zip_bytes"),
+        )
+        node_archive_bytes = _compact_first_present_int(
+            node,
+            (
+                "charged_archive_bytes",
+                "measured_archive_bytes",
+                "archive_bytes",
+                "archive_zip_bytes",
+                "candidate_archive_bytes",
+            ),
+        )
+        if (
+            proof_archive_bytes is not None
+            and node_archive_bytes is not None
+            and int(proof_archive_bytes) != int(node_archive_bytes)
+        ):
+            continue
+        return {
+            "status": "associated_receiver_proof",
+            "proof_path": proof_path.as_posix(),
+        }
+    return {}
+
+
+def _modelsize_byte_cap_receiver_proof_paths(
+    node: Mapping[str, Any],
+    *,
+    source_path: Path | None = None,
+) -> list[Path]:
+    paths: list[Path] = []
+    for artifact_path in _modelsize_byte_cap_row_artifact_paths(
+        node,
+        source_path=source_path,
+    ):
+        for parent in _self_and_parents(artifact_path):
+            for name in (
+                "snerv_inverse_steg_receiver_proof.json",
+                "hi_nerv_mlx_receiver_proof.json",
+            ):
+                for candidate in (parent / name, parent / "receiver_proof" / name):
+                    if candidate.is_file() and candidate not in paths:
+                        paths.append(candidate)
+    return paths
+
+
+def _modelsize_byte_cap_row_artifact_paths(
+    node: Mapping[str, Any],
+    *,
+    source_path: Path | None = None,
+) -> list[Path]:
+    out: list[Path] = []
+    if source_path is not None:
+        out.append(Path(source_path).expanduser().resolve(strict=False))
+    for key in (
+        "input_path",
+        "archive_path",
+        "source_archive_path",
+        "candidate_archive_path",
+        "proof_path",
+        "receiver_proof_path",
+        "report_path",
+    ):
+        value = node.get(key)
+        if not value:
+            continue
+        candidate = Path(str(value)).expanduser().resolve(strict=False)
+        if candidate not in out:
+            out.append(candidate)
+    return out
+
+
+def _startup_paths_from_artifact(path: Path) -> list[Path]:
+    out: list[Path] = []
+    for parent in _self_and_parents(path):
+        candidate = parent / "compact_renderer_mlx_spine_runner_startup.json"
+        if candidate.is_file() and candidate not in out:
+            out.append(candidate)
+    return out
+
+
+def _self_and_parents(path: Path) -> list[Path]:
+    base = path if path.is_dir() else path.parent
+    return [base, *list(base.parents)]
 
 
 def _load_json(path: Path) -> dict[str, Any]:

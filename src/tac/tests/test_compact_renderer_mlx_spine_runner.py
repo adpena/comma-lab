@@ -104,6 +104,108 @@ def _write_hinerv_receiver_proof(
     return path
 
 
+def _snerv_official_skip_candidate(mode: str) -> dict:
+    rows = enumerate_snerv_modelsize_candidates(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        wavelet="haar",
+        levels=(1,),
+        bits_per_coeffs=(1.5,),
+        step_map_bits_per_coeffs=(0.5,),
+        decoder_codecs=("int8_symmetric",),
+        snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        official_modelsize_mparams=(0.05,),
+        emb_sizes=(0,),
+        patch_radius=1,
+        mfu_scales=(1, 2, 4),
+        hfr_gain=0.0,
+        temporal_context=0,
+        temporal_modes=("official_haar_dwt1d_lowpass",),
+        official_skip_high_modes=(mode,),
+    )
+    official_rows = [
+        row for row in rows if row.capacity_source == "official_snerv_modelsize"
+    ]
+    assert len(official_rows) == 1
+    return official_rows[0].as_dict()
+
+
+def _write_snerv_binary_profile_receiver_feedback(
+    tmp_path: Path,
+    *,
+    candidate: dict,
+    archive_bytes: int,
+    archive_sha256: str,
+) -> Path:
+    run_root = tmp_path / "snerv_run"
+    package = (
+        run_root
+        / "snerv_mlx_native_export"
+        / "native_train_export"
+        / "snerv_mlx_native_archive_bound_package"
+    )
+    archive = package / "archive.zip"
+    proof = package / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+    profile_dir = tmp_path / "binary_profile"
+    startup = run_root / "compact_renderer_mlx_spine_runner_startup.json"
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    archive.write_bytes(b"synthetic archive bytes")
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "execute_family": "snerv",
+                "modelsize_candidate": candidate,
+                "modelsize_candidate_id": "auto",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    proof.parent.mkdir(parents=True, exist_ok=True)
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                "archive_bytes": int(archive_bytes),
+                "archive_path": archive.as_posix(),
+                "archive_sha256": archive_sha256,
+                "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    profile_dir.mkdir(parents=True, exist_ok=True)
+    profile = profile_dir / "snerv_binary_profile.json"
+    profile.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_binary_profile.v1",
+                "charged_archive_bytes": int(archive_bytes),
+                "input_kind": "contest_archive_zip",
+                "input_path": archive.as_posix(),
+                "input_sha256": archive_sha256,
+                "snar1_packet_bytes": 87_418,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return profile
+
+
 def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     plane_count = int(pairs) * 2 * 3
     lf_planes = [
@@ -2433,7 +2535,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     official_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
-        hard_byte_ceilings=(178_000,),
+        hard_byte_ceilings=(216_000,),
         snerv_official_modelsize_mparams=(0.05,),
     )
     assert official_sn is not None
@@ -2447,7 +2549,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     spectra_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
-        hard_byte_ceilings=(178_000,),
+        hard_byte_ceilings=(216_000,),
         snerv_official_modelsize_mparams=(0.05,),
         snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
     )
@@ -2468,9 +2570,10 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     official_primitives_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
-        hard_byte_ceilings=(178_000,),
+        hard_byte_ceilings=(2_000_000_000,),
         snerv_official_modelsize_mparams=(0.05,),
         snerv_model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+        snerv_official_skip_high_modes=("full",),
     )
     assert official_primitives_sn is not None
     assert official_primitives_sn["capacity_source"] == "official_snerv_modelsize"
@@ -2480,6 +2583,33 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     )
     assert "_haar_lv1_" in official_primitives_sn["candidate_id"]
     assert "_adofficial_oms0p05_" in official_primitives_sn["candidate_id"]
+    official_primitives_auto_skip_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        snerv_official_modelsize_mparams=(0.05,),
+        snerv_model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+        snerv_official_skip_high_modes=runner_mod._snerv_auto_skip_high_modes_for_resolution(
+            explicit_mode=None,
+            model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+        ),
+    )
+    assert official_primitives_auto_skip_sn is not None
+    assert official_primitives_auto_skip_sn["official_skip_high_mode"] in {
+        "channel_mean",
+        "scalar_mean",
+    }
+    assert official_primitives_auto_skip_sn["nominal_under_ceiling"] is True
+    assert official_primitives_auto_skip_sn["nominal_total_payload_bytes"] < (
+        official_primitives_sn["nominal_total_payload_bytes"]
+    )
+    assert (
+        runner_mod._snerv_auto_skip_high_modes_for_resolution(
+            explicit_mode="shared_mean",
+            model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+        )
+        == ("shared_mean",)
+    )
     reparsed_official_primitives_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id=official_primitives_sn["candidate_id"],
@@ -2537,7 +2667,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     shared_target_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
-        hard_byte_ceilings=(178_000,),
+        hard_byte_ceilings=(216_000,),
         target_modelsize_mparams=(0.05,),
     )
     assert shared_target_sn is not None
@@ -2836,6 +2966,8 @@ def test_snerv_modelsize_candidates_include_official_skip_high_mode_in_identity(
 
     keyed = {row.official_skip_high_mode: row.as_dict() for row in rows}
     assert set(keyed) == {"full", "shared_mean", "channel_mean", "scalar_mean"}
+    assert {row["bits_per_coeff"] for row in keyed.values()} == {1.0}
+    assert {row["step_map_bits_per_coeff"] for row in keyed.values()} == {1.0}
     assert "_sksharedmean_" not in keyed["full"]["candidate_id"]
     assert "_sksharedmean_" in keyed["shared_mean"]["candidate_id"]
     assert "_skchannelmean_" in keyed["channel_mean"]["candidate_id"]
@@ -2881,6 +3013,10 @@ def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
             "nominal_total_payload_bytes": 111_111,
             "hard_byte_ceiling": 178_000,
             "decoder_codec": "int4_mixed",
+            "source_bound_controls": {
+                "family": "hi_nerv",
+                "hard_byte_ceiling": 178_000,
+            },
             "receiver_closed": True,
             "source_path": path.resolve(strict=False).as_posix(),
         }
@@ -2923,6 +3059,11 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
             "nominal_total_payload_bytes": 188_854,
             "hard_byte_ceiling": 216_000,
             "decoder_codec": "int8_symmetric",
+            "source_bound_controls": {
+                "family": "snerv",
+                "hard_byte_ceiling": 216_000,
+                "decoder_payload_codec": "int8_symmetric",
+            },
             "receiver_closed": True,
             "source_path": path.resolve(strict=False).as_posix(),
         }
@@ -2971,6 +3112,66 @@ def test_modelsize_byte_cap_feedback_loader_reads_startup_candidate_fallback(
     assert rows[0]["hard_byte_ceiling"] == 178_000
     assert rows[0]["decoder_codec"] == "int7_mixed"
     assert rows[0]["receiver_closed"] is True
+
+
+def test_modelsize_byte_cap_feedback_loader_accepts_snerv_binary_profile_with_receiver_proof(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="c" * 64,
+    )
+
+    rows = runner_mod._load_modelsize_byte_cap_feedback_rows([profile])
+
+    assert rows == [
+        {
+            "family": "snerv",
+            "candidate_id": scalar["candidate_id"],
+            "measured_archive_bytes": 91_445,
+            "nominal_total_payload_bytes": scalar["nominal_total_payload_bytes"],
+            "hard_byte_ceiling": 178_000,
+            "decoder_codec": "int8_symmetric",
+            "source_bound_controls": runner_mod._byte_cap_candidate_match_controls(
+                scalar
+            ),
+            "receiver_closed": True,
+            "source_path": profile.resolve(strict=False).as_posix(),
+        }
+    ]
+
+
+def test_byte_cap_controller_keeps_snerv_skip_mode_feedback_candidate_scoped(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    full = _snerv_official_skip_candidate("full")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="d" * 64,
+    )
+    rows = runner_mod._load_modelsize_byte_cap_feedback_rows([profile])
+
+    attached = runner_mod._attach_byte_cap_controller_predictions(
+        [scalar, full],
+        family="snerv",
+        byte_cap_feedback_rows=rows,
+    )
+
+    by_id = {row["candidate_id"]: row for row in attached}
+    scalar_controller = by_id[scalar["candidate_id"]]["byte_cap_controller"]
+    full_controller = by_id[full["candidate_id"]]["byte_cap_controller"]
+    assert scalar_controller["calibration_observation_count"] == 1
+    assert scalar_controller["predicted_archive_bytes"] == 91_445
+    assert full_controller["calibration_observation_count"] == 0
+    assert "byte_cap_controller_measured_archive_feedback_missing" in full_controller[
+        "blockers"
+    ]
 
 
 def test_snerv_official_modelsize_controls_require_candidate_resolution() -> None:
