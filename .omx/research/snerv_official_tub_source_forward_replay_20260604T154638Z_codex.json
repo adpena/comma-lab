@@ -1,0 +1,459 @@
+{
+  "blockers": [
+    "snerv_official_trained_checkpoint_state_dict_not_loaded",
+    "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+    "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+    "snerv_official_pytorch_wavelets_runtime_dependency_missing"
+  ],
+  "closed_blockers": [
+    "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
+    "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing"
+  ],
+  "component_id": "tub",
+  "component_rows": [
+    {
+      "blockers": [],
+      "classification": "official_tub_graph_inputs_match_local_numpy_primitive",
+      "component_id": "tub_graph_inputs",
+      "frontier_score_claim": false,
+      "graph_input_parity_passed": true,
+      "max_abs_error": 0.0,
+      "official_output_sha256": "c4722e4b64f773cac4b601f67c7bb2957658d3d42b55d6796d0f4555604181a9",
+      "output_hashes_bit_identical": true,
+      "output_shapes": {
+        "lf_triplet": [
+          3,
+          3,
+          16,
+          16
+        ],
+        "next_lowpass_over_2": [
+          1,
+          3,
+          16,
+          16
+        ],
+        "normalized_lf": [
+          3,
+          3,
+          16,
+          16
+        ],
+        "prev_lowpass_over_2": [
+          1,
+          3,
+          16,
+          16
+        ]
+      },
+      "portable_output_sha256": "c4722e4b64f773cac4b601f67c7bb2957658d3d42b55d6796d0f4555604181a9",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_official_tub_source_forward_component.v1",
+      "score_claim": false
+    },
+    {
+      "blockers": [
+        "snerv_official_trained_checkpoint_state_dict_not_loaded",
+        "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+        "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+      ],
+      "classification": "official_snerv_t_temporal_encoder_output2_source_fixture_executed",
+      "closed_blockers": [
+        "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
+        "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing"
+      ],
+      "component_id": "tub_temporal_encoder_output2",
+      "decoder_len": 7,
+      "fc_hw": [
+        1,
+        1
+      ],
+      "frontier_score_claim": false,
+      "official_module_classes": {
+        "encoder0": "ConvNeXt",
+        "encoder1": "ConvNeXt",
+        "encoder2": "ConvNeXt",
+        "output2_decoder": "Sequential"
+      },
+      "output_sha256": "ebdda97a3ab7d365546f9536b938f379a01b37c6805300a16a31cb6e075bfe8d",
+      "output_shapes": {
+        "final_decoder_output": [
+          1,
+          3,
+          16,
+          16
+        ],
+        "full_img_out": [
+          1,
+          3,
+          32,
+          32
+        ],
+        "full_img_yl": [
+          1,
+          3,
+          16,
+          16
+        ],
+        "full_yh_out": [
+          1,
+          3,
+          3,
+          16,
+          16
+        ],
+        "output2_raw": [
+          2,
+          6,
+          2,
+          2
+        ],
+        "output2_shuffled": [
+          2,
+          6,
+          2,
+          2
+        ],
+        "temporal_encoder_concat": [
+          1,
+          6,
+          1,
+          1
+        ],
+        "temporal_encoder_next": [
+          1,
+          3,
+          1,
+          1
+        ],
+        "temporal_encoder_prev": [
+          1,
+          3,
+          1,
+          1
+        ]
+      },
+      "output_tensors_finite": true,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_official_tub_source_forward_component.v1",
+      "score_claim": false,
+      "source_forward_fixture_replay_passed": true
+    },
+    {
+      "blockers": [],
+      "classification": "manual_tub_extraction_matches_official_snerv_t_forward_embed_list",
+      "component_id": "tub_full_forward_equivalence",
+      "frontier_score_claim": false,
+      "manual_replay_matches_official_forward": true,
+      "manual_replay_sha256": "7d20167a135681b6a58b7e682d12b5fb3657924d2fa14c5e02a00efcf84d7a7e",
+      "max_abs_error": 0.0,
+      "official_forward_sha256": "7d20167a135681b6a58b7e682d12b5fb3657924d2fa14c5e02a00efcf84d7a7e",
+      "output_hashes_bit_identical": true,
+      "output_shapes": {
+        "decoder0_shuffled": [
+          1,
+          8,
+          1,
+          1
+        ],
+        "embed_curr": [
+          1,
+          4,
+          1,
+          1
+        ],
+        "final_decoder_output": [
+          1,
+          3,
+          16,
+          16
+        ],
+        "temporal_encoder_concat": [
+          1,
+          6,
+          1,
+          1
+        ]
+      },
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_official_tub_source_forward_component.v1",
+      "score_claim": false
+    }
+  ],
+  "dependency_contract": {
+    "functional_haar_shim_used_for_fixture": true,
+    "official_pytorch_wavelets_runtime_dependency_installed": false,
+    "official_requirements_pins_pytorch_wavelets": true,
+    "shim_scope": "one_level_haar_dwt_dwt1d_idwt_source_fixture_only",
+    "shim_score_authority": false
+  },
+  "family": "snerv",
+  "frontier_score_claim": false,
+  "full_forward_equivalence": {
+    "blockers": [],
+    "classification": "manual_tub_extraction_matches_official_snerv_t_forward_embed_list",
+    "component_id": "tub_full_forward_equivalence",
+    "frontier_score_claim": false,
+    "manual_replay_matches_official_forward": true,
+    "manual_replay_sha256": "7d20167a135681b6a58b7e682d12b5fb3657924d2fa14c5e02a00efcf84d7a7e",
+    "max_abs_error": 0.0,
+    "official_forward_sha256": "7d20167a135681b6a58b7e682d12b5fb3657924d2fa14c5e02a00efcf84d7a7e",
+    "output_hashes_bit_identical": true,
+    "output_shapes": {
+      "decoder0_shuffled": [
+        1,
+        8,
+        1,
+        1
+      ],
+      "embed_curr": [
+        1,
+        4,
+        1,
+        1
+      ],
+      "final_decoder_output": [
+        1,
+        3,
+        16,
+        16
+      ],
+      "temporal_encoder_concat": [
+        1,
+        6,
+        1,
+        1
+      ]
+    },
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "snerv_official_tub_source_forward_component.v1",
+    "score_claim": false
+  },
+  "full_tub_source_forward_parity_proven": false,
+  "functional_haar_shim_used_for_fixture": true,
+  "generated_utc": "20260604T154638Z",
+  "graph_input_parity": {
+    "blockers": [],
+    "classification": "official_tub_graph_inputs_match_local_numpy_primitive",
+    "component_id": "tub_graph_inputs",
+    "frontier_score_claim": false,
+    "graph_input_parity_passed": true,
+    "max_abs_error": 0.0,
+    "official_output_sha256": "c4722e4b64f773cac4b601f67c7bb2957658d3d42b55d6796d0f4555604181a9",
+    "output_hashes_bit_identical": true,
+    "output_shapes": {
+      "lf_triplet": [
+        3,
+        3,
+        16,
+        16
+      ],
+      "next_lowpass_over_2": [
+        1,
+        3,
+        16,
+        16
+      ],
+      "normalized_lf": [
+        3,
+        3,
+        16,
+        16
+      ],
+      "prev_lowpass_over_2": [
+        1,
+        3,
+        16,
+        16
+      ]
+    },
+    "portable_output_sha256": "c4722e4b64f773cac4b601f67c7bb2957658d3d42b55d6796d0f4555604181a9",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "snerv_official_tub_source_forward_component.v1",
+    "score_claim": false
+  },
+  "official_pytorch_wavelets_runtime_dependency_installed": false,
+  "official_repo": {
+    "expected_head_sha": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+    "head_sha": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+    "repo_url": "https://github.com/qwertja/SNeRV",
+    "root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV"
+  },
+  "official_trained_checkpoint_loaded": false,
+  "official_tub_temporal_encoder_output2_source_fixture_replay_passed": true,
+  "preserved_blockers": [
+    "snerv_official_trained_checkpoint_state_dict_not_loaded",
+    "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+    "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
+    "snerv_official_pytorch_wavelets_runtime_dependency_missing"
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_official_tub_source_forward_replay.v1",
+  "score_claim": false,
+  "source_fixture_config": {
+    "act": "gelu",
+    "conv_type": [
+      "convnext",
+      "pshuffel"
+    ],
+    "crop_list": "640_1280",
+    "dec_strds": [
+      1,
+      2,
+      2,
+      2,
+      2
+    ],
+    "emb_size": 20,
+    "embed": "",
+    "enc2_strds": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "enc_dim": "4_4",
+    "enc_strds": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "fc_dim": 8,
+    "fc_hw": "1_1",
+    "ks": "0_1_5",
+    "lower_width": 2,
+    "norm": "none",
+    "num_blks": "1_1",
+    "num_blocks": 1,
+    "out_bias": "tanh",
+    "reduce": 1.2
+  },
+  "source_fixture_not_training_config": true,
+  "source_fixture_reason": "small shape chosen to exercise upstream SNeRV_T temporal encoder, output_2 fusion, and five-stage temporal decoder semantics on CPU",
+  "source_fixture_scope": "deterministic_official_source_fixture_not_trained_checkpoint",
+  "source_forward_parity_proven": false,
+  "source_forward_replay_executed": true,
+  "source_pins": {
+    "requirements_lines": {
+      "pytorch_wavelets": "requirements.txt:13",
+      "pywavelets": "requirements.txt:14",
+      "torch": "requirements.txt:1"
+    },
+    "requirements_txt": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV/requirements.txt",
+    "requirements_txt_sha256": "98650991c1e595d87814e89d484a8837b49c699737b2291b3abcf6b9b47fb33b",
+    "snerv_t_py": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV/model/snerv_t.py",
+    "snerv_t_py_sha256": "c743182311128973f24c217172ee229554d4639fd54ab36ce28c468552a39805",
+    "source_line_ranges": {
+      "output2_fusion": "model/snerv_t.py:142-150",
+      "temporal_decoder_loop": "model/snerv_t.py:152-159",
+      "tub_graph_inputs": "model/snerv_t.py:125-136"
+    }
+  },
+  "temporal_path": {
+    "blockers": [
+      "snerv_official_trained_checkpoint_state_dict_not_loaded",
+      "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+      "snerv_official_tub_portable_temporal_encoder_output2_receiver_mapping_missing",
+      "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+    ],
+    "classification": "official_snerv_t_temporal_encoder_output2_source_fixture_executed",
+    "closed_blockers": [
+      "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
+      "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing"
+    ],
+    "component_id": "tub_temporal_encoder_output2",
+    "decoder_len": 7,
+    "fc_hw": [
+      1,
+      1
+    ],
+    "frontier_score_claim": false,
+    "official_module_classes": {
+      "encoder0": "ConvNeXt",
+      "encoder1": "ConvNeXt",
+      "encoder2": "ConvNeXt",
+      "output2_decoder": "Sequential"
+    },
+    "output_sha256": "ebdda97a3ab7d365546f9536b938f379a01b37c6805300a16a31cb6e075bfe8d",
+    "output_shapes": {
+      "final_decoder_output": [
+        1,
+        3,
+        16,
+        16
+      ],
+      "full_img_out": [
+        1,
+        3,
+        32,
+        32
+      ],
+      "full_img_yl": [
+        1,
+        3,
+        16,
+        16
+      ],
+      "full_yh_out": [
+        1,
+        3,
+        3,
+        16,
+        16
+      ],
+      "output2_raw": [
+        2,
+        6,
+        2,
+        2
+      ],
+      "output2_shuffled": [
+        2,
+        6,
+        2,
+        2
+      ],
+      "temporal_encoder_concat": [
+        1,
+        6,
+        1,
+        1
+      ],
+      "temporal_encoder_next": [
+        1,
+        3,
+        1,
+        1
+      ],
+      "temporal_encoder_prev": [
+        1,
+        3,
+        1,
+        1
+      ]
+    },
+    "output_tensors_finite": true,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "snerv_official_tub_source_forward_component.v1",
+    "score_claim": false,
+    "source_forward_fixture_replay_passed": true
+  }
+}
