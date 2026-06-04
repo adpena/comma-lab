@@ -91,6 +91,7 @@ from tac.substrates._shared.mlx_score_aware.loss import (
     decode_frames_nhwc01,
     pose_student_inputs_nhwc,
     score_aware_loss,
+    scorer_input_distribution_guard_loss,
     source_pair_indices_for_local_batch,
 )
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
@@ -155,5 +156,6 @@ __all__ = [
     "require_mlx_for_harness",
     "run_mlx_score_aware_full_main",
     "score_aware_loss",
+    "scorer_input_distribution_guard_loss",
     "source_pair_indices_for_local_batch",
 ]

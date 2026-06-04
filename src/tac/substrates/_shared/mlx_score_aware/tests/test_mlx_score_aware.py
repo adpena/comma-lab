@@ -97,6 +97,28 @@ def test_renderer_bundle_validation_fail_closed() -> None:
             num_pairs=2,
             distillation_weight=-1.0,
         )
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="scorer_input_distribution_guard_weight",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=target_0,
+            target_rgb_1=target_1,
+            num_pairs=2,
+            scorer_input_distribution_guard_weight=-1.0,
+        )
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="scorer_input_distribution_guard_temperature",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=target_0,
+            target_rgb_1=target_1,
+            num_pairs=2,
+            scorer_input_distribution_guard_temperature=0.0,
+        )
 
 
 def test_decode_frames_supports_reconstruct_pair_nchw01() -> None:
@@ -184,6 +206,33 @@ def test_score_aware_loss_recon_distill_and_extra_terms_are_composed() -> None:
     assert _scalar(parts["regularizer"]) == pytest.approx(2.0)
     assert _scalar(total) == pytest.approx(0.5, abs=1e-6)
     assert _scalar(parts["total"]) == pytest.approx(_scalar(total), abs=1e-7)
+
+
+def test_score_aware_loss_applies_scorer_input_distribution_guard() -> None:
+    target_0, target_1 = _targets()
+    zeros = mx.zeros_like(target_0)
+    bundle = RendererBundle(
+        model=ReconstructPairModel(zeros, zeros),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_input_distribution_guard_weight=3.0,
+    )
+    idx = mx.array([0, 1], dtype=mx.int32)
+
+    total_guard, parts_guard = score_aware_loss(bundle, idx)
+    total_disabled, parts_disabled = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={"scorer_input_guard": 0.0},
+    )
+    mx.eval(total_guard, total_disabled)
+
+    assert "scorer_input_distribution_guard" in parts_guard
+    assert "scorer_input_distribution_guard" not in parts_disabled
+    assert _scalar(parts_guard["scorer_input_distribution_guard"]) > 0.0
+    assert _scalar(total_guard) > _scalar(total_disabled)
 
 
 def test_real_scorer_distill_selects_contest_segnet_frame_by_default() -> None:

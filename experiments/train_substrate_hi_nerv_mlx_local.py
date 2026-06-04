@@ -138,6 +138,9 @@ class HiNervTrainTimeControlConfig:
     export_decoder_quant_noise_bits: int | None = None
     export_decoder_quant_noise_scale: float = 0.0
     export_decoder_quant_noise_seed: int = 0
+    scorer_input_distribution_guard_weight: float = 0.0
+    scorer_input_distribution_guard_saturation_margin: float = 0.02
+    scorer_input_distribution_guard_temperature: float = 0.01
 
     def validated(self) -> HiNervTrainTimeControlConfig:
         if self.stage_loss_schedule not in {
@@ -200,6 +203,23 @@ class HiNervTrainTimeControlConfig:
             raise ValueError("train_time_decoder_control_start_epoch must be >= 0")
         if int(self.train_time_decoder_control_frequency_epochs) <= 0:
             raise ValueError("train_time_decoder_control_frequency_epochs must be positive")
+        _require_finite_nonnegative(
+            self.scorer_input_distribution_guard_weight,
+            "scorer_input_distribution_guard_weight",
+        )
+        if not (
+            0.0
+            < float(self.scorer_input_distribution_guard_saturation_margin)
+            < 0.5
+        ):
+            raise ValueError(
+                "scorer_input_distribution_guard_saturation_margin must be in "
+                "(0, 0.5)"
+            )
+        _require_finite_positive(
+            self.scorer_input_distribution_guard_temperature,
+            "scorer_input_distribution_guard_temperature",
+        )
         return replace(
             self,
             optimizer_kind=str(self.optimizer_kind),
@@ -237,6 +257,15 @@ class HiNervTrainTimeControlConfig:
             ),
             export_decoder_quant_noise_scale=float(self.export_decoder_quant_noise_scale),
             export_decoder_quant_noise_seed=int(self.export_decoder_quant_noise_seed),
+            scorer_input_distribution_guard_weight=float(
+                self.scorer_input_distribution_guard_weight
+            ),
+            scorer_input_distribution_guard_saturation_margin=float(
+                self.scorer_input_distribution_guard_saturation_margin
+            ),
+            scorer_input_distribution_guard_temperature=float(
+                self.scorer_input_distribution_guard_temperature
+            ),
         )
 
     @property
@@ -310,6 +339,17 @@ class HiNervTrainTimeControlConfig:
                 self.export_decoder_quant_noise_scale
             ),
             "export_decoder_quant_noise_seed": int(self.export_decoder_quant_noise_seed),
+            "scorer_input_distribution_guard": {
+                "schema": "hi_nerv_train_time_scorer_input_distribution_guard.v1",
+                "enabled": float(self.scorer_input_distribution_guard_weight) > 0.0,
+                "weight": float(self.scorer_input_distribution_guard_weight),
+                "saturation_margin": float(
+                    self.scorer_input_distribution_guard_saturation_margin
+                ),
+                "temperature": float(
+                    self.scorer_input_distribution_guard_temperature
+                ),
+            },
             "authority": TRAINER_AUTHORITY,
             **FALSE_AUTHORITY,
         }
@@ -464,6 +504,15 @@ def _full_main(args: argparse.Namespace) -> int:
         pose_dims=DEFAULT_POSE_DIMS,
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
         allow_segnet_only_research=bool(args.allow_segnet_only_research),
+        scorer_input_distribution_guard_weight=(
+            train_time_controls.scorer_input_distribution_guard_weight
+        ),
+        scorer_input_distribution_guard_saturation_margin=(
+            train_time_controls.scorer_input_distribution_guard_saturation_margin
+        ),
+        scorer_input_distribution_guard_temperature=(
+            train_time_controls.scorer_input_distribution_guard_temperature
+        ),
         export_archive_fn=lambda model_obj, out_dir: export_hi_nerv_mlx_archive(
             model_obj,
             out_dir,
@@ -510,6 +559,9 @@ def _full_main(args: argparse.Namespace) -> int:
             "train_time_controls": _metadata_safe(train_time_controls.metadata()),
             "eval_roundtrip_ste_enabled": bool(args.eval_roundtrip_ste),
             "pose_student_input_preprocess": str(args.pose_student_input_preprocess),
+            "scorer_input_distribution_guard": _metadata_safe(
+                train_time_controls.metadata()["scorer_input_distribution_guard"]
+            ),
             "pose_student_input_channels": _pose_student_input_channels(str(args.pose_student_input_preprocess)),
             "prioritized_pair_training": _prioritized_pair_training_lineage_metadata(
                 prioritized_pair_indices,
@@ -848,6 +900,26 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--staged-scorer-segnet-lr-scale", type=float, default=0.3)
     parser.add_argument("--staged-scorer-final-lr-scale", type=float, default=0.1)
+    parser.add_argument(
+        "--scorer-input-distribution-guard-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Differentiable train-time guard that matches decoded RGB mean, "
+            "std, and soft saturation mass to the contest video targets before "
+            "SegNet/PoseNet scorer surrogates consume the frames."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-distribution-guard-saturation-margin",
+        type=float,
+        default=0.02,
+    )
+    parser.add_argument(
+        "--scorer-input-distribution-guard-temperature",
+        type=float,
+        default=0.01,
+    )
     parser.add_argument("--grad-clip-max-norm", type=float, default=None)
     parser.add_argument("--warmup-epochs", type=int, default=0)
     parser.add_argument("--weight-decay", type=float, default=None)
@@ -1297,6 +1369,23 @@ def _train_time_control_config_from_args(
         ),
         export_decoder_quant_noise_seed=int(
             getattr(args, "export_decoder_quant_noise_seed", 0)
+        ),
+        scorer_input_distribution_guard_weight=float(
+            getattr(args, "scorer_input_distribution_guard_weight", 0.0)
+        ),
+        scorer_input_distribution_guard_saturation_margin=float(
+            getattr(
+                args,
+                "scorer_input_distribution_guard_saturation_margin",
+                0.02,
+            )
+        ),
+        scorer_input_distribution_guard_temperature=float(
+            getattr(
+                args,
+                "scorer_input_distribution_guard_temperature",
+                0.01,
+            )
         ),
     ).validated()
 
@@ -2002,7 +2091,12 @@ def _build_staged_scorer_curriculum(
             name="hi_nerv_receiver_fit_recon_scaffold",
             start_epoch=0,
             end_epoch=recon_end,
-            loss_weights={"recon": 1.0, "distill": 0.0, "pose_distill": 0.0},
+            loss_weights={
+                "recon": 1.0,
+                "distill": 0.0,
+                "pose_distill": 0.0,
+                "scorer_input_guard": 1.0,
+            },
             lr_scale=1.0,
             notes=(
                 "Contest-scorer input stabilization stage: fit receiver outputs "
@@ -2013,7 +2107,12 @@ def _build_staged_scorer_curriculum(
             name="hi_nerv_segnet_last_frame_admission",
             start_epoch=recon_end,
             end_epoch=segnet_end,
-            loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 0.0},
+            loss_weights={
+                "recon": 1.0,
+                "distill": 1.0,
+                "pose_distill": 0.0,
+                "scorer_input_guard": 1.0,
+            },
             lr_scale=float(segnet_lr_scale),
             notes=(
                 "Admit SegNet last-frame scorer surrogate after receiver "
@@ -2028,6 +2127,7 @@ def _build_staged_scorer_curriculum(
                 "recon": float(final_recon_weight),
                 "distill": 1.0,
                 "pose_distill": 1.0,
+                "scorer_input_guard": 1.0,
             },
             lr_scale=float(final_lr_scale),
             notes=(
@@ -2158,6 +2258,9 @@ def _pr95_full_control_contract(
     c1a_sample_size = int(getattr(args, "coder_qat_c1a_sample_size", 0))
     ema_archive_selection = bool(getattr(args, "ema_archive_selection", False))
     archive_parse_back_selection = bool(getattr(args, "post_export_receiver_cache_quality_gate", False))
+    scorer_input_guard_weight = float(
+        getattr(args, "scorer_input_distribution_guard_weight", 0.0)
+    )
 
     if distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_segnet_distillation_loss")
@@ -2189,6 +2292,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_ema_archive_selection")
     if not archive_parse_back_selection:
         blockers.append("hinerv_full_missing_archive_parse_back_selection")
+    if scorer_input_guard_weight <= 0.0:
+        blockers.append("hinerv_full_missing_scorer_input_distribution_guard")
 
     return {
         "schema": PR95_FULL_CONTROL_CONTRACT_SCHEMA,
@@ -2244,6 +2349,20 @@ def _pr95_full_control_contract(
             ),
             "ema_archive_selection_enabled": ema_archive_selection,
             "archive_parse_back_selection_enabled": archive_parse_back_selection,
+            "scorer_input_distribution_guard_enabled": (
+                scorer_input_guard_weight > 0.0
+            ),
+            "scorer_input_distribution_guard_weight": scorer_input_guard_weight,
+            "scorer_input_distribution_guard_saturation_margin": float(
+                getattr(
+                    args,
+                    "scorer_input_distribution_guard_saturation_margin",
+                    0.02,
+                )
+            ),
+            "scorer_input_distribution_guard_temperature": float(
+                getattr(args, "scorer_input_distribution_guard_temperature", 0.01)
+            ),
         },
         "train_time_controls": _metadata_safe(train_time_controls.metadata()),
         "blockers": blockers,

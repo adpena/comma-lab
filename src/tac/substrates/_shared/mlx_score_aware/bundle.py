@@ -335,6 +335,18 @@ class RendererBundle:
             the raw MSE telemetry and remains false-authority MLX evidence.
         pose_distillation_huber_delta: positive robust-loss transition point
             used only when ``pose_distillation_loss == "huber"``.
+        scorer_input_distribution_guard_weight: optional differentiable guard
+            against the observed compact-carrier value-domain collapse where a
+            byte-closed receiver emits saturated/out-of-distribution RGB and
+            then both SegNet/PoseNet collapse. The guard matches decoded RGB
+            per-channel mean, per-channel std, and a soft saturation mass to
+            the real-video target frames. It is a train-time Lagrangian term,
+            not a score authority claim.
+        scorer_input_distribution_guard_saturation_margin: byte-domain edge
+            band in normalized RGB units. ``0.02`` means the soft saturation
+            term tracks mass near ``<= 0.02`` or ``>= 0.98``.
+        scorer_input_distribution_guard_temperature: positive logistic
+            temperature for the soft saturation mass. Smaller is sharper.
         source_pair_indices: optional local-target-row -> source-video-pair
             mapping. When set, ``num_pairs`` is the hydrated target row count
             and each local row decodes the corresponding source model/latent
@@ -378,6 +390,9 @@ class RendererBundle:
     pose_student_input_preprocess: str = "rgb"
     pose_distillation_loss: str = "mse"
     pose_distillation_huber_delta: float = 1.0
+    scorer_input_distribution_guard_weight: float = 0.0
+    scorer_input_distribution_guard_saturation_margin: float = 0.02
+    scorer_input_distribution_guard_temperature: float = 0.01
     source_pair_indices: tuple[int, ...] | None = None
 
     def __post_init__(self) -> None:
@@ -501,6 +516,22 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 "pose_distillation_huber_delta must be > 0; got "
                 f"{self.pose_distillation_huber_delta}"
+            )
+        if self.scorer_input_distribution_guard_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "scorer_input_distribution_guard_weight must be >= 0; got "
+                f"{self.scorer_input_distribution_guard_weight}"
+            )
+        if not (0.0 < self.scorer_input_distribution_guard_saturation_margin < 0.5):
+            raise MlxScoreAwareHarnessError(
+                "scorer_input_distribution_guard_saturation_margin must be in "
+                "(0, 0.5); got "
+                f"{self.scorer_input_distribution_guard_saturation_margin}"
+            )
+        if self.scorer_input_distribution_guard_temperature <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "scorer_input_distribution_guard_temperature must be > 0; got "
+                f"{self.scorer_input_distribution_guard_temperature}"
             )
         try:
             cam_h, cam_w = self.eval_roundtrip_camera_hw

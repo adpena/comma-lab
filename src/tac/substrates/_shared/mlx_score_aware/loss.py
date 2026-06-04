@@ -35,6 +35,11 @@ _CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
     "recon": ("recon", "reconstruction"),
     "distill": ("distill", "segnet_distill", "segnet"),
     "pose_distill": ("pose_distill", "posenet_distill", "pose"),
+    "scorer_input_guard": (
+        "scorer_input_guard",
+        "scorer_input_distribution_guard",
+        "value_domain_guard",
+    ),
 }
 _CORE_LOSS_WEIGHT_KEYS = frozenset(
     key for aliases in _CORE_LOSS_WEIGHT_ALIASES.values() for key in aliases
@@ -340,6 +345,77 @@ def _pose_distillation_loss_and_raw_mse(
     return mx.mean(mx.where(abs_diff <= delta, quadratic, linear)), raw_mse
 
 
+def _frame_distribution_guard_parts(bundle: RendererBundle, rgb: Any, gt: Any) -> dict[str, Any]:
+    """Differentiable scorer-input value-domain guard for one frame.
+
+    The contest scorers never consume human perceptual quality; they consume
+    byte-realized RGB/YUV tensors after fixed preprocessing. A renderer that
+    saturates or shifts those tensors can have excellent byte rate and terrible
+    SegNet/PoseNet distortion. This guard keeps the decoded RGB distribution on
+    the same local manifold as the target before scorer surrogates try to learn
+    finer decision boundaries.
+    """
+
+    mx = require_mlx_for_harness()
+    margin = float(bundle.scorer_input_distribution_guard_saturation_margin)
+    temperature = float(bundle.scorer_input_distribution_guard_temperature)
+
+    cand_mean = mx.mean(rgb, axis=(1, 2))
+    ref_mean = mx.stop_gradient(mx.mean(gt, axis=(1, 2)))
+    mean_loss = mx.mean((cand_mean - ref_mean) ** 2)
+
+    cand_centered = rgb - mx.mean(rgb, axis=(1, 2), keepdims=True)
+    ref_centered = gt - mx.mean(gt, axis=(1, 2), keepdims=True)
+    cand_std = mx.sqrt(mx.mean(cand_centered * cand_centered, axis=(1, 2)) + 1.0e-12)
+    ref_std = mx.stop_gradient(
+        mx.sqrt(mx.mean(ref_centered * ref_centered, axis=(1, 2)) + 1.0e-12)
+    )
+    std_loss = mx.mean((cand_std - ref_std) ** 2)
+
+    cand_soft_sat = mx.mean(
+        mx.sigmoid((margin - rgb) / temperature)
+        + mx.sigmoid((rgb - (1.0 - margin)) / temperature),
+        axis=(1, 2),
+    )
+    ref_soft_sat = mx.stop_gradient(
+        mx.mean(
+            mx.sigmoid((margin - gt) / temperature)
+            + mx.sigmoid((gt - (1.0 - margin)) / temperature),
+            axis=(1, 2),
+        )
+    )
+    saturation_loss = mx.mean((cand_soft_sat - ref_soft_sat) ** 2)
+    total = mean_loss + std_loss + saturation_loss
+    return {
+        "total": total,
+        "mean": mean_loss,
+        "std": std_loss,
+        "soft_saturation": saturation_loss,
+    }
+
+
+def scorer_input_distribution_guard_loss(
+    bundle: RendererBundle,
+    rgb_0: Any,
+    rgb_1: Any,
+    gt_0: Any,
+    gt_1: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Return the two-frame differentiable scorer-input distribution guard."""
+
+    parts_0 = _frame_distribution_guard_parts(bundle, rgb_0, gt_0)
+    parts_1 = _frame_distribution_guard_parts(bundle, rgb_1, gt_1)
+    total = parts_0["total"] + parts_1["total"]
+    return total, {
+        "scorer_input_distribution_guard": total,
+        "scorer_input_distribution_guard_mean": parts_0["mean"] + parts_1["mean"],
+        "scorer_input_distribution_guard_std": parts_0["std"] + parts_1["std"],
+        "scorer_input_distribution_guard_soft_saturation": (
+            parts_0["soft_saturation"] + parts_1["soft_saturation"]
+        ),
+    }
+
+
 def score_aware_loss(
     bundle: RendererBundle,
     idx: Any,
@@ -377,6 +453,10 @@ def score_aware_loss(
     recon_stage_weight = component_loss_weight(loss_weights, "recon")
     segnet_stage_weight = component_loss_weight(loss_weights, "distill")
     pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
+    scorer_input_guard_stage_weight = component_loss_weight(
+        loss_weights,
+        "scorer_input_guard",
+    )
 
     rgb_0, rgb_1 = decode_frames_nhwc01(bundle, idx)
     rgb_0 = _apply_eval_roundtrip_ste_nhwc01(bundle, rgb_0)
@@ -414,6 +494,25 @@ def score_aware_loss(
         recon = mse_0 + mse_1
     total = recon_weight * recon_stage_weight * recon
     parts: dict[str, Any] = {"recon": recon}
+
+    if (
+        bundle.scorer_input_distribution_guard_weight > 0.0
+        and scorer_input_guard_stage_weight != 0.0
+    ):
+        guard, guard_parts = scorer_input_distribution_guard_loss(
+            bundle,
+            rgb_0,
+            rgb_1,
+            gt_0,
+            gt_1,
+        )
+        total = (
+            total
+            + float(bundle.scorer_input_distribution_guard_weight)
+            * scorer_input_guard_stage_weight
+            * guard
+        )
+        parts.update(guard_parts)
 
     if bundle.distillation_weight > 0.0 and segnet_stage_weight != 0.0:
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
@@ -750,6 +849,7 @@ __all__ = [
     "decode_frames_nhwc01",
     "pose_student_inputs_nhwc",
     "score_aware_loss",
+    "scorer_input_distribution_guard_loss",
     "source_pair_indices_for_local_batch",
 ]
 

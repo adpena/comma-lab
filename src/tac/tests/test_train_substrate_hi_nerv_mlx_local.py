@@ -578,16 +578,19 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "recon": 1.0,
         "distill": 0.0,
         "pose_distill": 0.0,
+        "scorer_input_guard": 1.0,
     }
     assert stages[1].loss_weights == {
         "recon": 1.0,
         "distill": 1.0,
         "pose_distill": 0.0,
+        "scorer_input_guard": 1.0,
     }
     assert stages[2].loss_weights == {
         "recon": 0.25,
         "distill": 1.0,
         "pose_distill": 1.0,
+        "scorer_input_guard": 1.0,
     }
     assert stages[1].lr_scale == pytest.approx(0.3)
     assert stages[2].lr_scale == pytest.approx(0.1)
@@ -717,6 +720,7 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_full_missing_c1a_entropy_control",
         "hinerv_full_missing_ema_archive_selection",
         "hinerv_full_missing_archive_parse_back_selection",
+        "hinerv_full_missing_scorer_input_distribution_guard",
     ):
         assert blocker in payload["blockers"]
     control = payload["pr95_full_control_contract"]
@@ -748,6 +752,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "64",
             "--ema-archive-selection",
             "--post-export-receiver-cache-quality-gate",
+            "--scorer-input-distribution-guard-weight",
+            "2.0",
         ]
     )
 
@@ -773,6 +779,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["export_decoder_pruning_ratio"] == pytest.approx(0.0)
     assert controls["ema_archive_selection_enabled"] is True
     assert controls["archive_parse_back_selection_enabled"] is True
+    assert controls["scorer_input_distribution_guard_enabled"] is True
+    assert controls["scorer_input_distribution_guard_weight"] == pytest.approx(2.0)
     assert contract["score_claim"] is False
     assert contract["promotion_eligible"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False

@@ -804,6 +804,7 @@ class MlxScoreAwareAdapter:
             _weighted_recon,
             decode_frames_nhwc01,
             pose_student_inputs_nhwc,
+            scorer_input_distribution_guard_loss,
         )
 
         if (
@@ -927,11 +928,33 @@ class MlxScoreAwareAdapter:
         )
         pose_loss = mx.sqrt(10.0 * pose_distill + 1.0e-12)
         recon_stage_weight = component_loss_weight(loss_weights, "recon")
+        scorer_input_guard_stage_weight = component_loss_weight(
+            loss_weights,
+            "scorer_input_guard",
+        )
         total = (
             float(effective_seg_weight) * seg_loss
             + float(effective_pose_weight) * pose_loss
             + recon_stage_weight * recon
         )
+        guard_parts: dict[str, Any] = {}
+        if (
+            self.bundle.scorer_input_distribution_guard_weight > 0.0
+            and scorer_input_guard_stage_weight != 0.0
+        ):
+            guard, guard_parts = scorer_input_distribution_guard_loss(
+                self.bundle,
+                rgb_0,
+                rgb_1,
+                gt_0,
+                gt_1,
+            )
+            total = (
+                total
+                + float(self.bundle.scorer_input_distribution_guard_weight)
+                * scorer_input_guard_stage_weight
+                * guard
+            )
         if cat_entropy_term is not None and float(stage_verdict.cat_lambda) > 0.0:
             total = total + float(stage_verdict.cat_lambda) * cat_entropy_term
         if extra_qat_total is not None:
@@ -967,7 +990,12 @@ class MlxScoreAwareAdapter:
             "pr95_stage_recon_weight": mx.array(
                 recon_stage_weight, dtype=mx.float32
             ),
+            "pr95_stage_scorer_input_guard_weight": mx.array(
+                scorer_input_guard_stage_weight, dtype=mx.float32
+            ),
         }
+        for name, value in guard_parts.items():
+            parts[f"pr95_stage_{name}"] = value
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
         parts.update(extra_qat_parts)
@@ -1324,6 +1352,25 @@ class MlxScoreAwareAdapter:
                 "schema": "mlx_score_aware_loss_part_telemetry.v1",
                 "emitted_by_train_step": True,
                 "required_when_score_terms_enabled": True,
+            },
+            "scorer_input_distribution_guard": {
+                "schema": "mlx_scorer_input_distribution_guard.v1",
+                "enabled": self.bundle.scorer_input_distribution_guard_weight > 0.0,
+                "weight": float(
+                    self.bundle.scorer_input_distribution_guard_weight
+                ),
+                "saturation_margin": float(
+                    self.bundle.scorer_input_distribution_guard_saturation_margin
+                ),
+                "temperature": float(
+                    self.bundle.scorer_input_distribution_guard_temperature
+                ),
+                "components": [
+                    "decoded_rgb_per_channel_mean",
+                    "decoded_rgb_per_channel_std",
+                    "decoded_rgb_soft_saturation_mass",
+                ],
+                "authority": "macos_mlx_training_lagrangian_false_authority",
             },
             "pr95_curriculum_controls": {
                 "schema": "mlx_pr95_curriculum_controls.v1",
