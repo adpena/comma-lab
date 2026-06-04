@@ -35,6 +35,7 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     idwt2_multilevel,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
+    DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
     SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
     SNERV_MLX_NATIVE_REPORT_FILENAME,
     SnervMlxNativeExportError,
@@ -114,6 +115,12 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
             "score_aware_long_training_pr95_muon_policy"
         ].default
         == "every_stage"
+    )
+    assert (
+        public_sig.parameters[
+            "score_aware_long_training_scorer_input_distribution_guard_weight"
+        ].default
+        == DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT
     )
     attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
     assert "pr95_muon_policy" in attachment_sig.parameters
@@ -716,6 +723,7 @@ def test_pr95_every_stage_muon_falls_back_when_snerv_has_no_matrix_targets(
             "score_aware_long_training_epochs": 1,
             "score_aware_long_training_pr95_faithful_curriculum": True,
             "score_aware_long_training_pr95_muon_policy": "every_stage",
+            "score_aware_long_training_scorer_input_distribution_guard_weight": 0.0,
         },
         scorer_upstream_dir="upstream",
         output_height=16,
@@ -1539,13 +1547,16 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
     assert long_training["final_recon_mse_nchw255"] <= (
         long_training["initial_recon_mse_nchw255"] + 1.0e-8
     )
-    assert long_training["checkpoint_selection_policy"]["mse_fallback"] is True
-    assert (
-        long_training["checkpoint_selection_policy"]["mse_fallback_reason"]
-        == "no_scorer_teacher_no_coder_qat_no_pr95_curriculum"
-    )
+    assert long_training["checkpoint_selection_policy"]["mse_fallback"] is False
+    assert long_training["scorer_input_distribution_guard_bound"] is True
+    assert long_training["checkpoint_selection_policy"][
+        "scorer_input_distribution_guard_weight"
+    ] == pytest.approx(DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT)
+    assert "scorer_input_distribution_guard" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
     assert long_training["best_checkpoint_selection"]["selection_metric"] == (
-        "full_reconstruction_mse_nchw255"
+        "score_aware_composite_full_video_surrogate"
     )
     assert long_training["checkpoint_retention"]["keep_last_n"] == (
         mod.SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
@@ -2633,6 +2644,7 @@ def test_official_primitives_full_video_long_training_defers_replay_gate(
             "snerv_fc_dim": 9,
             "score_aware_long_training_epochs": 1,
             "score_aware_long_training_batch_pairs": pair_count,
+            "score_aware_long_training_scorer_input_distribution_guard_weight": 0.0,
         },
         scorer_upstream_dir="upstream",
         output_height=16,

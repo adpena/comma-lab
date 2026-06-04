@@ -1314,7 +1314,9 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     score_aware_long_training_weight_decay: float | None = 1.0e-4,
     score_aware_long_training_eval_roundtrip_ste: bool = False,
-    score_aware_long_training_scorer_input_distribution_guard_weight: float = 0.0,
+    score_aware_long_training_scorer_input_distribution_guard_weight: float = (
+        DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT
+    ),
     score_aware_long_training_scorer_input_distribution_guard_saturation_margin: float = 0.02,
     score_aware_long_training_scorer_input_distribution_guard_temperature: float = 0.01,
     score_aware_long_training_checkpoint_retention_keep_last_n: int | None = (
