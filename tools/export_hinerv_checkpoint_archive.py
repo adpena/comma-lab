@@ -26,6 +26,14 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_knobs  # noqa: E402
+from tac.local_acceleration.mlx_preprocess import (  # noqa: E402
+    write_scorer_input_cache_from_raw_file,
+    write_scorer_input_cache_from_video_file,
+)
+from tac.local_acceleration.mlx_scorer_response import (  # noqa: E402
+    MANIFEST_CACHE_INTEGRITY_MODE,
+    build_mlx_scorer_response_payload,
+)
 from tac.repo_io import sha256_file, write_json_artifact  # noqa: E402
 from tac.substrates._shared.mlx_score_aware import RendererBundle  # noqa: E402
 from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter  # noqa: E402
@@ -57,6 +65,19 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--latent-codec", default=None)
     parser.add_argument("--emit-receiver-proof", action="store_true")
     parser.add_argument("--retain-receiver-proof-output", action="store_true")
+    parser.add_argument(
+        "--write-mlx-prefilter-profile",
+        action="store_true",
+        help=(
+            "Build a false-authority full-video MLX scorer replay from the "
+            "retained receiver raw output."
+        ),
+    )
+    parser.add_argument("--mlx-prefilter-scorer-device", default="cpu")
+    parser.add_argument("--mlx-prefilter-scorer-batch-pairs", default=1, type=int)
+    parser.add_argument("--mlx-prefilter-progress-every", default=50, type=int)
+    parser.add_argument("--source-video-path", default=None, type=Path)
+    parser.add_argument("--scorer-upstream-dir", default=None, type=Path)
     parser.add_argument("--repo-root", default=REPO_ROOT, type=Path)
     parser.add_argument("--output-json", default=None, type=Path)
     return parser
@@ -73,6 +94,12 @@ def main(argv: list[str] | None = None) -> int:
         latent_codec=args.latent_codec,
         emit_receiver_proof=bool(args.emit_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
+        write_mlx_prefilter_profile=bool(args.write_mlx_prefilter_profile),
+        mlx_prefilter_scorer_device=str(args.mlx_prefilter_scorer_device),
+        mlx_prefilter_scorer_batch_pairs=int(args.mlx_prefilter_scorer_batch_pairs),
+        mlx_prefilter_progress_every=int(args.mlx_prefilter_progress_every),
+        source_video_path=args.source_video_path,
+        scorer_upstream_dir=args.scorer_upstream_dir,
         repo_root=args.repo_root,
     )
     output_json = args.output_json or args.output_dir / "hinerv_checkpoint_archive_export.json"
@@ -92,6 +119,12 @@ def export_checkpoint_archive(
     latent_codec: str | None = None,
     emit_receiver_proof: bool = False,
     retain_receiver_proof_output: bool = False,
+    write_mlx_prefilter_profile: bool = False,
+    mlx_prefilter_scorer_device: str = "cpu",
+    mlx_prefilter_scorer_batch_pairs: int = 1,
+    mlx_prefilter_progress_every: int = 50,
+    source_video_path: str | Path | None = None,
+    scorer_upstream_dir: str | Path | None = None,
     repo_root: str | Path = REPO_ROOT,
 ) -> dict[str, Any]:
     startup_path = Path(startup_json).expanduser().resolve(strict=False)
@@ -170,6 +203,22 @@ def export_checkpoint_archive(
     receiver_proof_path = out / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
     receiver_proof = _read_json(receiver_proof_path) if receiver_proof_path.is_file() else {}
     section_profile = _section_profile(out, archive_bytes=int(archive_bytes))
+    mlx_prefilter_profile = _maybe_write_receiver_raw_cache_mlx_prefilter(
+        requested=bool(write_mlx_prefilter_profile),
+        output_dir=out / "local_mlx_prefilter",
+        receiver_proof=receiver_proof,
+        startup=startup,
+        command_args=command_args,
+        candidate=candidate,
+        archive_bytes=int(archive_bytes),
+        archive_sha256=str(archive_sha256),
+        source_video_path=source_video_path,
+        scorer_upstream_dir=scorer_upstream_dir,
+        scorer_device=_canonical_mlx_prefilter_device(mlx_prefilter_scorer_device),
+        scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
+        progress_every=int(mlx_prefilter_progress_every),
+        repo_root=root,
+    )
     report = {
         "schema": "hinerv_checkpoint_archive_export.v1",
         "family": "hi_nerv",
@@ -197,6 +246,9 @@ def export_checkpoint_archive(
         "receiver_proof_path": receiver_proof_path.as_posix() if receiver_proof_path.is_file() else None,
         "receiver_proof_sha256": sha256_file(receiver_proof_path) if receiver_proof_path.is_file() else None,
         "receiver_proof_ready": bool(receiver_proof.get("runtime_consumption_proof_ready")),
+        "local_mlx_prefilter_profile": mlx_prefilter_profile,
+        "local_mlx_prefilter_profile_path": mlx_prefilter_profile.get("profile_path"),
+        "local_mlx_prefilter_written": mlx_prefilter_profile.get("written") is True,
         "modelsize_byte_cap_feedback_row": _modelsize_byte_cap_feedback_row(
             candidate=candidate,
             archive_bytes=int(archive_bytes),
@@ -216,6 +268,7 @@ def export_checkpoint_archive(
             receiver_proof_requested=bool(emit_receiver_proof),
             modelsize_integrity=modelsize_integrity,
             decoder_codec_resolution=decoder_codec_resolution,
+            mlx_prefilter_profile=mlx_prefilter_profile,
         ),
         **FALSE_AUTHORITY,
     }
@@ -361,12 +414,26 @@ def _blockers(
     receiver_proof_requested: bool,
     modelsize_integrity: dict[str, Any],
     decoder_codec_resolution: dict[str, Any],
+    mlx_prefilter_profile: dict[str, Any] | None = None,
 ) -> list[str]:
     blockers = [
         "macos_mlx_checkpoint_export_false_authority",
         "contest_cpu_cuda_exact_eval_not_executed",
-        "full_video_scorer_replay_not_executed",
     ]
+    mlx_prefilter_profile = dict(mlx_prefilter_profile or {})
+    if mlx_prefilter_profile.get("written") is True:
+        blockers.extend(
+            str(blocker)
+            for blocker in mlx_prefilter_profile.get("blockers") or ()
+            if str(blocker)
+        )
+    else:
+        blockers.append("full_video_scorer_replay_not_executed")
+        blockers.extend(
+            str(blocker)
+            for blocker in mlx_prefilter_profile.get("blockers") or ()
+            if str(blocker)
+        )
     ceiling = hard_byte_ceiling or _min_positive_int(hard_byte_ceilings)
     if ceiling is not None and int(archive_bytes) > int(ceiling):
         blockers.append("archive_bytes_exceed_tightest_hard_ceiling")
@@ -376,7 +443,7 @@ def _blockers(
         blockers.append("receiver_proof_not_ready")
     blockers.extend(str(v) for v in modelsize_integrity.get("blockers") or [])
     blockers.extend(str(v) for v in decoder_codec_resolution.get("blockers") or [])
-    return blockers
+    return list(dict.fromkeys(blockers))
 
 
 def _modelsize_integrity_profile(
@@ -558,6 +625,401 @@ def _section_profile(output_dir: Path, *, archive_bytes: int) -> dict[str, Any]:
         "dominant_sections": sorted(sections, key=lambda row: int(row["bytes"]), reverse=True)[:4],
         "blockers": [] if sections else ["hprc_spine_sections_missing"],
     }
+
+
+def _maybe_write_receiver_raw_cache_mlx_prefilter(
+    *,
+    requested: bool,
+    output_dir: str | Path,
+    receiver_proof: dict[str, Any],
+    startup: dict[str, Any],
+    command_args: dict[str, Any],
+    candidate: dict[str, Any],
+    archive_bytes: int | None,
+    archive_sha256: str | None,
+    source_video_path: str | Path | None,
+    scorer_upstream_dir: str | Path | None,
+    scorer_device: str,
+    scorer_batch_pairs: int,
+    progress_every: int,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    base = {
+        "schema": "hinerv_checkpoint_receiver_raw_mlx_prefilter_request.v1",
+        "requested": bool(requested),
+        "profile_path": (out / "local_mlx_prefilter_profile.json").as_posix(),
+        "progress_path": None,
+        "receiver_decoded_archive_raw_required": True,
+        **FALSE_AUTHORITY,
+    }
+    if not requested:
+        return {
+            **base,
+            "written": False,
+            "blockers": ["hinerv_checkpoint_mlx_prefilter_not_requested"],
+        }
+    source_pair_indices = _hinerv_source_pair_indices(
+        candidate=candidate,
+        command_args=command_args,
+    )
+    n_pairs = len(source_pair_indices)
+    if n_pairs < 1:
+        return {
+            **base,
+            "written": False,
+            "blockers": ["hinerv_checkpoint_mlx_prefilter_pair_count_missing"],
+        }
+    if source_pair_indices != tuple(range(n_pairs)):
+        return {
+            **base,
+            "written": False,
+            "source_pair_indices": [int(value) for value in source_pair_indices],
+            "blockers": [
+                "hinerv_checkpoint_mlx_prefilter_requires_prefix_source_pair_indices"
+            ],
+        }
+    raw_path = _resolve_receiver_raw_path(
+        receiver_proof.get("receiver_output_path"),
+        repo_root=repo_root,
+    )
+    if raw_path is None or not raw_path.is_file() or raw_path.stat().st_size <= 0:
+        return {
+            **base,
+            "written": False,
+            "blockers": ["hinerv_checkpoint_mlx_prefilter_receiver_raw_missing"],
+        }
+    if receiver_proof.get("receiver_output_retained") is not True:
+        return {
+            **base,
+            "written": False,
+            "receiver_output_path": raw_path.as_posix(),
+            "blockers": [
+                "hinerv_checkpoint_mlx_prefilter_receiver_raw_not_retained"
+            ],
+        }
+    if archive_bytes is None or archive_sha256 is None:
+        return {
+            **base,
+            "written": False,
+            "receiver_output_path": raw_path.as_posix(),
+            "blockers": ["hinerv_checkpoint_mlx_prefilter_archive_identity_missing"],
+        }
+    source_video = _resolve_source_video_path(
+        explicit=source_video_path,
+        startup=startup,
+        command_args=command_args,
+        repo_root=repo_root,
+    )
+    upstream_dir = _resolve_scorer_upstream_dir(
+        explicit=scorer_upstream_dir,
+        command_args=command_args,
+        repo_root=repo_root,
+    )
+    profile_path = out / "local_mlx_prefilter_profile.json"
+    reference_cache_dir = out / "scorer_input_caches" / "reference_source_video"
+    candidate_cache_dir = out / "scorer_input_caches" / "candidate_receiver_raw"
+    components_dir = out / "scorer_input_caches" / "components"
+    try:
+        reference_manifest = _ensure_video_scorer_cache(
+            source_video,
+            reference_cache_dir,
+            pair_count=n_pairs,
+            batch_pairs=max(1, int(scorer_batch_pairs)),
+        )
+        candidate_manifest = _ensure_raw_scorer_cache(
+            raw_path,
+            candidate_cache_dir,
+            archive_sha256=str(archive_sha256),
+            inflated_outputs_aggregate_sha256=str(
+                receiver_proof.get("receiver_output_sha256") or ""
+            )
+            or None,
+            pair_count=n_pairs,
+            batch_pairs=max(1, int(scorer_batch_pairs)),
+        )
+        response = build_mlx_scorer_response_payload(
+            reference_cache_dir=reference_cache_dir,
+            candidate_cache_dir=candidate_cache_dir,
+            archive_size_bytes=int(archive_bytes),
+            repo_root=repo_root,
+            upstream_dir=upstream_dir,
+            batch_pairs=max(1, int(scorer_batch_pairs)),
+            device_type=str(scorer_device),
+            components_dir=components_dir,
+            progress_every=max(0, int(progress_every)),
+            allow_gpu_research_signal=str(scorer_device) == "gpu",
+            allow_unaudited_candidate_cache_debug=True,
+            cache_integrity_mode=MANIFEST_CACHE_INTEGRITY_MODE,
+            response_family="hi_nerv",
+        )
+        response = {
+            **response,
+            "schema": "mlx_scorer_response.v1",
+            "schema_version": "mlx_scorer_response.v1",
+            "hinerv_receiver_raw_cache_prefilter": {
+                "schema": "hinerv_receiver_raw_cache_prefilter.v1",
+                "receiver_output_path": raw_path.as_posix(),
+                "receiver_output_sha256": receiver_proof.get(
+                    "receiver_output_sha256"
+                ),
+                "reference_cache_manifest": reference_manifest,
+                "candidate_cache_manifest": candidate_manifest,
+                "source_pair_indices_alignment": "prefix_source_pair_indices",
+                **FALSE_AUTHORITY,
+            },
+        }
+        write_json_artifact(profile_path, response)
+        reference_cleanup = _cleanup_rebuildable_scorer_cache_arrays(
+            reference_cache_dir,
+            reference_manifest,
+            reason="hinerv_checkpoint_receiver_raw_prefilter_reference_cache_rebuildable",
+        )
+        candidate_cleanup = _cleanup_rebuildable_scorer_cache_arrays(
+            candidate_cache_dir,
+            candidate_manifest,
+            reason="hinerv_checkpoint_receiver_raw_prefilter_candidate_cache_rebuildable",
+        )
+        return {
+            **base,
+            "written": True,
+            "profile_schema": "mlx_scorer_response.v1",
+            "profile_path": profile_path.as_posix(),
+            "profile_sha256": sha256_file(profile_path),
+            "cache_backed": True,
+            "candidate_cache_dir": candidate_cache_dir.as_posix(),
+            "reference_cache_dir": reference_cache_dir.as_posix(),
+            "components_dir": components_dir.as_posix(),
+            "scorer_response_schema": response.get("schema"),
+            "n_samples": response.get("n_samples"),
+            "score_recomputed_from_components": response.get(
+                "score_recomputed_from_components"
+            ),
+            "avg_segnet_dist": response.get("avg_segnet_dist"),
+            "avg_posenet_dist": response.get("avg_posenet_dist"),
+            "cache_cleanup": {
+                "schema": "hinerv_receiver_raw_cache_prefilter_cleanup.v1",
+                "cleanup_policy": "delete_certified_rebuildable_cache_arrays_leave_manifests",
+                "reference_cache_cleanup": reference_cleanup,
+                "candidate_cache_cleanup": candidate_cleanup,
+                **FALSE_AUTHORITY,
+            },
+            "blockers": [
+                "mlx_local_replay_not_contest_auth_axis",
+                "hinerv_receiver_raw_cache_prefilter_false_authority",
+            ],
+            **FALSE_AUTHORITY,
+        }
+    except Exception as exc:
+        failure = {
+            "schema": "hinerv_receiver_raw_cache_prefilter_failure.v1",
+            "requested": True,
+            "receiver_output_path": raw_path.as_posix(),
+            "failure": repr(exc),
+            "blockers": ["hinerv_receiver_raw_cache_prefilter_failed"],
+            **FALSE_AUTHORITY,
+        }
+        write_json_artifact(profile_path, failure)
+        return {
+            **base,
+            "written": False,
+            "profile_schema": failure["schema"],
+            "profile_path": profile_path.as_posix(),
+            "profile_sha256": sha256_file(profile_path),
+            "failure": repr(exc),
+            "blockers": ["hinerv_receiver_raw_cache_prefilter_failed"],
+            **FALSE_AUTHORITY,
+        }
+
+
+def _ensure_video_scorer_cache(
+    video_path: Path,
+    output_dir: Path,
+    *,
+    pair_count: int,
+    batch_pairs: int,
+) -> dict[str, Any]:
+    return _ensure_scorer_cache(
+        output_dir,
+        writer=lambda: write_scorer_input_cache_from_video_file(
+            video_path,
+            output_dir,
+            max_pairs=int(pair_count),
+            batch_pairs=int(batch_pairs),
+        ),
+    )
+
+
+def _ensure_raw_scorer_cache(
+    raw_path: Path,
+    output_dir: Path,
+    *,
+    archive_sha256: str,
+    inflated_outputs_aggregate_sha256: str | None,
+    pair_count: int,
+    batch_pairs: int,
+) -> dict[str, Any]:
+    return _ensure_scorer_cache(
+        output_dir,
+        writer=lambda: write_scorer_input_cache_from_raw_file(
+            raw_path,
+            output_dir,
+            archive_sha256=archive_sha256,
+            inflated_outputs_aggregate_sha256=inflated_outputs_aggregate_sha256,
+            max_pairs=int(pair_count),
+            batch_pairs=int(batch_pairs),
+        ),
+    )
+
+
+def _ensure_scorer_cache(
+    output_dir: Path,
+    *,
+    writer: Any,
+) -> dict[str, Any]:
+    manifest_path = output_dir / "manifest.json"
+    cache_files = (
+        output_dir / "segnet_last_rgb.npy",
+        output_dir / "posenet_yuv6_pair.npy",
+        output_dir / "pair_indices.npy",
+    )
+    if manifest_path.is_file():
+        return _read_json(manifest_path)
+    existing = [path.as_posix() for path in cache_files if path.exists()]
+    if existing:
+        raise ValueError(
+            "refusing partial scorer-input cache without manifest: "
+            + ", ".join(existing)
+        )
+    return writer()
+
+
+def _cleanup_rebuildable_scorer_cache_arrays(
+    output_dir: Path,
+    manifest: dict[str, Any],
+    *,
+    reason: str,
+) -> dict[str, Any]:
+    cleanup = {
+        "schema": "hinerv_checkpoint_scorer_cache_array_cleanup.v1",
+        "cache_dir": output_dir.as_posix(),
+        "reason": str(reason),
+        "deleted_files": [],
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict):
+        cleanup["blockers"] = ["scorer_cache_cleanup_manifest_artifacts_missing"]
+        return cleanup
+    deleted: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for key, record in artifacts.items():
+        if not isinstance(record, dict):
+            blockers.append(f"scorer_cache_cleanup_artifact_record_invalid:{key}")
+            continue
+        path_value = record.get("path")
+        path = Path(str(path_value)).expanduser().resolve(strict=False) if path_value else None
+        if path is None or path.suffix != ".npy" or not path.is_file():
+            continue
+        expected_sha = str(record.get("sha256") or "")
+        actual_sha = sha256_file(path)
+        if actual_sha != expected_sha:
+            blockers.append(f"scorer_cache_cleanup_sha256_mismatch:{key}")
+            continue
+        file_record = {
+            "artifact_id": str(key),
+            "path": path.as_posix(),
+            "bytes": path.stat().st_size,
+            "sha256": actual_sha,
+            "delete_certified_rebuildable": True,
+        }
+        path.unlink()
+        deleted.append(file_record)
+    cleanup["deleted_files"] = deleted
+    cleanup["blockers"] = blockers
+    return cleanup
+
+
+def _resolve_source_video_path(
+    *,
+    explicit: str | Path | None,
+    startup: dict[str, Any],
+    command_args: dict[str, Any],
+    repo_root: str | Path,
+) -> Path:
+    value = (
+        explicit
+        or startup.get("source_video_path")
+        or command_args.get("source_video_path")
+        or Path(repo_root) / "upstream" / "videos" / "0.mkv"
+    )
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = Path(repo_root) / path
+    return path.resolve(strict=False)
+
+
+def _resolve_scorer_upstream_dir(
+    *,
+    explicit: str | Path | None,
+    command_args: dict[str, Any],
+    repo_root: str | Path,
+) -> Path:
+    value = explicit or command_args.get("scorer_upstream_dir") or Path(repo_root) / "upstream"
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = Path(repo_root) / path
+    return path.resolve(strict=False)
+
+
+def _resolve_receiver_raw_path(value: Any, *, repo_root: str | Path) -> Path | None:
+    if not value:
+        return None
+    path = Path(str(value)).expanduser()
+    if not path.is_absolute():
+        path = Path(repo_root) / path
+    return path.resolve(strict=False)
+
+
+def _hinerv_source_pair_indices(
+    *,
+    candidate: dict[str, Any],
+    command_args: dict[str, Any],
+) -> tuple[int, ...]:
+    raw = (
+        candidate.get("source_pair_indices")
+        or command_args.get("source_pair_indices")
+        or command_args.get("prioritized_pair_indices")
+    )
+    if raw is None or raw == "":
+        n_pairs = int(candidate.get("num_pairs") or command_args.get("num_pairs") or 0)
+        return tuple(range(n_pairs))
+    if isinstance(raw, str):
+        values = [part.strip() for part in raw.split(",") if part.strip()]
+        return tuple(int(value) for value in values)
+    if isinstance(raw, list | tuple):
+        return tuple(int(value) for value in raw)
+    raise ValueError(f"unsupported HiNeRV source_pair_indices payload: {raw!r}")
+
+
+def _canonical_mlx_prefilter_device(value: Any) -> str:
+    device = str(value or "cpu").strip().lower()
+    aliases = {
+        "": "cpu",
+        "cpu": "cpu",
+        "gpu": "gpu",
+        "metal": "gpu",
+        "mps": "gpu",
+        "mlx-gpu": "gpu",
+    }
+    if device not in aliases:
+        raise ValueError(
+            "mlx prefilter scorer device must be one of "
+            "cpu, gpu, metal, or mps; got "
+            f"{value!r}"
+        )
+    return aliases[device]
 
 
 def _read_json(path: Path) -> dict[str, Any]:

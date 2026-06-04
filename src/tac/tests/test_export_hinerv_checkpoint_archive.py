@@ -7,6 +7,8 @@ from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_kno
 from tools.export_hinerv_checkpoint_archive import (
     _blockers,
     _export_hard_byte_ceiling,
+    _hinerv_source_pair_indices,
+    _maybe_write_receiver_raw_cache_mlx_prefilter,
     _modelsize_integrity_profile,
     _resolve_decoder_codec,
 )
@@ -94,6 +96,93 @@ def test_hinerv_checkpoint_export_uses_strictest_candidate_or_startup_byte_ceili
         )
         == 178_000
     )
+
+
+def test_hinerv_checkpoint_prefilter_not_requested_is_false_authority_blocker(
+    tmp_path,
+) -> None:
+    profile = _maybe_write_receiver_raw_cache_mlx_prefilter(
+        requested=False,
+        output_dir=tmp_path,
+        receiver_proof={},
+        startup={},
+        command_args={},
+        candidate={"num_pairs": 2},
+        archive_bytes=123,
+        archive_sha256="a" * 64,
+        source_video_path=None,
+        scorer_upstream_dir=None,
+        scorer_device="cpu",
+        scorer_batch_pairs=1,
+        progress_every=0,
+        repo_root=tmp_path,
+    )
+
+    assert profile["written"] is False
+    assert profile["blockers"] == ["hinerv_checkpoint_mlx_prefilter_not_requested"]
+    assert profile["score_claim"] is False
+
+
+def test_hinerv_checkpoint_prefilter_requires_prefix_source_pair_indices(
+    tmp_path,
+) -> None:
+    raw = tmp_path / "candidate.raw"
+    raw.write_bytes(b"raw")
+    profile = _maybe_write_receiver_raw_cache_mlx_prefilter(
+        requested=True,
+        output_dir=tmp_path / "prefilter",
+        receiver_proof={
+            "receiver_output_path": raw.as_posix(),
+            "receiver_output_retained": True,
+        },
+        startup={},
+        command_args={"prioritized_pair_indices": "2,4"},
+        candidate={"num_pairs": 2},
+        archive_bytes=123,
+        archive_sha256="a" * 64,
+        source_video_path=None,
+        scorer_upstream_dir=None,
+        scorer_device="cpu",
+        scorer_batch_pairs=1,
+        progress_every=0,
+        repo_root=tmp_path,
+    )
+
+    assert profile["written"] is False
+    assert profile["source_pair_indices"] == [2, 4]
+    assert profile["blockers"] == [
+        "hinerv_checkpoint_mlx_prefilter_requires_prefix_source_pair_indices"
+    ]
+
+
+def test_hinerv_checkpoint_source_pair_indices_default_to_prefix() -> None:
+    assert _hinerv_source_pair_indices(candidate={"num_pairs": 3}, command_args={}) == (
+        0,
+        1,
+        2,
+    )
+    assert _hinerv_source_pair_indices(
+        candidate={},
+        command_args={"prioritized_pair_indices": "0,1"},
+    ) == (0, 1)
+
+
+def test_hinerv_checkpoint_blockers_switch_when_mlx_prefilter_written() -> None:
+    blockers = _blockers(
+        archive_bytes=120_000,
+        hard_byte_ceilings=[178_000],
+        receiver_proof={"runtime_consumption_proof_ready": True},
+        receiver_proof_requested=True,
+        modelsize_integrity={"blockers": []},
+        decoder_codec_resolution={"blockers": []},
+        mlx_prefilter_profile={
+            "written": True,
+            "blockers": ["mlx_local_replay_not_contest_auth_axis"],
+        },
+    )
+
+    assert "full_video_scorer_replay_not_executed" not in blockers
+    assert "mlx_local_replay_not_contest_auth_axis" in blockers
 
 
 def test_hinerv_checkpoint_decoder_codec_keeps_nondefault_runner_codec() -> None:
