@@ -297,7 +297,15 @@ def build_mlx_renderer_prefilter_profile_loaded(
     if batch_pairs != 1:
         blockers.append("mlx_profile_batch_pairs_not_singleton")
     scorer_input_distribution = input_stats.summary()
+    scorer_input_diagnosis = _scorer_input_distribution_diagnosis(
+        scorer_input_distribution
+    )
     blockers.extend(_scorer_input_distribution_blockers(scorer_input_distribution))
+    blockers.extend(
+        str(blocker)
+        for blocker in scorer_input_diagnosis.get("blockers") or ()
+        if str(blocker)
+    )
     return {
         "schema": HPRC_MLX_COMPONENT_PROFILE_SCHEMA,
         "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
@@ -382,8 +390,9 @@ def build_mlx_renderer_prefilter_profile_loaded(
         },
         "component_output_hashes": output_hashes.hexdigests(),
         "scorer_input_distribution": scorer_input_distribution,
+        "scorer_input_diagnosis": scorer_input_diagnosis,
         "section_value_rows": [],
-        "blockers": blockers,
+        "blockers": _ordered_unique(blockers),
         "authority_status": (
             "macOS MLX scorer replay is a local prefilter only. It can route "
             "local CPU replay after coverage/calibration gates, but it is not "
@@ -601,6 +610,99 @@ def _scorer_input_distribution_blockers(
     return blockers
 
 
+def _scorer_input_distribution_diagnosis(
+    distribution: dict[str, Any],
+) -> dict[str, Any]:
+    """Summarize value-domain pathologies before component scores are trusted."""
+
+    seg_candidate = distribution.get("candidate_segnet_last_rgb") or {}
+    seg_reference = distribution.get("reference_segnet_last_rgb") or {}
+    pose_candidate = distribution.get("candidate_posenet_yuv6_pair") or {}
+    pose_reference = distribution.get("reference_posenet_yuv6_pair") or {}
+    seg_absdiff = distribution.get("segnet_last_rgb_absdiff") or {}
+    pose_absdiff = distribution.get("posenet_yuv6_pair_absdiff") or {}
+
+    seg_std_ratio = _std_ratio(seg_candidate, seg_reference)
+    pose_std_ratio = _std_ratio(pose_candidate, pose_reference)
+    seg_saturation_delta = _saturation_delta(seg_candidate, seg_reference)
+    pose_saturation_delta = _saturation_delta(pose_candidate, pose_reference)
+    seg_saturation = _float_or_none(seg_candidate.get("saturation_fraction"))
+    pose_saturation = _float_or_none(pose_candidate.get("saturation_fraction"))
+    seg_mean_abs = _float_or_none(seg_absdiff.get("mean_abs"))
+    pose_mean_abs = _float_or_none(pose_absdiff.get("mean_abs"))
+
+    blockers: list[str] = []
+    suspected_failure_modes: list[str] = []
+    recommended_next_actions: list[str] = []
+
+    saturated_or_clipped = (
+        (seg_saturation is not None and seg_saturation >= 0.5)
+        or (pose_saturation is not None and pose_saturation >= 0.5)
+        or seg_saturation_delta > 0.35
+        or pose_saturation_delta > 0.35
+    )
+    out_of_distribution = (
+        saturated_or_clipped
+        or seg_std_ratio > 4.0
+        or pose_std_ratio > 4.0
+        or (0.0 < seg_std_ratio < 0.25)
+        or (0.0 < pose_std_ratio < 0.25)
+        or (seg_mean_abs is not None and seg_mean_abs > 50.0)
+        or (pose_mean_abs is not None and pose_mean_abs > 50.0)
+    )
+
+    if saturated_or_clipped:
+        blockers.append("mlx_renderer_prefilter_candidate_output_saturated_or_clipped")
+        suspected_failure_modes.extend(
+            [
+                "decode_value_domain_or_activation_scale_mismatch",
+                "receiver_output_clamped_before_scorer_input",
+                "train_export_selected_packet_not_representing_trained_dynamic_range",
+            ]
+        )
+        recommended_next_actions.extend(
+            [
+                "run_receiver_decode_value_domain_xray_before_architecture_dispatch",
+                "compare decoded candidate RGB byte histograms against source reference",
+                "block exact_eval_dispatch_until_scorer_input_distribution_normalizes",
+            ]
+        )
+    if out_of_distribution:
+        blockers.append("mlx_renderer_prefilter_scorer_input_out_of_distribution")
+        recommended_next_actions.append(
+            "route_next_local_work_to_value_domain_replay_or_hard_pair_quality_repair"
+        )
+
+    return {
+        "schema": "mlx_renderer_prefilter_scorer_input_diagnosis.v1",
+        "verdict": (
+            "SCORER_INPUT_OUT_OF_DISTRIBUTION"
+            if out_of_distribution
+            else "SCORER_INPUT_DISTRIBUTION_WITHIN_PREFILTER_LIMITS"
+        ),
+        "candidate_output_likely_saturated_or_clipped": bool(saturated_or_clipped),
+        "candidate_output_out_of_distribution": bool(out_of_distribution),
+        "metrics": {
+            "segnet_last_rgb_std_ratio_candidate_over_reference": seg_std_ratio,
+            "posenet_yuv6_pair_std_ratio_candidate_over_reference": pose_std_ratio,
+            "segnet_last_rgb_saturation_delta_candidate_minus_reference": (
+                seg_saturation_delta
+            ),
+            "posenet_yuv6_pair_saturation_delta_candidate_minus_reference": (
+                pose_saturation_delta
+            ),
+            "candidate_segnet_last_rgb_saturation_fraction": seg_saturation,
+            "candidate_posenet_yuv6_pair_saturation_fraction": pose_saturation,
+            "segnet_last_rgb_mean_absdiff": seg_mean_abs,
+            "posenet_yuv6_pair_mean_absdiff": pose_mean_abs,
+        },
+        "suspected_failure_modes": _ordered_unique(suspected_failure_modes),
+        "recommended_next_actions": _ordered_unique(recommended_next_actions),
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _float_or_none(value: Any) -> float | None:
     try:
         parsed = float(value)
@@ -623,6 +725,17 @@ def _saturation_delta(candidate: dict[str, Any], reference: dict[str, Any]) -> f
     if cand_sat is None or ref_sat is None:
         return 0.0
     return cand_sat - ref_sat
+
+
+def _ordered_unique(values: list[str] | tuple[str, ...] | Any) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values or ():
+        item = str(value)
+        if item and item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out
 
 
 class _OutputHashes:

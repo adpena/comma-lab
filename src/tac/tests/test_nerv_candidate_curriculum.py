@@ -54,6 +54,43 @@ def _snerv_native_artifact(tmp_path: Path, *, num_pairs: int = 600) -> dict[str,
     }
 
 
+def _healthy_local_scorer_profile() -> dict[str, object]:
+    return {
+        "local_mlx_prefilter_profile_path": "/ssd/local_mlx_prefilter_profile.json",
+        "local_mlx_prefilter_profile": {
+            "schema": "mlx_renderer_prefilter_profile.v1",
+            "blockers": ["mlx_local_replay_not_contest_auth_axis"],
+            "scorer_input_distribution": {
+                "schema": "mlx_renderer_prefilter_scorer_input_distribution.v1",
+                "candidate_segnet_last_rgb": {
+                    "std": 42.0,
+                    "saturation_fraction": 0.02,
+                },
+                "reference_segnet_last_rgb": {
+                    "std": 40.0,
+                    "saturation_fraction": 0.02,
+                },
+                "segnet_last_rgb_absdiff": {"mean_abs": 4.0},
+                "candidate_posenet_yuv6_pair": {
+                    "std": 58.0,
+                    "saturation_fraction": 0.01,
+                },
+                "reference_posenet_yuv6_pair": {
+                    "std": 60.0,
+                    "saturation_fraction": 0.01,
+                },
+                "posenet_yuv6_pair_absdiff": {"mean_abs": 5.0},
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    }
+
+
 def test_hinerv_candidate_curriculum_enables_lowbit_qat_and_blocks_missing_scorers() -> None:
     candidate = analyze_hinerv_modelsize_candidate(
         hard_byte_ceiling=178_000,
@@ -173,7 +210,15 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert plan["pr95_stack_binding"]["rows"][1]["satisfied"] is True
     assert "hi_nerv_archive_in_loop_byte_oracle_missing" not in plan["blockers"]
     assert "hi_nerv_receiver_proof_missing" in plan["blockers"]
-    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is True
+    assert plan["scorer_input_health_gate"]["profile_required"] is True
+    assert plan["scorer_input_health_gate"]["local_replay_admissible"] is False
+    assert "hinerv_local_scorer_input_profile_missing" in plan["blockers"]
+    assert "hinerv_local_scorer_input_health_gate_failed" in plan["blockers"]
+    assert plan["scorer_pressure"]["scorer_input_distribution_guard_verified"] is False
+    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
+    assert "hi_nerv_scorer_input_distribution_guard_missing" in plan[
+        "long_campaign_prelaunch_gate"
+    ]["blockers"]
     assert "hi_nerv_eval_roundtrip_ste_missing" not in plan[
         "long_campaign_prelaunch_gate"
     ]["blockers"]
@@ -208,9 +253,15 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
         ema_archive_selection_attached=True,
         receiver_proof_attached=True,
         measured_archive_bytes=measured,
+        native_mlx_artifact_evidence=_healthy_local_scorer_profile(),
     )
     assert "hi_nerv_receiver_proof_missing" not in receiver_proven["blockers"]
     assert receiver_proven["scorer_pressure"]["receiver_proof_attached"] is True
+    assert receiver_proven["scorer_input_health_gate"]["local_replay_admissible"] is True
+    assert (
+        receiver_proven["scorer_pressure"]["scorer_input_distribution_guard_verified"]
+        is True
+    )
 
 
 def test_hinerv_candidate_curriculum_uses_explicit_optimizer_binding_evidence() -> None:
@@ -276,6 +327,7 @@ def test_hinerv_candidate_curriculum_uses_explicit_optimizer_binding_evidence() 
         pr95_staged_curriculum_bound=True,
         muon_adamw_partition_bound=True,
         measured_archive_bytes=measured,
+        native_mlx_artifact_evidence=_healthy_local_scorer_profile(),
     )
 
     assert pr95_bound_plan["pr95_stage_plan"]["enabled"] is True
@@ -410,6 +462,8 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
         "queue_ready_is_not_receiver_or_exact_authority": True,
         "receiver_authority_requires_file_backed_export_and_replay": True,
         "official_receiver_payload_is_not_source_forward_authority": True,
+        "scorer_input_health_required_for_local_replay": True,
+        "skip_high_value_domain_xray_required_for_scalar_modes": True,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
@@ -442,6 +496,108 @@ def test_snerv_candidate_curriculum_records_snar1_byte_feedback() -> None:
     assert "snerv_receiver_proof_missing" in plan["blockers"]
     assert "snerv_scorer_loop_qat_not_attached" in plan["blockers"]
     assert plan["score_claim"] is False
+
+
+def test_snerv_candidate_curriculum_blocks_bad_scorer_input_and_scalar_skip_high() -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        levels=1,
+        bits_per_coeff=1.0,
+        step_map_bits_per_coeff=1.0,
+        decoder_payload_codec="int8_symmetric",
+        snerv_model_size_adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+    ).as_dict()
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=29_650,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=81_983,
+        measured_archive_bytes=93_620,
+        native_mlx_train_export_attached=True,
+        native_mlx_long_training_bound=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+        native_mlx_scorer_loop_qat_attached=True,
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=True,
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=True,
+        native_mlx_scorer_loop_qat_accepted_improvement=True,
+        native_mlx_scorer_loop_qat_best_materialized=True,
+        native_mlx_real_segnet_teacher_bound=True,
+        native_mlx_real_posenet_teacher_bound=True,
+        native_mlx_pr95_curriculum_bound=True,
+        native_mlx_eval_roundtrip_ste_bound=True,
+        native_mlx_scorer_input_distribution_guard_bound=True,
+        native_mlx_differentiable_pose_preprocess_bound=True,
+        native_mlx_coder_qat_bound=True,
+        native_mlx_muon_adamw_partition_bound=True,
+        receiver_proof_attached=True,
+        full_video_local_prefilter_attached=True,
+        local_cpu_replay_gate_attached=True,
+        native_mlx_artifact_evidence={
+            "local_mlx_prefilter_profile_path": "/ssd/local_mlx_prefilter_profile.json",
+            "local_mlx_prefilter_profile": {
+                "schema": "mlx_renderer_prefilter_profile.v1",
+                "blockers": [
+                    "mlx_local_replay_not_contest_auth_axis",
+                    "scorer_input_segnet_last_rgb_mean_absdiff_gt_50",
+                    "scorer_input_posenet_yuv6_pair_saturation_delta_gt_0_15",
+                ],
+                "scorer_input_distribution": {
+                    "schema": "mlx_renderer_prefilter_scorer_input_distribution.v1",
+                    "candidate_segnet_last_rgb": {
+                        "saturation_fraction": 0.994,
+                    },
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "receiver_value_domain_xray": {
+                "schema": "snerv_receiver_value_domain_xray.v1",
+                "decoder_payload_header": {
+                    "skip_high_storage": {
+                        "schema": "snerv_official_skip_high_storage.v1",
+                        "codec": "scalar_mean_float64",
+                        "stored_shape": [1, 1, 1, 1],
+                        "stored_raw_bytes": 8,
+                        "receiver_expands_skip_high": True,
+                        "lossless_relative_to_source_skip_high": False,
+                    },
+                },
+                "blockers": [
+                    "snerv_official_skip_high_scalar_mean_receiver_expand_collapse_risk",
+                    "snerv_profile_segnet_last_frame_saturated",
+                ],
+            },
+        },
+    )
+
+    scorer_gate = plan["scorer_input_health_gate"]
+    assert scorer_gate["profile_present"] is True
+    assert scorer_gate["local_replay_admissible"] is False
+    assert "scorer_input_segnet_last_rgb_mean_absdiff_gt_50" in scorer_gate[
+        "blockers"
+    ]
+    assert "snerv_local_scorer_input_health_gate_failed" in plan["blockers"]
+
+    skip_gate = plan["skip_high_export_admission_gate"]
+    assert skip_gate["official_skip_high_mode"] == "scalar_mean"
+    assert skip_gate["scalar_collapse_risk"] is True
+    assert skip_gate["local_training_allowed"] is True
+    assert skip_gate["exact_eval_admissible"] is False
+    assert (
+        "snerv_official_skip_high_scalar_mean_receiver_expand_collapse_risk"
+        in plan["blockers"]
+    )
+    assert (
+        "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse"
+        in plan["blockers"]
+    )
+    assert plan["ready_for_exact_eval_dispatch"] is False
 
 
 def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:

@@ -31,6 +31,10 @@ from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract impor
 SCHEMA = "nerv_candidate_curriculum_plan.v1"
 BYTE_FEEDBACK_SCHEMA = "nerv_candidate_byte_feedback.v1"
 SNERV_OFFICIAL_MFU_HFR_TUB_ADAPTER = "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+NERV_SCORER_INPUT_HEALTH_GATE_SCHEMA = "nerv_local_scorer_input_health_gate.v1"
+SNERV_SKIP_HIGH_EXPORT_ADMISSION_GATE_SCHEMA = (
+    "snerv_skip_high_export_admission_gate.v1"
+)
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -98,6 +102,11 @@ def _artifact_mappings(root: Mapping[str, Any] | None) -> list[Mapping[str, Any]
         "selected_official_authority",
         "official_primitive_binding",
         "official_receiver_tensor_map_custody",
+        "official_mfu_hfr_tub_source_forward_replay",
+        "official_checkpoint_export_binding",
+        "local_mlx_prefilter_profile",
+        "receiver_value_domain_xray",
+        "snerv_receiver_value_domain_xray",
     ):
         child = root.get(key)
         if isinstance(child, Mapping):
@@ -110,6 +119,10 @@ def _artifact_mappings(root: Mapping[str, Any] | None) -> list[Mapping[str, Any]
         if isinstance(official_replay, Mapping):
             maps.append(official_replay)
     return maps
+
+
+def _has_prefix(value: str, prefixes: tuple[str, ...]) -> bool:
+    return any(value.startswith(prefix) for prefix in prefixes)
 
 
 def _any_true(maps: list[Mapping[str, Any]], *keys: str) -> bool:
@@ -154,6 +167,155 @@ def _collect_blockers(
                     continue
                 values.append(text.removeprefix("source_parity:"))
     return _dedupe(values)
+
+
+def _collect_prefixed_blockers(
+    maps: list[Mapping[str, Any]],
+    *,
+    prefixes: tuple[str, ...],
+) -> list[str]:
+    values: list[str] = []
+    for row in maps:
+        raw = row.get("blockers")
+        if isinstance(raw, str):
+            items = [raw]
+        elif isinstance(raw, (list, tuple, set)):
+            items = list(raw)
+        else:
+            items = []
+        for item in items:
+            text = str(item)
+            if text and _has_prefix(text, prefixes):
+                values.append(text)
+    return _dedupe(values)
+
+
+def _nested_mapping(root: Mapping[str, Any], *keys: str) -> Mapping[str, Any]:
+    current: Any = root
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return {}
+        current = current.get(key)
+    return current if isinstance(current, Mapping) else {}
+
+
+def _build_nerv_local_scorer_input_health_gate(
+    artifact_evidence: Mapping[str, Any] | None,
+    *,
+    family_token: str,
+    require_profile: bool,
+) -> dict[str, Any]:
+    """Summarize whether local scorer inputs are in-distribution enough to replay."""
+
+    family = str(family_token or "nerv").strip() or "nerv"
+    artifact = _as_mapping(artifact_evidence)
+    maps = _artifact_mappings(artifact)
+    profile = _as_mapping(artifact.get("local_mlx_prefilter_profile"))
+    distribution = _as_mapping(profile.get("scorer_input_distribution"))
+    if not distribution:
+        for row in maps:
+            distribution = _as_mapping(row.get("scorer_input_distribution"))
+            if distribution:
+                break
+    if not distribution:
+        for row in maps:
+            distribution = _as_mapping(row.get("profile_scorer_input_summary"))
+            if distribution:
+                break
+    blockers = _collect_prefixed_blockers(
+        maps,
+        prefixes=(
+            "scorer_input_",
+            "snerv_profile_segnet_",
+            "snerv_profile_posenet_",
+            "skip_high_prefilter_scorer_input_",
+        ),
+    )
+    profile_present = bool(profile or distribution)
+    gate_blockers = list(blockers)
+    if require_profile and not profile_present:
+        gate_blockers.append(f"{family}_local_scorer_input_profile_missing")
+    if require_profile and profile_present and not distribution:
+        gate_blockers.append(f"{family}_local_scorer_input_distribution_missing")
+    if gate_blockers:
+        gate_blockers.append(f"{family}_local_scorer_input_health_gate_failed")
+    return {
+        "schema": NERV_SCORER_INPUT_HEALTH_GATE_SCHEMA,
+        "family": family,
+        "profile_required": bool(require_profile),
+        "profile_present": profile_present,
+        "profile_path": artifact.get("local_mlx_prefilter_profile_path")
+        or profile.get("profile_path"),
+        "scorer_input_distribution_present": bool(distribution),
+        "local_replay_admissible": bool(
+            profile_present and distribution and not gate_blockers
+        ),
+        "blockers": _dedupe(gate_blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _build_snerv_skip_high_export_admission_gate(
+    *,
+    candidate: Mapping[str, Any],
+    artifact_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Fail closed when byte-attractive skip_high storage collapses value domain."""
+
+    artifact = _as_mapping(artifact_evidence)
+    maps = _artifact_mappings(artifact)
+    mode = str(
+        candidate.get("official_skip_high_mode")
+        or candidate.get("snerv_official_skip_high_mode")
+        or ""
+    ).strip().lower()
+    storage: Mapping[str, Any] = {}
+    for row in maps:
+        storage = _nested_mapping(row, "decoder_payload_header", "skip_high_storage")
+        if storage:
+            break
+        storage = _as_mapping(row.get("skip_high_storage"))
+        if storage:
+            break
+    stored_shape = [int(v) for v in storage.get("stored_shape") or []]
+    codec = str(storage.get("codec") or "").strip().lower()
+    blocker_prefixes = (
+        "snerv_official_skip_high_",
+        "no_skip_high_",
+        "skip_high_",
+    )
+    blockers = _collect_prefixed_blockers(maps, prefixes=blocker_prefixes)
+    scalar_mode = mode == "scalar_mean"
+    scalar_storage = bool(
+        codec.startswith("scalar_mean") or stored_shape == [1, 1, 1, 1]
+    )
+    collapse_blocker_present = any(
+        "scalar_mean_receiver_expand_collapse_risk" in blocker
+        for blocker in blockers
+    )
+    if scalar_mode:
+        blockers.append(
+            "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse"
+        )
+    if scalar_storage or collapse_blocker_present:
+        blockers.append(
+            "snerv_official_skip_high_scalar_mean_receiver_expand_collapse_risk"
+        )
+    scalar_collapse_risk = bool(
+        scalar_mode or scalar_storage or collapse_blocker_present
+    )
+    return {
+        "schema": SNERV_SKIP_HIGH_EXPORT_ADMISSION_GATE_SCHEMA,
+        "official_skip_high_mode": mode or None,
+        "skip_high_storage_present": bool(storage),
+        "skip_high_storage_codec": storage.get("codec"),
+        "skip_high_storage_shape": stored_shape,
+        "scalar_collapse_risk": scalar_collapse_risk,
+        "local_training_allowed": True,
+        "exact_eval_admissible": bool(not scalar_collapse_risk and not blockers),
+        "blockers": _dedupe(blockers),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _build_snerv_official_source_forward_authority_split(
@@ -452,6 +614,7 @@ def build_hinerv_candidate_curriculum_plan(
     required_nominal_payload_bytes_max: int | None = None,
     hard_byte_ceiling_measurement_bypass_enabled: bool | None = None,
     hard_byte_ceiling_checked_after_export: bool | None = None,
+    native_mlx_artifact_evidence: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Bind a HiNeRV modelsize candidate to its required training pressure."""
 
@@ -495,6 +658,26 @@ def build_hinerv_candidate_curriculum_plan(
         blockers.append("hinerv_candidate_curriculum_full600_required_for_promotion")
     if not candidate_selected:
         blockers.append("hinerv_modelsize_candidate_not_selected_manual_probe")
+    serious_full_video_candidate = bool(candidate_selected and full_video and epochs >= 8)
+    scorer_input_health_gate = _build_nerv_local_scorer_input_health_gate(
+        native_mlx_artifact_evidence,
+        family_token="hinerv",
+        require_profile=bool(
+            serious_full_video_candidate
+            and (
+                scorer_input_distribution_guard_attached
+                or full_video_local_prefilter_attached
+            )
+        ),
+    )
+    blockers.extend(scorer_input_health_gate.get("blockers") or [])
+    scorer_input_distribution_guard_verified = bool(
+        scorer_input_distribution_guard_attached
+        and (
+            not scorer_input_health_gate["profile_required"]
+            or scorer_input_health_gate["local_replay_admissible"]
+        )
+    )
     byte_feedback = _base_byte_feedback(
         candidate=candidate_row,
         measured_num_pairs=(
@@ -542,9 +725,7 @@ def build_hinerv_candidate_curriculum_plan(
                 differentiable_pose_preprocess_attached
             ),
             eval_roundtrip_ste=bool(eval_roundtrip_ste_attached),
-            scorer_input_distribution_guard=bool(
-                scorer_input_distribution_guard_attached
-            ),
+            scorer_input_distribution_guard=scorer_input_distribution_guard_verified,
             ema_archive_selection=bool(ema_archive_selection_attached),
             qat_forward=effective_coder_regularizer,
             coder_aware_regularizer=effective_coder_regularizer,
@@ -589,6 +770,10 @@ def build_hinerv_candidate_curriculum_plan(
             "scorer_input_distribution_guard_attached": bool(
                 scorer_input_distribution_guard_attached
             ),
+            "scorer_input_distribution_guard_verified": (
+                scorer_input_distribution_guard_verified
+            ),
+            "scorer_input_health_gate": scorer_input_health_gate,
             "ema_archive_selection_attached": bool(
                 ema_archive_selection_attached
             ),
@@ -615,6 +800,7 @@ def build_hinerv_candidate_curriculum_plan(
             ),
         },
         "byte_oracle_logging": byte_feedback,
+        "scorer_input_health_gate": scorer_input_health_gate,
         "pr95_stack_binding": pr95_binding,
         "long_campaign_prelaunch_gate": long_campaign_prelaunch_gate,
         "launch_mutations": launch_mutations,
@@ -765,6 +951,24 @@ def build_snerv_candidate_curriculum_plan(
         )
     )
     full_video = int(num_pairs) >= CONTEST_PAIR_COUNT
+    serious_full_video_candidate = bool(
+        candidate_selected and full_video and int(requested_epochs) >= 8
+    )
+    scorer_input_health_gate = _build_nerv_local_scorer_input_health_gate(
+        native_mlx_artifact_evidence,
+        family_token="snerv",
+        require_profile=bool(
+            serious_full_video_candidate
+            and (
+                native_mlx_scorer_input_distribution_guard_bound
+                or full_video_local_prefilter_attached
+            )
+        ),
+    )
+    skip_high_export_admission_gate = _build_snerv_skip_high_export_admission_gate(
+        candidate=candidate_row,
+        artifact_evidence=native_mlx_artifact_evidence,
+    )
     levels = _int(candidate_row.get("levels"), 3)
     lf_bits = _num(candidate_row.get("bits_per_coeff"), 2.5)
     step_bits = _num(candidate_row.get("step_map_bits_per_coeff"), 4.0)
@@ -806,6 +1010,8 @@ def build_snerv_candidate_curriculum_plan(
         )
     ]
     blockers.extend(official_source_forward_split.get("blockers") or [])
+    blockers.extend(scorer_input_health_gate.get("blockers") or [])
+    blockers.extend(skip_high_export_admission_gate.get("blockers") or [])
     if not bool(native_contract.get("surfaces_ready")):
         blockers.append("snerv_mlx_native_train_export_adapter_missing")
     elif not native_export_verified:
@@ -866,6 +1072,13 @@ def build_snerv_candidate_curriculum_plan(
             blockers.append("snerv_scorer_loop_qat_pose_guard_not_ready")
         if not effective_scorer_loop_accepted:
             blockers.append("snerv_scorer_loop_qat_no_accepted_improvement")
+    scorer_input_distribution_guard_verified = bool(
+        native_mlx_scorer_input_distribution_guard_bound
+        and (
+            not scorer_input_health_gate["profile_required"]
+            or scorer_input_health_gate["local_replay_admissible"]
+        )
+    )
     pr95_binding = build_pr95_stack_binding_requirements(
         family="snerv",
         evidence=build_pr95_stack_binding_evidence(
@@ -877,9 +1090,7 @@ def build_snerv_candidate_curriculum_plan(
                 native_mlx_differentiable_pose_preprocess_bound
             ),
             eval_roundtrip_ste=bool(native_mlx_eval_roundtrip_ste_bound),
-            scorer_input_distribution_guard=bool(
-                native_mlx_scorer_input_distribution_guard_bound
-            ),
+            scorer_input_distribution_guard=scorer_input_distribution_guard_verified,
             qat_forward=bool(
                 effective_scorer_loop_verified or native_mlx_coder_qat_bound
             ),
@@ -930,6 +1141,8 @@ def build_snerv_candidate_curriculum_plan(
                 "queue_ready_is_not_receiver_or_exact_authority": True,
                 "receiver_authority_requires_file_backed_export_and_replay": True,
                 "official_receiver_payload_is_not_source_forward_authority": True,
+                "scorer_input_health_required_for_local_replay": True,
+                "skip_high_value_domain_xray_required_for_scalar_modes": True,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -937,6 +1150,8 @@ def build_snerv_candidate_curriculum_plan(
             "official_source_forward_authority_split": (
                 official_source_forward_split
             ),
+            "scorer_input_health_gate": scorer_input_health_gate,
+            "skip_high_export_admission_gate": skip_high_export_admission_gate,
             "native_mlx_train_export_planned": native_train_export_planned,
             "native_mlx_train_export_attached": bool(native_mlx_train_export_attached),
             "native_mlx_train_export_verified": native_export_verified,
@@ -1005,6 +1220,9 @@ def build_snerv_candidate_curriculum_plan(
             "native_mlx_scorer_input_distribution_guard_bound": bool(
                 native_mlx_scorer_input_distribution_guard_bound
             ),
+            "native_mlx_scorer_input_distribution_guard_verified": (
+                scorer_input_distribution_guard_verified
+            ),
             "native_mlx_differentiable_pose_preprocess_bound": bool(
                 native_mlx_differentiable_pose_preprocess_bound
             ),
@@ -1019,6 +1237,8 @@ def build_snerv_candidate_curriculum_plan(
             "local_cpu_replay_gate_attached": bool(local_cpu_replay_gate_attached),
         },
         "official_source_forward_authority_split": official_source_forward_split,
+        "scorer_input_health_gate": scorer_input_health_gate,
+        "skip_high_export_admission_gate": skip_high_export_admission_gate,
         "byte_oracle_logging": byte_feedback,
         "pr95_stack_binding": pr95_binding,
         "long_campaign_prelaunch_gate": long_campaign_prelaunch_gate,

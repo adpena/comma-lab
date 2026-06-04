@@ -111,6 +111,17 @@ def test_renderer_prefilter_blocks_scorer_input_distribution_collapse() -> None:
     assert "scorer_input_segnet_last_rgb_mean_absdiff_gt_50" in profile["blockers"]
     assert "scorer_input_posenet_yuv6_pair_mean_absdiff_gt_50" in profile["blockers"]
     assert "scorer_input_segnet_last_rgb_saturation_delta_gt_0_15" in profile["blockers"]
+    assert "mlx_renderer_prefilter_candidate_output_saturated_or_clipped" in profile[
+        "blockers"
+    ]
+    diagnosis = profile["scorer_input_diagnosis"]
+    assert diagnosis["schema"] == "mlx_renderer_prefilter_scorer_input_diagnosis.v1"
+    assert diagnosis["verdict"] == "SCORER_INPUT_OUT_OF_DISTRIBUTION"
+    assert diagnosis["candidate_output_likely_saturated_or_clipped"] is True
+    assert (
+        "run_receiver_decode_value_domain_xray_before_architecture_dispatch"
+        in diagnosis["recommended_next_actions"]
+    )
 
 
 def test_scorer_input_distribution_blocks_variance_collapse_without_large_bias() -> None:
@@ -133,6 +144,44 @@ def test_scorer_input_distribution_blocks_variance_collapse_without_large_bias()
     assert "scorer_input_posenet_yuv6_pair_mean_absdiff_gt_50" not in blockers
     assert "scorer_input_segnet_last_rgb_std_ratio_lt_0_25" in blockers
     assert "scorer_input_posenet_yuv6_pair_std_ratio_lt_0_25" in blockers
+
+
+def test_scorer_input_distribution_diagnosis_names_saturated_output_crux() -> None:
+    from tac.local_acceleration.mlx_renderer_prefilter_profile import (
+        _scorer_input_distribution_diagnosis,
+    )
+
+    diagnosis = _scorer_input_distribution_diagnosis(
+        {
+            "candidate_segnet_last_rgb": {
+                "std": 110.0,
+                "saturation_fraction": 0.99,
+            },
+            "reference_segnet_last_rgb": {
+                "std": 21.0,
+                "saturation_fraction": 0.04,
+            },
+            "candidate_posenet_yuv6_pair": {
+                "std": 94.0,
+                "saturation_fraction": 0.66,
+            },
+            "reference_posenet_yuv6_pair": {
+                "std": 54.0,
+                "saturation_fraction": 0.001,
+            },
+            "segnet_last_rgb_absdiff": {"mean_abs": 74.0},
+            "posenet_yuv6_pair_absdiff": {"mean_abs": 50.5},
+        }
+    )
+
+    assert diagnosis["verdict"] == "SCORER_INPUT_OUT_OF_DISTRIBUTION"
+    assert diagnosis["candidate_output_likely_saturated_or_clipped"] is True
+    assert "mlx_renderer_prefilter_candidate_output_saturated_or_clipped" in diagnosis[
+        "blockers"
+    ]
+    assert "decode_value_domain_or_activation_scale_mismatch" in diagnosis[
+        "suspected_failure_modes"
+    ]
 
 
 def test_renderer_prefilter_loaded_emits_progress_telemetry(tmp_path) -> None:
