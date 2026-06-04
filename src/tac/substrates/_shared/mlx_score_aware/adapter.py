@@ -2473,7 +2473,7 @@ class MlxScoreAwareAdapter:
         loss_value, grads = loss_and_grad_fn(self.model)
         self._accumulate_decoder_weight_gradient_saliency(grads)
         if self._wave_n11_grad_clip_max_norm is not None:
-            _unused_clipped_grads, total_norm = mlx_optim.clip_grad_norm(
+            grads, total_norm = mlx_optim.clip_grad_norm(
                 grads, self._wave_n11_grad_clip_max_norm
             )
             mx.eval(total_norm)

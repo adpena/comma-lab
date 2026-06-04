@@ -679,6 +679,57 @@ def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
 
 
 @mlx_only
+def test_pact_muon_adamw_train_step_passes_clipped_gradients(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    import tac.local_acceleration.pr95_hnerv_mlx as pr95_mlx
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    captured: dict[str, float] = {}
+
+    def _fake_apply_pr95_step(_model, grads, _state, _config):
+        leaves = [
+            grad.astype(mx.float32)
+            for _name, grad in tree_flatten(grads)
+            if hasattr(grad, "shape")
+        ]
+        total_sq = mx.array(0.0, dtype=mx.float32)
+        for grad in leaves:
+            total_sq = total_sq + mx.sum(grad * grad)
+        total_norm = mx.sqrt(total_sq)
+        mx.eval(total_norm)
+        captured["grad_norm"] = float(total_norm.item())
+        return {
+            "use_muon": True,
+            "muon_tensor_count": 0,
+            "adamw_tensor_count": len(leaves),
+        }
+
+    monkeypatch.setattr(
+        pr95_mlx,
+        "apply_pr95_mlx_optimizer_step",
+        _fake_apply_pr95_step,
+    )
+    max_norm = 1.0e-7
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        optimizer_kind="pact_muon_adamw",
+        grad_clip_max_norm=max_norm,
+    )
+    batch = mx.array([0, 1], dtype=mx.int32)
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    assert metrics["pact_optimizer_uses_muon"] == pytest.approx(1.0)
+    assert "grad_norm" in captured
+    assert captured["grad_norm"] <= max_norm * 1.0001 + 1.0e-10
+
+
+@mlx_only
 def test_adapter_stage_weights_skip_student_head_updates_when_gated() -> None:
     import mlx.core as mx
 
