@@ -12,6 +12,7 @@ from comma_lab.storage_tiers import StorageTierError
 from experiments.train_substrate_hi_nerv_mlx_local import (
     DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
     DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
+    HI_NERV_HARD_BYTE_CEILING_CONTROL_SCHEMA,
     HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA,
     HI_NERV_TRAIN_TIME_CONTROL_SCHEMA,
     HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA,
@@ -19,6 +20,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     TRAINER_SCHEMA,
     HiNervTrainTimeControlConfig,
     _apply_train_time_decoder_controls,
+    _build_hinerv_hard_byte_ceiling_control,
     _build_parser,
     _build_staged_scorer_curriculum,
     _build_train_time_decoder_mutation_identity,
@@ -186,6 +188,49 @@ def test_hinerv_mlx_trainer_rejects_over_cap_modelsize_candidate(
 
     with pytest.raises(ValueError, match="nominally_over_hard_byte_ceiling"):
         _modelsize_candidate_from_args(args)
+
+
+def test_hinerv_mlx_trainer_byte_cap_control_records_measured_archive_delta() -> None:
+    control = _build_hinerv_hard_byte_ceiling_control(
+        candidate={
+            "candidate_id": "hi_cap",
+            "byte_cap_controller": {"predicted_under_hard_byte_ceiling": True},
+        },
+        hard_byte_ceiling=178_000,
+        archive_path="/tmp/archive.zip",
+        archive_sha256="a" * 64,
+        archive_bytes=177_500,
+        archive_export_requested=True,
+    )
+
+    assert control["schema"] == HI_NERV_HARD_BYTE_CEILING_CONTROL_SCHEMA
+    assert control["candidate_id"] == "hi_cap"
+    assert control["attached"] is True
+    assert control["enforced"] is True
+    assert control["archive_bytes"] == 177_500
+    assert control["under_hard_byte_ceiling"] is True
+    assert control["delta_bytes_vs_hard_byte_ceiling"] == -500
+    assert control["blockers"] == []
+    assert control["score_claim"] is False
+
+
+def test_hinerv_mlx_trainer_byte_cap_control_blocks_when_export_disabled() -> None:
+    control = _build_hinerv_hard_byte_ceiling_control(
+        candidate={"candidate_id": "hi_cap"},
+        hard_byte_ceiling=178_000,
+        archive_path=None,
+        archive_sha256=None,
+        archive_bytes=None,
+        archive_export_requested=False,
+    )
+
+    assert control["attached"] is True
+    assert control["enforced"] is False
+    assert control["under_hard_byte_ceiling"] is None
+    assert control["delta_bytes_vs_hard_byte_ceiling"] is None
+    assert control["blockers"] == [
+        "hinerv_hard_byte_ceiling_not_enforced_archive_export_disabled"
+    ]
 
 
 def test_hinerv_mlx_trainer_coder_qat_config_is_real_and_validated() -> None:

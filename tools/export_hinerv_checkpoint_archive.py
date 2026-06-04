@@ -145,6 +145,10 @@ def export_checkpoint_archive(
     resolved_latent_codec = str(
         latent_codec or command_args.get("hi_nerv_latent_codec") or "int16_raw"
     )
+    hard_byte_ceiling = _export_hard_byte_ceiling(
+        candidate=candidate,
+        hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
+    )
     archive_path, archive_sha256, archive_bytes = export_hi_nerv_mlx_archive(
         model,
         out,
@@ -161,6 +165,7 @@ def export_checkpoint_archive(
             "--checkpoint-meta",
             meta_path.as_posix(),
         ],
+        hard_byte_ceiling=hard_byte_ceiling,
     )
     receiver_proof_path = out / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
     receiver_proof = _read_json(receiver_proof_path) if receiver_proof_path.is_file() else {}
@@ -183,6 +188,7 @@ def export_checkpoint_archive(
         "archive_path": Path(archive_path).as_posix(),
         "archive_sha256": archive_sha256,
         "archive_bytes": int(archive_bytes),
+        "hard_byte_ceiling_enforced_by_export": hard_byte_ceiling,
         "rate_byte_profile": section_profile,
         "hard_byte_ceilings": list(startup.get("hard_byte_ceilings") or []),
         "decoder_codec": resolved_decoder_codec,
@@ -204,6 +210,7 @@ def export_checkpoint_archive(
         ),
         "blockers": _blockers(
             archive_bytes=int(archive_bytes),
+            hard_byte_ceiling=hard_byte_ceiling,
             hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
             receiver_proof=receiver_proof,
             receiver_proof_requested=bool(emit_receiver_proof),
@@ -225,9 +232,9 @@ def _modelsize_byte_cap_feedback_row(
     archive_path: Path,
     archive_sha256: str,
 ) -> dict[str, Any]:
-    ceiling = (
-        _min_positive_int(hard_byte_ceilings)
-        or _optional_int(candidate.get("hard_byte_ceiling"))
+    ceiling = _export_hard_byte_ceiling(
+        candidate=candidate,
+        hard_byte_ceilings=hard_byte_ceilings,
     )
     nominal = (
         _optional_int(candidate.get("nominal_total_payload_bytes"))
@@ -349,6 +356,7 @@ def _blockers(
     *,
     archive_bytes: int,
     hard_byte_ceilings: Any,
+    hard_byte_ceiling: int | None = None,
     receiver_proof: dict[str, Any],
     receiver_proof_requested: bool,
     modelsize_integrity: dict[str, Any],
@@ -359,8 +367,8 @@ def _blockers(
         "contest_cpu_cuda_exact_eval_not_executed",
         "full_video_scorer_replay_not_executed",
     ]
-    ceilings = [int(v) for v in hard_byte_ceilings if int(v) > 0]
-    if ceilings and int(archive_bytes) > min(ceilings):
+    ceiling = hard_byte_ceiling or _min_positive_int(hard_byte_ceilings)
+    if ceiling is not None and int(archive_bytes) > int(ceiling):
         blockers.append("archive_bytes_exceed_tightest_hard_ceiling")
     if not receiver_proof_requested:
         blockers.append("receiver_proof_not_requested")
@@ -476,6 +484,29 @@ def _min_positive_int(values: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return min(ints) if ints else None
+
+
+def _export_hard_byte_ceiling(
+    *,
+    candidate: dict[str, Any],
+    hard_byte_ceilings: Any,
+) -> int | None:
+    """Return the tightest active measured archive-byte ceiling.
+
+    Modelsize candidates and runner startup rows can both carry ceilings.  The
+    materializer must honor the strictest positive value; otherwise a looser
+    runner default can silently weaken a candidate's byte contract.
+    """
+
+    values: list[int] = []
+    candidate_ceiling = _optional_int(candidate.get("hard_byte_ceiling"))
+    if candidate_ceiling is not None:
+        values.append(candidate_ceiling)
+    startup_ceiling = _min_positive_int(hard_byte_ceilings)
+    if startup_ceiling is not None:
+        values.append(startup_ceiling)
+    positives = [int(value) for value in values if int(value) > 0]
+    return min(positives) if positives else None
 
 
 def _optional_nonempty_str(value: Any) -> str | None:

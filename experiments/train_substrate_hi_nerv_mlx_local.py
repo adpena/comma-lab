@@ -75,6 +75,7 @@ HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA = (
 HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA = (
     "hi_nerv_trainer_modelsize_candidate_consumption.v1"
 )
+HI_NERV_HARD_BYTE_CEILING_CONTROL_SCHEMA = "hi_nerv_hard_byte_ceiling_control.v1"
 DIRECT_TRAINER_CANONICALIZATION_SCHEMA = "hi_nerv_direct_trainer_canonicalization_contract.v1"
 DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA = "hi_nerv_direct_trainer_launch_refusal.v1"
 DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
@@ -671,6 +672,14 @@ def _smoke_main(args: argparse.Namespace) -> int:
             hard_byte_ceiling=modelsize_hard_byte_ceiling,
         )
         archive_path = archive_path_obj.as_posix()
+    byte_cap_control = _build_hinerv_hard_byte_ceiling_control(
+        candidate=modelsize_candidate,
+        hard_byte_ceiling=modelsize_hard_byte_ceiling,
+        archive_path=archive_path,
+        archive_sha256=archive_sha256,
+        archive_bytes=archive_bytes,
+        archive_export_requested=bool(args.smoke_export_archive),
+    )
     post_export_quality = _maybe_write_post_export_receiver_cache_quality(
         args=args,
         output_dir=output_dir,
@@ -708,6 +717,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "archive_path": archive_path,
         "archive_sha256": archive_sha256,
         "archive_bytes": archive_bytes,
+        "byte_cap_control": byte_cap_control,
         "post_export_receiver_cache_quality": (
             _receiver_cache_quality_manifest_summary(post_export_quality) if post_export_quality is not None else None
         ),
@@ -717,6 +727,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "hi_nerv_smoke_no_training_score",
             "official_hinerv_feature_grid_parity_not_proven",
             *canonicalization["blockers"],
+            *byte_cap_control["blockers"],
         ],
         **FALSE_AUTHORITY,
     }
@@ -1096,6 +1107,56 @@ def _hard_byte_ceiling_from_modelsize_candidate(
     if ceiling <= 0:
         raise ValueError("HiNeRV modelsize candidate hard_byte_ceiling must be positive")
     return ceiling
+
+
+def _build_hinerv_hard_byte_ceiling_control(
+    *,
+    candidate: Mapping[str, Any] | None,
+    hard_byte_ceiling: int | None,
+    archive_path: str | None,
+    archive_sha256: str | None,
+    archive_bytes: int | None,
+    archive_export_requested: bool,
+) -> dict[str, Any]:
+    candidate_dict = dict(candidate or {})
+    controller = candidate_dict.get("byte_cap_controller")
+    controller_payload = _metadata_safe(controller) if isinstance(controller, Mapping) else None
+    blockers: list[str] = []
+    if hard_byte_ceiling is None:
+        blockers.append("hinerv_hard_byte_ceiling_not_attached")
+        under = None
+        delta = None
+    elif not archive_export_requested:
+        blockers.append("hinerv_hard_byte_ceiling_not_enforced_archive_export_disabled")
+        under = None
+        delta = None
+    elif archive_bytes is None:
+        blockers.append("hinerv_hard_byte_ceiling_archive_bytes_missing")
+        under = None
+        delta = None
+    else:
+        delta = int(archive_bytes) - int(hard_byte_ceiling)
+        under = delta <= 0
+        if not under:
+            blockers.append("hinerv_archive_exceeds_hard_byte_ceiling")
+    return {
+        "schema": HI_NERV_HARD_BYTE_CEILING_CONTROL_SCHEMA,
+        "family": "hi_nerv",
+        "candidate_id": candidate_dict.get("candidate_id"),
+        "attached": hard_byte_ceiling is not None,
+        "hard_byte_ceiling": hard_byte_ceiling,
+        "archive_export_requested": bool(archive_export_requested),
+        "enforced": bool(hard_byte_ceiling is not None and archive_export_requested),
+        "archive_path": archive_path,
+        "archive_sha256": archive_sha256,
+        "archive_bytes": None if archive_bytes is None else int(archive_bytes),
+        "under_hard_byte_ceiling": under,
+        "delta_bytes_vs_hard_byte_ceiling": delta,
+        "byte_cap_controller": controller_payload,
+        "blockers": blockers,
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _modelsize_candidate_consumption_metadata(
@@ -2421,6 +2482,7 @@ __all__ = [
     "TRAINER_SCHEMA",
     "HiNervTrainTimeControlConfig",
     "_apply_train_time_decoder_controls",
+    "_build_hinerv_hard_byte_ceiling_control",
     "_build_parser",
     "_build_train_time_decoder_control_callback",
     "_coder_qat_config_from_args",

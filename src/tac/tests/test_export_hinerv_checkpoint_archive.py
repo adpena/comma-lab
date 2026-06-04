@@ -6,6 +6,7 @@ import numpy as np
 from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_knobs
 from tools.export_hinerv_checkpoint_archive import (
     _blockers,
+    _export_hard_byte_ceiling,
     _modelsize_integrity_profile,
     _resolve_decoder_codec,
 )
@@ -69,6 +70,30 @@ def test_hinerv_checkpoint_export_blocks_candidate_decoder_codec_override() -> N
     )
 
     assert "candidate_decoder_codec_not_export_authority" in blockers
+
+
+def test_hinerv_checkpoint_export_uses_strictest_candidate_or_startup_byte_ceiling() -> None:
+    assert (
+        _export_hard_byte_ceiling(
+            candidate={"hard_byte_ceiling": 178_000},
+            hard_byte_ceilings=[216_000, 285_000],
+        )
+        == 178_000
+    )
+    assert (
+        _export_hard_byte_ceiling(
+            candidate={"hard_byte_ceiling": 285_000},
+            hard_byte_ceilings=[216_000],
+        )
+        == 216_000
+    )
+    assert (
+        _export_hard_byte_ceiling(
+            candidate={},
+            hard_byte_ceilings=[0, "178000"],
+        )
+        == 178_000
+    )
 
 
 def test_hinerv_checkpoint_decoder_codec_keeps_nondefault_runner_codec() -> None:
