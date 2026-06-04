@@ -210,8 +210,9 @@ def encode_step_maps_adaptive(
     may choose the precision during compression, but the archive packet carries
     the selected groups and the receiver only decodes codes. When
     ``constant_importance_quantile`` is supplied, the least-important maps are
-    encoded as header-only constant log2 fills: a receiver-visible run-length
-    group with zero per-coefficient code bits.
+    encoded as receiver-visible constant log2 fills with zero per-coefficient
+    code bits. Large same-shape constant buckets store their log2 values in a
+    compact binary side payload instead of verbose JSON floats and shapes.
     """
 
     arrays = [_validate_step_map(a) for a in step_maps]
@@ -256,23 +257,18 @@ def encode_step_maps_adaptive(
     payload = bytearray()
     if constant_indices:
         indices = sorted(constant_indices)
-        groups.append(
-            {
-                "kind": "constant_log2_fill",
-                "bins": 0,
-                "bits_per_code": 0,
-                "code_storage": "run_length_constant_log2_f32",
-                "map_indices": indices,
-                "payload_offset": 0,
-                "payload_bytes": 0,
-                "packed_code_bytes": 0,
-                "log2_values": [
-                    float(np.mean(np.log2(arrays[idx].astype(np.float64))))
-                    for idx in indices
-                ],
-                "shapes": [list(arrays[idx].shape) for idx in indices],
-                "code_count": 0,
-            }
+        constant_arrays = [arrays[idx] for idx in indices]
+        log2_values = [
+            float(np.mean(np.log2(arr.astype(np.float64))))
+            for arr in constant_arrays
+        ]
+        _append_constant_log2_groups(
+            groups=groups,
+            payload=payload,
+            precision_label="constant",
+            indices=indices,
+            arrays=constant_arrays,
+            log2_values=log2_values,
         )
     for bins in choices:
         indices = [
@@ -821,50 +817,13 @@ def _pack_adaptive_groups(
                 float(np.mean(np.log2(arr.astype(np.float64))))
                 for arr in group_arrays
             ]
-            if _should_use_shared_shape_constant_payload(group_arrays):
-                raw = np.asarray(log2_values, dtype="<f8").tobytes()
-                compressed = lzma.compress(
-                    raw,
-                    format=lzma.FORMAT_XZ,
-                    preset=9 | lzma.PRESET_EXTREME,
-                )
-                offset = len(payload)
-                payload.extend(compressed)
-                groups.append(
-                    {
-                        "kind": "constant_log2_shared_shape_f64_lzma",
-                        "precision_label": label,
-                        "bins": 0,
-                        "bits_per_code": 0,
-                        "code_storage": (
-                            "run_length_constant_log2_shared_shape_f64_lzma"
-                        ),
-                        "map_indices": indices,
-                        "payload_offset": offset,
-                        "payload_bytes": len(compressed),
-                        "packed_code_bytes": len(raw),
-                        "raw_bytes": len(raw),
-                        "log2_dtype": "float64_le",
-                        "shape": list(group_arrays[0].shape),
-                        "code_count": 0,
-                    }
-                )
-                continue
-            groups.append(
-                {
-                    "kind": "constant_log2_fill",
-                    "precision_label": label,
-                    "bins": 0,
-                    "bits_per_code": 0,
-                    "code_storage": "run_length_constant_log2_f32",
-                    "map_indices": indices,
-                    "payload_offset": 0,
-                    "payload_bytes": 0,
-                    "packed_code_bytes": 0,
-                    "log2_values": log2_values,
-                    "shapes": [list(arr.shape) for arr in group_arrays],
-                    "code_count": 0,
-                }
+            _append_constant_log2_groups(
+                groups=groups,
+                payload=payload,
+                precision_label=label,
+                indices=indices,
+                arrays=group_arrays,
+                log2_values=log2_values,
             )
             continue
         if kind == "fp16_steps_lzma":
@@ -937,11 +896,67 @@ def _pack_adaptive_groups(
     return packet, groups, len(payload)
 
 
-def _should_use_shared_shape_constant_payload(arrays: list[np.ndarray]) -> bool:
-    if len(arrays) < COMPACT_CONSTANT_SHARED_SHAPE_MIN_MAPS:
-        return False
-    first_shape = tuple(int(v) for v in arrays[0].shape)
-    return all(tuple(int(v) for v in arr.shape) == first_shape for arr in arrays)
+def _append_constant_log2_groups(
+    *,
+    groups: list[dict[str, Any]],
+    payload: bytearray,
+    precision_label: str,
+    indices: list[int],
+    arrays: list[np.ndarray],
+    log2_values: list[float],
+) -> None:
+    buckets: dict[tuple[int, ...], list[tuple[int, np.ndarray, float]]] = {}
+    for idx, arr, log2_value in zip(indices, arrays, log2_values, strict=True):
+        shape = tuple(int(v) for v in arr.shape)
+        buckets.setdefault(shape, []).append((int(idx), arr, float(log2_value)))
+
+    for shape, rows in buckets.items():
+        row_indices = [idx for idx, _, _ in rows]
+        row_log2_values = [value for _, _, value in rows]
+        row_arrays = [arr for _, arr, _ in rows]
+        if len(rows) >= COMPACT_CONSTANT_SHARED_SHAPE_MIN_MAPS:
+            raw = np.asarray(row_log2_values, dtype="<f8").tobytes()
+            compressed = lzma.compress(
+                raw,
+                format=lzma.FORMAT_XZ,
+                preset=9 | lzma.PRESET_EXTREME,
+            )
+            offset = len(payload)
+            payload.extend(compressed)
+            groups.append(
+                {
+                    "kind": "constant_log2_shared_shape_f64_lzma",
+                    "precision_label": precision_label,
+                    "bins": 0,
+                    "bits_per_code": 0,
+                    "code_storage": "run_length_constant_log2_shared_shape_f64_lzma",
+                    "map_indices": row_indices,
+                    "payload_offset": offset,
+                    "payload_bytes": len(compressed),
+                    "packed_code_bytes": len(raw),
+                    "raw_bytes": len(raw),
+                    "log2_dtype": "float64_le",
+                    "shape": list(shape),
+                    "code_count": 0,
+                }
+            )
+            continue
+        groups.append(
+            {
+                "kind": "constant_log2_fill",
+                "precision_label": precision_label,
+                "bins": 0,
+                "bits_per_code": 0,
+                "code_storage": "run_length_constant_log2_f32",
+                "map_indices": row_indices,
+                "payload_offset": 0,
+                "payload_bytes": 0,
+                "packed_code_bytes": 0,
+                "log2_values": row_log2_values,
+                "shapes": [list(arr.shape) for arr in row_arrays],
+                "code_count": 0,
+            }
+        )
 
 
 def _bits_per_code(bins: int) -> int:

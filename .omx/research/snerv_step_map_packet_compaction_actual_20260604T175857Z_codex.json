@@ -1,0 +1,87 @@
+{
+  "axis_tag": "[codec-unit:false-authority]",
+  "generated_utc": "2026-06-04T17:58:57Z",
+  "operation": "receiver_step_map_constant_shape_partition_binary_payload_probe",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "rows": [
+    {
+      "blockers": [
+        "full_archive_receiver_repack_not_materialized_for_step_map_recode",
+        "full_video_scorer_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "decoded_step_map_count": 96,
+      "decoded_step_maps_exact_equal": false,
+      "decoded_step_maps_max_abs_delta": 210.77601623535156,
+      "original_step_map_packet_bytes": 69522,
+      "original_step_map_packet_sha256": "a70e579c7041fb52f60f1b91d0409d2d96597d7128c29bf6a7e3198faea9c22f",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recoded_group_count": 1,
+      "recoded_group_summary": [
+        {
+          "kind": "constant_log2_shared_shape_f64_lzma",
+          "legacy_shape_count": 0,
+          "map_count": 96,
+          "payload_bytes": 260,
+          "raw_bytes": 768,
+          "shape": [
+            110,
+            146
+          ]
+        }
+      ],
+      "recoded_header_bytes": 679,
+      "recoded_payload_bytes": 260,
+      "recoded_step_map_packet_bytes": 939,
+      "recoded_step_map_packet_sha256": "db3979a51a869a3a8210c6f6b7852b1ff291bc6f03cfa6593bcf5a540356f520",
+      "recoded_total_bytes": 939,
+      "score_claim": false,
+      "source_archive_schema": "snerv_inverse_steg_archive.v1",
+      "source_packet_bytes": 738537,
+      "source_packet_path": "/Volumes/VertigoDataTier/pact/snerv_lf_payload_archive_recode/live16_20260603T112544Z/candidate.snar",
+      "step_map_packet_byte_delta": -68583
+    },
+    {
+      "blockers": [
+        "full_archive_receiver_repack_not_materialized_for_step_map_recode",
+        "full_video_scorer_replay_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "decoded_step_map_count": 3600,
+      "decoded_step_maps_exact_equal": true,
+      "decoded_step_maps_max_abs_delta": 0.0,
+      "original_step_map_packet_bytes": 105591,
+      "original_step_map_packet_sha256": "4b443f621640eeba316dd5b27fb4d337a29614162c558524a7b5c7920b08c6f3",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "recoded_group_count": 1,
+      "recoded_group_summary": [
+        {
+          "kind": "constant_log2_shared_shape_f64_lzma",
+          "legacy_shape_count": 0,
+          "map_count": 3600,
+          "payload_bytes": 19996,
+          "raw_bytes": 28800,
+          "shape": [
+            12,
+            16
+          ]
+        }
+      ],
+      "recoded_header_bytes": 17297,
+      "recoded_payload_bytes": 19996,
+      "recoded_step_map_packet_bytes": 37293,
+      "recoded_step_map_packet_sha256": "4d71d00f97ae232cb6ad071e1d513387643d54cd2351bfef25029594a3cf64cf",
+      "recoded_total_bytes": 37293,
+      "score_claim": false,
+      "source_archive_schema": "snerv_inverse_steg_archive.snar2.v1",
+      "source_packet_bytes": 139123,
+      "source_packet_path": "/Volumes/VertigoDataTier/pact/snerv_snar2_header_20260604Tcodex/candidate.snar2",
+      "step_map_packet_byte_delta": -68298
+    }
+  ],
+  "schema": "snerv_step_map_packet_actual_recode_probe.v2",
+  "score_claim": false
+}

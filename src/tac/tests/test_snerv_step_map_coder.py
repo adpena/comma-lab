@@ -314,6 +314,43 @@ def test_large_constant_group_uses_binary_shared_shape_payload() -> None:
         assert np.all(got > 0)
 
 
+def test_mixed_shape_constant_groups_use_binary_payload_per_large_shape() -> None:
+    maps: list[np.ndarray] = []
+    for index in range(10):
+        maps.append(np.full((4, 6), 2.0 ** (index - 5), dtype=np.float32))
+    for index in range(9):
+        maps.append(np.full((2, 3), 2.0 ** (index - 3), dtype=np.float32))
+    for index in range(3):
+        maps.append(np.full((1, 5), 2.0 ** index, dtype=np.float32))
+
+    packet = encode_step_maps_waterfill(
+        maps,
+        map_importance=np.linspace(1.0, 22.0, len(maps)),
+        target_bits_per_coeff=0.0,
+    )
+    decoded = decode_step_maps(packet.packet)
+
+    binary_groups = [
+        group
+        for group in packet.groups
+        if group["kind"] == "constant_log2_shared_shape_f64_lzma"
+    ]
+    fallback_groups = [
+        group for group in packet.groups if group["kind"] == "constant_log2_fill"
+    ]
+    assert [group["shape"] for group in binary_groups] == [[4, 6], [2, 3]]
+    assert [len(group["map_indices"]) for group in binary_groups] == [10, 9]
+    assert len(fallback_groups) == 1
+    assert fallback_groups[0]["shapes"] == [[1, 5], [1, 5], [1, 5]]
+    for group in binary_groups:
+        assert "shapes" not in group
+        assert "log2_values" not in group
+        assert group["payload_bytes"] > 0
+        assert group["raw_bytes"] == len(group["map_indices"]) * 8
+    for ref, got in zip(maps, decoded, strict=True):
+        np.testing.assert_array_equal(got, ref)
+
+
 def test_waterfill_rejects_negative_target_bits() -> None:
     with pytest.raises(SnervStepMapCoderError, match="target_bits_per_coeff"):
         encode_step_maps_waterfill(

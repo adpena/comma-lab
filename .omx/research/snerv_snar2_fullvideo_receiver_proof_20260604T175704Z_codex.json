@@ -1,0 +1,51 @@
+{
+  "schema": "snerv_snar2_fullvideo_receiver_proof.codex.v1",
+  "generated_utc": "2026-06-04T17:57:04Z",
+  "axis_tag": "[receiver-safe false-authority]",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "summary": {
+    "wire_format": "snar2",
+    "operation": "snar2_fixed_binary_header_receiver_metadata_prune",
+    "source_packet_bytes": 1485285,
+    "candidate_packet_bytes": 139123,
+    "packet_byte_delta": -1346162,
+    "source_header_bytes": 1346233,
+    "candidate_header_bytes": 71,
+    "candidate_archive_zip_bytes": 155530,
+    "full_video_receiver_contract_satisfied": true,
+    "runtime_consumption_proof_passed": true,
+    "blockers": [
+      "snerv_snar_header_minimization_false_authority",
+      "full_video_scorer_replay_missing",
+      "paired_contest_cpu_cuda_auth_eval_missing"
+    ]
+  },
+  "artifacts": [
+    {
+      "candidate_id": "native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm",
+      "report_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snar2_header_minimized_fullvideo/snerv_snar_header_minimization.json",
+      "report_bytes": 16233,
+      "report_sha256": "1041d994ab501c31cec3a6fc04fa57f00c4518b43c468b5ad504bece7168b0ae",
+      "candidate_packet_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snar2_header_minimized_fullvideo/candidate.snar2",
+      "candidate_packet_bytes": 139123,
+      "candidate_packet_sha256": "c64d2cccd793c976eb8bd6e432754677b80721a2a930823afdfc55d806d16c30",
+      "candidate_archive_zip_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snar2_header_minimized_fullvideo/runtime_package/archive.zip",
+      "candidate_archive_zip_bytes": 155530,
+      "candidate_archive_zip_sha256": "da6200c72506092677e8dd955d3bf8f5287ded10f6c87da03678a8b6de75ef48"
+    },
+    {
+      "candidate_id": "native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los",
+      "report_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar2_header_minimized_fullvideo/snerv_snar_header_minimization.json",
+      "report_bytes": 16233,
+      "report_sha256": "10e9935cd0fec43b20201423ab58e8d144f1cc3ba03b5f0bc42ab18e435fa585",
+      "candidate_packet_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar2_header_minimized_fullvideo/candidate.snar2",
+      "candidate_packet_bytes": 139123,
+      "candidate_packet_sha256": "c64d2cccd793c976eb8bd6e432754677b80721a2a930823afdfc55d806d16c30",
+      "candidate_archive_zip_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar2_header_minimized_fullvideo/runtime_package/archive.zip",
+      "candidate_archive_zip_bytes": 155530,
+      "candidate_archive_zip_sha256": "da6200c72506092677e8dd955d3bf8f5287ded10f6c87da03678a8b6de75ef48"
+    }
+  ]
+}
