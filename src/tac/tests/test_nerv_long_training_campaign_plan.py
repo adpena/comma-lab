@@ -1707,11 +1707,16 @@ def test_long_training_campaign_plan_refuses_snerv_byte_feedback_from_wrong_skip
         optimizer_kinds=("lion",),
         epochs=29_650,
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
-        max_candidates_per_family=1,
+        max_candidates_per_family=2,
         modelsize_byte_cap_feedback_paths=(profile.as_posix(),),
     )
 
-    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    snerv = next(
+        row
+        for row in report["campaign_rows"]
+        if row["family"] == "snerv"
+        and row["candidate"]["candidate_id"] == full["candidate_id"]
+    )
 
     assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
         "blockers"
@@ -1719,6 +1724,37 @@ def test_long_training_campaign_plan_refuses_snerv_byte_feedback_from_wrong_skip
     preflight = snerv["modelsize_byte_cap_preflight"]
     assert preflight["observation_count"] == 1
     assert preflight["matching_observation_count"] == 0
+
+
+def test_long_training_campaign_plan_promotes_snerv_candidate_with_byte_feedback_into_limit(
+    tmp_path: Path,
+) -> None:
+    channel = _snerv_official_skip_candidate("channel_mean")
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    profile = _write_snerv_binary_profile_receiver_feedback(
+        tmp_path,
+        candidate=scalar,
+        archive_bytes=91_445,
+        archive_sha256="f" * 64,
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(channel),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(profile.as_posix(),),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert snerv["candidate"]["candidate_id"] == scalar["candidate_id"]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in snerv[
+        "blockers"
+    ]
+    assert snerv["modelsize_byte_cap_preflight"]["matching_observation_count"] == 1
 
 
 def test_long_training_campaign_cli_discovers_snerv_binary_profile_receiver_feedback(
@@ -3924,9 +3960,13 @@ def _snerv_budget() -> dict:
 
 
 def _snerv_budget_with_candidate(candidate: dict) -> dict:
+    return _snerv_budget_with_candidates((candidate,))
+
+
+def _snerv_budget_with_candidates(candidates: tuple[dict, ...]) -> dict:
     return {
         "schema": "snerv_modelsize_budget.v1",
-        "selected_candidates": [candidate],
+        "selected_candidates": list(candidates),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

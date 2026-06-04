@@ -224,6 +224,13 @@ def build_nerv_long_training_campaign_plan(
         family="snerv",
         limit=max_candidates_per_family,
     )
+    snerv_candidates = _merge_modelsize_byte_cap_feedback_candidates(
+        selected_candidates=snerv_candidates,
+        modelsize_budget=snerv_modelsize_budget,
+        family="snerv",
+        feedback_paths=byte_cap_feedback_paths,
+        limit=max_candidates_per_family,
+    )
     for candidate in hi_candidates:
         for optimizer in optimizers:
             rows.append(
@@ -1648,6 +1655,90 @@ def _selected_candidates(
     return rows[: max(1, int(limit))]
 
 
+def _merge_modelsize_byte_cap_feedback_candidates(
+    *,
+    selected_candidates: Sequence[Mapping[str, Any]],
+    modelsize_budget: Mapping[str, Any],
+    family: str,
+    feedback_paths: Sequence[str],
+    limit: int,
+) -> list[dict[str, Any]]:
+    if not feedback_paths:
+        return [dict(row) for row in selected_candidates]
+    observations = _modelsize_byte_cap_feedback_observations(
+        family=family,
+        feedback_paths=feedback_paths,
+    )
+    if not observations:
+        return [dict(row) for row in selected_candidates]
+    all_candidates = _selected_candidates(
+        modelsize_budget,
+        family=family,
+        limit=max(
+            len(tuple(modelsize_budget.get("selected_candidates", ()))),
+            int(limit),
+            1,
+        ),
+    )
+    feedback_candidates: list[dict[str, Any]] = []
+    for observation in observations:
+        candidate = observation.get("modelsize_candidate")
+        if not isinstance(candidate, Mapping) or candidate.get("family") != family:
+            continue
+        clean = _scrub_candidate_authority_flags(candidate)
+        candidate_id = str(clean.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        authority_blockers = _candidate_authority_blockers(candidate)
+        if authority_blockers:
+            clean["_candidate_authority_blockers"] = authority_blockers
+        feedback_candidates.append(clean)
+    all_candidates = [*all_candidates, *feedback_candidates]
+    selected_by_id = {
+        str(row.get("candidate_id") or ""): dict(row) for row in selected_candidates
+    }
+    merged: dict[str, dict[str, Any]] = {
+        str(row.get("candidate_id") or ""): dict(row) for row in selected_candidates
+    }
+    for candidate in all_candidates:
+        candidate_id = str(candidate.get("candidate_id") or "")
+        if not candidate_id:
+            continue
+        matching = _modelsize_byte_cap_matching_observations(
+            observations,
+            candidate=candidate,
+            codec=_modelsize_byte_cap_codec(candidate),
+        )
+        if matching:
+            merged.setdefault(candidate_id, dict(candidate))
+    rows = list(merged.values())
+
+    def sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
+        preflight = _modelsize_byte_cap_preflight(
+            candidate=row,
+            family=family,
+            feedback_paths=feedback_paths,
+        )
+        matched = int(preflight.get("matching_observation_count") or 0)
+        predicted_under = preflight.get("predicted_under_hard_byte_ceiling") is True
+        predicted_archive = int(preflight.get("predicted_archive_bytes") or 0)
+        selected_rank = 0 if str(row.get("candidate_id") or "") in selected_by_id else 1
+        family_key = (
+            _snerv_long_training_candidate_sort_key(row)
+            if family == "snerv"
+            else _hinerv_long_training_candidate_sort_key(row)
+        )
+        return (
+            0 if matched and predicted_under else 1 if matched else 2,
+            predicted_archive if matched and predicted_under else 0,
+            selected_rank,
+            *family_key,
+        )
+
+    rows.sort(key=sort_key)
+    return rows[: max(1, int(limit))]
+
+
 def _merge_hinerv_waterfill_candidate_evidence(
     *,
     candidates: Sequence[Mapping[str, Any]],
@@ -2006,6 +2097,11 @@ def _modelsize_byte_cap_feedback_observations(
                         )
                         if candidate_mapping
                         else {}
+                    ),
+                    "modelsize_candidate": (
+                        _scrub_candidate_authority_flags(candidate_mapping)
+                        if candidate_mapping
+                        else None
                     ),
                 }
             )
