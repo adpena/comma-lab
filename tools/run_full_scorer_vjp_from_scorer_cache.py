@@ -242,6 +242,89 @@ def _per_pair_l2(array_nchw: np.ndarray) -> np.ndarray:
     return np.sqrt(np.sum(arr.astype(np.float64) * arr.astype(np.float64), axis=axes)).astype(np.float32)
 
 
+def _quantiles(values: np.ndarray) -> dict[str, float | None]:
+    arr = np.asarray(values, dtype=np.float64)
+    arr = arr[np.isfinite(arr)]
+    if arr.size == 0:
+        return {key: None for key in ("q00", "q50", "q90", "q95", "q99", "q100")}
+    return {
+        "q00": float(np.quantile(arr, 0.0)),
+        "q50": float(np.quantile(arr, 0.5)),
+        "q90": float(np.quantile(arr, 0.9)),
+        "q95": float(np.quantile(arr, 0.95)),
+        "q99": float(np.quantile(arr, 0.99)),
+        "q100": float(np.quantile(arr, 1.0)),
+    }
+
+
+def _full_reduction_summary_from_shards(shards: list[dict[str, Any]]) -> dict[str, Any]:
+    rows: list[dict[str, float | int]] = []
+    loss_sum = 0.0
+    elapsed_sum = 0.0
+    array_bytes = 0
+    for shard in sorted(shards, key=lambda item: int(item.get("pair_start", 0))):
+        pair_start = int(shard.get("pair_start", 0))
+        pose_l2 = np.asarray(
+            (shard.get("posenet_yuv6_pair_grad") or {}).get("per_pair_l2") or [],
+            dtype=np.float64,
+        )
+        seg_l2 = np.asarray(
+            (shard.get("segnet_last_rgb_grad") or {}).get("per_pair_l2") or [],
+            dtype=np.float64,
+        )
+        pair_count = max(len(pose_l2), len(seg_l2))
+        if len(pose_l2) < pair_count:
+            pose_l2 = np.pad(pose_l2, (0, pair_count - len(pose_l2)))
+        if len(seg_l2) < pair_count:
+            seg_l2 = np.pad(seg_l2, (0, pair_count - len(seg_l2)))
+        for offset in range(pair_count):
+            pose = float(pose_l2[offset])
+            seg = float(seg_l2[offset])
+            rows.append(
+                {
+                    "pair_idx": int(pair_start + offset),
+                    "combined_grad_l2": pose + seg,
+                    "pose_grad_l2": pose,
+                    "seg_grad_l2": seg,
+                }
+            )
+        loss_sum += float(shard.get("loss_contribution") or 0.0)
+        elapsed_sum += float(shard.get("elapsed_seconds") or 0.0)
+        arrays = shard.get("arrays")
+        if isinstance(arrays, dict):
+            array_bytes += int(arrays.get("bytes") or 0)
+
+    rows.sort(key=lambda row: (-float(row["combined_grad_l2"]), int(row["pair_idx"])))
+    pose_values = np.asarray([float(row["pose_grad_l2"]) for row in rows], dtype=np.float64)
+    seg_values = np.asarray([float(row["seg_grad_l2"]) for row in rows], dtype=np.float64)
+    combined_values = pose_values + seg_values
+    nonzero_pose = int(np.count_nonzero(pose_values > 0.0))
+    nonzero_seg = int(np.count_nonzero(seg_values > 0.0))
+    return {
+        "schema": "direct_full_scorer_vjp_full_reduction_summary.v1",
+        "pair_count": len(rows),
+        "loss_contribution_sum": loss_sum,
+        "shard_elapsed_seconds_sum": elapsed_sum,
+        "gradient_array_bytes": array_bytes,
+        "nonzero_pair_counts": {
+            "combined": int(np.count_nonzero(combined_values > 0.0)),
+            "pose": nonzero_pose,
+            "seg": nonzero_seg,
+        },
+        "gradient_l2_sum": {
+            "combined": float(np.sum(combined_values, dtype=np.float64)),
+            "pose": float(np.sum(pose_values, dtype=np.float64)),
+            "seg": float(np.sum(seg_values, dtype=np.float64)),
+        },
+        "gradient_l2_quantiles": {
+            "combined": _quantiles(combined_values),
+            "pose": _quantiles(pose_values),
+            "seg": _quantiles(seg_values),
+        },
+        "top_pairs_by_grad_l2": rows[:64],
+    }
+
+
 def _gradient_quality_blockers(
     *,
     name: str,
@@ -716,6 +799,7 @@ def run_vjp(args: argparse.Namespace) -> dict[str, Any]:
     )
     if shard_quality_blockers:
         blockers.append("direct_full_scorer_vjp_gradient_quality_failed")
+    full_reduction_summary = _full_reduction_summary_from_shards(shards)
     bundle = {
         "schema": SCHEMA,
         "generated_at_utc": datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
@@ -733,6 +817,8 @@ def run_vjp(args: argparse.Namespace) -> dict[str, Any]:
         "max_gradient_abs_sanity_limit": args.max_gradient_abs_sanity_limit,
         "seg_surrogate": "cross_entropy_to_reference_segnet_argmax",
         "pose_objective": "full_video_scaled_sqrt_pose_mse_linearized_gain",
+        "full_reduction_complete": full_reduction_complete,
+        "full_reduction_summary": full_reduction_summary,
         "exact_reduction_contract": {
             "single_update_after_all_shards_reduce": True,
             "budget_spend_allowed_before_full_reduction": False,
@@ -835,7 +921,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "bundle": bundle["bundle_path"],
                 "shard_count": bundle["shard_count"],
-                "full_reduction_complete": bundle["exact_reduction_contract"]["full_reduction_complete"],
+                "full_reduction_complete": bundle["full_reduction_complete"],
                 "blockers": bundle["blockers"],
             },
             sort_keys=True,

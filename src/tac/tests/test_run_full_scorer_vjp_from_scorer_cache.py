@@ -149,3 +149,44 @@ def test_vjp_output_byte_estimate_scales_with_pairs() -> None:
         stop_pair=10,
         summary_only=True,
     ) < large
+
+
+def test_vjp_full_reduction_summary_ranks_global_pairs() -> None:
+    module = _load_module()
+
+    summary = module._full_reduction_summary_from_shards(
+        [
+            {
+                "pair_start": 10,
+                "pair_end": 12,
+                "elapsed_seconds": 0.5,
+                "loss_contribution": 1.25,
+                "arrays": {"bytes": 12},
+                "posenet_yuv6_pair_grad": {"per_pair_l2": [0.2, 0.9]},
+                "segnet_last_rgb_grad": {"per_pair_l2": [0.1, 0.0]},
+            },
+            {
+                "pair_start": 0,
+                "pair_end": 2,
+                "elapsed_seconds": 0.25,
+                "loss_contribution": 0.75,
+                "arrays": {"bytes": 8},
+                "posenet_yuv6_pair_grad": {"per_pair_l2": [0.4, 0.0]},
+                "segnet_last_rgb_grad": {"per_pair_l2": [0.1, 0.6]},
+            },
+        ]
+    )
+
+    assert summary["schema"] == "direct_full_scorer_vjp_full_reduction_summary.v1"
+    assert summary["pair_count"] == 4
+    assert summary["gradient_array_bytes"] == 20
+    assert summary["loss_contribution_sum"] == 2.0
+    assert summary["nonzero_pair_counts"] == {"combined": 4, "pose": 3, "seg": 3}
+    assert summary["top_pairs_by_grad_l2"][0] == {
+        "pair_idx": 11,
+        "combined_grad_l2": 0.9,
+        "pose_grad_l2": 0.9,
+        "seg_grad_l2": 0.0,
+    }
+    assert summary["top_pairs_by_grad_l2"][1]["pair_idx"] == 1
+    assert summary["gradient_l2_quantiles"]["combined"]["q100"] == 0.9
