@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import numpy as np
 
+from tac.substrates._shared.numpy_portable_inflate import pack_state_dict_numpy
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_official_mfu_hfr_tub_decoder_payload,
     unpack_snerv_archive,
@@ -102,6 +104,68 @@ def test_official_checkpoint_packet_uses_official_payload() -> None:
     assert summary["source_faithful_stack"] is False
     frames = tool.decode_snerv_archive_frames(packet.packet)
     assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_official_checkpoint_export_report_classifies_receiver_payload(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    state_path = tmp_path / "official_state.npsd"
+    state_path.write_bytes(pack_state_dict_numpy(_official_checkpoint_state()))
+    checkpoint_meta = tmp_path / "checkpoint.meta.json"
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "global_epoch": 29,
+                "ema_shadow_state_path": state_path.as_posix(),
+                "live_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "official_checkpoint_unit",
+                    "snerv_model_size_adapter": (
+                        "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+                    ),
+                    "official_skip_high_mode": "scalar_mean",
+                },
+                "hard_byte_ceilings": [100_000],
+                "command_args": {"num_pairs": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = tool.export_snerv_checkpoint_archive(
+        startup_json=startup,
+        checkpoint_meta=checkpoint_meta,
+        output_dir=tmp_path / "export",
+        state_kind="ema",
+        repo_root=tmp_path,
+    )
+
+    binding = report["official_checkpoint_export_binding"]
+    assert binding["schema"] == "snerv_official_checkpoint_export_binding.v1"
+    assert binding["requested"] is True
+    assert binding["native_checkpoint_export_bound_to_official_payload"] is True
+    assert binding["official_receiver_payload_bound"] is True
+    assert binding["official_receiver_tensor_map_verified"] is True
+    assert binding["selected_packet_status"] == "frame_producing_official_export"
+    assert binding["selected_packet_decoded_frame_shape"] == [1, 2, 3, 16, 16]
+    assert binding["official_export_bound"] is False
+    assert binding["source_forward_replay_authority"] is False
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in (
+        binding["preserved_blockers"]
+    )
+    assert binding["official_tensor_category_bytes"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -> None:

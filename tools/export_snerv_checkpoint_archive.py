@@ -64,6 +64,8 @@ from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import ( 
     _build_official_mfu_hfr_tub_packet_from_components,
     _model_size_from_candidate,
     _official_passthrough_mfu,
+    _official_receiver_tensor_map_from_packet,
+    _selected_packet_official_payload_authority,
     _write_snerv_native_receiver_decoded_mlx_prefilter,
     export_snerv_mlx_archive,
 )
@@ -256,6 +258,10 @@ def export_snerv_checkpoint_archive(
     out.mkdir(parents=True, exist_ok=True)
     packet_path = out / "snerv_checkpoint_packet.bin"
     packet_path.write_bytes(packet.packet)
+    official_checkpoint_export_binding = _official_checkpoint_export_binding(
+        packet,
+        model_size=model_size,
+    )
     package: dict[str, Any] | None = None
     if emit_receiver_proof:
         package = export_snerv_mlx_archive(
@@ -309,6 +315,7 @@ def export_snerv_checkpoint_archive(
         "packet_section_reports": dict(packet.section_reports),
         "packet_section_report_summary": _packet_section_report_summary(packet),
         "packet_metadata_summary": _packet_metadata_summary(packet),
+        "official_checkpoint_export_binding": official_checkpoint_export_binding,
         "archive_path": str(archive_path) if archive_path else None,
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
@@ -1543,6 +1550,79 @@ def _require_mapping(value: Any, name: str) -> dict[str, Any]:
 
 def _sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _official_checkpoint_export_binding(
+    packet: SnervArchivePacket,
+    *,
+    model_size: SnervModelSizeConfig,
+) -> dict[str, Any]:
+    """Classify official checkpoint packet binding without claiming source parity."""
+
+    requested = bool(model_size.official_mfu_hfr_tub_numeric_primitives_requested)
+    selected_authority = _selected_packet_official_payload_authority(packet.packet)
+    receiver_tensor_map = _official_receiver_tensor_map_from_packet(packet.packet)
+    native_checkpoint_export_bound = bool(
+        requested
+        and selected_authority.get("frame_producing_official_export") is True
+        and receiver_tensor_map.get("receiver_tensor_map_verified") is True
+    )
+    preserved_blockers = [
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+        "snerv_official_trained_checkpoint_state_dict_mapping_missing",
+        "snerv_official_trained_checkpoint_source_forward_replay_missing",
+        "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+    ]
+    return {
+        "schema": "snerv_official_checkpoint_export_binding.v1",
+        "requested": requested,
+        "native_checkpoint_export_bound_to_official_payload": (
+            native_checkpoint_export_bound
+        ),
+        "official_receiver_payload_bound": bool(
+            selected_authority.get("official_decoder_payload_selected") is True
+        ),
+        "official_receiver_tensor_map_verified": bool(
+            receiver_tensor_map.get("receiver_tensor_map_verified") is True
+        ),
+        "selected_packet_status": selected_authority.get("status"),
+        "selected_packet_decoded_frame_shape": selected_authority.get(
+            "decoded_frame_shape"
+        ),
+        "selected_packet_authority": selected_authority,
+        "official_receiver_tensor_map": receiver_tensor_map,
+        "official_tensor_category_bytes": dict(
+            receiver_tensor_map.get("category_bytes") or {}
+        ),
+        "official_tensor_category_counts": dict(
+            receiver_tensor_map.get("category_counts") or {}
+        ),
+        "official_export_bound": False,
+        "official_export_bound_semantics": (
+            "checkpoint_export_receiver_payload_binding_not_source_forward_parity"
+        ),
+        "source_forward_replay_authority": False,
+        "source_forward_replay_bound": False,
+        "preserved_blockers": preserved_blockers,
+        "blockers": (
+            []
+            if native_checkpoint_export_bound
+            else [
+                *(
+                    str(blocker)
+                    for blocker in selected_authority.get("blockers", ())
+                    if str(blocker)
+                ),
+                *(
+                    str(blocker)
+                    for blocker in receiver_tensor_map.get("blockers", ())
+                    if str(blocker)
+                ),
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
 
 
 def _summary(report: dict[str, Any]) -> dict[str, Any]:
