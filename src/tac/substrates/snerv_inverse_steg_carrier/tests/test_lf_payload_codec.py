@@ -225,6 +225,33 @@ def test_lf_payload_v2_metadata_is_deterministic_and_inspectable() -> None:
     assert inspected.ready_for_exact_eval_dispatch is False
 
 
+def test_lf_payload_portfolio_auto_uses_bounded_wrappers_by_default() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec as mod
+
+    wrappers = mod._normalize_wrapper("portfolio_auto")
+
+    assert wrappers == ("none", "brotli_auto", "lzma_auto")
+    assert "brotli" not in wrappers
+    assert "brotli_q11" not in wrappers
+    assert "lzma" not in wrappers
+    assert "lzma_extreme" not in wrappers
+    assert (
+        mod._brotli_quality_for_wrapper(
+            "brotli_auto",
+            payload_bytes=mod.SNERV_LF_BROTLI_AUTO_Q11_MAX_INPUT_BYTES + 1,
+        )
+        == 6
+    )
+    assert (
+        mod._lzma_preset_for_wrapper(
+            "lzma_auto",
+            payload_bytes=mod.SNERV_LF_LZMA_AUTO_EXTREME_MAX_INPUT_BYTES + 1,
+        )
+        == 6
+    )
+    assert mod._brotli_quality_for_wrapper("brotli", payload_bytes=10_000_000) == 11
+
+
 def test_archive_lf_payload_codec_v2_is_receiver_decoded() -> None:
     planes = [
         np.array([[0, -1, 0], [0, 0, 1]], dtype=np.int64),

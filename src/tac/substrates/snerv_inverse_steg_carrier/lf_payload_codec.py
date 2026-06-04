@@ -56,7 +56,20 @@ _SUPPORTED_MODES = (
     "signed_int4_escape_varint",
     "signed_int8_escape_varint",
 )
-_SUPPORTED_WRAPPERS = ("none", "brotli", "lzma")
+SNERV_LF_BROTLI_AUTO_Q11_MAX_INPUT_BYTES = 1_048_576
+SNERV_LF_LZMA_AUTO_EXTREME_MAX_INPUT_BYTES = 1_048_576
+_PORTFOLIO_AUTO_WRAPPERS = ("none", "brotli_auto", "lzma_auto")
+_SUPPORTED_WRAPPERS = (
+    "none",
+    "brotli",
+    "brotli_auto",
+    "brotli_q6",
+    "brotli_q9",
+    "brotli_q11",
+    "lzma",
+    "lzma_auto",
+    "lzma_extreme",
+)
 _ESCAPE_HEADER = struct.Struct("<I")
 
 
@@ -396,23 +409,51 @@ def _decode_plane_unwrapped(blob: bytes, *, mode: str, count: int) -> np.ndarray
 def _wrap_payload(payload: bytes, *, wrapper: str) -> bytes:
     if wrapper == "none":
         return payload
-    if wrapper == "brotli":
+    if wrapper.startswith("brotli"):
         if brotli is None:
             raise SnervLfPayloadCodecError("brotli unavailable")
-        return brotli.compress(payload, quality=11)
-    if wrapper == "lzma":
-        return lzma.compress(payload, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
+        quality = _brotli_quality_for_wrapper(wrapper, payload_bytes=len(payload))
+        return brotli.compress(payload, quality=quality)
+    if wrapper.startswith("lzma"):
+        preset = _lzma_preset_for_wrapper(wrapper, payload_bytes=len(payload))
+        return lzma.compress(payload, format=lzma.FORMAT_XZ, preset=preset)
     raise SnervLfPayloadCodecError(f"unsupported LF wrapper: {wrapper!r}")
+
+
+def _brotli_quality_for_wrapper(wrapper: str, *, payload_bytes: int) -> int:
+    if wrapper == "brotli_auto":
+        return (
+            11
+            if int(payload_bytes) <= SNERV_LF_BROTLI_AUTO_Q11_MAX_INPUT_BYTES
+            else 6
+        )
+    if wrapper == "brotli_q6":
+        return 6
+    if wrapper == "brotli_q9":
+        return 9
+    if wrapper in {"brotli", "brotli_q11"}:
+        return 11
+    raise SnervLfPayloadCodecError(f"unsupported LF Brotli wrapper: {wrapper!r}")
+
+
+def _lzma_preset_for_wrapper(wrapper: str, *, payload_bytes: int) -> int:
+    if wrapper == "lzma_auto":
+        if int(payload_bytes) <= SNERV_LF_LZMA_AUTO_EXTREME_MAX_INPUT_BYTES:
+            return 9 | lzma.PRESET_EXTREME
+        return 6
+    if wrapper in {"lzma", "lzma_extreme"}:
+        return 9 | lzma.PRESET_EXTREME
+    raise SnervLfPayloadCodecError(f"unsupported LF LZMA wrapper: {wrapper!r}")
 
 
 def _unwrap_payload(payload: bytes, *, wrapper: str) -> bytes:
     if wrapper == "none":
         return payload
-    if wrapper == "brotli":
+    if wrapper.startswith("brotli"):
         if brotli is None:
             raise SnervLfPayloadCodecError("brotli unavailable")
         return brotli.decompress(payload)
-    if wrapper == "lzma":
+    if wrapper.startswith("lzma"):
         return lzma.decompress(payload)
     raise SnervLfPayloadCodecError(f"unsupported LF wrapper: {wrapper!r}")
 
@@ -538,8 +579,8 @@ def _normalize_wrapper(wrapper: str) -> tuple[str, ...]:
     normalized = str(wrapper).strip().lower()
     if normalized in {"auto", "portfolio", "portfolio_auto"}:
         if brotli is None:
-            return ("none", "lzma")
-        return _SUPPORTED_WRAPPERS
+            return ("none", "lzma_auto")
+        return _PORTFOLIO_AUTO_WRAPPERS
     if normalized not in _SUPPORTED_WRAPPERS:
         raise SnervLfPayloadCodecError(f"unsupported LF wrapper: {wrapper!r}")
     if normalized == "brotli" and brotli is None:
