@@ -526,6 +526,20 @@ def _hinerv_campaign_row(
         local_cpu_replay_gate_attached=bool(feedback.get("local_cpu_replay_gate_attached")),
         measured_archive_bytes=feedback.get("measured_archive_bytes"),
         measured_num_pairs=feedback.get("measured_num_pairs"),
+        archive_minus_nominal_bytes=feedback.get("archive_minus_nominal_bytes"),
+        archive_to_nominal_ratio=feedback.get("archive_to_nominal_ratio"),
+        calibrated_archive_overrun_bytes=feedback.get(
+            "calibrated_archive_overrun_bytes"
+        ),
+        required_nominal_payload_bytes_max=feedback.get(
+            "required_nominal_payload_bytes_max"
+        ),
+        hard_byte_ceiling_measurement_bypass_enabled=feedback.get(
+            "hard_byte_ceiling_measurement_bypass_enabled"
+        ),
+        hard_byte_ceiling_checked_after_export=feedback.get(
+            "hard_byte_ceiling_checked_after_export"
+        ),
     )
     row_id = f"hi_nerv::{runner_candidate_label}::{optimizer_kind}"
     optimizer_policy = _hinerv_optimizer_policy_for_kind(optimizer_kind)
@@ -834,6 +848,20 @@ def _snerv_campaign_row(
         measured_packet_bytes=feedback.get("measured_payload_bytes"),
         measured_archive_bytes=feedback.get("measured_archive_bytes"),
         measured_num_pairs=feedback.get("measured_num_pairs"),
+        archive_minus_nominal_bytes=feedback.get("archive_minus_nominal_bytes"),
+        archive_to_nominal_ratio=feedback.get("archive_to_nominal_ratio"),
+        calibrated_archive_overrun_bytes=feedback.get(
+            "calibrated_archive_overrun_bytes"
+        ),
+        required_nominal_payload_bytes_max=feedback.get(
+            "required_nominal_payload_bytes_max"
+        ),
+        hard_byte_ceiling_measurement_bypass_enabled=feedback.get(
+            "hard_byte_ceiling_measurement_bypass_enabled"
+        ),
+        hard_byte_ceiling_checked_after_export=feedback.get(
+            "hard_byte_ceiling_checked_after_export"
+        ),
     )
     row_id = f"snerv::{runner_candidate_label}::native_rate_aware_training"
     native_mlx_decoder_train_steps = max(
@@ -1910,6 +1938,13 @@ def _merge_modelsize_byte_cap_feedback_candidates(
             and hard_byte_ceiling is not None
             and int(observed_archive_bytes) > int(hard_byte_ceiling)
         ):
+            over_ceiling = (
+                _first_present_int(
+                    observation,
+                    ("calibrated_archive_overrun_bytes",),
+                )
+                or int(observed_archive_bytes) - int(hard_byte_ceiling)
+            )
             clean["_candidate_authority_blockers"] = _dedupe(
                 [
                     *list(clean.get("_candidate_authority_blockers") or []),
@@ -1921,8 +1956,20 @@ def _merge_modelsize_byte_cap_feedback_candidates(
                 observed_archive_bytes
             )
             clean["_modelsize_feedback_archive_over_hard_byte_ceiling_bytes"] = int(
-                observed_archive_bytes
-            ) - int(hard_byte_ceiling)
+                over_ceiling
+            )
+            required_nominal_max = _first_present_int(
+                observation,
+                ("required_nominal_payload_bytes_max",),
+            )
+            if required_nominal_max is not None:
+                clean["_modelsize_feedback_required_nominal_payload_bytes_max"] = int(
+                    required_nominal_max
+                )
+            if observation.get("hard_byte_ceiling_measurement_bypass_enabled") is not None:
+                clean["_modelsize_feedback_measurement_bypass_enabled"] = bool(
+                    observation.get("hard_byte_ceiling_measurement_bypass_enabled")
+                )
         feedback_candidates.append(clean)
     all_candidates = [*all_candidates, *feedback_candidates]
     selected_by_id = {
@@ -2245,6 +2292,18 @@ def _modelsize_byte_cap_preflight(
         prediction_rule = (
             "max_observed_archive_to_nominal_ratio_or_additive_overhead"
         )
+    required_nominal_values = [
+        int(value)
+        for row in matching
+        for value in [_first_present_int(row, ("required_nominal_payload_bytes_max",))]
+        if value is not None
+    ]
+    overrun_values = [
+        int(value)
+        for row in matching
+        for value in [_first_present_int(row, ("calibrated_archive_overrun_bytes",))]
+        if value is not None
+    ]
     headroom = None
     predicted_under = None
     if ceiling is not None and predicted is not None:
@@ -2268,6 +2327,16 @@ def _modelsize_byte_cap_preflight(
         "feedback_path_count": len(tuple(feedback_paths)),
         "observation_count": len(observations),
         "matching_observation_count": len(matching),
+        "matching_required_nominal_payload_bytes_max": (
+            min(required_nominal_values) if required_nominal_values else None
+        ),
+        "matching_calibrated_archive_overrun_bytes_max": (
+            max(overrun_values) if overrun_values else None
+        ),
+        "matching_measurement_bypass_observed": any(
+            bool(row.get("hard_byte_ceiling_measurement_bypass_enabled"))
+            for row in matching
+        ),
         "missing_matching_feedback_is_blocking": missing_matching_feedback_is_blocking,
         "matching_observations": matching,
         "scope": "budget_candidate_preflight_runner_revalidates_auto_selection",
@@ -2285,10 +2354,16 @@ def _observations_are_demote_only_byte_feedback(
 
 
 def _observation_is_over_own_hard_byte_ceiling(row: Mapping[str, Any]) -> bool:
+    overrun = _first_present_int(row, ("calibrated_archive_overrun_bytes",))
+    if overrun is not None and int(overrun) > 0:
+        return True
     archive_bytes = _first_present_int(row, ("measured_archive_bytes",))
     candidate = row.get("modelsize_candidate")
     candidate_mapping = candidate if isinstance(candidate, Mapping) else {}
-    ceiling = _first_present_int(candidate_mapping, ("hard_byte_ceiling",))
+    ceiling = _first_present_int(row, ("hard_byte_ceiling",)) or _first_present_int(
+        candidate_mapping,
+        ("hard_byte_ceiling",),
+    )
     return bool(
         archive_bytes is not None
         and ceiling is not None
@@ -2400,6 +2475,26 @@ def _modelsize_byte_cap_feedback_observations(
                     "nominal_payload_bytes": int(nominal),
                     "archive_minus_nominal_bytes": int(measured) - int(nominal),
                     "archive_to_nominal_ratio": float(measured) / float(nominal),
+                    "calibrated_archive_overrun_bytes": (
+                        _first_present_int(
+                            row,
+                            ("calibrated_archive_overrun_bytes",),
+                        )
+                    ),
+                    "required_nominal_payload_bytes_max": (
+                        _first_present_int(
+                            row,
+                            ("required_nominal_payload_bytes_max",),
+                        )
+                    ),
+                    "hard_byte_ceiling_measurement_bypass_enabled": bool(
+                        row.get("hard_byte_ceiling_measurement_bypass_enabled")
+                    ),
+                    "hard_byte_ceiling_checked_after_export": (
+                        None
+                        if row.get("hard_byte_ceiling_checked_after_export") is None
+                        else bool(row.get("hard_byte_ceiling_checked_after_export"))
+                    ),
                     "receiver_closed": True,
                     "receiver_closed_status": receiver_closed.get("status"),
                     "receiver_proof_path": receiver_closed.get("proof_path"),
@@ -3648,6 +3743,27 @@ def _snerv_feedback_with_modelsize_byte_cap_evidence(
         "feedback_ready": bool(scope_matches and archive_bytes is not None),
         "measured_payload_bytes": packet_bytes,
         "measured_archive_bytes": archive_bytes,
+        "archive_minus_nominal_bytes": _first_present_int(
+            observation,
+            ("archive_minus_nominal_bytes",),
+        ),
+        "archive_to_nominal_ratio": observation.get("archive_to_nominal_ratio"),
+        "calibrated_archive_overrun_bytes": _first_present_int(
+            observation,
+            ("calibrated_archive_overrun_bytes",),
+        ),
+        "required_nominal_payload_bytes_max": _first_present_int(
+            observation,
+            ("required_nominal_payload_bytes_max",),
+        ),
+        "hard_byte_ceiling_measurement_bypass_enabled": bool(
+            observation.get("hard_byte_ceiling_measurement_bypass_enabled")
+        ),
+        "hard_byte_ceiling_checked_after_export": (
+            None
+            if observation.get("hard_byte_ceiling_checked_after_export") is None
+            else bool(observation.get("hard_byte_ceiling_checked_after_export"))
+        ),
         "receiver_proof_attached": proof_path is not None,
         "receiver_proof_path": proof_path.as_posix() if proof_path else None,
         "receiver_proof_sha256": proof_sha,

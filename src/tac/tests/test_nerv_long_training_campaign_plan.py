@@ -1618,6 +1618,10 @@ def test_long_training_campaign_plan_blocks_snerv_auto_when_calibrated_byte_cap_
                 "decoder_payload_codec": "int4_symmetric",
                 "receiver_proof_passed": True,
                 "receiver_contract_satisfied": True,
+                "hard_byte_ceiling_measurement_bypass_enabled": True,
+                "hard_byte_ceiling_checked_after_export": True,
+                "calibrated_archive_overrun_bytes": 266_036,
+                "required_nominal_payload_bytes_max": 75_705,
                 "modelsize_candidate": {
                     "candidate_id": _snerv_candidate_id(),
                     "family": "snerv",
@@ -1652,6 +1656,14 @@ def test_long_training_campaign_plan_blocks_snerv_auto_when_calibrated_byte_cap_
     assert preflight["matching_observation_count"] == 1
     assert preflight["predicted_under_hard_byte_ceiling"] is False
     assert preflight["predicted_archive_bytes"] > 178_000
+    assert preflight["matching_calibrated_archive_overrun_bytes_max"] == 266_036
+    assert preflight["matching_required_nominal_payload_bytes_max"] == 75_705
+    assert preflight["matching_measurement_bypass_observed"] is True
+    observation = preflight["matching_observations"][0]
+    assert observation["calibrated_archive_overrun_bytes"] == 266_036
+    assert observation["required_nominal_payload_bytes_max"] == 75_705
+    assert observation["hard_byte_ceiling_measurement_bypass_enabled"] is True
+    assert observation["hard_byte_ceiling_checked_after_export"] is True
 
 
 def test_long_training_campaign_plan_byte_cap_preflight_reads_startup_candidate_fallback(
@@ -1847,6 +1859,10 @@ def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_de
                 "packet_bytes": 2_347_476,
                 "receiver_proof_passed": True,
                 "receiver_contract_satisfied": True,
+                "hard_byte_ceiling_measurement_bypass_enabled": True,
+                "hard_byte_ceiling_checked_after_export": True,
+                "calibrated_archive_overrun_bytes": 228_828,
+                "required_nominal_payload_bytes_max": 91_703,
                 "modelsize_candidate": observed,
             },
             sort_keys=True,
@@ -1883,6 +1899,11 @@ def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_de
         == 228_828
     )
     assert (
+        demoted["candidate"]["_modelsize_feedback_required_nominal_payload_bytes_max"]
+        == 91_703
+    )
+    assert demoted["candidate"]["_modelsize_feedback_measurement_bypass_enabled"] is True
+    assert (
         "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only"
         in demoted["blockers"]
     )
@@ -1892,6 +1913,9 @@ def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_de
     feedback = demoted["curriculum_plan"]["byte_oracle_logging"]
     assert feedback["archive_under_hard_byte_ceiling"] is False
     assert feedback["archive_over_hard_byte_ceiling_bytes"] == 228_828
+    assert feedback["required_nominal_payload_bytes_max"] == 91_703
+    assert feedback["calibrated_archive_overrun_bytes"] == 228_828
+    assert feedback["hard_byte_ceiling_measurement_bypass_enabled"] is True
 
 
 def test_long_training_campaign_plan_rejects_snerv_byte_feedback_failed_receiver_contract(

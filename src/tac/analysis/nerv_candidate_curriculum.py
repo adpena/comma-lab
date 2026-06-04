@@ -103,10 +103,20 @@ def _base_byte_feedback(
     measured_num_pairs: int,
     measured_payload_bytes: int | None = None,
     measured_archive_bytes: int | None = None,
+    archive_minus_nominal_bytes: int | None = None,
+    archive_to_nominal_ratio: float | None = None,
+    calibrated_archive_overrun_bytes: int | None = None,
+    required_nominal_payload_bytes_max: int | None = None,
+    hard_byte_ceiling_measurement_bypass_enabled: bool | None = None,
+    hard_byte_ceiling_checked_after_export: bool | None = None,
 ) -> dict[str, Any]:
     nominal = _int(candidate.get("nominal_total_payload_bytes"))
     measured = measured_archive_bytes if measured_archive_bytes is not None else measured_payload_bytes
-    delta = None if measured is None else int(measured) - int(nominal)
+    delta = (
+        archive_minus_nominal_bytes
+        if archive_minus_nominal_bytes is not None
+        else (None if measured is None else int(measured) - int(nominal))
+    )
     hard_byte_ceiling = _int(candidate.get("hard_byte_ceiling"))
     charged_archive_bytes = (
         None if measured_archive_bytes is None else int(measured_archive_bytes)
@@ -140,6 +150,35 @@ def _base_byte_feedback(
         ),
         "measured_archive_bytes": charged_archive_bytes,
         "measured_minus_nominal_bytes": delta,
+        "archive_to_nominal_ratio": (
+            float(archive_to_nominal_ratio)
+            if archive_to_nominal_ratio is not None
+            else (
+                None
+                if measured is None or nominal <= 0
+                else float(measured) / float(nominal)
+            )
+        ),
+        "calibrated_archive_overrun_bytes": (
+            None
+            if calibrated_archive_overrun_bytes is None
+            else int(calibrated_archive_overrun_bytes)
+        ),
+        "required_nominal_payload_bytes_max": (
+            None
+            if required_nominal_payload_bytes_max is None
+            else int(required_nominal_payload_bytes_max)
+        ),
+        "hard_byte_ceiling_measurement_bypass_enabled": (
+            None
+            if hard_byte_ceiling_measurement_bypass_enabled is None
+            else bool(hard_byte_ceiling_measurement_bypass_enabled)
+        ),
+        "hard_byte_ceiling_checked_after_export": (
+            None
+            if hard_byte_ceiling_checked_after_export is None
+            else bool(hard_byte_ceiling_checked_after_export)
+        ),
         "measured_minus_nominal_rate_score_delta": (
             None if delta is None else float(delta * RATE_SCORE_PER_BYTE)
         ),
@@ -185,6 +224,12 @@ def build_hinerv_candidate_curriculum_plan(
     local_cpu_replay_gate_attached: bool = False,
     measured_archive_bytes: int | None = None,
     measured_num_pairs: int | None = None,
+    archive_minus_nominal_bytes: int | None = None,
+    archive_to_nominal_ratio: float | None = None,
+    calibrated_archive_overrun_bytes: int | None = None,
+    required_nominal_payload_bytes_max: int | None = None,
+    hard_byte_ceiling_measurement_bypass_enabled: bool | None = None,
+    hard_byte_ceiling_checked_after_export: bool | None = None,
 ) -> dict[str, Any]:
     """Bind a HiNeRV modelsize candidate to its required training pressure."""
 
@@ -234,6 +279,14 @@ def build_hinerv_candidate_curriculum_plan(
             int(num_pairs) if measured_num_pairs is None else int(measured_num_pairs)
         ),
         measured_archive_bytes=measured_archive_bytes,
+        archive_minus_nominal_bytes=archive_minus_nominal_bytes,
+        archive_to_nominal_ratio=archive_to_nominal_ratio,
+        calibrated_archive_overrun_bytes=calibrated_archive_overrun_bytes,
+        required_nominal_payload_bytes_max=required_nominal_payload_bytes_max,
+        hard_byte_ceiling_measurement_bypass_enabled=(
+            hard_byte_ceiling_measurement_bypass_enabled
+        ),
+        hard_byte_ceiling_checked_after_export=hard_byte_ceiling_checked_after_export,
     ) if candidate_selected else {
         "schema": BYTE_FEEDBACK_SCHEMA,
         "candidate_id": None,
@@ -350,6 +403,12 @@ def build_snerv_candidate_curriculum_plan(
     step_map_coder_mode: str,
     measured_packet_bytes: int | None = None,
     measured_archive_bytes: int | None = None,
+    archive_minus_nominal_bytes: int | None = None,
+    archive_to_nominal_ratio: float | None = None,
+    calibrated_archive_overrun_bytes: int | None = None,
+    required_nominal_payload_bytes_max: int | None = None,
+    hard_byte_ceiling_measurement_bypass_enabled: bool | None = None,
+    hard_byte_ceiling_checked_after_export: bool | None = None,
     scorer_loop_qat_attached: bool = False,
     scorer_loop_qat_receiver_contract_satisfied: bool = False,
     scorer_loop_qat_ready_for_pose_guard_gate: bool = False,
@@ -482,6 +541,14 @@ def build_snerv_candidate_curriculum_plan(
         ),
         measured_payload_bytes=measured_packet_bytes,
         measured_archive_bytes=measured_archive_bytes,
+        archive_minus_nominal_bytes=archive_minus_nominal_bytes,
+        archive_to_nominal_ratio=archive_to_nominal_ratio,
+        calibrated_archive_overrun_bytes=calibrated_archive_overrun_bytes,
+        required_nominal_payload_bytes_max=required_nominal_payload_bytes_max,
+        hard_byte_ceiling_measurement_bypass_enabled=(
+            hard_byte_ceiling_measurement_bypass_enabled
+        ),
+        hard_byte_ceiling_checked_after_export=hard_byte_ceiling_checked_after_export,
     ) if candidate_selected else {
         "schema": BYTE_FEEDBACK_SCHEMA,
         "candidate_id": None,
