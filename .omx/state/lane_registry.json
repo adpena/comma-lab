@@ -67655,11 +67655,11 @@
       "id": "lane_snerv_official_source_forward_parity_20260604_codex",
       "name": "SNeRV official source-forward parity harness",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/analysis/snerv_official_source_forward_harness.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -67741,5 +67741,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-04T15:17:32Z"
+  "updated_at": "2026-06-04T15:27:33Z"
 }

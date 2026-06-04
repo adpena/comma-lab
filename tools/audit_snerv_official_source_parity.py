@@ -19,8 +19,10 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.analysis.snerv_official_source_forward_harness import (  # noqa: E402
+    build_snerv_official_source_forward_harness_artifact,
+)
 from tac.analysis.snerv_official_source_parity_audit import (  # noqa: E402
-    build_snerv_official_mfu_hfr_tub_forward_parity_artifact,
     build_snerv_official_source_parity_audit,
     render_snerv_official_source_parity_markdown,
 )
@@ -92,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     forward_artifact_result = None
     forward_artifact_path = args.official_forward_parity_artifact
     if output_forward_parity_artifact is not None:
-        forward_artifact = build_snerv_official_mfu_hfr_tub_forward_parity_artifact(
+        forward_artifact = build_snerv_official_source_forward_harness_artifact(
             official_repo_dir=args.official_repo_dir,
             repo_root=args.repo_root,
         )

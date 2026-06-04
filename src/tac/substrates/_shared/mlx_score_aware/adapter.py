@@ -385,6 +385,7 @@ class MlxScoreAwareAdapter:
         pr95_faithful_curriculum_enabled: bool = False,
         pr95_curriculum_total_epochs: int | None = None,
         pr95_muon_policy: str = "faithful_stage8_only",
+        pr95_stage_source_weight_amplification_enabled: bool = False,
         # Wave N+11 Z7-Mamba-2 stabilizer recipe (Slot 1 RESUME 1e2b78163
         # IMPLEMENTATION-LEVEL falsification + Wave N+10 NaN-at-ep-16-18
         # signature reactivation criteria per task #1481). All defaults are
@@ -441,6 +442,12 @@ class MlxScoreAwareAdapter:
                 explicit contest control ``every_stage`` keeps the same PR95
                 stage loss/QAT schedule but routes Muon-eligible tensors
                 through the real PR95-derived Muon branch from stage 1 onward.
+            pr95_stage_source_weight_amplification_enabled: opt in to PR95's
+                original SegNet:PoseNet source-scale loss multiplier (100:1).
+                Default False means launch controls are literal decoder-loss
+                weights, so a generic HiNeRV score-aware run cannot silently
+                turn ``--segnet-distillation-weight 16`` into effective 1600x
+                SegNet pressure and saturate the pixel fit.
             grad_clip_max_norm: Wave N+11 stabilizer. If not None and > 0,
                 applies ``mlx.optimizers.clip_grad_norm(grads, max_norm)``
                 after value_and_grad but before optimizer.update. Mamba-2
@@ -593,6 +600,9 @@ class MlxScoreAwareAdapter:
             pr95_faithful_curriculum_enabled
         )
         self._pr95_muon_policy = str(pr95_muon_policy)
+        self._pr95_stage_source_weight_amplification_enabled = bool(
+            pr95_stage_source_weight_amplification_enabled
+        )
         if self._pr95_muon_policy not in {"faithful_stage8_only", "every_stage"}:
             raise ValueError(
                 "pr95_muon_policy must be one of "
@@ -956,11 +966,11 @@ class MlxScoreAwareAdapter:
     def _pr95_stage_score_weight_controls(self) -> tuple[float, float, float, float]:
         """Return launch-controlled PR95 scorer weights for decoder training.
 
-        PR95's source-faithful scorer Lagrangian prices SegNet at ``100`` and
-        PoseNet at ``1``. A zero bundle distillation weight historically meant
-        "use the PR95 stage default" for this curriculum path, while positive
-        SNeRV/HiNeRV launch weights are operator controls that must change the
-        decoder objective, not just student-head training telemetry.
+        Generic score-aware launches use literal operator controls as decoder
+        loss weights. PR95's source-faithful scorer Lagrangian (SegNet:PoseNet
+        ``100:1``) is available only when explicitly opted in; otherwise it can
+        dominate reconstruction by orders of magnitude and produce byte-closed
+        but saturated HiNeRV packets.
         """
 
         seg_control = float(getattr(self.bundle, "distillation_weight", 0.0))
@@ -971,11 +981,21 @@ class MlxScoreAwareAdapter:
             seg_control = 1.0
         if pose_control == 0.0:
             pose_control = 1.0
+        seg_base = (
+            PR95_STAGE_BASE_SEG_WEIGHT
+            if self._pr95_stage_source_weight_amplification_enabled
+            else 1.0
+        )
+        pose_base = (
+            PR95_STAGE_BASE_POSE_WEIGHT
+            if self._pr95_stage_source_weight_amplification_enabled
+            else 1.0
+        )
         return (
             seg_control,
             pose_control,
-            PR95_STAGE_BASE_SEG_WEIGHT * seg_control,
-            PR95_STAGE_BASE_POSE_WEIGHT * pose_control,
+            seg_base * seg_control,
+            pose_base * pose_control,
         )
 
     def _extra_loss_terms_and_weighted_total(
@@ -1298,6 +1318,9 @@ class MlxScoreAwareAdapter:
                     self._pr95_faithful_curriculum_enabled
                 ),
                 "pr95_muon_policy": self._pr95_muon_policy,
+                "pr95_stage_source_weight_amplification_enabled": (
+                    self._pr95_stage_source_weight_amplification_enabled
+                ),
                 "source_faithful_default": "faithful_stage8_only",
                 "contest_specific_policies": ["every_stage"],
             },

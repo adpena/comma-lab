@@ -935,13 +935,11 @@ def test_pr95_curriculum_path_respects_zero_student_head_stage_weight() -> None:
 
 @requires_mlx
 def test_pr95_curriculum_stage_loss_consumes_launch_score_weight_controls_NO_FAKE() -> None:
-    """SNeRV/HiNeRV score pressure controls must change decoder loss, not telemetry only."""
+    """SNeRV/HiNeRV score pressure controls are literal decoder loss weights."""
 
     import mlx.core as mx
 
     from tac.substrates._shared.mlx_score_aware.adapter import (
-        PR95_STAGE_BASE_POSE_WEIGHT,
-        PR95_STAGE_BASE_SEG_WEIGHT,
         MlxScoreAwareAdapter,
     )
 
@@ -979,14 +977,11 @@ def test_pr95_curriculum_stage_loss_consumes_launch_score_weight_controls_NO_FAK
 
     seg = float(base_parts["pr95_stage_seg_surrogate"].item())
     pose = float(base_parts["pr95_stage_pose_surrogate"].item())
-    expected_delta = (
-        (4.0 - 1.0) * PR95_STAGE_BASE_SEG_WEIGHT * seg
-        + (0.5 - 1.0) * PR95_STAGE_BASE_POSE_WEIGHT * pose
-    )
+    expected_delta = (4.0 - 1.0) * seg + (0.5 - 1.0) * pose
 
     assert float(controlled_parts["pr95_stage_seg_control_multiplier"].item()) == pytest.approx(4.0)
     assert float(controlled_parts["pr95_stage_pose_control_multiplier"].item()) == pytest.approx(0.5)
-    assert float(controlled_parts["pr95_stage_effective_seg_weight"].item()) == pytest.approx(400.0)
+    assert float(controlled_parts["pr95_stage_effective_seg_weight"].item()) == pytest.approx(4.0)
     assert float(controlled_parts["pr95_stage_effective_pose_weight"].item()) == pytest.approx(0.5)
     assert float(controlled_total.item()) - float(base_total.item()) == pytest.approx(
         expected_delta,
@@ -995,14 +990,10 @@ def test_pr95_curriculum_stage_loss_consumes_launch_score_weight_controls_NO_FAK
 
 
 @requires_mlx
-def test_pr95_curriculum_zero_launch_score_weight_preserves_source_default() -> None:
-    """Zero keeps the PR95 source Lagrangian default so legacy rows stay byte-stable."""
+def test_pr95_curriculum_zero_launch_score_weight_uses_unamplified_default() -> None:
+    """Zero keeps a 1:1 default unless source amplification is explicitly requested."""
 
-    from tac.substrates._shared.mlx_score_aware.adapter import (
-        PR95_STAGE_BASE_POSE_WEIGHT,
-        PR95_STAGE_BASE_SEG_WEIGHT,
-        MlxScoreAwareAdapter,
-    )
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
     bundle = _make_minimal_pr95_score_bundle()
     bundle.distillation_weight = 0.0
@@ -1018,8 +1009,39 @@ def test_pr95_curriculum_zero_launch_score_weight_preserves_source_default() -> 
         (
             1.0,
             1.0,
-            PR95_STAGE_BASE_SEG_WEIGHT,
-            PR95_STAGE_BASE_POSE_WEIGHT,
+            1.0,
+            1.0,
+        )
+    )
+
+
+@requires_mlx
+def test_pr95_curriculum_source_weight_amplification_is_explicit_opt_in() -> None:
+    """PR95 source 100:1 SegNet amplification remains available but never implicit."""
+
+    from tac.substrates._shared.mlx_score_aware.adapter import (
+        PR95_STAGE_BASE_POSE_WEIGHT,
+        PR95_STAGE_BASE_SEG_WEIGHT,
+        MlxScoreAwareAdapter,
+    )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.distillation_weight = 4.0
+    bundle.pose_distillation_weight = 0.5
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate_source_amplified",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+        pr95_stage_source_weight_amplification_enabled=True,
+    )
+
+    assert adapter._pr95_stage_score_weight_controls() == pytest.approx(
+        (
+            4.0,
+            0.5,
+            PR95_STAGE_BASE_SEG_WEIGHT * 4.0,
+            PR95_STAGE_BASE_POSE_WEIGHT * 0.5,
         )
     )
 

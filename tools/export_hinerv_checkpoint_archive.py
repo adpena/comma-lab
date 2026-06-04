@@ -52,6 +52,10 @@ FALSE_AUTHORITY = {
     "ready_for_exact_eval_dispatch": False,
 }
 HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC = "portfolio_auto"
+HINERV_CHECKPOINT_FIT_SCALE_GUARD_SCHEMA = "hinerv_checkpoint_fit_scale_guard.v1"
+HINERV_CHECKPOINT_FIT_SCALE_MAX_LAST_FRAME_MAE = 64.0
+HINERV_CHECKPOINT_FIT_SCALE_MAX_MEAN_DELTA = 32.0
+HINERV_CHECKPOINT_FIT_SCALE_MAX_STD_DELTA = 64.0
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -186,6 +190,11 @@ def export_checkpoint_archive(
         cfg=cfg,
     )
     adapter.import_state_dict(model, state_path)
+    receiver_fit_scale_guard = _build_checkpoint_receiver_fit_scale_guard(
+        model,
+        cfg=cfg,
+        source_video_path=source_video_path or command_args.get("source_video_path"),
+    )
     decoder_codec_resolution = _resolve_decoder_codec(
         explicit_arg=decoder_codec,
         command_args=command_args,
@@ -254,6 +263,7 @@ def export_checkpoint_archive(
         "checkpoint_state_path": state_path.as_posix(),
         "checkpoint_state_sha256": sha256_file(state_path),
         "modelsize_integrity": modelsize_integrity,
+        "receiver_fit_scale_guard": receiver_fit_scale_guard,
         "startup_json_path": startup_path.as_posix(),
         "startup_json_sha256": sha256_file(startup_path),
         "output_dir": out.as_posix(),
@@ -305,6 +315,7 @@ def export_checkpoint_archive(
             receiver_proof=receiver_proof,
             receiver_proof_requested=bool(emit_receiver_proof),
             modelsize_integrity=modelsize_integrity,
+            receiver_fit_scale_guard=receiver_fit_scale_guard,
             decoder_codec_resolution=decoder_codec_resolution,
             mlx_prefilter_profile=pending_mlx_prefilter_profile,
             hard_byte_ceiling_measurement_bypass_enabled=bool(
@@ -343,6 +354,7 @@ def export_checkpoint_archive(
         "checkpoint_state_path": state_path.as_posix(),
         "checkpoint_state_sha256": sha256_file(state_path),
         "modelsize_integrity": modelsize_integrity,
+        "receiver_fit_scale_guard": receiver_fit_scale_guard,
         "startup_json_path": startup_path.as_posix(),
         "startup_json_sha256": sha256_file(startup_path),
         "output_dir": out.as_posix(),
@@ -388,6 +400,7 @@ def export_checkpoint_archive(
             receiver_proof=receiver_proof,
             receiver_proof_requested=bool(emit_receiver_proof),
             modelsize_integrity=modelsize_integrity,
+            receiver_fit_scale_guard=receiver_fit_scale_guard,
             decoder_codec_resolution=decoder_codec_resolution,
             mlx_prefilter_profile=mlx_prefilter_profile,
             hard_byte_ceiling_measurement_bypass_enabled=bool(
@@ -541,6 +554,158 @@ def _checkpoint_state_path(meta: dict[str, Any], *, state_kind: str) -> Path:
     return path
 
 
+def _sample_fit_scale_guard_pair_indices(
+    *,
+    num_pairs: int,
+    max_pair_samples: int = 6,
+) -> list[int]:
+    total = int(num_pairs)
+    count = min(max(1, int(max_pair_samples)), total)
+    if count == 1:
+        return [0]
+    return [
+        round(index * (total - 1) / float(count - 1))
+        for index in range(count)
+    ]
+
+
+def _build_checkpoint_receiver_fit_scale_guard(
+    model: Any,
+    *,
+    cfg: Any,
+    source_video_path: str | Path | None,
+    max_pair_samples: int = 6,
+) -> dict[str, Any]:
+    """Cheap sampled fit/domain guard for HiNeRV checkpoint exports.
+
+    The receiver proof proves byte/runtime consumption, not that the trained
+    checkpoint is still in the same RGB domain as the reference video. This
+    guard samples the loaded MLX checkpoint before archive packing and compares
+    its byte-range frame-1 statistics against the decoded source-video targets.
+    """
+
+    source = (
+        Path(source_video_path).expanduser().resolve(strict=False)
+        if source_video_path is not None
+        else None
+    )
+    base: dict[str, Any] = {
+        "schema": HINERV_CHECKPOINT_FIT_SCALE_GUARD_SCHEMA,
+        "guard_kind": "sampled_loaded_checkpoint_vs_source_video_rgb_stats",
+        "guard_ready": False,
+        "gate_passed": False,
+        "source_video_path": source.as_posix() if source is not None else None,
+        "thresholds": {
+            "max_last_frame_mae": HINERV_CHECKPOINT_FIT_SCALE_MAX_LAST_FRAME_MAE,
+            "max_last_frame_mean_abs_delta": (
+                HINERV_CHECKPOINT_FIT_SCALE_MAX_MEAN_DELTA
+            ),
+            "max_last_frame_std_abs_delta": (
+                HINERV_CHECKPOINT_FIT_SCALE_MAX_STD_DELTA
+            ),
+        },
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    if source is None or not source.is_file():
+        return {
+            **base,
+            "guard_status": "not_run_source_video_missing",
+            "reason": "source_video_path not supplied or not readable",
+        }
+    try:
+        import mlx.core as mx
+        import numpy as np
+
+        from tac.substrates._shared.mlx_score_aware.targets import (
+            decode_mlx_targets,
+        )
+
+        pair_indices = _sample_fit_scale_guard_pair_indices(
+            num_pairs=int(cfg.num_pairs),
+            max_pair_samples=int(max_pair_samples),
+        )
+        idx = mx.array(pair_indices, dtype=mx.int32)
+        candidate_b2chw_255 = model(idx)
+        mx.eval(candidate_b2chw_255)
+        candidate = np.asarray(candidate_b2chw_255, dtype=np.float32).transpose(
+            0,
+            1,
+            3,
+            4,
+            2,
+        )
+        target_0, target_1 = decode_mlx_targets(
+            source,
+            num_pairs=len(pair_indices),
+            output_height=int(cfg.output_height),
+            output_width=int(cfg.output_width),
+            pair_indices=pair_indices,
+        )
+        reference = (
+            np.stack(
+                [
+                    np.asarray(target_0, dtype=np.float32),
+                    np.asarray(target_1, dtype=np.float32),
+                ],
+                axis=1,
+            )
+            * 255.0
+        )
+        candidate_last = candidate[:, 1]
+        reference_last = reference[:, 1]
+        last_frame_mae = float(np.mean(np.abs(candidate_last - reference_last)))
+        candidate_mean = float(np.mean(candidate_last))
+        candidate_std = float(np.std(candidate_last))
+        reference_mean = float(np.mean(reference_last))
+        reference_std = float(np.std(reference_last))
+        mean_delta = abs(candidate_mean - reference_mean)
+        std_delta = abs(candidate_std - reference_std)
+        saturation_fraction = float(
+            np.mean((candidate_last <= 1.0) | (candidate_last >= 254.0))
+        )
+        gate_passed = (
+            last_frame_mae <= HINERV_CHECKPOINT_FIT_SCALE_MAX_LAST_FRAME_MAE
+            and mean_delta <= HINERV_CHECKPOINT_FIT_SCALE_MAX_MEAN_DELTA
+            and std_delta <= HINERV_CHECKPOINT_FIT_SCALE_MAX_STD_DELTA
+        )
+        blockers = [] if gate_passed else ["hinerv_checkpoint_fit_scale_gate_failed"]
+        return {
+            **base,
+            "guard_ready": True,
+            "gate_passed": bool(gate_passed),
+            "guard_status": "passed" if gate_passed else "failed",
+            "pair_indices": pair_indices,
+            "sampled_pair_count": len(pair_indices),
+            "candidate_last_rgb_stats": {
+                "mean": candidate_mean,
+                "std": candidate_std,
+                "min": float(np.min(candidate_last)),
+                "max": float(np.max(candidate_last)),
+                "saturation_fraction_le1_or_ge254": saturation_fraction,
+            },
+            "reference_last_rgb_stats": {
+                "mean": reference_mean,
+                "std": reference_std,
+                "min": float(np.min(reference_last)),
+                "max": float(np.max(reference_last)),
+            },
+            "fit_distance": {
+                "last_frame_rgb_mae": last_frame_mae,
+                "last_frame_mean_abs_delta": mean_delta,
+                "last_frame_std_abs_delta": std_delta,
+            },
+            "blockers": blockers,
+        }
+    except Exception as exc:  # pragma: no cover - depends on local MLX/video stack.
+        return {
+            **base,
+            "guard_status": "execution_failed",
+            "error": f"{type(exc).__name__}: {exc}",
+            "blockers": ["hinerv_checkpoint_fit_scale_guard_execution_failed"],
+        }
+
+
 def _blockers(
     *,
     archive_bytes: int,
@@ -550,6 +715,7 @@ def _blockers(
     receiver_proof_requested: bool,
     modelsize_integrity: dict[str, Any],
     decoder_codec_resolution: dict[str, Any],
+    receiver_fit_scale_guard: dict[str, Any] | None = None,
     mlx_prefilter_profile: dict[str, Any] | None = None,
     hard_byte_ceiling_measurement_bypass_enabled: bool = False,
 ) -> list[str]:
@@ -581,6 +747,8 @@ def _blockers(
     elif receiver_proof.get("runtime_consumption_proof_ready") is not True:
         blockers.append("receiver_proof_not_ready")
     blockers.extend(str(v) for v in modelsize_integrity.get("blockers") or [])
+    guard = dict(receiver_fit_scale_guard or {})
+    blockers.extend(str(v) for v in guard.get("blockers") or [])
     blockers.extend(str(v) for v in decoder_codec_resolution.get("blockers") or [])
     return list(dict.fromkeys(blockers))
 

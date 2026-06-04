@@ -367,10 +367,15 @@ def test_harness_signature_accepts_pr95_faithful_curriculum_kwargs() -> None:
         "harness signature missing PR95 Muon policy kwarg; contest optimizer "
         "control is FAKE if absent"
     )
+    assert "pr95_stage_source_weight_amplification_enabled" in params, (
+        "harness signature missing explicit PR95 source weight amplification "
+        "kwarg; HiNeRV score pressure can silently overrun recon fit if absent"
+    )
     # Defaults must preserve backward compat (default off).
     assert params["pr95_faithful_curriculum_enabled"].default is False
     assert params["pr95_curriculum_total_epochs"].default is None
     assert params["pr95_muon_policy"].default == "faithful_stage8_only"
+    assert params["pr95_stage_source_weight_amplification_enabled"].default is False
     assert params["ema_archive_selection_enabled"].default is False
 
 
@@ -396,6 +401,7 @@ def test_harness_source_constructs_adapter_with_pr95_kwargs() -> None:
         "pr95_faithful_curriculum_enabled",
         "pr95_curriculum_total_epochs",
         "pr95_muon_policy",
+        "pr95_stage_source_weight_amplification_enabled",
     }
     for call in found_calls:
         kw_names = {kw.arg for kw in call.keywords if kw.arg is not None}

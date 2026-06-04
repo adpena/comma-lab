@@ -7739,6 +7739,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     hi_nerv_optimizer_policy: str = "auto",
     hi_nerv_pr95_muon_policy: str = "auto",
     hi_nerv_pr95_curriculum_total_epochs: int | None = None,
+    hi_nerv_pr95_source_weight_amplification: bool = False,
     optimizer_grad_clip_max_norm: float | None = (
         DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
     ),
@@ -8450,6 +8451,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             hi_nerv_optimizer_policy=optimizer_policy,
             pr95_curriculum_total_epochs=optimizer_policy.get(
                 "pr95_curriculum_total_epochs"
+            ),
+            pr95_stage_source_weight_amplification_enabled=bool(
+                hi_nerv_pr95_source_weight_amplification
             ),
             optimizer_controls=optimizer_controls,
             recon_loss_stage_weight=float(recon_loss_stage_weight),
@@ -11683,6 +11687,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_upstream_dir: Path,
     repo_root: Path,
     pr95_curriculum_total_epochs: int | None = None,
+    pr95_stage_source_weight_amplification_enabled: bool = False,
     candidate_curriculum_plan: Mapping[str, Any] | None = None,
     modelsize_candidate: Mapping[str, Any] | None = None,
     sparse_prioritized_target_hydration: bool = False,
@@ -12071,6 +12076,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "pr95_muon_policy": (
                 pr95_muon_policy if pr95_curriculum_enabled else None
             ),
+            "pr95_stage_source_weight_amplification_enabled": bool(
+                pr95_stage_source_weight_amplification_enabled
+            ),
             "native_optimizer_active": native_optimizer_active,
             "optimizer_kind": effective_optimizer_kind,
             "optimizer_controls": strip_candidate_curriculum_authority_fields(
@@ -12308,6 +12316,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=resolved_pr95_curriculum_total_epochs,
         pr95_muon_policy=pr95_muon_policy,
+        pr95_stage_source_weight_amplification_enabled=bool(
+            pr95_stage_source_weight_amplification_enabled
+        ),
         ema_archive_selection_enabled=True,
         grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
         weight_decay=effective_weight_decay,
@@ -15279,6 +15290,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--hi-nerv-pr95-source-weight-amplification",
+        action="store_true",
+        help=(
+            "HiNeRV PR95-curriculum only: opt in to PR95's original 100:1 "
+            "SegNet:PoseNet source loss multiplier. Default off keeps "
+            "--segnet-distillation-weight and --pose-distillation-weight as "
+            "literal decoder-loss controls so fit/scale gates are not buried "
+            "under implicit SegNet amplification."
+        ),
+    )
+    parser.add_argument(
         "--optimizer-grad-clip-max-norm",
         default=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM,
         type=float,
@@ -16892,6 +16914,9 @@ def main(argv: list[str] | None = None) -> int:
             hi_nerv_pr95_muon_policy=args.hi_nerv_pr95_muon_policy,
             hi_nerv_pr95_curriculum_total_epochs=(
                 args.hi_nerv_pr95_curriculum_total_epochs
+            ),
+            hi_nerv_pr95_source_weight_amplification=(
+                args.hi_nerv_pr95_source_weight_amplification
             ),
             optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,
             optimizer_weight_decay=args.optimizer_weight_decay,

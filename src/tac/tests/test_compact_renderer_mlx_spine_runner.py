@@ -5063,6 +5063,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "hi_nerv::manual::lion",
             "--optimizer-kind",
             "lion",
+            "--hi-nerv-pr95-source-weight-amplification",
         ]
     )
     sn = _parse_args(
@@ -5164,6 +5165,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.modelsize_candidate_id == "manual"
     assert hi.planner_row_id == "hi_nerv::manual::lion"
     assert hi.optimizer_kind == "lion"
+    assert hi.hi_nerv_pr95_source_weight_amplification is True
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
     assert sn.coder_aware_qat is True

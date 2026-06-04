@@ -314,6 +314,37 @@ def test_blockers_price_archive_and_receiver_proof() -> None:
     assert "receiver_proof_not_requested" not in blockers
 
 
+def test_fit_scale_guard_blocker_reaches_checkpoint_export_blockers() -> None:
+    tool = _load_tool()
+
+    blockers = tool._blockers(
+        archive_bytes=121_690,
+        hard_byte_ceilings=[178_000],
+        receiver_proof={"runtime_consumption_proof_ready": True},
+        receiver_proof_requested=True,
+        modelsize_integrity={"blockers": []},
+        receiver_fit_scale_guard={
+            "schema": "hinerv_checkpoint_fit_scale_guard.v1",
+            "guard_ready": True,
+            "gate_passed": False,
+            "blockers": ["hinerv_checkpoint_fit_scale_gate_failed"],
+        },
+        decoder_codec_resolution={"blockers": []},
+    )
+
+    assert "hinerv_checkpoint_fit_scale_gate_failed" in blockers
+    assert "receiver_proof_not_ready" not in blockers
+
+
+def test_fit_scale_guard_pair_sampler_spreads_full_video() -> None:
+    tool = _load_tool()
+
+    assert tool._sample_fit_scale_guard_pair_indices(
+        num_pairs=600,
+        max_pair_samples=6,
+    ) == [0, 120, 240, 359, 479, 599]
+
+
 def test_summary_keeps_false_authority_fields() -> None:
     tool = _load_tool()
     report = {

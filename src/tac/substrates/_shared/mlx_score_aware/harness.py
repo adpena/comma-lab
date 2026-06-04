@@ -69,6 +69,7 @@ def run_mlx_score_aware_full_main(
     pr95_faithful_curriculum_enabled: bool = False,
     pr95_curriculum_total_epochs: int | None = None,
     pr95_muon_policy: str = "faithful_stage8_only",
+    pr95_stage_source_weight_amplification_enabled: bool = False,
     # Wave N+11 Z7-Mamba-2 stabilizer recipe (forwarded to adapter; see
     # MlxScoreAwareAdapter.__init__ for canonical contract docstring).
     # All None/0/"adamw"/False defaults preserve byte-stable legacy behavior.
@@ -161,6 +162,11 @@ def run_mlx_score_aware_full_main(
             is an explicit contest-specific optimizer control that keeps the
             PR95 stage loss/QAT curriculum but turns on the same real Muon
             branch for all stages.
+        pr95_stage_source_weight_amplification_enabled: opt in to PR95's
+            original source-scale SegNet:PoseNet multiplier (100:1). Default
+            False keeps generic compact renderer launches on literal operator
+            scorer weights so fit-first byte-cap runs do not inherit an
+            implicit 100x SegNet amplification.
         prioritized_pair_indices: optional hard-pair/sensitivity pair indices
             sampled before random fill by the shared MLX adapter. This is local
             training emphasis and telemetry only; it does not create full-video
@@ -226,6 +232,9 @@ def run_mlx_score_aware_full_main(
         pr95_faithful_curriculum_enabled=pr95_faithful_curriculum_enabled,
         pr95_curriculum_total_epochs=pr95_curriculum_total_epochs,
         pr95_muon_policy=pr95_muon_policy,
+        pr95_stage_source_weight_amplification_enabled=(
+            pr95_stage_source_weight_amplification_enabled
+        ),
         # Wave N+11 stabilizer kwargs (forwarded; defaults are
         # legacy-preserving so sister substrates remain byte-stable).
         grad_clip_max_norm=grad_clip_max_norm,
