@@ -94,10 +94,12 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    output_json = args.output_json or args.output_dir / "hinerv_checkpoint_archive_export.json"
     report = export_checkpoint_archive(
         startup_json=args.startup_json,
         checkpoint_meta=args.checkpoint_meta,
         output_dir=args.output_dir,
+        output_json=output_json,
         state_kind=args.state_kind,
         decoder_codec=args.decoder_codec,
         latent_codec=args.latent_codec,
@@ -114,9 +116,6 @@ def main(argv: list[str] | None = None) -> int:
         scorer_upstream_dir=args.scorer_upstream_dir,
         repo_root=args.repo_root,
     )
-    output_json = args.output_json or args.output_dir / "hinerv_checkpoint_archive_export.json"
-    report["report_path"] = output_json.expanduser().resolve(strict=False).as_posix()
-    write_json_artifact(output_json, report)
     print(json.dumps(_summary(report), indent=2, sort_keys=True))
     return 0
 
@@ -126,6 +125,7 @@ def export_checkpoint_archive(
     startup_json: str | Path,
     checkpoint_meta: str | Path,
     output_dir: str | Path,
+    output_json: str | Path | None = None,
     state_kind: str = "ema",
     decoder_codec: str | None = None,
     latent_codec: str | None = None,
@@ -221,6 +221,95 @@ def export_checkpoint_archive(
     receiver_proof_path = out / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
     receiver_proof = _read_json(receiver_proof_path) if receiver_proof_path.is_file() else {}
     section_profile = _section_profile(out, archive_bytes=int(archive_bytes))
+    report_path = (
+        Path(output_json)
+        if output_json is not None
+        else out / "hinerv_checkpoint_archive_export.json"
+    ).expanduser().resolve(strict=False)
+    pending_mlx_prefilter_profile = {
+        "schema": "hinerv_checkpoint_mlx_prefilter_profile.v1",
+        "written": False,
+        "profile_path": None,
+        "blockers": (
+            ["hinerv_checkpoint_mlx_prefilter_pending"]
+            if write_mlx_prefilter_profile
+            else ["hinerv_checkpoint_mlx_prefilter_not_requested"]
+        ),
+        **FALSE_AUTHORITY,
+    }
+    preliminary_report = {
+        "schema": "hinerv_checkpoint_archive_export.v1",
+        "family": "hi_nerv",
+        "report_status": "archive_receiver_proof_written_prefilter_pending",
+        "candidate_id": candidate.get("candidate_id"),
+        "modelsize_candidate": candidate,
+        "checkpoint_meta_path": meta_path.as_posix(),
+        "checkpoint_meta_sha256": sha256_file(meta_path),
+        "checkpoint_epoch": meta.get("global_epoch"),
+        "checkpoint_state_kind": state_kind,
+        "checkpoint_state_path": state_path.as_posix(),
+        "checkpoint_state_sha256": sha256_file(state_path),
+        "modelsize_integrity": modelsize_integrity,
+        "startup_json_path": startup_path.as_posix(),
+        "startup_json_sha256": sha256_file(startup_path),
+        "output_dir": out.as_posix(),
+        "archive_path": Path(archive_path).as_posix(),
+        "archive_sha256": archive_sha256,
+        "archive_bytes": int(archive_bytes),
+        "hard_byte_ceiling_enforced_by_export": enforced_hard_byte_ceiling,
+        "hard_byte_ceiling_requested_by_candidate_or_startup": hard_byte_ceiling,
+        "hard_byte_ceiling_measurement_bypass_enabled": bool(
+            allow_over_hard_byte_ceiling_for_measurement
+        ),
+        "rate_byte_profile": section_profile,
+        "hard_byte_ceilings": list(startup.get("hard_byte_ceilings") or []),
+        "decoder_codec": resolved_decoder_codec,
+        "decoder_codec_resolution": decoder_codec_resolution,
+        "latent_codec": resolved_latent_codec,
+        "receiver_proof_path": (
+            receiver_proof_path.as_posix() if receiver_proof_path.is_file() else None
+        ),
+        "receiver_proof_sha256": (
+            sha256_file(receiver_proof_path) if receiver_proof_path.is_file() else None
+        ),
+        "receiver_proof_ready": bool(
+            receiver_proof.get("runtime_consumption_proof_ready")
+        ),
+        "local_mlx_prefilter_profile": pending_mlx_prefilter_profile,
+        "local_mlx_prefilter_profile_path": None,
+        "local_mlx_prefilter_written": False,
+        "report_path": report_path.as_posix(),
+        "modelsize_byte_cap_feedback_row": _modelsize_byte_cap_feedback_row(
+            candidate=candidate,
+            archive_bytes=int(archive_bytes),
+            hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
+            decoder_codec=resolved_decoder_codec,
+            receiver_proof_ready=bool(
+                receiver_proof.get("runtime_consumption_proof_ready")
+            ),
+            archive_path=Path(archive_path),
+            archive_sha256=archive_sha256,
+            hard_byte_ceiling_enforced_by_export=enforced_hard_byte_ceiling,
+            hard_byte_ceiling_measurement_bypass_enabled=bool(
+                allow_over_hard_byte_ceiling_for_measurement
+            ),
+        ),
+        "blockers": _blockers(
+            archive_bytes=int(archive_bytes),
+            hard_byte_ceiling=hard_byte_ceiling,
+            hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
+            receiver_proof=receiver_proof,
+            receiver_proof_requested=bool(emit_receiver_proof),
+            modelsize_integrity=modelsize_integrity,
+            decoder_codec_resolution=decoder_codec_resolution,
+            mlx_prefilter_profile=pending_mlx_prefilter_profile,
+            hard_byte_ceiling_measurement_bypass_enabled=bool(
+                allow_over_hard_byte_ceiling_for_measurement
+            ),
+        ),
+        **FALSE_AUTHORITY,
+    }
+    preliminary_write = write_json_artifact(report_path, preliminary_report)
     mlx_prefilter_profile = _maybe_write_receiver_raw_cache_mlx_prefilter(
         requested=bool(write_mlx_prefilter_profile),
         output_dir=out / "local_mlx_prefilter",
@@ -240,6 +329,7 @@ def export_checkpoint_archive(
     report = {
         "schema": "hinerv_checkpoint_archive_export.v1",
         "family": "hi_nerv",
+        "report_status": "complete",
         "candidate_id": candidate.get("candidate_id"),
         "modelsize_candidate": candidate,
         "checkpoint_meta_path": meta_path.as_posix(),
@@ -271,6 +361,7 @@ def export_checkpoint_archive(
         "local_mlx_prefilter_profile": mlx_prefilter_profile,
         "local_mlx_prefilter_profile_path": mlx_prefilter_profile.get("profile_path"),
         "local_mlx_prefilter_written": mlx_prefilter_profile.get("written") is True,
+        "report_path": report_path.as_posix(),
         "modelsize_byte_cap_feedback_row": _modelsize_byte_cap_feedback_row(
             candidate=candidate,
             archive_bytes=int(archive_bytes),
@@ -301,6 +392,12 @@ def export_checkpoint_archive(
         ),
         **FALSE_AUTHORITY,
     }
+    write_json_artifact(
+        report_path,
+        report,
+        allow_overwrite=True,
+        expected_existing_sha256=preliminary_write.sha256,
+    )
     return report
 
 
