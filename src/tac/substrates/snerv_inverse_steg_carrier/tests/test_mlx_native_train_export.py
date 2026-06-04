@@ -7,6 +7,8 @@ import ast
 import hashlib
 import inspect
 import json
+import sys
+import types
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -2485,6 +2487,119 @@ def test_train_export_rejects_unweighted_qat_packet_when_recon_weight_bound(
     assert Path(report["packet_path"]).read_bytes() != unweighted_best_packet
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["recon_pixel_weight_consumed"] is True
+
+
+def test_receiver_decoded_mlx_prefilter_uses_selected_packet_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.local_acceleration.mlx_renderer_prefilter_profile as prefilter_mod
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    decoded_pairs = np.arange(2 * 2 * 3 * 4 * 5, dtype=np.float32).reshape(
+        2, 2, 3, 4, 5
+    )
+    target0 = np.linspace(0.0, 1.0, num=2 * 4 * 5 * 3, dtype=np.float32).reshape(
+        2, 4, 5, 3
+    )
+    target1 = target0 + np.float32(0.25)
+    captured: dict[str, object] = {}
+
+    mlx_pkg = types.ModuleType("mlx")
+    mx_mod = types.ModuleType("mlx.core")
+    mx_mod.float32 = np.float32
+    mx_mod.array = lambda value, dtype=None: np.asarray(value, dtype=dtype)
+    mx_mod.take = lambda value, idx, axis=0: np.take(
+        value,
+        np.asarray(idx, dtype=np.int64),
+        axis=axis,
+    )
+    mlx_pkg.core = mx_mod
+    monkeypatch.setitem(sys.modules, "mlx", mlx_pkg)
+    monkeypatch.setitem(sys.modules, "mlx.core", mx_mod)
+    def fake_decode_snerv_archive_frames(packet: bytes) -> np.ndarray:
+        captured["packet"] = packet
+        return decoded_pairs
+
+    monkeypatch.setattr(
+        mod,
+        "decode_snerv_archive_frames",
+        fake_decode_snerv_archive_frames,
+    )
+
+    def fake_write_profile(**kwargs):
+        bundle = kwargs["bundle"]
+        captured["bundle_metadata"] = dict(bundle.substrate_artifact_metadata)
+        captured["archive_bytes"] = int(kwargs["archive_bytes"])
+        captured["archive_sha256"] = str(kwargs["archive_sha256"])
+        captured["scorer_device"] = str(kwargs["scorer_device"])
+        captured["scorer_batch_pairs"] = int(kwargs["scorer_batch_pairs"])
+        captured["progress_every"] = int(kwargs["progress_every"])
+        np.testing.assert_array_equal(bundle.model(np.asarray([1])), decoded_pairs[[1]])
+        np.testing.assert_array_equal(np.asarray(bundle.target_rgb_0), target0)
+        np.testing.assert_array_equal(np.asarray(bundle.target_rgb_1), target1)
+        output_path = Path(kwargs["output_path"])
+        output_path.write_text(
+            json.dumps(
+                {
+                    "schema": "hprc_mlx_component_profile.v1",
+                    "blockers": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        progress_path = Path(kwargs["progress_jsonl_path"])
+        progress_path.write_text(
+            json.dumps({"schema": "mlx_renderer_prefilter_progress.v1"}) + "\n",
+            encoding="utf-8",
+        )
+        return {
+            "schema": "hprc_mlx_component_profile.v1",
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        prefilter_mod,
+        "write_mlx_renderer_prefilter_profile",
+        fake_write_profile,
+    )
+
+    profile = mod._write_snerv_native_receiver_decoded_mlx_prefilter(
+        requested=True,
+        output_dir=tmp_path / "prefilter",
+        selected_packet=b"SNAR1 receiver packet",
+        target0_np=target0,
+        target1_np=target1,
+        archive_bytes=1234,
+        archive_sha256="d" * 64,
+        source_video_path=tmp_path / "source.mkv",
+        scorer_upstream_dir=tmp_path / "upstream",
+        scorer_device="gpu",
+        scorer_batch_pairs=4,
+        progress_every=7,
+        allow_overwrite=False,
+    )
+
+    assert captured["packet"] == b"SNAR1 receiver packet"
+    assert captured["archive_bytes"] == 1234
+    assert captured["archive_sha256"] == "d" * 64
+    assert captured["scorer_device"] == "gpu"
+    assert captured["scorer_batch_pairs"] == 4
+    assert captured["progress_every"] == 7
+    assert captured["bundle_metadata"]["receiver_decoded_selected_packet"] is True
+    assert captured["bundle_metadata"]["contest_scorer_prefilter_only"] is True
+    assert profile["written"] is True
+    assert profile["blockers"] == []
+    assert profile["score_claim"] is False
+    assert Path(profile["profile_path"]).is_file()
+    assert Path(profile["progress_path"]).is_file()
 
 
 def test_prefilter_profile_is_false_authority_until_component_scores_exist(

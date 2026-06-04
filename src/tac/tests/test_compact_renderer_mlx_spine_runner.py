@@ -242,6 +242,191 @@ def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     return archive.packet
 
 
+def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as native_mod
+
+    captured: dict[str, object] = {}
+
+    def fake_train_export_snerv_mlx_native(**kwargs):
+        captured.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        report = out / "snerv_mlx_native_train_export.json"
+        packet = out / "snerv_mlx_native_packet.snar"
+        archive = out / "archive.zip"
+        proof = out / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
+        profile = out / "local_mlx_prefilter" / "local_mlx_prefilter_profile.json"
+        progress = out / "local_mlx_prefilter" / "local_mlx_prefilter_progress.jsonl"
+        packet.write_bytes(b"SNAR1 fake packet")
+        with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", packet.read_bytes())
+        proof.parent.mkdir()
+        proof.write_text(
+            json.dumps(
+                {
+                    "schema": "snerv_inverse_steg_generated_receiver_proof.v1",
+                    "receiver_contract_satisfied": True,
+                    "runtime_consumption_proof_passed": True,
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        profile.parent.mkdir()
+        profile_payload = {
+            "schema": "hprc_mlx_component_profile.v1",
+            "n_samples": 600,
+            "num_pairs": 600,
+            "scorer_batch_pairs": 4,
+            "scope_status": {"full_video": "complete"},
+            "blockers": ["mlx_profile_batch_pairs_not_singleton"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        profile.write_text(json.dumps(profile_payload, sort_keys=True), encoding="utf-8")
+        progress.write_text(
+            json.dumps({"schema": "mlx_renderer_prefilter_progress.v1"}) + "\n",
+            encoding="utf-8",
+        )
+        artifact = {
+            "schema": "snerv_mlx_native_train_export.v1",
+            "num_pairs": 600,
+            "source_pair_indices": [],
+            "report_path": report.as_posix(),
+            "packet_path": packet.as_posix(),
+            "packet_bytes": packet.stat().st_size,
+            "packet_sha256": runner_mod._sha256_file(packet),
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "receiver_proof_path": proof.as_posix(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "native_mlx_training_executed": True,
+            "native_mlx_training_kind": "score_aware_long_training",
+            "native_mlx_hf_decoder_training": {
+                "requested_steps": 1,
+                "attempted": True,
+                "executed": True,
+                "accepted": True,
+                "blockers": [],
+            },
+            "score_aware_long_training_executed": True,
+            "score_aware_long_training": {
+                "executed": True,
+                "epochs": 8,
+                "optimizer": "pact_muon_adamw",
+            },
+            "scorer_loop_qat": {
+                "executed": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": True,
+                "accepted_improvement": True,
+                "emitted_packet_uses_scorer_loop_best_decoder": True,
+            },
+            "local_mlx_prefilter_profile": profile_payload,
+            "local_mlx_prefilter_profile_path": profile.as_posix(),
+            "local_mlx_prefilter_progress_path": progress.as_posix(),
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        report.write_text(json.dumps(artifact, sort_keys=True), encoding="utf-8")
+        return artifact
+
+    monkeypatch.setattr(
+        native_mod,
+        "train_export_snerv_mlx_native",
+        fake_train_export_snerv_mlx_native,
+    )
+
+    out = runner_mod._run_snerv_native_mlx_export_attachment(
+        requested=True,
+        output_dir=tmp_path / "snerv_native_attachment",
+        num_pairs=600,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        scorer_upstream_dir=REPO_ROOT / "upstream",
+        modelsize_candidate={"candidate_id": "snerv-prefilter-test"},
+        prioritized_pair_indices=(3, 5),
+        repo_root=REPO_ROOT,
+        allow_overwrite=False,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=12,
+        run_scorer_loop_qat=True,
+        scorer_loop_qat_max_trials=2,
+        scorer_loop_qat_search_mode="learned_random_subspace",
+        scorer_loop_qat_qat_bits=4,
+        scorer_loop_qat_decoder_payload_codec="int4_symmetric",
+        scorer_loop_qat_lf_payload_codec="int4_symmetric",
+        scorer_loop_qat_component_guard_mode="pose_seg_hard",
+        scorer_loop_qat_device="gpu",
+        recon_pixel_weight_path=None,
+        recon_pixel_weight_manifest_path=None,
+        recon_pixel_weight_normalize="mean",
+        native_mlx_decoder_train_steps=0,
+        native_mlx_decoder_train_lr=1e-5,
+        native_mlx_decoder_train_ridge=1e-6,
+        native_mlx_decoder_train_optimizer="closed_form",
+        score_aware_long_training_epochs=8,
+        score_aware_long_training_lr=1e-3,
+        score_aware_long_training_batch_pairs=2,
+        score_aware_long_training_optimizer="pact_muon_adamw",
+        score_aware_long_training_grad_clip_max_norm=None,
+        score_aware_long_training_weight_decay=0.01,
+        score_aware_long_training_eval_roundtrip_ste=True,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=0.5,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_tau_boundary=1.25,
+        segnet_hinge_margin=0.5,
+        distillation_device="cpu",
+        allow_segnet_only_research=False,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0002,
+        coder_qat_c1a_entropy_weight=0.0001,
+        coder_qat_c1a_sigma=0.2,
+        coder_qat_c1a_sample_size=512,
+        score_aware_long_training_pr95_faithful_curriculum=True,
+        score_aware_long_training_pr95_muon_policy="faithful_stage8_only",
+        write_mlx_prefilter_profile=True,
+        mlx_prefilter_scorer_device="gpu",
+        mlx_prefilter_scorer_batch_pairs=4,
+        mlx_prefilter_progress_every=7,
+    )
+
+    assert captured["write_mlx_prefilter_profile"] is True
+    assert captured["mlx_prefilter_scorer_device"] == "gpu"
+    assert captured["mlx_prefilter_scorer_batch_pairs"] == 4
+    assert captured["mlx_prefilter_progress_every"] == 7
+    assert captured["prioritized_pair_indices"] == (3, 5)
+    assert captured["score_aware_long_training_optimizer"] == "pact_muon_adamw"
+    assert captured["score_aware_long_training_pr95_faithful_curriculum"] is True
+    assert out["executed"] is True
+    assert out["local_mlx_prefilter_profile_path"].endswith(
+        "local_mlx_prefilter_profile.json"
+    )
+    assert out["local_mlx_prefilter_progress_path"].endswith(
+        "local_mlx_prefilter_progress.jsonl"
+    )
+    assert out["local_mlx_prefilter_profile"]["scorer_batch_pairs"] == 4
+    assert out["native_mlx_full600_campaign_ready"] is True
+    assert out["score_claim"] is False
+
+
 def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) -> None:
     artifact = {
         "substrate_artifact_metadata": {
@@ -7521,6 +7706,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "archive_path": archive.as_posix(),
             "archive_bytes": archive.stat().st_size,
             "archive_sha256": runner_mod._sha256_file(archive),
+            "runtime_submission_dir": (out / "submission").as_posix(),
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
@@ -7632,6 +7818,30 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+        submission = out / "submission"
+        submission.mkdir(exist_ok=True)
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        if kwargs.get("write_mlx_prefilter_profile"):
+            profile = _write_mlx_prefilter_profile(
+                out / "local_mlx_prefilter_profile.json",
+                pairs=int(kwargs["num_pairs"]),
+                batch_pairs=int(kwargs.get("mlx_prefilter_scorer_batch_pairs") or 1),
+                score=0.1,
+            )
+            payload["local_mlx_prefilter_profile"] = {
+                "schema": "snerv_mlx_native_prefilter_profile.v1",
+                "written": True,
+                "profile_path": profile.as_posix(),
+                "profile_sha256": runner_mod._sha256_file(profile),
+                "blockers": ["mlx_local_replay_not_contest_auth_axis"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+            payload["local_mlx_prefilter_profile_path"] = profile.as_posix()
+            payload["local_mlx_prefilter_progress_path"] = (
+                out / "local_mlx_prefilter_progress.jsonl"
+            ).as_posix()
         report.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
         return payload
 
@@ -7829,6 +8039,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         == recon_weight_manifest_path
     )
     assert native_calls[0]["recon_pixel_weight_normalize"] == "none"
+    assert native_calls[0]["write_mlx_prefilter_profile"] is False
+    assert native_calls[0]["mlx_prefilter_scorer_device"] == "cpu"
+    assert native_calls[0]["mlx_prefilter_scorer_batch_pairs"] == 1
     native = out["snerv_mlx_native_export"]
     assert native["executed"] is True
     assert native["source_pair_indices"] == [0, 1]
@@ -8496,6 +8709,258 @@ def test_snerv_batched_full_video_mlx_prefilter_feeds_acquisition_not_replay(
         is False
     )
     assert feedback_row["local_cpu_replay_gate_executed"] is False
+
+
+def test_snerv_native_auto_mlx_prefilter_runs_cpu_replay_on_native_archive(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    packet = _synthetic_snerv_packet(pairs=600)
+    native_dir = tmp_path / "native_export"
+    native_dir.mkdir()
+    native_archive = native_dir / "archive.zip"
+    with zipfile.ZipFile(native_archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", b"native-snar")
+    native_submission = native_dir / "submission"
+    native_submission.mkdir()
+    (native_submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    native_packet = native_dir / "snerv_mlx_native_packet.snar"
+    native_packet.write_bytes(b"native-snar")
+    native_proof = native_dir / "receiver_proof.json"
+    native_proof.write_text(
+        json.dumps(
+            {
+                "receiver_contract_satisfied": True,
+                "runtime_consumption_proof_passed": True,
+                "blockers": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    native_prefilter = _write_mlx_prefilter_profile(
+        native_dir / "local_mlx_prefilter_profile.json",
+        pairs=600,
+        batch_pairs=1,
+        score=0.1,
+    )
+
+    def fake_native_attachment(**kwargs):
+        assert kwargs["write_mlx_prefilter_profile"] is True
+        assert kwargs["mlx_prefilter_scorer_device"] == "cpu"
+        assert kwargs["mlx_prefilter_scorer_batch_pairs"] == 1
+        return {
+            "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+            "executed": True,
+            "requested": True,
+            "num_pairs": 600,
+            "source_pair_indices": list(range(600)),
+            "artifact_report_path": (native_dir / "report.json").as_posix(),
+            "packet_path": native_packet.as_posix(),
+            "packet_bytes": native_packet.stat().st_size,
+            "packet_sha256": runner_mod._sha256_file(native_packet),
+            "archive_path": native_archive.as_posix(),
+            "archive_bytes": native_archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(native_archive),
+            "runtime_submission_dir": native_submission.as_posix(),
+            "receiver_proof_path": native_proof.as_posix(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "native_mlx_training_executed": True,
+            "native_mlx_training_kind": "snerv_mlx_score_aware_haar_renderer",
+            "score_aware_long_training_executed": True,
+            "score_aware_long_training_real_teachers_bound": True,
+            "score_aware_long_training_has_real_segnet_teacher": True,
+            "score_aware_long_training_has_real_posenet_teacher": True,
+            "local_mlx_prefilter_profile": {
+                "schema": "snerv_mlx_native_prefilter_profile.v1",
+                "written": True,
+                "profile_path": native_prefilter.as_posix(),
+                "profile_sha256": runner_mod._sha256_file(native_prefilter),
+                "blockers": ["mlx_local_replay_not_contest_auth_axis"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "local_mlx_prefilter_profile_path": native_prefilter.as_posix(),
+            "local_mlx_prefilter_progress_path": (
+                native_dir / "local_mlx_prefilter_progress.jsonl"
+            ).as_posix(),
+            "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def fake_run_snerv_advisory(**kwargs):
+        assert kwargs["n_pairs"] == 600
+
+        def as_jsonable() -> dict[str, object]:
+            return {
+                "schema": "fake_snerv_advisory.v1",
+                "receiver_archive_packet": {
+                    "bytes": len(packet),
+                    "sha256": "0" * 64,
+                    "redacted": True,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+        return SimpleNamespace(
+            n_pairs=600,
+            receiver_archive_packet=packet,
+            as_jsonable=as_jsonable,
+            levels=int(kwargs["levels"]),
+            wavelet="haar",
+            score_linf=91.0,
+            score_l2=92.0,
+            d_seg_mean_linf=0.5,
+            d_pose_mean_linf=160.0,
+            archive_bytes_total=len(packet),
+            snerv_fc_dim=9,
+            snerv_emb_size=0,
+            snerv_patch_radius=1,
+            decoder_feature_count=9,
+            beats_frontier_rate=True,
+            receiver_archive_replay_verified=True,
+        )
+
+    def fake_export_snerv_archive_bound_candidate_package(**kwargs):
+        package_dir = Path(kwargs["output_dir"])
+        package_dir.mkdir(parents=True, exist_ok=True)
+        advisory_archive = package_dir / "archive.zip"
+        with zipfile.ZipFile(advisory_archive, "w", compression=zipfile.ZIP_STORED) as zf:
+            zf.writestr("0.bin", bytes(kwargs["packet"]))
+        submission = package_dir / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        row = {
+            "candidate_archive_path": advisory_archive.as_posix(),
+            "candidate_archive_bytes": advisory_archive.stat().st_size,
+            "candidate_archive_sha256": runner_mod._sha256_file(advisory_archive),
+            "runtime_consumption_proof_ready": True,
+            "receiver_contract_satisfied": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        return {
+            "archive_bound_candidate_adapter_package": {"candidate_rows": [row]},
+            "receiver_proof": {
+                "proof_path": (package_dir / "proof.json").as_posix(),
+                "runtime_consumption_proof_ready": True,
+                "receiver_contract_satisfied": True,
+                "blockers": [],
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    staged_calls: list[dict[str, object]] = []
+
+    def fake_stage_local_replay_submission(**kwargs):
+        staged_calls.append(kwargs)
+        staged = Path(kwargs["output_dir"]) / "submission"
+        staged.mkdir(parents=True)
+        (staged / "archive.zip").write_bytes(b"archive")
+        (staged / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return staged
+
+    class FakeReplaySummary:
+        def to_json(self) -> str:
+            return json.dumps(
+                {
+                    "schema": "local_submission_replay.v1",
+                    "evaluation_passed": True,
+                    "axis_tag": "[macOS-CPU advisory]",
+                    "local_score_estimate": 0.2,
+                    "blockers": [],
+                    "score_claim": False,
+                    "score_claim_valid": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            )
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_run_snerv_native_mlx_export_attachment",
+        fake_native_attachment,
+    )
+    import tac.substrates.snerv_inverse_steg_carrier.advisory as advisory_mod
+    import tac.substrates.snerv_inverse_steg_carrier.archive_candidate as package_mod
+
+    monkeypatch.setattr(advisory_mod, "run_snerv_advisory", fake_run_snerv_advisory)
+    monkeypatch.setattr(
+        package_mod,
+        "export_snerv_archive_bound_candidate_package",
+        fake_export_snerv_archive_bound_candidate_package,
+    )
+    monkeypatch.setattr(
+        runner_mod,
+        "stage_local_replay_submission",
+        fake_stage_local_replay_submission,
+    )
+    monkeypatch.setattr(
+        runner_mod,
+        "run_local_submission_replay",
+        lambda **_kwargs: FakeReplaySummary(),
+    )
+
+    out = execute_snerv_inverse_steg_advisory_and_adapt(
+        output_dir=tmp_path / "snerv_native_full600_gate",
+        num_pairs=600,
+        epochs=3,
+        hard_byte_ceilings=(178_000,),
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        modelsize_candidate={
+            "schema": "snerv_modelsize_candidate.v1",
+            "family": "snerv",
+            "candidate_id": "snerv-full600-native-auto-prefilter",
+            "levels": 2,
+            "bits_per_coeff": 1.5,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int2_symmetric",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 150_000,
+            "nominal_under_ceiling": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        run_native_mlx_export=True,
+        snerv_score_aware_long_training_epochs=1,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        mlx_prefilter_scorer_device="cpu",
+        mlx_prefilter_scorer_batch_pairs=1,
+        mlx_prefilter_progress_every=3,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["auto_mlx_prefilter_profile_path"] == native_prefilter.as_posix()
+    assert out["mlx_profile_paths"] == [native_prefilter.as_posix()]
+    assert out["local_cpu_replay_gate"]["executed"] is True
+    assert out["local_cpu_replay_gate"]["archive_source"] == (
+        "snerv_mlx_native_export_archive"
+    )
+    assert out["local_cpu_replay_gate"]["archive_path"] == native_archive.as_posix()
+    assert out["local_cpu_replay_gate"]["runtime_submission_dir"] == (
+        native_submission.as_posix()
+    )
+    assert staged_calls
+    assert Path(staged_calls[0]["archive_zip_path"]) == native_archive
+    assert Path(staged_calls[0]["runtime_submission_dir"]) == native_submission
+    feedback = out["candidate_feedback"]["row"]
+    assert feedback["mlx_prefilter_has_full_video"] is True
+    assert feedback["mlx_prefilter_local_replay_passed"] is True
+    assert feedback["local_cpu_replay_gate_executed"] is True
 
 
 def test_snerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(

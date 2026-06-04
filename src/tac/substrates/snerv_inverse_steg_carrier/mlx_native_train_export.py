@@ -228,6 +228,10 @@ def train_export_snerv_mlx_native(
     coder_qat_c1a_sample_size: int = 512,
     score_aware_long_training_pr95_faithful_curriculum: bool = False,
     score_aware_long_training_pr95_muon_policy: str = "faithful_stage8_only",
+    write_mlx_prefilter_profile: bool = False,
+    mlx_prefilter_scorer_device: str = "cpu",
+    mlx_prefilter_scorer_batch_pairs: int = 1,
+    mlx_prefilter_progress_every: int = 50,
     scorer_loop_qat_max_trials: int = 0,
     scorer_loop_qat_search_mode: str = "random_signed",
     scorer_loop_qat_qat_bits: int = 8,
@@ -854,6 +858,29 @@ def train_export_snerv_mlx_native(
             )
     receiver_proof = dict(package.get("receiver_proof") or {}) if package else {}
     selected_archive_metadata = unpack_snerv_archive(selected_packet).metadata
+    mlx_prefilter_profile = _write_snerv_native_receiver_decoded_mlx_prefilter(
+        requested=bool(write_mlx_prefilter_profile),
+        output_dir=out / "local_mlx_prefilter",
+        selected_packet=selected_packet,
+        target0_np=target0_np,
+        target1_np=target1_np,
+        archive_bytes=(
+            int(receiver_proof["archive_bytes"])
+            if receiver_proof.get("archive_bytes") is not None
+            else None
+        ),
+        archive_sha256=(
+            str(receiver_proof.get("archive_sha256"))
+            if receiver_proof.get("archive_sha256")
+            else None
+        ),
+        source_video_path=source_video_path,
+        scorer_upstream_dir=scorer_upstream_dir,
+        scorer_device=str(mlx_prefilter_scorer_device),
+        scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
+        progress_every=int(mlx_prefilter_progress_every),
+        allow_overwrite=allow_overwrite,
+    )
     selected_official_authority = (
         _selected_packet_official_payload_authority(selected_packet)
         if official_primitives_requested
@@ -954,6 +981,13 @@ def train_export_snerv_mlx_native(
         blockers=tuple(dict.fromkeys(blockers)),
     )
     payload = artifact.as_jsonable()
+    payload["local_mlx_prefilter_profile"] = mlx_prefilter_profile
+    payload["local_mlx_prefilter_profile_path"] = mlx_prefilter_profile.get(
+        "profile_path"
+    )
+    payload["local_mlx_prefilter_progress_path"] = mlx_prefilter_profile.get(
+        "progress_path"
+    )
     payload["executed"] = True
     payload["packet_source"] = selected_packet_source
     selected_recon_metadata = selected_archive_metadata.get("recon_pixel_weight_metadata")
@@ -1056,6 +1090,155 @@ def train_export_snerv_mlx_native(
     payload["report_path"] = report_path.as_posix()
     write_json(report_path, payload)
     return payload
+
+
+def _write_snerv_native_receiver_decoded_mlx_prefilter(
+    *,
+    requested: bool,
+    output_dir: str | Path,
+    selected_packet: bytes,
+    target0_np: np.ndarray,
+    target1_np: np.ndarray,
+    archive_bytes: int | None,
+    archive_sha256: str | None,
+    source_video_path: str | Path,
+    scorer_upstream_dir: str | Path,
+    scorer_device: str,
+    scorer_batch_pairs: int,
+    progress_every: int,
+    allow_overwrite: bool,
+) -> dict[str, Any]:
+    """Write a false-authority MLX scorer prefilter for the selected SNAR1 bytes.
+
+    The profile is intentionally receiver-decoded, not trainer-tensor decoded:
+    ``selected_packet`` is first unpacked through the SNeRV receiver path, then
+    scored against the hydrated target frames. This makes the local replay
+    unlock depend on the exact packet bytes that inflate.sh will consume.
+    """
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    profile_path = out / "local_mlx_prefilter_profile.json"
+    progress_path = out / "local_mlx_prefilter_progress.jsonl"
+    base = {
+        "schema": SNERV_MLX_NATIVE_PREFILTER_PROFILE_SCHEMA,
+        "requested": bool(requested),
+        "profile_path": profile_path.as_posix(),
+        "progress_path": progress_path.as_posix(),
+        "receiver_decoded_selected_packet": True,
+        "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
+        "archive_sha256": archive_sha256,
+        "scorer_device": str(scorer_device),
+        "scorer_batch_pairs": int(scorer_batch_pairs),
+        "progress_every": int(progress_every),
+        **FALSE_AUTHORITY,
+    }
+    if not requested:
+        return {
+            **base,
+            "written": False,
+            "blockers": ["snerv_native_mlx_prefilter_not_requested"],
+        }
+    out.mkdir(parents=True, exist_ok=True)
+    if profile_path.exists() and not allow_overwrite:
+        raise SnervMlxNativeExportError(
+            f"refusing to overwrite existing MLX prefilter profile: {profile_path}"
+        )
+    try:
+        if archive_bytes is None or archive_sha256 is None:
+            raise SnervMlxNativeExportError(
+                "archive_bytes/archive_sha256 missing; cannot build SNeRV MLX prefilter"
+            )
+        import mlx.core as mx
+
+        from tac.local_acceleration.mlx_renderer_prefilter_profile import (
+            write_mlx_renderer_prefilter_profile,
+        )
+        from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+
+        decoded_pairs = decode_snerv_archive_frames(selected_packet).astype(
+            np.float32,
+            copy=False,
+        )
+        if decoded_pairs.shape[0] != int(target0_np.shape[0]):
+            raise SnervMlxNativeExportError(
+                "receiver-decoded pair count does not match target pair count: "
+                f"{decoded_pairs.shape[0]} != {target0_np.shape[0]}"
+            )
+
+        class _ReceiverDecodedPacketModel:
+            def __init__(self, pairs_b2chw255: np.ndarray) -> None:
+                self._pairs = mx.array(pairs_b2chw255, dtype=mx.float32)
+
+            def __call__(self, idx: Any) -> Any:
+                return mx.take(self._pairs, idx, axis=0)
+
+        bundle = RendererBundle(
+            model=_ReceiverDecodedPacketModel(decoded_pairs),
+            target_rgb_0=mx.array(target0_np, dtype=mx.float32),
+            target_rgb_1=mx.array(target1_np, dtype=mx.float32),
+            num_pairs=int(decoded_pairs.shape[0]),
+            forward_convention="call_b2chw_255",
+            substrate_artifact_metadata={
+                "schema": "snerv_receiver_decoded_packet_prefilter_bundle.v1",
+                "receiver_decoded_selected_packet": True,
+                "packet_sha256": _sha256_bytes(selected_packet),
+                "archive_sha256": str(archive_sha256),
+                "human_visual_fidelity_objective": False,
+                "contest_scorer_prefilter_only": True,
+            },
+        )
+        profile = write_mlx_renderer_prefilter_profile(
+            bundle=bundle,
+            output_path=profile_path,
+            archive_bytes=int(archive_bytes),
+            archive_sha256=str(archive_sha256),
+            upstream_dir=scorer_upstream_dir,
+            scorer_device=str(scorer_device),
+            scorer_batch_pairs=int(scorer_batch_pairs),
+            run_id="snerv_native_receiver_decoded_packet_prefilter",
+            source_video_path=source_video_path,
+            progress_jsonl_path=progress_path,
+            progress_every=int(progress_every),
+        )
+        return {
+            **base,
+            "written": True,
+            "profile_schema": profile.get("schema"),
+            "profile_sha256": sha256_file(profile_path),
+            "blockers": list(profile.get("blockers") or []),
+        }
+    except Exception as exc:
+        try:
+            from tac.local_acceleration.mlx_renderer_prefilter_profile import (
+                write_mlx_renderer_prefilter_failure_profile,
+            )
+
+            failure = write_mlx_renderer_prefilter_failure_profile(
+                output_path=profile_path,
+                archive_bytes=archive_bytes,
+                archive_sha256=archive_sha256,
+                num_pairs=int(target0_np.shape[0]),
+                failure=repr(exc),
+                run_id="snerv_native_receiver_decoded_packet_prefilter",
+            )
+            return {
+                **base,
+                "written": False,
+                "profile_schema": failure.get("schema"),
+                "profile_sha256": sha256_file(profile_path),
+                "failure": repr(exc),
+                "blockers": [
+                    "snerv_native_mlx_prefilter_failed",
+                    *list(failure.get("blockers") or []),
+                ],
+            }
+        except Exception:
+            return {
+                **base,
+                "written": False,
+                "failure": repr(exc),
+                "blockers": ["snerv_native_mlx_prefilter_failed"],
+            }
 
 
 def export_snerv_mlx_archive(

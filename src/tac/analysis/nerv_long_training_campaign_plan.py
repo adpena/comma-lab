@@ -918,6 +918,12 @@ def _snerv_campaign_row(
         _float_token(float(native_mlx_decoder_train_lr)),
         "--snerv-native-mlx-decoder-train-ridge",
         _float_token(float(native_mlx_decoder_train_ridge)),
+        "--mlx-prefilter-scorer-device",
+        "cpu",
+        "--mlx-prefilter-scorer-batch-pairs",
+        "1",
+        "--mlx-prefilter-progress-every",
+        "25",
         "--output-dir",
         (output_root / _safe_path_token(row_id)).as_posix(),
     ]
