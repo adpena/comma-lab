@@ -92,6 +92,12 @@ def test_archive_bundles_sections_and_decodes_receiver_step_maps() -> None:
 
     assert archive.packet.startswith(SNERV_ARCHIVE_MAGIC)
     assert archive.section_order == SECTION_ORDER
+    lf_report = archive.section_reports["lf_payload_codec_report"]
+    assert lf_report["report_status"] == "receiver_visible_lf_payload_accounting_verified"
+    assert lf_report["schema"] == "snerv_lf_quant_payload.v1"
+    assert lf_report["section_bytes"] == archive.section_bytes["lf_payload"]
+    assert lf_report["section_sha256"] == archive.section_sha256["lf_payload"]
+    assert lf_report["score_claim"] is False
     assert decoded.section_order == SECTION_ORDER
     for ref, got in zip(lf_planes, decoded.decode_lf_quant_planes(), strict=True):
         np.testing.assert_array_equal(got, ref)
@@ -124,6 +130,12 @@ def test_archive_is_deterministic_and_hash_checked() -> None:
     b = pack_snerv_archive(**kwargs)
 
     assert a.packet == b.packet
+    assert a.section_reports["lf_payload_codec_report"]["report_status"] == (
+        "blocked_lf_payload_accounting_not_inspectable"
+    )
+    assert "snerv_lf_payload_accounting_not_inspectable" in a.section_reports[
+        "lf_payload_codec_report"
+    ]["blockers"]
     mutated = bytearray(a.packet)
     mutated[-1] ^= 0x01
     with pytest.raises(SnervArchiveError, match="sha256 mismatch"):

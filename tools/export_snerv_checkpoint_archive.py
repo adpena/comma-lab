@@ -279,6 +279,8 @@ def export_snerv_checkpoint_archive(
         "packet_sha256": _sha256_bytes(packet.packet),
         "packet_section_bytes": dict(packet.section_bytes),
         "packet_section_sha256": dict(packet.section_sha256),
+        "packet_section_reports": dict(packet.section_reports),
+        "packet_section_report_summary": _packet_section_report_summary(packet),
         "packet_metadata_summary": _packet_metadata_summary(packet),
         "archive_path": str(archive_path) if archive_path else None,
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
@@ -1161,6 +1163,8 @@ def _sha256_bytes(data: bytes) -> str:
 
 def _summary(report: dict[str, Any]) -> dict[str, Any]:
     packet_metadata = dict(report.get("packet_metadata_summary") or {})
+    section_summary = dict(report.get("packet_section_report_summary") or {})
+    lf_summary = dict(section_summary.get("lf_payload_codec_report") or {})
     return {
         "schema": report.get("schema"),
         "checkpoint_epoch": report.get("checkpoint_epoch"),
@@ -1174,8 +1178,37 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "receiver_contract_satisfied": report.get("receiver_contract_satisfied"),
         "local_mlx_prefilter_written": report.get("local_mlx_prefilter_written"),
         "local_mlx_prefilter_profile_path": report.get("local_mlx_prefilter_profile_path"),
+        "lf_payload_report_status": lf_summary.get("report_status"),
+        "lf_payload_packet_schema": lf_summary.get("schema"),
+        "lf_payload_mode_histogram": lf_summary.get("mode_histogram"),
+        "lf_payload_section_bytes": lf_summary.get("section_bytes"),
         "blockers": report.get("blockers"),
         "score_claim": report.get("score_claim"),
+    }
+
+
+def _packet_section_report_summary(packet: SnervArchivePacket) -> dict[str, Any]:
+    lf = dict(packet.section_reports.get("lf_payload_codec_report") or {})
+    keys = (
+        "schema",
+        "report_status",
+        "section_name",
+        "section_bytes",
+        "packet_bytes",
+        "raw_i64_bytes",
+        "payload_bytes",
+        "plane_count",
+        "mode_histogram",
+        "wrapper_histogram",
+        "blockers",
+        "score_claim",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+    )
+    return {
+        "schema": "snerv_checkpoint_packet_section_report_summary.v1",
+        "lf_payload_codec_report": {key: lf.get(key) for key in keys if key in lf},
+        **FALSE_AUTHORITY,
     }
 
 

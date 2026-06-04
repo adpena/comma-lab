@@ -225,6 +225,7 @@ class SnervArchivePacket:
     section_order: tuple[str, ...]
     section_bytes: dict[str, int]
     section_sha256: dict[str, str]
+    section_reports: dict[str, Any]
     metadata: dict[str, Any]
     header_bytes: int
     total_bytes: int
@@ -698,6 +699,11 @@ def pack_snerv_archive(
         section_bytes[name] = len(blob)
         section_sha256[name] = _sha256(blob)
         cursor += len(blob)
+    section_reports = _receiver_section_reports(
+        sections,
+        section_bytes=section_bytes,
+        section_sha256=section_sha256,
+    )
     header = {
         "schema": SNERV_ARCHIVE_SCHEMA,
         "section_order": list(SECTION_ORDER),
@@ -724,12 +730,49 @@ def pack_snerv_archive(
         section_order=SECTION_ORDER,
         section_bytes=section_bytes,
         section_sha256=section_sha256,
+        section_reports=section_reports,
         metadata=clean_metadata,
         header_bytes=len(SNERV_ARCHIVE_MAGIC)
         + struct.calcsize(HEADER_LEN_FMT)
         + len(header_bytes_raw),
         total_bytes=len(packet),
     )
+
+
+def _receiver_section_reports(
+    sections: Mapping[str, bytes],
+    *,
+    section_bytes: Mapping[str, int],
+    section_sha256: Mapping[str, str],
+) -> dict[str, Any]:
+    """Return receiver-byte accounting reports without changing archive bytes."""
+
+    reports: dict[str, Any] = {}
+    lf_payload = bytes(sections.get("lf_payload", b""))
+    try:
+        lf_report = inspect_lf_quant_payload_header(lf_payload)
+        lf_status = "receiver_visible_lf_payload_accounting_verified"
+        lf_blockers: list[str] = []
+    except SnervArchiveError as exc:
+        lf_report = {
+            "schema": "snerv_lf_payload_codec_report.blocked.v1",
+            "error": f"{type(exc).__name__}:{exc}",
+        }
+        lf_status = "blocked_lf_payload_accounting_not_inspectable"
+        lf_blockers = ["snerv_lf_payload_accounting_not_inspectable"]
+    lf_report = _jsonable_metadata(
+        {
+            **dict(lf_report),
+            "report_status": lf_status,
+            "section_name": "lf_payload",
+            "section_bytes": int(section_bytes.get("lf_payload", len(lf_payload))),
+            "section_sha256": str(section_sha256.get("lf_payload") or _sha256(lf_payload)),
+            "blockers": lf_blockers,
+            **FALSE_AUTHORITY,
+        }
+    )
+    reports["lf_payload_codec_report"] = lf_report
+    return reports
 
 
 def unpack_snerv_archive(packet: bytes) -> DecodedSnervArchive:

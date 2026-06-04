@@ -60,6 +60,12 @@ def test_snerv_checkpoint_packet_uses_state_lf_and_decoder_directly() -> None:
     assert decoded.metadata["hf_decoder_fit_mode"] == "trained_mlx_checkpoint_decoder_kernels"
     assert decoded.metadata["native_mlx_training_executed"] is True
     assert decoded.metadata["score_claim"] is False
+    lf_report = packet.section_reports["lf_payload_codec_report"]
+    assert lf_report["report_status"] == "receiver_visible_lf_payload_accounting_verified"
+    assert lf_report["schema"] == "snerv_lf_quant_payload.v2"
+    assert lf_report["section_bytes"] == packet.section_bytes["lf_payload"]
+    assert lf_report["mode_histogram"]
+    assert lf_report["score_claim"] is False
     assert packet.total_bytes == len(packet.packet)
     assert frames.shape == (2, 2, 3, 16, 16)
     assert np.isfinite(frames).all()
@@ -186,6 +192,14 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
 
     assert report["receiver_proof_passed"] is True
     assert report["local_mlx_prefilter_written"] is True
+    lf_summary = report["packet_section_report_summary"]["lf_payload_codec_report"]
+    assert lf_summary["report_status"] == "receiver_visible_lf_payload_accounting_verified"
+    assert lf_summary["schema"] == "snerv_lf_quant_payload.v2"
+    assert lf_summary["section_bytes"] == report["packet_section_bytes"]["lf_payload"]
+    assert lf_summary["mode_histogram"]
+    lf_report = report["packet_section_reports"]["lf_payload_codec_report"]
+    assert lf_report["section_sha256"] == report["packet_section_sha256"]["lf_payload"]
+    assert lf_report["promotion_eligible"] is False
     assert "full_video_scorer_replay_not_executed" not in report["blockers"]
     assert "contest_cpu_cuda_exact_eval_not_executed" in report["blockers"]
     assert "macos_mlx_research_signal_false_authority" in report["blockers"]
