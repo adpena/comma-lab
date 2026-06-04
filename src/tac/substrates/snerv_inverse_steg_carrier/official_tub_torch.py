@@ -11,6 +11,7 @@ from typing import Any
 
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OfficialTubError,
+    _apply_output2_fusion_backend,
     official_output2_fusion_shape,
 )
 
@@ -35,22 +36,14 @@ def official_output2_fusion_torch(
         fc_hw=fc_hw,
         decoder_output_shape=raw_shape,
     )
-    emb_ch = int(shape.emb_ch)
-    decoder_input = torch.cat(
-        (
-            temporal_encoder_concat[:, :emb_ch, :, :],
-            temporal_encoder_concat[:, emb_ch:, :, :],
-        ),
-        0,
+    return _apply_output2_fusion_backend(
+        temporal_encoder_concat,
+        decoder_output,
+        shape=shape,
+        concat=lambda parts, axis: torch.cat(tuple(parts), axis),
+        reshape=lambda value, target_shape: value.reshape(*target_shape),
+        transpose=lambda value, axes: value.permute(*axes),
     )
-    fc_h, fc_w = shape.fc_hw
-    out_n, _out_c, out_h, out_w = raw_shape
-    fused = (
-        decoder_output.reshape(out_n, -1, fc_h, fc_w, out_h, out_w)
-        .permute(0, 1, 4, 2, 5, 3)
-        .reshape(out_n, -1, fc_h * out_h, fc_w * out_w)
-    )
-    return decoder_input, fused
 
 
 def _torch_nchw_shape(array: Any, *, name: str) -> tuple[int, int, int, int]:

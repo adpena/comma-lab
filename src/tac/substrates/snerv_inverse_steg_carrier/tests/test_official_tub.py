@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import tac.substrates.snerv_inverse_steg_carrier.official_tub as official_tub_mod
+import tac.substrates.snerv_inverse_steg_carrier.official_tub_torch as official_tub_torch_mod
 from tac.substrates.snerv_inverse_steg_carrier import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
     OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE,
@@ -354,6 +356,18 @@ def test_official_tub_output2_fusion_mlx_matches_numpy_reference() -> None:
 
     np.testing.assert_array_equal(np.asarray(decoder_input), reference.decoder_input)
     np.testing.assert_array_equal(np.asarray(fused), reference.output2_fused)
+
+
+def test_official_tub_backend_bindings_share_one_fusion_core() -> None:
+    assert "_apply_output2_fusion_backend" in official_output2_fusion_numpy.__code__.co_names
+    assert (
+        "_apply_output2_fusion_backend"
+        in official_tub_mod.official_output2_fusion_mlx.__code__.co_names
+    )
+    assert (
+        "_apply_output2_fusion_backend"
+        in official_tub_torch_mod.official_output2_fusion_torch.__code__.co_names
+    )
 
 
 def test_prepare_can_attach_output2_shape_metadata() -> None:

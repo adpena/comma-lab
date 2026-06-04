@@ -431,20 +431,17 @@ def official_output2_fusion_numpy(
         fc_hw=fc_hw,
         decoder_output_shape=tuple(int(v) for v in raw.shape),
     )
+    decoder_input, fused = _apply_output2_fusion_backend(
+        temporal,
+        raw,
+        shape=shape,
+        concat=lambda parts, axis: np.concatenate(tuple(parts), axis=axis),
+        reshape=lambda value, target_shape: np.reshape(value, target_shape),
+        transpose=lambda value, axes: np.transpose(value, axes),
+    )
     emb_ch = int(shape.emb_ch)
     prev_half = np.ascontiguousarray(temporal[:, :emb_ch, :, :], dtype=np.float64)
     next_half = np.ascontiguousarray(temporal[:, emb_ch:, :, :], dtype=np.float64)
-    decoder_input = np.ascontiguousarray(
-        np.concatenate([prev_half, next_half], axis=0),
-        dtype=np.float64,
-    )
-    fc_h, fc_w = shape.fc_hw or _validate_hw(fc_hw, name="fc_hw")
-    out_n, out_c, out_h, out_w = raw.shape
-    fused = (
-        raw.reshape(out_n, -1, fc_h, fc_w, out_h, out_w)
-        .transpose(0, 1, 4, 2, 5, 3)
-        .reshape(out_n, -1, fc_h * out_h, fc_w * out_w)
-    )
     return OfficialOutput2FusionResult(
         source_contract=OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
         score_claim=False,
@@ -489,18 +486,51 @@ def official_output2_fusion_mlx(
         fc_hw=fc_hw,
         decoder_output_shape=raw_shape,
     )
-    emb_ch = int(shape.emb_ch)
     temporal = mx.array(temporal_encoder_concat)
     raw = mx.array(decoder_output)
-    decoder_input = mx.concatenate(
-        (temporal[:, :emb_ch, :, :], temporal[:, emb_ch:, :, :]),
-        axis=0,
+    return _apply_output2_fusion_backend(
+        temporal,
+        raw,
+        shape=shape,
+        concat=lambda parts, axis: mx.concatenate(tuple(parts), axis=axis),
+        reshape=lambda value, target_shape: mx.reshape(value, target_shape),
+        transpose=lambda value, axes: mx.transpose(value, axes),
     )
-    fc_h, fc_w = shape.fc_hw or _validate_hw(fc_hw, name="fc_hw")
-    out_n, _out_c, out_h, out_w = raw_shape
-    fused = mx.reshape(
-        mx.transpose(
-            mx.reshape(raw, (out_n, -1, fc_h, fc_w, out_h, out_w)),
+
+
+def _apply_output2_fusion_backend(
+    temporal_encoder_concat: Any,
+    decoder_output: Any,
+    *,
+    shape: OfficialOutput2FusionShape,
+    concat: Any,
+    reshape: Any,
+    transpose: Any,
+) -> tuple[Any, Any]:
+    """Backend-resolved official ``output_2`` algebra.
+
+    This is the tinygrad-like core: callers provide tensor ops for NumPy, MLX,
+    Torch, or a future backend, while this function owns the source-faithful
+    split/concat/pixel-shuffle order exactly once.
+    """
+
+    emb_ch = int(shape.emb_ch)
+    decoder_input = concat(
+        (
+            temporal_encoder_concat[:, :emb_ch, :, :],
+            temporal_encoder_concat[:, emb_ch:, :, :],
+        ),
+        0,
+    )
+    if shape.fc_hw is None or shape.decoder_output_shape is None:
+        raise OfficialTubError(
+            "backend output_2 fusion requires fc_hw and decoder_output_shape"
+        )
+    fc_h, fc_w = shape.fc_hw
+    out_n, _out_c, out_h, out_w = shape.decoder_output_shape
+    fused = reshape(
+        transpose(
+            reshape(decoder_output, (out_n, -1, fc_h, fc_w, out_h, out_w)),
             (0, 1, 4, 2, 5, 3),
         ),
         (out_n, -1, fc_h * out_h, fc_w * out_w),
