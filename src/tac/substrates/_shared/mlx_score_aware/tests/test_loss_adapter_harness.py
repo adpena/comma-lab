@@ -527,6 +527,7 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
         pose_scorer_teacher=pose_teacher,
         learnable_pose_student_head=pose_head,
         pose_student_input_preprocess="pr95_yuv6",
+        scorer_input_distribution_guard_weight=2.0,
     )
     adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
     batch = mx.array([0, 1, 2, 3], dtype=mx.int32)
@@ -538,6 +539,9 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
     assert "loss_part_weighted_distill" in metrics
     assert "loss_part_pose_distill" in metrics
     assert "loss_part_weighted_pose_distill" in metrics
+    assert "loss_part_scorer_input_distribution_guard" in metrics
+    assert "loss_part_weighted_scorer_input_distribution_guard" in metrics
+    assert metrics["loss_part_config_weight_scorer_input_distribution_guard"] == pytest.approx(2.0)
 
 
 @mlx_only

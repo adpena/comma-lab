@@ -620,6 +620,10 @@ def test_pr95_curriculum_step_consumes_c1a_entropy_not_telemetry_only() -> None:
     assert "stage_verdict.cat_lambda" in adapter_source
     assert "stage_verdict.cat_sigma" in adapter_source
     assert "loss_part_weighted_pr95_c1a_entropy" in adapter_source
+    assert (
+        "loss_part_weighted_pr95_stage_scorer_input_distribution_guard"
+        in adapter_source
+    )
     assert "pr95_stage_recon" in adapter_source
     assert 'component_loss_weight(loss_weights, "recon")' in adapter_source
     assert "_pose_distillation_loss_and_raw_mse" in adapter_source

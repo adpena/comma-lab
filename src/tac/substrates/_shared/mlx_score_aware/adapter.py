@@ -737,12 +737,19 @@ class MlxScoreAwareAdapter:
                         "pose_distill",
                         "posenet_distill",
                         "pose",
+                        "scorer_input_guard",
+                        "scorer_input_distribution_guard",
+                        "value_domain_guard",
                     }
                 }
             )
         recon_stage_weight = component_loss_weight(loss_weights, "recon")
         segnet_stage_weight = component_loss_weight(loss_weights, "distill")
         pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
+        scorer_input_guard_stage_weight = component_loss_weight(
+            loss_weights,
+            "scorer_input_guard",
+        )
         for name, value in parts.items():
             mx.eval(value)
             scalar = float(value.item())
@@ -764,6 +771,18 @@ class MlxScoreAwareAdapter:
             elif name == "recon":
                 out["loss_part_weighted_recon"] = recon_stage_weight * scalar
                 out["loss_part_stage_weight_recon"] = recon_stage_weight
+            elif name == "scorer_input_distribution_guard":
+                out["loss_part_weighted_scorer_input_distribution_guard"] = (
+                    float(self.bundle.scorer_input_distribution_guard_weight)
+                    * scorer_input_guard_stage_weight
+                    * scalar
+                )
+                out["loss_part_stage_weight_scorer_input_distribution_guard"] = (
+                    scorer_input_guard_stage_weight
+                )
+                out["loss_part_config_weight_scorer_input_distribution_guard"] = (
+                    float(self.bundle.scorer_input_distribution_guard_weight)
+                )
             elif name in weights:
                 out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
         out["score_aware_loss_parts_active"] = float(
@@ -1114,6 +1133,24 @@ class MlxScoreAwareAdapter:
                 out["loss_part_weighted_pr95_c1a_entropy"] = (
                     float(stage_verdict.cat_lambda) * scalar
                 )
+            elif name == "pr95_stage_scorer_input_distribution_guard":
+                guard_stage_weight = component_loss_weight(
+                    loss_weights,
+                    "scorer_input_guard",
+                )
+                out[
+                    "loss_part_weighted_pr95_stage_scorer_input_distribution_guard"
+                ] = (
+                    float(self.bundle.scorer_input_distribution_guard_weight)
+                    * guard_stage_weight
+                    * scalar
+                )
+                out[
+                    "loss_part_stage_weight_pr95_stage_scorer_input_distribution_guard"
+                ] = guard_stage_weight
+                out[
+                    "loss_part_config_weight_pr95_stage_scorer_input_distribution_guard"
+                ] = float(self.bundle.scorer_input_distribution_guard_weight)
             elif name in self.bundle.extra_loss_weights:
                 out[f"loss_part_weighted_{name}"] = (
                     float(self.bundle.extra_loss_weights[name]) * scalar
