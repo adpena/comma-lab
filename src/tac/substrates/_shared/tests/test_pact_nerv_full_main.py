@@ -217,6 +217,8 @@ def test_write_contest_runtime_emits_compliant_pair(tmp_path):
     assert "PoseNet" not in py and "SegNet" not in py
     assert "inflate_one_video" in py
     assert "sys.argv" in py
+    assert "_read_archive_bytes" in py
+    assert "archive_dir / 'x'" in py
     # Vendored substrate package present (Catalog #295 self-containment).
     assert (sub / "src" / "tac" / "substrates" / "pact_nerv_ia3" / "inflate.py").is_file()
 
