@@ -52,6 +52,9 @@ def build_mlx_cache_quality_gate(
     min_segnet_std: float = 1.0,
     min_segnet_dynamic_range: float = 16.0,
     max_segnet_mae_vs_reference_for_fit_gate: float = 64.0,
+    min_posenet_yuv6_std: float = 1.0,
+    min_posenet_yuv6_dynamic_range: float = 16.0,
+    max_posenet_yuv6_mae_vs_reference_for_fit_gate: float = 64.0,
 ) -> dict[str, Any]:
     """Inspect candidate scorer-input cache health against a reference cache."""
 
@@ -91,6 +94,12 @@ def build_mlx_cache_quality_gate(
         blockers.append("candidate_segnet_last_rgb_dynamic_range_too_low")
     if seg_mae > max_segnet_mae_vs_reference_for_fit_gate:
         blockers.append("candidate_segnet_last_rgb_far_from_reference_fit_gate")
+    if cand_pose_stats.std < min_posenet_yuv6_std:
+        blockers.append("candidate_posenet_yuv6_pair_degenerate_constant_or_flat")
+    if cand_pose_stats.dynamic_range < min_posenet_yuv6_dynamic_range:
+        blockers.append("candidate_posenet_yuv6_pair_dynamic_range_too_low")
+    if pose_mae > max_posenet_yuv6_mae_vs_reference_for_fit_gate:
+        blockers.append("candidate_posenet_yuv6_pair_far_from_reference_fit_gate")
     if cand_seg_sample.shape[1:] != ref_seg_sample.shape[1:]:
         blockers.append("segnet_cache_shape_mismatch")
     if cand_pose_sample.shape[1:] != ref_pose_sample.shape[1:]:
@@ -104,10 +113,16 @@ def build_mlx_cache_quality_gate(
     ]
     if "candidate_segnet_last_rgb_degenerate_constant_or_flat" in blockers:
         verdict = "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    elif "candidate_posenet_yuv6_pair_degenerate_constant_or_flat" in blockers:
+        verdict = "FUNDAMENTAL_POSE_INPUT_DEGENERATE"
     elif "candidate_segnet_last_rgb_dynamic_range_too_low" in blockers:
         verdict = "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW"
+    elif "candidate_posenet_yuv6_pair_dynamic_range_too_low" in blockers:
+        verdict = "POSE_INPUT_DYNAMIC_RANGE_TOO_LOW"
     elif "candidate_segnet_last_rgb_far_from_reference_fit_gate" in blockers:
         verdict = "FIT_OR_SCALE_FAILURE"
+    elif "candidate_posenet_yuv6_pair_far_from_reference_fit_gate" in blockers:
+        verdict = "POSE_FIT_OR_SCALE_FAILURE"
     else:
         verdict = "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
     gate_passed = not non_authority_blockers
@@ -140,6 +155,11 @@ def build_mlx_cache_quality_gate(
             "max_segnet_mae_vs_reference_for_fit_gate": float(
                 max_segnet_mae_vs_reference_for_fit_gate
             ),
+            "min_posenet_yuv6_std": float(min_posenet_yuv6_std),
+            "min_posenet_yuv6_dynamic_range": float(min_posenet_yuv6_dynamic_range),
+            "max_posenet_yuv6_mae_vs_reference_for_fit_gate": float(
+                max_posenet_yuv6_mae_vs_reference_for_fit_gate
+            ),
         },
         "blockers": blockers,
         "recommended_next_actions": _recommended_next_actions(verdict),
@@ -156,6 +176,9 @@ def write_mlx_cache_quality_gate(
     min_segnet_std: float = 1.0,
     min_segnet_dynamic_range: float = 16.0,
     max_segnet_mae_vs_reference_for_fit_gate: float = 64.0,
+    min_posenet_yuv6_std: float = 1.0,
+    min_posenet_yuv6_dynamic_range: float = 16.0,
+    max_posenet_yuv6_mae_vs_reference_for_fit_gate: float = 64.0,
 ) -> dict[str, Any]:
     report = build_mlx_cache_quality_gate(
         candidate_cache_dir=candidate_cache_dir,
@@ -164,6 +187,11 @@ def write_mlx_cache_quality_gate(
         min_segnet_std=min_segnet_std,
         min_segnet_dynamic_range=min_segnet_dynamic_range,
         max_segnet_mae_vs_reference_for_fit_gate=max_segnet_mae_vs_reference_for_fit_gate,
+        min_posenet_yuv6_std=min_posenet_yuv6_std,
+        min_posenet_yuv6_dynamic_range=min_posenet_yuv6_dynamic_range,
+        max_posenet_yuv6_mae_vs_reference_for_fit_gate=(
+            max_posenet_yuv6_mae_vs_reference_for_fit_gate
+        ),
     )
     out = Path(output_json).expanduser().resolve(strict=False)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -232,10 +260,25 @@ def _recommended_next_actions(verdict: str) -> list[str]:
             "continue_short_fit_probe_or_increase_capacity_until_byte_dynamic_range_passes",
             "attach_receiver_cache_quality_gate_to_archive_export",
         ]
+    if verdict in {
+        "FUNDAMENTAL_POSE_INPUT_DEGENERATE",
+        "POSE_INPUT_DYNAMIC_RANGE_TOO_LOW",
+    }:
+        return [
+            "block_exact_eval_and_score_claims",
+            "inspect_posenet_yuv6_domain_resize_chroma_baseline_and_pair_order",
+            "require_posenet_pair_cache_gate_before_section_value_or_spend",
+        ]
     if verdict == "FIT_OR_SCALE_FAILURE":
         return [
             "block_exact_eval_and_score_claims",
             "inspect_training_target_scaling_rgb_order_and_eval_roundtrip",
+            "run_small_reference_fit_before_long_training",
+        ]
+    if verdict == "POSE_FIT_OR_SCALE_FAILURE":
+        return [
+            "block_exact_eval_and_score_claims",
+            "inspect_pose_target_scaling_yuv6_chroma_baseline_pair_order_and_eval_roundtrip",
             "run_small_reference_fit_before_long_training",
         ]
     return [
