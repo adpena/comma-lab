@@ -907,9 +907,9 @@ def _snerv_stack_audit(
             "missing_upstream_axes": [
                 "official multi-layer scalable neural representation",
                 (
-                    "MFU/HFR/TUB primitive replay is proven but not receiver/export-bound"
+                    "MFU/HFR/TUB receiver primitive replay is proven but not full source-forward parity"
                     if official_primitive_replay.get(
-                        "all_primitive_source_replay_proven"
+                        "all_receiver_primitive_replay_proven"
                     )
                     else "MFU/HFR/TUB-style blocks"
                 ),
@@ -1056,7 +1056,7 @@ def _snerv_official_mfu_hfr_tub_stack_blockers(
     ]
     component_ids = {str(row.get("component_id")) for row in rows}
     blockers: list[str] = []
-    if official_primitive_replay.get("all_primitive_source_replay_proven") is not True:
+    if official_primitive_replay.get("all_receiver_primitive_replay_proven") is not True:
         blocker_by_component = {
             "mfu": "snerv_official_mfu_source_forward_replay_missing",
             "hfr": "snerv_official_hfr_source_forward_replay_missing",
@@ -1064,7 +1064,7 @@ def _snerv_official_mfu_hfr_tub_stack_blockers(
         }
         for component_id, blocker in blocker_by_component.items():
             row = next((item for item in rows if item.get("component_id") == component_id), None)
-            if row is None or row.get("primitive_source_replay_proven") is not True:
+            if row is None or row.get("receiver_primitive_replay_proven") is not True:
                 blockers.append(blocker)
         for component_id in sorted({"mfu", "hfr", "tub"} - component_ids):
             blockers.append(f"snerv_official_{component_id}_primitive_replay_row_missing")

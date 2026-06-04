@@ -269,7 +269,8 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
         "component_rows": rows,
         "all_primitive_numeric_graph_replay_proven": all_numeric_proven,
         "all_receiver_primitive_replay_proven": all_numeric_proven,
-        "all_primitive_source_replay_proven": all_numeric_proven,
+        "all_primitive_numeric_source_fixture_replay_proven": all_numeric_proven,
+        "all_primitive_source_replay_proven": False,
         "full_stack_source_forward_replay_proven": False,
         "receiver_export_self_consistency_verified": bool(
             receiver_contract["receiver_export_self_consistency_verified"]
@@ -431,15 +432,17 @@ def _primitive_replay_row(root: Path, spec: SnervPrimitiveReplaySpec) -> dict[st
         "missing_source_markers": missing_source,
         "missing_test_markers": missing_tests,
         "primitive_numeric_graph_replay_proven": proven,
+        "primitive_numeric_source_fixture_replay_proven": proven,
         "receiver_primitive_replay_proven": proven,
-        "primitive_source_replay_proven": proven,
+        "primitive_source_replay_proven": False,
+        "primitive_source_forward_replay_proven": False,
         "numeric_source_replay_test_present": bool(
             runtime_decode["numeric_source_replay_test_present"]
         ),
         "receiver_runtime_decode_row": runtime_decode,
         "full_stack_source_forward_replay_proven": False,
         "status": (
-            "primitive_source_replay_proven_full_stack_missing"
+            "primitive_numeric_source_fixture_replay_proven_full_stack_missing"
             if proven
             else "primitive_source_replay_missing"
         ),

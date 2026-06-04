@@ -1084,7 +1084,7 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert report["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] is False
     assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in report["blockers"]
-    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" not in report["blockers"]
+    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" in report["blockers"]
     assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in report["blockers"]
     assert Path(report["packet_path"]).is_file()
     assert report["packet_bytes"] == Path(report["packet_path"]).stat().st_size
@@ -1127,6 +1127,14 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert tensor_map["total_tensor_bytes"] > 0
     assert tensor_map["category_counts"]["official_mfu_weight_payload"] > 0
     assert tensor_map["category_counts"]["official_hfr_weight_payload"] > 0
+    assert tensor_map["official_state_dict_mapping_verified"] is False
+    assert tensor_map["official_weight_mapping_blocker_closed"] is False
+    assert tensor_map["official_weight_mapping_scope"] == (
+        "receiver_payload_tensor_hashes_only_not_upstream_state_dict_mapping"
+    )
+    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" in tensor_map[
+        "official_weight_mapping_blockers"
+    ]
     assert len(tensor_map["tensor_manifest_sha256"]) == 64
     assert all(len(row["sha256"]) == 64 for row in tensor_map["rows"])
     assert {
@@ -1149,7 +1157,9 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert surrogate["score_claim"] is False
     evidence = {row["blocker"]: row for row in binding["blocker_evidence"]}
     assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in evidence
-    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" not in evidence
+    assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
+        "official_authority"
+    ] is False
     assert evidence["snerv_official_mfu_hfr_tub_source_forward_replay_missing"]["official_authority"] is False
     assert binding["export_consumed_official_mfu"] is True
     assert binding["export_consumed_official_hfr"] is True
@@ -1733,9 +1743,13 @@ def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     assert report["receiver_contract_satisfied"] is True
     assert "snerv_official_receiver_runtime_decode_missing" not in report["blockers"]
     assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in report["blockers"]
-    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" not in report["blockers"]
+    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" in report["blockers"]
     binding = report["official_primitive_binding"]
     assert binding["official_receiver_tensor_map"]["receiver_tensor_map_verified"] is True
+    assert (
+        binding["official_receiver_tensor_map"]["official_weight_mapping_blocker_closed"]
+        is False
+    )
     surrogate = binding["receiver_bound_surrogate_export"]
     assert surrogate["archive_sha256"] == report["archive_sha256"]
     assert surrogate["surrogate_receiver_contract_satisfied"] is True
@@ -1749,6 +1763,10 @@ def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     assert "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload" not in {
         row["blocker"] for row in binding["blocker_evidence"]
     }
+    evidence = {row["blocker"]: row for row in binding["blocker_evidence"]}
+    assert evidence["snerv_official_mfu_hfr_tub_weight_mapping_missing"][
+        "official_authority"
+    ] is False
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False

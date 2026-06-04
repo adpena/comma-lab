@@ -38,7 +38,8 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     primitive = report["official_mfu_hfr_tub_primitive_replay_binding"]
     assert primitive["all_primitive_numeric_graph_replay_proven"] is True
     assert primitive["all_receiver_primitive_replay_proven"] is True
-    assert primitive["all_primitive_source_replay_proven"] is True
+    assert primitive["all_primitive_numeric_source_fixture_replay_proven"] is True
+    assert primitive["all_primitive_source_replay_proven"] is False
     assert primitive["full_stack_source_forward_replay_proven"] is False
     assert primitive["receiver_export_self_consistency_verified"] is True
     assert primitive["receiver_source_forward_replay_bound"] is False
@@ -179,7 +180,8 @@ def test_snerv_official_forward_parity_artifact_round_trips_falsification(
     )
     assert artifact["score_claim"] is False
     primitive = artifact["official_mfu_hfr_tub_primitive_replay_binding"]
-    assert primitive["all_primitive_source_replay_proven"] is True
+    assert primitive["all_primitive_numeric_source_fixture_replay_proven"] is True
+    assert primitive["all_primitive_source_replay_proven"] is False
     assert primitive["full_stack_source_forward_replay_proven"] is False
     assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is False
     assert artifact["official_mfu_hfr_tub_forward_parity_falsified"] is True

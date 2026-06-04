@@ -202,13 +202,19 @@ def test_nerv_stack_synergy_audit_is_false_authority_and_binds_both_stacks() -> 
         "snerv"
     ]["blockers"]
     replay = stacks["snerv"]["official_mfu_hfr_tub_primitive_replay_binding"]
-    assert replay["all_primitive_source_replay_proven"] is True
+    assert replay["all_receiver_primitive_replay_proven"] is True
+    assert replay["all_primitive_numeric_source_fixture_replay_proven"] is True
+    assert replay["all_primitive_source_replay_proven"] is False
     assert replay["full_stack_source_forward_replay_proven"] is False
     assert replay["receiver_export_bound"] is True
     assert replay["receiver_source_forward_replay_bound"] is False
     replay_rows = {row["component_id"]: row for row in replay["component_rows"]}
     assert set(replay_rows) == {"mfu", "hfr", "tub"}
-    assert all(row["primitive_source_replay_proven"] for row in replay_rows.values())
+    assert all(row["receiver_primitive_replay_proven"] for row in replay_rows.values())
+    assert not any(
+        row["primitive_source_forward_replay_proven"]
+        for row in replay_rows.values()
+    )
     assert all(row["missing_source_markers"] == [] for row in replay_rows.values())
     assert all(row["missing_test_markers"] == [] for row in replay_rows.values())
     assert "snerv_official_snerv_t_temporal_path_missing" not in stacks["snerv"]["blockers"]

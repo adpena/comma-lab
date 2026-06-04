@@ -344,7 +344,8 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
         "official_mfu_hfr_tub_primitive_replay_binding": {
             "all_receiver_primitive_replay_proven": True,
             "all_primitive_numeric_graph_replay_proven": True,
-            "all_primitive_source_replay_proven": True,
+            "all_primitive_numeric_source_fixture_replay_proven": True,
+            "all_primitive_source_replay_proven": False,
             "full_stack_source_forward_replay_proven": False,
             "receiver_source_forward_replay_bound": False,
             "official_receiver_runtime_decode_contract": {

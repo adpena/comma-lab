@@ -1002,18 +1002,17 @@ def train_export_snerv_mlx_native(
             and selected_official_tensor_map.get("receiver_tensor_map_verified")
             is True
         ):
-            official_primitives_blockers = [
-                str(blocker)
-                for blocker in official_primitives_blockers
-                if str(blocker)
-                != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
-            ]
-            blockers = [
-                str(blocker)
-                for blocker in blockers
-                if str(blocker)
-                != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
-            ]
+            selected_official_tensor_map = {
+                **dict(selected_official_tensor_map),
+                "official_state_dict_mapping_verified": False,
+                "official_weight_mapping_blocker_closed": False,
+                "official_weight_mapping_scope": (
+                    "receiver_payload_tensor_hashes_only_not_upstream_state_dict_mapping"
+                ),
+                "official_weight_mapping_blockers": [
+                    "snerv_official_mfu_hfr_tub_weight_mapping_missing"
+                ],
+            }
         if official_binding is not None:
             official_binding = dict(official_binding)
             official_binding["blockers"] = list(official_primitives_blockers)
@@ -4412,11 +4411,17 @@ def _receiver_bound_official_primitives_export_binding(
     selected_authority = _selected_packet_official_payload_authority(selected_packet)
     tensor_map = _official_receiver_tensor_map_from_packet(selected_packet)
     if bool(tensor_map.get("receiver_tensor_map_verified")):
-        blockers = [
-            blocker
-            for blocker in blockers
-            if blocker != "snerv_official_mfu_hfr_tub_weight_mapping_missing"
-        ]
+        tensor_map = {
+            **tensor_map,
+            "official_state_dict_mapping_verified": False,
+            "official_weight_mapping_blocker_closed": False,
+            "official_weight_mapping_scope": (
+                "receiver_payload_tensor_hashes_only_not_upstream_state_dict_mapping"
+            ),
+            "official_weight_mapping_blockers": [
+                "snerv_official_mfu_hfr_tub_weight_mapping_missing"
+            ],
+        }
     proof_passed = receiver_proof.get("runtime_consumption_proof_passed") is True
     receiver_satisfied = receiver_proof.get("receiver_contract_satisfied") is True
     archive_path = receiver_proof.get("archive_path")
