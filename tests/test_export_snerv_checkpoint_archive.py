@@ -90,6 +90,16 @@ def test_official_checkpoint_packet_uses_official_payload() -> None:
         "snerv_decoder_payload.official_mfu_hfr_tub.v1"
     )
     assert summary["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert summary["snerv_official_mfu_hfr_tub_export_bound_semantics"] == (
+        "receiver_payload_bound_not_source_forward_parity"
+    )
+    assert summary["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert summary["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert (
+        summary["snerv_official_mfu_hfr_tub_source_forward_replay_authority"]
+        is False
+    )
+    assert summary["source_faithful_stack"] is False
     frames = tool.decode_snerv_archive_frames(packet.packet)
     assert frames.shape == (1, 2, 3, 16, 16)
 
