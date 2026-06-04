@@ -287,6 +287,26 @@ def test_hinerv_target_modelsize_selects_real_capacity_rows() -> None:
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_hinerv_target_modelsize_selection_preserves_target_diversity() -> None:
+    report = build_hinerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        per_ceiling_limit=8,
+        target_modelsize_mparams=(0.05, 0.1, 0.2, 0.4),
+    )
+
+    selected = report["selected_candidates_by_ceiling"]["178000"]
+    assert len(selected) <= 8
+    selected_targets = {
+        row["target_modelsize_mparams"]
+        for row in selected
+        if row["capacity_source"] == "local_hinerv_target_modelsize"
+    }
+    assert {0.05, 0.1, 0.2, 0.4} <= selected_targets
+    assert all(row["score_claim"] is False for row in selected)
+    assert all(row["ready_for_exact_eval_dispatch"] is False for row in selected)
+
+
 def test_hinerv_modelsize_knobs_are_real_capacity_and_codec_controls() -> None:
     small = analyze_hinerv_modelsize_candidate(
         hard_byte_ceiling=178_000,

@@ -1208,6 +1208,33 @@ def select_hinerv_modelsize_candidates(
         )
         target_under = [row for row in target_rows if row.nominal_under_ceiling]
         target_over = [row for row in target_rows if not row.nominal_under_ceiling]
+        target_values = sorted(
+            {
+                float(row.target_modelsize_mparams)
+                for row in target_rows
+                if row.target_modelsize_mparams is not None
+            }
+        )
+        for target in target_values:
+            if len(chosen) >= per_ceiling_limit:
+                break
+            rows_for_target = [
+                row
+                for row in target_rows
+                if row.target_modelsize_mparams is not None
+                and float(row.target_modelsize_mparams) == target
+            ]
+            if not rows_for_target:
+                continue
+            rows_for_target.sort(
+                key=lambda row: (
+                    not bool(row.nominal_under_ceiling),
+                    float(row.modelsize_error_mparams or float("inf")),
+                    abs(int(row.byte_headroom)),
+                    -int(row.nominal_total_payload_bytes),
+                )
+            )
+            chosen[rows_for_target[0].candidate_id] = rows_for_target[0]
         for row in target_under:
             if len(chosen) >= per_ceiling_limit:
                 break
