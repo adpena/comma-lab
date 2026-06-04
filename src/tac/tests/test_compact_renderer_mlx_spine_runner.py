@@ -4349,6 +4349,87 @@ def test_execute_snerv_modelsize_auto_fails_closed_when_no_nominal_candidate_und
         )
 
 
+def test_explicit_snerv_modelsize_candidate_rejects_calibrated_over_cap_feedback() -> None:
+    rows = [
+        row.as_dict()
+        for row in enumerate_snerv_modelsize_candidates(
+            hard_byte_ceilings=(216_000,),
+            num_pairs=600,
+            official_modelsize_mparams=(0.05,),
+            snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            temporal_modes=("official_haar_dwt1d_lowpass",),
+            official_skip_high_modes=("scalar_mean",),
+        )
+    ]
+    candidate = next(row for row in rows if row["official_modelsize_solution"])
+    feedback = {
+        "family": "snerv",
+        "candidate_id": candidate["candidate_id"],
+        "decoder_payload_codec": candidate["decoder_payload_codec"],
+        "nominal_total_payload_bytes": candidate["nominal_total_payload_bytes"],
+        "measured_archive_bytes": 300_000,
+        "receiver_proof_passed": True,
+    }
+
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="snerv_modelsize_explicit_candidate_over_hard_byte_ceiling",
+    ):
+        _resolve_execute_modelsize_candidate(
+            family="snerv",
+            candidate_id=candidate["candidate_id"],
+            hard_byte_ceilings=(216_000,),
+            snerv_official_modelsize_mparams=(0.05,),
+            snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            snerv_temporal_modes=("official_haar_dwt1d_lowpass",),
+            snerv_official_skip_high_modes=("scalar_mean",),
+            byte_cap_feedback_rows=[feedback],
+        )
+
+
+def test_explicit_snerv_modelsize_candidate_accepts_calibrated_under_cap_feedback() -> None:
+    rows = [
+        row.as_dict()
+        for row in enumerate_snerv_modelsize_candidates(
+            hard_byte_ceilings=(216_000,),
+            num_pairs=600,
+            official_modelsize_mparams=(0.05,),
+            snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            temporal_modes=("official_haar_dwt1d_lowpass",),
+            official_skip_high_modes=("scalar_mean",),
+        )
+    ]
+    candidate = next(row for row in rows if row["official_modelsize_solution"])
+    selected = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=candidate["candidate_id"],
+        hard_byte_ceilings=(216_000,),
+        snerv_official_modelsize_mparams=(0.05,),
+        snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        snerv_temporal_modes=("official_haar_dwt1d_lowpass",),
+        snerv_official_skip_high_modes=("scalar_mean",),
+        byte_cap_feedback_rows=[
+            {
+                "family": "snerv",
+                "candidate_id": candidate["candidate_id"],
+                "decoder_payload_codec": candidate["decoder_payload_codec"],
+                "nominal_total_payload_bytes": candidate[
+                    "nominal_total_payload_bytes"
+                ],
+                "measured_archive_bytes": 200_000,
+                "receiver_proof_passed": True,
+            }
+        ],
+    )
+
+    assert selected is not None
+    assert selected["candidate_id"] == candidate["candidate_id"]
+    assert selected["byte_cap_controller"]["predicted_archive_bytes"] == 200_000
+    assert selected["byte_cap_controller"][
+        "predicted_under_hard_byte_ceiling"
+    ] is True
+
+
 def test_snerv_modelsize_candidates_include_official_skip_high_mode_in_identity() -> None:
     rows = enumerate_snerv_modelsize_candidates(
         hard_byte_ceilings=(36_000,),

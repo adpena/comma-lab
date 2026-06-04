@@ -2229,21 +2229,55 @@ def _resolve_execute_modelsize_candidate(
         )
     for row in candidates:
         if row["candidate_id"] == token:
-            return row
+            return _enforce_explicit_modelsize_byte_cap_candidate(
+                row,
+                family=family,
+                candidate_id=token,
+            )
     rebuilt = _modelsize_candidate_from_self_describing_id(
         family=family,
         candidate_id=token,
     )
     if rebuilt is not None:
-        return _attach_byte_cap_controller_predictions(
+        attached = _attach_byte_cap_controller_predictions(
             [rebuilt],
             family=family,
             byte_cap_feedback_rows=byte_cap_feedback_rows,
         )[0]
+        return _enforce_explicit_modelsize_byte_cap_candidate(
+            attached,
+            family=family,
+            candidate_id=token,
+        )
     raise CompactRendererMlxSpineRunnerError(
         f"unknown {family} --modelsize-candidate-id {token!r}; "
         "rerun plan mode and select one of the emitted candidate_id values"
     )
+
+
+def _enforce_explicit_modelsize_byte_cap_candidate(
+    row: Mapping[str, Any],
+    *,
+    family: str,
+    candidate_id: str,
+) -> dict[str, Any]:
+    """Reject explicit modelsize candidates once measured bytes prove over-cap."""
+
+    selected = dict(row)
+    controller = selected.get("byte_cap_controller")
+    if (
+        isinstance(controller, Mapping)
+        and _byte_cap_controller_has_observation(selected)
+        and controller.get("predicted_under_hard_byte_ceiling") is False
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            f"{family}_modelsize_explicit_candidate_over_hard_byte_ceiling: "
+            f"candidate_id={candidate_id} "
+            f"predicted_archive_bytes={controller.get('predicted_archive_bytes')} "
+            f"hard_byte_ceiling={selected.get('hard_byte_ceiling')} "
+            "measured_archive_feedback_required_new_candidate"
+        )
+    return selected
 
 
 def _effective_snerv_modelsize_adapter_for_resolution(args: argparse.Namespace) -> str:
