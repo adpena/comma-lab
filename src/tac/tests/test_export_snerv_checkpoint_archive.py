@@ -97,6 +97,8 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
         ),
         encoding="utf-8",
     )
+    checkpoint_meta_sha256 = export_tool.sha256_file(checkpoint_meta)
+    checkpoint_state_sha256 = export_tool.sha256_file(state_path)
     startup = tmp_path / "startup.json"
     source_video = tmp_path / "source.mkv"
     startup.write_text(
@@ -164,6 +166,8 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
         calls["prefilter_scorer_device"] = str(kwargs["scorer_device"])
         calls["prefilter_target0_shape"] = tuple(kwargs["target0_np"].shape)
         calls["prefilter_packet_bytes"] = len(kwargs["selected_packet"])
+        checkpoint_meta.unlink()
+        state_path.unlink()
         out = Path(kwargs["output_dir"])
         return {
             "schema": "snerv_mlx_native_prefilter_profile.v1",
@@ -195,6 +199,10 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
     )
 
     assert report["receiver_proof_passed"] is True
+    assert report["checkpoint_meta_sha256"] == checkpoint_meta_sha256
+    assert report["checkpoint_meta_present_at_report_write"] is False
+    assert report["checkpoint_state_sha256"] == checkpoint_state_sha256
+    assert report["checkpoint_state_present_at_report_write"] is False
     assert report["hard_byte_ceiling_requested_by_candidate_or_startup"] == 10
     assert report["hard_byte_ceiling_checked_after_export"] is True
     feedback = report["modelsize_byte_cap_feedback_row"]

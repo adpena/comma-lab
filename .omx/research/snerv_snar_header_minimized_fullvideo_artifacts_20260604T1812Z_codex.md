@@ -1,0 +1,49 @@
+# SNeRV SNAR Header Minimized Full-Video Artifacts
+
+Schema: `codex_artifact_manifest.v1`
+Generated: `2026-06-04T18:12Z`
+Axis: `[receiver-proof:false-authority]`
+
+## Summary
+
+- Two SNeRV over-ceiling receiver packets were minimized by pruning receiver-inert SNAR1 metadata while preserving section bytes.
+- Both minimized packets stream-replayed all 600 pairs source-vs-candidate with exact receiver frame equality.
+- Packet bytes moved from `1,485,285` to `139,855`; packet-only archive.zip bytes are `139,963`.
+- This burns down the receiver full-video replay blocker for these minimized packets.
+- These artifacts were generated before candidate-id binding was added. They are packet-SHA-bound only, so current campaign-row reenable still requires rerunning the minimizer command emitted by the queue with `--candidate-id`.
+- Remaining blockers for current campaign rows are candidate-id binding, false-authority status, recode-admission rerun, and paired contest CPU/CUDA auth eval.
+
+## SSD Artifacts
+
+- Bulk planner JSON root:
+  `/Volumes/VertigoDataTier/pact/research_bulk/snerv_header_minimized_fullvideo_20260604T1812Z_codex`
+- Candidate A full-video minimization:
+  `/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snar_header_minimized_fullvideo`
+- Candidate B full-video minimization:
+  `/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar_header_minimized_fullvideo`
+
+## SHA-256
+
+- `a1bfa8471974b454f1d190f157654dda56ce0a82af18023778a5ad685d72740b`
+  `nerv_long_training_campaign_snerv_header_minimized_20260604T1805Z_codex.json`
+- `d57b00d88663d057630df351c7e5e69c1a880a879d1540434910b9f873368750`
+  `nerv_long_training_campaign_snerv_header_minimized_fullvideo_20260604T1812Z_codex.json`
+- `afba1240f231695a38cb44e019a02b06fab76f44c82fbbd3ca5094c87d51ccad`
+  `nerv_long_training_campaign_snerv_header_minimized_queue_20260604T1805Z_codex.json`
+- `95bf617ac8af5121b741657e2281c0072e21e5f1e859b64291eb515bb5760018`
+  `nerv_long_training_campaign_snerv_header_minimized_fullvideo_queue_20260604T1812Z_codex.json`
+- `9f68d408571d082eb08c8f4933a2a8ed3af38198a9e392a54b474a423f1f15c5`
+  `snerv_lf_over_ceiling_reroute_queue_header_minimized_20260604T1805Z_codex.json`
+- `6a372d27c4d31dd5124397facd670a23d06c1d2f420173181d9eadbace4cddbe`
+  `snerv_lf_over_ceiling_reroute_queue_header_minimized_fullvideo_20260604T1812Z_codex.json`
+- `1fdc5344c40c736c1b3a35ca5b0f7edbf1a205474706422a9200b7b3afd8bc8f`
+  candidate A `snerv_snar_header_minimization.json`
+- `9a718471200c65383c9a862207286d8ef684bcb667b909cb90e5f730bec7b32a`
+  candidate B `snerv_snar_header_minimization.json`
+
+## Rebuild Commands
+
+```bash
+uv run python tools/minimize_snerv_snar_header.py --packet /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/candidate.snar --output-packet /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snar_header_minimized_fullvideo/candidate.minimized.snar --output-archive-zip /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snar_header_minimized_fullvideo/archive.zip --output-json /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc11e0_p1_mfu1-2-4_hfr0_t0_tmhaar1_adspectra_oms0p05_int8_symm_66ae723339c7/snar_header_minimized_fullvideo/snerv_snar_header_minimization.json --hard-byte-ceiling 216000 --full-video-receiver-proof
+uv run python tools/minimize_snerv_snar_header.py --packet /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/candidate.snar --output-packet /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar_header_minimized_fullvideo/candidate.minimized.snar --output-archive-zip /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar_header_minimized_fullvideo/archive.zip --output-json /Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar_header_minimized_fullvideo/snerv_snar_header_minimization.json --hard-byte-ceiling 178000 --full-video-receiver-proof
+```

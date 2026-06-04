@@ -60,7 +60,9 @@ def test_snerv_snar_header_minimizer_prunes_provenance_and_preserves_receiver_ra
 
     report, candidate_packet = build_snerv_snar_header_minimization(
         source_packet,
+        candidate_id="snerv_unit_candidate",
         proof_pair_indices=(0,),
+        full_video_receiver_proof=True,
         hard_byte_ceilings=(len(source_packet) - 32,),
         generated_utc="2026-06-04T00:00:00+00:00",
     )
@@ -69,7 +71,23 @@ def test_snerv_snar_header_minimizer_prunes_provenance_and_preserves_receiver_ra
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["candidate_binding"]["candidate_id"] == "snerv_unit_candidate"
+    assert (
+        report["candidate_binding"]["binding_status"]
+        == "candidate_id_and_source_packet_sha256"
+    )
+    assert (
+        "snerv_snar_header_minimization_candidate_id_binding_missing"
+        not in report["blockers"]
+    )
     assert report["receiver_contract_satisfied"] is True
+    assert report["full_video_receiver_contract_satisfied"] is True
+    assert report["receiver_pair_frame_equality_proof"]["scope"] == (
+        "full_video_streaming"
+    )
+    assert report["receiver_pair_frame_equality_proof"]["pair_count"] == (
+        decoded.metadata["n_pairs"]
+    )
     assert report["sections_exact_equal"] is True
     assert report["hard_byte_ceiling_rows"][0]["header_bytes_removed"] > 0
     assert report["hard_byte_ceiling_rows"][0]["source_packet_over_ceiling_bytes"] == 32
@@ -89,14 +107,14 @@ def test_snerv_snar_header_minimizer_prunes_provenance_and_preserves_receiver_ra
     assert "source_pair_indices_preserved" not in candidate.metadata
     assert set(candidate.metadata).issubset(
         {
-        "n_pairs",
-        "frames_per_pair",
-        "channels",
-        "lf_plane_count",
-        "levels",
-        "wavelet",
-        "carrier_hw",
-        "orig_hw",
+            "n_pairs",
+            "frames_per_pair",
+            "channels",
+            "lf_plane_count",
+            "levels",
+            "wavelet",
+            "carrier_hw",
+            "orig_hw",
         }
     )
     assert "carrier_hw" in candidate.metadata or "orig_hw" in candidate.metadata
@@ -129,23 +147,36 @@ def test_minimize_snerv_snar_header_cli_accepts_zip_and_writes_deterministic_arc
         },
     )
     source_zip = tmp_path / "source.zip"
-    _write_zip(source_zip, source_packet)
+    _write_zip(
+        source_zip,
+        source_packet,
+        extra_members=(
+            ("inflate.py", b"print('receiver runtime')\n"),
+            ("src/tac/substrates/snerv_inverse_steg_carrier/archive.py", b"# runtime\n"),
+        ),
+    )
     output_packet = tmp_path / "candidate.snar"
     output_zip = tmp_path / "archive.zip"
+    output_package = tmp_path / "runtime_package"
     output_json = tmp_path / "manifest.json"
 
     assert cli.main(
         [
             "--packet",
             str(source_zip),
+            "--candidate-id",
+            "snerv_cli_candidate",
             "--output-packet",
             str(output_packet),
             "--output-archive-zip",
             str(output_zip),
+            "--output-package-dir",
+            str(output_package),
             "--output-json",
             str(output_json),
             "--pair-index",
             "0",
+            "--full-video-receiver-proof",
             "--hard-byte-ceiling",
             str(len(source_packet) - 8),
         ]
@@ -154,16 +185,52 @@ def test_minimize_snerv_snar_header_cli_accepts_zip_and_writes_deterministic_arc
     manifest = json.loads(output_json.read_text(encoding="utf-8"))
     candidate_packet = output_packet.read_bytes()
     with zipfile.ZipFile(output_zip) as archive_zip:
+        assert archive_zip.namelist() == [
+            "0.bin",
+            "inflate.py",
+            "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+        ]
         info = archive_zip.getinfo("0.bin")
         assert info.compress_type == zipfile.ZIP_STORED
         assert info.date_time == (1980, 1, 1, 0, 0, 0)
         assert archive_zip.read("0.bin") == candidate_packet
+        assert archive_zip.read("inflate.py") == b"print('receiver runtime')\n"
+        assert (
+            archive_zip.read("src/tac/substrates/snerv_inverse_steg_carrier/archive.py")
+            == b"# runtime\n"
+        )
     assert manifest["candidate_archive_zip"]["member"] == "0.bin"
+    assert manifest["candidate_archive_zip"]["archive_zip_kind"] in {
+        "runtime_preserving_repack",
+        "generated_runtime_package",
+    }
     assert manifest["contest_compliance_contract"]["archive_zip_materialized"] is True
+    assert manifest["contest_compliance_contract"]["runtime_package_materialized"] is True
+    assert (
+        manifest["contest_compliance_contract"]["runtime_consumption_proof_passed"]
+        is True
+    )
+    assert manifest["runtime_package"]["receiver_proof"][
+        "runtime_consumption_proof_passed"
+    ] is True
+    assert (output_package / "archive.zip").is_file()
+    assert (
+        output_package
+        / "receiver_proof"
+        / "snerv_inverse_steg_receiver_proof.json"
+    ).is_file()
     assert "not_packaged_as_contest_archive_zip" not in manifest["blockers"]
+    assert (
+        "snerv_snar_header_minimization_candidate_id_binding_missing"
+        not in manifest["blockers"]
+    )
+    assert manifest["full_video_receiver_contract_satisfied"] is True
+    assert manifest["receiver_pair_frame_equality_proof"]["scope"] == (
+        "full_video_streaming"
+    )
     assert manifest["source_packet"]["input_kind"] == "archive_zip_member_0_bin"
     assert manifest["hard_byte_ceiling_rows"][0]["candidate_archive_zip_bytes"] == (
-        output_zip.stat().st_size
+        manifest["candidate_archive_zip"]["bytes"]
     )
     assert unpack_snerv_archive(candidate_packet).metadata["carrier_hw"] == list(
         decoded.metadata["carrier_hw"]
@@ -183,8 +250,17 @@ def _repack_with_metadata(packet: bytes, metadata: dict) -> bytes:
     ).packet
 
 
-def _write_zip(path: Path, packet: bytes) -> None:
+def _write_zip(
+    path: Path,
+    packet: bytes,
+    *,
+    extra_members: tuple[tuple[str, bytes], ...] = (),
+) -> None:
     info = zipfile.ZipInfo(filename="0.bin", date_time=(1980, 1, 1, 0, 0, 0))
     info.compress_type = zipfile.ZIP_STORED
     with zipfile.ZipFile(path, "w") as archive:
         archive.writestr(info, packet)
+        for name, payload in extra_members:
+            extra_info = zipfile.ZipInfo(filename=name, date_time=(1980, 1, 1, 0, 0, 0))
+            extra_info.compress_type = zipfile.ZIP_STORED
+            archive.writestr(extra_info, payload)

@@ -167,7 +167,7 @@ def _queue_rows_for_campaign_row(
     campaign_row: Mapping[str, Any],
     evidence: Mapping[str, Any] | None,
     header_profiles: Mapping[str, Mapping[str, Any]],
-    header_minimizations: Mapping[str, Mapping[str, Any]],
+    header_minimizations: Mapping[str, Sequence[Mapping[str, Any]]],
     output_root: Path,
 ) -> list[dict[str, Any]]:
     recode_evidence = _recode_admission_evidence_from_campaign_row(
@@ -374,6 +374,28 @@ def _header_minimization_result_row(
     output_root: Path,
     required_savings_bytes: int,
 ) -> dict[str, Any]:
+    full_video_replay_proven = _header_minimization_full_video_receiver_proven(
+        evidence,
+    )
+    candidate_binding_satisfied = _header_minimization_candidate_binding_satisfied(
+        campaign_row,
+        evidence,
+    )
+    blockers = [
+        "snerv_snar_header_minimized_packet_false_authority",
+        "snerv_snar_header_minimized_packet_recode_admission_not_rerun",
+        *(
+            []
+            if candidate_binding_satisfied
+            else ["snerv_snar_header_minimized_packet_candidate_id_binding_missing"]
+        ),
+        *(
+            []
+            if full_video_replay_proven
+            else ["snerv_snar_header_minimized_packet_full_video_replay_missing"]
+        ),
+        "paired_contest_cpu_cuda_auth_eval_missing",
+    ]
     return _base_row(
         campaign_row=campaign_row,
         evidence=evidence,
@@ -382,12 +404,7 @@ def _header_minimization_result_row(
         planner_action="preserve_minimized_snar1_packet_then_run_full_video_replay_and_admission",
         priority=11,
         blocked=True,
-        blockers=[
-            "snerv_snar_header_minimized_packet_false_authority",
-            "snerv_snar_header_minimized_packet_recode_admission_not_rerun",
-            "snerv_snar_header_minimized_packet_full_video_replay_missing",
-            "paired_contest_cpu_cuda_auth_eval_missing",
-        ],
+        blockers=blockers,
         command_argv=[],
         output_root=output_root,
         required_lf_savings_bytes=required_savings_bytes,
@@ -423,12 +440,17 @@ def _header_rewrite_work_order_row(
             "tools/minimize_snerv_snar_header.py",
             "--packet",
             packet_path,
+            "--candidate-id",
+            str(campaign_row.get("candidate_id") or ""),
             "--output-packet",
             (out_dir / "candidate.minimized.snar").as_posix(),
             "--output-archive-zip",
             (out_dir / "archive.zip").as_posix(),
+            "--output-package-dir",
+            (out_dir / "runtime_package").as_posix(),
             "--output-json",
             (out_dir / "snerv_snar_header_minimization.json").as_posix(),
+            "--full-video-receiver-proof",
             *(
                 []
                 if ceiling is None
@@ -486,6 +508,38 @@ def _header_minimization_satisfies_waterline(evidence: Mapping[str, Any]) -> boo
         and row.get("candidate_archive_zip_under_ceiling") is not False
         for row in rows
     )
+
+
+def _header_minimization_full_video_receiver_proven(
+    evidence: Mapping[str, Any],
+) -> bool:
+    summary = evidence.get("snar_header_minimization_report")
+    if not isinstance(summary, Mapping):
+        return False
+    if summary.get("full_video_receiver_contract_satisfied") is True:
+        return True
+    proof = summary.get("receiver_pair_frame_equality_proof")
+    return (
+        isinstance(proof, Mapping)
+        and proof.get("scope") == "full_video_streaming"
+        and proof.get("status") == "proven_exact"
+        and proof.get("exact_equal") is True
+    )
+
+
+def _header_minimization_candidate_binding_satisfied(
+    campaign_row: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+) -> bool:
+    summary = evidence.get("snar_header_minimization_report")
+    if not isinstance(summary, Mapping):
+        return False
+    candidate_id = str(campaign_row.get("candidate_id") or "").strip()
+    binding = summary.get("candidate_binding")
+    if not isinstance(binding, Mapping):
+        return False
+    bound_candidate_id = str(binding.get("candidate_id") or "").strip()
+    return bool(candidate_id and bound_candidate_id and candidate_id == bound_candidate_id)
 
 
 def _lossless_recode_probe_row(
@@ -718,7 +772,7 @@ def _recode_admission_evidence_from_campaign_row(
     campaign_row: Mapping[str, Any],
     *,
     header_profiles: Mapping[str, Mapping[str, Any]],
-    header_minimizations: Mapping[str, Mapping[str, Any]],
+    header_minimizations: Mapping[str, Sequence[Mapping[str, Any]]],
 ) -> dict[str, Any] | None:
     plan = campaign_row.get("snerv_lf_payload_recode_admission_plan")
     if not isinstance(plan, Mapping):
@@ -734,12 +788,14 @@ def _recode_admission_evidence_from_campaign_row(
         return None
     source_report_path = selected.get("source_report_path")
     candidate_packet_sha256 = selected.get("candidate_packet_sha256")
+    candidate_id = campaign_row.get("candidate_id") or plan.get("candidate_id")
     header_profile = _matching_header_profile(
         packet_sha256=candidate_packet_sha256,
         header_profiles=header_profiles,
     )
     header_minimization = _matching_header_minimization(
         packet_sha256=candidate_packet_sha256,
+        candidate_id=candidate_id,
         header_minimizations=header_minimizations,
     )
     blockers = [
@@ -756,7 +812,7 @@ def _recode_admission_evidence_from_campaign_row(
         "source_schema": plan.get("schema"),
         "source_path": source_report_path,
         "source_report_sha256": selected.get("source_report_sha256"),
-        "candidate_id": campaign_row.get("candidate_id") or plan.get("candidate_id"),
+        "candidate_id": candidate_id,
         "mode": selected.get("mode"),
         "recommended_lossless_recode_mode": selected.get("mode"),
         "source_lf_payload_bytes": source_lf,
@@ -812,8 +868,8 @@ def _header_profile_index(
 
 def _header_minimization_index(
     reports: Sequence[Mapping[str, Any]],
-) -> dict[str, Mapping[str, Any]]:
-    out: dict[str, Mapping[str, Any]] = {}
+) -> dict[str, tuple[Mapping[str, Any], ...]]:
+    by_sha: dict[str, list[Mapping[str, Any]]] = {}
     for report in reports:
         if not isinstance(report, Mapping):
             continue
@@ -825,8 +881,8 @@ def _header_minimization_index(
         ):
             text = str(sha or "").strip()
             if text:
-                out.setdefault(text, report)
-    return out
+                by_sha.setdefault(text, []).append(report)
+    return {sha: tuple(rows) for sha, rows in by_sha.items()}
 
 
 def _matching_header_profile(
@@ -843,12 +899,35 @@ def _matching_header_profile(
 def _matching_header_minimization(
     *,
     packet_sha256: Any,
-    header_minimizations: Mapping[str, Mapping[str, Any]],
+    candidate_id: Any,
+    header_minimizations: Mapping[str, Sequence[Mapping[str, Any]]],
 ) -> Mapping[str, Any] | None:
     sha = str(packet_sha256 or "").strip()
     if not sha:
         return None
-    return header_minimizations.get(sha)
+    reports = tuple(header_minimizations.get(sha) or ())
+    if not reports:
+        return None
+    candidate_text = str(candidate_id or "").strip()
+    for report in reports:
+        report_candidate_id = _header_minimization_candidate_id(report)
+        if candidate_text and report_candidate_id == candidate_text:
+            return report
+    for report in reports:
+        if not _header_minimization_candidate_id(report):
+            return report
+    return None
+
+
+def _header_minimization_candidate_id(report: Mapping[str, Any]) -> str | None:
+    for value in (
+        _nested(report, ("candidate_binding", "candidate_id")),
+        report.get("candidate_id"),
+    ):
+        text = str(value or "").strip()
+        if text:
+            return text
+    return None
 
 
 def _header_profile_summary(profile: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -879,8 +958,15 @@ def _header_profile_summary(profile: Mapping[str, Any] | None) -> dict[str, Any]
 def _header_minimization_summary(report: Mapping[str, Any] | None) -> dict[str, Any] | None:
     if not isinstance(report, Mapping):
         return None
+    runtime_package = report.get("runtime_package")
+    receiver_proof = (
+        runtime_package.get("receiver_proof")
+        if isinstance(runtime_package, Mapping)
+        else None
+    )
     return {
         "schema": report.get("schema"),
+        "candidate_binding": dict(report.get("candidate_binding") or {}),
         "source_packet_path": _nested(report, ("source_packet", "path")),
         "source_packet_sha256": _nested(report, ("source_packet", "sha256")),
         "source_packet_bytes": _positive_int(_nested(report, ("source_packet", "bytes"))),
@@ -895,6 +981,20 @@ def _header_minimization_summary(report: Mapping[str, Any] | None) -> dict[str, 
         "packet_byte_delta": _int_or_none(report.get("packet_byte_delta")),
         "header_byte_delta": _int_or_none(report.get("header_byte_delta")),
         "receiver_contract_satisfied": report.get("receiver_contract_satisfied") is True,
+        "full_video_receiver_contract_satisfied": (
+            report.get("full_video_receiver_contract_satisfied") is True
+        ),
+        "runtime_package_materialized": isinstance(runtime_package, Mapping),
+        "runtime_consumption_proof_passed": (
+            isinstance(receiver_proof, Mapping)
+            and receiver_proof.get("runtime_consumption_proof_passed") is True
+        ),
+        "runtime_consumption_proof_path": (
+            receiver_proof.get("proof_path") if isinstance(receiver_proof, Mapping) else None
+        ),
+        "receiver_pair_frame_equality_proof": report.get(
+            "receiver_pair_frame_equality_proof"
+        ),
         "hard_byte_ceiling_rows": list(report.get("hard_byte_ceiling_rows") or ()),
         "blockers": list(report.get("blockers") or ()),
         "next_actions": list(report.get("next_actions") or ()),

@@ -183,6 +183,9 @@ def export_snerv_checkpoint_archive(
     candidate = _require_mapping(startup.get("modelsize_candidate"), "modelsize_candidate")
     command_args = _require_mapping(startup.get("command_args"), "command_args")
     state_path = _checkpoint_state_path(meta, state_kind=state_kind)
+    checkpoint_meta_sha256 = sha256_file(meta_path)
+    checkpoint_state_sha256 = sha256_file(state_path)
+    startup_json_sha256 = sha256_file(startup_path)
     state = unpack_state_dict_numpy(state_path.read_bytes())
     hard_byte_ceiling = _export_hard_byte_ceiling(
         candidate=candidate,
@@ -222,8 +225,8 @@ def export_snerv_checkpoint_archive(
         "checkpoint_meta_path": meta_path.as_posix(),
         "checkpoint_epoch": meta.get("global_epoch"),
         "checkpoint_state_kind": state_kind,
-        "checkpoint_state_sha256": sha256_file(state_path),
-        "startup_json_sha256": sha256_file(startup_path),
+        "checkpoint_state_sha256": checkpoint_state_sha256,
+        "startup_json_sha256": startup_json_sha256,
         "native_mlx_training_executed": True,
         "score_aware_long_training_executed": True,
         "score_aware_long_training_kind": "checkpoint_harvest_interrupted_run",
@@ -287,14 +290,16 @@ def export_snerv_checkpoint_archive(
         "family": "snerv",
         "candidate_id": candidate.get("candidate_id"),
         "checkpoint_meta_path": meta_path.as_posix(),
-        "checkpoint_meta_sha256": sha256_file(meta_path),
+        "checkpoint_meta_sha256": checkpoint_meta_sha256,
+        "checkpoint_meta_present_at_report_write": meta_path.is_file(),
         "checkpoint_epoch": meta.get("global_epoch"),
         "checkpoint_state_kind": state_kind,
         "checkpoint_state_path": state_path.as_posix(),
-        "checkpoint_state_sha256": sha256_file(state_path),
+        "checkpoint_state_sha256": checkpoint_state_sha256,
+        "checkpoint_state_present_at_report_write": state_path.is_file(),
         "modelsize_candidate": candidate,
         "startup_json_path": startup_path.as_posix(),
-        "startup_json_sha256": sha256_file(startup_path),
+        "startup_json_sha256": startup_json_sha256,
         "output_dir": out.as_posix(),
         "packet_path": packet_path.as_posix(),
         "packet_bytes": int(packet.total_bytes),

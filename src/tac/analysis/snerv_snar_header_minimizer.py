@@ -50,7 +50,9 @@ def build_snerv_snar_header_minimization(
     source_packet: bytes,
     *,
     source_packet_path: str | None = None,
+    candidate_id: str | None = None,
     proof_pair_indices: Sequence[int] = (),
+    full_video_receiver_proof: bool = False,
     frame_proof_max_output_bytes: int = DEFAULT_FRAME_PROOF_MAX_OUTPUT_BYTES,
     hard_byte_ceilings: Sequence[int] = (),
     generated_utc: str | None = None,
@@ -91,10 +93,15 @@ def build_snerv_snar_header_minimization(
         source,
         candidate,
         requested_pair_indices=proof_pair_indices,
+        full_video=bool(full_video_receiver_proof),
         max_output_bytes=int(frame_proof_max_output_bytes),
     )
     section_parity = all(row["bytes_exact_equal"] for row in section_rows)
     receiver_contract = bool(section_parity and proof["status"] == "proven_exact")
+    full_video_receiver_contract = bool(
+        receiver_contract and proof.get("scope") == "full_video_streaming"
+    )
+    bound_candidate_id = _nonempty_text(candidate_id)
     source_header_bytes = _outer_header_bytes(source_blob)
     candidate_header_bytes = _outer_header_bytes(candidate_packet)
     report = {
@@ -102,6 +109,17 @@ def build_snerv_snar_header_minimization(
         "axis_tag": AXIS_TAG,
         "generated_utc": generated_utc or datetime.now(UTC).isoformat(),
         "operation": "snar1_receiver_metadata_prune",
+        "candidate_binding": {
+            "candidate_id": bound_candidate_id,
+            "binding_status": (
+                "candidate_id_and_source_packet_sha256"
+                if bound_candidate_id
+                else "source_packet_sha256_only_false_authority"
+            ),
+            "source_packet_sha256": _sha256(source_blob),
+            "candidate_packet_sha256": _sha256(candidate_packet),
+            "candidate_id_required_for_launch_reenable": True,
+        },
         "source_packet": {
             "path": source_packet_path,
             "bytes": len(source_blob),
@@ -140,7 +158,8 @@ def build_snerv_snar_header_minimization(
         },
         "receiver_pair_frame_equality_proof": proof,
         "receiver_contract_satisfied": receiver_contract,
-        "runtime_consumption_proof_ready": receiver_contract,
+        "full_video_receiver_contract_satisfied": full_video_receiver_contract,
+        "runtime_consumption_proof_ready": full_video_receiver_contract,
         "hard_byte_ceiling_rows": [
             _hard_byte_ceiling_row(
                 ceiling=int(ceiling),
@@ -157,12 +176,20 @@ def build_snerv_snar_header_minimization(
             "inflate_py_changed": False,
             "external_runtime_state_required": False,
             "removed_metadata_preserved_outside_archive": True,
+            "candidate_id_bound": bool(bound_candidate_id),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
-        "next_actions": _next_actions(receiver_contract=receiver_contract),
-        "blockers": _blockers(receiver_contract=receiver_contract),
+        "next_actions": _next_actions(
+            receiver_contract=receiver_contract,
+            full_video_receiver_contract=full_video_receiver_contract,
+        ),
+        "blockers": _blockers(
+            receiver_contract=receiver_contract,
+            full_video_receiver_contract=full_video_receiver_contract,
+            candidate_id_bound=bool(bound_candidate_id),
+        ),
         "raw_argv": list(raw_argv),
         **FALSE_AUTHORITY,
     }
@@ -236,13 +263,26 @@ def _receiver_pair_frame_proof(
     candidate: Any,
     *,
     requested_pair_indices: Sequence[int],
+    full_video: bool,
     max_output_bytes: int,
 ) -> dict[str, Any]:
-    pair_indices = _proof_pair_indices(source.metadata, requested_pair_indices)
+    pair_indices = (
+        _full_video_pair_indices(source.metadata)
+        if full_video
+        else _proof_pair_indices(source.metadata, requested_pair_indices)
+    )
     estimate = _pair_frame_output_bytes(source.metadata, pair_indices)
+    if full_video:
+        return _streaming_receiver_pair_frame_proof(
+            source,
+            candidate,
+            pair_indices=pair_indices,
+            estimated_output_bytes=estimate,
+        )
     if estimate is not None and estimate > int(max_output_bytes):
         return {
             "status": "skipped_by_output_byte_guard",
+            "scope": "sampled_pairs",
             "pair_indices": pair_indices,
             "estimated_output_bytes": estimate,
             "max_output_bytes": int(max_output_bytes),
@@ -261,6 +301,7 @@ def _receiver_pair_frame_proof(
     except SnervArchiveError as exc:
         return {
             "status": "error",
+            "scope": "sampled_pairs",
             "pair_indices": pair_indices,
             "estimated_output_bytes": estimate,
             "error": f"{type(exc).__name__}:{exc}",
@@ -270,6 +311,7 @@ def _receiver_pair_frame_proof(
     exact = bool(np.array_equal(source_frames, candidate_frames))
     return {
         "status": "proven_exact" if exact else "failed",
+        "scope": "sampled_pairs",
         "pair_indices": pair_indices,
         "estimated_output_bytes": estimate,
         "source_shape": list(source_frames.shape),
@@ -281,6 +323,83 @@ def _receiver_pair_frame_proof(
         if exact
         else ["snerv_snar_header_minimizer_receiver_pair_frames_changed"],
     }
+
+
+def _streaming_receiver_pair_frame_proof(
+    source: Any,
+    candidate: Any,
+    *,
+    pair_indices: Sequence[int],
+    estimated_output_bytes: int | None,
+) -> dict[str, Any]:
+    source_hash = hashlib.sha256()
+    candidate_hash = hashlib.sha256()
+    source_shape: list[int] | None = None
+    candidate_shape: list[int] | None = None
+    first_mismatch: int | None = None
+    decoded_pairs = 0
+    try:
+        for pair_index in pair_indices:
+            source_frames = decode_snerv_archive_pair_frames_from_decoded(
+                source,
+                [int(pair_index)],
+            )
+            candidate_frames = decode_snerv_archive_pair_frames_from_decoded(
+                candidate,
+                [int(pair_index)],
+            )
+            if source_shape is None:
+                source_shape = list(source_frames.shape)
+            if candidate_shape is None:
+                candidate_shape = list(candidate_frames.shape)
+            source_bytes = np.ascontiguousarray(source_frames).tobytes()
+            candidate_bytes = np.ascontiguousarray(candidate_frames).tobytes()
+            source_hash.update(source_bytes)
+            candidate_hash.update(candidate_bytes)
+            decoded_pairs += 1
+            if first_mismatch is None and source_bytes != candidate_bytes:
+                first_mismatch = int(pair_index)
+    except SnervArchiveError as exc:
+        return {
+            "status": "error",
+            "scope": "full_video_streaming",
+            "pair_count": len(pair_indices),
+            "decoded_pair_count": decoded_pairs,
+            "estimated_output_bytes": estimated_output_bytes,
+            "error": f"{type(exc).__name__}:{exc}",
+            "exact_equal": False,
+            "blockers": ["snerv_snar_header_minimizer_full_video_receiver_decode_failed"],
+        }
+    exact = first_mismatch is None
+    return {
+        "status": "proven_exact" if exact else "failed",
+        "scope": "full_video_streaming",
+        "pair_count": len(pair_indices),
+        "decoded_pair_count": decoded_pairs,
+        "pair_indices_summary": {
+            "first": int(pair_indices[0]) if pair_indices else None,
+            "last": int(pair_indices[-1]) if pair_indices else None,
+        },
+        "estimated_output_bytes": estimated_output_bytes,
+        "first_pair_shape": source_shape,
+        "first_candidate_shape": candidate_shape,
+        "source_stream_sha256": source_hash.hexdigest(),
+        "candidate_stream_sha256": candidate_hash.hexdigest(),
+        "first_mismatch_pair_index": first_mismatch,
+        "exact_equal": exact,
+        "blockers": []
+        if exact
+        else ["snerv_snar_header_minimizer_full_video_receiver_frames_changed"],
+    }
+
+
+def _full_video_pair_indices(metadata: Mapping[str, Any]) -> list[int]:
+    n_pairs = _positive_int(metadata.get("n_pairs"))
+    if n_pairs is None:
+        raise SnervSnarHeaderMinimizerError(
+            "source metadata missing n_pairs for full-video receiver proof"
+        )
+    return list(range(int(n_pairs)))
 
 
 def _proof_pair_indices(
@@ -326,12 +445,22 @@ def _outer_header_bytes(packet: bytes) -> int:
     return int(len(SNERV_ARCHIVE_MAGIC) + size + int(header_len))
 
 
-def _next_actions(*, receiver_contract: bool) -> list[str]:
-    if receiver_contract:
+def _next_actions(
+    *,
+    receiver_contract: bool,
+    full_video_receiver_contract: bool,
+) -> list[str]:
+    if full_video_receiver_contract:
         return [
             "rerun_snerv_lf_recode_admission_with_minimized_packet",
             "package_minimized_packet_as_archive_zip_with_runtime_custody",
             "run_full_video_local_replay_before_any_long_training_reenable",
+            "prototype_snar2_binary_or_cbor_header_after_snar1_prune",
+        ]
+    if receiver_contract:
+        return [
+            "run_full_video_streaming_receiver_replay_for_minimized_packet",
+            "keep_sampled_pair_proof_as_advisory_until_full_video_replay_passes",
             "prototype_snar2_binary_or_cbor_header_after_snar1_prune",
         ]
     return [
@@ -340,7 +469,12 @@ def _next_actions(*, receiver_contract: bool) -> list[str]:
     ]
 
 
-def _blockers(*, receiver_contract: bool) -> list[str]:
+def _blockers(
+    *,
+    receiver_contract: bool,
+    full_video_receiver_contract: bool,
+    candidate_id_bound: bool,
+) -> list[str]:
     blockers = [
         "snerv_snar_header_minimization_false_authority",
         "not_packaged_as_contest_archive_zip",
@@ -348,8 +482,14 @@ def _blockers(*, receiver_contract: bool) -> list[str]:
         "paired_contest_cpu_cuda_auth_eval_missing",
         "snar2_no_human_readable_label_bitstream_not_implemented",
     ]
+    if not candidate_id_bound:
+        blockers.append("snerv_snar_header_minimization_candidate_id_binding_missing")
     if not receiver_contract:
         blockers.append("snerv_snar_header_minimization_receiver_proof_failed")
+    elif not full_video_receiver_contract:
+        blockers.append(
+            "snerv_snar_header_minimization_full_video_receiver_proof_missing"
+        )
     return blockers
 
 
@@ -406,6 +546,11 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _nonempty_text(value: Any) -> str | None:
+    text = str(value or "").strip()
+    return text or None
 
 
 def _dedupe_ints(values: Sequence[int]) -> list[int]:

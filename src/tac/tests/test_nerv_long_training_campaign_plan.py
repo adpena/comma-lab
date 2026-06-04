@@ -1169,11 +1169,20 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     assert header_rewrite["command_argv"][
         header_rewrite["command_argv"].index("--packet") + 1
     ] == "/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar"
+    assert "--candidate-id" in header_rewrite["command_argv"]
+    assert header_rewrite["command_argv"][
+        header_rewrite["command_argv"].index("--candidate-id") + 1
+    ] == snerv["candidate_id"]
     assert "--output-packet" in header_rewrite["command_argv"]
     assert "--output-archive-zip" in header_rewrite["command_argv"]
     assert header_rewrite["command_argv"][
         header_rewrite["command_argv"].index("--output-archive-zip") + 1
     ].endswith("/archive.zip")
+    assert "--output-package-dir" in header_rewrite["command_argv"]
+    assert header_rewrite["command_argv"][
+        header_rewrite["command_argv"].index("--output-package-dir") + 1
+    ].endswith("/runtime_package")
+    assert "--full-video-receiver-proof" in header_rewrite["command_argv"]
     assert "--hard-byte-ceiling" in header_rewrite["command_argv"]
     assert int(
         header_rewrite["command_argv"][
@@ -1259,6 +1268,10 @@ def test_long_training_campaign_plan_consumes_snerv_header_minimization_result()
     ] == 139_963
     assert result["snar_header_minimization_report"]["receiver_contract_satisfied"] is True
     assert (
+        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
+        in result["blockers"]
+    )
+    assert (
         "snerv_snar_header_minimized_packet_full_video_replay_missing"
         in result["blockers"]
     )
@@ -1272,6 +1285,100 @@ def test_long_training_campaign_plan_consumes_snerv_header_minimization_result()
         "snerv_snar_header_minimization_result_precedes_lf_representation_change"
         in row["blockers"]
         for row in representation_rows
+    )
+
+
+def test_long_training_campaign_plan_accepts_full_video_header_minimization_proof() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_lf_payload_recode_sources=(
+            _snerv_lf_recode_report(
+                mode="auto",
+                source_packet_bytes=2_347_142,
+                candidate_packet_bytes=1_485_285,
+                candidate_packet_header_bytes=1_346_233,
+                candidate_packet_path="/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
+                source_lf_bytes=879_633,
+                candidate_lf_bytes=17_779,
+            ),
+        ),
+        snerv_snar_header_minimization_report_sources=(
+            _snerv_snar_header_minimization_report(
+                source_packet_sha256="b" * 64,
+                candidate_id=_snerv_candidate_id(),
+                full_video_receiver_contract_satisfied=True,
+            ),
+        ),
+    )
+
+    reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
+    rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
+    result = rows_by_type["snar_header_minimization_result"]
+    assert result["snar_header_minimization_report"][
+        "full_video_receiver_contract_satisfied"
+    ] is True
+    assert (
+        "snerv_snar_header_minimized_packet_full_video_replay_missing"
+        not in result["blockers"]
+    )
+    assert (
+        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
+        not in result["blockers"]
+    )
+    assert "paired_contest_cpu_cuda_auth_eval_missing" in result["blockers"]
+    assert result["score_claim"] is False
+
+
+def test_long_training_campaign_plan_prefers_candidate_bound_header_minimization() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_lf_payload_recode_sources=(
+            _snerv_lf_recode_report(
+                mode="auto",
+                source_packet_bytes=2_347_142,
+                candidate_packet_bytes=1_485_285,
+                candidate_packet_header_bytes=1_346_233,
+                candidate_packet_path="/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
+                source_lf_bytes=879_633,
+                candidate_lf_bytes=17_779,
+            ),
+        ),
+        snerv_snar_header_minimization_report_sources=(
+            _snerv_snar_header_minimization_report(
+                source_packet_sha256="b" * 64,
+                candidate_id="other_snerv_candidate",
+                candidate_packet_bytes=141_000,
+            ),
+            _snerv_snar_header_minimization_report(
+                source_packet_sha256="b" * 64,
+                candidate_id=_snerv_candidate_id(),
+                candidate_packet_bytes=139_855,
+            ),
+        ),
+    )
+
+    rows_by_type = {
+        row["work_order_type"]: row
+        for row in report["snerv_lf_over_ceiling_reroute_queue"]["queue_rows"]
+    }
+    result = rows_by_type["snar_header_minimization_result"]
+    assert result["snar_header_minimization_report"]["candidate_packet_bytes"] == 139_855
+    assert result["snar_header_minimization_report"]["candidate_binding"][
+        "candidate_id"
+    ] == _snerv_candidate_id()
+    assert (
+        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
+        not in result["blockers"]
     )
 
 
@@ -5186,8 +5293,14 @@ def _snerv_snar_header_grammar_profile(
     }
 
 
-def _snerv_snar_header_minimization_report(*, source_packet_sha256: str) -> dict:
-    return {
+def _snerv_snar_header_minimization_report(
+    *,
+    source_packet_sha256: str,
+    candidate_id: str | None = None,
+    candidate_packet_bytes: int = 139_855,
+    full_video_receiver_contract_satisfied: bool = False,
+) -> dict:
+    report = {
         "schema": "snerv_snar_header_minimization.v1",
         "source_packet": {
             "path": "/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
@@ -5197,7 +5310,7 @@ def _snerv_snar_header_minimization_report(*, source_packet_sha256: str) -> dict
         },
         "candidate_packet": {
             "path": "/Volumes/VertigoDataTier/pact/snerv_test/candidate.minimized.snar",
-            "bytes": 139_855,
+            "bytes": int(candidate_packet_bytes),
             "sha256": "c" * 64,
             "header_bytes": 803,
         },
@@ -5210,6 +5323,18 @@ def _snerv_snar_header_minimization_report(*, source_packet_sha256: str) -> dict
         "packet_byte_delta": -1_345_430,
         "header_byte_delta": -1_345_430,
         "receiver_contract_satisfied": True,
+        "full_video_receiver_contract_satisfied": (
+            bool(full_video_receiver_contract_satisfied)
+        ),
+        "receiver_pair_frame_equality_proof": {
+            "status": "proven_exact",
+            "scope": (
+                "full_video_streaming"
+                if full_video_receiver_contract_satisfied
+                else "sampled_pairs"
+            ),
+            "exact_equal": True,
+        },
         "hard_byte_ceiling_rows": [
             {
                 "hard_byte_ceiling": 178_000,
@@ -5229,6 +5354,15 @@ def _snerv_snar_header_minimization_report(*, source_packet_sha256: str) -> dict
         "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    if candidate_id is not None:
+        report["candidate_binding"] = {
+            "candidate_id": str(candidate_id),
+            "binding_status": "candidate_id_and_source_packet_sha256",
+            "source_packet_sha256": source_packet_sha256,
+            "candidate_packet_sha256": "c" * 64,
+            "candidate_id_required_for_launch_reenable": True,
+        }
+    return report
 
 
 def _decoder_weight_waterfill_plan(
