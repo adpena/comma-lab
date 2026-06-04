@@ -10729,7 +10729,15 @@ def _measured_archive_byte_cap_report(
         blockers.append("measured_archive_sha256_missing_for_byte_cap")
     if candidate and candidate_ceiling is None:
         blockers.append("selected_modelsize_candidate_missing_hard_byte_ceiling")
-    if delta is not None and delta > 0:
+    if (
+        delta is not None
+        and delta > 0
+        and (
+            candidate_ceiling is None
+            or tightest is None
+            or int(candidate_ceiling) <= int(tightest)
+        )
+    ):
         blockers.append("measured_archive_bytes_exceed_tightest_hard_ceiling")
     if candidate_delta is not None and candidate_delta > 0:
         blockers.append("measured_archive_bytes_exceed_selected_candidate_ceiling")
@@ -10746,6 +10754,11 @@ def _measured_archive_byte_cap_report(
         "under_tightest_hard_byte_ceiling": under_tightest,
         "under_selected_candidate_hard_byte_ceiling": (
             None if candidate_delta is None else candidate_delta <= 0
+        ),
+        "tightest_hard_ceiling_is_blocking": bool(
+            candidate_ceiling is None
+            or tightest is None
+            or int(candidate_ceiling) <= int(tightest)
         ),
         "blockers": _dedupe(blockers),
         "score_claim": False,
@@ -13768,15 +13781,13 @@ def _startup_byte_cap_binding(
         blockers.append("hard_byte_ceiling_not_configured")
     if candidate and candidate_ceiling is None:
         blockers.append("selected_modelsize_candidate_missing_hard_byte_ceiling")
-    if (
-        tightest_ceiling is not None
-        and candidate_ceiling is not None
-        and int(candidate_ceiling) > int(tightest_ceiling)
-    ):
-        blockers.append("selected_modelsize_candidate_ceiling_looser_than_tightest_cap")
     if nominal_total is None:
         blockers.append("selected_modelsize_candidate_nominal_payload_bytes_missing")
-    elif tightest_ceiling is not None and int(nominal_total) > int(tightest_ceiling):
+    elif candidate_ceiling is not None and int(nominal_total) > int(candidate_ceiling):
+        blockers.append("selected_modelsize_candidate_nominally_over_own_hard_ceiling")
+    elif candidate_ceiling is None and tightest_ceiling is not None and int(
+        nominal_total
+    ) > int(tightest_ceiling):
         blockers.append("selected_modelsize_candidate_nominally_over_tightest_cap")
     blockers.append("byte_cap_requires_measured_archive_zip_export")
     return {
@@ -13794,6 +13805,7 @@ def _startup_byte_cap_binding(
         "selected_candidate_nominal_under_tightest_hard_ceiling": (
             None if nominal_headroom is None else nominal_headroom >= 0
         ),
+        "tightest_hard_ceiling_is_blocking": bool(candidate_ceiling is None),
         "calibrated_predicted_archive_bytes": predicted_archive_bytes,
         "calibrated_predicted_headroom_bytes": predicted_headroom,
         "calibrated_predicted_under_hard_byte_ceiling": (

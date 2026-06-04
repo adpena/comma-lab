@@ -1305,6 +1305,31 @@ def test_compact_family_startup_marker_records_inverse_modelsize_target(
     ]
 
 
+def test_startup_byte_cap_binding_allows_looser_selected_sweep_ceiling() -> None:
+    binding = runner_mod._startup_byte_cap_binding(
+        family="hi_nerv",
+        hard_byte_ceilings=(178_000, 216_000, 285_000),
+        modelsize_candidate={
+            "candidate_id": "hinerv_285k_candidate",
+            "hard_byte_ceiling": 285_000,
+            "nominal_total_payload_bytes": 240_000,
+            "byte_headroom": 45_000,
+            "nominal_under_ceiling": True,
+            "modelsize_control_contract": {
+                "archive_bytes_authority_required": True,
+                "modelsize_mparams_caps_archive_zip_bytes": False,
+            },
+        },
+    )
+
+    assert binding["tightest_hard_byte_ceiling"] == 178_000
+    assert binding["selected_candidate_hard_byte_ceiling"] == 285_000
+    assert binding["selected_candidate_nominal_under_tightest_hard_ceiling"] is False
+    assert binding["selected_candidate_nominal_under_own_hard_ceiling"] is True
+    assert binding["tightest_hard_ceiling_is_blocking"] is False
+    assert binding["blockers"] == ["byte_cap_requires_measured_archive_zip_export"]
+
+
 def test_compact_family_interrupted_report_preserves_false_authority_custody(
     tmp_path: Path,
 ) -> None:
@@ -5718,6 +5743,25 @@ def test_hinerv_trained_archive_byte_oracle_blocks_measured_over_cap(
         "blockers"
     ]
     assert oracle["feedback_ready"] is False
+
+
+def test_measured_archive_byte_cap_report_allows_selected_looser_ceiling() -> None:
+    report = runner_mod._measured_archive_byte_cap_report(
+        archive_bytes=240_000,
+        archive_sha256="a" * 64,
+        hard_byte_ceilings=(178_000, 216_000, 285_000),
+        candidate={
+            "candidate_id": "hinerv_285k_candidate",
+            "hard_byte_ceiling": 285_000,
+        },
+    )
+
+    assert report["tightest_hard_byte_ceiling"] == 178_000
+    assert report["selected_candidate_hard_byte_ceiling"] == 285_000
+    assert report["under_tightest_hard_byte_ceiling"] is False
+    assert report["under_selected_candidate_hard_byte_ceiling"] is True
+    assert report["tightest_hard_ceiling_is_blocking"] is False
+    assert report["blockers"] == []
 
 
 def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
