@@ -7877,6 +7877,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         repo_root=root,
     )
     blockers.extend(post_export_materializer_execution.get("blockers") or [])
+    priority_hydration_contract = _hi_nerv_priority_target_hydration_contract(
+        prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
+        model_num_pairs=int(num_pairs),
+        hydrated_target_pair_count=(
+            len(prioritized_pair_indices) if prioritized_pair_indices else int(num_pairs)
+        ),
+    )
 
     final = _base_report(
         output_dir=out,
@@ -7995,20 +8002,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     else None
                 ),
                 "prioritized_pair_training": {
-                    "schema": "compact_hi_nerv_prioritized_pair_training.v1",
-                    "enabled": bool(prioritized_pair_indices),
-                    "pair_indices": [int(value) for value in prioritized_pair_indices],
-                    "pair_count": len(prioritized_pair_indices),
-                    "sampling_scope": "training_batch_emphasis_only",
-                    "pair_index_domain": (
-                        "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
-                    ),
-                    "arbitrary_source_pair_hydration": False,
-                    "target_hydration_pair_indices_consumed": False,
-                    "requires_num_pairs_covering_pair_ids": bool(
-                        prioritized_pair_indices
-                    ),
-                    "authority": "macos_mlx_research_signal_false_authority",
+                    **priority_hydration_contract,
                     **FALSE_AUTHORITY,
                 },
                 "coder_aware_qat": _coder_qat_report_metadata(
@@ -10413,6 +10407,42 @@ def _resume_start_epoch_for_pose_monitor(
     return max(0, global_epoch + 1)
 
 
+def _hi_nerv_priority_target_hydration_contract(
+    *,
+    prioritized_pair_indices: tuple[int, ...],
+    model_num_pairs: int,
+    hydrated_target_pair_count: int,
+) -> dict[str, Any]:
+    """Return the machine-readable HiNeRV hard-pair hydration contract."""
+
+    sparse = bool(prioritized_pair_indices)
+    return {
+        "schema": "compact_hi_nerv_prioritized_pair_training.v1",
+        "enabled": sparse,
+        "pair_indices": [int(value) for value in prioritized_pair_indices],
+        "pair_count": len(prioritized_pair_indices),
+        "sampling_scope": (
+            "sparse_source_pair_target_hydration"
+            if sparse
+            else "training_batch_emphasis_only"
+        ),
+        "pair_index_domain": (
+            "source_video_pair_indices_0_to_model_num_pairs_minus_1"
+            if sparse
+            else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+        ),
+        "model_num_pairs": int(model_num_pairs),
+        "hydrated_target_pair_count": int(hydrated_target_pair_count),
+        "source_pair_indices": [int(value) for value in prioritized_pair_indices],
+        "local_target_rows_are_compact": sparse,
+        "arbitrary_source_pair_hydration": sparse,
+        "target_hydration_pair_indices_consumed": sparse,
+        "target_hydration_pair_indices_consumed_by_renderer_bundle": sparse,
+        "requires_num_pairs_covering_pair_ids": sparse,
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+
+
 def _modelsize_budget_rows_from_plan(plan: Any) -> list[dict[str, Any]]:
     if not isinstance(plan, Mapping):
         return []
@@ -10715,6 +10745,20 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
     except HardPairIndicesError as exc:
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
+    sparse_priority_target_hydration = bool(prioritized_pair_indices)
+    hydrated_source_pair_indices = (
+        tuple(int(value) for value in prioritized_pair_indices)
+        if sparse_priority_target_hydration
+        else ()
+    )
+    hydrated_target_pair_count = (
+        len(hydrated_source_pair_indices) if sparse_priority_target_hydration else pairs
+    )
+    priority_hydration_contract = _hi_nerv_priority_target_hydration_contract(
+        prioritized_pair_indices=hydrated_source_pair_indices,
+        model_num_pairs=pairs,
+        hydrated_target_pair_count=hydrated_target_pair_count,
+    )
 
     from tac.substrates._shared.mlx_score_aware import (
         CoderAwareQATConfig,
@@ -10813,9 +10857,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
     target_rgb_0, target_rgb_1 = decode_mlx_targets(
         source_video_path,
-        num_pairs=pairs,
+        num_pairs=hydrated_target_pair_count,
         output_height=int(cfg.output_height),
         output_width=int(cfg.output_width),
+        pair_indices=(
+            hydrated_source_pair_indices
+            if sparse_priority_target_hydration
+            else None
+        ),
     )
     model = HinervSubstrateMLX(cfg)
     optimizer_policy = dict(hi_nerv_optimizer_policy or {})
@@ -10878,6 +10927,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "schema": "compact_renderer_hi_nerv_mlx_adapter_smoke_metadata.v1",
         "family": "hi_nerv",
         "num_pairs": pairs,
+        "model_num_pairs": pairs,
+        "hydrated_target_pair_count": hydrated_target_pair_count,
+        "source_pair_indices": [int(value) for value in hydrated_source_pair_indices],
         "full_video_pairs_required_for_promotion": 600,
         "decoder_codec": str(decoder_codec),
         "hi_nerv_latent_codec": str(hi_nerv_latent_codec),
@@ -10951,18 +11003,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             ),
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "prioritized_pair_training": {
-                "schema": "compact_hi_nerv_prioritized_pair_training.v1",
-                "enabled": bool(prioritized_pair_indices),
-                "pair_indices": [int(value) for value in prioritized_pair_indices],
-                "pair_count": len(prioritized_pair_indices),
-                "sampling_scope": "training_batch_emphasis_only",
-                "pair_index_domain": "decoded_prefix_pair_indices_0_to_num_pairs_minus_1",
-                "arbitrary_source_pair_hydration": False,
-                "target_hydration_pair_indices_consumed": False,
-                "requires_num_pairs_covering_pair_ids": bool(
-                    prioritized_pair_indices
-                ),
-                "authority": "macos_mlx_research_signal_false_authority",
+                **priority_hydration_contract,
                 "canonical_authority_surface": (
                     "TrainingArtifact top-level false-authority fields"
                 ),
@@ -11026,7 +11067,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "model": model,
         "target_rgb_0": target_rgb_0,
         "target_rgb_1": target_rgb_1,
-        "num_pairs": pairs,
+        "num_pairs": hydrated_target_pair_count,
         "forward_convention": "call_b2chw_255",
         "extra_loss_terms": _extra_loss_terms,
         "extra_loss_weights": coder_qat_loss_weights(coder_qat_cfg),
@@ -11036,12 +11077,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "eval_roundtrip_camera_hw": (874, 1164),
         "pose_student_input_preprocess": "pr95_yuv6",
     }
+    if sparse_priority_target_hydration:
+        bundle_kwargs["source_pair_indices"] = hydrated_source_pair_indices
     recon_pixel_weight = None
     if recon_pixel_weight_path is not None:
         recon_pixel_weight, recon_metadata = _load_recon_pixel_weight(
             recon_pixel_weight_path,
             base=repo_root,
-            expected_pairs=pairs,
+            expected_pairs=hydrated_target_pair_count,
             normalize=recon_pixel_weight_normalize,
         )
         if recon_pixel_weight_auto_discovery is not None:
@@ -11158,7 +11201,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         cosine_decay_min_lr_ratio=float(
             optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
         ),
-        prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
+        prioritized_pair_indices=hydrated_source_pair_indices,
         on_epoch_end=pose_instability_monitor,
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "

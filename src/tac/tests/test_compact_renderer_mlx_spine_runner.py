@@ -1425,10 +1425,18 @@ def test_hinerv_execute_forwards_prioritized_pair_indices(
     assert prioritized["pair_indices"] == [3, 1]
     assert (
         prioritized["pair_index_domain"]
-        == "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
+        == "source_video_pair_indices_0_to_model_num_pairs_minus_1"
     )
-    assert prioritized["arbitrary_source_pair_hydration"] is False
-    assert prioritized["target_hydration_pair_indices_consumed"] is False
+    assert prioritized["model_num_pairs"] == 4
+    assert prioritized["hydrated_target_pair_count"] == 2
+    assert prioritized["source_pair_indices"] == [3, 1]
+    assert prioritized["local_target_rows_are_compact"] is True
+    assert prioritized["arbitrary_source_pair_hydration"] is True
+    assert prioritized["target_hydration_pair_indices_consumed"] is True
+    assert (
+        prioritized["target_hydration_pair_indices_consumed_by_renderer_bundle"]
+        is True
+    )
     assert prioritized["requires_num_pairs_covering_pair_ids"] is True
     assert prioritized["score_claim"] is False
     assert prioritized["promotion_eligible"] is False
@@ -1502,6 +1510,174 @@ def test_hinerv_execute_rejects_out_of_range_prioritized_pairs(
             prioritized_pair_indices=(3, 4),
             repo_root=REPO_ROOT,
         )
+
+
+def test_hinerv_private_smoke_uses_sparse_source_pair_target_hydration(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
+
+    captured: dict[str, object] = {}
+
+    class FakeHinervModel:
+        def __init__(self, cfg):
+            self.cfg = cfg
+            self.fake_quant = {}
+
+        def configure_decoder_fake_quant_forward(self, **kwargs):
+            self.fake_quant = dict(kwargs)
+
+        def num_parameters(self):
+            return 123
+
+    class FakeArtifact:
+        def __init__(self, payload: dict[str, object]) -> None:
+            self._payload = payload
+
+        def as_dict(self) -> dict[str, object]:
+            return dict(self._payload)
+
+    def fake_decode_mlx_targets(
+        video_path,
+        *,
+        num_pairs,
+        output_height,
+        output_width,
+        pair_indices=None,
+    ):
+        captured["decode_call"] = {
+            "video_path": Path(video_path),
+            "num_pairs": int(num_pairs),
+            "output_height": int(output_height),
+            "output_width": int(output_width),
+            "pair_indices": tuple(pair_indices or ()),
+        }
+        shape = (int(num_pairs), int(output_height), int(output_width), 3)
+        return np.zeros(shape, dtype=np.float32), np.zeros(shape, dtype=np.float32)
+
+    def fake_run_mlx_score_aware_full_main(**kwargs):
+        bundle = kwargs["bundle"]
+        captured["bundle_num_pairs"] = int(bundle.num_pairs)
+        captured["bundle_source_pair_indices"] = tuple(bundle.source_pair_indices or ())
+        captured["model_num_pairs"] = int(bundle.model.cfg.num_pairs)
+        captured["run_prioritized_pair_indices"] = tuple(
+            kwargs["prioritized_pair_indices"]
+        )
+        archive = tmp_path / "fake_hinerv_sparse_hydration_archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=10)
+        return FakeArtifact(
+            {
+                "archive_path": archive.as_posix(),
+                "archive_bytes": archive.stat().st_size,
+                "archive_sha256": runner_mod._sha256_file(archive),
+                "substrate_artifact_metadata": dict(
+                    bundle.substrate_artifact_metadata
+                ),
+            }
+        )
+
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "decode_mlx_targets",
+        fake_decode_mlx_targets,
+    )
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "run_mlx_score_aware_full_main",
+        fake_run_mlx_score_aware_full_main,
+    )
+    monkeypatch.setattr(
+        hinerv_mlx_renderer,
+        "HinervSubstrateMLX",
+        FakeHinervModel,
+    )
+
+    artifact = runner_mod._run_hi_nerv_mlx_scoreaware_smoke(
+        output_dir=tmp_path / "private_smoke_sparse_priority_hydration",
+        num_pairs=10,
+        epochs=1,
+        batch_pair_indices_per_step=2,
+        learning_rate=1e-3,
+        source_video_path=tmp_path / "not_read_by_fake_decoder.mkv",
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        use_hierarchical_feature_grid=False,
+        use_convnext_blocks=False,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=7,
+        mid_injection_block_index=1,
+        fine_injection_block_index=4,
+        decoder_codec="portfolio_auto",
+        hi_nerv_latent_codec="int16_brotli_q11",
+        ema_decay=0.9,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_distillation_loss="mse",
+        pose_distillation_huber_delta=1.0,
+        recon_loss_stage_weight=1.0,
+        segnet_loss_stage_weight=1.0,
+        pose_loss_stage_weight=1.0,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_tau_boundary=1.0,
+        segnet_hinge_margin=1.0,
+        distillation_device="cpu",
+        requested_distillation_device=None,
+        allow_segnet_only_research=False,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.0,
+        coder_qat_magnitude_weight=0.0,
+        coder_qat_delta_weight=0.0,
+        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+        coder_qat_c1a_sample_size=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
+        recon_pixel_weight_path=None,
+        decoder_weight_waterfill_plan=None,
+        recon_pixel_weight_auto_discovery=None,
+        auto_segnet_boundary_recon_weight=False,
+        recon_pixel_weight_tau=1.0,
+        recon_pixel_weight_normalize="mean",
+        mlx_prefilter_scorer_device=None,
+        mlx_prefilter_scorer_batch_pairs=1,
+        mlx_prefilter_progress_every=50,
+        telemetry_flush_interval_epochs=1,
+        checkpoint_interval_epochs=1,
+        checkpoint_dir=None,
+        resume_from_checkpoint=None,
+        optimizer_kind="adamw",
+        hi_nerv_optimizer_policy={},
+        optimizer_controls={},
+        prioritized_pair_indices=(7, 2),
+        random_seed=0,
+        scorer_upstream_dir=REPO_ROOT / "upstream",
+        repo_root=REPO_ROOT,
+    )
+
+    decode_call = captured["decode_call"]
+    assert decode_call["num_pairs"] == 2
+    assert decode_call["pair_indices"] == (7, 2)
+    assert captured["bundle_num_pairs"] == 2
+    assert captured["bundle_source_pair_indices"] == (7, 2)
+    assert captured["model_num_pairs"] == 10
+    assert captured["run_prioritized_pair_indices"] == (7, 2)
+    metadata = artifact.as_dict()["substrate_artifact_metadata"]
+    training = metadata["score_aware_training"]
+    assert metadata["model_num_pairs"] == 10
+    assert metadata["hydrated_target_pair_count"] == 2
+    assert metadata["source_pair_indices"] == [7, 2]
+    priority = training["prioritized_pair_training"]
+    assert priority["sampling_scope"] == "sparse_source_pair_target_hydration"
+    assert priority["target_hydration_pair_indices_consumed"] is True
+    assert (
+        priority["target_hydration_pair_indices_consumed_by_renderer_bundle"]
+        is True
+    )
 
 
 def test_hinerv_private_smoke_rejects_out_of_range_prioritized_pairs(
