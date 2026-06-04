@@ -664,6 +664,15 @@ def _checkpoint_export_ladder_row(
         and runtime_consumption_proof_passed
         and receiver_contract_satisfied
     )
+    receiver_cache_quality = _checkpoint_export_receiver_cache_quality_summary(
+        export,
+        output_dir=output_dir,
+        archive_sha256=archive_sha256,
+    )
+    receiver_cache_quality_blockers = list(
+        receiver_cache_quality.get("row_blockers") or ()
+    )
+    blockers.extend(receiver_cache_quality_blockers)
 
     nominal_total_payload_bytes = (
         None
@@ -720,6 +729,19 @@ def _checkpoint_export_ladder_row(
         "runtime_consumption_proof_passed": bool(runtime_consumption_proof_passed),
         "receiver_contract_satisfied": bool(receiver_contract_satisfied),
         "receiver_closed": receiver_closed,
+        "post_export_receiver_cache_quality": receiver_cache_quality.get("summary"),
+        "receiver_cache_quality_report_path": receiver_cache_quality.get("report_path"),
+        "receiver_cache_quality_report_sha256": receiver_cache_quality.get(
+            "report_sha256"
+        ),
+        "receiver_cache_quality_gate_passed": bool(
+            receiver_cache_quality.get("quality_gate_passed")
+        ),
+        "receiver_cache_quality_gate_verdict": receiver_cache_quality.get(
+            "quality_gate_verdict"
+        ),
+        "receiver_cache_quality_blockers": receiver_cache_quality_blockers,
+        "receiver_cache_quality_required_for_replay": True,
         "required_allocator_bindings": list(REQUIRED_ALLOCATOR_BINDINGS),
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
@@ -741,6 +763,195 @@ def _resolve_export_path(
     if output_dir is not None:
         return (output_dir / fallback_name).resolve(strict=False)
     return Path(fallback_name).expanduser().resolve(strict=False)
+
+
+def _checkpoint_export_receiver_cache_quality_summary(
+    export: Mapping[str, Any],
+    *,
+    output_dir: Path | None,
+    archive_sha256: str,
+) -> dict[str, Any]:
+    """Return cache-quality summary plus row blockers for a checkpoint export."""
+
+    row_blockers: list[str] = []
+    summary_payload = _receiver_cache_quality_summary_from_export(export)
+    report_path = _resolve_receiver_cache_quality_report_path(
+        export,
+        output_dir=output_dir,
+        summary=summary_payload,
+    )
+    report_payload: Mapping[str, Any] | None = None
+    report_sha256: str | None = None
+    if report_path is not None and report_path.is_file():
+        try:
+            report_payload = _read_json_if_exists(report_path)
+        except (OSError, json.JSONDecodeError):
+            row_blockers.append(
+                "hinerv_checkpoint_export_receiver_cache_quality_unreadable"
+            )
+        else:
+            report_sha256 = sha256_file(report_path)
+    elif summary_payload is None:
+        row_blockers.append("hinerv_checkpoint_export_receiver_cache_quality_missing")
+
+    source_payload = report_payload or summary_payload
+    summary = (
+        _normalize_receiver_cache_quality_summary(source_payload)
+        if isinstance(source_payload, Mapping)
+        else None
+    )
+    if summary is None:
+        if summary_payload is not None or report_payload is not None:
+            row_blockers.append(
+                "hinerv_checkpoint_export_receiver_cache_quality_schema_unexpected"
+            )
+        return {
+            "summary": None,
+            "report_path": report_path.as_posix() if report_path is not None else None,
+            "report_sha256": report_sha256,
+            "quality_gate_passed": False,
+            "quality_gate_verdict": None,
+            "row_blockers": _ordered_unique(row_blockers),
+        }
+
+    report_path_raw = str(summary.get("report_path") or "").strip()
+    if report_path_raw and report_path is None:
+        report_path = Path(report_path_raw).expanduser().resolve(strict=False)
+    summary_archive_sha = str(summary.get("archive_sha256") or "").strip().lower()
+    expected_archive_sha = str(archive_sha256 or "").strip().lower()
+    if (
+        len(summary_archive_sha) == 64
+        and len(expected_archive_sha) == 64
+        and summary_archive_sha != expected_archive_sha
+    ):
+        row_blockers.append(
+            "hinerv_checkpoint_export_receiver_cache_quality_archive_sha256_mismatch"
+        )
+    if summary.get("quality_gate_passed") is not True:
+        row_blockers.append(
+            "hinerv_checkpoint_export_receiver_cache_quality_gate_failed"
+        )
+    for blocker in summary.get("blockers") or ():
+        normalized = str(blocker)
+        if normalized and normalized != "hi_nerv_receiver_cache_quality_is_false_authority":
+            row_blockers.append(normalized)
+    return {
+        "summary": summary,
+        "report_path": report_path.as_posix() if report_path is not None else None,
+        "report_sha256": report_sha256,
+        "quality_gate_passed": bool(summary.get("quality_gate_passed")),
+        "quality_gate_verdict": summary.get("quality_gate_verdict"),
+        "row_blockers": _ordered_unique(row_blockers),
+    }
+
+
+def _receiver_cache_quality_summary_from_export(
+    export: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    summary = export.get("post_export_receiver_cache_quality")
+    if isinstance(summary, Mapping):
+        return summary
+    metadata = export.get("substrate_artifact_metadata")
+    if isinstance(metadata, Mapping):
+        summary = metadata.get("post_export_receiver_cache_quality")
+        if isinstance(summary, Mapping):
+            return summary
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, Mapping):
+            summary = score_training.get("post_export_receiver_cache_quality")
+            if isinstance(summary, Mapping):
+                return summary
+    return None
+
+
+def _resolve_receiver_cache_quality_report_path(
+    export: Mapping[str, Any],
+    *,
+    output_dir: Path | None,
+    summary: Mapping[str, Any] | None,
+) -> Path | None:
+    candidates = (
+        export.get("receiver_cache_quality_report_path"),
+        export.get("post_export_receiver_cache_quality_report_path"),
+        (summary or {}).get("report_path"),
+    )
+    for value in candidates:
+        raw = str(value or "").strip()
+        if not raw:
+            continue
+        path = Path(raw).expanduser()
+        if not path.is_absolute() and output_dir is not None:
+            path = output_dir / path
+        return path.resolve(strict=False)
+    if output_dir is None:
+        return None
+    fallback = (
+        output_dir
+        / "post_export_receiver_cache_quality"
+        / "hi_nerv_receiver_cache_quality_report.json"
+    )
+    return fallback.resolve(strict=False)
+
+
+def _normalize_receiver_cache_quality_summary(
+    payload: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if not isinstance(payload, Mapping):
+        return None
+    schema = payload.get("schema")
+    if schema == "hi_nerv_receiver_cache_quality_summary.v1":
+        return {
+            "schema": schema,
+            "report_path": payload.get("report_path"),
+            "archive_path": payload.get("archive_path"),
+            "archive_sha256": payload.get("archive_sha256"),
+            "candidate_cache_dir": payload.get("candidate_cache_dir"),
+            "reference_cache_dir": payload.get("reference_cache_dir"),
+            "quality_gate_path": payload.get("quality_gate_path"),
+            "quality_gate_verdict": payload.get("quality_gate_verdict"),
+            "quality_gate_passed": bool(payload.get("quality_gate_passed")),
+            "candidate_segnet_last_rgb_stats": payload.get(
+                "candidate_segnet_last_rgb_stats"
+            ),
+            "candidate_posenet_yuv6_pair_stats": payload.get(
+                "candidate_posenet_yuv6_pair_stats"
+            ),
+            "distance_to_reference": payload.get("distance_to_reference"),
+            "blockers": [str(v) for v in payload.get("blockers") or ()],
+            **FALSE_AUTHORITY,
+        }
+    if schema != "hi_nerv_receiver_cache_quality_report.v1":
+        return None
+    gate = payload.get("quality_gate")
+    gate_stats = gate.get("stats") if isinstance(gate, Mapping) else None
+    return {
+        "schema": "hi_nerv_receiver_cache_quality_summary.v1",
+        "report_path": payload.get("report_path"),
+        "archive_path": payload.get("archive_path"),
+        "archive_sha256": payload.get("archive_sha256"),
+        "candidate_cache_dir": payload.get("candidate_cache_dir"),
+        "reference_cache_dir": payload.get("reference_cache_dir"),
+        "quality_gate_path": payload.get("quality_gate_path"),
+        "quality_gate_verdict": (
+            gate.get("verdict") if isinstance(gate, Mapping) else None
+        ),
+        "quality_gate_passed": bool(payload.get("quality_gate_passed")),
+        "candidate_segnet_last_rgb_stats": (
+            gate_stats.get("candidate_segnet_last_rgb")
+            if isinstance(gate_stats, Mapping)
+            else None
+        ),
+        "candidate_posenet_yuv6_pair_stats": (
+            gate_stats.get("candidate_posenet_yuv6_pair")
+            if isinstance(gate_stats, Mapping)
+            else None
+        ),
+        "distance_to_reference": (
+            gate.get("distance_to_reference") if isinstance(gate, Mapping) else None
+        ),
+        "blockers": [str(v) for v in payload.get("blockers") or ()],
+        **FALSE_AUTHORITY,
+    }
 
 
 def _append_state_manifest_blockers(
@@ -1603,6 +1814,8 @@ def _measured_hinerv_increment_section_value_rows(
         receiver_closed = bool(
             proof_ready and proof_passed and receiver_contract_satisfied
         )
+        from_cache_quality = from_row.get("receiver_cache_quality_gate_passed") is True
+        to_cache_quality = to_row.get("receiver_cache_quality_gate_passed") is True
         blockers: list[str] = []
         if from_nonrate is None or to_nonrate is None:
             blockers.append("hinerv_modelsize_increment_measured_nonrate_missing")
@@ -1612,6 +1825,10 @@ def _measured_hinerv_increment_section_value_rows(
             blockers.append("hinerv_modelsize_increment_measured_score_untrusted")
         if not receiver_closed:
             blockers.append("hinerv_modelsize_increment_receiver_proof_missing")
+        if not (from_cache_quality and to_cache_quality):
+            blockers.append(
+                "hinerv_modelsize_increment_receiver_cache_quality_missing_or_failed"
+            )
         delta_nonrate = (
             None
             if from_nonrate is None or to_nonrate is None
@@ -1643,6 +1860,11 @@ def _measured_hinerv_increment_section_value_rows(
                 "runtime_consumption_proof_passed": bool(proof_passed),
                 "receiver_contract_satisfied": bool(receiver_contract_satisfied),
                 "receiver_closed": receiver_closed,
+                "receiver_cache_quality_gate_passed": bool(
+                    from_cache_quality and to_cache_quality
+                ),
+                "from_receiver_cache_quality_gate_passed": bool(from_cache_quality),
+                "to_receiver_cache_quality_gate_passed": bool(to_cache_quality),
                 "full_video_coverage": bool(from_full and to_full),
                 "measured_score_custody_trusted": bool(from_trusted and to_trusted),
                 "blockers": blockers,

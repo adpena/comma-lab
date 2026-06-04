@@ -49,6 +49,9 @@ def write_hi_nerv_receiver_cache_quality_report(
     min_segnet_std: float = 1.0,
     min_segnet_dynamic_range: float = 16.0,
     max_segnet_mae_vs_reference_for_fit_gate: float = 64.0,
+    min_posenet_yuv6_std: float = 1.0,
+    min_posenet_yuv6_dynamic_range: float = 16.0,
+    max_posenet_yuv6_mae_vs_reference_for_fit_gate: float = 64.0,
 ) -> dict[str, Any]:
     """Render a small HiNeRV receiver cache and optionally run a quality gate.
 
@@ -94,6 +97,11 @@ def write_hi_nerv_receiver_cache_quality_report(
             min_segnet_dynamic_range=float(min_segnet_dynamic_range),
             max_segnet_mae_vs_reference_for_fit_gate=float(
                 max_segnet_mae_vs_reference_for_fit_gate
+            ),
+            min_posenet_yuv6_std=float(min_posenet_yuv6_std),
+            min_posenet_yuv6_dynamic_range=float(min_posenet_yuv6_dynamic_range),
+            max_posenet_yuv6_mae_vs_reference_for_fit_gate=float(
+                max_posenet_yuv6_mae_vs_reference_for_fit_gate
             ),
         )
 

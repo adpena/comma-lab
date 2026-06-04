@@ -87,6 +87,54 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _write_receiver_cache_quality_report(
+    export_dir: Path,
+    *,
+    archive: Path,
+    passed: bool,
+    verdict: str = "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY",
+    blockers: list[str] | None = None,
+) -> Path:
+    report_dir = export_dir / "post_export_receiver_cache_quality"
+    report_dir.mkdir(exist_ok=True)
+    report_path = report_dir / "hi_nerv_receiver_cache_quality_report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_receiver_cache_quality_report.v1",
+                "report_path": report_path.as_posix(),
+                "archive_path": archive.as_posix(),
+                "archive_sha256": _sha256(archive),
+                "candidate_cache_dir": (report_dir / "candidate_cache").as_posix(),
+                "quality_gate_path": (report_dir / "cache_quality_gate.json").as_posix(),
+                "quality_gate_passed": bool(passed),
+                "quality_gate": {
+                    "schema": "mlx_cache_quality_gate.v1",
+                    "verdict": verdict,
+                    "stats": {
+                        "candidate_segnet_last_rgb": {
+                            "dynamic_range": 22.0 if passed else 4.0,
+                            "std": 2.5 if passed else 0.25,
+                        },
+                        "candidate_posenet_yuv6_pair": {
+                            "dynamic_range": 18.0 if passed else 3.0,
+                            "std": 2.0 if passed else 0.2,
+                        },
+                    },
+                    "distance_to_reference": {"segnet_last_rgb_mae": 1.0},
+                },
+                "blockers": blockers
+                or ["hi_nerv_receiver_cache_quality_is_false_authority"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return report_path
+
+
 def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None:
     output_dir = tmp_path / "archive_ladder"
     report = build_hinerv_archive_size_ladder(
@@ -277,6 +325,11 @@ def test_hinerv_checkpoint_export_bridge_feeds_decoder_waterfill(
         ),
         encoding="utf-8",
     )
+    cache_quality_path = _write_receiver_cache_quality_report(
+        export_dir,
+        archive=archive,
+        passed=True,
+    )
     candidate = _hinerv_budget_candidate(
         num_pairs=600,
         latent_dim=16,
@@ -326,6 +379,12 @@ def test_hinerv_checkpoint_export_bridge_feeds_decoder_waterfill(
     assert row["runtime_consumption_proof_passed"] is True
     assert row["receiver_contract_satisfied"] is True
     assert row["receiver_closed"] is True
+    assert row["receiver_cache_quality_report_path"] == cache_quality_path.as_posix()
+    assert row["receiver_cache_quality_gate_passed"] is True
+    assert row["receiver_cache_quality_gate_verdict"] == (
+        "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+    )
+    assert row["receiver_cache_quality_blockers"] == []
     assert row["modelsize_candidate"]["candidate_id"] == "hinerv_trained_export_bridge"
     assert "hinerv_checkpoint_export_state_npz_artifact_sha256_mismatch" not in row["blockers"]
     assert "hinerv_checkpoint_export_receiver_proof_archive_sha256_mismatch" not in row["blockers"]
@@ -337,7 +396,46 @@ def test_hinerv_checkpoint_export_bridge_feeds_decoder_waterfill(
     assert waterfill_row["waterfill_plan"]["schema"] == NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
     assert waterfill_row["waterfill_summary"]["group_count"] == 1
     assert "decoder_weight_saliency_missing_for_some_groups" in waterfill_row["blockers"]
+    assert (
+        "hinerv_archive_ladder_waterfill_receiver_cache_quality_missing_or_failed"
+        not in waterfill_row["blockers"]
+    )
     assert waterfill["score_claim"] is False
+
+    _write_receiver_cache_quality_report(
+        export_dir,
+        archive=archive,
+        passed=False,
+        verdict="FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE",
+        blockers=[
+            "hi_nerv_receiver_cache_quality_is_false_authority",
+            "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE",
+        ],
+    )
+    failed_report = build_hinerv_archive_size_ladder_from_checkpoint_exports(
+        [export],
+        report_path=tmp_path / "failed_ladder.json",
+    )
+    failed_row = failed_report["archive_rows"][0]
+    assert failed_row["receiver_closed"] is True
+    assert failed_row["receiver_cache_quality_gate_passed"] is False
+    assert failed_row["receiver_cache_quality_gate_verdict"] == (
+        "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    )
+    assert "hinerv_checkpoint_export_receiver_cache_quality_gate_failed" in failed_row[
+        "blockers"
+    ]
+    assert "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE" in failed_row["blockers"]
+    failed_waterfill = build_hinerv_archive_ladder_waterfill(failed_report)
+    failed_waterfill_row = failed_waterfill["rows"][0]
+    assert (
+        "hinerv_archive_ladder_waterfill_receiver_cache_quality_missing_or_failed"
+        in failed_waterfill_row["blockers"]
+    )
+    assert (
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+        in failed_waterfill_row["blockers"]
+    )
 
 
 def test_hinerv_checkpoint_export_bridge_blocks_ready_only_receiver_proof(
@@ -1219,6 +1317,11 @@ def _ladder_for_score_attachment() -> dict:
                 "runtime_consumption_proof_passed": True,
                 "receiver_contract_satisfied": True,
                 "receiver_closed": True,
+                "receiver_cache_quality_gate_passed": True,
+                "receiver_cache_quality_gate_verdict": (
+                    "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+                ),
+                "receiver_cache_quality_blockers": [],
                 "blockers": [
                     "hinerv_archive_size_row_has_no_nonrate_score",
                     "contest_cpu_cuda_exact_eval_not_executed",
@@ -1237,6 +1340,11 @@ def _ladder_for_score_attachment() -> dict:
                 "runtime_consumption_proof_passed": True,
                 "receiver_contract_satisfied": True,
                 "receiver_closed": True,
+                "receiver_cache_quality_gate_passed": True,
+                "receiver_cache_quality_gate_verdict": (
+                    "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+                ),
+                "receiver_cache_quality_blockers": [],
                 "blockers": [
                     "hinerv_archive_size_row_has_no_nonrate_score",
                     "contest_cpu_cuda_exact_eval_not_executed",

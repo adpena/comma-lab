@@ -248,10 +248,23 @@ def _waterfill_for_archive_row(
         command_blockers.append(
             "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
         )
+    cache_quality_blockers = _receiver_cache_quality_blockers(archive_row)
+    if cache_quality_blockers:
+        command_blockers.extend(cache_quality_blockers)
+        command_blockers.append(
+            "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+        )
     return {
         "row_id": row_id,
         "archive_bytes": int(archive_row.get("archive_bytes") or 0),
         "archive_sha256": archive_row.get("archive_sha256"),
+        "receiver_cache_quality_gate_passed": (
+            archive_row.get("receiver_cache_quality_gate_passed") is True
+        ),
+        "receiver_cache_quality_gate_verdict": archive_row.get(
+            "receiver_cache_quality_gate_verdict"
+        ),
+        "receiver_cache_quality_blockers": cache_quality_blockers,
         "state_npz_manifest_path": manifest_path.as_posix(),
         "state_npz_artifact_path": artifact_path.as_posix(),
         "state_npz_artifact_sha256": actual_sha,
@@ -276,6 +289,19 @@ def _waterfill_for_archive_row(
         ),
         **FALSE_AUTHORITY,
     }
+
+
+def _receiver_cache_quality_blockers(archive_row: Mapping[str, Any]) -> list[str]:
+    blockers = [
+        str(blocker)
+        for blocker in archive_row.get("receiver_cache_quality_blockers") or ()
+        if str(blocker)
+    ]
+    if archive_row.get("receiver_cache_quality_gate_passed") is not True:
+        blockers.append(
+            "hinerv_archive_ladder_waterfill_receiver_cache_quality_missing_or_failed"
+        )
+    return _ordered_unique(blockers)
 
 
 def _manifest_error_blocker(message: str) -> str:

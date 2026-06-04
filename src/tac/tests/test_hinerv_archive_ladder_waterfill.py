@@ -76,6 +76,36 @@ def test_hinerv_archive_ladder_waterfill_fails_closed_on_bad_manifest_sha(
     assert report["section_value_rows"] == []
 
 
+def test_hinerv_archive_ladder_waterfill_blocks_failed_receiver_cache_quality(
+    tmp_path: Path,
+) -> None:
+    ladder = _ladder(tmp_path, row_id="tiny", saliency_ready=True)
+    row = ladder["archive_rows"][0]
+    row["receiver_cache_quality_gate_passed"] = False
+    row["receiver_cache_quality_gate_verdict"] = "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    row["receiver_cache_quality_blockers"] = [
+        "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    ]
+
+    report = build_hinerv_archive_ladder_waterfill(
+        ladder,
+        global_saliency_by_name={"blocks.0.weight": 0.0},
+        action_bits=(0, 2, 32),
+        candidate_id="candidate_a",
+    )
+
+    waterfill_row = report["rows"][0]
+    assert waterfill_row["receiver_cache_quality_gate_passed"] is False
+    assert waterfill_row["receiver_cache_quality_gate_verdict"] == (
+        "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE"
+    )
+    assert "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE" in waterfill_row["blockers"]
+    assert (
+        "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
+        in waterfill_row["blockers"]
+    )
+
+
 def test_hinerv_archive_ladder_waterfill_carries_saliency_replay_blockers(
     tmp_path: Path,
 ) -> None:
@@ -261,6 +291,11 @@ def _ladder(tmp_path: Path, *, row_id: str, saliency_ready: bool) -> dict:
                 "archive_sha256": "a" * 64,
                 "state_npz_manifest_path": str(manifest_path),
                 "runtime_consumption_proof_ready": True,
+                "receiver_cache_quality_gate_passed": True,
+                "receiver_cache_quality_gate_verdict": (
+                    "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+                ),
+                "receiver_cache_quality_blockers": [],
                 "decoder_codec": "int8_mixed",
             }
         ],

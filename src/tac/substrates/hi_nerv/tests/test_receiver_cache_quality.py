@@ -73,6 +73,9 @@ def test_hi_nerv_receiver_cache_quality_attaches_gate_against_reference(
         min_segnet_std=0.0,
         min_segnet_dynamic_range=0.0,
         max_segnet_mae_vs_reference_for_fit_gate=1.0,
+        min_posenet_yuv6_std=0.0,
+        min_posenet_yuv6_dynamic_range=0.0,
+        max_posenet_yuv6_mae_vs_reference_for_fit_gate=1.0,
     )
 
     assert report["quality_gate"] is not None
