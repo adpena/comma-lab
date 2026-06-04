@@ -104,6 +104,222 @@ def _write_hinerv_receiver_proof(
     return path
 
 
+def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive bytes")
+    reference = tmp_path / "reference_cache"
+    reference.mkdir()
+    captured: dict[str, object] = {}
+
+    from tac.substrates.hi_nerv import receiver_cache_quality
+
+    def fake_write_hi_nerv_receiver_cache_quality_report(**kwargs):
+        captured.update(kwargs)
+        return {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": (tmp_path / "report.json").as_posix(),
+            "archive_path": Path(kwargs["archive_zip_path"]).as_posix(),
+            "archive_sha256": "a" * 64,
+            "candidate_cache_dir": (tmp_path / "candidate_cache").as_posix(),
+            "reference_cache_dir": Path(kwargs["reference_cache_dir"]).as_posix(),
+            "quality_gate_path": (tmp_path / "gate.json").as_posix(),
+            "quality_gate_passed": True,
+            "quality_gate": {
+                "verdict": "CACHE_QUALITY_GATE_PASSED",
+                "stats": {
+                    "candidate_segnet_last_rgb": {"std": 12.0},
+                    "candidate_posenet_yuv6_pair": {"std": 3.0},
+                },
+                "distance_to_reference": {"segnet_last_rgb_mae": 1.5},
+            },
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+        }
+
+    monkeypatch.setattr(
+        receiver_cache_quality,
+        "write_hi_nerv_receiver_cache_quality_report",
+        fake_write_hi_nerv_receiver_cache_quality_report,
+    )
+
+    report = runner_mod._write_hi_nerv_runner_post_export_receiver_cache_quality(
+        requested=True,
+        archive_zip_path=archive,
+        source_video_path=tmp_path / "unused_source.mkv",
+        output_dir=tmp_path / "training",
+        reference_cache_dir=reference,
+        max_pairs=3,
+        batch_pairs=2,
+        min_segnet_std=1.25,
+        min_segnet_dynamic_range=7.5,
+        max_segnet_mae_vs_reference_for_fit_gate=22.0,
+        repo_root=REPO_ROOT,
+    )
+
+    assert Path(captured["archive_zip_path"]) == archive
+    assert Path(captured["reference_cache_dir"]) == reference
+    assert captured["max_pairs"] == 3
+    assert captured["batch_pairs"] == 2
+    assert captured["sample_pairs"] == 3
+    assert captured["min_segnet_std"] == pytest.approx(1.25)
+    assert captured["min_segnet_dynamic_range"] == pytest.approx(7.5)
+    assert captured["max_segnet_mae_vs_reference_for_fit_gate"] == pytest.approx(22.0)
+    summary = runner_mod._hi_nerv_receiver_cache_quality_summary(report)
+    assert summary["quality_gate_passed"] is True
+    assert summary["candidate_posenet_yuv6_pair_stats"] == {"std": 3.0}
+
+
+def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive bytes")
+    source = tmp_path / "source.mkv"
+    source.write_bytes(b"unit source video")
+    captured_reference: dict[str, object] = {}
+    captured_quality: dict[str, object] = {}
+
+    from tac.local_acceleration import mlx_preprocess
+    from tac.substrates.hi_nerv import receiver_cache_quality
+
+    def fake_write_scorer_input_cache_from_video_file(
+        video_path,
+        output_dir,
+        *,
+        max_pairs,
+        batch_pairs,
+        **_kwargs,
+    ):
+        captured_reference.update(
+            {
+                "video_path": Path(video_path),
+                "output_dir": Path(output_dir),
+                "max_pairs": int(max_pairs),
+                "batch_pairs": int(batch_pairs),
+            }
+        )
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+        (Path(output_dir) / "manifest.json").write_text("{}", encoding="utf-8")
+        return {"pair_count": int(max_pairs)}
+
+    def fake_write_hi_nerv_receiver_cache_quality_report(**kwargs):
+        captured_quality.update(kwargs)
+        return {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": (tmp_path / "report.json").as_posix(),
+            "archive_path": Path(kwargs["archive_zip_path"]).as_posix(),
+            "archive_sha256": "b" * 64,
+            "candidate_cache_dir": (tmp_path / "candidate_cache").as_posix(),
+            "reference_cache_dir": Path(kwargs["reference_cache_dir"]).as_posix(),
+            "quality_gate_path": (tmp_path / "gate.json").as_posix(),
+            "quality_gate_passed": False,
+            "quality_gate": {
+                "verdict": "CACHE_QUALITY_GATE_FAILED",
+                "stats": {
+                    "candidate_segnet_last_rgb": {"std": 0.1},
+                    "candidate_posenet_yuv6_pair": {"std": 0.0},
+                },
+                "distance_to_reference": {"segnet_last_rgb_mae": 99.0},
+            },
+            "blockers": [
+                "hi_nerv_receiver_cache_quality_is_false_authority",
+                "candidate_posenet_yuv6_pair_low_dynamic_range",
+            ],
+        }
+
+    monkeypatch.setattr(
+        mlx_preprocess,
+        "write_scorer_input_cache_from_video_file",
+        fake_write_scorer_input_cache_from_video_file,
+    )
+    monkeypatch.setattr(
+        receiver_cache_quality,
+        "write_hi_nerv_receiver_cache_quality_report",
+        fake_write_hi_nerv_receiver_cache_quality_report,
+    )
+
+    report = runner_mod._write_hi_nerv_runner_post_export_receiver_cache_quality(
+        requested=True,
+        archive_zip_path=archive,
+        source_video_path=source,
+        output_dir=tmp_path / "training",
+        reference_cache_dir=None,
+        max_pairs=4,
+        batch_pairs=2,
+        min_segnet_std=1.0,
+        min_segnet_dynamic_range=16.0,
+        max_segnet_mae_vs_reference_for_fit_gate=64.0,
+        repo_root=REPO_ROOT,
+    )
+
+    reference_dir = (
+        tmp_path
+        / "training"
+        / "post_export_receiver_cache_quality"
+        / "source_video_reference_cache"
+    )
+    assert captured_reference["video_path"] == source
+    assert captured_reference["output_dir"] == reference_dir
+    assert captured_reference["max_pairs"] == 4
+    assert captured_reference["batch_pairs"] == 2
+    assert Path(captured_quality["reference_cache_dir"]) == reference_dir
+    assert report["quality_gate_passed"] is False
+    assert "candidate_posenet_yuv6_pair_low_dynamic_range" in report["blockers"]
+
+
+def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "training"
+    training_dir.mkdir()
+    artifact_path = training_dir / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "substrate_artifact_metadata": {
+                    "score_aware_training": {"schema": "unit"}
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact_dict = {
+        "substrate_artifact_metadata": {
+            "score_aware_training": {"schema": "unit"}
+        }
+    }
+    report = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "report_path": (tmp_path / "report.json").as_posix(),
+        "archive_path": (tmp_path / "archive.zip").as_posix(),
+        "quality_gate_passed": False,
+        "quality_gate": {"verdict": "CACHE_QUALITY_GATE_FAILED", "stats": {}},
+        "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+    }
+
+    runner_mod._attach_hi_nerv_post_export_receiver_cache_quality(
+        artifact_dict=artifact_dict,
+        output_dir=training_dir,
+        report=report,
+    )
+
+    metadata = artifact_dict["substrate_artifact_metadata"]
+    assert metadata["post_export_receiver_cache_quality"][
+        "quality_gate_passed"
+    ] is False
+    assert metadata["score_aware_training"]["post_export_receiver_cache_quality"][
+        "quality_gate_verdict"
+    ] == "CACHE_QUALITY_GATE_FAILED"
+    persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
+    persisted_metadata = persisted["substrate_artifact_metadata"]
+    assert persisted_metadata["post_export_receiver_cache_quality"][
+        "quality_gate_passed"
+    ] is False
+
+
 def _snerv_official_skip_candidate(mode: str) -> dict:
     rows = enumerate_snerv_modelsize_candidates(
         hard_byte_ceilings=(178_000,),

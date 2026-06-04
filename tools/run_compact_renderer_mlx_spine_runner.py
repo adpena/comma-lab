@@ -7727,6 +7727,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_scorer_device: str | None = None,
     mlx_prefilter_scorer_batch_pairs: int = 1,
     mlx_prefilter_progress_every: int = 50,
+    post_export_receiver_cache_quality_gate: bool = True,
+    receiver_cache_quality_reference_cache_dir: str | Path | None = None,
+    receiver_cache_quality_max_pairs: int = 1,
+    receiver_cache_quality_batch_pairs: int = 1,
+    receiver_cache_quality_min_segnet_std: float = 1.0,
+    receiver_cache_quality_min_segnet_dynamic_range: float = 16.0,
+    receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate: float = 64.0,
     telemetry_flush_interval_epochs: int = 1,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
@@ -8570,6 +8577,30 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         if archive_file_path is not None and archive_file_path.parent.is_dir()
         else training_dir
     )
+    post_export_receiver_cache_quality = (
+        _write_hi_nerv_runner_post_export_receiver_cache_quality(
+            requested=bool(post_export_receiver_cache_quality_gate),
+            archive_zip_path=archive_file_path,
+            source_video_path=resolved_source_video,
+            output_dir=training_dir,
+            reference_cache_dir=receiver_cache_quality_reference_cache_dir,
+            max_pairs=int(receiver_cache_quality_max_pairs),
+            batch_pairs=int(receiver_cache_quality_batch_pairs),
+            min_segnet_std=float(receiver_cache_quality_min_segnet_std),
+            min_segnet_dynamic_range=float(
+                receiver_cache_quality_min_segnet_dynamic_range
+            ),
+            max_segnet_mae_vs_reference_for_fit_gate=float(
+                receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+            ),
+            repo_root=root,
+        )
+    )
+    _attach_hi_nerv_post_export_receiver_cache_quality(
+        artifact_dict=artifact_dict,
+        output_dir=training_dir,
+        report=post_export_receiver_cache_quality,
+    )
     auto_mlx_prefilter_profile_path = training_dir / "local_mlx_prefilter_profile.json"
     effective_mlx_profile_paths: tuple[str | Path, ...] = tuple(mlx_profile_paths)
     if auto_mlx_prefilter_profile_path.is_file():
@@ -8721,6 +8752,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers.extend(candidate_curriculum_plan.get("blockers") or [])
     blockers.extend(trained_archive_byte_oracle.get("blockers") or [])
     blockers.extend(local_cpu_replay_blockers)
+    if post_export_receiver_cache_quality is None:
+        blockers.append("hi_nerv_post_export_receiver_cache_quality_not_requested")
+    else:
+        blockers.extend(post_export_receiver_cache_quality.get("blockers") or [])
+        if not bool(post_export_receiver_cache_quality.get("quality_gate_passed")):
+            blockers.append("hi_nerv_post_export_receiver_cache_quality_gate_failed")
     if not decoder_weight_saliency_artifact.get("written"):
         blockers.append(
             decoder_weight_saliency_artifact.get("reason")
@@ -8970,6 +9007,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     ),
                     "authority": "macos_mlx_research_signal_false_authority",
                 },
+                "post_export_receiver_cache_quality": (
+                    _hi_nerv_receiver_cache_quality_summary(
+                        post_export_receiver_cache_quality
+                    )
+                ),
                 "pose_instability_monitor": (
                     _pose_instability_monitor_report_metadata(artifact_dict)
                 ),
@@ -9016,6 +9058,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             },
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
             "mlx_prefilter_error_anatomy": auto_xray_attachment,
+            "post_export_receiver_cache_quality": (
+                _hi_nerv_receiver_cache_quality_summary(
+                    post_export_receiver_cache_quality
+                )
+            ),
             "auto_mlx_prefilter_profile_path": (
                 auto_mlx_prefilter_profile_path.as_posix()
                 if auto_mlx_prefilter_profile_path.is_file()
@@ -12390,6 +12437,252 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     return artifact
 
 
+def _write_hi_nerv_runner_post_export_receiver_cache_quality(
+    *,
+    requested: bool,
+    archive_zip_path: str | Path | None,
+    source_video_path: str | Path,
+    output_dir: str | Path,
+    reference_cache_dir: str | Path | None,
+    max_pairs: int,
+    batch_pairs: int,
+    min_segnet_std: float,
+    min_segnet_dynamic_range: float,
+    max_segnet_mae_vs_reference_for_fit_gate: float,
+    repo_root: str | Path,
+) -> dict[str, Any] | None:
+    """Run the HiNeRV receiver-render scorer-domain fit gate from the runner.
+
+    The direct trainer had this protection first, but the compact spine runner
+    is the canonical long-run entrypoint.  Keep the gate here so exported HIV1
+    packets are checked in the exact SegNet RGB / PoseNet YUV6 cache domains
+    before downstream materializers or replay queues consume them.
+    """
+
+    if not requested:
+        return None
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    report_dir = out / "post_export_receiver_cache_quality"
+    if max_pairs < 1:
+        return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+            output_dir=out,
+            blockers=["hi_nerv_receiver_cache_quality_max_pairs_invalid"],
+            archive_path=Path(archive_zip_path) if archive_zip_path else None,
+            reference_cache_dir=Path(reference_cache_dir)
+            if reference_cache_dir is not None
+            else None,
+        )
+    if batch_pairs < 1:
+        return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+            output_dir=out,
+            blockers=["hi_nerv_receiver_cache_quality_batch_pairs_invalid"],
+            archive_path=Path(archive_zip_path) if archive_zip_path else None,
+            reference_cache_dir=Path(reference_cache_dir)
+            if reference_cache_dir is not None
+            else None,
+        )
+    if archive_zip_path is None:
+        return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+            output_dir=out,
+            blockers=["hi_nerv_archive_export_missing_for_receiver_cache_quality"],
+        )
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    archive = Path(archive_zip_path).expanduser()
+    archive = (
+        (root / archive).resolve(strict=False)
+        if not archive.is_absolute()
+        else archive.resolve(strict=False)
+    )
+    if not archive.is_file():
+        return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+            output_dir=out,
+            blockers=["hi_nerv_archive_export_path_missing_for_receiver_cache_quality"],
+            archive_path=archive,
+        )
+
+    reference: Path
+    if reference_cache_dir is not None:
+        reference = Path(reference_cache_dir).expanduser()
+        if not reference.is_absolute():
+            reference = (root / reference).resolve(strict=False)
+        else:
+            reference = reference.resolve(strict=False)
+        if not reference.is_dir():
+            return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+                output_dir=out,
+                blockers=["hi_nerv_reference_cache_missing_for_receiver_cache_quality"],
+                archive_path=archive,
+                reference_cache_dir=reference,
+            )
+    else:
+        source = Path(source_video_path).expanduser()
+        source = (
+            (root / source).resolve(strict=False)
+            if not source.is_absolute()
+            else source.resolve(strict=False)
+        )
+        if not source.is_file():
+            return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+                output_dir=out,
+                blockers=[
+                    "hi_nerv_source_video_missing_for_auto_receiver_cache_quality_reference"
+                ],
+                archive_path=archive,
+            )
+        reference = report_dir / "source_video_reference_cache"
+        try:
+            from tac.local_acceleration.mlx_preprocess import (
+                write_scorer_input_cache_from_video_file,
+            )
+
+            write_scorer_input_cache_from_video_file(
+                source,
+                reference,
+                max_pairs=int(max_pairs),
+                batch_pairs=int(batch_pairs),
+            )
+        except Exception as exc:
+            return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+                output_dir=out,
+                blockers=[
+                    "hi_nerv_auto_receiver_cache_quality_reference_build_failed"
+                ],
+                archive_path=archive,
+                reference_cache_dir=reference,
+                failure=repr(exc),
+            )
+
+    try:
+        from tac.substrates.hi_nerv.receiver_cache_quality import (
+            write_hi_nerv_receiver_cache_quality_report,
+        )
+
+        return write_hi_nerv_receiver_cache_quality_report(
+            archive_zip_path=archive,
+            output_dir=report_dir,
+            reference_cache_dir=reference,
+            max_pairs=int(max_pairs),
+            batch_pairs=int(batch_pairs),
+            sample_pairs=int(max_pairs),
+            min_segnet_std=float(min_segnet_std),
+            min_segnet_dynamic_range=float(min_segnet_dynamic_range),
+            max_segnet_mae_vs_reference_for_fit_gate=float(
+                max_segnet_mae_vs_reference_for_fit_gate
+            ),
+        )
+    except Exception as exc:
+        return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+            output_dir=out,
+            blockers=["hi_nerv_receiver_cache_quality_report_failed"],
+            archive_path=archive,
+            reference_cache_dir=reference,
+            failure=repr(exc),
+        )
+
+
+def _write_hi_nerv_runner_receiver_cache_quality_refusal(
+    *,
+    output_dir: str | Path,
+    blockers: Sequence[str],
+    archive_path: Path | None = None,
+    reference_cache_dir: Path | None = None,
+    failure: str | None = None,
+) -> dict[str, Any]:
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    report_dir = out / "post_export_receiver_cache_quality"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / "hi_nerv_receiver_cache_quality_report.json"
+    report = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "output_dir": report_dir.as_posix(),
+        "archive_path": archive_path.as_posix() if archive_path is not None else None,
+        "reference_cache_dir": (
+            reference_cache_dir.as_posix() if reference_cache_dir is not None else None
+        ),
+        "quality_gate": None,
+        "quality_gate_passed": False,
+        "failure": failure,
+        "blockers": _dedupe(
+            [
+                "hi_nerv_receiver_cache_quality_is_false_authority",
+                *[str(blocker) for blocker in blockers],
+            ]
+        ),
+        **FALSE_AUTHORITY,
+    }
+    report["report_path"] = report_path.as_posix()
+    _write_json(report_path, report)
+    return report
+
+
+def _hi_nerv_receiver_cache_quality_summary(
+    report: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    gate = report.get("quality_gate") if isinstance(report, Mapping) else None
+    gate_stats = gate.get("stats") if isinstance(gate, Mapping) else None
+    return {
+        "schema": "hi_nerv_receiver_cache_quality_summary.v1",
+        "report_path": report.get("report_path"),
+        "archive_path": report.get("archive_path"),
+        "archive_sha256": report.get("archive_sha256"),
+        "candidate_cache_dir": report.get("candidate_cache_dir"),
+        "reference_cache_dir": report.get("reference_cache_dir"),
+        "quality_gate_path": report.get("quality_gate_path"),
+        "quality_gate_verdict": gate.get("verdict") if isinstance(gate, Mapping) else None,
+        "quality_gate_passed": bool(report.get("quality_gate_passed")),
+        "candidate_segnet_last_rgb_stats": (
+            gate_stats.get("candidate_segnet_last_rgb")
+            if isinstance(gate_stats, Mapping)
+            else None
+        ),
+        "candidate_posenet_yuv6_pair_stats": (
+            gate_stats.get("candidate_posenet_yuv6_pair")
+            if isinstance(gate_stats, Mapping)
+            else None
+        ),
+        "distance_to_reference": (
+            gate.get("distance_to_reference") if isinstance(gate, Mapping) else None
+        ),
+        "blockers": [str(blocker) for blocker in report.get("blockers") or []],
+    }
+
+
+def _attach_hi_nerv_post_export_receiver_cache_quality(
+    *,
+    artifact_dict: dict[str, Any],
+    output_dir: str | Path,
+    report: Mapping[str, Any] | None,
+) -> None:
+    summary = _hi_nerv_receiver_cache_quality_summary(report)
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["post_export_receiver_cache_quality"] = summary
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["post_export_receiver_cache_quality"] = summary
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
+        "training_artifact.json"
+    )
+    if not artifact_path.is_file():
+        return
+    try:
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+    artifact_metadata["post_export_receiver_cache_quality"] = summary
+    score_training = artifact_metadata.get("score_aware_training")
+    if isinstance(score_training, dict):
+        score_training["post_export_receiver_cache_quality"] = summary
+    artifact["substrate_artifact_metadata"] = artifact_metadata
+    artifact_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def _run_pact_nerv_vq_mlx_smoke(
     *,
     output_dir: Path,
@@ -15679,6 +15972,62 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--skip-post-export-receiver-cache-quality-gate",
+        dest="post_export_receiver_cache_quality_gate",
+        action="store_false",
+        default=True,
+        help=(
+            "HiNeRV only: skip the post-export receiver-render scorer-domain "
+            "cache quality gate. Default runs it and blocks bad RGB/YUV6 "
+            "receiver outputs before downstream materializers consume them."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-reference-cache-dir",
+        type=Path,
+        help=(
+            "Optional HiNeRV source scorer-input cache for the post-export "
+            "receiver-quality gate. If omitted, the runner builds a small "
+            "reference cache from --source-video-path inside the output dir."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-pairs",
+        default=1,
+        type=int,
+        help="HiNeRV receiver-quality gate pair count. Default 1 for fast launch feedback.",
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-batch-pairs",
+        default=1,
+        type=int,
+        help="Batch size for HiNeRV post-export receiver-quality cache rendering.",
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-min-segnet-std",
+        default=1.0,
+        type=float,
+        help="Minimum candidate SegNet last-frame RGB std for the receiver-quality gate.",
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-min-segnet-dynamic-range",
+        default=16.0,
+        type=float,
+        help=(
+            "Minimum candidate SegNet last-frame RGB dynamic range for the "
+            "receiver-quality gate."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-segnet-mae-vs-reference-for-fit-gate",
+        default=64.0,
+        type=float,
+        help=(
+            "Maximum candidate-vs-source SegNet RGB MAE accepted by the "
+            "HiNeRV post-export receiver-quality fit gate."
+        ),
+    )
+    parser.add_argument(
         "--telemetry-flush-interval-epochs",
         default=1,
         type=int,
@@ -16897,6 +17246,23 @@ def main(argv: list[str] | None = None) -> int:
             ),
             mlx_prefilter_scorer_device=args.mlx_prefilter_scorer_device,
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
+            post_export_receiver_cache_quality_gate=(
+                args.post_export_receiver_cache_quality_gate
+            ),
+            receiver_cache_quality_reference_cache_dir=(
+                args.receiver_cache_quality_reference_cache_dir
+            ),
+            receiver_cache_quality_max_pairs=args.receiver_cache_quality_max_pairs,
+            receiver_cache_quality_batch_pairs=args.receiver_cache_quality_batch_pairs,
+            receiver_cache_quality_min_segnet_std=(
+                args.receiver_cache_quality_min_segnet_std
+            ),
+            receiver_cache_quality_min_segnet_dynamic_range=(
+                args.receiver_cache_quality_min_segnet_dynamic_range
+            ),
+            receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate=(
+                args.receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+            ),
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
