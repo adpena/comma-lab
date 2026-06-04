@@ -2942,6 +2942,62 @@ def test_snerv_modelsize_resolution_uses_effective_spectra_adapter() -> None:
         runner_mod._effective_snerv_modelsize_adapter_for_resolution(conflict_args)
 
 
+def test_snerv_execution_fc_dim_resolver_consumes_official_solution() -> None:
+    fc_dim = runner_mod._resolve_snerv_execution_fc_dim(
+        {
+            "candidate_id": "snerv_solution",
+            "modelsize_mparams": 0.05,
+            "official_modelsize_solution": {"fc_dim": 11},
+        },
+        cli_override=None,
+        fallback=9,
+    )
+
+    assert fc_dim == 11
+
+
+def test_snerv_execution_fc_dim_resolver_recomputes_official_formula() -> None:
+    fc_dim = runner_mod._resolve_snerv_execution_fc_dim(
+        {
+            "candidate_id": "snerv_formula",
+            "modelsize_mparams": 0.05,
+            "num_pairs": 600,
+            "carrier_hw": [384, 512],
+            "enc_strds": [5, 4, 2, 2, 2],
+            "dec_strds": [5, 4, 2, 2, 2],
+        },
+        cli_override=None,
+        fallback=9,
+    )
+
+    assert fc_dim == 11
+
+
+def test_snerv_execution_fc_dim_resolver_rejects_fake_modelsize_fallback() -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="modelsize_mparams requires official_modelsize_solution",
+    ):
+        runner_mod._resolve_snerv_execution_fc_dim(
+            {
+                "candidate_id": "snerv_missing_formula_controls",
+                "modelsize_mparams": 0.05,
+            },
+            cli_override=7,
+            fallback=9,
+        )
+
+
+def test_snerv_execution_fc_dim_resolver_keeps_manual_fallback_without_modelsize() -> None:
+    fc_dim = runner_mod._resolve_snerv_execution_fc_dim(
+        {"candidate_id": "manual_no_modelsize"},
+        cli_override=7,
+        fallback=9,
+    )
+
+    assert fc_dim == 7
+
+
 def test_byte_cap_controller_uses_measured_archive_feedback() -> None:
     attached = runner_mod._attach_byte_cap_controller_predictions(
         [
@@ -6640,6 +6696,7 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert captured_train_kwargs["decoder_channel"] == 6
     assert captured_train_kwargs["decoder_codec"] == "int4_mixed"
     assert captured_train_kwargs["hi_nerv_latent_codec"] == "int16_brotli_q11"
+    assert captured_train_kwargs["hard_byte_ceiling"] == 178_000
     assert captured_train_kwargs["coder_qat_quant_residual_weight"] == 0.001
     assert captured_train_kwargs["coder_qat_magnitude_weight"] == 0.0001
     assert captured_train_kwargs["coder_qat_delta_weight"] == 0.0002

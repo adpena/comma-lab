@@ -761,6 +761,28 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     ]
 
 
+def test_archive_export_refuses_over_hard_byte_ceiling_before_receiver_package(
+    tmp_path: Path,
+) -> None:
+    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+
+    out_dir = tmp_path / "hi_nerv_export_over_cap"
+    with pytest.raises(ValueError, match="exceeds hard_byte_ceiling"):
+        export_hi_nerv_mlx_archive(
+            _exportable_torch_model(),
+            out_dir,
+            repo_root=REPO_ROOT,
+            decoder_codec="int8_mixed",
+            retain_receiver_proof_output=False,
+            source_backend="pytorch_test_export",
+            hard_byte_ceiling=1,
+        )
+
+    assert (out_dir / "archive.zip").is_file()
+    assert not (out_dir / "archive_bound_candidate_adapter_package.json").exists()
+    assert not (out_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json").exists()
+
+
 def test_archive_export_emits_hprc_spine_for_brotli_latents(tmp_path: Path) -> None:
     from tac.substrates.hi_nerv.archive import parse_archive, split_archive_sections
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive

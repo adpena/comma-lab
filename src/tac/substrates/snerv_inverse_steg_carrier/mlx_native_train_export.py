@@ -68,6 +68,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
+    SnervCarrierError,
     SnervModelSizeConfig,
     _decoder_features,
     _hfr_for_model_size,
@@ -4810,6 +4811,20 @@ def _fc_dim_resolution_from_candidate(candidate: Mapping[str, Any]) -> tuple[int
                     saturate_stages=int(candidate.get("saturate_stages", -1)),
                 ).fc_dim
             ), "official_modelsize_formula"
+        missing = [
+            key
+            for key, value in (
+                ("full_data_length", full_data_length),
+                ("final_size", final_size),
+                ("enc_strds/official_enc_strds", enc_strds),
+                ("dec_strds/official_dec_strds", dec_strds),
+            )
+            if value is None
+        ]
+        raise SnervCarrierError(
+            "modelsize_mparams requires official_modelsize_solution or "
+            "official formula inputs; missing " + ", ".join(missing)
+        )
     return 9, "fallback_default_missing_official_modelsize_inputs"
 
 

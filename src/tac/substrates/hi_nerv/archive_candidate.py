@@ -483,6 +483,7 @@ def export_hi_nerv_mlx_archive(
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
     latent_codec: str = "int16_raw",
+    hard_byte_ceiling: int | None = None,
 ) -> tuple[Path, str, int]:
     """Export an MLX HiNeRV model as a contest-shaped ``archive.zip``."""
 
@@ -540,6 +541,15 @@ def export_hi_nerv_mlx_archive(
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
+    if hard_byte_ceiling is not None:
+        ceiling = int(hard_byte_ceiling)
+        if ceiling <= 0:
+            raise ValueError("hard_byte_ceiling must be positive when supplied")
+        if int(archive_bytes) > ceiling:
+            raise ValueError(
+                "HiNeRV archive exceeds hard_byte_ceiling: "
+                f"{archive_bytes} > {ceiling}"
+            )
     write_representation_spine_projection(
         output_dir=out_dir,
         spine=build_hi_nerv_spine_from_archive_payload(
@@ -626,6 +636,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
+    hard_byte_ceiling: int | None = None,
 ) -> dict[str, Any]:
     """Export HiNeRV MLX bytes and emit the shared candidate package."""
 
@@ -641,6 +652,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         quant_noise_scale=quant_noise_scale,
         quant_noise_seed=quant_noise_seed,
         decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        hard_byte_ceiling=hard_byte_ceiling,
     )
     root = (
         Path(repo_root)

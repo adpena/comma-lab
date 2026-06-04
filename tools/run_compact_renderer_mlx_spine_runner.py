@@ -2947,6 +2947,19 @@ def _resolve_snerv_execution_fc_dim(
                     saturate_stages=int(candidate.get("saturate_stages", -1)),
                 ).fc_dim
             )
+        missing = [
+            key
+            for key, value in (
+                ("carrier_hw", carrier_hw if len(carrier_hw) == 2 else None),
+                ("enc_strds/official_enc_strds", enc_tuple or None),
+                ("dec_strds/official_dec_strds", dec_tuple or None),
+            )
+            if value is None
+        ]
+        raise CompactRendererMlxSpineRunnerError(
+            "SNeRV modelsize_mparams requires official_modelsize_solution or "
+            "official formula controls; missing " + ", ".join(missing)
+        )
     if cli_override is not None:
         return int(cli_override)
     return int(fallback)
@@ -7653,6 +7666,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     launch_hi_nerv_latent_codec = str(
         candidate.get("hi_nerv_latent_codec", hi_nerv_latent_codec)
     )
+    launch_hard_byte_ceiling = _compact_first_present_int(
+        candidate,
+        ("hard_byte_ceiling",),
+    )
+    if launch_hard_byte_ceiling is None:
+        configured_ceilings = tuple(
+            int(value) for value in hard_byte_ceilings if int(value) > 0
+        )
+        launch_hard_byte_ceiling = (
+            min(configured_ceilings) if configured_ceilings else None
+        )
     launch_use_hierarchical_feature_grid = bool(
         candidate.get("use_hierarchical_feature_grid", not candidate_supplied)
     )
@@ -8102,6 +8126,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             fine_injection_block_index=launch_fine_injection_block_index,
             decoder_codec=launch_decoder_codec,
             hi_nerv_latent_codec=launch_hi_nerv_latent_codec,
+            hard_byte_ceiling=launch_hard_byte_ceiling,
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
             pose_distillation_weight=effective_pose_distillation_weight,
@@ -11279,6 +11304,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     fine_injection_block_index: int,
     decoder_codec: str,
     hi_nerv_latent_codec: str = "int16_raw",
+    hard_byte_ceiling: int | None = None,
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
@@ -11532,6 +11558,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             decoder_codec=str(decoder_codec),
             latent_codec=str(hi_nerv_latent_codec),
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            hard_byte_ceiling=hard_byte_ceiling,
         )
 
     artifact_metadata = {

@@ -23,6 +23,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     HfGenerationDecoder,
+    SnervCarrierError,
     SnervModelSizeConfig,
     generate_hf_from_lf,
 )
@@ -1762,14 +1763,25 @@ def test_native_export_modelsize_candidate_recomputes_fc_dim_when_formula_inputs
     assert model_size.feature_count == 11
 
 
-def test_native_export_modelsize_candidate_records_fallback_fc_dim_source() -> None:
+def test_native_export_modelsize_candidate_rejects_missing_formula_inputs() -> None:
+    with pytest.raises(
+        SnervCarrierError,
+        match="modelsize_mparams requires official_modelsize_solution",
+    ):
+        _model_size_from_candidate(
+            {
+                "candidate_id": "official-modelsize-missing-formula-inputs",
+                "modelsize_mparams": 0.05,
+            }
+        )
+
+
+def test_native_export_without_modelsize_keeps_manual_default_fc_dim_source() -> None:
     model_size = _model_size_from_candidate(
         {
-            "candidate_id": "official-modelsize-missing-formula-inputs",
-            "modelsize_mparams": 0.05,
+            "candidate_id": "manual-default-no-modelsize",
         }
     )
-
     assert model_size.fc_dim == 9
     assert model_size.fc_dim_source == "fallback_default_missing_official_modelsize_inputs"
     assert model_size.as_jsonable()["fc_dim_source"] == (
