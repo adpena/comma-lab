@@ -4648,6 +4648,20 @@ def _receiver_bound_official_primitives_export_binding(
     blockers = [str(blocker) for blocker in official_binding.get("blockers") or []]
     selected_authority = _selected_packet_official_payload_authority(selected_packet)
     tensor_map = _official_receiver_tensor_map_from_packet(selected_packet)
+    receiver_contract_proven = bool(
+        dict(official_binding.get("official_receiver_runtime_decode_contract") or {}).get(
+            "receiver_runtime_decode_proven"
+        )
+        is True
+    )
+    tensor_map = {
+        **tensor_map,
+        "receiver_runtime_decode_contract_proven": receiver_contract_proven,
+        "receiver_runtime_decode_authority": False,
+        "receiver_runtime_decode_authority_scope": (
+            "tensor_map_only_selected_packet_frame_decode_required"
+        ),
+    }
     if bool(tensor_map.get("receiver_tensor_map_verified")):
         tensor_map = {
             **tensor_map,
@@ -4723,14 +4737,10 @@ def _receiver_bound_official_primitives_export_binding(
         out["export_consumed_official_hfr"] = True
         out["export_consumed_official_tub"] = True
     out["source_forward_replay_authority"] = False
-    out["official_receiver_runtime_decode_contract_proven"] = bool(
-        dict(out.get("official_receiver_runtime_decode_contract") or {}).get(
-            "receiver_runtime_decode_proven"
-        )
-        is True
-    )
+    out["official_receiver_runtime_decode_contract_proven"] = receiver_contract_proven
     out["receiver_runtime_decode_authority"] = bool(
         out["official_receiver_runtime_decode_contract_proven"]
+        and selected_authority.get("frame_decode_succeeded") is True
     )
     out["selected_packet_official_payload_runtime_decode_authority"] = bool(
         selected_authority["official_payload_runtime_decode_authority"]
@@ -4753,6 +4763,11 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
         "total_tensor_bytes": 0,
         "category_counts": {},
         "category_bytes": {},
+        "receiver_runtime_decode_contract_proven": False,
+        "receiver_runtime_decode_authority": False,
+        "receiver_runtime_decode_authority_scope": (
+            "tensor_map_only_selected_packet_frame_decode_required"
+        ),
         "blockers": [],
         **FALSE_AUTHORITY,
     }
@@ -5139,8 +5154,12 @@ def _official_primitives_export_binding(
         "export_consumed_official_hfr": False,
         "export_consumed_official_tub": False,
         "source_forward_replay_authority": False,
-        "receiver_runtime_decode_authority": bool(
+        "receiver_runtime_decode_contract_proven": bool(
             receiver_contract.get("receiver_runtime_decode_proven") is True
+        ),
+        "receiver_runtime_decode_authority": False,
+        "receiver_runtime_decode_authority_scope": (
+            "tensor_map_only_selected_packet_frame_decode_required"
         ),
         "native_mlx_export_bound_to_official_payload": False,
         "blockers": list(blockers),

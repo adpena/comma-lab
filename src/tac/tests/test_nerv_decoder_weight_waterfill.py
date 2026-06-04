@@ -313,6 +313,9 @@ def test_build_nerv_decoder_weight_waterfill_plan_cli_smoke(tmp_path: Path) -> N
     assert payload["decoder_state_codec_byte_calibration"]["bound"] is True
     assert payload["rows"][0]["group_name"] == "blocks.0.weight"
     assert payload["rows"][0]["selected_action"] in {"int2", "zero_rle"}
+    assert payload["rows"][0]["selected_byte_delta_source"] == (
+        "measured_decoder_state_codec_whole_blob_delta"
+    )
     assert payload["rows"][0]["selected_byte_delta"] < 0
     assert payload["rows"][0]["selected_delta_total_score_proxy"] < 0.0
     assert "latents.0" not in output_md.read_text(encoding="utf-8")

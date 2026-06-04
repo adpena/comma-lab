@@ -390,6 +390,7 @@ def _admission_row(
     lf_payload = _mapping(report.get("lf_payload"))
     source_packet_bytes = _positive_int(source_packet.get("bytes"))
     candidate_packet_bytes = _positive_int(candidate_packet.get("bytes"))
+    candidate_packet_header_bytes = _positive_int(candidate_packet.get("header_bytes"))
     packet_delta = _int_or_none(report.get("packet_byte_delta"))
     if packet_delta is None and source_packet_bytes is not None and candidate_packet_bytes is not None:
         packet_delta = int(candidate_packet_bytes - source_packet_bytes)
@@ -472,6 +473,7 @@ def _admission_row(
         "mode": mode,
         "source_packet_bytes": source_packet_bytes,
         "candidate_packet_bytes": candidate_packet_bytes,
+        "candidate_packet_header_bytes": candidate_packet_header_bytes,
         "packet_byte_delta": packet_delta,
         "packet_rate_score_delta": packet_rate_delta,
         "lf_source_bytes": lf_source_bytes,
@@ -627,6 +629,8 @@ def _admission_verdict(selected: Mapping[str, Any] | None) -> str:
     decision = str(selected.get("admission_decision") or "")
     if "crosses_byte_waterline" in decision:
         return "ADMIT_LF_RECODE__CROSSES_BYTE_WATERLINE__FALSE_AUTHORITY"
+    if _post_recode_overrun_is_header_dominated(selected):
+        return "ADMIT_LF_RECODE__POST_RECODE_PACKET_HEADER_GRAMMAR_DOMINATES"
     if "remaining_lf_ablation" in decision:
         return "ADMIT_LF_RECODE__REMAINING_LF_BYTES_REQUIRE_ABLATION"
     return "ADMIT_LF_RECODE__BYTE_PRICED_RECEIVER_PROVEN__FALSE_AUTHORITY"
@@ -640,6 +644,12 @@ def _admission_next_actions(selected: Mapping[str, Any] | None) -> list[str]:
         ]
     mode = str(selected.get("mode") or "unknown")
     if int(selected.get("post_recode_over_waterline_bytes") or 0) > 0:
+        if _post_recode_overrun_is_header_dominated(selected):
+            return [
+                f"preserve_snerv_lossless_lf_payload_codec:{mode}",
+                "attack_snerv_snar_packet_header_grammar_or_packaging_overhead",
+                "rerun_receiver_proof_and_byte_price_admission_after_packet_header_rewrite",
+            ]
         return [
             f"route_snerv_native_export_lf_payload_codec:{mode}",
             "attack_remaining_lf_payload_with_temporal_delta_generation_or_coarser_lf_ablation",
@@ -650,6 +660,12 @@ def _admission_next_actions(selected: Mapping[str, Any] | None) -> list[str]:
         "materialize_recode_candidate_archive_zip_then_receiver_proof",
         "run_full600_local_cpu_replay_before_any_exact_axis_dispatch",
     ]
+
+
+def _post_recode_overrun_is_header_dominated(selected: Mapping[str, Any]) -> bool:
+    over = _positive_int(selected.get("post_recode_over_waterline_bytes"))
+    header = _positive_int(selected.get("candidate_packet_header_bytes"))
+    return bool(over is not None and header is not None and header >= over)
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:

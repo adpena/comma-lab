@@ -691,6 +691,8 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         tub_current: np.ndarray | None = None,
         tub_previous: np.ndarray | None = None,
         tub_next_frame: np.ndarray | None = None,
+        tub_temporal_encoder_concat: np.ndarray | None = None,
+        tub_output2_raw: np.ndarray | None = None,
     ) -> None:
         _require_mlx()
         super().__init__()
@@ -766,6 +768,14 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             tub_next_frame,
             skip_high_np,
             frame_index=min(1, int(skip_high_np.shape[0]) - 1),
+        )
+        self.tub_temporal_encoder_concat = _official_tub_optional_payload_tensor_mlx(
+            tub_temporal_encoder_concat,
+            name="tub_temporal_encoder_concat",
+        )
+        self.tub_output2_raw = _official_tub_optional_payload_tensor_mlx(
+            tub_output2_raw,
+            name="tub_output2_raw",
         )
 
     def _import_hfr_heads(self, heads: OfficialHfrHeads) -> None:
@@ -870,6 +880,16 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             "skip_mid": np.asarray(self.skip_mid, dtype=np.float32).copy(),
             "skip_high": np.asarray(self.skip_high, dtype=np.float32).copy(),
         }
+        if self.tub_temporal_encoder_concat is not None:
+            out["tub.temporal_encoder_concat"] = np.asarray(
+                self.tub_temporal_encoder_concat,
+                dtype=np.float32,
+            ).copy()
+        if self.tub_output2_raw is not None:
+            out["tub.output2_raw"] = np.asarray(
+                self.tub_output2_raw,
+                dtype=np.float32,
+            ).copy()
         for name in self._hfr_head_names:
             for layer in ("conv1", "conv2"):
                 for field in ("weight", "bias"):
@@ -904,6 +924,22 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
                     f"model={tuple(current.shape)}"
                 )
             setattr(self, attr, mx.array(arr, dtype=mx.float32))  # type: ignore[union-attr]
+        for key, attr in (
+            ("tub.temporal_encoder_concat", "tub_temporal_encoder_concat"),
+            ("tub.output2_raw", "tub_output2_raw"),
+        ):
+            if key not in state:
+                continue
+            arr = np.asarray(state[key], dtype=np.float32)
+            current = getattr(self, attr)
+            if current is None:
+                raise SnervMlxRendererError(f"{key} supplied but renderer was not initialized with it")
+            if tuple(arr.shape) != tuple(current.shape):
+                raise SnervMlxRendererError(
+                    f"{key} shape mismatch; state={tuple(arr.shape)} "
+                    f"model={tuple(current.shape)}"
+                )
+            setattr(self, attr, mx.array(arr, dtype=mx.float32))  # type: ignore[union-attr]
         for name in self._hfr_head_names:
             for layer in ("conv1", "conv2"):
                 for field in ("weight", "bias"):
@@ -923,7 +959,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
 
         state = self.export_state_dict()
         skip_high = state["skip_high"].astype(np.float64)
-        return {
+        components = {
             "mfu": self.mfu,
             "hfr_heads": OfficialHfrHeads(
                 lh_head=self._export_hfr_head("lh", state),
@@ -941,6 +977,13 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             "tub_previous": self._tub_previous_np.astype(np.float64),
             "tub_next_frame": self._tub_next_frame_np.astype(np.float64),
         }
+        if "tub.temporal_encoder_concat" in state:
+            components["tub_temporal_encoder_concat"] = state[
+                "tub.temporal_encoder_concat"
+            ].astype(np.float64)
+        if "tub.output2_raw" in state:
+            components["tub_output2_raw"] = state["tub.output2_raw"].astype(np.float64)
+        return components
 
     def metadata(self) -> dict[str, Any]:
         return {
@@ -967,6 +1010,25 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
                 "hfr.hl",
                 "hfr.hh",
             ],
+            "receiver_export_payload_atoms": [
+                "inputs.mfu.low",
+                "inputs.mfu.skip_mid",
+                "inputs.mfu.skip_high",
+                "hfr.lh",
+                "hfr.hl",
+                "hfr.hh",
+                *(
+                    ["tub.temporal_encoder_concat", "tub.output2_raw"]
+                    if self.tub_temporal_encoder_concat is not None
+                    and self.tub_output2_raw is not None
+                    else []
+                ),
+            ],
+            "official_tub_output2_payload_export_bound": bool(
+                self.tub_temporal_encoder_concat is not None
+                and self.tub_output2_raw is not None
+            ),
+            "official_tub_output2_payload_loss_coupled": False,
             "receiver_export_payload_schema": "snerv_decoder_payload.official_mfu_hfr_tub.v1",
             "source_forward_replay_authority": False,
             "score_claim": False,
@@ -1030,6 +1092,21 @@ def _official_tub_frame_or_default(
     if not np.isfinite(arr).all():
         raise SnervMlxRendererError("official TUB frame contains non-finite values")
     return arr.copy()
+
+
+def _official_tub_optional_payload_tensor_mlx(
+    value: np.ndarray | None,
+    *,
+    name: str,
+) -> Any | None:
+    if value is None:
+        return None
+    arr = np.asarray(value, dtype=np.float32)
+    if arr.ndim != 4:
+        raise SnervMlxRendererError(f"{name} must be NCHW, got {arr.shape}")
+    if not np.isfinite(arr).all():
+        raise SnervMlxRendererError(f"{name} contains non-finite values")
+    return mx.array(arr.copy(), dtype=mx.float32)  # type: ignore[union-attr]
 
 
 def _trainable_conv2d_nchw_mlx(x: Any, weight_oihw: Any, bias: Any, *, padding: int) -> Any:

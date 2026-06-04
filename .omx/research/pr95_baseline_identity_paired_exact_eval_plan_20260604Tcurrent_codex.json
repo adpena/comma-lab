@@ -1,0 +1,129 @@
+{
+  "archive": {
+    "bytes": 178363,
+    "expected_sha256": "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74",
+    "expected_sha256_match": true,
+    "path": "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/byte_closed_submission/archive.zip",
+    "sha256": "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74"
+  },
+  "axes_skipped_due_to_existing_anchor": {
+    "contest_cpu": false,
+    "contest_cuda": false
+  },
+  "commands": {
+    "contest_cpu": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval_cpu.py",
+      "--archive",
+      "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/byte_closed_submission/archive.zip",
+      "--expected-archive-sha256",
+      "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "/Volumes/VertigoDataTier/pact/pr95_baseline_identity_exact_eval_20260604Tcurrent_codex/modal_auth_eval_cpu/pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z_cpu",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z",
+      "--lane-id",
+      "lane_pr95_baseline_identity_contest_cpu",
+      "--instance-job-id",
+      "pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z_cpu",
+      "--claim-agent",
+      "codex:modal_paired_auth_eval",
+      "--claim-notes",
+      "paired Modal auth eval; same archive/runtime required on contest_cuda and contest_cpu axes; pair_group_id=pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z; axis=contest_cpu; archive_sha=61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74; bytes=178363",
+      "--submission-dir",
+      "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+      "--expected-runtime-tree-sha256",
+      "26596a32ea2bd9af335d1325dbac6364b185af92699ebd970fba3f3d554d6b49"
+    ],
+    "contest_cuda": [
+      ".venv/bin/modal",
+      "run",
+      "--detach",
+      "experiments/modal_auth_eval.py",
+      "--archive",
+      "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/byte_closed_submission/archive.zip",
+      "--expected-archive-sha256",
+      "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74",
+      "--inflate-sh",
+      "inflate.sh",
+      "--output-dir",
+      "/Volumes/VertigoDataTier/pact/pr95_baseline_identity_exact_eval_20260604Tcurrent_codex/modal_auth_eval/pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z_cuda",
+      "--gpu",
+      "T4",
+      "--detach",
+      "--provider-detach-ack",
+      "--pair-group-id",
+      "pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z",
+      "--lane-id",
+      "lane_pr95_baseline_identity_contest_cuda",
+      "--instance-job-id",
+      "pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z_cuda",
+      "--claim-agent",
+      "codex:modal_paired_auth_eval",
+      "--claim-notes",
+      "paired Modal auth eval; same archive/runtime required on contest_cuda and contest_cpu axes; pair_group_id=pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z; axis=contest_cuda; archive_sha=61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74; bytes=178363",
+      "--submission-dir",
+      "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+      "--expected-runtime-tree-sha256",
+      "b2e47a7585b3f7d7297a18a77a638297b7c8629bb3866e488a0d3ebfd88a8011"
+    ]
+  },
+  "created_at_utc": "2026-06-04T15:56:42Z",
+  "existing_anchors_reused": {
+    "contest_cpu": null,
+    "contest_cuda": null
+  },
+  "lanes": {
+    "contest_cpu": "lane_pr95_baseline_identity_contest_cpu",
+    "contest_cuda": "lane_pr95_baseline_identity_contest_cuda"
+  },
+  "notes": [
+    "This tool is the default Modal auth-eval entry point for score-bearing archives.",
+    "Both commands carry the same pair_group_id and exact archive SHA.",
+    "Single-axis Modal wrapper use requires an explicit waiver reason.",
+    "skip_axis_if_promotable_anchor_exists=True; per-axis dispatch skipped if a promotable anchor already exists for the archive sha and expected runtime tree (anchor_lookup.find_promotable_anchor_for_axis_and_sha)."
+  ],
+  "outputs": {
+    "contest_cpu": "/Volumes/VertigoDataTier/pact/pr95_baseline_identity_exact_eval_20260604Tcurrent_codex/modal_auth_eval_cpu/pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z_cpu",
+    "contest_cuda": "/Volumes/VertigoDataTier/pact/pr95_baseline_identity_exact_eval_20260604Tcurrent_codex/modal_auth_eval/pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z_cuda"
+  },
+  "pair_group_id": "pr95_public_hnerv_muon_control_arm_paired_modal_auth_20260604T155642Z",
+  "promotion_eligible": false,
+  "required_axes": [
+    "contest_cuda",
+    "contest_cpu"
+  ],
+  "runtime": {
+    "expected_runtime_content_tree_sha256_by_axis": {
+      "contest_cpu": "83362e65f21774defb706aaac4e2df2afe6de6f8a4531abe0f08ce64c11c6ae2",
+      "contest_cuda": "83362e65f21774defb706aaac4e2df2afe6de6f8a4531abe0f08ce64c11c6ae2"
+    },
+    "expected_runtime_tree_sha256": null,
+    "expected_runtime_tree_sha256_by_axis": {
+      "contest_cpu": "26596a32ea2bd9af335d1325dbac6364b185af92699ebd970fba3f3d554d6b49",
+      "contest_cuda": "b2e47a7585b3f7d7297a18a77a638297b7c8629bb3866e488a0d3ebfd88a8011"
+    },
+    "inflate_sh": "inflate.sh",
+    "inflate_sh_original": null,
+    "modal_uploaded_runtime_manifest_by_axis": {
+      "contest_cpu": {
+        "runtime_content_tree_sha256": "83362e65f21774defb706aaac4e2df2afe6de6f8a4531abe0f08ce64c11c6ae2",
+        "runtime_tree_sha256": "26596a32ea2bd9af335d1325dbac6364b185af92699ebd970fba3f3d554d6b49"
+      },
+      "contest_cuda": {
+        "runtime_content_tree_sha256": "83362e65f21774defb706aaac4e2df2afe6de6f8a4531abe0f08ce64c11c6ae2",
+        "runtime_tree_sha256": "b2e47a7585b3f7d7297a18a77a638297b7c8629bb3866e488a0d3ebfd88a8011"
+      }
+    },
+    "submission_dir": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
+  },
+  "schema": "modal_paired_auth_eval_dispatch_plan_v2",
+  "score_claim": false,
+  "skip_axis_if_promotable_anchor_exists": true
+}

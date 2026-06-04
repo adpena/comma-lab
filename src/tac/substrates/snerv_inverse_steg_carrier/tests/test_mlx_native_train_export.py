@@ -1191,6 +1191,8 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert authority["blockers"] == []
     tensor_map = binding["official_receiver_tensor_map"]
     assert tensor_map["receiver_tensor_map_verified"] is True
+    assert tensor_map["receiver_runtime_decode_contract_proven"] is True
+    assert tensor_map["receiver_runtime_decode_authority"] is False
     assert tensor_map["official_decoder_payload_selected"] is True
     assert tensor_map["row_count"] > 0
     assert tensor_map["total_tensor_bytes"] > 0
@@ -1271,6 +1273,85 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
     assert Path(report["report_path"]).is_file()
+
+
+def test_official_primitives_receiver_authority_requires_frame_decode(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    def fake_selected_authority(_packet: bytes) -> dict[str, object]:
+        return {
+            "schema": "snerv_selected_packet_official_payload_authority.v1",
+            "status": "official_payload_selected_not_frame_producing",
+            "decoder_payload_schema": "snerv_decoder_payload.official_mfu_hfr_tub.v1",
+            "decoder_payload_codec": "int8_symmetric",
+            "official_decoder_payload_selected": True,
+            "linear_surrogate_decoder_selected": False,
+            "frame_decode_attempted": True,
+            "frame_decode_succeeded": False,
+            "official_payload_runtime_decode_authority": False,
+            "frame_producing_official_export": False,
+            "blockers": [
+                "snerv_official_mfu_hfr_tub_selected_payload_not_frame_producing"
+            ],
+            "score_claim": False,
+            "frontier_score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        mod,
+        "_selected_packet_official_payload_authority",
+        fake_selected_authority,
+    )
+    monkeypatch.setattr(
+        mod,
+        "_official_receiver_tensor_map_from_packet",
+        lambda _packet: {
+            "schema": "snerv_official_mfu_hfr_tub_receiver_tensor_map.v1",
+            "receiver_tensor_map_verified": False,
+            "receiver_runtime_decode_contract_proven": True,
+            "receiver_runtime_decode_authority": False,
+        },
+    )
+
+    binding = mod._receiver_bound_official_primitives_export_binding(
+        {
+            "schema": "snerv_official_mfu_hfr_tub_export_binding.v2",
+            "official_receiver_runtime_decode_contract": {
+                "receiver_runtime_decode_proven": True,
+            },
+            "blockers": [
+                "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+            ],
+        },
+        packet_path=tmp_path / "candidate.snar",
+        packet_bytes=16,
+        packet_sha256="0" * 64,
+        selected_packet=b"official-looking-but-not-frame-decodable",
+        selected_archive_metadata={"decoder_payload_codec": "int8_symmetric"},
+        package=None,
+        receiver_proof={
+            "runtime_consumption_proof_passed": True,
+            "receiver_contract_satisfied": True,
+        },
+    )
+
+    assert binding["official_receiver_runtime_decode_contract_proven"] is True
+    assert binding["official_receiver_payload_bound"] is True
+    assert binding["selected_packet_authority"]["frame_decode_succeeded"] is False
+    assert binding["selected_packet_official_payload_runtime_decode_authority"] is False
+    assert binding["selected_packet_frame_producing_official_export"] is False
+    assert binding["receiver_runtime_decode_authority"] is False
+    assert binding["receiver_native_export_bound"] is False
+    assert binding["export_consumed_official_mfu"] is False
+    assert binding["score_claim"] is False
+    assert binding["promotion_eligible"] is False
+    assert binding["ready_for_exact_eval_dispatch"] is False
 
 
 def test_train_export_official_primitives_shared_skip_high_is_receiver_closed(
@@ -1381,6 +1462,71 @@ def test_official_mfu_hfr_tub_packet_carries_output2_payload_from_components() -
     assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
     assert decoded.metadata["source_faithful_stack"] is False
     assert decoded.metadata["score_claim"] is False
+
+
+def test_official_renderer_exports_output2_payload_into_receiver_packet() -> None:
+    pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+        SnervMlxOfficialMfuHfrTubScoreRenderer,
+    )
+
+    pairs = _tiny_pairs(pairs=2)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    temporal = np.arange(
+        np.prod(components["temporal_encoder_output_shape"]),
+        dtype=np.float64,
+    ).reshape(components["temporal_encoder_output_shape"])
+    output2_raw = (
+        np.arange(
+            np.prod(components["output2_decoder_output_shape"]),
+            dtype=np.float64,
+        ).reshape(components["output2_decoder_output_shape"])
+        / 23.0
+    )
+    model = SnervMlxOfficialMfuHfrTubScoreRenderer(
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
+        low=components["low"],
+        skip_mid=components["skip_mid"],
+        skip_high=components["skip_high"],
+        output_hw=(16, 16),
+        model_size=model_size,
+        tub_current=components["tub_current"],
+        tub_previous=components["tub_previous"],
+        tub_next_frame=components["tub_next_frame"],
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+    )
+
+    exported = model.export_official_components()
+    metadata = model.metadata()
+    packet = mod._build_official_mfu_hfr_tub_packet_from_components(
+        exported,
+        source_pair_indices=[8, 9],
+        model_size=model_size,
+        metadata_extra={"allocation_mode": "unit_renderer_output2_payload_bound"},
+    )
+    decoded = unpack_snerv_archive(packet.packet)
+    official_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    proof = official_payload.execute()
+
+    assert "tub_temporal_encoder_concat" in exported
+    assert "tub_output2_raw" in exported
+    assert metadata["official_tub_output2_payload_export_bound"] is True
+    assert metadata["official_tub_output2_payload_loss_coupled"] is False
+    assert decoded.metadata["official_tub_output2_storage"]["stored"] is True
+    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
+    assert proof["executed_components"]["official_tub_output2_fusion"] is True
 
 
 def test_official_primitives_long_training_exports_trained_official_payload(

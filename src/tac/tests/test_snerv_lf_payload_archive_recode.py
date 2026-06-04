@@ -238,6 +238,53 @@ def test_snerv_lf_payload_recode_admission_prices_receiver_backed_savings() -> N
     assert "ADMIT_LF_RECODE__CROSSES_BYTE_WATERLINE" in markdown
 
 
+def test_snerv_lf_payload_recode_admission_routes_header_dominated_overrun() -> None:
+    report = {
+        "schema": "snerv_lf_payload_archive_recode.v1",
+        "candidate_id": "snerv-header-dominated",
+        "mode": "zero_run_varint",
+        "source_packet": {"bytes": 240_000, "sha256": "source-sha"},
+        "candidate_packet": {
+            "bytes": 181_000,
+            "header_bytes": 4_096,
+            "sha256": "candidate-sha",
+        },
+        "packet_byte_delta": -59_000,
+        "lf_payload": {
+            "source_bytes": 150_000,
+            "candidate_bytes": 90_000,
+            "byte_delta": -60_000,
+        },
+        "receiver_contract_satisfied": True,
+        "receiver_frame_equality_proof": {"status": "proven_exact"},
+        "blockers": [
+            "not_packaged_as_contest_archive_zip",
+            "paired_contest_cpu_cuda_auth_eval_missing",
+        ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [report],
+        hard_byte_ceiling=178_000,
+        candidate_id="snerv-header-dominated",
+        full_video_coverage=True,
+    )
+
+    selected = plan["selected_row"]
+    assert selected["candidate_packet_header_bytes"] == 4_096
+    assert selected["post_recode_over_waterline_bytes"] == 3_000
+    assert plan["verdict"] == (
+        "ADMIT_LF_RECODE__POST_RECODE_PACKET_HEADER_GRAMMAR_DOMINATES"
+    )
+    assert plan["next_actions"] == [
+        "preserve_snerv_lossless_lf_payload_codec:zero_run_varint",
+        "attack_snerv_snar_packet_header_grammar_or_packaging_overhead",
+        "rerun_receiver_proof_and_byte_price_admission_after_packet_header_rewrite",
+    ]
+
+
 def test_snerv_lf_payload_recode_admission_blocks_cross_candidate_rebinding() -> None:
     report = {
         "schema": "snerv_lf_payload_archive_recode.v1",

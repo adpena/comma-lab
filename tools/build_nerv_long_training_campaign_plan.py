@@ -43,6 +43,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-json", type=Path, required=True)
     parser.add_argument("--output-md", type=Path)
     parser.add_argument("--output-queue", type=Path)
+    parser.add_argument("--output-snerv-lf-reroute-queue", type=Path)
     parser.add_argument(
         "--experiment-queue-id",
         help=(
@@ -54,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-output-json-sha256")
     parser.add_argument("--expected-output-md-sha256")
     parser.add_argument("--expected-output-queue-sha256")
+    parser.add_argument("--expected-output-snerv-lf-reroute-queue-sha256")
     parser.add_argument("--optimizer-kind", action="append", default=None)
     parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
     parser.add_argument("--batch-pairs", type=int, default=DEFAULT_BATCH_PAIRS)
@@ -120,12 +122,55 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-lf-payload-recode-source",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Receiver-proof snerv_lf_payload_archive_recode.v1 or admission "
+            "JSON to feed the SNeRV LF recode admission and over-ceiling "
+            "reroute queue. Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-lf-payload-byte-report",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Measured LF payload byte report for the SNeRV over-ceiling "
+            "reroute queue. Accepts snerv_checkpoint_archive_export.v1, "
+            "snerv_lf_payload_codec_sweep.v1, or recode/admission JSON. "
+            "Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-snar-header-grammar-profile",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_snar_header_grammar_profile.v1 JSON to attach exact "
+            "post-recode SNAR header byte accounting to the over-ceiling "
+            "reroute queue. Repeatable."
+        ),
+    )
+    parser.add_argument(
         "--snerv-official-source-audit",
         type=Path,
         help=(
             "Optional snerv_official_source_parity_audit.v1 JSON. When present, "
             "SNeRV rows carry official-source marker custody and remaining "
             "parity debt without granting promotion authority."
+        ),
+    )
+    parser.add_argument(
+        "--pr95-baseline-identity",
+        type=Path,
+        help=(
+            "Optional pr95_baseline_identity.v1 JSON. When present, campaign "
+            "rows carry the selected PR95 control-arm archive identity and "
+            "paired exact-eval work order without granting score authority."
         ),
     )
     parser.add_argument(
@@ -177,8 +222,20 @@ def main(argv: list[str] | None = None) -> int:
                 sidecar_root=args.output_json.parent / "decoder_weight_waterfill_sidecars",
             )
         ),
+        snerv_lf_payload_recode_sources=tuple(
+            _load(path) for path in args.snerv_lf_payload_recode_source
+        ),
+        snerv_lf_payload_byte_report_sources=tuple(
+            _load(path) for path in args.snerv_lf_payload_byte_report
+        ),
+        snerv_snar_header_grammar_profile_sources=tuple(
+            _load(path) for path in args.snerv_snar_header_grammar_profile
+        ),
         snerv_official_source_audit=(
             None if args.snerv_official_source_audit is None else _load(args.snerv_official_source_audit)
+        ),
+        pr95_baseline_identity=(
+            None if args.pr95_baseline_identity is None else _load(args.pr95_baseline_identity)
         ),
         snerv_bounded_proof_only=bool(args.snerv_bounded_proof_only),
         snerv_bounded_proof_epochs=int(args.snerv_bounded_proof_epochs),
@@ -198,6 +255,13 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=args.expected_output_queue_sha256 is not None,
             expected_existing_sha256=args.expected_output_queue_sha256,
         )
+    if args.output_snerv_lf_reroute_queue:
+        write_json_artifact(
+            args.output_snerv_lf_reroute_queue,
+            report["snerv_lf_over_ceiling_reroute_queue"],
+            allow_overwrite=args.expected_output_snerv_lf_reroute_queue_sha256 is not None,
+            expected_existing_sha256=args.expected_output_snerv_lf_reroute_queue_sha256,
+        )
     if args.output_md:
         write_text_artifact(
             args.output_md,
@@ -213,10 +277,21 @@ def main(argv: list[str] | None = None) -> int:
                 "launchable_local_row_count": report["launchable_local_row_count"],
                 "blocked_row_count": report["blocked_row_count"],
                 "decoder_weight_waterfill_attached_row_count": report["decoder_weight_waterfill_attached_row_count"],
+                "snerv_lf_over_ceiling_reroute_queue_row_count": report[
+                    "snerv_lf_over_ceiling_reroute_queue_row_count"
+                ],
+                "snerv_snar_header_grammar_profile_source_count": report[
+                    "snerv_snar_header_grammar_profile_source_count"
+                ],
                 "score_claim": report["score_claim"],
                 "ready_for_exact_eval_dispatch": report["ready_for_exact_eval_dispatch"],
                 "output_json": args.output_json.as_posix(),
                 "output_queue": (None if args.output_queue is None else args.output_queue.as_posix()),
+                "output_snerv_lf_reroute_queue": (
+                    None
+                    if args.output_snerv_lf_reroute_queue is None
+                    else args.output_snerv_lf_reroute_queue.as_posix()
+                ),
                 "experiment_queue_id": report["experiment_queue_id"],
             },
             sort_keys=True,

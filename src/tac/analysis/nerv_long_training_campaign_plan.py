@@ -45,10 +45,20 @@ from tac.analysis.nerv_modelsize_budget import (
     snerv_decoder_codec_nominal_bits,
     snerv_modelsize_candidate_id_from_controls,
 )
+from tac.analysis.nerv_scorer_objective import (
+    PEIRCE_P1_CONTEST_SCORER_GEOMETRY,
+)
 from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_contract
+from tac.analysis.snerv_lf_over_ceiling_reroute_queue import (
+    DEFAULT_QUEUE_ID as DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
+)
+from tac.analysis.snerv_lf_over_ceiling_reroute_queue import (
+    build_snerv_lf_over_ceiling_reroute_queue,
+)
 from tac.analysis.snerv_lf_payload_archive_recode import (
     build_snerv_lf_payload_recode_admission_plan,
 )
+from tac.contest_eval_contract import build_score_allocation_contract
 from tac.optimization.recon_pixel_weight_surface import (
     JOINT_RECON_PIXEL_WEIGHT_MANIFEST_SCHEMA,
 )
@@ -148,6 +158,11 @@ _TIMING_SMOKE_OPTIMIZER_LAUNCH_BLOCKERS: dict[str, tuple[str, ...]] = {
 FIRST_PASS_OPTIMIZER_KINDS = frozenset(("pact_muon_adamw", "adamw", "muon", "lion", "adamax"))
 OPTIMIZER_CONTROL_SCHEMA = "nerv_optimizer_control_surface.v1"
 HINERV_OPTIMIZER_POLICY_SCHEMA = "nerv_hinerv_optimizer_policy.v1"
+UPSTREAM_EVALUATE_PRIORITY_CONTRACT_SCHEMA = "nerv_upstream_evaluate_priority_contract.v1"
+ROW_UPSTREAM_EVALUATE_BINDING_SCHEMA = "nerv_row_upstream_evaluate_binding.v1"
+TILDE_OSS_LEVERAGE_POLICY_SCHEMA = "nerv_tilde_oss_leverage_policy.v1"
+ROW_TILDE_OSS_BINDING_SCHEMA = "nerv_row_tilde_oss_binding.v1"
+PR95_BASELINE_IDENTITY_BINDING_SCHEMA = "nerv_pr95_baseline_identity_binding.v1"
 
 
 class NervLongTrainingCampaignPlanError(ValueError):
@@ -156,6 +171,266 @@ class NervLongTrainingCampaignPlanError(ValueError):
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
+
+
+def _upstream_evaluate_priority_contract() -> dict[str, Any]:
+    score_allocation = build_score_allocation_contract()
+    scorer_geometry = PEIRCE_P1_CONTEST_SCORER_GEOMETRY.as_false_authority_payload()
+    return {
+        "schema": UPSTREAM_EVALUATE_PRIORITY_CONTRACT_SCHEMA,
+        "source": "upstream/evaluate.py",
+        "baseline_to_beat": "full_pr95_fidelity_or_better_on_exact_upstream_evaluate_axes",
+        "applies_to_families": ["hi_nerv", "snerv"],
+        "objective": (
+            "Allocate SNeRV/HiNeRV capacity against the official evaluator: "
+            "SegNet last-frame hard argmax, PoseNet two-frame YUV6 pose MSE, "
+            "and exact archive.zip byte price."
+        ),
+        "optimizer_target_terms": [
+            "SegNet_last_frame_argmax_distortion",
+            "PoseNet_two_frame_yuv6_first_six_pose_dims",
+            "archive_zip_bytes_rate_term",
+        ],
+        "non_authority_terms": [
+            "human_visual_fidelity",
+            "PSNR_without_scorer_causal_evidence",
+            "SSIM_without_scorer_causal_evidence",
+            "inflated_raw_bytes_as_rate_denominator",
+            "nominal_modelsize_as_archive_bytes",
+        ],
+        "crux": {
+            "segnet_frame0_direct_weight": 0.0,
+            "segnet_frame1_direct_weight": 1.0,
+            "posenet_frame0_direct_weight": 1.0,
+            "posenet_frame1_direct_weight": 1.0,
+            "pose_marginal_formula": score_allocation["posenet"][
+                "derivative_wrt_d_pose"
+            ],
+            "rate_price_per_archive_byte": score_allocation["rate"][
+                "rate_price_per_archive_byte"
+            ],
+            "canonical_rate_denominator_bytes": score_allocation["rate"][
+                "canonical_denominator_bytes"
+            ],
+        },
+        "row_binding_required": True,
+        "promotion_boundary": "archive.zip plus deterministic inflate runtime through upstream evaluate.py",
+        "score_allocation_contract": score_allocation,
+        "scorer_geometry": scorer_geometry,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _row_upstream_evaluate_binding(
+    *,
+    family: str,
+    contract: Mapping[str, Any],
+) -> dict[str, Any]:
+    score_allocation = contract.get("score_allocation_contract")
+    if not isinstance(score_allocation, Mapping):
+        score_allocation = build_score_allocation_contract()
+    return {
+        "schema": ROW_UPSTREAM_EVALUATE_BINDING_SCHEMA,
+        "family": str(family),
+        "contract_schema": contract.get("schema"),
+        "source": contract.get("source"),
+        "baseline_to_beat": contract.get("baseline_to_beat"),
+        "optimizer_target_terms": list(contract.get("optimizer_target_terms") or ()),
+        "rate": {
+            "archive_authority": score_allocation["rate"]["archive_authority"],
+            "canonical_denominator_bytes": score_allocation["rate"][
+                "canonical_denominator_bytes"
+            ],
+            "rate_price_per_archive_byte": score_allocation["rate"][
+                "rate_price_per_archive_byte"
+            ],
+            "raw_output_shape_bytes_are_not_rate_denominator": score_allocation[
+                "rate"
+            ]["raw_output_shape_bytes_are_not_rate_denominator"],
+        },
+        "pair_geometry": {
+            "seq_len": score_allocation["pair_geometry"]["seq_len"],
+            "public_test_pair_count": score_allocation["pair_geometry"][
+                "public_test_pair_count"
+            ],
+            "camera_size_wh": list(score_allocation["pair_geometry"]["camera_size_wh"]),
+            "candidate_raw_shape": list(
+                score_allocation["pair_geometry"]["candidate_raw_shape"]
+            ),
+        },
+        "segnet": {
+            "coefficient": score_allocation["segnet"]["coefficient"],
+            "frame_scope": score_allocation["segnet"]["frame_scope"],
+            "scored_frame_index_within_pair": score_allocation["segnet"][
+                "scored_frame_index_within_pair"
+            ],
+            "unscored_frame_index_within_pair": score_allocation["segnet"][
+                "unscored_frame_index_within_pair"
+            ],
+            "distortion": score_allocation["segnet"]["distortion"],
+        },
+        "posenet": {
+            "frame_scope": score_allocation["posenet"]["frame_scope"],
+            "scored_frame_indices_within_pair": list(
+                score_allocation["posenet"]["scored_frame_indices_within_pair"]
+            ),
+            "input_domain": score_allocation["posenet"]["input_domain"],
+            "distortion": score_allocation["posenet"]["distortion"],
+            "derivative_wrt_d_pose": score_allocation["posenet"][
+                "derivative_wrt_d_pose"
+            ],
+        },
+        "authority": {
+            "row_is_optimizer_guidance_only": True,
+            "score_authority_requires": score_allocation["authority"][
+                "score_authority_requires"
+            ],
+            "receiver_contract": score_allocation["authority"]["receiver_contract"],
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def _tilde_oss_leverage_policy() -> dict[str, Any]:
+    return {
+        "schema": TILDE_OSS_LEVERAGE_POLICY_SCHEMA,
+        "source_intake": "xhigh_research_sidecar_20260604",
+        "applies_to_families": ["hi_nerv", "snerv"],
+        "implementation_order": [
+            "reuse_or_refresh_exact_pr95_baseline_identity_on_upstream_evaluate_axes",
+            "aurora_like_pr95_hinerv_timing_convergence_smoke",
+            "pact_native_snerv_wall_style_lf_tub_gate_byte_charged_side_smoke",
+        ],
+        "aurora": {
+            "official_tilde_surface": True,
+            "allowed_use": "optimizer_timing_convergence_smoke_only",
+            "planner_optimizer_kind": AURORA_LIKE_OPTIMIZER_KIND,
+            "runtime_archive_payload_import_allowed": False,
+            "score_claim": False,
+        },
+        "wall_attention": {
+            "official_tilde_surface": True,
+            "allowed_use": (
+                "concept_only_pact_native_snerv_lf_tub_temporal_gate_with_receiver_bytes"
+            ),
+            "direct_kernel_import_allowed": False,
+            "byte_charged_receiver_replay_required": True,
+            "score_claim": False,
+        },
+        "parallax": {
+            "official_tilde_surface": False,
+            "classification": "llm_local_linear_attention_not_video_parallax_geometry",
+            "allowed_use": "concept_only_architecture_optimizer_codesign_signal",
+            "direct_runtime_import_allowed": False,
+            "runtime_blockers": [
+                "torch_triton_hopper_cute_runtime_debt",
+                "no_inflate_raw_rgb_contract",
+                "no_archive_zip_byte_closed_component",
+            ],
+        },
+        "nitrobrew": {
+            "official_tilde_surface": True,
+            "allowed_use": (
+                "concept_only_streaming_accumulation_for_local_scorer_memory_reduction"
+            ),
+            "codec_or_submission_claim_allowed": False,
+        },
+        "direct_import_policy": {
+            "forbidden_repos": [
+                "Yifei-Zuo/Parallax",
+                "tilde-research/wall-attention-release",
+            ],
+            "reason": (
+                "external LLM kernels are not contest inflate grammar and would "
+                "add runtime dependency debt without archive.zip scorer evidence"
+            ),
+            "pact_native_reimplementation_required_for_receiver_runtime": True,
+        },
+        **FALSE_AUTHORITY,
+    }
+
+
+def _row_tilde_oss_binding(
+    *,
+    family: str,
+    policy: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema": ROW_TILDE_OSS_BINDING_SCHEMA,
+        "family": str(family),
+        "policy_schema": policy.get("schema"),
+        "implementation_order": list(policy.get("implementation_order") or ()),
+        "aurora_like_optimizer_smoke_allowed": True,
+        "aurora_like_optimizer_kind": AURORA_LIKE_OPTIMIZER_KIND,
+        "parallax_direct_runtime_import_allowed": False,
+        "wall_attention_direct_kernel_import_allowed": False,
+        "pact_native_receiver_byte_charged_required": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _pr95_baseline_identity_binding(
+    source: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(source, Mapping):
+        return {
+            "schema": PR95_BASELINE_IDENTITY_BINDING_SCHEMA,
+            "attached": False,
+            "reason": "pr95_baseline_identity_missing",
+            "selected_archive": None,
+            "local_cpu_mlx_work_order": None,
+            "modal_dispatch_policy": None,
+            "paired_exact_eval_work_order": None,
+            "blockers": ["pr95_baseline_identity_missing"],
+            **FALSE_AUTHORITY,
+        }
+    selected_archive = source.get("selected_reusable_candidate_archive")
+    exact_axis_status = source.get("exact_axis_status")
+    local_work_order = source.get("local_cpu_mlx_work_order")
+    modal_policy = source.get("modal_dispatch_policy")
+    work_order = source.get("paired_exact_eval_work_order")
+    source_blockers = [
+        str(blocker) for blocker in source.get("blockers") or () if blocker
+    ]
+    structural_blockers = []
+    if source.get("schema") != "pr95_baseline_identity.v1":
+        structural_blockers.append("pr95_baseline_identity_schema_mismatch")
+    if not isinstance(selected_archive, Mapping):
+        structural_blockers.append("pr95_baseline_identity_selected_archive_missing")
+    if not isinstance(exact_axis_status, Mapping):
+        structural_blockers.append("pr95_baseline_identity_exact_axis_status_missing")
+    if not isinstance(local_work_order, Mapping):
+        structural_blockers.append("pr95_baseline_identity_local_cpu_mlx_work_order_missing")
+    if not isinstance(modal_policy, Mapping):
+        structural_blockers.append("pr95_baseline_identity_modal_dispatch_policy_missing")
+    if not isinstance(work_order, Mapping):
+        structural_blockers.append("pr95_baseline_identity_paired_work_order_missing")
+    blockers = _dedupe([*structural_blockers, *source_blockers])
+    return {
+        "schema": PR95_BASELINE_IDENTITY_BINDING_SCHEMA,
+        "attached": not structural_blockers and isinstance(selected_archive, Mapping),
+        "baseline_id": source.get("baseline_id"),
+        "baseline_identity_reusable": bool(source.get("baseline_identity_reusable")),
+        "selected_archive": (
+            dict(selected_archive) if isinstance(selected_archive, Mapping) else None
+        ),
+        "exact_axis_status": (
+            dict(exact_axis_status) if isinstance(exact_axis_status, Mapping) else None
+        ),
+        "local_cpu_mlx_work_order": (
+            dict(local_work_order) if isinstance(local_work_order, Mapping) else None
+        ),
+        "modal_dispatch_policy": (
+            dict(modal_policy) if isinstance(modal_policy, Mapping) else None
+        ),
+        "paired_exact_eval_work_order": (
+            dict(work_order) if isinstance(work_order, Mapping) else None
+        ),
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def build_nerv_long_training_campaign_plan(
@@ -173,7 +448,10 @@ def build_nerv_long_training_campaign_plan(
     modelsize_byte_cap_feedback_paths: Sequence[str | Path] = (),
     decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
+    snerv_lf_payload_byte_report_sources: Sequence[Mapping[str, Any]] = (),
+    snerv_snar_header_grammar_profile_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
+    pr95_baseline_identity: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
     snerv_bounded_proof_epochs: int = 3,
     experiment_queue_id: str = DEFAULT_EXPERIMENT_QUEUE_ID,
@@ -217,6 +495,9 @@ def build_nerv_long_training_campaign_plan(
         families=("hi_nerv", "snerv"),
         snerv_official_source_audit=snerv_official_source_audit,
     )
+    upstream_evaluate_priority_contract = _upstream_evaluate_priority_contract()
+    tilde_oss_leverage_policy = _tilde_oss_leverage_policy()
+    pr95_baseline_binding = _pr95_baseline_identity_binding(pr95_baseline_identity)
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -262,6 +543,11 @@ def build_nerv_long_training_campaign_plan(
                     candidate_feedback_index=candidate_feedback_index,
                     decoder_weight_waterfill_index=decoder_weight_waterfill_index,
                     source_parity_contract=source_parity_contract,
+                    upstream_evaluate_priority_contract=(
+                        upstream_evaluate_priority_contract
+                    ),
+                    tilde_oss_leverage_policy=tilde_oss_leverage_policy,
+                    pr95_baseline_identity_binding=pr95_baseline_binding,
                     planner_row_queue_artifact_path=planner_queue_artifact,
                     modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 )
@@ -279,6 +565,11 @@ def build_nerv_long_training_campaign_plan(
                 bounded_proof_only=bool(snerv_bounded_proof_only),
                 bounded_proof_epochs=int(snerv_bounded_proof_epochs),
                 source_parity_contract=source_parity_contract,
+                upstream_evaluate_priority_contract=(
+                    upstream_evaluate_priority_contract
+                ),
+                tilde_oss_leverage_policy=tilde_oss_leverage_policy,
+                pr95_baseline_identity_binding=pr95_baseline_binding,
                 planner_row_queue_artifact_path=planner_queue_artifact,
                 modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 snerv_lf_payload_recode_sources=snerv_lf_payload_recode_sources,
@@ -294,6 +585,17 @@ def build_nerv_long_training_campaign_plan(
         ),
     )
     experiment_queue = _experiment_queue(rows, queue_id=queue_id)
+    snerv_lf_over_ceiling_reroute_queue = build_snerv_lf_over_ceiling_reroute_queue(
+        campaign_rows=rows,
+        measured_lf_payload_sources=(
+            *tuple(snerv_lf_payload_recode_sources),
+            *tuple(snerv_lf_payload_byte_report_sources),
+        ),
+        measured_lf_payload_paths=byte_cap_feedback_paths,
+        snar_header_grammar_profiles=snerv_snar_header_grammar_profile_sources,
+        output_root=Path(output_root) / "snerv_lf_over_ceiling_reroutes",
+        queue_id=DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
+    )
     decoder_weight_waterfill_unattached_sources = _decoder_weight_waterfill_unattached_sources(
         index=decoder_weight_waterfill_index,
         campaign_rows=rows,
@@ -365,16 +667,40 @@ def build_nerv_long_training_campaign_plan(
         "candidate_feedback_row_count": _unique_index_row_count(candidate_feedback_index),
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
         "snerv_lf_payload_recode_source_count": len(snerv_lf_payload_recode_sources),
+        "snerv_lf_payload_byte_report_source_count": len(snerv_lf_payload_byte_report_sources),
+        "snerv_snar_header_grammar_profile_source_count": len(
+            snerv_snar_header_grammar_profile_sources
+        ),
         "decoder_weight_waterfill_row_count": _unique_index_row_count(decoder_weight_waterfill_index),
         "decoder_weight_waterfill_unattached_source_count": len(decoder_weight_waterfill_unattached_sources),
         "decoder_weight_waterfill_unattached_sources": (decoder_weight_waterfill_unattached_sources),
+        "snerv_lf_over_ceiling_reroute_queue": snerv_lf_over_ceiling_reroute_queue,
+        "snerv_lf_over_ceiling_reroute_queue_schema": snerv_lf_over_ceiling_reroute_queue["schema"],
+        "snerv_lf_over_ceiling_reroute_queue_row_count": snerv_lf_over_ceiling_reroute_queue["queue_row_count"],
         "source_parity_contract": source_parity_contract,
         "snerv_official_source_audit_attached": isinstance(snerv_official_source_audit, Mapping),
         "source_parity_required_for_long_training_ready": bool(
             source_parity_contract.get("required_for_long_training_ready")
         ),
         "source_parity_blockers": list(source_parity_contract.get("blockers") or ()),
-        "source_parity_nonblocking_gaps": list(source_parity_contract.get("nonblocking_gaps") or ()),
+        "source_parity_nonblocking_gaps": list(
+            source_parity_contract.get("nonblocking_gaps") or ()
+        ),
+        "upstream_evaluate_priority_contract": upstream_evaluate_priority_contract,
+        "upstream_evaluate_contract_consumed_by_rows": all(
+            isinstance(row.get("upstream_evaluate_score_binding"), Mapping)
+            for row in rows
+        ),
+        "tilde_oss_leverage_policy": tilde_oss_leverage_policy,
+        "tilde_oss_policy_consumed_by_rows": all(
+            isinstance(row.get("tilde_oss_leverage_binding"), Mapping)
+            for row in rows
+        ),
+        "pr95_baseline_identity_binding": pr95_baseline_binding,
+        "pr95_baseline_identity_consumed_by_rows": all(
+            isinstance(row.get("pr95_baseline_identity_binding"), Mapping)
+            for row in rows
+        ),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
         "experiment_queue": experiment_queue,
@@ -429,9 +755,71 @@ def render_nerv_long_training_campaign_plan_markdown(report: Mapping[str, Any]) 
         f"Score claim: `{report.get('score_claim')}`",
         f"Ready for exact dispatch: `{report.get('ready_for_exact_eval_dispatch')}`",
         "",
-        "## Rows",
+        "## Authority Bindings",
         "",
     ]
+    upstream_contract = report.get("upstream_evaluate_priority_contract")
+    if isinstance(upstream_contract, Mapping):
+        crux = upstream_contract.get("crux")
+        crux = crux if isinstance(crux, Mapping) else {}
+        lines.extend(
+            [
+                f"- upstream_evaluate: `{upstream_contract.get('source')}`",
+                f"  baseline_to_beat: `{upstream_contract.get('baseline_to_beat')}`",
+                "  canonical_rate_denominator_bytes: "
+                f"`{crux.get('canonical_rate_denominator_bytes')}`",
+                f"  pose_marginal_formula: `{crux.get('pose_marginal_formula')}`",
+            ]
+        )
+    tilde_policy = report.get("tilde_oss_leverage_policy")
+    if isinstance(tilde_policy, Mapping):
+        parallax = tilde_policy.get("parallax")
+        parallax = parallax if isinstance(parallax, Mapping) else {}
+        wall_attention = tilde_policy.get("wall_attention")
+        wall_attention = wall_attention if isinstance(wall_attention, Mapping) else {}
+        lines.extend(
+            [
+                f"- tilde_oss_policy: `{tilde_policy.get('schema')}`",
+                "  parallax_official_tilde_surface: "
+                f"`{parallax.get('official_tilde_surface')}`",
+                "  parallax_direct_runtime_import_allowed: "
+                f"`{parallax.get('direct_runtime_import_allowed')}`",
+                "  wall_attention_direct_kernel_import_allowed: "
+                f"`{wall_attention.get('direct_kernel_import_allowed')}`",
+            ]
+        )
+    pr95_binding = report.get("pr95_baseline_identity_binding")
+    if isinstance(pr95_binding, Mapping):
+        selected_archive = pr95_binding.get("selected_archive")
+        selected_archive = (
+            selected_archive if isinstance(selected_archive, Mapping) else {}
+        )
+        local_work_order = pr95_binding.get("local_cpu_mlx_work_order")
+        local_work_order = (
+            local_work_order if isinstance(local_work_order, Mapping) else {}
+        )
+        modal_policy = pr95_binding.get("modal_dispatch_policy")
+        modal_policy = modal_policy if isinstance(modal_policy, Mapping) else {}
+        paired_work_order = pr95_binding.get("paired_exact_eval_work_order")
+        paired_work_order = (
+            paired_work_order if isinstance(paired_work_order, Mapping) else {}
+        )
+        lines.extend(
+            [
+                f"- pr95_baseline_identity_attached: `{pr95_binding.get('attached')}`",
+                f"  baseline_id: `{pr95_binding.get('baseline_id')}`",
+                f"  selected_archive_sha256: `{selected_archive.get('sha256')}`",
+                f"  selected_archive_bytes: `{selected_archive.get('bytes')}`",
+                f"  local_cpu_mlx_ready: `{local_work_order.get('ready')}`",
+                f"  local_cpu_axis: `{local_work_order.get('local_cpu_axis_tag')}`",
+                f"  mlx_axis: `{local_work_order.get('mlx_axis_tag')}`",
+                f"  modal_dispatch_allowed: `{modal_policy.get('modal_dispatch_allowed')}`",
+                f"  paired_exact_eval_ready: `{paired_work_order.get('ready')}`",
+                "  exact_axis_blockers: "
+                f"`{', '.join(str(b) for b in pr95_binding.get('blockers') or ())}`",
+            ]
+        )
+    lines.extend(["", "## Rows", ""])
     for row in report.get("campaign_rows") or ():
         if not isinstance(row, Mapping):
             continue
@@ -477,6 +865,9 @@ def _hinerv_campaign_row(
     candidate_feedback_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     decoder_weight_waterfill_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     source_parity_contract: Mapping[str, Any] | None = None,
+    upstream_evaluate_priority_contract: Mapping[str, Any] | None = None,
+    tilde_oss_leverage_policy: Mapping[str, Any] | None = None,
+    pr95_baseline_identity_binding: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
 ) -> dict[str, Any]:
@@ -525,6 +916,23 @@ def _hinerv_campaign_row(
     source_parity = _source_parity_family_report(
         family="hi_nerv",
         source_parity_contract=source_parity_contract,
+    )
+    upstream_evaluate_binding = _row_upstream_evaluate_binding(
+        family="hi_nerv",
+        contract=upstream_evaluate_priority_contract
+        if isinstance(upstream_evaluate_priority_contract, Mapping)
+        else _upstream_evaluate_priority_contract(),
+    )
+    tilde_oss_binding = _row_tilde_oss_binding(
+        family="hi_nerv",
+        policy=tilde_oss_leverage_policy
+        if isinstance(tilde_oss_leverage_policy, Mapping)
+        else _tilde_oss_leverage_policy(),
+    )
+    pr95_baseline_binding = (
+        dict(pr95_baseline_identity_binding)
+        if isinstance(pr95_baseline_identity_binding, Mapping)
+        else _pr95_baseline_identity_binding(None)
     )
     optimizer_launch_blockers = _optimizer_launch_blockers(optimizer_kind)
     effective_learning_rate = float(launch_feedback_adjustment.get("learning_rate") or learning_rate)
@@ -746,6 +1154,9 @@ def _hinerv_campaign_row(
             ),
             "modelsize_byte_cap_preflight": modelsize_byte_cap_preflight,
             "optimizer_control": _optimizer_control(optimizer_kind),
+            "upstream_evaluate_score_binding": upstream_evaluate_binding,
+            "tilde_oss_leverage_binding": tilde_oss_binding,
+            "pr95_baseline_identity_binding": pr95_baseline_binding,
             "optimizer_policy": _hinerv_optimizer_policy_control(
                 optimizer_kind=optimizer_kind,
                 optimizer_policy=optimizer_policy,
@@ -794,6 +1205,9 @@ def _snerv_campaign_row(
     bounded_proof_only: bool = False,
     bounded_proof_epochs: int = 3,
     source_parity_contract: Mapping[str, Any] | None = None,
+    upstream_evaluate_priority_contract: Mapping[str, Any] | None = None,
+    tilde_oss_leverage_policy: Mapping[str, Any] | None = None,
+    pr95_baseline_identity_binding: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
@@ -810,6 +1224,23 @@ def _snerv_campaign_row(
     )
     official_runtime_authority_split = _snerv_official_runtime_authority_split(
         source_parity
+    )
+    upstream_evaluate_binding = _row_upstream_evaluate_binding(
+        family="snerv",
+        contract=upstream_evaluate_priority_contract
+        if isinstance(upstream_evaluate_priority_contract, Mapping)
+        else _upstream_evaluate_priority_contract(),
+    )
+    tilde_oss_binding = _row_tilde_oss_binding(
+        family="snerv",
+        policy=tilde_oss_leverage_policy
+        if isinstance(tilde_oss_leverage_policy, Mapping)
+        else _tilde_oss_leverage_policy(),
+    )
+    pr95_baseline_binding = (
+        dict(pr95_baseline_identity_binding)
+        if isinstance(pr95_baseline_identity_binding, Mapping)
+        else _pr95_baseline_identity_binding(None)
     )
     feedback = _candidate_feedback_for(
         candidate=candidate,
@@ -1112,6 +1543,9 @@ def _snerv_campaign_row(
             ),
             "modelsize_byte_cap_preflight": modelsize_byte_cap_preflight,
             "optimizer_control": optimizer_control,
+            "upstream_evaluate_score_binding": upstream_evaluate_binding,
+            "tilde_oss_leverage_binding": tilde_oss_binding,
+            "pr95_baseline_identity_binding": pr95_baseline_binding,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
@@ -1156,6 +1590,9 @@ def _snerv_campaign_row(
                 "muon_adamw_partition_bound": (
                     str(optimizer_kind) == "pact_muon_adamw"
                 ),
+                "upstream_evaluate_score_binding": upstream_evaluate_binding,
+                "tilde_oss_leverage_binding": tilde_oss_binding,
+                "pr95_baseline_identity_binding": pr95_baseline_binding,
                 **FALSE_AUTHORITY,
             },
         },
@@ -1326,6 +1763,9 @@ def _experiment_for_row(
     source_parity = metadata.get("source_parity")
     source_controls = metadata.get("source_bound_capacity_controls")
     source_control_blockers = metadata.get("source_bound_capacity_control_blockers")
+    upstream_evaluate_binding = metadata.get("upstream_evaluate_score_binding")
+    tilde_oss_binding = metadata.get("tilde_oss_leverage_binding")
+    pr95_baseline_binding = metadata.get("pr95_baseline_identity_binding")
     snerv_runtime_authority_split = metadata.get(
         "snerv_official_runtime_authority_split"
     )
@@ -1347,6 +1787,18 @@ def _experiment_for_row(
             "queue_status_is_cpu_replay_proof": False,
             "queue_status_is_exact_eval_authority": False,
             "source_parity_contract_consumed": isinstance(source_parity, Mapping),
+            "upstream_evaluate_score_contract_consumed": isinstance(
+                upstream_evaluate_binding,
+                Mapping,
+            ),
+            "tilde_oss_leverage_policy_consumed": isinstance(
+                tilde_oss_binding,
+                Mapping,
+            ),
+            "pr95_baseline_identity_consumed": isinstance(
+                pr95_baseline_binding,
+                Mapping,
+            ),
             "source_bound_capacity_controls_consumed": isinstance(
                 source_controls,
                 Mapping,
@@ -1361,6 +1813,21 @@ def _experiment_for_row(
             "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
             "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
             "source_parity": source_parity if isinstance(source_parity, Mapping) else None,
+            "upstream_evaluate_score_binding": (
+                upstream_evaluate_binding
+                if isinstance(upstream_evaluate_binding, Mapping)
+                else None
+            ),
+            "tilde_oss_leverage_binding": (
+                tilde_oss_binding
+                if isinstance(tilde_oss_binding, Mapping)
+                else None
+            ),
+            "pr95_baseline_identity_binding": (
+                pr95_baseline_binding
+                if isinstance(pr95_baseline_binding, Mapping)
+                else None
+            ),
             "snerv_official_runtime_authority_split": (
                 snerv_runtime_authority_split
                 if isinstance(snerv_runtime_authority_split, Mapping)
@@ -1417,7 +1884,15 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
         "snerv_candidate_id_source_bound_controls_mismatch",
         "snerv_candidate_id_source_bound_controls_unparseable",
+        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training",
+        "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
+        "snerv_lf_payload_recode_still_over_hard_byte_ceiling",
+        "snerv_lf_recode_selected_mode_still_over_byte_waterline",
+        "snerv_lf_recode_no_receiver_proven_byte_saving_mode",
+        "snerv_modelsize_auto_calibrated_byte_cap_over_ceiling",
         "snerv_nominal_payload_far_over_ceiling_refuse_long_training",
+        "snerv_receiver_proven_archive_over_hard_byte_ceiling",
+        "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only",
     }
     prefixes = ("snerv_source_bound_control_missing:", "source_parity:")
     return _dedupe(
@@ -5078,6 +5553,9 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "optimizer_control",
         "optimizer_policy",
         "prioritized_pair_training",
+        "upstream_evaluate_score_binding",
+        "tilde_oss_leverage_binding",
+        "pr95_baseline_identity_binding",
         "source_faithfulness_controls",
         "source_bound_capacity_controls",
         "source_bound_capacity_control_blockers",

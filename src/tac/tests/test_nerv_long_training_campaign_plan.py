@@ -49,6 +49,14 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
     assert report["launchable_local_row_count"] == 0
+    assert report["snerv_lf_over_ceiling_reroute_queue"]["schema"] == (
+        "snerv_lf_over_ceiling_reroute_queue.v1"
+    )
+    assert report["snerv_lf_over_ceiling_reroute_queue_row_count"] == 1
+    reroute_row = report["snerv_lf_over_ceiling_reroute_queue"]["queue_rows"][0]
+    assert reroute_row["work_order_type"] == "lf_reroute_blocker"
+    assert "snerv_measured_lf_payload_report_missing" in reroute_row["blockers"]
+    assert reroute_row["local_mlx_long_training_allowed"] is False
     assert report["family_counts"] == {"hi_nerv": 2, "snerv": 1}
     assert report["source_parity_contract"]["schema"] == ("nerv_source_parity_contract.v1")
     assert report["source_parity_required_for_long_training_ready"] is True
@@ -203,6 +211,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert launch_contract["queue_status_is_local_mlx_plan"] is False
     assert launch_contract["queue_status_is_runnable_plan"] is False
     assert (
+        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
+        in launch_contract["queue_launch_blockers"]
+    )
+    assert (
         "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in launch_contract["queue_launch_blockers"]
     )
     assert launch_contract["queue_status_is_receiver_proof"] is False
@@ -267,6 +279,196 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert "NeRV Long-Training Campaign Plan" in markdown
     assert "hi_nerv::hinerv_tiny::lion" in markdown
+
+
+def test_long_training_campaign_plan_binds_upstream_evaluate_contract() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        batch_pairs=8,
+        learning_rate=3.0e-4,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    contract = report["upstream_evaluate_priority_contract"]
+    assert contract["schema"] == "nerv_upstream_evaluate_priority_contract.v1"
+    assert contract["source"] == "upstream/evaluate.py"
+    assert contract["baseline_to_beat"] == (
+        "full_pr95_fidelity_or_better_on_exact_upstream_evaluate_axes"
+    )
+    assert contract["score_claim"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+    assert contract["crux"]["segnet_frame0_direct_weight"] == 0.0
+    assert contract["crux"]["segnet_frame1_direct_weight"] == 1.0
+    assert contract["crux"]["pose_marginal_formula"] == "5/sqrt(10*d_pose)"
+    assert contract["crux"]["canonical_rate_denominator_bytes"] == 37_545_489
+    assert contract["crux"]["rate_price_per_archive_byte"] == pytest.approx(
+        25 / 37_545_489
+    )
+    score_allocation = contract["score_allocation_contract"]
+    assert score_allocation["rate"]["archive_authority"] == (
+        "submission_dir/archive.zip.stat().st_size"
+    )
+    assert score_allocation["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (
+        1200 * 874 * 1164 * 3
+    )
+    assert report["upstream_evaluate_contract_consumed_by_rows"] is True
+
+    for row in report["campaign_rows"]:
+        binding = row["upstream_evaluate_score_binding"]
+        assert binding["schema"] == "nerv_row_upstream_evaluate_binding.v1"
+        assert binding["contract_schema"] == contract["schema"]
+        assert binding["baseline_to_beat"] == contract["baseline_to_beat"]
+        assert binding["rate"]["canonical_denominator_bytes"] == 37_545_489
+        assert binding["rate"]["rate_price_per_archive_byte"] == pytest.approx(
+            25 / 37_545_489
+        )
+        assert binding["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (
+            1200 * 874 * 1164 * 3
+        )
+        assert binding["pair_geometry"]["seq_len"] == 2
+        assert binding["pair_geometry"]["public_test_pair_count"] == 600
+        assert binding["pair_geometry"]["camera_size_wh"] == [1164, 874]
+        assert binding["pair_geometry"]["candidate_raw_shape"] == [
+            1200,
+            874,
+            1164,
+            3,
+        ]
+        assert binding["segnet"]["frame_scope"] == "last_frame_only"
+        assert binding["segnet"]["scored_frame_index_within_pair"] == 1
+        assert binding["segnet"]["unscored_frame_index_within_pair"] == 0
+        assert binding["posenet"]["frame_scope"] == "both_frames_in_pair"
+        assert binding["posenet"]["scored_frame_indices_within_pair"] == [0, 1]
+        assert binding["posenet"]["derivative_wrt_d_pose"] == "5/sqrt(10*d_pose)"
+        assert binding["score_claim"] is False
+        assert binding["promotion_eligible"] is False
+        queue_entry = row["experiment_queue_entry"]
+        assert queue_entry["metadata"]["upstream_evaluate_score_binding"] == binding
+        launch_contract = queue_entry["launch_authority_contract"]
+        assert launch_contract["upstream_evaluate_score_contract_consumed"] is True
+        assert launch_contract["upstream_evaluate_score_binding"] == binding
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv["score_aware_long_training_plan"]["upstream_evaluate_score_binding"] == (
+        snerv["upstream_evaluate_score_binding"]
+    )
+
+
+def test_long_training_campaign_plan_binds_tilde_oss_leverage_policy() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("aurora_like", "lion"),
+        epochs=29_650,
+        batch_pairs=8,
+        learning_rate=3.0e-4,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    policy = report["tilde_oss_leverage_policy"]
+    assert policy["schema"] == "nerv_tilde_oss_leverage_policy.v1"
+    assert policy["score_claim"] is False
+    assert policy["ready_for_exact_eval_dispatch"] is False
+    assert policy["aurora"]["allowed_use"] == "optimizer_timing_convergence_smoke_only"
+    assert policy["aurora"]["planner_optimizer_kind"] == "aurora_like"
+    assert policy["wall_attention"]["direct_kernel_import_allowed"] is False
+    assert policy["wall_attention"]["byte_charged_receiver_replay_required"] is True
+    assert policy["parallax"]["official_tilde_surface"] is False
+    assert policy["parallax"]["direct_runtime_import_allowed"] is False
+    assert policy["parallax"]["classification"] == (
+        "llm_local_linear_attention_not_video_parallax_geometry"
+    )
+    assert policy["direct_import_policy"]["forbidden_repos"] == [
+        "Yifei-Zuo/Parallax",
+        "tilde-research/wall-attention-release",
+    ]
+    assert report["tilde_oss_policy_consumed_by_rows"] is True
+
+    for row in report["campaign_rows"]:
+        binding = row["tilde_oss_leverage_binding"]
+        assert binding["schema"] == "nerv_row_tilde_oss_binding.v1"
+        assert binding["policy_schema"] == policy["schema"]
+        assert binding["aurora_like_optimizer_smoke_allowed"] is True
+        assert binding["parallax_direct_runtime_import_allowed"] is False
+        assert binding["wall_attention_direct_kernel_import_allowed"] is False
+        assert binding["pact_native_receiver_byte_charged_required"] is True
+        assert binding["score_claim"] is False
+        queue_entry = row["experiment_queue_entry"]
+        assert queue_entry["metadata"]["tilde_oss_leverage_binding"] == binding
+        launch_contract = queue_entry["launch_authority_contract"]
+        assert launch_contract["tilde_oss_leverage_policy_consumed"] is True
+        assert launch_contract["tilde_oss_leverage_binding"] == binding
+
+    aurora_rows = [
+        row for row in report["campaign_rows"] if row["optimizer_kind"] == "aurora_like"
+    ]
+    assert len(aurora_rows) == 1
+    assert aurora_rows[0]["experiment_queue_entry"]["status"] == "disabled"
+    assert (
+        "aurora_requires_local_timing_convergence_smoke"
+        in aurora_rows[0]["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_launch_blockers"
+        ]
+    )
+
+
+def test_long_training_campaign_plan_binds_pr95_baseline_identity() -> None:
+    pr95_identity = _pr95_baseline_identity()
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        batch_pairs=8,
+        learning_rate=3.0e-4,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        pr95_baseline_identity=pr95_identity,
+    )
+
+    binding = report["pr95_baseline_identity_binding"]
+    assert binding["schema"] == "nerv_pr95_baseline_identity_binding.v1"
+    assert binding["attached"] is True
+    assert binding["baseline_id"] == "pr95_public_hnerv_muon_control_arm"
+    assert binding["selected_archive"]["sha256"] == "a" * 64
+    assert binding["local_cpu_mlx_work_order"]["ready"] is True
+    assert binding["local_cpu_mlx_work_order"]["local_cpu_axis_tag"] == (
+        "[macOS-CPU advisory]"
+    )
+    assert binding["local_cpu_mlx_work_order"]["mlx_axis_tag"] == (
+        "[macOS-MLX research-signal]"
+    )
+    assert binding["modal_dispatch_policy"]["modal_dispatch_allowed"] is False
+    assert binding["paired_exact_eval_work_order"]["ready"] is False
+    assert "modal_reserved_for_frontier_candidates" in binding[
+        "paired_exact_eval_work_order"
+    ]["blockers"]
+    assert "pr95_contest_cpu_exact_eval_missing" in binding["blockers"]
+    assert report["pr95_baseline_identity_consumed_by_rows"] is True
+    assert report["score_claim"] is False
+
+    for row in report["campaign_rows"]:
+        row_binding = row["pr95_baseline_identity_binding"]
+        assert row_binding == binding
+        queue_entry = row["experiment_queue_entry"]
+        assert queue_entry["metadata"]["pr95_baseline_identity_binding"] == binding
+        launch_contract = queue_entry["launch_authority_contract"]
+        assert launch_contract["pr95_baseline_identity_consumed"] is True
+        assert launch_contract["pr95_baseline_identity_binding"] == binding
+        assert launch_contract["score_claim"] is False
+
+    markdown = render_nerv_long_training_campaign_plan_markdown(report)
+    assert "pr95_baseline_identity_attached: `True`" in markdown
+    assert f"selected_archive_sha256: `{'a' * 64}`" in markdown
+    assert "local_cpu_mlx_ready: `True`" in markdown
+    assert "modal_dispatch_allowed: `False`" in markdown
+    assert "paired_exact_eval_ready: `False`" in markdown
+    assert "pr95_contest_cpu_exact_eval_missing" in markdown
 
 
 def test_long_training_campaign_plan_source_parity_required_blocker_disables_row(
@@ -872,6 +1074,125 @@ def test_long_training_campaign_plan_consumes_snerv_lf_recode_admission() -> Non
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
     assert snerv["score_claim"] is False
     assert snerv["ready_for_exact_eval_dispatch"] is False
+
+
+def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_lf_payload_recode_sources=(
+            _snerv_lf_recode_report(
+                mode="auto",
+                source_packet_bytes=2_347_142,
+                candidate_packet_bytes=1_485_285,
+                candidate_packet_header_bytes=1_346_233,
+                source_lf_bytes=879_633,
+                candidate_lf_bytes=17_779,
+            ),
+        ),
+        snerv_snar_header_grammar_profile_sources=(
+            _snerv_snar_header_grammar_profile(
+                packet_sha256="b" * 64,
+                packet_bytes=1_485_285,
+                header_bytes=1_346_233,
+                metadata_json_bytes=1_345_466,
+                section_total_bytes=139_052,
+            ),
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
+    expected_overrun = 1_485_285 - snerv["hard_byte_ceiling"]
+    assert reroute_queue["local_recode_command_row_count"] == 0
+    assert reroute_queue["queue_row_count"] == 4
+    assert (
+        "snerv_lf_recode_selected_mode_still_over_byte_waterline"
+        in snerv["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_launch_blockers"
+        ]
+    )
+
+    rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
+    recode_result = rows_by_type["lf_recode_admission_result"]
+    assert recode_result["blocked"] is True
+    assert recode_result["lossless_lf_recode_already_admitted"] is True
+    assert recode_result["candidate_lf_payload_bytes"] == 17_779
+    assert recode_result["candidate_packet_header_bytes"] == 1_346_233
+    assert recode_result["snar_header_grammar_profile_attached"] is True
+    assert recode_result["snar_header_grammar_profile"]["header_bytes"] == 1_346_233
+    assert recode_result["snar_header_grammar_profile"]["top_metadata_contributors"][1][
+        "path"
+    ] == "$.metadata.lf_step_allocation_rows"
+    assert recode_result["post_recode_over_waterline_bytes"] == expected_overrun
+    assert recode_result["required_lf_savings_bytes"] == expected_overrun
+    assert recode_result["lf_payload_can_cover_required_savings"] is False
+    assert (
+        "snerv_post_recode_packet_still_over_hard_byte_ceiling"
+        in recode_result["blockers"]
+    )
+    assert (
+        "snerv_post_recode_overrun_exceeds_remaining_lf_payload_bytes"
+        in recode_result["blockers"]
+    )
+    assert (
+        "snerv_post_recode_overrun_dominated_by_packet_header_bytes"
+        in recode_result["blockers"]
+    )
+    assert (
+        "snerv_snar_packet_header_grammar_rewrite_required"
+        in recode_result["blockers"]
+    )
+    assert snerv["snerv_lf_payload_recode_admission_plan"]["verdict"] == (
+        "ADMIT_LF_RECODE__POST_RECODE_PACKET_HEADER_GRAMMAR_DOMINATES"
+    )
+    assert (
+        "attack_snerv_snar_packet_header_grammar_or_packaging_overhead"
+        in snerv["snerv_lf_payload_recode_admission_plan"]["next_actions"]
+    )
+
+    header_rewrite = rows_by_type["snar_header_grammar_rewrite_materialization"]
+    assert header_rewrite["blocked"] is True
+    assert header_rewrite["command_argv"] == []
+    assert header_rewrite["dispatch_allowed"] is False
+    assert header_rewrite["local_mlx_long_training_allowed"] is False
+    assert (
+        header_rewrite["planner_action"]
+        == "materialize_byte_charged_snar_header_grammar_rewrite_then_receiver_replay"
+    )
+    assert (
+        "snerv_snar_header_grammar_rewrite_packet_missing"
+        in header_rewrite["blockers"]
+    )
+    assert (
+        "snerv_snar_header_grammar_rewrite_receiver_proof_missing"
+        in header_rewrite["blockers"]
+    )
+
+    representation_rows = [
+        row
+        for row in reroute_queue["queue_rows"]
+        if row["work_order_type"] == "lf_representation_change_candidate"
+    ]
+    assert len(representation_rows) == 2
+    assert all(row["measured_lf_payload_bytes"] == 17_779 for row in representation_rows)
+    assert all(
+        row["lf_payload_can_cover_required_savings"] is False
+        for row in representation_rows
+    )
+    assert all(
+        "snerv_required_savings_exceeds_measured_lf_payload_bytes" in row["blockers"]
+        for row in representation_rows
+    )
+    assert all(
+        "snerv_snar_header_grammar_rewrite_precedes_lf_representation_change"
+        in row["blockers"]
+        for row in representation_rows
+    )
 
 
 def test_long_training_campaign_plan_dedupes_snerv_candidate_ids() -> None:
@@ -1858,6 +2179,15 @@ def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_de
                 "candidate_id": observed["candidate_id"],
                 "archive_bytes": 444_828,
                 "packet_bytes": 2_347_476,
+                "packet_path": "/Volumes/VertigoDataTier/pact/snerv/observed_over_ceiling.snar",
+                "packet_sha256": "c" * 64,
+                "lf_payload_codec": "portfolio_auto",
+                "packet_section_bytes": {
+                    "metadata_payload": 14_400,
+                    "lf_payload": 879_633,
+                    "decoder_payload": 1_282,
+                    "step_map_packet": 105_591,
+                },
                 "receiver_proof_passed": True,
                 "receiver_contract_satisfied": True,
                 "hard_byte_ceiling_measurement_bypass_enabled": True,
@@ -1911,6 +2241,38 @@ def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_de
     assert "snerv_receiver_proven_archive_over_hard_byte_ceiling" in demoted[
         "blockers"
     ]
+    launch_contract = demoted["experiment_queue_entry"]["launch_authority_contract"]
+    assert (
+        "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only"
+        in launch_contract["queue_launch_blockers"]
+    )
+    assert launch_contract["queue_status_is_runnable_plan"] is False
+    reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
+    queue_row_ids = [row["queue_row_id"] for row in reroute_queue["queue_rows"]]
+    assert len(queue_row_ids) == len(set(queue_row_ids))
+    reroute_rows = {
+        row["representation_candidate_id"]: row
+        for row in reroute_queue["queue_rows"]
+        if row["candidate_id"] == observed["candidate_id"]
+    }
+    assert reroute_queue["schema"] == "snerv_lf_over_ceiling_reroute_queue.v1"
+    assert reroute_queue["local_recode_command_row_count"] >= 1
+    recode = reroute_rows["snerv_lossless_lf_recode_probe"]
+    assert recode["work_order_type"] == "lossless_lf_recode_probe"
+    assert recode["blocked"] is False
+    assert "tools/recode_snerv_lf_payload_archive.py" in recode["command_argv"]
+    assert recode["measured_lf_payload_bytes"] == 879_633
+    assert recode["required_lf_savings_bytes"] == 228_828
+    assert recode["source_campaign_status"]["local_mlx_launch_command_ready"] is False
+    assert observed["candidate_id"] in " ".join(recode["command_argv"])
+    temporal_gate = reroute_rows["snerv_lf_temporal_tub_gate_receiver_visible"]
+    assert temporal_gate["work_order_type"] == "lf_representation_change_candidate"
+    assert temporal_gate["blocked"] is True
+    assert temporal_gate["lf_payload_can_cover_required_savings"] is True
+    assert (
+        "snerv_lf_tub_temporal_gate_not_implemented"
+        in temporal_gate["blockers"]
+    )
     feedback = demoted["curriculum_plan"]["byte_oracle_logging"]
     assert feedback["archive_under_hard_byte_ceiling"] is False
     assert feedback["archive_over_hard_byte_ceiling_bytes"] == 228_828
@@ -3523,6 +3885,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     out_json = tmp_path / "campaign.json"
     out_md = tmp_path / "campaign.md"
     out_queue = tmp_path / "campaign_queue.json"
+    out_snerv_lf_reroute_queue = tmp_path / "snerv_lf_reroute_queue.json"
     feedback_jsonl = tmp_path / "feedback.jsonl"
     waterfill_bundle = tmp_path / "hinerv_archive_ladder_waterfill.json"
     proof_path = _receiver_proof(tmp_path, archive_sha="a" * 64)
@@ -3578,6 +3941,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(out_md),
             "--output-queue",
             str(out_queue),
+            "--output-snerv-lf-reroute-queue",
+            str(out_snerv_lf_reroute_queue),
         ]
     )
 
@@ -3600,9 +3965,15 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert snerv_row["candidate_feedback"]["candidate_id"] == _snerv_candidate_id()
     assert "partial_pair_byte_feedback_only" in snerv_row["blockers"]
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
+    assert payload["snerv_lf_over_ceiling_reroute_queue"]["schema"] == (
+        "snerv_lf_over_ceiling_reroute_queue.v1"
+    )
     assert payload["experiment_queue_id"] == (f"nerv_long_training_campaign_{out_json.stem}.v1")
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue == payload["experiment_queue"]
+    reroute_queue = json.loads(out_snerv_lf_reroute_queue.read_text(encoding="utf-8"))
+    assert reroute_queue == payload["snerv_lf_over_ceiling_reroute_queue"]
+    assert reroute_queue["queue_kind"] == "planner_queue_not_training_queue"
     assert queue["experiments"][0]["steps"][0]["command"] == payload["campaign_rows"][0]["command_argv"]
     assert queue["queue_id"] == f"nerv_long_training_campaign_{out_json.stem}.v1"
     assert queue["experiments"][0]["steps"][0]["postconditions"]
@@ -3645,6 +4016,10 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             _sha256(out_md),
             "--expected-output-queue-sha256",
             _sha256(out_queue),
+            "--output-snerv-lf-reroute-queue",
+            str(out_snerv_lf_reroute_queue),
+            "--expected-output-snerv-lf-reroute-queue-sha256",
+            _sha256(out_snerv_lf_reroute_queue),
         ]
     )
 
@@ -4574,12 +4949,21 @@ def _snerv_lf_recode_report(
     candidate_packet_bytes: int,
     source_lf_bytes: int,
     candidate_lf_bytes: int,
+    candidate_packet_header_bytes: int | None = None,
 ) -> dict:
     return {
         "schema": "snerv_lf_payload_archive_recode.v1",
         "mode": mode,
         "source_packet": {"bytes": source_packet_bytes, "sha256": "a" * 64},
-        "candidate_packet": {"bytes": candidate_packet_bytes, "sha256": "b" * 64},
+        "candidate_packet": {
+            "bytes": candidate_packet_bytes,
+            "sha256": "b" * 64,
+            **(
+                {}
+                if candidate_packet_header_bytes is None
+                else {"header_bytes": candidate_packet_header_bytes}
+            ),
+        },
         "packet_byte_delta": int(candidate_packet_bytes - source_packet_bytes),
         "lf_payload": {
             "source_bytes": source_lf_bytes,
@@ -4610,6 +4994,71 @@ def _snerv_lf_recode_report(
             "not_packaged_as_contest_archive_zip",
             "paired_contest_cpu_cuda_auth_eval_missing",
         ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_snar_header_grammar_profile(
+    *,
+    packet_sha256: str,
+    packet_bytes: int,
+    header_bytes: int,
+    metadata_json_bytes: int,
+    section_total_bytes: int,
+) -> dict:
+    return {
+        "schema": "snerv_snar_header_grammar_profile.v1",
+        "input": {
+            "path": "/tmp/candidate.snar",
+            "kind": "snar1_packet",
+            "bytes": packet_bytes,
+            "sha256": packet_sha256,
+        },
+        "packet": {
+            "bytes": packet_bytes,
+            "sha256": packet_sha256,
+            "schema_valid": True,
+        },
+        "header": {
+            "bytes": header_bytes,
+            "metadata_json_bytes": metadata_json_bytes,
+            "metadata_top_contributor_rows": [
+                {
+                    "path": "$.metadata",
+                    "json_bytes": metadata_json_bytes,
+                    "type": "dict",
+                    "item_count": 53,
+                    "depth": 0,
+                },
+                {
+                    "path": "$.metadata.lf_step_allocation_rows",
+                    "json_bytes": metadata_json_bytes - 100_000,
+                    "type": "list",
+                    "item_count": 3600,
+                    "depth": 1,
+                },
+            ],
+        },
+        "payload": {
+            "section_total_bytes": section_total_bytes,
+            "section_rows": [],
+        },
+        "hard_byte_ceiling_rows": [
+            {
+                "hard_byte_ceiling": 216_000,
+                "packet_over_ceiling_bytes": packet_bytes - 216_000,
+                "header_bytes_can_cover_overrun": True,
+                "metadata_json_bytes_can_cover_overrun": True,
+                "sections_alone_under_ceiling": True,
+            }
+        ],
+        "next_actions": [
+            "build_receiver_visible_snar_header_minimization_candidate"
+        ],
+        "blockers": ["snerv_snar_packet_header_grammar_rewrite_required"],
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,
@@ -4653,6 +5102,103 @@ def _decoder_weight_waterfill_plan(
         "blockers": blockers,
         "score_claim": False,
         "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _pr95_baseline_identity() -> dict:
+    return {
+        "schema": "pr95_baseline_identity.v1",
+        "baseline_id": "pr95_public_hnerv_muon_control_arm",
+        "baseline_identity_reusable": True,
+        "selected_reusable_candidate_archive": {
+            "schema": "pr95_baseline_identity_archive_record.v1",
+            "source_artifact_path": "/tmp/pr95/pr95_stage8_from_public_archive_report.json",
+            "path": "/tmp/pr95/byte_closed_submission/archive.zip",
+            "bytes": 178_363,
+            "sha256": "a" * 64,
+            "runtime_path": "/tmp/pr95/runtime",
+            "runtime_tree_sha256": "b" * 64,
+            "candidate_type": "pr95_stage8_public_archive_candidate",
+            "reusable_identity": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "exact_axis_status": {
+            "schema": "pr95_baseline_identity_exact_axis_status.v1",
+            "contest_cpu": {
+                "present": False,
+                "blockers": ["pr95_contest_cpu_exact_eval_missing"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "contest_cuda": {
+                "present": False,
+                "blockers": ["pr95_contest_cuda_exact_eval_missing"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "matched_archive_sha256": "a" * 64,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "local_cpu_mlx_work_order": {
+            "schema": "pr95_baseline_local_cpu_mlx_work_order.v1",
+            "ready": True,
+            "local_cpu_axis_tag": "[macOS-CPU advisory]",
+            "local_cpu_command_argv": [
+                "uv",
+                "run",
+                "python",
+                "experiments/contest_auth_eval.py",
+                "--archive",
+                "/tmp/pr95/byte_closed_submission/archive.zip",
+                "--device",
+                "cpu",
+            ],
+            "mlx_axis_tag": "[macOS-MLX research-signal]",
+            "modal_dispatch_allowed": False,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "modal_dispatch_policy": {
+            "schema": "pr95_baseline_modal_dispatch_policy.v1",
+            "modal_dispatch_allowed": False,
+            "reason": "non_frontier_control_arm_modal_dispatch_forbidden",
+            "allowed_only_for": "frontier_candidate_exact_auth_eval_after_local_cpu_mlx_gates",
+            "baseline_control_arm_policy": "local_cpu_and_mlx_only",
+            "forbidden_work_order_blocker": "modal_reserved_for_frontier_candidates",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "paired_exact_eval_work_order": {
+            "schema": "pr95_baseline_paired_exact_eval_work_order.v1",
+            "ready": False,
+            "modal_dispatch_allowed": False,
+            "reason": "non_frontier_control_arm_modal_dispatch_forbidden",
+            "allowed_only_for": "frontier_candidate_exact_auth_eval_after_local_cpu_mlx_gates",
+            "output_root": "/tmp/pr95/exact_eval",
+            "command_argv": [],
+            "blockers": ["modal_reserved_for_frontier_candidates"],
+            "superseded_by": "pr95_baseline_local_cpu_mlx_work_order.v1",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "blockers": [
+            "pr95_contest_cpu_exact_eval_missing",
+            "pr95_contest_cuda_exact_eval_missing",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
 

@@ -1,0 +1,313 @@
+{
+  "authority": "false_authority_pr95_baseline_identity_no_score_claim",
+  "baseline_id": "pr95_public_hnerv_muon_control_arm",
+  "baseline_identity_reusable": true,
+  "blockers": [
+    "pr95_contest_cpu_exact_eval_missing",
+    "pr95_contest_cuda_exact_eval_missing"
+  ],
+  "candidate_archive_count": 3,
+  "candidate_archives": [
+    {
+      "blockers": [
+        "stage8_best_checkpoint_missing_packaged_final_checkpoint",
+        "contest_cpu_cuda_exact_eval_missing"
+      ],
+      "bytes": 178362,
+      "declared_bytes": 178362,
+      "declared_sha256": "2220a4701cb09706c01f13fbd01a8765f323261bcee18ffba2394497a7aa38cf",
+      "exact_gate": {
+        "blockers": [
+          "stage8_best_checkpoint_missing_packaged_final_checkpoint",
+          "contest_cpu_cuda_exact_eval_missing"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_gate_blocker.v1"
+      },
+      "exists": true,
+      "frontier_score_claim": false,
+      "path": "/Volumes/VertigoDataTier/pact/pr95_stage8_from_public_archive_smoke_ep1/byte_closed_submission/archive.zip",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reusable_identity": false,
+      "role": "stage8_public_archive_candidate",
+      "runtime_consumption_proven": null,
+      "runtime_root": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+      "schema": "pr95_baseline_identity_archive_record.v1",
+      "score_authority": "none_until_contest_cpu_cuda_exact_eval",
+      "score_axis": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "2220a4701cb09706c01f13fbd01a8765f323261bcee18ffba2394497a7aa38cf",
+      "source_artifact": "/Volumes/VertigoDataTier/pact/pr95_stage8_from_public_archive_smoke_ep1/pr95_stage8_from_public_archive_report.json"
+    },
+    {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_missing"
+      ],
+      "bytes": 178363,
+      "declared_bytes": 178363,
+      "declared_sha256": "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74",
+      "exact_gate": {
+        "blockers": [
+          "contest_cpu_cuda_exact_eval_missing"
+        ],
+        "ready_for_exact_eval_dispatch": false,
+        "schema": "exact_gate_blocker.v1"
+      },
+      "exists": true,
+      "frontier_score_claim": false,
+      "path": "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/byte_closed_submission/archive.zip",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reusable_identity": true,
+      "role": "stage8_public_archive_candidate",
+      "runtime_consumption_proven": null,
+      "runtime_root": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+      "schema": "pr95_baseline_identity_archive_record.v1",
+      "score_authority": "none_until_contest_cpu_cuda_exact_eval",
+      "score_axis": "[macOS-CPU advisory]",
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74",
+      "source_artifact": "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/pr95_stage8_from_public_archive_report.json"
+    },
+    {
+      "blockers": [
+        "receiver_proof_archive_not_stage8_public_archive_candidate"
+      ],
+      "bytes": 162581,
+      "declared_bytes": null,
+      "declared_sha256": "40fae1b1abf88428a7e36a2cc2ed766107afe46082230715aeadd50350a868b9",
+      "exact_gate": null,
+      "exists": true,
+      "frontier_score_claim": false,
+      "path": "/Volumes/VertigoDataTier/pact/compact_pr95_hnerv_receiver_proof_smoke_20260601T155507Z_codex_covfix/pr95_hnerv_mlx_training/pr95_public_archive.zip",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "reusable_identity": false,
+      "role": "receiver_runtime_consumption_identity",
+      "runtime_consumption_proven": null,
+      "runtime_root": null,
+      "schema": "pr95_baseline_identity_archive_record.v1",
+      "score_authority": null,
+      "score_axis": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "sha256": "40fae1b1abf88428a7e36a2cc2ed766107afe46082230715aeadd50350a868b9",
+      "source_artifact": "/Volumes/VertigoDataTier/pact/compact_pr95_hnerv_receiver_proof_smoke_20260601T155507Z_codex_covfix/receiver_proof/pr95_hnerv_receiver_proof.json"
+    }
+  ],
+  "exact_axis_status": {
+    "contest_cpu": {
+      "archive_sha256": null,
+      "axis": "contest_cpu",
+      "blockers": [
+        "pr95_contest_cpu_exact_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "present": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_artifact": null
+    },
+    "contest_cuda": {
+      "archive_sha256": null,
+      "axis": "contest_cuda",
+      "blockers": [
+        "pr95_contest_cuda_exact_eval_missing"
+      ],
+      "frontier_score_claim": false,
+      "present": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "score": null,
+      "score_claim": false,
+      "score_claim_valid": false,
+      "source_artifact": null
+    },
+    "frontier_score_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr95_baseline_identity_exact_axis_status.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "frontier_score_claim": false,
+  "local_cpu_mlx_work_order": {
+    "blockers": [],
+    "frontier_score_claim": false,
+    "local_cpu_axis_tag": "[macOS-CPU advisory]",
+    "local_cpu_command_argv": [
+      "uv",
+      "run",
+      "python",
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/byte_closed_submission/archive.zip",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cpu",
+      "--json-out",
+      "/Volumes/VertigoDataTier/pact/pr95_baseline_identity_local_cpu_mlx_20260604Tcurrent_codex/local_cpu_advisory/contest_auth_eval_cpu_advisory.json",
+      "--inflate-sh",
+      "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon/inflate.sh"
+    ],
+    "local_cpu_output_json": "/Volumes/VertigoDataTier/pact/pr95_baseline_identity_local_cpu_mlx_20260604Tcurrent_codex/local_cpu_advisory/contest_auth_eval_cpu_advisory.json",
+    "mlx_axis_tag": "[macOS-MLX research-signal]",
+    "mlx_next_action": "Bind PR95/HNeRV MLX-vs-PyTorch parity or scorer-response artifacts as research signal only before local CPU replay spend triage.",
+    "modal_dispatch_allowed": false,
+    "plan_only_default": true,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready": true,
+    "ready_for_exact_eval_dispatch": false,
+    "schema": "pr95_baseline_local_cpu_mlx_work_order.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "modal_dispatch_policy": {
+    "allowed_only_for": "frontier_candidate_exact_auth_eval_after_local_cpu_mlx_gates",
+    "baseline_control_arm_policy": "local_cpu_and_mlx_only",
+    "forbidden_work_order_blocker": "modal_reserved_for_frontier_candidates",
+    "frontier_score_claim": false,
+    "modal_dispatch_allowed": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reason": "non_frontier_control_arm_modal_dispatch_forbidden",
+    "schema": "pr95_baseline_modal_dispatch_policy.v1",
+    "score_claim": false,
+    "score_claim_valid": false
+  },
+  "not_reusable_for": [
+    "score_claim",
+    "rank_or_kill",
+    "promotion",
+    "cpu_cuda_axis_collapse"
+  ],
+  "paired_exact_eval_work_order": {
+    "allowed_only_for": "frontier_candidate_exact_auth_eval_after_local_cpu_mlx_gates",
+    "blockers": [
+      "modal_reserved_for_frontier_candidates"
+    ],
+    "command_argv": [],
+    "frontier_score_claim": false,
+    "modal_dispatch_allowed": false,
+    "output_root": "/Volumes/VertigoDataTier/pact/pr95_baseline_identity_local_cpu_mlx_20260604Tcurrent_codex",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reason": "non_frontier_control_arm_modal_dispatch_forbidden",
+    "schema": "pr95_baseline_paired_exact_eval_work_order.v1",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "superseded_by": "pr95_baseline_local_cpu_mlx_work_order.v1"
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "reusable_for": [
+    "pr95_control_arm_identity",
+    "aurora_like_optimizer_timing_smoke_anchor",
+    "hinerv_snerv_exact_eval_dispatch_candidate_selection"
+  ],
+  "role": "control_arm_for_hi_nerv_snerv_pr95_or_better_work",
+  "schema": "pr95_baseline_identity.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "selected_reusable_candidate_archive": {
+    "blockers": [
+      "contest_cpu_cuda_exact_eval_missing"
+    ],
+    "bytes": 178363,
+    "declared_bytes": 178363,
+    "declared_sha256": "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74",
+    "exact_gate": {
+      "blockers": [
+        "contest_cpu_cuda_exact_eval_missing"
+      ],
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "exact_gate_blocker.v1"
+    },
+    "exists": true,
+    "frontier_score_claim": false,
+    "path": "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/byte_closed_submission/archive.zip",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reusable_identity": true,
+    "role": "stage8_public_archive_candidate",
+    "runtime_consumption_proven": null,
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon",
+    "schema": "pr95_baseline_identity_archive_record.v1",
+    "score_authority": "none_until_contest_cpu_cuda_exact_eval",
+    "score_axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "sha256": "61fae2691fc674e11307307e1a87e8f0aef75ebcad4f34fd780980ed68e87f74",
+    "source_artifact": "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/pr95_stage8_from_public_archive_report.json"
+  },
+  "source_archive": {
+    "blockers": [],
+    "bytes": 178417,
+    "declared_bytes": null,
+    "declared_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+    "exact_gate": null,
+    "exists": true,
+    "frontier_score_claim": false,
+    "path": "/Users/adpena/Projects/pact/experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/archive.zip",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "reusable_identity": true,
+    "role": "public_pr95_source_archive",
+    "runtime_consumption_proven": null,
+    "runtime_root": null,
+    "schema": "pr95_baseline_identity_archive_record.v1",
+    "score_authority": "none_until_contest_cpu_cuda_exact_eval",
+    "score_axis": "[macOS-CPU advisory]",
+    "score_claim": false,
+    "score_claim_valid": false,
+    "sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+    "source_artifact": "/Volumes/VertigoDataTier/pact/pr95_stage8_from_public_archive_smoke_ep1/pr95_stage8_from_public_archive_report.json"
+  },
+  "source_artifact_count": 3,
+  "source_artifacts": [
+    {
+      "bytes": 213166,
+      "exists": true,
+      "kind": "json",
+      "path": "/Volumes/VertigoDataTier/pact/pr95_stage8_from_public_archive_smoke_ep1/pr95_stage8_from_public_archive_report.json",
+      "schema": "pr95_baseline_identity_source_artifact.v1",
+      "sha256": "6e4e9ad16941417cecd34acea2742e9c83e03b717630f2582332099edd6889e5"
+    },
+    {
+      "bytes": 219175,
+      "exists": true,
+      "kind": "json",
+      "path": "/Volumes/VertigoDataTier/pact/compact_pr95_stage8_source_1ep_bridge_codex_v1/pr95_stage8_source_lane/pr95_stage8_from_public_archive_report.json",
+      "schema": "pr95_baseline_identity_source_artifact.v1",
+      "sha256": "11831dc229059f90052657a06eed7d35083dc0bb31043c84cddc1f2752786deb"
+    },
+    {
+      "bytes": 5233,
+      "exists": true,
+      "kind": "json",
+      "path": "/Volumes/VertigoDataTier/pact/compact_pr95_hnerv_receiver_proof_smoke_20260601T155507Z_codex_covfix/receiver_proof/pr95_hnerv_receiver_proof.json",
+      "schema": "pr95_baseline_identity_source_artifact.v1",
+      "sha256": "a289d0ef5d12d090a32d421c2e65a22f3e4c9874aff589d2375d07b1a0ff27ba"
+    }
+  ]
+}
