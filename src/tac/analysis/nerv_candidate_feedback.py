@@ -560,7 +560,9 @@ def build_nerv_full_video_mlx_scorer_feedback_row(
         raise ValueError(
             "mlx_response must have schema/schema_version 'mlx_scorer_response.v1'"
         )
-    export = dict(archive_export_report or {})
+    export = _normalize_full_video_archive_export_report(
+        archive_export_report or {}
+    )
     response_path = (
         Path(mlx_response_path).expanduser().resolve(strict=False)
         if mlx_response_path
@@ -2449,6 +2451,75 @@ def _archive_export_receiver_proof_attached(export: Mapping[str, Any]) -> bool:
     )
 
 
+def _normalize_full_video_archive_export_report(
+    archive_export_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Expose archive-bound package custody with checkpoint-export field names."""
+
+    export = dict(archive_export_report or {})
+    contract = _archive_bound_best_acquisition_contract(export)
+    if not contract:
+        return export
+    candidate_archive = _mapping_or_empty(contract.get("candidate_archive"))
+    file_custody = _mapping_or_empty(contract.get("archive_file_custody"))
+    identity = _mapping_or_empty(contract.get("contract_identity"))
+    out = dict(export)
+    out.setdefault("family", _family_key(str(contract.get("family_id") or "")))
+    out.setdefault(
+        "candidate_id",
+        contract.get("candidate_chain_id") or identity.get("candidate_chain_id"),
+    )
+    out.setdefault(
+        "archive_path",
+        candidate_archive.get("path") or file_custody.get("path"),
+    )
+    out.setdefault(
+        "archive_bytes",
+        candidate_archive.get("bytes") or file_custody.get("bytes"),
+    )
+    out.setdefault(
+        "archive_sha256",
+        candidate_archive.get("sha256") or file_custody.get("sha256"),
+    )
+    out.setdefault(
+        "receiver_proof_path",
+        identity.get("runtime_consumption_proof_path")
+        or contract.get("runtime_consumption_proof_path"),
+    )
+    out.setdefault(
+        "runtime_consumption_proof_ready",
+        bool(contract.get("receiver_contract_satisfied"))
+        or bool(file_custody.get("custody_complete")),
+    )
+    out.setdefault(
+        "receiver_contract_satisfied",
+        bool(contract.get("receiver_contract_satisfied")),
+    )
+    out.setdefault("archive_bound_adapter_package_normalized", True)
+    return out
+
+
+def _archive_bound_best_acquisition_contract(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    surfaces = _path_get(
+        report,
+        (
+            "archive_bound_candidate_adapter_package",
+            "archive_bound_candidate_contract_surfaces",
+        ),
+    )
+    if not isinstance(surfaces, Sequence) or isinstance(surfaces, (str, bytes)):
+        return {}
+    for surface in surfaces:
+        if not isinstance(surface, Mapping):
+            continue
+        contract = surface.get("best_acquisition_contract")
+        if isinstance(contract, Mapping):
+            return dict(contract)
+    return {}
+
+
 def _full_video_mlx_response_training_control(
     *,
     family: str,
@@ -2706,7 +2777,7 @@ def _path_get(source: Mapping[str, Any], path: Sequence[str]) -> Any:
 
 def _family_key(value: str) -> str:
     text = str(value).strip().lower().replace("-", "_")
-    if text == "hinerv":
+    if text in {"hinerv", "hi_nerv_mlx"}:
         return "hi_nerv"
     return text
 

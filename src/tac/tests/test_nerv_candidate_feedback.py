@@ -348,6 +348,64 @@ def test_full_video_mlx_response_feedback_binds_archive_export_and_false_authori
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_full_video_mlx_response_feedback_accepts_archive_bound_package(
+    tmp_path: Path,
+) -> None:
+    archive_sha = "7" * 64
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text("{}\n", encoding="utf-8")
+    package = {
+        "schema": "hi_nerv_mlx_archive_bound_adapter_package.v1",
+        "archive_bound_candidate_adapter_package": {
+            "archive_bound_candidate_contract_surfaces": [
+                {
+                    "best_acquisition_contract": {
+                        "family_id": "hi_nerv_mlx",
+                        "candidate_chain_id": "hi_nerv_mlx_7777",
+                        "candidate_archive": {
+                            "path": archive.as_posix(),
+                            "bytes": 214_498,
+                            "sha256": archive_sha,
+                        },
+                        "archive_file_custody": {
+                            "path": archive.as_posix(),
+                            "bytes": 214_498,
+                            "sha256": archive_sha,
+                            "custody_complete": True,
+                        },
+                        "contract_identity": {
+                            "runtime_consumption_proof_path": proof.as_posix(),
+                        },
+                        "receiver_contract_satisfied": True,
+                    }
+                }
+            ]
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = build_nerv_full_video_mlx_scorer_feedback_row(
+        mlx_response=_mlx_response(
+            archive_sha256=archive_sha,
+            archive_size_bytes=214_498,
+        ),
+        archive_export_report=package,
+    )
+
+    assert row["family"] == "hi_nerv"
+    assert row["candidate_id"] == "hi_nerv_mlx_7777"
+    assert row["archive_sha256"] == archive_sha
+    assert row["measured_archive_bytes"] == 214_498
+    assert row["receiver_proof_attached"] is True
+    assert row["direct_feedback_blockers"] == []
+    assert row["feedback_ready"] is True
+    assert row["score_claim"] is False
+
+
 def test_full_video_mlx_response_feedback_infers_segnet_weight_from_export(
     tmp_path: Path,
 ) -> None:
