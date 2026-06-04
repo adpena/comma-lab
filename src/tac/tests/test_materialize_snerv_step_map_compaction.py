@@ -78,9 +78,22 @@ def test_materialize_snerv_step_map_compaction_cli_rewrites_verbose_constant_gro
     assert report["decoded_step_maps_exact_equal"] is True
     assert report["packet_byte_delta"] < 0
     assert report["section_bytes"]["step_map_packet_delta"] < 0
-    assert report["hard_byte_ceiling_rows"][0]["candidate_packet_under_ceiling"] is True
+    ceiling_row = report["hard_byte_ceiling_rows"][0]
+    assert ceiling_row["candidate_packet_under_ceiling"] is True
+    assert ceiling_row["packet_under_ceiling_is_byte_authority"] is False
+    assert ceiling_row["candidate_archive_zip_under_ceiling"] is None
+    assert ceiling_row["byte_authority"] == "packet_preview_only_no_receiver_proof"
+    assert ceiling_row["hard_byte_ceiling_satisfied_for_long_training"] is False
+    assert (
+        "snerv_step_map_compaction_receiver_proven_archive_zip_missing"
+        in ceiling_row["blockers"]
+    )
     assert report["runtime_consumption_proof_passed"] is False
     assert "snerv_step_map_compaction_receiver_proof_missing" in report["blockers"]
+    assert (
+        "snerv_step_map_compaction_packet_preview_not_byte_authority"
+        in report["blockers"]
+    )
     assert candidate_packet.startswith(b"SNAR2")
     assert candidate.sections["step_map_packet"] != verbose_step_packet
     assert candidate.sections["step_map_packet"].startswith(ADAPTIVE_BINARY_MAGIC)

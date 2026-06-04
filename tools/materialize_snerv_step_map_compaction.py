@@ -139,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
                 "snerv_step_map_compaction_receiver_proof_missing",
             ]
         )
+    _finalize_hard_byte_ceiling_authority(report)
 
     _write_report(args.output_json, report)
     print(
@@ -460,6 +461,101 @@ def _hard_byte_ceiling_rows(
             }
         )
     return rows
+
+
+def _finalize_hard_byte_ceiling_authority(report: dict[str, Any]) -> None:
+    rows = report.get("hard_byte_ceiling_rows")
+    if not isinstance(rows, Sequence):
+        return
+    receiver_package = (
+        report.get("receiver_package")
+        if isinstance(report.get("receiver_package"), Mapping)
+        else {}
+    )
+    candidate_archive = (
+        report.get("candidate_archive_zip")
+        if isinstance(report.get("candidate_archive_zip"), Mapping)
+        else {}
+    )
+    proof_passed = (
+        report.get("runtime_consumption_proof_passed") is True
+        and report.get("receiver_contract_satisfied") is True
+        and bool(receiver_package)
+    )
+    archive_bytes = _positive_int(receiver_package.get("archive_zip_bytes"))
+    archive_kind = "generated_runtime_package"
+    if archive_bytes is None:
+        archive_bytes = _positive_int(candidate_archive.get("bytes"))
+        archive_kind = str(candidate_archive.get("archive_zip_kind") or "missing")
+    archive_path = receiver_package.get("archive_zip_path") or candidate_archive.get("path")
+    archive_sha256 = receiver_package.get("archive_zip_sha256") or candidate_archive.get(
+        "sha256"
+    )
+    updated: list[dict[str, Any]] = []
+    packet_preview_crossed = False
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        out = dict(row)
+        ceiling = _positive_int(out.get("hard_byte_ceiling"))
+        archive_under = (
+            None
+            if archive_bytes is None or ceiling is None or not proof_passed
+            else int(archive_bytes) <= int(ceiling)
+        )
+        satisfied = bool(proof_passed and archive_under is True)
+        out.update(
+            {
+                "candidate_archive_zip_path": archive_path,
+                "candidate_archive_zip_bytes": archive_bytes,
+                "candidate_archive_zip_sha256": archive_sha256,
+                "candidate_archive_zip_kind": archive_kind,
+                "candidate_archive_zip_under_ceiling": archive_under,
+                "candidate_archive_zip_over_ceiling_bytes": (
+                    None
+                    if archive_bytes is None or ceiling is None or not proof_passed
+                    else max(int(archive_bytes) - int(ceiling), 0)
+                ),
+                "runtime_consumption_proof_passed": bool(proof_passed),
+                "receiver_contract_satisfied": bool(
+                    report.get("receiver_contract_satisfied") is True
+                ),
+                "byte_authority": (
+                    "receiver_proven_generated_runtime_archive_zip"
+                    if proof_passed
+                    else "packet_preview_only_no_receiver_proof"
+                ),
+                "packet_under_ceiling_is_byte_authority": bool(proof_passed),
+                "hard_byte_ceiling_satisfied_for_long_training": satisfied,
+            }
+        )
+        row_blockers = list(out.get("blockers") or ())
+        if not proof_passed:
+            row_blockers.append(
+                "snerv_step_map_compaction_receiver_proven_archive_zip_missing"
+            )
+            if out.get("candidate_packet_under_ceiling") is True:
+                packet_preview_crossed = True
+        elif archive_under is not True:
+            row_blockers.append("snerv_step_map_compaction_archive_zip_over_ceiling")
+        out["blockers"] = _dedupe(row_blockers)
+        updated.append(out)
+    report["hard_byte_ceiling_rows"] = updated
+    if packet_preview_crossed:
+        report["blockers"] = _dedupe(
+            [
+                *list(report.get("blockers") or ()),
+                "snerv_step_map_compaction_packet_preview_not_byte_authority",
+            ]
+        )
+
+
+def _positive_int(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
 
 
 def _write_blocked_report(path: Path, report: dict[str, Any], blocker: str) -> None:
