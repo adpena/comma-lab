@@ -7756,6 +7756,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     coder_qat_c1a_sigma: float = DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
     coder_qat_c1a_sample_size: int = DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
     decoder_weight_waterfill_plan_json: str | Path | None = None,
+    archive_section_telemetry_json: str | Path | None = None,
     recon_pixel_weight_path: str | Path | None = None,
     auto_joint_recon_pixel_weight: bool = False,
     auto_segnet_boundary_recon_weight: bool = False,
@@ -7944,6 +7945,66 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 if decoder_weight_waterfill_plan is not None
                 else None
             )
+    archive_section_telemetry: dict[str, Any] | None = None
+    archive_section_telemetry_metadata: dict[str, Any] = {
+        "schema": "compact_hi_nerv_archive_section_telemetry_attachment.v1",
+        "attached": False,
+        "active": False,
+        "validated": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if archive_section_telemetry_json is not None:
+        telemetry_path = Path(archive_section_telemetry_json).expanduser()
+        if not telemetry_path.is_absolute():
+            telemetry_path = root / telemetry_path
+        telemetry_path = telemetry_path.resolve(strict=False)
+        archive_section_telemetry_metadata.update(
+            {
+                "attached": True,
+                "path": telemetry_path.as_posix(),
+                "blockers": [],
+            }
+        )
+        if not telemetry_path.is_file():
+            archive_section_telemetry_metadata["blockers"] = [
+                "hi_nerv_archive_section_telemetry_json_missing"
+            ]
+        else:
+            archive_section_telemetry = _load_json(telemetry_path)
+            sections = archive_section_telemetry.get("sections")
+            archive_section_telemetry_metadata.update(
+                {
+                    "sha256": _sha256_file(telemetry_path),
+                    "source_schema": archive_section_telemetry.get("schema"),
+                    "profile_ready": archive_section_telemetry.get("profile_ready"),
+                    "archive_zip_bytes": archive_section_telemetry.get(
+                        "archive_zip_bytes"
+                    ),
+                    "section_payload_bytes": archive_section_telemetry.get(
+                        "section_payload_bytes"
+                    ),
+                    "section_count": (
+                        len(sections)
+                        if isinstance(sections, Sequence)
+                        and not isinstance(sections, (str, bytes))
+                        else 0
+                    ),
+                }
+            )
+            archive_section_telemetry_metadata["validated"] = bool(
+                archive_section_telemetry.get("schema")
+                == "hinerv_archive_section_telemetry.v1"
+                and archive_section_telemetry.get("profile_ready") is True
+            )
+    (
+        archive_section_telemetry,
+        archive_section_telemetry_metadata,
+    ) = _validate_hi_nerv_archive_section_telemetry_attachment(
+        telemetry=archive_section_telemetry,
+        metadata=archive_section_telemetry_metadata,
+    )
     modelsize_budget_rows, modelsize_budget_sources = (
         _load_compact_modelsize_budget_rows(
             (*modelsize_budget_json_paths, *receiver_closed_ladder_json_paths),
@@ -8068,6 +8129,102 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     waterfill_validation_blockers = list(
         decoder_weight_waterfill_plan_metadata.get("blockers") or []
     )
+    archive_section_telemetry_blockers = list(
+        archive_section_telemetry_metadata.get("blockers") or []
+    )
+    if (
+        archive_section_telemetry_json is not None
+        and archive_section_telemetry_blockers
+    ):
+        refusal = _base_report(
+            output_dir=out,
+            mode="hi_nerv_archive_section_telemetry_launch_refused",
+            hard_byte_ceilings=hard_byte_ceilings,
+            repo_root=root,
+        )
+        refusal.update(
+            {
+                "execute_family": "hi_nerv",
+                "num_pairs": int(num_pairs),
+                "epochs_requested": int(epochs),
+                "training_executed": False,
+                "trainer_launch_allowed": False,
+                "launch_refusal_reason": (
+                    "Explicit HiNeRV archive-section telemetry must be "
+                    "structurally usable before it can drive train-time "
+                    "QAT and dual-ascent byte pressure."
+                ),
+                "modelsize_candidate_selection": {
+                    "schema": "compact_execute_modelsize_candidate_selection.v1",
+                    "family": "hi_nerv",
+                    "selection_mode": (
+                        "planner_candidate" if candidate else "manual_cli_knobs"
+                    ),
+                    "candidate": candidate or None,
+                    "modelsize_control_contract": _modelsize_control_contract(
+                        candidate
+                    ),
+                    "num_pairs_for_budget": CONTEST_PAIR_COUNT,
+                    "launch_latent_dim": launch_latent_dim,
+                    "launch_embed_dim": launch_embed_dim,
+                    "launch_decoder_channel": launch_decoder_channel,
+                    "launch_decoder_codec": launch_decoder_codec,
+                    "launch_hi_nerv_latent_codec": launch_hi_nerv_latent_codec,
+                    "launch_use_hierarchical_feature_grid": (
+                        launch_use_hierarchical_feature_grid
+                    ),
+                    "launch_use_convnext_blocks": launch_use_convnext_blocks,
+                    "launch_mid_injection_block_index": (
+                        launch_mid_injection_block_index
+                    ),
+                    "launch_fine_injection_block_index": (
+                        launch_fine_injection_block_index
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "status": "refused_before_mlx_training",
+                    "stage_loss_weights": stage_loss_weights,
+                    "decoder_weight_waterfill_plan": (
+                        decoder_weight_waterfill_plan_metadata
+                    ),
+                    "archive_section_telemetry_attachment": (
+                        archive_section_telemetry_metadata
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "hi_nerv_modelsize_launch_pressure": launch_pressure_binding,
+                "hi_nerv_source_faithfulness": launch_source_faithfulness,
+                "hi_nerv_control_precedence": launch_control_precedence,
+                "hi_nerv_optimizer_policy": optimizer_policy,
+                "hi_nerv_optimizer_controls": optimizer_controls,
+                "score_aware_carrier_training_plan": score_aware_training_plan,
+                "modelsize_budget_evidence": modelsize_budget_evidence,
+                "scorer_upstream_snapshot": _scorer_upstream_metadata(
+                    scorer_upstream
+                ),
+                "blockers": _dedupe(
+                    [
+                        *archive_section_telemetry_blockers,
+                        "hi_nerv_archive_section_telemetry_not_usable_for_training",
+                        "hi_nerv_training_not_launched",
+                        "contest_cpu_cuda_exact_eval_not_executed",
+                    ]
+                ),
+            }
+        )
+        refusal["candidate_feedback"] = write_nerv_candidate_feedback_files(
+            runner_report=refusal,
+            output_dir=out,
+        )
+        path = out / "compact_renderer_mlx_spine_runner_report.json"
+        _write_json(path, refusal)
+        return {**refusal, "report_path": path.as_posix()}
     if decoder_weight_waterfill_plan_json is not None and waterfill_validation_blockers:
         refusal = _base_report(
             output_dir=out,
@@ -8123,6 +8280,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "stage_loss_weights": stage_loss_weights,
                     "decoder_weight_waterfill_plan": (
                         decoder_weight_waterfill_plan_metadata
+                    ),
+                    "archive_section_telemetry_attachment": (
+                        archive_section_telemetry_metadata
                     ),
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -8190,6 +8350,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "stage_loss_weights": stage_loss_weights,
                     "decoder_weight_waterfill_plan": (
                         decoder_weight_waterfill_plan_metadata
+                    ),
+                    "archive_section_telemetry_attachment": (
+                        archive_section_telemetry_metadata
                     ),
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -8280,6 +8443,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "stage_loss_weights": stage_loss_weights,
                     "decoder_weight_waterfill_plan": (
                         decoder_weight_waterfill_plan_metadata
+                    ),
+                    "archive_section_telemetry_attachment": (
+                        archive_section_telemetry_metadata
                     ),
                     "score_claim": False,
                     "promotion_eligible": False,
@@ -8522,6 +8688,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             repo_root=root,
             candidate_curriculum_plan=launch_curriculum_plan,
             modelsize_candidate=candidate or None,
+            archive_section_telemetry=archive_section_telemetry,
+            archive_section_telemetry_metadata=archive_section_telemetry_metadata,
         )
     except Exception as exc:
         blocker_report = _base_report(
@@ -8590,9 +8758,28 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "hi_nerv_optimizer_controls": optimizer_controls,
                 "checkpoint_interval_epochs": checkpoint_interval,
                 "score_aware_stage_loss_weights": stage_loss_weights,
+                "score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "status": "failed_during_mlx_training_or_export",
+                    "stage_loss_weights": stage_loss_weights,
+                    "decoder_weight_waterfill_plan": (
+                        decoder_weight_waterfill_plan_metadata
+                    ),
+                    "archive_section_telemetry_attachment": (
+                        archive_section_telemetry_metadata
+                    ),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
                 "score_aware_carrier_training_plan": score_aware_training_plan,
                 "modelsize_budget_evidence": modelsize_budget_evidence,
-                "blockers": ["hi_nerv_mlx_scoreaware_or_export_failed"],
+                "blockers": _dedupe(
+                    [
+                        *archive_section_telemetry_blockers,
+                        "hi_nerv_mlx_scoreaware_or_export_failed",
+                    ]
+                ),
             }
         )
         path = out / "compact_renderer_mlx_spine_runner_report.json"
@@ -8874,6 +9061,19 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         ),
         sparse_target_hydration=bool(sparse_prioritized_target_hydration),
     )
+    substrate_score_training_metadata = _substrate_score_aware_training_from_artifact(
+        artifact_dict
+    )
+    if bool(archive_section_telemetry_metadata.get("attached")):
+        blockers.extend(archive_section_telemetry_metadata.get("blockers") or [])
+    archive_section_qat_policy_metadata = substrate_score_training_metadata.get(
+        "archive_section_qat_weight_policy"
+    )
+    if bool(archive_section_telemetry_metadata.get("attached")) and isinstance(
+        archive_section_qat_policy_metadata,
+        Mapping,
+    ):
+        blockers.extend(archive_section_qat_policy_metadata.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -9022,6 +9222,22 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     c1a_entropy_weight=coder_qat_c1a_entropy_weight,
                     c1a_sigma=coder_qat_c1a_sigma,
                     c1a_sample_size=coder_qat_c1a_sample_size,
+                ),
+                "latent_coder_aware_qat": (
+                    substrate_score_training_metadata.get("latent_coder_aware_qat")
+                    or {}
+                ),
+                "archive_section_telemetry_attachment": (
+                    substrate_score_training_metadata.get(
+                        "archive_section_telemetry_attachment"
+                    )
+                    or strip_candidate_curriculum_authority_fields(
+                        archive_section_telemetry_metadata
+                    )
+                ),
+                "archive_section_qat_weight_policy": (
+                    archive_section_qat_policy_metadata
+                    or {}
                 ),
                 "decoder_weight_waterfill_plan": decoder_weight_waterfill_plan_metadata,
                 "eval_roundtrip_ste": _eval_roundtrip_ste_report_metadata(
@@ -9894,6 +10110,60 @@ def _validate_hi_nerv_decoder_weight_waterfill_plan_attachment(
         out["validated"] = True
         return dict(plan), out
     return None, out
+
+
+def _validate_hi_nerv_archive_section_telemetry_attachment(
+    *,
+    telemetry: Mapping[str, Any] | None,
+    metadata: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Validate explicitly attached HiNeRV section telemetry before training."""
+
+    out = dict(metadata)
+    blockers = [str(blocker) for blocker in out.get("blockers") or []]
+    if not bool(out.get("attached")):
+        out["active"] = False
+        out["validated"] = False
+        out["blockers"] = _dedupe(blockers)
+        return (dict(telemetry) if isinstance(telemetry, Mapping) else None), out
+    if telemetry is None:
+        blockers.append("hi_nerv_archive_section_telemetry_not_loaded")
+        out["active"] = False
+        out["validated"] = False
+        out["blockers"] = _dedupe(blockers)
+        return None, out
+    payload = dict(telemetry)
+    if str(payload.get("schema") or "") != "hinerv_archive_section_telemetry.v1":
+        blockers.append("hi_nerv_archive_section_telemetry_schema_mismatch")
+    if payload.get("profile_ready") is not True:
+        blockers.append("hi_nerv_archive_section_telemetry_not_profile_ready")
+    sections = payload.get("sections")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        blockers.append("hi_nerv_archive_section_telemetry_sections_missing")
+        sections = []
+    else:
+        out["section_count"] = len(sections)
+        if not any(
+            isinstance(row, Mapping)
+            and str(row.get("name") or "") == "decoder_state"
+            for row in sections
+        ):
+            blockers.append("hi_nerv_archive_section_telemetry_decoder_state_missing")
+    overhead_sections = payload.get("sections_with_zip_overhead")
+    if isinstance(overhead_sections, Sequence) and not isinstance(
+        overhead_sections,
+        (str, bytes),
+    ):
+        out["sections_with_zip_overhead_count"] = len(overhead_sections)
+        out["archive_zip_overhead_section_attached"] = any(
+            isinstance(row, Mapping)
+            and str(row.get("name") or "") == "archive_zip_overhead"
+            for row in overhead_sections
+        )
+    out["blockers"] = _dedupe(blockers)
+    out["validated"] = not bool(out["blockers"])
+    out["active"] = bool(out["validated"])
+    return payload, out
 
 
 def _decoder_weight_waterfill_fake_quant_bits_by_name(
@@ -11702,6 +11972,35 @@ def _hi_nerv_source_faithfulness_metadata(
     return strip_candidate_curriculum_authority_fields(report)
 
 
+_SUBSTRATE_METADATA_AUTHORITY_KEYS = frozenset(
+    {
+        "score_claim",
+        "frontier_score_claim",
+        "rank_or_kill_eligible",
+        "promotion_eligible",
+        "ready_for_exact_eval_dispatch",
+        "promotable",
+        "score_claim_valid",
+    }
+)
+
+
+def _strip_substrate_metadata_authority_fields(value: Any) -> Any:
+    """Return a nested metadata copy accepted by RendererBundle guards."""
+
+    if isinstance(value, Mapping):
+        return {
+            str(key): _strip_substrate_metadata_authority_fields(item)
+            for key, item in value.items()
+            if str(key) not in _SUBSTRATE_METADATA_AUTHORITY_KEYS
+        }
+    if isinstance(value, list):
+        return [_strip_substrate_metadata_authority_fields(item) for item in value]
+    if isinstance(value, tuple):
+        return [_strip_substrate_metadata_authority_fields(item) for item in value]
+    return value
+
+
 def _run_hi_nerv_mlx_scoreaware_smoke(
     *,
     output_dir: Path,
@@ -11778,6 +12077,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     candidate_curriculum_plan: Mapping[str, Any] | None = None,
     modelsize_candidate: Mapping[str, Any] | None = None,
     sparse_prioritized_target_hydration: bool = False,
+    archive_section_telemetry: Mapping[str, Any] | None = None,
+    archive_section_telemetry_metadata: Mapping[str, Any] | None = None,
 ) -> Any:
     pairs = int(num_pairs)
     if pairs < 1:
@@ -11825,6 +12126,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         run_mlx_score_aware_full_main,
     )
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+    from tac.substrates.hi_nerv.bitstream import (
+        build_hinerv_archive_section_qat_weight_policy,
+    )
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
     from tac.substrates.hinton_distilled_scorer_surrogate import (
         build_learnable_pose_student_head,
@@ -12016,6 +12320,43 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         c1a_sample_size=int(coder_qat_c1a_sample_size),
     ).validated()
     coder_qat_loss_weight_map = coder_qat_loss_weights(coder_qat_cfg)
+    archive_section_qat_policy = build_hinerv_archive_section_qat_weight_policy(
+        archive_section_telemetry,
+        coder_qat_loss_weight_map,
+    )
+    if not archive_section_qat_policy.get("blockers"):
+        coder_qat_loss_weight_map = {
+            str(key): float(value)
+            for key, value in dict(
+                archive_section_qat_policy.get("extra_loss_weights") or {}
+            ).items()
+            if float(value) >= 0.0
+        }
+    latent_qat_loss_weight_map = {
+        str(key): float(value)
+        for key, value in coder_qat_loss_weight_map.items()
+        if str(key).startswith("latent_qat_") and float(value) > 0.0
+    }
+    latent_qat_cfg = CoderAwareQATConfig(
+        enabled=bool(latent_qat_loss_weight_map),
+        quant_bits=int(coder_qat_cfg.quant_bits),
+        quant_residual_weight=(
+            1.0 if latent_qat_loss_weight_map.get("latent_qat_quant_residual") else 0.0
+        ),
+        magnitude_weight=(
+            1.0 if latent_qat_loss_weight_map.get("latent_qat_magnitude") else 0.0
+        ),
+        delta_weight=(
+            1.0 if latent_qat_loss_weight_map.get("latent_qat_delta") else 0.0
+        ),
+        c1a_entropy_weight=(
+            1.0 if latent_qat_loss_weight_map.get("latent_qat_c1a_entropy") else 0.0
+        ),
+        c1a_sigma=float(coder_qat_cfg.c1a_sigma),
+        c1a_sample_size=int(coder_qat_cfg.c1a_sample_size),
+        include_substrings=("latents",),
+        exclude_substrings=(),
+    ).validated()
     train_time_dual_ascent_config = build_default_nerv_train_time_dual_ascent_config(
         family="hi_nerv",
         segnet_distillation_weight=float(segnet_distillation_weight),
@@ -12037,7 +12378,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
-        return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
+        terms = dict(build_decoder_coder_qat_terms(model_obj, coder_qat_cfg))
+        if latent_qat_cfg.enabled:
+            for key, value in build_decoder_coder_qat_terms(
+                model_obj,
+                latent_qat_cfg,
+            ).items():
+                suffix = str(key).removeprefix("coder_qat_")
+                terms[f"latent_qat_{suffix}"] = value
+        return terms
 
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         return export_hi_nerv_mlx_archive(
@@ -12228,6 +12577,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
             },
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "latent_coder_aware_qat": {
+                **coder_qat_metadata(latent_qat_cfg),
+                "schema": "latent_coder_aware_qat.v1",
+                "target": (
+                    "HiNeRV per-pair latents selected by include_substrings="
+                    "['latents']; section pressure comes from measured HIV1 "
+                    "latent archive bytes"
+                ),
+            },
+            "archive_section_telemetry_attachment": (
+                _strip_substrate_metadata_authority_fields(
+                    archive_section_telemetry_metadata or {}
+                )
+            ),
+            "archive_section_qat_weight_policy": (
+                _strip_substrate_metadata_authority_fields(
+                    archive_section_qat_policy
+                )
+            ),
             "train_time_dual_ascent": strip_candidate_curriculum_authority_fields(
                 train_time_dual_ascent_config
             ),
@@ -12255,8 +12623,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "per_tensor_fp16_scale_for_biases"
                 ),
                 "target": (
-                    "decoder weights and decoder biases; latents remain priced "
-                    "by their archive section"
+                    "decoder weights and decoder biases; per-pair latents use "
+                    "the separate latent_coder_aware_qat train-time path when "
+                    "archive-section telemetry is attached"
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
@@ -14527,6 +14896,7 @@ def _planner_row_command_control_blockers(
             "hi_nerv_pr95_curriculum_total_epochs",
         ),
         ("--decoder-weight-waterfill-plan-json", "decoder_weight_waterfill_plan_json"),
+        ("--archive-section-telemetry-json", "archive_section_telemetry_json"),
         ("--recon-pixel-weight-path", "recon_pixel_weight_path"),
         ("--snerv-model-size-adapter", "snerv_model_size_adapter"),
         ("--snerv-fc-dim", "snerv_fc_dim"),
@@ -16215,6 +16585,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--archive-section-telemetry-json",
+        type=Path,
+        help=(
+            "HiNeRV only: attach a hinerv_archive_section_telemetry.v1 artifact "
+            "from a prior byte-closed export and use its decoder/latent section "
+            "bytes to scale train-time QAT and dual-ascent rate pressure."
+        ),
+    )
+    parser.add_argument(
         "--snerv-spectra-preserving-adapter",
         action="store_true",
         help=(
@@ -17286,6 +17665,7 @@ def main(argv: list[str] | None = None) -> int:
             decoder_weight_waterfill_plan_json=(
                 args.decoder_weight_waterfill_plan_json
             ),
+            archive_section_telemetry_json=args.archive_section_telemetry_json,
             recon_pixel_weight_path=args.recon_pixel_weight_path,
             auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
             auto_segnet_boundary_recon_weight=(

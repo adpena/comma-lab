@@ -48,6 +48,9 @@ HI_NERV_DECODER_WATERFILL_FAKE_QUANT_FORWARD_SCHEMA = (
 HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA = (
     "hi_nerv_official_entropy_receiver_consumption.v1"
 )
+HI_NERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA = (
+    "hi_nerv_archive_section_qat_weight_policy.v1"
+)
 HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE = RATE_COEFFICIENT / CONTEST_REFERENCE_BYTES
 HI_NERV_OFFICIAL_QUANT_AXIS_RULE = "official_compute_best_quant_axis_thres_0p05"
 HI_NERV_OFFICIAL_QUANTNOISE_METHOD = "official_quantnoise_random_quantized_mix"
@@ -692,6 +695,319 @@ def decoder_waterfill_fake_quant_bits_by_name(
         str(name): int(bits)
         for name, bits in dict(report.get("per_tensor_bits") or {}).items()
     }
+
+
+def build_hinerv_archive_section_qat_weight_policy(
+    archive_section_telemetry: Mapping[str, Any] | None,
+    base_qat_weights: Mapping[str, float],
+    *,
+    byte_price_score_per_byte: float = HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE,
+    max_decoder_multiplier: float = 8.0,
+) -> dict[str, Any]:
+    """Convert measured HIV1 archive sections into train-time QAT weights.
+
+    This is a structural Lagrangian hook, not a score claim.  It consumes exact
+    section bytes from the previous byte-closed HiNeRV export and turns the
+    decoder section into stronger decoder-QAT pressure for the next run.  Latent
+    sections are separately scaled into ``latent_qat_*`` weights so the runner
+    can apply the same archive-shaped quantization geometry to per-pair learned
+    latents without conflating them with decoder weights.
+    """
+
+    base_weights = _nonnegative_float_map(base_qat_weights)
+    base = {
+        "schema": HI_NERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA,
+        "attached": archive_section_telemetry is not None,
+        "active": False,
+        "section_count": 0,
+        "archive_zip_bytes": None,
+        "section_payload_bytes": None,
+        "byte_price_score_per_byte": float(byte_price_score_per_byte),
+        "max_section_multiplier": float(max_decoder_multiplier),
+        "max_decoder_multiplier": float(max_decoder_multiplier),
+        "base_loss_weights": base_weights,
+        "extra_loss_weights": dict(base_weights),
+        "affected_loss_weight_keys": [],
+        "section_rows": [],
+        "applied_section_operators": [],
+        "pending_section_operators": [],
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    if archive_section_telemetry is None:
+        return {
+            **base,
+            "blockers": ["hinerv_archive_section_telemetry_not_attached"],
+        }
+    if (
+        str(archive_section_telemetry.get("schema") or "")
+        != "hinerv_archive_section_telemetry.v1"
+    ):
+        return {
+            **base,
+            "blockers": ["hinerv_archive_section_telemetry_schema_mismatch"],
+        }
+    if archive_section_telemetry.get("profile_ready") is not True:
+        return {
+            **base,
+            "blockers": ["hinerv_archive_section_telemetry_not_profile_ready"],
+        }
+    sections = archive_section_telemetry.get("sections_with_zip_overhead")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        sections = archive_section_telemetry.get("sections")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        return {
+            **base,
+            "blockers": ["hinerv_archive_section_telemetry_sections_missing"],
+        }
+    rows = _archive_section_rows_for_qat_policy(
+        sections,
+        archive_zip_bytes=archive_section_telemetry.get("archive_zip_bytes"),
+        section_payload_bytes=archive_section_telemetry.get("section_payload_bytes"),
+        byte_price_score_per_byte=float(byte_price_score_per_byte),
+    )
+    decoder_rows = [row for row in rows if row["name"] == "decoder_state"]
+    if not decoder_rows:
+        return {
+            **base,
+            "section_count": len(rows),
+            "section_rows": rows,
+            "blockers": ["hinerv_archive_section_telemetry_decoder_state_missing"],
+        }
+    if not base_weights:
+        return {
+            **base,
+            "section_count": len(rows),
+            "archive_zip_bytes": _optional_positive_int(
+                archive_section_telemetry.get("archive_zip_bytes")
+            ),
+            "section_payload_bytes": _optional_positive_int(
+                archive_section_telemetry.get("section_payload_bytes")
+            ),
+            "section_rows": rows,
+            "blockers": ["hinerv_archive_section_qat_base_weights_empty"],
+        }
+    if not any(float(value) > 0.0 for value in base_weights.values()):
+        return {
+            **base,
+            "section_count": len(rows),
+            "archive_zip_bytes": _optional_positive_int(
+                archive_section_telemetry.get("archive_zip_bytes")
+            ),
+            "section_payload_bytes": _optional_positive_int(
+                archive_section_telemetry.get("section_payload_bytes")
+            ),
+            "section_rows": rows,
+            "blockers": ["hinerv_archive_section_qat_base_weights_all_zero"],
+        }
+    decoder_row = decoder_rows[0]
+    latent_rows = [row for row in rows if str(row.get("role") or "") == "latent"]
+    decoder_multiplier = _qat_multiplier_from_section_pressure(
+        decoder_row,
+        max_decoder_multiplier=float(max_decoder_multiplier),
+    )
+    latent_pressure_row = _aggregate_policy_rows(
+        latent_rows,
+        name="latents_all",
+        role="latent",
+    )
+    latent_multiplier = (
+        _qat_multiplier_from_section_pressure(
+            latent_pressure_row,
+            max_decoder_multiplier=float(max_decoder_multiplier),
+        )
+        if latent_pressure_row is not None
+        else 1.0
+    )
+    decoder_weights = {
+        key: float(value) * decoder_multiplier for key, value in base_weights.items()
+    }
+    latent_weights = {
+        f"latent_qat_{key.removeprefix('coder_qat_')}": (
+            float(value) * latent_multiplier
+        )
+        for key, value in base_weights.items()
+        if latent_pressure_row is not None
+    }
+    scaled_weights = {**decoder_weights, **latent_weights}
+    pending = []
+    for row in rows:
+        role = str(row.get("role") or "")
+        if role not in {"decoder", "latent"}:
+            pending.append(
+                {
+                    "section_name": row["name"],
+                    "role": role,
+                    "bytes": int(row["bytes"]),
+                    "rate_score": float(row["rate_score"]),
+                    "required_operator": (
+                        "packet_layout_or_metadata_codec_operator"
+                        if role in {"header", "metadata", "container_overhead"}
+                        else "section_specific_train_time_operator"
+                    ),
+                    "current_status": "priced_not_yet_applied",
+                    **FALSE_AUTHORITY,
+                }
+            )
+    return {
+        **base,
+        "active": any(float(value) > 0.0 for value in scaled_weights.values()),
+        "section_count": len(rows),
+        "archive_zip_bytes": _optional_positive_int(
+            archive_section_telemetry.get("archive_zip_bytes")
+        ),
+        "section_payload_bytes": _optional_positive_int(
+            archive_section_telemetry.get("section_payload_bytes")
+        ),
+        "extra_loss_weights": scaled_weights,
+        "affected_loss_weight_keys": sorted(scaled_weights),
+        "decoder_section_bytes": int(decoder_row["bytes"]),
+        "decoder_section_fraction": float(decoder_row["fraction_of_archive_or_payload"]),
+        "decoder_rate_score": float(decoder_row["rate_score"]),
+        "decoder_pressure_multiplier": float(decoder_multiplier),
+        "latent_section_bytes": (
+            int(latent_pressure_row["bytes"]) if latent_pressure_row is not None else 0
+        ),
+        "latent_section_fraction": (
+            float(latent_pressure_row["fraction_of_archive_or_payload"])
+            if latent_pressure_row is not None
+            else 0.0
+        ),
+        "latent_rate_score": (
+            float(latent_pressure_row["rate_score"])
+            if latent_pressure_row is not None
+            else 0.0
+        ),
+        "latent_pressure_multiplier": float(latent_multiplier),
+        "section_rows": rows,
+        "applied_section_operators": [
+            {
+                "section_name": "decoder_state",
+                "operator": "decoder_coder_qat_loss_weight_scaling",
+                "loss_weight_keys": sorted(decoder_weights),
+                "multiplier": float(decoder_multiplier),
+                **FALSE_AUTHORITY,
+            },
+            *(
+                [
+                    {
+                        "section_name": "latents_all",
+                        "operator": "latent_coder_qat_loss_weight_scaling",
+                        "loss_weight_keys": sorted(latent_weights),
+                        "multiplier": float(latent_multiplier),
+                        "source_sections": [str(row["name"]) for row in latent_rows],
+                        **FALSE_AUTHORITY,
+                    }
+                ]
+                if latent_rows and latent_weights
+                else []
+            ),
+        ],
+        "pending_section_operators": pending,
+        "blockers": [],
+    }
+
+
+def _archive_section_rows_for_qat_policy(
+    sections: Sequence[Any],
+    *,
+    archive_zip_bytes: Any,
+    section_payload_bytes: Any,
+    byte_price_score_per_byte: float,
+) -> list[dict[str, Any]]:
+    valid_rows = [row for row in sections if isinstance(row, Mapping)]
+    section_payload_denominator = _optional_positive_int(section_payload_bytes)
+    if section_payload_denominator is None:
+        section_payload_denominator = sum(
+            max(0, int(row.get("bytes") or 0)) for row in valid_rows
+        )
+    denominator = (
+        _optional_positive_int(archive_zip_bytes)
+        or section_payload_denominator
+        or 1
+    )
+    rows: list[dict[str, Any]] = []
+    for row in sorted(
+        valid_rows,
+        key=lambda item: (-int(item.get("bytes") or 0), str(item.get("name") or "")),
+    ):
+        nbytes = max(0, int(row.get("bytes") or 0))
+        name = str(row.get("name") or "")
+        rows.append(
+            {
+                "name": name,
+                "role": str(row.get("role") or ""),
+                "bytes": nbytes,
+                "rate_score": float(nbytes) * float(byte_price_score_per_byte),
+                "fraction_of_archive_or_payload": (
+                    float(nbytes) / float(max(int(denominator), 1))
+                ),
+                "codec": row.get("codec"),
+                "control_status": _archive_section_qat_control_status(name, row),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return rows
+
+
+def _archive_section_qat_control_status(
+    name: str,
+    row: Mapping[str, Any],
+) -> str:
+    if name == "decoder_state":
+        return "applied_decoder_qat_weight_scaling"
+    if str(row.get("role") or "") == "latent":
+        return "applied_latent_qat_weight_scaling"
+    return "priced_not_yet_applied"
+
+
+def _qat_multiplier_from_section_pressure(
+    row: Mapping[str, Any],
+    *,
+    max_decoder_multiplier: float,
+) -> float:
+    fraction = max(0.0, float(row.get("fraction_of_archive_or_payload") or 0.0))
+    rate_score = max(0.0, float(row.get("rate_score") or 0.0))
+    multiplier = 1.0 + fraction + rate_score
+    return min(max(1.0, multiplier), max(1.0, float(max_decoder_multiplier)))
+
+
+def _aggregate_policy_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    name: str,
+    role: str,
+) -> dict[str, Any] | None:
+    if not rows:
+        return None
+    bytes_total = sum(int(row.get("bytes") or 0) for row in rows)
+    rate_total = sum(float(row.get("rate_score") or 0.0) for row in rows)
+    fraction_total = sum(
+        float(row.get("fraction_of_archive_or_payload") or 0.0) for row in rows
+    )
+    return {
+        "name": name,
+        "role": role,
+        "bytes": int(bytes_total),
+        "rate_score": float(rate_total),
+        "fraction_of_archive_or_payload": float(fraction_total),
+    }
+
+
+def _nonnegative_float_map(raw: Mapping[str, float]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for key, value in dict(raw or {}).items():
+        fvalue = float(value)
+        if fvalue >= 0.0 and math.isfinite(fvalue):
+            out[str(key)] = fvalue
+    return out
+
+
+def _optional_positive_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    resolved = int(value)
+    return resolved if resolved > 0 else None
 
 
 def _decoder_weight_waterfill_plan_custody(
@@ -1374,6 +1690,7 @@ def _roundtrip_error(
 
 
 __all__ = [
+    "HI_NERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA",
     "HI_NERV_BITSTREAM_PREPARATION_SCHEMA",
     "HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE",
     "HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA",
@@ -1393,6 +1710,7 @@ __all__ = [
     "apply_decoder_quant_noise",
     "apply_decoder_waterfill_actions",
     "build_decoder_waterfill_fake_quant_forward_plan",
+    "build_hinerv_archive_section_qat_weight_policy",
     "decoder_waterfill_fake_quant_bits_by_name",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
     "measure_hi_nerv_official_entropy_receiver_consumption",

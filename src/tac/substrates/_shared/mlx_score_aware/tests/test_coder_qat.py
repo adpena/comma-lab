@@ -139,6 +139,28 @@ def test_qat_selection_excludes_latents_from_decoder_pressure() -> None:
 
 
 @mlx_only
+def test_qat_explicit_latent_selection_changes_with_latent_values() -> None:
+    import mlx.core as mx
+
+    cfg = CoderAwareQATConfig(
+        enabled=True,
+        quant_bits=2,
+        include_substrings=("latents",),
+        exclude_substrings=(),
+    )
+    baseline = _TinyParamTree([0.0, 1.0], latent_values=[0.25, 0.5])
+    changed_latents = _TinyParamTree([0.0, 1.0], latent_values=[0.125, 0.75])
+
+    terms_a = build_decoder_coder_qat_terms(baseline, cfg)
+    terms_b = build_decoder_coder_qat_terms(changed_latents, cfg)
+    mx.eval(terms_a["coder_qat_magnitude"], terms_b["coder_qat_magnitude"])
+
+    assert float(terms_a["coder_qat_magnitude"].item()) != pytest.approx(
+        float(terms_b["coder_qat_magnitude"].item())
+    )
+
+
+@mlx_only
 def test_c1a_entropy_is_finite_and_positive_for_decoder_weights() -> None:
     import mlx.core as mx
 

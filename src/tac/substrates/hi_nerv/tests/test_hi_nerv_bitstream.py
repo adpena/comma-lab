@@ -7,6 +7,7 @@ import pytest
 import torch
 
 from tac.substrates.hi_nerv.bitstream import (
+    HI_NERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA,
     HI_NERV_BITSTREAM_PREPARATION_SCHEMA,
     HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE,
     HI_NERV_BITSTREAM_ROUNDTRIP_SCHEMA,
@@ -21,6 +22,7 @@ from tac.substrates.hi_nerv.bitstream import (
     apply_decoder_quant_noise,
     apply_decoder_waterfill_actions,
     build_decoder_waterfill_fake_quant_forward_plan,
+    build_hinerv_archive_section_qat_weight_policy,
     decoder_waterfill_fake_quant_bits_by_name,
     measure_hi_nerv_decoder_bitstream_roundtrip,
     measure_hi_nerv_official_entropy_receiver_consumption,
@@ -37,6 +39,117 @@ def _state() -> dict[str, torch.Tensor]:
         "block.weight": torch.randn(3, 4, 3, 3) * 0.05,
         "norm.weight": torch.ones(4),
     }
+
+
+def test_archive_section_qat_policy_prices_decoder_and_latent_sections() -> None:
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "profile_ready": True,
+        "archive_zip_bytes": 200,
+        "section_payload_bytes": 196,
+        "sections": [
+            {"name": "decoder_state", "role": "decoder", "bytes": 100},
+            {"name": "latents_coarse", "role": "latent", "bytes": 12},
+            {"name": "latents_mid", "role": "latent", "bytes": 18},
+            {"name": "latents_fine", "role": "latent", "bytes": 30},
+            {"name": "hiv1_header", "role": "header", "bytes": 16},
+            {"name": "meta_json", "role": "metadata", "bytes": 20},
+        ],
+        "sections_with_zip_overhead": [
+            {"name": "decoder_state", "role": "decoder", "bytes": 100},
+            {"name": "latents_coarse", "role": "latent", "bytes": 12},
+            {"name": "latents_mid", "role": "latent", "bytes": 18},
+            {"name": "latents_fine", "role": "latent", "bytes": 30},
+            {"name": "hiv1_header", "role": "header", "bytes": 16},
+            {"name": "meta_json", "role": "metadata", "bytes": 20},
+            {
+                "name": "archive_zip_overhead",
+                "role": "container_overhead",
+                "bytes": 4,
+            },
+        ],
+    }
+    base_weights = {
+        "coder_qat_quant_residual": 0.001,
+        "coder_qat_magnitude": 0.0001,
+        "coder_qat_delta": 0.0002,
+        "coder_qat_c1a_entropy": 0.0003,
+    }
+
+    policy = build_hinerv_archive_section_qat_weight_policy(
+        telemetry,
+        base_weights,
+        byte_price_score_per_byte=0.01,
+        max_decoder_multiplier=4.0,
+    )
+
+    assert policy["schema"] == HI_NERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA
+    assert policy["active"] is True
+    assert policy["score_claim"] is False
+    assert policy["decoder_section_bytes"] == 100
+    assert policy["latent_section_bytes"] == 60
+    assert policy["decoder_pressure_multiplier"] == pytest.approx(2.5)
+    assert policy["latent_pressure_multiplier"] == pytest.approx(1.9)
+    assert policy["extra_loss_weights"]["coder_qat_quant_residual"] == pytest.approx(
+        0.0025
+    )
+    assert policy["extra_loss_weights"]["latent_qat_quant_residual"] == pytest.approx(
+        0.0019
+    )
+    assert {
+        row["section_name"]: row["operator"]
+        for row in policy["applied_section_operators"]
+    } == {
+        "decoder_state": "decoder_coder_qat_loss_weight_scaling",
+        "latents_all": "latent_coder_qat_loss_weight_scaling",
+    }
+    pending_roles = {
+        row["section_name"]: row["role"]
+        for row in policy["pending_section_operators"]
+    }
+    assert pending_roles == {
+        "archive_zip_overhead": "container_overhead",
+        "hiv1_header": "header",
+        "meta_json": "metadata",
+    }
+    control_status = {
+        row["name"]: row["control_status"] for row in policy["section_rows"]
+    }
+    assert control_status["decoder_state"] == "applied_decoder_qat_weight_scaling"
+    assert control_status["latents_fine"] == "applied_latent_qat_weight_scaling"
+
+
+def test_archive_section_qat_policy_fails_closed_when_qat_weights_empty() -> None:
+    policy = build_hinerv_archive_section_qat_weight_policy(
+        {
+            "schema": "hinerv_archive_section_telemetry.v1",
+            "profile_ready": True,
+            "archive_zip_bytes": 128,
+            "sections": [{"name": "decoder_state", "role": "decoder", "bytes": 64}],
+        },
+        {},
+    )
+
+    assert policy["active"] is False
+    assert "hinerv_archive_section_qat_base_weights_empty" in policy["blockers"]
+
+
+def test_archive_section_qat_policy_fails_closed_when_qat_weights_all_zero() -> None:
+    policy = build_hinerv_archive_section_qat_weight_policy(
+        {
+            "schema": "hinerv_archive_section_telemetry.v1",
+            "profile_ready": True,
+            "archive_zip_bytes": 128,
+            "sections": [{"name": "decoder_state", "role": "decoder", "bytes": 64}],
+        },
+        {
+            "coder_qat_quant_residual": 0.0,
+            "coder_qat_magnitude": 0.0,
+        },
+    )
+
+    assert policy["active"] is False
+    assert "hinerv_archive_section_qat_base_weights_all_zero" in policy["blockers"]
 
 
 def test_hi_nerv_bitstream_preparation_applies_receiver_visible_transforms() -> None:

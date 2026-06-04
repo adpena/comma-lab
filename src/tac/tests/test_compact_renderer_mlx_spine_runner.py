@@ -4866,6 +4866,11 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "train_time_dual_ascent_config" in kw_names
     target_source = ast.get_source_segment(source, target_fn) or ""
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
+    assert "build_hinerv_archive_section_qat_weight_policy" in target_source
+    assert "archive_section_qat_policy = " in target_source
+    assert "latent_qat_cfg = CoderAwareQATConfig" in target_source
+    assert 'terms[f"latent_qat_{suffix}"] = value' in target_source
+    assert '"archive_section_qat_weight_policy": (' in target_source
     assert '"train_time_dual_ascent": strip_candidate_curriculum_authority_fields' in (
         target_source
     )
@@ -5374,6 +5379,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "hi_nerv::manual::lion",
             "--optimizer-kind",
             "lion",
+            "--archive-section-telemetry-json",
+            "hinerv_sections.json",
             "--hi-nerv-pr95-source-weight-amplification",
         ]
     )
@@ -5476,6 +5483,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.modelsize_candidate_id == "manual"
     assert hi.planner_row_id == "hi_nerv::manual::lion"
     assert hi.optimizer_kind == "lion"
+    assert hi.archive_section_telemetry_json == Path("hinerv_sections.json")
     assert hi.hi_nerv_pr95_source_weight_amplification is True
     assert sn.execute_family == "snerv"
     assert sn.num_pairs == 128
@@ -7738,6 +7746,312 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     }
 
 
+def test_hinerv_execute_threads_archive_section_telemetry_into_training(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "profile_ready": True,
+        "archive_zip_bytes": 2048,
+        "section_payload_bytes": 1900,
+        "sections": [
+            {"name": "decoder_state", "role": "decoder", "bytes": 1200},
+            {"name": "latents_coarse", "role": "latent", "bytes": 80},
+            {"name": "latents_mid", "role": "latent", "bytes": 120},
+            {"name": "latents_fine", "role": "latent", "bytes": 160},
+            {"name": "hiv1_header", "role": "header", "bytes": 32},
+        ],
+    }
+    telemetry_path = tmp_path / "hinerv_archive_section_telemetry.json"
+    telemetry_path.write_text(json.dumps(telemetry, sort_keys=True), encoding="utf-8")
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "substrate_supplied_score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "archive_section_telemetry_attachment": kwargs[
+                        "archive_section_telemetry_metadata"
+                    ],
+                    "archive_section_qat_weight_policy": {
+                        "schema": "hi_nerv_archive_section_qat_weight_policy.v1",
+                        "active": True,
+                        "decoder_section_bytes": 1200,
+                        "latent_section_bytes": 360,
+                        "extra_loss_weights": {
+                            "coder_qat_quant_residual": 0.002,
+                            "latent_qat_quant_residual": 0.0015,
+                        },
+                        "blockers": [],
+                    },
+                    "latent_coder_aware_qat": {
+                        "schema": "latent_coder_aware_qat.v1",
+                        "enabled": True,
+                        "quant_bits": 8,
+                    },
+                },
+            },
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_archive_section_qat",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        archive_section_telemetry_json=telemetry_path,
+        post_export_receiver_cache_quality_gate=False,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["archive_section_telemetry"] == telemetry
+    attachment = captured_train_kwargs["archive_section_telemetry_metadata"]
+    assert attachment["attached"] is True
+    assert attachment["validated"] is True
+    assert attachment["path"] == telemetry_path.as_posix()
+    assert attachment["sha256"] == runner_mod._sha256_file(telemetry_path)
+    assert attachment["source_schema"] == "hinerv_archive_section_telemetry.v1"
+    assert attachment["archive_zip_bytes"] == 2048
+    assert attachment["section_payload_bytes"] == 1900
+    assert attachment["section_count"] == 5
+    report_attachment = out["score_aware_training"][
+        "archive_section_telemetry_attachment"
+    ]
+    assert report_attachment["validated"] is True
+    assert report_attachment["path"] == telemetry_path.as_posix()
+    policy = out["score_aware_training"]["archive_section_qat_weight_policy"]
+    assert policy["active"] is True
+    assert policy["decoder_section_bytes"] == 1200
+    assert policy["latent_section_bytes"] == 360
+    assert "latent_qat_quant_residual" in policy["extra_loss_weights"]
+    latent_qat = out["score_aware_training"]["latent_coder_aware_qat"]
+    assert latent_qat["enabled"] is True
+    assert out["score_claim"] is False
+
+
+@pytest.mark.parametrize(
+    ("case_name", "payload", "expected_blocker"),
+    [
+        ("missing_file", None, "hi_nerv_archive_section_telemetry_json_missing"),
+        (
+            "schema_mismatch",
+            {
+                "schema": "wrong_schema.v1",
+                "profile_ready": True,
+                "sections": [
+                    {"name": "decoder_state", "role": "decoder", "bytes": 1}
+                ],
+            },
+            "hi_nerv_archive_section_telemetry_schema_mismatch",
+        ),
+        (
+            "profile_not_ready",
+            {
+                "schema": "hinerv_archive_section_telemetry.v1",
+                "profile_ready": False,
+                "sections": [
+                    {"name": "decoder_state", "role": "decoder", "bytes": 1}
+                ],
+            },
+            "hi_nerv_archive_section_telemetry_not_profile_ready",
+        ),
+        (
+            "sections_missing",
+            {
+                "schema": "hinerv_archive_section_telemetry.v1",
+                "profile_ready": True,
+            },
+            "hi_nerv_archive_section_telemetry_sections_missing",
+        ),
+        (
+            "decoder_missing",
+            {
+                "schema": "hinerv_archive_section_telemetry.v1",
+                "profile_ready": True,
+                "sections": [
+                    {"name": "latents_mid", "role": "latent", "bytes": 16}
+                ],
+            },
+            "hi_nerv_archive_section_telemetry_decoder_state_missing",
+        ),
+    ],
+)
+def test_hinerv_execute_refuses_bad_archive_section_telemetry_before_training(
+    tmp_path: Path,
+    monkeypatch,
+    case_name: str,
+    payload: dict[str, object] | None,
+    expected_blocker: str,
+) -> None:
+    telemetry_path = tmp_path / f"{case_name}.json"
+    if payload is not None:
+        telemetry_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    def fail_train(**_kwargs):
+        raise AssertionError("trainer must not run with invalid telemetry")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / f"hinerv_bad_telemetry_{case_name}",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        archive_section_telemetry_json=telemetry_path,
+        post_export_receiver_cache_quality_gate=False,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["training_executed"] is False
+    assert out["trainer_launch_allowed"] is False
+    assert out["mode"] == "hi_nerv_archive_section_telemetry_launch_refused"
+    assert expected_blocker in out["blockers"]
+    assert "hi_nerv_training_not_launched" in out["blockers"]
+    attachment = out["score_aware_training"][
+        "archive_section_telemetry_attachment"
+    ]
+    assert attachment["attached"] is True
+    assert attachment["validated"] is False
+    assert expected_blocker in attachment["blockers"]
+
+
+def test_hinerv_execute_does_not_top_level_block_when_section_telemetry_absent(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    def fake_train(**kwargs):
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+            "substrate_artifact_metadata": {
+                "substrate_supplied_score_aware_training": {
+                    "schema": "compact_hi_nerv_score_aware_training.v1",
+                    "archive_section_qat_weight_policy": {
+                        "schema": "hi_nerv_archive_section_qat_weight_policy.v1",
+                        "attached": False,
+                        "active": False,
+                        "blockers": [
+                            "hinerv_archive_section_telemetry_not_attached"
+                        ],
+                    },
+                },
+            },
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_no_section_telemetry",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        post_export_receiver_cache_quality_gate=False,
+        repo_root=REPO_ROOT,
+    )
+
+    assert "hinerv_archive_section_telemetry_not_attached" not in out["blockers"]
+    assert out["score_aware_training"][
+        "archive_section_telemetry_attachment"
+    ]["attached"] is False
+
+
+def test_hinerv_execute_failure_preserves_archive_section_telemetry_context(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "profile_ready": True,
+        "archive_zip_bytes": 256,
+        "sections": [{"name": "decoder_state", "role": "decoder", "bytes": 128}],
+    }
+    telemetry_path = tmp_path / "valid_hinerv_sections.json"
+    telemetry_path.write_text(json.dumps(telemetry, sort_keys=True), encoding="utf-8")
+
+    def fail_train(**_kwargs):
+        raise RuntimeError("synthetic trainer failure")
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fail_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_failure_section_telemetry",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        archive_section_telemetry_json=telemetry_path,
+        post_export_receiver_cache_quality_gate=False,
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "hi_nerv_mlx_scoreaware_failed"
+    assert "synthetic trainer failure" in out["failure"]
+    attachment = out["score_aware_training"][
+        "archive_section_telemetry_attachment"
+    ]
+    assert attachment["attached"] is True
+    assert attachment["validated"] is True
+    assert attachment["path"] == telemetry_path.as_posix()
+    assert "hi_nerv_mlx_scoreaware_or_export_failed" in out["blockers"]
+
+
 def _hinerv_waterfill_modelsize_candidate(
     candidate_id: str = "hinerv-unit-candidate",
 ) -> dict[str, object]:
@@ -7921,6 +8235,194 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     assert consumption["training_num_pairs"] == 2
     assert consumption["model_num_pairs"] == 600
     assert consumption["partial_pair_training_against_full_candidate"] is True
+
+
+@pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required (Apple Silicon)")
+def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import mlx.core as mx
+
+    from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
+
+    captured: dict[str, object] = {}
+
+    class FakeHinervModel:
+        def __init__(self, cfg):
+            self.cfg = cfg
+            self.fake_quant = {}
+            self._params = {
+                "decoder": {
+                    "head": {
+                        "weight": mx.array([0.0, 0.5, 1.0], dtype=mx.float32),
+                    },
+                },
+                "latents_coarse": mx.array([0.25, 0.5], dtype=mx.float32),
+                "latents_mid": mx.array([0.125, 0.75], dtype=mx.float32),
+            }
+
+        def configure_decoder_fake_quant_forward(self, **kwargs):
+            self.fake_quant = dict(kwargs)
+
+        def num_parameters(self):
+            return 7
+
+        def parameters(self):
+            return self._params
+
+    class FakeArtifact:
+        def __init__(self, payload: dict[str, object]) -> None:
+            self._payload = payload
+
+        def as_dict(self) -> dict[str, object]:
+            return dict(self._payload)
+
+    def fake_decode_mlx_targets(
+        video_path,
+        *,
+        num_pairs,
+        output_height,
+        output_width,
+        pair_indices=None,
+    ):
+        shape = (int(num_pairs), int(output_height), int(output_width), 3)
+        return mx.zeros(shape, dtype=mx.float32), mx.zeros(shape, dtype=mx.float32)
+
+    def fake_run_mlx_score_aware_full_main(**kwargs):
+        bundle = kwargs["bundle"]
+        captured["extra_loss_weights"] = dict(bundle.extra_loss_weights)
+        terms = bundle.extra_loss_terms(
+            bundle.model,
+            mx.array([0], dtype=mx.int32),
+        )
+        mx.eval(*terms.values())
+        captured["extra_loss_term_keys"] = sorted(terms)
+        captured["term_values"] = {
+            key: float(value.item()) for key, value in terms.items()
+        }
+        captured["dual_loss_weight_keys"] = sorted(
+            row["loss_weight_key"]
+            for row in kwargs["train_time_dual_ascent_config"]["constraints"]
+        )
+        captured["metadata"] = dict(bundle.substrate_artifact_metadata)
+        return FakeArtifact({"substrate_artifact_metadata": captured["metadata"]})
+
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "decode_mlx_targets",
+        fake_decode_mlx_targets,
+    )
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "run_mlx_score_aware_full_main",
+        fake_run_mlx_score_aware_full_main,
+    )
+    monkeypatch.setattr(
+        hinerv_mlx_renderer,
+        "HinervSubstrateMLX",
+        FakeHinervModel,
+    )
+
+    artifact = runner_mod._run_hi_nerv_mlx_scoreaware_smoke(
+        output_dir=tmp_path / "hinerv_section_qat_consumption",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=tmp_path / "not_read_by_fake_decoder.mkv",
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=7,
+        mid_injection_block_index=2,
+        fine_injection_block_index=5,
+        decoder_codec="int4_mixed",
+        hi_nerv_latent_codec="int16_brotli_q11",
+        hard_byte_ceiling=178_000,
+        ema_decay=0.9,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_distillation_loss="mse",
+        pose_distillation_huber_delta=1.0,
+        recon_loss_stage_weight=1.0,
+        segnet_loss_stage_weight=1.0,
+        pose_loss_stage_weight=1.0,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_tau_boundary=1.0,
+        segnet_hinge_margin=1.0,
+        distillation_device="cpu",
+        requested_distillation_device=None,
+        allow_segnet_only_research=False,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0,
+        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+        coder_qat_c1a_sample_size=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
+        recon_pixel_weight_path=None,
+        decoder_weight_waterfill_plan=None,
+        recon_pixel_weight_auto_discovery=None,
+        auto_segnet_boundary_recon_weight=False,
+        recon_pixel_weight_tau=1.0,
+        recon_pixel_weight_normalize="mean",
+        mlx_prefilter_scorer_device=None,
+        mlx_prefilter_scorer_batch_pairs=1,
+        mlx_prefilter_progress_every=50,
+        telemetry_flush_interval_epochs=1,
+        checkpoint_interval_epochs=1,
+        checkpoint_retention_keep_last_n=1,
+        checkpoint_retention_keep_best_n=1,
+        checkpoint_retention_keep_every_n_epochs=None,
+        checkpoint_retention_cold_store_roots=(),
+        checkpoint_dir=None,
+        resume_from_checkpoint=None,
+        optimizer_kind="pact_muon_adamw",
+        hi_nerv_optimizer_policy={},
+        optimizer_controls={},
+        prioritized_pair_indices=(),
+        scorer_error_pair_sampling_weights=None,
+        scorer_error_pair_curriculum=None,
+        random_seed=0,
+        scorer_upstream_dir=REPO_ROOT / "upstream",
+        repo_root=REPO_ROOT,
+        archive_section_telemetry={
+            "schema": "hinerv_archive_section_telemetry.v1",
+            "profile_ready": True,
+            "archive_zip_bytes": 400,
+            "sections": [
+                {"name": "decoder_state", "role": "decoder", "bytes": 200},
+                {"name": "latents_coarse", "role": "latent", "bytes": 40},
+                {"name": "latents_mid", "role": "latent", "bytes": 40},
+            ],
+        },
+        archive_section_telemetry_metadata={
+            "schema": "compact_hi_nerv_archive_section_telemetry_attachment.v1",
+            "attached": True,
+            "validated": True,
+        },
+    )
+
+    assert artifact.as_dict()["substrate_artifact_metadata"] == captured["metadata"]
+    weights = captured["extra_loss_weights"]
+    assert weights["coder_qat_quant_residual"] > 0.001
+    assert weights["latent_qat_quant_residual"] > 0.001
+    assert "coder_qat_quant_residual" in captured["extra_loss_term_keys"]
+    assert "latent_qat_quant_residual" in captured["extra_loss_term_keys"]
+    assert "coder_qat_quant_residual" in captured["dual_loss_weight_keys"]
+    assert "latent_qat_quant_residual" in captured["dual_loss_weight_keys"]
+    metadata = captured["metadata"]["score_aware_training"]
+    assert metadata["archive_section_qat_weight_policy"]["active"] is True
+    assert metadata["latent_coder_aware_qat"]["enabled"] is True
 
 
 def _write_hinerv_waterfill_plan(
