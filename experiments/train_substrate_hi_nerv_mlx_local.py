@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,11 @@ from tac.adaptation.hard_pair_indices import (
     parse_pair_indices_csv,
     validate_pair_indices_in_range,
 )
+from tac.analysis.nerv_modelsize_budget import (
+    MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS,
+    build_hinerv_config_from_size_knobs,
+    modelsize_control_precedence_contract,
+)
 from tac.analysis.nerv_modelsize_ladder import (
     hi_nerv_modelsize_config_rows,
 )
@@ -66,6 +72,9 @@ HI_NERV_TRAIN_TIME_DECODER_CONTROL_REPORT_SCHEMA = "hi_nerv_train_time_decoder_c
 HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA = (
     "hi_nerv_train_time_decoder_mutation_identity.v1"
 )
+HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA = (
+    "hi_nerv_trainer_modelsize_candidate_consumption.v1"
+)
 DIRECT_TRAINER_CANONICALIZATION_SCHEMA = "hi_nerv_direct_trainer_canonicalization_contract.v1"
 DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA = "hi_nerv_direct_trainer_launch_refusal.v1"
 DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
@@ -80,6 +89,7 @@ DIRECT_TRAINER_CANONICALIZATION_BLOCKERS = (
     "hinerv_direct_trainer_local_cpu_replay_gate_not_bound",
 )
 DEFAULT_WORKLOAD_SUBDIR = "hinerv_mlx_local_training"
+DEFAULT_DECODER_CODEC = "int8_mixed"
 MODEL_SIZE_ROWS = tuple(row["row_id"] for row in hi_nerv_modelsize_config_rows(num_pairs=600))
 _HI_NERV_DECODER_CONTROL_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "latent_embed",
@@ -308,11 +318,19 @@ def _full_main(args: argparse.Namespace) -> int:
     """Run canonical MLX score-aware training for the current HiNeRV carrier."""
 
     train_time_controls = _train_time_control_config_from_args(args)
+    modelsize_candidate = _modelsize_candidate_from_args(args)
+    modelsize_candidate_consumption = _modelsize_candidate_consumption_metadata(
+        args=args,
+        candidate=modelsize_candidate,
+    )
     pr95_full_control_contract = _pr95_full_control_contract(
         args,
         train_time_controls=train_time_controls,
     )
-    canonicalization = _direct_trainer_canonicalization_contract(mode="full")
+    canonicalization = _direct_trainer_canonicalization_contract(
+        mode="full",
+        modelsize_candidate_consumption=modelsize_candidate_consumption,
+    )
     launch_refusal = _direct_trainer_launch_refusal_payload(
         canonicalization,
         mode="full",
@@ -344,7 +362,14 @@ def _full_main(args: argparse.Namespace) -> int:
     )
 
     output_dir, storage_payload = _resolve_output_dir(args)
-    cfg = _config_from_args(args)
+    cfg = _config_from_args(args, modelsize_candidate=modelsize_candidate)
+    effective_decoder_codec = _decoder_codec_from_args(
+        args,
+        modelsize_candidate=modelsize_candidate,
+    )
+    modelsize_hard_byte_ceiling = _hard_byte_ceiling_from_modelsize_candidate(
+        modelsize_candidate
+    )
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     source_pair_indices = prioritized_pair_indices or None
     effective_training_num_pairs = len(source_pair_indices) if source_pair_indices is not None else int(cfg.num_pairs)
@@ -442,13 +467,14 @@ def _full_main(args: argparse.Namespace) -> int:
             model_obj,
             out_dir,
             repo_root=REPO_ROOT,
-            decoder_codec=str(args.decoder_codec),
+            decoder_codec=effective_decoder_codec,
             source_backend="mlx",
             pruning_ratio=float(train_time_controls.export_decoder_pruning_ratio),
             quant_noise_bits=train_time_controls.export_decoder_quant_noise_bits,
             quant_noise_scale=float(train_time_controls.export_decoder_quant_noise_scale),
             quant_noise_seed=int(train_time_controls.export_decoder_quant_noise_seed),
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            hard_byte_ceiling=modelsize_hard_byte_ceiling,
         ),
         substrate_artifact_metadata={
             "schema": TRAINER_SCHEMA,
@@ -456,6 +482,9 @@ def _full_main(args: argparse.Namespace) -> int:
             "family": "hi_nerv",
             "source_fidelity_status": "local_hi_nerv_fork_not_official_hinerv_parity",
             "modelsize_row": args.modelsize_row,
+            "modelsize_candidate_consumption": _metadata_safe(
+                modelsize_candidate_consumption
+            ),
             "config": _config_snapshot(cfg),
             "training_target_pair_count": int(effective_training_num_pairs),
             "source_pair_indices": (
@@ -467,7 +496,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 if source_pair_indices is not None
                 else "identity_local_rows_are_source_pairs"
             ),
-            "decoder_codec": str(args.decoder_codec),
+            "decoder_codec": effective_decoder_codec,
             "decoder_fake_quant_forward": _metadata_safe(decoder_fake_quant_forward),
             "decoder_weight_waterfill_plan": _metadata_safe(
                 _decoder_weight_waterfill_plan_attachment_metadata(
@@ -509,6 +538,7 @@ def _full_main(args: argparse.Namespace) -> int:
             "direct_trainer_canonicalization": canonicalization,
             "pr95_full_control_contract": pr95_full_control_contract,
             "train_time_controls": train_time_controls.metadata(),
+            "modelsize_candidate_consumption": modelsize_candidate_consumption,
             "prioritized_pair_training": _prioritized_pair_training_metadata(
                 prioritized_pair_indices,
                 target_hydration_pair_indices_consumed=source_pair_indices is not None,
@@ -595,8 +625,23 @@ def _smoke_main(args: argparse.Namespace) -> int:
     from tac.substrates.hi_nerv.mlx_renderer import MLX_EVIDENCE_GRADE, HinervSubstrateMLX
 
     output_dir, storage_payload = _resolve_output_dir(args)
-    cfg = _config_from_args(args)
-    canonicalization = _direct_trainer_canonicalization_contract(mode="smoke")
+    modelsize_candidate = _modelsize_candidate_from_args(args)
+    modelsize_candidate_consumption = _modelsize_candidate_consumption_metadata(
+        args=args,
+        candidate=modelsize_candidate,
+    )
+    cfg = _config_from_args(args, modelsize_candidate=modelsize_candidate)
+    effective_decoder_codec = _decoder_codec_from_args(
+        args,
+        modelsize_candidate=modelsize_candidate,
+    )
+    modelsize_hard_byte_ceiling = _hard_byte_ceiling_from_modelsize_candidate(
+        modelsize_candidate
+    )
+    canonicalization = _direct_trainer_canonicalization_contract(
+        mode="smoke",
+        modelsize_candidate_consumption=modelsize_candidate_consumption,
+    )
     train_time_controls = _train_time_control_config_from_args(args)
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(args)
@@ -616,13 +661,14 @@ def _smoke_main(args: argparse.Namespace) -> int:
             model,
             output_dir / "smoke_archive_export",
             repo_root=REPO_ROOT,
-            decoder_codec=str(args.decoder_codec),
+            decoder_codec=effective_decoder_codec,
             source_backend="mlx",
             pruning_ratio=float(train_time_controls.export_decoder_pruning_ratio),
             quant_noise_bits=train_time_controls.export_decoder_quant_noise_bits,
             quant_noise_scale=float(train_time_controls.export_decoder_quant_noise_scale),
             quant_noise_seed=int(train_time_controls.export_decoder_quant_noise_seed),
             decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            hard_byte_ceiling=modelsize_hard_byte_ceiling,
         )
         archive_path = archive_path_obj.as_posix()
     post_export_quality = _maybe_write_post_export_receiver_cache_quality(
@@ -639,6 +685,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "output_dir": output_dir.as_posix(),
         "storage_preflight": storage_payload,
         "modelsize_row": args.modelsize_row,
+        "modelsize_candidate_consumption": modelsize_candidate_consumption,
         "config": _config_snapshot(cfg),
         "num_parameters": int(model.num_parameters()),
         "forward_convention": "call_b2chw_255",
@@ -649,7 +696,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_max": float(mx.max(output)),
             "output_mean": float(mx.mean(output)),
         },
-        "decoder_codec": str(args.decoder_codec),
+        "decoder_codec": effective_decoder_codec,
         "decoder_fake_quant_forward": decoder_fake_quant_forward,
         "decoder_weight_waterfill_plan": _decoder_weight_waterfill_plan_attachment_metadata(
             args=args,
@@ -729,7 +776,19 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--full-lr", type=float, default=1.0e-3)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=25)
-    parser.add_argument("--decoder-codec", default="int8_mixed")
+    parser.add_argument("--decoder-codec", default=DEFAULT_DECODER_CODEC)
+    parser.add_argument(
+        "--modelsize-candidate-json",
+        type=Path,
+        default=None,
+        help=(
+            "HiNeRV hinerv_modelsize_candidate.v1, compact selection, or "
+            "compact startup marker whose receiver-visible capacity, decoder "
+            "codec, and hard-byte ceiling should drive this trainer/export. "
+            "Invalid, over-ceiling, or non-HiNeRV candidates fail before MLX "
+            "work starts."
+        ),
+    )
     parser.add_argument("--decoder-fake-quant-forward", action="store_true")
     parser.add_argument("--decoder-fake-quant-bits", type=int, default=8)
     parser.add_argument(
@@ -813,7 +872,48 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _config_from_args(args: argparse.Namespace) -> Any:
+def _config_from_args(
+    args: argparse.Namespace,
+    *,
+    modelsize_candidate: Mapping[str, Any] | None = None,
+) -> Any:
+    candidate = (
+        _modelsize_candidate_from_args(args)
+        if modelsize_candidate is None
+        else dict(modelsize_candidate)
+    )
+    if candidate:
+        _reject_modelsize_candidate_cli_config_overrides(args)
+        cfg = build_hinerv_config_from_size_knobs(
+            num_pairs=int(candidate["num_pairs"]),
+            latent_dim=int(candidate["latent_dim"]),
+            embed_dim=int(candidate["embed_dim"]),
+            decoder_channel=int(candidate["decoder_channel"]),
+            use_hierarchical_feature_grid=bool(
+                candidate.get("use_hierarchical_feature_grid")
+            ),
+            use_convnext_blocks=bool(candidate.get("use_convnext_blocks")),
+            local_grid_levels=int(candidate.get("local_grid_levels", 2)),
+            local_grid_channels=int(candidate.get("local_grid_channels", 4)),
+            convnext_mlp_ratio=int(candidate.get("convnext_mlp_ratio", 2)),
+            convnext_kernel_size=int(candidate.get("convnext_kernel_size", 7)),
+            mid_injection_block_index=int(
+                candidate.get("mid_injection_block_index", 1)
+            ),
+            fine_injection_block_index=int(
+                candidate.get("fine_injection_block_index", 4)
+            ),
+        )
+        if int(args.output_height) != int(cfg.output_height) or int(
+            args.output_width
+        ) != int(cfg.output_width):
+            raise ValueError(
+                "HiNeRV modelsize candidate fixes receiver output geometry; "
+                f"got --output-height/--output-width "
+                f"{int(args.output_height)}x{int(args.output_width)} but "
+                f"candidate resolves to {int(cfg.output_height)}x{int(cfg.output_width)}"
+            )
+        return cfg
     rows = {str(row["row_id"]): row["config"] for row in hi_nerv_modelsize_config_rows(num_pairs=int(args.num_pairs))}
     cfg = rows[str(args.modelsize_row)]
     updates: dict[str, Any] = {
@@ -834,6 +934,241 @@ def _config_from_args(args: argparse.Namespace) -> Any:
     if args.decoder_channels:
         updates["decoder_channels"] = tuple(int(part) for part in str(args.decoder_channels).split(",") if part)
     return replace(cfg, **updates)
+
+
+def _resolve_modelsize_candidate_path(args: argparse.Namespace) -> Path | None:
+    path = getattr(args, "modelsize_candidate_json", None)
+    if path is None:
+        return None
+    resolved = Path(path).expanduser()
+    if not resolved.is_absolute():
+        resolved = REPO_ROOT / resolved
+    return resolved.resolve(strict=False)
+
+
+def _modelsize_candidate_from_args(args: argparse.Namespace) -> dict[str, Any] | None:
+    path = _resolve_modelsize_candidate_path(args)
+    if path is None:
+        return None
+    if not path.is_file():
+        raise ValueError(
+            "modelsize_candidate_json must point at an existing file; "
+            f"got {path.as_posix()}"
+        )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("modelsize_candidate_json must contain a JSON object")
+    candidate = _extract_hinerv_modelsize_candidate(payload)
+    _validate_hinerv_modelsize_candidate(candidate, args=args)
+    return candidate
+
+
+def _extract_hinerv_modelsize_candidate(payload: Mapping[str, Any]) -> dict[str, Any]:
+    schema = str(payload.get("schema") or "")
+    if schema == "hinerv_modelsize_candidate.v1":
+        return dict(payload)
+    if schema == "compact_execute_modelsize_candidate_selection.v1":
+        candidate = payload.get("candidate")
+    elif schema == "compact_carrier_startup_marker.v1":
+        candidate = payload.get("modelsize_candidate")
+    else:
+        raise ValueError(
+            "modelsize_candidate_json schema must be hinerv_modelsize_candidate.v1, "
+            "compact_execute_modelsize_candidate_selection.v1, or "
+            f"compact_carrier_startup_marker.v1; got {schema!r}"
+        )
+    if not isinstance(candidate, Mapping):
+        raise ValueError(
+            f"modelsize_candidate_json schema {schema!r} did not contain a "
+            "modelsize candidate object"
+        )
+    return dict(candidate)
+
+
+def _validate_hinerv_modelsize_candidate(
+    candidate: Mapping[str, Any],
+    *,
+    args: argparse.Namespace,
+) -> None:
+    blockers: list[str] = []
+    if candidate.get("schema") != "hinerv_modelsize_candidate.v1":
+        blockers.append("hinerv_modelsize_candidate_schema_mismatch")
+    if candidate.get("family") != "hi_nerv":
+        blockers.append("hinerv_modelsize_candidate_family_mismatch")
+    if not str(candidate.get("candidate_id") or "").strip():
+        blockers.append("hinerv_modelsize_candidate_id_missing")
+    required_int_fields = (
+        "num_pairs",
+        "hard_byte_ceiling",
+        "latent_dim",
+        "embed_dim",
+        "decoder_channel",
+        "local_grid_levels",
+        "local_grid_channels",
+        "convnext_mlp_ratio",
+        "convnext_kernel_size",
+        "mid_injection_block_index",
+        "fine_injection_block_index",
+        "nominal_total_payload_bytes",
+    )
+    for field in required_int_fields:
+        try:
+            value = int(candidate.get(field))
+        except (TypeError, ValueError):
+            blockers.append(f"hinerv_modelsize_candidate_{field}_missing_or_invalid")
+            continue
+        if value <= 0 and field not in {
+            "mid_injection_block_index",
+            "fine_injection_block_index",
+        }:
+            blockers.append(f"hinerv_modelsize_candidate_{field}_must_be_positive")
+        if (
+            field in {"mid_injection_block_index", "fine_injection_block_index"}
+            and value < 0
+        ):
+            blockers.append(f"hinerv_modelsize_candidate_{field}_must_be_nonnegative")
+    if str(candidate.get("decoder_codec") or "").strip() == "":
+        blockers.append("hinerv_modelsize_candidate_decoder_codec_missing")
+    try:
+        if int(candidate.get("num_pairs")) != int(args.num_pairs):
+            blockers.append("hinerv_modelsize_candidate_num_pairs_mismatch")
+    except (TypeError, ValueError):
+        pass
+    controller = candidate.get("byte_cap_controller")
+    controller_under = None
+    if isinstance(controller, Mapping) and (
+        controller.get("predicted_under_hard_byte_ceiling") is False
+    ):
+        controller_under = False
+        blockers.append(
+            "hinerv_modelsize_candidate_byte_cap_controller_predicts_over_hard_ceiling"
+        )
+    elif isinstance(controller, Mapping):
+        controller_under = controller.get("predicted_under_hard_byte_ceiling")
+    if controller_under is not True and candidate.get("nominal_under_ceiling") is not True:
+        blockers.append("hinerv_modelsize_candidate_nominally_over_hard_byte_ceiling")
+    contract = candidate.get("modelsize_control_contract")
+    if not isinstance(contract, Mapping):
+        blockers.append("hinerv_modelsize_candidate_contract_missing")
+    else:
+        for field in MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS:
+            if contract.get(field) is not True:
+                blockers.append(f"hinerv_modelsize_candidate_contract_missing:{field}")
+    if blockers:
+        raise ValueError(
+            "invalid HiNeRV modelsize candidate: " + ", ".join(dict.fromkeys(blockers))
+        )
+
+
+def _reject_modelsize_candidate_cli_config_overrides(args: argparse.Namespace) -> None:
+    overrides = [
+        flag
+        for flag, attr in (
+            ("--latent-dim-coarse", "latent_dim_coarse"),
+            ("--latent-dim-mid", "latent_dim_mid"),
+            ("--latent-dim-fine", "latent_dim_fine"),
+            ("--embed-dim", "embed_dim"),
+            ("--decoder-channels", "decoder_channels"),
+            ("--sin-frequency", "sin_frequency"),
+        )
+        if getattr(args, attr, None) is not None
+    ]
+    if overrides:
+        raise ValueError(
+            "HiNeRV modelsize candidate owns receiver-visible architecture; "
+            "remove conflicting CLI overrides: " + ", ".join(overrides)
+        )
+
+
+def _decoder_codec_from_args(
+    args: argparse.Namespace,
+    *,
+    modelsize_candidate: Mapping[str, Any] | None = None,
+) -> str:
+    candidate = (
+        _modelsize_candidate_from_args(args)
+        if modelsize_candidate is None
+        else dict(modelsize_candidate)
+    )
+    requested = str(
+        getattr(args, "decoder_codec", DEFAULT_DECODER_CODEC) or DEFAULT_DECODER_CODEC
+    )
+    if not candidate:
+        return requested
+    candidate_codec = str(candidate.get("decoder_codec") or "").strip()
+    if not candidate_codec:
+        raise ValueError("HiNeRV modelsize candidate decoder_codec is missing")
+    if requested != DEFAULT_DECODER_CODEC and requested != candidate_codec:
+        raise ValueError(
+            "HiNeRV modelsize candidate decoder_codec conflicts with explicit "
+            f"--decoder-codec: candidate={candidate_codec!r} cli={requested!r}"
+        )
+    return candidate_codec
+
+
+def _hard_byte_ceiling_from_modelsize_candidate(
+    candidate: Mapping[str, Any] | None,
+) -> int | None:
+    if not candidate:
+        return None
+    ceiling = int(candidate.get("hard_byte_ceiling") or 0)
+    if ceiling <= 0:
+        raise ValueError("HiNeRV modelsize candidate hard_byte_ceiling must be positive")
+    return ceiling
+
+
+def _modelsize_candidate_consumption_metadata(
+    *,
+    args: argparse.Namespace,
+    candidate: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    path = _resolve_modelsize_candidate_path(args)
+    if not candidate:
+        return {
+            "schema": HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA,
+            "attached": False,
+            "path": path.as_posix() if path is not None else None,
+            "consumed_by_trainer_config": False,
+            "consumed_by_decoder_codec": False,
+            "consumed_by_archive_export_hard_byte_ceiling": False,
+            "blockers": ["hinerv_modelsize_candidate_json_not_attached"],
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+    candidate_dict = dict(candidate)
+    contract = dict(candidate_dict.get("modelsize_control_contract") or {})
+    contract.setdefault(
+        "control_precedence",
+        modelsize_control_precedence_contract(candidate_dict),
+    )
+    return {
+        "schema": HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA,
+        "attached": True,
+        "path": path.as_posix() if path is not None else None,
+        "sha256": sha256_file(path) if path is not None and path.is_file() else None,
+        "bytes": path.stat().st_size if path is not None and path.is_file() else None,
+        "candidate_id": candidate_dict.get("candidate_id"),
+        "candidate_schema": candidate_dict.get("schema"),
+        "capacity_source": candidate_dict.get("capacity_source"),
+        "target_modelsize_mparams": candidate_dict.get("target_modelsize_mparams"),
+        "modelsize_mparams": candidate_dict.get("modelsize_mparams"),
+        "hard_byte_ceiling": _hard_byte_ceiling_from_modelsize_candidate(candidate_dict),
+        "nominal_total_payload_bytes": candidate_dict.get("nominal_total_payload_bytes"),
+        "nominal_under_ceiling": bool(candidate_dict.get("nominal_under_ceiling")),
+        "byte_headroom": candidate_dict.get("byte_headroom"),
+        "decoder_codec": _decoder_codec_from_args(
+            args,
+            modelsize_candidate=candidate_dict,
+        ),
+        "modelsize_control_contract": contract,
+        "byte_cap_controller": _metadata_safe(candidate_dict.get("byte_cap_controller")),
+        "consumed_by_trainer_config": True,
+        "consumed_by_decoder_codec": True,
+        "consumed_by_archive_export_hard_byte_ceiling": True,
+        "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _coder_qat_config_from_args(args: argparse.Namespace) -> Any:
@@ -1704,7 +2039,11 @@ def _resolve_output_dir(args: argparse.Namespace) -> tuple[Path, dict[str, Any]]
     return output, payload
 
 
-def _direct_trainer_canonicalization_contract(*, mode: str) -> dict[str, Any]:
+def _direct_trainer_canonicalization_contract(
+    *,
+    mode: str,
+    modelsize_candidate_consumption: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Describe why this script is not the production launch authority.
 
     The compact runner owns planner rows, campaign locks, source parity,
@@ -1714,6 +2053,23 @@ def _direct_trainer_canonicalization_contract(*, mode: str) -> dict[str, Any]:
     queue-owned launch authority.
     """
 
+    modelsize_consumed = bool(
+        isinstance(modelsize_candidate_consumption, Mapping)
+        and modelsize_candidate_consumption.get("attached") is True
+        and modelsize_candidate_consumption.get("consumed_by_trainer_config") is True
+        and (
+            modelsize_candidate_consumption.get(
+                "consumed_by_archive_export_hard_byte_ceiling"
+            )
+            is True
+        )
+    )
+    blockers = [
+        blocker
+        for blocker in DIRECT_TRAINER_CANONICALIZATION_BLOCKERS
+        if not modelsize_consumed
+        or blocker != "hinerv_direct_modelsize_row_not_budget_candidate_contract"
+    ]
     return {
         "schema": DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
         "canonical_runner_entrypoint": DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT,
@@ -1724,12 +2080,15 @@ def _direct_trainer_canonicalization_contract(*, mode: str) -> dict[str, Any]:
         "source_parity_contract_consumed": False,
         "source_faithfulness_launch_gate_consumed": False,
         "pr95_prelaunch_gate_consumed": False,
-        "modelsize_candidate_contract_consumed": False,
+        "modelsize_candidate_contract_consumed": modelsize_consumed,
+        "modelsize_candidate_consumption": _metadata_safe(
+            modelsize_candidate_consumption
+        ),
         "compact_runner_startup_marker_present": False,
         "full_video_mlx_prefilter_bound": False,
         "local_cpu_replay_gate_bound": False,
         "trainer_launch_allowed": False,
-        "blockers": list(DIRECT_TRAINER_CANONICALIZATION_BLOCKERS),
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 
@@ -2074,6 +2433,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 __all__ = [
+    "HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA",
     "HI_NERV_TRAIN_TIME_CONTROL_SCHEMA",
     "HI_NERV_TRAIN_TIME_DECODER_CONTROL_REPORT_SCHEMA",
     "PR95_FULL_CONTROL_CONTRACT_SCHEMA",
@@ -2085,9 +2445,13 @@ __all__ = [
     "_coder_qat_config_from_args",
     "_config_from_args",
     "_configure_decoder_fake_quant_forward",
+    "_decoder_codec_from_args",
     "_decoder_weight_waterfill_plan_attachment_metadata",
     "_decoder_weight_waterfill_plan_from_args",
+    "_hard_byte_ceiling_from_modelsize_candidate",
     "_metadata_safe",
+    "_modelsize_candidate_consumption_metadata",
+    "_modelsize_candidate_from_args",
     "_pr95_full_control_contract",
     "_prioritized_pair_indices_from_args",
     "_prioritized_pair_training_lineage_metadata",

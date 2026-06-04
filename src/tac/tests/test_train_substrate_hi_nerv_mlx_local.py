@@ -12,6 +12,7 @@ from comma_lab.storage_tiers import StorageTierError
 from experiments.train_substrate_hi_nerv_mlx_local import (
     DIRECT_TRAINER_CANONICALIZATION_SCHEMA,
     DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
+    HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA,
     HI_NERV_TRAIN_TIME_CONTROL_SCHEMA,
     HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA,
     PR95_FULL_CONTROL_CONTRACT_SCHEMA,
@@ -25,11 +26,15 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _config_from_args,
     _configure_decoder_fake_quant_forward,
     _curriculum_stages_from_args,
+    _decoder_codec_from_args,
     _decoder_weight_waterfill_plan_attachment_metadata,
     _decoder_weight_waterfill_plan_from_args,
     _direct_trainer_canonicalization_contract,
     _full_main,
+    _hard_byte_ceiling_from_modelsize_candidate,
     _metadata_safe,
+    _modelsize_candidate_consumption_metadata,
+    _modelsize_candidate_from_args,
     _pose_student_input_channels,
     _pr95_full_control_contract,
     _prioritized_pair_indices_from_args,
@@ -39,6 +44,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _resolve_output_dir,
     _train_time_control_config_from_args,
 )
+from tac.analysis.nerv_modelsize_budget import analyze_hinerv_modelsize_candidate
 from tac.repo_io import sha256_file
 from tac.substrates._shared.mlx_score_aware.adapter import (
     DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
@@ -74,6 +80,112 @@ def test_hinerv_mlx_trainer_binds_modelsize_row_and_overrides() -> None:
     assert cfg.decoder_channels == (9, 8, 7, 6, 5, 4, 3)
     assert cfg.output_height == 96
     assert cfg.output_width == 128
+
+
+def test_hinerv_mlx_trainer_consumes_modelsize_candidate_for_config_codec_and_byte_cap(
+    tmp_path: Path,
+) -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=500_000,
+        num_pairs=7,
+        latent_dim=10,
+        embed_dim=16,
+        decoder_channel=8,
+        decoder_codec="int4_mixed",
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=3,
+        local_grid_channels=5,
+        convnext_mlp_ratio=3,
+        convnext_kernel_size=5,
+        mid_injection_block_index=1,
+        fine_injection_block_index=4,
+    ).as_dict()
+    assert candidate["nominal_under_ceiling"] is True
+    candidate_path = tmp_path / "hinerv_candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--num-pairs",
+            "7",
+            "--modelsize-candidate-json",
+            candidate_path.as_posix(),
+        ]
+    )
+
+    loaded = _modelsize_candidate_from_args(args)
+    assert loaded is not None
+    cfg = _config_from_args(args, modelsize_candidate=loaded)
+    consumption = _modelsize_candidate_consumption_metadata(
+        args=args,
+        candidate=loaded,
+    )
+    canonicalization = _direct_trainer_canonicalization_contract(
+        mode="smoke",
+        modelsize_candidate_consumption=consumption,
+    )
+
+    assert cfg.num_pairs == 7
+    assert cfg.latent_dim_coarse == 5
+    assert cfg.latent_dim_mid == 10
+    assert cfg.latent_dim_fine == 20
+    assert cfg.embed_dim == 16
+    assert cfg.decoder_channels == (8, 8, 8, 8, 8, 8, 8)
+    assert cfg.use_hierarchical_feature_grid is True
+    assert cfg.use_convnext_blocks is True
+    assert cfg.local_grid_levels == 3
+    assert cfg.local_grid_channels == 5
+    assert cfg.convnext_mlp_ratio == 3
+    assert cfg.convnext_kernel_size == 5
+    assert _decoder_codec_from_args(args, modelsize_candidate=loaded) == "int4_mixed"
+    assert _hard_byte_ceiling_from_modelsize_candidate(loaded) == 500_000
+    assert consumption["schema"] == HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA
+    assert consumption["attached"] is True
+    assert consumption["consumed_by_trainer_config"] is True
+    assert consumption["consumed_by_decoder_codec"] is True
+    assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is True
+    assert consumption["sha256"] == sha256_file(candidate_path)
+    assert consumption["decoder_codec"] == "int4_mixed"
+    assert consumption["hard_byte_ceiling"] == 500_000
+    assert "control_precedence" in consumption["modelsize_control_contract"]
+    assert canonicalization["modelsize_candidate_contract_consumed"] is True
+    assert (
+        "hinerv_direct_modelsize_row_not_budget_candidate_contract"
+        not in canonicalization["blockers"]
+    )
+    assert "hinerv_direct_trainer_missing_planner_row_id" in canonicalization["blockers"]
+    assert canonicalization["score_claim"] is False
+
+
+def test_hinerv_mlx_trainer_rejects_over_cap_modelsize_candidate(
+    tmp_path: Path,
+) -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=1,
+        num_pairs=7,
+        latent_dim=10,
+        embed_dim=16,
+        decoder_channel=8,
+        decoder_codec="int4_mixed",
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+    ).as_dict()
+    assert candidate["nominal_under_ceiling"] is False
+    candidate_path = tmp_path / "hinerv_candidate_over_cap.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--num-pairs",
+            "7",
+            "--modelsize-candidate-json",
+            candidate_path.as_posix(),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="nominally_over_hard_byte_ceiling"):
+        _modelsize_candidate_from_args(args)
 
 
 def test_hinerv_mlx_trainer_coder_qat_config_is_real_and_validated() -> None:
@@ -746,6 +858,30 @@ def test_hinerv_mlx_trainer_forwards_prioritized_pairs_to_harness() -> None:
             for keyword in call.keywords
         )
         for call in run_calls
+    )
+
+
+def test_hinerv_mlx_trainer_forwards_modelsize_hard_byte_ceiling_to_archive_export() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    export_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "export_hi_nerv_mlx_archive"
+    ]
+
+    assert export_calls
+    assert all(
+        any(
+            keyword.arg == "hard_byte_ceiling"
+            and isinstance(keyword.value, ast.Name)
+            and keyword.value.id == "modelsize_hard_byte_ceiling"
+            for keyword in call.keywords
+        )
+        for call in export_calls
     )
 
 
