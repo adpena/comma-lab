@@ -253,6 +253,9 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "loss_part_pr95_stage_seg_surrogate": 1.0,
                     "loss_part_pr95_stage_pose_surrogate": 2.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.25,
+                    "segnet_student_live_calibration_active": 1.0,
+                    "loss_part_segnet_student_live_calibration": 0.125,
+                    "loss_part_weighted_segnet_student_live_calibration": 0.125,
                     "train_time_section_rate_score__decoder_payload": 0.01,
                     "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
@@ -268,6 +271,7 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
         telemetry,
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=1.0,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
@@ -280,6 +284,8 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["posenet_dual_metric_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
+    assert contract["segnet_live_calibration_active_observed"] is True
+    assert contract["segnet_live_calibration_loss_observed"] is True
 
 
 def test_score_aware_telemetry_contract_rejects_stale_pr95_alias_failure(
@@ -306,6 +312,7 @@ def test_score_aware_telemetry_contract_rejects_stale_pr95_alias_failure(
         telemetry,
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=1.0,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
@@ -325,6 +332,14 @@ def test_score_aware_telemetry_contract_rejects_stale_pr95_alias_failure(
     )
     assert (
         "snerv_score_aware_long_training_section_rate_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_live_segnet_calibration_never_active"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_live_segnet_calibration_loss_missing"
         in contract["blockers"]
     )
 

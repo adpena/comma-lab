@@ -1465,6 +1465,9 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "loss_part_pr95_stage_seg_surrogate": 1.25,
                     "loss_part_pr95_stage_pose_surrogate": 2.5,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.125,
+                    "segnet_student_live_calibration_active": 1.0,
+                    "loss_part_segnet_student_live_calibration": 0.0625,
+                    "loss_part_weighted_segnet_student_live_calibration": 0.0625,
                     "train_time_section_rate_score__decoder_payload": 0.002,
                     "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
@@ -1481,6 +1484,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
         family="hi_nerv",
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=1.0,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
@@ -1493,6 +1497,8 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["posenet_dual_metric_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
+    assert contract["segnet_live_calibration_active_observed"] is True
+    assert contract["segnet_live_calibration_loss_observed"] is True
 
 
 def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
@@ -1521,6 +1527,7 @@ def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
         family="hi_nerv",
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=1.0,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
@@ -1538,6 +1545,12 @@ def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
         "blockers"
     ]
     assert "hi_nerv_score_aware_training_section_rate_metric_missing" in contract[
+        "blockers"
+    ]
+    assert "hi_nerv_score_aware_training_live_segnet_calibration_never_active" in contract[
+        "blockers"
+    ]
+    assert "hi_nerv_score_aware_training_live_segnet_calibration_loss_missing" in contract[
         "blockers"
     ]
 

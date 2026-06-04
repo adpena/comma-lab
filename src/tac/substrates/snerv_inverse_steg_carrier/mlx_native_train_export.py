@@ -359,6 +359,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
     *,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    segnet_student_live_calibration_weight: float,
     pr95_faithful_curriculum_enabled: bool,
     coder_aware_qat_bound: bool,
     train_time_section_byte_control_bound: bool,
@@ -370,9 +371,18 @@ def _snerv_score_aware_long_training_telemetry_contract(
     blockers: list[str] = []
     expected_seg = float(segnet_distillation_weight) > 0.0
     expected_pose = float(pose_distillation_weight) > 0.0
+    expected_live_calibration = bool(
+        expected_seg and float(segnet_student_live_calibration_weight) > 0.0
+    )
     expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
-    expected_any = bool(expected_seg or expected_pose or expected_section or expected_guard)
+    expected_any = bool(
+        expected_seg
+        or expected_pose
+        or expected_live_calibration
+        or expected_section
+        or expected_guard
+    )
     row_count = 0
     malformed_rows = 0
     seg_dual_observed = False
@@ -381,6 +391,8 @@ def _snerv_score_aware_long_training_telemetry_contract(
     pose_loss_observed = False
     section_rate_observed = False
     guard_loss_observed = False
+    live_calibration_active_observed = False
+    live_calibration_loss_observed = False
     pr95_seg_loss_observed = False
     pr95_pose_loss_observed = False
     if not path.is_file():
@@ -434,6 +446,24 @@ def _snerv_score_aware_long_training_telemetry_contract(
                     "loss_part_pr95_stage_scorer_input_distribution_guard",
                 )
             )
+            live_calibration_active_observed = (
+                live_calibration_active_observed
+                or _row_float_equals(
+                    row,
+                    "segnet_student_live_calibration_active",
+                    1.0,
+                )
+            )
+            live_calibration_loss_observed = (
+                live_calibration_loss_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_segnet_student_live_calibration",
+                        "loss_part_weighted_segnet_student_live_calibration",
+                    )
+                )
+            )
             section_rate_observed = section_rate_observed or any(
                 str(key).startswith("train_time_section_rate_score__")
                 and _finite_number(value)
@@ -465,6 +495,14 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append("snerv_score_aware_long_training_section_rate_metric_missing")
     if expected_guard and not guard_loss_observed:
         blockers.append("snerv_score_aware_long_training_scorer_input_guard_metric_missing")
+    if expected_live_calibration and not live_calibration_active_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_live_segnet_calibration_never_active"
+        )
+    if expected_live_calibration and not live_calibration_loss_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_live_segnet_calibration_loss_missing"
+        )
     if pr95_faithful_curriculum_enabled and pr95_seg_loss_observed and not seg_loss_observed:
         blockers.append("snerv_score_aware_long_training_pr95_seg_alias_missing")
     if pr95_faithful_curriculum_enabled and pr95_pose_loss_observed and not pose_loss_observed:
@@ -478,6 +516,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "malformed_row_count": int(malformed_rows),
         "expected_segnet_dual": bool(expected_seg),
         "expected_posenet_dual": bool(expected_pose),
+        "expected_segnet_live_calibration": bool(expected_live_calibration),
         "expected_section_rate_metrics": bool(expected_section),
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
@@ -486,6 +525,12 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "posenet_dual_metric_observed": bool(pose_dual_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
+        "segnet_live_calibration_active_observed": bool(
+            live_calibration_active_observed
+        ),
+        "segnet_live_calibration_loss_observed": bool(
+            live_calibration_loss_observed
+        ),
         "pr95_stage_seg_loss_observed": bool(pr95_seg_loss_observed),
         "pr95_stage_pose_loss_observed": bool(pr95_pose_loss_observed),
         "passed": not blockers,
@@ -3800,6 +3845,7 @@ def _run_score_aware_long_training_attachment(
                 telemetry_path,
                 segnet_distillation_weight=seg_weight,
                 pose_distillation_weight=pose_weight,
+                segnet_student_live_calibration_weight=live_calibration_weight,
                 pr95_faithful_curriculum_enabled=bool(
                     pr95_faithful_curriculum_enabled
                 ),
