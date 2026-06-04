@@ -197,6 +197,7 @@ DEFAULT_HINERV_DECODER_CODECS = (
     "int2_mixed",
 )
 DEFAULT_SNERV_LEVELS = (2, 3, 4, 5)
+SNERV_OFFICIAL_MFU_HFR_TUB_LEVELS = (1,)
 DEFAULT_SNERV_BITS_PER_COEFF = (1.5, 2.0, 2.5, 3.0, 4.0)
 DEFAULT_SNERV_STEP_MAP_BITS_PER_COEFF = (0.5, 1.0, 2.0, 4.0)
 DEFAULT_SNERV_DECODER_CODECS = (
@@ -1388,8 +1389,12 @@ def enumerate_snerv_modelsize_candidates(
     """Enumerate SNeRV LF/HF receiver-grammar capacity points."""
 
     rows: list[SnervModelSizeCandidate] = []
+    canonical_adapter = normalize_snerv_model_size_adapter(snerv_model_size_adapter)
+    effective_levels = tuple(int(v) for v in levels)
+    if canonical_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER:
+        effective_levels = SNERV_OFFICIAL_MFU_HFR_TUB_LEVELS
     for ceiling in sorted({int(v) for v in hard_byte_ceilings if int(v) > 0}):
-        for lvl in levels:
+        for lvl in effective_levels:
             for bits in bits_per_coeffs:
                 for step_bits in step_map_bits_per_coeffs:
                     for decoder_codec in decoder_codecs:
@@ -1407,7 +1412,7 @@ def enumerate_snerv_modelsize_candidates(
                                             step_map_bits_per_coeff=step_bits,
                                             decoder_payload_codec=decoder_codec,
                                             snerv_model_size_adapter=(
-                                                snerv_model_size_adapter
+                                                canonical_adapter
                                             ),
                                             fc_dim=int(fc_dim),
                                             emb_size=int(emb_size),
@@ -1433,7 +1438,7 @@ def enumerate_snerv_modelsize_candidates(
                                                 step_map_bits_per_coeff=step_bits,
                                                 decoder_payload_codec=decoder_codec,
                                                 snerv_model_size_adapter=(
-                                                    snerv_model_size_adapter
+                                                    canonical_adapter
                                                 ),
                                                 official_modelsize_mparams=float(
                                                     modelsize_mparams
@@ -1468,7 +1473,7 @@ def enumerate_snerv_modelsize_candidates(
                                                     step_map_bits_per_coeff=step_bits,
                                                     decoder_payload_codec=decoder_codec,
                                                     snerv_model_size_adapter=(
-                                                        snerv_model_size_adapter
+                                                        canonical_adapter
                                                     ),
                                                     official_modelsize_mparams=float(
                                                         modelsize_mparams
@@ -2115,6 +2120,7 @@ __all__ = [
     "SNERV_MANUAL_STRIDE_OVERRIDE_PROFILE_ID",
     "SNERV_MODELSIZE_CONTROL_PROFILES",
     "SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID",
+    "SNERV_OFFICIAL_MFU_HFR_TUB_LEVELS",
     "SNERV_PACT_RECEIVER_PROFILE_ID",
     "HinervModelSizeCandidate",
     "NervModelSizeBudgetError",

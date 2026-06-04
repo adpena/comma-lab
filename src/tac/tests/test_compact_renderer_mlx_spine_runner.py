@@ -2469,9 +2469,11 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     )
     assert official_primitives_sn is not None
     assert official_primitives_sn["capacity_source"] == "official_snerv_modelsize"
+    assert official_primitives_sn["levels"] == 1
     assert official_primitives_sn["snerv_model_size_adapter"] == (
         SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     )
+    assert "_haar_lv1_" in official_primitives_sn["candidate_id"]
     assert "_adofficial_oms0p05_" in official_primitives_sn["candidate_id"]
     reparsed_official_primitives_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
