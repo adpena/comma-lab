@@ -64,6 +64,7 @@ def test_hprc_export_emits_archive_bound_package(tmp_path: Path, monkeypatch) ->
             "schema": kwargs["proof_schema"],
             "proof_path": "receiver_proof/hprc_receiver_proof.json",
             "runtime_consumption_proof_ready": True,
+            "runtime_consumption_proof_passed": True,
             "receiver_contract_satisfied": True,
             "blockers": [],
             "inflate_argv": ["inflate.sh", "archive_dir", "out", "file_list"],

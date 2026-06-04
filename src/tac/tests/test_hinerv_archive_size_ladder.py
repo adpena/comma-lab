@@ -269,6 +269,7 @@ def test_hinerv_checkpoint_export_bridge_feeds_decoder_waterfill(
                 "archive_sha256": _sha256(archive),
                 "runtime_consumption_proof_ready": True,
                 "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -322,6 +323,9 @@ def test_hinerv_checkpoint_export_bridge_feeds_decoder_waterfill(
     assert row["state_npz_manifest_path"] == manifest.as_posix()
     assert row["receiver_proof_path"] == proof.as_posix()
     assert row["runtime_consumption_proof_ready"] is True
+    assert row["runtime_consumption_proof_passed"] is True
+    assert row["receiver_contract_satisfied"] is True
+    assert row["receiver_closed"] is True
     assert row["modelsize_candidate"]["candidate_id"] == "hinerv_trained_export_bridge"
     assert "hinerv_checkpoint_export_state_npz_artifact_sha256_mismatch" not in row["blockers"]
     assert "hinerv_checkpoint_export_receiver_proof_archive_sha256_mismatch" not in row["blockers"]
@@ -334,6 +338,84 @@ def test_hinerv_checkpoint_export_bridge_feeds_decoder_waterfill(
     assert waterfill_row["waterfill_summary"]["group_count"] == 1
     assert "decoder_weight_saliency_missing_for_some_groups" in waterfill_row["blockers"]
     assert waterfill["score_claim"] is False
+
+
+def test_hinerv_checkpoint_export_bridge_blocks_ready_only_receiver_proof(
+    tmp_path: Path,
+) -> None:
+    export_dir = tmp_path / "ready_only_export"
+    export_dir.mkdir()
+    archive = export_dir / "archive.zip"
+    archive.write_bytes(b"trained-hinerv-archive")
+    npz = export_dir / "hi_nerv_mlx_exported_state.npz"
+    np.savez(npz, **{"blocks.0.weight": np.array([[1.0]], dtype=np.float32)})
+    manifest = export_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "framework_agnostic_npz_bridge_manifest.v1",
+                "artifact_path": npz.as_posix(),
+                "artifact_sha256": _sha256(npz),
+                "consumption_recommended": True,
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_dir = export_dir / "receiver_proof"
+    proof_dir.mkdir()
+    proof = proof_dir / "hi_nerv_mlx_receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_mlx_receiver_proof.v1",
+                "archive_sha256": _sha256(archive),
+                "runtime_consumption_proof_ready": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    export = {
+        "schema": "hinerv_checkpoint_archive_export.v1",
+        "family": "hi_nerv",
+        "candidate_id": "hinerv_ready_only_bridge",
+        "archive_path": archive.as_posix(),
+        "archive_bytes": archive.stat().st_size,
+        "archive_sha256": _sha256(archive),
+        "receiver_proof_ready": True,
+        "receiver_proof_path": proof.as_posix(),
+        "receiver_proof_sha256": _sha256(proof),
+        "modelsize_candidate": _hinerv_budget_candidate(
+            candidate_id="hinerv_ready_only_bridge"
+        ),
+        "output_dir": export_dir.as_posix(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_hinerv_archive_size_ladder_from_checkpoint_exports(
+        [export],
+        report_path=tmp_path / "ladder.json",
+    )
+
+    row = report["archive_rows"][0]
+    assert row["runtime_consumption_proof_ready"] is True
+    assert row["runtime_consumption_proof_passed"] is False
+    assert row["receiver_contract_satisfied"] is False
+    assert row["receiver_closed"] is False
+    assert "hinerv_checkpoint_export_receiver_proof_runtime_not_passed" in row[
+        "blockers"
+    ]
+    assert "hinerv_checkpoint_export_receiver_contract_not_satisfied" in row[
+        "blockers"
+    ]
 
 
 def test_hinerv_checkpoint_export_bridge_cli_smoke(tmp_path: Path) -> None:
@@ -364,6 +446,8 @@ def test_hinerv_checkpoint_export_bridge_cli_smoke(tmp_path: Path) -> None:
             {
                 "archive_sha256": _sha256(archive),
                 "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
             }
         ),
         encoding="utf-8",
@@ -936,7 +1020,10 @@ def test_hinerv_archive_ladder_score_attachment_prices_measured_increments() -> 
     assert section["section_id"] == "hinerv_modelsize_increment:tiny->small"
     assert section["delta_nonrate_score"] == pytest.approx(-0.05)
     assert section["byte_delta"] == 10_000
-    assert section["receiver_proof_status"] == "runtime_consumption_proof_ready"
+    assert section["receiver_proof_status"] == "receiver_closed"
+    assert section["runtime_consumption_proof_passed"] is True
+    assert section["receiver_contract_satisfied"] is True
+    assert section["receiver_closed"] is True
     assert section["full_video_coverage"] is True
     assert section["measured_score_custody_trusted"] is True
     assert section["blockers"] == []
@@ -1129,6 +1216,9 @@ def _ladder_for_score_attachment() -> dict:
                 "archive_bytes": 20_000,
                 "archive_sha256": "a" * 64,
                 "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "receiver_closed": True,
                 "blockers": [
                     "hinerv_archive_size_row_has_no_nonrate_score",
                     "contest_cpu_cuda_exact_eval_not_executed",
@@ -1144,6 +1234,9 @@ def _ladder_for_score_attachment() -> dict:
                 "archive_bytes": 30_000,
                 "archive_sha256": "b" * 64,
                 "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "receiver_closed": True,
                 "blockers": [
                     "hinerv_archive_size_row_has_no_nonrate_score",
                     "contest_cpu_cuda_exact_eval_not_executed",

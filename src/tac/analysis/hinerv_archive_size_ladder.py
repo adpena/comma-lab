@@ -189,11 +189,18 @@ def build_hinerv_archive_size_ladder(
         )
         waterfill_path = None
         waterfill_summary = None
+        proof_ready = proof.get("runtime_consumption_proof_ready") is True
+        proof_passed = proof.get("runtime_consumption_proof_passed") is True
+        receiver_contract_satisfied = proof.get("receiver_contract_satisfied") is True
+        receiver_closed = bool(
+            proof_ready
+            and proof_passed
+            and receiver_contract_satisfied
+            and not proof.get("blockers")
+        )
         if emit_decoder_weight_waterfill_plan:
             proof_status = (
-                "runtime_consumption_proof_ready"
-                if proof.get("runtime_consumption_proof_ready") is True
-                else "missing"
+                "receiver_closed" if receiver_closed else "missing"
             )
             waterfill_path = row_dir / "decoder_weight_waterfill_plan.json"
             waterfill = build_nerv_decoder_weight_waterfill_plan(
@@ -217,8 +224,15 @@ def build_hinerv_archive_size_ladder(
         ]
         if not emit_receiver_proof:
             row_blockers.append("receiver_proof_not_executed_for_archive_size_ladder")
-        elif proof.get("runtime_consumption_proof_ready") is not True:
-            row_blockers.append("receiver_proof_not_ready_for_archive_size_ladder_row")
+        else:
+            if not proof_ready:
+                row_blockers.append("receiver_proof_not_ready_for_archive_size_ladder_row")
+            if not proof_passed:
+                row_blockers.append("runtime_consumption_proof_not_passed_for_archive_size_ladder_row")
+            if not receiver_contract_satisfied:
+                row_blockers.append("receiver_contract_not_satisfied_for_archive_size_ladder_row")
+            if proof.get("blockers"):
+                row_blockers.append("receiver_proof_blockers_present_for_archive_size_ladder_row")
         rows.append(
             {
                 "family": "hi_nerv",
@@ -263,9 +277,16 @@ def build_hinerv_archive_size_ladder(
                 "submission_dir": _path_if_exists(row_dir / "submission"),
                 "receiver_proof_executed": bool(emit_receiver_proof),
                 "receiver_proof_path": _path_if_exists(proof_path),
-                "runtime_consumption_proof_ready": proof.get(
-                    "runtime_consumption_proof_ready"
+                "runtime_consumption_proof_ready": (
+                    bool(proof_ready) if emit_receiver_proof else None
                 ),
+                "runtime_consumption_proof_passed": (
+                    bool(proof_passed) if emit_receiver_proof else None
+                ),
+                "receiver_contract_satisfied": (
+                    bool(receiver_contract_satisfied) if emit_receiver_proof else None
+                ),
+                "receiver_closed": receiver_closed if emit_receiver_proof else None,
                 "required_allocator_bindings": list(REQUIRED_ALLOCATOR_BINDINGS),
                 "blockers": row_blockers,
                 **FALSE_AUTHORITY,
@@ -608,6 +629,8 @@ def _checkpoint_export_ladder_row(
     proof_ready = export.get("receiver_proof_ready") is True
     proof_sha256 = str(export.get("receiver_proof_sha256") or "").strip().lower()
     runtime_consumption_proof_ready = False
+    runtime_consumption_proof_passed = False
+    receiver_contract_satisfied = False
     if not proof_ready:
         blockers.append("receiver_proof_not_ready_for_archive_size_ladder_row")
     if not proof_path.is_file():
@@ -622,8 +645,25 @@ def _checkpoint_export_ladder_row(
         if proof_archive_sha != archive_sha256:
             blockers.append("hinerv_checkpoint_export_receiver_proof_archive_sha256_mismatch")
         runtime_consumption_proof_ready = proof_payload.get("runtime_consumption_proof_ready") is True
+        runtime_consumption_proof_passed = (
+            proof_payload.get("runtime_consumption_proof_passed") is True
+        )
+        receiver_contract_satisfied = (
+            proof_payload.get("receiver_contract_satisfied") is True
+        )
         if not runtime_consumption_proof_ready:
             blockers.append("hinerv_checkpoint_export_receiver_proof_runtime_not_ready")
+        if not runtime_consumption_proof_passed:
+            blockers.append("hinerv_checkpoint_export_receiver_proof_runtime_not_passed")
+        if not receiver_contract_satisfied:
+            blockers.append("hinerv_checkpoint_export_receiver_contract_not_satisfied")
+        if proof_payload.get("blockers"):
+            blockers.append("hinerv_checkpoint_export_receiver_proof_blockers_present")
+    receiver_closed = bool(
+        runtime_consumption_proof_ready
+        and runtime_consumption_proof_passed
+        and receiver_contract_satisfied
+    )
 
     nominal_total_payload_bytes = (
         None
@@ -677,6 +717,9 @@ def _checkpoint_export_ladder_row(
         "receiver_proof_path": proof_path.as_posix() if proof_path.is_file() else None,
         "receiver_proof_sha256": proof_sha256 or None,
         "runtime_consumption_proof_ready": bool(runtime_consumption_proof_ready),
+        "runtime_consumption_proof_passed": bool(runtime_consumption_proof_passed),
+        "receiver_contract_satisfied": bool(receiver_contract_satisfied),
+        "receiver_closed": receiver_closed,
         "required_allocator_bindings": list(REQUIRED_ALLOCATOR_BINDINGS),
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
@@ -1322,7 +1365,7 @@ def render_hinerv_archive_size_ladder_markdown(report: Mapping[str, Any]) -> str
                 bytes=row["archive_bytes"],
                 delta=row.get("measured_minus_nominal_bytes"),
                 rate=row["archive_rate_score_at_contest_price"],
-                proof=row.get("runtime_consumption_proof_ready"),
+                proof=row.get("receiver_closed"),
             )
         )
     lines.extend(["", "## Marginal Gates", ""])
@@ -1549,6 +1592,17 @@ def _measured_hinerv_increment_section_value_rows(
             from_row.get("runtime_consumption_proof_ready") is True
             and to_row.get("runtime_consumption_proof_ready") is True
         )
+        proof_passed = (
+            from_row.get("runtime_consumption_proof_passed") is True
+            and to_row.get("runtime_consumption_proof_passed") is True
+        )
+        receiver_contract_satisfied = (
+            from_row.get("receiver_contract_satisfied") is True
+            and to_row.get("receiver_contract_satisfied") is True
+        )
+        receiver_closed = bool(
+            proof_ready and proof_passed and receiver_contract_satisfied
+        )
         blockers: list[str] = []
         if from_nonrate is None or to_nonrate is None:
             blockers.append("hinerv_modelsize_increment_measured_nonrate_missing")
@@ -1556,7 +1610,7 @@ def _measured_hinerv_increment_section_value_rows(
             blockers.append("hinerv_modelsize_increment_full_video_score_missing")
         if not (from_trusted and to_trusted):
             blockers.append("hinerv_modelsize_increment_measured_score_untrusted")
-        if not proof_ready:
+        if not receiver_closed:
             blockers.append("hinerv_modelsize_increment_receiver_proof_missing")
         delta_nonrate = (
             None
@@ -1583,8 +1637,12 @@ def _measured_hinerv_increment_section_value_rows(
                 "archive_sha256": to_row.get("archive_sha256"),
                 "axis_tag": _score_axis_for_increment(from_row, to_row),
                 "receiver_proof_status": (
-                    "runtime_consumption_proof_ready" if proof_ready else "missing"
+                    "receiver_closed" if receiver_closed else "missing"
                 ),
+                "runtime_consumption_proof_ready": bool(proof_ready),
+                "runtime_consumption_proof_passed": bool(proof_passed),
+                "receiver_contract_satisfied": bool(receiver_contract_satisfied),
+                "receiver_closed": receiver_closed,
                 "full_video_coverage": bool(from_full and to_full),
                 "measured_score_custody_trusted": bool(from_trusted and to_trusted),
                 "blockers": blockers,

@@ -93,6 +93,7 @@ def test_archive_bound_runtime_package_preserves_changedness_without_score_autho
     proof = {
         "proof_path": "receiver_proof/proof.json",
         "runtime_consumption_proof_ready": True,
+        "runtime_consumption_proof_passed": True,
         "receiver_contract_satisfied": True,
         "blockers": [],
         "inflate_argv": ["inflate.sh", "archive_dir", "out", "file_list"],
@@ -166,6 +167,46 @@ def test_archive_bound_runtime_package_runtime_ready_requires_receiver_proof(
     assert row["runtime_adapter_ready"] is False
     assert row["contest_runtime_decoder_adapter_ready"] is False
     assert row["runtime_consumption_proof_status"] == "blocked"
+    assert row["runtime_consumption_proof_ready"] is False
+    assert row["runtime_consumption_proof_passed"] is False
     assert row["receiver_contract_satisfied"] is False
     assert "unit_receiver_proof_failed" in row["blockers"]
     assert "runtime_adapter_ready_requires_receiver_proof" in row["blockers"]
+
+
+def test_archive_bound_runtime_package_rejects_ready_only_receiver_proof(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "0.bin").write_bytes(b"payload")
+    proof = {
+        "proof_path": "receiver_proof/proof.json",
+        "runtime_consumption_proof_ready": True,
+        "receiver_contract_satisfied": True,
+        "blockers": [],
+        "inflate_argv": ["inflate.sh", "archive_dir", "out", "file_list"],
+    }
+
+    package = build_archive_bound_candidate_runtime_package(
+        adapter_id="unit_adapter",
+        candidate_family="unit_family",
+        candidate_id_prefix="unit_candidate",
+        transform_kind="unit_transform",
+        archive_zip_path=archive,
+        archive_sha256=sha256_file(archive),
+        archive_bytes=archive.stat().st_size,
+        submission_dir=submission,
+        output_dir=tmp_path / "package",
+        repo_root=tmp_path,
+        receiver_proof=proof,
+        receiver_contract_kind="unit_receiver_contract",
+    )
+
+    row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    assert row["runtime_consumption_proof_status"] == "blocked"
+    assert row["runtime_consumption_proof_ready"] is False
+    assert row["runtime_consumption_proof_passed"] is False
+    assert row["receiver_contract_satisfied"] is False

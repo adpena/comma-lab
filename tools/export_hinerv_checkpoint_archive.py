@@ -255,6 +255,15 @@ def export_checkpoint_archive(
         ),
         **FALSE_AUTHORITY,
     }
+    receiver_proof_ready = bool(receiver_proof.get("runtime_consumption_proof_ready"))
+    receiver_proof_passed = bool(receiver_proof.get("runtime_consumption_proof_passed"))
+    receiver_contract_satisfied = bool(receiver_proof.get("receiver_contract_satisfied"))
+    receiver_closed = bool(
+        receiver_proof_ready
+        and receiver_proof_passed
+        and receiver_contract_satisfied
+        and not receiver_proof.get("blockers")
+    )
     preliminary_report = {
         "schema": "hinerv_checkpoint_archive_export.v1",
         "family": "hi_nerv",
@@ -294,6 +303,9 @@ def export_checkpoint_archive(
         "receiver_proof_ready": bool(
             receiver_proof.get("runtime_consumption_proof_ready")
         ),
+        "receiver_proof_passed": receiver_proof_passed,
+        "receiver_contract_satisfied": receiver_contract_satisfied,
+        "receiver_closed": receiver_closed,
         "local_mlx_prefilter_profile": pending_mlx_prefilter_profile,
         "local_mlx_prefilter_profile_path": None,
         "local_mlx_prefilter_written": False,
@@ -307,9 +319,9 @@ def export_checkpoint_archive(
             archive_section_telemetry=section_profile.get(
                 "archive_section_telemetry"
             ),
-            receiver_proof_ready=bool(
-                receiver_proof.get("runtime_consumption_proof_ready")
-            ),
+            receiver_proof_ready=receiver_proof_ready,
+            receiver_proof_passed=receiver_proof_passed,
+            receiver_contract_satisfied=receiver_contract_satisfied,
             archive_path=Path(archive_path),
             archive_sha256=archive_sha256,
             hard_byte_ceiling_enforced_by_export=enforced_hard_byte_ceiling,
@@ -382,7 +394,10 @@ def export_checkpoint_archive(
         "latent_codec": resolved_latent_codec,
         "receiver_proof_path": receiver_proof_path.as_posix() if receiver_proof_path.is_file() else None,
         "receiver_proof_sha256": sha256_file(receiver_proof_path) if receiver_proof_path.is_file() else None,
-        "receiver_proof_ready": bool(receiver_proof.get("runtime_consumption_proof_ready")),
+        "receiver_proof_ready": receiver_proof_ready,
+        "receiver_proof_passed": receiver_proof_passed,
+        "receiver_contract_satisfied": receiver_contract_satisfied,
+        "receiver_closed": receiver_closed,
         "local_mlx_prefilter_profile": mlx_prefilter_profile,
         "local_mlx_prefilter_profile_path": mlx_prefilter_profile.get("profile_path"),
         "local_mlx_prefilter_written": mlx_prefilter_profile.get("written") is True,
@@ -396,9 +411,9 @@ def export_checkpoint_archive(
             archive_section_telemetry=section_profile.get(
                 "archive_section_telemetry"
             ),
-            receiver_proof_ready=bool(
-                receiver_proof.get("runtime_consumption_proof_ready")
-            ),
+            receiver_proof_ready=receiver_proof_ready,
+            receiver_proof_passed=receiver_proof_passed,
+            receiver_contract_satisfied=receiver_contract_satisfied,
             archive_path=Path(archive_path),
             archive_sha256=archive_sha256,
             hard_byte_ceiling_enforced_by_export=enforced_hard_byte_ceiling,
@@ -440,6 +455,8 @@ def _modelsize_byte_cap_feedback_row(
     latent_codec: str,
     archive_section_telemetry: Any,
     receiver_proof_ready: bool,
+    receiver_proof_passed: bool,
+    receiver_contract_satisfied: bool,
     archive_path: Path,
     archive_sha256: str,
     hard_byte_ceiling_enforced_by_export: int | None,
@@ -474,6 +491,9 @@ def _modelsize_byte_cap_feedback_row(
         required_nominal_max = math.floor(
             float(ceiling) * float(nominal) / float(archive_bytes)
         )
+    receiver_closed = bool(
+        receiver_proof_ready and receiver_proof_passed and receiver_contract_satisfied
+    )
     return {
         "schema": "nerv_modelsize_byte_cap_feedback_row.v1",
         "family": "hi_nerv",
@@ -498,7 +518,9 @@ def _modelsize_byte_cap_feedback_row(
         "calibrated_archive_overrun_bytes": overrun,
         "required_nominal_payload_bytes_max": required_nominal_max,
         "receiver_proof_ready": bool(receiver_proof_ready),
-        "receiver_closed": bool(receiver_proof_ready),
+        "receiver_proof_passed": bool(receiver_proof_passed),
+        "receiver_contract_satisfied": bool(receiver_contract_satisfied),
+        "receiver_closed": receiver_closed,
         "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
         **FALSE_AUTHORITY,
     }
@@ -866,8 +888,15 @@ def _blockers(
             blockers.append("hard_byte_ceiling_export_bypassed_for_measurement")
     if not receiver_proof_requested:
         blockers.append("receiver_proof_not_requested")
-    elif receiver_proof.get("runtime_consumption_proof_ready") is not True:
-        blockers.append("receiver_proof_not_ready")
+    else:
+        if receiver_proof.get("runtime_consumption_proof_ready") is not True:
+            blockers.append("receiver_proof_not_ready")
+        if receiver_proof.get("runtime_consumption_proof_passed") is not True:
+            blockers.append("runtime_consumption_proof_not_passed")
+        if receiver_proof.get("receiver_contract_satisfied") is not True:
+            blockers.append("receiver_contract_not_satisfied")
+        if receiver_proof.get("blockers"):
+            blockers.append("receiver_proof_blockers_present")
     blockers.extend(str(v) for v in modelsize_integrity.get("blockers") or [])
     guard = dict(receiver_fit_scale_guard or {})
     blockers.extend(str(v) for v in guard.get("blockers") or [])
@@ -1669,6 +1698,9 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         ),
         "rate_byte_profile": report.get("rate_byte_profile"),
         "receiver_proof_ready": report.get("receiver_proof_ready"),
+        "receiver_proof_passed": report.get("receiver_proof_passed"),
+        "receiver_contract_satisfied": report.get("receiver_contract_satisfied"),
+        "receiver_closed": report.get("receiver_closed"),
         "blockers": report.get("blockers"),
         "score_claim": report.get("score_claim"),
         "ready_for_exact_eval_dispatch": report.get("ready_for_exact_eval_dispatch"),

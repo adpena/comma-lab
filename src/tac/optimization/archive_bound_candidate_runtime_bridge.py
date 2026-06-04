@@ -257,7 +257,12 @@ def build_archive_bound_candidate_runtime_package(
 ) -> dict[str, Any]:
     """Build and persist the shared archive-bound candidate package."""
 
-    proof_passed = receiver_proof.get("runtime_consumption_proof_ready") is True
+    proof_passed = (
+        receiver_proof.get("runtime_consumption_proof_ready") is True
+        and receiver_proof.get("runtime_consumption_proof_passed") is True
+        and receiver_proof.get("receiver_contract_satisfied") is True
+        and not receiver_proof.get("blockers")
+    )
     proof_path = str(receiver_proof.get("proof_path") or "")
     runtime_tree_sha256 = tree_sha256(submission_dir)
     runtime_manifest = {
@@ -287,6 +292,7 @@ def build_archive_bound_candidate_runtime_package(
         "candidate_archive_materialized": True,
         "runtime_consumption_proof_status": "present" if proof_passed else "blocked",
         "runtime_consumption_proof_ready": proof_passed,
+        "runtime_consumption_proof_passed": proof_passed,
         "runtime_consumption_proof_path": proof_path,
         "receiver_contract_kind": receiver_contract_kind,
         "receiver_contract_satisfied": proof_passed,
