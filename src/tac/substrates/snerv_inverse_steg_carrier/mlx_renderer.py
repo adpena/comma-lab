@@ -1028,6 +1028,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
                 self.tub_temporal_encoder_concat is not None
                 and self.tub_output2_raw is not None
             ),
+            "official_tub_output2_receiver_frame_bound": False,
             "official_tub_output2_payload_loss_coupled": False,
             "receiver_export_payload_schema": "snerv_decoder_payload.official_mfu_hfr_tub.v1",
             "source_forward_replay_authority": False,

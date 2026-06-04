@@ -667,6 +667,9 @@ def test_official_mfu_hfr_tub_payload_executes_output2_fusion_from_bytes() -> No
     storage = header["tub_output2_storage"]
     assert storage["stored"] is True
     assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["receiver_frame_decode_consumes_output2"] is False
+    assert storage["train_time_loss_coupled"] is False
+    assert storage["scored_pixel_render_bound"] is False
     assert storage["tensor_names"] == [
         "tub.temporal_encoder_concat",
         "tub.output2_raw",

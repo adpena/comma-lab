@@ -2105,8 +2105,19 @@ def test_official_renderer_exports_output2_payload_into_receiver_packet() -> Non
     assert "tub_temporal_encoder_concat" in exported
     assert "tub_output2_raw" in exported
     assert metadata["official_tub_output2_payload_export_bound"] is True
+    assert metadata["official_tub_output2_receiver_frame_bound"] is False
     assert metadata["official_tub_output2_payload_loss_coupled"] is False
     assert decoded.metadata["official_tub_output2_storage"]["stored"] is True
+    assert (
+        decoded.metadata["official_tub_output2_storage"][
+            "receiver_frame_decode_consumes_output2"
+        ]
+        is False
+    )
+    assert (
+        decoded.metadata["official_tub_output2_storage"]["train_time_loss_coupled"]
+        is False
+    )
     assert decoded.metadata["official_tub_output2_receiver_executed"] is True
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
     pixel_drift = np.abs(mlx_frames - receiver_frames)
@@ -2899,6 +2910,10 @@ def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
         "official_mfu_weight_payload": 160,
         "official_tub_output2_payload": 200,
     }
+    assert cap["official_decoder_payload_proof_only_component_bytes"] == {
+        "official_tub_output2_payload": 200,
+    }
+    assert cap["official_decoder_payload_proof_only_component_total_bytes"] == 200
     assert cap["largest_pressure_scope"] == "snar_archive_section"
     assert cap["largest_pressure_name"] == "decoder_payload"
     assert cap["largest_pressure_bytes"] == 500
@@ -2918,6 +2933,32 @@ def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
     assert component_rows["official_tub_output2_payload"][
         "fraction_of_decoder_payload_section"
     ] == pytest.approx(0.4)
+    assert (
+        component_rows["official_mfu_weight_payload"][
+            "receiver_frame_decode_bound"
+        ]
+        is True
+    )
+    assert (
+        component_rows["official_mfu_weight_payload"]["byte_cap_action"]
+        == "protect_quantize_or_waterfill_by_scorer_gradient"
+    )
+    assert (
+        component_rows["official_tub_output2_payload"][
+            "receiver_frame_decode_bound"
+        ]
+        is False
+    )
+    assert (
+        component_rows["official_tub_output2_payload"][
+            "waterfill_admission_class"
+        ]
+        == "proof_only_rate_liability"
+    )
+    assert (
+        component_rows["official_tub_output2_payload"]["byte_cap_action"]
+        == "zero_or_elide_until_receiver_frame_decode_bound"
+    )
     assert "snerv_decoder_payload_is_largest_section_on_over_ceiling_export" in cap[
         "blockers"
     ]
@@ -2927,6 +2968,10 @@ def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
     )
     assert (
         "snerv_official_mfu_hfr_tub_component_byte_pressure_requires_modelsize_waterfill"
+        in cap["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_proof_only_component_bytes_require_ablation_before_modelsize_growth"
         in cap["blockers"]
     )
 

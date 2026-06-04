@@ -6851,6 +6851,11 @@ def _build_snerv_mlx_native_byte_cap_control(
         archive_bytes=archive_bytes,
         hard_byte_ceiling=hard_byte_ceiling,
     )
+    proof_only_component_rows = [
+        row
+        for row in official_component_rows
+        if row.get("receiver_frame_decode_bound") is False
+    ]
     largest_pressure_row = max(
         section_pressure_rows + official_component_rows,
         key=lambda row: int(row.get("bytes", 0)),
@@ -6868,6 +6873,13 @@ def _build_snerv_mlx_native_byte_cap_control(
             str(row["name"]): int(row["bytes"])
             for row in official_component_rows
         },
+        "official_decoder_payload_proof_only_component_bytes": {
+            str(row["name"]): int(row["bytes"])
+            for row in proof_only_component_rows
+        },
+        "official_decoder_payload_proof_only_component_total_bytes": int(
+            sum(int(row["bytes"]) for row in proof_only_component_rows)
+        ),
         "official_decoder_payload_component_pressure_bound": bool(
             official_component_rows
         ),
@@ -6982,6 +6994,10 @@ def _build_snerv_mlx_native_byte_cap_control(
                     blockers.append(
                         "snerv_official_mfu_hfr_tub_component_byte_pressure_requires_modelsize_waterfill"
                     )
+                if proof_only_component_rows:
+                    blockers.append(
+                        "snerv_official_mfu_hfr_tub_proof_only_component_bytes_require_ablation_before_modelsize_growth"
+                    )
 
     return {
         **base,
@@ -7086,6 +7102,7 @@ def _snerv_official_decoder_component_pressure_rows(
         category_bytes_raw.items(), key=lambda item: (-int(item[1]), str(item[0]))
     ):
         bytes_int = int(value)
+        binding = _snerv_official_decoder_component_render_binding(str(name))
         rows.append(
             {
                 "scope": "official_mfu_hfr_tub_decoder_payload_category",
@@ -7113,9 +7130,48 @@ def _snerv_official_decoder_component_pressure_rows(
                     if hard_byte_ceiling is not None
                     else None
                 ),
+                **binding,
             }
         )
     return rows
+
+
+def _snerv_official_decoder_component_render_binding(name: str) -> dict[str, Any]:
+    """Classify official payload categories by scored-frame decode causality.
+
+    The official packet can carry tensors for receiver primitive proofs that are
+    not consumed by ``decode_frames()``.  Hard byte-cap/modelsize control must
+    not protect those bytes as if they could move SegNet/PoseNet output.
+    """
+
+    category = str(name)
+    render_bound = category in {
+        "official_mfu_weight_payload",
+        "official_hfr_weight_payload",
+        "official_mfu_input_payload",
+    }
+    proof_only = category in {
+        "official_tub_input_payload",
+        "official_tub_output2_payload",
+        "official_tub_weight_payload",
+    }
+    if render_bound:
+        action = "protect_quantize_or_waterfill_by_scorer_gradient"
+        admission_class = "score_causal_receiver_frame_decode_atom"
+    elif proof_only:
+        action = "zero_or_elide_until_receiver_frame_decode_bound"
+        admission_class = "proof_only_rate_liability"
+    else:
+        action = "inspect_before_protecting_under_byte_cap"
+        admission_class = "unknown_or_graph_topology_atom"
+    return {
+        "receiver_frame_decode_bound": bool(render_bound),
+        "train_time_loss_coupled": bool(render_bound),
+        "score_causal_without_source_forward_tub": bool(render_bound),
+        "proof_only_receiver_payload": bool(proof_only),
+        "byte_cap_action": action,
+        "waterfill_admission_class": admission_class,
+    }
 
 
 def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:
