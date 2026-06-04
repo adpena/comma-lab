@@ -135,6 +135,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
     SnervArchiveError,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
+    SNERV_OFFICIAL_SKIP_HIGH_MODES,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     normalize_snerv_model_size_adapter,
     official_snerv_modelsize_to_fc_dim,
@@ -3892,6 +3893,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_patch_radius_override: int | None = None,
     snerv_mfu_scales: tuple[int, ...] = (1, 2, 4),
     snerv_hfr_gain: float = 0.0,
+    snerv_official_skip_high_mode_override: str | None = None,
     snerv_temporal_context_override: int | None = None,
     snerv_temporal_mode_override: str | None = None,
     recon_pixel_weight_path: str | Path | None = None,
@@ -4092,6 +4094,50 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     resolved_snerv_hfr_gain = float(
         candidate.get("hfr_gain", candidate.get("snerv_hfr_gain", snerv_hfr_gain))
     )
+    raw_candidate_skip_high_mode = str(
+        candidate.get(
+            "official_skip_high_mode",
+            candidate.get("snerv_official_skip_high_mode", ""),
+        )
+        or ""
+    ).strip().lower()
+    if (
+        raw_candidate_skip_high_mode
+        and raw_candidate_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "SNeRV modelsize candidate official_skip_high_mode must be one of "
+            f"{sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES)}; got "
+            f"{raw_candidate_skip_high_mode!r}"
+        )
+    raw_explicit_skip_high_mode = str(
+        snerv_official_skip_high_mode_override or ""
+    ).strip().lower()
+    if (
+        raw_explicit_skip_high_mode
+        and raw_explicit_skip_high_mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "--snerv-official-skip-high-mode must be one of "
+            f"{sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES)}; got "
+            f"{raw_explicit_skip_high_mode!r}"
+        )
+    if raw_candidate_skip_high_mode:
+        if (
+            raw_explicit_skip_high_mode
+            and raw_explicit_skip_high_mode != raw_candidate_skip_high_mode
+        ):
+            raise CompactRendererMlxSpineRunnerError(
+                "SNeRV modelsize candidate official_skip_high_mode conflicts "
+                "with --snerv-official-skip-high-mode: "
+                f"{raw_candidate_skip_high_mode!r} != "
+                f"{raw_explicit_skip_high_mode!r}"
+            )
+        resolved_snerv_official_skip_high_mode = raw_candidate_skip_high_mode
+    else:
+        resolved_snerv_official_skip_high_mode = (
+            raw_explicit_skip_high_mode or "full"
+        )
     raw_candidate_adapter = str(candidate.get("snerv_model_size_adapter") or "")
     candidate_adapter = (
         normalize_snerv_model_size_adapter(raw_candidate_adapter)
@@ -4197,6 +4243,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "patch_radius": int(snerv_patch_radius),
         "mfu_scales": [int(v) for v in resolved_snerv_mfu_scales],
         "hfr_gain": float(resolved_snerv_hfr_gain),
+        "official_skip_high_mode": str(resolved_snerv_official_skip_high_mode),
+        "snerv_official_skip_high_mode": str(
+            resolved_snerv_official_skip_high_mode
+        ),
         "temporal_context": int(snerv_temporal_context),
         "temporal_mode": str(snerv_temporal_mode),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
@@ -4886,6 +4936,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "patch_radius": int(snerv_patch_radius),
         "mfu_scales": [int(v) for v in resolved_snerv_mfu_scales],
         "hfr_gain": float(resolved_snerv_hfr_gain),
+        "official_skip_high_mode": str(resolved_snerv_official_skip_high_mode),
+        "snerv_official_skip_high_mode": str(
+            resolved_snerv_official_skip_high_mode
+        ),
         "temporal_context": int(snerv_temporal_context),
         "temporal_mode": str(snerv_temporal_mode),
         "snerv_model_size_adapter": str(snerv_model_size_adapter),
@@ -14459,6 +14513,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Deterministic HFR residual gain for the SNeRV adapter.",
     )
     parser.add_argument(
+        "--snerv-official-skip-high-mode",
+        choices=sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES),
+        default=None,
+        help=(
+            "Receiver storage mode for official SNeRV MFU skip_high tensors. "
+            "Use shared_mean to store one deterministic shared LF state; "
+            "planner candidates win when they already bind this control."
+        ),
+    )
+    parser.add_argument(
         "--snerv-temporal-context",
         type=int,
         help="Manual SNeRV temporal context override for no-candidate probes.",
@@ -15245,6 +15309,9 @@ def main(argv: list[str] | None = None) -> int:
             snerv_patch_radius_override=args.snerv_patch_radius,
             snerv_mfu_scales=_parse_positive_int_csv(args.snerv_mfu_scales),
             snerv_hfr_gain=args.snerv_hfr_gain,
+            snerv_official_skip_high_mode_override=(
+                args.snerv_official_skip_high_mode
+            ),
             snerv_temporal_context_override=args.snerv_temporal_context,
             snerv_temporal_mode_override=args.snerv_temporal_mode,
             recon_pixel_weight_path=args.recon_pixel_weight_path,
