@@ -1687,6 +1687,53 @@ def test_harvest_training_telemetry_feedback_tool_output_json_is_guarded(
         harvest_training_feedback_main(argv)
 
 
+def test_harvest_training_telemetry_feedback_allows_output_json_manifest_alias(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 7,
+                "learning_rate": 1.0e-3,
+                "loss_components": {"loss_part_pose_distill": 2.0},
+                "per_axis_decomposition": {"pose": 2.0, "seg": 5.0},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    feedback_dir = tmp_path / "feedback"
+    output_json = feedback_dir / "nerv_training_telemetry_feedback.json"
+
+    assert (
+        harvest_training_feedback_main(
+            [
+                "--telemetry",
+                str(telemetry),
+                "--family",
+                "snerv",
+                "--candidate-id",
+                "snerv_same_manifest_alias",
+                "--candidate-num-pairs",
+                "600",
+                "--output-dir",
+                str(feedback_dir),
+                "--output-json",
+                str(output_json),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert output_json.is_file()
+    manifest = json.loads(output_json.read_text(encoding="utf-8"))
+    assert manifest["schema"] == "nerv_training_telemetry_feedback.v1"
+    assert manifest["row"]["family"] == "snerv"
+
+
 def test_refresh_nerv_candidate_feedback_report_repairs_batched_mlx_signal(
     tmp_path: Path,
 ) -> None:

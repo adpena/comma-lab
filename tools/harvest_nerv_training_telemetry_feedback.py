@@ -70,10 +70,19 @@ def main(argv: list[str] | None = None) -> int:
         current_segnet_distillation_weight=args.current_segnet_distillation_weight,
     )
     if args.output_json:
-        write_json_artifact(
-            Path(args.output_json).expanduser().resolve(strict=False),
-            result,
+        output_json = Path(args.output_json).expanduser().resolve(strict=False)
+        manifest_path = Path(str(result.get("manifest_path") or "")).expanduser().resolve(
+            strict=False
         )
+        if output_json == manifest_path:
+            # The writer above already emitted the canonical manifest. Treat an
+            # identical --output-json as an alias, not a self-overwrite.
+            pass
+        else:
+            write_json_artifact(
+                output_json,
+                result,
+            )
     print(json.dumps(_summary(result), indent=2, sort_keys=True))
     return 0
 
