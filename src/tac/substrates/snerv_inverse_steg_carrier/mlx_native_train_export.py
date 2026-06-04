@@ -1532,6 +1532,12 @@ def train_export_snerv_mlx_native(
             if receiver_proof.get("archive_sha256")
             else None
         ),
+        receiver_proof_passed=(
+            receiver_proof.get("runtime_consumption_proof_passed") is True
+        ),
+        receiver_contract_satisfied=(
+            receiver_proof.get("receiver_contract_satisfied") is True
+        ),
         run_archive_export=bool(run_archive_export),
     )
     blockers.extend(str(blocker) for blocker in byte_cap_control.get("blockers") or ())
@@ -6324,6 +6330,8 @@ def _build_snerv_mlx_native_byte_cap_control(
     official_receiver_tensor_map: Mapping[str, Any] | None = None,
     archive_bytes: int | None,
     archive_sha256: str | None,
+    receiver_proof_passed: bool,
+    receiver_contract_satisfied: bool,
     run_archive_export: bool,
 ) -> dict[str, Any]:
     controller = candidate.get("byte_cap_controller")
@@ -6402,8 +6410,25 @@ def _build_snerv_mlx_native_byte_cap_control(
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
         "run_archive_export": bool(run_archive_export),
+        "receiver_proof_passed": bool(receiver_proof_passed),
+        "receiver_contract_satisfied": bool(receiver_contract_satisfied),
+        "archive_bytes_authoritative": bool(
+            run_archive_export
+            and archive_bytes is not None
+            and receiver_proof_passed
+            and receiver_contract_satisfied
+        ),
         "byte_cap_controller": controller_payload,
-        "authority": "measured_archive_zip_bytes_when_receiver_proof_emits_archive_bytes",
+        "authority": (
+            "measured_receiver_proven_archive_zip_bytes"
+            if (
+                run_archive_export
+                and archive_bytes is not None
+                and receiver_proof_passed
+                and receiver_contract_satisfied
+            )
+            else "archive_bytes_not_authoritative_until_receiver_proof_passes"
+        ),
         **FALSE_AUTHORITY,
     }
     if hard_byte_ceiling is None:
@@ -6430,6 +6455,10 @@ def _build_snerv_mlx_native_byte_cap_control(
         blockers.append("snerv_mlx_native_hard_byte_ceiling_not_enforced_archive_export_disabled")
     elif archive_bytes is None:
         blockers.append("snerv_mlx_native_hard_byte_ceiling_archive_bytes_missing")
+    elif not receiver_proof_passed or not receiver_contract_satisfied:
+        blockers.append(
+            "snerv_mlx_native_hard_byte_ceiling_receiver_proof_missing_or_failed"
+        )
     else:
         delta = int(archive_bytes) - int(hard_byte_ceiling)
         under = delta <= 0
@@ -6476,7 +6505,12 @@ def _build_snerv_mlx_native_byte_cap_control(
         "archive_overrun_bytes": archive_overrun_bytes,
         "lf_payload_exceeds_hard_byte_ceiling": lf_payload_exceeds_hard_byte_ceiling,
         "lf_payload_can_cover_archive_overrun": lf_payload_can_cover_archive_overrun,
-        "enforced": bool(run_archive_export and archive_bytes is not None),
+        "enforced": bool(
+            run_archive_export
+            and archive_bytes is not None
+            and receiver_proof_passed
+            and receiver_contract_satisfied
+        ),
         "blockers": _ordered_unique(blockers),
     }
 

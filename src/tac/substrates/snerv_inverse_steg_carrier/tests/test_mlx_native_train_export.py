@@ -2556,11 +2556,15 @@ def test_byte_cap_control_reports_lf_pressure_without_under_ceiling_blocker() ->
         },
         archive_bytes=360,
         archive_sha256="a" * 64,
+        receiver_proof_passed=True,
+        receiver_contract_satisfied=True,
         run_archive_export=True,
     )
 
     assert cap["attached"] is True
     assert cap["enforced"] is True
+    assert cap["archive_bytes_authoritative"] is True
+    assert cap["authority"] == "measured_receiver_proven_archive_zip_bytes"
     assert cap["under_hard_byte_ceiling"] is True
     assert cap["delta_bytes_vs_hard_byte_ceiling"] == -152
     assert cap["lf_payload_bytes"] == 190
@@ -2569,6 +2573,39 @@ def test_byte_cap_control_reports_lf_pressure_without_under_ceiling_blocker() ->
     assert cap["lf_payload_exceeds_hard_byte_ceiling"] is False
     assert cap["lf_payload_can_cover_archive_overrun"] is None
     assert cap["blockers"] == []
+
+
+def test_byte_cap_control_rejects_archive_bytes_without_receiver_proof() -> None:
+    cap = _build_snerv_mlx_native_byte_cap_control(
+        candidate={"candidate_id": "proof-missing"},
+        hard_byte_ceiling=512,
+        packet_bytes=300,
+        section_bytes={
+            "metadata_payload": 12,
+            "lf_payload": 190,
+            "decoder_payload": 64,
+            "step_map_packet": 34,
+        },
+        archive_bytes=360,
+        archive_sha256="a" * 64,
+        receiver_proof_passed=False,
+        receiver_contract_satisfied=False,
+        run_archive_export=True,
+    )
+
+    assert cap["attached"] is True
+    assert cap["enforced"] is False
+    assert cap["archive_bytes_authoritative"] is False
+    assert cap["under_hard_byte_ceiling"] is None
+    assert cap["delta_bytes_vs_hard_byte_ceiling"] is None
+    assert (
+        cap["authority"]
+        == "archive_bytes_not_authoritative_until_receiver_proof_passes"
+    )
+    assert (
+        "snerv_mlx_native_hard_byte_ceiling_receiver_proof_missing_or_failed"
+        in cap["blockers"]
+    )
 
 
 def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
@@ -2593,6 +2630,8 @@ def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
         },
         archive_bytes=1000,
         archive_sha256="b" * 64,
+        receiver_proof_passed=True,
+        receiver_contract_satisfied=True,
         run_archive_export=True,
     )
 
