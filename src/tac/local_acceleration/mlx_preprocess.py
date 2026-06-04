@@ -38,6 +38,7 @@ __all__ = [
     "load_raw_video_memmap",
     "non_overlapping_pair_indices",
     "preprocess_scorer_inputs_from_pairs",
+    "recover_scorer_input_cache_manifest_from_existing_arrays",
     "write_scorer_input_cache",
     "write_scorer_input_cache_from_pair_batches",
     "write_scorer_input_cache_from_raw_file",
@@ -321,6 +322,126 @@ def write_scorer_input_cache_hash_manifest_from_raw_file(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
+        json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
+
+
+def recover_scorer_input_cache_manifest_from_existing_arrays(
+    output_dir: str | Path,
+    *,
+    source: str | Path,
+    source_kind: str,
+    archive_sha256: str | None = None,
+    inflated_outputs_aggregate_sha256: str | None = None,
+    raw_sha256: str | None = None,
+    source_video_sha256: str | None = None,
+    frame_shape_hwc: tuple[int, int, int] = (*CAMERA_HW, 3),
+    streaming_batch_pairs: int | None = None,
+) -> dict[str, Any]:
+    """Certify a complete scorer-input cache whose manifest was interrupted.
+
+    The cache arrays are deterministic rebuildable artifacts.  If a long export
+    is interrupted after writing ``.npy`` payloads but before ``manifest.json``,
+    future runners should not guess or delete blindly; they should recover a
+    manifest by validating shapes and re-hashing the exact arrays already on
+    disk.
+    """
+
+    out = Path(output_dir)
+    seg_path = out / "segnet_last_rgb.npy"
+    pose_path = out / "posenet_yuv6_pair.npy"
+    pair_path = out / "pair_indices.npy"
+    missing = [
+        path.name
+        for path in (seg_path, pose_path, pair_path)
+        if not path.is_file() or path.stat().st_size <= 0
+    ]
+    if missing:
+        raise ValueError(
+            "cannot recover scorer-input cache manifest; missing arrays: "
+            + ", ".join(missing)
+        )
+
+    seg = np.load(seg_path, mmap_mode="r")
+    pose = np.load(pose_path, mmap_mode="r")
+    pair_indices = np.load(pair_path, mmap_mode="r")
+    if seg.ndim != 4 or pose.ndim != 4:
+        raise ValueError(f"expected rank-4 scorer arrays, got {seg.shape} and {pose.shape}")
+    if pair_indices.ndim != 2 or pair_indices.shape[1] != 2:
+        raise ValueError(f"pair_indices must have shape (N, 2), got {pair_indices.shape}")
+    if seg.shape[0] != pose.shape[0] or seg.shape[0] != pair_indices.shape[0]:
+        raise ValueError(
+            "cannot recover scorer-input cache manifest; pair counts disagree: "
+            f"seg={seg.shape[0]} pose={pose.shape[0]} pair_indices={pair_indices.shape[0]}"
+        )
+    if str(seg.dtype) != "float32" or str(pose.dtype) != "float32":
+        raise TypeError(
+            "cannot recover scorer-input cache manifest; scorer arrays must be float32: "
+            f"seg={seg.dtype} pose={pose.dtype}"
+        )
+    if str(pair_indices.dtype) != "int64":
+        raise TypeError(
+            "cannot recover scorer-input cache manifest; pair_indices must be int64: "
+            f"{pair_indices.dtype}"
+        )
+
+    manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "source": str(source),
+        "source_kind": str(source_kind),
+        "recovered_from_existing_arrays": True,
+        "recovery_policy": "validate_shapes_and_stream_hash_existing_npy_arrays",
+        "streaming_batch_pairs": streaming_batch_pairs,
+        "frame_shape_hwc": [int(v) for v in frame_shape_hwc],
+        "seq_len": SEQ_LEN,
+        "pair_count": int(seg.shape[0]),
+        "segnet_last_rgb_shape": list(seg.shape),
+        "posenet_yuv6_pair_shape": list(pose.shape),
+        "pair_indices_shape": list(pair_indices.shape),
+        "archive_sha256": archive_sha256,
+        "inflated_outputs_aggregate_sha256": inflated_outputs_aggregate_sha256,
+        "raw_sha256": raw_sha256,
+        "source_video_sha256": source_video_sha256,
+        "hash_domain": ARRAY_HASH_DOMAIN,
+        "producer_environment": _producer_environment(),
+        "artifacts": {
+            "segnet_last_rgb": _artifact_record(seg_path),
+            "posenet_yuv6_pair": _artifact_record(pose_path),
+            "pair_indices": _artifact_record(pair_path),
+        },
+        "array_sha256": {
+            "segnet_last_rgb": _streaming_existing_array_sha256(seg),
+            "posenet_yuv6_pair": _streaming_existing_array_sha256(pose),
+            "pair_indices": _array_sha256(np.asarray(pair_indices)),
+        },
+        "evidence_grade": EVIDENCE_GRADE_MLX,
+        "evidence_tag": EVIDENCE_TAG_MLX,
+        "score_claim": False,
+        "score_claim_valid": False,
+        "promotion_eligible": False,
+        "promotable": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "device_contract": {
+            "allowed_uses": [
+                "local_mlx_training",
+                "scorer_surrogate_calibration",
+                "prepaid_dispatch_spend_filter_after_score_calibration",
+                "cross_backend_tensor_parity",
+                "interrupted_cache_manifest_recovery",
+            ],
+            "forbidden_uses": [
+                "auth_eval",
+                "score_claim",
+                "promotion",
+                "rank_or_kill",
+                "leaderboard_claim",
+            ],
+        },
+    }
+    (out / "manifest.json").write_text(
         json.dumps(_jsonable(manifest), indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
@@ -874,6 +995,19 @@ def _array_sha256(arr: np.ndarray) -> str:
     h.update(str(contiguous.dtype).encode("utf-8"))
     h.update(json.dumps(list(contiguous.shape), separators=(",", ":")).encode("utf-8"))
     h.update(contiguous.tobytes())
+    return h.hexdigest()
+
+
+def _streaming_existing_array_sha256(arr: np.ndarray, *, rows_per_chunk: int = 8) -> str:
+    h = hashlib.sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(json.dumps(list(arr.shape), separators=(",", ":")).encode("utf-8"))
+    if arr.ndim == 0:
+        h.update(np.ascontiguousarray(arr).tobytes())
+        return h.hexdigest()
+    chunk = max(1, int(rows_per_chunk))
+    for start in range(0, int(arr.shape[0]), chunk):
+        h.update(np.ascontiguousarray(arr[start : start + chunk]).tobytes())
     return h.hexdigest()
 
 

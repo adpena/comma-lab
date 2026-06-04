@@ -9,6 +9,7 @@ from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_kno
 from tools import export_hinerv_checkpoint_archive as export_mod
 from tools.export_hinerv_checkpoint_archive import (
     _blockers,
+    _build_receiver_raw_cache_quality_gate,
     _export_hard_byte_ceiling,
     _hinerv_source_pair_indices,
     _maybe_write_receiver_raw_cache_mlx_prefilter,
@@ -324,6 +325,44 @@ def test_hinerv_checkpoint_source_pair_indices_default_to_prefix() -> None:
         candidate={},
         command_args={"prioritized_pair_indices": "0,1"},
     ) == (0, 1)
+
+
+def test_hinerv_checkpoint_cache_quality_gate_detects_prefilter_fit_failure(
+    tmp_path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    candidate.mkdir()
+    reference.mkdir()
+    np.save(
+        candidate / "segnet_last_rgb.npy",
+        np.full((2, 3, 8, 8), 255.0, dtype=np.float32),
+    )
+    np.save(
+        reference / "segnet_last_rgb.npy",
+        np.full((2, 3, 8, 8), 24.0, dtype=np.float32),
+    )
+    np.save(
+        candidate / "posenet_yuv6_pair.npy",
+        np.full((2, 12, 4, 4), 255.0, dtype=np.float32),
+    )
+    np.save(
+        reference / "posenet_yuv6_pair.npy",
+        np.full((2, 12, 4, 4), 24.0, dtype=np.float32),
+    )
+
+    gate = _build_receiver_raw_cache_quality_gate(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        output_path=tmp_path / "cache_quality_gate.json",
+        pair_count=2,
+    )
+
+    assert gate["schema"] == "mlx_cache_quality_gate.v1"
+    assert gate["fit_gate_passed"] is False
+    assert "candidate_segnet_last_rgb_far_from_reference_fit_gate" in gate["blockers"]
+    assert gate["score_claim"] is False
+    assert (tmp_path / "cache_quality_gate.json").is_file()
 
 
 def test_hinerv_checkpoint_blockers_switch_when_mlx_prefilter_written() -> None:

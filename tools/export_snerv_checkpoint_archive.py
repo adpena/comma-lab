@@ -28,13 +28,17 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+from tac.analysis.mlx_cache_quality_gate import build_mlx_cache_quality_gate  # noqa: E402
 from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill  # noqa: E402
 from tac.local_acceleration.mlx_preprocess import (  # noqa: E402
+    CAMERA_HW,
+    recover_scorer_input_cache_manifest_from_existing_arrays,
     write_scorer_input_cache_from_raw_file,
     write_scorer_input_cache_from_video_file,
 )
 from tac.local_acceleration.mlx_scorer_response import (  # noqa: E402
     MANIFEST_CACHE_INTEGRITY_MODE,
+    attach_cache_quality_gate_to_mlx_scorer_response,
     build_mlx_scorer_response_payload,
 )
 from tac.repo_io import sha256_file, write_json_artifact  # noqa: E402
@@ -906,6 +910,13 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             pair_count=n_pairs,
             batch_pairs=int(scorer_batch_pairs),
         )
+        cache_quality_gate_path = output_dir / "cache_quality_gate.json"
+        cache_quality_gate = _build_receiver_raw_cache_quality_gate(
+            candidate_cache_dir=candidate_cache_dir,
+            reference_cache_dir=reference_cache_dir,
+            output_path=cache_quality_gate_path,
+            pair_count=n_pairs,
+        )
         response = build_mlx_scorer_response_payload(
             reference_cache_dir=reference_cache_dir,
             candidate_cache_dir=candidate_cache_dir,
@@ -921,6 +932,11 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             cache_integrity_mode=MANIFEST_CACHE_INTEGRITY_MODE,
             response_family="snerv",
         )
+        response = attach_cache_quality_gate_to_mlx_scorer_response(
+            response,
+            cache_quality_gate,
+            source_path=cache_quality_gate_path,
+        )
         response = {
             **response,
             "schema": "mlx_scorer_response.v1",
@@ -931,6 +947,9 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
                 "receiver_output_sha256": receiver_proof.get("receiver_output_sha256"),
                 "reference_cache_manifest": reference_manifest,
                 "candidate_cache_manifest": candidate_manifest,
+                "cache_quality_gate": response.get("cache_quality_gate"),
+                "cache_quality_gate_path": cache_quality_gate_path.as_posix(),
+                "cache_quality_gate_sha256": sha256_file(cache_quality_gate_path),
                 "source_pair_indices_alignment": "prefix_source_pair_indices",
                 "scorer_batch_pairs_requested": base.get(
                     "scorer_batch_pairs_requested"
@@ -969,6 +988,9 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             "candidate_cache_dir": candidate_cache_dir.as_posix(),
             "reference_cache_dir": reference_cache_dir.as_posix(),
             "components_dir": components_dir.as_posix(),
+            "cache_quality_gate": response.get("cache_quality_gate"),
+            "cache_quality_gate_path": cache_quality_gate_path.as_posix(),
+            "cache_quality_gate_sha256": sha256_file(cache_quality_gate_path),
             "scorer_response_schema": response.get("schema"),
             "n_samples": response.get("n_samples"),
             "score_recomputed_from_components": response.get(
@@ -984,6 +1006,11 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
                 **FALSE_AUTHORITY,
             },
             "blockers": [
+                *[
+                    str(blocker)
+                    for blocker in response.get("blockers") or ()
+                    if str(blocker)
+                ],
                 "mlx_local_replay_not_contest_auth_axis",
                 "snerv_receiver_raw_cache_prefilter_false_authority",
             ],
@@ -1013,6 +1040,43 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
         }
 
 
+def _build_receiver_raw_cache_quality_gate(
+    *,
+    candidate_cache_dir: Path,
+    reference_cache_dir: Path,
+    output_path: Path,
+    pair_count: int,
+) -> dict[str, Any]:
+    sample_pairs = max(1, min(32, int(pair_count)))
+    try:
+        gate = build_mlx_cache_quality_gate(
+            candidate_cache_dir=candidate_cache_dir,
+            reference_cache_dir=reference_cache_dir,
+            sample_pairs=sample_pairs,
+        )
+    except Exception as exc:
+        gate = {
+            "schema": "mlx_cache_quality_gate.v1",
+            "verdict": "CACHE_QUALITY_GATE_FAILED",
+            "candidate_cache_nondegenerate": None,
+            "fit_gate_passed": False,
+            "sample_pairs": sample_pairs,
+            "candidate_cache_dir": candidate_cache_dir.as_posix(),
+            "reference_cache_dir": reference_cache_dir.as_posix(),
+            "failure": repr(exc),
+            "blockers": [
+                "mlx_cache_quality_gate_failed",
+                f"mlx_cache_quality_gate_exception:{type(exc).__name__}",
+            ],
+            "recommended_next_actions": [
+                "preserve_receiver_proof_but_block_exact_gate_until_cache_quality_gate_reruns"
+            ],
+            **FALSE_AUTHORITY,
+        }
+    write_json_artifact(output_path, gate)
+    return gate
+
+
 def _ensure_video_scorer_cache(
     video_path: Path,
     output_dir: Path,
@@ -1027,6 +1091,13 @@ def _ensure_video_scorer_cache(
             output_dir,
             max_pairs=int(pair_count),
             batch_pairs=int(batch_pairs),
+        ),
+        recoverer=lambda: recover_scorer_input_cache_manifest_from_existing_arrays(
+            output_dir,
+            source=video_path,
+            source_kind="video",
+            frame_shape_hwc=(*CAMERA_HW, 3),
+            streaming_batch_pairs=None,
         ),
     )
 
@@ -1050,6 +1121,16 @@ def _ensure_raw_scorer_cache(
             max_pairs=int(pair_count),
             batch_pairs=int(batch_pairs),
         ),
+        recoverer=lambda: recover_scorer_input_cache_manifest_from_existing_arrays(
+            output_dir,
+            source=raw_path,
+            source_kind="raw",
+            archive_sha256=archive_sha256,
+            inflated_outputs_aggregate_sha256=inflated_outputs_aggregate_sha256,
+            raw_sha256=sha256_file(raw_path),
+            frame_shape_hwc=(*CAMERA_HW, 3),
+            streaming_batch_pairs=int(batch_pairs),
+        ),
     )
 
 
@@ -1057,6 +1138,7 @@ def _ensure_scorer_cache(
     output_dir: Path,
     *,
     writer: Any,
+    recoverer: Any,
 ) -> dict[str, Any]:
     manifest_path = output_dir / "manifest.json"
     cache_files = (
@@ -1068,8 +1150,10 @@ def _ensure_scorer_cache(
         return _read_json(manifest_path)
     existing = [path.as_posix() for path in cache_files if path.exists()]
     if existing:
+        if len(existing) == len(cache_files):
+            return recoverer()
         raise ValueError(
-            "refusing partial scorer-input cache without manifest: "
+            "refusing incomplete scorer-input cache without manifest: "
             + ", ".join(existing)
         )
     return writer()

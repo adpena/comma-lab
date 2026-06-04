@@ -494,6 +494,11 @@ def test_snerv_checkpoint_export_prefers_receiver_raw_cache_prefilter(
     assert response_kwargs["allow_unaudited_candidate_cache_debug"] is True
     profile = json.loads(Path(report["local_mlx_prefilter_profile_path"]).read_text())
     assert profile["schema"] == "mlx_scorer_response.v1"
+    assert profile["cache_quality_gate"]["schema"] == "mlx_cache_quality_gate.v1"
+    assert profile["cache_quality_gate"]["verdict"] == "CACHE_QUALITY_GATE_FAILED"
+    assert report["local_mlx_prefilter_profile"]["cache_quality_gate"]["schema"] == (
+        "mlx_cache_quality_gate.v1"
+    )
     assert profile["snerv_receiver_raw_cache_prefilter"][
         "source_pair_indices_alignment"
     ] == "prefix_source_pair_indices"

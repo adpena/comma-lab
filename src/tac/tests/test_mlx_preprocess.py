@@ -18,6 +18,7 @@ from tac.local_acceleration.mlx_preprocess import (
     load_raw_video_memmap,
     non_overlapping_pair_indices,
     preprocess_scorer_inputs_from_pairs,
+    recover_scorer_input_cache_manifest_from_existing_arrays,
     write_scorer_input_cache,
     write_scorer_input_cache_from_raw_file,
     write_scorer_input_cache_hash_manifest_from_raw_file,
@@ -232,6 +233,39 @@ def test_raw_full_cache_hashes_streamed_without_full_float_array_hash(
     assert manifest["pair_count"] == 2
     assert len(manifest["array_sha256"]["segnet_last_rgb"]) == 64
     assert len(manifest["array_sha256"]["posenet_yuv6_pair"]) == 64
+
+
+def test_recover_scorer_input_cache_manifest_from_existing_arrays(
+    tmp_path: Path,
+) -> None:
+    pair = np.zeros((1, 2, 4, 4, 3), dtype=np.uint8)
+    pair[:, 1, ...] = 255
+    original = write_scorer_input_cache(
+        preprocess_scorer_inputs_from_pairs(pair),
+        tmp_path / "cache",
+        archive_sha256="a" * 64,
+        inflated_outputs_aggregate_sha256="b" * 64,
+        raw_sha256="b" * 64,
+    )
+    (tmp_path / "cache" / "manifest.json").unlink()
+
+    recovered = recover_scorer_input_cache_manifest_from_existing_arrays(
+        tmp_path / "cache",
+        source=tmp_path / "0.raw",
+        source_kind="raw",
+        archive_sha256="a" * 64,
+        inflated_outputs_aggregate_sha256="b" * 64,
+        raw_sha256="b" * 64,
+        streaming_batch_pairs=1,
+    )
+
+    assert recovered["recovered_from_existing_arrays"] is True
+    assert recovered["array_sha256"] == original["array_sha256"]
+    assert recovered["artifacts"]["segnet_last_rgb"]["bytes"] == original[
+        "artifacts"
+    ]["segnet_last_rgb"]["bytes"]
+    assert recovered["score_claim"] is False
+    assert (tmp_path / "cache" / "manifest.json").is_file()
 
 
 def test_raw_full_cache_rejects_unbounded_batch_working_set(tmp_path: Path) -> None:
