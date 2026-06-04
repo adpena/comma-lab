@@ -22,7 +22,7 @@ import signal
 import subprocess
 import sys
 import zipfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -12210,6 +12210,259 @@ def _strip_substrate_metadata_authority_fields(value: Any) -> Any:
     return value
 
 
+def _positive_int_from_controls(
+    controls: Mapping[str, Any],
+    *,
+    keys: Sequence[str],
+    default: int,
+) -> int:
+    for key in keys:
+        if key not in controls:
+            continue
+        try:
+            value = int(controls.get(key))
+        except (TypeError, ValueError) as exc:
+            raise CompactRendererMlxSpineRunnerError(
+                f"{key} must be a positive integer; got {controls.get(key)!r}"
+            ) from exc
+        if value <= 0:
+            raise CompactRendererMlxSpineRunnerError(
+                f"{key} must be a positive integer; got {value}"
+            )
+        return value
+    return int(default)
+
+
+def _hi_nerv_section_metric_payload_from_telemetry(
+    telemetry: Mapping[str, Any],
+    *,
+    source: str,
+    refresh_call: int,
+    refresh_every_steps: int,
+    fallback_archive_bytes: int | None = None,
+) -> dict[str, Any]:
+    if str(telemetry.get("schema") or "") != "hinerv_archive_section_telemetry.v1":
+        raise CompactRendererMlxSpineRunnerError(
+            "live HiNeRV archive-section telemetry schema mismatch"
+        )
+    if telemetry.get("profile_ready") is not True:
+        raise CompactRendererMlxSpineRunnerError(
+            "live HiNeRV archive-section telemetry is not profile_ready"
+        )
+    sections = telemetry.get("sections")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        raise CompactRendererMlxSpineRunnerError(
+            "live HiNeRV archive-section telemetry is missing sections"
+        )
+    section_bytes: dict[str, int] = {}
+    for index, row in enumerate(sections):
+        if not isinstance(row, Mapping):
+            continue
+        name = str(row.get("name") or f"section_{index:04d}")
+        try:
+            nbytes = int(row.get("bytes") or 0)
+        except (TypeError, ValueError):
+            continue
+        if name and nbytes > 0:
+            section_bytes[name] = nbytes
+    if not section_bytes:
+        raise CompactRendererMlxSpineRunnerError(
+            "live HiNeRV archive-section telemetry has no positive-byte sections"
+        )
+    archive_bytes = None
+    for key in ("archive_zip_bytes", "inner_payload_bytes"):
+        try:
+            parsed = int(telemetry.get(key) or 0)
+        except (TypeError, ValueError):
+            parsed = 0
+        if parsed > 0:
+            archive_bytes = parsed
+            break
+    if archive_bytes is None:
+        archive_bytes = (
+            int(fallback_archive_bytes)
+            if fallback_archive_bytes is not None and int(fallback_archive_bytes) > 0
+            else int(sum(section_bytes.values()))
+        )
+    return {
+        "schema": "hi_nerv_live_train_time_section_byte_metrics.v1",
+        "archive_bytes": int(archive_bytes),
+        "section_bytes": dict(sorted(section_bytes.items())),
+        "source": str(source),
+        "live_profile": {
+            "refresh_call": int(refresh_call),
+            "refresh_every_steps": int(refresh_every_steps),
+        },
+        "authority": "macos_mlx_research_signal_false_authority",
+        "blockers": [
+            "live_metrics_are_inner_hiv1_packet_bytes_until_export_zip_replay"
+        ],
+    }
+
+
+def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
+    *,
+    cfg: Any,
+    decoder_codec: str,
+    latent_codec: str,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+    train_time_section_byte_control: Mapping[str, Any],
+    optimizer_controls: Mapping[str, Any],
+) -> tuple[
+    Callable[[Any, Any, Mapping[str, float]], Mapping[str, Any] | None] | None,
+    dict[str, Any],
+]:
+    """Build a live HIV1 section-byte callback for HiNeRV long training.
+
+    The prior control surface priced section bytes from startup/export
+    telemetry.  This callback re-packs the current MLX model state into the
+    real receiver-visible HIV1 grammar at a bounded interval, entirely in
+    memory, so the existing dual-ascent controller tracks current decoder and
+    latent bytes during training.
+    """
+
+    static_payload_obj = train_time_section_byte_control.get("metrics_payload")
+    static_payload = (
+        dict(static_payload_obj) if isinstance(static_payload_obj, Mapping) else None
+    )
+    refresh_every = _positive_int_from_controls(
+        optimizer_controls,
+        keys=(
+            "hi_nerv_live_section_byte_refresh_every_steps",
+            "section_byte_refresh_every_steps",
+            "train_time_section_byte_refresh_every_steps",
+        ),
+        default=25,
+    )
+    metadata: dict[str, Any] = {
+        "schema": "hi_nerv_live_train_time_section_byte_metrics_callback.v1",
+        "enabled": static_payload is not None,
+        "refresh_every_steps": int(refresh_every),
+        "packet_grammar": "HIV1",
+        "decoder_codec": str(decoder_codec),
+        "latent_codec": str(latent_codec),
+        "uses_current_export_state_dict": True,
+        "writes_artifacts": False,
+        "source": "in_memory_pack_archive_from_current_mlx_state",
+        "fallback_source": (
+            "startup_archive_section_telemetry"
+            if static_payload is not None
+            else None
+        ),
+        "fallback_static_archive_bytes": (
+            static_payload.get("archive_bytes")
+            if isinstance(static_payload, Mapping)
+            else None
+        ),
+        "refresh_call_count": 0,
+        "successful_refresh_count": 0,
+        "fallback_count": 0,
+        "blockers": [] if static_payload is not None else [
+            "hi_nerv_live_section_byte_callback_requires_startup_metrics_payload"
+        ],
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+    if static_payload is None:
+        return None, metadata
+
+    state: dict[str, Any] = {
+        "call_count": 0,
+        "last_payload": None,
+        "last_blocker": None,
+    }
+
+    def _fallback_payload(blocker: str) -> Mapping[str, Any] | None:
+        metadata["fallback_count"] = int(metadata.get("fallback_count") or 0) + 1
+        blockers = [str(value) for value in metadata.get("blockers") or []]
+        blockers.append(str(blocker))
+        metadata["blockers"] = _dedupe(blockers)
+        state["last_blocker"] = str(blocker)
+        if isinstance(state.get("last_payload"), Mapping):
+            payload = dict(state["last_payload"])
+        else:
+            payload = dict(static_payload)
+            payload["source"] = "startup_archive_section_telemetry_fallback"
+        payload["schema"] = "hi_nerv_train_time_section_byte_metrics_fallback.v1"
+        payload["blockers"] = _dedupe(
+            [*list(payload.get("blockers") or []), str(blocker)]
+        )
+        payload["authority"] = "macos_mlx_research_signal_false_authority"
+        return payload
+
+    def _callback(
+        model_obj: Any,
+        _idx: Any,
+        _loss_weights: Mapping[str, float],
+    ) -> Mapping[str, Any] | None:
+        state["call_count"] = int(state.get("call_count") or 0) + 1
+        call_count = int(state["call_count"])
+        should_refresh = (
+            state.get("last_payload") is None
+            or (call_count - 1) % int(refresh_every) == 0
+        )
+        if not should_refresh and isinstance(state.get("last_payload"), Mapping):
+            payload = dict(state["last_payload"])
+            live_profile = dict(payload.get("live_profile") or {})
+            live_profile["cache_hit"] = True
+            live_profile["callback_call"] = call_count
+            payload["live_profile"] = live_profile
+            return payload
+        export_state_dict = getattr(model_obj, "export_state_dict", None)
+        if not callable(export_state_dict):
+            return _fallback_payload("hi_nerv_model_export_state_dict_missing")
+        try:
+            exported_state_dict = export_state_dict()
+            if not isinstance(exported_state_dict, Mapping):
+                raise CompactRendererMlxSpineRunnerError(
+                    "HiNeRV export_state_dict returned "
+                    f"{type(exported_state_dict).__name__}, expected Mapping"
+                )
+            from tac.substrates.hi_nerv.archive import build_archive_section_telemetry
+            from tac.substrates.hi_nerv.archive_candidate import (
+                pack_archive_from_exported_state_dict,
+            )
+
+            packet_bytes = pack_archive_from_exported_state_dict(
+                exported_state_dict=dict(exported_state_dict),
+                cfg=cfg,
+                decoder_codec=str(decoder_codec),
+                decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+                latent_codec=str(latent_codec),
+            )
+            if isinstance(packet_bytes, tuple):
+                packet_bytes = packet_bytes[0]
+            telemetry = build_archive_section_telemetry(packet_bytes)
+            if not isinstance(telemetry, Mapping):
+                raise CompactRendererMlxSpineRunnerError(
+                    "build_archive_section_telemetry returned "
+                    f"{type(telemetry).__name__}, expected Mapping"
+                )
+            payload = _hi_nerv_section_metric_payload_from_telemetry(
+                telemetry,
+                source="live_current_hiv1_packet",
+                refresh_call=call_count,
+                refresh_every_steps=refresh_every,
+                fallback_archive_bytes=static_payload.get("archive_bytes"),
+            )
+        except Exception as exc:
+            return _fallback_payload(
+                "hi_nerv_live_section_byte_refresh_failed:"
+                f"{type(exc).__name__}:{exc}"
+            )
+        state["last_payload"] = dict(payload)
+        metadata["refresh_call_count"] = call_count
+        metadata["successful_refresh_count"] = (
+            int(metadata.get("successful_refresh_count") or 0) + 1
+        )
+        metadata["last_live_archive_bytes"] = int(payload["archive_bytes"])
+        metadata["last_live_section_bytes"] = dict(payload["section_bytes"])
+        metadata["last_refresh_call"] = call_count
+        metadata["last_refresh_blocker"] = None
+        return payload
+
+    return _callback, metadata
+
+
 def _run_hi_nerv_mlx_scoreaware_smoke(
     *,
     output_dir: Path,
@@ -12575,6 +12828,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         coder_qat_loss_weight_map,
         hard_byte_ceiling=hard_byte_ceiling,
     )
+    (
+        live_train_time_section_byte_metrics,
+        live_train_time_section_byte_metrics_metadata,
+    ) = _build_hi_nerv_live_train_time_section_byte_metrics_callback(
+        cfg=cfg,
+        decoder_codec=str(decoder_codec),
+        latent_codec=str(hi_nerv_latent_codec),
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        train_time_section_byte_control=train_time_section_byte_control,
+        optimizer_controls=optimizer_control,
+    )
     train_time_dual_ascent_config = build_default_nerv_train_time_dual_ascent_config(
         family="hi_nerv",
         segnet_distillation_weight=float(segnet_distillation_weight),
@@ -12852,6 +13116,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     train_time_section_byte_control
                 )
             ),
+            "live_train_time_section_byte_metrics": (
+                live_train_time_section_byte_metrics_metadata
+            ),
             "train_time_dual_ascent": strip_candidate_curriculum_authority_fields(
                 train_time_dual_ascent_config
             ),
@@ -12926,7 +13193,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     }
     if train_time_section_byte_control.get("metrics_payload") is not None:
         bundle_kwargs["train_time_section_byte_metrics"] = (
-            _train_time_section_byte_metrics
+            live_train_time_section_byte_metrics
+            if live_train_time_section_byte_metrics is not None
+            else _train_time_section_byte_metrics
         )
     if sparse_priority_target_hydration:
         bundle_kwargs["source_pair_indices"] = hydrated_source_pair_indices

@@ -140,6 +140,117 @@ def _write_hinerv_receiver_proof(
     return path
 
 
+def test_hinerv_live_section_byte_metrics_callback_refreshes_current_hiv1_packet(
+    monkeypatch,
+) -> None:
+    from tac.substrates.hi_nerv import archive as hinerv_archive
+    from tac.substrates.hi_nerv import archive_candidate as hinerv_archive_candidate
+
+    pack_calls: list[dict[str, object]] = []
+
+    class FakeModel:
+        def __init__(self) -> None:
+            self.export_calls = 0
+
+        def export_state_dict(self) -> dict[str, np.ndarray]:
+            self.export_calls += 1
+            return {
+                "decoder.weight": np.asarray([self.export_calls], dtype=np.float32)
+            }
+
+    def fake_pack_archive_from_exported_state_dict(**kwargs):
+        pack_calls.append(dict(kwargs))
+        return f"hiv1-packet-{len(pack_calls)}".encode("ascii")
+
+    def fake_build_archive_section_telemetry(packet: bytes) -> dict[str, object]:
+        packet_index = int(packet.decode("ascii").rsplit("-", 1)[-1])
+        return {
+            "schema": "hinerv_archive_section_telemetry.v1",
+            "profile_ready": True,
+            "inner_payload_bytes": 300 + packet_index,
+            "sections": [
+                {
+                    "name": "decoder_state",
+                    "role": "decoder",
+                    "bytes": 200 + packet_index,
+                },
+                {
+                    "name": "latents_coarse",
+                    "role": "latent",
+                    "bytes": 40 + packet_index,
+                },
+            ],
+        }
+
+    monkeypatch.setattr(
+        hinerv_archive_candidate,
+        "pack_archive_from_exported_state_dict",
+        fake_pack_archive_from_exported_state_dict,
+    )
+    monkeypatch.setattr(
+        hinerv_archive,
+        "build_archive_section_telemetry",
+        fake_build_archive_section_telemetry,
+    )
+    callback, metadata = (
+        runner_mod._build_hi_nerv_live_train_time_section_byte_metrics_callback(
+            cfg=SimpleNamespace(num_pairs=2),
+            decoder_codec="int4_mixed",
+            latent_codec="int16_brotli_q11",
+            decoder_weight_waterfill_plan={"schema": "unit_waterfill"},
+            train_time_section_byte_control={
+                "metrics_payload": {
+                    "archive_bytes": 999,
+                    "section_bytes": {"decoder_state": 500},
+                }
+            },
+            optimizer_controls={"section_byte_refresh_every_steps": 2},
+        )
+    )
+    assert callback is not None
+
+    model = FakeModel()
+    first = callback(model, None, {})
+    second = callback(model, None, {})
+    third = callback(model, None, {})
+
+    assert first is not None
+    assert second is not None
+    assert third is not None
+    assert first["source"] == "live_current_hiv1_packet"
+    assert first["archive_bytes"] == 301
+    assert first["section_bytes"] == {
+        "decoder_state": 201,
+        "latents_coarse": 41,
+    }
+    assert first["live_profile"] == {
+        "refresh_call": 1,
+        "refresh_every_steps": 2,
+    }
+    assert [
+        key
+        for key, value in first.items()
+        if isinstance(value, (int, float, bool))
+    ] == ["archive_bytes"]
+    assert second["live_profile"]["cache_hit"] is True
+    assert second["live_profile"]["callback_call"] == 2
+    assert third["archive_bytes"] == 302
+    assert model.export_calls == 2
+    assert len(pack_calls) == 2
+    assert pack_calls[0]["decoder_codec"] == "int4_mixed"
+    assert pack_calls[0]["latent_codec"] == "int16_brotli_q11"
+    assert pack_calls[0]["decoder_weight_waterfill_plan"] == {
+        "schema": "unit_waterfill"
+    }
+    assert metadata["successful_refresh_count"] == 2
+    assert metadata["fallback_count"] == 0
+    assert metadata["last_live_archive_bytes"] == 302
+    assert metadata["last_live_section_bytes"] == {
+        "decoder_state": 202,
+        "latents_coarse": 42,
+    }
+
+
 def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
     tmp_path: Path,
     monkeypatch,
@@ -8363,9 +8474,12 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
     import mlx.core as mx
 
     from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import archive as hinerv_archive
+    from tac.substrates.hi_nerv import archive_candidate as hinerv_archive_candidate
     from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
 
     captured: dict[str, object] = {}
+    live_pack_calls: list[dict[str, object]] = []
 
     class FakeHinervModel:
         def __init__(self, cfg):
@@ -8389,6 +8503,12 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
 
         def parameters(self):
             return self._params
+
+        def export_state_dict(self) -> dict[str, np.ndarray]:
+            return {
+                "decoder.weight": np.asarray([1.0, 2.0], dtype=np.float32),
+                "latents_coarse": np.asarray([0.25, 0.5], dtype=np.float32),
+            }
 
     class FakeArtifact:
         def __init__(self, payload: dict[str, object]) -> None:
@@ -8437,6 +8557,23 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         captured["metadata"] = dict(bundle.substrate_artifact_metadata)
         return FakeArtifact({"substrate_artifact_metadata": captured["metadata"]})
 
+    def fake_pack_archive_from_exported_state_dict(**kwargs):
+        live_pack_calls.append(dict(kwargs))
+        return b"live-hiv1-section-test"
+
+    def fake_build_archive_section_telemetry(packet: bytes) -> dict[str, object]:
+        assert packet == b"live-hiv1-section-test"
+        return {
+            "schema": "hinerv_archive_section_telemetry.v1",
+            "profile_ready": True,
+            "inner_payload_bytes": 333,
+            "sections": [
+                {"name": "decoder_state", "role": "decoder", "bytes": 210},
+                {"name": "latents_coarse", "role": "latent", "bytes": 41},
+                {"name": "latents_mid", "role": "latent", "bytes": 42},
+            ],
+        }
+
     monkeypatch.setattr(
         mlx_score_aware_pkg,
         "decode_mlx_targets",
@@ -8451,6 +8588,16 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         hinerv_mlx_renderer,
         "HinervSubstrateMLX",
         FakeHinervModel,
+    )
+    monkeypatch.setattr(
+        hinerv_archive_candidate,
+        "pack_archive_from_exported_state_dict",
+        fake_pack_archive_from_exported_state_dict,
+    )
+    monkeypatch.setattr(
+        hinerv_archive,
+        "build_archive_section_telemetry",
+        fake_build_archive_section_telemetry,
     )
 
     artifact = runner_mod._run_hi_nerv_mlx_scoreaware_smoke(
@@ -8516,7 +8663,7 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         resume_from_checkpoint=None,
         optimizer_kind="pact_muon_adamw",
         hi_nerv_optimizer_policy={},
-        optimizer_controls={},
+        optimizer_controls={"section_byte_refresh_every_steps": 1},
         prioritized_pair_indices=(),
         scorer_error_pair_sampling_weights=None,
         scorer_error_pair_curriculum=None,
@@ -8561,12 +8708,16 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         in captured["dual_metric_names"]
     )
     section_metrics = captured["section_byte_metrics"]
-    assert section_metrics["archive_bytes"] == 400
+    assert section_metrics["source"] == "live_current_hiv1_packet"
+    assert section_metrics["archive_bytes"] == 333
     assert section_metrics["section_bytes"] == {
-        "decoder_state": 200,
-        "latents_coarse": 40,
-        "latents_mid": 40,
+        "decoder_state": 210,
+        "latents_coarse": 41,
+        "latents_mid": 42,
     }
+    assert len(live_pack_calls) == 1
+    assert live_pack_calls[0]["decoder_codec"] == "int4_mixed"
+    assert live_pack_calls[0]["latent_codec"] == "int16_brotli_q11"
     metadata = captured["metadata"]["score_aware_training"]
     assert metadata["archive_section_qat_weight_policy"]["active"] is True
     section_control = metadata["train_time_section_byte_control"]
@@ -8582,6 +8733,16 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         "latents_mid": "latent_qat_quant_residual",
     }
     assert metadata["latent_coder_aware_qat"]["enabled"] is True
+    live_metadata = metadata["live_train_time_section_byte_metrics"]
+    assert live_metadata["enabled"] is True
+    assert live_metadata["refresh_every_steps"] == 1
+    assert live_metadata["successful_refresh_count"] == 1
+    assert live_metadata["last_live_archive_bytes"] == 333
+    assert live_metadata["last_live_section_bytes"] == {
+        "decoder_state": 210,
+        "latents_coarse": 41,
+        "latents_mid": 42,
+    }
 
 
 def _write_hinerv_waterfill_plan(
