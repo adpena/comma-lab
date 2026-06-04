@@ -1429,6 +1429,62 @@ def test_official_hfr_bootstrap_least_squares_caps_design_rows(
     assert head.conv2.bias.shape == (3,)
 
 
+def test_official_renderer_coder_qat_selects_hfr_decoder_weights() -> None:
+    pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    from tac.substrates._shared.mlx_score_aware.coder_qat import (
+        CoderAwareQATConfig,
+        build_decoder_coder_qat_terms,
+        coder_qat_metadata,
+    )
+    from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+        SnervMlxOfficialMfuHfrTubScoreRenderer,
+    )
+
+    pairs = _tiny_pairs(pairs=1)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    model = SnervMlxOfficialMfuHfrTubScoreRenderer(
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
+        low=components["low"],
+        skip_mid=components["skip_mid"],
+        skip_high=components["skip_high"],
+        output_hw=(16, 16),
+        model_size=model_size,
+        tub_current=components["tub_current"],
+        tub_previous=components["tub_previous"],
+        tub_next_frame=components["tub_next_frame"],
+    )
+    cfg = CoderAwareQATConfig(
+        enabled=True,
+        quant_bits=4,
+        quant_residual_weight=1.0,
+        magnitude_weight=1.0,
+        delta_weight=1.0,
+        c1a_entropy_weight=1.0,
+        c1a_sample_size=8,
+    ).validated()
+
+    terms = build_decoder_coder_qat_terms(model, cfg)
+    metadata = coder_qat_metadata(cfg)
+
+    assert "hfr_" in metadata["include_substrings"]
+    assert "mfu_" in metadata["include_substrings"]
+    assert set(terms) == {
+        "coder_qat_quant_residual",
+        "coder_qat_magnitude",
+        "coder_qat_delta",
+        "coder_qat_c1a_entropy",
+    }
+
+
 def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

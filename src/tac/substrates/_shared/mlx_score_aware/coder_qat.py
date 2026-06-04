@@ -25,6 +25,8 @@ DEFAULT_DECODER_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "injector",
     "head",
     "decoder",
+    "hfr_",
+    "mfu_",
 )
 DEFAULT_DECODER_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "latents",
