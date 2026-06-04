@@ -31,6 +31,11 @@ def test_score_allocation_contract_matches_upstream_score_geometry() -> None:
     assert contract["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (
         PUBLIC_TEST_RAW_OUTPUT_BYTES
     )
+    assert contract["distortion_reduction"]["authority"] == (
+        "upstream/evaluate.py full-video pair-sum reduction"
+    )
+    assert contract["distortion_reduction"]["update_before_full_reduction_allowed"] is False
+    assert "exact accumulation" in contract["distortion_reduction"]["gradient_acquisition_rule"]
     assert contract["pair_geometry"]["seq_len"] == SEQ_LEN
     assert contract["pair_geometry"]["public_test_pair_count"] == PUBLIC_TEST_PAIR_COUNT
     assert contract["pair_geometry"]["camera_size_wh"] == list(CAMERA_SIZE_WH)
@@ -60,7 +65,27 @@ def test_upstream_eval_contract_verifies_actual_source_snippets() -> None:
     assert all(record["exists"] for record in contract["source_custody"])
     assert all(record["exists"] for record in contract["model_custody"])
     assert all(len(record["sha256"]) == 64 for record in contract["source_custody"])
+    assert all(record["sha256_matches_expected"] for record in contract["model_custody"])
+    assert {
+        record["relative_path"]: record["expected_sha256"]
+        for record in contract["model_custody"]
+    } == {
+        "models/posenet.safetensors": (
+            "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576"
+        ),
+        "models/segnet.safetensors": (
+            "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6"
+        ),
+    }
     assert all(check["present"] for check in contract["implementation_snippet_checks"])
+    snippet_names = {check["name"] for check in contract["implementation_snippet_checks"]}
+    assert {
+        "posenet_full_video_pair_sum",
+        "segnet_full_video_pair_sum",
+        "batch_size_weighted_reduction",
+        "posenet_full_video_mean",
+        "segnet_full_video_mean",
+    } <= snippet_names
 
 
 def test_upstream_eval_contract_fails_closed_when_snapshot_missing(tmp_path) -> None:

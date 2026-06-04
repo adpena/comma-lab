@@ -44,6 +44,10 @@ _MODEL_FILES = (
     "models/posenet.safetensors",
     "models/segnet.safetensors",
 )
+_EXPECTED_MODEL_SHA256: dict[str, str] = {
+    "models/posenet.safetensors": "0f3a0874c5c387f990d7b88bd1d7e1f6de35d98b45f2a289989db2c77b9b6576",
+    "models/segnet.safetensors": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+}
 
 _REQUIRED_SNIPPETS: dict[str, tuple[tuple[str, str], ...]] = {
     "evaluate.py": (
@@ -51,6 +55,11 @@ _REQUIRED_SNIPPETS: dict[str, tuple[tuple[str, str], ...]] = {
         ("rate_denominator_source_tree", "sum(file.stat().st_size for file in args.uncompressed_dir.rglob"),
         ("score_formula", "100 * segnet_dist +  math.sqrt(posenet_dist * 10)  + 25 * rate"),
         ("candidate_raw_dataset", "TensorVideoDataset(test_video_names"),
+        ("posenet_full_video_pair_sum", "posenet_dists += posenet_dist.sum()"),
+        ("segnet_full_video_pair_sum", "segnet_dists += segnet_dist.sum()"),
+        ("batch_size_weighted_reduction", "batch_sizes += batch_gt.shape[0]"),
+        ("posenet_full_video_mean", "posenet_dist = (posenet_dists / batch_sizes).item()"),
+        ("segnet_full_video_mean", "segnet_dist = (segnet_dists / batch_sizes).item()"),
     ),
     "evaluate.sh": (
         ("archive_unzip_before_inflate", 'unzip -o "$ARCHIVE_ZIP" -d "$ARCHIVE_DIR"'),
@@ -96,6 +105,16 @@ def build_score_allocation_contract() -> dict[str, Any]:
             "canonical_denominator_bytes": CONTEST_ORIGINAL_BYTES,
             "rate_price_per_archive_byte": contest_rate_term(1),
             "raw_output_shape_bytes_are_not_rate_denominator": PUBLIC_TEST_RAW_OUTPUT_BYTES,
+        },
+        "distortion_reduction": {
+            "authority": "upstream/evaluate.py full-video pair-sum reduction",
+            "pair_weighting": "sum per-pair distortions over all evaluated pairs, then divide by total pair count",
+            "update_before_full_reduction_allowed": False,
+            "gradient_acquisition_rule": (
+                "chunking is allowed only as exact accumulation; optimizer or "
+                "allocator updates must wait until every intended pair shard "
+                "has reduced into the full-video scalar"
+            ),
         },
         "pair_geometry": {
             "seq_len": SEQ_LEN,
@@ -252,6 +271,14 @@ def build_upstream_eval_contract(
     model_records = [
         _path_record(upstream / rel_path, label=rel_path) for rel_path in _MODEL_FILES
     ]
+    for record in model_records:
+        expected_sha256 = _EXPECTED_MODEL_SHA256.get(str(record["relative_path"]))
+        record["expected_sha256"] = expected_sha256
+        record["sha256_matches_expected"] = bool(
+            record["exists"]
+            and expected_sha256 is not None
+            and record["sha256"] == expected_sha256
+        )
     snippet_checks = _snippet_checks(root=root, upstream=upstream)
     blockers = [
         f"missing_source:{record['relative_path']}"
@@ -262,6 +289,11 @@ def build_upstream_eval_contract(
         f"missing_model:{record['relative_path']}"
         for record in model_records
         if not record["exists"]
+    )
+    blockers.extend(
+        f"model_sha256_mismatch:{record['relative_path']}"
+        for record in model_records
+        if record["exists"] and not record["sha256_matches_expected"]
     )
     blockers.extend(
         f"required_snippet_missing:{item['relative_path']}:{item['name']}"
