@@ -1997,11 +1997,14 @@ def _official_feature_rows(root: Path, family: str) -> list[dict[str, Any]]:
         )
         primitive_replay_proven = bool(
             isinstance(primitive_replay, Mapping)
-            and primitive_replay.get("primitive_source_replay_proven")
+            and primitive_replay.get("receiver_primitive_replay_proven")
+            and primitive_replay.get("primitive_numeric_source_fixture_replay_proven")
         )
         if markers and not missing_markers:
             if analogue_only and primitive_replay_proven:
-                local_binding_status = "primitive_source_replay_proven_full_stack_missing"
+                local_binding_status = (
+                    "primitive_numeric_source_fixture_replay_proven_full_stack_missing"
+                )
             elif analogue_only:
                 local_binding_status = "receiver_safe_analogue_only"
             else:
