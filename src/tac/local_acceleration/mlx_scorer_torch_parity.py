@@ -31,6 +31,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (
 from tac.local_acceleration.mlx_scorer_response import (
     GPU_RESEARCH_SIGNAL_BLOCKER,
     _load_upstream_distortion_net,
+    _resolve_upstream_dir,
     load_scorer_input_cache,
 )
 
@@ -104,7 +105,7 @@ def build_mlx_scorer_torch_parity_manifest(
     pose = np.asarray(cache.posenet_yuv6_pair[start:stop], dtype=np.float32)
     seg = np.asarray(cache.segnet_last_rgb[start:stop], dtype=np.float32)
 
-    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    dist = _load_upstream_distortion_net(_resolve_upstream_dir(Path(repo_root).resolve()))
     torch_outputs = run_torch_distortion_scorer_nchw(dist, pose, seg)
     with temporary_mlx_device(device_type):
         mlx_outputs = run_mlx_distortion_scorer_nchw(
@@ -187,7 +188,7 @@ def build_mlx_scorer_torch_parity_sweep_manifest(
         raise ValueError("no parity windows selected")
 
     limits = thresholds or MLXTorchParityThresholds()
-    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    dist = _load_upstream_distortion_net(_resolve_upstream_dir(Path(repo_root).resolve()))
     rows: list[dict[str, Any]] = []
     started = time.time()
     stream = sys.stderr if progress_stream is None else progress_stream
@@ -577,7 +578,7 @@ def build_mlx_segnet_layer_trace_manifest(
     stop = min(total_pair_count, start + int(max_pairs))
     seg = np.asarray(cache.segnet_last_rgb[start:stop], dtype=np.float32)
 
-    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    dist = _load_upstream_distortion_net(_resolve_upstream_dir(Path(repo_root).resolve()))
     torch_trace = run_torch_segnet_layer_trace_nchw(dist.segnet, seg)
     with temporary_mlx_device(device_type):
         mlx_trace = run_mlx_segnet_layer_trace_nchw(
@@ -694,7 +695,7 @@ def build_torch_segnet_batch_invariance_manifest(
     stop = min(total_pair_count, start + int(max_pairs))
     seg = np.asarray(cache.segnet_last_rgb[start:stop], dtype=np.float32)
 
-    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    dist = _load_upstream_distortion_net(_resolve_upstream_dir(Path(repo_root).resolve()))
     with _torch_backend_options(
         use_deterministic_algorithms=bool(use_deterministic_algorithms),
         cudnn_benchmark=cudnn_benchmark,

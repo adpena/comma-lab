@@ -22,6 +22,7 @@ from tac.local_acceleration.mlx_scorer_adapters import (
 from tac.local_acceleration.mlx_scorer_response import (
     GPU_RESEARCH_SIGNAL_BLOCKER,
     _load_upstream_distortion_net,
+    _resolve_upstream_dir,
     load_scorer_input_cache,
 )
 from tac.local_acceleration.mlx_scorer_torch_parity import (
@@ -73,7 +74,7 @@ def build_mlx_segnet_repaired_stage0_se_probe_manifest(
     stop = min(total_pair_count, start + int(max_pairs))
     seg = np.asarray(cache.segnet_last_rgb[start:stop], dtype=np.float32)
 
-    dist = _load_upstream_distortion_net(Path(repo_root).resolve())
+    dist = _load_upstream_distortion_net(_resolve_upstream_dir(Path(repo_root).resolve()))
     torch_trace = run_torch_segnet_layer_trace_nchw(dist.segnet, seg)
     torch_logits = torch_trace["segmentation_head.logits"]
     torch_se = dist.segnet.encoder.model.blocks[0][0].se
