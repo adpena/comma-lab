@@ -902,6 +902,12 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         """Return receiver encoder inputs from the current trained MLX state."""
 
         state = self.export_state_dict()
+        skip_high = state["skip_high"].astype(np.float64)
+        if self.skip_high_mode == "shared_mean":
+            skip_high = np.broadcast_to(skip_high, self.skip_high_full_shape).astype(
+                np.float64,
+                copy=True,
+            )
         return {
             "mfu": self.mfu,
             "hfr_heads": OfficialHfrHeads(
@@ -911,7 +917,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             ),
             "low": state["low"].astype(np.float64),
             "skip_mid": state["skip_mid"].astype(np.float64),
-            "skip_high": state["skip_high"].astype(np.float64),
+            "skip_high": skip_high,
             "skip_high_mode": self.skip_high_mode,
             "skip_high_full_shape": tuple(int(v) for v in self.skip_high_full_shape),
             "tub_current": self._tub_current_np.astype(np.float64),
