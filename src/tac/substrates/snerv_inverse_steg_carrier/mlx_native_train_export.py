@@ -1432,6 +1432,7 @@ def _run_score_aware_long_training_attachment(
             "pr95_faithful_curriculum_enabled": bool(
                 pr95_faithful_curriculum_enabled
             ),
+            "pr95_muon_policy_requested": str(pr95_muon_policy),
             "pr95_muon_policy": str(pr95_muon_policy),
             "muon_tensor_count": len(pr95_optimizer_split.get("muon") or []),
             "adamw_tensor_count": len(pr95_optimizer_split.get("adamw") or []),
@@ -1441,26 +1442,29 @@ def _run_score_aware_long_training_attachment(
             "official_mfu_hfr_tub_matrix_payload_atoms_bound": official_training_requested,
             **FALSE_AUTHORITY,
         }
+        effective_pr95_muon_policy = str(pr95_muon_policy)
         if (
             pr95_faithful_curriculum_enabled
             and str(pr95_muon_policy) == "every_stage"
             and int(pr95_optimizer_coverage["muon_tensor_count"]) <= 0
         ):
-            payload = {
-                **base_payload,
-                "executed": False,
-                "training_completed": False,
-                "pr95_optimizer_coverage": pr95_optimizer_coverage,
-                "blockers": [
-                    "snerv_pr95_every_stage_muon_has_no_eligible_matrix_tensors"
-                ],
-                "recommended_next_optimizer_controls": [
-                    "disable_pr95_faithful_curriculum_for_sneRV_vector_kernel_lion_smoke",
-                    "or_add_a_source-faithful_matrix_decoder_before_muon",
-                ],
+            effective_pr95_muon_policy = "faithful_stage8_only"
+            pr95_optimizer_coverage = {
+                **pr95_optimizer_coverage,
+                "pr95_muon_policy": effective_pr95_muon_policy,
+                "muon_policy_fallback_applied": True,
+                "muon_policy_fallback_reason": (
+                    "requested_every_stage_muon_but_snerv_renderer_has_no_"
+                    "eligible_matrix_tensors"
+                ),
+                "score_lane_blocker": False,
             }
-            write_json(report_path, payload)
-            return {**payload, "report_path": report_path.as_posix()}
+        else:
+            pr95_optimizer_coverage = {
+                **pr95_optimizer_coverage,
+                "muon_policy_fallback_applied": False,
+                "score_lane_blocker": False,
+            }
         coder_qat_cfg = CoderAwareQATConfig(
             enabled=bool(coder_aware_qat),
             quant_bits=int(coder_qat_quant_bits),
@@ -1549,6 +1553,11 @@ def _run_score_aware_long_training_attachment(
             for key, value in dict(base_payload["teacher_binding"]).items()
             if key not in metadata_forbidden_authority_keys
         }
+        pr95_optimizer_coverage_metadata = {
+            key: value
+            for key, value in dict(pr95_optimizer_coverage).items()
+            if key not in metadata_forbidden_authority_keys
+        }
         bundle_kwargs: dict[str, Any] = {
             "model": model,
             "target_rgb_0": target0,
@@ -1574,7 +1583,9 @@ def _run_score_aware_long_training_attachment(
                 "pr95_faithful_curriculum_enabled": bool(
                     pr95_faithful_curriculum_enabled
                 ),
-                "pr95_muon_policy": str(pr95_muon_policy),
+                "pr95_muon_policy_requested": str(pr95_muon_policy),
+                "pr95_muon_policy": effective_pr95_muon_policy,
+                "pr95_optimizer_coverage": pr95_optimizer_coverage_metadata,
                 "contest_scorer_distortion_objective": bool(
                     _recon_pixel_weight_metadata_is_verified_gradient_manifest(
                         recon_pixel_weight_metadata
@@ -1680,7 +1691,7 @@ def _run_score_aware_long_training_attachment(
                 if pr95_faithful_curriculum_enabled
                 else None
             ),
-            pr95_muon_policy=str(pr95_muon_policy),
+            pr95_muon_policy=effective_pr95_muon_policy,
             prioritized_pair_indices=tuple(
                 int(value) for value in prioritized_pair_indices
             ),
@@ -1762,7 +1773,8 @@ def _run_score_aware_long_training_attachment(
             "pr95_faithful_curriculum_enabled": bool(
                 pr95_faithful_curriculum_enabled
             ),
-            "pr95_muon_policy": str(pr95_muon_policy),
+            "pr95_muon_policy_requested": str(pr95_muon_policy),
+            "pr95_muon_policy": effective_pr95_muon_policy,
             "pr95_optimizer_coverage": pr95_optimizer_coverage,
             "optimizer_binding_mode": (
                 "pr95_faithful_curriculum"

@@ -8,6 +8,7 @@ import hashlib
 import inspect
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -96,7 +97,7 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     )
 
 
-def test_pr95_every_stage_muon_blocks_when_snerv_has_no_matrix_targets(
+def test_pr95_every_stage_muon_falls_back_when_snerv_has_no_matrix_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -111,6 +112,28 @@ def test_pr95_every_stage_muon_blocks_when_snerv_has_no_matrix_targets(
         return target0, target1
 
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    harness_calls: list[dict[str, object]] = []
+
+    class FakeArtifact:
+        def as_dict(self) -> dict[str, object]:
+            return {
+                "total_epochs_completed": 1,
+                "telemetry_path": "",
+                "live_checkpoint_path": "",
+                "ema_shadow_checkpoint_path": "",
+            }
+
+    def fake_run_mlx_score_aware_full_main(**kwargs):
+        harness_calls.append(kwargs)
+        on_epoch_end = kwargs.get("on_epoch_end")
+        if on_epoch_end is not None:
+            on_epoch_end(SimpleNamespace(epoch=0, loss=0.0))
+        return FakeArtifact()
+
+    monkeypatch.setattr(
+        "tac.substrates._shared.mlx_score_aware.harness.run_mlx_score_aware_full_main",
+        fake_run_mlx_score_aware_full_main,
+    )
 
     report = train_export_snerv_mlx_native(
         output_dir=tmp_path / "zero_muon_every_stage",
@@ -133,14 +156,27 @@ def test_pr95_every_stage_muon_blocks_when_snerv_has_no_matrix_targets(
     )
 
     long_training = report["score_aware_long_training"]
-    assert report["score_aware_long_training_executed"] is False
-    assert long_training["executed"] is False
-    assert (
-        "snerv_pr95_every_stage_muon_has_no_eligible_matrix_tensors"
-        in long_training["blockers"]
-    )
+    assert report["score_aware_long_training_executed"] is True
+    assert long_training["executed"] is True
+    assert long_training["blockers"] == []
+    assert harness_calls
+    assert harness_calls[0]["pr95_muon_policy"] == "faithful_stage8_only"
+    assert long_training["pr95_muon_policy_requested"] == "every_stage"
+    assert long_training["pr95_muon_policy"] == "faithful_stage8_only"
     assert long_training["pr95_optimizer_coverage"]["muon_tensor_count"] == 0
     assert long_training["pr95_optimizer_coverage"]["adamw_tensor_count"] > 0
+    assert (
+        long_training["pr95_optimizer_coverage"]["pr95_muon_policy_requested"]
+        == "every_stage"
+    )
+    assert (
+        long_training["pr95_optimizer_coverage"]["pr95_muon_policy"]
+        == "faithful_stage8_only"
+    )
+    assert (
+        long_training["pr95_optimizer_coverage"]["muon_policy_fallback_applied"]
+        is True
+    )
 
 
 def test_packet_builder_emits_receiver_decodable_snar1() -> None:

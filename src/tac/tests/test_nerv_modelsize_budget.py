@@ -11,12 +11,14 @@ from tac.analysis.nerv_modelsize_budget import (
     MODELSIZE_RATE_AUTHORITY_SURFACE,
     SNERV_CONTEST_RECEIVER_PROFILE_ID,
     SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID,
+    SNERV_OFFICIAL_MFU_HFR_TUB_LEVELS,
     NervModelSizeBudgetError,
     analyze_hinerv_modelsize_candidate,
     analyze_snerv_modelsize_candidate,
     build_hinerv_config_from_size_knobs,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
+    enumerate_snerv_modelsize_candidates,
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
     snerv_model_size_adapter_id_token,
@@ -597,6 +599,27 @@ def test_snerv_fc_dim_and_emb_size_are_receiver_decoder_controls() -> None:
         base.nominal_step_map_payload_bytes
     )
     assert larger_decoder.nominal_rate_score > base.nominal_rate_score
+
+
+def test_snerv_official_primitives_modelsize_enumeration_uses_source_haar_j1() -> None:
+    rows = enumerate_snerv_modelsize_candidates(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        levels=(2, 3, 4, 5),
+        bits_per_coeffs=(1.5,),
+        step_map_bits_per_coeffs=(0.5,),
+        decoder_codecs=("int2_symmetric",),
+        snerv_model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+        official_modelsize_mparams=(0.05,),
+    )
+
+    assert rows
+    assert {row.levels for row in rows} == set(SNERV_OFFICIAL_MFU_HFR_TUB_LEVELS)
+    assert all(
+        row.snerv_model_size_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+        for row in rows
+    )
+    assert all("_haar_lv1_" in row.candidate_id for row in rows)
 
 
 def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None:
