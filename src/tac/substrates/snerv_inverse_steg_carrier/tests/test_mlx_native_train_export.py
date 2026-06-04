@@ -1404,6 +1404,31 @@ def test_official_primitives_full_video_long_training_defers_replay_gate(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_official_hfr_bootstrap_least_squares_caps_design_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    ll = np.arange(2 * 3 * 8 * 8, dtype=np.float64).reshape(2, 3, 8, 8)
+    detail = ll * 0.25
+    seen: dict[str, tuple[int, ...]] = {}
+
+    def fake_lstsq(design, target, rcond=None):
+        seen["design_shape"] = tuple(int(v) for v in design.shape)
+        seen["target_shape"] = tuple(int(v) for v in target.shape)
+        beta = np.zeros((int(design.shape[1]), int(target.shape[1])), dtype=np.float64)
+        return beta, np.empty((0,), dtype=np.float64), 0, np.empty((0,), dtype=np.float64)
+
+    monkeypatch.setattr(np.linalg, "lstsq", fake_lstsq)
+
+    head = mod._fit_official_hfr_head_from_ll(ll, detail, max_rows=17)
+
+    assert seen["design_shape"] == (17, 28)
+    assert seen["target_shape"] == (17, 3)
+    assert head.conv2.weight.shape == (3, 3, 3, 3)
+    assert head.conv2.bias.shape == (3,)
+
+
 def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
