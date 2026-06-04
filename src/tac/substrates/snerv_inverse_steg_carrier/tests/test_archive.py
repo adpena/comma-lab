@@ -11,9 +11,14 @@ import warnings
 import numpy as np
 import pytest
 
-from tac.analysis.snerv_step_map_coder import decode_step_maps, encode_step_maps
+from tac.analysis.snerv_step_map_coder import (
+    decode_step_maps,
+    encode_step_maps,
+    encode_step_maps_waterfill,
+)
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     HEADER_LEN_FMT,
+    LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
     SECTION_ORDER,
     SNERV_ARCHIVE_MAGIC,
     SNERV_DECODER_MAGIC,
@@ -523,6 +528,61 @@ def test_archive_can_carry_official_mfu_hfr_tub_receiver_payload() -> None:
         decoded.decode_decoder()
 
 
+def test_official_mfu_hfr_tub_archive_frames_ignore_dummy_lf_sections() -> None:
+    bundle = _official_payload_fixture()
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    step_packet = encode_step_maps_waterfill(
+        [np.ones((1, 1), dtype=np.float32)],
+        map_importance=np.ones((1,), dtype=np.float64),
+        target_bits_per_coeff=1.0,
+    )
+
+    def pack_with_dummy_lf(value: int):
+        return pack_snerv_archive(
+            metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+            lf_payload=encode_lf_quant_payload(
+                [np.full((1, 1), value, dtype=np.int64)],
+                codec=LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
+            ),
+            decoder_payload=official_payload,
+            step_map_packet=step_packet.packet,
+            metadata={
+                "lf_plane_count": 1,
+                "levels": 1,
+                "wavelet": "haar",
+                "orig_hw": [16, 16],
+                "n_pairs": 1,
+                "frames_per_pair": 1,
+                "channels": 3,
+                "receiver_lf_section_role": (
+                    "snar1_required_placeholder_official_decoder_payload_renders_frames"
+                ),
+            },
+        )
+
+    archive_zero = pack_with_dummy_lf(0)
+    archive_nonzero = pack_with_dummy_lf(7)
+    decoded = unpack_snerv_archive(archive_zero.packet)
+    direct_planes = decode_official_mfu_hfr_tub_decoder_payload(
+        official_payload
+    ).decode_frame_planes()
+    frames_zero = decode_snerv_archive_frames(archive_zero.packet)
+    frames_nonzero = decode_snerv_archive_frames(archive_nonzero.packet)
+
+    assert decoded.decode_lf_quant_planes()[0].shape == (1, 1)
+    assert decoded.decode_lf_zero_points().shape == (1,)
+    assert len(decoded.decode_step_maps()) == 1
+    assert archive_zero.section_bytes["metadata_payload"] == 4
+    assert archive_zero.section_bytes["lf_payload"] < 1_000
+    assert archive_zero.section_bytes["step_map_packet"] < 1_000
+    assert frames_zero.shape == (1, 1, 3, 16, 16)
+    np.testing.assert_array_equal(frames_zero, frames_nonzero)
+    np.testing.assert_array_equal(
+        frames_zero.reshape(3, 16, 16),
+        np.stack(direct_planes),
+    )
+
+
 def test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames() -> None:
     bundle = _official_payload_fixture()
     bundle["low"] = np.concatenate(
@@ -611,16 +671,22 @@ def test_official_mfu_hfr_tub_unused_tub_inputs_compact_without_score_authority(
     compact_header = _read_subpacket_header(compact_payload)
     decoded = decode_official_mfu_hfr_tub_decoder_payload(compact_payload)
     proof = decoded.execute()
+    full_decoded = decode_official_mfu_hfr_tub_decoder_payload(full_payload)
 
     assert compact_header["tub_input_storage"]["codec"] == "unused_synthetic_float64"
     assert compact_header["tub_input_storage"][
         "receiver_frame_synthesis_uses_tub_inputs"
     ] is False
+    assert compact_header["tub_input_storage"]["receiver_expands_tub_inputs"] is True
+    assert compact_header["tub_input_storage"]["stored_raw_bytes"] < compact_header[
+        "tub_input_storage"
+    ]["source_raw_bytes"]
     assert compact_header["tub_input_storage"][
         "lossless_relative_to_source_tub_inputs"
     ] is False
     assert compact_header["source_forward_replay_authority"] is False
     assert len(compact_payload) < len(full_payload)
+    np.testing.assert_array_equal(decoded.decode_frames(), full_decoded.decode_frames())
     assert np.count_nonzero(decoded.tensors["inputs.tub.current"]) == 2
     assert np.count_nonzero(decoded.tensors["inputs.tub.previous"]) == 2
     assert np.count_nonzero(decoded.tensors["inputs.tub.next_frame"]) == 2

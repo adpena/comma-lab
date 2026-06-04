@@ -18,6 +18,7 @@ REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
+    DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     SNERV_MODELSIZE_CONTROL_PROFILES,
     build_hinerv_modelsize_budget_report,
@@ -134,6 +135,24 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-model-size-adapter",
+        default=DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
+        help=(
+            "SNeRV receiver-visible adapter to price. Use "
+            "snerv_official_mfu_hfr_tub_primitives_adapter for the official "
+            "MFU/HFR/TUB primitive receiver grammar."
+        ),
+    )
+    parser.add_argument(
+        "--snerv-official-skip-high-mode",
+        action="append",
+        choices=("full", "shared_mean"),
+        help=(
+            "Official MFU/HFR/TUB skip_high storage mode to enumerate. "
+            "Repeatable; defaults to full."
+        ),
+    )
+    parser.add_argument(
         "--snerv-temporal-context",
         type=int,
         default=0,
@@ -193,6 +212,9 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     snerv_temporal_modes = tuple(args.snerv_temporal_mode or ("delta",))
+    snerv_official_skip_high_modes = tuple(
+        args.snerv_official_skip_high_mode or ("full",)
+    )
     snerv_profile = snerv_modelsize_control_profile(
         str(args.snerv_modelsize_control_profile)
     )
@@ -220,11 +242,13 @@ def main(argv: list[str] | None = None) -> int:
         fc_dims=snerv_fc_dims,
         emb_sizes=snerv_emb_sizes,
         official_modelsize_mparams=snerv_official_modelsize_mparams,
+        snerv_model_size_adapter=str(args.snerv_model_size_adapter),
         official_enc_strds=snerv_official_enc_strds,
         official_dec_strds=snerv_official_dec_strds,
         modelsize_control_profile_id=str(args.snerv_modelsize_control_profile),
         temporal_context=int(args.snerv_temporal_context),
         temporal_modes=snerv_temporal_modes,
+        official_skip_high_modes=snerv_official_skip_high_modes,
     )
     hinerv_result = write_json_artifact(
         args.output_hinerv_json,
@@ -263,6 +287,7 @@ def main(argv: list[str] | None = None) -> int:
             "snerv_official_modelsize_mparams": list(
                 snerv_official_modelsize_mparams
             ),
+            "snerv_model_size_adapter": str(args.snerv_model_size_adapter),
             "snerv_modelsize_control_profile_id": str(
                 args.snerv_modelsize_control_profile
             ),
@@ -271,6 +296,9 @@ def main(argv: list[str] | None = None) -> int:
             "snerv_official_dec_strds": [int(v) for v in snerv_official_dec_strds],
             "snerv_temporal_context": int(args.snerv_temporal_context),
             "snerv_temporal_modes": list(snerv_temporal_modes),
+            "snerv_official_skip_high_modes": list(
+                snerv_official_skip_high_modes
+            ),
         },
         "hinerv_output_json": hinerv_result.path,
         "hinerv_output_sha256": hinerv_result.sha256,

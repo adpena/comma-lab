@@ -1678,6 +1678,7 @@ def decode_official_mfu_hfr_tub_decoder_payload(
         raise SnervArchiveError("official primitive payload raw sha256 mismatch")
     tensors = _unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
     tensors = _expand_official_skip_high_storage(header, tensors)
+    tensors = _expand_official_tub_input_storage(header, tensors)
     payload_obj = OfficialMfuHfrTubReceiverPayload(
         header=dict(header),
         tensors=tensors,
@@ -1811,10 +1812,13 @@ def _official_tub_input_storage_plan(
         effective = source
     elif normalized == OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC:
         stored = {
-            key: _unused_tub_placeholder(value)
+            key: _unused_tub_storage_placeholder()
             for key, value in source.items()
         }
-        effective = stored
+        effective = {
+            key: _unused_tub_placeholder(value.shape)
+            for key, value in source.items()
+        }
     else:  # pragma: no cover - guarded by normalizer
         raise SnervArchiveError(f"unsupported official tub input codec: {codec!r}")
     source_raw_bytes = sum(
@@ -1837,6 +1841,10 @@ def _official_tub_input_storage_plan(
             },
             "source_raw_bytes": int(source_raw_bytes),
             "stored_raw_bytes": int(stored_raw_bytes),
+            "raw_byte_savings": int(source_raw_bytes - stored_raw_bytes),
+            "receiver_expands_tub_inputs": (
+                normalized == OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC
+            ),
             "receiver_frame_synthesis_uses_tub_inputs": False,
             "lossless_relative_to_source_tub_inputs": (
                 normalized == OFFICIAL_TUB_INPUT_CODEC_FULL
@@ -1848,10 +1856,66 @@ def _official_tub_input_storage_plan(
     }
 
 
-def _unused_tub_placeholder(source: np.ndarray) -> np.ndarray:
-    """Return a deterministic non-constant placeholder for unused TUB inputs."""
+def _expand_official_tub_input_storage(
+    header: Mapping[str, Any],
+    tensors: dict[str, np.ndarray],
+) -> dict[str, np.ndarray]:
+    storage = header.get("tub_input_storage")
+    if storage is None:
+        return tensors
+    if not isinstance(storage, Mapping):
+        raise SnervArchiveError("official TUB input storage metadata must be an object")
+    codec = _normalize_official_tub_input_codec(str(storage.get("codec", "full")))
+    source_shapes = storage.get("source_shapes") or {}
+    stored_shapes = storage.get("stored_shapes") or {}
+    if not isinstance(source_shapes, Mapping) or not isinstance(stored_shapes, Mapping):
+        raise SnervArchiveError("official TUB input storage shapes must be objects")
 
-    out = np.zeros_like(source, dtype=np.float64)
+    out = dict(tensors)
+    for key in ("current", "previous", "next_frame"):
+        tensor_name = f"inputs.tub.{key}"
+        value = _tensor(tensors, tensor_name)
+        source_shape = tuple(int(v) for v in (source_shapes.get(key) or ()))
+        stored_shape = tuple(int(v) for v in (stored_shapes.get(key) or ()))
+        if stored_shape and tuple(value.shape) != stored_shape:
+            raise SnervArchiveError(
+                "official compact TUB stored shape mismatch; "
+                f"{tensor_name} manifest={tuple(value.shape)} header={stored_shape}"
+            )
+        if codec == OFFICIAL_TUB_INPUT_CODEC_FULL:
+            if source_shape and tuple(value.shape) != source_shape:
+                raise SnervArchiveError(
+                    "official full TUB source shape mismatch; "
+                    f"{tensor_name} manifest={tuple(value.shape)} header={source_shape}"
+                )
+            continue
+        if codec != OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC:
+            raise SnervArchiveError(f"unsupported official TUB input codec: {codec!r}")
+        if len(source_shape) != 3 or any(v <= 0 for v in source_shape):
+            raise SnervArchiveError(
+                f"official synthetic TUB source shape is invalid for {tensor_name}"
+            )
+        if tuple(value.shape) != (2,) or not np.array_equal(
+            value.astype(np.float64, copy=False),
+            _unused_tub_storage_placeholder(),
+        ):
+            raise SnervArchiveError(
+                f"official synthetic TUB placeholder is invalid for {tensor_name}"
+            )
+        out[tensor_name] = _unused_tub_placeholder(source_shape)
+    return out
+
+
+def _unused_tub_storage_placeholder() -> np.ndarray:
+    """Return the tiny deterministic sentinel stored for unused TUB inputs."""
+
+    return np.asarray([1.0, -1.0], dtype=np.float64)
+
+
+def _unused_tub_placeholder(shape: tuple[int, ...]) -> np.ndarray:
+    """Expand a deterministic non-constant placeholder for unused TUB inputs."""
+
+    out = np.zeros(tuple(int(v) for v in shape), dtype=np.float64)
     flat = out.reshape(-1)
     if flat.size == 0:
         return out

@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 
 from tac.analysis.nerv_scorer_objective import SCORER_ONLY_OBJECTIVE_AUTHORITY
+from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
 )
@@ -22,6 +23,8 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
+    encode_lf_metadata_payload,
     encode_lf_quant_payload,
 )
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
@@ -30,6 +33,12 @@ from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
 )
 
 SNERV_LF_PAYLOAD_CODEC_SWEEP_SCHEMA = "snerv_lf_payload_codec_sweep.v1"
+SNERV_OFFICIAL_DUMMY_LF_PAYLOAD_CODEC_SWEEP_SCHEMA = (
+    "snerv_official_dummy_lf_payload_codec_sweep.v1"
+)
+OFFICIAL_DUMMY_LF_RECEIVER_SECTION_ROLE = (
+    "snar1_required_placeholder_official_decoder_payload_renders_frames"
+)
 DEFAULT_LF_CODEC_MODES: tuple[str, ...] = (
     "int64_lzma",
     "portfolio_auto",
@@ -128,6 +137,117 @@ def build_snerv_lf_payload_codec_sweep(
     return report
 
 
+def build_snerv_official_dummy_lf_payload_codec_sweep(
+    *,
+    modes: Iterable[str] = (
+        "int64_lzma",
+        LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
+        "portfolio_auto",
+        "int2",
+    ),
+    baseline_mode: str = LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
+    step_map_bits_per_coeff: float = 1.0,
+    hard_byte_ceiling: int = 285_000,
+) -> dict[str, Any]:
+    """Enumerate LF codecs for official MFU/HFR/TUB dummy receiver sections.
+
+    Official primitive packets render frames from the decoder payload.  SNAR1
+    still requires LF metadata, LF quant, and step-map sections, so the
+    receiver-real storage target is one zero LF coefficient and one positive
+    step-map cell, not the full level-1 LF grid.
+    """
+
+    if hard_byte_ceiling <= 0:
+        raise ValueError("hard_byte_ceiling must be positive")
+    if step_map_bits_per_coeff <= 0.0:
+        raise ValueError("step_map_bits_per_coeff must be positive")
+    dummy_planes = [np.zeros((1, 1), dtype=np.int64)]
+    lf_report = build_snerv_lf_payload_codec_sweep(
+        dummy_planes,
+        modes=modes,
+        baseline_mode=str(baseline_mode),
+    )
+    metadata_payload = encode_lf_metadata_payload(lf_zero_points=[0.0])
+    step_packet = encode_step_maps_waterfill(
+        [np.ones((1, 1), dtype=np.float32)],
+        map_importance=np.ones((1,), dtype=np.float64),
+        target_bits_per_coeff=float(step_map_bits_per_coeff),
+    )
+    metadata_payload_bytes = len(metadata_payload)
+    step_map_packet_bytes = len(step_packet.packet)
+    fixed_section_bytes = int(metadata_payload_bytes + step_map_packet_bytes)
+    rows = [
+        _official_dummy_lf_row(
+            row,
+            fixed_section_bytes=fixed_section_bytes,
+            metadata_payload_bytes=metadata_payload_bytes,
+            step_map_packet_bytes=step_map_packet_bytes,
+            hard_byte_ceiling=int(hard_byte_ceiling),
+        )
+        for row in lf_report["rows"]
+    ]
+    baseline_total_bytes = _official_dummy_baseline_total_bytes(
+        rows,
+        baseline_mode=str(baseline_mode),
+        fallback_bytes=fixed_section_bytes + int(lf_report["raw_i64_bytes"]),
+    )
+    section_value_rows = _official_dummy_section_value_rows(
+        rows,
+        baseline_mode=str(baseline_mode),
+        baseline_total_bytes=baseline_total_bytes,
+    )
+    selectable_rows = [
+        row
+        for row in rows
+        if int(row.get("receiver_section_total_bytes") or 0) > 0
+        and not row.get("error")
+    ]
+    selected = min(
+        selectable_rows,
+        key=lambda row: (
+            int(row.get("receiver_section_total_bytes") or 0),
+            str(row.get("mode")),
+        ),
+        default=rows[0],
+    )
+    blockers = [
+        "snerv_official_dummy_lf_has_receiver_section_only_no_trained_official_payload",
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    report = {
+        "schema": SNERV_OFFICIAL_DUMMY_LF_PAYLOAD_CODEC_SWEEP_SCHEMA,
+        "source_schema": SNERV_LF_PAYLOAD_CODEC_SWEEP_SCHEMA,
+        "authority": "false_authority_official_dummy_lf_receiver_section_rate_only",
+        "objective_authority": SCORER_ONLY_OBJECTIVE_AUTHORITY,
+        "codec_proof": SNERV_LF_PAYLOAD_INTN_CODEC_PROOF,
+        "family": "snerv",
+        "axis_tag": "[planning/control]",
+        "receiver_lf_section_role": OFFICIAL_DUMMY_LF_RECEIVER_SECTION_ROLE,
+        "official_mfu_hfr_tub_decoder_payload_renders_frames": True,
+        "full_level1_lf_grid_required_for_receiver_frames": False,
+        "lf_plane_count": 1,
+        "lf_coeff_count_total": 1,
+        "lf_coeffs_per_plane": 1,
+        "plane_shapes": [[1, 1]],
+        "raw_i64_bytes": int(lf_report["raw_i64_bytes"]),
+        "metadata_payload_bytes": int(metadata_payload_bytes),
+        "step_map_packet_bytes": int(step_map_packet_bytes),
+        "fixed_non_lf_section_bytes": int(fixed_section_bytes),
+        "step_map_bits_per_coeff": float(step_map_bits_per_coeff),
+        "hard_byte_ceiling": int(hard_byte_ceiling),
+        "baseline_mode": str(baseline_mode),
+        "baseline_receiver_section_total_bytes": int(baseline_total_bytes),
+        "rows": rows,
+        "section_value_rows": section_value_rows,
+        "selected_rate_only_row": selected,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+    report["byte_price_plan"] = build_nerv_byte_price_plan(report)
+    return report
+
+
 def _sweep_row(
     planes: Sequence[np.ndarray],
     *,
@@ -168,6 +288,104 @@ def _sweep_row(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def _official_dummy_lf_row(
+    row: Mapping[str, Any],
+    *,
+    fixed_section_bytes: int,
+    metadata_payload_bytes: int,
+    step_map_packet_bytes: int,
+    hard_byte_ceiling: int,
+) -> dict[str, Any]:
+    payload_bytes = int(row.get("payload_bytes") or 0)
+    valid = payload_bytes > 0 and not row.get("error")
+    total = int(payload_bytes + fixed_section_bytes) if valid else 0
+    blockers = [
+        *[str(blocker) for blocker in row.get("blockers") or ()],
+        "snerv_official_dummy_lf_has_receiver_section_only_no_trained_official_payload",
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    return {
+        **dict(row),
+        "row_id": f"snerv_official_dummy_lf_codec_{row.get('mode')}",
+        "receiver_lf_section_role": OFFICIAL_DUMMY_LF_RECEIVER_SECTION_ROLE,
+        "lf_plane_count": 1,
+        "lf_coeff_count_total": 1,
+        "lf_coeffs_per_plane": 1,
+        "metadata_payload_bytes": int(metadata_payload_bytes),
+        "step_map_packet_bytes": int(step_map_packet_bytes),
+        "fixed_non_lf_section_bytes": int(fixed_section_bytes),
+        "receiver_section_total_bytes": int(total),
+        "under_hard_byte_ceiling": bool(valid and total <= int(hard_byte_ceiling)),
+        "full_level1_lf_grid_required_for_receiver_frames": False,
+        "official_mfu_hfr_tub_decoder_payload_renders_frames": True,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _official_dummy_baseline_total_bytes(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    baseline_mode: str,
+    fallback_bytes: int,
+) -> int:
+    for row in rows:
+        if str(row.get("mode")) == baseline_mode:
+            value = int(row.get("receiver_section_total_bytes") or 0)
+            if value > 0:
+                return value
+    return int(fallback_bytes)
+
+
+def _official_dummy_section_value_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    baseline_mode: str,
+    baseline_total_bytes: int,
+) -> list[dict[str, Any]]:
+    out = []
+    for row in rows:
+        mode = str(row.get("mode"))
+        total_bytes = int(row.get("receiver_section_total_bytes") or 0)
+        valid = total_bytes > 0 and not row.get("error")
+        row_blockers = [
+            *[str(blocker) for blocker in row.get("blockers") or ()],
+            "snerv_official_dummy_lf_has_packet_exactness_only_no_trained_archive",
+        ]
+        out.append(
+            {
+                "row_id": f"snerv_official_dummy_lf_codec_{mode}",
+                "section_id": "snerv_official_dummy_lf_receiver_sections",
+                "family": "snerv",
+                "scope": "official_dummy_lf_section_codec_replacement",
+                "row_kind": "existing_section_cut",
+                "candidate_mode": mode,
+                "baseline_mode": str(baseline_mode),
+                "baseline_payload_bytes": int(baseline_total_bytes),
+                "payload_bytes": int(total_bytes) if valid else 0,
+                "section_bytes": int(total_bytes) if valid else None,
+                "byte_delta": (
+                    int(total_bytes) - int(baseline_total_bytes) if valid else None
+                ),
+                "delta_nonrate_score": 0.0 if valid else None,
+                "axis_tag": "[planning/control]",
+                "receiver_proof_status": (
+                    "official_dummy_lf_packet_exact_only_trained_archive_missing"
+                    if valid
+                    else "missing"
+                ),
+                "full_video_coverage": False,
+                "exact_lossless_lf_packet_codec": bool(valid),
+                "official_mfu_hfr_tub_decoder_payload_renders_frames": True,
+                "full_level1_lf_grid_required_for_receiver_frames": False,
+                "blockers": _ordered_unique(row_blockers),
+                **FALSE_AUTHORITY,
+            }
+        )
+    return out
 
 
 def _rate_savings(
@@ -305,6 +523,8 @@ def render_snerv_lf_payload_codec_sweep_markdown(report: Mapping[str, Any]) -> s
 __all__ = [
     "DEFAULT_LF_CODEC_MODES",
     "SNERV_LF_PAYLOAD_CODEC_SWEEP_SCHEMA",
+    "SNERV_OFFICIAL_DUMMY_LF_PAYLOAD_CODEC_SWEEP_SCHEMA",
     "build_snerv_lf_payload_codec_sweep",
+    "build_snerv_official_dummy_lf_payload_codec_sweep",
     "render_snerv_lf_payload_codec_sweep_markdown",
 ]

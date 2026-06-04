@@ -49,6 +49,7 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "hinerv_official_controls_only": True,
         "snerv_emb_sizes": [0],
         "snerv_fc_dims": [9],
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
         "snerv_modelsize_control_profile": {
             "blockers": [],
             "dec_strds": [5, 4, 2, 2, 2],
@@ -68,6 +69,7 @@ def test_build_nerv_modelsize_budget_tool_writes_both_family_artifacts(
         "snerv_official_modelsize_mparams": [],
         "snerv_temporal_context": 0,
         "snerv_temporal_modes": ["delta"],
+        "snerv_official_skip_high_modes": ["full"],
     }
     assert summary["score_claim"] is False
     assert summary["ready_for_exact_eval_dispatch"] is False
@@ -279,6 +281,64 @@ def test_build_nerv_modelsize_budget_tool_exposes_snerv_temporal_modes(
         and "_tmhaar1_" in row["candidate_id"]
         for row in payload["selected_candidates"]
     )
+
+
+def test_build_nerv_modelsize_budget_tool_exposes_official_adapter_skip_high_modes(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    hinerv = tmp_path / "hinerv.json"
+    snerv = tmp_path / "snerv.json"
+
+    rc = tool.main(
+        [
+            "--output-hinerv-json",
+            str(hinerv),
+            "--output-snerv-json",
+            str(snerv),
+            "--hard-byte-ceiling",
+            "178000",
+            "--num-pairs",
+            "600",
+            "--per-ceiling-limit",
+            "12",
+            "--snerv-model-size-adapter",
+            "snerv_official_mfu_hfr_tub_primitives_adapter",
+            "--snerv-official-modelsize-mparams",
+            "0.05",
+            "--snerv-temporal-mode",
+            "official_haar_dwt1d_lowpass",
+            "--snerv-official-skip-high-mode",
+            "full",
+            "--snerv-official-skip-high-mode",
+            "shared_mean",
+        ]
+    )
+
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["inputs"]["snerv_model_size_adapter"] == (
+        "snerv_official_mfu_hfr_tub_primitives_adapter"
+    )
+    assert summary["inputs"]["snerv_official_skip_high_modes"] == [
+        "full",
+        "shared_mean",
+    ]
+    payload = json.loads(snerv.read_text(encoding="utf-8"))
+    rows = payload["selected_candidates"]
+    official_rows = [
+        row
+        for row in rows
+        if row["snerv_model_size_adapter"]
+        == "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+    ]
+    assert official_rows
+    assert any("_adofficial_" in row["candidate_id"] for row in official_rows)
+    assert any("_sksharedmean_" in row["candidate_id"] for row in official_rows)
+    assert all(row["lf_coeff_count_total"] == 1 for row in official_rows)
+    assert all(row["nominal_lf_payload_bytes"] < 512 for row in official_rows)
+    assert all(row["nominal_step_map_payload_bytes"] < 512 for row in official_rows)
+    assert all(row["nominal_metadata_payload_bytes"] < 64 for row in official_rows)
 
 
 def test_build_nerv_modelsize_budget_tool_requires_expected_hashes_for_overwrite(

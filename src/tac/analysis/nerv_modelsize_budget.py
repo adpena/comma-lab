@@ -1804,6 +1804,7 @@ def build_snerv_modelsize_budget_report(
     hfr_gain: float = 0.0,
     temporal_context: int = 0,
     temporal_modes: tuple[str, ...] = (DEFAULT_SNERV_TEMPORAL_MODE,),
+    official_skip_high_modes: tuple[str, ...] = ("full",),
 ) -> dict[str, Any]:
     """Return a planner-safe SNeRV model-size budget report."""
 
@@ -1830,6 +1831,7 @@ def build_snerv_modelsize_budget_report(
         hfr_gain=hfr_gain,
         temporal_context=temporal_context,
         temporal_modes=temporal_modes,
+        official_skip_high_modes=official_skip_high_modes,
         invalid_candidate_rows=invalid_candidate_rows,
     )
     selected = select_snerv_modelsize_candidates(
@@ -1860,6 +1862,7 @@ def build_snerv_modelsize_budget_report(
         "hfr_gain": float(hfr_gain),
         "temporal_context": int(temporal_context),
         "temporal_modes": [str(v) for v in temporal_modes],
+        "official_skip_high_modes": [str(v) for v in official_skip_high_modes],
         "hard_byte_ceilings": sorted({int(v) for v in hard_byte_ceilings}),
         "candidate_count": len(candidates),
         "invalid_candidate_count": len(invalid_candidate_rows),

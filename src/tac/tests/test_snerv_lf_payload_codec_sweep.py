@@ -5,7 +5,9 @@ import numpy as np
 
 from tac.analysis.snerv_lf_payload_codec_sweep import (
     SNERV_LF_PAYLOAD_CODEC_SWEEP_SCHEMA,
+    SNERV_OFFICIAL_DUMMY_LF_PAYLOAD_CODEC_SWEEP_SCHEMA,
     build_snerv_lf_payload_codec_sweep,
+    build_snerv_official_dummy_lf_payload_codec_sweep,
 )
 from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
     CUT,
@@ -109,3 +111,41 @@ def test_snerv_lf_payload_codec_sweep_never_selects_failed_zero_byte_mode() -> N
     assert "snerv_lf_payload_codec_mode_failed" not in by_mode["int64_lzma"][
         "blockers"
     ]
+
+
+def test_snerv_official_dummy_lf_payload_codec_sweep_prices_receiver_sections() -> None:
+    report = build_snerv_official_dummy_lf_payload_codec_sweep(
+        modes=("int64_lzma", "spatial_delta_zigzag_leb128", "portfolio_auto", "int2"),
+        hard_byte_ceiling=285_000,
+    )
+
+    assert report["schema"] == SNERV_OFFICIAL_DUMMY_LF_PAYLOAD_CODEC_SWEEP_SCHEMA
+    assert report["source_schema"] == SNERV_LF_PAYLOAD_CODEC_SWEEP_SCHEMA
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    assert report["receiver_lf_section_role"] == (
+        "snar1_required_placeholder_official_decoder_payload_renders_frames"
+    )
+    assert report["official_mfu_hfr_tub_decoder_payload_renders_frames"] is True
+    assert report["full_level1_lf_grid_required_for_receiver_frames"] is False
+    assert report["lf_plane_count"] == 1
+    assert report["lf_coeff_count_total"] == 1
+    assert report["metadata_payload_bytes"] == 4
+    assert report["step_map_packet_bytes"] > 0
+    assert report["selected_rate_only_row"]["under_hard_byte_ceiling"] is True
+    assert report["selected_rate_only_row"]["receiver_section_total_bytes"] < 285_000
+    assert all(
+        row["receiver_section_total_bytes"] < 285_000
+        for row in report["rows"]
+        if not row["error"]
+    )
+    assert "snerv_official_dummy_lf_has_receiver_section_only_no_trained_official_payload" in (
+        report["blockers"]
+    )
+
+    plan = report["byte_price_plan"]
+    assert plan["source_schema"] == SNERV_OFFICIAL_DUMMY_LF_PAYLOAD_CODEC_SWEEP_SCHEMA
+    assert plan["score_claim"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
+    assert "full_video_coverage_missing" in plan["blockers"]
