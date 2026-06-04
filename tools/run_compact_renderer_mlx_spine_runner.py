@@ -12340,6 +12340,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
     from tac.substrates.hi_nerv.bitstream import (
         build_hinerv_archive_section_qat_weight_policy,
+        build_hinerv_train_time_section_byte_control,
     )
     from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
     from tac.substrates.hinton_distilled_scorer_surrogate import (
@@ -12569,11 +12570,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         include_substrings=("latents",),
         exclude_substrings=(),
     ).validated()
+    train_time_section_byte_control = build_hinerv_train_time_section_byte_control(
+        archive_section_telemetry,
+        coder_qat_loss_weight_map,
+        hard_byte_ceiling=hard_byte_ceiling,
+    )
     train_time_dual_ascent_config = build_default_nerv_train_time_dual_ascent_config(
         family="hi_nerv",
         segnet_distillation_weight=float(segnet_distillation_weight),
         pose_distillation_weight=float(pose_distillation_weight),
         coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+        section_byte_budgets=train_time_section_byte_control.get(
+            "section_byte_budgets"
+        ),
+        section_byte_loss_weight_key_map=train_time_section_byte_control.get(
+            "section_byte_loss_weight_key_map"
+        ),
+        section_byte_loss_weight_scale_map=train_time_section_byte_control.get(
+            "section_byte_loss_weight_scale_map"
+        ),
     )
     decoder_waterfill_fake_quant_bits_by_name = (
         _decoder_weight_waterfill_fake_quant_bits_by_name(decoder_weight_waterfill_plan)
@@ -12599,6 +12614,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 suffix = str(key).removeprefix("coder_qat_")
                 terms[f"latent_qat_{suffix}"] = value
         return terms
+
+    def _train_time_section_byte_metrics(
+        _model_obj: Any,
+        _idx: Any,
+        _loss_weights: Mapping[str, float],
+    ) -> Mapping[str, Any] | None:
+        payload = train_time_section_byte_control.get("metrics_payload")
+        return dict(payload) if isinstance(payload, Mapping) else None
 
     def _export_archive(model_obj: Any, archive_output_dir: Path) -> tuple[Path, str, int]:
         return export_hi_nerv_mlx_archive(
@@ -12824,6 +12847,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     archive_section_qat_policy
                 )
             ),
+            "train_time_section_byte_control": (
+                _strip_substrate_metadata_authority_fields(
+                    train_time_section_byte_control
+                )
+            ),
             "train_time_dual_ascent": strip_candidate_curriculum_authority_fields(
                 train_time_dual_ascent_config
             ),
@@ -12896,6 +12924,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "eval_roundtrip_camera_hw": (874, 1164),
         "pose_student_input_preprocess": "pr95_yuv6",
     }
+    if train_time_section_byte_control.get("metrics_payload") is not None:
+        bundle_kwargs["train_time_section_byte_metrics"] = (
+            _train_time_section_byte_metrics
+        )
     if sparse_priority_target_hydration:
         bundle_kwargs["source_pair_indices"] = hydrated_source_pair_indices
     recon_pixel_weight = None

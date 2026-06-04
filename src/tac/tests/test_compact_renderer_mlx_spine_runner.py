@@ -8424,6 +8424,16 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
             row["loss_weight_key"]
             for row in kwargs["train_time_dual_ascent_config"]["constraints"]
         )
+        captured["dual_metric_names"] = sorted(
+            row["metric_name"]
+            for row in kwargs["train_time_dual_ascent_config"]["constraints"]
+        )
+        assert bundle.train_time_section_byte_metrics is not None
+        captured["section_byte_metrics"] = bundle.train_time_section_byte_metrics(
+            bundle.model,
+            mx.array([0], dtype=mx.int32),
+            dict(bundle.extra_loss_weights),
+        )
         captured["metadata"] = dict(bundle.substrate_artifact_metadata)
         return FakeArtifact({"substrate_artifact_metadata": captured["metadata"]})
 
@@ -8538,8 +8548,39 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
     assert "latent_qat_quant_residual" in captured["extra_loss_term_keys"]
     assert "coder_qat_quant_residual" in captured["dual_loss_weight_keys"]
     assert "latent_qat_quant_residual" in captured["dual_loss_weight_keys"]
+    assert (
+        "train_time_section_rate_score__decoder_state"
+        in captured["dual_metric_names"]
+    )
+    assert (
+        "train_time_section_rate_score__latents_coarse"
+        in captured["dual_metric_names"]
+    )
+    assert (
+        "train_time_section_rate_score__latents_mid"
+        in captured["dual_metric_names"]
+    )
+    section_metrics = captured["section_byte_metrics"]
+    assert section_metrics["archive_bytes"] == 400
+    assert section_metrics["section_bytes"] == {
+        "decoder_state": 200,
+        "latents_coarse": 40,
+        "latents_mid": 40,
+    }
     metadata = captured["metadata"]["score_aware_training"]
     assert metadata["archive_section_qat_weight_policy"]["active"] is True
+    section_control = metadata["train_time_section_byte_control"]
+    assert section_control["active"] is True
+    assert section_control["section_byte_budgets"] == {
+        "decoder_state": 89_000,
+        "latents_coarse": 17_800,
+        "latents_mid": 17_800,
+    }
+    assert section_control["section_byte_loss_weight_key_map"] == {
+        "decoder_state": "coder_qat_quant_residual",
+        "latents_coarse": "latent_qat_quant_residual",
+        "latents_mid": "latent_qat_quant_residual",
+    }
     assert metadata["latent_coder_aware_qat"]["enabled"] is True
 
 
