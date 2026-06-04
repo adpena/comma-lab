@@ -1295,6 +1295,111 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_official_primitives_full_video_long_training_defers_replay_gate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pair_count = mod.SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS + 1
+    pairs = _tiny_pairs(pairs=pair_count)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    def fail_if_expensive_replay_is_called(*_args, **_kwargs):
+        raise AssertionError("full-video training should defer pretraining replay")
+
+    class FakeArtifact:
+        def as_dict(self) -> dict[str, object]:
+            return {
+                "schema": "mlx_score_aware_training_artifact.v1",
+                "substrate_id": "snerv_inverse_steg_carrier",
+                "lane_id": "lane_snerv_mlx_score_aware_train_export",
+                "total_epochs_completed": 1,
+                "total_wall_clock_seconds": 0.1,
+                "telemetry_path": "",
+                "live_checkpoint_path": "",
+                "ema_shadow_checkpoint_path": "",
+            }
+
+    harness_calls: list[dict[str, object]] = []
+
+    def fake_run_mlx_score_aware_full_main(**kwargs):
+        harness_calls.append(kwargs)
+        on_epoch_end = kwargs.get("on_epoch_end")
+        if on_epoch_end is not None:
+            on_epoch_end(SimpleNamespace(epoch=0, loss=0.0))
+        return FakeArtifact()
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        mod,
+        "_build_official_mfu_hfr_tub_long_training_replay_contract",
+        fail_if_expensive_replay_is_called,
+    )
+    monkeypatch.setattr(
+        "tac.substrates._shared.mlx_score_aware.harness.run_mlx_score_aware_full_main",
+        fake_run_mlx_score_aware_full_main,
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_full_video_training_deferred_replay",
+        num_pairs=pair_count,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-primitives-full-video-training-request",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_batch_pairs": pair_count,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    assert harness_calls
+    assert report["score_aware_long_training_executed"] is True
+    assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
+    blocker = (
+        "snerv_official_mfu_hfr_tub_receiver_payload_replay_deferred_full_video"
+    )
+    assert blocker in report["blockers"]
+    replay = report["score_aware_long_training"][
+        "official_mfu_hfr_tub_source_forward_replay"
+    ]
+    assert Path(replay["artifact_path"]).is_file()
+    assert replay["deferred_for_full_video_training_start"] is True
+    assert replay["defer_threshold_pairs"] == (
+        mod.SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS
+    )
+    assert replay["requested_pair_count"] == pair_count
+    assert replay["receiver_official_payload_forward_replay_passed"] is False
+    assert replay["score_aware_long_training_renderer_bound"] is True
+    assert replay["train_renderer_bound"] is True
+    assert blocker in replay["blockers"]
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in replay[
+        "blockers"
+    ]
+    assert all(
+        row["train_renderer_bound"] is True
+        and row["receiver_payload_forward_replay_proven"] is False
+        and blocker in row["blockers"]
+        for row in replay["component_rows"]
+    )
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

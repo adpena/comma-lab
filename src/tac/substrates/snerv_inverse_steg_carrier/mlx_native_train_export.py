@@ -127,6 +127,7 @@ FALSE_AUTHORITY = {
     "ready_for_exact_eval_dispatch": False,
 }
 NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
+SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
 
 
 class SnervMlxNativeExportError(ValueError):
@@ -815,6 +816,15 @@ def train_export_snerv_mlx_native(
         for blocker in score_aware_long_training_public.get("blockers") or ()
         if str(blocker)
     )
+    long_training_official_replay = score_aware_long_training_public.get(
+        "official_mfu_hfr_tub_source_forward_replay"
+    )
+    if isinstance(long_training_official_replay, Mapping):
+        blockers.extend(
+            str(blocker)
+            for blocker in long_training_official_replay.get("blockers") or ()
+            if str(blocker)
+        )
     blockers.extend(
         _scorer_loop_qat_blockers(
             scorer_loop_qat_public,
@@ -1313,13 +1323,23 @@ def _run_score_aware_long_training_attachment(
     pairs = np.asarray(pairs_nchw255, dtype=np.float32)
     official_source_forward_replay: dict[str, Any] | None = None
     if official_training_requested:
-        source_forward_replay = _build_official_mfu_hfr_tub_long_training_replay_contract(
-            output_dir=out,
-            pairs_nchw255=pairs,
-            model_size=model_size,
-            source_pair_indices=source_pair_indices,
-            allow_overwrite=allow_overwrite,
-        )
+        if int(pairs.shape[0]) > SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS:
+            source_forward_replay = (
+                _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
+                    output_dir=out,
+                    pair_count=int(pairs.shape[0]),
+                    source_pair_indices=source_pair_indices,
+                    allow_overwrite=allow_overwrite,
+                )
+            )
+        else:
+            source_forward_replay = _build_official_mfu_hfr_tub_long_training_replay_contract(
+                output_dir=out,
+                pairs_nchw255=pairs,
+                model_size=model_size,
+                source_pair_indices=source_pair_indices,
+                allow_overwrite=allow_overwrite,
+            )
         official_source_forward_replay = (
             _official_long_training_replay_with_renderer_binding(
                 source_forward_replay
@@ -1998,6 +2018,108 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             ],
         }
     payload.update(FALSE_AUTHORITY)
+    write_json(artifact_path, payload)
+    payload["artifact_path"] = artifact_path.as_posix()
+    payload["artifact_sha256"] = sha256_file(artifact_path)
+    write_json(artifact_path, payload)
+    return payload
+
+
+def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
+    *,
+    output_dir: str | Path,
+    pair_count: int,
+    source_pair_indices: Sequence[int],
+    allow_overwrite: bool,
+) -> dict[str, Any]:
+    """Write a fail-closed replay contract without blocking full-video training."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    artifact_path = out / "snerv_official_mfu_hfr_tub_source_forward_replay_contract.json"
+    if artifact_path.exists() and not allow_overwrite:
+        raise SnervMlxNativeExportError(
+            f"refusing to overwrite existing official source-forward replay contract: {artifact_path}"
+        )
+    blocker = "snerv_official_mfu_hfr_tub_receiver_payload_replay_deferred_full_video"
+    payload: dict[str, Any] = {
+        "schema": "snerv_official_mfu_hfr_tub_source_forward_replay_contract.v1",
+        "family": "snerv",
+        "adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        "requested_pair_count": int(pair_count),
+        "source_pair_indices": [int(value) for value in source_pair_indices],
+        "source_forward_replay_bound": False,
+        "source_forward_replay_verified": False,
+        "source_forward_replay_authority": False,
+        "score_aware_long_training_renderer_bound": False,
+        "receiver_official_payload_forward_replay_passed": False,
+        "official_torch_source_forward_replay_passed": False,
+        "deferred_for_full_video_training_start": True,
+        "defer_threshold_pairs": int(SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS),
+        "defer_reason": (
+            "full_video_score_aware_training_must_not_block_on_pretraining_"
+            "receiver_payload_replay"
+        ),
+        "selected_packet_authority": {
+            "status": "deferred_until_export_receiver_replay",
+            "frame_producing_official_export": False,
+            **FALSE_AUTHORITY,
+        },
+        "official_receiver_tensor_map": {
+            "schema": "snerv_official_receiver_tensor_map.v1",
+            "receiver_tensor_map_verified": False,
+            "deferred_for_full_video_training_start": True,
+            "blockers": [blocker],
+            **FALSE_AUTHORITY,
+        },
+        "official_receiver_runtime_decode_proof": {
+            "schema": "snerv_official_receiver_runtime_decode_contract.v1",
+            "receiver_runtime_decode_proven": False,
+            "deferred_for_full_video_training_start": True,
+            "blockers": [blocker],
+            **FALSE_AUTHORITY,
+        },
+        "component_rows": [
+            {
+                "schema": "snerv_official_mfu_hfr_tub_long_training_replay_component.v1",
+                "component_id": component_id,
+                "receiver_payload_forward_replay_proven": False,
+                "receiver_tensor_payload_present": False,
+                "official_source_forward_parity_proven": False,
+                "score_aware_long_training_renderer_bound": False,
+                "deferred_for_full_video_training_start": True,
+                "blockers": [
+                    "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
+                    blocker,
+                    source_blocker,
+                ],
+                **FALSE_AUTHORITY,
+            }
+            for component_id, source_blocker in (
+                (
+                    "mfu",
+                    "snerv_mfu_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+                ),
+                (
+                    "hfr",
+                    "snerv_hfr_source_forward_replay_requires_upstream_torch_state_dict_mapping",
+                ),
+                (
+                    "tub",
+                    "snerv_tub_full_source_forward_replay_requires_temporal_encoder_decoder_fusion_mapping",
+                ),
+            )
+        ],
+        "blockers": _ordered_unique(
+            (
+                blocker,
+                "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
+            )
+        ),
+        **FALSE_AUTHORITY,
+    }
     write_json(artifact_path, payload)
     payload["artifact_path"] = artifact_path.as_posix()
     payload["artifact_sha256"] = sha256_file(artifact_path)

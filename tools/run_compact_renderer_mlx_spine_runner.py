@@ -137,6 +137,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     normalize_snerv_model_size_adapter,
+    official_snerv_modelsize_to_fc_dim,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (  # noqa: E402
     build_snerv_mlx_native_adapter_contract,
@@ -2715,6 +2716,81 @@ def _modelsize_candidate_from_self_describing_id(
     return row
 
 
+def _int_tuple_from_candidate_value(value: Any) -> tuple[int, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return tuple(int(v) for v in re.split(r"[x,]", value) if v.strip())
+    return tuple(int(v) for v in value)
+
+
+def _float_tuple_from_candidate_value(value: Any) -> tuple[float, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return tuple(float(v) for v in re.split(r"[,]", value) if v.strip())
+    return tuple(float(v) for v in value)
+
+
+def _resolve_snerv_execution_fc_dim(
+    candidate: Mapping[str, Any],
+    *,
+    cli_override: int | None,
+    fallback: int,
+) -> int:
+    """Resolve the receiver-visible SNeRV fc_dim at launch time."""
+
+    explicit = _compact_positive_int_from_keys(candidate, ("fc_dim", "snerv_fc_dim"))
+    if explicit is not None:
+        return int(explicit)
+    solution = candidate.get("official_modelsize_solution")
+    if isinstance(solution, Mapping):
+        solved = _compact_positive_int_from_keys(solution, ("fc_dim", "snerv_fc_dim"))
+        if solved is not None:
+            return int(solved)
+    modelsize = _compact_finite_float_from_keys(
+        candidate,
+        ("modelsize_mparams", "official_modelsize_mparams"),
+    )
+    if modelsize is not None:
+        carrier_hw = _int_tuple_from_candidate_value(
+            candidate.get("carrier_hw") or (384, 512)
+        )
+        profile = candidate.get("modelsize_control_profile")
+        enc_strds = candidate.get("enc_strds", candidate.get("official_enc_strds"))
+        dec_strds = candidate.get("dec_strds", candidate.get("official_dec_strds"))
+        if isinstance(profile, Mapping):
+            enc_strds = enc_strds or profile.get("enc_strds")
+            dec_strds = dec_strds or profile.get("dec_strds")
+        enc_tuple = _int_tuple_from_candidate_value(enc_strds)
+        dec_tuple = _int_tuple_from_candidate_value(dec_strds)
+        if len(carrier_hw) == 2 and enc_tuple and dec_tuple:
+            return int(
+                official_snerv_modelsize_to_fc_dim(
+                    modelsize_mparams=float(modelsize),
+                    full_data_length=int(candidate.get("num_pairs", 600)) * 2,
+                    final_size=int(carrier_hw[0]) * int(carrier_hw[1]),
+                    enc_strds=enc_tuple,
+                    dec_strds=dec_tuple,
+                    ks=_int_tuple_from_candidate_value(
+                        candidate.get("ks", (0, 1, 5))
+                    ),
+                    enc_dim=_float_tuple_from_candidate_value(
+                        candidate.get("enc_dim", (64.0, 16.0))
+                    ),
+                    emb_size=int(
+                        candidate.get("emb_size", candidate.get("snerv_emb_size", 0))
+                    ),
+                    reduce=float(candidate.get("reduce", 1.2)),
+                    lower_width=int(candidate.get("lower_width", 12)),
+                    saturate_stages=int(candidate.get("saturate_stages", -1)),
+                ).fc_dim
+            )
+    if cli_override is not None:
+        return int(cli_override)
+    return int(fallback)
+
+
 def _modelsize_control_contract(
     candidate: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
@@ -3947,14 +4023,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     decoder_payload_codec = str(
         candidate.get("decoder_payload_codec", "float32_lzma")
     )
-    snerv_fc_dim = int(
-        candidate.get(
-            "fc_dim",
-            candidate.get(
-                "snerv_fc_dim",
-                9 if snerv_fc_dim_override is None else int(snerv_fc_dim_override),
-            ),
-        )
+    snerv_fc_dim = _resolve_snerv_execution_fc_dim(
+        candidate,
+        cli_override=snerv_fc_dim_override,
+        fallback=9,
     )
     snerv_emb_size = int(
         candidate.get(

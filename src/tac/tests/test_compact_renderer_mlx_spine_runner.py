@@ -7426,6 +7426,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "bits_per_coeff": 1.5,
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int2_symmetric",
+            "modelsize_mparams": 0.05,
+            "official_modelsize_solution": {
+                "schema": "official_snerv_modelsize_to_fc_dim.v1",
+                "modelsize_mparams": 0.05,
+                "fc_dim": 11,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "num_pairs": 600,
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 150_000,
@@ -7501,6 +7510,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["modelsize_candidate"][
         "snerv_score_aware_long_training_epochs"
     ] == 13
+    assert native_calls[0]["modelsize_candidate"]["fc_dim"] == 11
+    assert native_calls[0]["modelsize_candidate"]["official_modelsize_solution"][
+        "fc_dim"
+    ] == 11
     assert native_calls[0]["modelsize_candidate"][
         "snerv_segnet_distillation_weight"
     ] == pytest.approx(0.025)
