@@ -22,6 +22,7 @@ requires a combined value+grad+update step (the canonical helper prefers
 """
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -43,6 +44,7 @@ SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS: tuple[str, ...] = (
     "adamax",
     "adadelta",
     "adagrad",
+    "aurora_like",
     "rmsprop",
     "sgd",
     "lion",
@@ -53,6 +55,7 @@ SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS: tuple[str, ...] = (
 DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND = "pact_muon_adamw"
 MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS: tuple[str, ...] = (
     "adamw",
+    "aurora_like",
     "sgd",
     "lion",
     "adafactor",
@@ -105,6 +108,18 @@ _MLX_OPTIMIZER_PROVENANCE_BY_KIND: dict[str, dict[str, Any]] = {
         "role": "native_mlx_lr_scale_adaptive_baseline_sweep",
         "contest_adaptation": "weight_decay_rejected_when_requested",
     },
+    "aurora_like": {
+        "borrowed_from": (
+            "tilde-research/aurora-release leverage-uniform polar update "
+            "ported to MLX"
+        ),
+        "role": "aurora_like_rectangular_matrix_optimizer_smoke",
+        "contest_adaptation": (
+            "matrix-like leaves receive leverage-uniform polar updates; "
+            "rank-0/1 leaves use AdamW-style moments; macOS-MLX timing signal "
+            "only until receiver-closed archive/runtime proof and exact replay"
+        ),
+    },
     "muon": {
         "borrowed_from": "mlx.optimizers.Muon",
         "role": "native_mlx_all_parameter_muon_sweep",
@@ -130,6 +145,10 @@ PACT_MUON_ADAMW_MUON_LR_MULTIPLIER = 2.0e-4 / 3.0e-5
 PACT_MUON_ADAMW_LATENT_LR_MULTIPLIER = 10.0
 PR95_STAGE_BASE_SEG_WEIGHT = 100.0
 PR95_STAGE_BASE_POSE_WEIGHT = 1.0
+AURORA_LIKE_SOURCE_REPO = "https://github.com/tilde-research/aurora-release"
+AURORA_LIKE_SOURCE_COMMIT = "7303d8cb9999d735cb12c921f3651f04bf362524"
+AURORA_LIKE_PP_ITERATIONS = 2
+AURORA_LIKE_PP_BETA = 0.5
 
 DECODER_GRADIENT_SALIENCY_SCHEMA = "mlx_decoder_weight_gradient_saliency.v1"
 _DECODER_SALIENCY_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
@@ -166,6 +185,187 @@ def _is_decoder_weight_saliency_group(name: str) -> bool:
     if any(token in lowered for token in _DECODER_SALIENCY_EXCLUDE_SUBSTRINGS):
         return False
     return any(token in lowered for token in _DECODER_SALIENCY_INCLUDE_SUBSTRINGS)
+
+
+def _build_aurora_like_mlx_optimizer(
+    *,
+    learning_rate: Any,
+    weight_decay: float | None,
+) -> Any:
+    """Return a real Aurora-like MLX optimizer object.
+
+    This is a local MLX port of the public Aurora update shape: SGD momentum,
+    leverage-uniform polar refinement for non-square matrices, Muon-style
+    aspect-ratio scaling, and decoupled weight decay.  It is intentionally named
+    ``aurora_like`` because Pact has not established source-faithful timing,
+    byte-closed export, or exact replay authority for the Tilde code path.
+    """
+
+    require_mlx_for_harness()
+    import mlx.core as mx
+    import mlx.optimizers as mlx_optim
+
+    class AuroraLikeMlxOptimizer(mlx_optim.Optimizer):
+        def __init__(
+            self,
+            *,
+            learning_rate: Any,
+            weight_decay: float,
+            mu: float = 0.95,
+            nesterov: bool = True,
+            pp_iterations: int = AURORA_LIKE_PP_ITERATIONS,
+            pp_beta: float = AURORA_LIKE_PP_BETA,
+            eps: float = 1.0e-7,
+            adamw_betas: tuple[float, float] = (0.9, 0.999),
+            adamw_eps: float = 1.0e-8,
+        ) -> None:
+            super().__init__()
+            if not (0.0 < float(mu) < 1.0):
+                raise ValueError(f"aurora_like mu must be in (0, 1), got {mu!r}")
+            if int(pp_iterations) < 1:
+                raise ValueError(
+                    "aurora_like pp_iterations must be >= 1, "
+                    f"got {pp_iterations!r}"
+                )
+            if float(pp_beta) <= 0.0:
+                raise ValueError(
+                    f"aurora_like pp_beta must be positive, got {pp_beta!r}"
+                )
+            if float(eps) <= 0.0:
+                raise ValueError(f"aurora_like eps must be positive, got {eps!r}")
+            self._maybe_schedule("learning_rate", learning_rate)
+            self.weight_decay = float(weight_decay)
+            self.mu = float(mu)
+            self.nesterov = bool(nesterov)
+            self.pp_iterations = int(pp_iterations)
+            self.pp_beta = float(pp_beta)
+            self.eps = float(eps)
+            self.adamw_betas = tuple(float(value) for value in adamw_betas)
+            self.adamw_eps = float(adamw_eps)
+            self.source_repo = AURORA_LIKE_SOURCE_REPO
+            self.source_commit = AURORA_LIKE_SOURCE_COMMIT
+
+        def init_single(self, parameter: Any, state: dict[str, Any]) -> None:
+            state["momentum"] = mx.zeros_like(parameter)
+            state["adamw_m"] = mx.zeros_like(parameter)
+            state["adamw_v"] = mx.zeros_like(parameter)
+
+        def _polar_simple_quintic(self, matrix: Any) -> Any:
+            x = matrix.astype(mx.float32)
+            transposed = int(x.shape[-2]) > int(x.shape[-1])
+            if transposed:
+                x = x.T
+            x = x / (mx.linalg.norm(x, keepdims=True) + self.eps)
+            a, b, c = (2.0, -1.5, 0.5)
+            for _ in range(12):
+                aa = x @ x.T
+                bb = b * aa + c * (aa @ aa)
+                x = a * x + bb @ x
+            if transposed:
+                x = x.T
+            return x.astype(matrix.dtype)
+
+        def _aurora_matrix_update(self, update: Any) -> Any:
+            original_shape = update.shape
+            if len(original_shape) > 2:
+                rows = int(original_shape[0])
+                cols = math.prod(int(dim) for dim in original_shape[1:])
+                update_2d = mx.reshape(update, (rows, cols))
+            else:
+                rows = int(original_shape[0])
+                cols = int(original_shape[1])
+                update_2d = update
+
+            if rows == cols:
+                projected = self._polar_simple_quintic(update_2d)
+            else:
+                tall = update_2d
+                transposed = rows < cols
+                if transposed:
+                    tall = tall.T
+                tall_rows = int(tall.shape[0])
+                tall_cols = int(tall.shape[1])
+                tall32 = tall.astype(mx.float32)
+                target_row_sq = float(tall_cols) / float(tall_rows)
+                row_norm = mx.sqrt(mx.sum(tall32 * tall32, axis=-1, keepdims=True))
+                d = 1.0 / mx.maximum(row_norm, mx.array(self.eps, dtype=mx.float32))
+                projected = tall32
+                for index in range(self.pp_iterations):
+                    projected = self._polar_simple_quintic(d * tall32).astype(
+                        mx.float32
+                    )
+                    if index < self.pp_iterations - 1:
+                        row_sq = mx.sum(
+                            projected * projected,
+                            axis=-1,
+                            keepdims=True,
+                        )
+                        row_sq = mx.maximum(
+                            row_sq,
+                            mx.array(self.eps * self.eps, dtype=mx.float32),
+                        )
+                        d = d * ((target_row_sq / row_sq) ** self.pp_beta)
+                if transposed:
+                    projected = projected.T
+                projected = projected.astype(update_2d.dtype)
+
+            projected = projected * max(1.0, math.sqrt(float(rows) / float(cols)))
+            if len(original_shape) > 2:
+                return mx.reshape(projected, original_shape)
+            return projected
+
+        def _adamw_like_update(
+            self,
+            gradient: Any,
+            parameter: Any,
+            state: dict[str, Any],
+            learning_rate_value: Any,
+        ) -> Any:
+            beta1, beta2 = self.adamw_betas
+            m = state["adamw_m"]
+            v = state["adamw_v"]
+            m = beta1 * m + (1.0 - beta1) * gradient
+            v = beta2 * v + (1.0 - beta2) * (gradient * gradient)
+            state["adamw_m"] = m
+            state["adamw_v"] = v
+            base = parameter
+            if self.weight_decay:
+                base = parameter * (1.0 - learning_rate_value * self.weight_decay)
+            return base - learning_rate_value * m / (mx.sqrt(v) + self.adamw_eps)
+
+        def apply_single(
+            self,
+            gradient: Any,
+            parameter: Any,
+            state: dict[str, Any],
+        ) -> Any:
+            learning_rate_value = self.learning_rate.astype(gradient.dtype)
+            if len(getattr(gradient, "shape", ())) < 2:
+                return self._adamw_like_update(
+                    gradient,
+                    parameter,
+                    state,
+                    learning_rate_value,
+                )
+
+            momentum = state["momentum"]
+            momentum = self.mu * momentum + (1.0 - self.mu) * gradient
+            state["momentum"] = momentum
+            update = (
+                (1.0 - self.mu) * gradient + self.mu * momentum
+                if self.nesterov
+                else momentum
+            )
+            update = self._aurora_matrix_update(update)
+            base = parameter
+            if self.weight_decay:
+                base = parameter * (1.0 - learning_rate_value * self.weight_decay)
+            return base - learning_rate_value * update.astype(parameter.dtype)
+
+    return AuroraLikeMlxOptimizer(
+        learning_rate=learning_rate,
+        weight_decay=0.025 if weight_decay is None else float(weight_decay),
+    )
 
 
 class MlxScoreAwareAdapter:
@@ -214,6 +414,8 @@ class MlxScoreAwareAdapter:
         cosine_decay_total_epochs: int | None = None,
         cosine_decay_min_lr_ratio: float = 1e-2,
         prioritized_pair_indices: Sequence[int] | None = None,
+        pair_sampling_weights: Mapping[int, float] | None = None,
+        pair_sampling_default_weight: float = 1.0,
     ) -> None:
         """Initialize the canonical MLX score-aware adapter.
 
@@ -279,6 +481,16 @@ class MlxScoreAwareAdapter:
                 training telemetry only; it lets XRay/master-gradient hard-pair
                 lists steer batches without pretending sampled training covers
                 the full video.
+            pair_sampling_weights: optional source-pair/local-pair sampling
+                weights from XRay/scorer-error telemetry. Keys are contest
+                pair indices; when ``bundle.source_pair_indices`` is set they
+                resolve through that source->local map. Values are finite
+                non-negative sampling mass, not loss multipliers. This changes
+                which real pairs train more often; it does not change scorer
+                authority or create full-video replay evidence.
+            pair_sampling_default_weight: baseline sampling mass for pairs not
+                explicitly present in ``pair_sampling_weights``. Set to 0.0
+                only for deliberate top-pair hard-focus runs.
         """
         mx = require_mlx_for_harness()
         import mlx.nn as mlx_nn
@@ -356,6 +568,12 @@ class MlxScoreAwareAdapter:
         )
         self._prioritized_pair_indices = self._normalize_prioritized_pair_indices(
             prioritized_pair_indices
+        )
+        self._pair_sampling_weights = self._normalize_pair_sampling_weights(
+            pair_sampling_weights
+        )
+        self._pair_sampling_default_weight = self._normalize_pair_sampling_default_weight(
+            pair_sampling_default_weight
         )
         # Wave N+11 telemetry (consumed by tests + landing memo for the
         # canonical Provenance bind step).
@@ -536,6 +754,7 @@ class MlxScoreAwareAdapter:
         batch: Any,
         stage_verdict: Any,
         model: Any,
+        loss_weights: Mapping[str, float] | None = None,
     ) -> tuple[Any, dict[str, Any]]:
         """Build the PR95 stage-specific scorer-surrogate loss.
 
@@ -553,12 +772,13 @@ class MlxScoreAwareAdapter:
             PR95_SEG_LOSS_L7_SOFTPLUS,
             PR95_SEG_LOSS_SMOOTH_DISAGREEMENT,
             PR95_SEG_LOSS_TAU_SOFTPLUS,
-            pr95_mlx_pose_loss,
-            pr95_mlx_stage_scorer_surrogate_loss,
             pr95_mlx_stage_seg_loss,
         )
         from tac.substrates._shared.mlx_score_aware.loss import (
             _apply_eval_roundtrip_ste_nhwc01,
+            _pose_distillation_loss_and_raw_mse,
+            _prepare_recon_pixel_weight,
+            _weighted_recon,
             decode_frames_nhwc01,
             pose_student_inputs_nhwc,
         )
@@ -585,6 +805,31 @@ class MlxScoreAwareAdapter:
         rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
         rgb_0 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_0)
         rgb_1 = _apply_eval_roundtrip_ste_nhwc01(self.bundle, rgb_1)
+        gt_0 = self.bundle.target_rgb_0[batch]
+        gt_1 = self.bundle.target_rgb_1[batch]
+        if self.bundle.recon_pixel_weight is None:
+            recon = mx.mean((rgb_0 - gt_0) ** 2) + mx.mean((rgb_1 - gt_1) ** 2)
+        else:
+            weight_0 = mx.stop_gradient(
+                _prepare_recon_pixel_weight(
+                    self.bundle,
+                    rgb_0.shape,
+                    idx=batch,
+                    frame_index=0,
+                )
+            )
+            weight_1 = mx.stop_gradient(
+                _prepare_recon_pixel_weight(
+                    self.bundle,
+                    rgb_1.shape,
+                    idx=batch,
+                    frame_index=1,
+                )
+            )
+            recon = (
+                _weighted_recon(self.bundle, rgb_0, gt_0, weight_0)
+                + _weighted_recon(self.bundle, rgb_1, gt_1, weight_1)
+            )
 
         seg_rgb = rgb_1 if self.bundle.segnet_teacher_frame_index == 1 else rgb_0
         student_logits_nhwc = self.bundle.learnable_student_head(seg_rgb)
@@ -641,25 +886,33 @@ class MlxScoreAwareAdapter:
             effective_seg_weight,
             effective_pose_weight,
         ) = self._pr95_stage_score_weight_controls()
-        total = pr95_mlx_stage_scorer_surrogate_loss(
-            seg_logits_nchw=seg_logits_nchw,
-            targets_hard_nhw=targets_hard_nhw,
-            pose_pred_first6=pose_pred[:, :6],
-            pose_target_first6=pose_target[:, :6],
-            loss_family=loss_family,
-            seg_weight=effective_seg_weight,
-            pose_weight=effective_pose_weight,
-            cat_entropy_term=cat_entropy_term,
-            cat_lambda=float(stage_verdict.cat_lambda),
-        )
-        if extra_qat_total is not None:
-            total = total + extra_qat_total
         seg_loss = pr95_mlx_stage_seg_loss(
             loss_family,
             seg_logits_nchw,
             targets_hard_nhw,
         )
-        pose_loss = pr95_mlx_pose_loss(pose_pred[:, :6], pose_target[:, :6])
+        per_dim_scale = getattr(
+            self.bundle.pose_scorer_teacher,
+            "per_dim_scale",
+            None,
+        )
+        pose_distill, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
+            self.bundle,
+            student_pose=pose_pred[:, :6],
+            teacher_pose=pose_target[:, :6],
+            per_dim_scale=per_dim_scale,
+        )
+        pose_loss = mx.sqrt(10.0 * pose_distill + 1.0e-12)
+        recon_stage_weight = component_loss_weight(loss_weights, "recon")
+        total = (
+            float(effective_seg_weight) * seg_loss
+            + float(effective_pose_weight) * pose_loss
+            + recon_stage_weight * recon
+        )
+        if cat_entropy_term is not None and float(stage_verdict.cat_lambda) > 0.0:
+            total = total + float(stage_verdict.cat_lambda) * cat_entropy_term
+        if extra_qat_total is not None:
+            total = total + extra_qat_total
         family_index = {
             PR95_SEG_LOSS_CE: 1.0,
             PR95_SEG_LOSS_TAU_SOFTPLUS: 2.0,
@@ -670,6 +923,8 @@ class MlxScoreAwareAdapter:
             "pr95_stage_scorer_surrogate": total,
             "pr95_stage_seg_surrogate": seg_loss,
             "pr95_stage_pose_surrogate": pose_loss,
+            "pr95_stage_pose_raw_mse": pose_distill_raw_mse,
+            "pr95_stage_recon": recon,
             "pr95_stage_loss_family_index": mx.array(
                 family_index, dtype=mx.float32
             ),
@@ -685,6 +940,9 @@ class MlxScoreAwareAdapter:
             ),
             "pr95_stage_effective_pose_weight": mx.array(
                 effective_pose_weight, dtype=mx.float32
+            ),
+            "pr95_stage_recon_weight": mx.array(
+                recon_stage_weight, dtype=mx.float32
             ),
         }
         if cat_entropy_term is not None:
@@ -757,6 +1015,7 @@ class MlxScoreAwareAdapter:
         batch: Any,
         *,
         stage_verdict: Any,
+        loss_weights: Mapping[str, float] | None = None,
     ) -> dict[str, float]:
         """Return float telemetry for the active PR95 stage loss parts."""
 
@@ -766,6 +1025,7 @@ class MlxScoreAwareAdapter:
                 batch=batch,
                 stage_verdict=stage_verdict,
                 model=self.model,
+                loss_weights=loss_weights,
             )
         except Exception:
             return {"pr95_stage_loss_part_probe_failed": 1.0}
@@ -906,11 +1166,9 @@ class MlxScoreAwareAdapter:
             def _pose_head_loss_fn(pose_params: Mapping[str, Any]) -> Any:
                 from tac.substrates._shared.mlx_score_aware.loss import (
                     _apply_eval_roundtrip_ste_nhwc01,
+                    _pose_distillation_loss_and_raw_mse,
                     decode_frames_nhwc01,
                     pose_student_inputs_nhwc,
-                )
-                from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-                    pose_distillation_mse_loss,
                 )
 
                 rgb_0, rgb_1 = decode_frames_nhwc01(self.bundle, batch)
@@ -930,7 +1188,8 @@ class MlxScoreAwareAdapter:
                 teacher_pose = mx.stop_gradient(
                     self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
                 )
-                pose_distill = pose_distillation_mse_loss(
+                pose_distill, _raw_mse = _pose_distillation_loss_and_raw_mse(
+                    self.bundle,
                     student_pose=student_pose,
                     teacher_pose=teacher_pose,
                     per_dim_scale=getattr(
@@ -1011,6 +1270,23 @@ class MlxScoreAwareAdapter:
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
+            "scorer_error_pair_sampling": {
+                "schema": "mlx_score_aware_scorer_error_pair_sampling_config.v1",
+                "enabled": bool(self._pair_sampling_weights),
+                "explicit_weight_count": len(self._pair_sampling_weights),
+                "default_weight": float(self._pair_sampling_default_weight),
+                "pair_index_domain": (
+                    "source_pair_indices"
+                    if self.bundle.source_pair_indices is not None
+                    else "local_pair_indices"
+                ),
+                "purpose": (
+                    "training_time_xray_error_curriculum_not_loss_weight_or_score_claim"
+                ),
+                "canonical_authority_surface": (
+                    "TrainingArtifact top-level false-authority fields"
+                ),
+            },
             "loss_part_telemetry": {
                 "schema": "mlx_score_aware_loss_part_telemetry.v1",
                 "emitted_by_train_step": True,
@@ -1040,8 +1316,11 @@ class MlxScoreAwareAdapter:
         size = min(max(1, batch_size), num_pairs)
         rng = np.random.RandomState(seed)
         priority_resolution = self._resolve_priority_local_rows()
+        weight_resolution = self._resolve_pair_sampling_weights_local()
         priority = tuple(priority_resolution["priority_local_pair_indices"])
-        reserve_random_fill = bool(priority and size > 1 and num_pairs > 1)
+        reserve_random_fill = bool(
+            priority and len(priority) < num_pairs and size > 1 and num_pairs > 1
+        )
         priority_take = min(size - int(reserve_random_fill), len(priority))
         random_fill_count = size - priority_take
         priority_selected: list[int] = []
@@ -1063,10 +1342,21 @@ class MlxScoreAwareAdapter:
                 if pair_index not in priority_set
             ]
             random_fill_count = min(random_fill_count, len(remaining))
+            random_probabilities = None
+            weight_array = weight_resolution["local_pair_sampling_weights"]
+            if weight_array is not None:
+                remaining_weights = np.asarray(
+                    [float(weight_array[int(pair_index)]) for pair_index in remaining],
+                    dtype=np.float64,
+                )
+                mass = float(remaining_weights.sum())
+                if mass > 0.0:
+                    random_probabilities = remaining_weights / mass
             random_selected = rng.choice(
                 remaining,
                 size=random_fill_count,
                 replace=False,
+                p=random_probabilities,
             ).astype("int32")
             sampled = np.asarray(
                 [*priority_selected, *[int(value) for value in random_selected.tolist()]],
@@ -1075,9 +1365,21 @@ class MlxScoreAwareAdapter:
         else:
             sampled = np.asarray(priority_selected, dtype=np.int32)
         sampling_policy = (
-            "priority_pairs_then_random_fill" if priority else "deterministic_random"
+            "priority_pairs_then_weighted_random_fill"
+            if priority and weight_resolution["enabled"]
+            else "priority_pairs_then_random_fill"
+            if priority
+            else "scorer_error_weighted_random"
+            if weight_resolution["enabled"]
+            else "deterministic_random"
         )
         sampled_pair_indices = [int(value) for value in sampled.tolist()]
+        sampled_weights = []
+        weight_array = weight_resolution["local_pair_sampling_weights"]
+        if weight_array is not None:
+            sampled_weights = [
+                float(weight_array[int(pair_index)]) for pair_index in sampled_pair_indices
+            ]
         if self.bundle.source_pair_indices is None:
             source_pair_indices = list(sampled_pair_indices)
             priority_source_pair_indices = list(priority_selected)
@@ -1110,6 +1412,29 @@ class MlxScoreAwareAdapter:
             "priority_pair_alignment_mode": str(
                 priority_resolution["priority_pair_alignment_mode"]
             ),
+            "scorer_error_pair_sampling": {
+                "schema": "mlx_score_aware_scorer_error_pair_sampling.v1",
+                "enabled": bool(weight_resolution["enabled"]),
+                "explicit_weight_count": int(
+                    weight_resolution["explicit_weight_count"]
+                ),
+                "default_weight": float(self._pair_sampling_default_weight),
+                "min_local_weight": weight_resolution["min_local_weight"],
+                "max_local_weight": weight_resolution["max_local_weight"],
+                "unresolved_weight_pair_indices": list(
+                    weight_resolution["unresolved_weight_pair_indices"]
+                ),
+                "pair_weight_alignment_mode": str(
+                    weight_resolution["pair_weight_alignment_mode"]
+                ),
+                "sampled_pair_weights": sampled_weights,
+                "random_fill_weighted": bool(
+                    weight_resolution["enabled"] and random_fill_count > 0
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "random_fill_count": int(random_fill_count),
             "pair_indices": sampled_pair_indices,
             "local_pair_indices": sampled_pair_indices,
@@ -1195,6 +1520,113 @@ class MlxScoreAwareAdapter:
                 out.append(value)
         return tuple(out)
 
+    def _normalize_pair_sampling_weights(
+        self,
+        pair_sampling_weights: Mapping[int, float] | None,
+    ) -> dict[int, float]:
+        if pair_sampling_weights is None:
+            return {}
+        if not isinstance(pair_sampling_weights, Mapping):
+            raise ValueError(
+                "pair_sampling_weights must be a mapping of pair_index -> "
+                f"non-negative weight; got {type(pair_sampling_weights).__name__}"
+            )
+        out: dict[int, float] = {}
+        for raw_key, raw_value in pair_sampling_weights.items():
+            try:
+                key = int(raw_key)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "pair_sampling_weights keys must be integer pair indices"
+                ) from exc
+            if key < 0:
+                raise ValueError(
+                    f"pair_sampling_weights keys must be non-negative; got {key}"
+                )
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"pair_sampling_weights[{key}] must be a finite float"
+                ) from exc
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(
+                    f"pair_sampling_weights[{key}] must be finite and >= 0; got {value!r}"
+                )
+            out[key] = value
+        return out
+
+    def _normalize_pair_sampling_default_weight(self, value: float) -> float:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "pair_sampling_default_weight must be a finite non-negative float"
+            ) from exc
+        if not math.isfinite(parsed) or parsed < 0.0:
+            raise ValueError(
+                "pair_sampling_default_weight must be finite and >= 0; got "
+                f"{parsed!r}"
+            )
+        return parsed
+
+    def _resolve_pair_sampling_weights_local(self) -> Mapping[str, Any]:
+        if not self._pair_sampling_weights:
+            return {
+                "enabled": False,
+                "explicit_weight_count": 0,
+                "local_pair_sampling_weights": None,
+                "unresolved_weight_pair_indices": (),
+                "pair_weight_alignment_mode": "no_pair_sampling_weights_requested",
+                "min_local_weight": None,
+                "max_local_weight": None,
+            }
+        import numpy as np
+
+        num_pairs = int(self.bundle.num_pairs)
+        weights = np.full(
+            num_pairs,
+            float(self._pair_sampling_default_weight),
+            dtype=np.float64,
+        )
+        unresolved: list[int] = []
+        if self.bundle.source_pair_indices is None:
+            for pair_index, weight in self._pair_sampling_weights.items():
+                if pair_index < num_pairs:
+                    weights[int(pair_index)] = float(weight)
+                else:
+                    unresolved.append(int(pair_index))
+            alignment = "identity_weight_pairs_are_local_rows"
+        else:
+            source_to_local = {
+                int(source_pair_index): int(local_row)
+                for local_row, source_pair_index in enumerate(
+                    self.bundle.source_pair_indices
+                )
+            }
+            for pair_index, weight in self._pair_sampling_weights.items():
+                local = source_to_local.get(int(pair_index))
+                if local is None:
+                    unresolved.append(int(pair_index))
+                else:
+                    weights[int(local)] = float(weight)
+            alignment = "source_weight_pairs_to_local_rows"
+        if float(weights.sum()) <= 0.0:
+            raise ValueError(
+                "pair_sampling_weights plus pair_sampling_default_weight leave "
+                "zero sampling mass for every local pair; increase at least one "
+                "weight or the default."
+            )
+        return {
+            "enabled": True,
+            "explicit_weight_count": len(self._pair_sampling_weights),
+            "local_pair_sampling_weights": weights,
+            "unresolved_weight_pair_indices": tuple(unresolved),
+            "pair_weight_alignment_mode": alignment,
+            "min_local_weight": float(weights.min()) if weights.size else None,
+            "max_local_weight": float(weights.max()) if weights.size else None,
+        }
+
     def _build_wave_n11_optimizer(self, learning_rate: float) -> Any:
         """Build the canonical Wave N+11 stabilizer-aware optimizer.
 
@@ -1238,6 +1670,10 @@ class MlxScoreAwareAdapter:
         - ``"adafactor"``: ``mlx.optimizers.Adafactor(learning_rate=sched,
           relative_step=False, scale_parameter=False)`` so the caller's
           stage/curriculum LR remains the sole scheduler authority.
+        - ``"aurora_like"``: local MLX port of Aurora's leverage-uniform polar
+          update for rank >= 2 leaves; rank < 2 leaves use AdamW-style moments.
+          This is false-authority timing-smoke support, not PR95 source
+          authority.
         - ``"muon"``: native ``mlx.optimizers.Muon`` as an explicit
           all-parameter optimizer-object comparison row. It is intentionally
           separate from Pact's default partitioned Muon+AdamW path.
@@ -1305,6 +1741,11 @@ class MlxScoreAwareAdapter:
             if self._wave_n11_weight_decay is not None:
                 adafactor_kwargs["weight_decay"] = self._wave_n11_weight_decay
             return mlx_optim.Adafactor(**adafactor_kwargs)
+        if self._wave_n11_optimizer_kind == "aurora_like":
+            return _build_aurora_like_mlx_optimizer(
+                learning_rate=lr_sched,
+                weight_decay=self._wave_n11_weight_decay,
+            )
         if self._wave_n11_optimizer_kind == "muon":
             if self._wave_n11_weight_decay is None:
                 return mlx_optim.Muon(learning_rate=lr_sched)
@@ -1670,6 +2111,9 @@ class MlxScoreAwareAdapter:
             "native_mlx_optimizer_kind_adagrad": float(
                 self._wave_n11_optimizer_kind == "adagrad"
             ),
+            "native_mlx_optimizer_kind_aurora_like": float(
+                self._wave_n11_optimizer_kind == "aurora_like"
+            ),
             "native_mlx_optimizer_kind_adam": float(
                 self._wave_n11_optimizer_kind == "adam"
             ),
@@ -1884,6 +2328,7 @@ class MlxScoreAwareAdapter:
                 batch=batch,
                 stage_verdict=stage_verdict,
                 model=model,
+                loss_weights=loss_weights,
             )
             return total
 
@@ -1910,6 +2355,7 @@ class MlxScoreAwareAdapter:
             self._pr95_stage_loss_part_metrics(
                 batch,
                 stage_verdict=stage_verdict,
+                loss_weights=loss_weights,
             )
         )
         student_head_eval_targets = self._train_student_heads(
@@ -2206,6 +2652,8 @@ class MlxScoreAwareAdapter:
 
 
 __all__ = [
+    "AURORA_LIKE_SOURCE_COMMIT",
+    "AURORA_LIKE_SOURCE_REPO",
     "DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND",
     "MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS",
     "SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS",

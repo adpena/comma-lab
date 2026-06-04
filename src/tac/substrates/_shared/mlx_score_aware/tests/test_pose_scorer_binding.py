@@ -22,6 +22,8 @@ MLX-bound tests skip cleanly on non-Apple-Silicon CI.
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from tac.substrates._shared.mlx_score_aware import (
@@ -514,6 +516,17 @@ def test_score_aware_loss_emits_pose_distill_part_when_pose_bound() -> None:
     assert "recon" in parts
     mx.eval(parts["pose_distill"])
     assert float(parts["pose_distill"].item()) >= 0.0
+
+
+def test_pose_head_training_uses_configured_pose_loss_not_raw_mse_only() -> None:
+    """The sibling pose-head optimizer must match the renderer pose objective."""
+
+    adapter_source = (
+        Path(__file__).resolve().parents[6]
+        / "src/tac/substrates/_shared/mlx_score_aware/adapter.py"
+    ).read_text(encoding="utf-8")
+    assert "_pose_distillation_loss_and_raw_mse" in adapter_source
+    assert "pose_distillation_mse_loss" not in adapter_source
 
 
 # --------------------------------------------------------------------------- #

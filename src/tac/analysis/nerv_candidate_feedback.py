@@ -67,6 +67,8 @@ _SEG_STAGNATION_WINDOW_EPOCHS = 64
 _SEG_STAGNATION_MIN_RELATIVE_IMPROVEMENT = 0.05
 _SEG_STAGNATION_WEIGHT_MULTIPLIER = 2.0
 _SEG_STAGNATION_MAX_DISTILLATION_WEIGHT = 8.0
+_FULL_VIDEO_FIT_WEIGHT_MIN_MULTIPLIER = 2.0
+_FULL_VIDEO_FIT_WEIGHT_MAX_DISTILLATION_WEIGHT = 8.0
 _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS = 64
 _TRAINING_CONTROL_MIN_RECENT_RELATIVE_IMPROVEMENT = 0.01
 _POSE_TAIL_BURST_MIN_EPOCHS = 64
@@ -640,6 +642,12 @@ def build_nerv_full_video_mlx_scorer_feedback_row(
             explicit_weight=current_segnet_distillation_weight,
         )
     )
+    observed_pose_weight, observed_pose_weight_source = (
+        _infer_full_video_feedback_pose_distillation_weight(
+            export=export,
+            explicit_weight=None,
+        )
+    )
     full_video = bool(int(measured_pairs) >= max(int(candidate_pairs), CONTEST_PAIR_COUNT))
     response_false_authority_blockers = _mlx_response_authority_blockers(mlx_response)
     direct_blockers: list[str] = []
@@ -674,6 +682,7 @@ def build_nerv_full_video_mlx_scorer_feedback_row(
         archive_under_ceiling=archive_under_ceiling,
         full_video=full_video,
         current_segnet_distillation_weight=observed_seg_weight,
+        current_pose_distillation_weight=observed_pose_weight,
         max_mlx_score_for_local_replay=max_mlx_score_for_local_replay,
     )
     recommended_mutations = list(
@@ -820,11 +829,19 @@ def build_nerv_full_video_mlx_scorer_feedback_row(
         "recommended_learning_rate": None,
         "observed_segnet_distillation_weight": observed_seg_weight,
         "segnet_distillation_weight_source": observed_seg_weight_source,
+        "observed_pose_distillation_weight": observed_pose_weight,
+        "pose_distillation_weight_source": observed_pose_weight_source,
         "recommended_segnet_distillation_weight": scorer_control.get(
             "recommended_segnet_distillation_weight"
         ),
         "recommended_segnet_distillation_weight_multiplier": scorer_control.get(
             "recommended_segnet_distillation_weight_multiplier"
+        ),
+        "recommended_pose_distillation_weight": scorer_control.get(
+            "recommended_pose_distillation_weight"
+        ),
+        "recommended_pose_distillation_weight_multiplier": scorer_control.get(
+            "recommended_pose_distillation_weight_multiplier"
         ),
         "recommended_launch_mutations": recommended_mutations,
         "direct_feedback_blockers": _dedupe_strings(direct_blockers),
@@ -2530,7 +2547,8 @@ def _full_video_mlx_response_training_control(
     archive_under_ceiling: bool | None,
     full_video: bool,
     current_segnet_distillation_weight: float | None,
-    max_mlx_score_for_local_replay: float | None,
+    current_pose_distillation_weight: float | None = None,
+    max_mlx_score_for_local_replay: float | None = None,
 ) -> dict[str, Any]:
     family_key = _family_key(str(family or "nerv"))
     bad_score = bool(
@@ -2546,10 +2564,21 @@ def _full_video_mlx_response_training_control(
         and float(avg_pose) >= _FULL_VIDEO_RESPONSE_BAD_POSE_THRESHOLD
     )
     recommended_seg_weight = (
-        recommend_segnet_distillation_weight_for_stagnation(
-            current_segnet_distillation_weight
+        recommend_distillation_weight_for_full_video_fit_failure(
+            current_segnet_distillation_weight,
+            observed_component=avg_seg,
+            failure_threshold=_FULL_VIDEO_RESPONSE_BAD_SEG_THRESHOLD,
         )
-        if seg_failure and family_key == "hi_nerv"
+        if seg_failure and family_key in {"hi_nerv", "snerv"}
+        else None
+    )
+    recommended_pose_weight = (
+        recommend_distillation_weight_for_full_video_fit_failure(
+            current_pose_distillation_weight,
+            observed_component=avg_pose,
+            failure_threshold=_FULL_VIDEO_RESPONSE_BAD_POSE_THRESHOLD,
+        )
+        if pose_failure and family_key in {"hi_nerv", "snerv"}
         else None
     )
     mutations: list[str] = []
@@ -2578,6 +2607,7 @@ def _full_video_mlx_response_training_control(
     if pose_failure:
         mutations.extend(
             [
+                "increase_pose_distillation_weight_from_full_video_mlx_response",
                 "build_xray_hardpair_hitlist_from_full_video_pose_tail",
                 "launch_hard_pair_prioritized_sampler_successor",
                 "preserve_random_full_video_fill_when_prioritizing_hard_pairs",
@@ -2619,10 +2649,23 @@ def _full_video_mlx_response_training_control(
         "segnet_fit_failure_detected": seg_failure,
         "pose_fit_failure_detected": pose_failure,
         "observed_segnet_distillation_weight": current_segnet_distillation_weight,
+        "observed_pose_distillation_weight": current_pose_distillation_weight,
         "recommended_segnet_distillation_weight": recommended_seg_weight,
         "recommended_segnet_distillation_weight_multiplier": (
-            _SEG_STAGNATION_WEIGHT_MULTIPLIER
+            _fit_failure_weight_multiplier(
+                current_segnet_distillation_weight,
+                recommended_seg_weight,
+            )
             if recommended_seg_weight is not None
+            else None
+        ),
+        "recommended_pose_distillation_weight": recommended_pose_weight,
+        "recommended_pose_distillation_weight_multiplier": (
+            _fit_failure_weight_multiplier(
+                current_pose_distillation_weight,
+                recommended_pose_weight,
+            )
+            if recommended_pose_weight is not None
             else None
         ),
         "recommended_launch_mutations": _dedupe_strings(mutations),
@@ -2643,8 +2686,33 @@ def _infer_full_video_feedback_segnet_distillation_weight(
         ("campaign_identity", "argv", "segnet_distillation_weight"),
         ("startup_json", "campaign_identity", "argv", "segnet_distillation_weight"),
         ("runner_startup_json", "campaign_identity", "argv", "segnet_distillation_weight"),
+        ("score_aware_training", "segnet_distillation_weight"),
         ("training_config", "segnet_distillation_weight"),
         ("config", "segnet_distillation_weight"),
+    )
+    for path in export_paths:
+        value = _float_or_none(_path_get(export, path))
+        if value is not None:
+            return value, ".".join(path)
+    return None, None
+
+
+def _infer_full_video_feedback_pose_distillation_weight(
+    *,
+    export: Mapping[str, Any],
+    explicit_weight: float | None,
+) -> tuple[float | None, str | None]:
+    explicit = _float_or_none(explicit_weight)
+    if explicit is not None:
+        return explicit, "harvest_current_pose_distillation_weight"
+    export_paths = (
+        ("command_args", "pose_distillation_weight"),
+        ("campaign_identity", "argv", "pose_distillation_weight"),
+        ("startup_json", "campaign_identity", "argv", "pose_distillation_weight"),
+        ("runner_startup_json", "campaign_identity", "argv", "pose_distillation_weight"),
+        ("score_aware_training", "pose_distillation_weight"),
+        ("training_config", "pose_distillation_weight"),
+        ("config", "pose_distillation_weight"),
     )
     for path in export_paths:
         value = _float_or_none(_path_get(export, path))
@@ -2724,6 +2792,44 @@ def recommend_segnet_distillation_weight_for_stagnation(
     )
     bounded = min(next_weight, float(_SEG_STAGNATION_MAX_DISTILLATION_WEIGHT))
     return bounded if bounded > observed else None
+
+
+def recommend_distillation_weight_for_full_video_fit_failure(
+    observed_weight: float | None,
+    *,
+    observed_component: float | None,
+    failure_threshold: float,
+) -> float | None:
+    """Return a bounded scorer pressure from full-video component severity."""
+
+    observed = _float_or_none(observed_weight)
+    component = _float_or_none(observed_component)
+    threshold = _float_or_none(failure_threshold)
+    if component is None or threshold is None or component < threshold or threshold <= 0.0:
+        return None
+    base = observed if observed is not None and observed > 0.0 else 1.0
+    severity = math.sqrt(max(float(component) / float(threshold), 1.0))
+    multiplier = min(
+        max(severity, float(_FULL_VIDEO_FIT_WEIGHT_MIN_MULTIPLIER)),
+        float(_FULL_VIDEO_FIT_WEIGHT_MAX_DISTILLATION_WEIGHT),
+    )
+    bounded = min(
+        base * multiplier,
+        float(_FULL_VIDEO_FIT_WEIGHT_MAX_DISTILLATION_WEIGHT),
+    )
+    return bounded if bounded > base else None
+
+
+def _fit_failure_weight_multiplier(
+    observed_weight: float | None,
+    recommended_weight: float | None,
+) -> float | None:
+    recommended = _float_or_none(recommended_weight)
+    if recommended is None:
+        return None
+    observed = _float_or_none(observed_weight)
+    base = observed if observed is not None and observed > 0.0 else 1.0
+    return float(recommended) / float(base)
 
 
 def _median(values: Sequence[float]) -> float | None:
@@ -2816,6 +2922,7 @@ __all__ = [
     "build_nerv_candidate_feedback_row",
     "build_nerv_full_video_mlx_scorer_feedback_row",
     "build_nerv_training_telemetry_feedback_row",
+    "recommend_distillation_weight_for_full_video_fit_failure",
     "recommend_segnet_distillation_weight_for_stagnation",
     "refresh_nerv_candidate_feedback_report",
     "write_nerv_candidate_feedback_files",

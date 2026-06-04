@@ -25,6 +25,9 @@ from typing import Any
 import numpy as np
 
 from tac.adaptation.hard_pair_indices import normalize_pair_indices
+from tac.analysis.nerv_candidate_curriculum import (
+    strip_candidate_curriculum_authority_fields,
+)
 from tac.analysis.snerv_official_primitive_replay import (
     build_snerv_official_receiver_runtime_decode_contract,
 )
@@ -209,6 +212,10 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     score_aware_long_training_weight_decay: float | None = 1.0e-4,
     score_aware_long_training_eval_roundtrip_ste: bool = False,
+    score_aware_long_training_checkpoint_retention_keep_last_n: int | None = None,
+    score_aware_long_training_checkpoint_retention_keep_best_n: int = 1,
+    score_aware_long_training_checkpoint_retention_keep_every_n_epochs: int | None = None,
+    score_aware_long_training_checkpoint_retention_cold_store_roots: tuple[Path, ...] = (),
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     pose_distillation_loss: str = "mse",
@@ -243,6 +250,8 @@ def train_export_snerv_mlx_native(
     recon_pixel_weight_path: str | Path | None = None,
     recon_pixel_weight_manifest_path: str | Path | None = None,
     recon_pixel_weight_normalize: str = "mean",
+    scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
+    scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
     pair_indices: Sequence[Any] | str | None = None,
     prioritized_pair_indices: Sequence[Any] | str | None = None,
     allow_overwrite: bool = False,
@@ -291,6 +300,11 @@ def train_export_snerv_mlx_native(
         prioritized_pair_indices,
         field="prioritized_pair_indices",
     )
+    scorer_error_pair_sampling_weights = {
+        int(pair): float(weight)
+        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+    }
+    scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
     effective_num_pairs = len(source_pair_indices)
     explicit_pair_indices = pair_indices is not None
     official_primitives_requested = bool(model_size.official_mfu_hfr_tub_numeric_primitives_requested)
@@ -438,6 +452,59 @@ def train_export_snerv_mlx_native(
                     score_aware_long_training_eval_roundtrip_ste,
                 ),
             )
+        ),
+        checkpoint_retention_keep_last_n=(
+            None
+            if candidate.get(
+                "score_aware_long_training_checkpoint_retention_keep_last_n",
+                candidate.get(
+                    "snerv_score_aware_long_training_checkpoint_retention_keep_last_n",
+                    score_aware_long_training_checkpoint_retention_keep_last_n,
+                ),
+            )
+            is None
+            else int(
+                candidate.get(
+                    "score_aware_long_training_checkpoint_retention_keep_last_n",
+                    candidate.get(
+                        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n",
+                        score_aware_long_training_checkpoint_retention_keep_last_n,
+                    ),
+                )
+            )
+        ),
+        checkpoint_retention_keep_best_n=int(
+            candidate.get(
+                "score_aware_long_training_checkpoint_retention_keep_best_n",
+                candidate.get(
+                    "snerv_score_aware_long_training_checkpoint_retention_keep_best_n",
+                    score_aware_long_training_checkpoint_retention_keep_best_n,
+                ),
+            )
+        ),
+        checkpoint_retention_keep_every_n_epochs=(
+            None
+            if candidate.get(
+                "score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
+                candidate.get(
+                    "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
+                    score_aware_long_training_checkpoint_retention_keep_every_n_epochs,
+                ),
+            )
+            is None
+            else int(
+                candidate.get(
+                    "score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
+                    candidate.get(
+                        "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
+                        score_aware_long_training_checkpoint_retention_keep_every_n_epochs,
+                    ),
+                )
+            )
+        ),
+        checkpoint_retention_cold_store_roots=tuple(
+            Path(root)
+            for root in score_aware_long_training_checkpoint_retention_cold_store_roots
         ),
         scorer_upstream_dir=scorer_upstream_dir,
         segnet_distillation_weight=float(
@@ -594,6 +661,8 @@ def train_export_snerv_mlx_native(
             )
         ),
         prioritized_pair_indices=priority_pair_indices,
+        scorer_error_pair_sampling_weights=scorer_error_pair_sampling_weights,
+        scorer_error_pair_curriculum=scorer_error_pair_curriculum,
         allow_overwrite=allow_overwrite,
     )
     pairs_for_packet = (
@@ -1389,6 +1458,10 @@ def _run_score_aware_long_training_attachment(
     grad_clip_max_norm: float | None,
     weight_decay: float | None,
     eval_roundtrip_ste: bool,
+    checkpoint_retention_keep_last_n: int | None,
+    checkpoint_retention_keep_best_n: int,
+    checkpoint_retention_keep_every_n_epochs: int | None,
+    checkpoint_retention_cold_store_roots: tuple[Path, ...],
     scorer_upstream_dir: str | Path,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
@@ -1411,6 +1484,8 @@ def _run_score_aware_long_training_attachment(
     pr95_faithful_curriculum_enabled: bool,
     pr95_muon_policy: str,
     prioritized_pair_indices: tuple[int, ...],
+    scorer_error_pair_sampling_weights: Mapping[int, float] | None,
+    scorer_error_pair_curriculum: Mapping[str, Any] | None,
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     """Run real SNeRV MLX long training before NumPy-portable SNAR export."""
@@ -1426,6 +1501,11 @@ def _run_score_aware_long_training_attachment(
     pose_weight = float(pose_distillation_weight)
     pose_loss = str(pose_distillation_loss)
     pose_huber_delta = float(pose_distillation_huber_delta)
+    scorer_error_pair_sampling_weights = {
+        int(pair): float(weight)
+        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+    }
+    scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
     resolved_scorer_upstream_dir = Path(scorer_upstream_dir).expanduser().resolve(
         strict=False
     )
@@ -1444,6 +1524,17 @@ def _run_score_aware_long_training_attachment(
         "executed": False,
         "training_kind": training_kind,
         "optimizer_kind": str(optimizer_kind),
+        "checkpoint_retention": {
+            "schema": "snerv_mlx_score_aware_checkpoint_retention.v1",
+            "keep_last_n": checkpoint_retention_keep_last_n,
+            "keep_best_n": int(checkpoint_retention_keep_best_n),
+            "keep_every_n_epochs": checkpoint_retention_keep_every_n_epochs,
+            "cold_store_roots": [
+                root.as_posix() for root in checkpoint_retention_cold_store_roots
+            ],
+            "hot_directory_scope": "periodic_checkpoints_only_final_always_kept",
+            **FALSE_AUTHORITY,
+        },
         "levels": int(levels),
         "wavelet": str(wavelet),
         "source_pair_indices": [int(value) for value in source_pair_indices],
@@ -1462,6 +1553,20 @@ def _run_score_aware_long_training_attachment(
             "pair_count": len(prioritized_pair_indices),
             "sampling_scope": "score_aware_training_batches_not_target_hydration",
             **FALSE_AUTHORITY,
+        },
+        "scorer_error_pair_curriculum": {
+            **strip_candidate_curriculum_authority_fields(
+                scorer_error_pair_curriculum
+            ),
+            "schema": "snerv_mlx_score_aware_scorer_error_pair_curriculum.v1",
+            "consumed_by_shared_mlx_sampler": bool(
+                scorer_error_pair_sampling_weights
+            ),
+            "weighted_pair_count": len(scorer_error_pair_sampling_weights),
+            "sampling_scope": "score_aware_training_batches_not_target_hydration",
+            "canonical_authority_surface": (
+                "TrainingArtifact top-level false-authority fields"
+            ),
         },
         "official_mfu_hfr_tub_train_export": {
             "schema": "snerv_official_mfu_hfr_tub_train_export_binding.v1",
@@ -1930,6 +2035,10 @@ def _run_score_aware_long_training_attachment(
             learning_rate=float(learning_rate),
             seed=0,
             checkpoint_interval_epochs=max(1, min(100, int(requested_epochs))),
+            checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+            checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+            checkpoint_retention_keep_every_n_epochs=checkpoint_retention_keep_every_n_epochs,
+            checkpoint_retention_cold_store_roots=checkpoint_retention_cold_store_roots,
             telemetry_flush_interval_epochs=1,
             grad_clip_max_norm=grad_clip_max_norm,
             weight_decay=weight_decay,
@@ -1945,6 +2054,10 @@ def _run_score_aware_long_training_attachment(
             pr95_muon_policy=effective_pr95_muon_policy,
             prioritized_pair_indices=tuple(
                 int(value) for value in prioritized_pair_indices
+            ),
+            pair_sampling_weights=scorer_error_pair_sampling_weights,
+            pair_sampling_default_weight=float(
+                scorer_error_pair_curriculum.get("default_weight", 1.0)
             ),
             notes=(
                 "SNeRV MLX score-aware train/export attachment: train LF "
@@ -2074,6 +2187,7 @@ def _run_score_aware_long_training_attachment(
                 "telemetry_path": telemetry_path,
                 "live_checkpoint_path": live_checkpoint_path,
                 "ema_shadow_checkpoint_path": ema_checkpoint_path,
+                "checkpoint_selection": artifact_dict.get("checkpoint_selection"),
                 "archive_path": artifact_dict.get("archive_path"),
                 "archive_bytes": artifact_dict.get("archive_bytes"),
                 "score_claim": artifact_dict.get("score_claim"),

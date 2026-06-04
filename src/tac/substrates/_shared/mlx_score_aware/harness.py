@@ -21,7 +21,7 @@ non-MLX host (no silent CPU/CUDA fallback per Catalog #1 + #317).
 """
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -54,6 +54,10 @@ def run_mlx_score_aware_full_main(
     seed: int = 0,
     ema_decay: float | None = None,
     checkpoint_interval_epochs: int = 10,
+    checkpoint_retention_keep_last_n: int | None = None,
+    checkpoint_retention_keep_best_n: int = 1,
+    checkpoint_retention_keep_every_n_epochs: int | None = None,
+    checkpoint_retention_cold_store_roots: tuple[Any, ...] = (),
     telemetry_flush_interval_epochs: int | None = None,
     early_stopping_patience: int | None = None,
     curriculum_stages: Any | None = None,
@@ -77,6 +81,8 @@ def run_mlx_score_aware_full_main(
     cosine_decay_total_epochs: int | None = None,
     cosine_decay_min_lr_ratio: float = 1e-2,
     prioritized_pair_indices: tuple[int, ...] = (),
+    pair_sampling_weights: Mapping[int, float] | None = None,
+    pair_sampling_default_weight: float = 1.0,
     ema_archive_selection_enabled: bool = False,
 ) -> Any:
     """Run the canonical MLX-first score-aware ``_full_main`` body.
@@ -104,6 +110,11 @@ def run_mlx_score_aware_full_main(
         epochs: total epoch budget.
         batch_pair_indices_per_step: training batch size.
         learning_rate / seed / checkpoint_interval_epochs: training hparams.
+        checkpoint_retention_keep_last_n / keep_best_n /
+            keep_every_n_epochs / cold_store_roots: optional hot-retention
+            policy for long checkpoint-heavy MLX campaigns. The canonical
+            trainer keeps last/best/milestone checkpoints hot and moves older
+            periodic checkpoints to cold store with JSONL provenance.
         telemetry_flush_interval_epochs: optional per-run override for canonical
             telemetry JSONL flush cadence. Use 1 for long carrier campaigns so
             epoch rows are durable while the process is still running.
@@ -154,6 +165,12 @@ def run_mlx_score_aware_full_main(
             sampled before random fill by the shared MLX adapter. This is local
             training emphasis and telemetry only; it does not create full-video
             replay or score authority.
+        pair_sampling_weights: optional XRay/scorer-error pair weights consumed
+            by the shared MLX adapter sampler. This makes post-export pair
+            anatomy usable during subsequent training runs without turning local
+            scorer telemetry into promotion authority.
+        pair_sampling_default_weight: baseline sampling mass for pairs not
+            present in ``pair_sampling_weights``.
         ema_archive_selection_enabled: when True, the canonical trainer exports
             both live and EMA final archives, evaluates their local score-aware
             proxy plus charged archive bytes, writes
@@ -220,6 +237,8 @@ def run_mlx_score_aware_full_main(
         cosine_decay_total_epochs=cosine_decay_total_epochs,
         cosine_decay_min_lr_ratio=cosine_decay_min_lr_ratio,
         prioritized_pair_indices=prioritized_pair_indices,
+        pair_sampling_weights=pair_sampling_weights,
+        pair_sampling_default_weight=pair_sampling_default_weight,
     )
 
     config = LongTrainingConfig(
@@ -230,6 +249,14 @@ def run_mlx_score_aware_full_main(
         curriculum_stages=curriculum_stages,
         ema_decay=CANONICAL_EMA_DECAY if ema_decay is None else float(ema_decay),
         checkpoint_interval_epochs=checkpoint_interval_epochs,
+        checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+        checkpoint_retention_keep_best_n=int(checkpoint_retention_keep_best_n),
+        checkpoint_retention_keep_every_n_epochs=(
+            checkpoint_retention_keep_every_n_epochs
+        ),
+        checkpoint_retention_cold_store_roots=tuple(
+            Path(root) for root in checkpoint_retention_cold_store_roots
+        ),
         telemetry_flush_interval_epochs=(
             telemetry_flush_interval_epochs
             if telemetry_flush_interval_epochs is not None

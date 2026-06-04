@@ -16,6 +16,7 @@ from tac.analysis.nerv_candidate_feedback import (
     build_nerv_candidate_feedback_row,
     build_nerv_full_video_mlx_scorer_feedback_row,
     build_nerv_training_telemetry_feedback_row,
+    recommend_distillation_weight_for_full_video_fit_failure,
     refresh_nerv_candidate_feedback_report,
     write_nerv_candidate_feedback_files,
     write_nerv_full_video_mlx_scorer_feedback_files,
@@ -338,8 +339,12 @@ def test_full_video_mlx_response_feedback_binds_archive_export_and_false_authori
     assert control["segnet_fit_failure_detected"] is True
     assert control["pose_fit_failure_detected"] is True
     assert row["pose_tail_burst_detected"] is True
-    assert control["recommended_segnet_distillation_weight"] == 4.0
+    assert control["recommended_segnet_distillation_weight"] == 8.0
+    assert control["recommended_pose_distillation_weight"] == 8.0
     assert "increase_segnet_distillation_weight_from_full_video_mlx_response" in row[
+        "recommended_launch_mutations"
+    ]
+    assert "increase_pose_distillation_weight_from_full_video_mlx_response" in row[
         "recommended_launch_mutations"
     ]
     assert row["direct_feedback_blockers"] == []
@@ -429,6 +434,27 @@ def test_full_video_mlx_response_feedback_infers_segnet_weight_from_export(
     control = row["full_video_mlx_response_control"]
     assert control["observed_segnet_distillation_weight"] == 16.0
     assert control["recommended_segnet_distillation_weight"] is None
+
+
+def test_full_video_fit_failure_weight_scales_with_component_severity() -> None:
+    assert recommend_distillation_weight_for_full_video_fit_failure(
+        1.0,
+        observed_component=0.49054932507375876,
+        failure_threshold=0.02,
+    ) == pytest.approx(4.9525212017403755)
+    assert recommend_distillation_weight_for_full_video_fit_failure(
+        1.0,
+        observed_component=84.16701777776082,
+        failure_threshold=1.0,
+    ) == pytest.approx(8.0)
+    assert (
+        recommend_distillation_weight_for_full_video_fit_failure(
+            8.0,
+            observed_component=84.16701777776082,
+            failure_threshold=1.0,
+        )
+        is None
+    )
 
 
 def test_full_video_mlx_feedback_writer_loads_export_startup_json_weight(

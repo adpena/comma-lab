@@ -135,6 +135,16 @@ DEFAULT_OPTIMIZER_KINDS = (
     "adadelta",
     "sgd",
 )
+AURORA_LIKE_OPTIMIZER_KIND = "aurora_like"
+_OPTIMIZER_KIND_ALIASES = {
+    "aurora": AURORA_LIKE_OPTIMIZER_KIND,
+}
+TIMING_SMOKE_OPTIMIZER_KINDS = (AURORA_LIKE_OPTIMIZER_KIND,)
+_TIMING_SMOKE_OPTIMIZER_LAUNCH_BLOCKERS: dict[str, tuple[str, ...]] = {
+    AURORA_LIKE_OPTIMIZER_KIND: (
+        "aurora_requires_local_timing_convergence_smoke",
+    )
+}
 FIRST_PASS_OPTIMIZER_KINDS = frozenset(("pact_muon_adamw", "adamw", "muon", "lion", "adamax"))
 OPTIMIZER_CONTROL_SCHEMA = "nerv_optimizer_control_surface.v1"
 HINERV_OPTIMIZER_POLICY_SCHEMA = "nerv_hinerv_optimizer_policy.v1"
@@ -310,8 +320,21 @@ def build_nerv_long_training_campaign_plan(
             ],
             "does_not_apply_to": [],
             "optimizer_kinds": list(optimizers),
-            "native_mlx_optimizer_kinds": [kind for kind in optimizers if kind != "pact_muon_adamw"],
+            "native_mlx_optimizer_kinds": [
+                kind
+                for kind in optimizers
+                if kind in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS
+                and kind != "pact_muon_adamw"
+            ],
             "pact_partitioned_optimizer_kinds": [kind for kind in optimizers if kind == "pact_muon_adamw"],
+            "selected_plan_only_optimizer_kinds": [],
+            "available_plan_only_optimizer_kinds": [],
+            "selected_timing_smoke_optimizer_kinds": [
+                kind for kind in optimizers if _is_timing_smoke_optimizer_kind(kind)
+            ],
+            "available_timing_smoke_optimizer_kinds": list(
+                TIMING_SMOKE_OPTIMIZER_KINDS
+            ),
             "first_pass_optimizer_kinds": sorted(FIRST_PASS_OPTIMIZER_KINDS),
             "default_optimizer_kind": "pact_muon_adamw",
             "default_optimizer_backend": "tac.local_acceleration.pr95_hnerv_mlx",
@@ -503,8 +526,10 @@ def _hinerv_campaign_row(
         family="hi_nerv",
         source_parity_contract=source_parity_contract,
     )
+    optimizer_launch_blockers = _optimizer_launch_blockers(optimizer_kind)
     effective_learning_rate = float(launch_feedback_adjustment.get("learning_rate") or learning_rate)
     effective_segnet_distillation_weight = float(launch_feedback_adjustment.get("segnet_distillation_weight") or 1.0)
+    effective_pose_distillation_weight = float(launch_feedback_adjustment.get("pose_distillation_weight") or 1.0)
     output_dir_basename = _campaign_output_basename(
         row_id=f"hi_nerv::{candidate_id}::{optimizer_kind}",
         launch_feedback_adjustment=launch_feedback_adjustment,
@@ -514,7 +539,7 @@ def _hinerv_campaign_row(
         requested_epochs=int(epochs),
         num_pairs=num_pairs,
         segnet_distillation_weight=effective_segnet_distillation_weight,
-        pose_distillation_weight=1.0,
+        pose_distillation_weight=effective_pose_distillation_weight,
         coder_aware_qat=True,
         coder_qat_quant_bits=int(quant_bits),
         recon_pixel_weight_attached=True,
@@ -575,7 +600,7 @@ def _hinerv_campaign_row(
         "--segnet-distillation-weight",
         _float_token(effective_segnet_distillation_weight),
         "--pose-distillation-weight",
-        "1.0",
+        _float_token(effective_pose_distillation_weight),
         "--coder-aware-qat",
         "--coder-qat-quant-bits",
         str(int(quant_bits)),
@@ -646,6 +671,7 @@ def _hinerv_campaign_row(
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *candidate_authority_blockers,
         *official_control_blockers,
+        *optimizer_launch_blockers,
         *modelsize_byte_cap_blockers,
         *list(source_parity["required_blockers"]),
         *list(curriculum.get("blockers") or []),
@@ -676,6 +702,7 @@ def _hinerv_campaign_row(
         and decoder_weight_waterfill_runner_admitted
         and not candidate_authority_blockers
         and not official_control_blockers
+        and not optimizer_launch_blockers
         and not modelsize_byte_cap_blockers
         and not source_parity["required_blockers"]
     )
@@ -683,6 +710,8 @@ def _hinerv_campaign_row(
         implementation_status = "selected_candidate_authority_flags_block_launch"
     elif official_control_blockers:
         implementation_status = "hinerv_official_controls_required_for_launch"
+    elif optimizer_launch_blockers:
+        implementation_status = "optimizer_timing_smoke_required_before_campaign_launch"
     elif source_parity["required_blockers"]:
         implementation_status = "source_parity_required_gap_blocks_launch"
     elif decoder_weight_waterfill and not decoder_weight_waterfill_runner_admitted:
@@ -1382,6 +1411,7 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
     """Return blockers that should prevent a row from being runnable."""
 
     exact_names = {
+        "aurora_requires_local_timing_convergence_smoke",
         "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted",
         "hinerv_decoder_weight_waterfill_plan_missing",
         "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
@@ -3176,11 +3206,29 @@ def _int_csv(values: Any) -> str:
     return ",".join(str(int(value)) for value in values)
 
 
+def _normalize_optimizer_kind(value: Any) -> str:
+    text = str(value).strip().lower()
+    return _OPTIMIZER_KIND_ALIASES.get(text, text)
+
+
+def _is_timing_smoke_optimizer_kind(optimizer_kind: str) -> bool:
+    return _normalize_optimizer_kind(optimizer_kind) in TIMING_SMOKE_OPTIMIZER_KINDS
+
+
+def _optimizer_launch_blockers(optimizer_kind: str) -> tuple[str, ...]:
+    return _TIMING_SMOKE_OPTIMIZER_LAUNCH_BLOCKERS.get(
+        _normalize_optimizer_kind(optimizer_kind),
+        (),
+    )
+
+
 def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
     out: list[str] = []
-    supported = set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS)
+    supported = set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS) | set(
+        TIMING_SMOKE_OPTIMIZER_KINDS
+    )
     for value in values:
-        text = str(value).strip().lower()
+        text = _normalize_optimizer_kind(value)
         if not text:
             continue
         if text not in supported:
@@ -3193,14 +3241,54 @@ def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
 
 
 def _optimizer_priority(optimizer_kind: str) -> int:
-    kind = str(optimizer_kind).strip().lower()
+    kind = _normalize_optimizer_kind(optimizer_kind)
     if kind == "pact_muon_adamw":
         return 9
+    if _is_timing_smoke_optimizer_kind(kind):
+        return 11
     return 10 if kind in FIRST_PASS_OPTIMIZER_KINDS else 11
 
 
 def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
-    kind = str(optimizer_kind).strip().lower()
+    kind = _normalize_optimizer_kind(optimizer_kind)
+    if _is_timing_smoke_optimizer_kind(kind):
+        return {
+            "schema": OPTIMIZER_CONTROL_SCHEMA,
+            "optimizer_kind": kind,
+            "classification": "runnable_false_authority_timing_smoke_candidate",
+            "backend": "tac.substrates._shared.mlx_score_aware.adapter.AuroraLikeMlxOptimizer",
+            "source_ids": [
+                "tilde-research/aurora-release@7303d8cb9999d735cb12c921f3651f04bf362524",
+                "blog.tilderesearch.com/blog/aurora",
+                "Yifei-Zuo/modded-nanogpt-plx@7698686df679a7990cf91571df64042c30168d5c",
+            ],
+            "native_mlx_on_apple_silicon": True,
+            "native_mlx_optimizer_object": True,
+            "pact_partitioned_muon_adamw": False,
+            "apple_specific_algorithm_claim": False,
+            "first_pass_priority": False,
+            "borrowed_from_pr95": False,
+            "original_pact_contest_adaptation": False,
+            "implementation_status": (
+                "mlx_score_aware_optimizer_contract_landed_timing_smoke_required"
+            ),
+            "launch_blockers": list(_optimizer_launch_blockers(kind)),
+            "authority_blockers": ["aurora_not_pr95_source_authority"],
+            "blocked_until": "aurora_like_local_timing_convergence_smoke",
+            "required_next_implementation": [
+                "run Aurora-like against pact_muon_adamw and muon on a tiny PR95/HiNeRV smoke",
+                "record seconds_per_epoch plus SegNet/PoseNet/loss telemetry with false-authority flags",
+                "keep score_claim/promotion/rank authority false until byte-closed replay evidence exists",
+            ],
+            "provenance_note": (
+                "Aurora-like is now a runnable Pact-local MLX optimizer port "
+                "for timing and convergence smokes, not PR95 source authority "
+                "or score/promotion authority."
+            ),
+            "default_hinerv_optimizer_policy": "native_optimizer",
+            "pr95_curriculum_optimizer_swallow_guard": True,
+            **FALSE_AUTHORITY,
+        }
     if kind not in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS:
         raise NervLongTrainingCampaignPlanError(f"unsupported optimizer kind: {optimizer_kind!r}")
     is_pact_default = kind == "pact_muon_adamw"
@@ -3232,7 +3320,7 @@ def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
 def _hinerv_optimizer_policy_for_kind(optimizer_kind: str) -> str:
     """Return the runner policy that makes this row's optimizer semantics real."""
 
-    kind = str(optimizer_kind).strip().lower()
+    kind = _normalize_optimizer_kind(optimizer_kind)
     return "pr95_curriculum" if kind == "adamw" else "native_optimizer"
 
 
@@ -3241,19 +3329,41 @@ def _hinerv_optimizer_policy_control(
     optimizer_kind: str,
     optimizer_policy: str,
 ) -> dict[str, Any]:
-    kind = str(optimizer_kind).strip().lower()
+    kind = _normalize_optimizer_kind(optimizer_kind)
     policy = str(optimizer_policy).strip().lower()
+    timing_smoke_only = _is_timing_smoke_optimizer_kind(kind)
     return {
         "schema": HINERV_OPTIMIZER_POLICY_SCHEMA,
         "optimizer_kind": kind,
         "requested_policy": policy,
-        "pr95_faithful_curriculum_expected": policy == "pr95_curriculum",
+        "classification": (
+            "runnable_false_authority_timing_smoke_candidate"
+            if timing_smoke_only
+            else "runner_optimizer_policy"
+        ),
+        "is_plan_only_optimizer_control": False,
+        "is_timing_smoke_optimizer_control": timing_smoke_only,
+        "pr95_faithful_curriculum_expected": (
+            policy == "pr95_curriculum" and not timing_smoke_only
+        ),
         "native_mlx_optimizer_expected": policy == "native_optimizer",
-        "effective_optimizer_label": ("pr95_8stage_muon_adamw" if policy == "pr95_curriculum" else kind),
+        "effective_optimizer_label": (
+            "pr95_8stage_muon_adamw" if policy == "pr95_curriculum" else kind
+        ),
+        "runner_policy_if_implemented": policy,
+        "launch_blockers": list(_optimizer_launch_blockers(kind)),
         "why": (
-            "adamw owns the PR95-faithful 8-stage Muon+AdamW control row; "
-            "non-adamw rows must run as native MLX optimizers so optimizer "
-            "diversity is measured rather than swallowed by the curriculum"
+            (
+                "Aurora-like rows are runnable native MLX timing-smoke "
+                "candidates, but full campaign launch stays blocked until the "
+                "local convergence smoke exists."
+            )
+            if timing_smoke_only
+            else (
+                "adamw owns the PR95-faithful 8-stage Muon+AdamW control row; "
+                "non-adamw rows must run as native MLX optimizers so optimizer "
+                "diversity is measured rather than swallowed by the curriculum"
+            )
         ),
         "score_claim": False,
         "promotion_eligible": False,
@@ -4745,6 +4855,7 @@ def _hinerv_feedback_launch_adjustment(
             "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
             "learning_rate": float(learning_rate),
             "segnet_distillation_weight": 1.0,
+            "pose_distillation_weight": 1.0,
             **FALSE_AUTHORITY,
         }
     launch_control_ready = _feedback_launch_control_ready(feedback)
@@ -4760,6 +4871,7 @@ def _hinerv_feedback_launch_adjustment(
             "launch_control_feedback_ready": feedback.get("launch_control_feedback_ready"),
             "learning_rate": float(learning_rate),
             "segnet_distillation_weight": 1.0,
+            "pose_distillation_weight": 1.0,
             **FALSE_AUTHORITY,
         }
     observed = _float_or_none(feedback.get("observed_learning_rate"))
@@ -4783,8 +4895,16 @@ def _hinerv_feedback_launch_adjustment(
     seg_stagnation = bool(feedback.get("seg_stagnation_detected"))
     pose_tail_burst = bool(feedback.get("pose_tail_burst_detected"))
     recommended_seg_weight = _float_or_none(feedback.get("recommended_segnet_distillation_weight"))
+    recommended_pose_weight = _float_or_none(feedback.get("recommended_pose_distillation_weight"))
     segnet_weight_applied = bool(seg_stagnation and recommended_seg_weight is not None and recommended_seg_weight > 1.0)
+    pose_weight_applied = bool(pose_tail_burst and recommended_pose_weight is not None and recommended_pose_weight > 1.0)
     if segnet_weight_applied:
+        launch_mutations.extend(
+            mutation
+            for mutation in (feedback.get("recommended_launch_mutations") or [])
+            if mutation not in launch_mutations
+        )
+    if pose_weight_applied:
         launch_mutations.extend(
             mutation
             for mutation in (feedback.get("recommended_launch_mutations") or [])
@@ -4797,6 +4917,7 @@ def _hinerv_feedback_launch_adjustment(
         lower_learning_rate_applied
         or pose_protected_pathway_applied
         or segnet_weight_applied
+        or pose_weight_applied
         or official_control_superseded
     )
     return {
@@ -4805,6 +4926,7 @@ def _hinerv_feedback_launch_adjustment(
         "lower_learning_rate_applied": lower_learning_rate_applied,
         "pose_protected_pathway_applied": pose_protected_pathway_applied,
         "segnet_weight_applied": segnet_weight_applied,
+        "pose_weight_applied": pose_weight_applied,
         "official_control_superseded": official_control_superseded,
         "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
         "reason": (
@@ -4817,15 +4939,19 @@ def _hinerv_feedback_launch_adjustment(
                     "segnet_stagnation_recommended_higher_segnet_weight"
                     if segnet_weight_applied
                     else (
-                        "official_hinerv_controls_supersede_source_feedback_run"
-                        if official_control_superseded
+                        "pose_tail_recommended_higher_pose_weight"
+                        if pose_weight_applied
                         else (
-                            "pose_instability_feedback_without_lower_lr"
-                            if pose_instability
+                            "official_hinerv_controls_supersede_source_feedback_run"
+                            if official_control_superseded
                             else (
-                                "pose_tail_burst_requires_prioritized_pair_indices"
-                                if pose_tail_burst
-                                else "feedback_does_not_request_launch_adjustment"
+                                "pose_instability_feedback_without_lower_lr"
+                                if pose_instability
+                                else (
+                                    "pose_tail_burst_requires_prioritized_pair_indices"
+                                    if pose_tail_burst
+                                    else "feedback_does_not_request_launch_adjustment"
+                                )
                             )
                         )
                     )
@@ -4847,6 +4973,8 @@ def _hinerv_feedback_launch_adjustment(
         "learning_rate": float(recommended if lower_learning_rate_applied else learning_rate),
         "recommended_segnet_distillation_weight": recommended_seg_weight,
         "segnet_distillation_weight": float(recommended_seg_weight if segnet_weight_applied else 1.0),
+        "recommended_pose_distillation_weight": recommended_pose_weight,
+        "pose_distillation_weight": float(recommended_pose_weight if pose_weight_applied else 1.0),
         "pose_distillation_loss": (HINERV_POSE_PROTECTED_LOSS if pose_protected_pathway_applied else "mse"),
         "pose_distillation_huber_delta": (
             HINERV_POSE_PROTECTED_HUBER_DELTA if pose_protected_pathway_applied else None
@@ -4865,6 +4993,7 @@ def _feedback_launch_control_ready(feedback: Mapping[str, Any]) -> bool:
     ):
         recommended_lr = _float_or_none(feedback.get("recommended_learning_rate"))
         recommended_seg_weight = _float_or_none(feedback.get("recommended_segnet_distillation_weight"))
+        recommended_pose_weight = _float_or_none(feedback.get("recommended_pose_distillation_weight"))
         pose_ready = (
             feedback.get("pose_instability_detected") is True and recommended_lr is not None and recommended_lr > 0.0
         )
@@ -4874,7 +5003,12 @@ def _feedback_launch_control_ready(feedback: Mapping[str, Any]) -> bool:
             and recommended_seg_weight > 1.0
         )
         tail_ready = feedback.get("pose_tail_burst_detected") is True
-        return bool(pose_ready or seg_ready or tail_ready)
+        pose_weight_ready = (
+            tail_ready
+            and recommended_pose_weight is not None
+            and recommended_pose_weight > 1.0
+        )
+        return bool(pose_ready or seg_ready or tail_ready or pose_weight_ready)
     if feedback.get("feedback_ready") is False:
         return False
     return bool(feedback)

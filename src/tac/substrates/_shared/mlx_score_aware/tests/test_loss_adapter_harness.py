@@ -317,6 +317,64 @@ def test_adapter_priority_sampling_maps_source_pairs_to_local_rows() -> None:
 
 
 @mlx_only
+def test_adapter_scorer_error_sampling_maps_source_weights_to_local_rows() -> None:
+    import mlx.core as mx
+
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=mx.zeros((3, 1, 1, 3), dtype=mx.float32),
+        target_rgb_1=mx.zeros((3, 1, 1, 3), dtype=mx.float32),
+        num_pairs=3,
+        forward_convention="call_b2chw_255",
+        source_pair_indices=(10, 20, 30),
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="hi_nerv",
+        pair_sampling_weights={20: 1.0},
+        pair_sampling_default_weight=0.0,
+    )
+
+    sampled = adapter.sample_batch(batch_size=1, seed=7)
+    observability = adapter.batch_observability(sampled)
+
+    assert np.asarray(sampled).tolist() == [1]
+    assert observability is not None
+    assert observability["sampling_policy"] == "scorer_error_weighted_random"
+    assert observability["source_pair_indices"] == [20]
+    scorer_sampling = observability["scorer_error_pair_sampling"]
+    assert scorer_sampling["enabled"] is True
+    assert scorer_sampling["pair_weight_alignment_mode"] == (
+        "source_weight_pairs_to_local_rows"
+    )
+    assert scorer_sampling["sampled_pair_weights"] == [1.0]
+    assert scorer_sampling["score_claim"] is False
+
+
+@mlx_only
+def test_adapter_scorer_error_sampling_refuses_zero_mass_curriculum() -> None:
+    import mlx.core as mx
+
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=mx.zeros((2, 1, 1, 3), dtype=mx.float32),
+        target_rgb_1=mx.zeros((2, 1, 1, 3), dtype=mx.float32),
+        num_pairs=2,
+        forward_convention="call_b2chw_255",
+        source_pair_indices=(10, 20),
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="hi_nerv",
+        pair_sampling_weights={999: 1.0},
+        pair_sampling_default_weight=0.0,
+    )
+
+    with pytest.raises(ValueError, match="zero sampling mass"):
+        adapter.sample_batch(batch_size=1, seed=0)
+
+
+@mlx_only
 def test_score_aware_loss_extra_term_weighted() -> None:
     import mlx.core as mx
 

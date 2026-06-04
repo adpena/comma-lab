@@ -992,6 +992,101 @@ def test_run_long_training_emits_checkpoint_at_interval(tmp_path: Path) -> None:
     assert len(meta_files) >= 2
 
 
+def test_run_long_training_exports_best_ema_when_final_loss_drifts(
+    tmp_path: Path,
+) -> None:
+    class _NonMonotoneLoss(_MockSubstrateAdapter):
+        losses = (0.1, 9.0, 8.0)
+
+        def loss_fn(self, model, batch, loss_weights):
+            self.step_count += 1
+            value = self.losses[self.step_count - 1]
+            return {"total": value, "recon": value}
+
+    config = LongTrainingConfig(
+        substrate_id="nonmonotone_substrate",
+        lane_id="lane_nonmonotone_substrate_20260604",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_nonmonotone_substrate_20260604_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260604
+        epochs=3,
+        curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=3),),
+        checkpoint_interval_epochs=3,
+        early_stopping_patience=100,
+        output_dir=tmp_path / "nonmonotone_run",
+    )
+
+    artifact = run_long_training(_NonMonotoneLoss(), config)
+
+    selection = artifact.as_dict()["checkpoint_selection"]
+    assert selection["selected_role"] == "best"
+    assert selection["selected_global_epoch"] == 0
+    assert selection["selected_loss"] == pytest.approx(0.1)
+    assert selection["final_global_epoch"] == 2
+    assert selection["final_loss"] == pytest.approx(8.0)
+    assert Path(selection["best_meta_path"]).is_file()
+    assert Path(selection["selected_ema_shadow_state_path"]).is_file()
+    assert artifact.ema_shadow_checkpoint_path == Path(
+        selection["selected_ema_shadow_state_path"]
+    )
+    assert artifact.archive_path is not None
+    assert artifact.archive_path.read_bytes() == Path(
+        selection["selected_ema_shadow_state_path"]
+    ).read_bytes()
+
+    artifact_json = json.loads((config.output_dir / "training_artifact.json").read_text())
+    assert artifact_json["checkpoint_selection"]["selected_role"] == "best"
+
+
+def test_checkpoint_retention_moves_old_periodic_checkpoints_to_cold_store(
+    tmp_path: Path,
+) -> None:
+    config = LongTrainingConfig(
+        substrate_id="retention_substrate",
+        lane_id="lane_retention_substrate_20260604",  # FAKE_LANE_OK:test_fixture_or_docstring_or_dict_key_reference_to_lane_token_lane_retention_substrate_20260604_NOT_a_real_lane_registry_pre_registration_per_catalog_126_false_positive_per_comprehensive_bug_audit_cascade_20260604
+        epochs=5,
+        curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=5),),
+        checkpoint_interval_epochs=1,
+        checkpoint_retention_keep_last_n=1,
+        checkpoint_retention_keep_best_n=1,
+        checkpoint_retention_cold_store_roots=(tmp_path / "cold_store",),
+        early_stopping_patience=100,
+        output_dir=tmp_path / "retention_run",
+    )
+
+    artifact = run_long_training(_MockSubstrateAdapter(), config)
+
+    ckpt_dir = config.resolved_checkpoint_dir()
+    hot_meta = sorted(ckpt_dir.glob("*.meta.json"))
+    assert any(path.name.startswith("final_") for path in hot_meta)
+    periodic_hot = [path for path in hot_meta if not path.name.startswith("final_")]
+    assert len(periodic_hot) == 1
+    assert artifact.config_snapshot["checkpoint_retention"]["enabled"] is True
+
+    manifest = config.resolved_checkpoint_retention_manifest_path()
+    assert manifest.is_file()
+    passes = [json.loads(line) for line in manifest.read_text().splitlines() if line]
+    assert passes
+    moved_groups = [
+        row
+        for payload in passes
+        for row in payload["rows"]
+        if row["status"] == "moved"
+    ]
+    assert moved_groups
+    for payload in passes:
+        assert payload["score_claim"] is False
+        assert payload["promotion_eligible"] is False
+        assert payload["ready_for_exact_eval_dispatch"] is False
+    for group in moved_groups:
+        assert group["cold_store_dir"].startswith(str(tmp_path / "cold_store"))
+        for moved_file in group["moved_files"]:
+            source = Path(moved_file["source"])
+            cold = Path(moved_file["cold_store_path"])
+            assert not source.exists()
+            assert cold.is_file()
+            import hashlib
+
+            assert hashlib.sha256(cold.read_bytes()).hexdigest() == moved_file["sha256"]
+
+
 def test_checkpoint_resume_advances_global_epoch(tmp_path: Path) -> None:
     # Phase 1: run 3 epochs.
     config1 = _make_simple_config(tmp_path / "phase1", epochs=3, checkpoint_interval=1)

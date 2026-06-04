@@ -110,6 +110,8 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import os
+import shutil
 import time
 import traceback
 from collections.abc import Callable, Mapping, Sequence
@@ -123,6 +125,8 @@ __all__ = [
     "CANONICAL_EMA_DECAY",
     "CANONICAL_NON_PROMOTABLE_MARKERS",
     "DEFAULT_CHECKPOINT_INTERVAL_EPOCHS",
+    "DEFAULT_CHECKPOINT_RETENTION_KEEP_BEST_N",
+    "DEFAULT_CHECKPOINT_RETENTION_KEEP_LAST_N",
     "DEFAULT_EARLY_STOPPING_PATIENCE",
     "DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS",
     "EMA_ACCUMULATION_MODES",
@@ -140,6 +144,7 @@ __all__ = [
     "SubstrateLongTrainingAdapter",
     "TelemetrySink",
     "TrainingArtifact",
+    "apply_checkpoint_retention",
     "run_long_training",
     "run_long_training_multi_arm",
     "validate_long_training_config",
@@ -174,6 +179,8 @@ _SUBSTRATE_ARTIFACT_METADATA_FORBIDDEN_AUTHORITY_KEYS: frozenset[str] = frozense
 
 # Canonical defaults (operator overridable via LongTrainingConfig).
 DEFAULT_CHECKPOINT_INTERVAL_EPOCHS: int = 100
+DEFAULT_CHECKPOINT_RETENTION_KEEP_LAST_N: int | None = None
+DEFAULT_CHECKPOINT_RETENTION_KEEP_BEST_N: int = 1
 DEFAULT_EARLY_STOPPING_PATIENCE: int = 200
 DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS: int = 10
 EMA_ACCUMULATION_MODES: frozenset[str] = frozenset({"kahan", "naive"})
@@ -519,6 +526,26 @@ class LongTrainingConfig:
             ``"naive"`` preserves historical Polyak updates; ``"kahan"``
             enables compensated accumulation and strict fallback refusal.
         checkpoint_interval_epochs: emit canonical checkpoint every N epochs.
+        checkpoint_retention_keep_last_n: optional hot-checkpoint retention
+            guard. ``None`` disables pruning and preserves legacy behavior.
+            When set, periodic checkpoints outside the last-N / best-N /
+            milestone keep set are moved to cold store with a manifest.
+        checkpoint_retention_keep_best_n: keep the N lowest-loss periodic
+            checkpoints in the hot checkpoint directory when retention is
+            enabled. Default 1 preserves non-monotone training signal.
+        checkpoint_retention_keep_every_n_epochs: optional milestone spacing
+            using the same ``epoch + 1`` convention as checkpoint cadence.
+        checkpoint_retention_action: ``"move"`` (lossless hot-retention) or
+            explicit ``"delete"``. Long carrier campaigns should use move.
+        checkpoint_retention_cold_store_roots: optional cold-store roots for
+            moved checkpoints. Empty means use the operator storage waterfall.
+        checkpoint_retention_manifest_path: optional JSONL manifest path; by
+            default lives next to the checkpoint directory.
+        best_checkpoint_for_archive_export: when True, the trainer keeps the
+            best-loss live/EMA state in memory, emits one durable best checkpoint
+            at the end, and uses that checkpoint for archive export. This avoids
+            exporting a drifted final epoch while avoiding every-epoch checkpoint
+            bloat.
         early_stopping_patience: stop training if no loss improvement for N
             consecutive checkpoint-intervals.
         score_aware_loss_kwargs: optional substrate-specific kwargs threaded
@@ -565,6 +592,13 @@ class LongTrainingConfig:
     ema_decay: float = CANONICAL_EMA_DECAY
     ema_accumulation: str = "naive"
     checkpoint_interval_epochs: int = DEFAULT_CHECKPOINT_INTERVAL_EPOCHS
+    checkpoint_retention_keep_last_n: int | None = DEFAULT_CHECKPOINT_RETENTION_KEEP_LAST_N
+    checkpoint_retention_keep_best_n: int = DEFAULT_CHECKPOINT_RETENTION_KEEP_BEST_N
+    checkpoint_retention_keep_every_n_epochs: int | None = None
+    checkpoint_retention_action: str = "move"
+    checkpoint_retention_cold_store_roots: tuple[Path, ...] = field(default_factory=tuple)
+    checkpoint_retention_manifest_path: Path | None = None
+    best_checkpoint_for_archive_export: bool = True
     early_stopping_patience: int = DEFAULT_EARLY_STOPPING_PATIENCE
     score_aware_loss_kwargs: Mapping[str, Any] = field(default_factory=dict)
     optimizer_class: str = "adamw"
@@ -642,6 +676,82 @@ class LongTrainingConfig:
                 f"checkpoint_interval_epochs must be positive int; "
                 f"got {self.checkpoint_interval_epochs!r}"
             )
+        if (
+            self.checkpoint_retention_keep_last_n is not None
+            and (
+                isinstance(self.checkpoint_retention_keep_last_n, bool)
+                or not isinstance(self.checkpoint_retention_keep_last_n, int)
+                or self.checkpoint_retention_keep_last_n < 0
+            )
+        ):
+            raise ValueError(
+                "checkpoint_retention_keep_last_n must be non-negative int "
+                f"or None; got {self.checkpoint_retention_keep_last_n!r}"
+            )
+        if (
+            isinstance(self.checkpoint_retention_keep_best_n, bool)
+            or not isinstance(self.checkpoint_retention_keep_best_n, int)
+            or self.checkpoint_retention_keep_best_n < 0
+        ):
+            raise ValueError(
+                "checkpoint_retention_keep_best_n must be non-negative int; "
+                f"got {self.checkpoint_retention_keep_best_n!r}"
+            )
+        if (
+            self.checkpoint_retention_keep_every_n_epochs is not None
+            and (
+                isinstance(self.checkpoint_retention_keep_every_n_epochs, bool)
+                or not isinstance(self.checkpoint_retention_keep_every_n_epochs, int)
+                or self.checkpoint_retention_keep_every_n_epochs <= 0
+            )
+        ):
+            raise ValueError(
+                "checkpoint_retention_keep_every_n_epochs must be positive int "
+                "or None; got "
+                f"{self.checkpoint_retention_keep_every_n_epochs!r}"
+            )
+        if self.checkpoint_retention_action not in {"move", "delete"}:
+            raise ValueError(
+                "checkpoint_retention_action must be 'move' or 'delete'; got "
+                f"{self.checkpoint_retention_action!r}"
+            )
+        if not isinstance(self.checkpoint_retention_cold_store_roots, tuple):
+            raise TypeError(
+                "checkpoint_retention_cold_store_roots must be tuple[Path, ...]; "
+                f"got {type(self.checkpoint_retention_cold_store_roots).__name__}"
+            )
+        for index, root in enumerate(self.checkpoint_retention_cold_store_roots):
+            if not isinstance(root, Path):
+                raise TypeError(
+                    "checkpoint_retention_cold_store_roots"
+                    f"[{index}] must be Path; got {type(root).__name__}"
+                )
+            _refuse_tmp_path(root, f"checkpoint_retention_cold_store_roots[{index}]")
+        if self.checkpoint_retention_manifest_path is not None:
+            if not isinstance(self.checkpoint_retention_manifest_path, Path):
+                raise TypeError(
+                    "checkpoint_retention_manifest_path must be Path; got "
+                    f"{type(self.checkpoint_retention_manifest_path).__name__}"
+                )
+            _refuse_tmp_path(
+                self.checkpoint_retention_manifest_path,
+                "checkpoint_retention_manifest_path",
+            )
+        if self.checkpoint_retention_enabled and (
+            (self.checkpoint_retention_keep_last_n or 0)
+            + self.checkpoint_retention_keep_best_n
+            <= 0
+            and self.checkpoint_retention_keep_every_n_epochs is None
+        ):
+            raise ValueError(
+                "checkpoint retention would prune every periodic checkpoint; "
+                "keep at least one last/best checkpoint or configure milestone spacing"
+            )
+        if not isinstance(self.best_checkpoint_for_archive_export, bool):
+            raise TypeError(
+                "best_checkpoint_for_archive_export must be bool; got "
+                f"{type(self.best_checkpoint_for_archive_export).__name__}"
+            )
         if not isinstance(self.early_stopping_patience, int) or self.early_stopping_patience <= 0:
             raise ValueError(
                 f"early_stopping_patience must be positive int; "
@@ -711,6 +821,22 @@ class LongTrainingConfig:
         """Canonical checkpoint dir (default = output_dir/checkpoints/)."""
         return self.checkpoint_dir or (self.output_dir / "checkpoints")
 
+    @property
+    def checkpoint_retention_enabled(self) -> bool:
+        """Whether periodic checkpoint hot-retention is active."""
+
+        return (
+            self.checkpoint_retention_keep_last_n is not None
+            or self.checkpoint_retention_keep_every_n_epochs is not None
+        )
+
+    def resolved_checkpoint_retention_manifest_path(self) -> Path:
+        """Canonical retention manifest path."""
+
+        return self.checkpoint_retention_manifest_path or (
+            self.resolved_checkpoint_dir() / "checkpoint_retention_manifest.jsonl"
+        )
+
     def curriculum_hash(self) -> str:
         """Canonical hash over curriculum_stages for resume validation."""
         payload = json.dumps(
@@ -730,6 +856,26 @@ class LongTrainingConfig:
             "ema_decay": float(self.ema_decay),
             "ema_accumulation": self.ema_accumulation,
             "checkpoint_interval_epochs": int(self.checkpoint_interval_epochs),
+            "checkpoint_retention": {
+                "schema": "long_training_checkpoint_retention_config.v1",
+                "enabled": bool(self.checkpoint_retention_enabled),
+                "keep_last_n": self.checkpoint_retention_keep_last_n,
+                "keep_best_n": int(self.checkpoint_retention_keep_best_n),
+                "keep_every_n_epochs": self.checkpoint_retention_keep_every_n_epochs,
+                "action": self.checkpoint_retention_action,
+                "cold_store_roots": [
+                    str(path) for path in self.checkpoint_retention_cold_store_roots
+                ],
+                "manifest_path": str(
+                    self.resolved_checkpoint_retention_manifest_path()
+                ),
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "best_checkpoint_for_archive_export": bool(
+                self.best_checkpoint_for_archive_export
+            ),
             "early_stopping_patience": int(self.early_stopping_patience),
             "score_aware_loss_kwargs": dict(self.score_aware_loss_kwargs),
             "optimizer_class": self.optimizer_class,
@@ -867,6 +1013,9 @@ class TrainingArtifact:
         archive_sha256: SHA-256 of the canonical archive bytes; None if
             adapter did not emit an archive.
         archive_bytes: positive int archive size; None if no archive.
+        checkpoint_selection: machine-readable selection contract for final
+            versus best-loss checkpoint. The top-level live/EMA checkpoint
+            paths refer to the selected checkpoint.
         per_epoch_metrics: tuple of canonical PerEpochMetrics rows.
         total_wall_clock_seconds: total training wall-clock.
         total_epochs_completed: total epochs actually completed (may be
@@ -905,6 +1054,7 @@ class TrainingArtifact:
     archive_sha256: str | None = None
     archive_bytes: int | None = None
     archive_selection_manifest_path: Path | None = None
+    checkpoint_selection: Mapping[str, Any] = field(default_factory=dict)
     early_stopped: bool = False
     early_stop_reason: str = ""
     posterior_update_accepted: bool = False
@@ -949,6 +1099,11 @@ class TrainingArtifact:
                 raise ValueError(
                     f"archive_bytes must be positive int; got {self.archive_bytes!r}"
                 )
+        if not isinstance(self.checkpoint_selection, Mapping):
+            raise TypeError(
+                "checkpoint_selection must be Mapping; got "
+                f"{type(self.checkpoint_selection).__name__}"
+            )
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -968,6 +1123,7 @@ class TrainingArtifact:
                 if self.archive_selection_manifest_path
                 else None
             ),
+            "checkpoint_selection": _jsonable_mapping(self.checkpoint_selection),
             "per_epoch_metrics_count": len(self.per_epoch_metrics),
             "per_epoch_metrics": [m.as_dict() for m in self.per_epoch_metrics],
             "total_wall_clock_seconds": float(self.total_wall_clock_seconds),
@@ -1719,12 +1875,21 @@ class CheckpointWriter:
         loss: float,
         wall_clock_seconds: float,
         is_final: bool = False,
+        checkpoint_role: str | None = None,
     ) -> Path:
         """Write canonical checkpoint (live + EMA shadow + metadata)."""
+        role = str(checkpoint_role or ("final" if is_final else "periodic"))
+        if role not in {"periodic", "best", "final"}:
+            raise ValueError(
+                "checkpoint_role must be one of {'periodic', 'best', 'final'}; "
+                f"got {role!r}"
+            )
         ts = _utc_now_iso().replace(":", "").replace("-", "")
         stem = f"epoch{global_epoch:06d}_{ts}"
-        if is_final:
+        if role == "final":
             stem = f"final_{stem}"
+        elif role == "best":
+            stem = f"best_{stem}"
         live_path = self.checkpoint_dir / f"{stem}.live.state"
         ema_path = self.checkpoint_dir / f"{stem}.ema_shadow.state"
         kahan_compensation_path = (
@@ -1758,7 +1923,9 @@ class CheckpointWriter:
             "global_epoch": int(global_epoch),
             "loss": float(loss),
             "wall_clock_seconds": float(wall_clock_seconds),
-            "is_final": bool(is_final),
+            "is_final": role == "final",
+            "is_best": role == "best",
+            "checkpoint_role": role,
             "ema_accumulation": "kahan" if ema_shadow.enable_kahan else "naive",
             "ema_kahan_enabled": bool(ema_shadow.enable_kahan),
             "ema_kahan_strict": bool(ema_shadow.strict_kahan),
@@ -1794,6 +1961,353 @@ class CheckpointWriter:
                 "Catalog #229 PV (curriculum must match for valid resume)."
             )
         return meta
+
+
+CHECKPOINT_RETENTION_PASS_SCHEMA = "long_training_checkpoint_retention_pass.v1"
+
+
+def _load_checkpoint_record(meta_path: Path) -> dict[str, Any] | None:
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(meta, Mapping):
+        return None
+    files: list[Path] = [meta_path]
+    for key in (
+        "live_state_path",
+        "ema_shadow_state_path",
+        "ema_kahan_compensation_state_path",
+    ):
+        value = meta.get(key)
+        if isinstance(value, str) and value:
+            candidate = Path(value).expanduser().resolve(strict=False)
+            if candidate.exists() and candidate not in files:
+                files.append(candidate)
+    return {
+        "meta_path": meta_path,
+        "meta": dict(meta),
+        "global_epoch": int(meta.get("global_epoch", -1)),
+        "loss": float(meta.get("loss", float("inf"))),
+        "is_final": bool(meta.get("is_final")),
+        "is_best": bool(meta.get("is_best"))
+        or str(meta.get("checkpoint_role") or "") == "best",
+        "checkpoint_role": str(meta.get("checkpoint_role") or ""),
+        "files": files,
+    }
+
+
+def _checkpoint_retention_default_cold_store_roots() -> tuple[Path, ...]:
+    try:
+        from comma_lab.operator_storage_waterfall import operator_cold_store_roots
+
+        return tuple(Path(root) for root in operator_cold_store_roots())
+    except Exception:
+        return ()
+
+
+def _checkpoint_retention_cold_store_roots(config: LongTrainingConfig) -> tuple[Path, ...]:
+    roots = tuple(config.checkpoint_retention_cold_store_roots)
+    return roots or _checkpoint_retention_default_cold_store_roots()
+
+
+def _checkpoint_record_file_status(path: Path) -> dict[str, Any]:
+    stat = path.stat()
+    return {
+        "path": path.as_posix(),
+        "bytes": int(stat.st_size),
+        "sha256": _sha256_file(path),
+    }
+
+
+def _checkpoint_retention_group_bytes(record: Mapping[str, Any]) -> int:
+    total = 0
+    for path in record.get("files", ()):
+        if isinstance(path, Path) and path.exists():
+            total += int(path.stat().st_size)
+    return total
+
+
+def _checkpoint_retention_root_slug(checkpoint_dir: Path) -> str:
+    resolved = checkpoint_dir.expanduser().resolve(strict=False)
+    return "_".join(part for part in resolved.parts if part and part != "/")
+
+
+def _select_checkpoint_retention_cold_store_root(
+    roots: Sequence[Path],
+    *,
+    required_bytes: int,
+    source: Path,
+) -> tuple[Path, dict[str, Any]] | None:
+    eligible: list[tuple[bool, Path, dict[str, Any]]] = []
+    try:
+        source_device = source.stat().st_dev
+    except OSError:
+        source_device = None
+    for root in roots:
+        resolved = root.expanduser().resolve(strict=False)
+        try:
+            resolved.mkdir(parents=True, exist_ok=True)
+            usage = shutil.disk_usage(resolved)
+            if int(usage.free) < int(required_bytes):
+                continue
+            same_device = (
+                source_device is not None and resolved.stat().st_dev == source_device
+            )
+            contract = {
+                "schema": "long_training_checkpoint_retention_cold_store_root.v1",
+                "root": resolved.as_posix(),
+                "free_bytes": int(usage.free),
+                "required_bytes": int(required_bytes),
+                "same_device_as_source": bool(same_device),
+            }
+            eligible.append((bool(same_device), resolved, contract))
+        except OSError:
+            continue
+    if not eligible:
+        return None
+    eligible.sort(key=lambda item: (item[0], item[1].as_posix()))
+    _, root, contract = eligible[0]
+    return root, contract
+
+
+def _move_checkpoint_file_to_cold_store(
+    source: Path,
+    destination: Path,
+    *,
+    source_status: Mapping[str, Any],
+) -> dict[str, Any]:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if destination.exists():
+        existing_sha = _sha256_file(destination)
+        if existing_sha != source_status["sha256"]:
+            raise RuntimeError(
+                "checkpoint retention destination exists with different sha256: "
+                f"{destination}"
+            )
+        source.unlink()
+        return {
+            "source": source.as_posix(),
+            "cold_store_path": destination.as_posix(),
+            "bytes": int(source_status["bytes"]),
+            "sha256": source_status["sha256"],
+            "status": "moved_existing_verified",
+        }
+    tmp = destination.with_name(
+        f"{destination.name}.tmp.{os.getpid()}.{time.time_ns()}"
+    )
+    try:
+        shutil.copy2(source, tmp)
+        copied_sha = _sha256_file(tmp)
+        if copied_sha != source_status["sha256"]:
+            raise RuntimeError(
+                "checkpoint retention copy sha256 mismatch for "
+                f"{source}: {copied_sha} != {source_status['sha256']}"
+            )
+        tmp.replace(destination)
+        final_sha = _sha256_file(destination)
+        if final_sha != source_status["sha256"]:
+            raise RuntimeError(
+                "checkpoint retention final sha256 mismatch for "
+                f"{destination}: {final_sha} != {source_status['sha256']}"
+            )
+        source.unlink()
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+    return {
+        "source": source.as_posix(),
+        "cold_store_path": destination.as_posix(),
+        "bytes": int(source_status["bytes"]),
+        "sha256": source_status["sha256"],
+        "status": "moved_verified",
+    }
+
+
+def _apply_checkpoint_retention_to_record(
+    record: Mapping[str, Any],
+    *,
+    config: LongTrainingConfig,
+    roots: Sequence[Path],
+) -> dict[str, Any]:
+    meta_path = record["meta_path"]
+    group_files = [path for path in record.get("files", ()) if isinstance(path, Path)]
+    existing_files = [path for path in group_files if path.exists()]
+    file_statuses = [_checkpoint_record_file_status(path) for path in existing_files]
+    group_bytes = sum(int(status["bytes"]) for status in file_statuses)
+    row: dict[str, Any] = {
+        "schema": "long_training_checkpoint_retention_group.v1",
+        "meta_path": meta_path.as_posix(),
+        "global_epoch": int(record.get("global_epoch", -1)),
+        "loss": float(record.get("loss", float("inf"))),
+        "is_final": bool(record.get("is_final")),
+        "is_best": bool(record.get("is_best")),
+        "checkpoint_role": str(record.get("checkpoint_role") or ""),
+        "action": config.checkpoint_retention_action,
+        "bytes": int(group_bytes),
+        "files": file_statuses,
+        **CANONICAL_NON_PROMOTABLE_MARKERS,
+    }
+    if not existing_files:
+        row["status"] = "skipped_missing"
+        return row
+    if config.checkpoint_retention_action == "delete":
+        for path in existing_files:
+            path.unlink()
+        row["status"] = "deleted_explicit"
+        return row
+    selected = _select_checkpoint_retention_cold_store_root(
+        roots,
+        required_bytes=group_bytes,
+        source=meta_path,
+    )
+    if selected is None:
+        row["status"] = "blocked_no_cold_store_capacity"
+        row["blockers"] = ["checkpoint_retention_no_cold_store_capacity"]
+        return row
+    cold_root, cold_contract = selected
+    destination_dir = (
+        cold_root
+        / "long_training_checkpoint_retention"
+        / _checkpoint_retention_root_slug(config.resolved_checkpoint_dir())
+        / str(meta_path.stem)
+    )
+    moved_files: list[dict[str, Any]] = []
+    for path, status in zip(existing_files, file_statuses, strict=True):
+        moved_files.append(
+            _move_checkpoint_file_to_cold_store(
+                path,
+                destination_dir / path.name,
+                source_status=status,
+            )
+        )
+    row["status"] = "moved"
+    row["cold_store_contract"] = cold_contract
+    row["cold_store_dir"] = destination_dir.as_posix()
+    row["moved_files"] = moved_files
+    return row
+
+
+def _append_checkpoint_retention_manifest(
+    manifest_path: Path,
+    payload: Mapping[str, Any],
+) -> None:
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = manifest_path.with_suffix(manifest_path.suffix + ".lock")
+    lock_path.touch(exist_ok=True)
+    with open(lock_path, "r+") as lock_fh:
+        fcntl.flock(lock_fh.fileno(), fcntl.LOCK_EX)
+        try:
+            with open(manifest_path, "a", encoding="utf-8") as out_fh:
+                out_fh.write(json.dumps(_jsonable(payload), sort_keys=True))
+                out_fh.write("\n")
+        finally:
+            fcntl.flock(lock_fh.fileno(), fcntl.LOCK_UN)
+
+
+def apply_checkpoint_retention(
+    config: LongTrainingConfig,
+    *,
+    trigger_meta_path: Path | None = None,
+) -> dict[str, Any] | None:
+    """Apply loss-ranked hot checkpoint retention with no silent signal loss."""
+
+    if not config.checkpoint_retention_enabled:
+        return None
+    checkpoint_dir = config.resolved_checkpoint_dir()
+    records = [
+        record
+        for meta_path in sorted(checkpoint_dir.glob("*.meta.json"))
+        if (record := _load_checkpoint_record(meta_path)) is not None
+    ]
+    periodic = [
+        record
+        for record in records
+        if not bool(record["is_final"]) and not bool(record["is_best"])
+    ]
+    protected_meta_paths = {
+        record["meta_path"]
+        for record in records
+        if bool(record["is_final"]) or bool(record["is_best"])
+    }
+    if config.resume_from_checkpoint is not None:
+        protected_meta_paths.add(
+            config.resume_from_checkpoint.expanduser().resolve(strict=False)
+        )
+    keep_last_n = config.checkpoint_retention_keep_last_n
+    if keep_last_n is not None and keep_last_n > 0:
+        by_epoch = sorted(
+            periodic,
+            key=lambda record: (
+                int(record["global_epoch"]),
+                record["meta_path"].as_posix(),
+            ),
+        )
+        protected_meta_paths.update(record["meta_path"] for record in by_epoch[-keep_last_n:])
+    keep_best_n = int(config.checkpoint_retention_keep_best_n)
+    if keep_best_n > 0:
+        finite_records = [
+            record
+            for record in periodic
+            if record["loss"] == record["loss"] and record["loss"] != float("inf")
+        ]
+        by_loss = sorted(
+            finite_records,
+            key=lambda record: (
+                float(record["loss"]),
+                int(record["global_epoch"]),
+                record["meta_path"].as_posix(),
+            ),
+        )
+        protected_meta_paths.update(record["meta_path"] for record in by_loss[:keep_best_n])
+    keep_every = config.checkpoint_retention_keep_every_n_epochs
+    if keep_every is not None:
+        protected_meta_paths.update(
+            record["meta_path"]
+            for record in periodic
+            if (int(record["global_epoch"]) + 1) % int(keep_every) == 0
+        )
+    candidates = [
+        record
+        for record in periodic
+        if record["meta_path"] not in protected_meta_paths
+    ]
+    roots = _checkpoint_retention_cold_store_roots(config)
+    rows = [
+        _apply_checkpoint_retention_to_record(record, config=config, roots=roots)
+        for record in candidates
+    ]
+    if not rows:
+        return None
+    payload = {
+        "schema": CHECKPOINT_RETENTION_PASS_SCHEMA,
+        "captured_at_utc": _utc_now_iso(),
+        "checkpoint_dir": checkpoint_dir.as_posix(),
+        "trigger_meta_path": (
+            None if trigger_meta_path is None else trigger_meta_path.as_posix()
+        ),
+        "policy": config.as_dict()["checkpoint_retention"],
+        "record_count_before": len(records),
+        "periodic_record_count_before": len(periodic),
+        "protected_meta_paths": sorted(path.as_posix() for path in protected_meta_paths),
+        "candidate_count": len(candidates),
+        "rows": rows,
+        "moved_count": sum(1 for row in rows if row.get("status") == "moved"),
+        "deleted_count": sum(
+            1 for row in rows if row.get("status") == "deleted_explicit"
+        ),
+        "blocked_count": sum(
+            1 for row in rows if str(row.get("status", "")).startswith("blocked")
+        ),
+        "bytes_processed": sum(int(row.get("bytes", 0)) for row in rows),
+        "cold_store_roots": [path.as_posix() for path in roots],
+        **CANONICAL_NON_PROMOTABLE_MARKERS,
+    }
+    _append_checkpoint_retention_manifest(
+        config.resolved_checkpoint_retention_manifest_path(),
+        payload,
+    )
+    return payload
 
 
 class OOMSafeStepRunner:
@@ -2430,6 +2944,12 @@ def run_long_training(
     # 3) Training loop.
     per_epoch_metrics: list[PerEpochMetrics] = []
     best_loss = float("inf")
+    best_epoch = -1
+    best_wall_clock = 0.0
+    best_live_state: Mapping[str, Any] | None = None
+    best_ema_state: Mapping[str, Any] | None = None
+    best_ema_compensation_state: Mapping[str, Any] | None = None
+    best_state_capture_error: str | None = None
     epochs_since_improvement = 0
     early_stopped = False
     early_stop_reason = ""
@@ -2562,7 +3082,25 @@ def run_long_training(
         # 7) Early-stopping bookkeeping.
         if total_loss < best_loss - 1e-9:
             best_loss = total_loss
+            best_epoch = int(epoch)
+            best_wall_clock = float(wall_clock)
             epochs_since_improvement = 0
+            if config.best_checkpoint_for_archive_export:
+                try:
+                    best_live_state = PolyakEMAShadow._clone_state_dict(
+                        ema_shadow._get_flat_state(adapter.model)
+                    )
+                    best_ema_state = ema_shadow.state_dict()
+                    best_ema_compensation_state = (
+                        ema_shadow.compensation_state_dict()
+                    )
+                    best_state_capture_error = None
+                except Exception as exc:
+                    best_state_capture_error = f"{type(exc).__name__}:{exc!s}"
+                    print(
+                        "[long_training_canonical] WARN: best checkpoint state "
+                        f"capture failed at epoch {epoch}: {exc!r}"
+                    )
         else:
             epochs_since_improvement += 1
         if epochs_since_improvement >= config.early_stopping_patience:
@@ -2576,13 +3114,17 @@ def run_long_training(
         # 8) Periodic checkpoint emission.
         if (epoch + 1) % config.checkpoint_interval_epochs == 0:
             try:
-                checkpoint_writer.write(
+                periodic_meta_path = checkpoint_writer.write(
                     adapter=adapter,
                     ema_shadow=ema_shadow,
                     global_epoch=epoch,
                     loss=total_loss,
                     wall_clock_seconds=wall_clock,
                     is_final=False,
+                )
+                apply_checkpoint_retention(
+                    config,
+                    trigger_meta_path=periodic_meta_path,
                 )
             except Exception as exc:
                 if config.ema_accumulation == "kahan":
@@ -2612,15 +3154,174 @@ def run_long_training(
             raise
         traceback.print_exc()
         print(f"[long_training_canonical] WARN: final checkpoint emission failed: {exc!r}")
+    try:
+        apply_checkpoint_retention(config, trigger_meta_path=final_meta_path)
+    except Exception as exc:
+        if config.ema_accumulation == "kahan":
+            raise
+        traceback.print_exc()
+        print(f"[long_training_canonical] WARN: checkpoint retention failed: {exc!r}")
 
-    # Resolve final EMA shadow checkpoint path from meta.
+    # 9b) Emit one durable best checkpoint when final drifted away from the
+    # observed best loss. This captures non-monotone valleys without every-epoch
+    # checkpoint bloat.
+    selected_meta_path = final_meta_path
+    selected_checkpoint_role = "final"
+    best_meta_path: Path | None = None
+    best_checkpoint_emission_error: str | None = None
+    if (
+        config.best_checkpoint_for_archive_export
+        and best_live_state is not None
+        and best_ema_state is not None
+    ):
+        if int(best_epoch) == int(final_epoch):
+            best_meta_path = final_meta_path
+        else:
+            final_live_state = PolyakEMAShadow._clone_state_dict(
+                ema_shadow._get_flat_state(adapter.model)
+            )
+            final_ema_state = ema_shadow.state_dict()
+            final_ema_compensation_state = ema_shadow.compensation_state_dict()
+            try:
+                ema_shadow.restore_from_snapshot(adapter.model, best_live_state)
+                ema_shadow.load_state_dict(best_ema_state)
+                if ema_shadow.enable_kahan:
+                    ema_shadow.load_compensation_state_dict(
+                        best_ema_compensation_state or {}
+                    )
+                best_meta_path = checkpoint_writer.write(
+                    adapter=adapter,
+                    ema_shadow=ema_shadow,
+                    global_epoch=int(best_epoch),
+                    loss=float(best_loss),
+                    wall_clock_seconds=float(best_wall_clock),
+                    is_final=False,
+                    checkpoint_role="best",
+                )
+                selected_meta_path = best_meta_path
+                selected_checkpoint_role = "best"
+            except Exception as exc:
+                if config.ema_accumulation == "kahan":
+                    raise
+                best_checkpoint_emission_error = f"{type(exc).__name__}:{exc!s}"
+                traceback.print_exc()
+                print(
+                    "[long_training_canonical] WARN: best checkpoint emission "
+                    f"failed: {exc!r}"
+                )
+            finally:
+                ema_shadow.restore_from_snapshot(adapter.model, final_live_state)
+                ema_shadow.load_state_dict(final_ema_state)
+                if ema_shadow.enable_kahan:
+                    ema_shadow.load_compensation_state_dict(
+                        final_ema_compensation_state
+                    )
+            if best_meta_path is not None:
+                try:
+                    apply_checkpoint_retention(config, trigger_meta_path=best_meta_path)
+                except Exception as exc:
+                    if config.ema_accumulation == "kahan":
+                        raise
+                    traceback.print_exc()
+                    print(
+                        "[long_training_canonical] WARN: checkpoint retention "
+                        f"after best emission failed: {exc!r}"
+                    )
+
+    # Resolve selected and final checkpoint paths from metadata. The top-level
+    # TrainingArtifact checkpoint paths intentionally point at the selected
+    # archive-export state; final paths remain in checkpoint_selection.
     try:
         final_meta = json.loads(final_meta_path.read_text())
-        ema_shadow_checkpoint_path = Path(final_meta["ema_shadow_state_path"])
-        live_checkpoint_path = Path(final_meta["live_state_path"])
+        final_ema_shadow_checkpoint_path = Path(final_meta["ema_shadow_state_path"])
+        final_live_checkpoint_path = Path(final_meta["live_state_path"])
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        ema_shadow_checkpoint_path = config.resolved_checkpoint_dir() / "ema_shadow.unknown"
-        live_checkpoint_path = None
+        final_meta = {}
+        final_ema_shadow_checkpoint_path = (
+            config.resolved_checkpoint_dir() / "ema_shadow.unknown"
+        )
+        final_live_checkpoint_path = None
+    try:
+        selected_meta = json.loads(selected_meta_path.read_text())
+        ema_shadow_checkpoint_path = Path(selected_meta["ema_shadow_state_path"])
+        live_checkpoint_path = Path(selected_meta["live_state_path"])
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        selected_meta = {}
+        ema_shadow_checkpoint_path = final_ema_shadow_checkpoint_path
+        live_checkpoint_path = final_live_checkpoint_path
+        selected_meta_path = final_meta_path
+        selected_checkpoint_role = "final"
+
+    selected_checkpoint_restore_error: str | None = None
+    if selected_checkpoint_role == "best" and best_live_state is not None:
+        try:
+            ema_shadow.restore_from_snapshot(adapter.model, best_live_state)
+            if best_ema_state is not None:
+                ema_shadow.load_state_dict(best_ema_state)
+            if ema_shadow.enable_kahan:
+                ema_shadow.load_compensation_state_dict(
+                    best_ema_compensation_state or {}
+                )
+        except Exception as exc:
+            selected_checkpoint_restore_error = f"{type(exc).__name__}:{exc!s}"
+            traceback.print_exc()
+            print(
+                "[long_training_canonical] WARN: selected best checkpoint restore "
+                f"failed before archive export: {exc!r}"
+            )
+            if "final_live_state" in locals() and "final_ema_state" in locals():
+                try:
+                    ema_shadow.restore_from_snapshot(adapter.model, final_live_state)
+                    ema_shadow.load_state_dict(final_ema_state)
+                    if ema_shadow.enable_kahan:
+                        ema_shadow.load_compensation_state_dict(
+                            final_ema_compensation_state
+                        )
+                except Exception as restore_exc:
+                    print(
+                        "[long_training_canonical] WARN: fallback final checkpoint "
+                        f"restore also failed: {restore_exc!r}"
+                    )
+            selected_meta_path = final_meta_path
+            selected_checkpoint_role = "final"
+            selected_meta = final_meta
+            ema_shadow_checkpoint_path = final_ema_shadow_checkpoint_path
+            live_checkpoint_path = final_live_checkpoint_path
+
+    checkpoint_selection: dict[str, Any] = {
+        "schema": "long_training_checkpoint_selection.v1",
+        "policy": (
+            "best_loss_checkpoint_for_archive_export"
+            if config.best_checkpoint_for_archive_export
+            else "final_checkpoint_for_archive_export"
+        ),
+        "selected_role": selected_checkpoint_role,
+        "selected_meta_path": selected_meta_path.as_posix(),
+        "selected_global_epoch": selected_meta.get("global_epoch"),
+        "selected_loss": selected_meta.get("loss"),
+        "selected_live_state_path": (
+            live_checkpoint_path.as_posix() if live_checkpoint_path else None
+        ),
+        "selected_ema_shadow_state_path": ema_shadow_checkpoint_path.as_posix(),
+        "final_meta_path": final_meta_path.as_posix(),
+        "final_global_epoch": final_meta.get("global_epoch"),
+        "final_loss": final_meta.get("loss"),
+        "final_live_state_path": (
+            final_live_checkpoint_path.as_posix()
+            if final_live_checkpoint_path
+            else None
+        ),
+        "final_ema_shadow_state_path": final_ema_shadow_checkpoint_path.as_posix(),
+        "best_observed_epoch": int(best_epoch),
+        "best_observed_loss": float(best_loss),
+        "best_meta_path": best_meta_path.as_posix() if best_meta_path else None,
+        "best_state_capture_error": best_state_capture_error,
+        "best_checkpoint_emission_error": best_checkpoint_emission_error,
+        "selected_checkpoint_restore_error": selected_checkpoint_restore_error,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
     # 10) Substrate archive export (optional per adapter contract).
     archive_path: Path | None = None
@@ -2669,6 +3370,7 @@ def run_long_training(
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
         archive_selection_manifest_path=archive_selection_manifest_path,
+        checkpoint_selection=checkpoint_selection,
         per_epoch_metrics=tuple(per_epoch_metrics),
         total_wall_clock_seconds=total_wall_clock,
         total_epochs_completed=total_epochs_completed,
@@ -2691,6 +3393,7 @@ def run_long_training(
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
         archive_selection_manifest_path=archive_selection_manifest_path,
+        checkpoint_selection=checkpoint_selection,
         per_epoch_metrics=tuple(per_epoch_metrics),
         total_wall_clock_seconds=total_wall_clock,
         total_epochs_completed=total_epochs_completed,
@@ -2713,6 +3416,7 @@ def run_long_training(
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
         archive_selection_manifest_path=archive_selection_manifest_path,
+        checkpoint_selection=checkpoint_selection,
         per_epoch_metrics=tuple(per_epoch_metrics),
         total_wall_clock_seconds=total_wall_clock,
         total_epochs_completed=total_epochs_completed,

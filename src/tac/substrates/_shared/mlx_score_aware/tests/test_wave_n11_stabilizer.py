@@ -477,6 +477,89 @@ def test_build_optimizer_routes_native_mlx_muon(
     assert opt.weight_decay == pytest.approx(1.0e-4)
 
 
+def test_build_optimizer_routes_aurora_like_real_optimizer(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """aurora_like builds a real MLX optimizer object, not a planner label."""
+
+    from tac.substrates._shared.mlx_score_aware.adapter import (
+        AURORA_LIKE_SOURCE_COMMIT,
+        AURORA_LIKE_SOURCE_REPO,
+        MlxScoreAwareAdapter,
+    )
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind="aurora_like",
+        weight_decay=1.0e-4,
+        **adapter_kwargs,
+    )
+    opt = a._build_wave_n11_optimizer(learning_rate=3.0e-4)
+
+    assert opt.__class__.__name__ == "AuroraLikeMlxOptimizer"
+    assert opt.weight_decay == pytest.approx(1.0e-4)
+    assert opt.source_repo == AURORA_LIKE_SOURCE_REPO
+    assert opt.source_commit == AURORA_LIKE_SOURCE_COMMIT
+    assert opt.pp_iterations >= 1
+
+
+def test_aurora_like_matrix_update_is_not_muon_or_adamw_alias(
+    minimal_bundle,
+    adapter_kwargs,
+):
+    """NO-FAKE: Aurora-like deltas row-balance rectangular matrices."""
+
+    import mlx.core as mx
+    import mlx.optimizers as mlx_optim
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    a = MlxScoreAwareAdapter(
+        minimal_bundle,
+        optimizer_kind="aurora_like",
+        weight_decay=0.0,
+        **adapter_kwargs,
+    )
+    aurora = a._build_wave_n11_optimizer(learning_rate=1.0)
+    muon = mlx_optim.Muon(learning_rate=1.0, weight_decay=0.0)
+    adamw = mlx_optim.AdamW(learning_rate=1.0, weight_decay=0.0)
+    params = {
+        "w": mx.zeros((4, 2), dtype=mx.float32),
+        "b": mx.zeros((4,), dtype=mx.float32),
+    }
+    grads = {
+        "w": mx.array(
+            [[8.0, 0.0], [0.1, 0.0], [0.0, 3.0], [0.0, 0.2]],
+            dtype=mx.float32,
+        ),
+        "b": mx.array([1.0, -0.5, 0.25, -0.125], dtype=mx.float32),
+    }
+
+    aurora_new = aurora.apply_gradients(grads, params)
+    muon_new = muon.apply_gradients(grads, params)
+    adamw_new = adamw.apply_gradients(grads, params)
+    aurora_w_delta = -aurora_new["w"]
+    muon_w_delta = -muon_new["w"]
+    adamw_w_delta = -adamw_new["w"]
+    aurora_row_norms = mx.sqrt(mx.sum(aurora_w_delta * aurora_w_delta, axis=1))
+    muon_row_norms = mx.sqrt(mx.sum(muon_w_delta * muon_w_delta, axis=1))
+    mx.eval(
+        aurora_w_delta,
+        muon_w_delta,
+        adamw_w_delta,
+        aurora_row_norms,
+        muon_row_norms,
+    )
+
+    assert float(mx.max(mx.abs(aurora_w_delta - muon_w_delta)).item()) > 1.0e-3
+    assert float(mx.max(mx.abs(aurora_w_delta - adamw_w_delta)).item()) > 1.0e-3
+    assert float(mx.std(aurora_row_norms).item()) < float(
+        mx.std(muon_row_norms).item()
+    )
+    assert float(mx.min(aurora_row_norms).item()) > 0.0
+
+
 def test_build_optimizer_refuses_fake_single_object_pact_muon_adamw(
     minimal_bundle,
     adapter_kwargs,
@@ -608,6 +691,61 @@ def test_train_step_lion_emits_native_optimizer_binding_telemetry(
     assert metrics["native_mlx_optimizer_kind_muon"] == pytest.approx(0.0)
     assert metrics["native_mlx_optimizer_weight_decay"] == pytest.approx(0.0)
     assert metrics["native_mlx_optimizer_weight_decay_explicit"] == pytest.approx(1.0)
+
+
+def test_train_step_aurora_like_emits_native_optimizer_binding_telemetry(
+    adapter_kwargs,
+):
+    """aurora_like trains through the shared adapter and advertises its branch."""
+
+    import mlx.core as mx
+    import mlx.nn as mlx_nn
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+
+    class TinyRenderer(mlx_nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.latents = mx.ones((4, 3)) * 0.2
+            self.decoder_weight = mx.eye(3) * 0.5
+
+        def reconstruct_pair(self, batch):
+            n = batch.shape[0]
+            latent = self.latents[batch]
+            mixed = latent @ self.decoder_weight
+            rgb0 = mx.broadcast_to(mx.reshape(mixed, (n, 3, 1, 1)), (n, 3, 4, 4))
+            rgb1 = rgb0 * 0.5
+            return rgb0, rgb1
+
+    bundle = RendererBundle(
+        model=TinyRenderer(),
+        target_rgb_0=mx.zeros((4, 4, 4, 3)),
+        target_rgb_1=mx.zeros((4, 4, 4, 3)),
+        num_pairs=4,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+    before = bundle.model.decoder_weight
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        optimizer_kind="aurora_like",
+        weight_decay=0.0,
+        **adapter_kwargs,
+    )
+
+    metrics = adapter.train_step(
+        batch=mx.array([0, 1], dtype=mx.int32),
+        learning_rate=3.0e-4,
+        loss_weights={},
+    )
+    after = bundle.model.decoder_weight
+    mx.eval(before, after)
+
+    assert metrics["native_mlx_optimizer_active"] == pytest.approx(1.0)
+    assert metrics["native_mlx_optimizer_kind_aurora_like"] == pytest.approx(1.0)
+    assert metrics["native_mlx_optimizer_kind_adamw"] == pytest.approx(0.0)
+    assert metrics["native_mlx_optimizer_kind_muon"] == pytest.approx(0.0)
+    assert float(mx.max(mx.abs(after - before)).item()) > 0.0
 
 
 def test_build_optimizer_warmup_only_uses_linear_schedule(

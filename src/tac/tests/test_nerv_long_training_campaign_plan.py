@@ -2517,10 +2517,14 @@ def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
                 "hard_byte_ceiling": 178_000,
                 "seg_stagnation_detected": True,
                 "pose_instability_detected": True,
+                "pose_tail_burst_detected": True,
                 "observed_segnet_distillation_weight": 2.0,
                 "recommended_segnet_distillation_weight": 4.0,
+                "observed_pose_distillation_weight": 1.0,
+                "recommended_pose_distillation_weight": 8.0,
                 "recommended_launch_mutations": [
                     "increase_segnet_distillation_weight_from_full_video_mlx_response",
+                    "increase_pose_distillation_weight_from_full_video_mlx_response",
                     "treat_previous_hi_nerv_run_as_fit_failure_not_rate_negative",
                 ],
                 "full_video_mlx_scorer_response": {
@@ -2553,9 +2557,15 @@ def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
     assert adjustment["launch_control_feedback_ready"] is True
     assert adjustment["applied"] is True
     assert adjustment["segnet_weight_applied"] is True
+    assert adjustment["pose_weight_applied"] is True
     assert adjustment["segnet_distillation_weight"] == 4.0
+    assert adjustment["pose_distillation_weight"] == 8.0
     assert argv[argv.index("--segnet-distillation-weight") + 1] == "4"
+    assert argv[argv.index("--pose-distillation-weight") + 1] == "8"
     assert "increase_segnet_distillation_weight_from_full_video_mlx_response" in (
+        adjustment["launch_mutations"]
+    )
+    assert "increase_pose_distillation_weight_from_full_video_mlx_response" in (
         adjustment["launch_mutations"]
     )
     assert "hinerv_segnet_stagnation_feedback_unapplied" not in hi["blockers"]
@@ -3362,7 +3372,13 @@ def test_long_training_campaign_plan_rejects_unknown_optimizer() -> None:
 
 
 def test_default_optimizer_kinds_cover_native_mlx_optimizer_surface() -> None:
-    assert set(DEFAULT_OPTIMIZER_KINDS) == set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS)
+    explicit_timing_smoke_only = {"aurora_like"}
+    assert set(DEFAULT_OPTIMIZER_KINDS) == (
+        set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS) - explicit_timing_smoke_only
+    )
+    assert explicit_timing_smoke_only.issubset(
+        set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS)
+    )
     assert DEFAULT_OPTIMIZER_KINDS[:5] == (
         "pact_muon_adamw",
         "adamw",
@@ -3370,6 +3386,74 @@ def test_default_optimizer_kinds_cover_native_mlx_optimizer_surface() -> None:
         "lion",
         "adamax",
     )
+
+
+def test_aurora_like_optimizer_row_is_native_mlx_timing_smoke_and_fail_closed() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("aurora",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["optimizer_kind"] == "aurora_like"
+    assert hi["implementation_status"] == (
+        "optimizer_timing_smoke_required_before_campaign_launch"
+    )
+    assert hi["local_mlx_launch_command_ready"] is False
+    assert hi["local_mlx_executable"] is False
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
+    assert "--optimizer-kind" in hi["command_argv"]
+    assert hi["command_argv"][hi["command_argv"].index("--optimizer-kind") + 1] == "aurora_like"
+
+    expected_launch_blockers = {"aurora_requires_local_timing_convergence_smoke"}
+    assert expected_launch_blockers.issubset(set(hi["blockers"]))
+    assert "aurora_not_integrated_with_mlx_score_aware_optimizer_contract" not in set(
+        hi["blockers"]
+    )
+    assert expected_launch_blockers.issubset(
+        set(hi["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"])
+    )
+    assert hi["experiment_queue_entry"]["status"] == "disabled"
+    assert hi["experiment_queue_entry"]["blocked"] is True
+    assert hi["experiment_queue_entry"]["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
+    assert hi["score_lowering_gate"]["command_materialized"] is False
+    assert hi["score_lowering_gate"]["local_mlx_executable"] is False
+    assert expected_launch_blockers.issubset(
+        set(hi["score_lowering_gate"]["launch_blockers"])
+    )
+
+    control = hi["optimizer_control"]
+    assert control["classification"] == (
+        "runnable_false_authority_timing_smoke_candidate"
+    )
+    assert control["backend"] == (
+        "tac.substrates._shared.mlx_score_aware.adapter.AuroraLikeMlxOptimizer"
+    )
+    assert control["native_mlx_on_apple_silicon"] is True
+    assert control["native_mlx_optimizer_object"] is True
+    assert control["score_claim"] is False
+    assert expected_launch_blockers.issubset(set(control["launch_blockers"]))
+    assert "aurora_not_pr95_source_authority" in set(control["authority_blockers"])
+
+    policy = hi["optimizer_policy"]
+    assert policy["classification"] == (
+        "runnable_false_authority_timing_smoke_candidate"
+    )
+    assert policy["is_plan_only_optimizer_control"] is False
+    assert policy["is_timing_smoke_optimizer_control"] is True
+    assert policy["native_mlx_optimizer_expected"] is True
+    assert policy["pr95_faithful_curriculum_expected"] is False
+    assert policy["runner_policy_if_implemented"] == "native_optimizer"
+
+    optimizer_policy = report["optimizer_control_policy"]
+    assert optimizer_policy["selected_plan_only_optimizer_kinds"] == []
+    assert optimizer_policy["selected_timing_smoke_optimizer_kinds"] == ["aurora_like"]
+    assert "aurora_like" in optimizer_policy["native_mlx_optimizer_kinds"]
 
 
 def test_adamw_hinerv_row_is_explicit_pr95_curriculum_control() -> None:

@@ -66056,11 +66056,11 @@
       "id": "lane_z8_symbolic_lambda_wavelet_blob_20260601",
       "name": "Z8 symbolic lambda wavelet blob int8/int16 probe",
       "phase": 1.0,
-      "level": 2,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": true,
-          "evidence": "src/tac/substrates/z8_hierarchical_predictive_coding/symbolic_wavelet_blob.py"
+          "status": false,
+          "evidence": ""
         },
         "real_archive_empirical": {
           "status": true,
@@ -66079,12 +66079,12 @@
           "evidence": ""
         },
         "three_clean_review": {
-          "status": true,
-          "evidence": ".omx/research/codex_findings_z8_symbolic_lambda_wavelet_blob_probe_20260601T202000Z_codex.md"
+          "status": false,
+          "evidence": ""
         },
         "memory_entry": {
-          "status": true,
-          "evidence": ".omx/research/codex_findings_z8_symbolic_lambda_wavelet_blob_probe_20260601T202000Z_codex.md"
+          "status": false,
+          "evidence": ""
         },
         "deploy_runbook": {
           "status": false,
@@ -67609,6 +67609,47 @@
         }
       },
       "notes": ""
+    },
+    {
+      "id": "lane_tilde_aurora_optimizer_control_20260604",
+      "name": "Tilde Aurora NeRV Optimizer Control",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "aurora_like now has real shared MLX optimizer adapter support plus planner treats it as native false-authority timing-smoke row"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "42 MLX adapter tests, 80 planner tests, focused Aurora planner tests, ruff, py_compile, argparse smoke, lane validate, and 1-pair/1-epoch Aurora false-authority SSD timing smoke passed"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_findings_tilde_aurora_swarm_integration_20260604T143436Z_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -67618,5 +67659,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-04T07:00:59Z"
+  "updated_at": "2026-06-04T14:44:22Z"
 }
