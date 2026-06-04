@@ -401,7 +401,9 @@ def _header_minimization_result_row(
         evidence=evidence,
         representation_candidate_id="snerv_snar_header_minimization_result",
         work_order_type="snar_header_minimization_result",
-        planner_action="preserve_minimized_snar1_packet_then_run_full_video_replay_and_admission",
+        planner_action=(
+            "preserve_minimized_snar_packet_then_run_full_video_replay_and_admission"
+        ),
         priority=11,
         blocked=True,
         blockers=blockers,
@@ -442,6 +444,8 @@ def _header_rewrite_work_order_row(
             packet_path,
             "--candidate-id",
             str(campaign_row.get("candidate_id") or ""),
+            "--wire-format",
+            "snar2",
             "--output-packet",
             (out_dir / "candidate.minimized.snar").as_posix(),
             "--output-archive-zip",
@@ -463,7 +467,9 @@ def _header_rewrite_work_order_row(
         evidence=evidence,
         representation_candidate_id="snerv_snar_header_grammar_rewrite_materialization",
         work_order_type="snar_header_grammar_rewrite_materialization",
-        planner_action="run_receiver_proven_snar1_header_prune_then_rerun_recode_admission",
+        planner_action=(
+            "run_receiver_proven_snar2_binary_header_prune_then_rerun_recode_admission"
+        ),
         priority=12,
         blocked=not bool(packet_path),
         blockers=blockers,
@@ -966,6 +972,8 @@ def _header_minimization_summary(report: Mapping[str, Any] | None) -> dict[str, 
     )
     return {
         "schema": report.get("schema"),
+        "wire_format": report.get("wire_format"),
+        "operation": report.get("operation"),
         "candidate_binding": dict(report.get("candidate_binding") or {}),
         "source_packet_path": _nested(report, ("source_packet", "path")),
         "source_packet_sha256": _nested(report, ("source_packet", "sha256")),

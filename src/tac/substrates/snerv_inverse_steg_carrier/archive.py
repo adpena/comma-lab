@@ -80,12 +80,27 @@ from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
 )
 
 SNERV_ARCHIVE_SCHEMA = "snerv_inverse_steg_archive.v1"
+SNERV_ARCHIVE_SCHEMA_V2 = "snerv_inverse_steg_archive.snar2.v1"
 SNERV_ARCHIVE_MAGIC = b"SNAR1"
+SNERV_ARCHIVE_MAGIC_V2 = b"SNAR2"
 SNERV_LF_QUANT_MAGIC = b"SNQL1"
 SNERV_DECODER_MAGIC = b"SNDC1"
 SNERV_LF_PAYLOAD_INTN_CODEC_PROOF = _SNERV_LF_PAYLOAD_INTN_CODEC_PROOF
 HEADER_LEN_FMT = "<I"
 SECTION_ORDER = ("metadata_payload", "lf_payload", "decoder_payload", "step_map_packet")
+SNAR2_VERSION = 1
+SNAR2_SECTION_HASH_BYTES = 8
+_SNAR2_HEADER_FMT = "<5sBBBBHBBIBBHH4I4Q"
+SNAR2_HEADER_BYTES = struct.calcsize(_SNAR2_HEADER_FMT)
+_SNAR2_WAVELET_TO_CODE = {
+    "haar": 1,
+    "db1": 1,
+    "db2": 2,
+}
+_SNAR2_CODE_TO_WAVELET = {
+    1: "haar",
+    2: "db2",
+}
 DECODER_SUBBANDS = ("LH", "HL", "HH")
 LF_QUANT_PAYLOAD_SCHEMA_V1 = "snerv_lf_quant_payload.v1"
 LF_QUANT_PAYLOAD_SCHEMA_V2 = "snerv_lf_quant_payload.v2"
@@ -784,6 +799,75 @@ def pack_snerv_archive(
     )
 
 
+def pack_snerv_archive_snar2(
+    *,
+    metadata_payload: bytes,
+    lf_payload: bytes,
+    decoder_payload: bytes,
+    step_map_packet: bytes,
+    metadata: dict[str, Any] | None = None,
+) -> SnervArchivePacket:
+    """Bundle SNeRV sections with a fixed binary SNAR2 header.
+
+    SNAR2 removes the human-readable outer JSON grammar from SNAR1.  The wire
+    header carries only fixed-order section lengths, compact receiver metadata
+    integers, and short section hash prefixes.  Full SHA-256 provenance remains
+    in surrounding reports, not in the packet header.
+    """
+
+    sections = {
+        "metadata_payload": bytes(metadata_payload),
+        "lf_payload": bytes(lf_payload),
+        "decoder_payload": bytes(decoder_payload),
+        "step_map_packet": bytes(step_map_packet),
+    }
+    _validate_sections(sections)
+    clean_metadata = _jsonable_metadata(metadata or {})
+    fields = _snar2_metadata_fields(clean_metadata)
+    payload_parts = [sections[name] for name in SECTION_ORDER]
+    section_bytes = {name: len(sections[name]) for name in SECTION_ORDER}
+    section_sha256 = {name: _sha256(sections[name]) for name in SECTION_ORDER}
+    section_reports = _receiver_section_reports(
+        sections,
+        section_bytes=section_bytes,
+        section_sha256=section_sha256,
+    )
+    section_lengths = [section_bytes[name] for name in SECTION_ORDER]
+    for name, length in zip(SECTION_ORDER, section_lengths, strict=True):
+        _snar2_u32(f"{name}_section_length", int(length))
+    hash_prefixes = [_sha256_prefix64(sections[name]) for name in SECTION_ORDER]
+    header = struct.pack(
+        _SNAR2_HEADER_FMT,
+        SNERV_ARCHIVE_MAGIC_V2,
+        SNAR2_VERSION,
+        0,
+        int(fields["wavelet_code"]),
+        len(SECTION_ORDER),
+        int(fields["n_pairs"]),
+        int(fields["frames_per_pair"]),
+        int(fields["channels"]),
+        int(fields["lf_plane_count"]),
+        int(fields["levels"]),
+        int(fields["metadata_flags"]),
+        int(fields["height"]),
+        int(fields["width"]),
+        *section_lengths,
+        *hash_prefixes,
+    )
+    packet = header + b"".join(payload_parts)
+    return SnervArchivePacket(
+        packet=packet,
+        schema=SNERV_ARCHIVE_SCHEMA_V2,
+        section_order=SECTION_ORDER,
+        section_bytes=section_bytes,
+        section_sha256=section_sha256,
+        section_reports=section_reports,
+        metadata=_snar2_metadata_from_fields(fields),
+        header_bytes=SNAR2_HEADER_BYTES,
+        total_bytes=len(packet),
+    )
+
+
 def _receiver_section_reports(
     sections: Mapping[str, bytes],
     *,
@@ -824,6 +908,14 @@ def unpack_snerv_archive(packet: bytes) -> DecodedSnervArchive:
     """Decode and validate a bundled SNeRV archive packet."""
 
     packet = bytes(packet)
+    if packet.startswith(SNERV_ARCHIVE_MAGIC):
+        return _unpack_snerv_archive_v1(packet)
+    if packet.startswith(SNERV_ARCHIVE_MAGIC_V2):
+        return _unpack_snerv_archive_v2(packet)
+    raise SnervArchiveError("bad SNeRV archive magic")
+
+
+def _unpack_snerv_archive_v1(packet: bytes) -> DecodedSnervArchive:
     if not packet.startswith(SNERV_ARCHIVE_MAGIC):
         raise SnervArchiveError("bad SNeRV archive magic")
     offset = len(SNERV_ARCHIVE_MAGIC)
@@ -877,6 +969,80 @@ def unpack_snerv_archive(packet: bytes) -> DecodedSnervArchive:
         section_order=SECTION_ORDER,
         sections=sections,
         metadata=dict(header.get("metadata", {})),
+        packet_sha256=_sha256(packet),
+    )
+
+
+def _unpack_snerv_archive_v2(packet: bytes) -> DecodedSnervArchive:
+    if len(packet) < SNAR2_HEADER_BYTES:
+        raise SnervArchiveError("truncated SNAR2 fixed header")
+    unpacked = struct.unpack(_SNAR2_HEADER_FMT, packet[:SNAR2_HEADER_BYTES])
+    (
+        magic,
+        version,
+        flags,
+        wavelet_code,
+        section_count,
+        n_pairs,
+        frames_per_pair,
+        channels,
+        lf_plane_count,
+        levels,
+        metadata_flags,
+        height,
+        width,
+        *tail,
+    ) = unpacked
+    if magic != SNERV_ARCHIVE_MAGIC_V2:
+        raise SnervArchiveError("bad SNAR2 archive magic")
+    if int(version) != SNAR2_VERSION:
+        raise SnervArchiveError(f"unsupported SNAR2 version: {version!r}")
+    if int(flags) != 0:
+        raise SnervArchiveError(f"unsupported SNAR2 flags: {flags!r}")
+    if int(section_count) != len(SECTION_ORDER):
+        raise SnervArchiveError(
+            f"SNAR2 section_count {section_count} != expected {len(SECTION_ORDER)}"
+        )
+    section_lengths = [int(value) for value in tail[: len(SECTION_ORDER)]]
+    hash_prefixes = [int(value) for value in tail[len(SECTION_ORDER) :]]
+    if len(hash_prefixes) != len(SECTION_ORDER):
+        raise SnervArchiveError("SNAR2 fixed header hash table malformed")
+    if any(length <= 0 for length in section_lengths):
+        raise SnervArchiveError("SNAR2 section lengths must be positive")
+    payload = packet[SNAR2_HEADER_BYTES:]
+    if sum(section_lengths) != len(payload):
+        raise SnervArchiveError("SNAR2 section lengths do not cover payload exactly")
+    sections: dict[str, bytes] = {}
+    cursor = 0
+    for name, length, expected_prefix in zip(
+        SECTION_ORDER,
+        section_lengths,
+        hash_prefixes,
+        strict=True,
+    ):
+        blob = payload[cursor : cursor + int(length)]
+        if _sha256_prefix64(blob) != int(expected_prefix):
+            raise SnervArchiveError(f"SNAR2 section {name!r} sha256-prefix mismatch")
+        sections[name] = blob
+        cursor += int(length)
+    metadata = _snar2_metadata_from_fields(
+        {
+            "wavelet_code": int(wavelet_code),
+            "n_pairs": int(n_pairs),
+            "frames_per_pair": int(frames_per_pair),
+            "channels": int(channels),
+            "lf_plane_count": int(lf_plane_count),
+            "levels": int(levels),
+            "metadata_flags": int(metadata_flags),
+            "height": int(height),
+            "width": int(width),
+        }
+    )
+    return DecodedSnervArchive(
+        schema=SNERV_ARCHIVE_SCHEMA_V2,
+        section_order=SECTION_ORDER,
+        sections=sections,
+        metadata=metadata,
         packet_sha256=_sha256(packet),
     )
 
@@ -2934,6 +3100,109 @@ def _validate_sections(sections: dict[str, bytes]) -> None:
             raise SnervArchiveError(f"section {name!r} must be non-empty bytes")
 
 
+def _snar2_metadata_fields(metadata: Mapping[str, Any]) -> dict[str, int]:
+    clean_metadata = dict(metadata)
+    if "carrier_hw" in clean_metadata and "orig_hw" in clean_metadata:
+        carrier_hw = _metadata_hw_value("carrier_hw", clean_metadata["carrier_hw"])
+        orig_hw = _metadata_hw_value("orig_hw", clean_metadata["orig_hw"])
+        if carrier_hw != orig_hw:
+            raise SnervArchiveError(
+                "SNAR2 fixed header cannot encode distinct carrier_hw and orig_hw"
+            )
+    n_pairs = _metadata_int(clean_metadata, "n_pairs", minimum=1)
+    frames_per_pair = _metadata_int(
+        clean_metadata,
+        "frames_per_pair",
+        default=2,
+        minimum=1,
+    )
+    channels = _metadata_int(clean_metadata, "channels", default=3, minimum=1)
+    lf_plane_count = _metadata_int(clean_metadata, "lf_plane_count", minimum=1)
+    levels = _metadata_int(clean_metadata, "levels", minimum=1)
+    wavelet = _metadata_str(clean_metadata, "wavelet").strip().lower()
+    if wavelet not in _SNAR2_WAVELET_TO_CODE:
+        raise SnervArchiveError(f"SNAR2 unsupported compact wavelet code: {wavelet!r}")
+    height, width = _metadata_hw(dict(metadata))
+    _snar2_u16("n_pairs", n_pairs)
+    _snar2_u8("frames_per_pair", frames_per_pair)
+    _snar2_u8("channels", channels)
+    _snar2_u32("lf_plane_count", lf_plane_count)
+    _snar2_u8("levels", levels)
+    _snar2_u16("height", height)
+    _snar2_u16("width", width)
+    return {
+        "n_pairs": n_pairs,
+        "frames_per_pair": frames_per_pair,
+        "channels": channels,
+        "lf_plane_count": lf_plane_count,
+        "levels": levels,
+        "wavelet_code": int(_SNAR2_WAVELET_TO_CODE[wavelet]),
+        "metadata_flags": 0,
+        "height": height,
+        "width": width,
+    }
+
+
+def _snar2_metadata_from_fields(fields: Mapping[str, Any]) -> dict[str, Any]:
+    wavelet_code = int(fields["wavelet_code"])
+    wavelet = _SNAR2_CODE_TO_WAVELET.get(wavelet_code)
+    if wavelet is None:
+        raise SnervArchiveError(f"unsupported SNAR2 wavelet code: {wavelet_code!r}")
+    n_pairs = int(fields["n_pairs"])
+    frames_per_pair = int(fields["frames_per_pair"])
+    channels = int(fields["channels"])
+    lf_plane_count = int(fields["lf_plane_count"])
+    levels = int(fields["levels"])
+    metadata_flags = int(fields["metadata_flags"])
+    height = int(fields["height"])
+    width = int(fields["width"])
+    if metadata_flags != 0:
+        raise SnervArchiveError(f"unsupported SNAR2 metadata_flags: {metadata_flags!r}")
+    _snar2_u16("n_pairs", n_pairs)
+    _snar2_u8("frames_per_pair", frames_per_pair)
+    _snar2_u8("channels", channels)
+    _snar2_u32("lf_plane_count", lf_plane_count)
+    _snar2_u8("levels", levels)
+    _snar2_u16("height", height)
+    _snar2_u16("width", width)
+    for name, value in (
+        ("n_pairs", n_pairs),
+        ("frames_per_pair", frames_per_pair),
+        ("channels", channels),
+        ("lf_plane_count", lf_plane_count),
+        ("levels", levels),
+        ("height", height),
+        ("width", width),
+    ):
+        if int(value) < 1:
+            raise SnervArchiveError(f"SNAR2 {name}={value} must be >= 1")
+    return {
+        "n_pairs": n_pairs,
+        "frames_per_pair": frames_per_pair,
+        "channels": channels,
+        "lf_plane_count": lf_plane_count,
+        "levels": levels,
+        "wavelet": wavelet,
+        "carrier_hw": [height, width],
+        "orig_hw": [height, width],
+    }
+
+
+def _snar2_u8(name: str, value: int) -> None:
+    if int(value) < 0 or int(value) > 0xFF:
+        raise SnervArchiveError(f"SNAR2 {name}={value} out of u8 range")
+
+
+def _snar2_u16(name: str, value: int) -> None:
+    if int(value) < 0 or int(value) > 0xFFFF:
+        raise SnervArchiveError(f"SNAR2 {name}={value} out of u16 range")
+
+
+def _snar2_u32(name: str, value: int) -> None:
+    if int(value) < 0 or int(value) > 0xFFFFFFFF:
+        raise SnervArchiveError(f"SNAR2 {name}={value} out of u32 range")
+
+
 def _validate_lf_quant_plane(plane: np.ndarray) -> np.ndarray:
     arr = np.asarray(plane)
     if arr.size == 0:
@@ -2997,10 +3266,12 @@ def _metadata_str(metadata: dict[str, Any], key: str) -> str:
 
 def _metadata_hw(metadata: dict[str, Any]) -> tuple[int, int]:
     value = metadata.get("carrier_hw", metadata.get("orig_hw"))
+    return _metadata_hw_value("'carrier_hw'/'orig_hw'", value)
+
+
+def _metadata_hw_value(name: str, value: Any) -> tuple[int, int]:
     if not isinstance(value, (list, tuple)) or len(value) != 2:
-        raise SnervArchiveError(
-            "receiver replay metadata missing 2-element 'carrier_hw'/'orig_hw'"
-        )
+        raise SnervArchiveError(f"receiver replay metadata missing 2-element {name}")
     h, w = int(value[0]), int(value[1])
     if h <= 0 or w <= 0:
         raise SnervArchiveError("receiver replay metadata height/width must be positive")
@@ -3059,6 +3330,10 @@ def _jsonable_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
 
 def _sha256(blob: bytes) -> str:
     return hashlib.sha256(blob).hexdigest()
+
+
+def _sha256_prefix64(blob: bytes) -> int:
+    return int.from_bytes(hashlib.sha256(blob).digest()[:SNAR2_SECTION_HASH_BYTES], "little")
 
 
 def _json_sha256(value: Any) -> str:

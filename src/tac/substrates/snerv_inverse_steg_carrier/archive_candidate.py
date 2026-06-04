@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Archive-bound SNeRV receiver package helpers.
 
-This bridge turns receiver-visible SNAR1 packets into a contest-shaped
+This bridge turns receiver-visible SNAR packets into a contest-shaped
 ``archive.zip`` plus generated ``inflate.sh`` proof. It is deliberately
 false-authority: runtime consumption is proved, exact score authority is not.
 """
@@ -21,6 +21,8 @@ from tac.substrates._shared.pact_nerv_full_main import (
     write_contest_runtime,
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    SNERV_ARCHIVE_SCHEMA,
+    SNERV_ARCHIVE_SCHEMA_V2,
     SnervArchiveError,
     unpack_snerv_archive,
 )
@@ -32,6 +34,11 @@ SNERV_RECEIVER_PROOF_SCHEMA = "snerv_inverse_steg_generated_receiver_proof.v1"
 SNERV_ARCHIVE_BOUND_ADAPTER_ID = "snerv_inverse_steg_archive_export"
 SNERV_ARCHIVE_CANDIDATE_FAMILY = "snerv_inverse_steg_carrier"
 SNERV_ARCHIVE_TRANSFORM_KIND = "snerv_inverse_steg_snar1_archive"
+SNERV_ARCHIVE_TRANSFORM_KIND_V2 = "snerv_inverse_steg_snar2_archive"
+SNERV_RECEIVER_CONTRACT_KIND = "snerv_inverse_steg_snar1_inflate_decode_only_receiver"
+SNERV_RECEIVER_CONTRACT_KIND_V2 = (
+    "snerv_inverse_steg_snar2_inflate_decode_only_receiver"
+)
 CAMERA_HW: tuple[int, int] = (874, 1164)
 
 
@@ -74,7 +81,7 @@ def export_snerv_archive_bound_candidate_package(
     receiver_proof_timeout_seconds: int = 1800,
     mlx_triage_argv: Sequence[str] | None = None,
 ) -> dict[str, Any]:
-    """Emit ``0.bin``, ``archive.zip``, runtime, and receiver proof for SNAR1."""
+    """Emit ``0.bin``, ``archive.zip``, runtime, and receiver proof for SNAR."""
 
     root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[4]
     out_dir = Path(output_dir)
@@ -84,6 +91,7 @@ def export_snerv_archive_bound_candidate_package(
 
     bin_bytes = bytes(packet)
     decoded = unpack_snerv_archive(bin_bytes)
+    transform_kind, receiver_contract_kind = _archive_contract_for_schema(decoded.schema)
     expected_output_bytes = expected_receiver_output_bytes_from_metadata(
         decoded.metadata
     )
@@ -114,7 +122,7 @@ def export_snerv_archive_bound_candidate_package(
         adapter_id=SNERV_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=SNERV_ARCHIVE_CANDIDATE_FAMILY,
         candidate_id_prefix="snerv_inverse_steg",
-        transform_kind=SNERV_ARCHIVE_TRANSFORM_KIND,
+        transform_kind=transform_kind,
         archive_zip_path=archive_zip_path,
         archive_sha256=archive_sha256,
         archive_bytes=archive_bytes,
@@ -122,7 +130,7 @@ def export_snerv_archive_bound_candidate_package(
         archive_dir_for_inflate=submission_dir,
         output_dir=out_dir,
         repo_root=root,
-        receiver_contract_kind="snerv_inverse_steg_snar1_inflate_decode_only_receiver",
+        receiver_contract_kind=receiver_contract_kind,
         proof_schema=SNERV_RECEIVER_PROOF_SCHEMA,
         proof_filename="snerv_inverse_steg_receiver_proof.json",
         candidate_label="snerv_inverse_steg",
@@ -178,11 +186,22 @@ def _receiver_dwt_dependency_mode(metadata: dict[str, Any]) -> str:
     return "pywavelets_required_for_non_haar"
 
 
+def _archive_contract_for_schema(schema: str) -> tuple[str, str]:
+    if schema == SNERV_ARCHIVE_SCHEMA:
+        return SNERV_ARCHIVE_TRANSFORM_KIND, SNERV_RECEIVER_CONTRACT_KIND
+    if schema == SNERV_ARCHIVE_SCHEMA_V2:
+        return SNERV_ARCHIVE_TRANSFORM_KIND_V2, SNERV_RECEIVER_CONTRACT_KIND_V2
+    raise SnervArchiveError(f"unsupported SNeRV archive packet schema: {schema!r}")
+
+
 __all__ = [
     "SNERV_ARCHIVE_BOUND_ADAPTER_ID",
     "SNERV_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA",
     "SNERV_ARCHIVE_CANDIDATE_FAMILY",
     "SNERV_ARCHIVE_TRANSFORM_KIND",
+    "SNERV_ARCHIVE_TRANSFORM_KIND_V2",
+    "SNERV_RECEIVER_CONTRACT_KIND",
+    "SNERV_RECEIVER_CONTRACT_KIND_V2",
     "SNERV_RECEIVER_PROOF_SCHEMA",
     "expected_receiver_output_bytes_from_metadata",
     "export_snerv_archive_bound_candidate_package",

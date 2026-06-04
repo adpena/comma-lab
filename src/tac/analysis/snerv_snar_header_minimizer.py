@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
-"""Prune receiver-inert metadata from SNAR1 packets.
+"""Prune receiver-inert metadata from SNeRV receiver packets.
 
 This is a compatibility bridge, not the final compact bitstream grammar.  It
 keeps the current SNAR1 unpacker contract while moving large provenance fields
-out of archive bytes and into a durable manifest.
+out of archive bytes and into a durable manifest.  SNAR2 is the same section
+contract with a fixed binary outer header, selected explicitly by callers.
 """
 
 from __future__ import annotations
@@ -21,10 +22,13 @@ from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     HEADER_LEN_FMT,
     SECTION_ORDER,
+    SNAR2_HEADER_BYTES,
     SNERV_ARCHIVE_MAGIC,
+    SNERV_ARCHIVE_MAGIC_V2,
     SNERV_ARCHIVE_SCHEMA,
     SnervArchiveError,
     decode_snerv_archive_pair_frames_from_decoded,
+    pack_snerv_archive_snar2,
     unpack_snerv_archive,
 )
 
@@ -51,6 +55,7 @@ def build_snerv_snar_header_minimization(
     *,
     source_packet_path: str | None = None,
     candidate_id: str | None = None,
+    wire_format: str = "snar1",
     proof_pair_indices: Sequence[int] = (),
     full_video_receiver_proof: bool = False,
     frame_proof_max_output_bytes: int = DEFAULT_FRAME_PROOF_MAX_OUTPUT_BYTES,
@@ -58,7 +63,7 @@ def build_snerv_snar_header_minimization(
     generated_utc: str | None = None,
     raw_argv: Sequence[str] = (),
 ) -> tuple[dict[str, Any], bytes]:
-    """Return a minimized SNAR1 packet plus a provenance/proof manifest."""
+    """Return a minimized receiver packet plus a provenance/proof manifest."""
 
     source_blob = bytes(source_packet)
     if not source_blob:
@@ -66,9 +71,11 @@ def build_snerv_snar_header_minimization(
 
     source = unpack_snerv_archive(source_blob)
     minimal_metadata = _receiver_metadata(source.metadata)
-    candidate_packet = _pack_minimal_snar1(
+    resolved_wire_format = _resolve_wire_format(wire_format)
+    candidate_packet = _pack_minimized_packet(
         sections=source.sections,
         metadata=minimal_metadata,
+        wire_format=resolved_wire_format,
     )
     candidate = unpack_snerv_archive(candidate_packet)
     removed_metadata = {
@@ -108,7 +115,8 @@ def build_snerv_snar_header_minimization(
         "schema": SCHEMA,
         "axis_tag": AXIS_TAG,
         "generated_utc": generated_utc or datetime.now(UTC).isoformat(),
-        "operation": "snar1_receiver_metadata_prune",
+        "operation": _operation_for_wire_format(resolved_wire_format),
+        "wire_format": resolved_wire_format,
         "candidate_binding": {
             "candidate_id": bound_candidate_id,
             "binding_status": (
@@ -184,16 +192,35 @@ def build_snerv_snar_header_minimization(
         "next_actions": _next_actions(
             receiver_contract=receiver_contract,
             full_video_receiver_contract=full_video_receiver_contract,
+            wire_format=resolved_wire_format,
         ),
         "blockers": _blockers(
             receiver_contract=receiver_contract,
             full_video_receiver_contract=full_video_receiver_contract,
             candidate_id_bound=bool(bound_candidate_id),
+            wire_format=resolved_wire_format,
         ),
         "raw_argv": list(raw_argv),
         **FALSE_AUTHORITY,
     }
     return report, candidate_packet
+
+
+def _pack_minimized_packet(
+    *,
+    sections: Mapping[str, bytes],
+    metadata: Mapping[str, Any],
+    wire_format: str,
+) -> bytes:
+    if wire_format == "snar2":
+        return pack_snerv_archive_snar2(
+            metadata_payload=sections["metadata_payload"],
+            lf_payload=sections["lf_payload"],
+            decoder_payload=sections["decoder_payload"],
+            step_map_packet=sections["step_map_packet"],
+            metadata=dict(metadata),
+        ).packet
+    return _pack_minimal_snar1(sections=sections, metadata=metadata)
 
 
 def _pack_minimal_snar1(
@@ -435,8 +462,10 @@ def _pair_frame_output_bytes(
 
 def _outer_header_bytes(packet: bytes) -> int:
     blob = bytes(packet)
+    if blob.startswith(SNERV_ARCHIVE_MAGIC_V2):
+        return int(SNAR2_HEADER_BYTES)
     if not blob.startswith(SNERV_ARCHIVE_MAGIC):
-        raise SnervSnarHeaderMinimizerError("input is not a SNAR1 packet")
+        raise SnervSnarHeaderMinimizerError("input is not a SNAR1/SNAR2 packet")
     offset = len(SNERV_ARCHIVE_MAGIC)
     size = struct.calcsize(HEADER_LEN_FMT)
     if len(blob) < offset + size:
@@ -449,14 +478,17 @@ def _next_actions(
     *,
     receiver_contract: bool,
     full_video_receiver_contract: bool,
+    wire_format: str,
 ) -> list[str]:
     if full_video_receiver_contract:
-        return [
+        actions = [
             "rerun_snerv_lf_recode_admission_with_minimized_packet",
             "package_minimized_packet_as_archive_zip_with_runtime_custody",
             "run_full_video_local_replay_before_any_long_training_reenable",
-            "prototype_snar2_binary_or_cbor_header_after_snar1_prune",
         ]
+        if wire_format != "snar2":
+            actions.append("prototype_snar2_binary_or_cbor_header_after_snar1_prune")
+        return actions
     if receiver_contract:
         return [
             "run_full_video_streaming_receiver_replay_for_minimized_packet",
@@ -474,14 +506,16 @@ def _blockers(
     receiver_contract: bool,
     full_video_receiver_contract: bool,
     candidate_id_bound: bool,
+    wire_format: str,
 ) -> list[str]:
     blockers = [
         "snerv_snar_header_minimization_false_authority",
         "not_packaged_as_contest_archive_zip",
         "full_video_scorer_replay_missing",
         "paired_contest_cpu_cuda_auth_eval_missing",
-        "snar2_no_human_readable_label_bitstream_not_implemented",
     ]
+    if wire_format != "snar2":
+        blockers.append("snar2_no_human_readable_label_bitstream_not_implemented")
     if not candidate_id_bound:
         blockers.append("snerv_snar_header_minimization_candidate_id_binding_missing")
     if not receiver_contract:
@@ -491,6 +525,12 @@ def _blockers(
             "snerv_snar_header_minimization_full_video_receiver_proof_missing"
         )
     return blockers
+
+
+def _operation_for_wire_format(wire_format: str) -> str:
+    if wire_format == "snar2":
+        return "snar2_fixed_binary_header_receiver_metadata_prune"
+    return "snar1_receiver_metadata_prune"
 
 
 def _hard_byte_ceiling_row(
@@ -546,6 +586,13 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed > 0 else None
+
+
+def _resolve_wire_format(value: str) -> str:
+    text = str(value or "snar1").strip().lower()
+    if text in {"snar1", "snar2"}:
+        return text
+    raise SnervSnarHeaderMinimizerError(f"unsupported SNAR wire format: {value!r}")
 
 
 def _nonempty_text(value: Any) -> str | None:

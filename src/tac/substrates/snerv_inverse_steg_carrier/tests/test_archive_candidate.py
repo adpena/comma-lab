@@ -10,7 +10,11 @@ from pathlib import Path
 
 import pytest
 
-from tac.substrates.snerv_inverse_steg_carrier.archive import SnervArchiveError
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    SnervArchiveError,
+    pack_snerv_archive_snar2,
+    unpack_snerv_archive,
+)
 from tac.substrates.snerv_inverse_steg_carrier.archive_candidate import (
     expected_receiver_output_bytes_from_metadata,
     export_snerv_archive_bound_candidate_package,
@@ -95,6 +99,46 @@ def test_haar_package_uses_numpy_receiver_dwt_without_pywavelets_blocker(
     assert manifest["receiver_dwt_dependency"] == "numpy_haar_no_pywavelets"
     assert "pywavelets_runtime_dependency_not_contest_proven" not in row["blockers"]
     assert "paired_contest_cpu_cuda_auth_eval_missing" in row["blockers"]
+
+
+def test_snar2_package_uses_snar2_transform_and_receiver_contract(
+    tmp_path: Path,
+) -> None:
+    _proof, archive = build_snerv_receiver_archive_proof(
+        bins=4,
+        levels=1,
+        wavelet="haar",
+        hw=(16, 24),
+        full_frame_packet=True,
+    )
+    decoded = unpack_snerv_archive(archive.packet)
+    snar2 = pack_snerv_archive_snar2(
+        metadata_payload=decoded.sections["metadata_payload"],
+        lf_payload=decoded.sections["lf_payload"],
+        decoder_payload=decoded.sections["decoder_payload"],
+        step_map_packet=decoded.sections["step_map_packet"],
+        metadata=decoded.metadata,
+    )
+
+    package = export_snerv_archive_bound_candidate_package(
+        packet=snar2.packet,
+        output_dir=tmp_path,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=120,
+    )
+    row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    manifest = row["runtime_adapter_manifest"]
+
+    assert package["receiver_proof"]["runtime_consumption_proof_passed"] is True
+    assert row["target_kind"] == "snerv_inverse_steg_snar2_archive"
+    assert row["archive_native_transform_kind"] == "snerv_inverse_steg_snar2_archive"
+    assert (
+        row["receiver_contract_kind"]
+        == "snerv_inverse_steg_snar2_inflate_decode_only_receiver"
+    )
+    assert manifest["archive_packet_schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert "snar1" not in row["target_kind"]
+    assert "snar1" not in row["receiver_contract_kind"]
 
 
 def test_expected_receiver_output_bytes_requires_contest_grouping() -> None:

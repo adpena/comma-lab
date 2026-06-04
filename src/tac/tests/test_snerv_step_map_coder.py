@@ -257,6 +257,63 @@ def test_adaptive_decode_accepts_shared_shape_constant_group() -> None:
         assert np.all(got > 0)
 
 
+def test_large_constant_group_uses_binary_shared_shape_payload() -> None:
+    maps = [
+        np.full((8, 12), np.exp2(0.25 + index * 0.01), dtype=np.float32)
+        for index in range(12)
+    ]
+    packet = encode_step_maps_waterfill(
+        maps,
+        map_importance=np.linspace(1.0, 12.0, len(maps)),
+        target_bits_per_coeff=0.0,
+    )
+    decoded = decode_step_maps(packet.packet)
+
+    assert len(packet.groups) == 1
+    group = packet.groups[0]
+    assert group["kind"] == "constant_log2_shared_shape_f64_lzma"
+    assert group["code_storage"] == "run_length_constant_log2_shared_shape_f64_lzma"
+    assert group["shape"] == [8, 12]
+    assert "shapes" not in group
+    assert "log2_values" not in group
+    assert group["payload_bytes"] > 0
+    assert group["raw_bytes"] == len(maps) * 8
+    legacy_group = {
+        **{
+            key: value
+            for key, value in group.items()
+            if key
+            not in {
+                "kind",
+                "code_storage",
+                "shape",
+                "payload_bytes",
+                "packed_code_bytes",
+                "raw_bytes",
+                "log2_dtype",
+            }
+        },
+        "kind": "constant_log2_fill",
+        "code_storage": "run_length_constant_log2_f32",
+        "payload_offset": 0,
+        "payload_bytes": 0,
+        "packed_code_bytes": 0,
+        "log2_values": [
+            float(np.mean(np.log2(arr.astype(np.float64)))) for arr in maps
+        ],
+        "shapes": [list(arr.shape) for arr in maps],
+    }
+    compact_json = json.dumps(group, separators=(",", ":"), sort_keys=True)
+    legacy_json = json.dumps(legacy_group, separators=(",", ":"), sort_keys=True)
+    assert len(compact_json) < len(legacy_json)
+    for ref, got in zip(decoded, decode_step_maps(packet.packet), strict=True):
+        np.testing.assert_array_equal(got, ref)
+    for ref, got in zip(maps, decoded, strict=True):
+        assert got.shape == ref.shape
+        assert np.unique(got).size == 1
+        assert np.all(got > 0)
+
+
 def test_waterfill_rejects_negative_target_bits() -> None:
     with pytest.raises(SnervStepMapCoderError, match="target_bits_per_coeff"):
         encode_step_maps_waterfill(

@@ -1173,6 +1173,10 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     assert header_rewrite["command_argv"][
         header_rewrite["command_argv"].index("--candidate-id") + 1
     ] == snerv["candidate_id"]
+    assert "--wire-format" in header_rewrite["command_argv"]
+    assert header_rewrite["command_argv"][
+        header_rewrite["command_argv"].index("--wire-format") + 1
+    ] == "snar2"
     assert "--output-packet" in header_rewrite["command_argv"]
     assert "--output-archive-zip" in header_rewrite["command_argv"]
     assert header_rewrite["command_argv"][
@@ -1193,7 +1197,7 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     assert header_rewrite["local_mlx_long_training_allowed"] is False
     assert (
         header_rewrite["planner_action"]
-        == "run_receiver_proven_snar1_header_prune_then_rerun_recode_admission"
+        == "run_receiver_proven_snar2_binary_header_prune_then_rerun_recode_admission"
     )
     assert header_rewrite["blockers"] == []
 

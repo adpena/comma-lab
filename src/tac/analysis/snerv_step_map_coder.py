@@ -31,6 +31,7 @@ ADAPTIVE_SCHEMA = "snerv_step_map_coder.adaptive.v1"
 MAGIC = b"SNSM1"
 ADAPTIVE_MAGIC = b"SNSA1"
 HEADER_LEN_FMT = "<I"
+COMPACT_CONSTANT_SHARED_SHAPE_MIN_MAPS = 8
 
 
 class SnervStepMapCoderError(ValueError):
@@ -506,6 +507,37 @@ def _decode_adaptive_step_maps(packet: bytes) -> list[np.ndarray]:
             for idx in indices:
                 out[idx] = np.full(shape, np.exp2(log2_value), dtype=np.float32)
             continue
+        if group.get("kind") == "constant_log2_shared_shape_f64_lzma":
+            shape = tuple(int(v) for v in group["shape"])
+            start = int(group["payload_offset"])
+            end = start + int(group["payload_bytes"])
+            if start < 0 or end > len(payload) or end < start:
+                raise SnervStepMapCoderError(
+                    "adaptive shared-shape constant payload bounds invalid"
+                )
+            if end == start:
+                raise SnervStepMapCoderError(
+                    "adaptive shared-shape constant payload must be non-empty"
+                )
+            payload_ranges.append((start, end, group_index))
+            raw = lzma.decompress(payload[start:end])
+            expected = len(indices) * np.dtype("<f8").itemsize
+            if len(raw) != expected:
+                raise SnervStepMapCoderError(
+                    f"adaptive shared-shape constant raw bytes {len(raw)} != expected {expected}"
+                )
+            values = np.frombuffer(raw, dtype="<f8")
+            if values.size != len(indices):
+                raise SnervStepMapCoderError(
+                    "adaptive shared-shape constant map count mismatch"
+                )
+            for idx, log2_value in zip(indices, values, strict=True):
+                out[idx] = np.full(
+                    shape,
+                    np.exp2(float(log2_value)),
+                    dtype=np.float32,
+                )
+            continue
         if group.get("kind") == "constant_log2_fill":
             if int(group.get("payload_bytes", 0)) != 0:
                 raise SnervStepMapCoderError(
@@ -785,6 +817,39 @@ def _pack_adaptive_groups(
         kind = str(level["kind"])
         group_arrays = [arrays[idx] for idx in indices]
         if kind == "constant_log2_fill":
+            log2_values = [
+                float(np.mean(np.log2(arr.astype(np.float64))))
+                for arr in group_arrays
+            ]
+            if _should_use_shared_shape_constant_payload(group_arrays):
+                raw = np.asarray(log2_values, dtype="<f8").tobytes()
+                compressed = lzma.compress(
+                    raw,
+                    format=lzma.FORMAT_XZ,
+                    preset=9 | lzma.PRESET_EXTREME,
+                )
+                offset = len(payload)
+                payload.extend(compressed)
+                groups.append(
+                    {
+                        "kind": "constant_log2_shared_shape_f64_lzma",
+                        "precision_label": label,
+                        "bins": 0,
+                        "bits_per_code": 0,
+                        "code_storage": (
+                            "run_length_constant_log2_shared_shape_f64_lzma"
+                        ),
+                        "map_indices": indices,
+                        "payload_offset": offset,
+                        "payload_bytes": len(compressed),
+                        "packed_code_bytes": len(raw),
+                        "raw_bytes": len(raw),
+                        "log2_dtype": "float64_le",
+                        "shape": list(group_arrays[0].shape),
+                        "code_count": 0,
+                    }
+                )
+                continue
             groups.append(
                 {
                     "kind": "constant_log2_fill",
@@ -796,10 +861,7 @@ def _pack_adaptive_groups(
                     "payload_offset": 0,
                     "payload_bytes": 0,
                     "packed_code_bytes": 0,
-                    "log2_values": [
-                        float(np.mean(np.log2(arr.astype(np.float64))))
-                        for arr in group_arrays
-                    ],
+                    "log2_values": log2_values,
                     "shapes": [list(arr.shape) for arr in group_arrays],
                     "code_count": 0,
                 }
@@ -873,6 +935,13 @@ def _pack_adaptive_groups(
         + bytes(payload)
     )
     return packet, groups, len(payload)
+
+
+def _should_use_shared_shape_constant_payload(arrays: list[np.ndarray]) -> bool:
+    if len(arrays) < COMPACT_CONSTANT_SHARED_SHAPE_MIN_MAPS:
+        return False
+    first_shape = tuple(int(v) for v in arrays[0].shape)
+    return all(tuple(int(v) for v in arr.shape) == first_shape for arr in arrays)
 
 
 def _bits_per_code(bins: int) -> int:

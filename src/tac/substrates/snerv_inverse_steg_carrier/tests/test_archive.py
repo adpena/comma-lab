@@ -20,7 +20,9 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     HEADER_LEN_FMT,
     LF_QUANT_CODEC_SPATIAL_DELTA_LEB128_LZMA,
     SECTION_ORDER,
+    SNAR2_HEADER_BYTES,
     SNERV_ARCHIVE_MAGIC,
+    SNERV_ARCHIVE_MAGIC_V2,
     SNERV_DECODER_MAGIC,
     SnervArchiveError,
     decode_decoder_payload,
@@ -37,6 +39,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     execute_official_mfu_hfr_tub_decoder_payload,
     is_official_mfu_hfr_tub_decoder_payload,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
     resolve_decoder_payload_codec,
     unpack_snerv_archive,
 )
@@ -140,6 +143,146 @@ def test_archive_is_deterministic_and_hash_checked() -> None:
     mutated[-1] ^= 0x01
     with pytest.raises(SnervArchiveError, match="sha256 mismatch"):
         unpack_snerv_archive(bytes(mutated))
+
+
+def test_snar2_binary_header_decodes_without_human_readable_outer_labels() -> None:
+    step_packet = encode_step_maps(_step_maps(), bins=16)
+    metadata_payload = encode_lf_metadata_payload(lf_zero_points=[0.25, 0.5, 0.75])
+    lf_planes = [
+        np.arange(12, dtype=np.int64).reshape(3, 4),
+        -np.arange(12, dtype=np.int64).reshape(3, 4),
+        np.ones((3, 4), dtype=np.int64) * 7,
+    ]
+    decoder = HfGenerationDecoder.zeros(levels=2)
+    lf_payload = encode_lf_quant_payload(lf_planes)
+    decoder_payload = encode_decoder_payload(decoder)
+    archive = pack_snerv_archive_snar2(
+        metadata_payload=metadata_payload,
+        lf_payload=lf_payload,
+        decoder_payload=decoder_payload,
+        step_map_packet=step_packet.packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 1,
+            "channels": 3,
+            "lf_plane_count": 3,
+            "levels": 4,
+            "wavelet": "db2",
+            "carrier_hw": [8, 12],
+        },
+    )
+    decoded = unpack_snerv_archive(archive.packet)
+
+    assert archive.packet.startswith(SNERV_ARCHIVE_MAGIC_V2)
+    assert archive.schema == "snerv_inverse_steg_archive.snar2.v1"
+    assert archive.header_bytes == SNAR2_HEADER_BYTES
+    header = archive.packet[: archive.header_bytes]
+    for forbidden in (
+        b"metadata_payload",
+        b"lf_payload",
+        b"decoder_payload",
+        b"step_map_packet",
+        b"section_order",
+        b"wavelet",
+        b"db2",
+        b"schema",
+    ):
+        assert forbidden not in header
+    assert decoded.schema == archive.schema
+    assert decoded.metadata == {
+        "n_pairs": 1,
+        "frames_per_pair": 1,
+        "channels": 3,
+        "lf_plane_count": 3,
+        "levels": 4,
+        "wavelet": "db2",
+        "carrier_hw": [8, 12],
+        "orig_hw": [8, 12],
+    }
+    for ref, got in zip(lf_planes, decoded.decode_lf_quant_planes(), strict=True):
+        np.testing.assert_array_equal(got, ref)
+    np.testing.assert_allclose(decoded.decode_lf_zero_points(), [0.25, 0.5, 0.75])
+    assert len(decoded.decode_step_maps()) == 3
+    assert len(decode_snerv_archive_step_maps(archive.packet)) == 3
+    mutated = bytearray(archive.packet)
+    mutated[-1] ^= 0x01
+    with pytest.raises(SnervArchiveError, match="sha256-prefix mismatch"):
+        unpack_snerv_archive(bytes(mutated))
+
+
+def test_snar2_header_metadata_fails_closed_on_unsupported_values() -> None:
+    step_packet = encode_step_maps(_step_maps(), bins=16)
+    metadata_payload = encode_lf_metadata_payload(lf_zero_points=[0.25, 0.5, 0.75])
+    lf_planes = [
+        np.arange(12, dtype=np.int64).reshape(3, 4),
+        -np.arange(12, dtype=np.int64).reshape(3, 4),
+        np.ones((3, 4), dtype=np.int64) * 7,
+    ]
+    archive = pack_snerv_archive_snar2(
+        metadata_payload=metadata_payload,
+        lf_payload=encode_lf_quant_payload(lf_planes),
+        decoder_payload=encode_decoder_payload(HfGenerationDecoder.zeros(levels=2)),
+        step_map_packet=step_packet.packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 1,
+            "channels": 3,
+            "lf_plane_count": 3,
+            "levels": 4,
+            "wavelet": "db2",
+            "carrier_hw": [8, 12],
+        },
+    )
+
+    header_values = list(
+        struct.unpack("<5sBBBBHBBIBBHH4I4Q", archive.packet[:SNAR2_HEADER_BYTES])
+    )
+    metadata_flags_index = 10
+    header_values[metadata_flags_index] = 1
+    with pytest.raises(SnervArchiveError, match="metadata_flags"):
+        unpack_snerv_archive(
+            struct.pack("<5sBBBBHBBIBBHH4I4Q", *header_values)
+            + archive.packet[SNAR2_HEADER_BYTES:]
+        )
+
+    header_values = list(
+        struct.unpack("<5sBBBBHBBIBBHH4I4Q", archive.packet[:SNAR2_HEADER_BYTES])
+    )
+    n_pairs_index = 5
+    header_values[n_pairs_index] = 0
+    with pytest.raises(SnervArchiveError, match="n_pairs=0"):
+        unpack_snerv_archive(
+            struct.pack("<5sBBBBHBBIBBHH4I4Q", *header_values)
+            + archive.packet[SNAR2_HEADER_BYTES:]
+        )
+
+
+def test_snar2_refuses_distinct_carrier_and_original_shapes() -> None:
+    step_packet = encode_step_maps(_step_maps(), bins=16)
+    metadata_payload = encode_lf_metadata_payload(lf_zero_points=[0.25, 0.5, 0.75])
+    lf_planes = [
+        np.arange(12, dtype=np.int64).reshape(3, 4),
+        -np.arange(12, dtype=np.int64).reshape(3, 4),
+        np.ones((3, 4), dtype=np.int64) * 7,
+    ]
+
+    with pytest.raises(SnervArchiveError, match="distinct carrier_hw and orig_hw"):
+        pack_snerv_archive_snar2(
+            metadata_payload=metadata_payload,
+            lf_payload=encode_lf_quant_payload(lf_planes),
+            decoder_payload=encode_decoder_payload(HfGenerationDecoder.zeros(levels=2)),
+            step_map_packet=step_packet.packet,
+            metadata={
+                "n_pairs": 1,
+                "frames_per_pair": 1,
+                "channels": 3,
+                "lf_plane_count": 3,
+                "levels": 4,
+                "wavelet": "db2",
+                "carrier_hw": [8, 12],
+                "orig_hw": [16, 24],
+            },
+        )
 
 
 def test_archive_rejects_trailing_payload_and_noncontiguous_offsets() -> None:
