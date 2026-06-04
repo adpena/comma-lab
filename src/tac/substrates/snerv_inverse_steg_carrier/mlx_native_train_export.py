@@ -64,6 +64,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_official_mfu_hfr_tub_decoder_payload,
     execute_official_mfu_hfr_tub_decoder_payload,
     inspect_decoder_payload_header,
+    inspect_lf_quant_payload_header,
     pack_snerv_archive,
     resolve_decoder_payload_codec,
     unpack_snerv_archive,
@@ -2179,7 +2180,9 @@ def train_export_snerv_mlx_native(
         or active_decoder_payload_codec
     )
     selected_lf_payload_codec = str(
-        selected_archive_metadata.get("lf_payload_codec") or active_lf_payload_codec
+        selected_archive_metadata.get("lf_payload_codec_selected")
+        or selected_archive_metadata.get("lf_payload_codec")
+        or active_lf_payload_codec
     )
     receiver_target_profile = _snerv_receiver_frame_reconstruction_profile(
         selected_packet,
@@ -4827,6 +4830,34 @@ def write_snerv_mlx_prefilter_profile(
     return payload
 
 
+def _selected_lf_payload_codec_label(
+    report: Mapping[str, Any],
+    *,
+    requested_codec: str,
+) -> str:
+    """Return the concrete LF codec label chosen by a lossless auto portfolio."""
+
+    schema = str(report.get("schema") or "")
+    if schema == "snerv_lf_quant_payload.v2":
+        modes = _sorted_histogram_keys(report.get("mode_histogram"))
+        wrappers = _sorted_histogram_keys(report.get("wrapper_histogram"))
+        if len(modes) == 1 and len(wrappers) == 1:
+            return f"v2:{modes[0]}:{wrappers[0]}"
+        mode_label = "+".join(modes) if modes else "unknown_modes"
+        wrapper_label = "+".join(wrappers) if wrappers else "unknown_wrappers"
+        return f"v2:portfolio:{mode_label}:{wrapper_label}"
+    codec = report.get("codec")
+    if codec:
+        return str(codec)
+    return str(requested_codec)
+
+
+def _sorted_histogram_keys(histogram: Any) -> list[str]:
+    if not isinstance(histogram, Mapping):
+        return []
+    return sorted(str(key) for key, value in histogram.items() if int(value) > 0)
+
+
 def build_snerv_mlx_native_packet_from_numpy_pairs(
     pairs_nchw255: np.ndarray,
     *,
@@ -5020,6 +5051,13 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     decoder_payload_codec_requested = str(decoder_payload_codec)
     decoder_payload_codec_resolved = resolve_decoder_payload_codec(decoder_payload_codec_requested)
     decoder_payload = encode_decoder_payload(decoder, codec=decoder_payload_codec_resolved)
+    lf_payload_codec_requested = str(lf_payload_codec)
+    lf_payload = encode_lf_quant_payload(lf_quant_planes, codec=lf_payload_codec_requested)
+    lf_payload_codec_report = inspect_lf_quant_payload_header(lf_payload)
+    lf_payload_codec_selected = _selected_lf_payload_codec_label(
+        lf_payload_codec_report,
+        requested_codec=lf_payload_codec_requested,
+    )
     native_training_export_guard = build_snerv_mlx_native_training_export_guard(
         {
             "native_mlx_training_executed": bool(mlx_training_report.get("executed") is True),
@@ -5046,7 +5084,10 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "lf_coeff_count_total": int(sum(int(p.lf.size) for p in pyramids)),
         "lf_zero_dtype": "float32_le",
         "lf_scale_mode": "implicit_per_element_steps_scale_1",
-        "lf_payload_codec": str(lf_payload_codec),
+        "lf_payload_codec": lf_payload_codec_requested,
+        "lf_payload_codec_requested": lf_payload_codec_requested,
+        "lf_payload_codec_selected": lf_payload_codec_selected,
+        "lf_payload_codec_selection_report": lf_payload_codec_report,
         "step_map_packet_schema": step_packet.schema,
         "step_map_coder_mode": (
             "joint_p18_p19_lf_step_map_waterfill"
@@ -5112,7 +5153,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     }
     archive = pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(lf_zero_points=lf_zero_points),
-        lf_payload=encode_lf_quant_payload(lf_quant_planes, codec=lf_payload_codec),
+        lf_payload=lf_payload,
         decoder_payload=decoder_payload,
         step_map_packet=step_packet.packet,
         metadata=metadata,

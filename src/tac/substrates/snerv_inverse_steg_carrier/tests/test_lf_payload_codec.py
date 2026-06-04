@@ -51,6 +51,8 @@ def test_lf_payload_v2_zero_heavy_portfolio_beats_raw_i64() -> None:
     assert set(report.mode_histogram).issubset(
         {
             "raw_i64",
+            "sparse_signed_varint",
+            "sparse_unsigned_varint",
             "zigzag_delta_varint",
             "zero_run_varint",
             "unsigned_int2_bitpack",
@@ -156,6 +158,65 @@ def test_lf_payload_v2_unsigned_escape_beats_signed_escape_for_nonnegative_plane
     np.testing.assert_array_equal(decode_lf_quant_payload_v2(unsigned_packet)[0], plane)
     np.testing.assert_array_equal(decode_lf_quant_payload_v2(signed_packet)[0], plane)
     assert unsigned_report.packet_bytes < signed_report.packet_bytes
+
+
+def test_lf_payload_v2_sparse_signed_varint_roundtrips_scattered_nonzeros() -> None:
+    plane = np.zeros((32, 32), dtype=np.int64)
+    coords = [(0, 3, -1), (3, 17, 2), (11, 8, -31), (24, 5, 7), (31, 29, -2)]
+    for y, x, value in coords:
+        plane[y, x] = value
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="sparse_signed",
+        wrapper="none",
+    )
+
+    np.testing.assert_array_equal(decode_lf_quant_payload_v2(packet)[0], plane)
+    assert report.mode_histogram == {"sparse_signed_varint": 1}
+    assert report.packet_bytes < plane.size
+
+
+def test_lf_payload_v2_sparse_unsigned_varint_roundtrips_and_refuses_negative() -> None:
+    plane = np.zeros((32, 32), dtype=np.int64)
+    plane[2, 5] = 1
+    plane[13, 21] = 18
+    plane[28, 7] = 255
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        mode="sparse_unsigned",
+        wrapper="none",
+    )
+
+    np.testing.assert_array_equal(decode_lf_quant_payload_v2(packet)[0], plane)
+    assert report.mode_histogram == {"sparse_unsigned_varint": 1}
+    assert report.packet_bytes < plane.size
+    with pytest.raises(SnervLfPayloadCodecError, match="non-negative"):
+        encode_lf_quant_payload_v2_with_report(
+            [np.array([[0, -1, 2]], dtype=np.int64)],
+            mode="sparse_unsigned",
+            wrapper="none",
+        )
+
+
+def test_lf_payload_v2_portfolio_can_pick_sparse_bitmask_for_scattered_tiny_support() -> None:
+    rng = np.random.default_rng(123)
+    plane = np.zeros((128, 128), dtype=np.int64)
+    support = rng.choice(plane.size, size=2_000, replace=False)
+    values = rng.choice(
+        np.array([-3, -2, -1, 1, 2, 3, 17, -33], dtype=np.int64),
+        size=support.size,
+    )
+    plane.reshape(-1)[support] = values
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        [plane],
+        wrapper="none",
+    )
+
+    np.testing.assert_array_equal(decode_lf_quant_payload_v2(packet)[0], plane)
+    assert report.mode_histogram == {"sparse_signed_varint": 1}
 
 
 def test_lf_payload_v2_portfolio_can_pick_unsigned_escape_for_nonnegative_tail() -> None:

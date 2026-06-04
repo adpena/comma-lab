@@ -41,6 +41,8 @@ SNERV_LF_PAYLOAD_INTN_CODEC_PROOF = (
 _HEADER = struct.Struct("<4sBI")
 _SUPPORTED_MODES = (
     "raw_i64",
+    "sparse_signed_varint",
+    "sparse_unsigned_varint",
     "zigzag_delta_varint",
     "zero_run_varint",
     "unsigned_int2_bitpack",
@@ -303,6 +305,10 @@ def _best_plane_encoding(
 def _encode_plane_unwrapped(arr: np.ndarray, *, mode: str) -> bytes:
     if mode == "raw_i64":
         return arr.astype("<i8", copy=False).tobytes()
+    if mode == "sparse_signed_varint":
+        return _encode_sparse_signed_varint(arr)
+    if mode == "sparse_unsigned_varint":
+        return _encode_sparse_unsigned_varint(arr)
     if mode == "zigzag_delta_varint":
         out = bytearray()
         prev = 0
@@ -353,6 +359,10 @@ def _encode_plane_unwrapped(arr: np.ndarray, *, mode: str) -> bytes:
 def _decode_plane_unwrapped(blob: bytes, *, mode: str, count: int) -> np.ndarray:
     if mode == "raw_i64":
         arr = np.frombuffer(blob, dtype="<i8").astype(np.int64)
+    elif mode == "sparse_signed_varint":
+        arr = _decode_sparse_signed_varint(blob, count=count)
+    elif mode == "sparse_unsigned_varint":
+        arr = _decode_sparse_unsigned_varint(blob, count=count)
     elif mode == "zigzag_delta_varint":
         out = []
         pos = 0
@@ -535,6 +545,12 @@ def _normalize_mode(mode: str) -> tuple[str, ...]:
         return _SUPPORTED_MODES
     aliases = {
         "raw": "raw_i64",
+        "sparse_signed": "sparse_signed_varint",
+        "sparse_unsigned": "sparse_unsigned_varint",
+        "nonzero_signed": "sparse_signed_varint",
+        "nonzero_unsigned": "sparse_unsigned_varint",
+        "packed_nonzero_signed": "sparse_signed_varint",
+        "packed_nonzero_unsigned": "sparse_unsigned_varint",
         "delta_varint": "zigzag_delta_varint",
         "zero_run": "zero_run_varint",
         "uint2": "unsigned_int2_bitpack",
@@ -596,6 +612,82 @@ def _signed_intn_bits(mode: str) -> int:
     if mode.startswith("signed_int8_"):
         return 8
     raise SnervLfPayloadCodecError(f"not a signed intN mode: {mode!r}")
+
+
+def _encode_sparse_signed_varint(arr: np.ndarray) -> bytes:
+    flat = arr.astype(np.int64, copy=False).reshape(-1)
+    mask = flat != 0
+    nonzero_count = int(np.count_nonzero(mask))
+    mask_payload = pack_fixed_width_uints(mask.astype(np.uint8), bits=1)
+    value_payload = bytearray()
+    for value in flat[mask].tolist():
+        value_payload.extend(encode_varint(_zigzag_encode(int(value))))
+    return _ESCAPE_HEADER.pack(nonzero_count) + mask_payload + bytes(value_payload)
+
+
+def _decode_sparse_signed_varint(blob: bytes, *, count: int) -> np.ndarray:
+    if len(blob) < _ESCAPE_HEADER.size:
+        raise SnervLfPayloadCodecError("truncated sparse signed LF payload")
+    (nonzero_count,) = _ESCAPE_HEADER.unpack(blob[: _ESCAPE_HEADER.size])
+    if int(nonzero_count) > int(count):
+        raise SnervLfPayloadCodecError("sparse signed nonzero count exceeds LF plane count")
+    pos = _ESCAPE_HEADER.size
+    mask_bytes = _packed_width_bytes(count=int(count), bits=1)
+    mask_end = pos + mask_bytes
+    if mask_end > len(blob):
+        raise SnervLfPayloadCodecError("truncated sparse signed mask")
+    mask = unpack_fixed_width_uints(blob[pos:mask_end], bits=1, count=count).astype(bool)
+    pos = mask_end
+    if int(np.count_nonzero(mask)) != int(nonzero_count):
+        raise SnervLfPayloadCodecError("sparse signed mask count mismatch")
+    values: list[int] = []
+    for _idx in range(int(nonzero_count)):
+        token, pos = decode_varint(blob, pos)
+        values.append(_zigzag_decode(token))
+    if pos != len(blob):
+        raise SnervLfPayloadCodecError("sparse signed payload has trailing bytes")
+    out = np.zeros(int(count), dtype=np.int64)
+    out[mask] = np.asarray(values, dtype=np.int64)
+    return out
+
+
+def _encode_sparse_unsigned_varint(arr: np.ndarray) -> bytes:
+    flat = arr.astype(np.int64, copy=False).reshape(-1)
+    if flat.size and int(flat.min()) < 0:
+        raise SnervLfPayloadCodecError("sparse_unsigned_varint requires non-negative values")
+    mask = flat != 0
+    nonzero_count = int(np.count_nonzero(mask))
+    mask_payload = pack_fixed_width_uints(mask.astype(np.uint8), bits=1)
+    value_payload = bytearray()
+    for value in flat[mask].tolist():
+        value_payload.extend(encode_varint(int(value)))
+    return _ESCAPE_HEADER.pack(nonzero_count) + mask_payload + bytes(value_payload)
+
+
+def _decode_sparse_unsigned_varint(blob: bytes, *, count: int) -> np.ndarray:
+    if len(blob) < _ESCAPE_HEADER.size:
+        raise SnervLfPayloadCodecError("truncated sparse unsigned LF payload")
+    (nonzero_count,) = _ESCAPE_HEADER.unpack(blob[: _ESCAPE_HEADER.size])
+    if int(nonzero_count) > int(count):
+        raise SnervLfPayloadCodecError("sparse unsigned nonzero count exceeds LF plane count")
+    pos = _ESCAPE_HEADER.size
+    mask_bytes = _packed_width_bytes(count=int(count), bits=1)
+    mask_end = pos + mask_bytes
+    if mask_end > len(blob):
+        raise SnervLfPayloadCodecError("truncated sparse unsigned mask")
+    mask = unpack_fixed_width_uints(blob[pos:mask_end], bits=1, count=count).astype(bool)
+    pos = mask_end
+    if int(np.count_nonzero(mask)) != int(nonzero_count):
+        raise SnervLfPayloadCodecError("sparse unsigned mask count mismatch")
+    values: list[int] = []
+    for _idx in range(int(nonzero_count)):
+        value, pos = decode_varint(blob, pos)
+        values.append(int(value))
+    if pos != len(blob):
+        raise SnervLfPayloadCodecError("sparse unsigned payload has trailing bytes")
+    out = np.zeros(int(count), dtype=np.int64)
+    out[mask] = np.asarray(values, dtype=np.int64)
+    return out
 
 
 def _encode_signed_escape_varint(arr: np.ndarray, *, bits: int) -> bytes:

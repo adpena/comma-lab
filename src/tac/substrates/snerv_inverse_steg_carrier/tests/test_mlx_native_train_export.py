@@ -795,6 +795,11 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     assert decoded.metadata["step_map_waterfill_bits_per_coeff"] == pytest.approx(0.5)
     assert decoded.metadata["step_map_coder_groups"]
     assert decoded.metadata["lf_payload_codec"] == "auto"
+    assert decoded.metadata["lf_payload_codec_requested"] == "auto"
+    assert decoded.metadata["lf_payload_codec_selected"] != "auto"
+    assert decoded.metadata["lf_payload_codec_selection_report"]["section_bytes"] == (
+        packet.section_bytes["lf_payload"]
+    )
     assert frames.shape == (2, 2, 3, 16, 16)
     assert np.isfinite(frames).all()
     assert packet.score_claim is False
@@ -892,6 +897,8 @@ def test_packet_builder_defaults_to_portfolio_lf_payload_codec() -> None:
     decoded = unpack_snerv_archive(packet.packet)
 
     assert decoded.metadata["lf_payload_codec"] == "portfolio_auto"
+    assert decoded.metadata["lf_payload_codec_requested"] == "portfolio_auto"
+    assert decoded.metadata["lf_payload_codec_selected"].startswith("v2:")
     assert packet.section_bytes["lf_payload"] > 0
 
 
@@ -1175,7 +1182,10 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert report["step_map_packet_schema"] == "snerv_step_map_coder.adaptive.v1"
     assert report["step_map_coder_mode"] == ("waterfill_mlx_native_uniform_importance_bridge")
     assert report["step_map_coder_groups"]
-    assert report["lf_payload_codec"] == "portfolio_auto"
+    decoded = unpack_snerv_archive(packet_path.read_bytes())
+    assert decoded.metadata["lf_payload_codec"] == "portfolio_auto"
+    assert decoded.metadata["lf_payload_codec_requested"] == "portfolio_auto"
+    assert report["lf_payload_codec"] == decoded.metadata["lf_payload_codec_selected"]
     assert report["receiver_proof_passed"] is False
     assert "snerv_mlx_score_aware_long_training_not_executed" in report["blockers"]
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" in report["blockers"]
