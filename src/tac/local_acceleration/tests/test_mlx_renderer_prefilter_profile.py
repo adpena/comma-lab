@@ -113,6 +113,28 @@ def test_renderer_prefilter_blocks_scorer_input_distribution_collapse() -> None:
     assert "scorer_input_segnet_last_rgb_saturation_delta_gt_0_15" in profile["blockers"]
 
 
+def test_scorer_input_distribution_blocks_variance_collapse_without_large_bias() -> None:
+    from tac.local_acceleration.mlx_renderer_prefilter_profile import (
+        _scorer_input_distribution_blockers,
+    )
+
+    distribution = {
+        "candidate_segnet_last_rgb": {"std": 5.0, "saturation_fraction": 0.0},
+        "reference_segnet_last_rgb": {"std": 40.0, "saturation_fraction": 0.0},
+        "candidate_posenet_yuv6_pair": {"std": 6.0, "saturation_fraction": 0.0},
+        "reference_posenet_yuv6_pair": {"std": 60.0, "saturation_fraction": 0.0},
+        "segnet_last_rgb_absdiff": {"mean_abs": 12.0},
+        "posenet_yuv6_pair_absdiff": {"mean_abs": 15.0},
+    }
+
+    blockers = _scorer_input_distribution_blockers(distribution)
+
+    assert "scorer_input_segnet_last_rgb_mean_absdiff_gt_50" not in blockers
+    assert "scorer_input_posenet_yuv6_pair_mean_absdiff_gt_50" not in blockers
+    assert "scorer_input_segnet_last_rgb_std_ratio_lt_0_25" in blockers
+    assert "scorer_input_posenet_yuv6_pair_std_ratio_lt_0_25" in blockers
+
+
 def test_renderer_prefilter_loaded_emits_progress_telemetry(tmp_path) -> None:
     mx = pytest.importorskip("mlx.core")
 

@@ -560,6 +560,7 @@ class _ScorerInputDistributionStats:
                 "segnet_last_rgb_mean_absdiff_gt": 50.0,
                 "posenet_yuv6_pair_mean_absdiff_gt": 50.0,
                 "candidate_to_reference_std_ratio_gt": 4.0,
+                "candidate_to_reference_std_ratio_lt": 0.25,
                 "candidate_saturation_delta_gt": 0.15,
             },
             **FALSE_AUTHORITY,
@@ -589,6 +590,10 @@ def _scorer_input_distribution_blockers(
         blockers.append("scorer_input_segnet_last_rgb_std_ratio_gt_4")
     if _std_ratio(pose_candidate, pose_reference) > 4.0:
         blockers.append("scorer_input_posenet_yuv6_pair_std_ratio_gt_4")
+    if 0.0 < _std_ratio(seg_candidate, seg_reference) < 0.25:
+        blockers.append("scorer_input_segnet_last_rgb_std_ratio_lt_0_25")
+    if 0.0 < _std_ratio(pose_candidate, pose_reference) < 0.25:
+        blockers.append("scorer_input_posenet_yuv6_pair_std_ratio_lt_0_25")
     if _saturation_delta(seg_candidate, seg_reference) > 0.15:
         blockers.append("scorer_input_segnet_last_rgb_saturation_delta_gt_0_15")
     if _saturation_delta(pose_candidate, pose_reference) > 0.15:
