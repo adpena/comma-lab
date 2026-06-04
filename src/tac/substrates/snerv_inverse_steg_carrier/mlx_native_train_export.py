@@ -163,6 +163,14 @@ SNERV_RECEIVER_RECON_MAX_STD_RATIO = 20.0
 SNERV_RECEIVER_RECON_MAX_SATURATION_DELTA = 0.35
 SNERV_RECEIVER_RECON_MAX_RMSE_NCHW255 = 96.0
 SNERV_RECEIVER_RECON_MAX_MAE_NCHW255 = 64.0
+OFFICIAL_TUB_OUTPUT2_PAYLOAD_TENSOR_NAMES = (
+    "tub.temporal_encoder_concat",
+    "tub.output2_raw",
+)
+OFFICIAL_TUB_OUTPUT2_RECEIVER_OUTPUT_TENSOR_NAMES = (
+    "tub.output2_decoder_input",
+    "tub.output2_fused",
+)
 
 
 class SnervMlxNativeExportError(ValueError):
@@ -1818,10 +1826,17 @@ def train_export_snerv_mlx_native(
         scorer_error_pair_curriculum=scorer_error_pair_curriculum,
         allow_overwrite=allow_overwrite,
     )
+    trained_pairs_candidate = score_aware_long_training.get("_trained_pairs_nchw255")
+    trained_state_exportable = bool(
+        isinstance(trained_pairs_candidate, np.ndarray)
+        and (
+            score_aware_long_training.get("trained_state_exportable") is True
+            or score_aware_long_training.get("executed") is True
+        )
+    )
     pairs_for_packet = (
-        np.asarray(score_aware_long_training["_trained_pairs_nchw255"], dtype=np.float32)
-        if score_aware_long_training.get("executed") is True
-        and isinstance(score_aware_long_training.get("_trained_pairs_nchw255"), np.ndarray)
+        np.asarray(trained_pairs_candidate, dtype=np.float32)
+        if trained_state_exportable
         else pairs_nchw255
     )
     trained_official_packet = score_aware_long_training.get("_trained_official_packet")
@@ -1845,6 +1860,9 @@ def train_export_snerv_mlx_native(
         "score_aware_long_training_executed": bool(
             score_aware_long_training_public.get("executed") is True
         ),
+        "score_aware_long_training_trained_state_exportable": (
+            trained_state_exportable
+        ),
         "score_aware_long_training_kind": str(
             score_aware_long_training_public.get("training_kind") or "none"
         ),
@@ -1866,7 +1884,7 @@ def train_export_snerv_mlx_native(
                     or "snerv_mlx_score_aware_haar_renderer"
                 ),
             }
-            if score_aware_long_training_public.get("executed") is True
+            if trained_state_exportable
             else {}
         ),
         **(
@@ -3047,6 +3065,9 @@ def _run_score_aware_long_training_attachment(
                 pairs,
                 model_size=model_size,
             )
+            official_tub_output2_kwargs = _official_tub_output2_renderer_kwargs(
+                official_components
+            )
             model = SnervMlxOfficialMfuHfrTubScoreRenderer(
                 mfu=official_components["mfu"],
                 hfr_heads=official_components["hfr_heads"],
@@ -3074,6 +3095,7 @@ def _run_score_aware_long_training_attachment(
                     official_components["tub_next_frame"],
                     dtype=np.float32,
                 ),
+                **official_tub_output2_kwargs,
             )
             renderer_schema = SNERV_MLX_OFFICIAL_MFU_HFR_TUB_RENDERER_SCHEMA
         else:
@@ -3834,6 +3856,12 @@ def _run_score_aware_long_training_attachment(
             selection_warnings.append(
                 "snerv_score_aware_long_training_selected_initial_no_improvement"
             )
+        trained_state_exportable = bool(
+            np.isfinite(final_mse)
+            and isinstance(trained_pairs, np.ndarray)
+            and tuple(int(dim) for dim in trained_pairs.shape)
+            == tuple(int(dim) for dim in pairs.shape)
+        )
         official_packet: SnervArchivePacket | None = None
         official_train_export = dict(base_payload["official_mfu_hfr_tub_train_export"])
         if official_training_requested:
@@ -3857,6 +3885,9 @@ def _run_score_aware_long_training_attachment(
             **base_payload,
             "executed": not blockers,
             "training_completed": True,
+            "blocker_free_execution": not blockers,
+            "trained_state_exportable": trained_state_exportable,
+            "trained_pairs_materialized": trained_state_exportable,
             "epochs_completed": int(artifact_dict.get("total_epochs_completed") or 0),
             "learning_rate": float(learning_rate),
             "batch_pairs": max(1, int(batch_pairs)),
@@ -3949,7 +3980,7 @@ def _run_score_aware_long_training_attachment(
             },
             "blockers": _ordered_unique(blockers),
         }
-        if official_training_requested and not blockers:
+        if official_training_requested and trained_state_exportable:
             trained_official_train_export = {
                 **official_train_export,
                 "trained_receiver_payload_exported": True,
@@ -3981,7 +4012,10 @@ def _run_score_aware_long_training_attachment(
                     "allocation_mode": "official_mfu_hfr_tub_trained_mlx_receiver_payload",
                     "hf_decoder_fit_mode": "official_mfu_hfr_tub_mlx_trained_payload_atoms",
                     "score_aware_long_training": payload_for_packet,
-                    "score_aware_long_training_executed": True,
+                    "score_aware_long_training_executed": bool(
+                        payload.get("executed") is True
+                    ),
+                    "score_aware_long_training_trained_state_exportable": True,
                     "score_aware_long_training_kind": training_kind,
                     "score_aware_long_training_optimizer": str(optimizer_kind),
                     "native_mlx_training_executed": True,
@@ -3989,10 +4023,16 @@ def _run_score_aware_long_training_attachment(
                     "official_mfu_hfr_tub_train_export": trained_official_train_export,
                 },
             )
+            official_packet_output2_metadata = {
+                str(key): value
+                for key, value in official_packet.metadata.items()
+                if str(key).startswith("official_tub_output2_")
+            }
             payload["official_mfu_hfr_tub_train_export"] = {
                 **trained_official_train_export,
                 "trained_packet_bytes": int(official_packet.total_bytes),
                 "trained_packet_sha256": _sha256_bytes(official_packet.packet),
+                **official_packet_output2_metadata,
             }
         write_json(report_path, payload)
         result = {
@@ -5158,6 +5198,112 @@ def _official_mfu_hfr_tub_bootstrap_components_from_pairs(
     }
 
 
+def _official_tub_output2_renderer_kwargs(
+    components: Mapping[str, Any],
+) -> dict[str, np.ndarray]:
+    has_temporal = "tub_temporal_encoder_concat" in components
+    has_raw = "tub_output2_raw" in components
+    if has_temporal != has_raw:
+        raise SnervMlxNativeExportError(
+            "official TUB output2 renderer payload requires both "
+            "tub_temporal_encoder_concat and tub_output2_raw"
+        )
+    if not has_temporal:
+        return {}
+    return {
+        "tub_temporal_encoder_concat": np.asarray(
+            components["tub_temporal_encoder_concat"],
+            dtype=np.float32,
+        ),
+        "tub_output2_raw": np.asarray(
+            components["tub_output2_raw"],
+            dtype=np.float32,
+        ),
+    }
+
+
+def _official_tub_output2_rows_from_manifest(
+    rows: Any,
+    *,
+    names: Sequence[str],
+) -> list[dict[str, Any]]:
+    if not isinstance(rows, Sequence) or isinstance(rows, (str, bytes)):
+        return []
+    wanted = {str(name) for name in names}
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, Mapping):
+            continue
+        if str(row.get("name")) in wanted:
+            out.append(dict(row))
+    return out
+
+
+def _official_tub_output2_manifest_sha256(
+    rows: Sequence[Mapping[str, Any]],
+) -> str | None:
+    if not rows:
+        return None
+    return _sha256_bytes(
+        json.dumps(
+            [dict(row) for row in rows],
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    )
+
+
+def _official_tub_output2_packet_metadata(
+    *,
+    payload_header: Mapping[str, Any],
+    payload_proof: Mapping[str, Any],
+) -> dict[str, Any]:
+    storage = dict(payload_header.get("tub_output2_storage") or {})
+    executed_components = payload_proof.get("executed_components")
+    executed_components = (
+        dict(executed_components) if isinstance(executed_components, Mapping) else {}
+    )
+    payload_rows = _official_tub_output2_rows_from_manifest(
+        payload_header.get("tensor_manifest") or (),
+        names=OFFICIAL_TUB_OUTPUT2_PAYLOAD_TENSOR_NAMES,
+    )
+    receiver_rows = _official_tub_output2_rows_from_manifest(
+        payload_proof.get("output_tensors") or (),
+        names=OFFICIAL_TUB_OUTPUT2_RECEIVER_OUTPUT_TENSOR_NAMES,
+    )
+    return {
+        "official_tub_output2_storage": storage,
+        "official_tub_output2_payload_export_bound": bool(
+            storage.get("stored") is True
+        ),
+        "official_tub_output2_receiver_executed": bool(
+            executed_components.get("official_tub_output2_fusion") is True
+        ),
+        "official_tub_output2_receiver_frame_bound": bool(
+            storage.get("receiver_frame_decode_consumes_output2") is True
+        ),
+        "official_tub_output2_payload_loss_coupled": bool(
+            storage.get("train_time_loss_coupled") is True
+        ),
+        "official_tub_output2_payload_tensor_names": [
+            str(row.get("name")) for row in payload_rows
+        ],
+        "official_tub_output2_payload_tensor_count": len(payload_rows),
+        "official_tub_output2_payload_tensor_manifest": payload_rows,
+        "official_tub_output2_payload_tensor_manifest_sha256": (
+            _official_tub_output2_manifest_sha256(payload_rows)
+        ),
+        "official_tub_output2_receiver_output_tensor_names": [
+            str(row.get("name")) for row in receiver_rows
+        ],
+        "official_tub_output2_receiver_output_tensor_count": len(receiver_rows),
+        "official_tub_output2_receiver_output_tensor_manifest": receiver_rows,
+        "official_tub_output2_receiver_output_tensor_manifest_sha256": (
+            _official_tub_output2_manifest_sha256(receiver_rows)
+        ),
+    }
+
+
 def _build_official_mfu_hfr_tub_packet_from_components(
     components: Mapping[str, Any],
     *,
@@ -5216,7 +5362,10 @@ def _build_official_mfu_hfr_tub_packet_from_components(
     )
     official_payload_proof = execute_official_mfu_hfr_tub_decoder_payload(official_payload)
     official_payload_header = decode_official_mfu_hfr_tub_decoder_payload(official_payload).header
-    tub_output2_storage = dict(official_payload_header.get("tub_output2_storage") or {})
+    official_tub_output2_metadata = _official_tub_output2_packet_metadata(
+        payload_header=official_payload_header,
+        payload_proof=official_payload_proof,
+    )
     step_packet = encode_step_maps_waterfill(
         [np.ones((1, 1), dtype=np.float32)],
         map_importance=np.ones((1,), dtype=np.float64),
@@ -5249,10 +5398,6 @@ def _build_official_mfu_hfr_tub_packet_from_components(
             tuple(int(v) for v in skip_high.shape) != skip_high_full_shape
         ),
         "official_tub_input_storage_mode": "unused_synthetic",
-        "official_tub_output2_storage": tub_output2_storage,
-        "official_tub_output2_receiver_executed": bool(
-            official_payload_proof["executed_components"]["official_tub_output2_fusion"]
-        ),
         **(
             {"official_hfr_bootstrap": components["official_hfr_bootstrap"]}
             if isinstance(components.get("official_hfr_bootstrap"), Mapping)
@@ -5260,6 +5405,7 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         ),
         "decoder_payload_codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         **dict(metadata_extra or {}),
+        **official_tub_output2_metadata,
         "snerv_model_size_adapter": model_size.adapter,
         "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
         "snerv_official_mfu_hfr_tub_export_bound": True,

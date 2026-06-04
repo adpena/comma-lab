@@ -2168,7 +2168,12 @@ def test_official_mfu_hfr_tub_packet_carries_output2_payload_from_components() -
         components,
         source_pair_indices=[4, 5],
         model_size=model_size,
-        metadata_extra={"allocation_mode": "unit_output2_payload_bound"},
+        metadata_extra={
+            "allocation_mode": "unit_output2_payload_bound",
+            "official_tub_output2_storage": {"stored": False},
+            "official_tub_output2_payload_export_bound": False,
+            "official_tub_output2_receiver_executed": False,
+        },
     )
     decoded = unpack_snerv_archive(packet.packet)
     official_payload = decode_official_mfu_hfr_tub_decoder_payload(
@@ -2184,10 +2189,39 @@ def test_official_mfu_hfr_tub_packet_carries_output2_payload_from_components() -
         "tub.output2_raw",
     ]
     assert decoded.metadata["official_tub_output2_receiver_executed"] is True
+    assert decoded.metadata["official_tub_output2_payload_export_bound"] is True
+    assert decoded.metadata["official_tub_output2_receiver_frame_bound"] is False
+    assert decoded.metadata["official_tub_output2_payload_loss_coupled"] is False
+    assert decoded.metadata["official_tub_output2_payload_tensor_names"] == [
+        "tub.output2_raw",
+        "tub.temporal_encoder_concat",
+    ]
+    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 2
+    manifest = {
+        row["name"]: row
+        for row in decoded.metadata["official_tub_output2_payload_tensor_manifest"]
+    }
+    assert manifest["tub.temporal_encoder_concat"]["shape"] == [1, 4, 4, 4]
+    assert manifest["tub.output2_raw"]["shape"] == [2, 8, 4, 4]
+    assert (
+        decoded.metadata["official_tub_output2_payload_tensor_manifest_sha256"]
+        == hashlib.sha256(
+            json.dumps(
+                decoded.metadata["official_tub_output2_payload_tensor_manifest"],
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+        ).hexdigest()
+    )
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
     rows = {row["name"]: row for row in proof["output_tensors"]}
     assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
     assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
+    assert decoded.metadata["official_tub_output2_receiver_output_tensor_names"] == [
+        "tub.output2_decoder_input",
+        "tub.output2_fused",
+    ]
+    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 2
     assert decoded.metadata["source_faithful_stack"] is False
     assert decoded.metadata["score_claim"] is False
 
@@ -2293,6 +2327,28 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         "build_snerv_official_tub_source_forward_replay_artifact",
         lambda: _fake_tub_fixture_replay_passed(),
     )
+    original_bootstrap = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs
+
+    def bootstrap_with_output2(pairs_arg, *, model_size):
+        components = original_bootstrap(pairs_arg, model_size=model_size)
+        components["tub_temporal_encoder_concat"] = np.arange(
+            np.prod(components["temporal_encoder_output_shape"]),
+            dtype=np.float64,
+        ).reshape(components["temporal_encoder_output_shape"])
+        components["tub_output2_raw"] = (
+            np.arange(
+                np.prod(components["output2_decoder_output_shape"]),
+                dtype=np.float64,
+            ).reshape(components["output2_decoder_output_shape"])
+            / 29.0
+        )
+        return components
+
+    monkeypatch.setattr(
+        mod,
+        "_official_mfu_hfr_tub_bootstrap_components_from_pairs",
+        bootstrap_with_output2,
+    )
 
     report = train_export_snerv_mlx_native(
         output_dir=tmp_path / "official_long_training_bound",
@@ -2360,6 +2416,13 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert long_training["renderer"]["schema"] == (
         "snerv_mlx_official_mfu_hfr_tub_score_renderer.v1"
     )
+    assert long_training["renderer"]["official_tub_output2_payload_export_bound"] is True
+    assert "tub.temporal_encoder_concat" in long_training["renderer"][
+        "receiver_export_payload_atoms"
+    ]
+    assert "tub.output2_raw" in long_training["renderer"][
+        "receiver_export_payload_atoms"
+    ]
     train_export = long_training["official_mfu_hfr_tub_train_export"]
     assert train_export["requested"] is True
     assert train_export["train_renderer_bound"] is True
@@ -2394,6 +2457,14 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         "authority_blockers"
     ]
     assert len(train_export["trained_packet_sha256"]) == 64
+    assert train_export["official_tub_output2_payload_export_bound"] is True
+    assert train_export["official_tub_output2_receiver_executed"] is True
+    assert train_export["official_tub_output2_payload_tensor_names"] == [
+        "tub.output2_raw",
+        "tub.temporal_encoder_concat",
+    ]
+    assert train_export["official_tub_output2_payload_tensor_count"] == 2
+    assert train_export["official_tub_output2_receiver_output_tensor_count"] == 2
     assert train_export["source_forward_replay_authority"] is False
     assert old_blocker not in long_training["blockers"]
     replay = long_training["official_mfu_hfr_tub_source_forward_replay"]
@@ -2476,6 +2547,22 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
     assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
     assert decoded.metadata["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert decoded.metadata["official_tub_output2_payload_export_bound"] is True
+    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
+    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 2
+    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 2
+    packet_manifest = {
+        row["name"]: row
+        for row in decoded.metadata["official_tub_output2_payload_tensor_manifest"]
+    }
+    assert packet_manifest["tub.temporal_encoder_concat"]["shape"] == [1, 4, 4, 4]
+    assert packet_manifest["tub.output2_raw"]["shape"] == [2, 8, 4, 4]
+    official_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    assert official_payload.execute()["executed_components"][
+        "official_tub_output2_fusion"
+    ] is True
     assert decoded.metadata["score_aware_long_training_executed"] is True
     assert decoded.metadata["score_aware_long_training"]["executed"] is True
     assert decoded.metadata["score_aware_long_training"]["official_mfu_hfr_tub_train_export"][
@@ -2499,6 +2586,82 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert np.isfinite(float(export_profile["mse_nchw255"]))
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_long_training_keeps_trained_packet_with_nonrender_blocker(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    def forced_telemetry_blocker(*_args, **_kwargs):
+        return {
+            "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+            "telemetry_exists": True,
+            "row_count": 1,
+            "passed": False,
+            "blockers": ["unit_nonrender_telemetry_blocker"],
+        }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        mod,
+        "build_snerv_official_tub_source_forward_replay_artifact",
+        lambda: _fake_tub_fixture_replay_passed(),
+    )
+    monkeypatch.setattr(
+        mod,
+        "_snerv_score_aware_long_training_telemetry_contract",
+        forced_telemetry_blocker,
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "official_long_training_blocked_but_trained",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "official-primitives-trained-state-exportable",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+            "snerv_fc_dim": 9,
+            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_batch_pairs": 2,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    assert report["score_aware_long_training_executed"] is False
+    assert "unit_nonrender_telemetry_blocker" in report["blockers"]
+    assert report["packet_source"] == "official_mfu_hfr_tub_mlx_trained_payload_atoms"
+    long_training = report["score_aware_long_training"]
+    assert long_training["executed"] is False
+    assert long_training["training_completed"] is True
+    assert long_training["trained_state_exportable"] is True
+    assert long_training["official_mfu_hfr_tub_train_export"][
+        "trained_receiver_payload_exported"
+    ] is True
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["score_aware_long_training_executed"] is False
+    assert decoded.metadata["score_aware_long_training_trained_state_exportable"] is True
+    assert decoded.metadata["native_mlx_training_executed"] is True
+    assert decoded.metadata["score_aware_long_training"]["trained_state_exportable"] is True
+    assert decoded.metadata["score_aware_long_training"][
+        "official_mfu_hfr_tub_train_export"
+    ]["trained_receiver_payload_exported"] is True
 
 
 @pytest.mark.parametrize(

@@ -676,10 +676,20 @@ def test_official_mfu_hfr_tub_payload_executes_output2_fusion_from_bytes() -> No
     ]
     assert storage["output2_decoder_input_shape"] == [2, 2, 4, 4]
     assert storage["output2_fused_shape"] == [2, 2, 8, 8]
+    assert storage["temporal_encoder_concat_sha256"] == hashlib.sha256(
+        np.asarray(temporal, dtype="<f8").tobytes()
+    ).hexdigest()
+    assert storage["output2_raw_sha256"] == hashlib.sha256(
+        np.asarray(output2_raw, dtype="<f8").tobytes()
+    ).hexdigest()
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
     rows = {row["name"]: row for row in proof["output_tensors"]}
     assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
     assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
+    assert storage["output2_decoder_input_sha256"] == rows[
+        "tub.output2_decoder_input"
+    ]["sha256"]
+    assert storage["output2_fused_sha256"] == rows["tub.output2_fused"]["sha256"]
     assert proof["output_bundle_sha256"] == header["receiver_self_consistency_reference"][
         "output_bundle_sha256"
     ]

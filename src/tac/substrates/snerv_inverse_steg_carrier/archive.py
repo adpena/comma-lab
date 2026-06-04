@@ -2282,6 +2282,14 @@ def _official_tub_output2_storage_plan(
                 int(v) for v in fusion.decoder_input.shape
             ],
             "output2_fused_shape": [int(v) for v in fusion.output2_fused.shape],
+            "temporal_encoder_concat_sha256": _sha256(temporal.tobytes()),
+            "output2_raw_sha256": _sha256(raw.tobytes()),
+            "output2_decoder_input_sha256": _sha256(
+                np.asarray(fusion.decoder_input, dtype="<f8").tobytes()
+            ),
+            "output2_fused_sha256": _sha256(
+                np.asarray(fusion.output2_fused, dtype="<f8").tobytes()
+            ),
             "source_raw_bytes": source_raw_bytes,
             "stored_raw_bytes": source_raw_bytes,
             "raw_byte_savings": 0,
