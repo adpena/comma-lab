@@ -1442,6 +1442,9 @@ def test_long_training_campaign_plan_threads_modelsize_byte_cap_feedback_paths()
             "calibrated_auto_from_modelsize_byte_cap_feedback"
         )
         assert argv[argv.index("--modelsize-candidate-id") + 1] == "auto"
+        assert argv[argv.index("--hard-byte-ceiling") + 1] == str(
+            row["candidate"]["hard_byte_ceiling"]
+        )
         indices = [
             index
             for index, value in enumerate(argv)
@@ -1451,6 +1454,111 @@ def test_long_training_campaign_plan_threads_modelsize_byte_cap_feedback_paths()
         assert [argv[index + 1] for index in indices] == report[
             "modelsize_byte_cap_feedback_paths"
         ]
+
+
+def test_long_training_campaign_plan_blocks_snerv_auto_when_calibrated_byte_cap_is_over(
+    tmp_path: Path,
+) -> None:
+    export = tmp_path / "snerv_export.json"
+    export.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "archive_bytes": 444_036,
+                "packet_bytes": 2_347_396,
+                "decoder_payload_codec": "int4_symmetric",
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "modelsize_candidate": {
+                    "candidate_id": _snerv_candidate_id(),
+                    "family": "snerv",
+                    "hard_byte_ceiling": 178_000,
+                    "nominal_total_payload_bytes": 188_854,
+                    "decoder_payload_codec": "int4_symmetric",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(export.as_posix(),),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert snerv["local_mlx_launch_command_ready"] is False
+    assert snerv["experiment_queue_entry"]["status"] == "disabled"
+    assert (
+        "snerv_modelsize_auto_calibrated_byte_cap_over_ceiling"
+        in snerv["blockers"]
+    )
+    preflight = snerv["modelsize_byte_cap_preflight"]
+    assert preflight["matching_observation_count"] == 1
+    assert preflight["predicted_under_hard_byte_ceiling"] is False
+    assert preflight["predicted_archive_bytes"] > 178_000
+
+
+def test_long_training_campaign_plan_byte_cap_preflight_reads_startup_candidate_fallback(
+    tmp_path: Path,
+) -> None:
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "hinerv_tiny",
+                    "family": "hi_nerv",
+                    "hard_byte_ceiling": 178_000,
+                    "nominal_total_payload_bytes": 95_000,
+                    "decoder_codec": "portfolio_auto",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    export = tmp_path / "hinerv_export.json"
+    export.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "archive_bytes": 80_000,
+                "decoder_codec": "portfolio_auto",
+                "receiver_proof_ready": True,
+                "startup_json_path": startup.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(export.as_posix(),),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+
+    assert "hi_nerv_modelsize_byte_cap_feedback_observation_missing" not in hi[
+        "blockers"
+    ]
+    preflight = hi["modelsize_byte_cap_preflight"]
+    assert preflight["matching_observation_count"] == 1
+    assert preflight["predicted_under_hard_byte_ceiling"] is True
 
 
 def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> None:

@@ -2283,6 +2283,28 @@ def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> Non
     assert controller["predicted_archive_bytes"] <= 178_000
 
 
+def test_execute_modelsize_auto_fails_closed_when_calibrated_feedback_has_no_under_cap_candidate() -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="hi_nerv_modelsize_auto_no_calibrated_candidate_under_hard_byte_ceiling",
+    ):
+        _resolve_execute_modelsize_candidate(
+            family="hi_nerv",
+            candidate_id="auto",
+            hard_byte_ceilings=(178_000,),
+            byte_cap_feedback_rows=[
+                {
+                    "family": "hi_nerv",
+                    "row_id": "oversized_export",
+                    "decoder_codec": "portfolio_auto",
+                    "nominal_total_payload_bytes": 1,
+                    "measured_archive_bytes": 1_000_000,
+                    "receiver_proof_passed": True,
+                }
+            ],
+        )
+
+
 def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
     tmp_path: Path,
 ) -> None:

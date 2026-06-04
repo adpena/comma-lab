@@ -456,6 +456,14 @@ def _hinerv_campaign_row(
         family="hi_nerv",
         index=decoder_weight_waterfill_index,
     )
+    modelsize_byte_cap_preflight = _modelsize_byte_cap_preflight(
+        candidate=candidate,
+        family="hi_nerv",
+        feedback_paths=modelsize_byte_cap_feedback_paths,
+    )
+    modelsize_byte_cap_blockers = list(
+        modelsize_byte_cap_preflight.get("blockers") or []
+    )
     launch_feedback_adjustment = _hinerv_feedback_launch_adjustment(
         feedback=feedback,
         learning_rate=float(learning_rate),
@@ -522,6 +530,8 @@ def _hinerv_campaign_row(
         "gpu",
         "--modelsize-candidate-id",
         runner_candidate_id,
+        "--hard-byte-ceiling",
+        str(int(candidate.get("hard_byte_ceiling") or 0)),
         "--segnet-distillation-weight",
         _float_token(effective_segnet_distillation_weight),
         "--pose-distillation-weight",
@@ -596,6 +606,7 @@ def _hinerv_campaign_row(
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
         *candidate_authority_blockers,
         *official_control_blockers,
+        *modelsize_byte_cap_blockers,
         *list(source_parity["required_blockers"]),
         *list(curriculum.get("blockers") or []),
         *feedback_evidence_blockers,
@@ -625,6 +636,7 @@ def _hinerv_campaign_row(
         and decoder_weight_waterfill_runner_admitted
         and not candidate_authority_blockers
         and not official_control_blockers
+        and not modelsize_byte_cap_blockers
         and not source_parity["required_blockers"]
     )
     if candidate_authority_blockers:
@@ -663,6 +675,7 @@ def _hinerv_campaign_row(
             "modelsize_byte_cap_feedback_paths": list(
                 modelsize_byte_cap_feedback_paths
             ),
+            "modelsize_byte_cap_preflight": modelsize_byte_cap_preflight,
             "optimizer_control": _optimizer_control(optimizer_kind),
             "optimizer_policy": _hinerv_optimizer_policy_control(
                 optimizer_kind=optimizer_kind,
@@ -730,6 +743,14 @@ def _snerv_campaign_row(
         candidate=candidate,
         family="snerv",
         index=candidate_feedback_index,
+    )
+    modelsize_byte_cap_preflight = _modelsize_byte_cap_preflight(
+        candidate=candidate,
+        family="snerv",
+        feedback_paths=modelsize_byte_cap_feedback_paths,
+    )
+    modelsize_byte_cap_blockers = list(
+        modelsize_byte_cap_preflight.get("blockers") or []
     )
     prioritized_pair_indices = _feedback_prioritized_pair_indices(feedback)
     feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
@@ -836,6 +857,8 @@ def _snerv_campaign_row(
         "--snerv-score-aware-long-training-pr95-faithful-curriculum",
         "--modelsize-candidate-id",
         runner_candidate_id,
+        "--hard-byte-ceiling",
+        str(int(candidate.get("hard_byte_ceiling") or 0)),
         "--distillation-device",
         "gpu",
         "--segnet-distillation-weight",
@@ -915,6 +938,7 @@ def _snerv_campaign_row(
             else "",
             *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
+            *modelsize_byte_cap_blockers,
             *list(source_parity["required_blockers"]),
             *list(curriculum.get("blockers") or []),
             *feedback_evidence_blockers,
@@ -926,6 +950,7 @@ def _snerv_campaign_row(
     source_controls_ready = (
         not source_control_blockers
         and not candidate.get("_candidate_authority_blockers")
+        and not modelsize_byte_cap_blockers
         and not source_parity["required_blockers"]
     )
     launch_ready = bool(
@@ -965,6 +990,7 @@ def _snerv_campaign_row(
             "modelsize_byte_cap_feedback_paths": list(
                 modelsize_byte_cap_feedback_paths
             ),
+            "modelsize_byte_cap_preflight": modelsize_byte_cap_preflight,
             "optimizer_control": optimizer_control,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
@@ -1811,6 +1837,254 @@ def _candidate_byte_headroom(row: Mapping[str, Any]) -> int:
     ceiling = int(row.get("hard_byte_ceiling") or 0)
     total = int(row.get("nominal_total_payload_bytes") or 0)
     return int(ceiling - total)
+
+
+def _modelsize_byte_cap_preflight(
+    *,
+    candidate: Mapping[str, Any],
+    family: str,
+    feedback_paths: Sequence[str],
+) -> dict[str, Any]:
+    candidate_id = str(candidate.get("candidate_id") or "")
+    ceiling = _first_present_int(candidate, ("hard_byte_ceiling",))
+    nominal = _first_present_int(
+        candidate,
+        (
+            "nominal_total_payload_bytes",
+            "total_payload_bytes",
+            "estimated_total_payload_bytes",
+        ),
+    )
+    codec = _modelsize_byte_cap_codec(candidate)
+    observations = _modelsize_byte_cap_feedback_observations(
+        family=family,
+        feedback_paths=feedback_paths,
+    )
+    matching = _modelsize_byte_cap_matching_observations(
+        observations,
+        codec=codec,
+    )
+    blockers: list[str] = []
+    predicted: int | None = nominal
+    prediction_rule = "nominal_payload_bytes_no_feedback"
+    if feedback_paths and not matching:
+        blockers.append(f"{family}_modelsize_byte_cap_feedback_observation_missing")
+    if nominal is None:
+        blockers.append(f"{family}_modelsize_byte_cap_candidate_nominal_missing")
+    if ceiling is None:
+        blockers.append(f"{family}_modelsize_byte_cap_candidate_ceiling_missing")
+    if nominal is not None and matching:
+        max_ratio = max(float(row["archive_to_nominal_ratio"]) for row in matching)
+        max_delta = max(int(row["archive_minus_nominal_bytes"]) for row in matching)
+        predicted = max(
+            int(float(nominal) * max_ratio + 0.999999),
+            int(nominal) + int(max_delta),
+        )
+        prediction_rule = (
+            "max_observed_archive_to_nominal_ratio_or_additive_overhead"
+        )
+    headroom = None
+    predicted_under = None
+    if ceiling is not None and predicted is not None:
+        headroom = int(ceiling) - int(predicted)
+        predicted_under = headroom >= 0
+        if not predicted_under and matching:
+            blockers.append(
+                f"{family}_modelsize_auto_calibrated_byte_cap_over_ceiling"
+            )
+    return {
+        "schema": "nerv_long_training_modelsize_byte_cap_preflight.v1",
+        "family": str(family),
+        "candidate_id": candidate_id or None,
+        "codec": codec,
+        "hard_byte_ceiling": ceiling,
+        "nominal_payload_bytes": nominal,
+        "predicted_archive_bytes": predicted,
+        "predicted_headroom_bytes": headroom,
+        "predicted_under_hard_byte_ceiling": predicted_under,
+        "prediction_rule": prediction_rule,
+        "feedback_path_count": len(tuple(feedback_paths)),
+        "observation_count": len(observations),
+        "matching_observation_count": len(matching),
+        "matching_observations": matching,
+        "scope": "budget_candidate_preflight_runner_revalidates_auto_selection",
+        "blockers": _dedupe(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _modelsize_byte_cap_feedback_observations(
+    *,
+    family: str,
+    feedback_paths: Sequence[str],
+) -> list[dict[str, Any]]:
+    observations: list[dict[str, Any]] = []
+    for raw_path in feedback_paths:
+        path = Path(str(raw_path)).expanduser().resolve(strict=False)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for row in _iter_modelsize_byte_cap_feedback_rows(payload):
+            row_family = str(row.get("family") or family)
+            if row_family != str(family):
+                continue
+            if not _truthy_any(
+                row,
+                (
+                    "receiver_closed",
+                    "receiver_proof_ready",
+                    "receiver_proof_passed",
+                    "runtime_consumption_proof_ready",
+                    "receiver_archive_replay_verified",
+                    "receiver_contract_satisfied",
+                    "byte_closed_receiver_proof",
+                ),
+            ):
+                continue
+            measured = _first_present_int(
+                row,
+                (
+                    "measured_archive_bytes",
+                    "archive_bytes",
+                    "archive_zip_bytes",
+                    "candidate_archive_bytes",
+                ),
+            )
+            candidate = row.get("modelsize_candidate")
+            candidate_mapping = candidate if isinstance(candidate, Mapping) else {}
+            if not candidate_mapping:
+                candidate_mapping = _modelsize_byte_cap_startup_candidate(row)
+            nominal = _first_present_int(
+                candidate_mapping,
+                (
+                    "nominal_total_payload_bytes",
+                    "total_payload_bytes",
+                    "estimated_total_payload_bytes",
+                    "packet_bytes",
+                ),
+            )
+            if nominal is None:
+                nominal = _first_present_int(
+                    row,
+                    (
+                        "nominal_total_payload_bytes",
+                        "total_payload_bytes",
+                        "estimated_total_payload_bytes",
+                        "packet_bytes",
+                    ),
+                )
+            if measured is None or nominal is None or measured <= 0 or nominal <= 0:
+                continue
+            observations.append(
+                {
+                    "source_path": path.as_posix(),
+                    "row_id": row.get("row_id") or row.get("candidate_id"),
+                    "family": row_family,
+                    "codec": _modelsize_byte_cap_codec(row),
+                    "measured_archive_bytes": int(measured),
+                    "nominal_payload_bytes": int(nominal),
+                    "archive_minus_nominal_bytes": int(measured) - int(nominal),
+                    "archive_to_nominal_ratio": float(measured) / float(nominal),
+                    "receiver_closed": True,
+                }
+            )
+    return observations
+
+
+def _modelsize_byte_cap_startup_candidate(row: Mapping[str, Any]) -> dict[str, Any]:
+    path_value = row.get("startup_json_path")
+    if not path_value:
+        return {}
+    try:
+        startup_path = Path(str(path_value)).expanduser().resolve(strict=False)
+        startup = json.loads(startup_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    candidate = startup.get("modelsize_candidate")
+    return dict(candidate) if isinstance(candidate, Mapping) else {}
+
+
+def _iter_modelsize_byte_cap_feedback_rows(node: Any) -> list[Mapping[str, Any]]:
+    rows: list[Mapping[str, Any]] = []
+
+    def visit(value: Any) -> None:
+        if isinstance(value, Mapping):
+            if _first_present_int(
+                value,
+                (
+                    "measured_archive_bytes",
+                    "archive_bytes",
+                    "archive_zip_bytes",
+                    "candidate_archive_bytes",
+                ),
+            ) is not None:
+                rows.append(value)
+            for key in (
+                "row",
+                "rows",
+                "archive_rows",
+                "ladder_rows",
+                "receiver_closed_rows",
+                "points",
+                "selected_candidates",
+                "family_rows",
+                "trained_archive_byte_oracle",
+            ):
+                child = value.get(key)
+                if child is not None:
+                    visit(child)
+        elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            for item in value:
+                visit(item)
+
+    visit(node)
+    return rows
+
+
+def _modelsize_byte_cap_matching_observations(
+    observations: Sequence[Mapping[str, Any]],
+    *,
+    codec: str | None,
+) -> list[dict[str, Any]]:
+    rows = [dict(row) for row in observations]
+    if codec:
+        exact = [row for row in rows if row.get("codec") == codec]
+        if exact:
+            return exact
+    return rows
+
+
+def _modelsize_byte_cap_codec(row: Mapping[str, Any]) -> str | None:
+    for key in (
+        "decoder_codec",
+        "decoder_payload_codec",
+        "codec",
+        "latent_codec",
+    ):
+        value = row.get(key)
+        if value:
+            return str(value)
+    candidate = row.get("modelsize_candidate")
+    if isinstance(candidate, Mapping):
+        return _modelsize_byte_cap_codec(candidate)
+    return None
+
+
+def _first_present_int(row: Mapping[str, Any], keys: Sequence[str]) -> int | None:
+    for key in keys:
+        value = row.get(key)
+        if value is None:
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
+def _truthy_any(row: Mapping[str, Any], keys: Sequence[str]) -> bool:
+    return any(row.get(key) is True for key in keys)
 
 
 def _snerv_source_bound_control_blockers(candidate: Mapping[str, Any]) -> list[str]:

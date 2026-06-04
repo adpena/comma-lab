@@ -2106,6 +2106,24 @@ def _resolve_execute_modelsize_candidate(
                     int(row.get("total_trainable_params", 0)),
                 ),
             )
+        calibrated_rows = [
+            row for row in candidates if _byte_cap_controller_has_observation(row)
+        ]
+        if calibrated_rows:
+            best = min(
+                calibrated_rows,
+                key=lambda row: (
+                    abs(_byte_cap_controller_predicted_headroom(row)),
+                    int(row["hard_byte_ceiling"]),
+                    -float(row.get("modelsize_mparams") or 0.0),
+                ),
+            )
+            raise CompactRendererMlxSpineRunnerError(
+                f"{family}_modelsize_auto_no_calibrated_candidate_under_hard_byte_ceiling: "
+                f"best_candidate={best.get('candidate_id')} "
+                f"predicted_archive_bytes={_byte_cap_controller_predicted_archive_bytes(best)} "
+                f"hard_byte_ceiling={best.get('hard_byte_ceiling')}"
+            )
         return min(
             candidates,
             key=lambda row: (
@@ -2420,6 +2438,13 @@ def _byte_cap_controller_predicts_under_ceiling(row: Mapping[str, Any]) -> bool:
         if value is not None:
             return bool(value)
     return bool(row.get("nominal_under_ceiling"))
+
+
+def _byte_cap_controller_has_observation(row: Mapping[str, Any]) -> bool:
+    controller = row.get("byte_cap_controller")
+    if not isinstance(controller, Mapping):
+        return False
+    return int(controller.get("calibration_observation_count") or 0) > 0
 
 
 def _byte_cap_controller_predicted_archive_bytes(
