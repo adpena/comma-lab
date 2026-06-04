@@ -17,8 +17,13 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import torch
 
 from tac.repo_io import sha256_file
+from tac.substrates._shared.decoder_state_codec import (
+    decoder_state_codec_stats,
+    serialize_decoder_state_dict,
+)
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
     ORIGINAL_VIDEO_BYTES,
@@ -89,6 +94,7 @@ def build_nerv_decoder_weight_waterfill_plan(
     byte_price_score_per_byte: float = CONTEST_BYTE_PRICE_SCORE,
     original_video_bytes: int = ORIGINAL_VIDEO_BYTES,
     zero_run_overhead_bytes: int = 2,
+    decoder_state_codec_for_byte_calibration: str | None = None,
     full_video_coverage: bool = False,
     receiver_proof_status: str = "missing",
     archive_sha256: str | None = None,
@@ -116,6 +122,12 @@ def build_nerv_decoder_weight_waterfill_plan(
         include_substrings=includes,
         exclude_substrings=excludes,
     )
+    codec_calibration = _decoder_state_codec_byte_calibration(
+        state_dict,
+        groups,
+        action_bits=bits,
+        decoder_state_codec=decoder_state_codec_for_byte_calibration,
+    )
     rows = [
         _row_for_group(
             group,
@@ -124,6 +136,7 @@ def build_nerv_decoder_weight_waterfill_plan(
             action_bits=bits,
             byte_price_score_per_byte=float(byte_price_score_per_byte),
             zero_run_overhead_bytes=int(zero_run_overhead_bytes),
+            codec_byte_calibration=codec_calibration["groups"].get(group.name),
             full_video_coverage=bool(full_video_coverage),
             receiver_proof_status=str(receiver_proof_status),
             archive_sha256=archive_sha256,
@@ -175,6 +188,8 @@ def build_nerv_decoder_weight_waterfill_plan(
         "exclude_substrings": list(excludes),
         "action_bits": list(bits),
         "zero_run_overhead_bytes": int(zero_run_overhead_bytes),
+        "decoder_state_codec_for_byte_calibration": decoder_state_codec_for_byte_calibration,
+        "decoder_state_codec_byte_calibration": codec_calibration["metadata"],
         "saliency_calibration": dict(saliency_calibration or {}),
         "full_video_coverage": bool(full_video_coverage),
         "receiver_proof_status": str(receiver_proof_status),
@@ -444,6 +459,7 @@ def _row_for_group(
     full_video_coverage: bool,
     receiver_proof_status: str,
     archive_sha256: str | None,
+    codec_byte_calibration: Mapping[int, Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
     values = group.values.astype(np.float64, copy=False)
     numel = int(values.size)
@@ -456,6 +472,11 @@ def _row_for_group(
             baseline_bytes=baseline_bytes,
             byte_price_score_per_byte=byte_price_score_per_byte,
             zero_run_overhead_bytes=zero_run_overhead_bytes,
+            codec_byte_calibration=(
+                None
+                if codec_byte_calibration is None
+                else codec_byte_calibration.get(int(bits))
+            ),
         )
         for bits in action_bits
     ]
@@ -502,6 +523,7 @@ def _row_for_group(
         "selected_bits": selected["bits"],
         "selected_estimated_bytes": selected["estimated_bytes"],
         "selected_byte_delta": selected["byte_delta"],
+        "selected_byte_delta_source": selected["byte_delta_source"],
         "selected_delta_rate_score": selected["delta_rate_score"],
         "selected_delta_nonrate_score_proxy": selected["delta_nonrate_score_proxy"],
         "selected_delta_total_score_proxy": selected["delta_total_score_proxy"],
@@ -514,6 +536,69 @@ def _row_for_group(
     }
 
 
+def _decoder_state_codec_byte_calibration(
+    state_dict: Mapping[str, Any],
+    groups: Sequence[TensorGroup],
+    *,
+    action_bits: Sequence[int],
+    decoder_state_codec: str | None,
+) -> dict[str, Any]:
+    codec = None if decoder_state_codec is None else str(decoder_state_codec).strip()
+    if not codec:
+        return {
+            "metadata": {
+                "bound": False,
+                "method": "analytic_group_byte_proxy",
+            },
+            "groups": {},
+        }
+    torch_state = _state_dict_to_torch(state_dict)
+    baseline_blob = serialize_decoder_state_dict(torch_state, codec=codec)
+    baseline_bytes = len(baseline_blob)
+    groups_out: dict[str, dict[int, dict[str, Any]]] = {}
+    for group in groups:
+        group_rows: dict[int, dict[str, Any]] = {}
+        for bits in action_bits:
+            mutated = dict(torch_state)
+            candidate_values = _candidate_values_for_bits(group.values, bits=int(bits))
+            mutated[group.name] = torch.from_numpy(
+                np.asarray(candidate_values, dtype=np.float32).copy()
+            )
+            candidate_blob = serialize_decoder_state_dict(mutated, codec=codec)
+            group_rows[int(bits)] = {
+                "decoder_state_codec_requested": codec,
+                "baseline_decoder_blob_bytes": int(baseline_bytes),
+                "candidate_decoder_blob_bytes": len(candidate_blob),
+                "decoder_blob_byte_delta": int(len(candidate_blob) - baseline_bytes),
+                "candidate_decoder_codec_emitted": decoder_state_codec_stats(
+                    candidate_blob
+                ).codec,
+            }
+        groups_out[group.name] = group_rows
+    return {
+        "metadata": {
+            "bound": True,
+            "method": "measured_whole_decoder_state_codec_delta",
+            "decoder_state_codec_requested": codec,
+            "baseline_decoder_blob_bytes": int(baseline_bytes),
+            "baseline_decoder_codec_stats": decoder_state_codec_stats(
+                baseline_blob
+            ).as_dict(),
+            "calibrated_group_count": len(groups_out),
+        },
+        "groups": groups_out,
+    }
+
+
+def _state_dict_to_torch(state_dict: Mapping[str, Any]) -> dict[str, torch.Tensor]:
+    out: dict[str, torch.Tensor] = {}
+    for name, value in state_dict.items():
+        out[str(name)] = torch.from_numpy(
+            np.asarray(value, dtype=np.float32).copy()
+        )
+    return out
+
+
 def _candidate_for_bits(
     values: np.ndarray,
     *,
@@ -522,27 +607,35 @@ def _candidate_for_bits(
     baseline_bytes: int,
     byte_price_score_per_byte: float,
     zero_run_overhead_bytes: int,
+    codec_byte_calibration: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     numel = int(values.size)
     if bits == 0:
         action = "zero_rle"
         estimated_bytes = int(zero_run_overhead_bytes)
-        mse_sum = float(np.sum(values * values))
     elif bits == 32:
         action = "fp32_protect"
         estimated_bytes = baseline_bytes
-        mse_sum = 0.0
     elif bits == 16:
         action = "fp16"
         estimated_bytes = int(numel * 2)
-        q = values.astype(np.float16).astype(np.float64)
-        mse_sum = float(np.sum((values - q) ** 2))
     else:
         action = f"int{bits}"
         estimated_bytes = int((numel * bits + 7) // 8)
-        q = _symmetric_quantize(values, bits=bits)
-        mse_sum = float(np.sum((values - q) ** 2))
-    byte_delta = int(estimated_bytes - baseline_bytes)
+    q = _candidate_values_for_bits(values, bits=bits)
+    mse_sum = float(np.sum((values - q) ** 2))
+    analytic_byte_delta = int(estimated_bytes - baseline_bytes)
+    measured_delta = (
+        None
+        if codec_byte_calibration is None
+        else int(codec_byte_calibration["decoder_blob_byte_delta"])
+    )
+    byte_delta = analytic_byte_delta if measured_delta is None else measured_delta
+    byte_delta_source = (
+        "analytic_group_proxy"
+        if measured_delta is None
+        else "measured_decoder_state_codec_whole_blob_delta"
+    )
     delta_rate = float(byte_delta) * float(byte_price_score_per_byte)
     delta_nonrate = None if saliency is None else float(saliency) * mse_sum
     delta_total = None if delta_nonrate is None else float(delta_nonrate) + delta_rate
@@ -551,11 +644,27 @@ def _candidate_for_bits(
         "bits": int(bits),
         "estimated_bytes": int(estimated_bytes),
         "byte_delta": int(byte_delta),
+        "analytic_byte_delta": int(analytic_byte_delta),
+        "byte_delta_source": byte_delta_source,
+        "decoder_state_codec_calibration": (
+            None if codec_byte_calibration is None else dict(codec_byte_calibration)
+        ),
         "quantization_error_sum": mse_sum,
         "delta_rate_score": delta_rate,
         "delta_nonrate_score_proxy": delta_nonrate,
         "delta_total_score_proxy": delta_total,
     }
+
+
+def _candidate_values_for_bits(values: np.ndarray, *, bits: int) -> np.ndarray:
+    values64 = np.asarray(values, dtype=np.float64)
+    if bits == 0:
+        return np.zeros_like(values64, dtype=np.float64)
+    if bits == 32:
+        return values64.copy()
+    if bits == 16:
+        return values64.astype(np.float16).astype(np.float64)
+    return _symmetric_quantize(values64, bits=bits)
 
 
 def _symmetric_quantize(values: np.ndarray, *, bits: int) -> np.ndarray:

@@ -59,6 +59,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--receiver-proof-status", default="missing")
     parser.add_argument("--full-video-coverage", action="store_true")
     parser.add_argument("--zero-run-overhead-bytes", default=2, type=int)
+    parser.add_argument(
+        "--decoder-state-codec-for-byte-calibration",
+        default=None,
+        help=(
+            "Optional receiver decoder-state codec used to measure whole-blob "
+            "byte deltas per candidate action instead of the analytic group proxy."
+        ),
+    )
     args = parser.parse_args(argv)
 
     state = (
@@ -90,6 +98,11 @@ def main(argv: list[str] | None = None) -> int:
         receiver_proof_status=str(args.receiver_proof_status),
         full_video_coverage=bool(args.full_video_coverage),
         zero_run_overhead_bytes=int(args.zero_run_overhead_bytes),
+        decoder_state_codec_for_byte_calibration=(
+            None
+            if args.decoder_state_codec_for_byte_calibration is None
+            else str(args.decoder_state_codec_for_byte_calibration)
+        ),
     )
     output = args.output_json.expanduser().resolve(strict=False)
     output.parent.mkdir(parents=True, exist_ok=True)

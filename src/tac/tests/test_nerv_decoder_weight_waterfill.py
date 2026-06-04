@@ -98,6 +98,44 @@ def test_decoder_weight_waterfill_default_actions_include_official_six_seven_bit
     assert report["score_claim"] is False
 
 
+def test_decoder_weight_waterfill_can_measure_receiver_codec_byte_deltas() -> None:
+    state = {
+        "blocks.0.weight": np.linspace(-1.0, 1.0, num=257, dtype=np.float32),
+        "blocks.1.weight": np.linspace(0.25, 0.75, num=17, dtype=np.float32),
+    }
+
+    report = build_nerv_decoder_weight_waterfill_plan(
+        state,
+        saliency_by_name={"blocks.0.weight": 0.0, "blocks.1.weight": 0.0},
+        action_bits=(0, 8, 32),
+        zero_run_overhead_bytes=0,
+        full_video_coverage=True,
+        receiver_proof_status="runtime_consumption_proof_ready",
+        archive_sha256="e" * 64,
+        decoder_state_codec_for_byte_calibration="int8_mixed",
+    )
+
+    assert report["decoder_state_codec_for_byte_calibration"] == "int8_mixed"
+    calibration = report["decoder_state_codec_byte_calibration"]
+    assert calibration["bound"] is True
+    assert calibration["method"] == "measured_whole_decoder_state_codec_delta"
+    assert calibration["baseline_decoder_blob_bytes"] > 0
+    row = next(row for row in report["rows"] if row["group_name"] == "blocks.0.weight")
+    candidates = {candidate["bits"]: candidate for candidate in row["candidate_actions"]}
+    assert candidates[8]["byte_delta_source"] == (
+        "measured_decoder_state_codec_whole_blob_delta"
+    )
+    assert candidates[8]["decoder_state_codec_calibration"][
+        "candidate_decoder_blob_bytes"
+    ] > 0
+    assert row["selected_byte_delta_source"] == (
+        "measured_decoder_state_codec_whole_blob_delta"
+    )
+    assert row["selected_delta_rate_score"] == pytest.approx(
+        row["selected_byte_delta"] * report["contest_byte_price_score_per_byte"]
+    )
+
+
 def test_decoder_weight_waterfill_requires_strict_receiver_proof_status_and_hash() -> None:
     report = build_nerv_decoder_weight_waterfill_plan(
         {"blocks.0.weight": np.asarray([0.125, -0.75, 1.0], dtype=np.float32)},
@@ -264,12 +302,15 @@ def test_build_nerv_decoder_weight_waterfill_plan_cli_smoke(tmp_path: Path) -> N
             "runtime_consumption_proof_ready",
             "--archive-sha256",
             "c" * 64,
+            "--decoder-state-codec-for-byte-calibration",
+            "int8_mixed",
         ]
     )
 
     assert rc == 0
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["group_count"] == 1
+    assert payload["decoder_state_codec_byte_calibration"]["bound"] is True
     assert payload["rows"][0]["group_name"] == "blocks.0.weight"
     assert payload["rows"][0]["selected_action"] in {"int2", "zero_rle"}
     assert payload["rows"][0]["selected_byte_delta"] < 0
