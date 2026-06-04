@@ -217,6 +217,71 @@ def test_run_long_training_calls_notify_global_epoch_once_per_epoch(
     )
 
 
+def test_run_long_training_calls_notify_curriculum_stage_before_step(
+    tmp_path: Path,
+) -> None:
+    """Full CurriculumStage controls are delivered before each train step."""
+
+    class _StageNotifyAdapter(_NotifyRecordingAdapter):
+        def __init__(self) -> None:
+            super().__init__()
+            self.stage_calls: list[tuple[int, str, bool]] = []
+            self.loss_fn_stage_flags: list[bool] = []
+
+        def notify_curriculum_stage(
+            self,
+            global_epoch: int,
+            stage: CurriculumStage,
+        ) -> None:
+            self.stage_calls.append(
+                (int(global_epoch), str(stage.name), bool(stage.enable_qat))
+            )
+
+        def loss_fn(
+            self,
+            model: Any,
+            batch: Any,
+            loss_weights: Mapping[str, float],
+        ) -> Mapping[str, float]:
+            self.loss_fn_stage_flags.append(self.stage_calls[-1][2])
+            return super().loss_fn(model, batch, loss_weights)
+
+    adapter = _StageNotifyAdapter()
+    config = LongTrainingConfig(
+        substrate_id="wire_in_test_substrate",
+        lane_id="lane_test_wire_in_test_substrate_20260530",  # FAKE_LANE_OK:test_fixture_lane_token_not_a_lane_registry_pre_registration_per_catalog_126
+        epochs=3,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(
+                name="qat_on",
+                start_epoch=0,
+                end_epoch=3,
+                enable_qat=True,
+                notes="stage hook test enables QAT before each train step",
+            ),
+        ),
+        ema_decay=0.9,
+        checkpoint_interval_epochs=3,
+        early_stopping_patience=4,
+        learning_rate=1e-3,
+        seed=0,
+        output_dir=tmp_path,
+        device="cpu",
+        evidence_grade="[advisory only]",
+        notes="stage hook test verifies enable_qat is train-step visible",
+    )
+
+    run_long_training(adapter, config)
+
+    assert adapter.stage_calls == [
+        (0, "qat_on", True),
+        (1, "qat_on", True),
+        (2, "qat_on", True),
+    ]
+    assert adapter.loss_fn_stage_flags == [True, True, True]
+
+
 def test_run_long_training_notify_global_epoch_silent_noop_when_missing(
     tmp_path: Path,
 ) -> None:
@@ -572,8 +637,21 @@ def test_harness_construction_propagates_pr95_state_into_adapter() -> None:
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
     # Construct a minimal bundle via a stub so the adapter can initialize.
+    class _StubModel:
+        def __init__(self) -> None:
+            self.stage_calls: list[tuple[int, str, bool]] = []
+
+        def notify_curriculum_stage(
+            self,
+            global_epoch: int,
+            stage: CurriculumStage,
+        ) -> None:
+            self.stage_calls.append(
+                (int(global_epoch), str(stage.name), bool(stage.enable_qat))
+            )
+
     class _StubBundle:
-        model = type("StubModel", (), {})()
+        model = _StubModel()
 
         def __init__(self):
             self.num_pairs = 1
@@ -602,6 +680,18 @@ def test_harness_construction_propagates_pr95_state_into_adapter() -> None:
     # notify_global_epoch must advance internal state.
     adapter.notify_global_epoch(42)
     assert adapter._pr95_global_epoch == 42
+    stage = CurriculumStage(
+        name="stage_qat_on",
+        start_epoch=0,
+        end_epoch=1,
+        enable_qat=True,
+        notes="adapter stage notification test enables train-time QAT flag",
+    )
+    adapter.notify_curriculum_stage(0, stage)
+    assert adapter._active_curriculum_stage_name == "stage_qat_on"
+    assert adapter._active_curriculum_stage_enable_qat is True
+    assert adapter._active_curriculum_stage_epoch == 0
+    assert bundle.model.stage_calls == [(0, "stage_qat_on", True)]
 
 
 def test_pr95_curriculum_step_consumes_c1a_entropy_not_telemetry_only() -> None:

@@ -1241,6 +1241,13 @@ class SubstrateLongTrainingAdapter(Protocol):
             checkpoints, and archive export. Use this for real weight-space
             projections such as train-time quantization/pruning controls; do
             not put parameter mutation in on_epoch_end observability callbacks.
+        notify_curriculum_stage(epoch, stage) -> None:
+            optional stage-control hook called once per epoch after
+            ``notify_global_epoch`` and before ``train_step`` / ``loss_fn``.
+            This is the canonical surface for non-loss stage controls such as
+            ``CurriculumStage.enable_qat``; if an adapter implements it and it
+            raises, the training run fails closed instead of silently ignoring
+            a requested train-time control.
         artifact_metadata() -> Mapping[str, Any] | None:
             optional non-authority metadata threaded into TrainingArtifact
             JSON and MLX posterior rows. This may carry substrate lineage or
@@ -2979,6 +2986,9 @@ def run_long_training(
                 print(
                     f"[long_training_canonical] WARN: notify_global_epoch failed at epoch {epoch}: {exc!r}"
                 )
+        stage_notify_fn = getattr(adapter, "notify_curriculum_stage", None)
+        if callable(stage_notify_fn):
+            stage_notify_fn(epoch, stage)
 
         try:
             loss_dict, actual_bs = oom_runner.run_step(

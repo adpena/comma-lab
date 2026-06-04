@@ -668,6 +668,9 @@ class MlxScoreAwareAdapter:
         self._pose_head_optimizer: Any = None
         self._pose_head_optimizer_lr: float | None = None
         self._active_loss_weights: Mapping[str, float] = {}
+        self._active_curriculum_stage_name: str | None = None
+        self._active_curriculum_stage_enable_qat: bool = False
+        self._active_curriculum_stage_epoch: int | None = None
 
     def _post_train_step_update(self, batch: Any) -> tuple[list[Any], dict[str, float]]:
         """Run substrate-local non-gradient updates after an accepted step."""
@@ -1420,6 +1423,15 @@ class MlxScoreAwareAdapter:
                 ),
                 "source_faithful_default": "faithful_stage8_only",
                 "contest_specific_policies": ["every_stage"],
+            },
+            "active_curriculum_stage_controls": {
+                "schema": "mlx_score_aware_active_curriculum_stage_controls.v1",
+                "stage_name": self._active_curriculum_stage_name,
+                "epoch": self._active_curriculum_stage_epoch,
+                "enable_qat": bool(self._active_curriculum_stage_enable_qat),
+                "stage_notified_before_train_step": (
+                    self._active_curriculum_stage_epoch is not None
+                ),
             },
             "train_time_dual_ascent": self._train_time_dual_ascent.as_metadata(),
         }
@@ -2567,6 +2579,25 @@ class MlxScoreAwareAdapter:
                     "[MlxScoreAwareAdapter] WARN: renderer notify_global_epoch "
                     f"failed at epoch {global_epoch}: {exc!r}"
                 )
+
+    def notify_curriculum_stage(self, global_epoch: int, stage: Any) -> None:
+        """Notify the adapter/model of full stage controls before train_step.
+
+        ``notify_global_epoch`` is the legacy PR95 stage-index tick. This hook
+        carries the full canonical :class:`CurriculumStage`, including
+        ``enable_qat``.  That makes per-stage QAT/quant-noise/projection a real
+        train-time control for SNeRV/HiNeRV renderers instead of metadata-only
+        schema text.
+        """
+
+        self._active_curriculum_stage_epoch = int(global_epoch)
+        self._active_curriculum_stage_name = str(getattr(stage, "name", ""))
+        self._active_curriculum_stage_enable_qat = bool(
+            getattr(stage, "enable_qat", False)
+        )
+        renderer_hook = getattr(self.model, "notify_curriculum_stage", None)
+        if callable(renderer_hook):
+            renderer_hook(int(global_epoch), stage)
 
     def post_optimizer_projection(self, *, epoch: int) -> Mapping[str, Any] | None:
         """Forward optional substrate-owned proximal projection hooks."""
