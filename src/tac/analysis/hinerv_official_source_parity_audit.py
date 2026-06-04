@@ -970,8 +970,9 @@ def _official_hinerv_forward_source_replay(official_root: Path) -> dict[str, Any
     """Run a tiny deterministic official HiNeRV torch forward.
 
     This is source-custody evidence only.  It proves the pinned upstream graph
-    can be instantiated and executed on a hashed input; it does not compare
-    against a local portable/MLX renderer, so it cannot clear forward parity.
+    can be instantiated and executed on a hashed input, then compares only the
+    strict portable adapter cases that can be represented exactly.  Unsupported
+    official states fail closed instead of becoming approximate parity claims.
     """
 
     input_record = _official_hinerv_tiny_input_record()
