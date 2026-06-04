@@ -7809,6 +7809,30 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             float(kwargs.get("segnet_distillation_weight") or 0.0) > 0.0
             and float(kwargs.get("pose_distillation_weight") or 0.0) > 0.0
         )
+        modelsize_candidate = dict(kwargs.get("modelsize_candidate") or {})
+        hard_byte_ceiling = int(modelsize_candidate.get("hard_byte_ceiling") or 0)
+        byte_cap_control = {
+            "schema": "snerv_mlx_native_hard_byte_ceiling_control.v1",
+            "attached": hard_byte_ceiling > 0,
+            "hard_byte_ceiling": hard_byte_ceiling or None,
+            "packet_bytes": packet_path.stat().st_size,
+            "archive_bytes": archive.stat().st_size,
+            "under_hard_byte_ceiling": (
+                archive.stat().st_size <= hard_byte_ceiling
+                if hard_byte_ceiling > 0
+                else None
+            ),
+            "delta_bytes_vs_hard_byte_ceiling": (
+                archive.stat().st_size - hard_byte_ceiling
+                if hard_byte_ceiling > 0
+                else None
+            ),
+            "enforced": hard_byte_ceiling > 0,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
         payload = {
             "schema": "snerv_mlx_native_train_export.v1",
             "report_path": report.as_posix(),
@@ -7818,6 +7842,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "archive_path": archive.as_posix(),
             "archive_bytes": archive.stat().st_size,
             "archive_sha256": runner_mod._sha256_file(archive),
+            "byte_cap_control": byte_cap_control,
             "runtime_submission_dir": (out / "submission").as_posix(),
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
@@ -8168,6 +8193,12 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     )
     assert native["receiver_proof_passed"] is True
     assert native["receiver_contract_satisfied"] is True
+    assert native["byte_cap_control"]["schema"] == (
+        "snerv_mlx_native_hard_byte_ceiling_control.v1"
+    )
+    assert native["byte_cap_control"]["hard_byte_ceiling"] == 178_000
+    assert native["byte_cap_control"]["archive_bytes"] == native["archive_bytes"]
+    assert native["byte_cap_control"]["under_hard_byte_ceiling"] is True
     assert native["native_mlx_training_executed"] is True
     assert native["native_mlx_training_kind"] == (
         "snerv_mlx_score_aware_haar_renderer"

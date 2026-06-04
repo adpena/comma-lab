@@ -282,6 +282,7 @@ def train_export_snerv_mlx_native(
         str(scorer_loop_qat_lf_payload_codec) if scorer_loop_qat_lf_payload_codec else lf_payload_codec
     )
     model_size = _model_size_from_candidate(candidate)
+    hard_byte_ceiling = _hard_byte_ceiling_from_candidate(candidate)
     source_pair_indices = _source_pair_indices_for_native_export(
         int(num_pairs),
         pair_indices=pair_indices,
@@ -628,6 +629,7 @@ def train_export_snerv_mlx_native(
         "score_aware_long_training_optimizer": str(
             score_aware_long_training_public.get("optimizer_kind") or "none"
         ),
+        "hard_byte_ceiling": hard_byte_ceiling,
         **(
             {
                 "native_mlx_training_executed": True,
@@ -859,6 +861,23 @@ def train_export_snerv_mlx_native(
             )
     receiver_proof = dict(package.get("receiver_proof") or {}) if package else {}
     selected_archive_metadata = unpack_snerv_archive(selected_packet).metadata
+    byte_cap_control = _build_snerv_mlx_native_byte_cap_control(
+        candidate=candidate,
+        hard_byte_ceiling=hard_byte_ceiling,
+        packet_bytes=len(selected_packet),
+        archive_bytes=(
+            int(receiver_proof["archive_bytes"])
+            if receiver_proof.get("archive_bytes") is not None
+            else None
+        ),
+        archive_sha256=(
+            str(receiver_proof.get("archive_sha256"))
+            if receiver_proof.get("archive_sha256")
+            else None
+        ),
+        run_archive_export=bool(run_archive_export),
+    )
+    blockers.extend(str(blocker) for blocker in byte_cap_control.get("blockers") or ())
     mlx_prefilter_profile = _write_snerv_native_receiver_decoded_mlx_prefilter(
         requested=bool(write_mlx_prefilter_profile),
         output_dir=out / "local_mlx_prefilter",
@@ -982,6 +1001,8 @@ def train_export_snerv_mlx_native(
         blockers=tuple(dict.fromkeys(blockers)),
     )
     payload = artifact.as_jsonable()
+    payload["hard_byte_ceiling"] = hard_byte_ceiling
+    payload["byte_cap_control"] = byte_cap_control
     payload["local_mlx_prefilter_profile"] = mlx_prefilter_profile
     payload["local_mlx_prefilter_profile_path"] = mlx_prefilter_profile.get(
         "profile_path"
@@ -4816,6 +4837,73 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
         ),
         adapter=adapter,
     )
+
+
+def _hard_byte_ceiling_from_candidate(candidate: Mapping[str, Any]) -> int | None:
+    value = candidate.get("hard_byte_ceiling", candidate.get("snerv_hard_byte_ceiling"))
+    if value is None:
+        return None
+    try:
+        ceiling = int(value)
+    except (TypeError, ValueError) as exc:
+        raise SnervCarrierError("hard_byte_ceiling must be an integer") from exc
+    if ceiling <= 0:
+        raise SnervCarrierError("hard_byte_ceiling must be positive")
+    return ceiling
+
+
+def _build_snerv_mlx_native_byte_cap_control(
+    *,
+    candidate: Mapping[str, Any],
+    hard_byte_ceiling: int | None,
+    packet_bytes: int,
+    archive_bytes: int | None,
+    archive_sha256: str | None,
+    run_archive_export: bool,
+) -> dict[str, Any]:
+    controller = candidate.get("byte_cap_controller")
+    controller_payload = dict(controller) if isinstance(controller, Mapping) else None
+    base = {
+        "schema": "snerv_mlx_native_hard_byte_ceiling_control.v1",
+        "attached": hard_byte_ceiling is not None,
+        "hard_byte_ceiling": hard_byte_ceiling,
+        "packet_bytes": int(packet_bytes),
+        "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
+        "archive_sha256": str(archive_sha256) if archive_sha256 else None,
+        "run_archive_export": bool(run_archive_export),
+        "byte_cap_controller": controller_payload,
+        "authority": "measured_archive_zip_bytes_when_receiver_proof_emits_archive_bytes",
+        **FALSE_AUTHORITY,
+    }
+    if hard_byte_ceiling is None:
+        return {
+            **base,
+            "under_hard_byte_ceiling": None,
+            "delta_bytes_vs_hard_byte_ceiling": None,
+            "enforced": False,
+            "blockers": [],
+        }
+
+    blockers: list[str] = []
+    under: bool | None = None
+    delta: int | None = None
+    if not run_archive_export:
+        blockers.append("snerv_mlx_native_hard_byte_ceiling_not_enforced_archive_export_disabled")
+    elif archive_bytes is None:
+        blockers.append("snerv_mlx_native_hard_byte_ceiling_archive_bytes_missing")
+    else:
+        delta = int(archive_bytes) - int(hard_byte_ceiling)
+        under = delta <= 0
+        if not under:
+            blockers.append("snerv_mlx_native_archive_exceeds_hard_byte_ceiling")
+
+    return {
+        **base,
+        "under_hard_byte_ceiling": under,
+        "delta_bytes_vs_hard_byte_ceiling": delta,
+        "enforced": bool(run_archive_export and archive_bytes is not None),
+        "blockers": _ordered_unique(blockers),
+    }
 
 
 def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:

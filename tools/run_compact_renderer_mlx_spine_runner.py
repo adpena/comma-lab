@@ -3504,6 +3504,7 @@ def _run_snerv_native_mlx_export_attachment(
             "archive_path": artifact.get("archive_path"),
             "archive_bytes": artifact.get("archive_bytes"),
             "archive_sha256": artifact.get("archive_sha256"),
+            "byte_cap_control": artifact.get("byte_cap_control"),
             "runtime_submission_dir": (
                 (Path(str(artifact.get("archive_path"))).parent / "submission").as_posix()
                 if artifact.get("archive_path")

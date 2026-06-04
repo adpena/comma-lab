@@ -1753,6 +1753,87 @@ def test_train_export_official_primitives_receiver_proof_stays_surrogate_only(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
+def test_train_export_blocks_over_hard_byte_ceiling_using_measured_archive_bytes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    def fake_export_snerv_mlx_archive(
+        *,
+        model_or_artifact,
+        output_dir,
+        repo_root,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=1800,
+    ):
+        del repo_root, retain_receiver_output, receiver_proof_timeout_seconds
+        packet = Path(model_or_artifact["packet_path"]).read_bytes()
+        out = Path(output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        archive_path = out / "archive.zip"
+        archive_path.write_bytes(b"charged-archive:" + packet[:64])
+        proof_path = out / "receiver_proof.json"
+        proof_path.write_text('{"runtime_consumption_proof_passed":true}\n')
+        return {
+            "schema": "fake_snerv_mlx_archive_package.v1",
+            "receiver_proof": {
+                "archive_path": archive_path.as_posix(),
+                "archive_bytes": archive_path.stat().st_size,
+                "archive_sha256": hashlib.sha256(archive_path.read_bytes()).hexdigest(),
+                "proof_path": proof_path.as_posix(),
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(mod, "export_snerv_mlx_archive", fake_export_snerv_mlx_archive)
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "over_hard_cap",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "candidate_id": "over-hard-cap",
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "hard_byte_ceiling": 8,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=True,
+    )
+
+    cap = report["byte_cap_control"]
+    assert cap["attached"] is True
+    assert cap["enforced"] is True
+    assert cap["hard_byte_ceiling"] == 8
+    assert cap["archive_bytes"] == report["archive_bytes"]
+    assert cap["under_hard_byte_ceiling"] is False
+    assert cap["delta_bytes_vs_hard_byte_ceiling"] == report["archive_bytes"] - 8
+    assert "snerv_mlx_native_archive_exceeds_hard_byte_ceiling" in cap["blockers"]
+    assert "snerv_mlx_native_archive_exceeds_hard_byte_ceiling" in report["blockers"]
+    assert report["score_claim"] is False
+    assert report["promotion_eligible"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
 def test_native_export_modelsize_candidate_consumes_official_fc_dim_solution() -> None:
     model_size = _model_size_from_candidate(
         {
