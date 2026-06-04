@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tac.substrates.hprc.mlx_prefilter_coverage import (
     mlx_profile_has_full_video_coverage,
     mlx_profile_pair_count,
@@ -65,6 +67,40 @@ def test_renderer_prefilter_profile_schema_unlocks_full_video_coverage(
     assert coverage["local_replay_mlx_prefilter_passed"] is True
     assert coverage["best_full_video_mlx_score"] == 0.2
     assert coverage["blockers"] == []
+
+
+def test_hinerv_mlx_scorer_response_schema_unlocks_full_video_but_requires_gate(
+    tmp_path: Path,
+) -> None:
+    profile_path = tmp_path / "hinerv_receiver_raw_prefilter.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_scorer_response.v1",
+                "n_samples": 600,
+                "candidate_cache_pairs": 600,
+                "reference_cache_pairs": 600,
+                "batch_pairs": 1,
+                "score_recomputed_from_components": 78.18,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "hinerv_receiver_raw_cache_prefilter": {
+                    "schema": "hinerv_receiver_raw_cache_prefilter.v1",
+                    "cache_quality_gate": None,
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    coverage = summarize_mlx_prefilter_coverage((profile_path,), root=tmp_path)
+
+    assert coverage["has_full_video_mlx_prefilter"] is True
+    assert coverage["best_full_video_mlx_score"] == pytest.approx(78.18)
+    assert coverage["local_replay_mlx_prefilter_passed"] is False
+    assert "hinerv_receiver_raw_cache_quality_gate_missing" in coverage["blockers"]
 
 
 def test_sampled_profile_path_is_not_full_video_prefilter(tmp_path: Path) -> None:
@@ -127,6 +163,8 @@ def test_batched_full_video_profile_is_not_singleton_prefilter(
         root=tmp_path,
     )
 
-    assert coverage["has_full_video_mlx_prefilter"] is False
+    assert coverage["has_full_video_mlx_prefilter"] is True
     assert coverage["profile_records"][0]["batch_pairs"] == 8
+    assert coverage["profile_records"][0]["full_video_prefilter"] is True
+    assert coverage["profile_records"][0]["local_replay_prefilter"] is False
     assert "mlx_profile_batch_pairs_not_singleton" in coverage["blockers"]

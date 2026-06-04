@@ -5,12 +5,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from tac.substrates.hprc.resolution_contract import CONTEST_PAIR_COUNT
 
 HPRC_MLX_COMPONENT_PROFILE_SCHEMA = "hprc_mlx_component_neutralization_profile.v1"
+MLX_SCORER_RESPONSE_SCHEMA = "mlx_scorer_response.v1"
 HPRC_MLX_PREFILTER_COVERAGE_SCHEMA = "hprc_mlx_prefilter_coverage.v1"
 DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY = 0.5
 
@@ -63,6 +65,13 @@ def mlx_profile_batch_pairs(profile: dict[str, Any]) -> int | None:
 def mlx_profile_full_video_scope(profile: dict[str, Any]) -> str:
     """Return the profile's declared full-video scope marker."""
 
+    if profile.get("schema") == MLX_SCORER_RESPONSE_SCHEMA:
+        count = mlx_profile_pair_count(profile)
+        return (
+            "executed"
+            if count is not None and int(count) >= int(CONTEST_PAIR_COUNT)
+            else "sampled_prefix_requires_full_video_rerun"
+        )
     scope = profile.get("scope_status")
     if not isinstance(scope, dict):
         return "missing_scope_status"
@@ -86,7 +95,10 @@ def mlx_profile_has_full_video_coverage(
     separately by ``local_replay_prefilter`` below.
     """
 
-    if profile.get("schema") != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
+    if profile.get("schema") not in {
+        HPRC_MLX_COMPONENT_PROFILE_SCHEMA,
+        MLX_SCORER_RESPONSE_SCHEMA,
+    }:
         return False
     count = mlx_profile_pair_count(profile)
     return (
@@ -179,6 +191,7 @@ def summarize_mlx_prefilter_coverage(
             for record in full_records
             for blocker in record.get("blockers", [])
             if blocker == "mlx_profile_batch_pairs_not_singleton"
+            or _is_local_replay_quality_blocker(str(blocker))
         )
     elif score_threshold is not None and not local_replay_passed:
         blockers.append("mlx_prefilter_score_not_below_local_replay_threshold")
@@ -260,10 +273,13 @@ def _profile_path_record(
             ),
         }
     )
+    quality_blockers = _profile_local_replay_quality_blockers(payload)
     record["local_replay_prefilter"] = bool(
-        record["full_video_prefilter"] is True and batch_pairs == 1
+        record["full_video_prefilter"] is True
+        and batch_pairs == 1
+        and not quality_blockers
     )
-    if schema != HPRC_MLX_COMPONENT_PROFILE_SCHEMA:
+    if schema not in {HPRC_MLX_COMPONENT_PROFILE_SCHEMA, MLX_SCORER_RESPONSE_SCHEMA}:
         record["blockers"].append("mlx_profile_schema_unsupported")
     if full_video_scope != "executed":
         record["blockers"].append("mlx_profile_not_full_video_executed")
@@ -273,7 +289,113 @@ def _profile_path_record(
         record["blockers"].append("mlx_profile_pair_count_below_full_video")
     if batch_pairs != 1:
         record["blockers"].append("mlx_profile_batch_pairs_not_singleton")
+    record["blockers"].extend(quality_blockers)
     return record
+
+
+def _profile_local_replay_quality_blockers(profile: Mapping[str, Any]) -> list[str]:
+    """Return MLX profile blockers that invalidate local CPU replay triage."""
+
+    blockers = [
+        str(blocker)
+        for blocker in profile.get("blockers") or ()
+        if _is_local_replay_quality_blocker(str(blocker))
+    ]
+    diagnosis = profile.get("scorer_input_diagnosis")
+    if isinstance(diagnosis, Mapping):
+        blockers.extend(
+            str(blocker)
+            for blocker in diagnosis.get("blockers") or ()
+            if _is_local_replay_quality_blocker(str(blocker))
+        )
+        if diagnosis.get("candidate_output_likely_saturated_or_clipped") is True:
+            blockers.append(
+                "mlx_renderer_prefilter_candidate_output_saturated_or_clipped"
+            )
+        if diagnosis.get("candidate_output_out_of_distribution") is True:
+            blockers.append("mlx_renderer_prefilter_scorer_input_out_of_distribution")
+    cache_gate = profile.get("cache_quality_gate")
+    if isinstance(cache_gate, Mapping):
+        blockers.extend(_cache_quality_gate_blockers(cache_gate))
+    nested_hinerv_prefilter = profile.get("hinerv_receiver_raw_cache_prefilter")
+    if isinstance(nested_hinerv_prefilter, Mapping):
+        nested_gate = nested_hinerv_prefilter.get("cache_quality_gate")
+        if isinstance(nested_gate, Mapping):
+            blockers.extend(_cache_quality_gate_blockers(nested_gate))
+        else:
+            blockers.append("hinerv_receiver_raw_cache_quality_gate_missing")
+    post_export_quality = profile.get("post_export_receiver_cache_quality")
+    if isinstance(post_export_quality, Mapping):
+        blockers.extend(_receiver_cache_quality_blockers(post_export_quality))
+    metadata = profile.get("substrate_artifact_metadata")
+    if isinstance(metadata, Mapping):
+        nested_quality = metadata.get("post_export_receiver_cache_quality")
+        if isinstance(nested_quality, Mapping):
+            blockers.extend(_receiver_cache_quality_blockers(nested_quality))
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, Mapping):
+            nested_quality = score_training.get("post_export_receiver_cache_quality")
+            if isinstance(nested_quality, Mapping):
+                blockers.extend(_receiver_cache_quality_blockers(nested_quality))
+    return _dedupe(blockers)
+
+
+def _cache_quality_gate_blockers(gate: Mapping[str, Any]) -> list[str]:
+    blockers = [
+        str(blocker)
+        for blocker in gate.get("blockers") or ()
+        if _is_local_replay_quality_blocker(str(blocker))
+    ]
+    if gate.get("fit_gate_passed") is not True:
+        blockers.append("mlx_prefilter_cache_quality_gate_not_passed")
+    if gate.get("candidate_cache_nondegenerate") is not True:
+        blockers.append("mlx_prefilter_cache_quality_gate_degenerate_candidate_cache")
+    verdict = gate.get("verdict")
+    if isinstance(verdict, str) and verdict and verdict != "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY":
+        blockers.append(f"mlx_prefilter_cache_quality_verdict:{verdict}")
+    return blockers
+
+
+def _receiver_cache_quality_blockers(report: Mapping[str, Any]) -> list[str]:
+    blockers = [
+        str(blocker)
+        for blocker in report.get("blockers") or ()
+        if _is_local_replay_quality_blocker(str(blocker))
+    ]
+    if report.get("quality_gate_passed") is not True:
+        blockers.append("hi_nerv_post_export_receiver_cache_quality_gate_failed")
+    gate = report.get("quality_gate")
+    if isinstance(gate, Mapping):
+        blockers.extend(_cache_quality_gate_blockers(gate))
+    verdict = report.get("quality_gate_verdict")
+    if isinstance(verdict, str) and verdict and verdict != "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY":
+        blockers.append(f"mlx_prefilter_cache_quality_verdict:{verdict}")
+    return blockers
+
+
+def _is_local_replay_quality_blocker(blocker: str) -> bool:
+    return (
+        blocker.startswith("scorer_input_")
+        or blocker.startswith("candidate_segnet_")
+        or blocker.startswith("candidate_posenet_")
+        or blocker.startswith("segnet_cache_")
+        or blocker.startswith("posenet_cache_")
+        or blocker.startswith("mlx_prefilter_cache_quality_")
+        or blocker.startswith("mlx_prefilter_cache_quality_verdict:")
+        or blocker
+        in {
+            "hi_nerv_archive_export_missing_for_receiver_cache_quality",
+            "hi_nerv_archive_export_path_missing_for_receiver_cache_quality",
+            "hi_nerv_post_export_receiver_cache_quality_gate_failed",
+            "hi_nerv_receiver_cache_quality_reference_gate_not_run",
+            "hi_nerv_reference_cache_missing_for_receiver_cache_quality",
+            "hinerv_receiver_raw_cache_quality_gate_missing",
+            "mlx_scorer_response_cache_quality_gate_failed",
+            "mlx_scorer_response_candidate_cache_degenerate",
+            "mlx_renderer_prefilter_candidate_output_saturated_or_clipped",
+            "mlx_renderer_prefilter_scorer_input_out_of_distribution",
+        }
+    )
 
 
 def _resolve(path: str | Path, *, base: Path) -> Path:
