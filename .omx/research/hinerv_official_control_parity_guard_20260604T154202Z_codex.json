@@ -1,0 +1,37 @@
+{
+  "schema": "hinerv_official_control_parity_guard_landing.v1",
+  "authority": "false_authority_control_guard_no_score_claim",
+  "generated_utc": "2026-06-04T15:42:02Z",
+  "family": "hi_nerv",
+  "lane_id": "lane_hinerv_official_control_parity_guard_20260604",
+  "guard_module": "src/tac/analysis/hinerv_official_control_parity_guard.py",
+  "test_module": "src/tac/tests/test_hinerv_official_control_parity_guard.py",
+  "guarded_control_id": "hi_nerv_prune_quant_torchac_bitstream",
+  "guarded_component_id": "prune_quant_codec",
+  "real_missing_or_partial_control": "Official HiNeRV prune/QuantNoise/torchac bitstream control is only receiver-visible locally until source-forward replay includes official torchac encode/decode byte-stream custody.",
+  "blocker_semantics": {
+    "hinerv_prune_quant_codec_source_forward_replay_missing": "The official prune/QuantNoise/torchac component lacks source-forward replay authority.",
+    "hinerv_official_torchac_encode_decode_not_bound": "Local receiver entropy estimates or tensor codecs do not bind the official torchac encode/decode CDF streams.",
+    "hinerv_official_torchac_byte_streams_not_present": "The proof does not show official torchac byte streams were serialized and consumed.",
+    "hinerv_official_torchac_stream_sha256_missing": "The proof does not identify the official encoded byte stream.",
+    "hinerv_official_torchac_roundtrip_error_missing": "The proof does not carry numeric roundtrip evidence for the official bitstream control."
+  },
+  "pass_requirements": [
+    "official_quant_prune_torchac_bitstream source markers present",
+    "prune_quant_codec component source-forward parity proven",
+    "numeric component evidence with input/output/weight SHA-256 identity",
+    "official_torchac_encode_decode_bound=true",
+    "torchac byte streams present with stream SHA-256",
+    "roundtrip max error within declared tolerance",
+    "score/promotion/rank/exact-eval authority flags false"
+  ],
+  "consumer_wiring_status": "operator_callable_cli_guard",
+  "consumer_command": "uv run python -m tac.analysis.hinerv_official_control_parity_guard --source-audit-report <source.json> --forward-parity-artifact <artifact.json> --local-bitstream-report <local.json> --out <guard.json> --require",
+  "consumer_wiring_blocker": "not yet attached to global preflight/operator briefing; CLI emits fail-closed JSON and nonzero --require status for exact consumer integration",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "production_hardened_claim": false,
+  "source_faithful_stack_claim": false,
+  "ready_for_exact_eval_dispatch": false
+}
