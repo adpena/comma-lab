@@ -21,25 +21,21 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-import numpy as np
 import torch
 
 from tac import differentiable_eval_roundtrip
 from tac.analysis.nerv_decoder_weight_waterfill import (
     DEFAULT_EXCLUDE_SUBSTRINGS,
     DEFAULT_INCLUDE_SUBSTRINGS,
-    NervDecoderWeightWaterfillError,
-    load_state_npz_from_manifest,
 )
 from tac.data import decode_video
 from tac.repo_io import sha256_file
 from tac.substrates.hi_nerv.architecture import (
-    LATENT_STATE_KEYS,
     HinervConfig,
     HinervSubstrate,
-    validate_decoder_state_dict,
 )
 from tac.substrates.hi_nerv.archive import parse_archive
+from tac.substrates.hi_nerv.inflate import build_model_from_archive
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.score_aware_common import (
     CONTEST_POSE_SQRT_WEIGHT,
@@ -344,23 +340,7 @@ def _load_real_pair_tensors(
 
 
 def _cfg_from_row_archive(row: Mapping[str, Any]) -> HinervConfig:
-    archive_path = Path(str(row.get("archive_path") or "")).expanduser()
-    if not archive_path.is_file():
-        raise HinervDecoderWeightSaliencyReplayError(
-            f"archive_path missing for row {row.get('row_id')!r}: {archive_path}"
-        )
-    expected_sha = str(row.get("archive_sha256") or "")
-    if len(expected_sha) != 64:
-        raise HinervDecoderWeightSaliencyReplayError(
-            f"row {row.get('row_id')!r} missing 64-char archive_sha256"
-        )
-    actual_sha = sha256_file(archive_path)
-    if actual_sha != expected_sha:
-        raise HinervDecoderWeightSaliencyReplayError(
-            f"archive sha mismatch for row {row.get('row_id')!r}: "
-            f"expected={expected_sha} actual={actual_sha}"
-        )
-    blob = _read_zero_bin_from_archive_zip(archive_path)
+    blob = _validated_zero_bin_from_row_archive(row)
     arc = parse_archive(blob)
     meta = arc.meta
     return HinervConfig(
@@ -389,6 +369,26 @@ def _cfg_from_row_archive(row: Mapping[str, Any]) -> HinervConfig:
     )
 
 
+def _validated_zero_bin_from_row_archive(row: Mapping[str, Any]) -> bytes:
+    archive_path = Path(str(row.get("archive_path") or "")).expanduser()
+    if not archive_path.is_file():
+        raise HinervDecoderWeightSaliencyReplayError(
+            f"archive_path missing for row {row.get('row_id')!r}: {archive_path}"
+        )
+    expected_sha = str(row.get("archive_sha256") or "")
+    if len(expected_sha) != 64:
+        raise HinervDecoderWeightSaliencyReplayError(
+            f"row {row.get('row_id')!r} missing 64-char archive_sha256"
+        )
+    actual_sha = sha256_file(archive_path)
+    if actual_sha != expected_sha:
+        raise HinervDecoderWeightSaliencyReplayError(
+            f"archive sha mismatch for row {row.get('row_id')!r}: "
+            f"expected={expected_sha} actual={actual_sha}"
+        )
+    return _read_zero_bin_from_archive_zip(archive_path)
+
+
 def _read_zero_bin_from_archive_zip(archive_path: Path) -> bytes:
     with zipfile.ZipFile(archive_path, "r") as zf:
         names = set(zf.namelist())
@@ -400,30 +400,13 @@ def _read_zero_bin_from_archive_zip(archive_path: Path) -> bytes:
 
 
 def _model_from_row(row: Mapping[str, Any], *, device: torch.device) -> HinervSubstrate:
-    cfg = _cfg_from_row_archive(row)
-    manifest_path = row.get("state_npz_manifest_path")
-    if not manifest_path:
-        raise HinervDecoderWeightSaliencyReplayError(
-            f"row {row.get('row_id')!r} missing state_npz_manifest_path"
-        )
     try:
-        arrays = load_state_npz_from_manifest(str(manifest_path))
-    except NervDecoderWeightWaterfillError as exc:
+        _, _, model = build_model_from_archive(
+            _validated_zero_bin_from_row_archive(row),
+            device=str(device),
+        )
+    except Exception as exc:
         raise HinervDecoderWeightSaliencyReplayError(str(exc)) from exc
-    state = {
-        str(name): torch.from_numpy(np.asarray(array).copy()).to(dtype=torch.float32)
-        for name, array in arrays.items()
-    }
-    decoder_state = {
-        name: tensor for name, tensor in state.items() if name not in LATENT_STATE_KEYS
-    }
-    validate_decoder_state_dict(
-        decoder_state,
-        cfg,
-        context="hi_nerv_saliency_replay_decoder_state",
-    )
-    model = HinervSubstrate(cfg).to(device)
-    model.load_state_dict({name: tensor.to(device) for name, tensor in state.items()})
     model.train(False)
     return model
 
@@ -554,6 +537,8 @@ def _replay_row(
         "archive_sha256": row.get("archive_sha256"),
         "archive_bytes": row.get("archive_bytes"),
         "state_npz_manifest_path": row.get("state_npz_manifest_path"),
+        "model_source": "receiver_archive_zip_0_bin",
+        "receiver_archive_model_reconstructed": True,
         "num_pairs_in_model": int(model.cfg.num_pairs),
         "sampled_pairs": int(max_pairs),
         "pair_schedule": {

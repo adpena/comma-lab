@@ -194,6 +194,31 @@ def test_hinerv_decoder_weight_saliency_replay_fails_closed_on_archive_sha(
         )
 
 
+def test_hinerv_decoder_weight_saliency_replay_uses_receiver_archive_without_npz(
+    tmp_path: Path,
+) -> None:
+    ladder = _fixture_ladder(tmp_path)
+    ladder["archive_rows"][0].pop("state_npz_manifest_path")
+
+    report = build_hinerv_decoder_weight_saliency_replay(
+        archive_ladder_report=ladder,
+        row_ids=("fixture_tiny",),
+        video_path=tmp_path / "fixture_not_used.mkv",
+        upstream_dir=tmp_path / "fixture_upstream_not_used",
+        device="cpu",
+        max_pairs=1,
+        scorer_loader=_fixture_scorer_loader,
+        pair_loader=_fixture_pair_loader,
+        scorer_source="fixture_not_score_authority",
+    )
+
+    row = report["rows"][0]
+    assert row["state_npz_manifest_path"] is None
+    assert row["model_source"] == "receiver_archive_zip_0_bin"
+    assert row["receiver_archive_model_reconstructed"] is True
+    assert row["saliency_by_name"]
+
+
 def test_write_hinerv_decoder_weight_saliency_replay_outputs_json_and_md(
     tmp_path: Path,
 ) -> None:
