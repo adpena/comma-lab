@@ -617,6 +617,10 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             in_channels=final_ch, out_channels=3, kernel_size=3, padding=1
         )
         self.decoder_fake_quant_forward_enabled = False
+        self.decoder_fake_quant_forward_configured_enabled = False
+        self.decoder_fake_quant_forward_stage_controlled = False
+        self.decoder_fake_quant_forward_stage_qat_active = True
+        self.decoder_fake_quant_forward_last_stage: dict[str, Any] = {}
         self.decoder_fake_quant_bits: int | None = 8
         self.decoder_fake_quant_bits_by_name: dict[str, int] = {}
         self._siren_init()
@@ -627,11 +631,14 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
         enabled: bool,
         quant_bits: int | None = 8,
         per_tensor_bits: Mapping[str, int] | None = None,
+        stage_controlled: bool = False,
     ) -> None:
         """Enable decoder-weight fake-quant forward QAT for training.
 
         This affects forward computation only; archive/export still measures
-        real packet bytes independently.
+        real packet bytes independently.  ``stage_controlled`` keeps the
+        configured quantizer geometry resident while allowing PR95/canonical
+        curriculum stages to activate it only during QAT phases.
         """
 
         bits = None if quant_bits is None else int(quant_bits)
@@ -647,9 +654,75 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                     f"got {value!r} for {name!r}"
                 )
             normalized[str(name)] = tensor_bits
-        self.decoder_fake_quant_forward_enabled = bool(enabled)
+        self.decoder_fake_quant_forward_configured_enabled = bool(enabled)
+        self.decoder_fake_quant_forward_stage_controlled = bool(stage_controlled)
+        self.decoder_fake_quant_forward_stage_qat_active = not bool(stage_controlled)
         self.decoder_fake_quant_bits = bits
         self.decoder_fake_quant_bits_by_name = normalized
+        self.decoder_fake_quant_forward_enabled = bool(enabled) and (
+            not bool(stage_controlled)
+        )
+
+    def _set_decoder_fake_quant_stage_active(
+        self,
+        *,
+        active: bool,
+        stage_name: str,
+        stage_epoch: int | None = None,
+        stage_index: int | None = None,
+        source: str,
+    ) -> dict[str, Any]:
+        active_bool = bool(active)
+        self.decoder_fake_quant_forward_stage_qat_active = active_bool
+        self.decoder_fake_quant_forward_enabled = (
+            bool(self.decoder_fake_quant_forward_configured_enabled)
+            and (active_bool or not bool(self.decoder_fake_quant_forward_stage_controlled))
+        )
+        self.decoder_fake_quant_forward_last_stage = {
+            "schema": "hi_nerv_decoder_fake_quant_stage_control.v1",
+            "source": str(source),
+            "stage_name": str(stage_name),
+            "stage_epoch": None if stage_epoch is None else int(stage_epoch),
+            "stage_index": None if stage_index is None else int(stage_index),
+            "stage_qat_active": active_bool,
+            "stage_controlled": bool(self.decoder_fake_quant_forward_stage_controlled),
+            "configured_enabled": bool(
+                self.decoder_fake_quant_forward_configured_enabled
+            ),
+            "forward_active": bool(self.decoder_fake_quant_forward_enabled),
+            "global_quant_bits": (
+                None
+                if self.decoder_fake_quant_bits is None
+                else int(self.decoder_fake_quant_bits)
+            ),
+            "per_tensor_group_count": len(self.decoder_fake_quant_bits_by_name),
+        }
+        return dict(self.decoder_fake_quant_forward_last_stage)
+
+    def notify_curriculum_stage(self, global_epoch: int, stage: Any) -> None:
+        """Activate/deactivate configured fake quant from canonical stages."""
+
+        if not bool(self.decoder_fake_quant_forward_stage_controlled):
+            return
+        self._set_decoder_fake_quant_stage_active(
+            active=bool(getattr(stage, "enable_qat", False)),
+            stage_name=str(getattr(stage, "name", "")),
+            stage_epoch=int(global_epoch),
+            source="canonical_curriculum_stage",
+        )
+
+    def notify_pr95_stage_verdict(self, global_epoch: int, verdict: Any) -> None:
+        """Activate/deactivate configured fake quant from PR95 stage verdicts."""
+
+        if not bool(self.decoder_fake_quant_forward_stage_controlled):
+            return
+        self._set_decoder_fake_quant_stage_active(
+            active=bool(getattr(verdict, "qat_active", False)),
+            stage_name=str(getattr(verdict, "descriptor_id", "")),
+            stage_epoch=int(global_epoch),
+            stage_index=int(getattr(verdict, "stage_index", 0) or 0),
+            source="pr95_faithful_stage_verdict",
+        )
 
     def configure_decoder_fake_quant_forward_from_waterfill_plan(
         self,
@@ -683,6 +756,7 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             enabled=enabled,
             quant_bits=fallback_quant_bits,
             per_tensor_bits=per_tensor_bits,
+            stage_controlled=False,
         )
         return {
             **report,

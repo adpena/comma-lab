@@ -924,6 +924,7 @@ class MlxScoreAwareAdapter:
         extra_qat_total, extra_qat_parts = self._extra_loss_terms_and_weighted_total(
             model,
             batch,
+            qat_active=bool(stage_verdict.qat_active),
         )
         cat_entropy_term = None
         if float(stage_verdict.cat_lambda) > 0.0:
@@ -1081,6 +1082,8 @@ class MlxScoreAwareAdapter:
         self,
         model: Any,
         batch: Any,
+        *,
+        qat_active: bool = True,
     ) -> tuple[Any | None, dict[str, Any]]:
         """Return configured bundle extra losses and their weighted sum.
 
@@ -1090,7 +1093,7 @@ class MlxScoreAwareAdapter:
         consumes that same surface instead of duplicating a PR95-only shim.
         """
 
-        if self.bundle.extra_loss_terms is None:
+        if not bool(qat_active) or self.bundle.extra_loss_terms is None:
             return None, {}
         mx = self._mx
         extra = dict(self.bundle.extra_loss_terms(model, batch))
@@ -2587,6 +2590,7 @@ class MlxScoreAwareAdapter:
         stage_verdict = self._pr95_curriculum_factory.current_stage_verdict(
             self._pr95_global_epoch
         )
+        self._notify_renderer_pr95_stage_verdict(stage_verdict)
         # Stage transition reset for Muon buffers per L15 (Muon-final-stage-only).
         if self._pr95_last_stage_verdict is not None:
             prev_stage = self._pr95_last_stage_verdict.stage_index
@@ -2668,6 +2672,7 @@ class MlxScoreAwareAdapter:
         return {
             "total": float(loss_value.item()),
             "pr95_stage_index": float(stage_verdict.stage_index),
+            "pr95_stage_qat_active": float(int(bool(stage_verdict.qat_active))),
             "pr95_stage_uses_muon": float(int(stage_verdict.uses_muon)),
             "pr95_stage_optimizer_use_muon": float(
                 int(bool(_summary.get("use_muon")))
@@ -2682,6 +2687,14 @@ class MlxScoreAwareAdapter:
             "pr95_stage_cat_sigma": float(stage_verdict.cat_sigma),
             **post_update_metrics,
         }
+
+    def _notify_renderer_pr95_stage_verdict(self, stage_verdict: Any) -> None:
+        """Forward PR95 QAT activity to renderer-owned train-time quantizers."""
+
+        renderer_hook = getattr(self.model, "notify_pr95_stage_verdict", None)
+        if not callable(renderer_hook):
+            return
+        renderer_hook(int(self._pr95_global_epoch), stage_verdict)
 
     def notify_global_epoch(self, global_epoch: int) -> None:
         """Notify the adapter of the current global epoch (PR95 curriculum-aware).

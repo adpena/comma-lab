@@ -8353,6 +8353,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         bundle = kwargs["bundle"]
         captured["bundle_num_pairs"] = int(bundle.num_pairs)
         captured["model_num_pairs"] = int(bundle.model.cfg.num_pairs)
+        captured["model_fake_quant"] = dict(bundle.model.fake_quant)
         captured["metadata"] = dict(bundle.substrate_artifact_metadata)
         return FakeArtifact({"substrate_artifact_metadata": captured["metadata"]})
 
@@ -8434,7 +8435,11 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         checkpoint_dir=None,
         resume_from_checkpoint=None,
         optimizer_kind="pact_muon_adamw",
-        hi_nerv_optimizer_policy={},
+        hi_nerv_optimizer_policy={
+            "pr95_faithful_curriculum_enabled": True,
+            "pr95_muon_policy": "every_stage",
+            "native_optimizer_active": True,
+        },
         optimizer_controls={},
         prioritized_pair_indices=(),
         scorer_error_pair_sampling_weights=None,
@@ -8442,6 +8447,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         random_seed=0,
         scorer_upstream_dir=REPO_ROOT / "upstream",
         repo_root=REPO_ROOT,
+        pr95_curriculum_total_epochs=80,
         modelsize_candidate=_hinerv_waterfill_modelsize_candidate(),
     )
 
@@ -8450,6 +8456,9 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     assert captured["decode_pair_indices"] == ()
     assert captured["bundle_num_pairs"] == 2
     assert captured["model_num_pairs"] == 600
+    assert captured["model_fake_quant"]["enabled"] is True
+    assert captured["model_fake_quant"]["quant_bits"] == 4
+    assert captured["model_fake_quant"]["stage_controlled"] is True
     metadata = captured["metadata"]
     assert metadata["num_pairs"] == 2
     assert metadata["training_num_pairs"] == 2
@@ -8467,6 +8476,15 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
     assert consumption["training_num_pairs"] == 2
     assert consumption["model_num_pairs"] == 600
     assert consumption["partial_pair_training_against_full_candidate"] is True
+    fake_quant = metadata["score_aware_training"]["decoder_fake_quant_forward"]
+    assert fake_quant["enabled"] is True
+    assert fake_quant["configured_enabled"] is True
+    assert fake_quant["initial_forward_active"] is False
+    assert fake_quant["stage_controlled"] is True
+    assert (
+        fake_quant["stage_control_source"]
+        == "pr95_faithful_stage_verdict.qat_active"
+    )
 
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required (Apple Silicon)")

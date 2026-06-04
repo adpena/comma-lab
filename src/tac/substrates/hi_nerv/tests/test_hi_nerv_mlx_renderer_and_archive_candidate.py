@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import torch
@@ -234,6 +235,40 @@ def test_mlx_renderer_generic_resize_path_matches_pytorch() -> None:
 
 
 @skip_no_mlx
+def test_mlx_trilinear_upsample_matches_pytorch_reference() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.architecture import trilinear_upsample
+    from tac.substrates.hi_nerv.mlx_renderer import trilinear_upsample_mlx
+
+    rng = np.random.default_rng(41)
+    grid_np = rng.normal(size=(4, 3, 3, 2)).astype("float32")
+    pair_indices_np = np.asarray([0, 1, 4], dtype=np.int64)
+    torch_ref = trilinear_upsample(
+        torch.from_numpy(grid_np),
+        torch.from_numpy(pair_indices_np),
+        num_pairs=5,
+        target_h=5,
+        target_w=7,
+        local_scale=3,
+    ).numpy()
+    mlx_out = np.asarray(
+        trilinear_upsample_mlx(
+            mx.array(grid_np),
+            mx.array(pair_indices_np.astype(np.int32)),
+            num_pairs=5,
+            target_h=5,
+            target_w=7,
+            local_scale=3,
+        ),
+        dtype=np.float32,
+    )
+
+    np.testing.assert_allclose(mlx_out, torch_ref, atol=1.0e-6, rtol=1.0e-6)
+
+
+@skip_no_mlx
 def test_mlx_decoder_fake_quant_uses_archive_axis0_scale() -> None:
     import mlx.core as mx
     import numpy as np
@@ -261,6 +296,46 @@ def test_mlx_decoder_fake_quant_uses_archive_axis0_scale() -> None:
         ),
         atol=0.0,
     )
+
+
+@skip_no_mlx
+@pytest.mark.parametrize("bits", [2, 4, 6, 7, 8])
+def test_mlx_decoder_fake_quant_matches_decoder_state_codec_roundtrip(bits: int) -> None:
+    import mlx.core as mx
+    import numpy as np
+    import torch
+
+    from tac.substrates._shared.decoder_state_codec import (
+        _decode_int8_record,
+        _decode_nbit_record,
+        _encode_int8_record,
+        _encode_nbit_record,
+    )
+    from tac.substrates.hi_nerv.mlx_renderer import _fake_quant_symmetric_ste
+
+    values_np = np.asarray(
+        [
+            [[-0.37, -0.19, 0.08], [0.41, -0.12, 0.27]],
+            [[-0.31, 0.53, 0.02], [-0.44, 0.16, -0.07]],
+            [[0.33, -0.25, 0.49], [-0.58, 0.04, 0.21]],
+        ],
+        dtype=np.float32,
+    )
+    tensor = torch.from_numpy(values_np)
+    if bits == 8:
+        reference = _decode_int8_record(_encode_int8_record(tensor)).numpy()
+    else:
+        reference = _decode_nbit_record(
+            _encode_nbit_record(tensor, bits=bits),
+            bits=bits,
+        ).numpy()
+
+    quantized = np.asarray(
+        _fake_quant_symmetric_ste(mx.array(values_np), bits=bits),
+        dtype=np.float32,
+    )
+
+    np.testing.assert_allclose(quantized, reference, atol=0.0, rtol=0.0)
 
 
 @skip_no_mlx
@@ -295,6 +370,60 @@ def test_mlx_decoder_fake_quant_forward_changes_surface_without_mutating_export(
     model.configure_decoder_fake_quant_forward(enabled=False, quant_bits=2)
     restored = model(pair_indices)
     mx.eval(restored)
+    assert float(mx.max(mx.abs(restored - baseline))) < 1.0e-6
+
+
+@skip_no_mlx
+def test_mlx_decoder_fake_quant_forward_can_follow_stage_qat_flag() -> None:
+    import mlx.core as mx
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    model = HinervSubstrateMLX(_smoke_cfg())
+    pair_indices = mx.array([0, 1, 2], dtype=mx.int32)
+    baseline = model(pair_indices)
+    mx.eval(baseline)
+
+    model.configure_decoder_fake_quant_forward(
+        enabled=True,
+        quant_bits=2,
+        stage_controlled=True,
+    )
+    assert model.decoder_fake_quant_forward_configured_enabled is True
+    assert model.decoder_fake_quant_forward_stage_controlled is True
+    assert model.decoder_fake_quant_forward_enabled is False
+    inactive = model(pair_indices)
+    mx.eval(inactive)
+    assert float(mx.max(mx.abs(inactive - baseline))) < 1.0e-6
+
+    model.notify_curriculum_stage(
+        17,
+        SimpleNamespace(name="qat_on", enable_qat=True),
+    )
+    active = model(pair_indices)
+    mx.eval(active)
+    assert model.decoder_fake_quant_forward_enabled is True
+    assert model.decoder_fake_quant_forward_last_stage["forward_active"] is True
+    assert (
+        model.decoder_fake_quant_forward_last_stage["source"]
+        == "canonical_curriculum_stage"
+    )
+    assert float(mx.max(mx.abs(active - baseline))) > 1.0e-7
+
+    model.notify_pr95_stage_verdict(
+        18,
+        SimpleNamespace(
+            descriptor_id="pr95_stage1",
+            stage_index=1,
+            qat_active=False,
+        ),
+    )
+    restored = model(pair_indices)
+    mx.eval(restored)
+    assert model.decoder_fake_quant_forward_enabled is False
+    assert model.decoder_fake_quant_forward_last_stage["source"] == (
+        "pr95_faithful_stage_verdict"
+    )
     assert float(mx.max(mx.abs(restored - baseline))) < 1.0e-6
 
 

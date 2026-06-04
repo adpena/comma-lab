@@ -815,9 +815,18 @@ def test_pr95_stage_4_consumes_real_coder_qat_terms_NO_FAKE() -> None:
     stage_4 = adapter._pr95_curriculum_factory.current_stage_verdict(
         stage_starts[4]
     )
+    stage_1 = adapter._pr95_curriculum_factory.current_stage_verdict(
+        stage_starts[1]
+    )
+    assert stage_1.qat_active is False
     assert stage_4.qat_active is True
     assert stage_4.cat_lambda == pytest.approx(0.0)
 
+    total_stage_1, parts_stage_1 = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage_1,
+        model=adapter.model,
+    )
     total_with_qat, parts_with_qat = adapter._pr95_stage_loss_and_parts(
         batch=batch,
         stage_verdict=stage_4,
@@ -830,8 +839,17 @@ def test_pr95_stage_4_consumes_real_coder_qat_terms_NO_FAKE() -> None:
         stage_verdict=stage_4,
         model=adapter.model,
     )
-    mx.eval(total_with_qat, total_without_qat, *parts_with_qat.values())
+    mx.eval(
+        total_stage_1,
+        total_with_qat,
+        total_without_qat,
+        *parts_stage_1.values(),
+        *parts_with_qat.values(),
+    )
 
+    assert "coder_qat_quant_residual" not in parts_stage_1
+    assert "coder_qat_magnitude" not in parts_stage_1
+    assert "coder_qat_delta" not in parts_stage_1
     assert "coder_qat_quant_residual" in parts_with_qat
     assert "coder_qat_magnitude" in parts_with_qat
     assert "coder_qat_delta" in parts_with_qat

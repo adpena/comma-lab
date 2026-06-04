@@ -694,6 +694,75 @@ def test_harness_construction_propagates_pr95_state_into_adapter() -> None:
     assert bundle.model.stage_calls == [(0, "stage_qat_on", True)]
 
 
+def test_adapter_forwards_pr95_qat_verdict_to_renderer_hook() -> None:
+    """PR95 stage QAT must reach renderer-owned forward quantizers."""
+
+    try:
+        from tac.substrates._shared.mlx_score_aware.device_gate import (
+            is_mlx_available,
+        )
+    except Exception:
+        pytest.skip("device_gate import failed; cannot probe MLX availability")
+    if not is_mlx_available():
+        pytest.skip("MLX unavailable on this host")
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class _StubModel:
+        def __init__(self) -> None:
+            self.pr95_stage_calls: list[tuple[int, int, bool]] = []
+
+        def notify_pr95_stage_verdict(self, global_epoch: int, verdict: object) -> None:
+            self.pr95_stage_calls.append(
+                (
+                    int(global_epoch),
+                    int(getattr(verdict, "stage_index", -1)),
+                    bool(getattr(verdict, "qat_active", False)),
+                )
+            )
+
+    class _StubBundle:
+        model = _StubModel()
+
+        def __init__(self):
+            self.num_pairs = 1
+            self.distillation_weight = 0.0
+            self.scorer_teacher = None
+            self.pose_scorer_teacher = None
+            self.learnable_student_head = None
+            self.pose_learnable_student_head = None
+            self.export_state_dict_fn = None
+
+    bundle = _StubBundle()
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="wire_in_pr95_qat_renderer_hook_test",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+        pr95_muon_policy="every_stage",
+    )
+    stage_starts = {
+        int(stage_index): int(start_epoch)
+        for stage_index, start_epoch, _end_epoch in (
+            adapter._pr95_curriculum_factory.stage_epoch_boundaries
+        )
+    }
+    adapter.notify_global_epoch(stage_starts[1])
+    stage_1 = adapter._pr95_curriculum_factory.current_stage_verdict(
+        stage_starts[1]
+    )
+    adapter._notify_renderer_pr95_stage_verdict(stage_1)
+    adapter.notify_global_epoch(stage_starts[4])
+    stage_4 = adapter._pr95_curriculum_factory.current_stage_verdict(
+        stage_starts[4]
+    )
+    adapter._notify_renderer_pr95_stage_verdict(stage_4)
+
+    assert bundle.model.pr95_stage_calls == [
+        (stage_starts[1], 1, False),
+        (stage_starts[4], 4, True),
+    ]
+
+
 def test_pr95_curriculum_step_consumes_c1a_entropy_not_telemetry_only() -> None:
     """PR95 stage verdict controls must change the train loss path."""
 

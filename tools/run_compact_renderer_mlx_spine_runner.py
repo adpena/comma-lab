@@ -12878,6 +12878,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         enabled=bool(coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name),
         quant_bits=int(coder_qat_cfg.quant_bits) if bool(coder_qat_cfg.enabled) else None,
         per_tensor_bits=decoder_waterfill_fake_quant_bits_by_name,
+        stage_controlled=bool(pr95_curriculum_enabled),
     )
     receiver_proof_export_enabled = int(pairs) >= int(cfg.num_pairs)
     pose_instability_monitor = _PoseInstabilityEpochMonitor(
@@ -13143,6 +13144,19 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
                 "enabled": bool(
                     coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name
+                ),
+                "configured_enabled": bool(
+                    coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name
+                ),
+                "initial_forward_active": bool(
+                    coder_qat_cfg.enabled or decoder_waterfill_fake_quant_bits_by_name
+                )
+                and not bool(pr95_curriculum_enabled),
+                "stage_controlled": bool(pr95_curriculum_enabled),
+                "stage_control_source": (
+                    "pr95_faithful_stage_verdict.qat_active"
+                    if pr95_curriculum_enabled
+                    else "static_runner_configuration"
                 ),
                 "global_fake_quant_enabled": bool(coder_qat_cfg.enabled),
                 "quant_bits": int(coder_qat_cfg.quant_bits),
