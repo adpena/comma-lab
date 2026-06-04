@@ -161,6 +161,85 @@ def _first_present(*sources_and_key: Any) -> Any:
     return None
 
 
+def _snerv_official_checkpoint_mapping_manifest(
+    *sources: Any,
+) -> dict[str, Any]:
+    """Return the strongest embedded official checkpoint mapping manifest."""
+
+    for source in sources:
+        manifest = _snerv_official_checkpoint_mapping_manifest_from_source(source)
+        if manifest:
+            return manifest
+    return {}
+
+
+def _snerv_official_checkpoint_mapping_manifest_from_source(
+    source: Any,
+) -> dict[str, Any]:
+    if not isinstance(source, Mapping):
+        return {}
+    direct = source.get("official_trained_checkpoint_mapping_manifest")
+    if isinstance(direct, Mapping):
+        return dict(direct)
+    binding = source.get("official_checkpoint_export_binding")
+    if isinstance(binding, Mapping):
+        manifest = binding.get("official_trained_checkpoint_mapping_manifest")
+        if isinstance(manifest, Mapping):
+            return dict(manifest)
+    train_export = source.get("official_mfu_hfr_tub_train_export")
+    if isinstance(train_export, Mapping):
+        manifest = train_export.get("official_trained_checkpoint_mapping_manifest")
+        if isinstance(manifest, Mapping):
+            return dict(manifest)
+    replay = source.get("official_mfu_hfr_tub_source_forward_replay")
+    if isinstance(replay, Mapping):
+        manifest = replay.get("official_trained_checkpoint_mapping_manifest")
+        if isinstance(manifest, Mapping):
+            return dict(manifest)
+    score_training = source.get("score_aware_long_training")
+    if isinstance(score_training, Mapping):
+        manifest = _snerv_official_checkpoint_mapping_manifest_from_source(
+            score_training
+        )
+        if manifest:
+            return manifest
+    native_export = source.get("snerv_mlx_native_export") or source.get(
+        "mlx_native_export"
+    )
+    if isinstance(native_export, Mapping):
+        manifest = _snerv_official_checkpoint_mapping_manifest_from_source(
+            native_export
+        )
+        if manifest:
+            return manifest
+    file_evidence = source.get("snerv_mlx_native_file_backed_export_evidence")
+    if isinstance(file_evidence, Mapping):
+        manifest = _snerv_official_checkpoint_mapping_manifest_from_source(
+            file_evidence
+        )
+        if manifest:
+            return manifest
+    return {}
+
+
+def _snerv_official_checkpoint_mapping_verified(
+    manifest: Mapping[str, Any],
+) -> bool:
+    rows = [
+        row
+        for row in manifest.get("component_rows") or ()
+        if isinstance(row, Mapping)
+    ]
+    return bool(
+        manifest.get("official_trained_checkpoint_loaded") is True
+        and rows
+        and all(
+            row.get("trained_checkpoint_weight_mapping_proven") is True
+            for row in rows
+        )
+    )
+
+
 def _sha256_file(path: Path) -> str | None:
     import hashlib
 
@@ -222,6 +301,15 @@ def build_nerv_candidate_feedback_row(
     )
     snerv_native_packet_metadata = _mapping_or_empty(
         snerv_native_evidence.get("packet_metadata_summary")
+    )
+    snerv_official_checkpoint_mapping = (
+        _snerv_official_checkpoint_mapping_manifest(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            score_aware_training,
+            runner_report,
+        )
     )
     snerv_native_scorer_loop = _mapping_or_empty(
         snerv_native_export.get("scorer_loop_qat")
@@ -291,6 +379,11 @@ def build_nerv_candidate_feedback_row(
             *[
                 str(blocker)
                 for blocker in snerv_native_receiver_reconstruction.get("blockers")
+                or []
+            ],
+            *[
+                str(blocker)
+                for blocker in snerv_official_checkpoint_mapping.get("blockers")
                 or []
             ],
         ]
@@ -399,6 +492,38 @@ def build_nerv_candidate_feedback_row(
             or snerv_native_evidence.get("snerv_official_mfu_hfr_tub_export_blockers")
             or snerv_native_packet_metadata.get("official_source_parity_blockers")
             or []
+        ),
+        "snerv_official_trained_checkpoint_mapping_manifest": (
+            snerv_official_checkpoint_mapping or None
+        ),
+        "snerv_official_trained_checkpoint_loaded": (
+            snerv_official_checkpoint_mapping.get("official_trained_checkpoint_loaded")
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven": (
+            snerv_official_checkpoint_mapping.get(
+                "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_tub_temporal_encoder_weight_mapping_proven": (
+            snerv_official_checkpoint_mapping.get(
+                "official_tub_temporal_encoder_weight_mapping_proven"
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_trained_checkpoint_state_dict_mapping_verified": (
+            _snerv_official_checkpoint_mapping_verified(
+                snerv_official_checkpoint_mapping
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_trained_checkpoint_mapping_blockers": list(
+            snerv_official_checkpoint_mapping.get("blockers") or []
         ),
         "snerv_mlx_native_export_packet_source": snerv_native_export.get(
             "packet_source"

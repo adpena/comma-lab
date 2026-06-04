@@ -1569,6 +1569,9 @@ def _snerv_campaign_row(
             "snerv_official_runtime_authority_split": (
                 official_runtime_authority_split
             ),
+            "snerv_official_trained_checkpoint_mapping": feedback.get(
+                "snerv_official_trained_checkpoint_mapping_manifest"
+            ),
             "candidate_feedback": feedback or None,
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
             "prioritized_pair_training": prioritized_pair_training,
@@ -1935,6 +1938,14 @@ def _candidate_feedback_evidence_blockers(
     blockers.extend(
         str(blocker)
         for blocker in feedback.get("direct_feedback_blockers") or []
+        if blocker
+    )
+    blockers.extend(
+        str(blocker)
+        for blocker in feedback.get(
+            "snerv_official_trained_checkpoint_mapping_blockers"
+        )
+        or []
         if blocker
     )
     return _dedupe(blockers)
@@ -4198,6 +4209,10 @@ def _augment_feedback_row(
             "snerv_official_mfu_hfr_tub_frame_producing_export",
             "snerv_official_mfu_hfr_tub_source_forward_replay_bound",
             "snerv_official_mfu_hfr_tub_source_forward_replay_authority",
+            "snerv_official_trained_checkpoint_loaded",
+            "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven",
+            "snerv_official_tub_temporal_encoder_weight_mapping_proven",
+            "snerv_official_trained_checkpoint_state_dict_mapping_verified",
             "source_faithful_stack",
         ):
             out.setdefault(
@@ -4297,6 +4312,24 @@ def _snerv_native_artifact_evidence_from_feedback(
         ),
         "snerv_official_mfu_hfr_tub_source_forward_replay_authority": feedback.get(
             "snerv_official_mfu_hfr_tub_source_forward_replay_authority"
+        ),
+        "snerv_official_trained_checkpoint_mapping_manifest": feedback.get(
+            "snerv_official_trained_checkpoint_mapping_manifest"
+        ),
+        "snerv_official_trained_checkpoint_loaded": feedback.get(
+            "snerv_official_trained_checkpoint_loaded"
+        ),
+        "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven": feedback.get(
+            "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+        ),
+        "snerv_official_tub_temporal_encoder_weight_mapping_proven": feedback.get(
+            "snerv_official_tub_temporal_encoder_weight_mapping_proven"
+        ),
+        "snerv_official_trained_checkpoint_state_dict_mapping_verified": feedback.get(
+            "snerv_official_trained_checkpoint_state_dict_mapping_verified"
+        ),
+        "snerv_official_trained_checkpoint_mapping_blockers": feedback.get(
+            "snerv_official_trained_checkpoint_mapping_blockers"
         ),
         "source_faithful_stack": feedback.get("source_faithful_stack"),
         "official_source_parity_blockers": feedback.get(

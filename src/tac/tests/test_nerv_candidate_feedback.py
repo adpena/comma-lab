@@ -879,6 +879,25 @@ def _snerv_native_runner_report(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
+        "official_checkpoint_export_binding": {
+            "schema": "snerv_official_checkpoint_export_binding.v1",
+            "official_trained_checkpoint_mapping_manifest": {
+                "schema": (
+                    "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
+                ),
+                "official_trained_checkpoint_loaded": False,
+                "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+                "official_tub_temporal_encoder_weight_mapping_proven": False,
+                "component_rows": [],
+                "blockers": [
+                    "snerv_official_trained_checkpoint_state_dict_not_loaded",
+                    "snerv_official_trained_checkpoint_source_forward_replay_missing",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        },
         "blockers": [],
     }
     if loss_worsened_training:
@@ -962,6 +981,16 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert row["snerv_mlx_native_receiver_target_mse_nchw255"] == pytest.approx(1.25)
     assert row["snerv_mlx_native_receiver_export_mse_nchw255"] == pytest.approx(0.125)
     assert row["snerv_mlx_native_receiver_reconstruction_blockers"] == []
+    assert row["snerv_official_trained_checkpoint_loaded"] is False
+    assert (
+        row["snerv_official_trained_checkpoint_state_dict_mapping_verified"] is False
+    )
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in row[
+        "snerv_official_trained_checkpoint_mapping_blockers"
+    ]
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in row[
+        "blockers"
+    ]
     native_feedback = row["snerv_mlx_native_file_backed_byte_feedback"]
     assert native_feedback["packet_sha256"] == hashlib.sha256(
         b"snerv-native-packet"

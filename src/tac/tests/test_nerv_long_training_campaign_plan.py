@@ -3948,6 +3948,25 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
                 "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
             ],
         },
+        "official_checkpoint_export_binding": {
+            "schema": "snerv_official_checkpoint_export_binding.v1",
+            "official_trained_checkpoint_mapping_manifest": {
+                "schema": (
+                    "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
+                ),
+                "official_trained_checkpoint_loaded": False,
+                "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+                "official_tub_temporal_encoder_weight_mapping_proven": False,
+                "component_rows": [],
+                "blockers": [
+                    "snerv_official_trained_checkpoint_state_dict_not_loaded",
+                    "snerv_official_trained_checkpoint_source_forward_replay_missing",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        },
     }
 
     report = build_nerv_long_training_campaign_plan(
@@ -3968,6 +3987,14 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         feedback["snerv_official_mfu_hfr_tub_source_forward_replay_authority"]
         is False
     )
+    assert feedback["snerv_official_trained_checkpoint_loaded"] is False
+    assert (
+        feedback["snerv_official_trained_checkpoint_state_dict_mapping_verified"]
+        is False
+    )
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in feedback[
+        "snerv_official_trained_checkpoint_mapping_blockers"
+    ]
     assert feedback["feedback_scope"] == "full600_native_file_backed_snar1_export"
     assert feedback["feedback_ready"] is True
     assert feedback["scope_matches_candidate"] is True
@@ -3992,6 +4019,8 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
         in official_split["blockers"]
     )
+    checkpoint_mapping = snerv["snerv_official_trained_checkpoint_mapping"]
+    assert checkpoint_mapping["official_trained_checkpoint_loaded"] is False
     assert training_plan["native_mlx_train_export_planned"] is True
     assert training_plan["native_mlx_train_export_verified"] is True
     assert training_plan["native_mlx_scorer_loop_qat_planned"] is True
@@ -4010,6 +4039,9 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
         in snerv["blockers"]
     )
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in snerv[
+        "blockers"
+    ]
     assert "snerv_full_video_local_prefilter_missing" in snerv["blockers"]
     assert "snerv_local_cpu_replay_gate_missing" in snerv["blockers"]
     assert snerv["score_claim"] is False
