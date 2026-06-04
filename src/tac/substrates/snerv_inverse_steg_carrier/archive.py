@@ -75,6 +75,7 @@ from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
     OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
+    official_output2_fusion_numpy,
     prepare_official_tub_graph_inputs,
 )
 
@@ -406,11 +407,29 @@ class OfficialMfuHfrTubReceiverPayload:
             self.tensors["inputs.tub.next_frame"],
         )
 
+    def tub_output2_inputs(self) -> tuple[np.ndarray, np.ndarray] | None:
+        """Return optional archived TUB ``output_2`` fusion tensors."""
+
+        has_temporal = "tub.temporal_encoder_concat" in self.tensors
+        has_raw = "tub.output2_raw" in self.tensors
+        if has_temporal != has_raw:
+            raise SnervArchiveError(
+                "official TUB output2 payload must include both "
+                "tub.temporal_encoder_concat and tub.output2_raw"
+            )
+        if not has_temporal:
+            return None
+        return (
+            self.tensors["tub.temporal_encoder_concat"],
+            self.tensors["tub.output2_raw"],
+        )
+
     def execute(self) -> dict[str, Any]:
         """Execute receiver-side official primitives and return hashed proof."""
 
         low, skip_mid, skip_high = self.mfu_inputs()
         current, previous, next_frame = self.tub_inputs()
+        output2_inputs = self.tub_output2_inputs()
         mfu_out, hfr_out, tub_out, output_tensors = _execute_official_mfu_hfr_tub_forward(
             mfu=self.build_mfu(),
             hfr_heads=self.build_hfr_heads(),
@@ -421,6 +440,10 @@ class OfficialMfuHfrTubReceiverPayload:
             tub_previous=previous,
             tub_next_frame=next_frame,
             tub_config=dict(self.header.get("tub_config") or {}),
+            tub_temporal_encoder_concat=(
+                output2_inputs[0] if output2_inputs is not None else None
+            ),
+            tub_output2_raw=output2_inputs[1] if output2_inputs is not None else None,
         )
         output_rows, output_bundle_sha256 = _official_receiver_self_consistency_output_manifest(
             output_tensors
@@ -442,6 +465,7 @@ class OfficialMfuHfrTubReceiverPayload:
                 "official_mfu": True,
                 "official_hfr": True,
                 "official_tub": True,
+                "official_tub_output2_fusion": output2_inputs is not None,
             },
             "source_contracts": dict(self.header.get("source_contracts") or {}),
             "tensor_count": len(self.tensors),
@@ -523,6 +547,8 @@ def _execute_official_mfu_hfr_tub_forward(
     tub_previous: np.ndarray,
     tub_next_frame: np.ndarray,
     tub_config: Mapping[str, Any],
+    tub_temporal_encoder_concat: np.ndarray | None = None,
+    tub_output2_raw: np.ndarray | None = None,
 ) -> tuple[Any, Any, Any, dict[str, np.ndarray]]:
     mfu_out = mfu.forward(low, skip_mid, skip_high)
     hfr_out = hfr_heads.forward(mfu_out.pyr_out)
@@ -548,6 +574,21 @@ def _execute_official_mfu_hfr_tub_forward(
         "tub.prev_lowpass_over_2": tub_out.prev_lowpass_over_2,
         "tub.next_lowpass_over_2": tub_out.next_lowpass_over_2,
     }
+    if (tub_temporal_encoder_concat is None) != (tub_output2_raw is None):
+        raise SnervArchiveError(
+            "official TUB output2 receiver replay requires both temporal concat "
+            "and raw output2 decoder tensors"
+        )
+    if tub_temporal_encoder_concat is not None and tub_output2_raw is not None:
+        if fc_hw is None:
+            raise SnervArchiveError("official TUB output2 receiver replay requires fc_hw")
+        fusion = official_output2_fusion_numpy(
+            tub_temporal_encoder_concat,
+            tub_output2_raw,
+            fc_hw=tuple(int(v) for v in fc_hw),
+        )
+        output_tensors["tub.output2_decoder_input"] = fusion.decoder_input
+        output_tensors["tub.output2_fused"] = fusion.output2_fused
     return mfu_out, hfr_out, tub_out, output_tensors
 
 
@@ -616,6 +657,8 @@ def _build_official_receiver_self_consistency_reference(
     tub_previous: np.ndarray,
     tub_next_frame: np.ndarray,
     tub_config: Mapping[str, Any],
+    tub_temporal_encoder_concat: np.ndarray | None = None,
+    tub_output2_raw: np.ndarray | None = None,
 ) -> dict[str, Any]:
     _mfu_out, _hfr_out, _tub_out, output_tensors = _execute_official_mfu_hfr_tub_forward(
         mfu=mfu,
@@ -627,6 +670,8 @@ def _build_official_receiver_self_consistency_reference(
         tub_previous=tub_previous,
         tub_next_frame=tub_next_frame,
         tub_config=tub_config,
+        tub_temporal_encoder_concat=tub_temporal_encoder_concat,
+        tub_output2_raw=tub_output2_raw,
     )
     output_rows, output_bundle_sha256 = _official_receiver_self_consistency_output_manifest(
         output_tensors
@@ -1329,6 +1374,8 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     temporal_encoder_output_shape: tuple[int, int, int, int] | None = None,
     fc_hw: tuple[int, int] | None = None,
     output2_decoder_output_shape: tuple[int, int, int, int] | None = None,
+    tub_temporal_encoder_concat: np.ndarray | None = None,
+    tub_output2_raw: np.ndarray | None = None,
     skip_high_codec: str | None = None,
     skip_high_source_shape: tuple[int, int, int, int] | None = None,
     tub_input_codec: str | None = None,
@@ -1352,6 +1399,13 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         next_frame=tub_next_frame,
         codec=tub_input_codec,
     )
+    output2_plan = _official_tub_output2_storage_plan(
+        temporal_encoder_concat=tub_temporal_encoder_concat,
+        output2_raw=tub_output2_raw,
+        fc_hw=fc_hw,
+        temporal_encoder_output_shape=temporal_encoder_output_shape,
+        output2_decoder_output_shape=output2_decoder_output_shape,
+    )
     tensors = _official_payload_tensor_dict(
         mfu=mfu,
         hfr_heads=hfr_heads,
@@ -1361,6 +1415,10 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         tub_current=tub_input_plan["stored"]["current"],
         tub_previous=tub_input_plan["stored"]["previous"],
         tub_next_frame=tub_input_plan["stored"]["next_frame"],
+        tub_temporal_encoder_concat=output2_plan["stored"].get(
+            "temporal_encoder_concat"
+        ),
+        tub_output2_raw=output2_plan["stored"].get("output2_raw"),
     )
     tensor_manifest, raw = _pack_tensor_manifest(tensors)
     compressed = lzma.compress(
@@ -1371,14 +1429,14 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     spec = mfu.spec
     tub_config = {
         "temporal_encoder_output_shape": (
-            [int(v) for v in temporal_encoder_output_shape]
-            if temporal_encoder_output_shape is not None
+            [int(v) for v in output2_plan["temporal_encoder_output_shape"]]
+            if output2_plan["temporal_encoder_output_shape"] is not None
             else None
         ),
         "fc_hw": [int(v) for v in fc_hw] if fc_hw is not None else None,
         "output2_decoder_output_shape": (
-            [int(v) for v in output2_decoder_output_shape]
-            if output2_decoder_output_shape is not None
+            [int(v) for v in output2_plan["output2_decoder_output_shape"]]
+            if output2_plan["output2_decoder_output_shape"] is not None
             else None
         ),
     }
@@ -1392,6 +1450,10 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         tub_previous=tub_input_plan["effective"]["previous"],
         tub_next_frame=tub_input_plan["effective"]["next_frame"],
         tub_config=tub_config,
+        tub_temporal_encoder_concat=output2_plan["effective"].get(
+            "temporal_encoder_concat"
+        ),
+        tub_output2_raw=output2_plan["effective"].get("output2_raw"),
     )
     header = {
         "schema": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
@@ -1425,6 +1487,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "compressed_sha256": _sha256(compressed),
         "skip_high_storage": skip_high_plan["metadata"],
         "tub_input_storage": tub_input_plan["metadata"],
+        "tub_output2_storage": output2_plan["metadata"],
         "receiver_self_consistency_reference": self_consistency_reference,
         "receiver_self_consistency_reference_sha256": _json_sha256(
             self_consistency_reference
@@ -1964,6 +2027,99 @@ def _official_tub_input_storage_plan(
     }
 
 
+def _official_tub_output2_storage_plan(
+    *,
+    temporal_encoder_concat: np.ndarray | None,
+    output2_raw: np.ndarray | None,
+    fc_hw: tuple[int, int] | None,
+    temporal_encoder_output_shape: tuple[int, int, int, int] | None,
+    output2_decoder_output_shape: tuple[int, int, int, int] | None,
+) -> dict[str, Any]:
+    if (temporal_encoder_concat is None) != (output2_raw is None):
+        raise SnervArchiveError(
+            "official TUB output2 payload requires both temporal_encoder_concat "
+            "and output2_raw"
+        )
+    if temporal_encoder_concat is None or output2_raw is None:
+        return {
+            "stored": {},
+            "effective": {},
+            "temporal_encoder_output_shape": temporal_encoder_output_shape,
+            "output2_decoder_output_shape": output2_decoder_output_shape,
+            "metadata": {
+                "schema": "snerv_official_tub_output2_storage.v1",
+                "stored": False,
+                "receiver_executes_output2_fusion_from_payload": False,
+                "source_raw_bytes": 0,
+                "stored_raw_bytes": 0,
+                "raw_byte_savings": 0,
+                "source_forward_replay_authority": False,
+                "contest_scorer_authority": False,
+                **FALSE_AUTHORITY,
+            },
+        }
+    if fc_hw is None:
+        raise SnervArchiveError("official TUB output2 payload requires fc_hw")
+    temporal = _canonical_float64_tensor(
+        temporal_encoder_concat,
+        name="tub.temporal_encoder_concat",
+    )
+    raw = _canonical_float64_tensor(output2_raw, name="tub.output2_raw")
+    temporal_shape = tuple(int(v) for v in temporal.shape)
+    raw_shape = tuple(int(v) for v in raw.shape)
+    if temporal_encoder_output_shape is not None:
+        expected = tuple(int(v) for v in temporal_encoder_output_shape)
+        if temporal_shape != expected:
+            raise SnervArchiveError(
+                "official TUB temporal encoder output shape mismatch; "
+                f"tensor={temporal_shape} config={expected}"
+            )
+    if output2_decoder_output_shape is not None:
+        expected = tuple(int(v) for v in output2_decoder_output_shape)
+        if raw_shape != expected:
+            raise SnervArchiveError(
+                "official TUB output2 raw shape mismatch; "
+                f"tensor={raw_shape} config={expected}"
+            )
+    # Validate the exact receiver algebra at export time before bytes are stored.
+    fusion = official_output2_fusion_numpy(temporal, raw, fc_hw=fc_hw)
+    source_raw_bytes = int(temporal.size + raw.size) * np.dtype("<f8").itemsize
+    return {
+        "stored": {
+            "temporal_encoder_concat": temporal,
+            "output2_raw": raw,
+        },
+        "effective": {
+            "temporal_encoder_concat": temporal,
+            "output2_raw": raw,
+        },
+        "temporal_encoder_output_shape": temporal_shape,
+        "output2_decoder_output_shape": raw_shape,
+        "metadata": {
+            "schema": "snerv_official_tub_output2_storage.v1",
+            "stored": True,
+            "receiver_executes_output2_fusion_from_payload": True,
+            "tensor_names": [
+                "tub.temporal_encoder_concat",
+                "tub.output2_raw",
+            ],
+            "temporal_encoder_output_shape": [int(v) for v in temporal_shape],
+            "output2_decoder_output_shape": [int(v) for v in raw_shape],
+            "fc_hw": [int(v) for v in fc_hw],
+            "output2_decoder_input_shape": [
+                int(v) for v in fusion.decoder_input.shape
+            ],
+            "output2_fused_shape": [int(v) for v in fusion.output2_fused.shape],
+            "source_raw_bytes": source_raw_bytes,
+            "stored_raw_bytes": source_raw_bytes,
+            "raw_byte_savings": 0,
+            "source_forward_replay_authority": False,
+            "contest_scorer_authority": False,
+            **FALSE_AUTHORITY,
+        },
+    }
+
+
 def _expand_official_tub_input_storage(
     header: Mapping[str, Any],
     tensors: dict[str, np.ndarray],
@@ -2240,6 +2396,8 @@ def _official_payload_tensor_dict(
     tub_current: np.ndarray,
     tub_previous: np.ndarray,
     tub_next_frame: np.ndarray,
+    tub_temporal_encoder_concat: np.ndarray | None = None,
+    tub_output2_raw: np.ndarray | None = None,
 ) -> dict[str, np.ndarray]:
     tensors: dict[str, np.ndarray] = {
         "mfu.upsample_mid.weight": mfu.upsample_mid.weight,
@@ -2253,6 +2411,14 @@ def _official_payload_tensor_dict(
         "inputs.tub.previous": tub_previous,
         "inputs.tub.next_frame": tub_next_frame,
     }
+    if (tub_temporal_encoder_concat is None) != (tub_output2_raw is None):
+        raise SnervArchiveError(
+            "official TUB output2 tensor dictionary requires both temporal concat "
+            "and output2 raw tensors"
+        )
+    if tub_temporal_encoder_concat is not None and tub_output2_raw is not None:
+        tensors["tub.temporal_encoder_concat"] = tub_temporal_encoder_concat
+        tensors["tub.output2_raw"] = tub_output2_raw
     tensors.update(_official_rb_to_tensors(mfu.rb_mid, prefix="mfu.rb_mid"))
     tensors.update(_official_rb_to_tensors(mfu.rb_high, prefix="mfu.rb_high"))
     tensors.update(_official_hfr_heads_to_tensors(hfr_heads))
@@ -2478,7 +2644,43 @@ def _validate_official_payload_exec_surfaces(
     payload.build_hfr_heads()
     payload.mfu_inputs()
     payload.tub_inputs()
+    payload.tub_output2_inputs()
+    _validate_official_tub_output2_storage(payload.header, payload.tensors)
     _official_receiver_self_consistency_reference_from_header(payload.header)
+
+
+def _validate_official_tub_output2_storage(
+    header: Mapping[str, Any],
+    tensors: Mapping[str, np.ndarray],
+) -> None:
+    storage = header.get("tub_output2_storage")
+    if storage is None:
+        return
+    if not isinstance(storage, Mapping):
+        raise SnervArchiveError("official TUB output2 storage metadata must be an object")
+    has_temporal = "tub.temporal_encoder_concat" in tensors
+    has_raw = "tub.output2_raw" in tensors
+    if has_temporal != has_raw:
+        raise SnervArchiveError(
+            "official TUB output2 storage has incomplete tensor pair"
+        )
+    stored = bool(storage.get("stored"))
+    if stored != bool(has_temporal):
+        raise SnervArchiveError(
+            "official TUB output2 storage metadata/tensor presence mismatch"
+        )
+    if not stored:
+        return
+    temporal = np.asarray(tensors["tub.temporal_encoder_concat"])
+    raw = np.asarray(tensors["tub.output2_raw"])
+    if tuple(temporal.shape) != tuple(
+        int(v) for v in storage.get("temporal_encoder_output_shape") or ()
+    ):
+        raise SnervArchiveError("official TUB output2 temporal shape metadata mismatch")
+    if tuple(raw.shape) != tuple(
+        int(v) for v in storage.get("output2_decoder_output_shape") or ()
+    ):
+        raise SnervArchiveError("official TUB output2 raw shape metadata mismatch")
 
 
 def _official_receiver_self_consistency_reference_from_header(

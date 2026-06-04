@@ -483,11 +483,10 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert proof["receiver_export_self_consistency_verified"] is True
     assert proof["source_forward_replay_bound"] is False
     assert proof["source_forward_replay_verified"] is False
-    assert proof["executed_components"] == {
-        "official_mfu": True,
-        "official_hfr": True,
-        "official_tub": True,
-    }
+    assert proof["executed_components"]["official_mfu"] is True
+    assert proof["executed_components"]["official_hfr"] is True
+    assert proof["executed_components"]["official_tub"] is True
+    assert proof["executed_components"]["official_tub_output2_fusion"] is False
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
     assert proof["source_forward_replay_authority"] is False
@@ -505,6 +504,52 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
 
     with pytest.raises(SnervArchiveError, match="requires decode_official"):
         decode_decoder_payload(payload)
+
+
+def test_official_mfu_hfr_tub_payload_executes_output2_fusion_from_bytes() -> None:
+    bundle = _official_payload_fixture()
+    temporal = np.arange(1 * 4 * 4 * 4, dtype=np.float64).reshape(1, 4, 4, 4)
+    output2_raw = (
+        np.arange(2 * 8 * 4 * 4, dtype=np.float64).reshape(2, 8, 4, 4) / 17.0
+    )
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+    )
+    header = _read_subpacket_header(payload)
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+    proof = decoded.execute()
+
+    storage = header["tub_output2_storage"]
+    assert storage["stored"] is True
+    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["tensor_names"] == [
+        "tub.temporal_encoder_concat",
+        "tub.output2_raw",
+    ]
+    assert storage["output2_decoder_input_shape"] == [2, 2, 4, 4]
+    assert storage["output2_fused_shape"] == [2, 2, 8, 8]
+    assert proof["executed_components"]["official_tub_output2_fusion"] is True
+    rows = {row["name"]: row for row in proof["output_tensors"]}
+    assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
+    assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
+    assert proof["output_bundle_sha256"] == header["receiver_self_consistency_reference"][
+        "output_bundle_sha256"
+    ]
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_mfu_hfr_tub_output2_payload_requires_complete_pair() -> None:
+    bundle = _official_payload_fixture()
+    temporal = np.zeros((1, 4, 4, 4), dtype=np.float64)
+
+    with pytest.raises(SnervArchiveError, match="requires both"):
+        encode_official_mfu_hfr_tub_decoder_payload(
+            **bundle,
+            tub_temporal_encoder_concat=temporal,
+        )
 
 
 def test_archive_can_carry_official_mfu_hfr_tub_receiver_payload() -> None:
