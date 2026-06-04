@@ -70,6 +70,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
     DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
+    DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES,
     HINERV_COMPACT_FINE_INJECTION_BLOCK_INDEX,
     HINERV_COMPACT_MID_INJECTION_BLOCK_INDEX,
     SNERV_MODELSIZE_CONTROL_PROFILES,
@@ -2225,7 +2226,7 @@ def _snerv_auto_skip_high_modes_for_resolution(
         normalize_snerv_model_size_adapter(str(model_size_adapter))
         == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     ):
-        return tuple(str(value) for value in SNERV_OFFICIAL_SKIP_HIGH_MODES)
+        return DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES
     return ("full",)
 
 

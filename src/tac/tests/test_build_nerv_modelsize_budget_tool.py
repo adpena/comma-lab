@@ -268,12 +268,12 @@ def test_build_nerv_modelsize_budget_tool_enumerates_official_skip_ladder_by_def
 
     assert rc == 0
     summary = json.loads(capsys.readouterr().out)
-    assert set(summary["inputs"]["snerv_official_skip_high_modes"]) == {
+    assert summary["inputs"]["snerv_official_skip_high_modes"] == [
         "full",
         "shared_mean",
         "channel_mean",
         "scalar_mean",
-    }
+    ]
     payload = json.loads(snerv.read_text(encoding="utf-8"))
     selected_modes = {
         row["official_skip_high_mode"] for row in payload["selected_candidates"]

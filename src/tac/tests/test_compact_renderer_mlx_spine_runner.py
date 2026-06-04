@@ -2855,6 +2855,10 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
     )
     assert "_haar_lv1_" in official_primitives_sn["candidate_id"]
     assert "_adofficial_oms0p05_" in official_primitives_sn["candidate_id"]
+    assert runner_mod._snerv_auto_skip_high_modes_for_resolution(
+        explicit_mode=None,
+        model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+    ) == ("full", "shared_mean", "channel_mean", "scalar_mean")
     official_primitives_auto_skip_sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",

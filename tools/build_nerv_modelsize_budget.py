@@ -20,6 +20,7 @@ ensure_repo_imports(REPO_ROOT)
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
+    DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES,
     SNERV_MODELSIZE_CONTROL_PROFILES,
     build_hinerv_modelsize_budget_report,
     build_snerv_modelsize_budget_report,
@@ -223,7 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     snerv_official_skip_high_modes = tuple(
         args.snerv_official_skip_high_mode
         or (
-            tuple(SNERV_OFFICIAL_SKIP_HIGH_MODES)
+            DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES
             if snerv_model_size_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
             else ("full",)
         )
