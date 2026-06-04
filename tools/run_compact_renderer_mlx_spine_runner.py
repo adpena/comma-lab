@@ -3631,6 +3631,11 @@ def _run_snerv_native_mlx_export_attachment(
         if artifact.get("receiver_proof_passed") is not True:
             blockers.append("snerv_mlx_native_receiver_proof_missing_or_failed")
         native_scorer_loop = dict(artifact.get("scorer_loop_qat") or {})
+        receiver_reconstruction = _snerv_receiver_reconstruction_summary(
+            target_profile=artifact.get("receiver_target_reconstruction_profile"),
+            export_profile=artifact.get("receiver_export_reconstruction_profile"),
+        )
+        blockers.extend(receiver_reconstruction["blockers"])
         native_mlx_full600_export_proof_ready = int(num_pairs) >= CONTEST_PAIR_COUNT
         native_mlx_full600_campaign_ready = bool(
             native_mlx_full600_export_proof_ready
@@ -3638,6 +3643,7 @@ def _run_snerv_native_mlx_export_attachment(
             and artifact.get("score_aware_long_training_executed") is True
             and artifact.get("native_mlx_training_executed") is True
             and artifact.get("receiver_proof_passed") is True
+            and receiver_reconstruction["receiver_reconstruction_verified"] is True
         )
         if native_mlx_full600_export_proof_ready and not native_mlx_full600_campaign_ready:
             blockers.extend(
@@ -3705,6 +3711,22 @@ def _run_snerv_native_mlx_export_attachment(
             "receiver_contract_satisfied": bool(
                 artifact.get("receiver_contract_satisfied")
             ),
+            "receiver_reconstruction": receiver_reconstruction,
+            "receiver_reconstruction_verified": bool(
+                receiver_reconstruction["receiver_reconstruction_verified"]
+            ),
+            "receiver_target_reconstruction_profile": receiver_reconstruction[
+                "target_profile"
+            ],
+            "receiver_export_reconstruction_profile": receiver_reconstruction[
+                "export_profile"
+            ],
+            "receiver_target_reconstruction_mse_nchw255": receiver_reconstruction[
+                "target_mse_nchw255"
+            ],
+            "receiver_export_reconstruction_mse_nchw255": receiver_reconstruction[
+                "export_mse_nchw255"
+            ],
             "scorer_loop_qat_attached": bool(native_scorer_loop.get("executed")),
             "scorer_loop_qat_receiver_contract_satisfied": bool(
                 native_scorer_loop.get("receiver_contract_satisfied")
@@ -3800,6 +3822,69 @@ def _run_snerv_native_mlx_export_attachment(
         **payload,
         "result_path": result_path.as_posix(),
         "result_sha256": _sha256_file(result_path),
+    }
+
+
+def _snerv_receiver_reconstruction_profile_ready(profile: Any) -> bool:
+    """Return whether a SNeRV receiver reconstruction profile proves decode health."""
+
+    if not isinstance(profile, Mapping):
+        return False
+    return bool(
+        profile.get("receiver_decoded_selected_packet") is True
+        and profile.get("shape_matches") is True
+        and profile.get("receiver_frames_finite") is True
+        and not list(profile.get("blockers") or [])
+    )
+
+
+def _snerv_receiver_reconstruction_blockers(
+    *,
+    target_profile: Any,
+    export_profile: Any,
+) -> list[str]:
+    blockers: list[str] = []
+    if not _snerv_receiver_reconstruction_profile_ready(target_profile):
+        blockers.append("snerv_receiver_target_reconstruction_profile_missing_or_failed")
+        if isinstance(target_profile, Mapping):
+            blockers.extend(str(item) for item in target_profile.get("blockers") or [])
+    if not _snerv_receiver_reconstruction_profile_ready(export_profile):
+        blockers.append("snerv_receiver_export_reconstruction_profile_missing_or_failed")
+        if isinstance(export_profile, Mapping):
+            blockers.extend(str(item) for item in export_profile.get("blockers") or [])
+    return _dedupe(blockers)
+
+
+def _snerv_receiver_reconstruction_summary(
+    *,
+    target_profile: Any,
+    export_profile: Any,
+) -> dict[str, Any]:
+    """Return runner-level false-authority receiver reconstruction evidence."""
+
+    target = dict(target_profile) if isinstance(target_profile, Mapping) else {}
+    export = dict(export_profile) if isinstance(export_profile, Mapping) else {}
+    return {
+        "schema": "compact_runner_snerv_receiver_reconstruction_summary.v1",
+        "target_profile_ready": _snerv_receiver_reconstruction_profile_ready(target),
+        "export_profile_ready": _snerv_receiver_reconstruction_profile_ready(export),
+        "receiver_reconstruction_verified": (
+            _snerv_receiver_reconstruction_profile_ready(target)
+            and _snerv_receiver_reconstruction_profile_ready(export)
+        ),
+        "target_profile": target or None,
+        "export_profile": export or None,
+        "target_mse_nchw255": target.get("mse_nchw255"),
+        "target_max_abs_nchw255": target.get("max_abs_nchw255"),
+        "export_mse_nchw255": export.get("mse_nchw255"),
+        "export_max_abs_nchw255": export.get("max_abs_nchw255"),
+        "worst_target_pairs_by_mse": list(target.get("worst_pairs_by_mse") or []),
+        "worst_export_pairs_by_mse": list(export.get("worst_pairs_by_mse") or []),
+        "blockers": _snerv_receiver_reconstruction_blockers(
+            target_profile=target,
+            export_profile=export,
+        ),
+        **FALSE_AUTHORITY,
     }
 
 
@@ -5312,6 +5397,24 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "mlx_native_receiver_proof_passed": (
                         snerv_mlx_native_receiver_proof_passed
                     ),
+                    "mlx_native_receiver_reconstruction": (
+                        snerv_mlx_native_export.get("receiver_reconstruction")
+                    ),
+                    "mlx_native_receiver_reconstruction_verified": bool(
+                        snerv_mlx_native_export.get(
+                            "receiver_reconstruction_verified"
+                        )
+                    ),
+                    "mlx_native_receiver_target_reconstruction_mse_nchw255": (
+                        snerv_mlx_native_export.get(
+                            "receiver_target_reconstruction_mse_nchw255"
+                        )
+                    ),
+                    "mlx_native_receiver_export_reconstruction_mse_nchw255": (
+                        snerv_mlx_native_export.get(
+                            "receiver_export_reconstruction_mse_nchw255"
+                        )
+                    ),
                     "mlx_native_full600_export_verified": (
                         snerv_mlx_native_export_verified
                     ),
@@ -6159,6 +6262,22 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 ),
                 "mlx_native_receiver_proof_passed": (
                     snerv_mlx_native_receiver_proof_passed
+                ),
+                "mlx_native_receiver_reconstruction": (
+                    snerv_mlx_native_export.get("receiver_reconstruction")
+                ),
+                "mlx_native_receiver_reconstruction_verified": bool(
+                    snerv_mlx_native_export.get("receiver_reconstruction_verified")
+                ),
+                "mlx_native_receiver_target_reconstruction_mse_nchw255": (
+                    snerv_mlx_native_export.get(
+                        "receiver_target_reconstruction_mse_nchw255"
+                    )
+                ),
+                "mlx_native_receiver_export_reconstruction_mse_nchw255": (
+                    snerv_mlx_native_export.get(
+                        "receiver_export_reconstruction_mse_nchw255"
+                    )
                 ),
                 "mlx_native_full600_export_verified": snerv_mlx_native_export_verified,
                 "mlx_native_training_required_next": (

@@ -854,6 +854,31 @@ def _snerv_native_runner_report(
         "archive_sha256": archive_sha,
         "receiver_proof_passed": True,
         "receiver_contract_satisfied": True,
+        "receiver_reconstruction": {
+            "schema": "compact_runner_snerv_receiver_reconstruction_summary.v1",
+            "target_profile_ready": True,
+            "export_profile_ready": True,
+            "receiver_reconstruction_verified": True,
+            "target_mse_nchw255": 1.25,
+            "target_max_abs_nchw255": 4.0,
+            "export_mse_nchw255": 0.125,
+            "export_max_abs_nchw255": 0.75,
+            "worst_target_pairs_by_mse": [
+                {
+                    "rank": 0,
+                    "pair_idx": 0,
+                    "source_pair_idx": 0,
+                    "mse_nchw255": 1.25,
+                    "mae_nchw255": 0.5,
+                    "max_abs_nchw255": 4.0,
+                }
+            ],
+            "worst_export_pairs_by_mse": [],
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "blockers": [],
     }
     if loss_worsened_training:
@@ -933,6 +958,10 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert row["measured_minus_nominal_bytes"] == (
         len(b"snerv-native-packet") - 150_000
     )
+    assert row["snerv_mlx_native_receiver_reconstruction_verified"] is True
+    assert row["snerv_mlx_native_receiver_target_mse_nchw255"] == pytest.approx(1.25)
+    assert row["snerv_mlx_native_receiver_export_mse_nchw255"] == pytest.approx(0.125)
+    assert row["snerv_mlx_native_receiver_reconstruction_blockers"] == []
     native_feedback = row["snerv_mlx_native_file_backed_byte_feedback"]
     assert native_feedback["packet_sha256"] == hashlib.sha256(
         b"snerv-native-packet"

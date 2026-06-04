@@ -220,6 +220,10 @@ def build_nerv_candidate_feedback_row(
         if snerv_native_export
         else {}
     )
+    snerv_native_receiver_reconstruction = _mapping_or_empty(
+        snerv_native_export.get("receiver_reconstruction")
+        or score_aware_training.get("mlx_native_receiver_reconstruction")
+    )
     native_byte_feedback = _snerv_native_file_backed_byte_feedback(
         family=runner_report.get("execute_family"),
         candidate_row=candidate_row,
@@ -272,6 +276,11 @@ def build_nerv_candidate_feedback_row(
             *[
                 str(blocker)
                 for blocker in snerv_native_training_guard.get("blockers") or []
+            ],
+            *[
+                str(blocker)
+                for blocker in snerv_native_receiver_reconstruction.get("blockers")
+                or []
             ],
         ]
     )
@@ -346,6 +355,29 @@ def build_nerv_candidate_feedback_row(
         ),
         "snerv_mlx_native_training_export_guard_blockers": list(
             snerv_native_training_guard.get("blockers") or []
+        ),
+        "snerv_mlx_native_receiver_reconstruction_verified": (
+            snerv_native_receiver_reconstruction.get(
+                "receiver_reconstruction_verified"
+            )
+        ),
+        "snerv_mlx_native_receiver_target_mse_nchw255": (
+            snerv_native_receiver_reconstruction.get("target_mse_nchw255")
+        ),
+        "snerv_mlx_native_receiver_target_max_abs_nchw255": (
+            snerv_native_receiver_reconstruction.get("target_max_abs_nchw255")
+        ),
+        "snerv_mlx_native_receiver_export_mse_nchw255": (
+            snerv_native_receiver_reconstruction.get("export_mse_nchw255")
+        ),
+        "snerv_mlx_native_receiver_export_max_abs_nchw255": (
+            snerv_native_receiver_reconstruction.get("export_max_abs_nchw255")
+        ),
+        "snerv_mlx_native_receiver_reconstruction_blockers": list(
+            snerv_native_receiver_reconstruction.get("blockers") or []
+        ),
+        "snerv_mlx_native_receiver_reconstruction": (
+            snerv_native_receiver_reconstruction or None
         ),
         "snerv_mlx_native_export_blockers": list(
             snerv_native_export.get("blockers") or []

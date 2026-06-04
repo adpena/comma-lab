@@ -67,6 +67,42 @@ except ImportError:
     _AV_AVAILABLE = False
 
 
+def _fake_snerv_receiver_reconstruction_profile(
+    *,
+    profile_id: str,
+    reference_kind: str,
+    mse: float = 1.25,
+    max_abs: float = 2.0,
+) -> dict[str, object]:
+    return {
+        "schema": "snerv_receiver_frame_reconstruction_profile.v1",
+        "profile_id": profile_id,
+        "reference_kind": reference_kind,
+        "packet_source": "unit_test_selected_packet",
+        "receiver_decoded_selected_packet": True,
+        "shape_matches": True,
+        "receiver_frames_finite": True,
+        "mse_nchw255": float(mse),
+        "mae_nchw255": 0.5,
+        "rmse_nchw255": float(mse) ** 0.5,
+        "max_abs_nchw255": float(max_abs),
+        "worst_pairs_by_mse": [
+            {
+                "rank": 0,
+                "pair_idx": 0,
+                "source_pair_idx": 0,
+                "mse_nchw255": float(mse),
+                "mae_nchw255": 0.5,
+                "max_abs_nchw255": float(max_abs),
+            }
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _write_synthetic_pr95_archive(path: Path, *, pairs: int = 600) -> Path:
     chunks = []
     for payload in (f'{{"pairs":{pairs}}}'.encode(), b"decoder", b"latents"):
@@ -746,6 +782,22 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
+            "receiver_target_reconstruction_profile": (
+                _fake_snerv_receiver_reconstruction_profile(
+                    profile_id="selected_packet_vs_source_targets",
+                    reference_kind="source_targets_nchw255",
+                    mse=0.75,
+                    max_abs=1.5,
+                )
+            ),
+            "receiver_export_reconstruction_profile": (
+                _fake_snerv_receiver_reconstruction_profile(
+                    profile_id="selected_packet_vs_export_reference",
+                    reference_kind="export_reference_nchw255",
+                    mse=0.0,
+                    max_abs=0.0,
+                )
+            ),
             "native_mlx_training_executed": True,
             "native_mlx_training_kind": "score_aware_long_training",
             "native_mlx_hf_decoder_training": {
@@ -879,6 +931,9 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         "consumed_by_native_mlx_train_export"
     ] is True
     assert out["scorer_error_pair_curriculum"]["weighted_pair_count"] == 1
+    assert out["receiver_reconstruction_verified"] is True
+    assert out["receiver_reconstruction"]["target_mse_nchw255"] == pytest.approx(0.75)
+    assert out["receiver_reconstruction"]["export_mse_nchw255"] == pytest.approx(0.0)
     assert out["native_mlx_full600_campaign_ready"] is True
     assert out["score_claim"] is False
 
@@ -9425,6 +9480,22 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
+            "receiver_target_reconstruction_profile": (
+                _fake_snerv_receiver_reconstruction_profile(
+                    profile_id="selected_packet_vs_source_targets",
+                    reference_kind="source_targets_nchw255",
+                    mse=2.5,
+                    max_abs=4.0,
+                )
+            ),
+            "receiver_export_reconstruction_profile": (
+                _fake_snerv_receiver_reconstruction_profile(
+                    profile_id="selected_packet_vs_export_reference",
+                    reference_kind="export_reference_nchw255",
+                    mse=0.125,
+                    max_abs=0.75,
+                )
+            ),
             "native_mlx_training_executed": int(
                 kwargs.get("native_mlx_decoder_train_steps") or 0
             )
@@ -9831,6 +9902,14 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     )
     assert native["receiver_proof_passed"] is True
     assert native["receiver_contract_satisfied"] is True
+    assert native["receiver_reconstruction_verified"] is True
+    assert native["receiver_reconstruction"]["target_mse_nchw255"] == pytest.approx(
+        2.5
+    )
+    assert native["receiver_target_reconstruction_mse_nchw255"] == pytest.approx(2.5)
+    assert native["receiver_export_reconstruction_mse_nchw255"] == pytest.approx(
+        0.125
+    )
     assert native["byte_cap_control"]["schema"] == (
         "snerv_mlx_native_hard_byte_ceiling_control.v1"
     )
@@ -9866,6 +9945,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert recon_weight["primary_archive_source"] == "snerv_native_mlx_export_direct"
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
     assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
+    assert (
+        out["score_aware_training"]["mlx_native_receiver_reconstruction_verified"]
+        is True
+    )
+    assert out["score_aware_training"][
+        "mlx_native_receiver_target_reconstruction_mse_nchw255"
+    ] == pytest.approx(2.5)
     assert out["score_aware_training"]["mlx_native_full600_export_verified"] is False
     top_prioritized = out["score_aware_training"]["prioritized_pair_training"]
     assert top_prioritized["consumed_by_mlx_native_export"] is True
