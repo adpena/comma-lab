@@ -5,8 +5,8 @@ This module is deliberately narrower than full SNeRV authority.  It loads the
 pinned official source graph, assigns deterministic dyadic weights into the
 real Torch ``decoder[...]`` modules, maps those official state_dict keys into
 the local portable MFU/HFR primitives, and compares the source subgraph outputs.
-The TUB row is graph-input-only: full temporal encoder/output2 replay still
-needs the upstream wavelet/runtime dependency and trained temporal weights.
+The TUB row proves graph-input algebra plus deterministic ``output_2`` fusion;
+full temporal encoder/output2 replay still needs trained temporal weights.
 """
 
 from __future__ import annotations
@@ -43,6 +43,7 @@ from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
     OfficialSnervMfuSpec,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
+    official_output2_fusion_numpy,
     prepare_official_tub_graph_inputs,
 )
 
@@ -389,29 +390,68 @@ def _run_tub_graph_input_replay() -> dict[str, Any]:
         "prev_lowpass_over_2": portable.prev_lowpass_over_2,
         "next_lowpass_over_2": portable.next_lowpass_over_2,
     }
-    max_abs_error = max(
+    graph_error = max(
         float(np.max(np.abs(official_outputs[name] - portable_outputs[name])))
         for name in official_outputs
     )
-    output_hash = _hash_named_arrays(official_outputs)
+    temporal = torch.arange(1 * 12 * 2 * 3, dtype=torch.float64).reshape(1, 12, 2, 3)
+    decoder_output = torch.arange(2 * 18 * 2 * 3, dtype=torch.float64).reshape(
+        2, 18, 2, 3
+    )
+    emb_ch = int(temporal.shape[1]) // 2
+    official_output2_decoder_input = torch.cat(
+        [temporal[:, :emb_ch], temporal[:, emb_ch:]],
+        0,
+    )
+    official_output2_shuffled = (
+        decoder_output.reshape(2, -1, 2, 3, 2, 3)
+        .permute(0, 1, 4, 2, 5, 3)
+        .reshape(2, -1, 4, 9)
+    )
+    portable_fusion = official_output2_fusion_numpy(
+        np.asarray(temporal.detach().cpu().numpy()),
+        np.asarray(decoder_output.detach().cpu().numpy()),
+        fc_hw=(2, 3),
+    )
+    official_fusion_outputs = {
+        "output2_decoder_input": np.asarray(
+            official_output2_decoder_input.detach().cpu().numpy()
+        ),
+        "output2_shuffled": np.asarray(official_output2_shuffled.detach().cpu().numpy()),
+    }
+    portable_fusion_outputs = {
+        "output2_decoder_input": portable_fusion.decoder_input,
+        "output2_shuffled": portable_fusion.output2_fused,
+    }
+    fusion_error = max(
+        float(np.max(np.abs(official_fusion_outputs[name] - portable_fusion_outputs[name])))
+        for name in official_fusion_outputs
+    )
+    official_all_outputs = {**official_outputs, **official_fusion_outputs}
+    portable_all_outputs = {**portable_outputs, **portable_fusion_outputs}
+    max_abs_error = max(graph_error, fusion_error)
+    output_hash = _hash_named_arrays(official_all_outputs)
     blockers = [
-        "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
-        "snerv_official_tub_encoder_decoder_weights_not_loaded",
         "snerv_official_pytorch_wavelets_runtime_dependency_missing",
-        "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+        "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing",
     ]
     return {
         "schema": "snerv_official_source_forward_component_replay.v1",
         "component_id": "tub",
-        "classification": "official_tub_graph_input_source_fixture_proven_full_tub_blocked",
+        "classification": "official_tub_graph_input_and_output2_fusion_source_fixture_proven_full_tub_blocked",
         "backend": "official_torch_vs_portable",
         "source_forward_parity_proven": False,
         "primitive_source_forward_parity_proven": True,
+        "portable_output2_fusion_receiver_mapping_proven": fusion_error == 0.0,
         "source_forward_parity_falsified": False,
         "full_stack_source_forward_parity_proven": False,
         "full_tub_source_forward_parity_proven": False,
         "tolerance": 0.0,
         "max_abs_error": max_abs_error,
+        "graph_input_max_abs_error": graph_error,
+        "output2_fusion_max_abs_error": fusion_error,
         "input_sha256": _hash_named_arrays(
             {
                 "current": current,
@@ -420,10 +460,17 @@ def _run_tub_graph_input_replay() -> dict[str, Any]:
             }
         ),
         "official_output_sha256": output_hash,
-        "portable_output_sha256": _hash_named_arrays(portable_outputs),
-        "output_hashes_bit_identical": output_hash == _hash_named_arrays(portable_outputs),
+        "portable_output_sha256": _hash_named_arrays(portable_all_outputs),
+        "output_hashes_bit_identical": output_hash
+        == _hash_named_arrays(portable_all_outputs),
+        "output_shapes": _shape_map(official_all_outputs),
+        "closed_blockers": [
+            "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+            "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing",
+        ],
         "official_weight_keys": [
             "weightless_source_lines:model/snerv_t.py:125-136",
+            "weightless_source_lines:model/snerv_t.py:142-150",
             "unmapped_temporal_encoder:self.encoder[1]",
             "unmapped_temporal_encoder:self.encoder[2]",
             "unmapped_output2_decoder:self.decoder[self.decoder_len-1]",
@@ -757,6 +804,13 @@ def _hash_named_arrays(arrays: Mapping[str, np.ndarray]) -> str:
         h.update(arr.tobytes())
         h.update(b"\0")
     return h.hexdigest()
+
+
+def _shape_map(arrays: Mapping[str, np.ndarray]) -> dict[str, list[int]]:
+    return {
+        name: [int(v) for v in np.asarray(array).shape]
+        for name, array in arrays.items()
+    }
 
 
 def _hash_text_lines(lines: Iterable[str]) -> str:

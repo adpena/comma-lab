@@ -508,53 +508,6 @@ def official_output2_fusion_mlx(
     return decoder_input, fused
 
 
-def official_output2_fusion_torch(
-    temporal_encoder_concat: Any,
-    decoder_output: Any,
-    *,
-    fc_hw: tuple[int, int],
-) -> tuple[Any, Any]:
-    """Execute official ``output_2`` fusion with PyTorch tensors.
-
-    This mirrors upstream ``snerv_t.py`` directly and preserves autograd for
-    contest/Linux reproduction without making Torch a receiver dependency.
-    """
-
-    temporal_shape = _validate_finite_backend_nchw(
-        temporal_encoder_concat,
-        name="temporal_encoder_concat",
-        backend="torch",
-    )
-    raw_shape = _validate_finite_backend_nchw(
-        decoder_output,
-        name="decoder_output",
-        backend="torch",
-    )
-    shape = official_output2_fusion_shape(
-        temporal_shape,
-        fc_hw=fc_hw,
-        decoder_output_shape=raw_shape,
-    )
-    import torch
-
-    emb_ch = int(shape.emb_ch)
-    decoder_input = torch.cat(
-        [
-            temporal_encoder_concat[:, :emb_ch, :, :],
-            temporal_encoder_concat[:, emb_ch:, :, :],
-        ],
-        0,
-    )
-    fc_h, fc_w = shape.fc_hw or _validate_hw(fc_hw, name="fc_hw")
-    out_n, _out_c, out_h, out_w = raw_shape
-    fused = (
-        decoder_output.reshape(out_n, -1, fc_h, fc_w, out_h, out_w)
-        .permute(0, 1, 4, 2, 5, 3)
-        .reshape(out_n, -1, fc_h * out_h, fc_w * out_w)
-    )
-    return decoder_input, fused
-
-
 def _stack_triplet(
     current: np.ndarray,
     previous: np.ndarray,
@@ -665,14 +618,13 @@ def _validate_finite_backend_nchw(
         tuple(int(v) for v in getattr(array, "shape", ())),
         name=name,
     )
-    if backend == "torch":
-        import torch
+    if backend != "mlx":
+        raise OfficialTubError(
+            f"unsupported backend for receiver-safe TUB primitive: {backend}"
+        )
+    import mlx.core as mx
 
-        finite = bool(torch.isfinite(array).all().item())
-    else:
-        import mlx.core as mx
-
-        finite = bool(mx.all(mx.isfinite(mx.array(array))).item())
+    finite = bool(mx.all(mx.isfinite(mx.array(array))).item())
     if not finite:
         raise OfficialTubError(f"{name} contains NaN or Inf")
     return shape
@@ -692,6 +644,5 @@ __all__ = [
     "official_output2_fusion_mlx",
     "official_output2_fusion_numpy",
     "official_output2_fusion_shape",
-    "official_output2_fusion_torch",
     "prepare_official_tub_graph_inputs",
 ]

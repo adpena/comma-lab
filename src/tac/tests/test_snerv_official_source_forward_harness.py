@@ -67,10 +67,28 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
 
     tub = rows["tub"]
     assert tub["primitive_source_forward_parity_proven"] is True
+    assert tub["portable_output2_fusion_receiver_mapping_proven"] is True
     assert tub["source_forward_parity_proven"] is False
     assert tub["max_abs_error"] == 0.0
+    assert tub["graph_input_max_abs_error"] == 0.0
+    assert tub["output2_fusion_max_abs_error"] == 0.0
     assert tub["official_output_sha256"] == tub["portable_output_sha256"]
-    assert "snerv_official_tub_encoder_decoder_weights_not_loaded" in tub["blockers"]
+    assert (
+        "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing"
+        in tub["closed_blockers"]
+    )
+    assert (
+        "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing"
+        in tub["closed_blockers"]
+    )
+    assert (
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing"
+        in tub["blockers"]
+    )
+    assert (
+        "snerv_official_tub_portable_output2_decoder_weight_mapping_missing"
+        in tub["blockers"]
+    )
     assert "snerv_official_pytorch_wavelets_runtime_dependency_missing" in tub["blockers"]
 
     local_gap = artifact["local_receiver_adapter_source_gap"]

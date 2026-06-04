@@ -116,8 +116,10 @@ from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     official_output2_fusion_mlx,
     official_output2_fusion_numpy,
     official_output2_fusion_shape,
-    official_output2_fusion_torch,
     prepare_official_tub_graph_inputs,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_tub_torch import (
+    official_output2_fusion_torch,
 )
 
 __all__ = [
