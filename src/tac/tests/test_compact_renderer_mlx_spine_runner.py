@@ -2717,21 +2717,43 @@ def test_plan_only_report_routes_backend_rows_by_real_executability(
 
 
 def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() -> None:
+    hi_feedback = [
+        {
+            "family": "hi_nerv",
+            "row_id": "hi_receiver_closed_calibration",
+            "nominal_total_payload_bytes": 100_000,
+            "measured_archive_bytes": 90_000,
+            "receiver_proof_passed": True,
+        }
+    ]
+    sn_feedback = [
+        {
+            "family": "snerv",
+            "row_id": "sn_receiver_closed_calibration",
+            "nominal_total_payload_bytes": 100_000,
+            "measured_archive_bytes": 90_000,
+            "receiver_proof_passed": True,
+        }
+    ]
     hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
         hard_byte_ceilings=(178_000, 285_000),
+        byte_cap_feedback_rows=hi_feedback,
     )
     sn = _resolve_execute_modelsize_candidate(
         family="snerv",
         candidate_id="auto",
         hard_byte_ceilings=(178_000, 285_000),
+        byte_cap_feedback_rows=sn_feedback,
     )
 
     assert hi is not None
     assert hi["family"] == "hi_nerv"
     assert hi["hard_byte_ceiling"] == 178_000
-    assert hi["nominal_under_ceiling"] is True
+    assert hi["byte_cap_controller"]["calibration_observation_count"] == 1
+    assert hi["byte_cap_controller"]["predicted_under_hard_byte_ceiling"] is True
+    assert runner_mod._byte_cap_controller_predicts_under_ceiling(hi)
     assert hi["use_hierarchical_feature_grid"] is True
     assert hi["use_convnext_blocks"] is True
     hi_precedence = hi["modelsize_control_contract"]["control_precedence"]
@@ -2745,6 +2767,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         hard_byte_ceilings=(178_000,),
         num_pairs=17,
         hinerv_target_modelsize_mparams=(0.03,),
+        byte_cap_feedback_rows=hi_feedback,
     )
     assert target_hi is not None
     assert target_hi["family"] == "hi_nerv"
@@ -2770,6 +2793,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         candidate_id=target_hi["candidate_id"],
         hard_byte_ceilings=(178_000,),
         num_pairs=17,
+        byte_cap_feedback_rows=hi_feedback,
     )
     assert reparsed_target_hi == target_hi
     assert target_hi["ready_for_exact_eval_dispatch"] is False
@@ -2782,6 +2806,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         candidate_id="auto",
         hard_byte_ceilings=(216_000,),
         snerv_official_modelsize_mparams=(0.05,),
+        byte_cap_feedback_rows=sn_feedback,
     )
     assert official_sn is not None
     assert official_sn["family"] == "snerv"
@@ -2797,6 +2822,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         hard_byte_ceilings=(216_000,),
         snerv_official_modelsize_mparams=(0.05,),
         snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+        byte_cap_feedback_rows=sn_feedback,
     )
     assert spectra_sn is not None
     assert spectra_sn["capacity_source"] == "official_snerv_modelsize"
@@ -2819,6 +2845,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         snerv_official_modelsize_mparams=(0.05,),
         snerv_model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
         snerv_official_skip_high_modes=("full",),
+        byte_cap_feedback_rows=sn_feedback,
     )
     assert official_primitives_sn is not None
     assert official_primitives_sn["capacity_source"] == "official_snerv_modelsize"
@@ -2838,6 +2865,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
             explicit_mode=None,
             model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
         ),
+        byte_cap_feedback_rows=sn_feedback,
     )
     assert official_primitives_auto_skip_sn is not None
     assert official_primitives_auto_skip_sn["official_skip_high_mode"] in {
@@ -2872,6 +2900,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         candidate_id="auto",
         hard_byte_ceilings=(36_000,),
         hinerv_target_modelsize_mparams=(0.02,),
+        byte_cap_feedback_rows=hi_feedback,
     )
     assert target_hi is not None
     assert target_hi["family"] == "hi_nerv"
@@ -2888,6 +2917,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         hard_byte_ceilings=(178_000,),
         num_pairs=17,
         target_modelsize_mparams=(0.03,),
+        byte_cap_feedback_rows=hi_feedback,
     )
     assert shared_target_hi is not None
     assert shared_target_hi["family"] == "hi_nerv"
@@ -2914,6 +2944,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         candidate_id="auto",
         hard_byte_ceilings=(216_000,),
         target_modelsize_mparams=(0.05,),
+        byte_cap_feedback_rows=sn_feedback,
     )
     assert shared_target_sn is not None
     assert shared_target_sn["family"] == "snerv"
@@ -2951,6 +2982,7 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         family="hi_nerv",
         candidate_id=hi["candidate_id"],
         hard_byte_ceilings=(178_000, 285_000),
+        byte_cap_feedback_rows=hi_feedback,
     )
     assert explicit == hi
     assert (
@@ -3159,21 +3191,44 @@ def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
 
     controller = attached[0]["byte_cap_controller"]
     assert controller["predicted_archive_bytes"] == 80
+    assert controller["predicted_under_hard_byte_ceiling"] is True
     assert controller["prediction_rule"] == "nominal_payload_bytes_uncalibrated"
     assert controller["calibration_observation_count"] == 0
     assert "byte_cap_controller_measured_archive_feedback_missing" in controller[
         "blockers"
     ]
+    assert not runner_mod._byte_cap_controller_predicts_under_ceiling(attached[0])
 
 
 def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> None:
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="hi_nerv_modelsize_auto_no_candidate_under_hard_byte_ceiling",
+    ):
+        _resolve_execute_modelsize_candidate(
+            family="hi_nerv",
+            candidate_id="auto",
+            hard_byte_ceilings=(178_000,),
+        )
+
     nominal = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
         hard_byte_ceilings=(178_000,),
+        hinerv_target_modelsize_mparams=(0.12,),
+        byte_cap_feedback_rows=[
+            {
+                "family": "hi_nerv",
+                "row_id": "target_export",
+                "decoder_codec": "portfolio_auto",
+                "nominal_total_payload_bytes": 100_000,
+                "measured_archive_bytes": 120_000,
+                "receiver_proof_passed": True,
+            }
+        ],
     )
     assert nominal is not None
-    assert nominal["nominal_total_payload_bytes"] <= 178_000
+    assert nominal["byte_cap_controller"]["calibration_observation_count"] == 1
 
     calibrated = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
@@ -3198,13 +3253,11 @@ def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> Non
 
     assert calibrated is not None
     assert calibrated["hard_byte_ceiling"] == 178_000
-    assert calibrated["nominal_total_payload_bytes"] < nominal[
-        "nominal_total_payload_bytes"
-    ]
     controller = calibrated["byte_cap_controller"]
     assert controller["calibration_observation_count"] == 1
     assert controller["predicted_under_hard_byte_ceiling"] is True
     assert controller["predicted_archive_bytes"] <= 178_000
+    assert runner_mod._byte_cap_controller_predicts_under_ceiling(calibrated)
 
 
 def test_execute_modelsize_auto_fails_closed_when_calibrated_feedback_has_no_under_cap_candidate() -> None:

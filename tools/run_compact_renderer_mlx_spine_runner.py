@@ -2612,11 +2612,12 @@ def _byte_cap_controls_are_candidate_scoped(source_controls: Any) -> bool:
 
 def _byte_cap_controller_predicts_under_ceiling(row: Mapping[str, Any]) -> bool:
     controller = row.get("byte_cap_controller")
-    if isinstance(controller, Mapping):
-        value = controller.get("predicted_under_hard_byte_ceiling")
-        if value is not None:
-            return bool(value)
-    return bool(row.get("nominal_under_ceiling"))
+    if not isinstance(controller, Mapping):
+        return False
+    if int(controller.get("calibration_observation_count") or 0) <= 0:
+        return False
+    value = controller.get("predicted_under_hard_byte_ceiling")
+    return bool(value) if value is not None else False
 
 
 def _byte_cap_controller_has_observation(row: Mapping[str, Any]) -> bool:
