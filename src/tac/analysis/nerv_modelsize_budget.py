@@ -23,6 +23,7 @@ import numpy as np
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_BASE_MODEL_SIZE_ADAPTER,
     SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+    SNERV_OFFICIAL_SKIP_HIGH_MODES,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     SNERV_TEMPORAL_MODES,
     SnervCarrierError,
@@ -49,6 +50,14 @@ MODELSIZE_CONTROL_CONTRACT_REQUIRED_TRUE_FIELDS = (
     "archive_bytes_authority_required",
 )
 MODELSIZE_CONTROL_AUTHORITY_SPLIT_SCHEMA = "nerv_modelsize_control_authority_split.v1"
+DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES = (
+    "full",
+    "shared_mean",
+    "channel_mean",
+    "scalar_mean",
+)
+if set(DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES) != set(SNERV_OFFICIAL_SKIP_HIGH_MODES):
+    raise RuntimeError("DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES drifted from carrier")
 
 
 def modelsize_control_authority_split(
@@ -1561,7 +1570,7 @@ def enumerate_snerv_modelsize_candidates(
     hfr_gain: float = 0.0,
     temporal_context: int = 0,
     temporal_modes: tuple[str, ...] = (DEFAULT_SNERV_TEMPORAL_MODE,),
-    official_skip_high_modes: tuple[str, ...] = ("full",),
+    official_skip_high_modes: tuple[str, ...] = DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES,
     invalid_candidate_rows: list[dict[str, Any]] | None = None,
 ) -> list[SnervModelSizeCandidate]:
     """Enumerate SNeRV LF/HF receiver-grammar capacity points."""
@@ -1577,12 +1586,15 @@ def enumerate_snerv_modelsize_candidates(
         effective_levels = SNERV_OFFICIAL_MFU_HFR_TUB_LEVELS
         effective_bits_per_coeffs = (1.0,)
         effective_step_map_bits_per_coeffs = (1.0,)
+        effective_official_skip_high_modes = tuple(official_skip_high_modes)
+    else:
+        effective_official_skip_high_modes = ("full",)
     for ceiling in sorted({int(v) for v in hard_byte_ceilings if int(v) > 0}):
         for lvl in effective_levels:
             for bits in effective_bits_per_coeffs:
                 for step_bits in effective_step_map_bits_per_coeffs:
                     for decoder_codec in decoder_codecs:
-                        for official_skip_high_mode in official_skip_high_modes:
+                        for official_skip_high_mode in effective_official_skip_high_modes:
                             for temporal_mode in temporal_modes:
                                 for fc_dim in fc_dims:
                                     for emb_size in emb_sizes:
@@ -1846,6 +1858,22 @@ def select_snerv_modelsize_candidates(
             if current is None or _selection_key(row) > _selection_key(current):
                 chosen_by_id[row.candidate_id] = row
 
+        source_rows = under or group
+        for capacity_source in sorted({row.capacity_source for row in source_rows}):
+            rows_for_source = [
+                row for row in source_rows if row.capacity_source == capacity_source
+            ]
+            if not rows_for_source:
+                continue
+            if under:
+                best_for_source = max(rows_for_source, key=_selection_key)
+            else:
+                best_for_source = min(
+                    rows_for_source,
+                    key=lambda row: abs(row.byte_headroom),
+                )
+            choose(chosen, best_for_source)
+
         for lvl in DEFAULT_SNERV_LEVELS:
             lvl_rows = [row for row in under if row.levels == lvl]
             if lvl_rows:
@@ -1914,19 +1942,18 @@ def select_snerv_modelsize_candidates(
             if len(chosen) >= per_ceiling_limit:
                 break
             choose(chosen, row)
+        if not under:
+            group.sort(key=lambda row: abs(row.byte_headroom))
+            for row in group:
+                if len(chosen) >= per_ceiling_limit:
+                    break
+                choose(chosen, row)
         selected.extend(
             _dedupe_snerv_modelsize_candidates(
                 list(chosen.values()),
                 key_fn=_selection_key,
             )[:per_ceiling_limit]
         )
-        if not under:
-            group.sort(key=lambda row: abs(row.byte_headroom))
-            selected.extend(
-                _dedupe_snerv_modelsize_candidates(group, key_fn=_selection_key)[
-                    : min(2, per_ceiling_limit)
-                ]
-            )
     return _dedupe_snerv_modelsize_candidates(selected, key_fn=_selection_key)
 
 
@@ -1949,10 +1976,16 @@ def build_snerv_modelsize_budget_report(
     hfr_gain: float = 0.0,
     temporal_context: int = 0,
     temporal_modes: tuple[str, ...] = (DEFAULT_SNERV_TEMPORAL_MODE,),
-    official_skip_high_modes: tuple[str, ...] = ("full",),
+    official_skip_high_modes: tuple[str, ...] = DEFAULT_SNERV_OFFICIAL_SKIP_HIGH_MODES,
 ) -> dict[str, Any]:
     """Return a planner-safe SNeRV model-size budget report."""
 
+    canonical_adapter = normalize_snerv_model_size_adapter(snerv_model_size_adapter)
+    effective_official_skip_high_modes = (
+        tuple(official_skip_high_modes)
+        if canonical_adapter == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+        else ("full",)
+    )
     modelsize_control_profile = _snerv_profile_for_strides(
         profile_id=modelsize_control_profile_id,
         enc_strds=tuple(int(v) for v in official_enc_strds),
@@ -1970,13 +2003,13 @@ def build_snerv_modelsize_budget_report(
         official_enc_strds=official_enc_strds,
         official_dec_strds=official_dec_strds,
         modelsize_control_profile_id=str(modelsize_control_profile["profile_id"]),
-        snerv_model_size_adapter=snerv_model_size_adapter,
+        snerv_model_size_adapter=canonical_adapter,
         patch_radius=patch_radius,
         mfu_scales=mfu_scales,
         hfr_gain=hfr_gain,
         temporal_context=temporal_context,
         temporal_modes=temporal_modes,
-        official_skip_high_modes=official_skip_high_modes,
+        official_skip_high_modes=effective_official_skip_high_modes,
         invalid_candidate_rows=invalid_candidate_rows,
     )
     selected = select_snerv_modelsize_candidates(
@@ -1992,7 +2025,7 @@ def build_snerv_modelsize_budget_report(
         "num_pairs": int(num_pairs),
         "carrier_hw": [int(carrier_hw[0]), int(carrier_hw[1])],
         "wavelet": str(wavelet),
-        "snerv_model_size_adapter": str(snerv_model_size_adapter),
+        "snerv_model_size_adapter": str(canonical_adapter),
         "fc_dims": [int(v) for v in fc_dims],
         "official_modelsize_mparams": [
             float(v) for v in official_modelsize_mparams
@@ -2007,7 +2040,9 @@ def build_snerv_modelsize_budget_report(
         "hfr_gain": float(hfr_gain),
         "temporal_context": int(temporal_context),
         "temporal_modes": [str(v) for v in temporal_modes],
-        "official_skip_high_modes": [str(v) for v in official_skip_high_modes],
+        "official_skip_high_modes": [
+            str(v) for v in effective_official_skip_high_modes
+        ],
         "hard_byte_ceilings": sorted({int(v) for v in hard_byte_ceilings}),
         "candidate_count": len(candidates),
         "invalid_candidate_count": len(invalid_candidate_rows),

@@ -832,6 +832,57 @@ def test_snerv_official_cli_default_profile_is_explicit_and_fail_closed() -> Non
     assert invalid["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_official_adapter_report_enumerates_skip_ladder_by_default() -> None:
+    report = build_snerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        per_ceiling_limit=32,
+        fc_dims=(),
+        official_modelsize_mparams=(0.05,),
+        snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        temporal_modes=("official_haar_dwt1d_lowpass",),
+    )
+
+    assert report["snerv_model_size_adapter"] == (
+        "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+    )
+    assert report["official_skip_high_modes"] == [
+        "full",
+        "shared_mean",
+        "channel_mean",
+        "scalar_mean",
+    ]
+    selected_modes = {
+        row["official_skip_high_mode"] for row in report["selected_candidates"]
+    }
+    assert {"channel_mean", "scalar_mean"} <= selected_modes
+    assert any(
+        row["official_skip_high_mode"] == "full"
+        and row["nominal_under_ceiling"] is False
+        for row in report["selected_candidates"]
+    )
+    assert all(
+        row["nominal_under_ceiling"] is True
+        for row in report["selected_candidates"]
+        if row["official_skip_high_mode"] in {"channel_mean", "scalar_mean"}
+    )
+
+
+def test_snerv_modelsize_selection_respects_per_ceiling_limit_with_fallbacks() -> None:
+    report = build_snerv_modelsize_budget_report(
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        per_ceiling_limit=8,
+        fc_dims=(9,),
+        official_modelsize_mparams=(0.05, 0.1, 0.2),
+    )
+
+    selected = report["selected_candidates_by_ceiling"]["178000"]
+    assert report["selected_candidate_count"] <= 8
+    assert len(selected) <= 8
+    assert {row["hard_byte_ceiling"] for row in selected} == {178_000}
+
+
 def test_snerv_modelsize_budget_records_invalid_official_modelsize_without_aborting() -> None:
     report = build_snerv_modelsize_budget_report(
         hard_byte_ceilings=(178_000,),
