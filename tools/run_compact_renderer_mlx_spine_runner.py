@@ -2251,16 +2251,15 @@ def _byte_cap_controller_prediction(
     prediction_rule = "nominal_payload_bytes_uncalibrated"
     if nominal is not None and observations:
         max_ratio = max(float(row["archive_to_nominal_ratio"]) for row in observations)
-        max_positive_delta = max(
-            0,
-            max(int(row["archive_minus_nominal_bytes"]) for row in observations),
+        max_delta = max(
+            int(row["archive_minus_nominal_bytes"]) for row in observations
         )
         predicted = max(
             math.ceil(float(nominal) * max_ratio),
-            int(nominal) + int(max_positive_delta),
+            int(nominal) + int(max_delta),
         )
         prediction_rule = (
-            "max_observed_archive_to_nominal_ratio_plus_positive_overhead"
+            "max_observed_archive_to_nominal_ratio_or_additive_overhead"
         )
     headroom = None
     if predicted is not None and ceiling is not None:
@@ -2307,7 +2306,9 @@ def _byte_cap_calibration(
             row,
             (
                 "receiver_closed",
+                "receiver_proof_ready",
                 "receiver_proof_passed",
+                "runtime_consumption_proof_ready",
                 "receiver_archive_replay_verified",
                 "receiver_contract_satisfied",
                 "byte_closed_receiver_proof",
@@ -15273,6 +15274,8 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
         return None
     candidate = node.get("modelsize_candidate")
     candidate_mapping = candidate if isinstance(candidate, Mapping) else {}
+    if not candidate_mapping:
+        candidate_mapping = _startup_modelsize_candidate_from_node(node)
     nominal = _compact_first_present_int(
         node,
         (
@@ -15314,7 +15317,9 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
             node,
             (
                 "receiver_closed",
+                "receiver_proof_ready",
                 "receiver_proof_passed",
+                "runtime_consumption_proof_ready",
                 "receiver_archive_replay_verified",
                 "receiver_contract_satisfied",
                 "byte_closed_receiver_proof",
@@ -15323,6 +15328,21 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
         "report_path": node.get("report_path"),
     }
     return {key: value for key, value in row.items() if value is not None}
+
+
+def _startup_modelsize_candidate_from_node(node: Mapping[str, Any]) -> dict[str, Any]:
+    path_value = node.get("startup_json_path")
+    if not path_value:
+        return {}
+    try:
+        path = Path(str(path_value)).expanduser().resolve(strict=False)
+        if not path.is_file():
+            return {}
+        startup = _load_json(path)
+    except (OSError, ValueError, json.JSONDecodeError, CompactRendererMlxSpineRunnerError):
+        return {}
+    candidate = startup.get("modelsize_candidate")
+    return dict(candidate) if isinstance(candidate, Mapping) else {}
 
 
 def _load_json(path: Path) -> dict[str, Any]:

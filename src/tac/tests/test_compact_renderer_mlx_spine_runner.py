@@ -2175,6 +2175,39 @@ def test_byte_cap_controller_uses_measured_archive_feedback() -> None:
     assert not runner_mod._byte_cap_controller_predicts_under_ceiling(by_id["large"])
 
 
+def test_byte_cap_controller_exploits_measured_compression_headroom() -> None:
+    attached = runner_mod._attach_byte_cap_controller_predictions(
+        [
+            {
+                "candidate_id": "larger",
+                "family": "hi_nerv",
+                "hard_byte_ceiling": 100,
+                "nominal_total_payload_bytes": 140,
+                "decoder_codec": "portfolio_auto",
+                "nominal_under_ceiling": False,
+            }
+        ],
+        family="hi_nerv",
+        byte_cap_feedback_rows=[
+            {
+                "row_id": "compressed_export",
+                "family": "hi_nerv",
+                "nominal_total_payload_bytes": 100,
+                "measured_archive_bytes": 50,
+                "decoder_codec": "portfolio_auto",
+                "receiver_proof_ready": True,
+            }
+        ],
+    )
+
+    controller = attached[0]["byte_cap_controller"]
+    assert controller["prediction_rule"] == (
+        "max_observed_archive_to_nominal_ratio_or_additive_overhead"
+    )
+    assert controller["predicted_archive_bytes"] == 90
+    assert controller["predicted_under_hard_byte_ceiling"] is True
+
+
 def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
     attached = runner_mod._attach_byte_cap_controller_predictions(
         [
@@ -2262,7 +2295,7 @@ def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
                 "candidate_id": "hinerv-row",
                 "archive_bytes": 123_456,
                 "decoder_codec": "int4_mixed",
-                "receiver_proof_passed": True,
+                "receiver_proof_ready": True,
                 "modelsize_candidate": {
                     "candidate_id": "hinerv-row",
                     "family": "hi_nerv",
@@ -2289,6 +2322,50 @@ def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
             "source_path": path.resolve(strict=False).as_posix(),
         }
     ]
+
+
+def test_modelsize_byte_cap_feedback_loader_reads_startup_candidate_fallback(
+    tmp_path: Path,
+) -> None:
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "hinerv-fallback",
+                    "family": "hi_nerv",
+                    "hard_byte_ceiling": 178_000,
+                    "nominal_total_payload_bytes": 117_000,
+                    "decoder_codec": "int7_mixed",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    export = tmp_path / "export.json"
+    export.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv-fallback",
+                "archive_bytes": 122_074,
+                "receiver_proof_ready": True,
+                "startup_json_path": startup.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = runner_mod._load_modelsize_byte_cap_feedback_rows([export])
+
+    assert rows[0]["candidate_id"] == "hinerv-fallback"
+    assert rows[0]["measured_archive_bytes"] == 122_074
+    assert rows[0]["nominal_total_payload_bytes"] == 117_000
+    assert rows[0]["hard_byte_ceiling"] == 178_000
+    assert rows[0]["decoder_codec"] == "int7_mixed"
+    assert rows[0]["receiver_closed"] is True
 
 
 def test_snerv_official_modelsize_controls_require_candidate_resolution() -> None:

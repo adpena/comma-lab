@@ -201,6 +201,7 @@ def export_snerv_checkpoint_archive(
         "checkpoint_state_kind": state_kind,
         "checkpoint_state_path": state_path.as_posix(),
         "checkpoint_state_sha256": sha256_file(state_path),
+        "modelsize_candidate": candidate,
         "startup_json_path": startup_path.as_posix(),
         "startup_json_sha256": sha256_file(startup_path),
         "output_dir": out.as_posix(),

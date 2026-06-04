@@ -168,6 +168,7 @@ def export_checkpoint_archive(
         "schema": "hinerv_checkpoint_archive_export.v1",
         "family": "hi_nerv",
         "candidate_id": candidate.get("candidate_id"),
+        "modelsize_candidate": candidate,
         "checkpoint_meta_path": meta_path.as_posix(),
         "checkpoint_meta_sha256": sha256_file(meta_path),
         "checkpoint_epoch": meta.get("global_epoch"),
