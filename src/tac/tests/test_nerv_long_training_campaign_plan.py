@@ -433,6 +433,12 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
         "snerv_source_bound_capacity_controls.v1"
     )
     assert launch_contract["score_claim"] is False
+    markdown = render_nerv_long_training_campaign_plan_markdown(report)
+    assert (
+        "snerv_runtime_authority: "
+        "`receiver_bound_training_allowed_but_official_source_authority_false`"
+    ) in markdown
+    assert "snerv_full_source_forward_authority: `False`" in markdown
 
 
 def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> None:

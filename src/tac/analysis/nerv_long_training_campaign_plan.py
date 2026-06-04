@@ -421,6 +421,17 @@ def render_nerv_long_training_campaign_plan_markdown(report: Mapping[str, Any]) 
                 f"  blockers: `{len(row.get('blockers') or [])}`",
             ]
         )
+        split = row.get("snerv_official_runtime_authority_split")
+        if isinstance(split, Mapping):
+            lines.extend(
+                [
+                    f"  snerv_runtime_authority: `{split.get('launch_semantics')}`",
+                    "  snerv_receiver_training_evidence: "
+                    f"`{split.get('receiver_bound_training_evidence_usable')}`",
+                    "  snerv_full_source_forward_authority: "
+                    f"`{split.get('full_source_forward_authority_proven')}`",
+                ]
+            )
     lines.extend(["", "## Blockers", ""])
     blockers = list(report.get("blockers") or ())
     if blockers:
