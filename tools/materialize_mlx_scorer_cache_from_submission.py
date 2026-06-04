@@ -251,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         else None
     )
     if receiver_direct_cache:
-        _validate_archive_without_extracting(archive)
+        _validate_archive_without_extracting(archive, validate_members=False)
         inflate_elapsed = 0.0
     elif inflate_executed:
         members = _extract_archive(archive, extracted_dir)
@@ -560,6 +560,18 @@ def _write_direct_receiver_cache(
             archive_sha256=archive_sha256,
             pair_indices_filter=pair_indices_filter,
         )
+    if packet_bytes.startswith(b"SNAR1"):
+        return _write_snerv_direct_cache_from_payload(
+            archive,
+            output_cache,
+            member_name=member_name,
+            packet_bytes=packet_bytes,
+            max_pairs=max_pairs,
+            local_acquisition_max_pairs=local_acquisition_max_pairs,
+            batch_pairs=batch_pairs,
+            archive_sha256=archive_sha256,
+            pair_indices_filter=pair_indices_filter,
+        )
     return _write_hprc_direct_cache_from_payload(
         archive,
         output_cache,
@@ -726,6 +738,165 @@ def _write_hprc_direct_cache_from_payload(
         ]["sha256"],
         "candidate_cache_identity_mode": (
             "hprc_direct_receiver_render_cache_identity_audited_false_authority"
+        ),
+        **FALSE_AUTHORITY,
+    }
+    return report, manifest
+
+
+def _write_snerv_direct_cache_from_payload(
+    archive: Path,
+    output_cache: Path,
+    *,
+    member_name: str,
+    packet_bytes: bytes,
+    max_pairs: int | None,
+    local_acquisition_max_pairs: int | None,
+    batch_pairs: int,
+    archive_sha256: str,
+    pair_indices_filter: list[int] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    from tac.substrates.snerv_inverse_steg_carrier.archive import (
+        decode_snerv_archive_frames,
+        unpack_snerv_archive,
+    )
+
+    decoded = unpack_snerv_archive(packet_bytes)
+    raw_pair_count = int(decoded.metadata.get("n_pairs") or 0)
+    if raw_pair_count < 1:
+        raise SystemExit("SNeRV direct cache has no complete frame pairs")
+    if local_acquisition_max_pairs is not None:
+        raw_pair_count = min(raw_pair_count, int(local_acquisition_max_pairs))
+    selected_pair_indices = (
+        list(range(raw_pair_count))
+        if pair_indices_filter is None
+        else _validate_selected_pair_indices(pair_indices_filter, raw_pair_count=raw_pair_count)
+    )
+    if max_pairs is not None:
+        selected_pair_indices = selected_pair_indices[: int(max_pairs)]
+    pair_count = len(selected_pair_indices)
+    if pair_count < 1:
+        raise SystemExit("SNeRV direct cache has no complete frame pairs")
+
+    frames = decode_snerv_archive_frames(packet_bytes, clip_to_uint8_range=True)
+    if frames.ndim != 5 or frames.shape[1] != 2 or frames.shape[2] != 3:
+        raise SystemExit(f"SNeRV direct cache expected frames (pairs,2,3,H,W), got {frames.shape}")
+    if frames.shape[0] < raw_pair_count:
+        raise SystemExit(
+            f"SNeRV direct cache decoded {frames.shape[0]} pairs, expected at least {raw_pair_count}"
+        )
+    h, w = int(frames.shape[3]), int(frames.shape[4])
+    scorer_pair_indices = np.array(
+        [[2 * idx, 2 * idx + 1] for idx in selected_pair_indices],
+        dtype=np.int64,
+    )
+
+    def pair_batches():
+        for start in range(0, pair_count, int(batch_pairs)):
+            chunk_indices = selected_pair_indices[start : start + int(batch_pairs)]
+            chunk = frames[np.asarray(chunk_indices, dtype=np.int64)]
+            chunk = np.transpose(chunk, (0, 1, 3, 4, 2))
+            yield np.ascontiguousarray(np.rint(chunk).clip(0, 255).astype(np.uint8))
+
+    manifest = write_scorer_input_cache_from_pair_batches(
+        pair_batches(),
+        output_cache,
+        pair_count=pair_count,
+        pair_indices=scorer_pair_indices,
+        frame_shape_hwc=(h, w, 3),
+        source=str(archive),
+        source_kind="snerv_direct_receiver_render",
+        archive_sha256=archive_sha256,
+        inflated_outputs_aggregate_sha256=None,
+        batch_pairs=batch_pairs,
+        compute_raw_sha256=True,
+    )
+    manifest["inflated_outputs_aggregate_sha256"] = manifest.get("raw_sha256")
+    audit_path = output_cache / "snerv_direct_receiver_render_cache_identity_audit.json"
+    audit = {
+        "schema_version": "snerv_direct_receiver_render_cache_identity_audit.v1",
+        "verdict": "PASS_SNERV_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY",
+        "passed": True,
+        "created_by": "tools/materialize_mlx_scorer_cache_from_submission.py",
+        "allowed_use": "certify_snerv_direct_mlx_cache_rebuildability_for_disk_retention",
+        "forbidden_use": "score_claim_or_promotion_or_rank_or_exact_dispatch",
+        "cache": {
+            "archive_sha256": manifest.get("archive_sha256"),
+            "inflated_outputs_aggregate_sha256": manifest.get(
+                "inflated_outputs_aggregate_sha256"
+            ),
+            "raw_sha256": manifest.get("raw_sha256"),
+            "pair_count": manifest.get("pair_count"),
+            "hash_domain": manifest.get("hash_domain"),
+            "array_sha256": manifest.get("array_sha256"),
+        },
+        "source": {
+            "archive_path": str(archive),
+            "archive_sha256": archive_sha256,
+            "zip_member": member_name,
+            "archive_magic": "SNAR1",
+            "packet_sha256": decoded.packet_sha256,
+            "metadata": dict(decoded.metadata),
+        },
+        "direct_render": {
+            "raw_pair_count": raw_pair_count,
+            "selected_pair_count": int(pair_count),
+            "selected_pair_ranges": _format_pair_ranges(selected_pair_indices),
+            "pair_index_scope": (
+                "explicit_pair_ranges" if pair_indices_filter is not None else "prefix_from_zero"
+            ),
+            "frame_shape_hwc": [h, w, 3],
+            "batch_pairs": int(batch_pairs),
+            "max_pairs": max_pairs,
+            "local_acquisition_max_pairs": local_acquisition_max_pairs,
+            "raw_file_written": False,
+            "rebuilds_from_archive_bytes": True,
+            "lowering": "decode_snerv_archive_frames_nchw_to_uint8_hwc",
+        },
+        "receiver_proof_required_for_promotion": True,
+        **FALSE_AUTHORITY,
+    }
+    write_json(audit_path, audit)
+    manifest["snerv_direct_receiver_render_cache_identity_audit"] = {
+        "schema_version": audit["schema_version"],
+        "path": str(audit_path),
+        "sha256": _sha256(audit_path, prefix=0),
+        "verdict": audit["verdict"],
+        "passed": True,
+        "archive_path": str(archive),
+        "archive_sha256": archive_sha256,
+        **FALSE_AUTHORITY,
+    }
+    manifest["eligible_for_snerv_direct_rebuild_cleanup"] = True
+    write_json(output_cache / "manifest.json", manifest)
+    report = {
+        "schema": "snerv_direct_mlx_scorer_cache_render.v1",
+        "source_family": "snerv",
+        "archive_path": str(archive),
+        "archive_sha256": archive_sha256,
+        "zip_member": member_name,
+        "archive_magic": "SNAR1",
+        "packet_sha256": decoded.packet_sha256,
+        "raw_pair_count": raw_pair_count,
+        "cached_pair_count": int(manifest["pair_count"]),
+        "selected_pair_count": int(pair_count),
+        "selected_pair_ranges": _format_pair_ranges(selected_pair_indices),
+        "pair_index_scope": (
+            "explicit_pair_ranges" if pair_indices_filter is not None else "prefix_from_zero"
+        ),
+        "frame_shape_hwc": [h, w, 3],
+        "direct_render_raw_bytes": int(manifest["pair_count"]) * 2 * h * w * 3,
+        "direct_render_raw_pair_count": int(manifest["pair_count"]),
+        "direct_render_raw_sha256": manifest.get("raw_sha256"),
+        "direct_render_raw_sha256_scope": manifest.get("raw_sha256_scope"),
+        "raw_file_written": False,
+        "receiver_proof_required_for_promotion": True,
+        "identity_audit_path": str(audit_path),
+        "identity_audit_sha256": manifest[
+            "snerv_direct_receiver_render_cache_identity_audit"
+        ]["sha256"],
+        "candidate_cache_identity_mode": (
+            "snerv_direct_receiver_render_cache_identity_audited_false_authority"
         ),
         **FALSE_AUTHORITY,
     }
@@ -974,11 +1145,10 @@ def _read_single_member_zip(archive: Path) -> tuple[str, bytes]:
         payload_infos = [info for info in infos if Path(info.filename).name == "0.bin"]
         if len(payload_infos) != 1:
             raise SystemExit(
-                "--hprc-direct-cache requires exactly one archive member named "
+                "--receiver-direct-cache requires exactly one archive member named "
                 f"0.bin, got {[info.filename for info in infos]}"
             )
         info = payload_infos[0]
-        _validate_archive_members([item.filename for item in infos])
         return info.filename, zf.read(info)
 
 
@@ -1005,11 +1175,16 @@ def _is_relative_to(child: Path, parent: Path) -> bool:
     return True
 
 
-def _validate_archive_without_extracting(archive: Path) -> None:
+def _validate_archive_without_extracting(
+    archive: Path,
+    *,
+    validate_members: bool = True,
+) -> None:
     with zipfile.ZipFile(archive, "r") as zf:
         infos = zf.infolist()
         _validate_zip_container_integrity(archive, infos)
-        _validate_archive_members([info.filename for info in infos])
+        if validate_members:
+            _validate_archive_members([info.filename for info in infos])
 
 
 def _require_file(path: Path, label: str) -> None:

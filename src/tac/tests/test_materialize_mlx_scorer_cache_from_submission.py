@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.local_acceleration.mlx_preprocess import CAMERA_HW
 from tac.substrates._shared.inflate_runtime import (
     rgb_pair_to_uint8_frames,
@@ -25,6 +26,18 @@ from tac.substrates.hprc.learned_receiver import (
     build_compact_receiver_packet_from_lowres_frames,
     decode_compact_receiver_packet,
     render_compact_receiver_frame_batch,
+)
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    decode_snerv_archive_frames,
+    encode_decoder_payload,
+    encode_lf_metadata_payload,
+    encode_lf_quant_payload,
+    pack_snerv_archive,
+)
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    encode_frame_lf,
+    fit_hf_decoder_least_squares,
+    quantize_lf,
 )
 
 REPO = Path(__file__).resolve().parents[3]
@@ -618,7 +631,11 @@ def test_submission_mlx_cache_can_render_hi_nerv_direct_without_raw_scratch(
         "output_width": cfg.output_width,
     }
     packet_bytes = pack_hi_nerv_archive(
-        dict(model.state_dict()),
+        {
+            key: value
+            for key, value in model.state_dict().items()
+            if key not in {"latents_coarse", "latents_mid", "latents_fine"}
+        },
         model.latents_coarse.detach(),
         model.latents_mid.detach(),
         model.latents_fine.detach(),
@@ -714,4 +731,119 @@ def test_submission_mlx_cache_can_render_hi_nerv_direct_without_raw_scratch(
     assert manifest["pair_count"] == 1
     assert pair_indices.tolist() == [[2, 3]]
     assert manifest["raw_sha256"] == hashlib.sha256(expected_raw).hexdigest()
+    assert not (work_dir / "inflated").exists()
+
+
+def test_submission_mlx_cache_can_render_snerv_direct_without_raw_scratch(
+    tmp_path: Path,
+) -> None:
+    frames = np.zeros((1, 2, 3, 16, 16), dtype=np.float32)
+    frames[0, 0, 0] = np.arange(16, dtype=np.float32)[None, :]
+    frames[0, 1, 1] = np.arange(16, dtype=np.float32)[:, None] * 3.0
+    pyramids = [
+        encode_frame_lf(frames[pair, frame, channel], levels=1, wavelet="haar")
+        for pair in range(1)
+        for frame in range(2)
+        for channel in range(3)
+    ]
+    decoder = fit_hf_decoder_least_squares(pyramids, levels=1)
+    step_maps = [np.ones(pyr.lf.shape, dtype=np.float32) for pyr in pyramids]
+    step_packet = encode_step_maps(step_maps, bins=4)
+    q_planes = []
+    zeros = []
+    for pyr, steps in zip(pyramids, step_maps, strict=True):
+        q, _scale, zero = quantize_lf(pyr.lf, per_element_steps=steps)
+        q_planes.append(q)
+        zeros.append(zero)
+    packet_bytes = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=zeros),
+        lf_payload=encode_lf_quant_payload(q_planes),
+        decoder_payload=encode_decoder_payload(decoder),
+        step_map_packet=step_packet.packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+            "lf_plane_count": len(q_planes),
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+        },
+    ).packet
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", packet_bytes)
+
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "inflate.sh").write_text("#!/usr/bin/env bash\nexit 99\n")
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    (upstream / "public_test_video_names.txt").write_text("0.mkv\n", encoding="utf-8")
+    report = tmp_path / "report.json"
+    cache_dir = tmp_path / "cache"
+    work_dir = tmp_path / "work"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(TOOL),
+            "--archive",
+            str(archive),
+            "--submission-dir",
+            str(submission),
+            "--upstream-dir",
+            str(upstream),
+            "--video-names-file",
+            str(upstream / "public_test_video_names.txt"),
+            "--output-cache-dir",
+            str(cache_dir),
+            "--work-dir",
+            str(work_dir),
+            "--report-output",
+            str(report),
+            "--receiver-direct-cache",
+            "--batch-pairs",
+            "1",
+            "--allow-large-tensor-cache",
+            "--force",
+        ],
+        cwd=REPO,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    stdout = json.loads(result.stdout)
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    manifest = json.loads((cache_dir / "manifest.json").read_text(encoding="utf-8"))
+    decoded = decode_snerv_archive_frames(packet_bytes)
+    expected_raw = np.rint(np.transpose(decoded, (0, 1, 3, 4, 2))).clip(0, 255).astype(
+        np.uint8
+    )
+
+    assert stdout["cached_pair_count"] == 1
+    assert payload["inflate_executed"] is False
+    assert payload["receiver_direct_cache"] is True
+    assert payload["raw_path"] is None
+    assert payload["raw_pair_count"] == 1
+    assert payload["cached_pair_count"] == 1
+    assert payload["direct_receiver_cache_report"]["source_family"] == "snerv"
+    assert payload["direct_receiver_cache_report"]["archive_magic"] == "SNAR1"
+    assert (
+        payload["candidate_cache_identity_mode"]
+        == "snerv_direct_receiver_render_cache_identity_audited_false_authority"
+    )
+    stamp = manifest["snerv_direct_receiver_render_cache_identity_audit"]
+    audit = json.loads(Path(stamp["path"]).read_text(encoding="utf-8"))
+    assert stamp["verdict"] == "PASS_SNERV_DIRECT_RECEIVER_RENDER_CACHE_IDENTITY"
+    assert stamp["score_claim"] is False
+    assert audit["source"]["archive_magic"] == "SNAR1"
+    assert audit["cache"]["raw_sha256"] == manifest["raw_sha256"]
+    assert audit["direct_render"]["lowering"] == (
+        "decode_snerv_archive_frames_nchw_to_uint8_hwc"
+    )
+    assert manifest["source_kind"] == "snerv_direct_receiver_render"
+    assert manifest["pair_count"] == 1
+    assert manifest["raw_sha256"] == hashlib.sha256(expected_raw.tobytes()).hexdigest()
     assert not (work_dir / "inflated").exists()
