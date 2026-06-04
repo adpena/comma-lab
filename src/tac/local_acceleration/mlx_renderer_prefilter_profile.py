@@ -168,6 +168,7 @@ def build_mlx_renderer_prefilter_profile_loaded(
     seg_sum = 0.0
     count = 0
     output_hashes = _OutputHashes()
+    input_stats = _ScorerInputDistributionStats()
     chunk_elapsed_seconds: list[float] = []
     chunk_pairs_per_second: list[float] = []
 
@@ -190,6 +191,12 @@ def build_mlx_renderer_prefilter_profile_loaded(
             ref_pair,
             resize_nhwc_align_corners_false=resize_nhwc_align_corners_false,
             rgb_to_yuv6_mlx=rgb_to_yuv6_mlx,
+        )
+        input_stats.update(
+            candidate_posenet_yuv6=np.asarray(cand_pose, dtype=np.float32),
+            reference_posenet_yuv6=np.asarray(ref_pose, dtype=np.float32),
+            candidate_segnet_rgb=np.asarray(cand_seg, dtype=np.float32),
+            reference_segnet_rgb=np.asarray(ref_seg, dtype=np.float32),
         )
         cand_out = adapter(cand_pose, cand_seg)
         ref_out = adapter(ref_pose, ref_seg)
@@ -289,6 +296,8 @@ def build_mlx_renderer_prefilter_profile_loaded(
         blockers.append("partial_coverage_mlx_replay_not_score_authority")
     if batch_pairs != 1:
         blockers.append("mlx_profile_batch_pairs_not_singleton")
+    scorer_input_distribution = input_stats.summary()
+    blockers.extend(_scorer_input_distribution_blockers(scorer_input_distribution))
     return {
         "schema": HPRC_MLX_COMPONENT_PROFILE_SCHEMA,
         "producer": "tac.local_acceleration.mlx_renderer_prefilter_profile",
@@ -372,6 +381,7 @@ def build_mlx_renderer_prefilter_profile_loaded(
             **FALSE_AUTHORITY,
         },
         "component_output_hashes": output_hashes.hexdigests(),
+        "scorer_input_distribution": scorer_input_distribution,
         "section_value_rows": [],
         "blockers": blockers,
         "authority_status": (
@@ -431,6 +441,183 @@ def write_mlx_renderer_prefilter_failure_profile(
         encoding="utf-8",
     )
     return profile
+
+
+class _OnlineArrayStats:
+    def __init__(self) -> None:
+        self.count = 0
+        self.sum = 0.0
+        self.sumsq = 0.0
+        self.min_value = math.inf
+        self.max_value = -math.inf
+        self.saturated_low_count = 0
+        self.saturated_high_count = 0
+
+    def update(self, array: np.ndarray) -> None:
+        arr = np.asarray(array, dtype=np.float32)
+        if arr.size == 0:
+            return
+        self.count += int(arr.size)
+        self.sum += float(np.sum(arr, dtype=np.float64))
+        self.sumsq += float(np.sum(np.square(arr, dtype=np.float32), dtype=np.float64))
+        self.min_value = min(self.min_value, float(np.min(arr)))
+        self.max_value = max(self.max_value, float(np.max(arr)))
+        self.saturated_low_count += int(np.count_nonzero(arr <= 0.5))
+        self.saturated_high_count += int(np.count_nonzero(arr >= 254.5))
+
+    def summary(self) -> dict[str, Any]:
+        if self.count <= 0:
+            return {
+                "count": 0,
+                "mean": None,
+                "std": None,
+                "min": None,
+                "max": None,
+                "saturation_fraction": None,
+            }
+        mean = self.sum / float(self.count)
+        variance = max(0.0, self.sumsq / float(self.count) - mean * mean)
+        saturated = self.saturated_low_count + self.saturated_high_count
+        return {
+            "count": int(self.count),
+            "mean": mean,
+            "std": math.sqrt(variance),
+            "min": self.min_value,
+            "max": self.max_value,
+            "saturation_fraction": float(saturated) / float(self.count),
+        }
+
+
+class _OnlineAbsDiffStats:
+    def __init__(self) -> None:
+        self.count = 0
+        self.sum_abs = 0.0
+        self.max_abs = 0.0
+
+    def update(self, candidate: np.ndarray, reference: np.ndarray) -> None:
+        cand = np.asarray(candidate, dtype=np.float32)
+        ref = np.asarray(reference, dtype=np.float32)
+        if cand.shape != ref.shape:
+            raise ValueError(
+                "candidate/reference scorer-input shapes differ: "
+                f"{cand.shape} != {ref.shape}"
+            )
+        if cand.size == 0:
+            return
+        diff = np.abs(cand - ref)
+        self.count += int(diff.size)
+        self.sum_abs += float(np.sum(diff, dtype=np.float64))
+        self.max_abs = max(self.max_abs, float(np.max(diff)))
+
+    def summary(self) -> dict[str, Any]:
+        if self.count <= 0:
+            return {"count": 0, "mean_abs": None, "max_abs": None}
+        return {
+            "count": int(self.count),
+            "mean_abs": self.sum_abs / float(self.count),
+            "max_abs": self.max_abs,
+        }
+
+
+class _ScorerInputDistributionStats:
+    def __init__(self) -> None:
+        self.candidate_posenet_yuv6 = _OnlineArrayStats()
+        self.reference_posenet_yuv6 = _OnlineArrayStats()
+        self.posenet_yuv6_absdiff = _OnlineAbsDiffStats()
+        self.candidate_segnet_rgb = _OnlineArrayStats()
+        self.reference_segnet_rgb = _OnlineArrayStats()
+        self.segnet_rgb_absdiff = _OnlineAbsDiffStats()
+
+    def update(
+        self,
+        *,
+        candidate_posenet_yuv6: np.ndarray,
+        reference_posenet_yuv6: np.ndarray,
+        candidate_segnet_rgb: np.ndarray,
+        reference_segnet_rgb: np.ndarray,
+    ) -> None:
+        self.candidate_posenet_yuv6.update(candidate_posenet_yuv6)
+        self.reference_posenet_yuv6.update(reference_posenet_yuv6)
+        self.posenet_yuv6_absdiff.update(
+            candidate_posenet_yuv6,
+            reference_posenet_yuv6,
+        )
+        self.candidate_segnet_rgb.update(candidate_segnet_rgb)
+        self.reference_segnet_rgb.update(reference_segnet_rgb)
+        self.segnet_rgb_absdiff.update(candidate_segnet_rgb, reference_segnet_rgb)
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "schema": "mlx_renderer_prefilter_scorer_input_distribution.v1",
+            "value_domain": "scorer_input_rgb_yuv6_byte_scale_0_255",
+            "candidate_segnet_last_rgb": self.candidate_segnet_rgb.summary(),
+            "reference_segnet_last_rgb": self.reference_segnet_rgb.summary(),
+            "segnet_last_rgb_absdiff": self.segnet_rgb_absdiff.summary(),
+            "candidate_posenet_yuv6_pair": self.candidate_posenet_yuv6.summary(),
+            "reference_posenet_yuv6_pair": self.reference_posenet_yuv6.summary(),
+            "posenet_yuv6_pair_absdiff": self.posenet_yuv6_absdiff.summary(),
+            "quality_blocker_thresholds": {
+                "segnet_last_rgb_mean_absdiff_gt": 50.0,
+                "posenet_yuv6_pair_mean_absdiff_gt": 50.0,
+                "candidate_to_reference_std_ratio_gt": 4.0,
+                "candidate_saturation_delta_gt": 0.15,
+            },
+            **FALSE_AUTHORITY,
+        }
+
+
+def _scorer_input_distribution_blockers(
+    distribution: dict[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    seg_candidate = distribution.get("candidate_segnet_last_rgb") or {}
+    seg_reference = distribution.get("reference_segnet_last_rgb") or {}
+    pose_candidate = distribution.get("candidate_posenet_yuv6_pair") or {}
+    pose_reference = distribution.get("reference_posenet_yuv6_pair") or {}
+    seg_absdiff = distribution.get("segnet_last_rgb_absdiff") or {}
+    pose_absdiff = distribution.get("posenet_yuv6_pair_absdiff") or {}
+
+    if _float_or_none(seg_absdiff.get("mean_abs")) is not None and float(
+        seg_absdiff["mean_abs"]
+    ) > 50.0:
+        blockers.append("scorer_input_segnet_last_rgb_mean_absdiff_gt_50")
+    if _float_or_none(pose_absdiff.get("mean_abs")) is not None and float(
+        pose_absdiff["mean_abs"]
+    ) > 50.0:
+        blockers.append("scorer_input_posenet_yuv6_pair_mean_absdiff_gt_50")
+    if _std_ratio(seg_candidate, seg_reference) > 4.0:
+        blockers.append("scorer_input_segnet_last_rgb_std_ratio_gt_4")
+    if _std_ratio(pose_candidate, pose_reference) > 4.0:
+        blockers.append("scorer_input_posenet_yuv6_pair_std_ratio_gt_4")
+    if _saturation_delta(seg_candidate, seg_reference) > 0.15:
+        blockers.append("scorer_input_segnet_last_rgb_saturation_delta_gt_0_15")
+    if _saturation_delta(pose_candidate, pose_reference) > 0.15:
+        blockers.append("scorer_input_posenet_yuv6_pair_saturation_delta_gt_0_15")
+    return blockers
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _std_ratio(candidate: dict[str, Any], reference: dict[str, Any]) -> float:
+    cand_std = _float_or_none(candidate.get("std"))
+    ref_std = _float_or_none(reference.get("std"))
+    if cand_std is None or ref_std is None or ref_std <= 1.0e-12:
+        return 0.0
+    return cand_std / ref_std
+
+
+def _saturation_delta(candidate: dict[str, Any], reference: dict[str, Any]) -> float:
+    cand_sat = _float_or_none(candidate.get("saturation_fraction"))
+    ref_sat = _float_or_none(reference.get("saturation_fraction"))
+    if cand_sat is None or ref_sat is None:
+        return 0.0
+    return cand_sat - ref_sat
 
 
 class _OutputHashes:

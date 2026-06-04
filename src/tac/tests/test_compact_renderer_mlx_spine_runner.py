@@ -211,6 +211,227 @@ def _write_snerv_binary_profile_receiver_feedback(
     return profile
 
 
+def test_scorer_error_pair_curriculum_from_xray_rows_builds_weights(
+    tmp_path: Path,
+) -> None:
+    report = tmp_path / "xray.json"
+    report.write_text(
+        json.dumps(
+            {
+                "schema": "mlx_prefilter_error_anatomy.v1",
+                "rows": [
+                    {
+                        "pair_idx": 5,
+                        "component_score_no_rate": 2.0,
+                        "seg_score_contribution": 1.25,
+                        "pose_score_contribution": 0.75,
+                    },
+                    {
+                        "pair_idx": 9,
+                        "component_score_no_rate": 4.0,
+                        "seg_score_contribution": 0.0,
+                        "pose_score_contribution": 4.0,
+                    },
+                    {"pair_idx": 11, "component_score_no_rate": -1.0},
+                ],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scorer_error_pair_curriculum_json=report,
+        auto_scorer_error_pair_curriculum=False,
+        mlx_profile=(),
+        scorer_error_pair_curriculum_default_weight=0.5,
+        scorer_error_pair_curriculum_gain=3.0,
+        scorer_error_pair_curriculum_field="component_score_no_rate",
+        scorer_error_pair_curriculum_top_k=0,
+        repo_root=REPO_ROOT,
+    )
+
+    weights, metadata = runner_mod._scorer_error_pair_curriculum_from_args(
+        args,
+        output_dir=tmp_path / "out",
+    )
+
+    assert weights == {9: pytest.approx(3.5), 5: pytest.approx(2.0)}
+    assert metadata["enabled"] is True
+    assert metadata["field"] == "component_score_no_rate"
+    assert metadata["weighted_pair_count"] == 2
+    geometry = metadata["distortion_geometry"]
+    assert geometry["full_lagrangian_is_final_arbiter"] is True
+    assert geometry["segnet_domain"] == "last_frame_spatial_argmax_boundary_geometry"
+    assert metadata["score_claim"] is False
+
+
+def test_scorer_error_pair_curriculum_honors_axis_field_and_top_k(
+    tmp_path: Path,
+) -> None:
+    report = tmp_path / "xray.jsonl"
+    report.write_text(
+        "\n".join(
+            [
+                json.dumps({"pair_idx": 1, "pose_score_contribution": 2.0}),
+                json.dumps({"pair_idx": 2, "pose_score_contribution": 8.0}),
+                json.dumps({"pair_idx": 3, "pose_score_contribution": 4.0}),
+            ]
+        ),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scorer_error_pair_curriculum_json=report,
+        auto_scorer_error_pair_curriculum=False,
+        mlx_profile=(),
+        scorer_error_pair_curriculum_default_weight=1.0,
+        scorer_error_pair_curriculum_gain=2.0,
+        scorer_error_pair_curriculum_field="pose_score_contribution",
+        scorer_error_pair_curriculum_top_k=1,
+        repo_root=REPO_ROOT,
+    )
+
+    weights, metadata = runner_mod._scorer_error_pair_curriculum_from_args(
+        args,
+        output_dir=tmp_path / "out",
+    )
+
+    assert weights == {2: pytest.approx(3.0)}
+    assert metadata["field"] == "pose_score_contribution"
+    assert metadata["top_k"] == 1
+    assert metadata["top_weighted_pairs"][0]["pair_idx"] == 2
+
+
+def test_scorer_error_pair_curriculum_consumes_direct_vjp_bundle(
+    tmp_path: Path,
+) -> None:
+    bundle = tmp_path / "direct_full_scorer_vjp_bundle.json"
+    bundle.write_text(
+        json.dumps(
+            {
+                "schema": "direct_full_scorer_vjp_bundle.v1",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+                "exact_reduction_contract": {
+                    "single_update_after_all_shards_reduce": True,
+                    "budget_spend_allowed_before_full_reduction": False,
+                    "full_reduction_complete": True,
+                },
+                "gradient_quality_blockers": [],
+                "shards": [
+                    {
+                        "backend": "mlx",
+                        "device_type": "gpu",
+                        "pair_start": 10,
+                        "pair_end": 13,
+                        "loss_contribution": 0.125,
+                        "gradient_quality_blockers": [],
+                        "posenet_yuv6_pair_grad": {
+                            "per_pair_l2": [0.25, 7.5, 0.75],
+                        },
+                        "segnet_last_rgb_grad": {
+                            "per_pair_l2": [1.75, 0.5, 0.25],
+                        },
+                        "top_pairs_by_grad_l2": [
+                            {
+                                "pair_idx": 10,
+                                "combined_grad_l2": 2.0,
+                                "pose_grad_l2": 0.25,
+                                "seg_grad_l2": 1.75,
+                            },
+                            {
+                                "pair_idx": 11,
+                                "combined_grad_l2": 8.0,
+                                "pose_grad_l2": 7.5,
+                                "seg_grad_l2": 0.5,
+                            },
+                        ],
+                    }
+                ],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scorer_error_pair_curriculum_json=bundle,
+        auto_scorer_error_pair_curriculum=False,
+        mlx_profile=(),
+        scorer_error_pair_curriculum_default_weight=0.25,
+        scorer_error_pair_curriculum_gain=4.0,
+        scorer_error_pair_curriculum_field="pose_grad_l2",
+        scorer_error_pair_curriculum_top_k=0,
+        repo_root=REPO_ROOT,
+    )
+
+    weights, metadata = runner_mod._scorer_error_pair_curriculum_from_args(
+        args,
+        output_dir=tmp_path / "out",
+    )
+
+    assert weights == {
+        11: pytest.approx(4.25),
+        12: pytest.approx(0.25 + 4.0 * (0.75 / 7.5)),
+        10: pytest.approx(0.25 + 4.0 * (0.25 / 7.5)),
+    }
+    assert metadata["enabled"] is True
+    assert metadata["field"] == "pose_grad_l2"
+    assert metadata["input_row_count"] == 3
+    assert metadata["distortion_geometry"]["selected_axis_field"] == "pose_grad_l2"
+    assert metadata["score_claim"] is False
+    assert metadata["promotion_eligible"] is False
+
+
+def test_scorer_error_pair_curriculum_rejects_partial_direct_vjp_bundle(
+    tmp_path: Path,
+) -> None:
+    bundle = tmp_path / "partial_direct_full_scorer_vjp_bundle.json"
+    bundle.write_text(
+        json.dumps(
+            {
+                "schema": "direct_full_scorer_vjp_bundle.v1",
+                "exact_reduction_contract": {
+                    "full_reduction_complete": False,
+                    "budget_spend_allowed_before_full_reduction": False,
+                },
+                "gradient_quality_blockers": [],
+                "shards": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="exact full-video reduction"):
+        runner_mod._load_scorer_error_pair_rows(bundle)
+
+
+def test_scorer_error_pair_curriculum_rejects_quality_blocked_direct_vjp_bundle(
+    tmp_path: Path,
+) -> None:
+    bundle = tmp_path / "blocked_direct_full_scorer_vjp_bundle.json"
+    bundle.write_text(
+        json.dumps(
+            {
+                "schema": "direct_full_scorer_vjp_bundle.v1",
+                "exact_reduction_contract": {
+                    "full_reduction_complete": True,
+                    "budget_spend_allowed_before_full_reduction": False,
+                },
+                "gradient_quality_blockers": [
+                    "segnet_last_rgb_gradient_abs_max_exceeds_sanity_limit"
+                ],
+                "shards": [],
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="gradient quality blockers"):
+        runner_mod._load_scorer_error_pair_rows(bundle)
+
+
 def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     plane_count = int(pairs) * 2 * 3
     lf_planes = [
@@ -356,6 +577,13 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         scorer_upstream_dir=REPO_ROOT / "upstream",
         modelsize_candidate={"candidate_id": "snerv-prefilter-test"},
         prioritized_pair_indices=(3, 5),
+        scorer_error_pair_sampling_weights={5: 2.0},
+        scorer_error_pair_curriculum={
+            "schema": "test_scorer_error_pair_curriculum.v1",
+            "enabled": True,
+            "field": "component_score_no_rate",
+            "default_weight": 1.0,
+        },
         repo_root=REPO_ROOT,
         allow_overwrite=False,
         retain_receiver_output=False,
@@ -382,6 +610,10 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         score_aware_long_training_grad_clip_max_norm=None,
         score_aware_long_training_weight_decay=0.01,
         score_aware_long_training_eval_roundtrip_ste=True,
+        checkpoint_retention_keep_last_n=2,
+        checkpoint_retention_keep_best_n=1,
+        checkpoint_retention_keep_every_n_epochs=None,
+        checkpoint_retention_cold_store_roots=(),
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
         pose_distillation_loss="huber",
@@ -413,6 +645,10 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured["mlx_prefilter_scorer_batch_pairs"] == 4
     assert captured["mlx_prefilter_progress_every"] == 7
     assert captured["prioritized_pair_indices"] == (3, 5)
+    assert captured["scorer_error_pair_sampling_weights"] == {5: 2.0}
+    assert captured["scorer_error_pair_curriculum"]["field"] == (
+        "component_score_no_rate"
+    )
     assert captured["score_aware_long_training_optimizer"] == "pact_muon_adamw"
     assert captured["score_aware_long_training_pr95_faithful_curriculum"] is True
     assert out["executed"] is True
@@ -423,6 +659,10 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         "local_mlx_prefilter_progress.jsonl"
     )
     assert out["local_mlx_prefilter_profile"]["scorer_batch_pairs"] == 4
+    assert out["scorer_error_pair_curriculum"][
+        "consumed_by_native_mlx_train_export"
+    ] is True
+    assert out["scorer_error_pair_curriculum"]["weighted_pair_count"] == 1
     assert out["native_mlx_full600_campaign_ready"] is True
     assert out["score_claim"] is False
 
@@ -3187,10 +3427,73 @@ def test_byte_cap_controller_exploits_measured_compression_headroom() -> None:
 
     controller = attached[0]["byte_cap_controller"]
     assert controller["prediction_rule"] == (
-        "max_observed_archive_to_nominal_ratio_or_additive_overhead"
+        "max_observed_archive_to_nominal_ratio_or_additive_overhead_plus_loo_residual_guard"
     )
+    assert controller["calibration_residual_guard_bytes"] == 0
     assert controller["predicted_archive_bytes"] == 90
     assert controller["predicted_under_hard_byte_ceiling"] is True
+
+
+def test_byte_cap_controller_uses_leave_one_out_residual_guard() -> None:
+    feedback_rows = [
+        {
+            "row_id": "early_a",
+            "family": "hi_nerv",
+            "nominal_total_payload_bytes": 177_554,
+            "measured_archive_bytes": 214_187,
+            "decoder_codec": "int7_mixed",
+            "receiver_proof_ready": True,
+        },
+        {
+            "row_id": "early_b",
+            "family": "hi_nerv",
+            "nominal_total_payload_bytes": 177_554,
+            "measured_archive_bytes": 215_512,
+            "decoder_codec": "int7_mixed",
+            "receiver_proof_ready": True,
+        },
+        {
+            "row_id": "final_overcap",
+            "family": "hi_nerv",
+            "nominal_total_payload_bytes": 138_998,
+            "measured_archive_bytes": 178_479,
+            "decoder_codec": "int7_mixed",
+            "receiver_proof_ready": True,
+        },
+    ]
+
+    attached = runner_mod._attach_byte_cap_controller_predictions(
+        [
+            {
+                "candidate_id": "too_tight",
+                "family": "hi_nerv",
+                "hard_byte_ceiling": 178_000,
+                "nominal_total_payload_bytes": 137_188,
+                "decoder_codec": "int7_mixed",
+                "nominal_under_ceiling": True,
+            },
+            {
+                "candidate_id": "guarded",
+                "family": "hi_nerv",
+                "hard_byte_ceiling": 178_000,
+                "nominal_total_payload_bytes": 136_900,
+                "decoder_codec": "int7_mixed",
+                "nominal_under_ceiling": True,
+            },
+        ],
+        family="hi_nerv",
+        byte_cap_feedback_rows=feedback_rows,
+    )
+
+    by_id = {row["candidate_id"]: row for row in attached}
+    tight = by_id["too_tight"]["byte_cap_controller"]
+    guarded = by_id["guarded"]["byte_cap_controller"]
+    assert tight["calibration_residual_guard_bytes"] == 1_523
+    assert tight["predicted_archive_bytes"] == 178_192
+    assert tight["predicted_under_hard_byte_ceiling"] is False
+    assert guarded["calibration_residual_guard_bytes"] == 1_523
+    assert guarded["predicted_archive_bytes"] == 177_904
+    assert guarded["predicted_under_hard_byte_ceiling"] is True
 
 
 def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
@@ -3220,8 +3523,10 @@ def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
 
     controller = attached[0]["byte_cap_controller"]
     assert controller["predicted_archive_bytes"] == 80
-    assert controller["predicted_under_hard_byte_ceiling"] is True
+    assert controller["predicted_under_hard_byte_ceiling"] is None
     assert controller["prediction_rule"] == "nominal_payload_bytes_uncalibrated"
+    assert controller["prediction_authority"] == "uncalibrated_nominal_payload_diagnostic"
+    assert controller["calibrated_archive_prediction"] is False
     assert controller["calibration_observation_count"] == 0
     assert "byte_cap_controller_measured_archive_feedback_missing" in controller[
         "blockers"
@@ -3407,6 +3712,74 @@ def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
     ]
 
 
+def test_modelsize_byte_cap_feedback_loader_preserves_nested_required_nominal_bound(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "hinerv_export.json"
+    candidate = {
+        "candidate_id": "hinerv-row",
+        "family": "hi_nerv",
+        "num_pairs": 600,
+        "hard_byte_ceiling": 178_000,
+        "nominal_total_payload_bytes": 138_998,
+        "decoder_codec": "int7_mixed",
+    }
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv-row",
+                "archive_bytes": 178_479,
+                "decoder_codec": "int7_mixed",
+                "receiver_proof_ready": True,
+                "modelsize_candidate": candidate,
+                "modelsize_byte_cap_feedback_row": {
+                    "schema": "nerv_modelsize_byte_cap_feedback_row.v1",
+                    "family": "hi_nerv",
+                    "candidate_id": "hinerv-row",
+                    "measured_archive_bytes": 178_479,
+                    "nominal_total_payload_bytes": 138_998,
+                    "hard_byte_ceiling": 178_000,
+                    "decoder_codec": "int7_mixed",
+                    "modelsize_candidate": candidate,
+                    "calibrated_archive_overrun_bytes": 479,
+                    "required_nominal_payload_bytes_max": 138_624,
+                    "hard_byte_ceiling_measurement_bypass_enabled": True,
+                    "receiver_closed": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = runner_mod._load_modelsize_byte_cap_feedback_rows([path])
+
+    assert rows == [
+        {
+            "family": "hi_nerv",
+            "row_id": "hinerv-row",
+            "candidate_id": "hinerv-row",
+            "measured_archive_bytes": 178_479,
+            "nominal_total_payload_bytes": 138_998,
+            "hard_byte_ceiling": 178_000,
+            "decoder_codec": "int7_mixed",
+            "calibrated_archive_overrun_bytes": 479,
+            "required_nominal_payload_bytes_max": 138_624,
+            "hard_byte_ceiling_measurement_bypass_enabled": True,
+            "source_bound_controls": {
+                "family": "hi_nerv",
+                "num_pairs": 600,
+                "hard_byte_ceiling": 178_000,
+                "decoder_codec": "int7_mixed",
+            },
+            "receiver_closed": True,
+            "receiver_closed_status": "inline_receiver_closed",
+            "source_path": path.resolve(strict=False).as_posix(),
+        }
+    ]
+
+
 def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_over_packet_bytes(
     tmp_path: Path,
 ) -> None:
@@ -3553,14 +3926,26 @@ def test_modelsize_byte_cap_feedback_loader_accepts_snerv_binary_profile_with_re
             "measured_archive_bytes": 91_445,
             "nominal_total_payload_bytes": scalar["nominal_total_payload_bytes"],
             "hard_byte_ceiling": 178_000,
-            "decoder_codec": "int8_symmetric",
-            "source_bound_controls": runner_mod._byte_cap_candidate_match_controls(
-                scalar
-            ),
-            "receiver_closed": True,
-            "source_path": profile.resolve(strict=False).as_posix(),
-        }
-    ]
+                "decoder_codec": "int8_symmetric",
+                "source_bound_controls": runner_mod._byte_cap_candidate_match_controls(
+                    scalar
+                ),
+                "receiver_closed": True,
+                "receiver_closed_status": "associated_receiver_proof",
+                "receiver_proof_path": (
+                    profile.parent.parent
+                    / "snerv_run"
+                    / "snerv_mlx_native_export"
+                    / "native_train_export"
+                    / "snerv_mlx_native_archive_bound_package"
+                    / "receiver_proof"
+                    / "snerv_inverse_steg_receiver_proof.json"
+                )
+                .resolve(strict=False)
+                .as_posix(),
+                "source_path": profile.resolve(strict=False).as_posix(),
+            }
+        ]
 
 
 def test_modelsize_byte_cap_feedback_loader_rejects_partial_snerv_binary_profile(
@@ -4271,13 +4656,35 @@ def test_compact_runner_checkpoint_controls_parse_and_validate() -> None:
     )
 
     assert args.checkpoint_interval_epochs == 17
+    assert (
+        args.checkpoint_retention_keep_last_n
+        == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N
+    )
+    assert (
+        args.checkpoint_retention_keep_best_n
+        == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N
+    )
     assert args.checkpoint_dir == Path("ssd/checkpoints")
     assert args.resume_from_checkpoint == Path("ssd/checkpoints/epoch000016.meta.json")
     assert runner_mod._resolve_checkpoint_interval_epochs(17, epochs=100) == 17
+    assert runner_mod._resolve_checkpoint_retention_keep_last_n(-1) is None
+    assert runner_mod._resolve_checkpoint_retention_keep_last_n(3) == 3
+    assert runner_mod._resolve_checkpoint_retention_keep_best_n(2) == 2
+    assert runner_mod._resolve_checkpoint_retention_keep_every_n_epochs(None) is None
+    assert (
+        runner_mod._resolve_checkpoint_retention_keep_every_n_epochs(1000)
+        == 1000
+    )
     with pytest.raises(CompactRendererMlxSpineRunnerError, match="positive integer"):
         runner_mod._resolve_checkpoint_interval_epochs(True, epochs=100)
     with pytest.raises(CompactRendererMlxSpineRunnerError, match="> 0"):
         runner_mod._resolve_checkpoint_interval_epochs(0, epochs=100)
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match=">= -1"):
+        runner_mod._resolve_checkpoint_retention_keep_last_n(-2)
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match=">= 0"):
+        runner_mod._resolve_checkpoint_retention_keep_best_n(-1)
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="> 0"):
+        runner_mod._resolve_checkpoint_retention_keep_every_n_epochs(0)
 
 
 def test_mlx_optimizer_controls_reject_weight_decay_for_no_decay_kind() -> None:

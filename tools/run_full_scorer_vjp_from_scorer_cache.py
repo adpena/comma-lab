@@ -649,7 +649,23 @@ def run_vjp(args: argparse.Namespace) -> dict[str, Any]:
                         if not args.summary_only
                         else metal_probe
                     )
-                    shard["gradient_backend_fallback"] = None
+                    if shard.get("gradient_quality_blockers"):
+                        full_metal_blockers = list(
+                            shard.get("gradient_quality_blockers") or []
+                        )
+                        shard = compute_mlx_on("cpu", summary_only=args.summary_only)
+                        shard["gradient_backend_fallback"] = {
+                            "schema": "direct_full_scorer_vjp_gradient_backend_fallback.v1",
+                            "from_backend": "mlx",
+                            "from_device_type": "gpu",
+                            "to_backend": "mlx",
+                            "to_device_type": "cpu",
+                            "reason": "metal_full_shard_gradient_quality_blocked",
+                            "metal_gradient_quality_blockers": full_metal_blockers,
+                            "metal_probe_loss_contribution": metal_probe.get("loss_contribution"),
+                        }
+                    else:
+                        shard["gradient_backend_fallback"] = None
             else:
                 shard = compute_mlx_on(args.device_type, summary_only=args.summary_only)
         else:

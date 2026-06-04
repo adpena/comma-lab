@@ -160,6 +160,8 @@ COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA = "compact_renderer_mlx_spine_runner.v1
 ACTIVE_CAMPAIGN_LOCK_SCHEMA = "compact_renderer_active_campaign_lock.v1"
 ACTIVE_FAMILY_PROCESS_REFUSAL_SCHEMA = "compact_renderer_active_family_process_refusal.v1"
 DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS = DEFAULT_CHECKPOINT_INTERVAL_EPOCHS
+DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N = 4
+DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N = 2
 RAW_NERV_MODELSIZE_BUDGET_SCHEMAS = frozenset(
     {"nerv_modelsize_budget.v1", "snerv_modelsize_budget.v1"}
 )
@@ -2152,10 +2154,45 @@ def _resolve_execute_modelsize_candidate(
                 int(row["hard_byte_ceiling"]),
             ),
         )
+        predicted_archive_bytes = _byte_cap_controller_predicted_archive_bytes(
+            best_uncalibrated
+        )
+        hard_byte_ceiling = int(best_uncalibrated["hard_byte_ceiling"])
+        normalized_snerv_adapter = (
+            normalize_snerv_model_size_adapter(snerv_model_size_adapter)
+            if snerv_model_size_adapter
+            else DEFAULT_SNERV_MODEL_SIZE_ADAPTER
+        )
+        if (
+            family == "snerv"
+            and snerv_targets
+            and normalized_snerv_adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
+            and predicted_archive_bytes is not None
+            and hard_byte_ceiling > 0
+            and float(predicted_archive_bytes) <= float(hard_byte_ceiling) * 1.10
+        ):
+            near_cap = dict(best_uncalibrated)
+            near_cap[
+                "modelsize_auto_selection_requires_measured_archive_feedback"
+            ] = True
+            near_cap["modelsize_auto_selection_warning"] = (
+                "snerv_spectra_adapter_uncalibrated_near_cap_candidate"
+            )
+            near_cap["modelsize_auto_selection_predicted_archive_bytes"] = int(
+                predicted_archive_bytes
+            )
+            near_cap["modelsize_auto_selection_hard_byte_ceiling"] = hard_byte_ceiling
+            near_cap["modelsize_auto_selection_over_cap_ratio"] = (
+                float(predicted_archive_bytes) / float(hard_byte_ceiling)
+            )
+            near_cap["promotion_eligible"] = False
+            near_cap["ready_for_exact_eval_dispatch"] = False
+            near_cap["score_claim"] = False
+            return near_cap
         raise CompactRendererMlxSpineRunnerError(
             f"{family}_modelsize_auto_no_candidate_under_hard_byte_ceiling: "
             f"best_candidate={best_uncalibrated.get('candidate_id')} "
-            f"predicted_archive_bytes={_byte_cap_controller_predicted_archive_bytes(best_uncalibrated)} "
+            f"predicted_archive_bytes={predicted_archive_bytes} "
             f"hard_byte_ceiling={best_uncalibrated.get('hard_byte_ceiling')} "
             "measured_archive_feedback_required"
         )
@@ -2347,21 +2384,26 @@ def _byte_cap_controller_prediction(
         blockers.append("byte_cap_controller_measured_archive_feedback_missing")
     predicted = nominal
     prediction_rule = "nominal_payload_bytes_uncalibrated"
+    residual_guard_bytes = 0
     if nominal is not None and observations:
-        max_ratio = max(float(row["archive_to_nominal_ratio"]) for row in observations)
-        max_delta = max(
-            int(row["archive_minus_nominal_bytes"]) for row in observations
+        predicted = _byte_cap_archive_prediction_from_observations(
+            nominal_payload_bytes=int(nominal),
+            observations=observations,
         )
-        predicted = max(
-            math.ceil(float(nominal) * max_ratio),
-            int(nominal) + int(max_delta),
+        residual_guard_bytes = _byte_cap_leave_one_out_underprediction_margin(
+            observations
         )
+        predicted += residual_guard_bytes
         prediction_rule = (
-            "max_observed_archive_to_nominal_ratio_or_additive_overhead"
+            "max_observed_archive_to_nominal_ratio_or_additive_overhead_plus_loo_residual_guard"
         )
+    calibrated_prediction = bool(observations and not blockers)
     headroom = None
     if predicted is not None and ceiling is not None:
         headroom = int(ceiling) - int(predicted)
+    predicted_under = None
+    if headroom is not None and calibrated_prediction:
+        predicted_under = headroom >= 0
     return {
         "schema": "compact_modelsize_byte_cap_controller.v1",
         "family": str(family),
@@ -2370,10 +2412,15 @@ def _byte_cap_controller_prediction(
         "nominal_payload_bytes": nominal,
         "predicted_archive_bytes": predicted,
         "predicted_headroom_bytes": headroom,
-        "predicted_under_hard_byte_ceiling": (
-            None if headroom is None else headroom >= 0
-        ),
+        "predicted_under_hard_byte_ceiling": predicted_under,
         "prediction_rule": prediction_rule,
+        "prediction_authority": (
+            "calibrated_measured_archive_feedback"
+            if calibrated_prediction
+            else "uncalibrated_nominal_payload_diagnostic"
+        ),
+        "calibrated_archive_prediction": calibrated_prediction,
+        "calibration_residual_guard_bytes": int(residual_guard_bytes),
         "calibration_observation_count": len(observations),
         "calibration_source": calibration.get("calibration_source"),
         "matching_observations": observations,
@@ -2387,6 +2434,51 @@ def _byte_cap_controller_prediction(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _byte_cap_archive_prediction_from_observations(
+    *,
+    nominal_payload_bytes: int,
+    observations: Sequence[Mapping[str, Any]],
+) -> int:
+    max_ratio = max(float(row["archive_to_nominal_ratio"]) for row in observations)
+    max_delta = max(int(row["archive_minus_nominal_bytes"]) for row in observations)
+    return max(
+        math.ceil(float(nominal_payload_bytes) * max_ratio),
+        int(nominal_payload_bytes) + int(max_delta),
+    )
+
+
+def _byte_cap_leave_one_out_underprediction_margin(
+    observations: Sequence[Mapping[str, Any]],
+) -> int:
+    """Return the worst receiver-proof archive underprediction in calibration.
+
+    The base predictor is the upper envelope of ratio and additive overhead.
+    A final-checkpoint export can still shift entropy enough to falsify that
+    envelope.  Leave-one-out residuals turn those falsifications into an
+    explicit guard band before the next byte spend.
+    """
+
+    if len(observations) < 2:
+        return 0
+    worst = 0
+    for index, row in enumerate(observations):
+        peers = [
+            peer
+            for peer_index, peer in enumerate(observations)
+            if peer_index != index
+        ]
+        if not peers:
+            continue
+        nominal = int(row["nominal_payload_bytes"])
+        measured = int(row["measured_archive_bytes"])
+        predicted = _byte_cap_archive_prediction_from_observations(
+            nominal_payload_bytes=nominal,
+            observations=peers,
+        )
+        worst = max(worst, measured - predicted)
+    return max(0, int(worst))
 
 
 def _byte_cap_calibration(
@@ -2463,6 +2555,16 @@ def _byte_cap_calibration(
                 "archive_to_nominal_ratio": float(measured) / float(nominal),
                 "source_bound_controls": _byte_cap_candidate_match_controls(row),
                 "receiver_closed": True,
+                **{
+                    key: row[key]
+                    for key in (
+                        "calibrated_archive_overrun_bytes",
+                        "required_nominal_payload_bytes_max",
+                        "hard_byte_ceiling_measurement_bypass_enabled",
+                        "hard_byte_ceiling_checked_after_export",
+                    )
+                    if key in row
+                },
             }
         )
     return {
@@ -3278,6 +3380,8 @@ def _run_snerv_native_mlx_export_attachment(
     scorer_upstream_dir: str | Path,
     modelsize_candidate: Mapping[str, Any] | None,
     prioritized_pair_indices: tuple[int, ...],
+    scorer_error_pair_sampling_weights: Mapping[int, float] | None,
+    scorer_error_pair_curriculum: Mapping[str, Any] | None,
     repo_root: str | Path,
     allow_overwrite: bool,
     retain_receiver_output: bool,
@@ -3304,6 +3408,10 @@ def _run_snerv_native_mlx_export_attachment(
     score_aware_long_training_grad_clip_max_norm: float | None,
     score_aware_long_training_weight_decay: float | None,
     score_aware_long_training_eval_roundtrip_ste: bool,
+    checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
+    checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
+    checkpoint_retention_keep_every_n_epochs: int | None = None,
+    checkpoint_retention_cold_store_roots: tuple[Path, ...] = (),
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
     pose_distillation_loss: str,
@@ -3371,6 +3479,15 @@ def _run_snerv_native_mlx_export_attachment(
             prioritized_pair_indices=tuple(
                 int(value) for value in prioritized_pair_indices
             ),
+            scorer_error_pair_sampling_weights={
+                int(pair): float(weight)
+                for pair, weight in dict(
+                    scorer_error_pair_sampling_weights or {}
+                ).items()
+            },
+            scorer_error_pair_curriculum=dict(
+                scorer_error_pair_curriculum or {}
+            ),
             retain_receiver_output=bool(retain_receiver_output),
             receiver_proof_timeout_seconds=int(receiver_proof_timeout_seconds),
             run_scorer_loop_qat=bool(run_scorer_loop_qat),
@@ -3412,6 +3529,18 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             score_aware_long_training_eval_roundtrip_ste=bool(
                 score_aware_long_training_eval_roundtrip_ste
+            ),
+            score_aware_long_training_checkpoint_retention_keep_last_n=(
+                checkpoint_retention_keep_last_n
+            ),
+            score_aware_long_training_checkpoint_retention_keep_best_n=(
+                checkpoint_retention_keep_best_n
+            ),
+            score_aware_long_training_checkpoint_retention_keep_every_n_epochs=(
+                checkpoint_retention_keep_every_n_epochs
+            ),
+            score_aware_long_training_checkpoint_retention_cold_store_roots=(
+                checkpoint_retention_cold_store_roots
             ),
             segnet_distillation_weight=float(segnet_distillation_weight),
             pose_distillation_weight=float(pose_distillation_weight),
@@ -3487,6 +3616,20 @@ def _run_snerv_native_mlx_export_attachment(
                 "pair_indices": [int(value) for value in prioritized_pair_indices],
                 "pair_count": len(prioritized_pair_indices),
                 "consumed_by_native_mlx_train_export": bool(prioritized_pair_indices),
+                "sampling_scope": "score_aware_training_batches_not_target_hydration",
+                **FALSE_AUTHORITY,
+            },
+            "scorer_error_pair_curriculum": {
+                **strip_candidate_curriculum_authority_fields(
+                    scorer_error_pair_curriculum or {}
+                ),
+                "schema": "compact_snerv_native_mlx_scorer_error_pair_curriculum.v1",
+                "consumed_by_native_mlx_train_export": bool(
+                    scorer_error_pair_sampling_weights
+                ),
+                "weighted_pair_count": len(
+                    dict(scorer_error_pair_sampling_weights or {})
+                ),
                 "sampling_scope": "score_aware_training_batches_not_target_hydration",
                 **FALSE_AUTHORITY,
             },
@@ -4100,6 +4243,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     recon_pixel_weight_path: str | Path | None = None,
     auto_joint_recon_pixel_weight: bool = False,
     recon_pixel_weight_normalize: str = "mean",
+    scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
+    scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
     run_native_mlx_export: bool = False,
     snerv_native_mlx_receiver_proof_timeout_seconds: int = 1800,
     snerv_native_mlx_decoder_train_steps: int = 0,
@@ -4113,6 +4258,10 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
     snerv_score_aware_long_training_eval_roundtrip_ste: bool = False,
+    checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
+    checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
+    checkpoint_retention_keep_every_n_epochs: int | None = None,
+    checkpoint_retention_cold_store_roots: tuple[Path, ...] = (),
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     pose_distillation_loss: str = "mse",
@@ -4179,6 +4328,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     prioritized_pair_indices = _normalize_nonnegative_int_sequence(
         prioritized_pair_indices
     )
+    scorer_error_pair_sampling_weights = {
+        int(pair): float(weight)
+        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+    }
+    scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
     if (
         _has_disallowed_existing_output_artifacts(
             out,
@@ -4526,6 +4680,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_pr95_muon_policy": str(
             snerv_score_aware_long_training_pr95_muon_policy
         ),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": (
+            checkpoint_retention_keep_last_n
+        ),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_best_n": int(
+            checkpoint_retention_keep_best_n
+        ),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs": (
+            checkpoint_retention_keep_every_n_epochs
+        ),
     }
     native_long_training_requested = bool(
         run_native_mlx_export and int(snerv_score_aware_long_training_epochs) > 0
@@ -4544,6 +4707,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             scorer_upstream_dir=scorer_upstream,
             modelsize_candidate=resolved_snerv_modelsize_candidate,
             prioritized_pair_indices=prioritized_pair_indices,
+            scorer_error_pair_sampling_weights=scorer_error_pair_sampling_weights,
+            scorer_error_pair_curriculum=scorer_error_pair_curriculum,
             repo_root=root,
             allow_overwrite=bool(allow_overwrite),
             retain_receiver_output=bool(keep_local_replay_inflated),
@@ -4593,6 +4758,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
             score_aware_long_training_eval_roundtrip_ste=bool(
                 snerv_score_aware_long_training_eval_roundtrip_ste
+            ),
+            checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+            checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+            checkpoint_retention_keep_every_n_epochs=(
+                checkpoint_retention_keep_every_n_epochs
+            ),
+            checkpoint_retention_cold_store_roots=(
+                checkpoint_retention_cold_store_roots
             ),
             segnet_distillation_weight=float(segnet_distillation_weight),
             pose_distillation_weight=float(pose_distillation_weight),
@@ -4761,6 +4934,16 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
             effective_mlx_profile_paths,
             root=root,
+        )
+        auto_xray_attachment = _write_mlx_prefilter_error_anatomy_attachment(
+            profile_path=(
+                _optional_existing(auto_mlx_prefilter_profile_path, base=root)
+                if auto_mlx_prefilter_profile_path
+                else None
+            ),
+            archive_path=snerv_mlx_native_export.get("archive_path"),
+            output_dir=out / "mlx_prefilter_error_anatomy",
+            label="snerv_native_direct_auto_post_export_xray",
         )
         has_full_video_mlx_prefilter = bool(
             mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
@@ -4950,6 +5133,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     if isinstance(auto_mlx_prefilter_profile, Mapping)
                     else None
                 ),
+                "mlx_prefilter_error_anatomy": auto_xray_attachment,
                 "score_aware_training": {
                     "schema": "compact_snerv_native_mlx_long_training_direct.v1",
                     "status": "native_mlx_long_training_direct_no_legacy_advisory",
@@ -5009,6 +5193,29 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                                 "snerv_mlx_native_prioritized_pair_hydration_"
                                 "not_consumed"
                             )
+                        ),
+                        "sampling_scope": "snerv_native_mlx_direct_training",
+                        **FALSE_AUTHORITY,
+                    },
+                    "scorer_error_pair_curriculum": {
+                        **strip_candidate_curriculum_authority_fields(
+                            scorer_error_pair_curriculum
+                        ),
+                        "schema": "compact_snerv_score_aware_scorer_error_pair_curriculum.v1",
+                        "consumed_by_native_mlx_export": bool(
+                            scorer_error_pair_sampling_weights
+                            and (
+                                (
+                                    snerv_mlx_native_export.get(
+                                        "scorer_error_pair_curriculum"
+                                    )
+                                    or {}
+                                ).get("consumed_by_native_mlx_train_export")
+                                is True
+                            )
+                        ),
+                        "weighted_pair_count": len(
+                            scorer_error_pair_sampling_weights
                         ),
                         "sampling_scope": "snerv_native_mlx_direct_training",
                         **FALSE_AUTHORITY,
@@ -5171,6 +5378,17 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
         effective_mlx_profile_paths,
         root=root,
+    )
+    resolved_auto_mlx_prefilter_profile_path = (
+        _optional_existing(auto_mlx_prefilter_profile_path, base=root)
+        if auto_mlx_prefilter_profile_path
+        else None
+    )
+    auto_xray_attachment = _write_mlx_prefilter_error_anatomy_attachment(
+        profile_path=resolved_auto_mlx_prefilter_profile_path,
+        archive_path=snerv_mlx_native_export.get("archive_path") or archive_path,
+        output_dir=out / "mlx_prefilter_error_anatomy",
+        label="snerv_auto_post_export_xray",
     )
     has_full_video_mlx_prefilter = bool(
         mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
@@ -5366,6 +5584,15 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_pr95_muon_policy": str(
             snerv_score_aware_long_training_pr95_muon_policy
         ),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": (
+            checkpoint_retention_keep_last_n
+        ),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_best_n": int(
+            checkpoint_retention_keep_best_n
+        ),
+        "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs": (
+            checkpoint_retention_keep_every_n_epochs
+        ),
     }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
@@ -5375,6 +5602,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         scorer_upstream_dir=scorer_upstream,
         modelsize_candidate=resolved_snerv_modelsize_candidate,
         prioritized_pair_indices=prioritized_pair_indices,
+        scorer_error_pair_sampling_weights=scorer_error_pair_sampling_weights,
+        scorer_error_pair_curriculum=scorer_error_pair_curriculum,
         repo_root=root,
         allow_overwrite=bool(allow_overwrite),
         retain_receiver_output=bool(keep_local_replay_inflated),
@@ -5420,6 +5649,14 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         score_aware_long_training_eval_roundtrip_ste=bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
+        ),
+        checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+        checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+        checkpoint_retention_keep_every_n_epochs=(
+            checkpoint_retention_keep_every_n_epochs
+        ),
+        checkpoint_retention_cold_store_roots=(
+            checkpoint_retention_cold_store_roots
         ),
         segnet_distillation_weight=float(segnet_distillation_weight),
         pose_distillation_weight=float(pose_distillation_weight),
@@ -5772,6 +6009,31 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     ),
                     **FALSE_AUTHORITY,
                 },
+                "scorer_error_pair_curriculum": {
+                    **strip_candidate_curriculum_authority_fields(
+                        scorer_error_pair_curriculum
+                    ),
+                    "schema": "compact_snerv_score_aware_scorer_error_pair_curriculum.v1",
+                    "consumed_by_mlx_native_export": bool(
+                        scorer_error_pair_sampling_weights
+                        and (
+                            (
+                                snerv_mlx_native_export.get(
+                                    "scorer_error_pair_curriculum"
+                                )
+                                or {}
+                            ).get("consumed_by_native_mlx_train_export")
+                            is True
+                        )
+                    ),
+                    "weighted_pair_count": len(
+                        scorer_error_pair_sampling_weights
+                    ),
+                    "sampling_scope": (
+                        "snerv_mlx_native_training_batches_when_attached"
+                    ),
+                    **FALSE_AUTHORITY,
+                },
                 "scorer_loop_component_guard_mode": str(
                     snerv_scorer_loop_component_guard_mode
                 ),
@@ -5877,6 +6139,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 "ready_for_exact_eval_dispatch": False,
             },
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
+            "mlx_prefilter_error_anatomy": auto_xray_attachment,
             "mlx_profile_paths": [
                 _resolve(path, base=root).as_posix()
                 for path in effective_mlx_profile_paths
@@ -7466,6 +7729,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_progress_every: int = 50,
     telemetry_flush_interval_epochs: int = 1,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
+    checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
+    checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
+    checkpoint_retention_keep_every_n_epochs: int | None = None,
+    checkpoint_retention_cold_store_roots: tuple[Path, ...] = (),
     checkpoint_dir: str | Path | None = None,
     resume_from_checkpoint: str | Path | None = None,
     optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
@@ -7485,6 +7752,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     segnet_loss_stage_weight: float = 1.0,
     pose_loss_stage_weight: float = 1.0,
     prioritized_pair_indices: tuple[int, ...] = (),
+    scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
+    scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
     sparse_prioritized_target_hydration: bool = False,
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
@@ -7504,6 +7773,11 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     prioritized_pair_indices = _normalize_nonnegative_int_sequence(
         prioritized_pair_indices
     )
+    scorer_error_pair_sampling_weights = {
+        int(pair): float(weight)
+        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+    }
+    scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
     try:
         prioritized_pair_indices = validate_pair_indices_in_range(
             prioritized_pair_indices,
@@ -8162,6 +8436,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=checkpoint_interval,
+            checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+            checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+            checkpoint_retention_keep_every_n_epochs=(
+                checkpoint_retention_keep_every_n_epochs
+            ),
+            checkpoint_retention_cold_store_roots=(
+                checkpoint_retention_cold_store_roots
+            ),
             checkpoint_dir=resolved_checkpoint_dir,
             resume_from_checkpoint=resolved_resume_from_checkpoint,
             optimizer_kind=str(optimizer_kind),
@@ -8174,6 +8456,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             segnet_loss_stage_weight=float(segnet_loss_stage_weight),
             pose_loss_stage_weight=float(pose_loss_stage_weight),
             prioritized_pair_indices=prioritized_pair_indices,
+            scorer_error_pair_sampling_weights=(
+                scorer_error_pair_sampling_weights
+            ),
+            scorer_error_pair_curriculum=scorer_error_pair_curriculum,
             sparse_prioritized_target_hydration=bool(
                 sparse_prioritized_target_hydration
             ),
@@ -8298,6 +8584,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     mlx_prefilter_coverage = summarize_mlx_prefilter_coverage(
         effective_mlx_profile_paths,
         root=root,
+    )
+    auto_xray_attachment = _write_mlx_prefilter_error_anatomy_attachment(
+        profile_path=(
+            auto_mlx_prefilter_profile_path
+            if auto_mlx_prefilter_profile_path.is_file()
+            else None
+        ),
+        archive_path=archive_file_path,
+        output_dir=training_dir / "mlx_prefilter_error_anatomy",
+        label="hi_nerv_auto_post_export_xray",
     )
     has_full_video_mlx_prefilter = bool(
         mlx_prefilter_coverage["has_full_video_mlx_prefilter"]
@@ -8437,6 +8733,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     ):
         blockers.append("hi_nerv_real_segnet_posenet_teachers_not_both_attached")
     blockers.extend(mlx_prefilter_coverage.get("blockers") or [])
+    if auto_xray_attachment.get("written") is not True:
+        blockers.extend(auto_xray_attachment.get("blockers") or [])
     if projection_paths:
         acquisition = build_spine_acquisition_report(
             projection_manifest_paths=projection_paths,
@@ -8619,6 +8917,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     **priority_hydration_contract,
                     **FALSE_AUTHORITY,
                 },
+                "scorer_error_pair_curriculum": {
+                    **strip_candidate_curriculum_authority_fields(
+                        scorer_error_pair_curriculum
+                    ),
+                    "consumed_by_shared_mlx_sampler": bool(
+                        scorer_error_pair_sampling_weights
+                    ),
+                    "weighted_pair_count": len(scorer_error_pair_sampling_weights),
+                    "sampling_scope": "score_aware_training_batches_not_full_video_replay",
+                    **FALSE_AUTHORITY,
+                },
                 "coder_aware_qat": _coder_qat_report_metadata(
                     artifact_dict=artifact_dict,
                     enabled=effective_coder_aware_qat,
@@ -8702,6 +9011,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "ready_for_exact_eval_dispatch": False,
             },
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
+            "mlx_prefilter_error_anatomy": auto_xray_attachment,
             "auto_mlx_prefilter_profile_path": (
                 auto_mlx_prefilter_profile_path.as_posix()
                 if auto_mlx_prefilter_profile_path.is_file()
@@ -11354,6 +11664,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     mlx_prefilter_progress_every: int,
     telemetry_flush_interval_epochs: int,
     checkpoint_interval_epochs: int,
+    checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
+    checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
+    checkpoint_retention_keep_every_n_epochs: int | None = None,
+    checkpoint_retention_cold_store_roots: tuple[Path, ...] = (),
     checkpoint_dir: str | Path | None,
     resume_from_checkpoint: str | Path | None,
     optimizer_kind: str,
@@ -11363,6 +11677,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     segnet_loss_stage_weight: float,
     pose_loss_stage_weight: float,
     prioritized_pair_indices: tuple[int, ...],
+    scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
+    scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
@@ -11385,6 +11701,11 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     sparse_priority_target_hydration = bool(
         prioritized_pair_indices and sparse_prioritized_target_hydration
     )
+    scorer_error_pair_sampling_weights = {
+        int(pair): float(weight)
+        for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
+    }
+    scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
     hydrated_source_pair_indices = (
         tuple(int(value) for value in prioritized_pair_indices)
         if sparse_priority_target_hydration
@@ -11731,6 +12052,18 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "stage_loss_weights": stage_weights,
             "effective_weight_decay": effective_weight_decay,
             "checkpoint_interval_epochs": checkpoint_interval,
+            "checkpoint_retention": {
+                "schema": "compact_hi_nerv_checkpoint_retention.v1",
+                "keep_last_n": checkpoint_retention_keep_last_n,
+                "keep_best_n": int(checkpoint_retention_keep_best_n),
+                "keep_every_n_epochs": checkpoint_retention_keep_every_n_epochs,
+                "cold_store_roots": [
+                    root.as_posix()
+                    for root in checkpoint_retention_cold_store_roots
+                ],
+                "hot_directory_scope": "periodic_checkpoints_only_final_always_kept",
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "checkpoint_dir": (
                 Path(checkpoint_dir).as_posix() if checkpoint_dir is not None else None
             ),
@@ -11742,6 +12075,24 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "checkpoint_policy": "periodic_canonical_long_training_checkpoint",
             "prioritized_pair_training": {
                 **priority_hydration_contract,
+                "canonical_authority_surface": (
+                    "TrainingArtifact top-level false-authority fields"
+                ),
+            },
+            "scorer_error_pair_curriculum": {
+                **strip_candidate_curriculum_authority_fields(
+                    scorer_error_pair_curriculum
+                ),
+                "consumed_by_shared_mlx_sampler": bool(
+                    scorer_error_pair_sampling_weights
+                ),
+                "weighted_pair_count": len(scorer_error_pair_sampling_weights),
+                "sampling_scope": "score_aware_training_batches_not_full_video_replay",
+                "orthogonality_controls": {
+                    "combined": "SegNet frame1 plus PoseNet pair objective",
+                    "seg_score_contribution": "last-frame boundary/argmax pressure",
+                    "pose_score_contribution": "two-frame pose/motion pressure",
+                },
                 "canonical_authority_surface": (
                     "TrainingArtifact top-level false-authority fields"
                 ),
@@ -11915,6 +12266,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ema_decay=float(ema_decay),
         seed=int(random_seed),
         checkpoint_interval_epochs=checkpoint_interval,
+        checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+        checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+        checkpoint_retention_keep_every_n_epochs=checkpoint_retention_keep_every_n_epochs,
+        checkpoint_retention_cold_store_roots=checkpoint_retention_cold_store_roots,
         checkpoint_dir=checkpoint_dir,
         resume_from_checkpoint=resume_from_checkpoint,
         telemetry_flush_interval_epochs=max(1, int(telemetry_flush_interval_epochs)),
@@ -11940,6 +12295,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
         ),
         prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
+        pair_sampling_weights=scorer_error_pair_sampling_weights,
+        pair_sampling_default_weight=float(
+            scorer_error_pair_curriculum.get("default_weight", 1.0)
+        ),
         on_epoch_end=pose_instability_monitor,
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
@@ -12749,6 +13108,313 @@ def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, 
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
 
 
+def _load_scorer_error_pair_rows(path: Path) -> list[Mapping[str, Any]]:
+    resolved = Path(path).expanduser().resolve(strict=False)
+    if not resolved.is_file():
+        raise CompactRendererMlxSpineRunnerError(
+            f"scorer-error pair curriculum artifact not found: {resolved}"
+        )
+    if resolved.suffix == ".jsonl":
+        rows: list[Mapping[str, Any]] = []
+        for line_no, line in enumerate(resolved.read_text(encoding="utf-8").splitlines(), 1):
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise CompactRendererMlxSpineRunnerError(
+                    f"{resolved}:{line_no}: invalid JSONL row"
+                ) from exc
+            if not isinstance(row, Mapping):
+                raise CompactRendererMlxSpineRunnerError(
+                    f"{resolved}:{line_no}: expected JSON object row"
+                )
+            rows.append(row)
+        return rows
+    try:
+        payload = json.loads(resolved.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            f"{resolved}: invalid scorer-error pair curriculum JSON"
+        ) from exc
+    if isinstance(payload, Mapping):
+        if payload.get("schema") == "direct_full_scorer_vjp_bundle.v1":
+            exact_contract = payload.get("exact_reduction_contract")
+            if not isinstance(exact_contract, Mapping) or exact_contract.get("full_reduction_complete") is not True:
+                raise CompactRendererMlxSpineRunnerError(
+                    f"{resolved}: direct VJP curriculum requires exact full-video reduction"
+                )
+            bundle_quality_blockers = list(payload.get("gradient_quality_blockers") or [])
+            if bundle_quality_blockers:
+                raise CompactRendererMlxSpineRunnerError(
+                    f"{resolved}: direct VJP curriculum has gradient quality blockers: "
+                    f"{bundle_quality_blockers}"
+                )
+            rows: list[Mapping[str, Any]] = []
+            for shard in payload.get("shards") or []:
+                if not isinstance(shard, Mapping):
+                    continue
+                shard_loss = shard.get("loss_contribution")
+                shard_quality_blockers = list(shard.get("gradient_quality_blockers") or [])
+                if shard_quality_blockers:
+                    raise CompactRendererMlxSpineRunnerError(
+                        f"{resolved}: direct VJP shard {shard.get('shard_index')} "
+                        f"has gradient quality blockers: {shard_quality_blockers}"
+                    )
+                pair_rows: list[Mapping[str, Any]] = []
+                pose_l2 = (
+                    (shard.get("posenet_yuv6_pair_grad") or {}).get("per_pair_l2")
+                    if isinstance(shard.get("posenet_yuv6_pair_grad"), Mapping)
+                    else None
+                )
+                seg_l2 = (
+                    (shard.get("segnet_last_rgb_grad") or {}).get("per_pair_l2")
+                    if isinstance(shard.get("segnet_last_rgb_grad"), Mapping)
+                    else None
+                )
+                if isinstance(pose_l2, Sequence) and isinstance(seg_l2, Sequence):
+                    pair_start = int(shard.get("pair_start") or 0)
+                    pair_count = min(len(pose_l2), len(seg_l2))
+                    for offset in range(pair_count):
+                        try:
+                            pose_value = float(pose_l2[offset])
+                            seg_value = float(seg_l2[offset])
+                        except (TypeError, ValueError):
+                            continue
+                        pair_rows.append(
+                            {
+                                "pair_idx": int(pair_start + offset),
+                                "combined_grad_l2": float(pose_value + seg_value),
+                                "pose_grad_l2": pose_value,
+                                "seg_grad_l2": seg_value,
+                            }
+                        )
+                else:
+                    pair_rows = [
+                        row for row in shard.get("top_pairs_by_grad_l2") or []
+                        if isinstance(row, Mapping)
+                    ]
+                for row in pair_rows:
+                    if not isinstance(row, Mapping):
+                        continue
+                    rows.append(
+                        {
+                            **dict(row),
+                            "vjp_loss_contribution": shard_loss,
+                            "vjp_backend": shard.get("backend"),
+                            "vjp_device_type": shard.get("device_type"),
+                            "vjp_pair_start": shard.get("pair_start"),
+                            "vjp_pair_end": shard.get("pair_end"),
+                            "vjp_gradient_quality_blockers": [],
+                            "vjp_bundle_schema": payload.get("schema"),
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        }
+                    )
+            if rows:
+                return rows
+        rows = payload.get("rows")
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, Mapping)]
+        top_pairs = payload.get("top_pairs")
+        if isinstance(top_pairs, Mapping) and isinstance(top_pairs.get("combined"), list):
+            return [row for row in top_pairs["combined"] if isinstance(row, Mapping)]
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, Mapping)]
+    raise CompactRendererMlxSpineRunnerError(
+        f"{resolved}: expected xray report JSON with rows/top_pairs, "
+        "direct_full_scorer_vjp_bundle.v1, or JSONL rows"
+    )
+
+
+def _write_mlx_prefilter_error_anatomy_attachment(
+    *,
+    profile_path: str | Path | None,
+    output_dir: str | Path,
+    archive_path: str | Path | None = None,
+    label: str,
+) -> dict[str, Any]:
+    base = {
+        "schema": "compact_runner_mlx_prefilter_error_anatomy_attachment.v1",
+        "requested": True,
+        "label": label,
+        "profile_path": str(profile_path) if profile_path is not None else None,
+        "archive_path": str(archive_path) if archive_path is not None else None,
+        "written": False,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if profile_path is None:
+        return {**base, "blockers": ["mlx_prefilter_profile_path_missing_for_xray"]}
+    resolved_profile = Path(profile_path).expanduser().resolve(strict=False)
+    if not resolved_profile.is_file():
+        return {
+            **base,
+            "blockers": ["mlx_prefilter_profile_path_not_found_for_xray"],
+        }
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    try:
+        from tools.xray_mlx_prefilter_error_anatomy import (
+            build_report_from_profile,
+            write_report_outputs,
+        )
+
+        resolved_archive = (
+            Path(archive_path).expanduser().resolve(strict=False)
+            if archive_path is not None
+            else None
+        )
+        report_path = out / "mlx_prefilter_error_anatomy.json"
+        report = build_report_from_profile(
+            mlx_profile=resolved_profile,
+            archive=resolved_archive if resolved_archive is not None else None,
+            label=label,
+            top_k=64,
+            compute_pixel_xray=True,
+            report_path=report_path,
+        )
+        outputs = write_report_outputs(report, out)
+        return {
+            **base,
+            "written": True,
+            "output_dir": out.as_posix(),
+            "json_path": outputs["json"].as_posix(),
+            "jsonl_path": outputs["jsonl"].as_posix(),
+            "markdown_path": outputs["markdown"].as_posix(),
+            "profile_sha256": _sha256_file(resolved_profile),
+            "component_summary": report.get("component_summary"),
+            "top_combined_pair_indices": [
+                int(row["pair_idx"])
+                for row in (report.get("top_pairs", {}).get("combined") or [])[:32]
+                if isinstance(row, Mapping) and "pair_idx" in row
+            ],
+            "blockers": list(report.get("blockers") or []),
+        }
+    except Exception as exc:
+        return {
+            **base,
+            "output_dir": out.as_posix(),
+            "failure": repr(exc),
+            "blockers": ["mlx_prefilter_error_anatomy_attachment_failed"],
+        }
+
+
+def _scorer_error_pair_curriculum_from_args(
+    args: argparse.Namespace,
+    *,
+    output_dir: str | Path,
+) -> tuple[dict[int, float], dict[str, Any]]:
+    path = getattr(args, "scorer_error_pair_curriculum_json", None)
+    default_weight = float(getattr(args, "scorer_error_pair_curriculum_default_weight", 1.0))
+    gain = float(getattr(args, "scorer_error_pair_curriculum_gain", 4.0))
+    field = str(
+        getattr(args, "scorer_error_pair_curriculum_field", "component_score_no_rate")
+    )
+    top_k = int(getattr(args, "scorer_error_pair_curriculum_top_k", 0) or 0)
+    if default_weight < 0.0 or not math.isfinite(default_weight):
+        raise CompactRendererMlxSpineRunnerError(
+            "--scorer-error-pair-curriculum-default-weight must be finite and >= 0"
+        )
+    if gain < 0.0 or not math.isfinite(gain):
+        raise CompactRendererMlxSpineRunnerError(
+            "--scorer-error-pair-curriculum-gain must be finite and >= 0"
+        )
+    if top_k < 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "--scorer-error-pair-curriculum-top-k must be >= 0"
+        )
+    auto_attachment: dict[str, Any] | None = None
+    if path is None and bool(getattr(args, "auto_scorer_error_pair_curriculum", True)):
+        mlx_profiles = tuple(getattr(args, "mlx_profile", ()) or ())
+        if mlx_profiles:
+            auto_attachment = _write_mlx_prefilter_error_anatomy_attachment(
+                profile_path=mlx_profiles[-1],
+                archive_path=None,
+                output_dir=Path(output_dir) / "auto_scorer_error_pair_curriculum",
+                label="auto_curriculum_from_prior_mlx_profile",
+            )
+            json_path = auto_attachment.get("json_path")
+            if auto_attachment.get("written") is True and isinstance(json_path, str):
+                path = Path(json_path)
+    if path is None:
+        return {}, {
+            "schema": "compact_runner_scorer_error_pair_curriculum.v1",
+            "enabled": False,
+            "default_weight": default_weight,
+            "gain": gain,
+            "field": field,
+            "top_k": top_k,
+            "auto_from_mlx_profile": auto_attachment,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+    rows = _load_scorer_error_pair_rows(Path(path))
+    parsed: list[tuple[int, float]] = []
+    for row in rows:
+        if "pair_idx" not in row or field not in row:
+            continue
+        try:
+            pair_idx = int(row["pair_idx"])
+            value = float(row[field])
+        except (TypeError, ValueError):
+            continue
+        if pair_idx < 0 or not math.isfinite(value) or value <= 0.0:
+            continue
+        parsed.append((pair_idx, value))
+    if not parsed:
+        raise CompactRendererMlxSpineRunnerError(
+            f"{path}: no positive finite pair rows found for field {field!r}"
+        )
+    parsed.sort(key=lambda item: item[1], reverse=True)
+    if top_k:
+        parsed = parsed[:top_k]
+    max_value = max(value for _pair_idx, value in parsed)
+    weights = {
+        int(pair_idx): float(default_weight + gain * (value / max_value))
+        for pair_idx, value in parsed
+    }
+    return weights, {
+        "schema": "compact_runner_scorer_error_pair_curriculum.v1",
+        "enabled": True,
+        "source_path": Path(path).expanduser().resolve(strict=False).as_posix(),
+        "field": field,
+        "top_k": top_k,
+        "auto_from_mlx_profile": auto_attachment,
+        "input_row_count": len(rows),
+        "weighted_pair_count": len(weights),
+        "default_weight": default_weight,
+        "gain": gain,
+        "normalization": "weight=default+gain*field/max_positive_field",
+        "distortion_geometry": {
+            "schema": "compact_runner_distortion_geometry_axis_model.v1",
+            "full_lagrangian_is_final_arbiter": True,
+            "inner_distortion_model": (
+                "axis_specific_training_curriculum_before_byte_priced_export"
+            ),
+            "segnet_domain": "last_frame_spatial_argmax_boundary_geometry",
+            "posenet_domain": "two_frame_motion_pose_geometry",
+            "overlap_domain": (
+                "shared_decoded_pixels_where_xray_vjp_or_cache_delta "
+                "shows both axes move"
+            ),
+            "rate_domain": "archive_bytes_admitted_after_export_by_fixed_25_over_N_price",
+            "selected_axis_field": field,
+            "score_claim": False,
+        },
+        "max_positive_field_value": float(max_value),
+        "top_weighted_pairs": [
+            {"pair_idx": int(pair_idx), "source_value": float(value), "weight": weights[int(pair_idx)]}
+            for pair_idx, value in parsed[:32]
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
 def _resolve_checkpoint_interval_epochs(value: Any, *, epochs: int) -> int:
     """Return a positive periodic checkpoint cadence for long compact runs."""
 
@@ -12768,6 +13434,74 @@ def _resolve_checkpoint_interval_epochs(value: Any, *, epochs: int) -> int:
         )
     if int(epochs) <= 0:
         raise CompactRendererMlxSpineRunnerError(f"epochs must be > 0; got {epochs!r}")
+    return parsed
+
+
+def _resolve_checkpoint_retention_keep_last_n(value: Any) -> int | None:
+    """Return hot-retention last-N, with -1 meaning preserve every checkpoint."""
+
+    if isinstance(value, bool):
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_last_n must be an integer or -1, not bool"
+        )
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_last_n must be an integer; "
+            f"got {value!r}"
+        ) from exc
+    if parsed < -1:
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_last_n must be >= -1; "
+            f"got {parsed}"
+        )
+    return None if parsed == -1 else parsed
+
+
+def _resolve_checkpoint_retention_keep_best_n(value: Any) -> int:
+    """Return non-negative best-loss hot-retention count."""
+
+    if isinstance(value, bool):
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_best_n must be a non-negative integer, not bool"
+        )
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_best_n must be a non-negative integer; "
+            f"got {value!r}"
+        ) from exc
+    if parsed < 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_best_n must be >= 0; "
+            f"got {parsed}"
+        )
+    return parsed
+
+
+def _resolve_checkpoint_retention_keep_every_n_epochs(value: Any) -> int | None:
+    """Return optional positive milestone retention spacing."""
+
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_every_n_epochs must be a positive integer, not bool"
+        )
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_every_n_epochs must be a positive integer; "
+            f"got {value!r}"
+        ) from exc
+    if parsed <= 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "checkpoint_retention_keep_every_n_epochs must be > 0; "
+            f"got {parsed}"
+        )
     return parsed
 
 
@@ -14385,6 +15119,81 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--scorer-error-pair-curriculum-json",
+        type=Path,
+        help=(
+            "XRay/post-export scorer-error report JSON or rows JSONL. The "
+            "runner converts per-pair scorer error into deterministic MLX "
+            "training sampling weights for HiNeRV/SNeRV. False-authority "
+            "training signal only."
+        ),
+    )
+    parser.add_argument(
+        "--auto-scorer-error-pair-curriculum",
+        dest="auto_scorer_error_pair_curriculum",
+        action="store_true",
+        default=True,
+        help=(
+            "When --mlx-profile is supplied and no explicit scorer-error "
+            "curriculum JSON is supplied, automatically build an XRay pair "
+            "curriculum before training."
+        ),
+    )
+    parser.add_argument(
+        "--no-auto-scorer-error-pair-curriculum",
+        dest="auto_scorer_error_pair_curriculum",
+        action="store_false",
+        help="Disable automatic xray-to-pair-curriculum generation from --mlx-profile.",
+    )
+    parser.add_argument(
+        "--scorer-error-pair-curriculum-field",
+        default="component_score_no_rate",
+        choices=(
+            "component_score_no_rate",
+            "seg_score_contribution",
+            "pose_score_contribution",
+            "segnet_cache_mean_abs_delta",
+            "posenet_cache_mean_abs_delta",
+            "combined_grad_l2",
+            "pose_grad_l2",
+            "seg_grad_l2",
+            "vjp_loss_contribution",
+        ),
+        help=(
+            "XRay row field used to build pair sampling weights. Combined is "
+            "default; SegNet and Pose fields split the last-frame vs pairwise "
+            "training pressure."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-error-pair-curriculum-gain",
+        default=4.0,
+        type=float,
+        help=(
+            "Maximum extra sampling mass added to the worst positive XRay pair "
+            "row after max normalization."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-error-pair-curriculum-default-weight",
+        default=1.0,
+        type=float,
+        help=(
+            "Baseline sampling mass for pairs not explicitly present in the "
+            "XRay curriculum artifact. Set to 0 only for deliberate top-pair "
+            "hard-focus runs."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-error-pair-curriculum-top-k",
+        default=0,
+        type=int,
+        help=(
+            "Only apply XRay-derived extra weight to the top K positive rows. "
+            "Zero uses all positive rows."
+        ),
+    )
+    parser.add_argument(
         "--sparse-prioritized-target-hydration",
         action="store_true",
         help=(
@@ -14839,6 +15648,46 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "runs. Default protects long PR95-style HiNeRV runs from losing "
             "weights before terminal archive export; reports remain "
             "false-authority until receiver proof and exact replay."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-retention-keep-last-n",
+        default=DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
+        type=int,
+        help=(
+            "Hot-retention for compact-family MLX checkpoints. Keep the last "
+            "N periodic checkpoints in the active run directory and move older "
+            "periodic checkpoints to cold store with SHA-256 manifest rows. "
+            "Use -1 to preserve every periodic checkpoint."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-retention-keep-best-n",
+        default=DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
+        type=int,
+        help=(
+            "Hot-retention for compact-family MLX checkpoints. Keep the N "
+            "lowest-loss periodic checkpoints in the active run directory, "
+            "in addition to last-N and final."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-retention-keep-every-n-epochs",
+        type=int,
+        help=(
+            "Optional milestone retention spacing for compact-family MLX "
+            "checkpoints, using the same epoch+1 convention as checkpoint "
+            "cadence."
+        ),
+    )
+    parser.add_argument(
+        "--checkpoint-retention-cold-store-root",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Optional cold-store root for moved compact-family checkpoints. "
+            "Repeatable. Defaults to the operator SSD waterfall cold-store roots."
         ),
     )
     parser.add_argument(
@@ -15357,6 +16206,34 @@ def main(argv: list[str] | None = None) -> int:
         args.modelsize_byte_cap_feedback_json
     )
     output_dir = args.output_dir or _default_output_dir()
+    planner_launch_blockers = _planner_row_launch_blockers(args)
+    if planner_launch_blockers:
+        report = _write_planner_row_launch_refusal(
+            output_dir=Path(output_dir).expanduser().resolve(strict=False),
+            args=args,
+            blockers=planner_launch_blockers,
+            hard_byte_ceilings=ceilings,
+            repo_root=Path(args.repo_root).expanduser().resolve(strict=False),
+        )
+        print(
+            json.dumps(
+                {
+                    "schema": "compact_renderer_mlx_spine_runner_cli_result.v1",
+                    "report_path": report["report_path"],
+                    "mode": report.get("mode"),
+                    "blockers": report.get("blockers", []),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    (
+        scorer_error_pair_sampling_weights,
+        scorer_error_pair_curriculum,
+    ) = _scorer_error_pair_curriculum_from_args(args, output_dir=output_dir)
     scorer_upstream_dir = _resolve_scorer_upstream_dir(
         args.repo_root,
         args.upstream_dir,
@@ -15370,6 +16247,21 @@ def main(argv: list[str] | None = None) -> int:
         None
         if args.post_export_materializer_max_experiments == 0
         else args.post_export_materializer_max_experiments
+    )
+    checkpoint_retention_keep_last_n = _resolve_checkpoint_retention_keep_last_n(
+        args.checkpoint_retention_keep_last_n
+    )
+    checkpoint_retention_keep_best_n = _resolve_checkpoint_retention_keep_best_n(
+        args.checkpoint_retention_keep_best_n
+    )
+    checkpoint_retention_keep_every_n_epochs = (
+        _resolve_checkpoint_retention_keep_every_n_epochs(
+            args.checkpoint_retention_keep_every_n_epochs
+        )
+    )
+    checkpoint_retention_cold_store_roots = tuple(
+        Path(path).expanduser().resolve(strict=False)
+        for path in args.checkpoint_retention_cold_store_root
     )
     snerv_modelsize_profile = snerv_modelsize_control_profile(
         str(args.snerv_modelsize_control_profile)
@@ -15425,30 +16317,6 @@ def main(argv: list[str] | None = None) -> int:
             ),
             byte_cap_feedback_rows=byte_cap_feedback_rows,
         )
-    planner_launch_blockers = _planner_row_launch_blockers(args)
-    if planner_launch_blockers:
-        report = _write_planner_row_launch_refusal(
-            output_dir=Path(output_dir).expanduser().resolve(strict=False),
-            args=args,
-            blockers=planner_launch_blockers,
-            hard_byte_ceilings=ceilings,
-            repo_root=Path(args.repo_root).expanduser().resolve(strict=False),
-        )
-        print(
-            json.dumps(
-                {
-                    "schema": "compact_renderer_mlx_spine_runner_cli_result.v1",
-                    "report_path": report["report_path"],
-                    "mode": report.get("mode"),
-                    "blockers": report.get("blockers", []),
-                    "score_claim": False,
-                    "promotion_eligible": False,
-                    "ready_for_exact_eval_dispatch": False,
-                },
-                sort_keys=True,
-            )
-        )
-        return 0
     _acquire_active_campaign_lock(
         output_dir=Path(output_dir).expanduser().resolve(strict=False),
         args=args,
@@ -15806,6 +16674,10 @@ def main(argv: list[str] | None = None) -> int:
             recon_pixel_weight_path=args.recon_pixel_weight_path,
             auto_joint_recon_pixel_weight=args.auto_joint_recon_pixel_weight,
             recon_pixel_weight_normalize=args.recon_pixel_weight_normalize,
+            scorer_error_pair_sampling_weights=(
+                scorer_error_pair_sampling_weights
+            ),
+            scorer_error_pair_curriculum=scorer_error_pair_curriculum,
             run_native_mlx_export=not args.skip_snerv_native_mlx_export,
             snerv_native_mlx_receiver_proof_timeout_seconds=(
                 args.snerv_native_mlx_receiver_proof_timeout
@@ -15844,6 +16716,14 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_score_aware_long_training_eval_roundtrip_ste=(
                 args.snerv_score_aware_long_training_eval_roundtrip_ste
+            ),
+            checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+            checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+            checkpoint_retention_keep_every_n_epochs=(
+                checkpoint_retention_keep_every_n_epochs
+            ),
+            checkpoint_retention_cold_store_roots=(
+                checkpoint_retention_cold_store_roots
             ),
             segnet_distillation_weight=args.segnet_distillation_weight,
             pose_distillation_weight=args.pose_distillation_weight,
@@ -15970,6 +16850,14 @@ def main(argv: list[str] | None = None) -> int:
             mlx_prefilter_progress_every=args.mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,
+            checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+            checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+            checkpoint_retention_keep_every_n_epochs=(
+                checkpoint_retention_keep_every_n_epochs
+            ),
+            checkpoint_retention_cold_store_roots=(
+                checkpoint_retention_cold_store_roots
+            ),
             checkpoint_dir=args.checkpoint_dir,
             resume_from_checkpoint=args.resume_from_checkpoint,
             optimizer_kind=args.optimizer_kind,
@@ -15993,6 +16881,10 @@ def main(argv: list[str] | None = None) -> int:
             segnet_loss_stage_weight=args.segnet_loss_stage_weight,
             pose_loss_stage_weight=args.pose_loss_stage_weight,
             prioritized_pair_indices=prioritized_pair_indices,
+            scorer_error_pair_sampling_weights=(
+                scorer_error_pair_sampling_weights
+            ),
+            scorer_error_pair_curriculum=scorer_error_pair_curriculum,
             sparse_prioritized_target_hydration=(
                 args.sparse_prioritized_target_hydration
             ),
@@ -16138,6 +17030,7 @@ def _extract_modelsize_byte_cap_feedback_rows(
                 "selected_candidates",
                 "family_rows",
                 "trained_archive_byte_oracle",
+                "modelsize_byte_cap_feedback_row",
                 "modelsize_candidate",
             ):
                 child = node.get(key)
@@ -16149,7 +17042,7 @@ def _extract_modelsize_byte_cap_feedback_rows(
 
     visit(payload)
     deduped: list[dict[str, Any]] = []
-    seen: set[tuple[Any, ...]] = set()
+    seen: dict[tuple[Any, ...], dict[str, Any]] = {}
     for row in rows:
         key = (
             row.get("source_path"),
@@ -16159,9 +17052,13 @@ def _extract_modelsize_byte_cap_feedback_rows(
             row.get("nominal_total_payload_bytes"),
             row.get("packet_bytes"),
         )
-        if key in seen:
+        existing = seen.get(key)
+        if existing is not None:
+            for item_key, value in row.items():
+                if item_key not in existing or existing[item_key] is None:
+                    existing[item_key] = value
             continue
-        seen.add(key)
+        seen[key] = row
         deduped.append(row)
     return deduped
 
