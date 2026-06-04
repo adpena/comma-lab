@@ -27,7 +27,11 @@ def test_snerv_official_primitive_replay_binding_splits_authority() -> None:
     assert payload["receiver_archive_payload_bound"] is True
     assert payload["receiver_export_bound"] is True
     assert payload["native_mlx_export_bound"] is True
-    assert payload["official_export_bound"] is True
+    assert payload["receiver_native_export_bound"] is True
+    assert payload["official_export_bound"] is False
+    assert payload["official_export_bound_semantics"] == (
+        "requires_receiver_export_native_mlx_export_and_source_forward_replay"
+    )
     assert payload["score_claim"] is False
     native_export = payload["native_mlx_train_export_contract"]
     assert native_export["native_mlx_export_bound"] is True
@@ -113,6 +117,11 @@ def test_snerv_receiver_runtime_decode_contract_is_hash_backed_and_fail_closed()
     assert payload["receiver_archive_payload_bound"] is True
     assert payload["receiver_export_bound"] is True
     assert payload["native_mlx_export_bound"] is True
+    assert payload["receiver_native_export_bound"] is True
+    assert payload["official_export_bound"] is False
+    assert payload["official_export_bound_semantics"] == (
+        "requires_receiver_export_native_mlx_export_and_source_forward_replay"
+    )
     assert payload["native_mlx_train_export_contract"]["native_mlx_export_bound"] is True
     assert payload["score_claim"] is False
     assert payload["blockers"] == [

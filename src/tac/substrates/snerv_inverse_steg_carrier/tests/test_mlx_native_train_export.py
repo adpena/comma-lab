@@ -1093,9 +1093,10 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert binding["schema"] == "snerv_official_mfu_hfr_tub_export_binding.v3"
     assert binding["primitive_modules_available"] is True
     assert binding["export_bound_to_receiver_packet"] is True
-    assert binding["official_export_bound"] is True
+    assert binding["receiver_native_export_bound"] is True
+    assert binding["official_export_bound"] is False
     assert binding["official_export_bound_semantics"] == (
-        "receiver_payload_bound_not_source_forward_parity"
+        "requires_receiver_export_native_mlx_export_and_source_forward_replay"
     )
     assert binding["official_receiver_payload_bound"] is True
     assert binding["official_source_forward_replay_bound"] is False

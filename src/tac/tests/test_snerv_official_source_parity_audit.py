@@ -43,6 +43,12 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert primitive["receiver_export_self_consistency_verified"] is True
     assert primitive["receiver_source_forward_replay_bound"] is False
     assert primitive["receiver_export_bound"] is True
+    assert primitive["native_mlx_export_bound"] is True
+    assert primitive["receiver_native_export_bound"] is True
+    assert primitive["official_export_bound"] is False
+    assert primitive["official_export_bound_semantics"] == (
+        "requires_receiver_export_native_mlx_export_and_source_forward_replay"
+    )
     runtime = report["official_receiver_runtime_decode_contract"]
     assert runtime["schema"] == RECEIVER_RUNTIME_DECODE_SCHEMA
     assert runtime["all_runtime_modules_import_safe"] is True
@@ -54,7 +60,11 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
         runtime["blockers"]
     )
     assert runtime["native_mlx_export_bound"] is True
-    assert runtime["official_export_bound"] is True
+    assert runtime["receiver_native_export_bound"] is True
+    assert runtime["official_export_bound"] is False
+    assert runtime["official_export_bound_semantics"] == (
+        "requires_receiver_export_native_mlx_export_and_source_forward_replay"
+    )
     assert (
         "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
         not in runtime["blockers"]

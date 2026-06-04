@@ -4311,11 +4311,12 @@ def _receiver_bound_official_primitives_export_binding(
     out = dict(official_binding)
     out["schema"] = "snerv_official_mfu_hfr_tub_export_binding.v3"
     out["export_bound_to_receiver_packet"] = True
-    out["official_export_bound"] = bool(
+    out["receiver_native_export_bound"] = bool(
         selected_authority["frame_producing_official_export"]
     )
+    out["official_export_bound"] = False
     out["official_export_bound_semantics"] = (
-        "receiver_payload_bound_not_source_forward_parity"
+        "requires_receiver_export_native_mlx_export_and_source_forward_replay"
     )
     out["official_receiver_payload_bound"] = bool(
         selected_authority["official_decoder_payload_selected"]

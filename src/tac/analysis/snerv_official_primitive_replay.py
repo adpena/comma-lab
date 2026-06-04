@@ -259,6 +259,11 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
         repo_root=root,
     )
     native_export = _native_mlx_train_export_contract(root)
+    receiver_export_bound = bool(receiver_contract["receiver_export_bound"])
+    native_mlx_export_bound = bool(native_export["native_mlx_export_bound"])
+    receiver_source_forward_bound = bool(
+        receiver_contract["receiver_source_forward_replay_bound"]
+    )
     return {
         "schema": SCHEMA,
         "component_rows": rows,
@@ -269,21 +274,24 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
         "receiver_export_self_consistency_verified": bool(
             receiver_contract["receiver_export_self_consistency_verified"]
         ),
-        "receiver_source_forward_replay_bound": bool(
-            receiver_contract["receiver_source_forward_replay_bound"]
-        ),
+        "receiver_source_forward_replay_bound": receiver_source_forward_bound,
         "official_receiver_runtime_decode_contract": receiver_contract,
         "receiver_archive_payload_bound": bool(
             receiver_contract["receiver_runtime_decode_proven"]
         ),
-        "receiver_export_bound": bool(
-            receiver_contract["receiver_export_bound"]
+        "receiver_export_bound": receiver_export_bound,
+        "native_mlx_export_bound": native_mlx_export_bound,
+        "receiver_native_export_bound": bool(
+            receiver_export_bound and native_mlx_export_bound
         ),
-        "native_mlx_export_bound": bool(native_export["native_mlx_export_bound"]),
         "native_mlx_train_export_contract": native_export,
-        "official_export_bound": bool(
-            receiver_contract["receiver_export_bound"]
-            and native_export["native_mlx_export_bound"]
+        "official_export_bound": _official_export_bound(
+            receiver_export_bound=receiver_export_bound,
+            native_mlx_export_bound=native_mlx_export_bound,
+            receiver_source_forward_replay_bound=receiver_source_forward_bound,
+        ),
+        "official_export_bound_semantics": (
+            "requires_receiver_export_native_mlx_export_and_source_forward_replay"
         ),
         "blockers": _ordered_unique(
             [*receiver_contract["blockers"], *native_export["blockers"]]
@@ -328,6 +336,7 @@ def build_snerv_official_receiver_runtime_decode_contract(
         bool(row["receiver_source_forward_replay_bound"]) for row in rows
     )
     native_export = _native_mlx_train_export_contract(root)
+    native_mlx_export_bound = bool(native_export["native_mlx_export_bound"])
     post_decode_blockers = (
         list(RECEIVER_EXPORT_BLOCKERS_AFTER_SOURCE_FORWARD_REPLAY)
         if source_forward_bound
@@ -351,10 +360,18 @@ def build_snerv_official_receiver_runtime_decode_contract(
         "receiver_source_forward_replay_bound": source_forward_bound,
         "receiver_archive_payload_bound": decode_proven,
         "receiver_export_bound": self_consistency_verified,
-        "native_mlx_export_bound": bool(native_export["native_mlx_export_bound"]),
+        "native_mlx_export_bound": native_mlx_export_bound,
+        "receiver_native_export_bound": bool(
+            self_consistency_verified and native_mlx_export_bound
+        ),
         "native_mlx_train_export_contract": native_export,
-        "official_export_bound": bool(
-            self_consistency_verified and native_export["native_mlx_export_bound"]
+        "official_export_bound": _official_export_bound(
+            receiver_export_bound=self_consistency_verified,
+            native_mlx_export_bound=native_mlx_export_bound,
+            receiver_source_forward_replay_bound=source_forward_bound,
+        ),
+        "official_export_bound_semantics": (
+            "requires_receiver_export_native_mlx_export_and_source_forward_replay"
         ),
         "blockers": blockers + post_decode_blockers,
         "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
@@ -675,6 +692,21 @@ def _native_mlx_train_export_contract(root: Path) -> dict[str, Any]:
         "source_forward_replay_authority": False,
         **FALSE_AUTHORITY,
     }
+
+
+def _official_export_bound(
+    *,
+    receiver_export_bound: bool,
+    native_mlx_export_bound: bool,
+    receiver_source_forward_replay_bound: bool,
+) -> bool:
+    """Return source-authority export status, not receiver-only payload status."""
+
+    return bool(
+        receiver_export_bound
+        and native_mlx_export_bound
+        and receiver_source_forward_replay_bound
+    )
 
 
 def _ordered_unique(items: Any) -> list[str]:

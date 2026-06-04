@@ -324,6 +324,47 @@ def test_bridge_refuses_top_level_official_export_bound_without_binding(
     assert payload["rows"][0]["ready_for_exact_eval_dispatch"] is False
 
 
+def test_bridge_refuses_ambiguous_official_export_bound_without_receiver_payload_contract(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-ambiguous-official-bound"
+    packet_path = tmp_path / "ambiguous_official_bound.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            snerv_mfu_scales=(1, 2, 4),
+            snerv_hfr_gain=0.125,
+            snerv_temporal_context=1,
+            snerv_temporal_mode="official_haar_dwt1d_lowpass",
+            official_primitive_binding={
+                "official_export_bound": True,
+                "export_bound_to_receiver_packet": True,
+                "official_receiver_payload_contract_emitted": True,
+                "receiver_runtime_decode_authority": True,
+                "official_receiver_tensor_map": _official_tensor_map(),
+            },
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    controls = payload["rows"][0]["official_controls"]
+    assert controls["official_mfu_hfr_tub_export_bound"] is False
+    assert controls["official_mfu_hfr_tub_receiver_payload_bound"] is False
+    assert controls["official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert controls["official_mfu_hfr_tub_export_blockers"] == [
+        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+    ]
+    assert controls["source_faithful_stack"] is False
+
+
 def test_bridge_consumes_receiver_bound_official_payload_evidence(
     tmp_path: Path,
 ) -> None:
@@ -342,7 +383,8 @@ def test_bridge_consumes_receiver_bound_official_payload_evidence(
             snerv_official_mfu_hfr_tub_export_bound=True,
             snerv_official_mfu_hfr_tub_frame_producing_export=True,
             official_primitive_binding={
-                "official_export_bound": True,
+                "official_export_bound": False,
+                "official_receiver_payload_bound": True,
                 "export_bound_to_receiver_packet": True,
                 "official_receiver_payload_contract_emitted": True,
                 "receiver_runtime_decode_authority": True,
@@ -407,7 +449,8 @@ def test_bridge_refuses_boolean_only_official_receiver_tensor_map(
             snerv_temporal_mode="official_haar_dwt1d_lowpass",
             snerv_official_mfu_hfr_tub_export_bound=True,
             official_primitive_binding={
-                "official_export_bound": True,
+                "official_export_bound": False,
+                "official_receiver_payload_bound": True,
                 "export_bound_to_receiver_packet": True,
                 "official_receiver_payload_contract_emitted": True,
                 "receiver_runtime_decode_authority": True,

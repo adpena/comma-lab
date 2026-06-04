@@ -264,7 +264,7 @@ def _official_mfu_hfr_tub_export_bound(advisory_result: Any) -> bool:
     binding = _attr(advisory_result, "official_primitive_binding")
     if isinstance(binding, Mapping):
         return bool(
-            binding.get("official_export_bound") is True
+            binding.get("official_receiver_payload_bound") is True
             and binding.get("export_bound_to_receiver_packet") is True
             and binding.get("official_receiver_payload_contract_emitted") is True
             and binding.get("receiver_runtime_decode_authority") is True
