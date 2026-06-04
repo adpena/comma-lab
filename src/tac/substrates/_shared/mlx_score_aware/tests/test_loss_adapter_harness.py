@@ -541,6 +541,52 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
 
 
 @mlx_only
+def test_adapter_train_step_updates_dual_ascent_once_and_records_metadata() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+
+    def _post_train_step_update(_batch):
+        return {
+            "eval_targets": [],
+            "metrics": {"unit_rate_proxy": 2.0},
+        }
+
+    bundle.model.post_train_step_update = _post_train_step_update
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        train_time_dual_ascent_config={
+            "enabled": True,
+            "constraints": [
+                {
+                    "constraint_id": "unit_rate",
+                    "metric_name": "unit_rate_proxy",
+                    "loss_weight_key": "recon",
+                    "target": 1.0,
+                    "dual_lr": 0.5,
+                    "max_lambda": 4.0,
+                }
+            ],
+        },
+    )
+    batch = mx.array([0, 1], dtype=mx.int32)
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    assert metrics["dual_ascent_active"] == pytest.approx(1.0)
+    assert metrics["dual_ascent_step"] == pytest.approx(1.0)
+    assert metrics["dual_ascent_metric__unit_rate"] == pytest.approx(2.0)
+    assert metrics["dual_ascent_lambda__unit_rate"] == pytest.approx(0.5)
+    metadata = adapter.artifact_metadata()["score_aware_training"][
+        "train_time_dual_ascent"
+    ]
+    assert metadata["enabled"] is True
+    assert metadata["step_count"] == 1
+    assert metadata["state"]["unit_rate"]["lambda"] == pytest.approx(0.5)
+
+
+@mlx_only
 def test_adapter_stage_weights_skip_student_head_updates_when_gated() -> None:
     import mlx.core as mx
 

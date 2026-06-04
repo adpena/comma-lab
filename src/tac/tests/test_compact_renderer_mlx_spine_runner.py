@@ -4804,6 +4804,60 @@ def test_pact_compact_runners_forward_optimizer_and_shared_qat_metadata(
     assert '"coder_aware_qat": coder_qat_metadata_row' in target_source
 
 
+def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> None:
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    target_fn = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_run_hi_nerv_mlx_scoreaware_smoke"
+    )
+    calls = [
+        node
+        for node in ast.walk(target_fn)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    assert len(calls) == 1
+    kw_names = {kw.arg for kw in calls[0].keywords if kw.arg is not None}
+    assert "train_time_dual_ascent_config" in kw_names
+    target_source = ast.get_source_segment(source, target_fn) or ""
+    assert "build_default_nerv_train_time_dual_ascent_config" in target_source
+    assert '"train_time_dual_ascent": strip_candidate_curriculum_authority_fields' in (
+        target_source
+    )
+
+
+def test_snerv_native_attachment_forwards_train_time_dual_ascent_to_shared_harness() -> None:
+    from tac.substrates.snerv_inverse_steg_carrier import (
+        mlx_native_train_export as snerv_export,
+    )
+
+    source = Path(snerv_export.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    target_fn = next(
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_run_score_aware_long_training_attachment"
+    )
+    calls = [
+        node
+        for node in ast.walk(target_fn)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    assert len(calls) == 1
+    kw_names = {kw.arg for kw in calls[0].keywords if kw.arg is not None}
+    assert "train_time_dual_ascent_config" in kw_names
+    target_source = ast.get_source_segment(source, target_fn) or ""
+    assert "build_default_nerv_train_time_dual_ascent_config" in target_source
+    assert '"train_time_dual_ascent": (' in target_source
+
+
 def test_mlx_optimizer_controls_default_to_pact_muon_adamw() -> None:
     controls = runner_mod._resolve_mlx_score_aware_optimizer_controls(
         optimizer_kind=None,

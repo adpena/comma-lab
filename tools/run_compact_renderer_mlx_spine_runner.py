@@ -116,6 +116,9 @@ from tac.substrates._shared.mlx_score_aware.adapter import (  # noqa: E402
 from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (  # noqa: E402
     build_score_aware_carrier_training_plan,
 )
+from tac.substrates._shared.mlx_score_aware.dual_ascent import (  # noqa: E402
+    build_default_nerv_train_time_dual_ascent_config,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
 from tac.substrates.hprc.mlx_prefilter_coverage import (  # noqa: E402
     summarize_mlx_prefilter_coverage,
@@ -11974,6 +11977,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         c1a_sigma=float(coder_qat_c1a_sigma),
         c1a_sample_size=int(coder_qat_c1a_sample_size),
     ).validated()
+    coder_qat_loss_weight_map = coder_qat_loss_weights(coder_qat_cfg)
+    train_time_dual_ascent_config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        segnet_distillation_weight=float(segnet_distillation_weight),
+        pose_distillation_weight=float(pose_distillation_weight),
+        coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+    )
     decoder_waterfill_fake_quant_bits_by_name = (
         _decoder_weight_waterfill_fake_quant_bits_by_name(decoder_weight_waterfill_plan)
     )
@@ -12180,6 +12190,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
             },
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+            "train_time_dual_ascent": strip_candidate_curriculum_authority_fields(
+                train_time_dual_ascent_config
+            ),
             "decoder_fake_quant_forward": {
                 "schema": "hi_nerv_decoder_fake_quant_forward_qat.v1",
                 "enabled": bool(
@@ -12241,7 +12254,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "num_pairs": hydrated_target_pair_count,
         "forward_convention": "call_b2chw_255",
         "extra_loss_terms": _extra_loss_terms,
-        "extra_loss_weights": coder_qat_loss_weights(coder_qat_cfg),
+        "extra_loss_weights": coder_qat_loss_weight_map,
         "export_archive_fn": _export_archive,
         "substrate_artifact_metadata": artifact_metadata,
         "eval_roundtrip_ste_enabled": True,
@@ -12379,6 +12392,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         cosine_decay_min_lr_ratio=float(
             optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
         ),
+        train_time_dual_ascent_config=train_time_dual_ascent_config,
         prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         pair_sampling_weights=scorer_error_pair_sampling_weights,
         pair_sampling_default_weight=float(

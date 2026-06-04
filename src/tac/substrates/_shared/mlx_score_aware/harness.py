@@ -81,6 +81,7 @@ def run_mlx_score_aware_full_main(
     cosine_decay_enabled: bool = False,
     cosine_decay_total_epochs: int | None = None,
     cosine_decay_min_lr_ratio: float = 1e-2,
+    train_time_dual_ascent_config: Mapping[str, Any] | None = None,
     prioritized_pair_indices: tuple[int, ...] = (),
     pair_sampling_weights: Mapping[int, float] | None = None,
     pair_sampling_default_weight: float = 1.0,
@@ -177,6 +178,11 @@ def run_mlx_score_aware_full_main(
             scorer telemetry into promotion authority.
         pair_sampling_default_weight: baseline sampling mass for pairs not
             present in ``pair_sampling_weights``.
+        train_time_dual_ascent_config: optional projected dual-ascent controller
+            over score-aware loss-part metrics. This is the closed-loop
+            train-time byte/scorer pressure surface shared by HiNeRV and SNeRV;
+            it remains MLX-local false-authority until archive/runtime and exact
+            CPU/CUDA replay evidence exists.
         ema_archive_selection_enabled: when True, the canonical trainer exports
             both live and EMA final archives, evaluates their local score-aware
             proxy plus charged archive bytes, writes
@@ -245,6 +251,7 @@ def run_mlx_score_aware_full_main(
         cosine_decay_enabled=cosine_decay_enabled,
         cosine_decay_total_epochs=cosine_decay_total_epochs,
         cosine_decay_min_lr_ratio=cosine_decay_min_lr_ratio,
+        train_time_dual_ascent_config=train_time_dual_ascent_config,
         prioritized_pair_indices=prioritized_pair_indices,
         pair_sampling_weights=pair_sampling_weights,
         pair_sampling_default_weight=pair_sampling_default_weight,

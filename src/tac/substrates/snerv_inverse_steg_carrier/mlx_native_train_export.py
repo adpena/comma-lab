@@ -1794,6 +1794,9 @@ def _run_score_aware_long_training_attachment(
             coder_qat_loss_weights,
             coder_qat_metadata,
         )
+        from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+            build_default_nerv_train_time_dual_ascent_config,
+        )
         from tac.substrates._shared.mlx_score_aware.harness import (
             run_mlx_score_aware_full_main,
         )
@@ -1905,6 +1908,15 @@ def _run_score_aware_long_training_attachment(
             c1a_sigma=float(coder_qat_c1a_sigma),
             c1a_sample_size=int(coder_qat_c1a_sample_size),
         ).validated()
+        coder_qat_loss_weight_map = coder_qat_loss_weights(coder_qat_cfg)
+        train_time_dual_ascent_config = (
+            build_default_nerv_train_time_dual_ascent_config(
+                family="snerv",
+                segnet_distillation_weight=seg_weight,
+                pose_distillation_weight=pose_weight,
+                coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+            )
+        )
 
         def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
             return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
@@ -1995,7 +2007,7 @@ def _run_score_aware_long_training_attachment(
             "num_pairs": int(pairs.shape[0]),
             "forward_convention": "reconstruct_pair_nchw01",
             "extra_loss_terms": _extra_loss_terms if coder_qat_cfg.enabled else None,
-            "extra_loss_weights": coder_qat_loss_weights(coder_qat_cfg),
+            "extra_loss_weights": coder_qat_loss_weight_map,
             "recon_pixel_weight": recon_weight_mlx,
             "recon_pixel_weight_normalize": "mean",
             "eval_roundtrip_ste_enabled": bool(eval_roundtrip_ste),
@@ -2010,6 +2022,11 @@ def _run_score_aware_long_training_attachment(
                 "human_visual_fidelity_objective": False,
                 "contest_scorer_distillation_objective": distillation_requested,
                 "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+                "train_time_dual_ascent": (
+                    strip_candidate_curriculum_authority_fields(
+                        train_time_dual_ascent_config
+                    )
+                ),
                 "pr95_faithful_curriculum_enabled": bool(
                     pr95_faithful_curriculum_enabled
                 ),
@@ -2133,6 +2150,7 @@ def _run_score_aware_long_training_attachment(
             pair_sampling_default_weight=float(
                 scorer_error_pair_curriculum.get("default_weight", 1.0)
             ),
+            train_time_dual_ascent_config=train_time_dual_ascent_config,
             notes=(
                 "SNeRV MLX score-aware train/export attachment: train LF "
                 "latents or official MFU/HFR/TUB receiver payload atoms with "

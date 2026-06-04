@@ -72,6 +72,13 @@ from tac.substrates._shared.mlx_score_aware.device_gate import (
     is_mlx_available,
     require_mlx_for_harness,
 )
+from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+    TRAIN_TIME_DUAL_ASCENT_SCHEMA,
+    DualAscentConstraint,
+    TrainTimeDualAscentController,
+    TrainTimeDualAscentError,
+    build_default_nerv_train_time_dual_ascent_config,
+)
 from tac.substrates._shared.mlx_score_aware.harness import (
     CONTEST_NORMALIZER,
     MLX_EVIDENCE_GRADE,
@@ -114,9 +121,11 @@ __all__ = [
     "MLX_NUMPY_BRIDGE_DRIFT_SCHEMA",
     "MODEL_SIZE_BUDGET_PLAN_SCHEMA",
     "N_PAIRS_FULL",
+    "TRAIN_TIME_DUAL_ASCENT_SCHEMA",
     "CarrierTrainingPlanError",
     "CarrierTrainingThresholds",
     "CoderAwareQATConfig",
+    "DualAscentConstraint",
     "MlxRenderer",
     "MlxScoreAwareAdapter",
     "MlxScoreAwareHarnessError",
@@ -124,8 +133,11 @@ __all__ = [
     "PoseScorerTeacherProvider",
     "RendererBundle",
     "ScorerTeacherProvider",
+    "TrainTimeDualAscentController",
+    "TrainTimeDualAscentError",
     "assert_numpy_portable_inflate",
     "build_decoder_coder_qat_terms",
+    "build_default_nerv_train_time_dual_ascent_config",
     "build_mlx_numpy_bridge_drift_bundle",
     "build_mlx_posenet_pair_teacher",
     "build_mlx_segnet_pair_teacher",

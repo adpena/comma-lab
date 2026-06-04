@@ -30,6 +30,9 @@ from typing import TYPE_CHECKING, Any
 from tac.substrates._shared.mlx_score_aware.device_gate import (
     require_mlx_for_harness,
 )
+from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+    TrainTimeDualAscentController,
+)
 from tac.substrates._shared.mlx_score_aware.loss import (
     component_loss_weight,
     score_aware_loss,
@@ -414,6 +417,7 @@ class MlxScoreAwareAdapter:
         cosine_decay_enabled: bool = False,
         cosine_decay_total_epochs: int | None = None,
         cosine_decay_min_lr_ratio: float = 1e-2,
+        train_time_dual_ascent_config: Mapping[str, Any] | None = None,
         prioritized_pair_indices: Sequence[int] | None = None,
         pair_sampling_weights: Mapping[int, float] | None = None,
         pair_sampling_default_weight: float = 1.0,
@@ -483,6 +487,12 @@ class MlxScoreAwareAdapter:
                 ``cosine_decay_enabled=True``.
             cosine_decay_min_lr_ratio: end-of-decay lr = peak_lr * ratio
                 (default 1e-2 matches the L2 hardening canonical).
+            train_time_dual_ascent_config: optional projected dual-ascent
+                controller over observed loss-part metrics. This is the
+                train-time version of the contest rate-distortion Lagrangian:
+                it can price SegNet, PoseNet, hard-pair, and coder/rate proxy
+                terms with separate dual variables instead of one static scalar
+                loss blend.
             prioritized_pair_indices: optional hard-pair/sensitivity pair index
                 schedule consumed before random fill. This is non-authority
                 training telemetry only; it lets XRay/master-gradient hard-pair
@@ -581,6 +591,9 @@ class MlxScoreAwareAdapter:
         )
         self._pair_sampling_default_weight = self._normalize_pair_sampling_default_weight(
             pair_sampling_default_weight
+        )
+        self._train_time_dual_ascent = TrainTimeDualAscentController.from_config(
+            train_time_dual_ascent_config
         )
         # Wave N+11 telemetry (consumed by tests + landing memo for the
         # canonical Provenance bind step).
@@ -1324,6 +1337,7 @@ class MlxScoreAwareAdapter:
                 "source_faithful_default": "faithful_stage8_only",
                 "contest_specific_policies": ["every_stage"],
             },
+            "train_time_dual_ascent": self._train_time_dual_ascent.as_metadata(),
         }
         metadata["decoder_weight_gradient_saliency"] = (
             self.decoder_weight_gradient_saliency_summary()
@@ -1971,6 +1985,23 @@ class MlxScoreAwareAdapter:
             out[name] = float(value.item())
         return out
 
+    def _with_dual_ascent_metrics(
+        self,
+        metrics: Mapping[str, Any],
+    ) -> dict[str, float]:
+        """Observe train-step telemetry once and append active dual prices.
+
+        ``effective_loss_weights`` is applied before the gradient step, so each
+        step uses the prices learned from prior telemetry. Observation happens
+        after loss-part metrics are populated here, updating prices for the next
+        step. This keeps PR95, Pact Muon+AdamW, and native MLX optimizer paths
+        on the same closed-loop contract without double-updating.
+        """
+
+        out = {str(key): float(value) for key, value in dict(metrics).items()}
+        out.update(self._train_time_dual_ascent.observe(out))
+        return out
+
     def _effective_wave_n11_learning_rate(self, learning_rate: float) -> float:
         """Return the scalar LR for custom step helpers that cannot take schedules."""
 
@@ -2038,7 +2069,10 @@ class MlxScoreAwareAdapter:
         mx = self._mx
         mlx_nn = self._mlx_nn
         mlx_optim = self._mlx_optim
-        self._active_loss_weights = dict(loss_weights)
+        effective_loss_weights = self._train_time_dual_ascent.effective_loss_weights(
+            loss_weights
+        )
+        self._active_loss_weights = dict(effective_loss_weights)
 
         # PR95-faithful 8-stage Muon+AdamW canonical curriculum opt-in path
         # per CLAUDE.md L14 + L15 + the optimizer stack research memo Option A.
@@ -2049,16 +2083,20 @@ class MlxScoreAwareAdapter:
         # PR95-faithful split). Sister NS kernel (zeropower_via_newtonschulz5_mlx)
         # is the canonical 1:1 PR95 hnerv_muon source implementation.
         if self._pr95_faithful_curriculum_enabled:
-            return self._train_step_pr95_faithful_curriculum(
-                batch=batch,
-                learning_rate=learning_rate,
-                loss_weights=loss_weights,
+            return self._with_dual_ascent_metrics(
+                self._train_step_pr95_faithful_curriculum(
+                    batch=batch,
+                    learning_rate=learning_rate,
+                    loss_weights=effective_loss_weights,
+                )
             )
         if self._wave_n11_optimizer_kind == "pact_muon_adamw":
-            return self._train_step_pact_muon_adamw(
-                batch=batch,
-                learning_rate=learning_rate,
-                loss_weights=loss_weights,
+            return self._with_dual_ascent_metrics(
+                self._train_step_pact_muon_adamw(
+                    batch=batch,
+                    learning_rate=learning_rate,
+                    loss_weights=effective_loss_weights,
+                )
             )
 
         if self._optimizer is None or self._optimizer_lr != learning_rate:
@@ -2075,7 +2113,7 @@ class MlxScoreAwareAdapter:
             # NOTE: score_aware_loss reads bundle.model; the value_and_grad
             # closure differentiates ``self.model`` which IS bundle.model.
             total, _parts = score_aware_loss(
-                self.bundle, batch, loss_weights=loss_weights
+                self.bundle, batch, loss_weights=effective_loss_weights
             )
             return total
 
@@ -2102,8 +2140,8 @@ class MlxScoreAwareAdapter:
         )
         post_update_metrics.update(
             self._score_aware_loss_part_metrics(
-                batch,
-                loss_weights=loss_weights,
+                batch=batch,
+                loss_weights=effective_loss_weights,
             )
         )
 
@@ -2118,7 +2156,7 @@ class MlxScoreAwareAdapter:
             self._train_student_heads(
                 batch=batch,
                 learning_rate=learning_rate,
-                loss_weights=loss_weights,
+                loss_weights=effective_loss_weights,
             )
         )
 
@@ -2167,11 +2205,13 @@ class MlxScoreAwareAdapter:
                 self._wave_n11_weight_decay is not None
             ),
         }
-        return {
-            "total": float(loss_value.item()),
-            **native_optimizer_metrics,
-            **post_update_metrics,
-        }
+        return self._with_dual_ascent_metrics(
+            {
+                "total": float(loss_value.item()),
+                **native_optimizer_metrics,
+                **post_update_metrics,
+            }
+        )
 
     def _train_step_pact_muon_adamw(
         self,
