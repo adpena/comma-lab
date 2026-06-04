@@ -11805,8 +11805,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 )
             hard_byte_ceiling = candidate_hard_byte_ceiling
         cfg = build_hinerv_config_from_modelsize_candidate(candidate_for_config)
+        candidate_num_pairs = int(cfg.num_pairs)
+        if candidate_num_pairs < pairs:
+            raise CompactRendererMlxSpineRunnerError(
+                "HiNeRV modelsize candidate pair capacity is smaller than the "
+                f"requested training sample: candidate_num_pairs={candidate_num_pairs} "
+                f"num_pairs={pairs}"
+            )
         expected = {
-            "num_pairs": int(pairs),
             "latent_dim_mid": max(1, int(latent_dim)),
             "embed_dim": max(1, int(embed_dim)),
             "decoder_channel": max(1, int(decoder_channel)),
@@ -11820,7 +11826,6 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "fine_injection_block_index": int(fine_injection_block_index),
         }
         observed = {
-            "num_pairs": int(cfg.num_pairs),
             "latent_dim_mid": int(cfg.latent_dim_mid),
             "embed_dim": int(cfg.embed_dim),
             "decoder_channel": int(cfg.decoder_channels[0]),
@@ -11925,6 +11930,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         quant_bits=int(coder_qat_cfg.quant_bits) if bool(coder_qat_cfg.enabled) else None,
         per_tensor_bits=decoder_waterfill_fake_quant_bits_by_name,
     )
+    receiver_proof_export_enabled = int(pairs) >= int(cfg.num_pairs)
     pose_instability_monitor = _PoseInstabilityEpochMonitor(
         start_epoch=_resume_start_epoch_for_pose_monitor(resume_from_checkpoint),
         hard_pair_sampling_active=bool(prioritized_pair_indices),
@@ -11938,7 +11944,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             model_obj,
             archive_output_dir,
             repo_root=repo_root,
-            emit_archive_bound_candidate_package=True,
+            emit_archive_bound_candidate_package=receiver_proof_export_enabled,
             retain_receiver_proof_output=False,
             mlx_triage_argv=[
                 "tools/run_compact_renderer_mlx_spine_runner.py",
@@ -11955,11 +11961,26 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "schema": "compact_renderer_hi_nerv_mlx_adapter_smoke_metadata.v1",
         "family": "hi_nerv",
         "num_pairs": pairs,
-        "model_num_pairs": pairs,
+        "training_num_pairs": pairs,
+        "model_num_pairs": int(cfg.num_pairs),
         "hydrated_target_pair_count": hydrated_target_pair_count,
         "source_pair_indices": [int(value) for value in hydrated_source_pair_indices],
         "sparse_prioritized_target_hydration": bool(sparse_priority_target_hydration),
         "full_video_pairs_required_for_promotion": 600,
+        "receiver_proof_export_policy": {
+            "schema": "compact_hi_nerv_receiver_proof_export_policy.v1",
+            "enabled": bool(receiver_proof_export_enabled),
+            "training_num_pairs": int(pairs),
+            "model_num_pairs": int(cfg.num_pairs),
+            "partial_candidate_smoke_skips_full_receiver_proof": bool(
+                not receiver_proof_export_enabled
+            ),
+            "reason": (
+                "full_model_receiver_proof"
+                if receiver_proof_export_enabled
+                else "partial_pair_timing_smoke_keeps_archive_bytes_but_skips_full_raw_inflate"
+            ),
+        },
         "decoder_codec": str(decoder_codec),
         "hi_nerv_latent_codec": str(hi_nerv_latent_codec),
         "model_num_parameters_at_init": int(model.num_parameters()),
@@ -11977,6 +11998,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "target_modelsize_mparams"
             ),
             "modelsize_mparams": candidate_for_config.get("modelsize_mparams"),
+            "candidate_num_pairs": candidate_for_config.get("num_pairs"),
+            "training_num_pairs": pairs,
+            "model_num_pairs": int(cfg.num_pairs),
+            "partial_pair_training_against_full_candidate": bool(
+                candidate_for_config and int(cfg.num_pairs) != pairs
+            ),
             "hard_byte_ceiling": int(hard_byte_ceiling)
             if hard_byte_ceiling is not None
             else None,

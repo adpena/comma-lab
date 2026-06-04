@@ -303,6 +303,20 @@ def test_quantize_actually_changes_latents() -> None:
     assert total_change > 0.0, "quantization at a coarse rate must change the latents"
 
 
+def test_quantize_preserves_shaped_latent_geometry() -> None:
+    """Archive/render consumers must not receive flattened shaped latent arrays."""
+    z = {"coarse": np.array([[0.137, -0.642], [0.911, 0.333]], dtype=np.float32)}
+    steps = {"coarse": np.full(4, 0.25, dtype=np.float64)}
+
+    q = quantize_latents_with_steps(z, steps, scales=("coarse",))
+
+    assert q["coarse"].shape == z["coarse"].shape
+    np.testing.assert_allclose(
+        q["coarse"],
+        np.array([[0.25, -0.75], [1.0, 0.25]], dtype=np.float64),
+    )
+
+
 def test_finer_step_smaller_quantization_error() -> None:
     """A finer quantizer step yields a smaller quantization error than a coarse one."""
     z = {"coarse": np.array([0.137, -0.642, 0.911, 0.333])}

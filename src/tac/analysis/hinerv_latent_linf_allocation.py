@@ -750,13 +750,14 @@ def quantize_latents_with_steps(
     """
     out: dict[str, np.ndarray] = {}
     for name in scales:
-        z = np.asarray(latent_values[name], dtype=np.float64).reshape(-1)
+        original = np.asarray(latent_values[name], dtype=np.float64)
+        z = original.reshape(-1)
         d = np.asarray(steps[name], dtype=np.float64).reshape(-1)
         if z.size != d.size:
             raise HinervAllocationError(
                 f"scale {name}: latent size {z.size} != steps size {d.size}"
             )
-        out[name] = (np.round(z / d) * d)
+        out[name] = (np.round(z / d) * d).reshape(original.shape)
     return out
 
 
