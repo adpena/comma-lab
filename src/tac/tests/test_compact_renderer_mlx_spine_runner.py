@@ -5650,6 +5650,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.0025",
             "--snerv-score-aware-long-training-batch-pairs",
             "6",
+            "--snerv-score-aware-long-training-section-byte-refresh-every-steps",
+            "9",
             "--snerv-score-aware-long-training-optimizer",
             "lion",
             "--snerv-score-aware-long-training-grad-clip-max-norm",
@@ -5731,6 +5733,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_score_aware_long_training_epochs == 17
     assert sn.snerv_score_aware_long_training_lr == 0.0025
     assert sn.snerv_score_aware_long_training_batch_pairs == 6
+    assert sn.snerv_score_aware_long_training_section_byte_refresh_every_steps == 9
     assert sn.snerv_score_aware_long_training_optimizer == "lion"
     assert sn.snerv_score_aware_long_training_grad_clip_max_norm == 0.75
     assert sn.snerv_score_aware_long_training_weight_decay == -1.0
@@ -9992,6 +9995,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         snerv_score_aware_long_training_epochs=13,
         snerv_score_aware_long_training_lr=0.002,
         snerv_score_aware_long_training_batch_pairs=2,
+        snerv_score_aware_long_training_section_byte_refresh_every_steps=7,
         snerv_score_aware_long_training_optimizer="lion",
         snerv_score_aware_long_training_grad_clip_max_norm=0.5,
         snerv_score_aware_long_training_weight_decay=None,
@@ -10032,6 +10036,10 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["score_aware_long_training_epochs"] == 13
     assert native_calls[0]["score_aware_long_training_lr"] == pytest.approx(0.002)
     assert native_calls[0]["score_aware_long_training_batch_pairs"] == 2
+    assert (
+        native_calls[0]["score_aware_long_training_section_byte_refresh_every_steps"]
+        == 7
+    )
     assert native_calls[0]["score_aware_long_training_optimizer"] == "lion"
     assert native_calls[0]["score_aware_long_training_grad_clip_max_norm"] == 0.5
     assert native_calls[0]["score_aware_long_training_weight_decay"] is None
@@ -10060,6 +10068,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["modelsize_candidate"][
         "snerv_score_aware_long_training_epochs"
     ] == 13
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_section_byte_refresh_every_steps"
+    ] == 7
     assert native_calls[0]["modelsize_candidate"]["fc_dim"] == 11
     assert native_calls[0]["modelsize_candidate"]["official_modelsize_solution"][
         "fc_dim"

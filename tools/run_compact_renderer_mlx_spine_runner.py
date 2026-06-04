@@ -3434,6 +3434,7 @@ def _run_snerv_native_mlx_export_attachment(
     score_aware_long_training_epochs: int,
     score_aware_long_training_lr: float,
     score_aware_long_training_batch_pairs: int,
+    score_aware_long_training_section_byte_refresh_every_steps: int,
     score_aware_long_training_optimizer: str,
     score_aware_long_training_grad_clip_max_norm: float | None,
     score_aware_long_training_weight_decay: float | None,
@@ -3546,6 +3547,9 @@ def _run_snerv_native_mlx_export_attachment(
             score_aware_long_training_lr=float(score_aware_long_training_lr),
             score_aware_long_training_batch_pairs=int(
                 score_aware_long_training_batch_pairs
+            ),
+            score_aware_long_training_section_byte_refresh_every_steps=int(
+                score_aware_long_training_section_byte_refresh_every_steps
             ),
             score_aware_long_training_optimizer=str(
                 score_aware_long_training_optimizer
@@ -4384,6 +4388,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_score_aware_long_training_epochs: int = 0,
     snerv_score_aware_long_training_lr: float = 1.0e-3,
     snerv_score_aware_long_training_batch_pairs: int = 2,
+    snerv_score_aware_long_training_section_byte_refresh_every_steps: int = 25,
     snerv_score_aware_long_training_optimizer: str = "pact_muon_adamw",
     snerv_score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
@@ -4767,6 +4772,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_batch_pairs": int(
             snerv_score_aware_long_training_batch_pairs
         ),
+        "snerv_score_aware_long_training_section_byte_refresh_every_steps": int(
+            snerv_score_aware_long_training_section_byte_refresh_every_steps
+        ),
         "snerv_score_aware_long_training_optimizer": str(
             snerv_score_aware_long_training_optimizer
         ),
@@ -4884,6 +4892,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             score_aware_long_training_lr=float(snerv_score_aware_long_training_lr),
             score_aware_long_training_batch_pairs=int(
                 snerv_score_aware_long_training_batch_pairs
+            ),
+            score_aware_long_training_section_byte_refresh_every_steps=int(
+                snerv_score_aware_long_training_section_byte_refresh_every_steps
             ),
             score_aware_long_training_optimizer=str(
                 snerv_score_aware_long_training_optimizer
@@ -5715,6 +5726,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_batch_pairs": int(
             snerv_score_aware_long_training_batch_pairs
         ),
+        "snerv_score_aware_long_training_section_byte_refresh_every_steps": int(
+            snerv_score_aware_long_training_section_byte_refresh_every_steps
+        ),
         "snerv_score_aware_long_training_optimizer": str(
             snerv_score_aware_long_training_optimizer
         ),
@@ -5819,6 +5833,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         score_aware_long_training_lr=float(snerv_score_aware_long_training_lr),
         score_aware_long_training_batch_pairs=int(
             snerv_score_aware_long_training_batch_pairs
+        ),
+        score_aware_long_training_section_byte_refresh_every_steps=int(
+            snerv_score_aware_long_training_section_byte_refresh_every_steps
         ),
         score_aware_long_training_optimizer=str(
             snerv_score_aware_long_training_optimizer
@@ -17343,6 +17360,15 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Batch pair count for SNeRV score-aware MLX long training.",
     )
     parser.add_argument(
+        "--snerv-score-aware-long-training-section-byte-refresh-every-steps",
+        default=25,
+        type=int,
+        help=(
+            "Refresh cadence for live current-SNAR1 section-byte telemetry "
+            "inside SNeRV train-time dual-ascent byte pressure."
+        ),
+    )
+    parser.add_argument(
         "--snerv-score-aware-long-training-optimizer",
         default=DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
         choices=SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
@@ -18099,6 +18125,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_score_aware_long_training_batch_pairs=(
                 args.snerv_score_aware_long_training_batch_pairs
+            ),
+            snerv_score_aware_long_training_section_byte_refresh_every_steps=(
+                args.snerv_score_aware_long_training_section_byte_refresh_every_steps
             ),
             snerv_score_aware_long_training_optimizer=(
                 args.snerv_score_aware_long_training_optimizer
