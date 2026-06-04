@@ -53,6 +53,7 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
     SnervArchivePacket,
+    decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frames,
     encode_decoder_payload,
     encode_lf_metadata_payload,
@@ -3483,6 +3484,8 @@ def _build_official_mfu_hfr_tub_packet_from_components(
     channels = int(skip_high_full_shape[1])
     h = int(skip_high_full_shape[-2]) * 2
     w = int(skip_high_full_shape[-1]) * 2
+    tub_temporal_encoder_concat = components.get("tub_temporal_encoder_concat")
+    tub_output2_raw = components.get("tub_output2_raw")
     official_payload = encode_official_mfu_hfr_tub_decoder_payload(
         mfu=components["mfu"],
         hfr_heads=components["hfr_heads"],
@@ -3502,7 +3505,18 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         skip_high_codec=skip_high_mode,
         skip_high_source_shape=skip_high_full_shape,
         tub_input_codec="unused_synthetic",
+        tub_temporal_encoder_concat=(
+            None
+            if tub_temporal_encoder_concat is None
+            else np.asarray(tub_temporal_encoder_concat, dtype=np.float64)
+        ),
+        tub_output2_raw=(
+            None if tub_output2_raw is None else np.asarray(tub_output2_raw, dtype=np.float64)
+        ),
     )
+    official_payload_proof = execute_official_mfu_hfr_tub_decoder_payload(official_payload)
+    official_payload_header = decode_official_mfu_hfr_tub_decoder_payload(official_payload).header
+    tub_output2_storage = dict(official_payload_header.get("tub_output2_storage") or {})
     step_packet = encode_step_maps_waterfill(
         [np.ones((1, 1), dtype=np.float32)],
         map_importance=np.ones((1,), dtype=np.float64),
@@ -3535,6 +3549,10 @@ def _build_official_mfu_hfr_tub_packet_from_components(
             tuple(int(v) for v in skip_high.shape) != skip_high_full_shape
         ),
         "official_tub_input_storage_mode": "unused_synthetic",
+        "official_tub_output2_storage": tub_output2_storage,
+        "official_tub_output2_receiver_executed": bool(
+            official_payload_proof["executed_components"]["official_tub_output2_fusion"]
+        ),
         **(
             {"official_hfr_bootstrap": components["official_hfr_bootstrap"]}
             if isinstance(components.get("official_hfr_bootstrap"), Mapping)

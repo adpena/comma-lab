@@ -1331,6 +1331,58 @@ def test_train_export_official_primitives_shared_skip_high_is_receiver_closed(
     assert official_payload.score_claim is False
 
 
+def test_official_mfu_hfr_tub_packet_carries_output2_payload_from_components() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=2)
+    model_size = SnervModelSizeConfig(
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+        fc_dim=9,
+    )
+    components = mod._official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    components["tub_temporal_encoder_concat"] = np.arange(
+        np.prod(components["temporal_encoder_output_shape"]),
+        dtype=np.float64,
+    ).reshape(components["temporal_encoder_output_shape"])
+    components["tub_output2_raw"] = (
+        np.arange(
+            np.prod(components["output2_decoder_output_shape"]),
+            dtype=np.float64,
+        ).reshape(components["output2_decoder_output_shape"])
+        / 19.0
+    )
+
+    packet = mod._build_official_mfu_hfr_tub_packet_from_components(
+        components,
+        source_pair_indices=[4, 5],
+        model_size=model_size,
+        metadata_extra={"allocation_mode": "unit_output2_payload_bound"},
+    )
+    decoded = unpack_snerv_archive(packet.packet)
+    official_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    proof = official_payload.execute()
+
+    storage = decoded.metadata["official_tub_output2_storage"]
+    assert storage["stored"] is True
+    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["tensor_names"] == [
+        "tub.temporal_encoder_concat",
+        "tub.output2_raw",
+    ]
+    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
+    assert proof["executed_components"]["official_tub_output2_fusion"] is True
+    rows = {row["name"]: row for row in proof["output_tensors"]}
+    assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
+    assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
+    assert decoded.metadata["source_faithful_stack"] is False
+    assert decoded.metadata["score_claim"] is False
+
+
 def test_official_primitives_long_training_exports_trained_official_payload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
