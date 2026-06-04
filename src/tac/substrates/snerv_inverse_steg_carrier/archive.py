@@ -1287,6 +1287,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     fc_hw: tuple[int, int] | None = None,
     output2_decoder_output_shape: tuple[int, int, int, int] | None = None,
     skip_high_codec: str | None = None,
+    skip_high_source_shape: tuple[int, int, int, int] | None = None,
     tub_input_codec: str | None = None,
 ) -> bytes:
     """Encode executable official MFU/HFR/TUB receiver primitive bytes.
@@ -1300,6 +1301,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     skip_high_plan = _official_skip_high_storage_plan(
         skip_high,
         codec=skip_high_codec,
+        source_shape=skip_high_source_shape,
     )
     tub_input_plan = _official_tub_input_storage_plan(
         current=tub_current,
@@ -1718,30 +1720,68 @@ def _official_skip_high_storage_plan(
     skip_high: np.ndarray,
     *,
     codec: str | None,
+    source_shape: tuple[int, int, int, int] | None = None,
 ) -> dict[str, Any]:
-    full = _canonical_float64_tensor(skip_high, name="inputs.mfu.skip_high")
-    if full.ndim != 4:
+    arr = _canonical_float64_tensor(skip_high, name="inputs.mfu.skip_high")
+    if arr.ndim != 4:
         raise SnervArchiveError(
-            f"official skip_high must be NCHW, got {tuple(full.shape)}"
+            f"official skip_high must be NCHW, got {tuple(arr.shape)}"
         )
     normalized = _normalize_official_skip_high_codec(codec)
+    declared_source_shape = (
+        None
+        if source_shape is None
+        else tuple(int(value) for value in source_shape)
+    )
+    if declared_source_shape is not None and (
+        len(declared_source_shape) != 4 or any(value <= 0 for value in declared_source_shape)
+    ):
+        raise SnervArchiveError(
+            f"official skip_high source_shape must be positive NCHW, got {declared_source_shape}"
+        )
+    if normalized == OFFICIAL_SKIP_HIGH_CODEC_FULL and declared_source_shape is not None:
+        if tuple(arr.shape) != declared_source_shape:
+            raise SnervArchiveError(
+                "official full skip_high payload shape must match source_shape; "
+                f"payload={tuple(arr.shape)} source_shape={declared_source_shape}"
+            )
+        source_shape_tuple = declared_source_shape
+    elif declared_source_shape is None:
+        source_shape_tuple = tuple(int(v) for v in arr.shape)
+    else:
+        source_shape_tuple = declared_source_shape
+
+    compact_expected_tail = {
+        OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN: tuple(source_shape_tuple[1:]),
+        OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN: (int(source_shape_tuple[1]), 1, 1),
+        OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN: (1, 1, 1),
+    }
+    compact_payload = (
+        normalized in compact_expected_tail
+        and declared_source_shape is not None
+        and int(arr.shape[0]) == 1
+        and tuple(arr.shape[1:]) == compact_expected_tail[normalized]
+    )
     if normalized == OFFICIAL_SKIP_HIGH_CODEC_FULL:
-        stored = full
-        effective = full
+        stored = arr
+        effective = arr
+    elif compact_payload:
+        stored = arr
+        effective = np.broadcast_to(stored, source_shape_tuple).copy()
     elif normalized == OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN:
-        stored = np.mean(full, axis=0, keepdims=True, dtype=np.float64)
-        effective = np.broadcast_to(stored, full.shape).copy()
+        stored = np.mean(arr, axis=0, keepdims=True, dtype=np.float64)
+        effective = np.broadcast_to(stored, source_shape_tuple).copy()
     elif normalized == OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN:
-        stored = np.mean(full, axis=(0, 2, 3), keepdims=True, dtype=np.float64)
-        effective = np.broadcast_to(stored, full.shape).copy()
+        stored = np.mean(arr, axis=(0, 2, 3), keepdims=True, dtype=np.float64)
+        effective = np.broadcast_to(stored, source_shape_tuple).copy()
     elif normalized == OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN:
-        stored = np.asarray([[[[float(np.mean(full, dtype=np.float64))]]]], dtype=np.float64)
-        effective = np.broadcast_to(stored, full.shape).copy()
+        stored = np.asarray([[[[float(np.mean(arr, dtype=np.float64))]]]], dtype=np.float64)
+        effective = np.broadcast_to(stored, source_shape_tuple).copy()
     else:  # pragma: no cover - guarded by normalizer
         raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}")
     stored = _canonical_float64_tensor(stored, name="inputs.mfu.skip_high")
     effective = _canonical_float64_tensor(effective, name="inputs.mfu.skip_high.expanded")
-    full_raw_bytes = int(full.size) * np.dtype("<f8").itemsize
+    full_raw_bytes = int(np.prod(source_shape_tuple)) * np.dtype("<f8").itemsize
     stored_raw_bytes = int(stored.size) * np.dtype("<f8").itemsize
     return {
         "stored": stored,
@@ -1749,12 +1789,13 @@ def _official_skip_high_storage_plan(
         "metadata": {
             "schema": "snerv_official_skip_high_storage.v1",
             "codec": normalized,
-            "source_shape": [int(v) for v in full.shape],
+            "source_shape": [int(v) for v in source_shape_tuple],
             "stored_shape": [int(v) for v in stored.shape],
             "effective_shape": [int(v) for v in effective.shape],
             "source_raw_bytes": full_raw_bytes,
             "stored_raw_bytes": stored_raw_bytes,
             "raw_byte_savings": full_raw_bytes - stored_raw_bytes,
+            "encoder_consumed_compact_train_state": bool(compact_payload),
             "receiver_expands_skip_high": normalized
             != OFFICIAL_SKIP_HIGH_CODEC_FULL,
             "lossless_relative_to_source_skip_high": normalized

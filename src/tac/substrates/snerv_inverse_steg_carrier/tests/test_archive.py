@@ -699,10 +699,53 @@ def test_official_mfu_hfr_tub_compact_skip_high_payload_expands_receiver_state(
     assert compact_header["skip_high_storage"]["stored_shape"] == [1, 1, 1, 1]
     assert compact_header["skip_high_storage"]["raw_byte_savings"] == 1016
     assert compact_header["skip_high_storage"]["receiver_expands_skip_high"] is True
+    assert compact_header["skip_high_storage"]["encoder_consumed_compact_train_state"] is False
     assert len(compact_payload) < len(full_payload)
     assert decoded.tensors["inputs.mfu.skip_high"].shape == (2, 1, 8, 8)
     assert proof["receiver_runtime_decode_proven"] is True
     assert proof["score_claim"] is False
+
+
+@pytest.mark.parametrize(
+    ("mode", "compact", "stored_shape"),
+    [
+        ("shared_mean", np.zeros((1, 1, 8, 8), dtype=np.float64), [1, 1, 8, 8]),
+        ("channel_mean", np.zeros((1, 1, 1, 1), dtype=np.float64), [1, 1, 1, 1]),
+        ("scalar_mean", np.zeros((1, 1, 1, 1), dtype=np.float64), [1, 1, 1, 1]),
+    ],
+)
+def test_official_mfu_hfr_tub_compact_skip_high_encoder_avoids_reexpansion(
+    mode: str,
+    compact: np.ndarray,
+    stored_shape: list[int],
+) -> None:
+    bundle = _official_payload_fixture()
+    source_shape = (2, 1, 8, 8)
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = compact + 0.5
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        skip_high_codec=mode,
+        skip_high_source_shape=source_shape,
+    )
+    header = _read_subpacket_header(payload)
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+
+    assert header["skip_high_storage"]["source_shape"] == [2, 1, 8, 8]
+    assert header["skip_high_storage"]["stored_shape"] == stored_shape
+    assert header["skip_high_storage"]["encoder_consumed_compact_train_state"] is True
+    assert decoded.tensors["inputs.mfu.skip_high"].shape == source_shape
+    np.testing.assert_allclose(
+        decoded.tensors["inputs.mfu.skip_high"],
+        np.broadcast_to(bundle["skip_high"], source_shape),
+    )
 
 
 def test_official_mfu_hfr_tub_unused_tub_inputs_compact_without_score_authority() -> None:

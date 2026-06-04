@@ -923,11 +923,6 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
 
         state = self.export_state_dict()
         skip_high = state["skip_high"].astype(np.float64)
-        if self.skip_high_mode != "full":
-            skip_high = np.broadcast_to(skip_high, self.skip_high_full_shape).astype(
-                np.float64,
-                copy=True,
-            )
         return {
             "mfu": self.mfu,
             "hfr_heads": OfficialHfrHeads(
@@ -940,6 +935,8 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
             "skip_high": skip_high,
             "skip_high_mode": self.skip_high_mode,
             "skip_high_full_shape": tuple(int(v) for v in self.skip_high_full_shape),
+            "skip_high_export_storage_shape": tuple(int(v) for v in skip_high.shape),
+            "skip_high_export_is_compact_train_state": self.skip_high_mode != "full",
             "tub_current": self._tub_current_np.astype(np.float64),
             "tub_previous": self._tub_previous_np.astype(np.float64),
             "tub_next_frame": self._tub_next_frame_np.astype(np.float64),

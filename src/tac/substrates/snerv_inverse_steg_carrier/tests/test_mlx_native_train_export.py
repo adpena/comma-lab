@@ -1426,6 +1426,9 @@ def test_official_primitives_long_training_compact_skip_high_exports_full_shape(
     assert storage["codec"] == codec
     assert storage["source_shape"] == [4, 3, 8, 8]
     assert storage["stored_shape"] == stored_shape
+    assert storage["encoder_consumed_compact_train_state"] is True
+    assert decoded.metadata["official_skip_high_export_storage_shape"] == stored_shape
+    assert decoded.metadata["official_skip_high_export_is_compact_train_state"] is True
     assert official_payload.tensors["inputs.mfu.skip_high"].shape == (4, 3, 8, 8)
     frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
     assert frames.shape == (2, 2, 3, 16, 16)
