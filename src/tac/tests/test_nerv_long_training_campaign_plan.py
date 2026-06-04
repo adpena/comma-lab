@@ -2797,6 +2797,38 @@ def test_long_training_campaign_cli_discovers_snerv_binary_profile_receiver_feed
     assert profile.resolve(strict=False) in discovered
 
 
+def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
+    tmp_path: Path,
+) -> None:
+    feedback = tmp_path / "nested" / "snerv_upstream_eval_candidate_feedback_row.json"
+    feedback.parent.mkdir()
+    feedback.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "upstream_eval_gate",
+                "feedback_scope": "full600_upstream_cpu_eval",
+                "family": "snerv",
+                "candidate_id": "snerv_upstream_data_only_snsa2",
+                "measured_num_pairs": 600,
+                "direct_feedback_blockers": ["snerv_upstream_eval_gate_score_bad"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    ignored = tmp_path / "nested" / "not_candidate_feedback_row.json"
+    ignored.write_text('{"schema":"other.v1"}', encoding="utf-8")
+
+    discovered = cli._discover_candidate_feedback_paths([tmp_path], limit=8)
+
+    assert feedback.resolve(strict=False) in discovered
+    assert ignored.resolve(strict=False) not in discovered
+
+
 def test_long_training_campaign_plan_rejects_partial_snerv_binary_profile_byte_feedback(
     tmp_path: Path,
 ) -> None:
@@ -3385,6 +3417,81 @@ def test_long_training_campaign_plan_reuses_snerv_full_video_rate_failure_as_con
         snerv["candidate_feedback"]["recommended_launch_mutations"]
     )
     assert snerv["score_claim"] is False
+
+
+def test_long_training_campaign_plan_reuses_snerv_upstream_eval_gate_as_context_only() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "upstream_eval_gate",
+                "feedback_scope": "full600_upstream_cpu_eval",
+                "family": "snerv",
+                "candidate_id": "snerv_upstream_data_only_snsa2",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "scope_matches_candidate": False,
+                "context_only": True,
+                "feedback_ready": False,
+                "launch_control_feedback_ready": False,
+                "receiver_proof_attached": False,
+                "full_video_local_prefilter_attached": False,
+                "local_cpu_replay_gate_attached": False,
+                "measured_archive_bytes": 51_694,
+                "upstream_eval_score": 90.61,
+                "upstream_eval_pose": 162.09104919,
+                "upstream_eval_seg": 0.50314105,
+                "upstream_eval_rate": 0.00137684,
+                "recommended_launch_mutations": [
+                    "block_snerv_data_only_archive_as_launch_candidate_due_to_scorer_quality",
+                    "require_snerv_representation_change_before_more_same_long_training",
+                ],
+                "direct_feedback_blockers": [
+                    "snerv_upstream_eval_gate_score_bad",
+                    "paired_contest_cpu_cuda_auth_eval_missing",
+                    "pre_submission_compliance_gate_missing",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    feedback = snerv["candidate_feedback"]
+    assert feedback["feedback_match_scope"] == "family_upstream_eval_gate_context"
+    assert feedback["candidate_id_match"] is False
+    assert feedback["source_candidate_id"] == "snerv_upstream_data_only_snsa2"
+    assert feedback["target_candidate_id"] == snerv["candidate_id"]
+    assert feedback["context_only"] is True
+    assert feedback["receiver_proof_attached"] is False
+    assert feedback["full_video_local_prefilter_attached"] is False
+    assert feedback["local_cpu_replay_gate_attached"] is False
+    assert feedback["measured_archive_bytes"] is None
+    assert feedback["measured_payload_bytes"] is None
+    assert feedback["feedback_ready"] is False
+    assert feedback["launch_control_feedback_ready"] is False
+    assert (
+        feedback["feedback_reuse_policy"]
+        == "family_upstream_eval_context_only_no_archive_receiver_replay_or_launch_authority"
+    )
+    assert "snerv_upstream_eval_gate_score_bad" in (
+        snerv["candidate_feedback_evidence_blockers"]
+    )
+    assert "require_snerv_representation_change_before_more_same_long_training" in (
+        snerv["candidate_feedback"]["recommended_launch_mutations"]
+    )
+    assert snerv["score_claim"] is False
+    assert snerv["experiment_queue_entry"]["status"] == "disabled"
+    assert snerv["experiment_queue_entry"]["score_claim"] is False
 
 
 def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback() -> None:

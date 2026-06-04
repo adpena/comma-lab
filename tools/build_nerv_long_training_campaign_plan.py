@@ -82,6 +82,22 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--auto-candidate-feedback-root",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Search this artifact root for nerv_candidate_feedback_row.v1 JSON "
+            "and feed newest rows into campaign rows. Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--auto-candidate-feedback-limit",
+        type=int,
+        default=8,
+        help="Maximum discovered candidate feedback rows to consume.",
+    )
+    parser.add_argument(
         "--modelsize-byte-cap-feedback-json",
         action="append",
         default=[],
@@ -213,6 +229,15 @@ def main(argv: list[str] | None = None) -> int:
             ),
         ]
     )
+    candidate_feedback_paths = _dedupe_paths(
+        [
+            *(path for path in args.candidate_feedback_source),
+            *_discover_candidate_feedback_paths(
+                args.auto_candidate_feedback_root,
+                limit=int(args.auto_candidate_feedback_limit),
+            ),
+        ]
+    )
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_load(args.hinerv_modelsize_budget),
         snerv_modelsize_budget=_load(args.snerv_modelsize_budget),
@@ -223,7 +248,7 @@ def main(argv: list[str] | None = None) -> int:
         output_root=args.output_root,
         max_candidates_per_family=args.max_candidates_per_family,
         joint_recon_weight_manifest_paths=tuple(args.joint_recon_weight_manifest),
-        candidate_feedback_sources=tuple(_load_feedback_sources(args.candidate_feedback_source)),
+        candidate_feedback_sources=tuple(_load_feedback_sources(candidate_feedback_paths)),
         modelsize_byte_cap_feedback_paths=tuple(
             path.as_posix() for path in modelsize_byte_cap_feedback_paths
         ),
@@ -288,6 +313,9 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "schema": report["schema"],
                 "campaign_row_count": report["campaign_row_count"],
+                "candidate_feedback_source_count": report[
+                    "candidate_feedback_source_count"
+                ],
                 "launchable_local_row_count": report["launchable_local_row_count"],
                 "blocked_row_count": report["blocked_row_count"],
                 "decoder_weight_waterfill_attached_row_count": report["decoder_weight_waterfill_attached_row_count"],
@@ -360,6 +388,60 @@ def _discover_modelsize_byte_cap_feedback_paths(
                     candidates.append((path.stat().st_mtime, path))
     candidates.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
     return _dedupe_paths([path for _mtime, path in candidates])[:limit]
+
+
+def _discover_candidate_feedback_paths(
+    roots: list[Path],
+    *,
+    limit: int,
+) -> list[Path]:
+    if limit <= 0:
+        return []
+    names = (
+        "snerv_upstream_eval_candidate_feedback_row.json",
+        "nerv_candidate_feedback_row.json",
+        "candidate_feedback_row.json",
+    )
+    candidates: list[tuple[float, Path]] = []
+    seen: set[str] = set()
+    for raw_root in roots:
+        root = Path(raw_root).expanduser().resolve(strict=False)
+        if not root.is_dir():
+            continue
+        for pattern in (*names, "*candidate_feedback*row*.json"):
+            for path in root.rglob(pattern):
+                key = path.resolve(strict=False).as_posix()
+                if key in seen:
+                    continue
+                seen.add(key)
+                if _is_candidate_feedback_source(path):
+                    candidates.append((path.stat().st_mtime, path))
+    candidates.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
+    return _dedupe_paths([path for _mtime, path in candidates])[:limit]
+
+
+def _is_candidate_feedback_source(path: Path) -> bool:
+    try:
+        payload = _load(path)
+    except (OSError, TypeError, json.JSONDecodeError):
+        return False
+    if payload.get("schema") == "nerv_candidate_feedback_row.v1":
+        return True
+    if payload.get("schema") == "nerv_candidate_byte_feedback_ledger.v1":
+        row = payload.get("row")
+        return (
+            isinstance(row, dict)
+            and row.get("schema") == "nerv_candidate_feedback_row.v1"
+        )
+    if payload.get("schema") == "nerv_queue_training_feedback_refresh.v1":
+        rows = payload.get("rows")
+        return isinstance(rows, list) and any(
+            isinstance(item, dict)
+            and isinstance(item.get("row"), dict)
+            and item["row"].get("schema") == "nerv_candidate_feedback_row.v1"
+            for item in rows
+        )
+    return False
 
 
 def _is_receiver_proof_modelsize_byte_cap_export(path: Path) -> bool:
