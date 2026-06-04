@@ -101,6 +101,10 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     public_sig = inspect.signature(train_export_snerv_mlx_native)
     assert "score_aware_long_training_pr95_muon_policy" in public_sig.parameters
     assert (
+        "score_aware_long_training_scorer_input_distribution_guard_weight"
+        in public_sig.parameters
+    )
+    assert (
         public_sig.parameters[
             "score_aware_long_training_pr95_muon_policy"
         ].default
@@ -108,6 +112,7 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     )
     attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
     assert "pr95_muon_policy" in attachment_sig.parameters
+    assert "scorer_input_distribution_guard_weight" in attachment_sig.parameters
 
     source = Path(mod.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)
@@ -121,6 +126,11 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     assert attachment_calls
     assert any(
         "pr95_muon_policy" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in attachment_calls
+    )
+    assert any(
+        "scorer_input_distribution_guard_weight"
+        in {kw.arg for kw in call.keywords if kw.arg}
         for call in attachment_calls
     )
     harness_calls = [
@@ -213,6 +223,73 @@ def test_score_aware_checkpoint_selection_policy_preserves_mse_fallback() -> Non
     assert policy["selection_metric"] == "full_reconstruction_mse_nchw255"
     assert policy["selection_metric_value_key"] == "recon_mse_nchw255"
     assert policy["blockers"] == []
+
+
+def test_snerv_archive_section_qat_policy_prices_decoder_and_lf_latents() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._build_snerv_pretraining_archive_section_qat_weight_policy(
+        pairs_nchw255=_tiny_pairs(pairs=2),
+        model_size=SnervModelSizeConfig(fc_dim=4, emb_size=1, patch_radius=1),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(3, 7),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        hard_byte_ceiling=10_000,
+        base_qat_weights={
+            "coder_qat_quant_residual": 1.0e-3,
+            "coder_qat_magnitude": 2.0e-4,
+        },
+    )
+
+    assert policy["schema"] == mod.SNERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA
+    assert policy["active"] is True
+    assert policy["baseline_packet_bytes"] > 0
+    assert policy["blockers"] == []
+    assert policy["decoder_section_bytes"] > 0
+    assert policy["lf_section_bytes"] > 0
+    assert policy["extra_loss_weights"]["coder_qat_quant_residual"] >= 1.0e-3
+    assert "latent_qat_quant_residual" in policy["extra_loss_weights"]
+    assert "latent_qat_magnitude" in policy["extra_loss_weights"]
+    assert {
+        row["section_name"]: row["operator"]
+        for row in policy["applied_section_operators"]
+    } == {
+        "decoder_payload": "decoder_coder_qat_loss_weight_scaling",
+        "lf_payload": "lf_latent_coder_qat_loss_weight_scaling",
+    }
+    pending = {row["section_name"] for row in policy["pending_section_operators"]}
+    assert {"metadata_payload", "step_map_packet"}.issubset(pending)
+
+
+def test_snerv_archive_section_qat_policy_fails_closed_on_empty_weights() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._build_snerv_pretraining_archive_section_qat_weight_policy(
+        pairs_nchw255=_tiny_pairs(pairs=1),
+        model_size=SnervModelSizeConfig(),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(0,),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        hard_byte_ceiling=None,
+        base_qat_weights={},
+    )
+
+    assert policy["active"] is False
+    assert "snerv_archive_section_qat_base_weights_empty" in policy["blockers"]
 
 
 def test_torch_scorer_device_alias_resolves_gpu_for_direct_snerv_export() -> None:
@@ -1147,6 +1224,9 @@ def test_train_export_long_training_binds_real_scorer_teachers(
             "score_aware_long_training_lr": 1.0e-3,
             "score_aware_long_training_batch_pairs": 2,
             "score_aware_long_training_optimizer": "pact_muon_adamw",
+            "score_aware_long_training_scorer_input_distribution_guard_weight": 0.5,
+            "score_aware_long_training_scorer_input_distribution_guard_saturation_margin": 0.03,
+            "score_aware_long_training_scorer_input_distribution_guard_temperature": 0.02,
         },
         scorer_upstream_dir=fake_upstream,
         output_height=16,
@@ -1191,6 +1271,33 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     }
     assert long_training["coder_aware_qat"]["enabled"] is True
     assert long_training["coder_aware_qat"]["quant_bits"] == 4
+    assert long_training["archive_section_qat_weight_policy_bound"] is True
+    section_policy = long_training["archive_section_qat_weight_policy"]
+    assert section_policy["schema"] == mod.SNERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA
+    assert section_policy["active"] is True
+    assert section_policy["baseline_packet_bytes"] > 0
+    assert section_policy["decoder_section_bytes"] > 0
+    assert section_policy["lf_section_bytes"] > 0
+    assert "latent_qat_quant_residual" in section_policy["extra_loss_weights"]
+    assert long_training["latent_qat_bound"] is True
+    assert (
+        report["score_aware_long_training_scorer_input_distribution_guard_bound"]
+        is True
+    )
+    assert long_training["scorer_input_distribution_guard_bound"] is True
+    assert long_training["scorer_input_distribution_guard"] == {
+        "schema": "snerv_mlx_score_aware_scorer_input_distribution_guard.v1",
+        "requested": True,
+        "enabled": True,
+        "bound_to_renderer_bundle": True,
+        "weight": 0.5,
+        "saturation_margin": 0.03,
+        "temperature": 0.02,
+        "target_surface": "decoded_rgb01_vs_target_rgb01_mean_std_soft_saturation",
+        "score_authority": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
     assert long_training["pr95_faithful_curriculum_enabled"] is True
     assert long_training["muon_adamw_partition_bound"] is True
     assert long_training["teacher_binding"]["pose_distillation_loss"] == "huber"
@@ -1211,9 +1318,27 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert "coder_aware_qat" in long_training["checkpoint_selection_policy"][
         "active_score_surfaces"
     ]
+    assert "latent_qat_quant_residual" in long_training["checkpoint_selection_policy"][
+        "weighted_coder_qat_terms"
+    ]
+    assert "latent_qat_magnitude" in long_training["checkpoint_selection_policy"][
+        "weighted_coder_qat_terms"
+    ]
     assert "pr95_faithful_curriculum" in long_training[
         "checkpoint_selection_policy"
     ]["active_score_surfaces"]
+    assert "scorer_input_distribution_guard" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
+    assert "scorer_input_distribution_guard" in long_training[
+        "checkpoint_selection_policy"
+    ]["required_loss_parts"]
+    assert (
+        long_training["checkpoint_selection_policy"][
+            "scorer_input_distribution_guard_weight"
+        ]
+        == 0.5
+    )
     assert long_training["best_checkpoint_selection"]["selection_metric"] == (
         "score_aware_composite_full_video_surrogate"
     )
@@ -1226,7 +1351,20 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert "weighted_pose_distill" in long_training["best_checkpoint_selection"][
         "score_aware_composite_parts"
     ]
+    assert (
+        "weighted_scorer_input_distribution_guard"
+        in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
+    )
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert (
+        decoded.metadata[
+            "score_aware_long_training_scorer_input_distribution_guard_bound"
+        ]
+        is True
+    )
+    assert decoded.metadata["score_aware_long_training"][
+        "scorer_input_distribution_guard_bound"
+    ] is True
     assert decoded.metadata["score_aware_long_training"]["teacher_binding"][
         "has_real_segnet_teacher"
     ] is True

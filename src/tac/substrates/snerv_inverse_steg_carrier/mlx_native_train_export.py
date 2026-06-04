@@ -144,6 +144,9 @@ SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER = (
 SNERV_SCORE_AWARE_CHECKPOINT_SELECTION_SCHEMA = (
     "snerv_score_aware_checkpoint_selection_policy.v1"
 )
+SNERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA = (
+    "snerv_archive_section_qat_weight_policy.v1"
+)
 NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
 SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS = 262_144
@@ -215,6 +218,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
     *,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    scorer_input_distribution_guard_weight: float = 0.0,
     has_real_segnet_teacher: bool,
     has_real_posenet_teacher: bool,
     coder_aware_qat_bound: bool,
@@ -233,6 +237,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
 
     seg_weight = float(segnet_distillation_weight)
     pose_weight = float(pose_distillation_weight)
+    guard_weight = float(scorer_input_distribution_guard_weight)
     weighted_qat_terms = {
         str(name): float(weight)
         for name, weight in dict(coder_qat_loss_weight_map or {}).items()
@@ -255,6 +260,9 @@ def _snerv_score_aware_checkpoint_selection_policy(
             blockers.append(
                 "snerv_score_aware_checkpoint_selection_posenet_teacher_missing"
             )
+    if guard_weight > 0.0:
+        active_surfaces.append("scorer_input_distribution_guard")
+        required_loss_parts.append("scorer_input_distribution_guard")
     if bool(coder_aware_qat_bound):
         active_surfaces.append("coder_aware_qat")
         if not weighted_qat_terms:
@@ -288,6 +296,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
         ),
         "active_score_surfaces": active_surfaces,
         "required_loss_parts": _ordered_unique(required_loss_parts),
+        "scorer_input_distribution_guard_weight": guard_weight,
         "weighted_coder_qat_terms": weighted_qat_terms,
         "fail_closed_on_missing_parts": uses_score_aware,
         "full_reduction": (
@@ -323,6 +332,239 @@ def _snerv_checkpoint_selection_row_is_better(
             or candidate_value < incumbent_value - float(epsilon)
         )
     )
+
+
+def _build_snerv_pretraining_archive_section_qat_weight_policy(
+    *,
+    pairs_nchw255: np.ndarray,
+    model_size: SnervModelSizeConfig,
+    levels: int,
+    wavelet: str,
+    source_pair_indices: tuple[int, ...],
+    target_bits_per_coeff: float,
+    step_map_bits_per_coeff: float,
+    decoder_payload_codec: str,
+    lf_payload_codec: str,
+    recon_pixel_weight: np.ndarray | None,
+    recon_pixel_weight_metadata: Mapping[str, Any] | None,
+    hf_decoder_saliency_gain: float,
+    hard_byte_ceiling: int | None,
+    base_qat_weights: Mapping[str, float],
+    max_section_multiplier: float = 8.0,
+) -> dict[str, Any]:
+    """Price exact baseline SNAR1 sections before SNeRV long training.
+
+    The long-training renderer has two distinct train-time actuation surfaces:
+    decoder/HFR/MFU tensors and LF latents.  The receiver packet tells us which
+    surface is actually byte-heavy for this candidate.  This policy therefore
+    scales ``coder_qat_*`` terms from ``decoder_payload`` and emits separate
+    ``latent_qat_*`` weights from ``lf_payload`` instead of pretending all rate
+    pressure lives in one generic decoder blob.
+    """
+
+    base_weights = {
+        str(key): float(value)
+        for key, value in dict(base_qat_weights or {}).items()
+        if float(value) >= 0.0
+    }
+    base: dict[str, Any] = {
+        "schema": SNERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA,
+        "attached": bool(base_weights),
+        "active": False,
+        "baseline_packet_bytes": None,
+        "baseline_packet_sha256": None,
+        "hard_byte_ceiling": hard_byte_ceiling,
+        "max_section_multiplier": float(max_section_multiplier),
+        "base_loss_weights": base_weights,
+        "extra_loss_weights": dict(base_weights),
+        "affected_loss_weight_keys": [],
+        "section_rows": [],
+        "official_decoder_payload_component_rows": [],
+        "applied_section_operators": [],
+        "pending_section_operators": [],
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    if not base_weights:
+        return {
+            **base,
+            "blockers": ["snerv_archive_section_qat_base_weights_empty"],
+        }
+    if not any(float(value) > 0.0 for value in base_weights.values()):
+        return {
+            **base,
+            "blockers": ["snerv_archive_section_qat_base_weights_all_zero"],
+        }
+    try:
+        baseline_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+            pairs_nchw255,
+            levels=int(levels),
+            wavelet=str(wavelet),
+            target_bits_per_coeff=float(target_bits_per_coeff),
+            step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+            decoder_payload_codec=str(decoder_payload_codec),
+            lf_payload_codec=str(lf_payload_codec),
+            model_size=model_size,
+            source_pair_indices=source_pair_indices,
+            recon_pixel_weight=recon_pixel_weight,
+            recon_pixel_weight_metadata=recon_pixel_weight_metadata,
+            hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
+            native_mlx_decoder_train_steps=0,
+            metadata_extra={
+                "section_qat_pretraining_baseline": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        )
+        decoded = unpack_snerv_archive(baseline_packet.packet)
+    except Exception as exc:
+        return {
+            **base,
+            "blockers": [
+                "snerv_archive_section_qat_pretraining_packet_failed",
+                f"snerv_archive_section_qat_pretraining_packet_exception_{type(exc).__name__}",
+            ],
+            "failure": repr(exc),
+        }
+
+    section_bytes = {str(name): len(blob) for name, blob in decoded.sections.items()}
+    section_rows = _snerv_archive_section_pressure_rows(
+        section_bytes,
+        packet_bytes=len(baseline_packet.packet),
+        archive_bytes=None,
+        hard_byte_ceiling=hard_byte_ceiling,
+    )
+    official_component_rows = (
+        _snerv_official_decoder_component_pressure_rows(
+            _official_receiver_tensor_map_from_packet(baseline_packet.packet),
+            decoder_payload_bytes=section_bytes.get("decoder_payload"),
+            packet_bytes=len(baseline_packet.packet),
+            archive_bytes=None,
+            hard_byte_ceiling=hard_byte_ceiling,
+        )
+        if bool(model_size.official_mfu_hfr_tub_numeric_primitives_requested)
+        else []
+    )
+    decoder_row = _section_row(section_rows, "decoder_payload")
+    lf_row = _section_row(section_rows, "lf_payload")
+    if decoder_row is None:
+        return {
+            **base,
+            "baseline_packet_bytes": len(baseline_packet.packet),
+            "baseline_packet_sha256": _sha256_bytes(baseline_packet.packet),
+            "section_rows": section_rows,
+            "official_decoder_payload_component_rows": official_component_rows,
+            "blockers": ["snerv_archive_section_qat_decoder_payload_missing"],
+        }
+
+    decoder_multiplier = _snerv_qat_multiplier_from_pressure_row(
+        decoder_row,
+        max_section_multiplier=float(max_section_multiplier),
+    )
+    lf_multiplier = (
+        _snerv_qat_multiplier_from_pressure_row(
+            lf_row,
+            max_section_multiplier=float(max_section_multiplier),
+        )
+        if lf_row is not None
+        else 1.0
+    )
+    decoder_weights = {
+        key: float(value) * decoder_multiplier for key, value in base_weights.items()
+    }
+    latent_weights = {
+        f"latent_qat_{key.removeprefix('coder_qat_')}": (
+            float(value) * lf_multiplier
+        )
+        for key, value in base_weights.items()
+        if lf_row is not None and int(lf_row.get("bytes") or 0) > 0
+    }
+    scaled_weights = {**decoder_weights, **latent_weights}
+    pending = []
+    for row in section_rows:
+        name = str(row.get("name") or "")
+        if name in {"decoder_payload", "lf_payload"}:
+            continue
+        pending.append(
+            {
+                "section_name": name,
+                "bytes": int(row.get("bytes") or 0),
+                "fraction_of_packet": float(row.get("fraction_of_packet") or 0.0),
+                "required_operator": (
+                    "step_map_waterfill_operator"
+                    if name == "step_map_packet"
+                    else "packet_layout_or_metadata_codec_operator"
+                ),
+                "current_status": "priced_not_yet_applied",
+                **FALSE_AUTHORITY,
+            }
+        )
+    return {
+        **base,
+        "active": any(float(value) > 0.0 for value in scaled_weights.values()),
+        "baseline_packet_bytes": len(baseline_packet.packet),
+        "baseline_packet_sha256": _sha256_bytes(baseline_packet.packet),
+        "extra_loss_weights": scaled_weights,
+        "affected_loss_weight_keys": sorted(scaled_weights),
+        "section_rows": section_rows,
+        "official_decoder_payload_component_rows": official_component_rows,
+        "decoder_section_bytes": int(decoder_row["bytes"]),
+        "decoder_section_fraction": float(decoder_row.get("fraction_of_packet") or 0.0),
+        "decoder_pressure_multiplier": float(decoder_multiplier),
+        "lf_section_bytes": int(lf_row.get("bytes") or 0) if lf_row is not None else 0,
+        "lf_section_fraction": (
+            float(lf_row.get("fraction_of_packet") or 0.0) if lf_row is not None else 0.0
+        ),
+        "lf_pressure_multiplier": float(lf_multiplier),
+        "applied_section_operators": [
+            {
+                "section_name": "decoder_payload",
+                "operator": "decoder_coder_qat_loss_weight_scaling",
+                "loss_weight_keys": sorted(decoder_weights),
+                "multiplier": float(decoder_multiplier),
+                **FALSE_AUTHORITY,
+            },
+            *(
+                [
+                    {
+                        "section_name": "lf_payload",
+                        "operator": "lf_latent_coder_qat_loss_weight_scaling",
+                        "loss_weight_keys": sorted(latent_weights),
+                        "multiplier": float(lf_multiplier),
+                        **FALSE_AUTHORITY,
+                    }
+                ]
+                if latent_weights
+                else []
+            ),
+        ],
+        "pending_section_operators": pending,
+        "blockers": [],
+    }
+
+
+def _section_row(
+    rows: Sequence[Mapping[str, Any]],
+    name: str,
+) -> dict[str, Any] | None:
+    for row in rows:
+        if str(row.get("name") or "") == str(name):
+            return dict(row)
+    return None
+
+
+def _snerv_qat_multiplier_from_pressure_row(
+    row: Mapping[str, Any],
+    *,
+    max_section_multiplier: float,
+) -> float:
+    fraction = max(0.0, float(row.get("fraction_of_packet") or 0.0))
+    over_cap = row.get("exceeds_hard_byte_ceiling")
+    multiplier = 1.0 + fraction
+    if over_cap is True:
+        multiplier += 1.0
+    return min(max(1.0, multiplier), max(1.0, float(max_section_multiplier)))
 
 
 def _coerce_checkpoint_keep_last(value: Any) -> int | None:
@@ -467,6 +709,9 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     score_aware_long_training_weight_decay: float | None = 1.0e-4,
     score_aware_long_training_eval_roundtrip_ste: bool = False,
+    score_aware_long_training_scorer_input_distribution_guard_weight: float = 0.0,
+    score_aware_long_training_scorer_input_distribution_guard_saturation_margin: float = 0.02,
+    score_aware_long_training_scorer_input_distribution_guard_temperature: float = 0.01,
     score_aware_long_training_checkpoint_retention_keep_last_n: int | None = (
         SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
     ),
@@ -662,8 +907,19 @@ def train_export_snerv_mlx_native(
         levels=levels,
         wavelet=wavelet,
         source_pair_indices=source_pair_indices,
+        target_bits_per_coeff=target_bits_per_coeff,
+        step_map_bits_per_coeff=step_map_bits_per_coeff,
+        decoder_payload_codec=active_decoder_payload_codec,
+        lf_payload_codec=active_lf_payload_codec,
         recon_pixel_weight=recon_weight,
         recon_pixel_weight_metadata=recon_weight_metadata,
+        hf_decoder_saliency_gain=float(
+            candidate.get(
+                "hf_decoder_saliency_gain",
+                candidate.get("snerv_hf_decoder_saliency_gain", 1.0),
+            )
+        ),
+        hard_byte_ceiling=hard_byte_ceiling,
         learning_rate=float(
             candidate.get(
                 "score_aware_long_training_lr",
@@ -737,6 +993,33 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_score_aware_long_training_eval_roundtrip_ste",
                     score_aware_long_training_eval_roundtrip_ste,
+                ),
+            )
+        ),
+        scorer_input_distribution_guard_weight=float(
+            candidate.get(
+                "score_aware_long_training_scorer_input_distribution_guard_weight",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_distribution_guard_weight",
+                    score_aware_long_training_scorer_input_distribution_guard_weight,
+                ),
+            )
+        ),
+        scorer_input_distribution_guard_saturation_margin=float(
+            candidate.get(
+                "score_aware_long_training_scorer_input_distribution_guard_saturation_margin",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_distribution_guard_saturation_margin",
+                    score_aware_long_training_scorer_input_distribution_guard_saturation_margin,
+                ),
+            )
+        ),
+        scorer_input_distribution_guard_temperature=float(
+            candidate.get(
+                "score_aware_long_training_scorer_input_distribution_guard_temperature",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature",
+                    score_aware_long_training_scorer_input_distribution_guard_temperature,
                 ),
             )
         ),
@@ -938,6 +1221,12 @@ def train_export_snerv_mlx_native(
         ),
         "score_aware_long_training_optimizer": str(
             score_aware_long_training_public.get("optimizer_kind") or "none"
+        ),
+        "score_aware_long_training_scorer_input_distribution_guard_bound": bool(
+            score_aware_long_training_public.get(
+                "scorer_input_distribution_guard_bound"
+            )
+            is True
         ),
         "hard_byte_ceiling": hard_byte_ceiling,
         **(
@@ -1369,6 +1658,12 @@ def train_export_snerv_mlx_native(
     payload["score_aware_long_training_coder_qat_bound"] = bool(
         score_aware_long_training_public.get("coder_aware_qat_bound") is True
     )
+    payload["score_aware_long_training_scorer_input_distribution_guard_bound"] = bool(
+        score_aware_long_training_public.get(
+            "scorer_input_distribution_guard_bound"
+        )
+        is True
+    )
     payload["score_aware_long_training_pr95_curriculum_bound"] = bool(
         score_aware_long_training_public.get("pr95_faithful_curriculum_enabled")
         is True
@@ -1717,14 +2012,23 @@ def _run_score_aware_long_training_attachment(
     levels: int,
     wavelet: str,
     source_pair_indices: tuple[int, ...],
+    target_bits_per_coeff: float,
+    step_map_bits_per_coeff: float,
+    decoder_payload_codec: str,
+    lf_payload_codec: str,
     recon_pixel_weight: np.ndarray | None,
     recon_pixel_weight_metadata: Mapping[str, Any] | None,
+    hf_decoder_saliency_gain: float,
+    hard_byte_ceiling: int | None,
     learning_rate: float,
     batch_pairs: int,
     optimizer_kind: str,
     grad_clip_max_norm: float | None,
     weight_decay: float | None,
     eval_roundtrip_ste: bool,
+    scorer_input_distribution_guard_weight: float,
+    scorer_input_distribution_guard_saturation_margin: float,
+    scorer_input_distribution_guard_temperature: float,
     checkpoint_retention_keep_last_n: int | None,
     checkpoint_retention_keep_best_n: int,
     checkpoint_retention_keep_every_n_epochs: int | None,
@@ -1766,6 +2070,9 @@ def _run_score_aware_long_training_attachment(
         )
     seg_weight = float(segnet_distillation_weight)
     pose_weight = float(pose_distillation_weight)
+    guard_weight = float(scorer_input_distribution_guard_weight)
+    guard_saturation_margin = float(scorer_input_distribution_guard_saturation_margin)
+    guard_temperature = float(scorer_input_distribution_guard_temperature)
     pose_loss = str(pose_distillation_loss)
     pose_huber_delta = float(pose_distillation_huber_delta)
     scorer_error_pair_sampling_weights = {
@@ -1819,6 +2126,20 @@ def _run_score_aware_long_training_attachment(
             pr95_faithful_curriculum_enabled
         ),
         "pr95_muon_policy": str(pr95_muon_policy),
+        "scorer_input_distribution_guard": {
+            "schema": "snerv_mlx_score_aware_scorer_input_distribution_guard.v1",
+            "requested": guard_weight > 0.0,
+            "enabled": guard_weight > 0.0,
+            "bound_to_renderer_bundle": False,
+            "weight": guard_weight,
+            "saturation_margin": guard_saturation_margin,
+            "temperature": guard_temperature,
+            "target_surface": "decoded_rgb01_vs_target_rgb01_mean_std_soft_saturation",
+            "score_authority": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "scorer_input_distribution_guard_bound": False,
         "prioritized_pair_training": {
             "schema": "snerv_mlx_score_aware_long_training_priority_pairs.v1",
             "enabled": bool(prioritized_pair_indices),
@@ -1902,6 +2223,18 @@ def _run_score_aware_long_training_attachment(
     if pose_weight < 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_pose_distillation_weight_negative"
+        )
+    if guard_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_scorer_input_distribution_guard_weight_negative"
+        )
+    if not (0.0 < guard_saturation_margin < 0.5):
+        validation_blockers.append(
+            "snerv_score_aware_long_training_scorer_input_distribution_guard_saturation_margin_invalid"
+        )
+    if guard_temperature <= 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature_nonpositive"
         )
     if pose_loss not in {"mse", "huber"}:
         validation_blockers.append(
@@ -2122,6 +2455,82 @@ def _run_score_aware_long_training_attachment(
             c1a_sample_size=int(coder_qat_c1a_sample_size),
         ).validated()
         coder_qat_loss_weight_map = coder_qat_loss_weights(coder_qat_cfg)
+        archive_section_qat_policy = (
+            _build_snerv_pretraining_archive_section_qat_weight_policy(
+                pairs_nchw255=pairs,
+                model_size=model_size,
+                levels=int(levels),
+                wavelet=str(wavelet),
+                source_pair_indices=source_pair_indices,
+                target_bits_per_coeff=float(target_bits_per_coeff),
+                step_map_bits_per_coeff=float(step_map_bits_per_coeff),
+                decoder_payload_codec=str(decoder_payload_codec),
+                lf_payload_codec=str(lf_payload_codec),
+                recon_pixel_weight=recon_pixel_weight,
+                recon_pixel_weight_metadata=recon_pixel_weight_metadata,
+                hf_decoder_saliency_gain=float(hf_decoder_saliency_gain),
+                hard_byte_ceiling=hard_byte_ceiling,
+                base_qat_weights=coder_qat_loss_weight_map,
+            )
+            if coder_qat_cfg.enabled
+            else {
+                "schema": SNERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA,
+                "attached": False,
+                "active": False,
+                "blockers": ["snerv_archive_section_qat_not_requested"],
+                **FALSE_AUTHORITY,
+            }
+        )
+        if coder_qat_cfg.enabled and not archive_section_qat_policy.get("blockers"):
+            coder_qat_loss_weight_map = {
+                str(key): float(value)
+                for key, value in dict(
+                    archive_section_qat_policy.get("extra_loss_weights") or {}
+                ).items()
+                if float(value) >= 0.0
+            }
+        latent_qat_loss_weight_map = {
+            str(key): float(value)
+            for key, value in coder_qat_loss_weight_map.items()
+            if str(key).startswith("latent_qat_") and float(value) > 0.0
+        }
+        latent_qat_cfg = CoderAwareQATConfig(
+            enabled=bool(latent_qat_loss_weight_map),
+            quant_bits=int(coder_qat_cfg.quant_bits),
+            quant_residual_weight=(
+                1.0 if latent_qat_loss_weight_map.get("latent_qat_quant_residual") else 0.0
+            ),
+            magnitude_weight=(
+                1.0 if latent_qat_loss_weight_map.get("latent_qat_magnitude") else 0.0
+            ),
+            delta_weight=(
+                1.0 if latent_qat_loss_weight_map.get("latent_qat_delta") else 0.0
+            ),
+            c1a_entropy_weight=(
+                1.0 if latent_qat_loss_weight_map.get("latent_qat_c1a_entropy") else 0.0
+            ),
+            c1a_sigma=float(coder_qat_cfg.c1a_sigma),
+            c1a_sample_size=int(coder_qat_cfg.c1a_sample_size),
+            include_substrings=("latents_lf_planes",),
+            exclude_substrings=(),
+        ).validated()
+        archive_section_qat_blockers = [
+            str(blocker)
+            for blocker in archive_section_qat_policy.get("blockers") or ()
+            if str(blocker) and str(blocker) != "snerv_archive_section_qat_not_requested"
+        ]
+        if coder_qat_cfg.enabled and archive_section_qat_blockers:
+            payload = {
+                **base_payload,
+                "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+                "coder_aware_qat_bound": False,
+                "archive_section_qat_weight_policy": archive_section_qat_policy,
+                "archive_section_qat_weight_policy_bound": False,
+                "latent_qat_bound": False,
+                "blockers": _ordered_unique(archive_section_qat_blockers),
+            }
+            write_json(report_path, payload)
+            return {**payload, "report_path": report_path.as_posix()}
         train_time_dual_ascent_config = (
             build_default_nerv_train_time_dual_ascent_config(
                 family="snerv",
@@ -2132,7 +2541,15 @@ def _run_score_aware_long_training_attachment(
         )
 
         def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
-            return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)
+            terms = dict(build_decoder_coder_qat_terms(model_obj, coder_qat_cfg))
+            if latent_qat_cfg.enabled:
+                for key, value in build_decoder_coder_qat_terms(
+                    model_obj,
+                    latent_qat_cfg,
+                ).items():
+                    suffix = str(key).removeprefix("coder_qat_")
+                    terms[f"latent_qat_{suffix}"] = value
+            return terms
 
         initial_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
         initial_mse = float(np.mean((initial_pairs - pairs) ** 2))
@@ -2162,6 +2579,13 @@ def _run_score_aware_long_training_attachment(
             for key, value in dict(base_payload["teacher_binding"]).items()
             if key not in metadata_forbidden_authority_keys
         }
+        guard_metadata = {
+            key: value
+            for key, value in dict(
+                base_payload["scorer_input_distribution_guard"]
+            ).items()
+            if key not in metadata_forbidden_authority_keys
+        }
         pr95_optimizer_coverage_metadata = {
             key: value
             for key, value in dict(pr95_optimizer_coverage).items()
@@ -2189,6 +2613,11 @@ def _run_score_aware_long_training_attachment(
                 "human_visual_fidelity_objective": False,
                 "contest_scorer_distillation_objective": distillation_requested,
                 "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
+                "archive_section_qat_weight_policy": (
+                    strip_candidate_curriculum_authority_fields(
+                        archive_section_qat_policy
+                    )
+                ),
                 "train_time_dual_ascent": (
                     strip_candidate_curriculum_authority_fields(
                         train_time_dual_ascent_config
@@ -2200,6 +2629,10 @@ def _run_score_aware_long_training_attachment(
                 "pr95_muon_policy_requested": str(pr95_muon_policy),
                 "pr95_muon_policy": effective_pr95_muon_policy,
                 "pr95_optimizer_coverage": pr95_optimizer_coverage_metadata,
+                "scorer_input_distribution_guard": {
+                    **guard_metadata,
+                    "bound_to_renderer_bundle": guard_weight > 0.0,
+                },
                 "contest_scorer_distortion_objective": bool(
                     _recon_pixel_weight_metadata_is_verified_gradient_manifest(
                         recon_pixel_weight_metadata
@@ -2282,10 +2715,14 @@ def _run_score_aware_long_training_attachment(
                 else 6
             ),
             allow_segnet_only_research=bool(allow_segnet_only_research),
+            scorer_input_distribution_guard_weight=guard_weight,
+            scorer_input_distribution_guard_saturation_margin=guard_saturation_margin,
+            scorer_input_distribution_guard_temperature=guard_temperature,
         )
         selection_policy = _snerv_score_aware_checkpoint_selection_policy(
             segnet_distillation_weight=seg_weight,
             pose_distillation_weight=pose_weight,
+            scorer_input_distribution_guard_weight=guard_weight,
             has_real_segnet_teacher=scorer_teacher is not None,
             has_real_posenet_teacher=pose_scorer_teacher is not None,
             coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
@@ -2674,6 +3111,11 @@ def _run_score_aware_long_training_attachment(
             ),
             "weight_decay": None if weight_decay is None else float(weight_decay),
             "eval_roundtrip_ste_enabled": bool(eval_roundtrip_ste),
+            "scorer_input_distribution_guard": {
+                **dict(base_payload["scorer_input_distribution_guard"]),
+                "bound_to_renderer_bundle": guard_weight > 0.0,
+            },
+            "scorer_input_distribution_guard_bound": guard_weight > 0.0,
             "pr95_faithful_curriculum_enabled": bool(
                 pr95_faithful_curriculum_enabled
             ),
@@ -2698,6 +3140,11 @@ def _run_score_aware_long_training_attachment(
             ),
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "coder_aware_qat_bound": bool(coder_qat_cfg.enabled),
+            "archive_section_qat_weight_policy": archive_section_qat_policy,
+            "archive_section_qat_weight_policy_bound": bool(
+                archive_section_qat_policy.get("active") is True
+            ),
+            "latent_qat_bound": bool(latent_qat_cfg.enabled),
             "teacher_binding": teacher_binding,
             "official_mfu_hfr_tub_train_export": official_train_export,
             **(
