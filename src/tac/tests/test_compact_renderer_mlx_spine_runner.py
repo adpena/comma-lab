@@ -3372,6 +3372,7 @@ def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
                 "hard_byte_ceiling": 178_000,
             },
             "receiver_closed": True,
+            "receiver_closed_status": "inline_receiver_closed",
             "source_path": path.resolve(strict=False).as_posix(),
         }
     ]
@@ -3427,9 +3428,36 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
                 "decoder_payload_codec": "int8_symmetric",
             },
             "receiver_closed": True,
+            "receiver_closed_status": "inline_receiver_closed",
             "source_path": path.resolve(strict=False).as_posix(),
         }
     ]
+
+
+def test_modelsize_byte_cap_feedback_loader_rejects_contract_only_checkpoint_export(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "snerv_contract_only_export.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "archive_bytes": 91_445,
+                "packet_bytes": 188_000,
+                "receiver_contract_satisfied": True,
+                "modelsize_candidate": {
+                    "candidate_id": "snerv-contract-only",
+                    "family": "snerv",
+                    "hard_byte_ceiling": 178_000,
+                    "nominal_total_payload_bytes": 120_000,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert runner_mod._load_modelsize_byte_cap_feedback_rows([path]) == []
 
 
 def test_modelsize_byte_cap_feedback_loader_reads_startup_candidate_fallback(

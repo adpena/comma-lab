@@ -1958,6 +1958,44 @@ def test_long_training_campaign_plan_rejects_snerv_byte_feedback_failed_receiver
     assert "snerv_mlx_native_full600_campaign_not_ready" in snerv["blockers"]
 
 
+def test_long_training_campaign_plan_rejects_contract_only_snerv_byte_feedback(
+    tmp_path: Path,
+) -> None:
+    scalar = _snerv_official_skip_candidate("scalar_mean")
+    export = tmp_path / "snerv_contract_only_export.json"
+    export.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "archive_bytes": 91_445,
+                "packet_bytes": 188_000,
+                "receiver_contract_satisfied": True,
+                "modelsize_candidate": scalar,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(scalar),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(export.as_posix(),),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert snerv["modelsize_byte_cap_preflight"]["observation_count"] == 0
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
+        "blockers"
+    ]
+
+
 def test_long_training_campaign_plan_refuses_snerv_byte_feedback_from_wrong_skip_mode(
     tmp_path: Path,
 ) -> None:
@@ -3606,12 +3644,17 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
     feedback_root = tmp_path / "exports"
     export_dir = feedback_root / "hinerv_epoch16749"
     snerv_export_dir = feedback_root / "snerv_epoch22399"
+    contract_only_dir = feedback_root / "snerv_contract_only"
     export_dir.mkdir(parents=True)
     snerv_export_dir.mkdir(parents=True)
+    contract_only_dir.mkdir(parents=True)
     candidate = dict(_hinerv_budget()["selected_candidates"][0])
     snerv_candidate = dict(_snerv_budget()["selected_candidates"][0])
     export_report = export_dir / "export_report.json"
     snerv_export_report = snerv_export_dir / "snerv_checkpoint_archive_export.json"
+    contract_only_report = (
+        contract_only_dir / "snerv_checkpoint_archive_export.json"
+    )
     export_report.write_text(
         json.dumps(
             {
@@ -3640,6 +3683,24 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
                 "archive_bytes": 444_828,
                 "packet_bytes": 2_347_476,
                 "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "modelsize_candidate": snerv_candidate,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    contract_only_report.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "candidate_id": snerv_candidate["candidate_id"],
+                "archive_bytes": 91_445,
+                "packet_bytes": 188_000,
                 "receiver_contract_satisfied": True,
                 "modelsize_candidate": snerv_candidate,
                 "score_claim": False,
@@ -3679,6 +3740,9 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
         export_report.resolve(strict=False).as_posix(),
         snerv_export_report.resolve(strict=False).as_posix(),
     }
+    assert contract_only_report.resolve(strict=False).as_posix() not in payload[
+        "modelsize_byte_cap_feedback_paths"
+    ]
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert hi["runner_modelsize_candidate_id"] == "auto"
     assert hi["local_mlx_launch_command_ready"] is False

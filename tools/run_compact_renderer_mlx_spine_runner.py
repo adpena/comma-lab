@@ -16203,6 +16203,12 @@ def _modelsize_byte_cap_feedback_row(
         )
     if nominal is None or nominal <= 0:
         return None
+    receiver_closed = _modelsize_byte_cap_row_receiver_closed(
+        node,
+        source_path=source_path,
+    )
+    if not receiver_closed:
+        return None
     row = {
         "family": (
             node.get("family")
@@ -16228,12 +16234,9 @@ def _modelsize_byte_cap_feedback_row(
             if candidate_mapping
             else {}
         ),
-        "receiver_closed": bool(
-            _modelsize_byte_cap_row_receiver_closed(
-                node,
-                source_path=source_path,
-            )
-        ),
+        "receiver_closed": True,
+        "receiver_closed_status": receiver_closed.get("status"),
+        "receiver_proof_path": receiver_closed.get("proof_path"),
         "report_path": node.get("report_path"),
     }
     for key in (
@@ -16306,7 +16309,7 @@ def _modelsize_byte_cap_row_receiver_closed(
     *,
     source_path: Path | None = None,
 ) -> dict[str, Any]:
-    if _truthy_any(
+    inline_runtime_ready = _truthy_any(
         node,
         (
             "receiver_closed",
@@ -16314,10 +16317,11 @@ def _modelsize_byte_cap_row_receiver_closed(
             "receiver_proof_passed",
             "runtime_consumption_proof_ready",
             "receiver_archive_replay_verified",
-            "receiver_contract_satisfied",
             "byte_closed_receiver_proof",
         ),
-    ):
+    )
+    contract_ok = node.get("receiver_contract_satisfied") is not False
+    if inline_runtime_ready and contract_ok:
         return {"status": "inline_receiver_closed"}
     for proof_path in _modelsize_byte_cap_receiver_proof_paths(
         node,

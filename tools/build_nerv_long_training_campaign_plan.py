@@ -287,15 +287,17 @@ def _is_receiver_proof_modelsize_byte_cap_export(path: Path) -> bool:
     candidate = payload.get("modelsize_candidate")
     if not isinstance(candidate, dict):
         return False
-    if not any(
+    runtime_ready = any(
         bool(payload.get(key))
         for key in (
             "receiver_proof_ready",
             "receiver_proof_passed",
             "runtime_consumption_proof_ready",
-            "receiver_contract_satisfied",
         )
-    ):
+    )
+    if not runtime_ready:
+        return False
+    if payload.get("receiver_contract_satisfied") is False:
         return False
     try:
         return int(payload.get("archive_bytes") or 0) > 0
