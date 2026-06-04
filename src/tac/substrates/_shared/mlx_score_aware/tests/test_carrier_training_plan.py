@@ -232,6 +232,30 @@ def test_training_plan_consumes_measured_modelsize_budget_ladder() -> None:
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_training_plan_passes_hard_byte_ceiling_to_modelsize_budget() -> None:
+    row = build_score_aware_carrier_training_plan(
+        {
+            "d_seg": 0.025,
+            "advisory_score": 0.19,
+            "g3_adjoint_exact": True,
+            "latent_jvp_norm_max": 2.0e-3,
+            "modelsize_knob_present": True,
+            "hard_byte_ceiling": 50_000,
+            "modelsize_budget_rows": _receiver_closed_modelsize_rows(),
+            **_all_stack_ready(),
+        },
+        carrier_id="snerv",
+    )
+
+    plan = row["modelsize_budget_plan"]
+    assert plan["hard_byte_ceiling"] == 50_000
+    assert plan["selected_point"]["row_id"] == "small"
+    assert plan["selected_archive_bytes"] == 40_000
+    assert plan["selected_under_hard_byte_ceiling"] is True
+    assert row["modelsize_budget_receiver_closed_ready"] is True
+    assert row["score_claim"] is False
+
+
 def test_advisory_modelsize_budget_blocks_training_ready() -> None:
     row = build_score_aware_carrier_training_plan(
         {

@@ -60,6 +60,82 @@ def test_modelsize_budget_plan_selects_measured_total_score_minimum() -> None:
     assert plan["ready_for_exact_eval_dispatch"] is False
 
 
+def test_modelsize_budget_plan_respects_hard_byte_ceiling() -> None:
+    rows = [
+        {
+            "row_id": "tiny",
+            "archive_bytes": 20_000,
+            "nonrate_score": 0.240,
+            "modelsize_mparams": 0.04,
+            **_receiver_proof_fields("tiny"),
+        },
+        {
+            "row_id": "small",
+            "archive_bytes": 40_000,
+            "nonrate_score": 0.205,
+            "modelsize_mparams": 0.08,
+            **_receiver_proof_fields("small"),
+        },
+        {
+            "row_id": "medium_over_cap",
+            "archive_bytes": 80_000,
+            "nonrate_score": 0.010,
+            "modelsize_mparams": 0.16,
+            **_receiver_proof_fields("medium_over_cap"),
+        },
+    ]
+
+    plan = build_modelsize_budget_plan(
+        rows,
+        carrier_id="hi_nerv",
+        hard_byte_ceiling=50_000,
+    )
+
+    assert plan["hard_byte_ceiling"] == 50_000
+    assert plan["selected_point"]["row_id"] == "small"
+    assert plan["selected_archive_bytes"] == 40_000
+    assert plan["selected_under_hard_byte_ceiling"] is True
+    assert plan["decision_under_hard_byte_ceiling_point_count"] == 2
+    assert "modelsize_budget_selected_point_over_hard_byte_ceiling" not in plan[
+        "blockers"
+    ]
+
+
+def test_modelsize_budget_plan_blocks_when_no_point_fits_hard_byte_ceiling() -> None:
+    rows = [
+        {
+            "row_id": "tiny_over_cap",
+            "archive_bytes": 20_000,
+            "nonrate_score": 0.240,
+            "modelsize_mparams": 0.04,
+            **_receiver_proof_fields("tiny_over_cap"),
+        },
+        {
+            "row_id": "small_over_cap",
+            "archive_bytes": 40_000,
+            "nonrate_score": 0.205,
+            "modelsize_mparams": 0.08,
+            **_receiver_proof_fields("small_over_cap"),
+        },
+    ]
+
+    plan = build_modelsize_budget_plan(
+        rows,
+        carrier_id="snerv",
+        hard_byte_ceiling=10_000,
+    )
+
+    assert plan["selected_under_hard_byte_ceiling"] is False
+    assert plan["under_hard_byte_ceiling_point_count"] == 0
+    assert "modelsize_budget_no_candidate_under_hard_byte_ceiling" in plan[
+        "blockers"
+    ]
+    assert "modelsize_budget_selected_point_over_hard_byte_ceiling" in plan[
+        "blockers"
+    ]
+    assert plan["ready_for_exact_eval_dispatch"] is False
+
+
 def test_modelsize_budget_plan_splits_projected_and_advisory_rows() -> None:
     plan = build_modelsize_budget_plan(
         [
@@ -216,3 +292,89 @@ def test_modelsize_budget_plan_rejects_bare_receiver_proof_boolean_as_advisory()
     assert "archive_sha256_missing_or_invalid" in plan["blockers"]
     assert "receiver_proof_axis_tag_missing" in plan["blockers"]
     assert "receiver_proof_full_sample_count_missing" in plan["blockers"]
+
+
+def test_modelsize_budget_plan_hard_ceiling_selects_best_under_cap() -> None:
+    rows = [
+        {
+            "row_id": "tiny",
+            "archive_bytes": 40_000,
+            "nonrate_score": 0.250,
+            "modelsize_mparams": 0.04,
+            **_receiver_proof_fields("tiny"),
+        },
+        {
+            "row_id": "small",
+            "archive_bytes": 100_000,
+            "nonrate_score": 0.190,
+            "modelsize_mparams": 0.08,
+            **_receiver_proof_fields("small"),
+        },
+        {
+            "row_id": "wide_over_cap",
+            "archive_bytes": 240_000,
+            "nonrate_score": 0.010,
+            "modelsize_mparams": 0.20,
+            **_receiver_proof_fields("wide_over_cap"),
+        },
+    ]
+
+    plan = build_modelsize_budget_plan(
+        rows,
+        carrier_id="hi_nerv",
+        hard_byte_ceiling=178_000,
+    )
+
+    assert plan["status"] == "receiver_closed_modelsize_budget_selected"
+    assert plan["hard_byte_ceiling"] == 178_000
+    assert plan["selected_point"]["row_id"] == "small"
+    assert plan["selected_archive_bytes"] == 100_000
+    assert plan["selected_under_hard_byte_ceiling"] is True
+    assert plan["under_hard_byte_ceiling_point_count"] == 2
+    assert plan["decision_under_hard_byte_ceiling_point_count"] == 2
+    assert "modelsize_budget_selected_point_over_hard_byte_ceiling" not in plan[
+        "blockers"
+    ]
+    assert all(
+        step["to_archive_bytes"] <= 178_000 for step in plan["marginal_steps"]
+    )
+
+
+def test_modelsize_budget_plan_hard_ceiling_blocks_when_no_candidate_fits() -> None:
+    rows = [
+        {
+            "row_id": "small_over_cap",
+            "archive_bytes": 200_000,
+            "nonrate_score": 0.250,
+            "modelsize_mparams": 0.08,
+            **_receiver_proof_fields("small_over_cap"),
+        },
+        {
+            "row_id": "wide_over_cap",
+            "archive_bytes": 260_000,
+            "nonrate_score": 0.120,
+            "modelsize_mparams": 0.16,
+            **_receiver_proof_fields("wide_over_cap"),
+        },
+    ]
+
+    plan = build_modelsize_budget_plan(
+        rows,
+        carrier_id="snerv",
+        hard_byte_ceiling=178_000,
+    )
+
+    assert plan["hard_byte_ceiling"] == 178_000
+    assert plan["under_hard_byte_ceiling_point_count"] == 0
+    assert plan["decision_under_hard_byte_ceiling_point_count"] == 0
+    assert plan["selected_under_hard_byte_ceiling"] is False
+    assert "modelsize_budget_no_candidate_under_hard_byte_ceiling" in plan[
+        "blockers"
+    ]
+    assert "modelsize_budget_no_decision_candidate_under_hard_byte_ceiling" in plan[
+        "blockers"
+    ]
+    assert "modelsize_budget_selected_point_over_hard_byte_ceiling" in plan[
+        "blockers"
+    ]
+    assert plan["score_claim"] is False

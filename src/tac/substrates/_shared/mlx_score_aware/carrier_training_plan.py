@@ -110,6 +110,15 @@ def _float_or_none(value: Any) -> float | None:
         return None
 
 
+def _int_or_none(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _ordered_unique(values: Iterable[str]) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
@@ -217,6 +226,7 @@ def build_score_aware_carrier_training_plan(
         modelsize_budget_rows,
         carrier_id=carrier,
         baseline_id=baseline_id,
+        hard_byte_ceiling=_int_or_none(evidence.get("hard_byte_ceiling")),
     )
     modelsize_budget_ready = _receiver_closed_modelsize_budget_ready(
         modelsize_budget_plan
@@ -319,17 +329,20 @@ def _modelsize_budget_plan(
     *,
     carrier_id: str,
     baseline_id: str,
+    hard_byte_ceiling: int | None = None,
 ) -> dict[str, Any]:
     if isinstance(rows, Sequence) and not isinstance(rows, (str, bytes, bytearray)):
         return build_modelsize_budget_plan(
             rows,
             carrier_id=carrier_id,
             baseline_id=baseline_id,
+            hard_byte_ceiling=hard_byte_ceiling,
         )
     return {
         "schema": MODEL_SIZE_BUDGET_PLAN_SCHEMA,
         "carrier_id": carrier_id,
         "baseline_id": baseline_id,
+        "hard_byte_ceiling": hard_byte_ceiling,
         "status": "modelsize_budget_ladder_not_measured",
         "decision_basis": "no_modelsize_budget_rows",
         "selected_archive_bytes": None,

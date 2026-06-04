@@ -133,21 +133,29 @@ def build_modelsize_budget_plan(
     *,
     carrier_id: str = "unknown",
     baseline_id: str = "pr95_hnerv",
+    hard_byte_ceiling: int | None = None,
 ) -> dict[str, Any]:
     """Choose a measured model-size budget from contest byte-price math."""
 
     points = _parse_points(rows)
+    ceiling = _resolve_hard_byte_ceiling(rows, hard_byte_ceiling=hard_byte_ceiling)
     receiver_closed_points = [
         point for point in points if point.receiver_closed_bytes
     ]
-    decision_points = (
+    base_decision_points = (
         receiver_closed_points if len(receiver_closed_points) >= 2 else points
     )
+    under_ceiling_decision_points = _under_ceiling_points(
+        base_decision_points,
+        hard_byte_ceiling=ceiling,
+    )
+    decision_points = under_ceiling_decision_points or base_decision_points
     if len(points) < 2:
         return {
             "schema": MODEL_SIZE_BUDGET_PLAN_SCHEMA,
             "carrier_id": str(carrier_id),
             "baseline_id": str(baseline_id),
+            "hard_byte_ceiling": ceiling,
             "status": "insufficient_modelsize_ladder",
             "decision_basis": "all_rows",
             "contest_byte_price_score": CONTEST_BYTE_PRICE_SCORE,
@@ -165,6 +173,9 @@ def build_modelsize_budget_plan(
             "selected_archive_bytes": int(points[0].archive_bytes) if points else None,
             "receiver_closed_selected_point": None,
             "receiver_closed_selected_archive_bytes": None,
+            "under_hard_byte_ceiling_point_count": len(
+                _under_ceiling_points(points, hard_byte_ceiling=ceiling)
+            ),
             "recommended_next_actions": [
                 "run_receiver_closed_modelsize_ladder_before_long_budget_spend",
                 "include_archive_bytes_and_nonrate_score_for_each_size_point",
@@ -173,6 +184,11 @@ def build_modelsize_budget_plan(
                 [
                     "modelsize_budget_ladder_has_fewer_than_two_points",
                     "receiver_closed_modelsize_ladder_has_fewer_than_two_points",
+                    *_ceiling_blockers(
+                        points=points,
+                        decision_points=decision_points,
+                        hard_byte_ceiling=ceiling,
+                    ),
                     *_point_evidence_blockers(points),
                 ]
             ),
@@ -211,6 +227,7 @@ def build_modelsize_budget_plan(
         "schema": MODEL_SIZE_BUDGET_PLAN_SCHEMA,
         "carrier_id": str(carrier_id),
         "baseline_id": str(baseline_id),
+        "hard_byte_ceiling": ceiling,
         "status": status,
         "decision_basis": decision_basis,
         "contest_byte_price_score": CONTEST_BYTE_PRICE_SCORE,
@@ -232,6 +249,15 @@ def build_modelsize_budget_plan(
         "marginal_steps": marginal_steps,
         "selected_point": selected.as_jsonable(),
         "selected_archive_bytes": int(selected.archive_bytes),
+        "selected_under_hard_byte_ceiling": (
+            None if ceiling is None else int(selected.archive_bytes) <= int(ceiling)
+        ),
+        "under_hard_byte_ceiling_point_count": len(
+            _under_ceiling_points(points, hard_byte_ceiling=ceiling)
+        ),
+        "decision_under_hard_byte_ceiling_point_count": len(
+            under_ceiling_decision_points
+        ),
         "receiver_closed_selected_point": (
             receiver_closed_selected.as_jsonable()
             if receiver_closed_selected is not None
@@ -260,6 +286,11 @@ def build_modelsize_budget_plan(
                         "modelsize_budget_selection_is_advisory_or_projected",
                     ]
                 ),
+                *_ceiling_blockers(
+                    points=points,
+                    decision_points=decision_points,
+                    hard_byte_ceiling=ceiling,
+                ),
                 *_point_evidence_blockers(points),
             ]
         ),
@@ -272,6 +303,7 @@ def build_modelsize_budget_plan_from_iterable(
     *,
     carrier_id: str = "unknown",
     baseline_id: str = "pr95_hnerv",
+    hard_byte_ceiling: int | None = None,
 ) -> dict[str, Any]:
     """Choose a measured model-size budget from an arbitrary row iterable."""
 
@@ -279,6 +311,7 @@ def build_modelsize_budget_plan_from_iterable(
         list(rows),
         carrier_id=carrier_id,
         baseline_id=baseline_id,
+        hard_byte_ceiling=hard_byte_ceiling,
     )
 
 
@@ -316,6 +349,81 @@ def _parse_points(rows: Sequence[Mapping[str, Any]]) -> list[ModelSizeBudgetPoin
         seen.add(point.archive_bytes)
         deduped.append(point)
     return deduped
+
+
+def _resolve_hard_byte_ceiling(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    hard_byte_ceiling: int | None,
+) -> int | None:
+    if hard_byte_ceiling is not None:
+        ceiling = int(hard_byte_ceiling)
+        if ceiling <= 0:
+            raise ModelSizeBudgetPlanError("hard_byte_ceiling must be positive")
+        return ceiling
+    ceilings = []
+    for row in rows:
+        ceiling = _first_present_int(
+            row,
+            (
+                "hard_byte_ceiling",
+                "archive_byte_ceiling",
+                "byte_ceiling",
+                "max_archive_bytes",
+                "target_archive_bytes",
+            ),
+        )
+        if ceiling is not None and ceiling > 0:
+            ceilings.append(int(ceiling))
+    if not ceilings:
+        return None
+    return min(ceilings)
+
+
+def _under_ceiling_points(
+    points: Sequence[ModelSizeBudgetPoint],
+    *,
+    hard_byte_ceiling: int | None,
+) -> list[ModelSizeBudgetPoint]:
+    if hard_byte_ceiling is None:
+        return list(points)
+    return [
+        point for point in points if int(point.archive_bytes) <= int(hard_byte_ceiling)
+    ]
+
+
+def _ceiling_blockers(
+    *,
+    points: Sequence[ModelSizeBudgetPoint],
+    decision_points: Sequence[ModelSizeBudgetPoint],
+    hard_byte_ceiling: int | None,
+) -> list[str]:
+    if hard_byte_ceiling is None:
+        return []
+    under_all = _under_ceiling_points(points, hard_byte_ceiling=hard_byte_ceiling)
+    under_decision = _under_ceiling_points(
+        decision_points,
+        hard_byte_ceiling=hard_byte_ceiling,
+    )
+    blockers: list[str] = []
+    if not under_all:
+        blockers.append("modelsize_budget_no_candidate_under_hard_byte_ceiling")
+    if not under_decision:
+        blockers.append(
+            "modelsize_budget_no_decision_candidate_under_hard_byte_ceiling"
+        )
+    elif len(under_decision) < 2:
+        blockers.append(
+            "modelsize_budget_under_hard_byte_ceiling_ladder_has_fewer_than_two_points"
+        )
+    selected = min(
+        decision_points,
+        key=lambda point: point.nonrate_score
+        + point.archive_bytes * CONTEST_BYTE_PRICE_SCORE,
+    ) if decision_points else None
+    if selected is not None and int(selected.archive_bytes) > int(hard_byte_ceiling):
+        blockers.append("modelsize_budget_selected_point_over_hard_byte_ceiling")
+    return blockers
 
 
 def _extract_archive_bytes(row: Mapping[str, Any]) -> tuple[int, str]:

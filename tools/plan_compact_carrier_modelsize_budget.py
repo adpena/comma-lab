@@ -31,6 +31,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--rows-key", default="modelsize_budget_rows")
     parser.add_argument("--carrier-id", default="unknown")
     parser.add_argument("--baseline-id", default="pr95_hnerv")
+    parser.add_argument(
+        "--hard-byte-ceiling",
+        type=int,
+        default=None,
+        help="Optional contest archive-byte ceiling; over-ceiling rows cannot be selected.",
+    )
     parser.add_argument("--output-json", required=True, type=Path)
     return parser.parse_args()
 
@@ -42,6 +48,7 @@ def main() -> int:
         rows,
         carrier_id=str(args.carrier_id),
         baseline_id=str(args.baseline_id),
+        hard_byte_ceiling=args.hard_byte_ceiling,
     )
     out = args.output_json.expanduser().resolve(strict=False)
     out.parent.mkdir(parents=True, exist_ok=True)
