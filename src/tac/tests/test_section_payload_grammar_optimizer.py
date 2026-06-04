@@ -21,6 +21,7 @@ from tac.packet_compiler.section_payload_grammar_optimizer import (
     sections_from_single_member_zip_archive,
     select_best_section_candidate,
     solve_section_payload_grammar,
+    spans_from_archive_section_telemetry,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -209,6 +210,58 @@ def test_single_member_zip_archive_sections_are_extracted_with_provenance() -> N
     assert report["blockers"]
 
 
+def test_archive_section_telemetry_converts_to_zip_spans() -> None:
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "sections": [
+            {
+                "name": "hiv1_header",
+                "role": "header",
+                "offset": 0,
+                "end_offset": 33,
+                "bytes": 33,
+                "sha256": "a" * 64,
+            },
+            {
+                "name": "decoder_state",
+                "role": "decoder",
+                "offset": 33,
+                "end_offset": 97,
+                "bytes": 64,
+                "sha256": "b" * 64,
+                "codec": "int8_mixed",
+            },
+        ],
+    }
+
+    spans = spans_from_archive_section_telemetry(telemetry)
+
+    assert spans == [
+        {
+            "schema": "section_payload_telemetry_span_adapter.v1",
+            "name": "hiv1_header",
+            "start": 0,
+            "end": 33,
+            "length": 33,
+            "source_role": "header",
+            "source_sha256": "a" * 64,
+            "source_codec": None,
+            "source_scale": None,
+        },
+        {
+            "schema": "section_payload_telemetry_span_adapter.v1",
+            "name": "decoder_state",
+            "start": 33,
+            "end": 97,
+            "length": 64,
+            "source_role": "decoder",
+            "source_sha256": "b" * 64,
+            "source_codec": "int8_mixed",
+            "source_scale": None,
+        },
+    ]
+
+
 def test_section_payload_solver_rejects_duplicate_names() -> None:
     with pytest.raises(ValueError, match="duplicate section name"):
         solve_section_payload_grammar(
@@ -324,3 +377,85 @@ def test_section_payload_optimizer_cli_reads_single_member_zip_spans(
     assert report["source_payload_manifest"]["zip_member_name"] == "0.bin"
     assert report["source_payload_manifest"]["section_count"] == 2
     assert {row["section_name"] for row in report["rows"]} == {"zeros", "pattern"}
+
+
+def test_section_payload_optimizer_cli_reads_archive_section_telemetry_spans(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    telemetry_path = tmp_path / "hi_nerv_archive_section_telemetry.json"
+    report_path = tmp_path / "report.json"
+    payload = b"H" * 33 + b"\x00" * 96 + b"meta" * 16
+    archive.write_bytes(_stored_zip("0.bin", payload))
+    telemetry_path.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_archive_section_telemetry.v1",
+                "sections": [
+                    {
+                        "name": "hiv1_header",
+                        "role": "header",
+                        "offset": 0,
+                        "end_offset": 33,
+                        "bytes": 33,
+                    },
+                    {
+                        "name": "decoder_state",
+                        "role": "decoder",
+                        "offset": 33,
+                        "end_offset": 129,
+                        "bytes": 96,
+                    },
+                    {
+                        "name": "meta_json",
+                        "role": "metadata",
+                        "offset": 129,
+                        "end_offset": len(payload),
+                        "bytes": len(payload) - 129,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "tools" / "section_payload_grammar_optimizer.py"),
+            "--zip-archive",
+            str(archive),
+            "--zip-member",
+            "0.bin",
+            "--archive-section-telemetry-json",
+            str(telemetry_path),
+            "--output",
+            str(report_path),
+            "--campaign-id",
+            "cli_hinerv_telemetry_section_grammar",
+            "--coder",
+            "brotli",
+            "--coder",
+            "canonical_huffman",
+            "--brotli-quality",
+            "4",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = report["source_payload_manifest"]
+    assert manifest["archive_section_telemetry_path"] == telemetry_path.as_posix()
+    assert manifest["archive_section_telemetry_schema"] == (
+        "hinerv_archive_section_telemetry.v1"
+    )
+    assert manifest["section_count"] == 3
+    assert {row["section_name"] for row in report["rows"]} == {
+        "hiv1_header",
+        "decoder_state",
+        "meta_json",
+    }

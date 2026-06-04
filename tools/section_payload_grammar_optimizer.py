@@ -25,6 +25,7 @@ from tac.packet_compiler.section_payload_grammar_optimizer import (  # noqa: E40
     build_section_payload_optimizer_queue,
     sections_from_single_member_zip_archive,
     solve_section_payload_grammar,
+    spans_from_archive_section_telemetry,
 )
 from tac.repo_io import ArtifactWriteError, write_json_artifact  # noqa: E402
 
@@ -86,6 +87,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--zip-member", help="Expected ZIP member name.")
     parser.add_argument(
+        "--archive-section-telemetry-json",
+        type=Path,
+        help=(
+            "Archive section telemetry JSON with sections[].offset/end_offset "
+            "rows to use as ZIP member spans."
+        ),
+    )
+    parser.add_argument(
         "--zip-section",
         action="append",
         type=_parse_zip_section,
@@ -130,14 +139,32 @@ def _load_section_source(args: argparse.Namespace) -> tuple[object, dict[str, An
     archive_path = Path(args.zip_archive).expanduser()
     if not archive_path.is_file():
         raise SystemExit(f"ZIP archive not found: {archive_path}")
+    if args.archive_section_telemetry_json is not None and args.zip_section:
+        raise SystemExit(
+            "pass either --archive-section-telemetry-json or --zip-section, not both"
+        )
+    spans = args.zip_section
+    telemetry_manifest: dict[str, Any] | None = None
+    if args.archive_section_telemetry_json is not None:
+        telemetry_path = Path(args.archive_section_telemetry_json).expanduser()
+        if not telemetry_path.is_file():
+            raise SystemExit(f"archive section telemetry not found: {telemetry_path}")
+        telemetry_payload = json.loads(telemetry_path.read_text(encoding="utf-8"))
+        spans = spans_from_archive_section_telemetry(telemetry_payload)
+        telemetry_manifest = {
+            "archive_section_telemetry_path": telemetry_path.as_posix(),
+            "archive_section_telemetry_schema": telemetry_payload.get("schema"),
+            "archive_section_telemetry_section_count": len(spans),
+        }
     sections, manifest = sections_from_single_member_zip_archive(
         archive_path.read_bytes(),
-        spans=args.zip_section,
+        spans=spans,
         member_name=args.zip_member,
     )
     manifest = {
         **manifest,
         "archive_path": archive_path.as_posix(),
+        **(telemetry_manifest or {}),
     }
     return sections, manifest
 

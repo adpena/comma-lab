@@ -33,6 +33,65 @@ SECTION_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "section_payload_grammar_optimizer.v1
 SECTION_PAYLOAD_GRAMMAR_CANDIDATE_SCHEMA = "section_payload_grammar_candidate.v1"
 SECTION_PAYLOAD_GRAMMAR_QUEUE_SCHEMA = "optimizer_candidate_queue_v1"
 SECTION_PAYLOAD_SOURCE_MANIFEST_SCHEMA = "section_payload_source_manifest.v1"
+SECTION_PAYLOAD_TELEMETRY_SPAN_ADAPTER_SCHEMA = (
+    "section_payload_telemetry_span_adapter.v1"
+)
+
+
+def spans_from_archive_section_telemetry(
+    telemetry: Mapping[str, Any],
+    *,
+    skip_container_overhead: bool = True,
+) -> list[dict[str, Any]]:
+    """Convert archive section telemetry into ZIP-member spans.
+
+    HiNeRV exports now emit exact ``offset``/``end_offset`` rows for ``0.bin``.
+    This adapter lets the generic section-payload optimizer consume those rows
+    directly, and the same contract is reusable for SNeRV/PacketIR telemetry.
+    """
+
+    sections = telemetry.get("sections")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        raise ValueError("archive section telemetry missing sections list")
+    spans: list[dict[str, Any]] = []
+    for index, row in enumerate(sections):
+        if not isinstance(row, Mapping):
+            raise ValueError(f"telemetry sections[{index}] must be an object")
+        role = str(row.get("role") or "")
+        if skip_container_overhead and role == "container_overhead":
+            continue
+        name = _section_name(str(row.get("name") or row.get("section_name") or ""))
+        start = _nonnegative_int(row.get("offset"), f"telemetry.sections[{index}].offset")
+        end = _nonnegative_int(
+            row.get("end_offset"),
+            f"telemetry.sections[{index}].end_offset",
+        )
+        if end < start:
+            raise ValueError(f"telemetry.sections[{index}] end_offset must be >= offset")
+        length = end - start
+        byte_count = _nonnegative_int(
+            row.get("bytes"),
+            f"telemetry.sections[{index}].bytes",
+        )
+        if byte_count != length:
+            raise ValueError(
+                f"telemetry.sections[{index}] bytes {byte_count} != span length {length}"
+            )
+        spans.append(
+            {
+                "schema": SECTION_PAYLOAD_TELEMETRY_SPAN_ADAPTER_SCHEMA,
+                "name": name,
+                "start": start,
+                "end": end,
+                "length": length,
+                "source_role": role or None,
+                "source_sha256": row.get("sha256"),
+                "source_codec": row.get("codec"),
+                "source_scale": row.get("scale"),
+            }
+        )
+    spans.sort(key=lambda row: (int(row["start"]), int(row["end"]), str(row["name"])))
+    return spans
 
 
 def sections_from_single_member_zip_archive(
@@ -767,4 +826,5 @@ __all__ = [
     "sections_from_single_member_zip_archive",
     "select_best_section_candidate",
     "solve_section_payload_grammar",
+    "spans_from_archive_section_telemetry",
 ]
