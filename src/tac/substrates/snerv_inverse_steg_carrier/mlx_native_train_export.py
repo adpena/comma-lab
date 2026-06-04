@@ -141,6 +141,9 @@ SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER = (
 SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER = (
     "snerv_official_trained_checkpoint_source_forward_replay_missing"
 )
+SNERV_SCORE_AWARE_CHECKPOINT_SELECTION_SCHEMA = (
+    "snerv_score_aware_checkpoint_selection_policy.v1"
+)
 NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
 SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS = 262_144
@@ -206,6 +209,120 @@ def _candidate_first_non_null(
         if key in candidate and candidate[key] is not None:
             return candidate[key]
     return fallback
+
+
+def _snerv_score_aware_checkpoint_selection_policy(
+    *,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    has_real_segnet_teacher: bool,
+    has_real_posenet_teacher: bool,
+    coder_aware_qat_bound: bool,
+    coder_qat_loss_weight_map: Mapping[str, float] | None,
+    pr95_faithful_curriculum_enabled: bool,
+) -> dict[str, Any]:
+    """Choose the SNeRV long-training checkpoint-selection metric.
+
+    Raw reconstruction MSE is a safe fallback only for runs that have no scorer
+    teachers, no coder-aware QAT pressure, and no PR95 scorer curriculum. Once
+    any of those score-aware surfaces is active, checkpoint selection must use
+    the same composite loss family that training optimizes; otherwise a long
+    run can throw away a state that improves the contest objective because its
+    human/reconstruction MSE is slightly worse.
+    """
+
+    seg_weight = float(segnet_distillation_weight)
+    pose_weight = float(pose_distillation_weight)
+    weighted_qat_terms = {
+        str(name): float(weight)
+        for name, weight in dict(coder_qat_loss_weight_map or {}).items()
+        if float(weight) != 0.0
+    }
+    active_surfaces: list[str] = []
+    required_loss_parts = ["recon"]
+    blockers: list[str] = []
+    if seg_weight > 0.0:
+        active_surfaces.append("real_segnet_teacher_distillation")
+        required_loss_parts.append("distill")
+        if not has_real_segnet_teacher:
+            blockers.append(
+                "snerv_score_aware_checkpoint_selection_segnet_teacher_missing"
+            )
+    if pose_weight > 0.0:
+        active_surfaces.append("real_posenet_teacher_distillation")
+        required_loss_parts.append("pose_distill")
+        if not has_real_posenet_teacher:
+            blockers.append(
+                "snerv_score_aware_checkpoint_selection_posenet_teacher_missing"
+            )
+    if bool(coder_aware_qat_bound):
+        active_surfaces.append("coder_aware_qat")
+        if not weighted_qat_terms:
+            blockers.append(
+                "snerv_score_aware_checkpoint_selection_coder_qat_terms_missing"
+            )
+        else:
+            required_loss_parts.extend(sorted(weighted_qat_terms))
+    if bool(pr95_faithful_curriculum_enabled):
+        active_surfaces.append("pr95_faithful_curriculum")
+
+    uses_score_aware = bool(active_surfaces)
+    return {
+        "schema": SNERV_SCORE_AWARE_CHECKPOINT_SELECTION_SCHEMA,
+        "selection_metric": (
+            "score_aware_composite_full_video_surrogate"
+            if uses_score_aware
+            else "full_reconstruction_mse_nchw255"
+        ),
+        "selection_metric_value_key": (
+            "score_aware_composite_loss"
+            if uses_score_aware
+            else "recon_mse_nchw255"
+        ),
+        "uses_score_aware_composite": uses_score_aware,
+        "mse_fallback": not uses_score_aware,
+        "mse_fallback_reason": (
+            "no_scorer_teacher_no_coder_qat_no_pr95_curriculum"
+            if not uses_score_aware
+            else None
+        ),
+        "active_score_surfaces": active_surfaces,
+        "required_loss_parts": _ordered_unique(required_loss_parts),
+        "weighted_coder_qat_terms": weighted_qat_terms,
+        "fail_closed_on_missing_parts": uses_score_aware,
+        "full_reduction": (
+            "deterministic_pair_chunks_no_update_before_reduction"
+            if uses_score_aware
+            else "full_reconstruction_mse_full_pairs"
+        ),
+        "blockers": _ordered_unique(blockers),
+        "human_visual_fidelity_objective": False,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_checkpoint_selection_row_is_better(
+    candidate: Mapping[str, Any],
+    incumbent: Mapping[str, Any],
+    *,
+    metric_value_key: str,
+    epsilon: float = 1.0e-9,
+) -> bool:
+    try:
+        candidate_value = float(candidate[metric_value_key])
+    except (KeyError, TypeError, ValueError):
+        return False
+    try:
+        incumbent_value = float(incumbent[metric_value_key])
+    except (KeyError, TypeError, ValueError):
+        incumbent_value = float("inf")
+    return bool(
+        np.isfinite(candidate_value)
+        and (
+            not np.isfinite(incumbent_value)
+            or candidate_value < incumbent_value - float(epsilon)
+        )
+    )
 
 
 def _coerce_checkpoint_keep_last(value: Any) -> int | None:
@@ -1898,6 +2015,7 @@ def _run_score_aware_long_training_attachment(
         from tac.substrates._shared.mlx_score_aware.loss import (
             build_mlx_posenet_pair_teacher,
             build_mlx_segnet_pair_teacher,
+            score_aware_loss,
         )
         from tac.substrates.hinton_distilled_scorer_surrogate import (
             build_learnable_pose_student_head,
@@ -2019,56 +2137,10 @@ def _run_score_aware_long_training_attachment(
         initial_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
         initial_mse = float(np.mean((initial_pairs - pairs) ** 2))
         best_state = model.export_state_dict()
-        best_selection: dict[str, Any] = {
-            "epoch": -1,
-            "state_source": "initial_closed_form_renderer",
-            "selection_metric": "full_reconstruction_mse_nchw255",
-            "recon_mse_nchw255": initial_mse,
-            "training_loss": None,
-            "selected_as_best": True,
-        }
-        selection_history: list[dict[str, Any]] = [dict(best_selection)]
+        best_selection: dict[str, Any] = {}
+        selection_history: list[dict[str, Any]] = []
+        selection_failures: list[str] = []
         selection_interval_epochs = max(1, min(100, int(requested_epochs)))
-
-        def _maybe_select_current_renderer(
-            *,
-            epoch: int,
-            training_loss: float | None,
-            state_source: str,
-        ) -> None:
-            nonlocal best_selection, best_state
-            rendered = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
-            recon_mse = float(np.mean((rendered - pairs) ** 2))
-            row = {
-                "epoch": int(epoch),
-                "state_source": str(state_source),
-                "selection_metric": "full_reconstruction_mse_nchw255",
-                "recon_mse_nchw255": recon_mse,
-                "training_loss": (
-                    None if training_loss is None else float(training_loss)
-                ),
-                "selected_as_best": False,
-            }
-            if np.isfinite(recon_mse) and (
-                not np.isfinite(float(best_selection["recon_mse_nchw255"]))
-                or recon_mse < float(best_selection["recon_mse_nchw255"]) - 1.0e-9
-            ):
-                best_state = model.export_state_dict()
-                row["selected_as_best"] = True
-                best_selection = dict(row)
-            selection_history.append(row)
-
-        def _on_epoch_end(metrics: Any) -> None:
-            epoch = int(metrics.epoch)
-            if (epoch + 1) % selection_interval_epochs != 0 and (
-                epoch + 1
-            ) < int(requested_epochs):
-                return
-            _maybe_select_current_renderer(
-                epoch=epoch,
-                training_loss=float(metrics.loss),
-                state_source="post_epoch_interval_or_final",
-            )
 
         target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0, dtype=mx.float32)
         target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0, dtype=mx.float32)
@@ -2211,6 +2283,261 @@ def _run_score_aware_long_training_attachment(
             ),
             allow_segnet_only_research=bool(allow_segnet_only_research),
         )
+        selection_policy = _snerv_score_aware_checkpoint_selection_policy(
+            segnet_distillation_weight=seg_weight,
+            pose_distillation_weight=pose_weight,
+            has_real_segnet_teacher=scorer_teacher is not None,
+            has_real_posenet_teacher=pose_scorer_teacher is not None,
+            coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
+            coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+            pr95_faithful_curriculum_enabled=bool(
+                pr95_faithful_curriculum_enabled
+            ),
+        )
+        metric_value_key = str(selection_policy["selection_metric_value_key"])
+        selection_chunk_size = max(1, int(batch_pairs))
+
+        def _mlx_scalar_to_float(value: Any) -> float:
+            mx.eval(value)
+            if hasattr(value, "item"):
+                return float(value.item())
+            return float(np.asarray(value).item())
+
+        def _score_aware_selection_parts() -> tuple[float, dict[str, float], list[str]]:
+            """Evaluate the full-video selector composite without updating params."""
+
+            raw_parts: dict[str, float] = {}
+            weighted_parts: dict[str, float] = {}
+            blockers_for_row: list[str] = []
+            n_pairs = int(pairs.shape[0])
+            if n_pairs <= 0:
+                return (
+                    float("nan"),
+                    {},
+                    ["snerv_score_aware_checkpoint_selection_no_pairs"],
+                )
+            coder_terms = {
+                str(name): float(weight)
+                for name, weight in dict(coder_qat_loss_weight_map).items()
+                if float(weight) != 0.0
+            }
+            coder_raw_parts: dict[str, float] = {}
+            for start in range(0, n_pairs, selection_chunk_size):
+                stop = min(n_pairs, start + selection_chunk_size)
+                idx_np = np.arange(start, stop, dtype=np.int32)
+                idx = mx.array(idx_np, dtype=mx.int32)
+                try:
+                    _total, parts = score_aware_loss(bundle, idx)
+                except Exception as exc:  # fail closed; selection must not silently fall back.
+                    return (
+                        float("nan"),
+                        {},
+                        [
+                            "snerv_score_aware_checkpoint_selection_loss_eval_failed",
+                            f"snerv_score_aware_checkpoint_selection_exception_{type(exc).__name__}",
+                        ],
+                    )
+                chunk_weight = float(stop - start) / float(n_pairs)
+                for name, value in parts.items():
+                    if name == "total":
+                        continue
+                    scalar = _mlx_scalar_to_float(value)
+                    if not np.isfinite(scalar):
+                        blockers_for_row.append(
+                            "snerv_score_aware_checkpoint_selection_loss_part_nonfinite"
+                        )
+                        continue
+                    if name in coder_terms:
+                        coder_raw_parts.setdefault(str(name), scalar)
+                    else:
+                        raw_parts[str(name)] = raw_parts.get(str(name), 0.0) + (
+                            chunk_weight * scalar
+                        )
+            for name, value in coder_raw_parts.items():
+                raw_parts[name] = float(value)
+
+            missing = [
+                str(name)
+                for name in selection_policy["required_loss_parts"]
+                if str(name) not in raw_parts
+            ]
+            if missing:
+                blockers_for_row.extend(
+                    [
+                        "snerv_score_aware_checkpoint_selection_required_parts_missing",
+                        *(
+                            f"snerv_score_aware_checkpoint_selection_missing_{name}"
+                            for name in missing
+                        ),
+                    ]
+                )
+
+            total = float(raw_parts.get("recon", 0.0))
+            weighted_parts["recon"] = total
+            if "distill" in raw_parts:
+                weighted_parts["distill"] = seg_weight * raw_parts["distill"]
+                total += weighted_parts["distill"]
+            if "pose_distill" in raw_parts:
+                weighted_parts["pose_distill"] = pose_weight * raw_parts[
+                    "pose_distill"
+                ]
+                total += weighted_parts["pose_distill"]
+            if "scorer_input_distribution_guard" in raw_parts:
+                weighted_parts["scorer_input_distribution_guard"] = (
+                    float(bundle.scorer_input_distribution_guard_weight)
+                    * raw_parts["scorer_input_distribution_guard"]
+                )
+                total += weighted_parts["scorer_input_distribution_guard"]
+            for name, weight in coder_terms.items():
+                if name in raw_parts:
+                    weighted_parts[name] = float(weight) * raw_parts[name]
+                    total += weighted_parts[name]
+
+            if not np.isfinite(total):
+                blockers_for_row.append(
+                    "snerv_score_aware_checkpoint_selection_composite_nonfinite"
+                )
+            return (
+                total,
+                {
+                    **{f"raw_{name}": float(value) for name, value in raw_parts.items()},
+                    **{
+                        f"weighted_{name}": float(value)
+                        for name, value in weighted_parts.items()
+                    },
+                },
+                _ordered_unique(blockers_for_row),
+            )
+
+        def _selection_metric_row(
+            *,
+            epoch: int,
+            training_loss: float | None,
+            state_source: str,
+        ) -> dict[str, Any]:
+            rendered = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
+            recon_mse = float(np.mean((rendered - pairs) ** 2))
+            row: dict[str, Any] = {
+                "epoch": int(epoch),
+                "state_source": str(state_source),
+                "selection_metric": selection_policy["selection_metric"],
+                "selection_metric_value_key": metric_value_key,
+                "recon_mse_nchw255": recon_mse,
+                "training_loss": (
+                    None if training_loss is None else float(training_loss)
+                ),
+                "selected_as_best": False,
+            }
+            if selection_policy["uses_score_aware_composite"]:
+                composite, parts, blockers_for_row = _score_aware_selection_parts()
+                row.update(
+                    {
+                        "score_aware_composite_loss": composite,
+                        "score_aware_composite_parts": parts,
+                        "score_aware_checkpoint_selection_blockers": blockers_for_row,
+                    }
+                )
+            else:
+                row["score_aware_checkpoint_selection_blockers"] = []
+            if not np.isfinite(float(row.get(metric_value_key, float("nan")))):
+                row["score_aware_checkpoint_selection_blockers"] = _ordered_unique(
+                    [
+                        *(
+                            str(blocker)
+                            for blocker in row.get(
+                                "score_aware_checkpoint_selection_blockers",
+                                (),
+                            )
+                            if str(blocker)
+                        ),
+                        "snerv_score_aware_checkpoint_selection_metric_nonfinite",
+                    ]
+                )
+            return row
+
+        initial_selection = _selection_metric_row(
+            epoch=-1,
+            training_loss=None,
+            state_source="initial_closed_form_renderer",
+        )
+        initial_selection["selected_as_best"] = True
+        best_selection = dict(initial_selection)
+        selection_history.append(dict(initial_selection))
+        initial_selection_blockers = _ordered_unique(
+            [
+                *(
+                    str(blocker)
+                    for blocker in selection_policy.get("blockers") or ()
+                    if str(blocker)
+                ),
+                *(
+                    str(blocker)
+                    for blocker in initial_selection.get(
+                        "score_aware_checkpoint_selection_blockers",
+                        (),
+                    )
+                    if str(blocker)
+                ),
+            ]
+        )
+        if (
+            selection_policy["uses_score_aware_composite"]
+            and initial_selection_blockers
+        ):
+            payload = {
+                **base_payload,
+                "checkpoint_selection_policy": {
+                    **selection_policy,
+                    "blockers": initial_selection_blockers,
+                },
+                "best_checkpoint_selection": best_selection,
+                "selection_history_tail": selection_history[-8:],
+                "blockers": initial_selection_blockers,
+            }
+            write_json(report_path, payload)
+            return {**payload, "report_path": report_path.as_posix()}
+
+        def _maybe_select_current_renderer(
+            *,
+            epoch: int,
+            training_loss: float | None,
+            state_source: str,
+        ) -> dict[str, Any]:
+            nonlocal best_selection, best_state
+            row = _selection_metric_row(
+                epoch=epoch,
+                training_loss=training_loss,
+                state_source=state_source,
+            )
+            row_blockers = [
+                str(blocker)
+                for blocker in row.get("score_aware_checkpoint_selection_blockers", ())
+                if str(blocker)
+            ]
+            if selection_policy["uses_score_aware_composite"] and row_blockers:
+                selection_failures.extend(row_blockers)
+            if _snerv_checkpoint_selection_row_is_better(
+                row,
+                best_selection,
+                metric_value_key=metric_value_key,
+            ):
+                best_state = model.export_state_dict()
+                row["selected_as_best"] = True
+                best_selection = dict(row)
+            selection_history.append(row)
+            return row
+
+        def _on_epoch_end(metrics: Any) -> None:
+            epoch = int(metrics.epoch)
+            if (epoch + 1) % selection_interval_epochs != 0 and (
+                epoch + 1
+            ) < int(requested_epochs):
+                return
+            _maybe_select_current_renderer(
+                epoch=epoch,
+                training_loss=float(metrics.loss),
+                state_source="post_epoch_interval_or_final",
+            )
         artifact = run_mlx_score_aware_full_main(
             bundle=bundle,
             substrate_id="snerv_inverse_steg_carrier",
@@ -2256,21 +2583,11 @@ def _run_score_aware_long_training_attachment(
         )
         live_final_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
         live_final_mse = float(np.mean((live_final_pairs - pairs) ** 2))
-        if np.isfinite(live_final_mse) and (
-            not np.isfinite(float(best_selection["recon_mse_nchw255"]))
-            or live_final_mse < float(best_selection["recon_mse_nchw255"]) - 1.0e-9
-        ):
-            best_state = model.export_state_dict()
-            best_selection = {
-                "epoch": int(artifact.as_dict().get("total_epochs_completed") or 0)
-                - 1,
-                "state_source": "live_final_post_training",
-                "selection_metric": "full_reconstruction_mse_nchw255",
-                "recon_mse_nchw255": live_final_mse,
-                "training_loss": None,
-                "selected_as_best": True,
-            }
-            selection_history.append(dict(best_selection))
+        live_final_selection = _maybe_select_current_renderer(
+            epoch=int(artifact.as_dict().get("total_epochs_completed") or 0) - 1,
+            training_loss=None,
+            state_source="live_final_post_training",
+        )
         model.import_state_dict(best_state)
         trained_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
         final_mse = float(np.mean((trained_pairs - pairs) ** 2))
@@ -2283,6 +2600,26 @@ def _run_score_aware_long_training_attachment(
         blockers: list[str] = []
         if not np.isfinite(final_mse):
             blockers.append("snerv_score_aware_long_training_selected_mse_nonfinite")
+        if selection_policy["uses_score_aware_composite"]:
+            selection_blockers = _ordered_unique(
+                [
+                    *(
+                        str(blocker)
+                        for blocker in selection_policy.get("blockers") or ()
+                        if str(blocker)
+                    ),
+                    *selection_failures,
+                    *(
+                        str(blocker)
+                        for blocker in best_selection.get(
+                            "score_aware_checkpoint_selection_blockers",
+                            (),
+                        )
+                        if str(blocker)
+                    ),
+                ]
+            )
+            blockers.extend(selection_blockers)
         if int(artifact_dict.get("total_epochs_completed") or 0) < int(requested_epochs):
             blockers.append("snerv_score_aware_long_training_early_stopped")
         selection_warnings = []
@@ -2293,6 +2630,14 @@ def _run_score_aware_long_training_attachment(
         ):
             selection_warnings.append(
                 "snerv_score_aware_long_training_live_final_worse_than_selected"
+            )
+        if _snerv_checkpoint_selection_row_is_better(
+            best_selection,
+            live_final_selection,
+            metric_value_key=metric_value_key,
+        ):
+            selection_warnings.append(
+                "snerv_score_aware_long_training_live_final_selection_metric_worse_than_selected"
             )
         if str(best_selection.get("state_source")) == "initial_closed_form_renderer":
             selection_warnings.append(
@@ -2369,9 +2714,11 @@ def _run_score_aware_long_training_attachment(
             "live_final_recon_mse_nchw255": live_final_mse,
             "final_recon_mse_nchw255": final_mse,
             "loss_delta_nchw255": final_mse - initial_mse,
+            "checkpoint_selection_policy": selection_policy,
             "best_checkpoint_selection": best_selection,
             "selection_interval_epochs": int(selection_interval_epochs),
             "selection_history_tail": selection_history[-8:],
+            "selection_failures": _ordered_unique(selection_failures),
             "selection_warnings": selection_warnings,
             "training_artifact": {
                 "schema": artifact_dict.get("schema"),
@@ -2391,7 +2738,7 @@ def _run_score_aware_long_training_attachment(
                     "ready_for_exact_eval_dispatch"
                 ),
             },
-            "blockers": blockers,
+            "blockers": _ordered_unique(blockers),
         }
         if official_training_requested and not blockers:
             trained_official_train_export = {

@@ -166,6 +166,55 @@ def test_checkpoint_retention_candidate_null_preserves_safe_default() -> None:
         mod._coerce_checkpoint_keep_every(0)
 
 
+def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._snerv_score_aware_checkpoint_selection_policy(
+        segnet_distillation_weight=0.25,
+        pose_distillation_weight=0.1,
+        has_real_segnet_teacher=False,
+        has_real_posenet_teacher=False,
+        coder_aware_qat_bound=True,
+        coder_qat_loss_weight_map={},
+        pr95_faithful_curriculum_enabled=True,
+    )
+
+    assert policy["uses_score_aware_composite"] is True
+    assert policy["selection_metric"] == "score_aware_composite_full_video_surrogate"
+    assert policy["fail_closed_on_missing_parts"] is True
+    assert "distill" in policy["required_loss_parts"]
+    assert "pose_distill" in policy["required_loss_parts"]
+    assert "snerv_score_aware_checkpoint_selection_segnet_teacher_missing" in policy[
+        "blockers"
+    ]
+    assert "snerv_score_aware_checkpoint_selection_posenet_teacher_missing" in policy[
+        "blockers"
+    ]
+    assert "snerv_score_aware_checkpoint_selection_coder_qat_terms_missing" in policy[
+        "blockers"
+    ]
+
+
+def test_score_aware_checkpoint_selection_policy_preserves_mse_fallback() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._snerv_score_aware_checkpoint_selection_policy(
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        has_real_segnet_teacher=False,
+        has_real_posenet_teacher=False,
+        coder_aware_qat_bound=False,
+        coder_qat_loss_weight_map={},
+        pr95_faithful_curriculum_enabled=False,
+    )
+
+    assert policy["uses_score_aware_composite"] is False
+    assert policy["mse_fallback"] is True
+    assert policy["selection_metric"] == "full_reconstruction_mse_nchw255"
+    assert policy["selection_metric_value_key"] == "recon_mse_nchw255"
+    assert policy["blockers"] == []
+
+
 def test_torch_scorer_device_alias_resolves_gpu_for_direct_snerv_export() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
@@ -996,6 +1045,11 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
     assert long_training["final_recon_mse_nchw255"] <= (
         long_training["initial_recon_mse_nchw255"] + 1.0e-8
     )
+    assert long_training["checkpoint_selection_policy"]["mse_fallback"] is True
+    assert (
+        long_training["checkpoint_selection_policy"]["mse_fallback_reason"]
+        == "no_scorer_teacher_no_coder_qat_no_pr95_curriculum"
+    )
     assert long_training["best_checkpoint_selection"]["selection_metric"] == (
         "full_reconstruction_mse_nchw255"
     )
@@ -1143,6 +1197,35 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert long_training["teacher_binding"]["pose_distillation_huber_delta"] == 2.0
     assert long_training["teacher_binding"]["learnable_student_head_bound"] is True
     assert long_training["teacher_binding"]["learnable_pose_student_head_bound"] is True
+    assert long_training["checkpoint_selection_policy"]["mse_fallback"] is False
+    assert (
+        long_training["checkpoint_selection_policy"]["selection_metric"]
+        == "score_aware_composite_full_video_surrogate"
+    )
+    assert "real_segnet_teacher_distillation" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
+    assert "real_posenet_teacher_distillation" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
+    assert "coder_aware_qat" in long_training["checkpoint_selection_policy"][
+        "active_score_surfaces"
+    ]
+    assert "pr95_faithful_curriculum" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
+    assert long_training["best_checkpoint_selection"]["selection_metric"] == (
+        "score_aware_composite_full_video_surrogate"
+    )
+    assert np.isfinite(
+        long_training["best_checkpoint_selection"]["score_aware_composite_loss"]
+    )
+    assert "weighted_distill" in long_training["best_checkpoint_selection"][
+        "score_aware_composite_parts"
+    ]
+    assert "weighted_pose_distill" in long_training["best_checkpoint_selection"][
+        "score_aware_composite_parts"
+    ]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["score_aware_long_training"]["teacher_binding"][
         "has_real_segnet_teacher"
@@ -1150,6 +1233,9 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert decoded.metadata["score_aware_long_training"]["teacher_binding"][
         "has_real_posenet_teacher"
     ] is True
+    assert decoded.metadata["score_aware_long_training"][
+        "checkpoint_selection_policy"
+    ]["selection_metric"] == "score_aware_composite_full_video_surrogate"
 
 
 def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
