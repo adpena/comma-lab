@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +12,9 @@ import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
+    OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE,
     OFFICIAL_SNERV_T_TUB_SCHEMA,
+    OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS,
     OfficialTubError,
     official_output2_fusion_shape,
     prepare_official_tub_graph_inputs,
@@ -161,6 +164,20 @@ def test_official_tub_graph_inputs_match_haar_lowpass_contract() -> None:
     )
     metadata = out.as_jsonable_metadata()
     assert metadata["shape_metadata"]["temporal_encoder_input_count"] == 2
+    assert metadata["source_equivalence_scope"] == OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE
+    assert metadata["primitive_numeric_graph_input_parity_proven"] is True
+    assert metadata["source_forward_parity_proven"] is False
+    assert metadata["full_tub_source_forward_parity_proven"] is False
+    assert metadata["source_forward_replay_bound"] is False
+    assert metadata["source_forward_replay_verified"] is False
+    assert metadata["source_forward_replay_authority"] is False
+    assert metadata["source_forward_blockers"] == list(
+        OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS
+    )
+    assert (
+        "snerv_official_tub_normalized_lf_graph_inputs_not_full_source_forward_parity"
+        in metadata["source_forward_blockers"]
+    )
     assert metadata["score_claim"] is False
     assert metadata["promotion_eligible"] is False
     assert metadata["rank_or_kill_eligible"] is False
@@ -199,6 +216,27 @@ def test_nchw_batch_one_inputs_match_chw_inputs() -> None:
     np.testing.assert_allclose(nchw.normalized_lf, chw.normalized_lf)
     np.testing.assert_allclose(nchw.prev_lowpass_over_2, chw.prev_lowpass_over_2)
     assert nchw.as_jsonable_metadata()["promotion_eligible"] is False
+
+
+def test_official_tub_graph_inputs_refuse_source_forward_overclaim() -> None:
+    current = np.arange(16, dtype=np.float64).reshape(1, 4, 4)
+    out = prepare_official_tub_graph_inputs(current, current + 1.0, current + 2.0)
+
+    with pytest.raises(OfficialTubError, match="not full source-forward parity"):
+        replace(out, source_forward_parity_proven=True)
+    with pytest.raises(OfficialTubError, match="not full source-forward parity"):
+        replace(out, full_tub_source_forward_parity_proven=True)
+    with pytest.raises(OfficialTubError, match="not full source-forward parity"):
+        replace(out, source_forward_replay_authority=True)
+    with pytest.raises(OfficialTubError, match="unexpected source equivalence scope"):
+        replace(out, source_equivalence_scope="full_source_forward_parity")
+    with pytest.raises(OfficialTubError, match="must preserve source-forward blockers"):
+        replace(
+            out,
+            source_forward_blockers=(
+                "snerv_official_tub_encoder_decoder_weights_not_loaded",
+            ),
+        )
 
 
 def test_official_tub_numpy_matches_torch_haar_and_temporal_algebra() -> None:

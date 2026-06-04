@@ -29,6 +29,14 @@ OFFICIAL_SNERV_T_TUB_SCHEMA: Final[str] = "official_snerv_t_tub_numpy_graph_inpu
 OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT: Final[str] = (
     "official_snerv_t_lines_125_136_148_150_and_requirements_numpy_tub_input_contract"
 )
+OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE: Final[str] = (
+    "official_tub_graph_input_numeric_primitive_only"
+)
+OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS: Final[tuple[str, ...]] = (
+    "snerv_official_tub_normalized_lf_graph_inputs_not_full_source_forward_parity",
+    "snerv_official_tub_encoder_decoder_weights_not_loaded",
+    "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+)
 
 
 class OfficialTubError(ValueError):
@@ -132,11 +140,73 @@ class OfficialTubGraphInputs:
     next_highpass: np.ndarray
     temporal_encoder_inputs: tuple[np.ndarray, np.ndarray]
     shape_metadata: OfficialTubShapeMetadata
+    source_equivalence_scope: str = OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE
+    primitive_numeric_graph_input_parity_proven: bool = True
+    source_forward_parity_proven: bool = False
+    full_tub_source_forward_parity_proven: bool = False
+    source_forward_replay_bound: bool = False
+    source_forward_replay_verified: bool = False
+    source_forward_replay_authority: bool = False
+    source_forward_blockers: tuple[str, ...] = (
+        OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS
+    )
+
+    def __post_init__(self) -> None:
+        if self.source_equivalence_scope != OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE:
+            raise OfficialTubError(
+                "official TUB graph inputs are primitive-only evidence; "
+                f"unexpected source equivalence scope {self.source_equivalence_scope!r}"
+            )
+        truthy_authority = [
+            name
+            for name, value in (
+                ("score_claim", self.score_claim),
+                ("promotion_eligible", self.promotion_eligible),
+                ("source_forward_parity_proven", self.source_forward_parity_proven),
+                (
+                    "full_tub_source_forward_parity_proven",
+                    self.full_tub_source_forward_parity_proven,
+                ),
+                ("source_forward_replay_bound", self.source_forward_replay_bound),
+                ("source_forward_replay_verified", self.source_forward_replay_verified),
+                ("source_forward_replay_authority", self.source_forward_replay_authority),
+            )
+            if bool(value)
+        ]
+        if truthy_authority:
+            raise OfficialTubError(
+                "official TUB normalized LF graph inputs are not full "
+                "source-forward parity; refused truthy authority fields: "
+                + ", ".join(truthy_authority)
+            )
+        missing_blockers = [
+            blocker
+            for blocker in OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS
+            if blocker not in self.source_forward_blockers
+        ]
+        if missing_blockers:
+            raise OfficialTubError(
+                "official TUB graph input metadata must preserve source-forward "
+                "blockers: "
+                + ", ".join(missing_blockers)
+            )
 
     def as_jsonable_metadata(self) -> dict[str, object]:
         return {
             "schema": self.schema,
             "source_contract": self.source_contract,
+            "source_equivalence_scope": self.source_equivalence_scope,
+            "primitive_numeric_graph_input_parity_proven": bool(
+                self.primitive_numeric_graph_input_parity_proven
+            ),
+            "source_forward_parity_proven": bool(self.source_forward_parity_proven),
+            "full_tub_source_forward_parity_proven": bool(
+                self.full_tub_source_forward_parity_proven
+            ),
+            "source_forward_replay_bound": bool(self.source_forward_replay_bound),
+            "source_forward_replay_verified": bool(self.source_forward_replay_verified),
+            "source_forward_replay_authority": bool(self.source_forward_replay_authority),
+            "source_forward_blockers": list(self.source_forward_blockers),
             **FALSE_AUTHORITY,
             "lf_min": float(self.lf_min),
             "lf_max": float(self.lf_max),
@@ -375,8 +445,10 @@ def _validate_nchw_shape(
 
 __all__ = [
     "OFFICIAL_SNERV_T_SOURCE_SHA",
+    "OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE",
     "OFFICIAL_SNERV_T_TUB_SCHEMA",
     "OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT",
+    "OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS",
     "OfficialOutput2FusionShape",
     "OfficialTubError",
     "OfficialTubGraphInputs",
