@@ -28,11 +28,12 @@ from tac.analysis.nerv_candidate_curriculum import (
     build_snerv_candidate_curriculum_plan,
 )
 from tac.analysis.nerv_candidate_feedback import (
-    SCHEMA as NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA,
-)
-from tac.analysis.nerv_candidate_feedback import (
+    FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA,
     build_nerv_candidate_feedback_row,
     recommend_segnet_distillation_weight_for_stagnation,
+)
+from tac.analysis.nerv_candidate_feedback import (
+    SCHEMA as NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA,
 )
 from tac.analysis.nerv_decoder_weight_waterfill import (
     NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
@@ -1311,6 +1312,11 @@ def _candidate_feedback_evidence_blockers(
     if isinstance(gate, Mapping):
         blockers.extend(str(blocker) for blocker in gate.get("blockers") or [])
     blockers.extend(_feedback_prioritized_pair_index_blockers(feedback))
+    blockers.extend(
+        str(blocker)
+        for blocker in feedback.get("direct_feedback_blockers") or []
+        if blocker
+    )
     return _dedupe(blockers)
 
 
@@ -2385,12 +2391,13 @@ def _candidate_feedback_index(
 
 def _candidate_feedback_sort_key(
     row: Mapping[str, Any],
-) -> tuple[bool, int, bool, int, bool, bool, bool]:
+) -> tuple[bool, int, bool, bool, int, bool, bool, bool]:
     telemetry = row.get("training_telemetry")
     last_epoch = int(telemetry.get("last_epoch") or 0) if isinstance(telemetry, Mapping) else 0
     return (
         bool(row.get("scope_matches_candidate")),
         int(row.get("measured_num_pairs") or 0),
+        bool(row.get("full_video_mlx_response_attached")),
         row.get("training_stopped") is not True,
         last_epoch,
         bool(row.get("receiver_proof_attached")),
@@ -2402,6 +2409,11 @@ def _candidate_feedback_sort_key(
 def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str, Any]:
     if source.get("schema") == NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA:
         row = _sanitize_direct_candidate_feedback_row(source)
+    elif (
+        source.get("schema") == FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA
+        and isinstance(source.get("row"), Mapping)
+    ):
+        row = _sanitize_direct_candidate_feedback_row(source["row"])
     elif source.get("schema") == "hinerv_training_telemetry_feedback.v1":
         row = _normalize_hinerv_training_telemetry_feedback(source)
     elif source.get("schema") == "compact_renderer_mlx_spine_runner.v1":
@@ -2430,8 +2442,16 @@ def _sanitize_direct_candidate_feedback_row(source: Mapping[str, Any]) -> dict[s
     _guard_direct_feedback_bool(
         row,
         bool_key="full_video_local_prefilter_attached",
-        path_keys=("full_video_local_prefilter_path", "mlx_prefilter_path"),
-        sha_keys=("full_video_local_prefilter_sha256", "mlx_prefilter_sha256"),
+        path_keys=(
+            "full_video_local_prefilter_path",
+            "mlx_prefilter_path",
+            "full_video_mlx_response_path",
+        ),
+        sha_keys=(
+            "full_video_local_prefilter_sha256",
+            "mlx_prefilter_sha256",
+            "full_video_mlx_response_sha256",
+        ),
         blocker="direct_feedback_full_video_prefilter_file_missing",
         blockers=blockers,
     )
@@ -2865,7 +2885,29 @@ def _family_level_candidate_feedback_applicable(
 ) -> bool:
     # Only reuse optimizer-stability telemetry across sibling HiNeRV candidates.
     # Archive, receiver, and replay evidence remain candidate-specific.
-    if _family_key(family) != "hi_nerv":
+    family_key = _family_key(family)
+    if family_key == "snerv":
+        if str(row.get("feedback_kind") or "").strip() != "full_video_mlx_scorer_response":
+            return False
+        target_candidate_id = str(candidate.get("candidate_id") or "").strip()
+        source_candidate_id = str(row.get("candidate_id") or "").strip()
+        if not target_candidate_id or not source_candidate_id or source_candidate_id == target_candidate_id:
+            return False
+        measured_num_pairs = int(row.get("measured_num_pairs") or 0)
+        target_num_pairs = int(candidate.get("num_pairs") or 0)
+        return bool(
+            target_num_pairs > 0
+            and measured_num_pairs == target_num_pairs
+            and (
+                row.get("full_video_mlx_response_attached") is True
+                or str(row.get("feedback_scope") or "") == "full600_mlx_scorer_response"
+            )
+            and any(
+                str(blocker).startswith("snerv_full_video_mlx_response_")
+                for blocker in row.get("direct_feedback_blockers") or ()
+            )
+        )
+    if family_key != "hi_nerv":
         return False
     target_candidate_id = str(candidate.get("candidate_id") or "").strip()
     source_candidate_id = str(row.get("candidate_id") or "").strip()
@@ -2899,6 +2941,26 @@ def _sanitize_family_level_candidate_feedback(
     out = dict(row)
     source_candidate_id = str(row.get("candidate_id") or "").strip()
     target_candidate_id = str(target_candidate.get("candidate_id") or "").strip()
+    if _family_key(str(row.get("family") or "")) != "hi_nerv":
+        out["source_candidate_id"] = source_candidate_id
+        out["target_candidate_id"] = str(target_candidate_id)
+        out["candidate_id_match"] = False
+        out["feedback_match_scope"] = "family_full_video_mlx_response_context"
+        out["family_scope_matches_target"] = True
+        out["scope_matches_candidate"] = False
+        out["receiver_proof_attached"] = False
+        out["full_video_local_prefilter_attached"] = False
+        out["local_cpu_replay_gate_attached"] = False
+        out["measured_archive_bytes"] = None
+        out["measured_payload_bytes"] = None
+        out["feedback_ready"] = False
+        out["launch_control_feedback_ready"] = False
+        out["context_only"] = True
+        out["feedback_reuse_policy"] = (
+            "family_full_video_context_only_no_archive_receiver_replay_or_launch_authority"
+        )
+        out.update(FALSE_AUTHORITY)
+        return out
     source_official_score = _hinerv_feedback_official_control_score(row)
     target_official_score = _hinerv_official_control_score(target_candidate)
     source_official_superseded = bool(target_official_score > source_official_score)

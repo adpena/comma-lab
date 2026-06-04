@@ -29,6 +29,7 @@ REFRESH_SCHEMA = "nerv_candidate_feedback_refresh.v1"
 TELEMETRY_FEEDBACK_SCHEMA = "nerv_training_telemetry_feedback.v1"
 SAMPLE_GENERALIZATION_GATE_SCHEMA = "nerv_sample_generalization_gate.v1"
 HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA = "hinerv_archive_ladder_candidate_feedback.v1"
+FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA = "nerv_full_video_mlx_scorer_feedback.v1"
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -74,6 +75,18 @@ _POSE_TAIL_BURST_MIN_AXIS = 8.0
 _POSE_TAIL_BURST_MEDIAN_MULTIPLIER = 4.0
 _POSE_TAIL_BURST_BAD_FRACTION = 0.05
 _PR95_FINAL_MUON_STAGE_INDEX = 8
+_FULL_VIDEO_RESPONSE_BAD_SCORE_THRESHOLD = DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY
+_FULL_VIDEO_RESPONSE_BAD_SEG_THRESHOLD = 0.02
+_FULL_VIDEO_RESPONSE_BAD_POSE_THRESHOLD = 1.0
+_FULL_VIDEO_RESPONSE_SCORE_AUTHORITY_KEYS = (
+    "score_claim",
+    "score_claim_valid",
+    "frontier_score_claim",
+    "rank_or_kill_eligible",
+    "promotion_eligible",
+    "promotable",
+    "ready_for_exact_eval_dispatch",
+)
 
 
 def _bool_metric_or_none(value: Any) -> bool | None:
@@ -515,6 +528,355 @@ def build_hinerv_archive_ladder_feedback_report(
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
+
+
+def build_nerv_full_video_mlx_scorer_feedback_row(
+    *,
+    mlx_response: Mapping[str, Any],
+    archive_export_report: Mapping[str, Any] | None = None,
+    mlx_response_path: str | Path | None = None,
+    archive_export_report_path: str | Path | None = None,
+    candidate_id: str | None = None,
+    family: str | None = None,
+    hard_byte_ceiling: int | None = None,
+    current_segnet_distillation_weight: float | None = None,
+    max_mlx_score_for_local_replay: float | None = (
+        DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY
+    ),
+) -> dict[str, Any]:
+    """Bind a full-video MLX scorer response to a candidate feedback row.
+
+    The MLX scorer response is local research signal only. Binding it to the
+    matching checkpoint/archive export by archive SHA makes it useful for
+    training control without granting score or promotion authority.
+    """
+
+    if max_mlx_score_for_local_replay is None:
+        max_mlx_score_for_local_replay = DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY
+    response_schema = str(
+        mlx_response.get("schema") or mlx_response.get("schema_version") or ""
+    )
+    if response_schema != "mlx_scorer_response.v1":
+        raise ValueError(
+            "mlx_response must have schema/schema_version 'mlx_scorer_response.v1'"
+        )
+    export = dict(archive_export_report or {})
+    response_path = (
+        Path(mlx_response_path).expanduser().resolve(strict=False)
+        if mlx_response_path
+        else None
+    )
+    export_path = (
+        Path(archive_export_report_path).expanduser().resolve(strict=False)
+        if archive_export_report_path
+        else None
+    )
+    family_key = _family_key(
+        str(
+            family
+            or export.get("family")
+            or mlx_response.get("response_family")
+            or ""
+        )
+    )
+    resolved_candidate_id = str(
+        candidate_id
+        or export.get("candidate_id")
+        or export.get("modelsize_candidate_id")
+        or _path_get(export, ("modelsize_candidate", "candidate_id"))
+        or ""
+    ).strip()
+    response_archive_sha = str(
+        mlx_response.get("archive_sha256")
+        or _path_get(mlx_response, ("cache_identity", "candidate", "archive_sha256"))
+        or ""
+    ).strip()
+    export_archive_sha = str(export.get("archive_sha256") or "").strip()
+    archive_sha = export_archive_sha or response_archive_sha or None
+    archive_bytes = (
+        _int_or_none(export.get("archive_bytes"))
+        or _int_or_none(mlx_response.get("archive_size_bytes"))
+        or _int_or_none(mlx_response.get("archive_bytes"))
+    )
+    response_archive_bytes = _int_or_none(mlx_response.get("archive_size_bytes"))
+    candidate_pairs = (
+        _int_or_none(_path_get(export, ("modelsize_candidate", "num_pairs")))
+        or _int_or_none(export.get("num_pairs"))
+        or _int_or_none(mlx_response.get("max_pairs"))
+        or _int_or_none(mlx_response.get("n_samples"))
+        or CONTEST_PAIR_COUNT
+    )
+    measured_pairs = _evidence_pair_count(mlx_response)
+    avg_seg = _float_or_none(mlx_response.get("avg_segnet_dist"))
+    avg_pose = _float_or_none(mlx_response.get("avg_posenet_dist"))
+    score = _float_or_none(
+        mlx_response.get("score_recomputed_from_components")
+        or mlx_response.get("canonical_score")
+    )
+    rate_term = _float_or_none(mlx_response.get("score_rate_contribution"))
+    seg_term = None if avg_seg is None else 100.0 * float(avg_seg)
+    pose_term = (
+        None
+        if avg_pose is None or avg_pose < 0.0
+        else math.sqrt(10.0 * float(avg_pose))
+    )
+    nonrate_score = (
+        None
+        if seg_term is None or pose_term is None
+        else float(seg_term) + float(pose_term)
+    )
+    if rate_term is None and score is not None and nonrate_score is not None:
+        rate_term = float(score) - float(nonrate_score)
+    ceiling = (
+        _int_or_none(hard_byte_ceiling)
+        or _int_or_none(_path_get(export, ("modelsize_candidate", "hard_byte_ceiling")))
+        or _min_positive_int(export.get("hard_byte_ceilings"))
+    )
+    full_video = bool(int(measured_pairs) >= max(int(candidate_pairs), CONTEST_PAIR_COUNT))
+    response_false_authority_blockers = _mlx_response_authority_blockers(mlx_response)
+    direct_blockers: list[str] = []
+    if not family_key:
+        direct_blockers.append("full_video_mlx_response_family_missing")
+    if not resolved_candidate_id:
+        direct_blockers.append("full_video_mlx_response_candidate_id_missing")
+    if not response_archive_sha:
+        direct_blockers.append("full_video_mlx_response_archive_sha256_missing")
+    if export and not export_archive_sha:
+        direct_blockers.append("archive_export_report_archive_sha256_missing")
+    if response_archive_sha and export_archive_sha and response_archive_sha != export_archive_sha:
+        direct_blockers.append("full_video_mlx_response_archive_sha256_mismatch")
+    if archive_bytes is None:
+        direct_blockers.append("full_video_mlx_response_archive_bytes_missing")
+    if response_archive_bytes is not None and archive_bytes is not None and response_archive_bytes != archive_bytes:
+        direct_blockers.append("full_video_mlx_response_archive_bytes_mismatch")
+    if not full_video:
+        direct_blockers.append("full_video_mlx_response_not_full600")
+    direct_blockers.extend(response_false_authority_blockers)
+    archive_under_ceiling = (
+        None if ceiling is None or archive_bytes is None else int(archive_bytes) <= int(ceiling)
+    )
+    if archive_under_ceiling is False:
+        direct_blockers.append(f"{family_key or 'nerv'}_full_video_mlx_response_archive_over_hard_byte_ceiling")
+    scorer_control = _full_video_mlx_response_training_control(
+        family=family_key,
+        score=score,
+        nonrate_score=nonrate_score,
+        avg_seg=avg_seg,
+        avg_pose=avg_pose,
+        archive_under_ceiling=archive_under_ceiling,
+        full_video=full_video,
+        current_segnet_distillation_weight=current_segnet_distillation_weight,
+        max_mlx_score_for_local_replay=max_mlx_score_for_local_replay,
+    )
+    recommended_mutations = list(
+        scorer_control.get("recommended_launch_mutations") or []
+    )
+    receiver_proof_attached = _archive_export_receiver_proof_attached(export)
+    sample_blockers = [] if full_video else ["full600_mlx_scorer_response_required"]
+    local_replay_passed = bool(
+        score is not None
+        and max_mlx_score_for_local_replay is not None
+        and float(score) <= float(max_mlx_score_for_local_replay)
+    )
+    response_sha = _sha256_file(response_path) if response_path else None
+    export_sha = _sha256_file(export_path) if export_path else None
+    return {
+        "schema": SCHEMA,
+        "feedback_kind": "full_video_mlx_scorer_response",
+        "full_video_mlx_feedback_schema": FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA,
+        "created_utc": datetime.now(UTC).isoformat(),
+        "source_report_path": response_path.as_posix() if response_path else None,
+        "source_report_sha256": response_sha,
+        "archive_export_report_path": export_path.as_posix() if export_path else None,
+        "archive_export_report_sha256": export_sha,
+        "mode": "full_video_mlx_scorer_response_harvested",
+        "family": family_key or None,
+        "candidate_id": resolved_candidate_id or None,
+        "candidate_conditioned": bool(resolved_candidate_id),
+        "candidate_num_pairs": int(candidate_pairs),
+        "measured_num_pairs": int(measured_pairs),
+        "feedback_scope": (
+            "full600_mlx_scorer_response" if full_video else "partial_mlx_scorer_response"
+        ),
+        "scope_matches_candidate": bool(full_video and resolved_candidate_id),
+        "feedback_ready": bool(
+            full_video and resolved_candidate_id and not direct_blockers
+        ),
+        "launch_control_feedback_ready": bool(full_video and resolved_candidate_id),
+        "hard_byte_ceiling": ceiling,
+        "nominal_total_payload_bytes": _path_get(
+            export, ("modelsize_candidate", "nominal_total_payload_bytes")
+        ),
+        "measured_payload_bytes": _int_or_none(export.get("packet_bytes")),
+        "measured_archive_bytes": archive_bytes,
+        "measured_minus_nominal_bytes": _minus_or_none(
+            archive_bytes,
+            _path_get(export, ("modelsize_candidate", "nominal_total_payload_bytes")),
+        ),
+        "archive_path": export.get("archive_path"),
+        "archive_bytes": archive_bytes,
+        "archive_sha256": archive_sha,
+        "receiver_proof_attached": receiver_proof_attached,
+        "receiver_proof_path": export.get("receiver_proof_path"),
+        "receiver_proof_sha256": export.get("receiver_proof_sha256"),
+        "receiver_contract_satisfied": receiver_proof_attached,
+        "full_video_local_prefilter_attached": bool(full_video and response_sha),
+        "full_video_mlx_response_attached": bool(full_video and response_sha),
+        "full_video_mlx_response_path": response_path.as_posix() if response_path else None,
+        "full_video_mlx_response_sha256": response_sha,
+        "local_cpu_replay_gate_attached": False,
+        "local_cpu_replay_gate_has_full_video_mlx_prefilter": bool(full_video),
+        "local_cpu_replay_gate_local_replay_mlx_prefilter_passed": local_replay_passed,
+        "local_cpu_replay_gate_coverage_valid_for_replay": bool(full_video),
+        "local_cpu_replay_gate_executed": False,
+        "mlx_prefilter_profile_count": 1 if full_video else 0,
+        "mlx_prefilter_has_full_video": bool(full_video),
+        "mlx_prefilter_local_replay_passed": local_replay_passed,
+        "mlx_prefilter_best_full_video_mlx_score": score,
+        "mlx_prefilter_full_video_profile_paths": (
+            [response_path.as_posix()] if response_path else []
+        ),
+        "mlx_prefilter_local_replay_profile_paths": [],
+        "mlx_prefilter_blockers": (
+            []
+            if local_replay_passed
+            else ["local_cpu_replay_blocked_by_mlx_prefilter_score"]
+        ),
+        "full_video_mlx_scorer_response": {
+            "schema": FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA,
+            "source_schema": response_schema,
+            "score_axis": mlx_response.get("score_axis")
+            or mlx_response.get("evidence_tag"),
+            "hardware_substrate": mlx_response.get("hardware_substrate"),
+            "evidence_grade": mlx_response.get("evidence_grade"),
+            "candidate_generation_only": bool(
+                mlx_response.get("candidate_generation_only")
+            ),
+            "n_samples": int(measured_pairs),
+            "score_recomputed_from_components": score,
+            "avg_segnet_dist": avg_seg,
+            "avg_posenet_dist": avg_pose,
+            "score_rate_contribution": rate_term,
+            "seg_score_term": seg_term,
+            "pose_score_term": pose_term,
+            "nonrate_score_estimate": nonrate_score,
+            "archive_size_bytes": archive_bytes,
+            "archive_under_hard_byte_ceiling": archive_under_ceiling,
+            "response_archive_sha256": response_archive_sha or None,
+            "export_archive_sha256": export_archive_sha or None,
+            "inflated_outputs_aggregate_sha256": mlx_response.get(
+                "inflated_outputs_aggregate_sha256"
+            ),
+            "cache_identity": mlx_response.get("cache_identity"),
+            "components": mlx_response.get("components"),
+            "direct_blockers": list(direct_blockers),
+            **FALSE_AUTHORITY,
+        },
+        "sample_generalization_gate": {
+            "schema": SAMPLE_GENERALIZATION_GATE_SCHEMA,
+            "candidate_num_pairs": int(candidate_pairs),
+            "measured_num_pairs": int(measured_pairs),
+            "required_pairs": int(max(CONTEST_PAIR_COUNT, int(candidate_pairs))),
+            "full_video_mlx_prefilter": bool(full_video),
+            "representative_distortion_evidence": bool(full_video),
+            "small_pair_smoke_only": False,
+            "verdict": (
+                "representative_full_video_mlx_scorer_response_present"
+                if full_video
+                else "partial_mlx_scorer_response_requires_full600"
+            ),
+            "blockers": sample_blockers,
+            **FALSE_AUTHORITY,
+        },
+        "sample_generalization_blockers": sample_blockers,
+        "full_video_mlx_response_control": scorer_control,
+        "training_control": scorer_control,
+        "training_control_action": scorer_control["action"],
+        "training_control_reason": scorer_control["reason"],
+        "training_control_should_stop_current_run": scorer_control[
+            "should_stop_current_run"
+        ],
+        "training_control_successor_required": scorer_control[
+            "successor_required"
+        ],
+        "pose_instability_detected": bool(
+            scorer_control.get("pose_fit_failure_detected")
+        ),
+        "pose_tail_burst_detected": bool(
+            scorer_control.get("pose_fit_failure_detected")
+        ),
+        "seg_stagnation_detected": bool(
+            scorer_control.get("segnet_fit_failure_detected")
+        ),
+        "observed_learning_rate": None,
+        "recommended_learning_rate": None,
+        "observed_segnet_distillation_weight": current_segnet_distillation_weight,
+        "recommended_segnet_distillation_weight": scorer_control.get(
+            "recommended_segnet_distillation_weight"
+        ),
+        "recommended_segnet_distillation_weight_multiplier": scorer_control.get(
+            "recommended_segnet_distillation_weight_multiplier"
+        ),
+        "recommended_launch_mutations": recommended_mutations,
+        "direct_feedback_blockers": _dedupe_strings(direct_blockers),
+        "blockers": _dedupe_strings([*direct_blockers, *sample_blockers]),
+        **FALSE_AUTHORITY,
+    }
+
+
+def write_nerv_full_video_mlx_scorer_feedback_files(
+    *,
+    mlx_response: Mapping[str, Any],
+    output_dir: str | Path,
+    archive_export_report: Mapping[str, Any] | None = None,
+    mlx_response_path: str | Path | None = None,
+    archive_export_report_path: str | Path | None = None,
+    candidate_id: str | None = None,
+    family: str | None = None,
+    hard_byte_ceiling: int | None = None,
+    current_segnet_distillation_weight: float | None = None,
+    max_mlx_score_for_local_replay: float | None = (
+        DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY
+    ),
+) -> dict[str, Any]:
+    """Write a full-video MLX response feedback row plus append-only ledger."""
+
+    out = Path(output_dir).expanduser().resolve(strict=False)
+    out.mkdir(parents=True, exist_ok=True)
+    row = build_nerv_full_video_mlx_scorer_feedback_row(
+        mlx_response=mlx_response,
+        archive_export_report=archive_export_report,
+        mlx_response_path=mlx_response_path,
+        archive_export_report_path=archive_export_report_path,
+        candidate_id=candidate_id,
+        family=family,
+        hard_byte_ceiling=hard_byte_ceiling,
+        current_segnet_distillation_weight=current_segnet_distillation_weight,
+        max_mlx_score_for_local_replay=max_mlx_score_for_local_replay,
+    )
+    row_path = out / "nerv_full_video_mlx_scorer_feedback_row.json"
+    ledger_path = out / "nerv_full_video_mlx_scorer_feedback.jsonl"
+    row_path.write_text(
+        json.dumps(row, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    with ledger_path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, sort_keys=True) + "\n")
+    manifest = {
+        "schema": FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA,
+        "row": row,
+        "row_path": row_path.as_posix(),
+        "ledger_path": ledger_path.as_posix(),
+        "append_only": True,
+        **FALSE_AUTHORITY,
+    }
+    manifest_path = out / "nerv_full_video_mlx_scorer_feedback.json"
+    manifest.update({"manifest_path": manifest_path.as_posix()})
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def _hinerv_archive_ladder_feedback_row(
@@ -2031,6 +2393,150 @@ def _refresh_nested_pr95_stack_binding_blockers(report: dict[str, Any]) -> list[
     return _dedupe_strings(removed)
 
 
+def _mlx_response_authority_blockers(response: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    for key in _FULL_VIDEO_RESPONSE_SCORE_AUTHORITY_KEYS:
+        if response.get(key) is True:
+            blockers.append(f"mlx_scorer_response_truthy_authority_field:{key}")
+    return blockers
+
+
+def _archive_export_receiver_proof_attached(export: Mapping[str, Any]) -> bool:
+    return bool(
+        export.get("receiver_proof_ready") is True
+        or export.get("receiver_proof_passed") is True
+        or export.get("runtime_consumption_proof_ready") is True
+        or export.get("receiver_contract_satisfied") is True
+    )
+
+
+def _full_video_mlx_response_training_control(
+    *,
+    family: str,
+    score: float | None,
+    nonrate_score: float | None,
+    avg_seg: float | None,
+    avg_pose: float | None,
+    archive_under_ceiling: bool | None,
+    full_video: bool,
+    current_segnet_distillation_weight: float | None,
+    max_mlx_score_for_local_replay: float | None,
+) -> dict[str, Any]:
+    family_key = _family_key(str(family or "nerv"))
+    bad_score = bool(
+        score is not None
+        and max_mlx_score_for_local_replay is not None
+        and float(score) > float(max_mlx_score_for_local_replay)
+    )
+    seg_failure = bool(
+        avg_seg is not None and float(avg_seg) >= _FULL_VIDEO_RESPONSE_BAD_SEG_THRESHOLD
+    )
+    pose_failure = bool(
+        avg_pose is not None
+        and float(avg_pose) >= _FULL_VIDEO_RESPONSE_BAD_POSE_THRESHOLD
+    )
+    recommended_seg_weight = (
+        recommend_segnet_distillation_weight_for_stagnation(
+            current_segnet_distillation_weight
+        )
+        if seg_failure and family_key == "hi_nerv"
+        else None
+    )
+    mutations: list[str] = []
+    if archive_under_ceiling is False:
+        mutations.extend(
+            [
+                f"treat_previous_{family_key}_run_as_rate_failure_not_distortion_negative",
+                (
+                    "switch_snerv_representation_before_more_same_modelsize_training"
+                    if family_key == "snerv"
+                    else "select_smaller_or_more_entropy_friendly_hinerv_modelsize_candidate"
+                ),
+            ]
+        )
+    if bad_score and archive_under_ceiling is not False:
+        mutations.append(
+            f"treat_previous_{family_key}_run_as_fit_failure_not_rate_negative"
+        )
+    if seg_failure and recommended_seg_weight is not None:
+        mutations.extend(
+            [
+                "increase_segnet_distillation_weight_from_full_video_mlx_response",
+                "preserve_pose_guard_while_raising_segnet_pressure",
+            ]
+        )
+    if pose_failure:
+        mutations.extend(
+            [
+                "build_xray_hardpair_hitlist_from_full_video_pose_tail",
+                "launch_hard_pair_prioritized_sampler_successor",
+                "preserve_random_full_video_fill_when_prioritizing_hard_pairs",
+            ]
+        )
+    if not full_video:
+        action = "wait_for_full600_mlx_scorer_response"
+        reason = "partial_mlx_scorer_response_not_enough_for_training_control"
+        should_stop = False
+        successor_required = False
+    elif archive_under_ceiling is False:
+        action = "checkpoint_then_stop_same_representation_rate_over_cap"
+        reason = "full_video_archive_bytes_exceed_hard_byte_ceiling"
+        should_stop = True
+        successor_required = True
+    elif bad_score:
+        action = "checkpoint_then_supersede_with_full_video_fit_mutation"
+        reason = "full_video_mlx_response_distortion_above_local_replay_gate"
+        should_stop = True
+        successor_required = True
+    else:
+        action = "eligible_for_local_cpu_replay_gate"
+        reason = "full_video_mlx_response_passes_local_replay_prefilter"
+        should_stop = False
+        successor_required = False
+    return {
+        "schema": "nerv_full_video_mlx_response_training_control.v1",
+        "family": family_key,
+        "action": action,
+        "reason": reason,
+        "should_stop_current_run": should_stop,
+        "successor_required": successor_required,
+        "max_mlx_score_for_local_replay": max_mlx_score_for_local_replay,
+        "score_recomputed_from_components": score,
+        "nonrate_score_estimate": nonrate_score,
+        "avg_segnet_dist": avg_seg,
+        "avg_posenet_dist": avg_pose,
+        "archive_under_hard_byte_ceiling": archive_under_ceiling,
+        "segnet_fit_failure_detected": seg_failure,
+        "pose_fit_failure_detected": pose_failure,
+        "observed_segnet_distillation_weight": current_segnet_distillation_weight,
+        "recommended_segnet_distillation_weight": recommended_seg_weight,
+        "recommended_segnet_distillation_weight_multiplier": (
+            _SEG_STAGNATION_WEIGHT_MULTIPLIER
+            if recommended_seg_weight is not None
+            else None
+        ),
+        "recommended_launch_mutations": _dedupe_strings(mutations),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _min_positive_int(value: Any) -> int | None:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        candidates = [_int_or_none(item) for item in value]
+        positives = [int(item) for item in candidates if item is not None and item > 0]
+        return min(positives) if positives else None
+    number = _int_or_none(value)
+    return number if number is not None and number > 0 else None
+
+
+def _minus_or_none(left: Any, right: Any) -> int | None:
+    left_i = _int_or_none(left)
+    right_i = _int_or_none(right)
+    if left_i is None or right_i is None:
+        return None
+    return int(left_i) - int(right_i)
+
+
 def _dedupe_strings(values: list[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -2166,6 +2672,7 @@ def _training_telemetry_mutations_for_family(
 
 
 __all__ = [
+    "FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA",
     "HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA",
     "LEDGER_SCHEMA",
     "REFRESH_SCHEMA",
@@ -2174,10 +2681,12 @@ __all__ = [
     "TELEMETRY_FEEDBACK_SCHEMA",
     "build_hinerv_archive_ladder_feedback_report",
     "build_nerv_candidate_feedback_row",
+    "build_nerv_full_video_mlx_scorer_feedback_row",
     "build_nerv_training_telemetry_feedback_row",
     "recommend_segnet_distillation_weight_for_stagnation",
     "refresh_nerv_candidate_feedback_report",
     "write_nerv_candidate_feedback_files",
+    "write_nerv_full_video_mlx_scorer_feedback_files",
     "write_nerv_training_telemetry_feedback_files",
     "write_refreshed_nerv_candidate_feedback_files",
 ]

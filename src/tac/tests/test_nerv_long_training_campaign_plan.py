@@ -1914,6 +1914,188 @@ def test_long_training_campaign_plan_applies_hinerv_segnet_stagnation_feedback()
     assert hi["output_dir_reuse_policy"] == "fresh_feedback_mutation_path"
 
 
+def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
+    tmp_path: Path,
+) -> None:
+    response_path = tmp_path / "hinerv_full_video_mlx_response.json"
+    receiver_proof_path = tmp_path / "hinerv_receiver_proof.json"
+    response_path.write_text('{"schema":"mlx_scorer_response.v1"}', encoding="utf-8")
+    receiver_proof_path.write_text('{"schema":"receiver_proof.v1"}', encoding="utf-8")
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "full_video_mlx_scorer_response",
+                "full_video_mlx_feedback_schema": (
+                    "nerv_full_video_mlx_scorer_feedback.v1"
+                ),
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_mlx_scorer_response",
+                "scope_matches_candidate": True,
+                "feedback_ready": True,
+                "launch_control_feedback_ready": True,
+                "receiver_proof_attached": True,
+                "receiver_proof_path": receiver_proof_path.as_posix(),
+                "receiver_proof_sha256": sha256(receiver_proof_path.read_bytes()).hexdigest(),
+                "full_video_local_prefilter_attached": True,
+                "full_video_mlx_response_attached": True,
+                "full_video_mlx_response_path": response_path.as_posix(),
+                "full_video_mlx_response_sha256": sha256(response_path.read_bytes()).hexdigest(),
+                "local_cpu_replay_gate_attached": False,
+                "measured_archive_bytes": 122_074,
+                "hard_byte_ceiling": 178_000,
+                "seg_stagnation_detected": True,
+                "pose_instability_detected": True,
+                "observed_segnet_distillation_weight": 2.0,
+                "recommended_segnet_distillation_weight": 4.0,
+                "recommended_launch_mutations": [
+                    "increase_segnet_distillation_weight_from_full_video_mlx_response",
+                    "treat_previous_hi_nerv_run_as_fit_failure_not_rate_negative",
+                ],
+                "full_video_mlx_scorer_response": {
+                    "score_recomputed_from_components": 91.57,
+                    "avg_segnet_dist": 0.55,
+                    "avg_posenet_dist": 132.0,
+                    "archive_under_hard_byte_ceiling": True,
+                    "score_claim": False,
+                },
+                "direct_feedback_blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    argv = hi["command_argv"]
+    adjustment = hi["feedback_launch_adjustment"]
+    assert hi["candidate_feedback"]["feedback_kind"] == "full_video_mlx_scorer_response"
+    assert hi["candidate_feedback"]["full_video_mlx_response_attached"] is True
+    assert hi["candidate_feedback"]["direct_feedback_blockers"] == []
+    assert adjustment["launch_control_feedback_ready"] is True
+    assert adjustment["applied"] is True
+    assert adjustment["segnet_weight_applied"] is True
+    assert adjustment["segnet_distillation_weight"] == 4.0
+    assert argv[argv.index("--segnet-distillation-weight") + 1] == "4"
+    assert "increase_segnet_distillation_weight_from_full_video_mlx_response" in (
+        adjustment["launch_mutations"]
+    )
+    assert "hinerv_segnet_stagnation_feedback_unapplied" not in hi["blockers"]
+    assert hi["score_claim"] is False
+
+
+def test_long_training_campaign_plan_reuses_snerv_full_video_rate_failure_as_context_only(
+    tmp_path: Path,
+) -> None:
+    response_path = tmp_path / "snerv_full_video_mlx_response.json"
+    receiver_proof_path = tmp_path / "snerv_receiver_proof.json"
+    response_path.write_text('{"schema":"mlx_scorer_response.v1"}', encoding="utf-8")
+    receiver_proof_path.write_text('{"schema":"receiver_proof.v1"}', encoding="utf-8")
+    snerv_budget = _snerv_budget()
+    sibling = dict(snerv_budget["selected_candidates"][0])
+    sibling["candidate_id"] = (
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc9e2_p1_mfu1-2-4_hfr0_t0_adbase_int4_symmetric_ceil178000"
+    )
+    sibling["fc_dim"] = 9
+    snerv_budget["selected_candidates"] = [sibling]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "full_video_mlx_scorer_response",
+                "full_video_mlx_feedback_schema": (
+                    "nerv_full_video_mlx_scorer_feedback.v1"
+                ),
+                "family": "snerv",
+                "candidate_id": (
+                    "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc36e0_p1_mfu1-2-4_hfr0_t1_adbase_oms0p285_int8_symmetric_ceil216000"
+                ),
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "full600_mlx_scorer_response",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "launch_control_feedback_ready": False,
+                "receiver_proof_attached": True,
+                "receiver_proof_path": receiver_proof_path.as_posix(),
+                "receiver_proof_sha256": sha256(receiver_proof_path.read_bytes()).hexdigest(),
+                "full_video_local_prefilter_attached": True,
+                "full_video_mlx_response_attached": True,
+                "full_video_mlx_response_path": response_path.as_posix(),
+                "full_video_mlx_response_sha256": sha256(response_path.read_bytes()).hexdigest(),
+                "local_cpu_replay_gate_attached": False,
+                "measured_archive_bytes": 444_036,
+                "hard_byte_ceiling": 178_000,
+                "recommended_launch_mutations": [
+                    "treat_previous_snerv_run_as_rate_failure_not_distortion_negative",
+                    "switch_snerv_representation_before_more_same_modelsize_training",
+                ],
+                "direct_feedback_blockers": [
+                    "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling"
+                ],
+                "full_video_mlx_scorer_response": {
+                    "score_recomputed_from_components": 108.61,
+                    "avg_segnet_dist": 0.68,
+                    "avg_posenet_dist": 162.84,
+                    "archive_under_hard_byte_ceiling": False,
+                    "score_claim": False,
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    feedback = snerv["candidate_feedback"]
+    assert feedback["feedback_match_scope"] == "family_full_video_mlx_response_context"
+    assert feedback["candidate_id_match"] is False
+    assert feedback["source_candidate_id"].startswith("snerv_np600_haar_lv5")
+    assert feedback["target_candidate_id"] == sibling["candidate_id"]
+    assert feedback["context_only"] is True
+    assert feedback["receiver_proof_attached"] is False
+    assert feedback["full_video_local_prefilter_attached"] is False
+    assert feedback["local_cpu_replay_gate_attached"] is False
+    assert feedback["measured_archive_bytes"] is None
+    assert feedback["measured_payload_bytes"] is None
+    assert feedback["feedback_ready"] is False
+    assert feedback["direct_feedback_blockers"] == [
+        "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling"
+    ]
+    assert feedback["score_claim"] is False
+    assert (
+        feedback["feedback_reuse_policy"]
+        == "family_full_video_context_only_no_archive_receiver_replay_or_launch_authority"
+    )
+    assert "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling" in (
+        snerv["candidate_feedback_evidence_blockers"]
+    )
+    assert "treat_previous_snerv_run_as_rate_failure_not_distortion_negative" in (
+        snerv["candidate_feedback"]["recommended_launch_mutations"]
+    )
+    assert snerv["score_claim"] is False
+
+
 def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),

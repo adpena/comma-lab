@@ -10,17 +10,21 @@ from pathlib import Path
 import pytest
 
 from tac.analysis.nerv_candidate_feedback import (
+    FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA,
     HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA,
     build_hinerv_archive_ladder_feedback_report,
     build_nerv_candidate_feedback_row,
+    build_nerv_full_video_mlx_scorer_feedback_row,
     build_nerv_training_telemetry_feedback_row,
     refresh_nerv_candidate_feedback_report,
     write_nerv_candidate_feedback_files,
+    write_nerv_full_video_mlx_scorer_feedback_files,
     write_nerv_training_telemetry_feedback_files,
     write_refreshed_nerv_candidate_feedback_files,
 )
 from tac.repo_io import ArtifactWriteError
 from tools import harvest_hinerv_archive_ladder_feedback as harvest_ladder_feedback_cli
+from tools import harvest_nerv_full_video_mlx_feedback as harvest_full_video_mlx_cli
 from tools.harvest_nerv_training_telemetry_feedback import (
     _effective_stop_reason,
 )
@@ -207,6 +211,235 @@ def test_hinerv_archive_ladder_feedback_cli_writes_json_and_jsonl(tmp_path: Path
     assert len(rows) == 1
     assert rows[0]["candidate_id"] == "hinerv_candidate"
     assert rows[0]["score_claim"] is False
+
+
+def _mlx_response(
+    *,
+    family: str = "hi_nerv",
+    archive_sha256: str = "5" * 64,
+    archive_size_bytes: int = 122_074,
+    score: float = 91.571,
+    avg_segnet_dist: float = 0.55,
+    avg_posenet_dist: float = 132.0,
+    n_samples: int = 600,
+) -> dict[str, object]:
+    return {
+        "schema": "mlx_scorer_response.v1",
+        "response_family": family,
+        "n_samples": n_samples,
+        "max_pairs": n_samples,
+        "archive_sha256": archive_sha256,
+        "archive_size_bytes": archive_size_bytes,
+        "score_recomputed_from_components": score,
+        "avg_segnet_dist": avg_segnet_dist,
+        "avg_posenet_dist": avg_posenet_dist,
+        "score_rate_contribution": 0.081,
+        "score_axis": "[macOS-MLX research-signal]",
+        "candidate_generation_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "cache_identity": {
+            "candidate": {
+                "archive_sha256": archive_sha256,
+                "pair_count": n_samples,
+            }
+        },
+    }
+
+
+def _checkpoint_export(
+    tmp_path: Path,
+    *,
+    family: str = "hi_nerv",
+    candidate_id: str = "hinerv_np600_ld16_ed8_dc16_int7_mixed_ceil178000",
+    archive_sha256: str = "5" * 64,
+    archive_bytes: int = 122_074,
+    hard_byte_ceiling: int = 178_000,
+) -> dict[str, object]:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text("{}\n", encoding="utf-8")
+    payload: dict[str, object] = {
+        "schema": f"{family.replace('_', '')}_checkpoint_archive_export.v1",
+        "family": family,
+        "candidate_id": candidate_id,
+        "archive_bytes": archive_bytes,
+        "archive_sha256": archive_sha256,
+        "archive_path": archive.as_posix(),
+        "receiver_proof_ready": True,
+        "receiver_proof_path": proof.as_posix(),
+        "receiver_proof_sha256": hashlib.sha256(proof.read_bytes()).hexdigest(),
+        "modelsize_candidate": {
+            "candidate_id": candidate_id,
+            "family": family,
+            "num_pairs": 600,
+            "hard_byte_ceiling": hard_byte_ceiling,
+            "nominal_total_payload_bytes": 160_000,
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    if family == "snerv":
+        packet = tmp_path / "packet.snar"
+        packet.write_bytes(b"packet")
+        payload.update(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "packet_bytes": 2_347_396,
+                "packet_sha256": hashlib.sha256(packet.read_bytes()).hexdigest(),
+                "packet_path": packet.as_posix(),
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+            }
+        )
+    return payload
+
+
+def test_full_video_mlx_response_feedback_binds_archive_export_and_false_authority(
+    tmp_path: Path,
+) -> None:
+    response_path = tmp_path / "mlx_response.json"
+    export_path = tmp_path / "export.json"
+    response = _mlx_response()
+    export = _checkpoint_export(tmp_path)
+    response_path.write_text(json.dumps(response), encoding="utf-8")
+    export_path.write_text(json.dumps(export), encoding="utf-8")
+
+    row = build_nerv_full_video_mlx_scorer_feedback_row(
+        mlx_response=response,
+        archive_export_report=export,
+        mlx_response_path=response_path,
+        archive_export_report_path=export_path,
+        current_segnet_distillation_weight=2.0,
+    )
+
+    assert row["schema"] == "nerv_candidate_feedback_row.v1"
+    assert row["full_video_mlx_feedback_schema"] == FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA
+    assert row["feedback_kind"] == "full_video_mlx_scorer_response"
+    assert row["family"] == "hi_nerv"
+    assert row["candidate_id"] == "hinerv_np600_ld16_ed8_dc16_int7_mixed_ceil178000"
+    assert row["measured_num_pairs"] == 600
+    assert row["scope_matches_candidate"] is True
+    assert row["feedback_ready"] is True
+    assert row["receiver_proof_attached"] is True
+    assert row["full_video_local_prefilter_attached"] is True
+    assert row["local_cpu_replay_gate_local_replay_mlx_prefilter_passed"] is False
+    assert row["full_video_mlx_scorer_response"]["seg_score_term"] == pytest.approx(55.0)
+    assert row["full_video_mlx_scorer_response"]["pose_score_term"] == pytest.approx(
+        (10.0 * 132.0) ** 0.5
+    )
+    assert row["full_video_mlx_scorer_response"]["archive_under_hard_byte_ceiling"] is True
+    control = row["full_video_mlx_response_control"]
+    assert control["action"] == "checkpoint_then_supersede_with_full_video_fit_mutation"
+    assert control["segnet_fit_failure_detected"] is True
+    assert control["pose_fit_failure_detected"] is True
+    assert row["pose_tail_burst_detected"] is True
+    assert control["recommended_segnet_distillation_weight"] == 4.0
+    assert "increase_segnet_distillation_weight_from_full_video_mlx_response" in row[
+        "recommended_launch_mutations"
+    ]
+    assert row["direct_feedback_blockers"] == []
+    assert row["score_claim"] is False
+    assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_full_video_mlx_response_feedback_fails_closed_on_archive_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    row = build_nerv_full_video_mlx_scorer_feedback_row(
+        mlx_response=_mlx_response(archive_sha256="6" * 64),
+        archive_export_report=_checkpoint_export(tmp_path, archive_sha256="5" * 64),
+    )
+
+    assert row["feedback_ready"] is False
+    assert "full_video_mlx_response_archive_sha256_mismatch" in row[
+        "direct_feedback_blockers"
+    ]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_full_video_mlx_response_feedback_marks_snerv_rate_over_cap(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "snerv_np600_haar_lv5_fc36_int8_ceil178000"
+    row = build_nerv_full_video_mlx_scorer_feedback_row(
+        mlx_response=_mlx_response(
+            family="snerv",
+            archive_size_bytes=444_036,
+            archive_sha256="7" * 64,
+        ),
+        archive_export_report=_checkpoint_export(
+            tmp_path,
+            family="snerv",
+            candidate_id=candidate_id,
+            archive_sha256="7" * 64,
+            archive_bytes=444_036,
+            hard_byte_ceiling=178_000,
+        ),
+    )
+
+    assert row["family"] == "snerv"
+    assert row["candidate_id"] == candidate_id
+    assert row["feedback_ready"] is False
+    assert row["full_video_mlx_scorer_response"]["archive_under_hard_byte_ceiling"] is False
+    assert "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling" in row[
+        "direct_feedback_blockers"
+    ]
+    control = row["full_video_mlx_response_control"]
+    assert control["action"] == "checkpoint_then_stop_same_representation_rate_over_cap"
+    assert "switch_snerv_representation_before_more_same_modelsize_training" in control[
+        "recommended_launch_mutations"
+    ]
+    assert row["score_claim"] is False
+
+
+def test_write_and_cli_full_video_mlx_feedback_emit_candidate_feedback_row(
+    tmp_path: Path,
+) -> None:
+    response_path = tmp_path / "mlx_response.json"
+    export_path = tmp_path / "export.json"
+    response_path.write_text(json.dumps(_mlx_response()), encoding="utf-8")
+    export_path.write_text(json.dumps(_checkpoint_export(tmp_path)), encoding="utf-8")
+    output = write_nerv_full_video_mlx_scorer_feedback_files(
+        mlx_response=json.loads(response_path.read_text(encoding="utf-8")),
+        archive_export_report=json.loads(export_path.read_text(encoding="utf-8")),
+        mlx_response_path=response_path,
+        archive_export_report_path=export_path,
+        output_dir=tmp_path / "feedback",
+    )
+
+    row = json.loads(Path(output["row_path"]).read_text(encoding="utf-8"))
+    assert output["schema"] == FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA
+    assert row["schema"] == "nerv_candidate_feedback_row.v1"
+    assert row["full_video_mlx_response_attached"] is True
+
+    cli_out = tmp_path / "cli_feedback"
+    assert (
+        harvest_full_video_mlx_cli.main(
+            [
+                "--mlx-response",
+                response_path.as_posix(),
+                "--archive-export-json",
+                export_path.as_posix(),
+                "--output-dir",
+                cli_out.as_posix(),
+            ]
+        )
+        == 0
+    )
+    cli_row = json.loads(
+        (cli_out / "nerv_full_video_mlx_scorer_feedback_row.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert cli_row["candidate_id"] == row["candidate_id"]
+    assert cli_row["score_claim"] is False
 
 
 def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
