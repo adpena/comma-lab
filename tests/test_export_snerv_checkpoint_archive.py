@@ -166,12 +166,110 @@ def test_official_checkpoint_export_report_classifies_receiver_payload(
     assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in manifest[
         "blockers"
     ]
+    assert binding["official_trained_checkpoint_state_dict_slice_present"] is False
+    assert (
+        binding["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"]
+        is False
+    )
+    assert binding["official_tub_temporal_encoder_weight_mapping_proven"] is False
+    assert (
+        binding["official_trained_checkpoint_state_dict_mapping_verified"] is False
+    )
     assert binding["official_export_bound"] is False
     assert binding["source_forward_replay_authority"] is False
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" in (
+        binding["preserved_blockers"]
+    )
     assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in (
         binding["preserved_blockers"]
     )
     assert binding["official_tensor_category_bytes"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_checkpoint_export_report_consumes_upstream_decoder_keys(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    state_path = tmp_path / "official_state_with_source_keys.npsd"
+    state_path.write_bytes(
+        pack_state_dict_numpy(_official_checkpoint_state_with_upstream_mfu_hfr_keys())
+    )
+    checkpoint_meta = tmp_path / "checkpoint.meta.json"
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "global_epoch": 30,
+                "ema_shadow_state_path": state_path.as_posix(),
+                "live_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "official_checkpoint_source_key_unit",
+                    "snerv_model_size_adapter": (
+                        "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+                    ),
+                    "official_skip_high_mode": "scalar_mean",
+                },
+                "hard_byte_ceilings": [100_000],
+                "command_args": {"num_pairs": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = tool.export_snerv_checkpoint_archive(
+        startup_json=startup,
+        checkpoint_meta=checkpoint_meta,
+        output_dir=tmp_path / "export",
+        state_kind="ema",
+        repo_root=tmp_path,
+    )
+
+    binding = report["official_checkpoint_export_binding"]
+    manifest = binding["official_trained_checkpoint_mapping_manifest"]
+    assert manifest["official_trained_checkpoint_loaded"] is True
+    assert manifest["decoder_len"] == 8
+    assert manifest["decoder_len_source"] == "inferred_from_decoder_prefixes"
+    assert manifest["state_dict_kind"] == (
+        "checkpoint_export_upstream_official_state_dict_slice"
+    )
+    assert manifest["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert manifest["official_tub_temporal_encoder_weight_mapping_proven"] is False
+    rows = {row["component_id"]: row for row in manifest["component_rows"]}
+    assert rows["hfr"]["trained_checkpoint_weight_mapping_proven"] is True
+    assert rows["mfu"]["trained_checkpoint_weight_mapping_proven"] is True
+    assert rows["tub"]["trained_checkpoint_weight_mapping_proven"] is False
+    receiver_keys = {row["receiver_key"] for row in manifest["weight_entries"]}
+    assert "hfr.lh.conv1.weight" in receiver_keys
+    assert "mfu.upsample_mid.weight" in receiver_keys
+    assert "mfu.rb_high.residual_blocks.0.conv2.bias" in receiver_keys
+    assert binding["official_trained_checkpoint_state_dict_slice_present"] is True
+    assert (
+        binding["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"]
+        is True
+    )
+    assert binding["official_tub_temporal_encoder_weight_mapping_proven"] is False
+    assert (
+        binding["official_trained_checkpoint_state_dict_mapping_verified"] is False
+    )
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" not in (
+        binding["preserved_blockers"]
+    )
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in (
+        binding["preserved_blockers"]
+    )
+    assert "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing" in (
+        binding["preserved_blockers"]
+    )
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
@@ -268,4 +366,39 @@ def _official_checkpoint_state() -> dict[str, np.ndarray]:
         state[f"hfr_{name}_conv1_bias"] = np.zeros((3,), dtype=np.float32)
         state[f"hfr_{name}_conv2_weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
         state[f"hfr_{name}_conv2_bias"] = np.zeros((3,), dtype=np.float32)
+    return state
+
+
+def _official_checkpoint_state_with_upstream_mfu_hfr_keys() -> dict[str, np.ndarray]:
+    state = _official_checkpoint_state()
+    state.update(_minimal_official_mfu_hfr_state(decoder_len=8))
+    return state
+
+
+def _minimal_official_mfu_hfr_state(decoder_len: int) -> dict[str, np.ndarray]:
+    state: dict[str, np.ndarray] = {}
+    for offset in range(3):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.conv1.weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+        state[f"{prefix}.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.conv2.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.conv2.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (3, 5):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.weight"] = np.zeros((3, 3, 2, 2), dtype=np.float32)
+        state[f"{prefix}.bias"] = np.zeros((3,), dtype=np.float32)
+    for offset in (4, 6):
+        prefix = f"decoder.{decoder_len + offset}"
+        state[f"{prefix}.main.0.weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"{prefix}.main.0.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv1.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv1.bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"{prefix}.main.1.0.conv2.weight"] = np.zeros(
+            (3, 3, 3, 3),
+            dtype=np.float32,
+        )
+        state[f"{prefix}.main.1.0.conv2.bias"] = np.zeros((3,), dtype=np.float32)
     return state

@@ -264,6 +264,7 @@ def export_snerv_checkpoint_archive(
     official_checkpoint_export_binding = _official_checkpoint_export_binding(
         packet,
         model_size=model_size,
+        checkpoint_state=state,
     )
     package: dict[str, Any] | None = None
     if emit_receiver_proof:
@@ -1559,6 +1560,7 @@ def _official_checkpoint_export_binding(
     packet: SnervArchivePacket,
     *,
     model_size: SnervModelSizeConfig,
+    checkpoint_state: dict[str, np.ndarray] | None = None,
 ) -> dict[str, Any]:
     """Classify official checkpoint packet binding without claiming source parity."""
 
@@ -1570,20 +1572,49 @@ def _official_checkpoint_export_binding(
         and selected_authority.get("frame_producing_official_export") is True
         and receiver_tensor_map.get("receiver_tensor_map_verified") is True
     )
-    preserved_blockers = [
-        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
-        "snerv_official_trained_checkpoint_state_dict_mapping_missing",
-        "snerv_official_trained_checkpoint_source_forward_replay_missing",
-        "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
-        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
-    ]
+    official_mapping_state = _official_state_dict_slice_for_mapping(
+        checkpoint_state or {}
+    )
     official_state_manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
-        None,
+        official_mapping_state or None,
         state_dict_kind=(
-            "checkpoint_export_has_receiver_atoms_not_upstream_official_state_dict"
+            "checkpoint_export_upstream_official_state_dict_slice"
+            if official_mapping_state
+            else "checkpoint_export_has_receiver_atoms_not_upstream_official_state_dict"
         ),
         source="export_snerv_checkpoint_archive.official_checkpoint_export_binding",
     )
+    mfu_hfr_mapping_proven = bool(
+        official_state_manifest.get(
+            "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
+    )
+    tub_mapping_proven = bool(
+        official_state_manifest.get(
+            "official_tub_temporal_encoder_weight_mapping_proven"
+        )
+        is True
+    )
+    preserved_blockers = [
+        *(
+            []
+            if mfu_hfr_mapping_proven
+            else [
+                "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+                "snerv_official_trained_checkpoint_state_dict_mapping_missing",
+            ]
+        ),
+        "snerv_official_trained_checkpoint_source_forward_replay_missing",
+        *(
+            []
+            if tub_mapping_proven
+            else [
+                "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
+                "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+            ]
+        ),
+    ]
     return {
         "schema": "snerv_official_checkpoint_export_binding.v1",
         "requested": requested,
@@ -1609,6 +1640,16 @@ def _official_checkpoint_export_binding(
             receiver_tensor_map.get("category_counts") or {}
         ),
         "official_trained_checkpoint_mapping_manifest": official_state_manifest,
+        "official_trained_checkpoint_state_dict_slice_present": bool(
+            official_mapping_state
+        ),
+        "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": (
+            mfu_hfr_mapping_proven
+        ),
+        "official_tub_temporal_encoder_weight_mapping_proven": tub_mapping_proven,
+        "official_trained_checkpoint_state_dict_mapping_verified": bool(
+            mfu_hfr_mapping_proven and tub_mapping_proven
+        ),
         "official_export_bound": False,
         "official_export_bound_semantics": (
             "checkpoint_export_receiver_payload_binding_not_source_forward_parity"
@@ -1633,6 +1674,16 @@ def _official_checkpoint_export_binding(
             ]
         ),
         **FALSE_AUTHORITY,
+    }
+
+
+def _official_state_dict_slice_for_mapping(
+    state: dict[str, np.ndarray],
+) -> dict[str, np.ndarray]:
+    return {
+        str(key): value
+        for key, value in state.items()
+        if str(key).startswith(("decoder.", "encoder."))
     }
 
 
