@@ -341,6 +341,25 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
         "official_source_markers_present": True,
         "local_receiver_safe_adapter_present": True,
         "official_mfu_hfr_tub_parity_proven": False,
+        "official_mfu_hfr_tub_primitive_replay_binding": {
+            "all_receiver_primitive_replay_proven": True,
+            "all_primitive_numeric_graph_replay_proven": True,
+            "all_primitive_source_replay_proven": True,
+            "full_stack_source_forward_replay_proven": False,
+            "receiver_source_forward_replay_bound": False,
+            "official_receiver_runtime_decode_contract": {
+                "receiver_runtime_decode_proven": True,
+                "receiver_source_forward_replay_bound": False,
+                "blockers": [
+                    "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+                ],
+            },
+        },
+        "official_receiver_runtime_decode_contract": {
+            "receiver_runtime_decode_proven": True,
+            "receiver_source_forward_replay_bound": False,
+            "blockers": ["snerv_official_mfu_hfr_tub_source_forward_replay_missing"],
+        },
         "blockers": ["snerv_official_mfu_hfr_tub_parity_missing"],
         "score_claim": False,
         "promotion_eligible": False,
@@ -364,7 +383,25 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
     source_audit = snerv_row["source_parity"]["source_audit_rows"][0]
     assert source_audit["official_head_sha"] == "0844a08f"
     assert source_audit["official_source_markers_present"] is True
+    assert source_audit["official_mfu_hfr_tub_receiver_primitives_proven"] is True
+    assert source_audit["official_mfu_hfr_tub_numeric_graph_replay_proven"] is True
+    assert source_audit["official_receiver_runtime_decode_proven"] is True
     assert source_audit["official_mfu_hfr_tub_parity_proven"] is False
+    assert source_audit["full_stack_source_forward_replay_proven"] is False
+    split = snerv_row["snerv_official_runtime_authority_split"]
+    assert split["schema"] == "snerv_official_runtime_authority_split.v1"
+    assert split["receiver_bound_training_evidence_usable"] is True
+    assert split["full_source_forward_authority_proven"] is False
+    assert split["receiver_primitive_replay_proven"] is True
+    assert split["numeric_graph_replay_proven"] is True
+    assert split["receiver_runtime_decode_proven"] is True
+    assert split["receiver_source_forward_replay_bound"] is False
+    assert split["launch_semantics"] == (
+        "receiver_bound_training_allowed_but_official_source_authority_false"
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in (
+        split["blockers"]
+    )
     official_feature = next(
         row
         for row in snerv_row["source_parity"]["feature_status_rows"]
@@ -386,6 +423,12 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
     assert launch_contract["source_parity"]["source_audit_rows"][0][
         "official_source_markers_present"
     ] is True
+    assert launch_contract["snerv_official_runtime_authority_split"][
+        "receiver_bound_training_evidence_usable"
+    ] is True
+    assert launch_contract["snerv_official_runtime_authority_split"][
+        "full_source_forward_authority_proven"
+    ] is False
     assert launch_contract["source_bound_capacity_controls"]["schema"] == (
         "snerv_source_bound_capacity_controls.v1"
     )

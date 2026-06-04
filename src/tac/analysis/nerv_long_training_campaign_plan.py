@@ -754,6 +754,9 @@ def _snerv_campaign_row(
         family="snerv",
         source_parity_contract=source_parity_contract,
     )
+    official_runtime_authority_split = _snerv_official_runtime_authority_split(
+        source_parity
+    )
     feedback = _candidate_feedback_for(
         candidate=candidate,
         family="snerv",
@@ -1050,6 +1053,9 @@ def _snerv_campaign_row(
             "source_bound_capacity_controls": _snerv_source_bound_controls(candidate),
             "source_bound_capacity_control_blockers": source_control_blockers,
             "source_parity": source_parity,
+            "snerv_official_runtime_authority_split": (
+                official_runtime_authority_split
+            ),
             "candidate_feedback": feedback or None,
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
             "prioritized_pair_training": prioritized_pair_training,
@@ -1252,6 +1258,9 @@ def _experiment_for_row(
     source_parity = metadata.get("source_parity")
     source_controls = metadata.get("source_bound_capacity_controls")
     source_control_blockers = metadata.get("source_bound_capacity_control_blockers")
+    snerv_runtime_authority_split = metadata.get(
+        "snerv_official_runtime_authority_split"
+    )
     current_command_is_bounded_proof = bool(
         metadata.get("current_command_is_bounded_proof_not_long_training")
     )
@@ -1284,6 +1293,11 @@ def _experiment_for_row(
             "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
             "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
             "source_parity": source_parity if isinstance(source_parity, Mapping) else None,
+            "snerv_official_runtime_authority_split": (
+                snerv_runtime_authority_split
+                if isinstance(snerv_runtime_authority_split, Mapping)
+                else None
+            ),
             "source_bound_capacity_controls": (
                 source_controls if isinstance(source_controls, Mapping) else None
             ),
@@ -1567,6 +1581,147 @@ def _source_parity_family_report(
         ],
         **FALSE_AUTHORITY,
     }
+
+
+def _snerv_official_runtime_authority_split(
+    source_parity: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Separate receiver-usable SNeRV evidence from source-forward authority."""
+
+    if str(source_parity.get("family") or "") != "snerv":
+        return {
+            "schema": "snerv_official_runtime_authority_split.v1",
+            "family": "snerv",
+            "source_parity_binding_consumed": False,
+            "receiver_bound_training_evidence_usable": False,
+            "full_source_forward_authority_proven": False,
+            "blockers": ["snerv_source_parity_binding_missing_or_wrong_family"],
+            **FALSE_AUTHORITY,
+        }
+    audit_rows = _snerv_official_audit_rows_from_source_parity(source_parity)
+    receiver_primitive_replay_proven = any(
+        row.get("official_mfu_hfr_tub_receiver_primitives_proven") is True
+        for row in audit_rows
+    )
+    numeric_graph_replay_proven = any(
+        row.get("official_mfu_hfr_tub_numeric_graph_replay_proven") is True
+        for row in audit_rows
+    )
+    receiver_runtime_decode_proven = any(
+        row.get("official_receiver_runtime_decode_proven") is True
+        for row in audit_rows
+    )
+    receiver_source_forward_replay_bound = any(
+        row.get("official_receiver_source_forward_replay_bound") is True
+        for row in audit_rows
+    )
+    full_stack_source_forward_replay_proven = any(
+        row.get("full_stack_source_forward_replay_proven") is True
+        for row in audit_rows
+    )
+    official_mfu_hfr_tub_parity_proven = any(
+        row.get("official_mfu_hfr_tub_parity_proven") is True for row in audit_rows
+    )
+    runtime_decode_blockers = _dedupe(
+        [
+            str(blocker)
+            for row in audit_rows
+            for blocker in row.get("official_receiver_runtime_decode_blockers") or ()
+            if blocker
+        ]
+    )
+    source_gap_blockers = _dedupe(
+        [
+            str(blocker).removeprefix("source_parity:")
+            for blocker in (
+                *(source_parity.get("required_blockers") or ()),
+                *(source_parity.get("nonblocking_gaps") or ()),
+            )
+            if "snerv_official_mfu_hfr_tub" in str(blocker)
+        ]
+    )
+    receiver_bound_training_evidence_usable = bool(
+        receiver_primitive_replay_proven
+        and numeric_graph_replay_proven
+        and receiver_runtime_decode_proven
+    )
+    full_source_forward_authority_proven = bool(
+        official_mfu_hfr_tub_parity_proven
+        and full_stack_source_forward_replay_proven
+        and receiver_source_forward_replay_bound
+    )
+    blockers: list[str] = []
+    if not receiver_primitive_replay_proven:
+        blockers.append("snerv_official_mfu_hfr_tub_receiver_primitive_replay_missing")
+    if not numeric_graph_replay_proven:
+        blockers.append("snerv_official_mfu_hfr_tub_numeric_graph_replay_missing")
+    if not receiver_runtime_decode_proven:
+        blockers.append("snerv_official_receiver_runtime_decode_missing")
+    if not full_source_forward_authority_proven:
+        blockers.append(
+            "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
+        )
+    if full_source_forward_authority_proven:
+        launch_semantics = (
+            "official_source_forward_parity_available_false_authority_until_score_gate"
+        )
+    elif receiver_bound_training_evidence_usable:
+        launch_semantics = (
+            "receiver_bound_training_allowed_but_official_source_authority_false"
+        )
+    else:
+        launch_semantics = "receiver_bound_training_waits_on_required_primitive_rows"
+    return {
+        "schema": "snerv_official_runtime_authority_split.v1",
+        "family": "snerv",
+        "source_parity_binding_consumed": True,
+        "source_audit_row_count": len(audit_rows),
+        "receiver_primitive_replay_proven": receiver_primitive_replay_proven,
+        "numeric_graph_replay_proven": numeric_graph_replay_proven,
+        "receiver_runtime_decode_proven": receiver_runtime_decode_proven,
+        "receiver_source_forward_replay_bound": receiver_source_forward_replay_bound,
+        "full_stack_source_forward_replay_proven": (
+            full_stack_source_forward_replay_proven
+        ),
+        "official_mfu_hfr_tub_parity_proven": official_mfu_hfr_tub_parity_proven,
+        "receiver_bound_training_evidence_usable": (
+            receiver_bound_training_evidence_usable
+        ),
+        "full_source_forward_authority_proven": (
+            full_source_forward_authority_proven
+        ),
+        "runtime_decode_blockers": runtime_decode_blockers,
+        "source_gap_blockers": source_gap_blockers,
+        "launch_semantics": launch_semantics,
+        "blockers": _dedupe(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_official_audit_rows_from_source_parity(
+    source_parity: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for raw in source_parity.get("source_audit_rows") or ():
+        if isinstance(raw, Mapping):
+            rows.append(dict(raw))
+    for feature in source_parity.get("feature_status_rows") or ():
+        if not isinstance(feature, Mapping):
+            continue
+        if feature.get("feature_id") != "snerv_official_mfu_hfr_tub_parity":
+            continue
+        for raw in feature.get("source_audit_rows") or ():
+            if isinstance(raw, Mapping):
+                rows.append(dict(raw))
+    deduped: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in rows:
+        key = json.dumps(row, sort_keys=True, default=str)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(row)
+    return deduped
 
 
 def _row_output_report_path(command_argv: Sequence[str]) -> str:
@@ -4665,6 +4820,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "source_bound_capacity_controls",
         "source_bound_capacity_control_blockers",
         "source_parity",
+        "snerv_official_runtime_authority_split",
         "current_command_is_bounded_proof_not_long_training",
         "snerv_bounded_proof_epochs",
         "snerv_lf_payload_recode_admission_plan",
