@@ -10812,7 +10812,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         len(hydrated_source_pair_indices) if sparse_priority_target_hydration else pairs
     )
     priority_hydration_contract = _hi_nerv_priority_target_hydration_contract(
-        prioritized_pair_indices=hydrated_source_pair_indices,
+        prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         model_num_pairs=pairs,
         hydrated_target_pair_count=hydrated_target_pair_count,
         sparse_target_hydration=sparse_priority_target_hydration,
@@ -11282,7 +11282,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         cosine_decay_min_lr_ratio=float(
             optimizer_control.get("cosine_decay_min_lr_ratio", 1e-2)
         ),
-        prioritized_pair_indices=hydrated_source_pair_indices,
+        prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         on_epoch_end=pose_instability_monitor,
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "

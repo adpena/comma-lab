@@ -36,6 +36,15 @@ RECEIVER_ARCHIVE_PATH = "src/tac/substrates/snerv_inverse_steg_carrier/archive.p
 RECEIVER_ARCHIVE_TEST_PATH = (
     "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py"
 )
+NATIVE_MLX_TRAIN_EXPORT_PATH = (
+    "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py"
+)
+NATIVE_MLX_RENDERER_PATH = (
+    "src/tac/substrates/snerv_inverse_steg_carrier/mlx_renderer.py"
+)
+NATIVE_MLX_TRAIN_EXPORT_TEST_PATH = (
+    "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py"
+)
 RECEIVER_EXPORT_BLOCKERS_AFTER_RUNTIME_DECODE: tuple[str, ...] = (
     "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
     "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
@@ -49,6 +58,22 @@ FORBIDDEN_RECEIVER_IMPORT_MARKERS: tuple[str, ...] = (
     "load_score_exact_scorers",
     "tac.scorer",
     "segmentation_models_pytorch",
+)
+NATIVE_MLX_EXPORT_MARKERS: tuple[str, ...] = (
+    "_trained_official_packet",
+    "_build_official_mfu_hfr_tub_packet_from_components",
+    "trained_receiver_payload_exported",
+    "snerv_mlx_official_mfu_hfr_tub_score_renderer",
+)
+NATIVE_MLX_RENDERER_MARKERS: tuple[str, ...] = (
+    "class SnervMlxOfficialMfuHfrTubScoreRenderer",
+    "def export_official_components",
+    "SNERV_MLX_OFFICIAL_MFU_HFR_TUB_RENDERER_SCHEMA",
+)
+NATIVE_MLX_EXPORT_TEST_MARKERS: tuple[str, ...] = (
+    "test_official_primitives_long_training_exports_trained_official_payload",
+    "trained_receiver_payload_exported",
+    "snerv_mlx_official_mfu_hfr_tub_score_renderer",
 )
 
 
@@ -231,6 +256,7 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
     receiver_contract = build_snerv_official_receiver_runtime_decode_contract(
         repo_root=root,
     )
+    native_export = _native_mlx_train_export_contract(root)
     return {
         "schema": SCHEMA,
         "component_rows": rows,
@@ -249,9 +275,15 @@ def build_snerv_official_primitive_replay_binding(*, repo_root: str | Path) -> d
         "receiver_export_bound": bool(
             receiver_contract["receiver_export_bound"]
         ),
-        "native_mlx_export_bound": False,
-        "official_export_bound": False,
-        "blockers": list(receiver_contract["blockers"]),
+        "native_mlx_export_bound": bool(native_export["native_mlx_export_bound"]),
+        "native_mlx_train_export_contract": native_export,
+        "official_export_bound": bool(
+            receiver_contract["receiver_export_bound"]
+            and native_export["native_mlx_export_bound"]
+        ),
+        "blockers": _ordered_unique(
+            [*receiver_contract["blockers"], *native_export["blockers"]]
+        ),
         "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
         **FALSE_AUTHORITY,
     }
@@ -291,11 +323,15 @@ def build_snerv_official_receiver_runtime_decode_contract(
     source_forward_bound = all(
         bool(row["receiver_source_forward_replay_bound"]) for row in rows
     )
+    native_export = _native_mlx_train_export_contract(root)
     post_decode_blockers = (
         list(RECEIVER_EXPORT_BLOCKERS_AFTER_SOURCE_FORWARD_REPLAY)
         if source_forward_bound
         else (
-            list(RECEIVER_EXPORT_BLOCKERS_AFTER_RUNTIME_DECODE)
+            [
+                "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                *native_export["blockers"],
+            ]
             if decode_proven
             else []
         )
@@ -310,8 +346,11 @@ def build_snerv_official_receiver_runtime_decode_contract(
         "receiver_source_forward_replay_bound": source_forward_bound,
         "receiver_archive_payload_bound": decode_proven,
         "receiver_export_bound": self_consistency_verified,
-        "native_mlx_export_bound": False,
-        "official_export_bound": False,
+        "native_mlx_export_bound": bool(native_export["native_mlx_export_bound"]),
+        "native_mlx_train_export_contract": native_export,
+        "official_export_bound": bool(
+            self_consistency_verified and native_export["native_mlx_export_bound"]
+        ),
         "blockers": blockers + post_decode_blockers,
         "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
         **FALSE_AUTHORITY,
@@ -558,6 +597,76 @@ def _file_identity_row(path: Path) -> dict[str, Any]:
         "path": path.as_posix(),
         "bytes": len(data),
         "sha256": sha256(data).hexdigest(),
+    }
+
+
+def _native_mlx_train_export_contract(root: Path) -> dict[str, Any]:
+    source_path = root / NATIVE_MLX_TRAIN_EXPORT_PATH
+    renderer_path = root / NATIVE_MLX_RENDERER_PATH
+    test_path = root / NATIVE_MLX_TRAIN_EXPORT_TEST_PATH
+    source_text = (
+        read_python_source_for_marker_scan(source_path)
+        if source_path.is_file()
+        else ""
+    )
+    renderer_text = (
+        read_python_source_for_marker_scan(renderer_path)
+        if renderer_path.is_file()
+        else ""
+    )
+    test_text = (
+        test_path.read_text(encoding="utf-8", errors="replace")
+        if test_path.is_file()
+        else ""
+    )
+    missing_source = [marker for marker in NATIVE_MLX_EXPORT_MARKERS if marker not in source_text]
+    missing_renderer = [marker for marker in NATIVE_MLX_RENDERER_MARKERS if marker not in renderer_text]
+    missing_tests = [marker for marker in NATIVE_MLX_EXPORT_TEST_MARKERS if marker not in test_text]
+    bound = bool(
+        source_path.is_file()
+        and renderer_path.is_file()
+        and test_path.is_file()
+        and not missing_source
+        and not missing_renderer
+        and not missing_tests
+    )
+    blockers = _ordered_unique(
+        [
+            "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
+            if not bound
+            else "",
+            *[
+                f"snerv_official_native_mlx_train_export_marker_missing:{marker}"
+                for marker in missing_source
+            ],
+            *[
+                f"snerv_official_native_mlx_renderer_marker_missing:{marker}"
+                for marker in missing_renderer
+            ],
+            *[
+                f"snerv_official_native_mlx_train_export_test_marker_missing:{marker}"
+                for marker in missing_tests
+            ],
+        ]
+    )
+    return {
+        "schema": "snerv_official_mfu_hfr_tub_native_mlx_train_export_contract.v1",
+        "native_mlx_export_bound": bound,
+        "native_mlx_train_renderer_bound": bool(renderer_path.is_file() and not missing_renderer),
+        "trained_receiver_payload_export_bound": bool(source_path.is_file() and not missing_source),
+        "positive_train_export_test_bound": bool(test_path.is_file() and not missing_tests),
+        "source_path": NATIVE_MLX_TRAIN_EXPORT_PATH,
+        "renderer_path": NATIVE_MLX_RENDERER_PATH,
+        "test_path": NATIVE_MLX_TRAIN_EXPORT_TEST_PATH,
+        "source_file": _file_identity_row(source_path),
+        "renderer_file": _file_identity_row(renderer_path),
+        "test_file": _file_identity_row(test_path),
+        "missing_source_markers": missing_source,
+        "missing_renderer_markers": missing_renderer,
+        "missing_test_markers": missing_tests,
+        "blockers": blockers,
+        "source_forward_replay_authority": False,
+        **FALSE_AUTHORITY,
     }
 
 

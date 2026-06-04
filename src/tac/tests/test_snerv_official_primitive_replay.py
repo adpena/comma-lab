@@ -24,8 +24,15 @@ def test_snerv_official_primitive_replay_binding_splits_authority() -> None:
     assert payload["receiver_source_forward_replay_bound"] is False
     assert payload["receiver_archive_payload_bound"] is True
     assert payload["receiver_export_bound"] is True
-    assert payload["native_mlx_export_bound"] is False
+    assert payload["native_mlx_export_bound"] is True
+    assert payload["official_export_bound"] is True
     assert payload["score_claim"] is False
+    native_export = payload["native_mlx_train_export_contract"]
+    assert native_export["native_mlx_export_bound"] is True
+    assert native_export["native_mlx_train_renderer_bound"] is True
+    assert native_export["trained_receiver_payload_export_bound"] is True
+    assert native_export["positive_train_export_test_bound"] is True
+    assert native_export["blockers"] == []
     runtime = payload["official_receiver_runtime_decode_contract"]
     assert runtime["schema"] == RECEIVER_RUNTIME_DECODE_SCHEMA
     assert runtime["all_runtime_modules_import_safe"] is True
@@ -39,7 +46,7 @@ def test_snerv_official_primitive_replay_binding_splits_authority() -> None:
     )
     assert (
         "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-        in runtime["blockers"]
+        not in runtime["blockers"]
     )
     rows = {row["component_id"]: row for row in payload["component_rows"]}
     assert set(rows) == {"mfu", "hfr", "tub"}
@@ -97,11 +104,11 @@ def test_snerv_receiver_runtime_decode_contract_is_hash_backed_and_fail_closed()
     assert payload["receiver_source_forward_replay_bound"] is False
     assert payload["receiver_archive_payload_bound"] is True
     assert payload["receiver_export_bound"] is True
-    assert payload["native_mlx_export_bound"] is False
+    assert payload["native_mlx_export_bound"] is True
+    assert payload["native_mlx_train_export_contract"]["native_mlx_export_bound"] is True
     assert payload["score_claim"] is False
     assert payload["blockers"] == [
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
-        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
     ]
     rows = {row["component_id"]: row for row in payload["component_rows"]}
     assert set(rows) == {"mfu", "hfr", "tub"}

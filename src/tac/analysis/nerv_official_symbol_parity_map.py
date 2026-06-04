@@ -137,11 +137,18 @@ def _binding_specs() -> tuple[SymbolBinding, ...]:
                     "tac.substrates.snerv_inverse_steg_carrier.official_tub",
                     "prepare_official_tub_graph_inputs",
                 ),
+                (
+                    "tac.substrates.snerv_inverse_steg_carrier.mlx_renderer",
+                    "SnervMlxOfficialMfuHfrTubScoreRenderer",
+                ),
+                (
+                    "tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export",
+                    "_build_official_mfu_hfr_tub_packet_from_components",
+                ),
             ),
             still_blocked_by=(
-                "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
-                "snerv_official_mfu_hfr_tub_weight_mapping_missing",
                 "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                "snerv_official_modelsize_fc_dim_not_architecture_authoritative",
             ),
         ),
         SymbolBinding(
@@ -159,7 +166,6 @@ def _binding_specs() -> tuple[SymbolBinding, ...]:
             ),
             still_blocked_by=(
                 "snerv_quantized_checkpoint_payload_replay_missing",
-                "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
                 "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
             ),
         ),

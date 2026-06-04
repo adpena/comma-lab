@@ -27,7 +27,7 @@ def test_source_parity_contract_is_false_authority_and_family_scoped() -> None:
     analogue_rows = {row["surface_id"]: row for row in report["analogue_risk_rows"]}
     assert analogue_rows["snerv_official_mfu_hfr_tub_numeric_primitives"][
         "insufficient_for"
-    ] == "byte_closed_official_snerv_export_runtime"
+    ] == "upstream_official_snerv_source_forward_authority"
     assert analogue_rows["hi_nerv_mlx_backend_drift"][
         "insufficient_for"
     ] == "contest_cpu_cuda_auth_eval_authority"
@@ -140,16 +140,19 @@ def test_source_parity_contract_records_insufficient_analogue_surfaces() -> None
     ] == "official_spectra_preserving_snerv_source_forward"
     assert (
         "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
-        in risks["snerv_receiver_safe_mfu_hfr_temporal_adapter"][
+        not in risks["snerv_receiver_safe_mfu_hfr_temporal_adapter"][
             "remaining_blockers"
         ]
     )
+    assert "snerv_official_modelsize_fc_dim_not_architecture_authoritative" in risks[
+        "snerv_receiver_safe_mfu_hfr_temporal_adapter"
+    ]["remaining_blockers"]
     assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in risks[
         "snerv_official_mfu_hfr_tub_numeric_primitives"
     ]["remaining_blockers"]
     assert risks["snerv_official_mfu_hfr_tub_numeric_primitives"][
         "insufficient_for"
-    ] == "byte_closed_official_snerv_export_runtime"
+    ] == "upstream_official_snerv_source_forward_authority"
     assert risks["snerv_local_modelsize_analogue"]["insufficient_for"] == (
         "official_snerv_modelsize_authority"
     )

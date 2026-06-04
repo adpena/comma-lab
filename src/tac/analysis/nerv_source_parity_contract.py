@@ -910,13 +910,12 @@ def _analogue_risk_rows(families: tuple[str, ...]) -> tuple[dict[str, Any], ...]
                     insufficient_for="official_spectra_preserving_snerv_source_forward",
                     why=(
                         "the local adapter is executable and receiver-safe, but "
-                        "does not consume official MFU/HFR/TUB weights through "
-                        "the upstream neural graph"
+                        "still does not prove the upstream source-forward graph "
+                        "or official modelsize-derived architecture authority"
                     ),
                     remaining_blockers=(
-                        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
-                        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
                         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
+                        "snerv_official_modelsize_fc_dim_not_architecture_authoritative",
                     ),
                 ),
                 _analogue_risk_row(
@@ -925,15 +924,13 @@ def _analogue_risk_rows(families: tuple[str, ...]) -> tuple[dict[str, Any], ...]
                     analogue_surface=(
                         "portable official MFU/HFR/TUB numeric kernels and shape contracts"
                     ),
-                    insufficient_for="byte_closed_official_snerv_export_runtime",
+                    insufficient_for="upstream_official_snerv_source_forward_authority",
                     why=(
-                        "numeric primitives prove local algebra, not a trained "
-                        "official neural payload, receiver grammar, or source "
-                        "forward replay"
+                        "numeric primitives plus native MLX export now produce "
+                        "receiver-bound trained official payload bytes, but not "
+                        "upstream source-forward replay"
                     ),
                     remaining_blockers=(
-                        "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload",
-                        "snerv_official_mfu_hfr_tub_weight_mapping_missing",
                         "snerv_official_mfu_hfr_tub_source_forward_replay_missing",
                     ),
                 ),
