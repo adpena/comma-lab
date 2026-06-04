@@ -157,6 +157,12 @@ NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
 SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS = 262_144
 SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT = 4
+DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT = 2.0
+SNERV_RECEIVER_RECON_MIN_STD_RATIO = 0.05
+SNERV_RECEIVER_RECON_MAX_STD_RATIO = 20.0
+SNERV_RECEIVER_RECON_MAX_SATURATION_DELTA = 0.35
+SNERV_RECEIVER_RECON_MAX_RMSE_NCHW255 = 96.0
+SNERV_RECEIVER_RECON_MAX_MAE_NCHW255 = 64.0
 
 
 class SnervMlxNativeExportError(ValueError):
@@ -338,6 +344,188 @@ def _snerv_checkpoint_selection_row_is_better(
             or candidate_value < incumbent_value - float(epsilon)
         )
     )
+
+
+def _snerv_score_aware_long_training_telemetry_contract(
+    telemetry_path: str | Path,
+    *,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    pr95_faithful_curriculum_enabled: bool,
+    coder_aware_qat_bound: bool,
+    train_time_section_byte_control_bound: bool,
+    scorer_input_distribution_guard_weight: float,
+) -> dict[str, Any]:
+    """Validate that a SNeRV long run actually drove score-aware controls."""
+
+    path = Path(telemetry_path).expanduser()
+    blockers: list[str] = []
+    expected_seg = float(segnet_distillation_weight) > 0.0
+    expected_pose = float(pose_distillation_weight) > 0.0
+    expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
+    expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
+    expected_any = bool(expected_seg or expected_pose or expected_section or expected_guard)
+    row_count = 0
+    malformed_rows = 0
+    seg_dual_observed = False
+    pose_dual_observed = False
+    seg_loss_observed = False
+    pose_loss_observed = False
+    section_rate_observed = False
+    guard_loss_observed = False
+    pr95_seg_loss_observed = False
+    pr95_pose_loss_observed = False
+    if not path.is_file():
+        blockers = (
+            ["snerv_score_aware_long_training_telemetry_missing"]
+            if expected_any
+            else []
+        )
+        return {
+            "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+            "telemetry_path": path.as_posix(),
+            "telemetry_exists": False,
+            "row_count": 0,
+            "passed": not blockers,
+            "blockers": blockers,
+        }
+    with path.open("r", encoding="utf-8") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                malformed_rows += 1
+                continue
+            if not isinstance(row, Mapping):
+                malformed_rows += 1
+                continue
+            row_count += 1
+            seg_loss_observed = seg_loss_observed or _finite_number_in_row(
+                row,
+                "loss_part_distill",
+            )
+            pose_loss_observed = pose_loss_observed or _finite_number_in_row(
+                row,
+                "loss_part_pose_distill",
+            )
+            pr95_seg_loss_observed = pr95_seg_loss_observed or _finite_number_in_row(
+                row,
+                "loss_part_pr95_stage_seg_surrogate",
+            )
+            pr95_pose_loss_observed = pr95_pose_loss_observed or _finite_number_in_row(
+                row,
+                "loss_part_pr95_stage_pose_surrogate",
+            )
+            guard_loss_observed = guard_loss_observed or any(
+                _finite_number_in_row(row, key)
+                for key in (
+                    "loss_part_scorer_input_distribution_guard",
+                    "loss_part_pr95_stage_scorer_input_distribution_guard",
+                )
+            )
+            section_rate_observed = section_rate_observed or any(
+                str(key).startswith("train_time_section_rate_score__")
+                and _finite_number(value)
+                for key, value in _telemetry_row_items(row)
+            )
+            seg_dual_observed = seg_dual_observed or _row_float_equals(
+                row,
+                "dual_ascent_missing_metric__snerv_segnet_last_frame_distill",
+                0.0,
+            )
+            pose_dual_observed = pose_dual_observed or _row_float_equals(
+                row,
+                "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill",
+                0.0,
+            )
+    if row_count <= 0:
+        blockers.append("snerv_score_aware_long_training_telemetry_empty")
+    if malformed_rows:
+        blockers.append("snerv_score_aware_long_training_telemetry_malformed_rows")
+    if expected_seg and not seg_loss_observed:
+        blockers.append("snerv_score_aware_long_training_segnet_loss_metric_missing")
+    if expected_pose and not pose_loss_observed:
+        blockers.append("snerv_score_aware_long_training_posenet_loss_metric_missing")
+    if expected_seg and not seg_dual_observed:
+        blockers.append("snerv_score_aware_long_training_dual_segnet_metric_never_observed")
+    if expected_pose and not pose_dual_observed:
+        blockers.append("snerv_score_aware_long_training_dual_posenet_metric_never_observed")
+    if expected_section and not section_rate_observed:
+        blockers.append("snerv_score_aware_long_training_section_rate_metric_missing")
+    if expected_guard and not guard_loss_observed:
+        blockers.append("snerv_score_aware_long_training_scorer_input_guard_metric_missing")
+    if pr95_faithful_curriculum_enabled and pr95_seg_loss_observed and not seg_loss_observed:
+        blockers.append("snerv_score_aware_long_training_pr95_seg_alias_missing")
+    if pr95_faithful_curriculum_enabled and pr95_pose_loss_observed and not pose_loss_observed:
+        blockers.append("snerv_score_aware_long_training_pr95_pose_alias_missing")
+    blockers = _ordered_unique(blockers)
+    return {
+        "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+        "telemetry_path": path.as_posix(),
+        "telemetry_exists": True,
+        "row_count": int(row_count),
+        "malformed_row_count": int(malformed_rows),
+        "expected_segnet_dual": bool(expected_seg),
+        "expected_posenet_dual": bool(expected_pose),
+        "expected_section_rate_metrics": bool(expected_section),
+        "expected_scorer_input_guard_metric": bool(expected_guard),
+        "segnet_loss_metric_observed": bool(seg_loss_observed),
+        "posenet_loss_metric_observed": bool(pose_loss_observed),
+        "segnet_dual_metric_observed": bool(seg_dual_observed),
+        "posenet_dual_metric_observed": bool(pose_dual_observed),
+        "section_rate_metric_observed": bool(section_rate_observed),
+        "scorer_input_guard_metric_observed": bool(guard_loss_observed),
+        "pr95_stage_seg_loss_observed": bool(pr95_seg_loss_observed),
+        "pr95_stage_pose_loss_observed": bool(pr95_pose_loss_observed),
+        "passed": not blockers,
+        "blockers": blockers,
+    }
+
+
+def _finite_number_in_row(row: Mapping[str, Any], key: str) -> bool:
+    value = _telemetry_row_value(row, key)
+    return _finite_number(value)
+
+
+def _telemetry_row_value(row: Mapping[str, Any], key: str) -> Any:
+    """Read canonical telemetry keys from flat or nested harness rows."""
+
+    if key in row:
+        return row.get(key)
+    loss_components = row.get("loss_components")
+    if isinstance(loss_components, Mapping) and key in loss_components:
+        return loss_components.get(key)
+    return None
+
+
+def _telemetry_row_items(row: Mapping[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """Return flat + nested loss-component telemetry for contract probes."""
+
+    items: list[tuple[str, Any]] = [(str(key), value) for key, value in row.items()]
+    loss_components = row.get("loss_components")
+    if isinstance(loss_components, Mapping):
+        items.extend((str(key), value) for key, value in loss_components.items())
+    return tuple(items)
+
+
+def _finite_number(value: Any) -> bool:
+    if value is None or isinstance(value, bool):
+        return False
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return False
+    return bool(np.isfinite(numeric))
+
+
+def _row_float_equals(row: Mapping[str, Any], key: str, expected: float) -> bool:
+    value = _telemetry_row_value(row, key)
+    if not _finite_number(value):
+        return False
+    return float(value) == float(expected)
 
 
 def _build_snerv_pretraining_archive_section_qat_weight_policy(
@@ -1141,6 +1329,7 @@ def train_export_snerv_mlx_native(
     pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
+    segnet_student_live_calibration_weight: float = 1.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
@@ -1506,6 +1695,15 @@ def train_export_snerv_mlx_native(
             candidate.get(
                 "distillation_temperature",
                 candidate.get("snerv_distillation_temperature", distillation_temperature),
+            )
+        ),
+        segnet_student_live_calibration_weight=float(
+            candidate.get(
+                "segnet_student_live_calibration_weight",
+                candidate.get(
+                    "snerv_segnet_student_live_calibration_weight",
+                    segnet_student_live_calibration_weight,
+                ),
             )
         ),
         segnet_tau_boundary=float(
@@ -2504,6 +2702,7 @@ def _run_score_aware_long_training_attachment(
     pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
     distillation_temperature: float,
+    segnet_student_live_calibration_weight: float,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
@@ -2537,6 +2736,7 @@ def _run_score_aware_long_training_attachment(
     guard_weight = float(scorer_input_distribution_guard_weight)
     guard_saturation_margin = float(scorer_input_distribution_guard_saturation_margin)
     guard_temperature = float(scorer_input_distribution_guard_temperature)
+    live_calibration_weight = float(segnet_student_live_calibration_weight)
     pose_loss = str(pose_distillation_loss)
     pose_huber_delta = float(pose_distillation_huber_delta)
     scorer_error_pair_sampling_weights = {
@@ -2664,6 +2864,7 @@ def _run_score_aware_long_training_attachment(
             "pose_distillation_huber_delta": pose_huber_delta,
             "segnet_distillation_objective": str(segnet_distillation_objective),
             "distillation_temperature": float(distillation_temperature),
+            "segnet_student_live_calibration_weight": live_calibration_weight,
             "segnet_tau_boundary": float(segnet_tau_boundary),
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "requested_distillation_device": requested_distillation_device,
@@ -2697,6 +2898,10 @@ def _run_score_aware_long_training_attachment(
     if pose_weight < 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_pose_distillation_weight_negative"
+        )
+    if live_calibration_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_student_live_calibration_weight_negative"
         )
     if guard_weight < 0.0:
         validation_blockers.append(
@@ -3111,6 +3316,7 @@ def _run_score_aware_long_training_attachment(
             "target_rgb_0": target0,
             "target_rgb_1": target1,
             "num_pairs": int(pairs.shape[0]),
+            "source_pair_indices": tuple(int(value) for value in source_pair_indices),
             "forward_convention": "reconstruct_pair_nchw01",
             "extra_loss_terms": _extra_loss_terms if coder_qat_cfg.enabled else None,
             "extra_loss_weights": coder_qat_loss_weight_map,
@@ -3228,6 +3434,7 @@ def _run_score_aware_long_training_attachment(
             learnable_student_head=learnable_student_head,
             distillation_temperature=float(distillation_temperature),
             segnet_distillation_objective=str(segnet_distillation_objective),
+            segnet_student_live_calibration_weight=live_calibration_weight,
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),
             distillation_num_classes=(
@@ -3564,6 +3771,22 @@ def _run_score_aware_long_training_attachment(
             artifact_dict.get("ema_shadow_checkpoint_path") or ""
         )
         blockers: list[str] = []
+        training_telemetry_contract = (
+            _snerv_score_aware_long_training_telemetry_contract(
+                telemetry_path,
+                segnet_distillation_weight=seg_weight,
+                pose_distillation_weight=pose_weight,
+                pr95_faithful_curriculum_enabled=bool(
+                    pr95_faithful_curriculum_enabled
+                ),
+                coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
+                train_time_section_byte_control_bound=bool(
+                    train_time_section_byte_control.get("active") is True
+                ),
+                scorer_input_distribution_guard_weight=guard_weight,
+            )
+        )
+        blockers.extend(training_telemetry_contract.get("blockers") or ())
         if not np.isfinite(final_mse):
             blockers.append("snerv_score_aware_long_training_selected_mse_nonfinite")
         if selection_policy["uses_score_aware_composite"]:
@@ -3677,6 +3900,7 @@ def _run_score_aware_long_training_attachment(
             "train_time_section_byte_control_bound": bool(
                 train_time_section_byte_control.get("active") is True
             ),
+            "training_telemetry_contract": training_telemetry_contract,
             "live_train_time_section_byte_metrics": (
                 live_train_time_section_byte_metrics_metadata
             ),
@@ -5690,6 +5914,16 @@ def _target_pairs_to_nchw255(target0_np: np.ndarray, target1_np: np.ndarray) -> 
         raise SnervMlxNativeExportError(f"target frame shapes differ: {target0_np.shape} vs {target1_np.shape}")
     if target0_np.ndim != 4 or target0_np.shape[-1] != 3:
         raise SnervMlxNativeExportError(f"targets must be NHWC RGB shaped (pairs, H, W, 3); got {target0_np.shape}")
+    for label, arr in (("target0", target0_np), ("target1", target1_np)):
+        if not np.isfinite(arr).all():
+            raise SnervMlxNativeExportError(f"{label} contains nonfinite values")
+        min_value = float(np.min(arr)) if arr.size else 0.0
+        max_value = float(np.max(arr)) if arr.size else 0.0
+        if min_value < -1.0e-6 or max_value > 1.0 + 1.0e-6:
+            raise SnervMlxNativeExportError(
+                f"{label} must be normalized RGB in [0,1] before NCHW255 "
+                f"conversion; got min={min_value:.6g} max={max_value:.6g}"
+            )
     pair = np.stack([target0_np, target1_np], axis=1)
     pair = np.clip(pair.astype(np.float32), 0.0, 1.0) * 255.0
     return np.transpose(pair, (0, 1, 4, 2, 3)).astype(np.float32)
@@ -6175,6 +6409,46 @@ def _snerv_receiver_frame_reconstruction_profile(
     mse = float(np.mean(diff * diff))
     mae = float(np.mean(abs_diff))
     max_abs = float(np.max(abs_diff)) if abs_diff.size else 0.0
+    decoded_std = float(np.std(decoded))
+    reference_std = float(np.std(reference))
+    std_ratio = decoded_std / max(reference_std, 1.0e-12)
+    decoded_dynamic_range = float(np.max(decoded) - np.min(decoded)) if decoded.size else 0.0
+    reference_dynamic_range = (
+        float(np.max(reference) - np.min(reference)) if reference.size else 0.0
+    )
+    decoded_low_sat = float(np.mean(decoded <= 1.0)) if decoded.size else 0.0
+    decoded_high_sat = float(np.mean(decoded >= 254.0)) if decoded.size else 0.0
+    reference_low_sat = float(np.mean(reference <= 1.0)) if reference.size else 0.0
+    reference_high_sat = float(np.mean(reference >= 254.0)) if reference.size else 0.0
+    saturation_delta = abs(decoded_low_sat - reference_low_sat) + abs(
+        decoded_high_sat - reference_high_sat
+    )
+    value_domain_blockers: list[str] = []
+    rmse = float(np.sqrt(max(mse, 0.0)))
+    if decoded_dynamic_range <= 1.0:
+        value_domain_blockers.append(
+            "snerv_receiver_frame_reconstruction_decoded_dynamic_range_degenerate"
+        )
+    if reference_std > 1.0e-6 and std_ratio < SNERV_RECEIVER_RECON_MIN_STD_RATIO:
+        value_domain_blockers.append(
+            "snerv_receiver_frame_reconstruction_decoded_std_collapsed"
+        )
+    if reference_std > 1.0e-6 and std_ratio > SNERV_RECEIVER_RECON_MAX_STD_RATIO:
+        value_domain_blockers.append(
+            "snerv_receiver_frame_reconstruction_decoded_std_exploded"
+        )
+    if saturation_delta > SNERV_RECEIVER_RECON_MAX_SATURATION_DELTA:
+        value_domain_blockers.append(
+            "snerv_receiver_frame_reconstruction_saturation_delta_excessive"
+        )
+    if rmse > SNERV_RECEIVER_RECON_MAX_RMSE_NCHW255:
+        value_domain_blockers.append(
+            "snerv_receiver_frame_reconstruction_rmse_exceeds_value_domain_gate"
+        )
+    if mae > SNERV_RECEIVER_RECON_MAX_MAE_NCHW255:
+        value_domain_blockers.append(
+            "snerv_receiver_frame_reconstruction_mae_exceeds_value_domain_gate"
+        )
     per_pair_mse = np.mean(diff * diff, axis=(1, 2, 3, 4))
     per_pair_mae = np.mean(abs_diff, axis=(1, 2, 3, 4))
     per_pair_max_abs = np.max(abs_diff, axis=(1, 2, 3, 4))
@@ -6201,9 +6475,30 @@ def _snerv_receiver_frame_reconstruction_profile(
             "mse_nchw255": mse,
             "mae_nchw255": mae,
             "max_abs_nchw255": max_abs,
-            "rmse_nchw255": float(np.sqrt(max(mse, 0.0))),
+            "rmse_nchw255": rmse,
+            "receiver_value_domain_gate": {
+                "schema": "snerv_receiver_frame_reconstruction_value_domain_gate.v1",
+                "decoded_std": decoded_std,
+                "reference_std": reference_std,
+                "std_ratio": std_ratio,
+                "decoded_dynamic_range": decoded_dynamic_range,
+                "reference_dynamic_range": reference_dynamic_range,
+                "decoded_low_saturation_fraction": decoded_low_sat,
+                "decoded_high_saturation_fraction": decoded_high_sat,
+                "reference_low_saturation_fraction": reference_low_sat,
+                "reference_high_saturation_fraction": reference_high_sat,
+                "saturation_delta": saturation_delta,
+                "min_std_ratio": SNERV_RECEIVER_RECON_MIN_STD_RATIO,
+                "max_std_ratio": SNERV_RECEIVER_RECON_MAX_STD_RATIO,
+                "max_saturation_delta": SNERV_RECEIVER_RECON_MAX_SATURATION_DELTA,
+                "max_rmse_nchw255": SNERV_RECEIVER_RECON_MAX_RMSE_NCHW255,
+                "max_mae_nchw255": SNERV_RECEIVER_RECON_MAX_MAE_NCHW255,
+                "passed": not value_domain_blockers,
+                "blockers": value_domain_blockers,
+                **FALSE_AUTHORITY,
+            },
             "worst_pairs_by_mse": worst_rows,
-            "blockers": [],
+            "blockers": value_domain_blockers,
         }
     )
     return profile

@@ -37,9 +37,11 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
     SNERV_MLX_NATIVE_REPORT_FILENAME,
+    SnervMlxNativeExportError,
     _build_snerv_mlx_native_byte_cap_control,
     _model_size_from_candidate,
     _snerv_receiver_frame_reconstruction_profile,
+    _target_pairs_to_nchw255,
     build_snerv_mlx_native_packet_from_numpy_pairs,
     train_export_snerv_mlx_native,
     write_snerv_mlx_prefilter_profile,
@@ -226,6 +228,98 @@ def test_score_aware_checkpoint_selection_policy_preserves_mse_fallback() -> Non
     assert policy["selection_metric"] == "full_reconstruction_mse_nchw255"
     assert policy["selection_metric_value_key"] == "recon_mse_nchw255"
     assert policy["blockers"] == []
+
+
+def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_distill": 1.0,
+                    "loss_part_pose_distill": 2.0,
+                    "loss_part_pr95_stage_seg_surrogate": 1.0,
+                    "loss_part_pr95_stage_pose_surrogate": 2.0,
+                    "loss_part_pr95_stage_scorer_input_distribution_guard": 0.25,
+                    "train_time_section_rate_score__decoder_payload": 0.01,
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        pr95_faithful_curriculum_enabled=True,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=2.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["blockers"] == []
+    assert contract["segnet_dual_metric_observed"] is True
+    assert contract["posenet_dual_metric_observed"] is True
+    assert contract["section_rate_metric_observed"] is True
+    assert contract["scorer_input_guard_metric_observed"] is True
+
+
+def test_score_aware_telemetry_contract_rejects_stale_pr95_alias_failure(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "loss_part_pr95_stage_seg_surrogate": 5.0,
+                "loss_part_pr95_stage_pose_surrogate": 0.5,
+                "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 1.0,
+                "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 1.0,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        pr95_faithful_curriculum_enabled=True,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=2.0,
+    )
+
+    assert contract["passed"] is False
+    assert "snerv_score_aware_long_training_pr95_seg_alias_missing" in contract[
+        "blockers"
+    ]
+    assert "snerv_score_aware_long_training_pr95_pose_alias_missing" in contract[
+        "blockers"
+    ]
+    assert (
+        "snerv_score_aware_long_training_dual_segnet_metric_never_observed"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_section_rate_metric_missing"
+        in contract["blockers"]
+    )
 
 
 def test_snerv_archive_section_qat_policy_prices_decoder_and_lf_latents() -> None:
@@ -1111,6 +1205,45 @@ def test_receiver_frame_reconstruction_profile_rejects_wrong_reference_layout() 
     ]
 
 
+def test_target_pairs_to_nchw255_rejects_byte_scale_targets() -> None:
+    target0 = np.full((1, 16, 16, 3), 255.0, dtype=np.float32)
+    target1 = np.zeros((1, 16, 16, 3), dtype=np.float32)
+
+    with pytest.raises(SnervMlxNativeExportError, match="normalized RGB"):
+        _target_pairs_to_nchw255(target0, target1)
+
+
+def test_receiver_frame_reconstruction_profile_blocks_constant_receiver_decode() -> None:
+    packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        np.zeros((1, 2, 3, 16, 16), dtype=np.float32),
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        source_pair_indices=(0,),
+    )
+
+    profile = _snerv_receiver_frame_reconstruction_profile(
+        packet.packet,
+        reference_pairs_nchw255=_tiny_pairs(pairs=1),
+        source_pair_indices=(0,),
+        profile_id="unit_constant_receiver_decode",
+        reference_kind="source_targets_nchw255",
+        packet_source="unit",
+    )
+
+    assert profile["shape_matches"] is True
+    assert profile["receiver_frames_finite"] is True
+    assert "snerv_receiver_frame_reconstruction_decoded_dynamic_range_degenerate" in profile[
+        "blockers"
+    ]
+    assert "snerv_receiver_frame_reconstruction_decoded_std_collapsed" in profile[
+        "blockers"
+    ]
+    assert profile["receiver_value_domain_gate"]["passed"] is False
+
+
 def test_train_export_executes_real_mlx_hf_decoder_training(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1453,6 +1586,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         def teacher_logits_for_indices(self, indices):
             captured["seg_indices_shape"] = tuple(indices.shape)
             return mx.zeros((int(indices.shape[0]), 16, 16, 5), dtype=mx.float32)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            captured["seg_live_frames_shape"] = tuple(frames.shape)
+            return mx.zeros((int(frames.shape[0]), 16, 16, 5), dtype=mx.float32)
 
     class FakePoseTeacher:
         pose_dims = 6
