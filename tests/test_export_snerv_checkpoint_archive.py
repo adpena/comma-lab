@@ -52,3 +52,70 @@ def test_checkpoint_packet_resolves_portfolio_decoder_codec() -> None:
     assert packet.metadata["lf_payload_codec"] == "portfolio_auto"
     assert packet.section_bytes["decoder_payload"] > 0
     assert packet.section_bytes["lf_payload"] > 0
+
+
+def test_official_checkpoint_packet_uses_official_payload() -> None:
+    tool = _load_tool()
+    model_size = tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+    )
+    state = _official_checkpoint_state()
+
+    packet = tool.build_snerv_official_checkpoint_packet(
+        state,
+        model_size=model_size,
+        metadata_extra={"unit_test": True},
+    )
+
+    assert packet.metadata["decoder_payload_codec"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub.v1"
+    )
+    assert packet.metadata["checkpoint_packetization_mode"] == (
+        "official_mfu_hfr_tub_receiver_payload"
+    )
+    assert packet.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert packet.metadata["official_skip_high_export_is_compact_train_state"] is True
+    assert packet.metadata["official_skip_high_full_shape"] == [2, 3, 8, 8]
+    summary = tool._packet_metadata_summary(packet)
+    assert summary["checkpoint_packetization_mode"] == (
+        "official_mfu_hfr_tub_receiver_payload"
+    )
+    assert summary["decoder_payload_codec"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub.v1"
+    )
+    assert summary["snerv_official_mfu_hfr_tub_export_bound"] is True
+    frames = tool.decode_snerv_archive_frames(packet.packet)
+    assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_official_checkpoint_packet_fails_closed_without_official_atoms() -> None:
+    tool = _load_tool()
+    model_size = tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+    )
+
+    try:
+        tool.build_snerv_official_checkpoint_packet(
+            {"latents_lf_planes": np.zeros((1, 2, 3, 1, 1), dtype=np.float32)},
+            model_size=model_size,
+        )
+    except ValueError as exc:
+        assert "official checkpoint state missing" in str(exc)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("official checkpoint export must fail closed")
+
+
+def _official_checkpoint_state() -> dict[str, np.ndarray]:
+    state: dict[str, np.ndarray] = {
+        "low": np.zeros((2, 3, 2, 2), dtype=np.float32),
+        "skip_mid": np.zeros((2, 3, 4, 4), dtype=np.float32),
+        "skip_high": np.asarray([[[[32.0]]]], dtype=np.float32),
+    }
+    for name in ("lh", "hl", "hh"):
+        state[f"hfr_{name}_conv1_weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+        state[f"hfr_{name}_conv1_bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"hfr_{name}_conv2_weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"hfr_{name}_conv2_bias"] = np.zeros((3,), dtype=np.float32)
+    return state

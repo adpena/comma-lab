@@ -2286,8 +2286,10 @@ def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
 ) -> None:
     response_path = tmp_path / "hinerv_full_video_mlx_response.json"
     receiver_proof_path = tmp_path / "hinerv_receiver_proof.json"
+    local_replay_path = tmp_path / "hinerv_local_cpu_replay_gate.json"
     response_path.write_text('{"schema":"mlx_scorer_response.v1"}', encoding="utf-8")
     receiver_proof_path.write_text('{"schema":"receiver_proof.v1"}', encoding="utf-8")
+    local_replay_path.write_text('{"schema":"local_cpu_replay_gate.v1"}', encoding="utf-8")
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
         snerv_modelsize_budget=_snerv_budget(),
@@ -2318,7 +2320,9 @@ def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
                 "full_video_mlx_response_attached": True,
                 "full_video_mlx_response_path": response_path.as_posix(),
                 "full_video_mlx_response_sha256": sha256(response_path.read_bytes()).hexdigest(),
-                "local_cpu_replay_gate_attached": False,
+                "local_cpu_replay_gate_attached": True,
+                "local_cpu_replay_gate_path": local_replay_path.as_posix(),
+                "local_cpu_replay_gate_sha256": sha256(local_replay_path.read_bytes()).hexdigest(),
                 "measured_archive_bytes": 122_074,
                 "hard_byte_ceiling": 178_000,
                 "seg_stagnation_detected": True,
@@ -2349,7 +2353,13 @@ def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
     adjustment = hi["feedback_launch_adjustment"]
     assert hi["candidate_feedback"]["feedback_kind"] == "full_video_mlx_scorer_response"
     assert hi["candidate_feedback"]["full_video_mlx_response_attached"] is True
+    assert hi["candidate_feedback"]["receiver_proof_attached"] is True
+    assert hi["candidate_feedback"]["full_video_local_prefilter_attached"] is True
+    assert hi["candidate_feedback"]["local_cpu_replay_gate_attached"] is True
     assert hi["candidate_feedback"]["direct_feedback_blockers"] == []
+    assert "hi_nerv_receiver_proof_missing" not in hi["blockers"]
+    assert "hi_nerv_full_video_local_prefilter_missing" not in hi["blockers"]
+    assert "hi_nerv_local_cpu_replay_gate_missing" not in hi["blockers"]
     assert adjustment["launch_control_feedback_ready"] is True
     assert adjustment["applied"] is True
     assert adjustment["segnet_weight_applied"] is True

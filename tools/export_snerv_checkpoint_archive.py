@@ -46,8 +46,15 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     quantize_lf,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (  # noqa: E402
+    _build_official_mfu_hfr_tub_packet_from_components,
     _model_size_from_candidate,
+    _official_passthrough_mfu,
     export_snerv_mlx_archive,
+)
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (  # noqa: E402
+    OfficialConv2dNchw,
+    OfficialHfrConvBlock,
+    OfficialHfrHeads,
 )
 
 FALSE_AUTHORITY = {
@@ -152,29 +159,39 @@ def export_snerv_checkpoint_archive(
         or "portfolio_auto"
     )
     model_size = _model_size_from_candidate(candidate)
-    packet = build_snerv_checkpoint_packet(
-        state,
-        levels=levels,
-        wavelet=wavelet,
-        target_bits_per_coeff=target_bits_per_coeff,
-        step_map_bits_per_coeff=step_map_bits_per_coeff,
-        decoder_payload_codec=resolved_decoder_codec,
-        lf_payload_codec=resolved_lf_codec,
-        model_size=model_size,
-        metadata_extra={
-            "checkpoint_export_schema": "snerv_checkpoint_archive_export.v1",
-            "checkpoint_meta_path": meta_path.as_posix(),
-            "checkpoint_epoch": meta.get("global_epoch"),
-            "checkpoint_state_kind": state_kind,
-            "checkpoint_state_sha256": sha256_file(state_path),
-            "startup_json_sha256": sha256_file(startup_path),
-            "native_mlx_training_executed": True,
-            "native_mlx_training_kind": "checkpoint_direct_lf_decoder_packetization",
-            "score_aware_long_training_executed": True,
-            "score_aware_long_training_kind": "checkpoint_harvest_interrupted_run",
-            **FALSE_AUTHORITY,
-        },
-    )
+    metadata_extra = {
+        "checkpoint_export_schema": "snerv_checkpoint_archive_export.v1",
+        "checkpoint_meta_path": meta_path.as_posix(),
+        "checkpoint_epoch": meta.get("global_epoch"),
+        "checkpoint_state_kind": state_kind,
+        "checkpoint_state_sha256": sha256_file(state_path),
+        "startup_json_sha256": sha256_file(startup_path),
+        "native_mlx_training_executed": True,
+        "score_aware_long_training_executed": True,
+        "score_aware_long_training_kind": "checkpoint_harvest_interrupted_run",
+        **FALSE_AUTHORITY,
+    }
+    if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
+        packet = build_snerv_official_checkpoint_packet(
+            state,
+            model_size=model_size,
+            metadata_extra=metadata_extra,
+        )
+    else:
+        packet = build_snerv_checkpoint_packet(
+            state,
+            levels=levels,
+            wavelet=wavelet,
+            target_bits_per_coeff=target_bits_per_coeff,
+            step_map_bits_per_coeff=step_map_bits_per_coeff,
+            decoder_payload_codec=resolved_decoder_codec,
+            lf_payload_codec=resolved_lf_codec,
+            model_size=model_size,
+            metadata_extra={
+                **metadata_extra,
+                "native_mlx_training_kind": "checkpoint_direct_lf_decoder_packetization",
+            },
+        )
     out.mkdir(parents=True, exist_ok=True)
     packet_path = out / "snerv_checkpoint_packet.bin"
     packet_path.write_bytes(packet.packet)
@@ -210,6 +227,7 @@ def export_snerv_checkpoint_archive(
         "packet_sha256": _sha256_bytes(packet.packet),
         "packet_section_bytes": dict(packet.section_bytes),
         "packet_section_sha256": dict(packet.section_sha256),
+        "packet_metadata_summary": _packet_metadata_summary(packet),
         "archive_path": str(archive_path) if archive_path else None,
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
@@ -359,6 +377,196 @@ def build_snerv_checkpoint_packet(
     return archive
 
 
+def build_snerv_official_checkpoint_packet(
+    state: dict[str, np.ndarray],
+    *,
+    model_size: SnervModelSizeConfig,
+    metadata_extra: dict[str, Any] | None = None,
+) -> SnervArchivePacket:
+    """Packetize an interrupted official MFU/HFR/TUB MLX checkpoint.
+
+    Official SNeRV long-training checkpoints store receiver atoms under the
+    official renderer state names (`low`, `skip_mid`, `skip_high`, `hfr_*`).
+    When the selected adapter is official, exporting through the local LF/kernel
+    grammar loses that signal, so this path reconstructs the official receiver
+    payload directly and fails closed if those atoms are absent.
+    """
+
+    components = _official_components_from_checkpoint_state(
+        state,
+        model_size=model_size,
+    )
+    n_frames = int(components["skip_high_full_shape"][0])
+    if n_frames <= 0 or n_frames % 2:
+        raise ValueError(
+            f"official checkpoint skip_high frame count must be positive/even, got {n_frames}"
+        )
+    return _build_official_mfu_hfr_tub_packet_from_components(
+        components,
+        source_pair_indices=tuple(range(n_frames // 2)),
+        model_size=model_size,
+        metadata_extra={
+            "native_mlx_training_kind": "checkpoint_official_mfu_hfr_tub_receiver_packetization",
+            "score_aware_long_training_kind": "checkpoint_official_mfu_hfr_tub_harvest_interrupted_run",
+            "checkpoint_packetization_mode": "official_mfu_hfr_tub_receiver_payload",
+            "allocation_mode": "official_mfu_hfr_tub_checkpoint_receiver_payload",
+            "hf_decoder_fit_mode": "trained_official_hfr_heads_from_mlx_checkpoint",
+            "official_checkpoint_state_keys_verified": True,
+            **dict(metadata_extra or {}),
+        },
+    )
+
+
+def _official_components_from_checkpoint_state(
+    state: dict[str, np.ndarray],
+    *,
+    model_size: SnervModelSizeConfig,
+) -> dict[str, Any]:
+    low = _checkpoint_state_array(state, "low")
+    skip_mid = _checkpoint_state_array(state, "skip_mid")
+    skip_high = _checkpoint_state_array(state, "skip_high")
+    low = np.asarray(low, dtype=np.float64)
+    skip_mid = np.asarray(skip_mid, dtype=np.float64)
+    skip_high = np.asarray(skip_high, dtype=np.float64)
+    _validate_official_checkpoint_tensor("low", low)
+    _validate_official_checkpoint_tensor("skip_mid", skip_mid)
+    _validate_official_checkpoint_tensor("skip_high", skip_high)
+    full_shape = _infer_official_skip_high_full_shape(
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        official_skip_high_mode=str(model_size.official_skip_high_mode),
+    )
+    n_frames, channels, ll_h, ll_w = (int(v) for v in full_shape)
+    h = int(ll_h) * 2
+    w = int(ll_w) * 2
+    tub_zero = np.zeros((channels, h, w), dtype=np.float64)
+    return {
+        "mfu": _official_passthrough_mfu(channels=channels),
+        "hfr_heads": _official_hfr_heads_from_checkpoint_state(state),
+        "low": low,
+        "skip_mid": skip_mid,
+        "skip_high": skip_high,
+        "skip_high_mode": str(model_size.official_skip_high_mode),
+        "skip_high_full_shape": full_shape,
+        "skip_high_export_storage_shape": tuple(int(v) for v in skip_high.shape),
+        "skip_high_export_is_compact_train_state": tuple(int(v) for v in skip_high.shape)
+        != full_shape,
+        "tub_current": tub_zero,
+        "tub_previous": tub_zero,
+        "tub_next_frame": tub_zero,
+        "temporal_encoder_output_shape": (1, 4, max(1, ll_h // 2), max(1, ll_w // 2)),
+        "fc_hw": (2, 2),
+        "output2_decoder_output_shape": (2, 8, max(1, ll_h // 2), max(1, ll_w // 2)),
+        "n_pairs": n_frames // 2,
+        "frames_per_pair": 2,
+        "channels": channels,
+        "h": h,
+        "w": w,
+        "model_size": model_size.as_jsonable(),
+    }
+
+
+def _official_hfr_heads_from_checkpoint_state(
+    state: dict[str, np.ndarray],
+) -> OfficialHfrHeads:
+    return OfficialHfrHeads(
+        lh_head=_official_hfr_head_from_checkpoint_state(state, "lh"),
+        hl_head=_official_hfr_head_from_checkpoint_state(state, "hl"),
+        hh_head=_official_hfr_head_from_checkpoint_state(state, "hh"),
+    )
+
+
+def _official_hfr_head_from_checkpoint_state(
+    state: dict[str, np.ndarray],
+    name: str,
+) -> OfficialHfrConvBlock:
+    return OfficialHfrConvBlock(
+        conv1=OfficialConv2dNchw(
+            _checkpoint_state_array(
+                state,
+                f"hfr.{name}.conv1.weight",
+                f"hfr_{name}_conv1_weight",
+            ),
+            _checkpoint_state_array(
+                state,
+                f"hfr.{name}.conv1.bias",
+                f"hfr_{name}_conv1_bias",
+            ),
+            padding=0,
+        ),
+        conv2=OfficialConv2dNchw(
+            _checkpoint_state_array(
+                state,
+                f"hfr.{name}.conv2.weight",
+                f"hfr_{name}_conv2_weight",
+            ),
+            _checkpoint_state_array(
+                state,
+                f"hfr.{name}.conv2.bias",
+                f"hfr_{name}_conv2_bias",
+            ),
+            padding=1,
+        ),
+    )
+
+
+def _checkpoint_state_array(
+    state: dict[str, np.ndarray],
+    *keys: str,
+) -> np.ndarray:
+    for key in keys:
+        if key in state:
+            return np.asarray(state[key])
+    joined = ", ".join(keys)
+    raise ValueError(f"official checkpoint state missing any of: {joined}")
+
+
+def _validate_official_checkpoint_tensor(name: str, value: np.ndarray) -> None:
+    if value.ndim != 4:
+        raise ValueError(f"official checkpoint tensor {name} must be NCHW, got {value.shape}")
+    if any(int(dim) <= 0 for dim in value.shape):
+        raise ValueError(f"official checkpoint tensor {name} has non-positive shape {value.shape}")
+    if not np.isfinite(value).all():
+        raise ValueError(f"official checkpoint tensor {name} contains non-finite values")
+
+
+def _infer_official_skip_high_full_shape(
+    *,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+    official_skip_high_mode: str,
+) -> tuple[int, int, int, int]:
+    if tuple(low.shape[:2]) != tuple(skip_mid.shape[:2]):
+        raise ValueError(
+            f"official checkpoint low/skip_mid batch-channel mismatch: {low.shape} vs {skip_mid.shape}"
+        )
+    n_frames, channels, mid_h, mid_w = (int(v) for v in skip_mid.shape)
+    if tuple(int(v) for v in low.shape[-2:]) != (max(1, mid_h // 2), max(1, mid_w // 2)):
+        raise ValueError(
+            "official checkpoint low spatial shape must be half skip_mid; "
+            f"low={low.shape[-2:]} skip_mid={skip_mid.shape[-2:]}"
+        )
+    full_shape = (n_frames, channels, mid_h * 2, mid_w * 2)
+    mode = str(official_skip_high_mode).strip().lower()
+    expected_shapes = {
+        "full": full_shape,
+        "shared_mean": (1, channels, full_shape[2], full_shape[3]),
+        "channel_mean": (1, channels, 1, 1),
+        "scalar_mean": (1, 1, 1, 1),
+    }
+    expected = expected_shapes.get(mode)
+    if expected is None:
+        raise ValueError(f"unsupported official checkpoint skip_high mode: {mode!r}")
+    if tuple(int(v) for v in skip_high.shape) != expected:
+        raise ValueError(
+            "official checkpoint skip_high shape does not match selected compact mode; "
+            f"mode={mode} got={tuple(skip_high.shape)} expected={expected}"
+        )
+    return full_shape
+
+
 def _decoder_from_state(
     state: dict[str, np.ndarray],
     *,
@@ -435,15 +643,47 @@ def _sha256_bytes(data: bytes) -> str:
 
 
 def _summary(report: dict[str, Any]) -> dict[str, Any]:
+    packet_metadata = dict(report.get("packet_metadata_summary") or {})
     return {
         "schema": report.get("schema"),
         "checkpoint_epoch": report.get("checkpoint_epoch"),
         "packet_bytes": report.get("packet_bytes"),
+        "checkpoint_packetization_mode": packet_metadata.get(
+            "checkpoint_packetization_mode"
+        ),
+        "decoder_payload_codec": packet_metadata.get("decoder_payload_codec"),
         "archive_bytes": report.get("archive_bytes"),
         "receiver_proof_passed": report.get("receiver_proof_passed"),
         "receiver_contract_satisfied": report.get("receiver_contract_satisfied"),
         "blockers": report.get("blockers"),
         "score_claim": report.get("score_claim"),
+    }
+
+
+def _packet_metadata_summary(packet: SnervArchivePacket) -> dict[str, Any]:
+    keys = (
+        "decoder_payload_codec",
+        "checkpoint_packetization_mode",
+        "allocation_mode",
+        "hf_decoder_fit_mode",
+        "snerv_model_size_adapter",
+        "snerv_official_mfu_hfr_tub_numeric_primitives_requested",
+        "snerv_official_mfu_hfr_tub_export_bound",
+        "snerv_official_mfu_hfr_tub_frame_producing_export",
+        "official_skip_high_mode",
+        "official_skip_high_full_shape",
+        "official_skip_high_export_storage_shape",
+        "official_skip_high_export_is_compact_train_state",
+        "source_faithful_stack",
+        "official_source_parity_blockers",
+        "native_mlx_training_kind",
+        "score_aware_long_training_kind",
+        "checkpoint_export_schema",
+    )
+    return {
+        "schema": "snerv_checkpoint_packet_metadata_summary.v1",
+        **{key: packet.metadata.get(key) for key in keys if key in packet.metadata},
+        **FALSE_AUTHORITY,
     }
 
 
