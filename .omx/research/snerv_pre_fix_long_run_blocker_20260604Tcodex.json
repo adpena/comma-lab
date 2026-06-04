@@ -1,0 +1,60 @@
+{
+  "archive_bytes": null,
+  "archive_or_receiver_artifact_count": 0,
+  "blockers": [
+    "snerv_pre_fix_long_run_no_archive_or_receiver_proof",
+    "snerv_pre_fix_checkpoint_retention_disabled_by_candidate_null",
+    "snerv_pre_fix_lf_portfolio_auto_brotli_hq_trap",
+    "snerv_sampled_only_training_not_full_video_replay_authority",
+    "snerv_old_pr95_stage_seg_weight_amplification_behavior"
+  ],
+  "checkpoint_dir_bytes_estimate": 131386945536,
+  "decision": "stop_pre_fix_nonpromotable_brotli_hq_trap_after_preserving_provenance",
+  "epochs_completed": 29650,
+  "false_authority": {
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "score_claim": false
+  },
+  "final_recon_mse_nchw255": 444.51190185546875,
+  "generated_utc": "2026-06-04T15:53:27Z",
+  "live_final_recon_mse_nchw255": 9933.0908203125,
+  "next_dispatch_requirements": [
+    "rerun_after_e210d980b_checkpoint_retention_defaults",
+    "rerun_after_e0ef45688_bounded_lf_auto_compression",
+    "require_archive_zip_or_snar_receiver_packet",
+    "require_receiver_proof_and_full_video_mlx_replay_before_exact_gate"
+  ],
+  "preserved_files": {
+    "report_file": {
+      "bytes": 30404,
+      "exists": true,
+      "mtime_ns": 1780572031706787599,
+      "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_hardpair_top96_successor_20260604T070349Z/snerv_mlx_native_export/native_train_export/snerv_score_aware_long_training/snerv_score_aware_long_training.json",
+      "sha256": "1901d34a4ce13871de5024f4bbd3003e0be7d1352a4733fa27fdb9360df477e4"
+    },
+    "sample_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_hardpair_top96_successor_20260604T070349Z/snerv_pre_fix_long_run_sample_20260604Tcodex.txt",
+    "telemetry_file": {
+      "bytes": 160252517,
+      "exists": true,
+      "mtime_ns": 1780571937456586936,
+      "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_hardpair_top96_successor_20260604T070349Z/snerv_mlx_native_export/native_train_export/snerv_score_aware_long_training/long_training/telemetry.jsonl",
+      "sha256": "3b75f16fa4fec497b5b74f6faec77629a7cb561afc8134bb73c89ff8004cdcca"
+    },
+    "training_artifact_file": {
+      "bytes": 295985082,
+      "exists": true,
+      "mtime_ns": 1780571959217416112,
+      "path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_hardpair_top96_successor_20260604T070349Z/snerv_mlx_native_export/native_train_export/snerv_score_aware_long_training/long_training/training_artifact.json",
+      "sha256": "5a671e9a26fee3a6f0d41c5c740e73fc820776cbc6f4b25d37c723b7a483a339"
+    }
+  },
+  "process_status_after_stop": "not_running_after_sigkill",
+  "run_dir": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_hardpair_top96_successor_20260604T070349Z",
+  "run_dir_bytes_estimate": 131843284992,
+  "schema": "snerv_pre_fix_long_run_blocker_summary.v1",
+  "source_manifest_path": "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_hardpair_top96_successor_20260604T070349Z/snerv_pre_fix_long_run_blocker_20260604Tcodex.json",
+  "source_manifest_sha256": "28fe5db25e88b72208b1e1e432498623c3f03fef4f625166ccbf2e274d86ae30",
+  "telemetry_line_count": 29650
+}
