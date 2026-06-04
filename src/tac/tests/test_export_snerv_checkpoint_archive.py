@@ -151,6 +151,7 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
     def fake_prefilter(**kwargs):
         calls["prefilter_archive_bytes"] = int(kwargs["archive_bytes"])
         calls["prefilter_archive_sha256"] = str(kwargs["archive_sha256"])
+        calls["prefilter_scorer_device"] = str(kwargs["scorer_device"])
         calls["prefilter_target0_shape"] = tuple(kwargs["target0_np"].shape)
         calls["prefilter_packet_bytes"] = len(kwargs["selected_packet"])
         out = Path(kwargs["output_dir"])
@@ -178,6 +179,7 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
         state_kind="ema",
         emit_receiver_proof=True,
         write_mlx_prefilter_profile=True,
+        mlx_prefilter_scorer_device="mps",
         repo_root=tmp_path,
     )
 
@@ -193,4 +195,5 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
     assert calls["prefilter_target0_shape"] == (2, 16, 16, 3)
     assert calls["prefilter_archive_bytes"] == len(b"archive")
     assert calls["prefilter_archive_sha256"] == "a" * 64
+    assert calls["prefilter_scorer_device"] == "gpu"
     assert int(calls["prefilter_packet_bytes"]) == report["packet_bytes"]

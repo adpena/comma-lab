@@ -246,7 +246,7 @@ def export_snerv_checkpoint_archive(
         archive_sha256=str(archive_sha256) if archive_sha256 else None,
         source_video_path=source_video_path,
         scorer_upstream_dir=scorer_upstream_dir,
-        scorer_device=str(mlx_prefilter_scorer_device),
+        scorer_device=_canonical_mlx_prefilter_device(mlx_prefilter_scorer_device),
         scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
         progress_every=int(mlx_prefilter_progress_every),
         repo_root=root,
@@ -800,6 +800,25 @@ def _packet_output_hw(metadata: dict[str, Any]) -> tuple[int, int]:
         if height > 0 and width > 0:
             return height, width
     return int(SCORER_HW[0]), int(SCORER_HW[1])
+
+
+def _canonical_mlx_prefilter_device(value: Any) -> str:
+    device = str(value or "cpu").strip().lower()
+    aliases = {
+        "": "cpu",
+        "cpu": "cpu",
+        "gpu": "gpu",
+        "metal": "gpu",
+        "mps": "gpu",
+        "mlx-gpu": "gpu",
+    }
+    if device not in aliases:
+        raise ValueError(
+            "mlx prefilter scorer device must be one of "
+            "cpu, gpu, metal, or mps; got "
+            f"{value!r}"
+        )
+    return aliases[device]
 
 
 def _blockers(
