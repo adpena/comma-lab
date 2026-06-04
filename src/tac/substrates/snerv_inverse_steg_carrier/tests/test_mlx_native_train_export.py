@@ -101,6 +101,35 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     )
 
 
+def test_checkpoint_retention_candidate_null_preserves_safe_default() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    assert (
+        mod._candidate_first_non_null(
+            {
+                "score_aware_long_training_checkpoint_retention_keep_last_n": None,
+                "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": None,
+            },
+            (
+                "score_aware_long_training_checkpoint_retention_keep_last_n",
+                "snerv_score_aware_long_training_checkpoint_retention_keep_last_n",
+            ),
+            mod.SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT,
+        )
+        == mod.SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
+    )
+    assert mod._coerce_checkpoint_keep_last(-1) is None
+    assert mod._coerce_checkpoint_keep_last(3) == 3
+    with pytest.raises(mod.SnervMlxNativeExportError, match="bool"):
+        mod._coerce_checkpoint_keep_last(True)
+    with pytest.raises(mod.SnervMlxNativeExportError, match=">= -1"):
+        mod._coerce_checkpoint_keep_last(-2)
+    with pytest.raises(mod.SnervMlxNativeExportError, match="non-negative"):
+        mod._coerce_checkpoint_keep_best(-1)
+    with pytest.raises(mod.SnervMlxNativeExportError, match="> 0"):
+        mod._coerce_checkpoint_keep_every(0)
+
+
 def test_pr95_every_stage_muon_falls_back_when_snerv_has_no_matrix_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -871,6 +900,8 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
             "score_aware_long_training_lr": 1.0e-3,
             "score_aware_long_training_batch_pairs": 2,
             "score_aware_long_training_optimizer": "pact_muon_adamw",
+            "score_aware_long_training_checkpoint_retention_keep_last_n": None,
+            "snerv_score_aware_long_training_checkpoint_retention_keep_last_n": None,
         },
         scorer_upstream_dir="upstream",
         output_height=16,
@@ -892,6 +923,9 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
     )
     assert long_training["best_checkpoint_selection"]["selection_metric"] == (
         "full_reconstruction_mse_nchw255"
+    )
+    assert long_training["checkpoint_retention"]["keep_last_n"] == (
+        mod.SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
     )
     assert long_training["selection_history_tail"]
     assert Path(long_training["report_path"]).is_file()

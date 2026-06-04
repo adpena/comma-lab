@@ -133,10 +133,99 @@ FALSE_AUTHORITY = {
 NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
 SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS = 262_144
+SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT = 4
 
 
 class SnervMlxNativeExportError(ValueError):
     """Raised when the native MLX SNeRV adapter cannot build a valid export."""
+
+
+def _candidate_first_non_null(
+    candidate: Mapping[str, Any],
+    keys: Sequence[str],
+    fallback: Any,
+) -> Any:
+    """Return the first explicit non-null candidate override.
+
+    Candidate rows often carry JSON ``null`` for fields they do not own.  For
+    launch controls such as checkpoint retention, treating that null as an
+    override silently disables the caller's safe default.  Null therefore means
+    "no override"; an intentional preserve-all retention run uses ``-1``.
+    """
+
+    for key in keys:
+        if key in candidate and candidate[key] is not None:
+            return candidate[key]
+    return fallback
+
+
+def _coerce_checkpoint_keep_last(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_last_n must be integer, -1, or None; "
+            f"got bool {value!r}"
+        )
+    try:
+        resolved = int(value)
+    except (TypeError, ValueError) as exc:
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_last_n must be integer, -1, or None; "
+            f"got {value!r}"
+        ) from exc
+    if resolved == -1:
+        return None
+    if resolved < 0:
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_last_n must be >= -1; "
+            f"got {resolved!r}"
+        )
+    return resolved
+
+
+def _coerce_checkpoint_keep_best(value: Any) -> int:
+    if isinstance(value, bool):
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_best_n must be non-negative integer; "
+            f"got bool {value!r}"
+        )
+    try:
+        resolved = int(value)
+    except (TypeError, ValueError) as exc:
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_best_n must be non-negative integer; "
+            f"got {value!r}"
+        ) from exc
+    if resolved < 0:
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_best_n must be non-negative; "
+            f"got {resolved!r}"
+        )
+    return resolved
+
+
+def _coerce_checkpoint_keep_every(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_every_n_epochs must be positive integer "
+            f"or None; got bool {value!r}"
+        )
+    try:
+        resolved = int(value)
+    except (TypeError, ValueError) as exc:
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_every_n_epochs must be positive integer "
+            f"or None; got {value!r}"
+        ) from exc
+    if resolved <= 0:
+        raise SnervMlxNativeExportError(
+            "checkpoint_retention_keep_every_n_epochs must be > 0; "
+            f"got {resolved!r}"
+        )
+    return resolved
 
 
 @dataclass(frozen=True)
@@ -212,7 +301,9 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     score_aware_long_training_weight_decay: float | None = 1.0e-4,
     score_aware_long_training_eval_roundtrip_ste: bool = False,
-    score_aware_long_training_checkpoint_retention_keep_last_n: int | None = None,
+    score_aware_long_training_checkpoint_retention_keep_last_n: int | None = (
+        SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
+    ),
     score_aware_long_training_checkpoint_retention_keep_best_n: int = 1,
     score_aware_long_training_checkpoint_retention_keep_every_n_epochs: int | None = None,
     score_aware_long_training_checkpoint_retention_cold_store_roots: tuple[Path, ...] = (),
@@ -359,6 +450,36 @@ def train_export_snerv_mlx_native(
         expected_hw=(int(output_height), int(output_width)),
         normalize=str(recon_pixel_weight_normalize),
     )
+    checkpoint_retention_keep_last_n = _coerce_checkpoint_keep_last(
+        _candidate_first_non_null(
+            candidate,
+            (
+                "score_aware_long_training_checkpoint_retention_keep_last_n",
+                "snerv_score_aware_long_training_checkpoint_retention_keep_last_n",
+            ),
+            score_aware_long_training_checkpoint_retention_keep_last_n,
+        )
+    )
+    checkpoint_retention_keep_best_n = _coerce_checkpoint_keep_best(
+        _candidate_first_non_null(
+            candidate,
+            (
+                "score_aware_long_training_checkpoint_retention_keep_best_n",
+                "snerv_score_aware_long_training_checkpoint_retention_keep_best_n",
+            ),
+            score_aware_long_training_checkpoint_retention_keep_best_n,
+        )
+    )
+    checkpoint_retention_keep_every_n_epochs = _coerce_checkpoint_keep_every(
+        _candidate_first_non_null(
+            candidate,
+            (
+                "score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
+                "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
+            ),
+            score_aware_long_training_checkpoint_retention_keep_every_n_epochs,
+        )
+    )
     score_aware_long_training = _run_score_aware_long_training_attachment(
         requested_epochs=int(
             candidate.get(
@@ -453,55 +574,9 @@ def train_export_snerv_mlx_native(
                 ),
             )
         ),
-        checkpoint_retention_keep_last_n=(
-            None
-            if candidate.get(
-                "score_aware_long_training_checkpoint_retention_keep_last_n",
-                candidate.get(
-                    "snerv_score_aware_long_training_checkpoint_retention_keep_last_n",
-                    score_aware_long_training_checkpoint_retention_keep_last_n,
-                ),
-            )
-            is None
-            else int(
-                candidate.get(
-                    "score_aware_long_training_checkpoint_retention_keep_last_n",
-                    candidate.get(
-                        "snerv_score_aware_long_training_checkpoint_retention_keep_last_n",
-                        score_aware_long_training_checkpoint_retention_keep_last_n,
-                    ),
-                )
-            )
-        ),
-        checkpoint_retention_keep_best_n=int(
-            candidate.get(
-                "score_aware_long_training_checkpoint_retention_keep_best_n",
-                candidate.get(
-                    "snerv_score_aware_long_training_checkpoint_retention_keep_best_n",
-                    score_aware_long_training_checkpoint_retention_keep_best_n,
-                ),
-            )
-        ),
-        checkpoint_retention_keep_every_n_epochs=(
-            None
-            if candidate.get(
-                "score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
-                candidate.get(
-                    "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
-                    score_aware_long_training_checkpoint_retention_keep_every_n_epochs,
-                ),
-            )
-            is None
-            else int(
-                candidate.get(
-                    "score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
-                    candidate.get(
-                        "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs",
-                        score_aware_long_training_checkpoint_retention_keep_every_n_epochs,
-                    ),
-                )
-            )
-        ),
+        checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
+        checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
+        checkpoint_retention_keep_every_n_epochs=checkpoint_retention_keep_every_n_epochs,
         checkpoint_retention_cold_store_roots=tuple(
             Path(root)
             for root in score_aware_long_training_checkpoint_retention_cold_store_roots
