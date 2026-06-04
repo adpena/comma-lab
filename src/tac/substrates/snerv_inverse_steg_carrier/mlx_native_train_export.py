@@ -128,6 +128,7 @@ FALSE_AUTHORITY = {
 }
 NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
+SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS = 262_144
 
 
 class SnervMlxNativeExportError(ValueError):
@@ -2863,6 +2864,23 @@ def _official_mfu_hfr_tub_bootstrap_components_from_pairs(
         "h": h,
         "w": w,
         "model_size": model_size.as_jsonable(),
+        "official_hfr_bootstrap": {
+            "schema": "snerv_official_hfr_bootstrap_fit.v1",
+            "fit": "deterministic_bounded_row_least_squares",
+            "total_rows_per_head": int(ll.shape[0]) * int(ll_h) * int(ll_w),
+            "max_rows_per_head": int(SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS),
+            "fit_rows_per_head": min(
+                int(SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS),
+                int(ll.shape[0]) * int(ll_h) * int(ll_w),
+            ),
+            "sampled": (
+                int(ll.shape[0]) * int(ll_h) * int(ll_w)
+                > int(SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS)
+            ),
+            "sample_policy": "linspace_flat_nhw_deterministic",
+            "human_visual_fidelity_objective": False,
+            **FALSE_AUTHORITY,
+        },
     }
 
 
@@ -2928,6 +2946,11 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         "step_map_coder_groups": [dict(group) for group in step_packet.groups],
         "allocation_mode": "official_mfu_hfr_tub_frame_producing_bootstrap",
         "hf_decoder_fit_mode": "official_hfr_heads_least_squares_from_haar_ll",
+        **(
+            {"official_hfr_bootstrap": components["official_hfr_bootstrap"]}
+            if isinstance(components.get("official_hfr_bootstrap"), Mapping)
+            else {}
+        ),
         "decoder_payload_codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
         **dict(metadata_extra or {}),
         "snerv_model_size_adapter": model_size.adapter,
@@ -2987,6 +3010,8 @@ def _official_passthrough_mfu(*, channels: int) -> OfficialSnervMfu:
 def _fit_official_hfr_head_from_ll(
     ll_chw: np.ndarray,
     detail_chw: np.ndarray,
+    *,
+    max_rows: int = SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS,
 ) -> OfficialHfrConvBlock:
     ll = np.asarray(ll_chw, dtype=np.float64)
     detail = np.asarray(detail_chw, dtype=np.float64)
@@ -3005,17 +3030,41 @@ def _fit_official_hfr_head_from_ll(
     conv1_bias = np.zeros((channels,), dtype=np.float64)
     hidden = np.where(ll >= 0.0, ll, 0.1 * ll)
     padded = np.pad(hidden, ((0, 0), (0, 0), (1, 1), (1, 1)), mode="constant")
-    windows = np.lib.stride_tricks.sliding_window_view(
-        padded,
-        (3, 3),
-        axis=(2, 3),
-    )
-    design = windows.transpose(0, 2, 3, 1, 4, 5).reshape(batch * h * w, channels * 9)
+    total_rows = int(batch) * int(h) * int(w)
+    row_budget = int(max_rows)
+    if row_budget > 0 and total_rows > row_budget:
+        flat_indices = np.linspace(
+            0,
+            total_rows - 1,
+            num=row_budget,
+            dtype=np.int64,
+        )
+        frame_idx = flat_indices // (h * w)
+        rem = flat_indices % (h * w)
+        y_idx = rem // w
+        x_idx = rem % w
+        columns = [
+            padded[frame_idx, :, y_idx + dy, x_idx + dx]
+            for dy in range(3)
+            for dx in range(3)
+        ]
+        design = np.stack(columns, axis=-1).reshape(row_budget, channels * 9)
+        target = detail[frame_idx, :, y_idx, x_idx]
+    else:
+        windows = np.lib.stride_tricks.sliding_window_view(
+            padded,
+            (3, 3),
+            axis=(2, 3),
+        )
+        design = windows.transpose(0, 2, 3, 1, 4, 5).reshape(
+            total_rows,
+            channels * 9,
+        )
+        target = detail.transpose(0, 2, 3, 1).reshape(total_rows, channels)
     design = np.concatenate(
-        [design, np.ones((batch * h * w, 1), dtype=np.float64)],
+        [design, np.ones((int(design.shape[0]), 1), dtype=np.float64)],
         axis=1,
     )
-    target = detail.transpose(0, 2, 3, 1).reshape(batch * h * w, channels)
     beta, *_ = np.linalg.lstsq(design, target, rcond=None)
     conv2_weight = beta[:-1, :].T.reshape(channels, channels, 3, 3)
     conv2_bias = beta[-1, :]
