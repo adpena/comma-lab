@@ -41,7 +41,7 @@ from tac.analysis.nerv_modelsize_ladder import (
     SCORER_ONLY_OBJECTIVE_AUTHORITY,
     hi_nerv_modelsize_config_rows,
 )
-from tac.repo_io import write_json
+from tac.repo_io import sha256_file, write_json
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     CONTEST_BYTE_PRICE_SCORE,
 )
@@ -349,6 +349,122 @@ def build_hinerv_archive_size_ladder(
     return report
 
 
+def build_hinerv_archive_size_ladder_from_checkpoint_exports(
+    checkpoint_exports: Sequence[Mapping[str, Any]],
+    *,
+    report_path: str | Path | None = None,
+    num_pairs: int | None = None,
+) -> dict[str, Any]:
+    """Wrap trained HiNeRV checkpoint exports as archive-size ladder rows.
+
+    ``build_hinerv_archive_size_ladder`` measures fresh untrained size-ladder
+    rows from model-size configs.  This bridge is for the opposite direction:
+    preserve an already-trained/exported checkpoint package as the standard
+    ``hinerv_archive_size_ladder.v1`` surface so waterfill, saliency replay,
+    planner reingest, and byte-price consumers can use the trained state
+    without rebuilding or pretending the row has scorer authority.
+    """
+
+    rows: list[dict[str, Any]] = []
+    blockers: list[str] = [
+        "hinerv_archive_size_ladder_false_authority_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    detected_num_pairs: int | None = int(num_pairs) if num_pairs is not None else None
+    for index, export in enumerate(checkpoint_exports):
+        if not isinstance(export, Mapping):
+            raise TypeError(f"checkpoint_exports[{index}] must be a mapping")
+        row = _checkpoint_export_ladder_row(export, row_index=index)
+        rows.append(row)
+        blockers.extend(row.get("backend_claim_blockers") or ())
+        blockers.extend(
+            blocker
+            for blocker in row.get("blockers") or ()
+            if blocker
+            not in {
+                "hinerv_archive_size_row_has_no_nonrate_score",
+                "contest_cpu_cuda_exact_eval_not_executed",
+            }
+        )
+        modelsize_candidate = row.get("modelsize_candidate")
+        if detected_num_pairs is None and isinstance(modelsize_candidate, Mapping):
+            maybe_pairs = _positive_int(modelsize_candidate.get("num_pairs"))
+            if maybe_pairs is not None:
+                detected_num_pairs = int(maybe_pairs)
+    rows.sort(key=lambda row: int(row.get("archive_bytes") or 0))
+    report = {
+        "schema": HINERV_ARCHIVE_SIZE_LADDER_SCHEMA,
+        "authority": "false_authority_trained_checkpoint_archive_ladder_no_score_claim",
+        "family": "hi_nerv",
+        "axis_tag": "[planning/control]",
+        "repo_root": None,
+        "output_dir": None,
+        "report_path": (
+            None
+            if report_path is None
+            else Path(report_path).expanduser().resolve(strict=False).as_posix()
+        ),
+        "storage_preflight": {
+            "schema": "trained_checkpoint_archive_ladder_externalized_storage.v1",
+            "selected_workload_root": "source_checkpoint_export_paths",
+            "large_artifact_policy": (
+                "no large artifact copied; existing checkpoint export archive, "
+                "state npz, and receiver proof paths remain source custody"
+            ),
+            **FALSE_AUTHORITY,
+        },
+        "local_output_explicitly_allowed": False,
+        "artifact_retention_policy": (
+            "trained checkpoint export bridge is metadata-only; archive/state/"
+            "receiver-proof bytes stay at their original durable paths"
+        ),
+        "num_pairs": int(detected_num_pairs or 0),
+        "decoder_codec": None,
+        "decoder_codec_policy": "trained_checkpoint_export_row_decoder_codec",
+        "hinerv_modelsize_budget_schema": None,
+        "modelsize_receiver_contract": _hinerv_archive_modelsize_receiver_contract(),
+        "archive_export_backend_counts": {
+            backend: sum(1 for row in rows if row.get("archive_export_backend") == backend)
+            for backend in sorted(
+                {
+                    str(row.get("archive_export_backend") or "")
+                    for row in rows
+                    if row.get("archive_export_backend")
+                }
+            )
+        },
+        "emit_receiver_proof": True,
+        "emit_decoder_weight_waterfill_plan": False,
+        "decoder_weight_waterfill_schema": NERV_DECODER_WEIGHT_WATERFILL_SCHEMA,
+        "decoder_weight_saliency_json": None,
+        "decoder_weight_saliency_metadata": _decoder_weight_saliency_metadata(
+            {},
+            num_pairs=int(detected_num_pairs or 0),
+        ),
+        "decoder_weight_waterfill_action_bits": [
+            int(value) for value in DEFAULT_ACTION_BITS
+        ],
+        "objective_authority": SCORER_ONLY_OBJECTIVE_AUTHORITY,
+        "contest_byte_price_score_per_byte": CONTEST_BYTE_PRICE_SCORE,
+        "selection_rule": (
+            "trained checkpoint archive rows are receiver-closed byte evidence "
+            "only; attach score replay and decoder-weight saliency before launch"
+        ),
+        "required_allocator_bindings": list(REQUIRED_ALLOCATOR_BINDINGS),
+        "row_count": len(rows),
+        "archive_rows": rows,
+        "marginal_archive_gates": _marginal_archive_gates(rows),
+        "section_value_rows": hinerv_modelsize_increment_section_value_rows(
+            _marginal_archive_gates(rows)
+        ),
+        "missing_requested_row_ids": [],
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+    report["byte_price_plan"] = build_nerv_byte_price_plan(report)
+    return report
+
+
 def _archive_ladder_specs(
     *,
     num_pairs: int,
@@ -375,6 +491,248 @@ def _archive_ladder_specs(
             continue
         out.append(_hinerv_modelsize_candidate_spec(candidate, num_pairs=int(num_pairs)))
     return out
+
+
+def _checkpoint_export_ladder_row(
+    export: Mapping[str, Any],
+    *,
+    row_index: int,
+) -> dict[str, Any]:
+    blockers: list[str] = [
+        "hinerv_archive_size_row_has_no_nonrate_score",
+        "contest_cpu_cuda_exact_eval_not_executed",
+    ]
+    schema = str(export.get("schema") or "")
+    if schema != "hinerv_checkpoint_archive_export.v1":
+        blockers.append("hinerv_checkpoint_export_schema_unexpected")
+    if export.get("family") not in {None, "hi_nerv"}:
+        blockers.append("hinerv_checkpoint_export_family_unexpected")
+
+    candidate_id = str(export.get("candidate_id") or f"checkpoint_export_{row_index:04d}")
+    modelsize_candidate = (
+        dict(export["modelsize_candidate"])
+        if isinstance(export.get("modelsize_candidate"), Mapping)
+        else None
+    )
+    num_pairs = 600
+    modelsize_receiver_contract: dict[str, Any]
+    config_snapshot: dict[str, Any] | None = None
+    modelsize_scale = 0.0
+    modelsize_scale_source = "missing_modelsize_candidate"
+    modelsize_scale_unit = "unknown"
+    if modelsize_candidate is None:
+        blockers.append("hinerv_checkpoint_export_modelsize_candidate_missing")
+        modelsize_receiver_contract = {
+            "schema": HINERV_MODELSIZE_RECEIVER_CONTRACT_SCHEMA,
+            "candidate_id": candidate_id,
+            "source_contract_schema": None,
+            "capacity_source": "missing",
+            "modelsize_scale_source": modelsize_scale_source,
+            "modelsize_scale_value": modelsize_scale,
+            "modelsize_scale_unit": modelsize_scale_unit,
+            "archive_bytes_authority": "archive_rows[].archive_bytes",
+            "rate_authority_surface": MODELSIZE_RATE_AUTHORITY_SURFACE,
+            "modelsize_mparams_is_official_upstream_flag": False,
+            "modelsize_mparams_caps_archive_zip_bytes": False,
+            **FALSE_AUTHORITY,
+        }
+    else:
+        num_pairs = int(modelsize_candidate.get("num_pairs") or num_pairs)
+        try:
+            spec = _hinerv_modelsize_candidate_spec(
+                modelsize_candidate,
+                num_pairs=num_pairs,
+            )
+        except ValueError as exc:
+            blockers.append(
+                "hinerv_checkpoint_export_modelsize_candidate_invalid:"
+                f"{type(exc).__name__}"
+            )
+            modelsize_receiver_contract = _legacy_hinerv_modelsize_receiver_contract(
+                {
+                    "row_id": candidate_id,
+                    "modelsize_scale": float(
+                        modelsize_candidate.get("modelsize_mparams") or 0.0
+                    ),
+                }
+            )
+        else:
+            config_snapshot = _config_snapshot(spec["config"])
+            modelsize_receiver_contract = dict(spec["modelsize_receiver_contract"])
+            modelsize_scale = float(spec["modelsize_scale"])
+            modelsize_scale_source = str(
+                modelsize_receiver_contract["modelsize_scale_source"]
+            )
+            modelsize_scale_unit = str(
+                modelsize_receiver_contract["modelsize_scale_unit"]
+            )
+
+    output_dir_raw = str(export.get("output_dir") or "").strip()
+    output_dir = Path(output_dir_raw).expanduser().resolve(strict=False) if output_dir_raw else None
+    archive_path = _resolve_export_path(
+        export.get("archive_path"),
+        output_dir=output_dir,
+        fallback_name="archive.zip",
+    )
+    archive_bytes = _optional_int(export.get("archive_bytes")) or 0
+    archive_sha256 = str(export.get("archive_sha256") or "").strip().lower()
+    if not archive_path.is_file():
+        blockers.append("hinerv_checkpoint_export_archive_missing")
+    else:
+        actual_bytes = archive_path.stat().st_size
+        actual_sha = sha256_file(archive_path)
+        if archive_bytes and archive_bytes != actual_bytes:
+            blockers.append("hinerv_checkpoint_export_archive_bytes_mismatch")
+        archive_bytes = actual_bytes
+        if archive_sha256 and archive_sha256 != actual_sha:
+            blockers.append("hinerv_checkpoint_export_archive_sha256_mismatch")
+        archive_sha256 = actual_sha
+    if len(archive_sha256) != 64:
+        blockers.append("hinerv_checkpoint_export_archive_sha256_missing")
+
+    state_npz_manifest_path = _resolve_export_path(
+        export.get("state_npz_manifest_path"),
+        output_dir=output_dir,
+        fallback_name="hi_nerv_mlx_exported_state_npz_manifest.json",
+    )
+    _append_state_manifest_blockers(
+        blockers,
+        state_npz_manifest_path=state_npz_manifest_path,
+    )
+
+    proof_path = _resolve_export_path(
+        export.get("receiver_proof_path"),
+        output_dir=output_dir,
+        fallback_name="receiver_proof/hi_nerv_mlx_receiver_proof.json",
+    )
+    proof_ready = export.get("receiver_proof_ready") is True
+    proof_sha256 = str(export.get("receiver_proof_sha256") or "").strip().lower()
+    runtime_consumption_proof_ready = False
+    if not proof_ready:
+        blockers.append("receiver_proof_not_ready_for_archive_size_ladder_row")
+    if not proof_path.is_file():
+        blockers.append("hinerv_checkpoint_export_receiver_proof_missing")
+    else:
+        actual_proof_sha = sha256_file(proof_path)
+        if proof_sha256 and proof_sha256 != actual_proof_sha:
+            blockers.append("hinerv_checkpoint_export_receiver_proof_sha256_mismatch")
+        proof_sha256 = actual_proof_sha
+        proof_payload = _read_json_if_exists(proof_path)
+        proof_archive_sha = str(proof_payload.get("archive_sha256") or "").strip().lower()
+        if proof_archive_sha != archive_sha256:
+            blockers.append("hinerv_checkpoint_export_receiver_proof_archive_sha256_mismatch")
+        runtime_consumption_proof_ready = proof_payload.get("runtime_consumption_proof_ready") is True
+        if not runtime_consumption_proof_ready:
+            blockers.append("hinerv_checkpoint_export_receiver_proof_runtime_not_ready")
+
+    nominal_total_payload_bytes = (
+        None
+        if modelsize_candidate is None
+        else _optional_int(modelsize_candidate.get("nominal_total_payload_bytes"))
+    )
+    row_output_dir = output_dir or archive_path.parent
+    return {
+        "family": "hi_nerv",
+        "row_id": candidate_id,
+        "source_schema": schema,
+        "source_checkpoint_export_report_path": export.get("report_path"),
+        "checkpoint_epoch": export.get("checkpoint_epoch"),
+        "modelsize_scale": float(modelsize_scale),
+        "modelsize_scale_source": modelsize_scale_source,
+        "modelsize_scale_unit": modelsize_scale_unit,
+        "modelsize_receiver_contract": modelsize_receiver_contract,
+        "modelsize_candidate": modelsize_candidate,
+        "config": config_snapshot,
+        "decoder_codec": str(
+            export.get("decoder_codec")
+            or (modelsize_candidate or {}).get("decoder_codec")
+            or "int8_mixed"
+        ),
+        "archive_export_backend": "trained_checkpoint_export_bridge",
+        "backend_claim_blockers": [],
+        "num_parameters": int(
+            (modelsize_candidate or {}).get("total_trainable_params") or 0
+        ),
+        "archive_path": archive_path.as_posix(),
+        "archive_sha256": archive_sha256 or None,
+        "archive_bytes": int(archive_bytes),
+        "nominal_total_payload_bytes": nominal_total_payload_bytes,
+        "measured_minus_nominal_bytes": (
+            None
+            if nominal_total_payload_bytes is None
+            else int(archive_bytes) - int(nominal_total_payload_bytes)
+        ),
+        "archive_rate_score_at_contest_price": float(
+            int(archive_bytes) * CONTEST_BYTE_PRICE_SCORE
+        ),
+        "spine_manifest_path": _path_if_exists(
+            row_output_dir / "hprc_representation_spine_hi_nerv_manifest.json"
+        ),
+        "state_npz_manifest_path": state_npz_manifest_path.as_posix(),
+        "decoder_weight_waterfill_plan_path": None,
+        "decoder_weight_waterfill_summary": None,
+        "decoder_weight_saliency_full_video_coverage": False,
+        "submission_dir": _path_if_exists(row_output_dir / "submission"),
+        "receiver_proof_executed": proof_path.is_file(),
+        "receiver_proof_path": proof_path.as_posix() if proof_path.is_file() else None,
+        "receiver_proof_sha256": proof_sha256 or None,
+        "runtime_consumption_proof_ready": bool(runtime_consumption_proof_ready),
+        "required_allocator_bindings": list(REQUIRED_ALLOCATOR_BINDINGS),
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _resolve_export_path(
+    value: Any,
+    *,
+    output_dir: Path | None,
+    fallback_name: str,
+) -> Path:
+    raw = str(value or "").strip()
+    if raw:
+        path = Path(raw).expanduser()
+        if not path.is_absolute() and output_dir is not None:
+            path = output_dir / path
+        return path.resolve(strict=False)
+    if output_dir is not None:
+        return (output_dir / fallback_name).resolve(strict=False)
+    return Path(fallback_name).expanduser().resolve(strict=False)
+
+
+def _append_state_manifest_blockers(
+    blockers: list[str],
+    *,
+    state_npz_manifest_path: Path,
+) -> None:
+    if not state_npz_manifest_path.is_file():
+        blockers.append("hinerv_checkpoint_export_state_npz_manifest_missing")
+        return
+    try:
+        manifest = json.loads(state_npz_manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        blockers.append("hinerv_checkpoint_export_state_npz_manifest_unreadable")
+        return
+    if manifest.get("schema") != "framework_agnostic_npz_bridge_manifest.v1":
+        blockers.append("hinerv_checkpoint_export_state_npz_manifest_schema_unexpected")
+    if manifest.get("consumption_recommended") is not True:
+        blockers.append("hinerv_checkpoint_export_state_npz_manifest_not_recommended")
+    artifact_raw = str(manifest.get("artifact_path") or "").strip()
+    if not artifact_raw:
+        blockers.append("hinerv_checkpoint_export_state_npz_manifest_artifact_missing")
+        return
+    artifact_path = Path(artifact_raw).expanduser()
+    if not artifact_path.is_absolute():
+        artifact_path = state_npz_manifest_path.parent / artifact_path
+    artifact_path = artifact_path.resolve(strict=False)
+    if not artifact_path.is_file():
+        blockers.append("hinerv_checkpoint_export_state_npz_artifact_missing")
+        return
+    expected_sha = str(manifest.get("artifact_sha256") or "").strip().lower()
+    if len(expected_sha) != 64:
+        blockers.append("hinerv_checkpoint_export_state_npz_artifact_sha256_missing")
+    elif sha256_file(artifact_path) != expected_sha:
+        blockers.append("hinerv_checkpoint_export_state_npz_artifact_sha256_mismatch")
 
 
 def _hinerv_modelsize_candidate_spec(
@@ -1536,6 +1894,7 @@ __all__ = [
     "REQUIRED_ALLOCATOR_BINDINGS",
     "attach_hinerv_archive_ladder_score_rows",
     "build_hinerv_archive_size_ladder",
+    "build_hinerv_archive_size_ladder_from_checkpoint_exports",
     "hinerv_modelsize_increment_section_value_rows",
     "render_hinerv_archive_size_ladder_markdown",
 ]

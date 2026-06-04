@@ -1,16 +1,22 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from comma_lab.storage_tiers import StorageTierError
+from tac.analysis.hinerv_archive_ladder_waterfill import (
+    build_hinerv_archive_ladder_waterfill,
+)
 from tac.analysis.hinerv_archive_size_ladder import (
     HINERV_ARCHIVE_SIZE_LADDER_SCHEMA,
     attach_hinerv_archive_ladder_score_rows,
     build_hinerv_archive_size_ladder,
+    build_hinerv_archive_size_ladder_from_checkpoint_exports,
     hinerv_modelsize_increment_section_value_rows,
     render_hinerv_archive_size_ladder_markdown,
 )
@@ -28,6 +34,7 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 )
 from tools import attach_hinerv_archive_ladder_scores as attach_cli
 from tools import build_hinerv_archive_size_ladder as ladder_cli
+from tools import harvest_hinerv_checkpoint_export_ladder as harvest_cli
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
@@ -70,6 +77,14 @@ def _hinerv_budget_candidate(
     payload = row.as_dict()
     payload.update(overrides)
     return payload
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def test_hinerv_archive_size_ladder_exports_one_tiny_row(tmp_path: Path) -> None:
@@ -217,6 +232,183 @@ def test_hinerv_archive_size_ladder_exports_modelsize_budget_candidate_waterfill
     assert waterfill["candidate_id"] == candidate_id
     assert waterfill["group_count"] > 0
     assert waterfill["score_claim"] is False
+
+
+def test_hinerv_checkpoint_export_bridge_feeds_decoder_waterfill(
+    tmp_path: Path,
+) -> None:
+    export_dir = tmp_path / "trained_export"
+    export_dir.mkdir()
+    archive = export_dir / "archive.zip"
+    archive.write_bytes(b"trained-hinerv-archive")
+    npz = export_dir / "hi_nerv_mlx_exported_state.npz"
+    np.savez(npz, **{"blocks.0.weight": np.array([[1.0, -0.25]], dtype=np.float32)})
+    manifest = export_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "framework_agnostic_npz_bridge_manifest.v1",
+                "artifact_path": npz.as_posix(),
+                "artifact_sha256": _sha256(npz),
+                "consumption_recommended": True,
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_dir = export_dir / "receiver_proof"
+    proof_dir.mkdir()
+    proof = proof_dir / "hi_nerv_mlx_receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_mlx_receiver_proof.v1",
+                "archive_sha256": _sha256(archive),
+                "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_passed": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    candidate = _hinerv_budget_candidate(
+        num_pairs=600,
+        latent_dim=16,
+        embed_dim=8,
+        decoder_channel=16,
+        decoder_codec="int7_mixed",
+        hard_byte_ceiling=178_000,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        candidate_id="hinerv_trained_export_bridge",
+        nominal_total_payload_bytes=177_554,
+    )
+    export = {
+        "schema": "hinerv_checkpoint_archive_export.v1",
+        "family": "hi_nerv",
+        "candidate_id": "hinerv_trained_export_bridge",
+        "archive_path": archive.as_posix(),
+        "archive_bytes": archive.stat().st_size,
+        "archive_sha256": _sha256(archive),
+        "receiver_proof_ready": True,
+        "receiver_proof_path": proof.as_posix(),
+        "receiver_proof_sha256": _sha256(proof),
+        "modelsize_candidate": candidate,
+        "output_dir": export_dir.as_posix(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_hinerv_archive_size_ladder_from_checkpoint_exports(
+        [export],
+        report_path=tmp_path / "ladder.json",
+    )
+
+    assert report["schema"] == HINERV_ARCHIVE_SIZE_LADDER_SCHEMA
+    assert report["authority"] == (
+        "false_authority_trained_checkpoint_archive_ladder_no_score_claim"
+    )
+    assert report["row_count"] == 1
+    row = report["archive_rows"][0]
+    assert row["row_id"] == "hinerv_trained_export_bridge"
+    assert row["archive_sha256"] == _sha256(archive)
+    assert row["archive_bytes"] == archive.stat().st_size
+    assert row["state_npz_manifest_path"] == manifest.as_posix()
+    assert row["receiver_proof_path"] == proof.as_posix()
+    assert row["runtime_consumption_proof_ready"] is True
+    assert row["modelsize_candidate"]["candidate_id"] == "hinerv_trained_export_bridge"
+    assert "hinerv_checkpoint_export_state_npz_artifact_sha256_mismatch" not in row["blockers"]
+    assert "hinerv_checkpoint_export_receiver_proof_archive_sha256_mismatch" not in row["blockers"]
+
+    waterfill = build_hinerv_archive_ladder_waterfill(report)
+    assert waterfill["schema"] == "hinerv_archive_ladder_waterfill.v1"
+    assert waterfill["row_count"] == 1
+    waterfill_row = waterfill["rows"][0]
+    assert waterfill_row["waterfill_plan"]["schema"] == NERV_DECODER_WEIGHT_WATERFILL_SCHEMA
+    assert waterfill_row["waterfill_summary"]["group_count"] == 1
+    assert "decoder_weight_saliency_missing_for_some_groups" in waterfill_row["blockers"]
+    assert waterfill["score_claim"] is False
+
+
+def test_hinerv_checkpoint_export_bridge_cli_smoke(tmp_path: Path) -> None:
+    export_dir = tmp_path / "trained_export"
+    export_dir.mkdir()
+    archive = export_dir / "archive.zip"
+    archive.write_bytes(b"archive")
+    npz = export_dir / "hi_nerv_mlx_exported_state.npz"
+    np.savez(npz, **{"head.weight": np.array([1.0], dtype=np.float32)})
+    manifest = export_dir / "hi_nerv_mlx_exported_state_npz_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "schema": "framework_agnostic_npz_bridge_manifest.v1",
+                "artifact_path": npz.as_posix(),
+                "artifact_sha256": _sha256(npz),
+                "consumption_recommended": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    proof_dir = export_dir / "receiver_proof"
+    proof_dir.mkdir()
+    proof = proof_dir / "hi_nerv_mlx_receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "archive_sha256": _sha256(archive),
+                "runtime_consumption_proof_ready": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    candidate = _hinerv_budget_candidate(candidate_id="hinerv_cli_bridge")
+    export_json = tmp_path / "export.json"
+    export_json.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_cli_bridge",
+                "archive_path": archive.as_posix(),
+                "archive_bytes": archive.stat().st_size,
+                "archive_sha256": _sha256(archive),
+                "receiver_proof_ready": True,
+                "receiver_proof_path": proof.as_posix(),
+                "receiver_proof_sha256": _sha256(proof),
+                "modelsize_candidate": candidate,
+                "output_dir": export_dir.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    out_json = tmp_path / "ladder.json"
+    out_md = tmp_path / "ladder.md"
+
+    rc = harvest_cli.main(
+        [
+            "--checkpoint-export-json",
+            export_json.as_posix(),
+            "--output-json",
+            out_json.as_posix(),
+            "--output-md",
+            out_md.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["schema"] == HINERV_ARCHIVE_SIZE_LADDER_SCHEMA
+    assert payload["report_path"] == out_json.resolve(strict=False).as_posix()
+    assert payload["archive_rows"][0]["row_id"] == "hinerv_cli_bridge"
+    assert payload["archive_rows"][0]["receiver_proof_sha256"] == _sha256(proof)
+    assert out_md.read_text(encoding="utf-8").startswith("# HiNeRV archive-size ladder")
 
 
 def test_hinerv_archive_size_ladder_honors_full_video_saliency_metadata(
