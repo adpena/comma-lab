@@ -1,0 +1,3234 @@
+{
+  "blockers": [
+    "snerv_modelsize_candidates_require_real_snAR1_archive_byte_oracle",
+    "snerv_modelsize_candidates_require_full_video_mlx_prefilter",
+    "contest_cpu_cuda_exact_eval_not_executed"
+  ],
+  "budget_math": {
+    "contest_rate_score_per_byte": 6.658589531221714e-07,
+    "marginal_rule": "admit LF precision, step-map precision, or HF decoder payload only when full-video P18/P19 distortion reduction per byte exceeds the contest rate price",
+    "modelsize_control_contract_required_true_fields": [
+      "nominal_payload_bytes_are_planner_prior_only",
+      "nominal_under_ceiling_is_not_promotion_authority",
+      "receiver_closed_archive_bytes_required_for_under_ceiling_claim",
+      "trained_archive_export_required_for_score_or_rate_claim",
+      "archive_bytes_authority_required"
+    ],
+    "nominal_payload_is_not_authority": true,
+    "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+    "real_authority": "receiver-visible SNAR1 packet or packaged archive.zip bytes from run_snerv_advisory/export_snerv_archive_bound_candidate_package",
+    "selection_strategy": "retain diverse DWT levels and LF/step precision points under each byte ceiling, then let real SNAR1 archive bytes and full-video scorer replay arbitrate"
+  },
+  "candidate_count": 320,
+  "carrier_hw": [
+    384,
+    512
+  ],
+  "emb_sizes": [
+    0
+  ],
+  "family": "snerv",
+  "fc_dims": [
+    9
+  ],
+  "hard_byte_ceilings": [
+    178000
+  ],
+  "hfr_gain": 0.0,
+  "invalid_candidate_count": 0,
+  "invalid_candidates": [],
+  "mfu_scales": [
+    1,
+    2,
+    4
+  ],
+  "modelsize_control_profile": {
+    "blockers": [],
+    "dec_strds": [
+      5,
+      4,
+      2,
+      2,
+      2
+    ],
+    "enc_strds": [
+      5,
+      4,
+      2,
+      2,
+      2
+    ],
+    "modelsize_solve_supported": true,
+    "profile_id": "contest_receiver_profile",
+    "source": "pact_receiver_closed_snar1_profile",
+    "source_family": "PACT SNeRV receiver adapter",
+    "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+  },
+  "modelsize_control_profile_id": "contest_receiver_profile",
+  "num_pairs": 600,
+  "official_dec_strds": [
+    5,
+    4,
+    2,
+    2,
+    2
+  ],
+  "official_enc_strds": [
+    5,
+    4,
+    2,
+    2,
+    2
+  ],
+  "official_modelsize_mparams": [],
+  "patch_radius": 1,
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_modelsize_budget.v1",
+  "score_claim": false,
+  "selected_candidate_count": 9,
+  "selected_candidates": [
+    {
+      "bits_per_coeff": 1.5,
+      "byte_headroom": -10896665,
+      "candidate_id": "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 66,
+      "hfr_gain": 0.0,
+      "levels": 2,
+      "lf_coeff_count_total": 44236800,
+      "lf_coeffs_per_plane": 12288,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 41,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 8294400,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 7.374164843078752,
+      "nominal_step_map_payload_bytes": 2764800,
+      "nominal_total_payload_bytes": 11074665,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 1.5,
+      "byte_headroom": -2602285,
+      "candidate_id": "snerv_np600_haar_lv3_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 99,
+      "hfr_gain": 0.0,
+      "levels": 3,
+      "lf_coeff_count_total": 11059200,
+      "lf_coeffs_per_plane": 3072,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv3_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 61,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 2073600,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 1.8512776594812763,
+      "nominal_step_map_payload_bytes": 691200,
+      "nominal_total_payload_bytes": 2780285,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 1.5,
+      "byte_headroom": -528705,
+      "candidate_id": "snerv_np600_haar_lv4_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 132,
+      "hfr_gain": 0.0,
+      "levels": 4,
+      "lf_coeff_count_total": 2764800,
+      "lf_coeffs_per_plane": 768,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv4_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 81,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 518400,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 0.4705658514662041,
+      "nominal_step_map_payload_bytes": 172800,
+      "nominal_total_payload_bytes": 706705,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 1.5,
+      "byte_headroom": -10326,
+      "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 165,
+      "hfr_gain": 0.0,
+      "levels": 5,
+      "lf_coeff_count_total": 691200,
+      "lf_coeffs_per_plane": 192,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 102,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 129600,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 0.12539855320568605,
+      "nominal_step_map_payload_bytes": 43200,
+      "nominal_total_payload_bytes": 188326,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 2.0,
+      "byte_headroom": -53526,
+      "candidate_id": "snerv_np600_haar_lv5_lfb2_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 165,
+      "hfr_gain": 0.0,
+      "levels": 5,
+      "lf_coeff_count_total": 691200,
+      "lf_coeffs_per_plane": 192,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv5_lfb2_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 102,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 172800,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 0.15416365998056386,
+      "nominal_step_map_payload_bytes": 43200,
+      "nominal_total_payload_bytes": 231526,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 2.5,
+      "byte_headroom": -96726,
+      "candidate_id": "snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 165,
+      "hfr_gain": 0.0,
+      "levels": 5,
+      "lf_coeff_count_total": 691200,
+      "lf_coeffs_per_plane": 192,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 102,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 216000,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 0.18292876675544165,
+      "nominal_step_map_payload_bytes": 43200,
+      "nominal_total_payload_bytes": 274726,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 3.0,
+      "byte_headroom": -139926,
+      "candidate_id": "snerv_np600_haar_lv5_lfb3_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 165,
+      "hfr_gain": 0.0,
+      "levels": 5,
+      "lf_coeff_count_total": 691200,
+      "lf_coeffs_per_plane": 192,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv5_lfb3_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 102,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 259200,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 0.21169387353031946,
+      "nominal_step_map_payload_bytes": 43200,
+      "nominal_total_payload_bytes": 317926,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 4.0,
+      "byte_headroom": -226326,
+      "candidate_id": "snerv_np600_haar_lv5_lfb4_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "int2_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 165,
+      "hfr_gain": 0.0,
+      "levels": 5,
+      "lf_coeff_count_total": 691200,
+      "lf_coeffs_per_plane": 192,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv5_lfb4_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 102,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 345600,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 0.26922408708007506,
+      "nominal_step_map_payload_bytes": 43200,
+      "nominal_total_payload_bytes": 404326,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    },
+    {
+      "bits_per_coeff": 1.5,
+      "byte_headroom": -10367,
+      "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_mixed_magnitude_symmetric_ceil178000",
+      "capacity_source": "manual_fc_dim",
+      "carrier_hw": [
+        384,
+        512
+      ],
+      "decoder_feature_count": 11,
+      "decoder_payload_codec": "mixed_magnitude_symmetric",
+      "emb_size": 0,
+      "family": "snerv",
+      "fc_dim": 9,
+      "hard_byte_ceiling": 178000,
+      "hf_decoder_weight_count": 165,
+      "hfr_gain": 0.0,
+      "levels": 5,
+      "lf_coeff_count_total": 691200,
+      "lf_coeffs_per_plane": 192,
+      "lf_plane_count": 3600,
+      "mfu_scales": [
+        1,
+        2,
+        4
+      ],
+      "modelsize_control_contract": {
+        "archive_bytes_authority_required": true,
+        "authority_split": {
+          "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "invalid_control_row": false,
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "same_numeric_target_can_feed_family_specific_controls": true,
+          "schema": "nerv_modelsize_control_authority_split.v1",
+          "score_claim": false,
+          "target_modelsize_mparams_present": false
+        },
+        "control_precedence": {
+          "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_mixed_magnitude_symmetric_ceil178000",
+          "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+          "child_rules_override_parent_defaults": true,
+          "family": "snerv",
+          "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+          "layers_low_to_high_specificity": [
+            {
+              "active": true,
+              "layer_id": "parent_source_or_oss_defaults",
+              "role": "base_rule",
+              "specificity": 10
+            },
+            {
+              "active": true,
+              "layer_id": "official_source_control_base",
+              "role": "required_guardrail",
+              "specificity": 30
+            },
+            {
+              "active": true,
+              "layer_id": "pact_hard_byte_ceiling",
+              "role": "receiver_archive_budget_filter",
+              "specificity": 70
+            },
+            {
+              "active": true,
+              "layer_id": "pact_receiver_visible_modelsize_child_rule",
+              "role": "receiver_visible_capacity_rule",
+              "specificity": 80
+            }
+          ],
+          "more_finely_grained_child_rules_take_priority": true,
+          "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+          "parent_rules_remain_required_guardrails": true,
+          "promotion_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "schema": "nerv_control_precedence_contract.v1",
+          "score_claim": false
+        },
+        "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+        "family": "snerv",
+        "hard_byte_ceiling_is_archive_budget_filter": true,
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams_caps_archive_zip_bytes": false,
+        "modelsize_mparams_is_official_upstream_flag": false,
+        "mutates_receiver_visible_architecture": true,
+        "mutates_receiver_visible_fc_dim": true,
+        "mutates_receiver_visible_temporal_basis": false,
+        "mutates_trained_parameter_count": true,
+        "nominal_payload_bytes_are_planner_prior_only": true,
+        "nominal_under_ceiling_is_not_promotion_authority": true,
+        "promotion_eligible": false,
+        "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+        "schema": "nerv_modelsize_control_contract.v1",
+        "score_claim": false,
+        "shared_target_modelsize_mparams_consumed_as": null,
+        "trained_archive_export_required_for_score_or_rate_claim": true
+      },
+      "modelsize_control_profile": {
+        "blockers": [],
+        "dec_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "enc_strds": [
+          5,
+          4,
+          2,
+          2,
+          2
+        ],
+        "modelsize_solve_supported": true,
+        "profile_id": "contest_receiver_profile",
+        "source": "pact_receiver_closed_snar1_profile",
+        "source_family": "PACT SNeRV receiver adapter",
+        "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+      },
+      "modelsize_control_profile_id": "contest_receiver_profile",
+      "modelsize_mparams": null,
+      "nominal_decoder_payload_bytes": 143,
+      "nominal_header_overhead_bytes": 1024,
+      "nominal_lf_payload_bytes": 129600,
+      "nominal_metadata_payload_bytes": 14400,
+      "nominal_rate_score": 0.12542585342276405,
+      "nominal_step_map_payload_bytes": 43200,
+      "nominal_total_payload_bytes": 188367,
+      "nominal_under_ceiling": false,
+      "num_pairs": 600,
+      "official_modelsize_solution": null,
+      "patch_radius": 1,
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "requires_snAR1_archive_byte_oracle": true,
+      "schema": "snerv_modelsize_candidate.v1",
+      "score_claim": false,
+      "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+      "step_map_bits_per_coeff": 0.5,
+      "temporal_context": 1,
+      "temporal_mode": "delta",
+      "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+      "wavelet": "haar"
+    }
+  ],
+  "selected_candidates_by_ceiling": {
+    "178000": [
+      {
+        "bits_per_coeff": 1.5,
+        "byte_headroom": -10896665,
+        "candidate_id": "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 66,
+        "hfr_gain": 0.0,
+        "levels": 2,
+        "lf_coeff_count_total": 44236800,
+        "lf_coeffs_per_plane": 12288,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 41,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 8294400,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 7.374164843078752,
+        "nominal_step_map_payload_bytes": 2764800,
+        "nominal_total_payload_bytes": 11074665,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 1.5,
+        "byte_headroom": -2602285,
+        "candidate_id": "snerv_np600_haar_lv3_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 99,
+        "hfr_gain": 0.0,
+        "levels": 3,
+        "lf_coeff_count_total": 11059200,
+        "lf_coeffs_per_plane": 3072,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv3_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 61,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 2073600,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 1.8512776594812763,
+        "nominal_step_map_payload_bytes": 691200,
+        "nominal_total_payload_bytes": 2780285,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 1.5,
+        "byte_headroom": -528705,
+        "candidate_id": "snerv_np600_haar_lv4_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 132,
+        "hfr_gain": 0.0,
+        "levels": 4,
+        "lf_coeff_count_total": 2764800,
+        "lf_coeffs_per_plane": 768,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv4_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 81,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 518400,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 0.4705658514662041,
+        "nominal_step_map_payload_bytes": 172800,
+        "nominal_total_payload_bytes": 706705,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 1.5,
+        "byte_headroom": -10326,
+        "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 165,
+        "hfr_gain": 0.0,
+        "levels": 5,
+        "lf_coeff_count_total": 691200,
+        "lf_coeffs_per_plane": 192,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 102,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 129600,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 0.12539855320568605,
+        "nominal_step_map_payload_bytes": 43200,
+        "nominal_total_payload_bytes": 188326,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 2.0,
+        "byte_headroom": -53526,
+        "candidate_id": "snerv_np600_haar_lv5_lfb2_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 165,
+        "hfr_gain": 0.0,
+        "levels": 5,
+        "lf_coeff_count_total": 691200,
+        "lf_coeffs_per_plane": 192,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv5_lfb2_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 102,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 172800,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 0.15416365998056386,
+        "nominal_step_map_payload_bytes": 43200,
+        "nominal_total_payload_bytes": 231526,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 2.5,
+        "byte_headroom": -96726,
+        "candidate_id": "snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 165,
+        "hfr_gain": 0.0,
+        "levels": 5,
+        "lf_coeff_count_total": 691200,
+        "lf_coeffs_per_plane": 192,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv5_lfb2p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 102,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 216000,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 0.18292876675544165,
+        "nominal_step_map_payload_bytes": 43200,
+        "nominal_total_payload_bytes": 274726,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 3.0,
+        "byte_headroom": -139926,
+        "candidate_id": "snerv_np600_haar_lv5_lfb3_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 165,
+        "hfr_gain": 0.0,
+        "levels": 5,
+        "lf_coeff_count_total": 691200,
+        "lf_coeffs_per_plane": 192,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv5_lfb3_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 102,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 259200,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 0.21169387353031946,
+        "nominal_step_map_payload_bytes": 43200,
+        "nominal_total_payload_bytes": 317926,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 4.0,
+        "byte_headroom": -226326,
+        "candidate_id": "snerv_np600_haar_lv5_lfb4_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "int2_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 165,
+        "hfr_gain": 0.0,
+        "levels": 5,
+        "lf_coeff_count_total": 691200,
+        "lf_coeffs_per_plane": 192,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv5_lfb4_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 102,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 345600,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 0.26922408708007506,
+        "nominal_step_map_payload_bytes": 43200,
+        "nominal_total_payload_bytes": 404326,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      },
+      {
+        "bits_per_coeff": 1.5,
+        "byte_headroom": -10367,
+        "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_mixed_magnitude_symmetric_ceil178000",
+        "capacity_source": "manual_fc_dim",
+        "carrier_hw": [
+          384,
+          512
+        ],
+        "decoder_feature_count": 11,
+        "decoder_payload_codec": "mixed_magnitude_symmetric",
+        "emb_size": 0,
+        "family": "snerv",
+        "fc_dim": 9,
+        "hard_byte_ceiling": 178000,
+        "hf_decoder_weight_count": 165,
+        "hfr_gain": 0.0,
+        "levels": 5,
+        "lf_coeff_count_total": 691200,
+        "lf_coeffs_per_plane": 192,
+        "lf_plane_count": 3600,
+        "mfu_scales": [
+          1,
+          2,
+          4
+        ],
+        "modelsize_control_contract": {
+          "archive_bytes_authority_required": true,
+          "authority_split": {
+            "archive_byte_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+            "archive_byte_cap_semantics": "hard_byte_ceiling_is_filter_only_until_receiver_export_measures_bytes",
+            "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+            "family": "snerv",
+            "invalid_control_row": false,
+            "modelsize_mparams_caps_archive_zip_bytes": false,
+            "modelsize_mparams_is_official_upstream_flag": false,
+            "modelsize_mparams_semantics": "absent_or_measured_parameter_count_metadata",
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "same_numeric_target_can_feed_family_specific_controls": true,
+            "schema": "nerv_modelsize_control_authority_split.v1",
+            "score_claim": false,
+            "target_modelsize_mparams_present": false
+          },
+          "control_precedence": {
+            "candidate_id": "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_mixed_magnitude_symmetric_ceil178000",
+            "cascade_model": "css_like_specificity_with_fail_closed_authority_gates",
+            "child_rules_override_parent_defaults": true,
+            "family": "snerv",
+            "highest_specificity_active_layer": "pact_receiver_visible_modelsize_child_rule",
+            "layers_low_to_high_specificity": [
+              {
+                "active": true,
+                "layer_id": "parent_source_or_oss_defaults",
+                "role": "base_rule",
+                "specificity": 10
+              },
+              {
+                "active": true,
+                "layer_id": "official_source_control_base",
+                "role": "required_guardrail",
+                "specificity": 30
+              },
+              {
+                "active": true,
+                "layer_id": "pact_hard_byte_ceiling",
+                "role": "receiver_archive_budget_filter",
+                "specificity": 70
+              },
+              {
+                "active": true,
+                "layer_id": "pact_receiver_visible_modelsize_child_rule",
+                "role": "receiver_visible_capacity_rule",
+                "specificity": 80
+              }
+            ],
+            "more_finely_grained_child_rules_take_priority": true,
+            "official_controls_are_base_constraints_not_rate_optimizer_overrides": true,
+            "parent_rules_remain_required_guardrails": true,
+            "promotion_eligible": false,
+            "ready_for_exact_eval_dispatch": false,
+            "schema": "nerv_control_precedence_contract.v1",
+            "score_claim": false
+          },
+          "control_semantics": "manual_receiver_visible_fc_dim_feature_basis",
+          "family": "snerv",
+          "hard_byte_ceiling_is_archive_budget_filter": true,
+          "modelsize_control_profile": {
+            "blockers": [],
+            "dec_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "enc_strds": [
+              5,
+              4,
+              2,
+              2,
+              2
+            ],
+            "modelsize_solve_supported": true,
+            "profile_id": "contest_receiver_profile",
+            "source": "pact_receiver_closed_snar1_profile",
+            "source_family": "PACT SNeRV receiver adapter",
+            "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+          },
+          "modelsize_control_profile_id": "contest_receiver_profile",
+          "modelsize_mparams_caps_archive_zip_bytes": false,
+          "modelsize_mparams_is_official_upstream_flag": false,
+          "mutates_receiver_visible_architecture": true,
+          "mutates_receiver_visible_fc_dim": true,
+          "mutates_receiver_visible_temporal_basis": false,
+          "mutates_trained_parameter_count": true,
+          "nominal_payload_bytes_are_planner_prior_only": true,
+          "nominal_under_ceiling_is_not_promotion_authority": true,
+          "promotion_eligible": false,
+          "rate_authority_surface": "archive_zip_bytes_after_receiver_export_and_inflate_proof",
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_closed_archive_bytes_required_for_under_ceiling_claim": true,
+          "schema": "nerv_modelsize_control_contract.v1",
+          "score_claim": false,
+          "shared_target_modelsize_mparams_consumed_as": null,
+          "trained_archive_export_required_for_score_or_rate_claim": true
+        },
+        "modelsize_control_profile": {
+          "blockers": [],
+          "dec_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "enc_strds": [
+            5,
+            4,
+            2,
+            2,
+            2
+          ],
+          "modelsize_solve_supported": true,
+          "profile_id": "contest_receiver_profile",
+          "source": "pact_receiver_closed_snar1_profile",
+          "source_family": "PACT SNeRV receiver adapter",
+          "source_notes": "Not an upstream README default; selected for PACT contest receiver custody with explicit measured-archive authority required."
+        },
+        "modelsize_control_profile_id": "contest_receiver_profile",
+        "modelsize_mparams": null,
+        "nominal_decoder_payload_bytes": 143,
+        "nominal_header_overhead_bytes": 1024,
+        "nominal_lf_payload_bytes": 129600,
+        "nominal_metadata_payload_bytes": 14400,
+        "nominal_rate_score": 0.12542585342276405,
+        "nominal_step_map_payload_bytes": 43200,
+        "nominal_total_payload_bytes": 188367,
+        "nominal_under_ceiling": false,
+        "num_pairs": 600,
+        "official_modelsize_solution": null,
+        "patch_radius": 1,
+        "promotion_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "requires_snAR1_archive_byte_oracle": true,
+        "schema": "snerv_modelsize_candidate.v1",
+        "score_claim": false,
+        "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+        "step_map_bits_per_coeff": 0.5,
+        "temporal_context": 1,
+        "temporal_mode": "delta",
+        "upstream_modelsize_analogue": "SNeRV local analogue of upstream --modelsize: LF resolution/bit budget plus receiver-visible fc_dim/emb_size/MFU/HFR/temporal decoder feature payload define archive capacity; real authority is measured SNAR1 archive bytes",
+        "wavelet": "haar"
+      }
+    ]
+  },
+  "snerv_model_size_adapter": "snerv_fc_dim_emb_size_adapter_v1",
+  "temporal_context": 1,
+  "temporal_modes": [
+    "delta"
+  ],
+  "wavelet": "haar"
+}

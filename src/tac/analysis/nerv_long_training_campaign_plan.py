@@ -159,6 +159,7 @@ def build_nerv_long_training_campaign_plan(
     max_candidates_per_family: int = 3,
     joint_recon_weight_manifest_paths: Sequence[str | Path] = (),
     candidate_feedback_sources: Sequence[Mapping[str, Any]] = (),
+    modelsize_byte_cap_feedback_paths: Sequence[str | Path] = (),
     decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
@@ -192,6 +193,9 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(joint_recon_weight_manifest_paths)
     candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
     decoder_weight_waterfill_index = _decoder_weight_waterfill_index(decoder_weight_waterfill_sources)
+    byte_cap_feedback_paths = tuple(
+        Path(path).as_posix() for path in modelsize_byte_cap_feedback_paths
+    )
     planner_queue_artifact = (
         None
         if planner_row_queue_artifact_path is None
@@ -234,6 +238,7 @@ def build_nerv_long_training_campaign_plan(
                     decoder_weight_waterfill_index=decoder_weight_waterfill_index,
                     source_parity_contract=source_parity_contract,
                     planner_row_queue_artifact_path=planner_queue_artifact,
+                    modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 )
             )
     for candidate in snerv_candidates:
@@ -250,6 +255,7 @@ def build_nerv_long_training_campaign_plan(
                 bounded_proof_epochs=int(snerv_bounded_proof_epochs),
                 source_parity_contract=source_parity_contract,
                 planner_row_queue_artifact_path=planner_queue_artifact,
+                modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 snerv_lf_payload_recode_sources=snerv_lf_payload_recode_sources,
             )
         )
@@ -314,6 +320,8 @@ def build_nerv_long_training_campaign_plan(
         "joint_recon_weight_artifacts": list(joint_recon_weight_artifacts.values()),
         "joint_recon_weight_artifact_count": len(joint_recon_weight_artifacts),
         "candidate_feedback_source_count": len(candidate_feedback_sources),
+        "modelsize_byte_cap_feedback_paths": list(byte_cap_feedback_paths),
+        "modelsize_byte_cap_feedback_path_count": len(byte_cap_feedback_paths),
         "snerv_bounded_proof_only": bool(snerv_bounded_proof_only),
         "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
         "candidate_feedback_row_count": _unique_index_row_count(candidate_feedback_index),
@@ -421,8 +429,13 @@ def _hinerv_campaign_row(
     decoder_weight_waterfill_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     source_parity_contract: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
+    modelsize_byte_cap_feedback_paths: Sequence[str] = (),
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
+    runner_candidate_id = "auto" if modelsize_byte_cap_feedback_paths else candidate_id
+    runner_candidate_label = (
+        "auto_bytecap" if modelsize_byte_cap_feedback_paths else candidate_id
+    )
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
     num_pairs = int(candidate.get("num_pairs") or 600)
     joint_recon_weight = dict((joint_recon_weight_artifacts or {}).get(num_pairs) or {})
@@ -480,7 +493,7 @@ def _hinerv_campaign_row(
         measured_archive_bytes=feedback.get("measured_archive_bytes"),
         measured_num_pairs=feedback.get("measured_num_pairs"),
     )
-    row_id = f"hi_nerv::{candidate_id}::{optimizer_kind}"
+    row_id = f"hi_nerv::{runner_candidate_label}::{optimizer_kind}"
     optimizer_policy = _hinerv_optimizer_policy_for_kind(optimizer_kind)
     command = [
         "uv",
@@ -508,7 +521,7 @@ def _hinerv_campaign_row(
         "--distillation-device",
         "gpu",
         "--modelsize-candidate-id",
-        candidate_id,
+        runner_candidate_id,
         "--segnet-distillation-weight",
         _float_token(effective_segnet_distillation_weight),
         "--pose-distillation-weight",
@@ -535,6 +548,8 @@ def _hinerv_campaign_row(
     ]
     if planner_row_queue_artifact_path:
         command.extend(["--planner-row-queue-artifact", planner_row_queue_artifact_path])
+    for path in modelsize_byte_cap_feedback_paths:
+        command.extend(["--modelsize-byte-cap-feedback-json", str(path)])
     if prioritized_pair_indices:
         command.extend(
             [
@@ -638,6 +653,16 @@ def _hinerv_campaign_row(
         blockers=blockers,
         extra={
             "optimizer_kind": str(optimizer_kind),
+            "budget_candidate_id": candidate_id,
+            "runner_modelsize_candidate_id": runner_candidate_id,
+            "modelsize_candidate_selection_mode": (
+                "calibrated_auto_from_modelsize_byte_cap_feedback"
+                if modelsize_byte_cap_feedback_paths
+                else "explicit_budget_candidate"
+            ),
+            "modelsize_byte_cap_feedback_paths": list(
+                modelsize_byte_cap_feedback_paths
+            ),
             "optimizer_control": _optimizer_control(optimizer_kind),
             "optimizer_policy": _hinerv_optimizer_policy_control(
                 optimizer_kind=optimizer_kind,
@@ -688,9 +713,14 @@ def _snerv_campaign_row(
     bounded_proof_epochs: int = 3,
     source_parity_contract: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
+    modelsize_byte_cap_feedback_paths: Sequence[str] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
+    runner_candidate_id = "auto" if modelsize_byte_cap_feedback_paths else candidate_id
+    runner_candidate_label = (
+        "auto_bytecap" if modelsize_byte_cap_feedback_paths else candidate_id
+    )
     source_control_blockers = _snerv_source_bound_control_blockers(candidate)
     source_parity = _source_parity_family_report(
         family="snerv",
@@ -750,7 +780,7 @@ def _snerv_campaign_row(
         measured_archive_bytes=feedback.get("measured_archive_bytes"),
         measured_num_pairs=feedback.get("measured_num_pairs"),
     )
-    row_id = f"snerv::{candidate_id}::native_rate_aware_training"
+    row_id = f"snerv::{runner_candidate_label}::native_rate_aware_training"
     native_mlx_decoder_train_steps = max(
         0,
         int(
@@ -805,7 +835,7 @@ def _snerv_campaign_row(
         "--snerv-score-aware-long-training-eval-roundtrip-ste",
         "--snerv-score-aware-long-training-pr95-faithful-curriculum",
         "--modelsize-candidate-id",
-        candidate_id,
+        runner_candidate_id,
         "--distillation-device",
         "gpu",
         "--segnet-distillation-weight",
@@ -848,6 +878,8 @@ def _snerv_campaign_row(
     ]
     if planner_row_queue_artifact_path:
         command.extend(["--planner-row-queue-artifact", planner_row_queue_artifact_path])
+    for path in modelsize_byte_cap_feedback_paths:
+        command.extend(["--modelsize-byte-cap-feedback-json", str(path)])
     if str(candidate.get("snerv_model_size_adapter") or "") == (SNERV_SPECTRA_PRESERVING_ADAPTER):
         insert_at = command.index("--snerv-model-size-adapter")
         command.insert(insert_at, "--snerv-spectra-preserving-adapter")
@@ -923,6 +955,16 @@ def _snerv_campaign_row(
         blockers=blockers,
         extra={
             "optimizer_kind": str(optimizer_kind),
+            "budget_candidate_id": candidate_id,
+            "runner_modelsize_candidate_id": runner_candidate_id,
+            "modelsize_candidate_selection_mode": (
+                "calibrated_auto_from_modelsize_byte_cap_feedback"
+                if modelsize_byte_cap_feedback_paths
+                else "explicit_budget_candidate"
+            ),
+            "modelsize_byte_cap_feedback_paths": list(
+                modelsize_byte_cap_feedback_paths
+            ),
             "optimizer_control": optimizer_control,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),

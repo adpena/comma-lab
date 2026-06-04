@@ -1416,6 +1416,43 @@ def test_long_training_campaign_plan_keeps_snerv_bounded_proof_explicit() -> Non
     assert snerv["curriculum_plan"]["training_plan"]["native_mlx_long_training_bound"] is False
 
 
+def test_long_training_campaign_plan_threads_modelsize_byte_cap_feedback_paths() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(
+            "/Volumes/VertigoDataTier/pact/exports/hi.json",
+            "/Volumes/VertigoDataTier/pact/exports/sn.json",
+        ),
+    )
+
+    assert report["modelsize_byte_cap_feedback_path_count"] == 2
+    assert report["modelsize_byte_cap_feedback_paths"] == [
+        "/Volumes/VertigoDataTier/pact/exports/hi.json",
+        "/Volumes/VertigoDataTier/pact/exports/sn.json",
+    ]
+    for row in report["campaign_rows"]:
+        argv = row["command_argv"]
+        assert row["runner_modelsize_candidate_id"] == "auto"
+        assert row["modelsize_candidate_selection_mode"] == (
+            "calibrated_auto_from_modelsize_byte_cap_feedback"
+        )
+        assert argv[argv.index("--modelsize-candidate-id") + 1] == "auto"
+        indices = [
+            index
+            for index, value in enumerate(argv)
+            if value == "--modelsize-byte-cap-feedback-json"
+        ]
+        assert len(indices) == 2
+        assert [argv[index + 1] for index in indices] == report[
+            "modelsize_byte_cap_feedback_paths"
+        ]
+
+
 def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),

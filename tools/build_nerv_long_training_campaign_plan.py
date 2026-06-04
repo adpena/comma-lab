@@ -80,6 +80,17 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--modelsize-byte-cap-feedback-json",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Measured checkpoint/archive export JSON consumed by "
+            "run_compact_renderer_mlx_spine_runner.py for calibrated hard-byte "
+            "cap modelsize selection. Repeatable."
+        ),
+    )
+    parser.add_argument(
         "--decoder-weight-waterfill-source",
         action="append",
         default=[],
@@ -131,6 +142,9 @@ def main(argv: list[str] | None = None) -> int:
         max_candidates_per_family=args.max_candidates_per_family,
         joint_recon_weight_manifest_paths=tuple(args.joint_recon_weight_manifest),
         candidate_feedback_sources=tuple(_load_feedback_sources(args.candidate_feedback_source)),
+        modelsize_byte_cap_feedback_paths=tuple(
+            path.as_posix() for path in args.modelsize_byte_cap_feedback_json
+        ),
         decoder_weight_waterfill_sources=tuple(
             _load_decoder_weight_waterfill_sources(
                 args.decoder_weight_waterfill_source,
