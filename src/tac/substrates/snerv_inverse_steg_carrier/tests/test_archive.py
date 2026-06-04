@@ -650,12 +650,22 @@ def test_official_mfu_hfr_tub_shared_skip_high_payload_expands_receiver_state() 
     assert shared_header["skip_high_storage"]["source_shape"] == [2, 1, 8, 8]
     assert shared_header["skip_high_storage"]["stored_shape"] == [1, 1, 8, 8]
     assert shared_header["skip_high_storage"]["raw_byte_savings"] == 512
+    assert shared_header["skip_high_storage"][
+        "lossless_relative_to_source_skip_high"
+    ] is False
+    assert shared_header["skip_high_storage"][
+        "train_time_tied_state_required_for_exact_compact_export"
+    ] is True
     assert shared_header["raw_tensor_bytes"] < full_header["raw_tensor_bytes"]
     assert len(shared_payload) < len(full_payload)
     assert decoded.tensors["inputs.mfu.skip_high"].shape == (2, 1, 8, 8)
     np.testing.assert_allclose(
         decoded.tensors["inputs.mfu.skip_high"][0],
         decoded.tensors["inputs.mfu.skip_high"][1],
+    )
+    assert not np.array_equal(
+        decoded.tensors["inputs.mfu.skip_high"],
+        bundle["skip_high"],
     )
     assert proof["receiver_runtime_decode_proven"] is True
     assert proof["score_claim"] is False
@@ -699,9 +709,19 @@ def test_official_mfu_hfr_tub_compact_skip_high_payload_expands_receiver_state(
     assert compact_header["skip_high_storage"]["stored_shape"] == [1, 1, 1, 1]
     assert compact_header["skip_high_storage"]["raw_byte_savings"] == 1016
     assert compact_header["skip_high_storage"]["receiver_expands_skip_high"] is True
+    assert compact_header["skip_high_storage"][
+        "lossless_relative_to_source_skip_high"
+    ] is False
+    assert compact_header["skip_high_storage"][
+        "train_time_tied_state_required_for_exact_compact_export"
+    ] is True
     assert compact_header["skip_high_storage"]["encoder_consumed_compact_train_state"] is False
     assert len(compact_payload) < len(full_payload)
     assert decoded.tensors["inputs.mfu.skip_high"].shape == (2, 1, 8, 8)
+    assert not np.array_equal(
+        decoded.tensors["inputs.mfu.skip_high"],
+        bundle["skip_high"],
+    )
     assert proof["receiver_runtime_decode_proven"] is True
     assert proof["score_claim"] is False
 
@@ -741,6 +761,10 @@ def test_official_mfu_hfr_tub_compact_skip_high_encoder_avoids_reexpansion(
     assert header["skip_high_storage"]["source_shape"] == [2, 1, 8, 8]
     assert header["skip_high_storage"]["stored_shape"] == stored_shape
     assert header["skip_high_storage"]["encoder_consumed_compact_train_state"] is True
+    assert header["skip_high_storage"]["lossless_relative_to_source_skip_high"] is False
+    assert header["skip_high_storage"][
+        "train_time_tied_state_required_for_exact_compact_export"
+    ] is True
     assert decoded.tensors["inputs.mfu.skip_high"].shape == source_shape
     np.testing.assert_allclose(
         decoded.tensors["inputs.mfu.skip_high"],
@@ -771,6 +795,8 @@ def test_official_mfu_hfr_tub_unused_tub_inputs_compact_without_score_authority(
     assert compact_header["tub_input_storage"][
         "lossless_relative_to_source_tub_inputs"
     ] is False
+    assert compact_header["tub_input_storage"]["source_forward_replay_authority"] is False
+    assert compact_header["tub_input_storage"]["contest_scorer_authority"] is False
     assert compact_header["source_forward_replay_authority"] is False
     assert len(compact_payload) < len(full_payload)
     np.testing.assert_array_equal(decoded.decode_frames(), full_decoded.decode_frames())

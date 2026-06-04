@@ -36,6 +36,8 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     assert report["official_source_markers_present"] is True
     assert report["local_receiver_safe_adapter_present"] is True
     primitive = report["official_mfu_hfr_tub_primitive_replay_binding"]
+    assert primitive["all_primitive_numeric_graph_replay_proven"] is True
+    assert primitive["all_receiver_primitive_replay_proven"] is True
     assert primitive["all_primitive_source_replay_proven"] is True
     assert primitive["full_stack_source_forward_replay_proven"] is False
     assert primitive["receiver_export_self_consistency_verified"] is True
@@ -82,6 +84,8 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
 
     summary = summarize_snerv_official_source_audit(report)
     assert summary["official_source_markers_present"] is True
+    assert summary["official_mfu_hfr_tub_receiver_primitives_proven"] is True
+    assert summary["official_mfu_hfr_tub_numeric_graph_replay_proven"] is True
     assert summary["official_mfu_hfr_tub_primitives_proven"] is True
     assert summary["official_receiver_runtime_decode_proven"] is True
     assert summary["official_receiver_source_forward_replay_bound"] is False
@@ -99,7 +103,8 @@ def test_snerv_official_source_audit_preserves_blocker_until_local_parity_proof(
     md = render_snerv_official_source_parity_markdown(report)
     assert "SNeRV Official Source-Parity Audit" in md
     assert "official MFU/HFR/TUB parity proven: `False`" in md
-    assert "official MFU/HFR/TUB primitive replay proven: `True`" in md
+    assert "official MFU/HFR/TUB receiver primitive replay proven: `True`" in md
+    assert "official MFU/HFR/TUB numeric graph replay proven: `True`" in md
     assert "official receiver runtime decode proven: `True`" in md
     assert "official receiver source-forward replay bound: `False`" in md
     assert "official MFU/HFR/TUB parity falsified: `False`" in md
