@@ -1,0 +1,202 @@
+# NeRV Long-Training Campaign Plan
+
+Schema: `nerv_long_training_campaign_plan.v1`
+Rows: `37`
+Launchable local rows: `0`
+Blocked rows: `37`
+Score claim: `False`
+Ready for exact dispatch: `False`
+
+## Rows
+
+- `hi_nerv::auto_bytecap::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::pact_muon_adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adamax`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamax`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adamax`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamax`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adamax`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamax`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adamw`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adamw`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::lion`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `lion`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::muon`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `muon`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::muon`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `muon`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::muon`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `muon`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adadelta`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adadelta`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adadelta`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adadelta`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adadelta`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adadelta`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adafactor`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adafactor`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adafactor`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adafactor`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adafactor`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adafactor`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adagrad`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adagrad`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adagrad`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adagrad`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adagrad`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adagrad`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adam`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adam`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adam`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adam`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::adam`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `adam`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::rmsprop`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `rmsprop`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::rmsprop`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `rmsprop`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::rmsprop`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `rmsprop`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::sgd`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `sgd`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::sgd`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `sgd`
+  blockers: `11`
+- `hi_nerv::auto_bytecap::sgd`
+  family: `hi_nerv`
+  launchable_mlx: `False`
+  optimizer: `sgd`
+  blockers: `11`
+- `snerv::auto_bytecap::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `16`
+- `snerv::auto_bytecap::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `16`
+- `snerv::auto_bytecap::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `16`
+- `snerv::auto_bytecap::native_rate_aware_training`
+  family: `snerv`
+  launchable_mlx: `False`
+  optimizer: `pact_muon_adamw`
+  blockers: `18`
+
+## Blockers
+
+- `campaign_plan_is_not_execution`
+- `exact_cpu_cuda_not_launched_by_campaign_plan`
+- `snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes`

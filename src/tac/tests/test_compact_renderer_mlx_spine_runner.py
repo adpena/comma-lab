@@ -2456,11 +2456,18 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         row for row in campaign_plan["campaign_rows"] if row["family"] == "snerv"
     ]
     assert snerv_campaign_rows
-    assert all(row["local_mlx_launch_command_ready"] is True for row in snerv_campaign_rows)
     assert all(
-        row["score_lowering_gate"]["command_materialized"] is True
-        and row["score_lowering_gate"]["local_mlx_executable"] is True
-        and row["score_lowering_gate"]["prelaunch_allowed"] is True
+        row["local_mlx_launch_command_ready"]
+        is row["hard_byte_ceiling_satisfied_for_long_training"]
+        for row in snerv_campaign_rows
+    )
+    assert all(
+        row["score_lowering_gate"]["command_materialized"]
+        is row["hard_byte_ceiling_satisfied_for_long_training"]
+        and row["score_lowering_gate"]["local_mlx_executable"]
+        is row["hard_byte_ceiling_satisfied_for_long_training"]
+        and row["score_lowering_gate"]["prelaunch_allowed"]
+        is row["hard_byte_ceiling_satisfied_for_long_training"]
         and row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
         and row["score_lowering_gate"]["cpu_replay_ready"] is False
         and row["score_lowering_gate"]["exact_gate_ready"] is False
@@ -2470,7 +2477,11 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         and row["score_lowering_gate"]["ready_for_exact_eval_dispatch"] is False
         for row in snerv_campaign_rows
     )
-    assert all(row["score_lowering_gate"]["launch_blockers"] == [] for row in snerv_campaign_rows)
+    assert any(
+        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
+        in row["blockers"]
+        for row in snerv_campaign_rows
+    )
     assert any(
         "snerv_byte_closed_archive_export_missing"
         in row["score_lowering_gate"]["promotion_blockers"]

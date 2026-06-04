@@ -48,7 +48,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
-    assert report["launchable_local_row_count"] == 1
+    assert report["launchable_local_row_count"] == 0
     assert report["family_counts"] == {"hi_nerv": 2, "snerv": 1}
     assert report["source_parity_contract"]["schema"] == ("nerv_source_parity_contract.v1")
     assert report["source_parity_required_for_long_training_ready"] is True
@@ -177,11 +177,17 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     }
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert snerv_row["local_mlx_launch_command_ready"] is True
-    assert snerv_row["score_lowering_gate"]["command_materialized"] is True
-    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is True
-    assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is True
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["implementation_status"] == "native_rate_aware_long_training_rate_blocked"
+    assert snerv_row["hard_byte_ceiling_satisfied_for_long_training"] is False
+    assert snerv_row["score_lowering_gate"]["command_materialized"] is False
+    assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
+    assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is False
     assert snerv_row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
+    assert (
+        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
+        in snerv_row["blockers"]
+    )
     assert (
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority"
         not in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
@@ -190,12 +196,12 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in snerv_row["score_lowering_gate"]["launch_blockers"]
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
-    assert snerv_row["experiment_queue_entry"]["status"] == "queued"
-    assert snerv_row["experiment_queue_entry"]["blocked"] is False
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+    assert snerv_row["experiment_queue_entry"]["blocked"] is True
     launch_contract = snerv_row["experiment_queue_entry"]["launch_authority_contract"]
     assert launch_contract["schema"] == ("nerv_long_training_queue_launch_authority_contract.v1")
-    assert launch_contract["queue_status_is_local_mlx_plan"] is True
-    assert launch_contract["queue_status_is_runnable_plan"] is True
+    assert launch_contract["queue_status_is_local_mlx_plan"] is False
+    assert launch_contract["queue_status_is_runnable_plan"] is False
     assert (
         "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in launch_contract["queue_launch_blockers"]
     )
@@ -497,7 +503,10 @@ def test_long_training_campaign_plan_executes_snerv_official_temporal_mode() -> 
     queue_command = snerv_row["experiment_queue_entry"]["steps"][0]["command"]
     assert queue_command == snerv_row["command_argv"]
     assert queue_command[queue_command.index("--snerv-temporal-mode") + 1] == "official_haar_dwt1d_lowpass"
-    assert snerv_row["implementation_status"] == "native_rate_aware_long_training_queue_ready"
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["implementation_status"] == "native_rate_aware_long_training_rate_blocked"
+    assert snerv_row["hard_byte_ceiling_satisfied_for_long_training"] is False
+    assert "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in snerv_row["blockers"]
 
 
 def test_long_training_campaign_plan_executes_snerv_official_mfu_hfr_tub_adapter() -> None:
@@ -1764,6 +1773,76 @@ def test_long_training_campaign_plan_consumes_snerv_binary_profile_receiver_proo
         "blockers"
     ]
     assert "snerv_mlx_native_full600_campaign_not_ready" not in snerv["blockers"]
+
+
+def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_demotion_row(
+    tmp_path: Path,
+) -> None:
+    observed = dict(_snerv_budget()["selected_candidates"][0])
+    observed.update(
+        {
+            "candidate_id": "snerv_observed_receiver_proven_over_ceiling",
+            "hard_byte_ceiling": 216_000,
+            "nominal_total_payload_bytes": 188_854,
+            "nominal_under_ceiling": True,
+        }
+    )
+    export = tmp_path / "snerv_checkpoint_archive_export.json"
+    export.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "candidate_id": observed["candidate_id"],
+                "archive_bytes": 444_828,
+                "packet_bytes": 2_347_476,
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "modelsize_candidate": observed,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(export.as_posix(),),
+    )
+
+    snerv_rows = [row for row in report["campaign_rows"] if row["family"] == "snerv"]
+    assert len(snerv_rows) == 2
+    selected, demoted = snerv_rows
+    assert selected["candidate"]["candidate_id"] != observed["candidate_id"]
+    assert selected["candidate"].get("_modelsize_feedback_demote_only") is not True
+    selected_preflight = selected["modelsize_byte_cap_preflight"]
+    assert selected_preflight["missing_matching_feedback_is_blocking"] is False
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in selected[
+        "blockers"
+    ]
+    assert demoted["candidate"]["candidate_id"] == observed["candidate_id"]
+    assert demoted["local_mlx_launch_command_ready"] is False
+    assert demoted["candidate"]["_modelsize_feedback_demote_only"] is True
+    assert demoted["candidate"]["_modelsize_feedback_observed_archive_bytes"] == 444_828
+    assert (
+        demoted["candidate"]["_modelsize_feedback_archive_over_hard_byte_ceiling_bytes"]
+        == 228_828
+    )
+    assert (
+        "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only"
+        in demoted["blockers"]
+    )
+    assert "snerv_receiver_proven_archive_over_hard_byte_ceiling" in demoted[
+        "blockers"
+    ]
+    feedback = demoted["curriculum_plan"]["byte_oracle_logging"]
+    assert feedback["archive_under_hard_byte_ceiling"] is False
+    assert feedback["archive_over_hard_byte_ceiling_bytes"] == 228_828
 
 
 def test_long_training_campaign_plan_rejects_snerv_byte_feedback_failed_receiver_contract(
@@ -3336,14 +3415,15 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert snerv_exp["steps"][0]["command"][
         snerv_exp["steps"][0]["command"].index("--planner-row-queue-artifact") + 1
     ] == out_queue.as_posix()
-    assert snerv_exp["blocked"] is False
+    assert snerv_exp["status"] == "disabled"
+    assert snerv_exp["blocked"] is True
     assert "--snerv-score-aware-long-training-epochs" in snerv_exp["steps"][0]["command"]
     loaded_queue = load_queue_definition(out_queue)
     assert loaded_queue["schema"] == "experiment_queue.v1"
     loaded_snerv_exp = next(exp for exp in loaded_queue["experiments"] if exp["family"] == "snerv")
-    assert loaded_snerv_exp["status"] == "queued"
-    assert loaded_snerv_exp["blocked"] is False
-    assert loaded_snerv_exp["launch_authority_contract"]["queue_status_is_runnable_plan"] is True
+    assert loaded_snerv_exp["status"] == "disabled"
+    assert loaded_snerv_exp["blocked"] is True
+    assert loaded_snerv_exp["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
     assert loaded_snerv_exp["steps"][0]["resources"]["kind"] == "local_mlx"
     assert out_md.read_text(encoding="utf-8").startswith("# NeRV Long-Training Campaign Plan")
 
@@ -3452,9 +3532,13 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
     out_json = tmp_path / "campaign.json"
     feedback_root = tmp_path / "exports"
     export_dir = feedback_root / "hinerv_epoch16749"
+    snerv_export_dir = feedback_root / "snerv_epoch22399"
     export_dir.mkdir(parents=True)
+    snerv_export_dir.mkdir(parents=True)
     candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    snerv_candidate = dict(_snerv_budget()["selected_candidates"][0])
     export_report = export_dir / "export_report.json"
+    snerv_export_report = snerv_export_dir / "snerv_checkpoint_archive_export.json"
     export_report.write_text(
         json.dumps(
             {
@@ -3466,6 +3550,25 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
                 "receiver_proof_ready": True,
                 "modelsize_candidate": candidate,
                 "hard_byte_ceilings": [178_000],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    snerv_export_report.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "candidate_id": snerv_candidate["candidate_id"],
+                "archive_bytes": 444_828,
+                "packet_bytes": 2_347_476,
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "modelsize_candidate": snerv_candidate,
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -3498,10 +3601,11 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
 
     assert rc == 0
     payload = json.loads(out_json.read_text(encoding="utf-8"))
-    assert payload["modelsize_byte_cap_feedback_path_count"] == 1
-    assert payload["modelsize_byte_cap_feedback_paths"] == [
-        export_report.resolve(strict=False).as_posix()
-    ]
+    assert payload["modelsize_byte_cap_feedback_path_count"] == 2
+    assert set(payload["modelsize_byte_cap_feedback_paths"]) == {
+        export_report.resolve(strict=False).as_posix(),
+        snerv_export_report.resolve(strict=False).as_posix(),
+    }
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert hi["runner_modelsize_candidate_id"] == "auto"
     assert hi["local_mlx_launch_command_ready"] is False

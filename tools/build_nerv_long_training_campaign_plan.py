@@ -260,6 +260,7 @@ def _discover_modelsize_byte_cap_feedback_paths(
         for name in (
             "export_report.json",
             "hinerv_checkpoint_archive_export.json",
+            "snerv_checkpoint_archive_export.json",
             "snerv_binary_profile.json",
         ):
             for path in root.rglob(name):

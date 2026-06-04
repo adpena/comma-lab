@@ -722,6 +722,60 @@ def test_snerv_candidate_curriculum_promotes_file_backed_scorer_loop_to_long_tra
     assert plan["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_candidate_curriculum_blocks_receiver_proven_over_ceiling_lf_grammar() -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        levels=5,
+        bits_per_coeff=1.5,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+    ).as_dict()
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=29_650,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=2_347_476,
+        measured_archive_bytes=444_828,
+        native_mlx_train_export_attached=True,
+        native_mlx_long_training_bound=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+        native_mlx_scorer_loop_qat_attached=True,
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=True,
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=True,
+        native_mlx_scorer_loop_qat_accepted_improvement=True,
+        native_mlx_scorer_loop_qat_best_materialized=True,
+        native_mlx_real_segnet_teacher_bound=True,
+        native_mlx_real_posenet_teacher_bound=True,
+        native_mlx_pr95_curriculum_bound=True,
+        native_mlx_eval_roundtrip_ste_bound=True,
+        native_mlx_differentiable_pose_preprocess_bound=True,
+        native_mlx_coder_qat_bound=True,
+        native_mlx_muon_adamw_partition_bound=True,
+        receiver_proof_attached=True,
+        full_video_local_prefilter_attached=True,
+        local_cpu_replay_gate_attached=True,
+    )
+
+    feedback = plan["byte_oracle_logging"]
+    assert feedback["feedback_ready"] is True
+    assert feedback["archive_under_hard_byte_ceiling"] is False
+    assert feedback["archive_over_hard_byte_ceiling_bytes"] == 228_828
+    assert feedback["rate_axis_feedback_verdict"] == (
+        "receiver_proven_archive_over_hard_byte_ceiling"
+    )
+    assert "snerv_receiver_proven_archive_over_hard_byte_ceiling" in plan[
+        "blockers"
+    ]
+    assert (
+        "snerv_over_ceiling_local_lf_grammar_reroute_to_official_packet_or_lf_recode"
+        in plan["blockers"]
+    )
+
+
 def test_snerv_candidate_curriculum_harvests_partial_bytes_without_readiness() -> None:
     candidate = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=216_000,

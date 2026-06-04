@@ -952,6 +952,12 @@ def _snerv_campaign_row(
             ]
         )
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
+    hard_byte_ceiling_satisfied_for_long_training = (
+        _snerv_hard_byte_ceiling_satisfied_for_long_training(
+            candidate,
+            lf_recode_admission_plan=lf_recode_admission_plan,
+        )
+    )
     blockers = _dedupe(
         [
             ("snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" if bounded_proof_only else ""),
@@ -963,6 +969,10 @@ def _snerv_campaign_row(
             ),
             "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes"
             if candidate.get("nominal_under_ceiling") is not True
+            else "",
+            "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
+            if not bounded_proof_only
+            and not hard_byte_ceiling_satisfied_for_long_training
             else "",
             *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
@@ -982,7 +992,15 @@ def _snerv_campaign_row(
         and not source_parity["required_blockers"]
     )
     launch_ready = bool(
-        source_controls_ready and (True if bounded_proof_only else bool(rate_plausible_for_long_training))
+        source_controls_ready
+        and (
+            True
+            if bounded_proof_only
+            else bool(
+                rate_plausible_for_long_training
+                and hard_byte_ceiling_satisfied_for_long_training
+            )
+        )
     )
     return _row(
         row_id=row_id,
@@ -1000,7 +1018,10 @@ def _snerv_campaign_row(
                 if bounded_proof_only
                 else (
                     "native_rate_aware_long_training_queue_ready"
-                    if rate_plausible_for_long_training
+                    if (
+                        rate_plausible_for_long_training
+                        and hard_byte_ceiling_satisfied_for_long_training
+                    )
                     else "native_rate_aware_long_training_rate_blocked"
                 )
             )
@@ -1034,6 +1055,9 @@ def _snerv_campaign_row(
             "prioritized_pair_training": prioritized_pair_training,
             "snerv_lf_payload_recode_admission_plan": lf_recode_admission_plan,
             "snerv_lf_payload_codec_from_admission_plan": lf_recode_selected_mode,
+            "hard_byte_ceiling_satisfied_for_long_training": (
+                hard_byte_ceiling_satisfied_for_long_training
+            ),
             "native_mlx_decoder_training_plan": {
                 "schema": "snerv_native_mlx_decoder_training_plan.v1",
                 "candidate_conditioned": True,
@@ -1710,6 +1734,29 @@ def _merge_modelsize_byte_cap_feedback_candidates(
         authority_blockers = _candidate_authority_blockers(candidate)
         if authority_blockers:
             clean["_candidate_authority_blockers"] = authority_blockers
+        observed_archive_bytes = _first_present_int(
+            observation,
+            ("measured_archive_bytes",),
+        )
+        hard_byte_ceiling = _first_present_int(clean, ("hard_byte_ceiling",))
+        if (
+            observed_archive_bytes is not None
+            and hard_byte_ceiling is not None
+            and int(observed_archive_bytes) > int(hard_byte_ceiling)
+        ):
+            clean["_candidate_authority_blockers"] = _dedupe(
+                [
+                    *list(clean.get("_candidate_authority_blockers") or []),
+                    f"{family}_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only",
+                ]
+            )
+            clean["_modelsize_feedback_demote_only"] = True
+            clean["_modelsize_feedback_observed_archive_bytes"] = int(
+                observed_archive_bytes
+            )
+            clean["_modelsize_feedback_archive_over_hard_byte_ceiling_bytes"] = int(
+                observed_archive_bytes
+            ) - int(hard_byte_ceiling)
         feedback_candidates.append(clean)
     all_candidates = [*all_candidates, *feedback_candidates]
     selected_by_id = {
@@ -1746,6 +1793,8 @@ def _merge_modelsize_byte_cap_feedback_candidates(
             if family == "snerv"
             else _hinerv_long_training_candidate_sort_key(row)
         )
+        if row.get("_modelsize_feedback_demote_only") is True:
+            return (3, predicted_archive, selected_rank, *family_key)
         return (
             0 if matched and predicted_under else 1 if matched else 2,
             predicted_archive if matched and predicted_under else 0,
@@ -1754,7 +1803,15 @@ def _merge_modelsize_byte_cap_feedback_candidates(
         )
 
     rows.sort(key=sort_key)
-    return rows[: max(1, int(limit))]
+    limited = rows[: max(1, int(limit))]
+    limited_ids = {str(row.get("candidate_id") or "") for row in limited}
+    demotion_rows = [
+        row
+        for row in rows[max(1, int(limit)) :]
+        if row.get("_modelsize_feedback_demote_only") is True
+        and str(row.get("candidate_id") or "") not in limited_ids
+    ]
+    return [*limited, *demotion_rows]
 
 
 def _merge_hinerv_waterfill_candidate_evidence(
@@ -1919,6 +1976,22 @@ def _snerv_rate_plausible_for_long_training(candidate: Mapping[str, Any]) -> boo
     return abs(byte_headroom) <= max(int(ceiling), 65_536)
 
 
+def _snerv_hard_byte_ceiling_satisfied_for_long_training(
+    candidate: Mapping[str, Any],
+    *,
+    lf_recode_admission_plan: Mapping[str, Any] | None,
+) -> bool:
+    if candidate.get("nominal_under_ceiling") is True:
+        return True
+    if not isinstance(lf_recode_admission_plan, Mapping):
+        return False
+    return bool(
+        lf_recode_admission_plan.get("local_planner_admitted") is True
+        and lf_recode_admission_plan.get("waterline_satisfied_after_selected_recode")
+        is True
+    )
+
+
 def _snerv_long_training_candidate_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     under = row.get("nominal_under_ceiling") is True
     ceiling = int(row.get("hard_byte_ceiling") or 0)
@@ -1985,7 +2058,12 @@ def _modelsize_byte_cap_preflight(
     blockers: list[str] = []
     predicted: int | None = nominal
     prediction_rule = "nominal_payload_bytes_no_feedback"
-    if feedback_paths and not matching:
+    missing_matching_feedback_is_blocking = bool(
+        feedback_paths
+        and not matching
+        and not _observations_are_demote_only_byte_feedback(observations)
+    )
+    if missing_matching_feedback_is_blocking:
         blockers.append(f"{family}_modelsize_byte_cap_feedback_observation_missing")
     if nominal is None:
         blockers.append(f"{family}_modelsize_byte_cap_candidate_nominal_missing")
@@ -2024,11 +2102,32 @@ def _modelsize_byte_cap_preflight(
         "feedback_path_count": len(tuple(feedback_paths)),
         "observation_count": len(observations),
         "matching_observation_count": len(matching),
+        "missing_matching_feedback_is_blocking": missing_matching_feedback_is_blocking,
         "matching_observations": matching,
         "scope": "budget_candidate_preflight_runner_revalidates_auto_selection",
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
+
+
+def _observations_are_demote_only_byte_feedback(
+    observations: Sequence[Mapping[str, Any]],
+) -> bool:
+    if not observations:
+        return False
+    return all(_observation_is_over_own_hard_byte_ceiling(row) for row in observations)
+
+
+def _observation_is_over_own_hard_byte_ceiling(row: Mapping[str, Any]) -> bool:
+    archive_bytes = _first_present_int(row, ("measured_archive_bytes",))
+    candidate = row.get("modelsize_candidate")
+    candidate_mapping = candidate if isinstance(candidate, Mapping) else {}
+    ceiling = _first_present_int(candidate_mapping, ("hard_byte_ceiling",))
+    return bool(
+        archive_bytes is not None
+        and ceiling is not None
+        and int(archive_bytes) > int(ceiling)
+    )
 
 
 def _modelsize_byte_cap_feedback_observations(

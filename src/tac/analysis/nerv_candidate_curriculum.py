@@ -107,6 +107,20 @@ def _base_byte_feedback(
     nominal = _int(candidate.get("nominal_total_payload_bytes"))
     measured = measured_archive_bytes if measured_archive_bytes is not None else measured_payload_bytes
     delta = None if measured is None else int(measured) - int(nominal)
+    hard_byte_ceiling = _int(candidate.get("hard_byte_ceiling"))
+    charged_archive_bytes = (
+        None if measured_archive_bytes is None else int(measured_archive_bytes)
+    )
+    archive_under_hard_byte_ceiling = (
+        None
+        if charged_archive_bytes is None or hard_byte_ceiling <= 0
+        else bool(charged_archive_bytes <= hard_byte_ceiling)
+    )
+    archive_over_hard_byte_ceiling_bytes = (
+        None
+        if charged_archive_bytes is None or hard_byte_ceiling <= 0
+        else max(0, charged_archive_bytes - hard_byte_ceiling)
+    )
     candidate_num_pairs = _int(candidate.get("num_pairs"))
     measured_pairs = int(measured_num_pairs)
     scope_matches = candidate_num_pairs > 0 and measured_pairs == candidate_num_pairs
@@ -119,17 +133,30 @@ def _base_byte_feedback(
             "candidate_full_scope" if scope_matches else "partial_pair_advisory"
         ),
         "scope_matches_candidate": scope_matches,
-        "hard_byte_ceiling": _int(candidate.get("hard_byte_ceiling")),
+        "hard_byte_ceiling": hard_byte_ceiling,
         "nominal_total_payload_bytes": nominal,
         "measured_payload_bytes": (
             None if measured_payload_bytes is None else int(measured_payload_bytes)
         ),
-        "measured_archive_bytes": (
-            None if measured_archive_bytes is None else int(measured_archive_bytes)
-        ),
+        "measured_archive_bytes": charged_archive_bytes,
         "measured_minus_nominal_bytes": delta,
         "measured_minus_nominal_rate_score_delta": (
             None if delta is None else float(delta * RATE_SCORE_PER_BYTE)
+        ),
+        "archive_under_hard_byte_ceiling": archive_under_hard_byte_ceiling,
+        "archive_over_hard_byte_ceiling_bytes": archive_over_hard_byte_ceiling_bytes,
+        "rate_axis_feedback_verdict": (
+            "archive_bytes_not_measured"
+            if charged_archive_bytes is None
+            else (
+                "hard_byte_ceiling_missing"
+                if hard_byte_ceiling <= 0
+                else (
+                    "receiver_proven_archive_under_hard_byte_ceiling"
+                    if archive_under_hard_byte_ceiling
+                    else "receiver_proven_archive_over_hard_byte_ceiling"
+                )
+            )
         ),
         "feedback_ready": measured is not None and scope_matches,
         "score_claim": False,
@@ -223,6 +250,12 @@ def build_hinerv_candidate_curriculum_plan(
         blockers.append("partial_pair_byte_feedback_only")
     elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("hinerv_trained_archive_byte_oracle_feedback_missing")
+    if (
+        candidate_selected
+        and byte_feedback.get("feedback_ready") is True
+        and byte_feedback.get("archive_under_hard_byte_ceiling") is False
+    ):
+        blockers.append("hinerv_receiver_proven_archive_over_hard_byte_ceiling")
     pr95_binding = build_pr95_stack_binding_requirements(
         family="hi_nerv",
         evidence=build_pr95_stack_binding_evidence(
@@ -510,6 +543,19 @@ def build_snerv_candidate_curriculum_plan(
         blockers.append("partial_pair_byte_feedback_only")
     elif candidate_selected and not byte_feedback["feedback_ready"]:
         blockers.append("snerv_snar1_byte_feedback_missing")
+    if (
+        candidate_selected
+        and byte_feedback.get("feedback_ready") is True
+        and byte_feedback.get("archive_under_hard_byte_ceiling") is False
+    ):
+        blockers.append("snerv_receiver_proven_archive_over_hard_byte_ceiling")
+        if (
+            str(candidate_row.get("snerv_model_size_adapter") or "")
+            != "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+        ):
+            blockers.append(
+                "snerv_over_ceiling_local_lf_grammar_reroute_to_official_packet_or_lf_recode"
+            )
     if effective_scorer_loop_attached:
         if not effective_scorer_loop_receiver_contract:
             blockers.append("snerv_scorer_loop_qat_receiver_contract_failed")
