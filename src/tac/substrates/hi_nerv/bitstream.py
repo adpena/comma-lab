@@ -51,6 +51,9 @@ HI_NERV_OFFICIAL_ENTROPY_RECEIVER_CONSUMPTION_SCHEMA = (
 HI_NERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA = (
     "hi_nerv_archive_section_qat_weight_policy.v1"
 )
+HI_NERV_TRAIN_TIME_SECTION_BYTE_CONTROL_SCHEMA = (
+    "hi_nerv_train_time_section_byte_control.v1"
+)
 HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE = RATE_COEFFICIENT / CONTEST_REFERENCE_BYTES
 HI_NERV_OFFICIAL_QUANT_AXIS_RULE = "official_compute_best_quant_axis_thres_0p05"
 HI_NERV_OFFICIAL_QUANTNOISE_METHOD = "official_quantnoise_random_quantized_mix"
@@ -908,6 +911,225 @@ def build_hinerv_archive_section_qat_weight_policy(
     }
 
 
+def build_hinerv_train_time_section_byte_control(
+    archive_section_telemetry: Mapping[str, Any] | None,
+    active_loss_weights: Mapping[str, float],
+    *,
+    hard_byte_ceiling: int | None,
+    byte_price_score_per_byte: float = HI_NERV_BITSTREAM_RATE_SCORE_PER_BYTE,
+) -> dict[str, Any]:
+    """Build the train-time dual-ascent byte-cap payload for HIV1 sections.
+
+    The export hard cap is a terminal gate; this helper turns prior
+    receiver-visible section telemetry into an in-training control signal.  It
+    only emits active dual constraints for sections with a real differentiable
+    train-time operator: decoder-state QAT and latent QAT. Header, metadata,
+    and ZIP/container overhead stay priced as pending bytes instead of being
+    silently mapped onto fake gradients.
+    """
+
+    loss_weights = _nonnegative_float_map(active_loss_weights)
+    ceiling = _optional_positive_int(hard_byte_ceiling)
+    base: dict[str, Any] = {
+        "schema": HI_NERV_TRAIN_TIME_SECTION_BYTE_CONTROL_SCHEMA,
+        "attached": archive_section_telemetry is not None,
+        "active": False,
+        "hard_byte_ceiling": ceiling,
+        "byte_price_score_per_byte": float(byte_price_score_per_byte),
+        "archive_bytes": None,
+        "section_bytes": {},
+        "section_byte_budgets": {},
+        "section_byte_loss_weight_key_map": {},
+        "section_byte_loss_weight_scale_map": {},
+        "budget_rows": [],
+        "pending_section_rows": [],
+        "metrics_payload": None,
+        "controlled_section_count": 0,
+        "pending_section_count": 0,
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    if archive_section_telemetry is None:
+        return {
+            **base,
+            "blockers": ["hinerv_train_time_section_byte_telemetry_not_attached"],
+        }
+    if (
+        str(archive_section_telemetry.get("schema") or "")
+        != "hinerv_archive_section_telemetry.v1"
+    ):
+        return {
+            **base,
+            "blockers": ["hinerv_train_time_section_byte_telemetry_schema_mismatch"],
+        }
+    if archive_section_telemetry.get("profile_ready") is not True:
+        return {
+            **base,
+            "blockers": ["hinerv_train_time_section_byte_telemetry_not_profile_ready"],
+        }
+    sections = archive_section_telemetry.get("sections_with_zip_overhead")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        sections = archive_section_telemetry.get("sections")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        return {
+            **base,
+            "blockers": ["hinerv_train_time_section_byte_sections_missing"],
+        }
+    section_rows = [
+        row
+        for row in sections
+        if isinstance(row, Mapping) and int(row.get("bytes") or 0) > 0
+    ]
+    section_bytes = {
+        str(row.get("name") or f"section_{idx:04d}"): int(row.get("bytes") or 0)
+        for idx, row in enumerate(section_rows)
+    }
+    archive_bytes = (
+        _optional_positive_int(archive_section_telemetry.get("archive_zip_bytes"))
+        or sum(section_bytes.values())
+        or None
+    )
+    metrics_payload = {
+        "schema": "hi_nerv_train_time_section_byte_metrics.v1",
+        "archive_bytes": archive_bytes,
+        "section_bytes": dict(sorted(section_bytes.items())),
+        "authority": "macos_mlx_research_signal_false_authority",
+    }
+    if ceiling is None:
+        return {
+            **base,
+            "archive_bytes": archive_bytes,
+            "section_bytes": dict(sorted(section_bytes.items())),
+            "metrics_payload": metrics_payload,
+            "pending_section_rows": _hi_nerv_pending_train_time_section_rows(
+                section_rows,
+                reason="hard_byte_ceiling_not_configured",
+            ),
+            "pending_section_count": len(section_rows),
+            "blockers": ["hinerv_train_time_section_byte_hard_ceiling_missing"],
+        }
+    denominator = max(int(archive_bytes or sum(section_bytes.values()) or 1), 1)
+    budgets: dict[str, int] = {}
+    loss_key_map: dict[str, str] = {}
+    loss_scale_map: dict[str, float] = {}
+    budget_rows: list[dict[str, Any]] = []
+    pending_rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    for row in section_rows:
+        name = str(row.get("name") or "")
+        role = str(row.get("role") or "")
+        nbytes = int(row.get("bytes") or 0)
+        budget = max(1, math.floor(float(ceiling) * nbytes / denominator))
+        loss_key = _hi_nerv_train_time_loss_key_for_section(
+            name=name,
+            role=role,
+            loss_weights=loss_weights,
+        )
+        if loss_key is None:
+            pending_rows.append(
+                {
+                    "section_name": name,
+                    "role": role,
+                    "bytes": nbytes,
+                    "budget_bytes_if_actuated": budget,
+                    "rate_score": float(nbytes) * float(byte_price_score_per_byte),
+                    "pending_reason": (
+                        "non_differentiable_archive_section"
+                        if role not in {"decoder", "latent"}
+                        else "active_qat_loss_key_missing"
+                    ),
+                    **FALSE_AUTHORITY,
+                }
+            )
+            if role in {"decoder", "latent"}:
+                blockers.append(
+                    f"hinerv_train_time_section_byte_{name}_active_loss_key_missing"
+                )
+            continue
+        budgets[name] = budget
+        loss_key_map[name] = loss_key
+        loss_scale_map[name] = 1.0
+        budget_rows.append(
+            {
+                "section_name": name,
+                "role": role,
+                "bytes": nbytes,
+                "budget_bytes": budget,
+                "rate_score": float(nbytes) * float(byte_price_score_per_byte),
+                "budget_rate_score": float(budget) * float(byte_price_score_per_byte),
+                "loss_weight_key": loss_key,
+                "operator": (
+                    "decoder_coder_qat_dual_ascent"
+                    if role == "decoder"
+                    else "latent_coder_qat_dual_ascent"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+    if not budgets:
+        blockers.append("hinerv_train_time_section_byte_no_actuated_sections")
+    return {
+        **base,
+        "active": bool(budgets and not blockers),
+        "archive_bytes": archive_bytes,
+        "section_bytes": dict(sorted(section_bytes.items())),
+        "section_byte_budgets": dict(sorted(budgets.items())),
+        "section_byte_loss_weight_key_map": dict(sorted(loss_key_map.items())),
+        "section_byte_loss_weight_scale_map": dict(sorted(loss_scale_map.items())),
+        "budget_rows": budget_rows,
+        "pending_section_rows": pending_rows,
+        "metrics_payload": metrics_payload,
+        "controlled_section_count": len(budget_rows),
+        "pending_section_count": len(pending_rows),
+        "blockers": _ordered_unique(blockers),
+    }
+
+
+def _hi_nerv_pending_train_time_section_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    reason: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "section_name": str(row.get("name") or ""),
+            "role": str(row.get("role") or ""),
+            "bytes": int(row.get("bytes") or 0),
+            "pending_reason": reason,
+            **FALSE_AUTHORITY,
+        }
+        for row in rows
+    ]
+
+
+def _hi_nerv_train_time_loss_key_for_section(
+    *,
+    name: str,
+    role: str,
+    loss_weights: Mapping[str, float],
+) -> str | None:
+    if name == "decoder_state" or role == "decoder":
+        candidates = (
+            "coder_qat_c1a_entropy",
+            "coder_qat_quant_residual",
+            "coder_qat_delta",
+            "coder_qat_magnitude",
+        )
+    elif role == "latent":
+        candidates = (
+            "latent_qat_c1a_entropy",
+            "latent_qat_quant_residual",
+            "latent_qat_delta",
+            "latent_qat_magnitude",
+        )
+    else:
+        return None
+    for key in candidates:
+        if float(loss_weights.get(key, 0.0)) > 0.0:
+            return key
+    return None
+
+
 def _archive_section_rows_for_qat_policy(
     sections: Sequence[Any],
     *,
@@ -1704,6 +1926,7 @@ __all__ = [
     "HI_NERV_PRUNE_QUANTNOISE_BITSTREAM_PIPELINE_PROOF",
     "HI_NERV_QUANT_NOISE_BITS",
     "HI_NERV_SUPPORTED_DECODER_CODECS",
+    "HI_NERV_TRAIN_TIME_SECTION_BYTE_CONTROL_SCHEMA",
     "HiNervBitstreamError",
     "HinervBitstreamPreparation",
     "apply_decoder_pruning",
@@ -1711,6 +1934,7 @@ __all__ = [
     "apply_decoder_waterfill_actions",
     "build_decoder_waterfill_fake_quant_forward_plan",
     "build_hinerv_archive_section_qat_weight_policy",
+    "build_hinerv_train_time_section_byte_control",
     "decoder_waterfill_fake_quant_bits_by_name",
     "measure_hi_nerv_decoder_bitstream_roundtrip",
     "measure_hi_nerv_official_entropy_receiver_consumption",

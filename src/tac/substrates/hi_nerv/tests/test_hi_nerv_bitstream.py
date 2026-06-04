@@ -23,6 +23,7 @@ from tac.substrates.hi_nerv.bitstream import (
     apply_decoder_waterfill_actions,
     build_decoder_waterfill_fake_quant_forward_plan,
     build_hinerv_archive_section_qat_weight_policy,
+    build_hinerv_train_time_section_byte_control,
     decoder_waterfill_fake_quant_bits_by_name,
     measure_hi_nerv_decoder_bitstream_roundtrip,
     measure_hi_nerv_official_entropy_receiver_consumption,
@@ -150,6 +151,49 @@ def test_archive_section_qat_policy_fails_closed_when_qat_weights_all_zero() -> 
 
     assert policy["active"] is False
     assert "hinerv_archive_section_qat_base_weights_all_zero" in policy["blockers"]
+
+
+def test_train_time_section_byte_control_prices_only_actuated_sections() -> None:
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "profile_ready": True,
+        "archive_zip_bytes": 400,
+        "sections": [
+            {"name": "decoder_state", "role": "decoder", "bytes": 200},
+            {"name": "latents_coarse", "role": "latent", "bytes": 40},
+            {"name": "latents_mid", "role": "latent", "bytes": 40},
+            {"name": "meta_json", "role": "metadata", "bytes": 20},
+        ],
+    }
+
+    control = build_hinerv_train_time_section_byte_control(
+        telemetry,
+        {
+            "coder_qat_quant_residual": 0.001,
+            "latent_qat_quant_residual": 0.002,
+        },
+        hard_byte_ceiling=100,
+        byte_price_score_per_byte=0.01,
+    )
+
+    assert control["active"] is True
+    assert control["section_byte_budgets"] == {
+        "decoder_state": 50,
+        "latents_coarse": 10,
+        "latents_mid": 10,
+    }
+    assert control["section_byte_loss_weight_key_map"] == {
+        "decoder_state": "coder_qat_quant_residual",
+        "latents_coarse": "latent_qat_quant_residual",
+        "latents_mid": "latent_qat_quant_residual",
+    }
+    assert control["metrics_payload"]["archive_bytes"] == 400
+    assert control["metrics_payload"]["section_bytes"]["meta_json"] == 20
+    assert control["pending_section_rows"][0]["section_name"] == "meta_json"
+    assert control["pending_section_rows"][0]["pending_reason"] == (
+        "non_differentiable_archive_section"
+    )
+    assert control["blockers"] == []
 
 
 def test_hi_nerv_bitstream_preparation_applies_receiver_visible_transforms() -> None:

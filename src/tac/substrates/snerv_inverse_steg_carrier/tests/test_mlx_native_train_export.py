@@ -269,6 +269,53 @@ def test_snerv_archive_section_qat_policy_prices_decoder_and_lf_latents() -> Non
     assert {"metadata_payload", "step_map_packet"}.issubset(pending)
 
 
+def test_snerv_train_time_section_byte_control_binds_decoder_and_lf_only() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._build_snerv_pretraining_archive_section_qat_weight_policy(
+        pairs_nchw255=_tiny_pairs(pairs=2),
+        model_size=SnervModelSizeConfig(fc_dim=4, emb_size=1, patch_radius=1),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(0, 1),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        hard_byte_ceiling=128,
+        base_qat_weights={
+            "coder_qat_quant_residual": 1.0e-3,
+            "coder_qat_magnitude": 2.0e-4,
+        },
+    )
+
+    control = mod._build_snerv_train_time_section_byte_control(
+        policy,
+        policy["extra_loss_weights"],
+        hard_byte_ceiling=128,
+    )
+
+    assert control["schema"] == "snerv_train_time_section_byte_control.v1"
+    assert control["active"] is True
+    assert set(control["section_byte_budgets"]) == {
+        "decoder_payload",
+        "lf_payload",
+    }
+    assert control["section_byte_loss_weight_key_map"] == {
+        "decoder_payload": "coder_qat_quant_residual",
+        "lf_payload": "latent_qat_quant_residual",
+    }
+    assert control["metrics_payload"]["archive_bytes"] == policy[
+        "baseline_packet_bytes"
+    ]
+    pending = {row["section_name"] for row in control["pending_section_rows"]}
+    assert {"metadata_payload", "step_map_packet"}.issubset(pending)
+    assert control["blockers"] == []
+
+
 def test_snerv_archive_section_qat_policy_fails_closed_on_empty_weights() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
@@ -380,6 +427,7 @@ def test_pr95_every_stage_muon_falls_back_when_snerv_has_no_matrix_targets(
             "bits_per_coeff": 3.0,
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int8_symmetric",
+            "hard_byte_ceiling": 10_000,
             "score_aware_long_training_epochs": 1,
             "score_aware_long_training_pr95_faithful_curriculum": True,
             "score_aware_long_training_pr95_muon_policy": "every_stage",
@@ -1265,6 +1313,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
             "bits_per_coeff": 3.0,
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int8_symmetric",
+            "hard_byte_ceiling": 10_000,
             "score_aware_long_training_epochs": 1,
             "score_aware_long_training_lr": 1.0e-3,
             "score_aware_long_training_batch_pairs": 2,
@@ -1324,6 +1373,17 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert section_policy["decoder_section_bytes"] > 0
     assert section_policy["lf_section_bytes"] > 0
     assert "latent_qat_quant_residual" in section_policy["extra_loss_weights"]
+    section_control = long_training["train_time_section_byte_control"]
+    assert long_training["train_time_section_byte_control_bound"] is True
+    assert section_control["active"] is True
+    assert set(section_control["section_byte_budgets"]) == {
+        "decoder_payload",
+        "lf_payload",
+    }
+    assert section_control["section_byte_loss_weight_key_map"] == {
+        "decoder_payload": "coder_qat_quant_residual",
+        "lf_payload": "latent_qat_quant_residual",
+    }
     assert long_training["latent_qat_bound"] is True
     assert (
         report["score_aware_long_training_scorer_input_distribution_guard_bound"]

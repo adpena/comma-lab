@@ -3641,6 +3641,8 @@ def test_snerv_execution_fc_dim_resolver_consumes_official_solution() -> None:
     fc_dim = runner_mod._resolve_snerv_execution_fc_dim(
         {
             "candidate_id": "snerv_solution",
+            "fc_dim": 3,
+            "snerv_fc_dim": 5,
             "modelsize_mparams": 0.05,
             "official_modelsize_solution": {"fc_dim": 11},
         },
@@ -3655,6 +3657,8 @@ def test_snerv_execution_fc_dim_resolver_recomputes_official_formula() -> None:
     fc_dim = runner_mod._resolve_snerv_execution_fc_dim(
         {
             "candidate_id": "snerv_formula",
+            "fc_dim": 3,
+            "snerv_fc_dim": 5,
             "modelsize_mparams": 0.05,
             "num_pairs": 600,
             "carrier_hw": [384, 512],

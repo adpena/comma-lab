@@ -354,6 +354,16 @@ class RendererBundle:
             rows, while renderer calls use these source pair IDs. This is the
             first-class hard-pair hydration contract for full-video models
             such as HiNeRV, where archive/runtime pair rows stay global.
+        train_time_section_byte_metrics: optional callback
+            ``(model, idx, loss_weights) -> mapping`` that returns archive or
+            section-byte telemetry during training. The callback is the
+            MLX-first portable byte-cap bridge: SNeRV and HiNeRV can expose
+            receiver-packet/predicted-section bytes without exporting a full
+            archive every step, and the shared dual-ascent controller can price
+            those bytes against the upstream fixed waterline. Accepted shapes:
+            ``{"archive_bytes": int, "section_bytes": {"decoder": int}}`` or
+            direct numeric ``section_name -> bytes`` rows. The values are
+            telemetry and training pressure only, never score authority.
     """
 
     model: Any
@@ -394,6 +404,9 @@ class RendererBundle:
     scorer_input_distribution_guard_saturation_margin: float = 0.02
     scorer_input_distribution_guard_temperature: float = 0.01
     source_pair_indices: tuple[int, ...] | None = None
+    train_time_section_byte_metrics: (
+        Callable[[Any, Any, Mapping[str, float]], Mapping[str, Any]] | None
+    ) = None
 
     def __post_init__(self) -> None:
         if self.forward_convention not in FORWARD_CONVENTIONS:
@@ -521,6 +534,14 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 "scorer_input_distribution_guard_weight must be >= 0; got "
                 f"{self.scorer_input_distribution_guard_weight}"
+            )
+        if (
+            self.train_time_section_byte_metrics is not None
+            and not callable(self.train_time_section_byte_metrics)
+        ):
+            raise MlxScoreAwareHarnessError(
+                "train_time_section_byte_metrics must be callable when set; got "
+                f"{type(self.train_time_section_byte_metrics).__name__}"
             )
         if not (0.0 < self.scorer_input_distribution_guard_saturation_margin < 0.5):
             raise MlxScoreAwareHarnessError(

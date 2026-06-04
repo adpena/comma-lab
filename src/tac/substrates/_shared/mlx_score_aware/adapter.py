@@ -31,7 +31,9 @@ from tac.substrates._shared.mlx_score_aware.device_gate import (
     require_mlx_for_harness,
 )
 from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+    CONTEST_RATE_SCORE_PER_BYTE,
     TrainTimeDualAscentController,
+    safe_dual_metric_key,
 )
 from tac.substrates._shared.mlx_score_aware.loss import (
     component_loss_weight,
@@ -188,6 +190,18 @@ def _is_decoder_weight_saliency_group(name: str) -> bool:
     if any(token in lowered for token in _DECODER_SALIENCY_EXCLUDE_SUBSTRINGS):
         return False
     return any(token in lowered for token in _DECODER_SALIENCY_INCLUDE_SUBSTRINGS)
+
+
+def _nonnegative_float_or_none(value: Any) -> float | None:
+    """Parse finite nonnegative telemetry values; reject malformed byte rows."""
+
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(out) or out < 0.0:
+        return None
+    return out
 
 
 def _build_aurora_like_mlx_optimizer(
@@ -671,6 +685,8 @@ class MlxScoreAwareAdapter:
         self._active_curriculum_stage_name: str | None = None
         self._active_curriculum_stage_enable_qat: bool = False
         self._active_curriculum_stage_epoch: int | None = None
+        self._last_train_time_section_byte_metrics: dict[str, float] = {}
+        self._last_train_time_section_byte_metric_source: str | None = None
 
     def _post_train_step_update(self, batch: Any) -> tuple[list[Any], dict[str, float]]:
         """Run substrate-local non-gradient updates after an accepted step."""
@@ -1434,6 +1450,20 @@ class MlxScoreAwareAdapter:
                 ),
             },
             "train_time_dual_ascent": self._train_time_dual_ascent.as_metadata(),
+            "train_time_section_byte_metrics": {
+                "schema": "mlx_train_time_section_byte_metrics.v1",
+                "enabled": bool(
+                    self.bundle.train_time_section_byte_metrics is not None
+                    or callable(
+                        getattr(self.model, "train_time_section_byte_metrics", None)
+                    )
+                ),
+                "source": self._last_train_time_section_byte_metric_source,
+                "metric_count": len(self._last_train_time_section_byte_metrics),
+                "contest_rate_score_per_byte": CONTEST_RATE_SCORE_PER_BYTE,
+                "last_metrics": dict(self._last_train_time_section_byte_metrics),
+                "authority": "macos_mlx_training_lagrangian_false_authority",
+            },
         }
         metadata["decoder_weight_gradient_saliency"] = (
             self.decoder_weight_gradient_saliency_summary()
@@ -2098,6 +2128,94 @@ class MlxScoreAwareAdapter:
         out.update(self._train_time_dual_ascent.observe(out))
         return out
 
+    def _train_time_section_byte_metrics(
+        self,
+        *,
+        batch: Any,
+        loss_weights: Mapping[str, float],
+    ) -> dict[str, float]:
+        """Return section-byte telemetry usable by train-time dual ascent.
+
+        This is the portable in-training byte-cap bridge. Substrates may expose
+        a cheap receiver-packet or predicted section-byte estimate without
+        exporting an archive every step. The controller then prices each byte
+        with the fixed upstream waterline. The values remain false-authority
+        telemetry until a byte-closed archive/runtime replay proves them.
+        """
+
+        callback = self.bundle.train_time_section_byte_metrics
+        source = "renderer_bundle_callback"
+        if callback is None:
+            callback = getattr(self.model, "train_time_section_byte_metrics", None)
+            source = "model_hook"
+        if not callable(callback):
+            self._last_train_time_section_byte_metrics = {}
+            self._last_train_time_section_byte_metric_source = None
+            return {}
+
+        if source == "renderer_bundle_callback":
+            raw = callback(self.model, batch, dict(loss_weights))
+        else:
+            raw = callback(batch=batch, loss_weights=dict(loss_weights))
+        if raw is None:
+            self._last_train_time_section_byte_metrics = {}
+            self._last_train_time_section_byte_metric_source = source
+            return {}
+        if not isinstance(raw, Mapping):
+            raise TypeError(
+                "train_time_section_byte_metrics must return a Mapping or None; "
+                f"got {type(raw).__name__}"
+            )
+
+        metrics: dict[str, float] = {
+            "train_time_section_byte_metric_active": 1.0,
+            "train_time_section_byte_metric_source_bundle_callback": float(
+                source == "renderer_bundle_callback"
+            ),
+            "train_time_section_byte_metric_source_model_hook": float(
+                source == "model_hook"
+            ),
+        }
+        sections: dict[str, float] = {}
+        archive_bytes = _nonnegative_float_or_none(
+            raw.get("archive_bytes", raw.get("total_archive_bytes"))
+        )
+        if archive_bytes is not None:
+            metrics["train_time_archive_bytes"] = archive_bytes
+            metrics["train_time_archive_rate_score"] = (
+                archive_bytes * CONTEST_RATE_SCORE_PER_BYTE
+            )
+        raw_sections = raw.get("section_bytes", raw.get("sections"))
+        if isinstance(raw_sections, Mapping):
+            for name, value in raw_sections.items():
+                parsed = _nonnegative_float_or_none(value)
+                if parsed is not None:
+                    sections[str(name)] = parsed
+        for name, value in raw.items():
+            key = str(name)
+            if key in {
+                "archive_bytes",
+                "total_archive_bytes",
+                "section_bytes",
+                "sections",
+                "schema",
+                "authority",
+            }:
+                continue
+            parsed = _nonnegative_float_or_none(value)
+            if parsed is not None:
+                sections[key] = parsed
+        for name, value in sorted(sections.items()):
+            safe = safe_dual_metric_key(name)
+            metrics[f"train_time_section_bytes__{safe}"] = value
+            metrics[f"train_time_section_rate_score__{safe}"] = (
+                value * CONTEST_RATE_SCORE_PER_BYTE
+            )
+        metrics["train_time_section_byte_metric_count"] = float(len(sections))
+        self._last_train_time_section_byte_metrics = dict(metrics)
+        self._last_train_time_section_byte_metric_source = source
+        return metrics
+
     def _effective_wave_n11_learning_rate(self, learning_rate: float) -> float:
         """Return the scalar LR for custom step helpers that cannot take schedules."""
 
@@ -2233,6 +2351,12 @@ class MlxScoreAwareAdapter:
         self._optimizer.update(self.model, grads)
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
             batch
+        )
+        post_update_metrics.update(
+            self._train_time_section_byte_metrics(
+                batch=batch,
+                loss_weights=effective_loss_weights,
+            )
         )
         post_update_metrics.update(
             self._score_aware_loss_part_metrics(
@@ -2385,6 +2509,12 @@ class MlxScoreAwareAdapter:
             batch
         )
         post_update_metrics.update(
+            self._train_time_section_byte_metrics(
+                batch=batch,
+                loss_weights=loss_weights,
+            )
+        )
+        post_update_metrics.update(
             self._score_aware_loss_part_metrics(
                 batch,
                 loss_weights=loss_weights,
@@ -2509,6 +2639,12 @@ class MlxScoreAwareAdapter:
         )
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
             batch
+        )
+        post_update_metrics.update(
+            self._train_time_section_byte_metrics(
+                batch=batch,
+                loss_weights=loss_weights,
+            )
         )
         post_update_metrics.update(
             self._pr95_stage_loss_part_metrics(

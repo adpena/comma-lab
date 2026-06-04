@@ -591,6 +591,94 @@ def test_adapter_train_step_updates_dual_ascent_once_and_records_metadata() -> N
 
 
 @mlx_only
+def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+        CONTEST_RATE_SCORE_PER_BYTE,
+    )
+
+    base = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    callback_calls: list[dict[str, object]] = []
+
+    def _section_byte_metrics(model, batch, loss_weights):
+        callback_calls.append(
+            {
+                "model_is_bundle_model": model is base.model,
+                "batch_shape": tuple(batch.shape),
+                "loss_weight_keys": sorted(loss_weights),
+            }
+        )
+        return {
+            "archive_bytes": 5_000,
+            "section_bytes": {"decoder_payload": 2_000},
+            "lf_payload": 1_500,
+            "schema": "unit_test_section_metrics.v1",
+        }
+
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        train_time_section_byte_metrics=_section_byte_metrics,
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        train_time_dual_ascent_config={
+            "enabled": True,
+            "constraints": [
+                {
+                    "constraint_id": "decoder_payload_bytes",
+                    "metric_name": (
+                        "train_time_section_rate_score__decoder_payload"
+                    ),
+                    "loss_weight_key": "coder_qat_c1a_entropy",
+                    "target": 1_000 * CONTEST_RATE_SCORE_PER_BYTE,
+                    "dual_lr": 1.0,
+                    "max_lambda": 2.0,
+                }
+            ],
+        },
+    )
+    batch = mx.array([0, 1], dtype=mx.int32)
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    assert callback_calls == [
+        {
+            "model_is_bundle_model": True,
+            "batch_shape": (2,),
+            "loss_weight_keys": [],
+        }
+    ]
+    assert metrics["train_time_archive_bytes"] == pytest.approx(5_000)
+    assert metrics["train_time_section_bytes__decoder_payload"] == pytest.approx(
+        2_000
+    )
+    assert metrics["train_time_section_bytes__lf_payload"] == pytest.approx(1_500)
+    assert metrics[
+        "train_time_section_rate_score__decoder_payload"
+    ] == pytest.approx(2_000 * CONTEST_RATE_SCORE_PER_BYTE)
+    assert metrics["dual_ascent_metric__decoder_payload_bytes"] == pytest.approx(
+        2_000 * CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert metrics["dual_ascent_lambda__decoder_payload_bytes"] == pytest.approx(
+        1_000 * CONTEST_RATE_SCORE_PER_BYTE
+    )
+    metadata = adapter.artifact_metadata()["score_aware_training"][
+        "train_time_section_byte_metrics"
+    ]
+    assert metadata["enabled"] is True
+    assert metadata["source"] == "renderer_bundle_callback"
+    assert metadata["last_metrics"]["train_time_section_bytes__decoder_payload"] == (
+        pytest.approx(2_000)
+    )
+
+
+@mlx_only
 def test_adapter_stage_weights_skip_student_head_updates_when_gated() -> None:
     import mlx.core as mx
 

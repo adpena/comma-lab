@@ -171,6 +171,32 @@ def test_default_nerv_dual_ascent_config_prices_active_scorer_and_coder_terms() 
     assert config["promotion_eligible"] is False
 
 
+def test_default_nerv_dual_ascent_config_prices_section_byte_budgets() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="snerv",
+        section_byte_budgets={"decoder_payload": 1_000, "lf payload": 2_000},
+        section_byte_loss_weight_key_map={"decoder_payload": "coder_qat_delta"},
+        section_byte_loss_weight_scale_map={"decoder_payload": 0.25},
+    )
+
+    assert config["enabled"] is True
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    decoder = constraints["snerv_decoder_payload_section_bytes"]
+    lf = constraints["snerv_lf_payload_section_bytes"]
+    byte_price = config["contest_grounding"][
+        "archive_byte_price_score_per_byte"
+    ]
+    assert decoder["metric_name"] == (
+        "train_time_section_rate_score__decoder_payload"
+    )
+    assert decoder["loss_weight_key"] == "coder_qat_delta"
+    assert decoder["target"] == pytest.approx(1_000 * byte_price)
+    assert decoder["weight_scale"] == pytest.approx(0.25)
+    assert lf["metric_name"] == "train_time_section_rate_score__lf_payload"
+    assert lf["loss_weight_key"] == "coder_qat_c1a_entropy"
+    assert lf["target"] == pytest.approx(2_000 * byte_price)
+
+
 def test_default_nerv_dual_ascent_config_disables_without_active_terms() -> None:
     config = build_default_nerv_train_time_dual_ascent_config(
         family="snerv",

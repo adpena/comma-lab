@@ -3036,9 +3036,6 @@ def _resolve_snerv_execution_fc_dim(
 ) -> int:
     """Resolve the receiver-visible SNeRV fc_dim at launch time."""
 
-    explicit = _compact_positive_int_from_keys(candidate, ("fc_dim", "snerv_fc_dim"))
-    if explicit is not None:
-        return int(explicit)
     solution = candidate.get("official_modelsize_solution")
     if isinstance(solution, Mapping):
         solved = _compact_positive_int_from_keys(solution, ("fc_dim", "snerv_fc_dim"))
@@ -3095,6 +3092,9 @@ def _resolve_snerv_execution_fc_dim(
             "SNeRV modelsize_mparams requires official_modelsize_solution or "
             "official formula controls; missing " + ", ".join(missing)
         )
+    explicit = _compact_positive_int_from_keys(candidate, ("fc_dim", "snerv_fc_dim"))
+    if explicit is not None:
+        return int(explicit)
     if cli_override is not None:
         return int(cli_override)
     return int(fallback)

@@ -21,6 +21,7 @@ from typing import Any
 
 TRAIN_TIME_DUAL_ASCENT_SCHEMA = "mlx_train_time_dual_ascent.v1"
 TRAIN_TIME_DUAL_ASCENT_CONSTRAINT_SCHEMA = "mlx_train_time_dual_ascent_constraint.v1"
+CONTEST_RATE_SCORE_PER_BYTE = 25.0 / 37_545_489.0
 _VALID_DIRECTIONS = frozenset({"upper_bound", "lower_bound"})
 _SAFE_KEY_RE = re.compile(r"[^0-9A-Za-z_]+")
 _DEFAULT_SCORER_TARGET_FRACTION = 0.985
@@ -403,6 +404,10 @@ def build_default_nerv_train_time_dual_ascent_config(
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
+    section_byte_budgets: Mapping[str, int | float] | None = None,
+    section_byte_loss_weight_key_map: Mapping[str, str] | None = None,
+    section_byte_loss_weight_scale_map: Mapping[str, float] | None = None,
+    contest_rate_score_per_byte: float = CONTEST_RATE_SCORE_PER_BYTE,
     enabled: bool = True,
     warmup_steps: int = 0,
     update_every_steps: int = 1,
@@ -421,6 +426,7 @@ def build_default_nerv_train_time_dual_ascent_config(
     constraints: list[dict[str, Any]] = []
     seg_weight = _nonnegative_weight(segnet_distillation_weight)
     pose_weight = _nonnegative_weight(pose_distillation_weight)
+    byte_price = _positive_weight(contest_rate_score_per_byte)
     if seg_weight > 0.0:
         constraints.append(
             _constraint_payload(
@@ -483,6 +489,55 @@ def build_default_nerv_train_time_dual_ascent_config(
             )
         )
 
+    loss_key_by_section = {
+        str(key): str(value)
+        for key, value in dict(section_byte_loss_weight_key_map or {}).items()
+        if str(key) and str(value)
+    }
+    loss_scale_by_section = {
+        str(key): _nonnegative_weight(value)
+        for key, value in dict(section_byte_loss_weight_scale_map or {}).items()
+    }
+    for section_name, raw_budget in sorted(dict(section_byte_budgets or {}).items()):
+        section = str(section_name)
+        if not section:
+            continue
+        try:
+            budget_bytes = float(raw_budget)
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(budget_bytes) or budget_bytes < 0.0:
+            continue
+        safe_section = safe_dual_metric_key(section)
+        loss_key = loss_key_by_section.get(section) or loss_key_by_section.get(
+            safe_section,
+            "coder_qat_c1a_entropy",
+        )
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_{safe_section}_section_bytes",
+                metric_name=f"train_time_section_rate_score__{safe_section}",
+                loss_weight_key=loss_key,
+                base_weight=loss_scale_by_section.get(
+                    section,
+                    loss_scale_by_section.get(safe_section, 1.0),
+                ),
+                target_fraction=1.0,
+                target=float(budget_bytes) * byte_price,
+                dual_lr=1.0,
+                max_lambda=2.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "Section byte budget is priced during training in upstream "
+                    "score units using the fixed evaluate.py waterline "
+                    "25/uncompressed_total. The renderer supplies bytes; the "
+                    "dual raises the selected coder/QAT loss when the section "
+                    "exceeds its active byte cap."
+                ),
+            )
+        )
+
     return {
         "schema": TRAIN_TIME_DUAL_ASCENT_SCHEMA,
         "enabled": bool(enabled and constraints),
@@ -498,6 +553,7 @@ def build_default_nerv_train_time_dual_ascent_config(
             "segnet_domain": "last_frame_only",
             "posenet_domain": "pair_yuv6",
             "archive_byte_price": "fixed_by_upstream_evaluate_py",
+            "archive_byte_price_score_per_byte": byte_price,
             "human_visual_fidelity_objective": False,
         },
         "authority": "macos_mlx_research_signal_false_authority",
@@ -519,6 +575,7 @@ def _constraint_payload(
     warmup_steps: int,
     update_every_steps: int,
     rationale: str,
+    target: float | None = None,
 ) -> dict[str, Any]:
     return {
         "schema": TRAIN_TIME_DUAL_ASCENT_CONSTRAINT_SCHEMA,
@@ -526,7 +583,10 @@ def _constraint_payload(
         "metric_name": metric_name,
         "loss_weight_key": loss_weight_key,
         "direction": "upper_bound",
-        "target_fraction_of_initial": float(target_fraction),
+        "target": None if target is None else float(target),
+        "target_fraction_of_initial": (
+            None if target is not None else float(target_fraction)
+        ),
         "target_ratchet_fraction": _DEFAULT_RATCHET_FRACTION,
         "dual_lr": float(dual_lr),
         "initial_lambda": 0.0,
@@ -549,6 +609,15 @@ def _nonnegative_weight(value: Any) -> float:
         return 0.0
     if not math.isfinite(out) or out <= 0.0:
         return 0.0
+    return out
+
+
+def _positive_weight(value: Any) -> float:
+    out = _nonnegative_weight(value)
+    if out <= 0.0:
+        raise TrainTimeDualAscentError(
+            f"contest_rate_score_per_byte must be finite and > 0; got {value!r}"
+        )
     return out
 
 
@@ -648,10 +717,18 @@ def _safe_key(value: str) -> str:
     return cleaned or "constraint"
 
 
+def safe_dual_metric_key(value: str) -> str:
+    """Return the public stable metric-key normalization used by constraints."""
+
+    return _safe_key(value)
+
+
 __all__ = [
+    "CONTEST_RATE_SCORE_PER_BYTE",
     "TRAIN_TIME_DUAL_ASCENT_SCHEMA",
     "DualAscentConstraint",
     "TrainTimeDualAscentController",
     "TrainTimeDualAscentError",
     "build_default_nerv_train_time_dual_ascent_config",
+    "safe_dual_metric_key",
 ]

@@ -547,6 +547,207 @@ def _build_snerv_pretraining_archive_section_qat_weight_policy(
     }
 
 
+def _build_snerv_train_time_section_byte_control(
+    archive_section_qat_policy: Mapping[str, Any],
+    active_loss_weights: Mapping[str, float],
+    *,
+    hard_byte_ceiling: int | None,
+) -> dict[str, Any]:
+    """Turn SNAR section telemetry into real train-time byte-cap constraints."""
+
+    loss_weights = {
+        str(key): float(value)
+        for key, value in dict(active_loss_weights or {}).items()
+        if float(value) >= 0.0
+    }
+    section_rows = [
+        dict(row)
+        for row in archive_section_qat_policy.get("section_rows") or []
+        if isinstance(row, Mapping) and int(row.get("bytes") or 0) > 0
+    ]
+    baseline_packet_bytes = _positive_int_or_none(
+        archive_section_qat_policy.get("baseline_packet_bytes")
+    )
+    section_bytes = {
+        str(row.get("name") or f"section_{idx:04d}"): int(row.get("bytes") or 0)
+        for idx, row in enumerate(section_rows)
+    }
+    metrics_payload = (
+        {
+            "schema": "snerv_train_time_section_byte_metrics.v1",
+            "archive_bytes": baseline_packet_bytes or sum(section_bytes.values()),
+            "section_bytes": dict(sorted(section_bytes.items())),
+            "authority": "macos_mlx_research_signal_false_authority",
+        }
+        if section_bytes
+        else None
+    )
+    base: dict[str, Any] = {
+        "schema": "snerv_train_time_section_byte_control.v1",
+        "attached": bool(section_rows),
+        "active": False,
+        "hard_byte_ceiling": hard_byte_ceiling,
+        "baseline_packet_bytes": baseline_packet_bytes,
+        "section_bytes": dict(sorted(section_bytes.items())),
+        "section_byte_budgets": {},
+        "section_byte_loss_weight_key_map": {},
+        "section_byte_loss_weight_scale_map": {},
+        "budget_rows": [],
+        "pending_section_rows": [],
+        "metrics_payload": metrics_payload,
+        "controlled_section_count": 0,
+        "pending_section_count": 0,
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    policy_blockers = [
+        str(blocker)
+        for blocker in archive_section_qat_policy.get("blockers") or []
+        if str(blocker)
+    ]
+    if policy_blockers:
+        return {
+            **base,
+            "blockers": _ordered_unique(
+                [
+                    *policy_blockers,
+                    "snerv_train_time_section_byte_archive_policy_blocked",
+                ]
+            ),
+        }
+    if hard_byte_ceiling is None:
+        return {
+            **base,
+            "pending_section_rows": _snerv_pending_train_time_section_rows(
+                section_rows,
+                reason="hard_byte_ceiling_not_configured",
+            ),
+            "pending_section_count": len(section_rows),
+            "blockers": ["snerv_train_time_section_byte_hard_ceiling_missing"],
+        }
+    if not section_rows or baseline_packet_bytes is None:
+        return {
+            **base,
+            "blockers": ["snerv_train_time_section_byte_section_rows_missing"],
+        }
+    budgets: dict[str, int] = {}
+    loss_key_map: dict[str, str] = {}
+    loss_scale_map: dict[str, float] = {}
+    budget_rows: list[dict[str, Any]] = []
+    pending_rows: list[dict[str, Any]] = []
+    blockers: list[str] = []
+    denominator = max(int(baseline_packet_bytes), 1)
+    for row in section_rows:
+        name = str(row.get("name") or "")
+        nbytes = int(row.get("bytes") or 0)
+        budget = max(1, int(np.floor(float(hard_byte_ceiling) * nbytes / denominator)))
+        loss_key = _snerv_train_time_loss_key_for_section(
+            name=name,
+            loss_weights=loss_weights,
+        )
+        if loss_key is None:
+            pending_rows.append(
+                {
+                    "section_name": name,
+                    "bytes": nbytes,
+                    "budget_bytes_if_actuated": budget,
+                    "pending_reason": (
+                        "active_qat_loss_key_missing"
+                        if name in {"decoder_payload", "lf_payload"}
+                        else "non_differentiable_archive_section"
+                    ),
+                    **FALSE_AUTHORITY,
+                }
+            )
+            if name in {"decoder_payload", "lf_payload"}:
+                blockers.append(
+                    f"snerv_train_time_section_byte_{name}_active_loss_key_missing"
+                )
+            continue
+        budgets[name] = budget
+        loss_key_map[name] = loss_key
+        loss_scale_map[name] = 1.0
+        budget_rows.append(
+            {
+                "section_name": name,
+                "bytes": nbytes,
+                "budget_bytes": budget,
+                "loss_weight_key": loss_key,
+                "operator": (
+                    "decoder_coder_qat_dual_ascent"
+                    if name == "decoder_payload"
+                    else "lf_latent_coder_qat_dual_ascent"
+                ),
+                **FALSE_AUTHORITY,
+            }
+        )
+    if not budgets:
+        blockers.append("snerv_train_time_section_byte_no_actuated_sections")
+    return {
+        **base,
+        "active": bool(budgets and not blockers),
+        "section_byte_budgets": dict(sorted(budgets.items())),
+        "section_byte_loss_weight_key_map": dict(sorted(loss_key_map.items())),
+        "section_byte_loss_weight_scale_map": dict(sorted(loss_scale_map.items())),
+        "budget_rows": budget_rows,
+        "pending_section_rows": pending_rows,
+        "controlled_section_count": len(budget_rows),
+        "pending_section_count": len(pending_rows),
+        "blockers": _ordered_unique(blockers),
+    }
+
+
+def _positive_int_or_none(value: Any) -> int | None:
+    try:
+        out = int(value)
+    except (TypeError, ValueError):
+        return None
+    return out if out > 0 else None
+
+
+def _snerv_pending_train_time_section_rows(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    reason: str,
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "section_name": str(row.get("name") or ""),
+            "bytes": int(row.get("bytes") or 0),
+            "pending_reason": reason,
+            **FALSE_AUTHORITY,
+        }
+        for row in rows
+    ]
+
+
+def _snerv_train_time_loss_key_for_section(
+    *,
+    name: str,
+    loss_weights: Mapping[str, float],
+) -> str | None:
+    if name == "decoder_payload":
+        candidates = (
+            "coder_qat_c1a_entropy",
+            "coder_qat_quant_residual",
+            "coder_qat_delta",
+            "coder_qat_magnitude",
+        )
+    elif name == "lf_payload":
+        candidates = (
+            "latent_qat_c1a_entropy",
+            "latent_qat_quant_residual",
+            "latent_qat_delta",
+            "latent_qat_magnitude",
+        )
+    else:
+        return None
+    for key in candidates:
+        if float(loss_weights.get(key, 0.0)) > 0.0:
+            return key
+    return None
+
+
 def _section_row(
     rows: Sequence[Mapping[str, Any]],
     name: str,
@@ -2553,6 +2754,11 @@ def _run_score_aware_long_training_attachment(
             include_substrings=("latents_lf_planes",),
             exclude_substrings=(),
         ).validated()
+        train_time_section_byte_control = _build_snerv_train_time_section_byte_control(
+            archive_section_qat_policy,
+            coder_qat_loss_weight_map,
+            hard_byte_ceiling=hard_byte_ceiling,
+        )
         archive_section_qat_blockers = [
             str(blocker)
             for blocker in archive_section_qat_policy.get("blockers") or ()
@@ -2576,6 +2782,15 @@ def _run_score_aware_long_training_attachment(
                 segnet_distillation_weight=seg_weight,
                 pose_distillation_weight=pose_weight,
                 coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+                section_byte_budgets=train_time_section_byte_control.get(
+                    "section_byte_budgets"
+                ),
+                section_byte_loss_weight_key_map=train_time_section_byte_control.get(
+                    "section_byte_loss_weight_key_map"
+                ),
+                section_byte_loss_weight_scale_map=train_time_section_byte_control.get(
+                    "section_byte_loss_weight_scale_map"
+                ),
             )
         )
 
@@ -2589,6 +2804,14 @@ def _run_score_aware_long_training_attachment(
                     suffix = str(key).removeprefix("coder_qat_")
                     terms[f"latent_qat_{suffix}"] = value
             return terms
+
+        def _train_time_section_byte_metrics(
+            _model_obj: Any,
+            _idx: Any,
+            _loss_weights: Mapping[str, float],
+        ) -> Mapping[str, Any] | None:
+            payload = train_time_section_byte_control.get("metrics_payload")
+            return dict(payload) if isinstance(payload, Mapping) else None
 
         initial_pairs = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
         initial_mse = float(np.mean((initial_pairs - pairs) ** 2))
@@ -2662,6 +2885,11 @@ def _run_score_aware_long_training_attachment(
                         train_time_dual_ascent_config
                     )
                 ),
+                "train_time_section_byte_control": (
+                    strip_candidate_curriculum_authority_fields(
+                        train_time_section_byte_control
+                    )
+                ),
                 "pr95_faithful_curriculum_enabled": bool(
                     pr95_faithful_curriculum_enabled
                 ),
@@ -2680,6 +2908,10 @@ def _run_score_aware_long_training_attachment(
                 "teacher_binding": teacher_binding_metadata,
             },
         }
+        if train_time_section_byte_control.get("metrics_payload") is not None:
+            bundle_kwargs["train_time_section_byte_metrics"] = (
+                _train_time_section_byte_metrics
+            )
         teacher_probe_bundle = RendererBundle(**bundle_kwargs)
         scorer_teacher = None
         learnable_student_head = None
@@ -3182,6 +3414,10 @@ def _run_score_aware_long_training_attachment(
             "archive_section_qat_weight_policy": archive_section_qat_policy,
             "archive_section_qat_weight_policy_bound": bool(
                 archive_section_qat_policy.get("active") is True
+            ),
+            "train_time_section_byte_control": train_time_section_byte_control,
+            "train_time_section_byte_control_bound": bool(
+                train_time_section_byte_control.get("active") is True
             ),
             "latent_qat_bound": bool(latent_qat_cfg.enabled),
             "teacher_binding": teacher_binding,
