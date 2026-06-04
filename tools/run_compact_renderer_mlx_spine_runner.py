@@ -2584,6 +2584,24 @@ def _float_token(value: str) -> float:
     return float(value.replace("p", "."))
 
 
+def _snerv_official_skip_high_mode_from_id_token(token: str | None) -> str:
+    if token is None:
+        return "full"
+    normalized = str(token).strip().lower()
+    token_to_mode = {
+        "sharedmean": "shared_mean",
+        "channelmean": "channel_mean",
+        "scalarmean": "scalar_mean",
+    }
+    mode = token_to_mode.get(normalized, normalized)
+    if mode not in SNERV_OFFICIAL_SKIP_HIGH_MODES:
+        raise CompactRendererMlxSpineRunnerError(
+            "SNeRV modelsize candidate official_skip_high_mode token must decode "
+            f"to one of {sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES)}; got {token!r}"
+        )
+    return mode
+
+
 def _modelsize_candidate_from_self_describing_id(
     *,
     family: str,
@@ -2713,14 +2731,8 @@ def _modelsize_candidate_from_self_describing_id(
                 if groups.get("official_modelsize") is not None
                 else None
             ),
-            official_skip_high_mode=(
-                "shared_mean"
-                if groups.get("official_skip_high_mode_token") == "sharedmean"
-                else (
-                    groups.get("official_skip_high_mode_token")
-                    if groups.get("official_skip_high_mode_token") is not None
-                    else "full"
-                )
+            official_skip_high_mode=_snerv_official_skip_high_mode_from_id_token(
+                groups.get("official_skip_high_mode_token")
             ),
         ).as_dict()
         if partial_match is not None or legacy_match is not None:

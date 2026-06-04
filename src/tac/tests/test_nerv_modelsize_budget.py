@@ -626,6 +626,36 @@ def test_snerv_official_primitives_modelsize_enumeration_uses_source_haar_j1() -
     assert all(row.nominal_step_map_payload_bytes < 1_000 for row in rows)
 
 
+def test_snerv_official_skip_high_modes_are_charged_by_storage_shape() -> None:
+    rows = {
+        mode: analyze_snerv_modelsize_candidate(
+            hard_byte_ceiling=178_000,
+            num_pairs=600,
+            carrier_hw=(384, 512),
+            wavelet="haar",
+            levels=1,
+            bits_per_coeff=1.5,
+            step_map_bits_per_coeff=0.5,
+            decoder_payload_codec="int8_symmetric",
+            snerv_model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+            official_modelsize_mparams=0.05,
+            official_skip_high_mode=mode,
+        )
+        for mode in ("full", "shared_mean", "channel_mean", "scalar_mean")
+    }
+
+    assert rows["full"].nominal_skip_high_payload_bytes > 1_000_000_000
+    assert rows["shared_mean"].nominal_skip_high_payload_bytes == 1_179_648
+    assert rows["channel_mean"].nominal_skip_high_payload_bytes == 24
+    assert rows["scalar_mean"].nominal_skip_high_payload_bytes == 8
+    assert rows["shared_mean"].nominal_under_ceiling is False
+    assert rows["channel_mean"].nominal_under_ceiling is True
+    assert rows["scalar_mean"].nominal_under_ceiling is True
+    assert rows["shared_mean"].nominal_decoder_payload_bytes > rows[
+        "channel_mean"
+    ].nominal_decoder_payload_bytes
+
+
 def test_snerv_modelsize_budget_can_consume_official_modelsize_formula() -> None:
     row = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=178_000,

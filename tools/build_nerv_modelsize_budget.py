@@ -26,6 +26,9 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     snerv_modelsize_control_profile,
 )
 from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
+    SNERV_OFFICIAL_SKIP_HIGH_MODES,
+)
 
 
 def _parse_int_tuple(value: str) -> tuple[int, ...]:
@@ -146,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--snerv-official-skip-high-mode",
         action="append",
-        choices=("full", "shared_mean"),
+        choices=sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES),
         help=(
             "Official MFU/HFR/TUB skip_high storage mode to enumerate. "
             "Repeatable; defaults to full."

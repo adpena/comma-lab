@@ -2826,14 +2826,23 @@ def test_snerv_modelsize_candidates_include_official_skip_high_mode_in_identity(
         official_modelsize_mparams=(0.05,),
         snerv_model_size_adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
         temporal_modes=("official_haar_dwt1d_lowpass",),
-        official_skip_high_modes=("full", "shared_mean"),
+        official_skip_high_modes=(
+            "full",
+            "shared_mean",
+            "channel_mean",
+            "scalar_mean",
+        ),
     )
 
     keyed = {row.official_skip_high_mode: row.as_dict() for row in rows}
-    assert set(keyed) == {"full", "shared_mean"}
+    assert set(keyed) == {"full", "shared_mean", "channel_mean", "scalar_mean"}
     assert "_sksharedmean_" not in keyed["full"]["candidate_id"]
     assert "_sksharedmean_" in keyed["shared_mean"]["candidate_id"]
+    assert "_skchannelmean_" in keyed["channel_mean"]["candidate_id"]
+    assert "_skscalarmean_" in keyed["scalar_mean"]["candidate_id"]
     assert keyed["shared_mean"]["snerv_official_skip_high_mode"] == "shared_mean"
+    assert keyed["channel_mean"]["snerv_official_skip_high_mode"] == "channel_mean"
+    assert keyed["scalar_mean"]["snerv_official_skip_high_mode"] == "scalar_mean"
     assert keyed["shared_mean"]["candidate_id"] != keyed["full"]["candidate_id"]
 
 

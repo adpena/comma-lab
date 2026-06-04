@@ -661,6 +661,50 @@ def test_official_mfu_hfr_tub_shared_skip_high_payload_expands_receiver_state() 
     assert proof["score_claim"] is False
 
 
+@pytest.mark.parametrize(
+    ("mode", "codec"),
+    [
+        ("channel_mean", "channel_mean_float64"),
+        ("scalar_mean", "scalar_mean_float64"),
+    ],
+)
+def test_official_mfu_hfr_tub_compact_skip_high_payload_expands_receiver_state(
+    mode: str,
+    codec: str,
+) -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    full_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    compact_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        skip_high_codec=mode,
+    )
+    compact_header = _read_subpacket_header(compact_payload)
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(compact_payload)
+    proof = decoded.execute()
+
+    assert compact_header["skip_high_storage"]["codec"] == codec
+    assert compact_header["skip_high_storage"]["source_shape"] == [2, 1, 8, 8]
+    assert compact_header["skip_high_storage"]["stored_shape"] == [1, 1, 1, 1]
+    assert compact_header["skip_high_storage"]["raw_byte_savings"] == 1016
+    assert compact_header["skip_high_storage"]["receiver_expands_skip_high"] is True
+    assert len(compact_payload) < len(full_payload)
+    assert decoded.tensors["inputs.mfu.skip_high"].shape == (2, 1, 8, 8)
+    assert proof["receiver_runtime_decode_proven"] is True
+    assert proof["score_claim"] is False
+
+
 def test_official_mfu_hfr_tub_unused_tub_inputs_compact_without_score_authority() -> None:
     bundle = _official_payload_fixture()
     full_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)

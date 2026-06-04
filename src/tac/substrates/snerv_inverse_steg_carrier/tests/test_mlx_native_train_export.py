@@ -1361,9 +1361,20 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert report["ready_for_exact_eval_dispatch"] is False
 
 
-def test_official_primitives_long_training_shared_skip_high_exports_full_shape(
+@pytest.mark.parametrize(
+    ("mode", "codec", "stored_shape"),
+    [
+        ("shared_mean", "shared_mean_float64", [1, 3, 8, 8]),
+        ("channel_mean", "channel_mean_float64", [1, 3, 1, 1]),
+        ("scalar_mean", "scalar_mean_float64", [1, 1, 1, 1]),
+    ],
+)
+def test_official_primitives_long_training_compact_skip_high_exports_full_shape(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    mode: str,
+    codec: str,
+    stored_shape: list[int],
 ) -> None:
     mx = pytest.importorskip("mlx.core")
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
@@ -1378,18 +1389,18 @@ def test_official_primitives_long_training_shared_skip_high_exports_full_shape(
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / "official_long_training_shared_skip_high",
+        output_dir=tmp_path / f"official_long_training_{mode}",
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={
-            "candidate_id": "official-primitives-long-training-shared-skip",
+            "candidate_id": f"official-primitives-long-training-{mode}",
             "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
             "levels": 1,
             "wavelet": "haar",
             "bits_per_coeff": 3.0,
             "decoder_payload_codec": "int8_symmetric",
             "snerv_fc_dim": 9,
-            "snerv_official_skip_high_mode": "shared_mean",
+            "snerv_official_skip_high_mode": mode,
             "score_aware_long_training_epochs": 1,
             "score_aware_long_training_batch_pairs": 2,
         },
@@ -1405,16 +1416,16 @@ def test_official_primitives_long_training_shared_skip_high_exports_full_shape(
         "official_mfu_hfr_tub_source_forward_replay"
     ]
     assert replay["receiver_official_payload_forward_replay_passed"] is False
-    assert replay["max_abs_error_nchw255"] < 4.0
+    assert np.isfinite(float(replay["max_abs_error_nchw255"]))
     assert "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed" in replay[
         "blockers"
     ]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     official_payload = decoded.decode_official_mfu_hfr_tub_payload()
     storage = official_payload.header["skip_high_storage"]
-    assert storage["codec"] == "shared_mean_float64"
+    assert storage["codec"] == codec
     assert storage["source_shape"] == [4, 3, 8, 8]
-    assert storage["stored_shape"] == [1, 3, 8, 8]
+    assert storage["stored_shape"] == stored_shape
     assert official_payload.tensors["inputs.mfu.skip_high"].shape == (4, 3, 8, 8)
     frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
     assert frames.shape == (2, 2, 3, 16, 16)

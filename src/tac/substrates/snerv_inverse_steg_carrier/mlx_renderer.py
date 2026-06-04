@@ -719,9 +719,15 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         requested_skip_high_mode = str(
             skip_high_mode or self.model_size.official_skip_high_mode
         ).strip().lower()
-        if requested_skip_high_mode not in {"full", "shared_mean"}:
+        if requested_skip_high_mode not in {
+            "full",
+            "shared_mean",
+            "channel_mean",
+            "scalar_mean",
+        }:
             raise SnervMlxRendererError(
-                "official skip_high_mode must be 'full' or 'shared_mean'"
+                "official skip_high_mode must be one of full, shared_mean, "
+                "channel_mean, scalar_mean"
             )
         self.skip_high_mode = requested_skip_high_mode
         self.skip_high_full_shape = tuple(int(v) for v in skip_high_np.shape)
@@ -731,6 +737,18 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         self.skip_mid = mx.array(skip_mid_np, dtype=mx.float32)  # type: ignore[union-attr]
         if self.skip_high_mode == "shared_mean":
             skip_high_np = np.mean(skip_high_np, axis=0, keepdims=True, dtype=np.float32)
+        elif self.skip_high_mode == "channel_mean":
+            skip_high_np = np.mean(
+                skip_high_np,
+                axis=(0, 2, 3),
+                keepdims=True,
+                dtype=np.float32,
+            )
+        elif self.skip_high_mode == "scalar_mean":
+            skip_high_np = np.asarray(
+                [[[[float(np.mean(skip_high_np, dtype=np.float32))]]]],
+                dtype=np.float32,
+            )
         self.skip_high = mx.array(skip_high_np, dtype=mx.float32)  # type: ignore[union-attr]
         self._hfr_head_names = ("lh", "hl", "hh")
         self._import_hfr_heads(hfr_heads)
@@ -788,12 +806,14 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
         frame_indices = (idx.reshape((-1, 1)) * 2 + frame_offsets).reshape((-1,))
         low = mx.take(self.low, frame_indices, axis=0)  # type: ignore[union-attr]
         skip_mid = mx.take(self.skip_mid, frame_indices, axis=0)  # type: ignore[union-attr]
-        if self.skip_high_mode == "shared_mean":
+        if self.skip_high_mode != "full":
             skip_high = mx.broadcast_to(  # type: ignore[union-attr]
                 self.skip_high,
                 (
                     int(frame_indices.shape[0]),
-                    *(int(v) for v in self.skip_high.shape[1:]),
+                    int(self.skip_high_full_shape[1]),
+                    int(self.skip_high_full_shape[2]),
+                    int(self.skip_high_full_shape[3]),
                 ),
             )
         else:
@@ -903,7 +923,7 @@ class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else ob
 
         state = self.export_state_dict()
         skip_high = state["skip_high"].astype(np.float64)
-        if self.skip_high_mode == "shared_mean":
+        if self.skip_high_mode != "full":
             skip_high = np.broadcast_to(skip_high, self.skip_high_full_shape).astype(
                 np.float64,
                 copy=True,

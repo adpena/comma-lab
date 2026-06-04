@@ -110,6 +110,8 @@ DECODER_PAYLOAD_MIXED_CODEC = "mixed_magnitude_symmetric"
 DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_CODEC = "official_numpy_float64_lzma"
 OFFICIAL_SKIP_HIGH_CODEC_FULL = "full_float64"
 OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN = "shared_mean_float64"
+OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN = "channel_mean_float64"
+OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN = "scalar_mean_float64"
 OFFICIAL_TUB_INPUT_CODEC_FULL = "full_float64"
 OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC = "unused_synthetic_float64"
 OFFICIAL_SKIP_HIGH_MODE_TO_CODEC = {
@@ -119,6 +121,13 @@ OFFICIAL_SKIP_HIGH_MODE_TO_CODEC = {
     "shared": OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
     "shared_mean": OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
     OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN: OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+    "channel": OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN,
+    "channel_mean": OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN,
+    OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN: OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN,
+    "scalar": OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN,
+    "scalar_mean": OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN,
+    "global_mean": OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN,
+    OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN: OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN,
 }
 OFFICIAL_TUB_INPUT_MODE_TO_CODEC = {
     "full": OFFICIAL_TUB_INPUT_CODEC_FULL,
@@ -1722,6 +1731,12 @@ def _official_skip_high_storage_plan(
     elif normalized == OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN:
         stored = np.mean(full, axis=0, keepdims=True, dtype=np.float64)
         effective = np.broadcast_to(stored, full.shape).copy()
+    elif normalized == OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN:
+        stored = np.mean(full, axis=(0, 2, 3), keepdims=True, dtype=np.float64)
+        effective = np.broadcast_to(stored, full.shape).copy()
+    elif normalized == OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN:
+        stored = np.asarray([[[[float(np.mean(full, dtype=np.float64))]]]], dtype=np.float64)
+        effective = np.broadcast_to(stored, full.shape).copy()
     else:  # pragma: no cover - guarded by normalizer
         raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}")
     stored = _canonical_float64_tensor(stored, name="inputs.mfu.skip_high")
@@ -1741,7 +1756,7 @@ def _official_skip_high_storage_plan(
             "stored_raw_bytes": stored_raw_bytes,
             "raw_byte_savings": full_raw_bytes - stored_raw_bytes,
             "receiver_expands_skip_high": normalized
-            == OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+            != OFFICIAL_SKIP_HIGH_CODEC_FULL,
             "lossless_relative_to_source_skip_high": normalized
             == OFFICIAL_SKIP_HIGH_CODEC_FULL,
             "train_time_tied_state_required_for_exact_compact_export": normalized
@@ -1776,7 +1791,11 @@ def _expand_official_skip_high_storage(
                 f"manifest={tuple(skip_high.shape)} header={source_shape}"
             )
         return tensors
-    if codec != OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN:
+    if codec not in {
+        OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN,
+        OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN,
+        OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN,
+    }:
         raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}")
     if len(source_shape) != 4 or any(v <= 0 for v in source_shape):
         raise SnervArchiveError("official shared skip_high source shape is invalid")
@@ -1784,7 +1803,12 @@ def _expand_official_skip_high_storage(
         raise SnervArchiveError(
             "official shared skip_high payload must store exactly one NCHW frame"
         )
-    if tuple(skip_high.shape[1:]) != tuple(source_shape[1:]):
+    expected_tail = {
+        OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN: tuple(source_shape[1:]),
+        OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN: (int(source_shape[1]), 1, 1),
+        OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN: (1, 1, 1),
+    }[codec]
+    if tuple(skip_high.shape[1:]) != expected_tail:
         raise SnervArchiveError(
             "official shared skip_high channel/spatial shape mismatch"
         )

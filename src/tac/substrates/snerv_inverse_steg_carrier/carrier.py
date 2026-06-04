@@ -122,7 +122,7 @@ SNERV_TEMPORAL_MODES: Final[frozenset[str]] = frozenset(
     ("delta", "official_haar_dwt1d_lowpass")
 )
 SNERV_OFFICIAL_SKIP_HIGH_MODES: Final[frozenset[str]] = frozenset(
-    ("full", "shared_mean")
+    ("full", "shared_mean", "channel_mean", "scalar_mean")
 )
 
 

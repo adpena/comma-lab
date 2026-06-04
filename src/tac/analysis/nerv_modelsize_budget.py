@@ -283,6 +283,36 @@ def _snerv_official_dummy_lf_section_bytes() -> tuple[int, int, int]:
     )
     metadata_bytes = len(encode_lf_metadata_payload(lf_zero_points=[0.0]))
     return int(lf_bytes), len(step_packet.packet), int(metadata_bytes)
+
+
+def _snerv_official_skip_high_storage_nominal_bytes(
+    *,
+    official_skip_high_mode: str,
+    num_pairs: int,
+    carrier_hw: tuple[int, int],
+    channels: int = 3,
+) -> int:
+    """Return conservative raw stored bytes for official skip_high mode."""
+
+    mode = str(official_skip_high_mode).strip().lower()
+    high_h = max(1, int(carrier_hw[0]) // 2)
+    high_w = max(1, int(carrier_hw[1]) // 2)
+    if mode == "full":
+        shape = (int(num_pairs) * 2, int(channels), high_h, high_w)
+    elif mode == "shared_mean":
+        shape = (1, int(channels), high_h, high_w)
+    elif mode == "channel_mean":
+        shape = (1, int(channels), 1, 1)
+    elif mode == "scalar_mean":
+        shape = (1, 1, 1, 1)
+    else:
+        raise NervModelSizeBudgetError(
+            f"unknown official skip_high mode: {official_skip_high_mode!r}"
+        )
+    count = 1
+    for dim in shape:
+        count *= int(dim)
+    return int(count * np.dtype("<f8").itemsize)
 # Backwards-compatible import aliases.  New code should read the named
 # ``modelsize_control_profile_id`` instead of treating these as upstream CLI
 # defaults.
@@ -636,6 +666,7 @@ class SnervModelSizeCandidate:
     hf_decoder_weight_count: int
     nominal_lf_payload_bytes: int
     nominal_step_map_payload_bytes: int
+    nominal_skip_high_payload_bytes: int
     nominal_decoder_payload_bytes: int
     nominal_metadata_payload_bytes: int
     nominal_header_overhead_bytes: int
@@ -1322,6 +1353,7 @@ def analyze_snerv_modelsize_candidate(
     decoder_bits = snerv_decoder_codec_nominal_bits(decoder_payload_codec)
     lf_payload = ceil(lf_total * float(bits_per_coeff) / 8.0)
     step_payload = ceil(lf_total * float(step_map_bits_per_coeff) / 8.0)
+    skip_high_payload = 0
     decoder_payload = ceil(decoder_weight_count * decoder_bits / 8.0) + int(levels) * 12
     metadata_payload = int(plane_count * 4)
     stored_lf_per_plane = int(lf_per_plane)
@@ -1331,6 +1363,12 @@ def analyze_snerv_modelsize_candidate(
         lf_payload, step_payload, metadata_payload = (
             _snerv_official_dummy_lf_section_bytes()
         )
+        skip_high_payload = _snerv_official_skip_high_storage_nominal_bytes(
+            official_skip_high_mode=str(model_size.official_skip_high_mode),
+            num_pairs=int(num_pairs),
+            carrier_hw=carrier_hw,
+        )
+        decoder_payload += int(skip_high_payload)
         stored_lf_per_plane = 1
         stored_plane_count = 1
         stored_lf_total = 1
@@ -1399,6 +1437,7 @@ def analyze_snerv_modelsize_candidate(
         hf_decoder_weight_count=decoder_weight_count,
         nominal_lf_payload_bytes=lf_payload,
         nominal_step_map_payload_bytes=step_payload,
+        nominal_skip_high_payload_bytes=skip_high_payload,
         nominal_decoder_payload_bytes=decoder_payload,
         nominal_metadata_payload_bytes=metadata_payload,
         nominal_header_overhead_bytes=header_overhead,

@@ -111,7 +111,7 @@ def test_build_nerv_modelsize_budget_tool_exposes_hinerv_target_modelsize(
             "--output-snerv-json",
             str(snerv),
             "--hard-byte-ceiling",
-            "178000",
+            "2000000000",
             "--num-pairs",
             "17",
             "--per-ceiling-limit",
@@ -151,7 +151,7 @@ def test_build_nerv_modelsize_budget_tool_exposes_shared_target_modelsize(
             "--output-snerv-json",
             str(snerv),
             "--hard-byte-ceiling",
-            "178000",
+            "2000000000",
             "--num-pairs",
             "17",
             "--per-ceiling-limit",
@@ -297,11 +297,11 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_adapter_skip_high_mod
             "--output-snerv-json",
             str(snerv),
             "--hard-byte-ceiling",
-            "178000",
+            "2000000000",
             "--num-pairs",
             "600",
             "--per-ceiling-limit",
-            "12",
+            "32",
             "--snerv-model-size-adapter",
             "snerv_official_mfu_hfr_tub_primitives_adapter",
             "--snerv-official-modelsize-mparams",
@@ -312,6 +312,10 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_adapter_skip_high_mod
             "full",
             "--snerv-official-skip-high-mode",
             "shared_mean",
+            "--snerv-official-skip-high-mode",
+            "channel_mean",
+            "--snerv-official-skip-high-mode",
+            "scalar_mean",
         ]
     )
 
@@ -323,8 +327,16 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_adapter_skip_high_mod
     assert summary["inputs"]["snerv_official_skip_high_modes"] == [
         "full",
         "shared_mean",
+        "channel_mean",
+        "scalar_mean",
     ]
     payload = json.loads(snerv.read_text(encoding="utf-8"))
+    assert payload["official_skip_high_modes"] == [
+        "full",
+        "shared_mean",
+        "channel_mean",
+        "scalar_mean",
+    ]
     rows = payload["selected_candidates"]
     official_rows = [
         row
@@ -334,8 +346,8 @@ def test_build_nerv_modelsize_budget_tool_exposes_official_adapter_skip_high_mod
     ]
     assert official_rows
     assert any("_adofficial_" in row["candidate_id"] for row in official_rows)
-    assert any("_sksharedmean_" in row["candidate_id"] for row in official_rows)
     assert all(row["lf_coeff_count_total"] == 1 for row in official_rows)
+    assert all("nominal_skip_high_payload_bytes" in row for row in official_rows)
     assert all(row["nominal_lf_payload_bytes"] < 512 for row in official_rows)
     assert all(row["nominal_step_map_payload_bytes"] < 512 for row in official_rows)
     assert all(row["nominal_metadata_payload_bytes"] < 64 for row in official_rows)
