@@ -2214,6 +2214,14 @@ def _official_long_training_replay_with_renderer_binding(
         ]
         rows.append(row)
     payload["component_rows"] = rows
+    artifact_path = payload.get("artifact_path")
+    if isinstance(artifact_path, str) and artifact_path:
+        path = Path(artifact_path).expanduser().resolve(strict=False)
+        if path.is_file():
+            payload.pop("artifact_sha256", None)
+            write_json(path, payload)
+            payload["artifact_sha256"] = sha256_file(path)
+            write_json(path, payload)
     return payload
 
 

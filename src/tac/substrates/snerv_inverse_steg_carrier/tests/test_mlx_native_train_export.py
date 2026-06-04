@@ -1378,7 +1378,9 @@ def test_official_primitives_full_video_long_training_defers_replay_gate(
         "official_mfu_hfr_tub_source_forward_replay"
     ]
     assert Path(replay["artifact_path"]).is_file()
+    replay_on_disk = json.loads(Path(replay["artifact_path"]).read_text())
     assert replay["deferred_for_full_video_training_start"] is True
+    assert replay_on_disk["deferred_for_full_video_training_start"] is True
     assert replay["defer_threshold_pairs"] == (
         mod.SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS
     )
@@ -1386,6 +1388,8 @@ def test_official_primitives_full_video_long_training_defers_replay_gate(
     assert replay["receiver_official_payload_forward_replay_passed"] is False
     assert replay["score_aware_long_training_renderer_bound"] is True
     assert replay["train_renderer_bound"] is True
+    assert replay_on_disk["score_aware_long_training_renderer_bound"] is True
+    assert replay_on_disk["train_renderer_bound"] is True
     assert blocker in replay["blockers"]
     assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in replay[
         "blockers"
