@@ -336,6 +336,28 @@ def test_fit_scale_guard_blocker_reaches_checkpoint_export_blockers() -> None:
     assert "receiver_proof_not_ready" not in blockers
 
 
+def test_written_mlx_prefilter_without_cache_quality_gate_blocks_export() -> None:
+    tool = _load_tool()
+
+    blockers = tool._blockers(
+        archive_bytes=121_690,
+        hard_byte_ceilings=[178_000],
+        receiver_proof={"runtime_consumption_proof_ready": True},
+        receiver_proof_requested=True,
+        modelsize_integrity={"blockers": []},
+        decoder_codec_resolution={"blockers": []},
+        mlx_prefilter_profile={
+            "written": True,
+            "profile_schema": "mlx_scorer_response.v1",
+            "blockers": [],
+            "cache_quality_gate": None,
+        },
+    )
+
+    assert "hinerv_receiver_raw_cache_quality_gate_missing" in blockers
+    assert "mlx_scorer_response_cache_quality_gate_failed" in blockers
+
+
 def test_fit_scale_guard_pair_sampler_spreads_full_video() -> None:
     tool = _load_tool()
 

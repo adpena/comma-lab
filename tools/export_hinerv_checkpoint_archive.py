@@ -874,6 +874,15 @@ def _blockers(
             for blocker in mlx_prefilter_profile.get("blockers") or ()
             if str(blocker)
         )
+        cache_quality_gate = mlx_prefilter_profile.get("cache_quality_gate")
+        if not isinstance(cache_quality_gate, dict):
+            blockers.append("hinerv_receiver_raw_cache_quality_gate_missing")
+            blockers.append("mlx_scorer_response_cache_quality_gate_failed")
+        else:
+            if cache_quality_gate.get("fit_gate_passed") is not True:
+                blockers.append("mlx_scorer_response_cache_quality_gate_failed")
+            if cache_quality_gate.get("candidate_cache_nondegenerate") is not True:
+                blockers.append("mlx_scorer_response_candidate_cache_degenerate")
     else:
         blockers.append("full_video_scorer_replay_not_executed")
         blockers.extend(
@@ -1301,8 +1310,21 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             cache_quality_gate,
             source_path=cache_quality_gate_path,
         )
+        response_blockers = [
+            str(blocker)
+            for blocker in response.get("blockers") or ()
+            if str(blocker)
+        ]
+        if not isinstance(response.get("cache_quality_gate"), dict):
+            response_blockers.extend(
+                [
+                    "hinerv_receiver_raw_cache_quality_gate_missing",
+                    "mlx_scorer_response_cache_quality_gate_failed",
+                ]
+            )
         response = {
             **response,
+            "blockers": list(dict.fromkeys(response_blockers)),
             "schema": "mlx_scorer_response.v1",
             "schema_version": "mlx_scorer_response.v1",
             "hinerv_receiver_raw_cache_prefilter": {
