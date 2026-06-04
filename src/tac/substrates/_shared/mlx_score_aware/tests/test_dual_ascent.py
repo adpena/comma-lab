@@ -5,12 +5,20 @@ from __future__ import annotations
 
 import pytest
 
+from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+    CONTEST_RATE_SCORE_PER_BYTE,
     TRAIN_TIME_DUAL_ASCENT_SCHEMA,
     TrainTimeDualAscentController,
     TrainTimeDualAscentError,
     build_default_nerv_train_time_dual_ascent_config,
 )
+
+
+def test_train_time_byte_price_uses_auth_eval_schema_denominator() -> None:
+    assert pytest.approx(CONTEST_RATE_SCORE_PER_BYTE) == (
+        25.0 / float(ORIGINAL_VIDEO_BYTES)
+    )
 
 
 def test_dual_ascent_bootstraps_relative_target_and_updates_weights() -> None:

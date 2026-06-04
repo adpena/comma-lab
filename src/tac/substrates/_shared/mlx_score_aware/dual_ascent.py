@@ -19,9 +19,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
+
 TRAIN_TIME_DUAL_ASCENT_SCHEMA = "mlx_train_time_dual_ascent.v1"
 TRAIN_TIME_DUAL_ASCENT_CONSTRAINT_SCHEMA = "mlx_train_time_dual_ascent_constraint.v1"
-CONTEST_RATE_SCORE_PER_BYTE = 25.0 / 37_545_489.0
+CONTEST_RATE_SCORE_PER_BYTE = 25.0 / float(ORIGINAL_VIDEO_BYTES)
 _VALID_DIRECTIONS = frozenset({"upper_bound", "lower_bound"})
 _SAFE_KEY_RE = re.compile(r"[^0-9A-Za-z_]+")
 _DEFAULT_SCORER_TARGET_FRACTION = 0.985
