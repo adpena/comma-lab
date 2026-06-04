@@ -74,6 +74,22 @@ def test_hinerv_checkpoint_export_blocks_candidate_decoder_codec_override() -> N
     assert "candidate_decoder_codec_not_export_authority" in blockers
 
 
+def test_hinerv_checkpoint_export_records_measurement_bypass_for_over_cap() -> None:
+    blockers = _blockers(
+        archive_bytes=214_187,
+        hard_byte_ceiling=178_000,
+        hard_byte_ceilings=[178_000, 216_000],
+        receiver_proof={"runtime_consumption_proof_ready": True},
+        receiver_proof_requested=True,
+        modelsize_integrity={"blockers": []},
+        decoder_codec_resolution={"blockers": []},
+        hard_byte_ceiling_measurement_bypass_enabled=True,
+    )
+
+    assert "archive_bytes_exceed_tightest_hard_ceiling" in blockers
+    assert "hard_byte_ceiling_export_bypassed_for_measurement" in blockers
+
+
 def test_hinerv_checkpoint_export_uses_strictest_candidate_or_startup_byte_ceiling() -> None:
     assert (
         _export_hard_byte_ceiling(
@@ -121,6 +137,35 @@ def test_hinerv_checkpoint_prefilter_not_requested_is_false_authority_blocker(
     assert profile["written"] is False
     assert profile["blockers"] == ["hinerv_checkpoint_mlx_prefilter_not_requested"]
     assert profile["score_claim"] is False
+
+
+def test_hinerv_checkpoint_prefilter_normalizes_non_singleton_batch_pairs(
+    tmp_path,
+) -> None:
+    profile = _maybe_write_receiver_raw_cache_mlx_prefilter(
+        requested=False,
+        output_dir=tmp_path,
+        receiver_proof={},
+        startup={},
+        command_args={},
+        candidate={"num_pairs": 2},
+        archive_bytes=123,
+        archive_sha256="a" * 64,
+        source_video_path=None,
+        scorer_upstream_dir=None,
+        scorer_device="cpu",
+        scorer_batch_pairs=4,
+        progress_every=0,
+        repo_root=tmp_path,
+    )
+
+    assert profile["scorer_batch_pairs_requested"] == 4
+    assert profile["scorer_batch_pairs_effective"] == 1
+    assert profile["scorer_batch_pairs_normalized_to_singleton"] is True
+    assert (
+        profile["scorer_batch_pairs_normalization"]["reason"]
+        == "production_mlx_scorer_response_uses_singleton_batches_after_recorded_segnet_batch_shape_drift"
+    )
 
 
 def test_hinerv_checkpoint_prefilter_requires_prefix_source_pair_indices(

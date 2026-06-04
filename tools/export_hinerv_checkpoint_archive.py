@@ -66,6 +66,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--emit-receiver-proof", action="store_true")
     parser.add_argument("--retain-receiver-proof-output", action="store_true")
     parser.add_argument(
+        "--allow-over-hard-byte-ceiling-for-measurement",
+        action="store_true",
+        help=(
+            "Do not fail before receiver proof when the measured archive exceeds "
+            "the active hard byte ceiling. The report still records the over-cap "
+            "blocker and remains false-authority."
+        ),
+    )
+    parser.add_argument(
         "--write-mlx-prefilter-profile",
         action="store_true",
         help=(
@@ -94,6 +103,9 @@ def main(argv: list[str] | None = None) -> int:
         latent_codec=args.latent_codec,
         emit_receiver_proof=bool(args.emit_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
+        allow_over_hard_byte_ceiling_for_measurement=bool(
+            args.allow_over_hard_byte_ceiling_for_measurement
+        ),
         write_mlx_prefilter_profile=bool(args.write_mlx_prefilter_profile),
         mlx_prefilter_scorer_device=str(args.mlx_prefilter_scorer_device),
         mlx_prefilter_scorer_batch_pairs=int(args.mlx_prefilter_scorer_batch_pairs),
@@ -119,6 +131,7 @@ def export_checkpoint_archive(
     latent_codec: str | None = None,
     emit_receiver_proof: bool = False,
     retain_receiver_proof_output: bool = False,
+    allow_over_hard_byte_ceiling_for_measurement: bool = False,
     write_mlx_prefilter_profile: bool = False,
     mlx_prefilter_scorer_device: str = "cpu",
     mlx_prefilter_scorer_batch_pairs: int = 1,
@@ -182,6 +195,11 @@ def export_checkpoint_archive(
         candidate=candidate,
         hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
     )
+    enforced_hard_byte_ceiling = (
+        None
+        if allow_over_hard_byte_ceiling_for_measurement
+        else hard_byte_ceiling
+    )
     archive_path, archive_sha256, archive_bytes = export_hi_nerv_mlx_archive(
         model,
         out,
@@ -198,7 +216,7 @@ def export_checkpoint_archive(
             "--checkpoint-meta",
             meta_path.as_posix(),
         ],
-        hard_byte_ceiling=hard_byte_ceiling,
+        hard_byte_ceiling=enforced_hard_byte_ceiling,
     )
     receiver_proof_path = out / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
     receiver_proof = _read_json(receiver_proof_path) if receiver_proof_path.is_file() else {}
@@ -237,7 +255,11 @@ def export_checkpoint_archive(
         "archive_path": Path(archive_path).as_posix(),
         "archive_sha256": archive_sha256,
         "archive_bytes": int(archive_bytes),
-        "hard_byte_ceiling_enforced_by_export": hard_byte_ceiling,
+        "hard_byte_ceiling_enforced_by_export": enforced_hard_byte_ceiling,
+        "hard_byte_ceiling_requested_by_candidate_or_startup": hard_byte_ceiling,
+        "hard_byte_ceiling_measurement_bypass_enabled": bool(
+            allow_over_hard_byte_ceiling_for_measurement
+        ),
         "rate_byte_profile": section_profile,
         "hard_byte_ceilings": list(startup.get("hard_byte_ceilings") or []),
         "decoder_codec": resolved_decoder_codec,
@@ -259,6 +281,10 @@ def export_checkpoint_archive(
             ),
             archive_path=Path(archive_path),
             archive_sha256=archive_sha256,
+            hard_byte_ceiling_enforced_by_export=enforced_hard_byte_ceiling,
+            hard_byte_ceiling_measurement_bypass_enabled=bool(
+                allow_over_hard_byte_ceiling_for_measurement
+            ),
         ),
         "blockers": _blockers(
             archive_bytes=int(archive_bytes),
@@ -269,6 +295,9 @@ def export_checkpoint_archive(
             modelsize_integrity=modelsize_integrity,
             decoder_codec_resolution=decoder_codec_resolution,
             mlx_prefilter_profile=mlx_prefilter_profile,
+            hard_byte_ceiling_measurement_bypass_enabled=bool(
+                allow_over_hard_byte_ceiling_for_measurement
+            ),
         ),
         **FALSE_AUTHORITY,
     }
@@ -284,6 +313,8 @@ def _modelsize_byte_cap_feedback_row(
     receiver_proof_ready: bool,
     archive_path: Path,
     archive_sha256: str,
+    hard_byte_ceiling_enforced_by_export: int | None,
+    hard_byte_ceiling_measurement_bypass_enabled: bool,
 ) -> dict[str, Any]:
     ceiling = _export_hard_byte_ceiling(
         candidate=candidate,
@@ -322,6 +353,10 @@ def _modelsize_byte_cap_feedback_row(
         "decoder_codec": str(decoder_codec),
         "modelsize_candidate": candidate,
         "hard_byte_ceiling": ceiling,
+        "hard_byte_ceiling_enforced_by_export": hard_byte_ceiling_enforced_by_export,
+        "hard_byte_ceiling_measurement_bypass_enabled": bool(
+            hard_byte_ceiling_measurement_bypass_enabled
+        ),
         "nominal_total_payload_bytes": nominal,
         "measured_archive_bytes": int(archive_bytes),
         "archive_bytes": int(archive_bytes),
@@ -415,6 +450,7 @@ def _blockers(
     modelsize_integrity: dict[str, Any],
     decoder_codec_resolution: dict[str, Any],
     mlx_prefilter_profile: dict[str, Any] | None = None,
+    hard_byte_ceiling_measurement_bypass_enabled: bool = False,
 ) -> list[str]:
     blockers = [
         "macos_mlx_checkpoint_export_false_authority",
@@ -437,6 +473,8 @@ def _blockers(
     ceiling = hard_byte_ceiling or _min_positive_int(hard_byte_ceilings)
     if ceiling is not None and int(archive_bytes) > int(ceiling):
         blockers.append("archive_bytes_exceed_tightest_hard_ceiling")
+        if hard_byte_ceiling_measurement_bypass_enabled:
+            blockers.append("hard_byte_ceiling_export_bypassed_for_measurement")
     if not receiver_proof_requested:
         blockers.append("receiver_proof_not_requested")
     elif receiver_proof.get("runtime_consumption_proof_ready") is not True:
@@ -645,12 +683,20 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
     repo_root: str | Path,
 ) -> dict[str, Any]:
     out = Path(output_dir).expanduser().resolve(strict=False)
+    batch_control = _canonical_mlx_prefilter_batch_pairs(scorer_batch_pairs)
+    effective_batch_pairs = int(batch_control["effective_batch_pairs"])
     base = {
         "schema": "hinerv_checkpoint_receiver_raw_mlx_prefilter_request.v1",
         "requested": bool(requested),
         "profile_path": (out / "local_mlx_prefilter_profile.json").as_posix(),
         "progress_path": None,
         "receiver_decoded_archive_raw_required": True,
+        "scorer_batch_pairs_requested": int(batch_control["requested_batch_pairs"]),
+        "scorer_batch_pairs_effective": effective_batch_pairs,
+        "scorer_batch_pairs_normalized_to_singleton": bool(
+            batch_control["normalized_to_singleton"]
+        ),
+        "scorer_batch_pairs_normalization": batch_control,
         **FALSE_AUTHORITY,
     }
     if not requested:
@@ -725,7 +771,7 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             source_video,
             reference_cache_dir,
             pair_count=n_pairs,
-            batch_pairs=max(1, int(scorer_batch_pairs)),
+            batch_pairs=effective_batch_pairs,
         )
         candidate_manifest = _ensure_raw_scorer_cache(
             raw_path,
@@ -736,7 +782,7 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             )
             or None,
             pair_count=n_pairs,
-            batch_pairs=max(1, int(scorer_batch_pairs)),
+            batch_pairs=effective_batch_pairs,
         )
         response = build_mlx_scorer_response_payload(
             reference_cache_dir=reference_cache_dir,
@@ -744,7 +790,7 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             archive_size_bytes=int(archive_bytes),
             repo_root=repo_root,
             upstream_dir=upstream_dir,
-            batch_pairs=max(1, int(scorer_batch_pairs)),
+            batch_pairs=effective_batch_pairs,
             device_type=str(scorer_device),
             components_dir=components_dir,
             progress_every=max(0, int(progress_every)),
@@ -766,6 +812,14 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
                 "reference_cache_manifest": reference_manifest,
                 "candidate_cache_manifest": candidate_manifest,
                 "source_pair_indices_alignment": "prefix_source_pair_indices",
+                "scorer_batch_pairs_requested": int(
+                    batch_control["requested_batch_pairs"]
+                ),
+                "scorer_batch_pairs_effective": effective_batch_pairs,
+                "scorer_batch_pairs_normalized_to_singleton": bool(
+                    batch_control["normalized_to_singleton"]
+                ),
+                "scorer_batch_pairs_normalization": batch_control,
                 **FALSE_AUTHORITY,
             },
         }
@@ -1022,6 +1076,29 @@ def _canonical_mlx_prefilter_device(value: Any) -> str:
     return aliases[device]
 
 
+def _canonical_mlx_prefilter_batch_pairs(value: Any) -> dict[str, Any]:
+    try:
+        requested = int(value)
+    except (TypeError, ValueError):
+        requested = 1
+    requested = max(1, requested)
+    effective = 1
+    normalized = requested != effective
+    return {
+        "schema": "mlx_prefilter_batch_pairs_control.v1",
+        "requested_batch_pairs": requested,
+        "effective_batch_pairs": effective,
+        "normalized_to_singleton": normalized,
+        "reason": (
+            "production_mlx_scorer_response_uses_singleton_batches_after_"
+            "recorded_segnet_batch_shape_drift"
+            if normalized
+            else "production_mlx_scorer_response_singleton_batch"
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -1040,6 +1117,15 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "checkpoint_state_kind": report.get("checkpoint_state_kind"),
         "archive_path": report.get("archive_path"),
         "archive_bytes": report.get("archive_bytes"),
+        "hard_byte_ceiling_enforced_by_export": report.get(
+            "hard_byte_ceiling_enforced_by_export"
+        ),
+        "hard_byte_ceiling_requested_by_candidate_or_startup": report.get(
+            "hard_byte_ceiling_requested_by_candidate_or_startup"
+        ),
+        "hard_byte_ceiling_measurement_bypass_enabled": report.get(
+            "hard_byte_ceiling_measurement_bypass_enabled"
+        ),
         "rate_byte_profile": report.get("rate_byte_profile"),
         "receiver_proof_ready": report.get("receiver_proof_ready"),
         "blockers": report.get("blockers"),

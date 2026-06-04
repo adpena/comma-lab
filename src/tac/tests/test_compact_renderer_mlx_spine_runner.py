@@ -3391,6 +3391,10 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
                 "decoder_codec": "int8_symmetric",
                 "receiver_proof_passed": True,
                 "receiver_contract_satisfied": True,
+                "hard_byte_ceiling_measurement_bypass_enabled": True,
+                "hard_byte_ceiling_checked_after_export": True,
+                "calibrated_archive_overrun_bytes": 228_036,
+                "required_nominal_payload_bytes_max": 91_875,
                 "modelsize_candidate": {
                     "candidate_id": "snerv-row",
                     "family": "snerv",
@@ -3413,6 +3417,10 @@ def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_ove
             "nominal_total_payload_bytes": 188_854,
             "hard_byte_ceiling": 216_000,
             "decoder_codec": "int8_symmetric",
+            "calibrated_archive_overrun_bytes": 228_036,
+            "required_nominal_payload_bytes_max": 91_875,
+            "hard_byte_ceiling_measurement_bypass_enabled": True,
+            "hard_byte_ceiling_checked_after_export": True,
             "source_bound_controls": {
                 "family": "snerv",
                 "hard_byte_ceiling": 216_000,

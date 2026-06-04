@@ -16236,6 +16236,16 @@ def _modelsize_byte_cap_feedback_row(
         ),
         "report_path": node.get("report_path"),
     }
+    for key in (
+        "archive_minus_nominal_bytes",
+        "archive_to_nominal_ratio",
+        "calibrated_archive_overrun_bytes",
+        "required_nominal_payload_bytes_max",
+        "hard_byte_ceiling_measurement_bypass_enabled",
+        "hard_byte_ceiling_checked_after_export",
+    ):
+        if key in node:
+            row[key] = node.get(key)
     return {key: value for key, value in row.items() if value is not None}
 
 

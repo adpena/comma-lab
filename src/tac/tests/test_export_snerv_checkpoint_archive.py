@@ -113,7 +113,10 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
                     "step_map_bits_per_coeff": 0.5,
                     "decoder_payload_codec": "int8_symmetric",
                     "lf_payload_codec": "portfolio_auto",
+                    "nominal_total_payload_bytes": 6,
+                    "hard_byte_ceiling": 10,
                 },
+                "hard_byte_ceilings": [12],
                 "command_args": {
                     "num_pairs": 2,
                     "scorer_upstream_dir": (tmp_path / "upstream").as_posix(),
@@ -187,11 +190,31 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
         emit_receiver_proof=True,
         write_mlx_prefilter_profile=True,
         mlx_prefilter_scorer_device="mps",
+        mlx_prefilter_scorer_batch_pairs=4,
         repo_root=tmp_path,
     )
 
     assert report["receiver_proof_passed"] is True
+    assert report["hard_byte_ceiling_requested_by_candidate_or_startup"] == 10
+    assert report["hard_byte_ceiling_checked_after_export"] is True
+    feedback = report["modelsize_byte_cap_feedback_row"]
+    assert feedback["schema"] == "nerv_modelsize_byte_cap_feedback_row.v1"
+    assert feedback["family"] == "snerv"
+    assert feedback["candidate_id"] == "snerv_test_prefilter"
+    assert feedback["hard_byte_ceiling"] == 10
+    assert feedback["nominal_total_payload_bytes"] == 6
+    assert feedback["measured_archive_bytes"] == len(b"archive")
+    assert feedback["calibrated_archive_overrun_bytes"] == 0
+    assert feedback["receiver_closed"] is True
     assert report["local_mlx_prefilter_written"] is True
+    assert report["local_mlx_prefilter_profile"]["scorer_batch_pairs_requested"] == 4
+    assert report["local_mlx_prefilter_profile"]["scorer_batch_pairs_effective"] == 1
+    assert (
+        report["local_mlx_prefilter_profile"][
+            "scorer_batch_pairs_normalized_to_singleton"
+        ]
+        is True
+    )
     lf_summary = report["packet_section_report_summary"]["lf_payload_codec_report"]
     assert lf_summary["report_status"] == "receiver_visible_lf_payload_accounting_verified"
     assert lf_summary["schema"] == "snerv_lf_quant_payload.v2"
@@ -212,6 +235,99 @@ def test_snerv_checkpoint_export_can_write_receiver_decoded_mlx_prefilter(
     assert calls["prefilter_archive_sha256"] == "a" * 64
     assert calls["prefilter_scorer_device"] == "gpu"
     assert int(calls["prefilter_packet_bytes"]) == report["packet_bytes"]
+
+
+def test_snerv_checkpoint_export_records_over_cap_measurement_feedback(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    model_size = SnervModelSizeConfig(fc_dim=9, emb_size=0, temporal_context=0)
+    state: dict[str, np.ndarray] = {
+        "latents_lf_planes": np.zeros((1, 2, 3, 4, 4), dtype=np.float32),
+    }
+    for subband in ("LH", "HL", "HH"):
+        state[f"decoder_kernels.0.{subband}"] = np.zeros(
+            (model_size.feature_count,),
+            dtype=np.float32,
+        )
+    state_path = tmp_path / "state.npsd"
+    state_path.write_bytes(pack_state_dict_numpy(state, dtype="fp32"))
+    checkpoint_meta = tmp_path / "checkpoint.meta.json"
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "global_epoch": 19,
+                "ema_shadow_state_path": state_path.as_posix(),
+                "live_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "snerv_overcap_measurement",
+                    "fc_dim": 9,
+                    "levels": 1,
+                    "wavelet": "haar",
+                    "bits_per_coeff": 3.0,
+                    "step_map_bits_per_coeff": 0.5,
+                    "decoder_payload_codec": "int8_symmetric",
+                    "lf_payload_codec": "portfolio_auto",
+                    "nominal_total_payload_bytes": 120_000,
+                    "hard_byte_ceiling": 178_000,
+                },
+                "hard_byte_ceilings": [216_000],
+                "command_args": {"num_pairs": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def fake_export_snerv_mlx_archive(*_args, **_kwargs):
+        archive = tmp_path / "archive.zip"
+        archive.write_bytes(b"x" * 214_187)
+        return {
+            "receiver_proof": {
+                "archive_path": archive.as_posix(),
+                "archive_bytes": archive.stat().st_size,
+                "archive_sha256": "d" * 64,
+                "proof_path": (tmp_path / "receiver_proof.json").as_posix(),
+                "runtime_consumption_proof_passed": True,
+                "receiver_contract_satisfied": True,
+            }
+        }
+
+    monkeypatch.setattr(export_tool, "export_snerv_mlx_archive", fake_export_snerv_mlx_archive)
+
+    report = export_snerv_checkpoint_archive(
+        startup_json=startup,
+        checkpoint_meta=checkpoint_meta,
+        output_dir=tmp_path / "export",
+        state_kind="ema",
+        emit_receiver_proof=True,
+        allow_over_hard_byte_ceiling_for_measurement=True,
+        repo_root=tmp_path,
+    )
+
+    assert report["archive_bytes"] == 214_187
+    assert report["hard_byte_ceiling_requested_by_candidate_or_startup"] == 178_000
+    assert report["hard_byte_ceiling_checked_after_export"] is True
+    assert report["hard_byte_ceiling_measurement_bypass_enabled"] is True
+    assert "archive_bytes_exceed_tightest_hard_ceiling" in report["blockers"]
+    assert "hard_byte_ceiling_export_bypassed_for_measurement" in report["blockers"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
+    feedback = report["modelsize_byte_cap_feedback_row"]
+    assert feedback["hard_byte_ceiling"] == 178_000
+    assert feedback["hard_byte_ceiling_measurement_bypass_enabled"] is True
+    assert feedback["measured_archive_bytes"] == 214_187
+    assert feedback["calibrated_archive_overrun_bytes"] == 36_187
+    assert feedback["required_nominal_payload_bytes_max"] == 99_725
+    assert feedback["receiver_closed"] is True
 
 
 def test_snerv_checkpoint_export_prefers_receiver_raw_cache_prefilter(

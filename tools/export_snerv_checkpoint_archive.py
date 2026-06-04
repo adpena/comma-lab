@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -93,6 +94,15 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--retain-receiver-proof-output", action="store_true")
     parser.add_argument("--receiver-proof-timeout-seconds", default=1800, type=int)
     parser.add_argument(
+        "--allow-over-hard-byte-ceiling-for-measurement",
+        action="store_true",
+        help=(
+            "Keep exporting/reporting even when measured archive.zip bytes exceed "
+            "the active hard byte ceiling. The report records an over-cap blocker "
+            "and remains false-authority."
+        ),
+    )
+    parser.add_argument(
         "--write-mlx-prefilter-profile",
         action="store_true",
         help=(
@@ -122,6 +132,9 @@ def main(argv: list[str] | None = None) -> int:
         emit_receiver_proof=bool(args.emit_receiver_proof),
         retain_receiver_proof_output=bool(args.retain_receiver_proof_output),
         receiver_proof_timeout_seconds=int(args.receiver_proof_timeout_seconds),
+        allow_over_hard_byte_ceiling_for_measurement=bool(
+            args.allow_over_hard_byte_ceiling_for_measurement
+        ),
         write_mlx_prefilter_profile=bool(args.write_mlx_prefilter_profile),
         mlx_prefilter_scorer_device=str(args.mlx_prefilter_scorer_device),
         mlx_prefilter_scorer_batch_pairs=int(args.mlx_prefilter_scorer_batch_pairs),
@@ -148,6 +161,7 @@ def export_snerv_checkpoint_archive(
     emit_receiver_proof: bool = False,
     retain_receiver_proof_output: bool = False,
     receiver_proof_timeout_seconds: int = 1800,
+    allow_over_hard_byte_ceiling_for_measurement: bool = False,
     write_mlx_prefilter_profile: bool = False,
     mlx_prefilter_scorer_device: str = "cpu",
     mlx_prefilter_scorer_batch_pairs: int = 1,
@@ -166,6 +180,10 @@ def export_snerv_checkpoint_archive(
     command_args = _require_mapping(startup.get("command_args"), "command_args")
     state_path = _checkpoint_state_path(meta, state_kind=state_kind)
     state = unpack_state_dict_numpy(state_path.read_bytes())
+    hard_byte_ceiling = _export_hard_byte_ceiling(
+        candidate=candidate,
+        hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
+    )
 
     levels = int(candidate.get("levels") or candidate.get("snerv_levels") or command_args.get("levels") or 3)
     wavelet = str(candidate.get("wavelet") or command_args.get("wavelet") or "haar")
@@ -285,6 +303,13 @@ def export_snerv_checkpoint_archive(
         "archive_path": str(archive_path) if archive_path else None,
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
+        "hard_byte_ceiling_requested_by_candidate_or_startup": hard_byte_ceiling,
+        "hard_byte_ceiling_checked_after_export": bool(
+            hard_byte_ceiling is not None and archive_bytes is not None
+        ),
+        "hard_byte_ceiling_measurement_bypass_enabled": bool(
+            allow_over_hard_byte_ceiling_for_measurement
+        ),
         "decoder_codec": resolved_decoder_codec,
         "decoder_codec_requested": requested_decoder_codec,
         "lf_payload_codec": resolved_lf_codec,
@@ -300,14 +325,33 @@ def export_snerv_checkpoint_archive(
         ),
         "receiver_proof_passed": receiver_proof.get("runtime_consumption_proof_passed") is True,
         "receiver_contract_satisfied": receiver_proof.get("receiver_contract_satisfied") is True,
+        "modelsize_byte_cap_feedback_row": _modelsize_byte_cap_feedback_row(
+            candidate=candidate,
+            archive_bytes=int(archive_bytes) if archive_bytes is not None else None,
+            hard_byte_ceiling=hard_byte_ceiling,
+            packet_bytes=int(packet.total_bytes),
+            decoder_codec=resolved_decoder_codec,
+            receiver_proof_passed=receiver_proof.get("runtime_consumption_proof_passed") is True,
+            receiver_contract_satisfied=receiver_proof.get("receiver_contract_satisfied") is True,
+            archive_path=str(archive_path) if archive_path else None,
+            archive_sha256=str(archive_sha256) if archive_sha256 else None,
+            measurement_bypass_enabled=bool(
+                allow_over_hard_byte_ceiling_for_measurement
+            ),
+        ),
         "local_mlx_prefilter_profile": mlx_prefilter_profile,
         "local_mlx_prefilter_profile_path": mlx_prefilter_profile.get("profile_path"),
         "local_mlx_prefilter_progress_path": mlx_prefilter_profile.get("progress_path"),
         "local_mlx_prefilter_written": mlx_prefilter_profile.get("written") is True,
         "blockers": _blockers(
+            archive_bytes=int(archive_bytes) if archive_bytes is not None else None,
+            hard_byte_ceiling=hard_byte_ceiling,
             receiver_proof=receiver_proof,
             receiver_proof_requested=bool(emit_receiver_proof),
             mlx_prefilter_profile=mlx_prefilter_profile,
+            hard_byte_ceiling_measurement_bypass_enabled=bool(
+                allow_over_hard_byte_ceiling_for_measurement
+            ),
         ),
         **FALSE_AUTHORITY,
     }
@@ -692,6 +736,8 @@ def _maybe_write_receiver_decoded_mlx_prefilter(
 ) -> dict[str, Any]:
     metadata = dict(packet.metadata)
     out = Path(output_dir).expanduser().resolve(strict=False)
+    batch_control = _canonical_mlx_prefilter_batch_pairs(scorer_batch_pairs)
+    effective_batch_pairs = int(batch_control["effective_batch_pairs"])
     base = {
         "schema": "snerv_checkpoint_receiver_decoded_mlx_prefilter_request.v1",
         "requested": bool(requested),
@@ -700,6 +746,12 @@ def _maybe_write_receiver_decoded_mlx_prefilter(
         "packet_sha256": _sha256_bytes(packet.packet),
         "packet_bytes": int(packet.total_bytes),
         "receiver_decoded_selected_packet": True,
+        "scorer_batch_pairs_requested": int(batch_control["requested_batch_pairs"]),
+        "scorer_batch_pairs_effective": effective_batch_pairs,
+        "scorer_batch_pairs_normalized_to_singleton": bool(
+            batch_control["normalized_to_singleton"]
+        ),
+        "scorer_batch_pairs_normalization": batch_control,
         **FALSE_AUTHORITY,
     }
     if not requested:
@@ -730,7 +782,7 @@ def _maybe_write_receiver_decoded_mlx_prefilter(
         archive_bytes=archive_bytes,
         archive_sha256=archive_sha256,
         scorer_device=scorer_device,
-        scorer_batch_pairs=scorer_batch_pairs,
+        scorer_batch_pairs=effective_batch_pairs,
         progress_every=progress_every,
         repo_root=repo_root,
         base=base,
@@ -750,7 +802,7 @@ def _maybe_write_receiver_decoded_mlx_prefilter(
             source_video_path=source_video,
             scorer_upstream_dir=upstream_dir,
             scorer_device=scorer_device,
-            scorer_batch_pairs=scorer_batch_pairs,
+            scorer_batch_pairs=effective_batch_pairs,
             progress_every=progress_every,
             allow_overwrite=False,
         )
@@ -774,7 +826,7 @@ def _maybe_write_receiver_decoded_mlx_prefilter(
         source_video_path=source_video,
         scorer_upstream_dir=upstream_dir,
         scorer_device=scorer_device,
-        scorer_batch_pairs=scorer_batch_pairs,
+        scorer_batch_pairs=effective_batch_pairs,
         progress_every=progress_every,
         allow_overwrite=False,
     )
@@ -816,7 +868,7 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             source_video_path,
             reference_cache_dir,
             pair_count=n_pairs,
-            batch_pairs=max(1, int(scorer_batch_pairs)),
+            batch_pairs=int(scorer_batch_pairs),
         )
         candidate_manifest = _ensure_raw_scorer_cache(
             raw_path,
@@ -827,7 +879,7 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             )
             or None,
             pair_count=n_pairs,
-            batch_pairs=max(1, int(scorer_batch_pairs)),
+            batch_pairs=int(scorer_batch_pairs),
         )
         response = build_mlx_scorer_response_payload(
             reference_cache_dir=reference_cache_dir,
@@ -835,7 +887,7 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
             archive_size_bytes=int(archive_bytes),
             repo_root=repo_root,
             upstream_dir=scorer_upstream_dir,
-            batch_pairs=max(1, int(scorer_batch_pairs)),
+            batch_pairs=int(scorer_batch_pairs),
             device_type=str(scorer_device),
             components_dir=components_dir,
             progress_every=max(0, int(progress_every)),
@@ -855,6 +907,18 @@ def _maybe_write_receiver_raw_cache_mlx_prefilter(
                 "reference_cache_manifest": reference_manifest,
                 "candidate_cache_manifest": candidate_manifest,
                 "source_pair_indices_alignment": "prefix_source_pair_indices",
+                "scorer_batch_pairs_requested": base.get(
+                    "scorer_batch_pairs_requested"
+                ),
+                "scorer_batch_pairs_effective": base.get(
+                    "scorer_batch_pairs_effective"
+                ),
+                "scorer_batch_pairs_normalized_to_singleton": base.get(
+                    "scorer_batch_pairs_normalized_to_singleton"
+                ),
+                "scorer_batch_pairs_normalization": base.get(
+                    "scorer_batch_pairs_normalization"
+                ),
                 **FALSE_AUTHORITY,
             },
         }
@@ -1111,11 +1175,37 @@ def _canonical_mlx_prefilter_device(value: Any) -> str:
     return aliases[device]
 
 
+def _canonical_mlx_prefilter_batch_pairs(value: Any) -> dict[str, Any]:
+    try:
+        requested = int(value)
+    except (TypeError, ValueError):
+        requested = 1
+    requested = max(1, requested)
+    effective = 1
+    normalized = requested != effective
+    return {
+        "schema": "mlx_prefilter_batch_pairs_control.v1",
+        "requested_batch_pairs": requested,
+        "effective_batch_pairs": effective,
+        "normalized_to_singleton": normalized,
+        "reason": (
+            "production_mlx_scorer_response_uses_singleton_batches_after_"
+            "recorded_segnet_batch_shape_drift"
+            if normalized
+            else "production_mlx_scorer_response_singleton_batch"
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
 def _blockers(
     *,
+    archive_bytes: int | None,
+    hard_byte_ceiling: int | None,
     receiver_proof: dict[str, Any],
     receiver_proof_requested: bool,
     mlx_prefilter_profile: dict[str, Any],
+    hard_byte_ceiling_measurement_bypass_enabled: bool = False,
 ) -> list[str]:
     blockers = [
         "macos_mlx_checkpoint_export_false_authority",
@@ -1140,7 +1230,125 @@ def _blockers(
         blockers.append("receiver_proof_not_passed")
     if receiver_proof_requested and receiver_proof.get("receiver_contract_satisfied") is not True:
         blockers.append("receiver_contract_not_satisfied")
+    if (
+        hard_byte_ceiling is not None
+        and archive_bytes is not None
+        and int(archive_bytes) > int(hard_byte_ceiling)
+    ):
+        blockers.append("archive_bytes_exceed_tightest_hard_ceiling")
+        if hard_byte_ceiling_measurement_bypass_enabled:
+            blockers.append("hard_byte_ceiling_export_bypassed_for_measurement")
     return list(dict.fromkeys(blockers))
+
+
+def _modelsize_byte_cap_feedback_row(
+    *,
+    candidate: dict[str, Any],
+    archive_bytes: int | None,
+    hard_byte_ceiling: int | None,
+    packet_bytes: int,
+    decoder_codec: str,
+    receiver_proof_passed: bool,
+    receiver_contract_satisfied: bool,
+    archive_path: str | None,
+    archive_sha256: str | None,
+    measurement_bypass_enabled: bool,
+) -> dict[str, Any]:
+    nominal = (
+        _optional_int(candidate.get("nominal_total_payload_bytes"))
+        or _optional_int(candidate.get("total_payload_bytes"))
+        or _optional_int(candidate.get("estimated_total_payload_bytes"))
+        or int(packet_bytes)
+    )
+    measured = int(archive_bytes) if archive_bytes is not None else None
+    archive_minus_nominal = (
+        None if measured is None else int(measured) - int(nominal)
+    )
+    archive_to_nominal = (
+        None
+        if measured is None or int(nominal) <= 0
+        else float(measured) / float(nominal)
+    )
+    overrun = (
+        None
+        if measured is None or hard_byte_ceiling is None
+        else max(0, int(measured) - int(hard_byte_ceiling))
+    )
+    required_nominal_max = None
+    if (
+        measured is not None
+        and hard_byte_ceiling is not None
+        and int(measured) > 0
+        and int(nominal) > 0
+    ):
+        required_nominal_max = math.floor(
+            float(hard_byte_ceiling) * float(nominal) / float(measured)
+        )
+    receiver_closed = bool(receiver_proof_passed and receiver_contract_satisfied)
+    return {
+        "schema": "nerv_modelsize_byte_cap_feedback_row.v1",
+        "family": "snerv",
+        "candidate_id": candidate.get("candidate_id"),
+        "codec": str(decoder_codec),
+        "decoder_codec": str(decoder_codec),
+        "modelsize_candidate": candidate,
+        "hard_byte_ceiling": hard_byte_ceiling,
+        "hard_byte_ceiling_measurement_bypass_enabled": bool(measurement_bypass_enabled),
+        "nominal_total_payload_bytes": int(nominal),
+        "measured_archive_bytes": measured,
+        "archive_bytes": measured,
+        "packet_bytes": int(packet_bytes),
+        "archive_path": archive_path,
+        "archive_sha256": archive_sha256,
+        "archive_minus_nominal_bytes": archive_minus_nominal,
+        "archive_to_nominal_ratio": archive_to_nominal,
+        "calibrated_archive_overrun_bytes": overrun,
+        "required_nominal_payload_bytes_max": required_nominal_max,
+        "receiver_proof_passed": bool(receiver_proof_passed),
+        "receiver_contract_satisfied": bool(receiver_contract_satisfied),
+        "receiver_closed": receiver_closed,
+        "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _min_positive_int(values: Any) -> int | None:
+    if values is None:
+        return None
+    if isinstance(values, (str, bytes)):
+        values = [values]
+    try:
+        ints = [int(value) for value in values if int(value) > 0]
+    except (TypeError, ValueError):
+        return None
+    return min(ints) if ints else None
+
+
+def _export_hard_byte_ceiling(
+    *,
+    candidate: dict[str, Any],
+    hard_byte_ceilings: Any,
+) -> int | None:
+    values: list[int] = []
+    candidate_ceiling = _optional_int(
+        candidate.get("hard_byte_ceiling", candidate.get("snerv_hard_byte_ceiling"))
+    )
+    if candidate_ceiling is not None:
+        values.append(candidate_ceiling)
+    startup_ceiling = _min_positive_int(hard_byte_ceilings)
+    if startup_ceiling is not None:
+        values.append(startup_ceiling)
+    positives = [int(value) for value in values if int(value) > 0]
+    return min(positives) if positives else None
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -1174,6 +1382,15 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         ),
         "decoder_payload_codec": packet_metadata.get("decoder_payload_codec"),
         "archive_bytes": report.get("archive_bytes"),
+        "hard_byte_ceiling_requested_by_candidate_or_startup": report.get(
+            "hard_byte_ceiling_requested_by_candidate_or_startup"
+        ),
+        "hard_byte_ceiling_checked_after_export": report.get(
+            "hard_byte_ceiling_checked_after_export"
+        ),
+        "hard_byte_ceiling_measurement_bypass_enabled": report.get(
+            "hard_byte_ceiling_measurement_bypass_enabled"
+        ),
         "receiver_proof_passed": report.get("receiver_proof_passed"),
         "receiver_contract_satisfied": report.get("receiver_contract_satisfied"),
         "local_mlx_prefilter_written": report.get("local_mlx_prefilter_written"),
