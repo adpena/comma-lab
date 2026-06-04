@@ -151,6 +151,75 @@ def test_bridge_preserves_actual_lf_payload_codec(tmp_path: Path) -> None:
     ]
 
 
+def test_bridge_prices_selected_lf_payload_codec_not_launch_control(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-selected-lf-codec-packet"
+    packet_path = tmp_path / "selected_codec.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            lf_payload_codec="portfolio_auto",
+            lf_payload_codec_requested="portfolio_auto",
+            lf_payload_codec_selected="v2:sparse_signed_varint:brotli_q11",
+            lf_payload_codec_selection_report={
+                "schema": "snerv_lf_quant_payload.v2",
+                "mode_histogram": {"sparse_signed_varint": 4},
+                "wrapper_histogram": {"brotli_q11": 4},
+                "section_bytes": 321,
+            },
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    row = payload["rows"][0]
+    assert row["lf_payload_codec"] == "v2:sparse_signed_varint:brotli_q11"
+    assert row["lf_payload_codec_requested"] == "portfolio_auto"
+    assert row["lf_payload_codec_selected"] == "v2:sparse_signed_varint:brotli_q11"
+    assert row["lf_payload_codec_selection_report"]["section_bytes"] == 321
+    assert payload["lf_payload_codec_identity"]["selected_is_requested"] is False
+    assert payload["lf_payload_codec_identity"]["requested_is_launch_control"] is True
+    assert "required_emission_field_missing:lf_payload_codec" not in payload[
+        "blockers"
+    ]
+
+
+def test_bridge_derives_selected_lf_payload_codec_from_report_when_missing(
+    tmp_path: Path,
+) -> None:
+    packet = b"SNAR1-derived-selected-codec-packet"
+    packet_path = tmp_path / "derived_selected_codec.snar"
+    packet_path.write_bytes(packet)
+
+    payload = build_snerv_trained_ladder_row_from_advisory(
+        advisory_result=_advisory(
+            packet,
+            lf_payload_codec="auto",
+            lf_payload_codec_selection_report={
+                "schema": "snerv_lf_quant_payload.v2",
+                "mode_histogram": {"zero_run_varint": 1, "sparse_signed_varint": 2},
+                "wrapper_histogram": {"none": 1, "brotli_q9": 2},
+            },
+        ),
+        archive_path=packet_path,
+        archive_path_kind="receiver_snar_packet",
+        target_bits_per_coeff=2.5,
+        repo_root=tmp_path,
+    )
+
+    row = payload["rows"][0]
+    assert row["lf_payload_codec"] == (
+        "v2:portfolio:sparse_signed_varint+zero_run_varint:brotli_q9+none"
+    )
+    assert row["lf_payload_codec_requested"] == "auto"
+    assert row["lf_payload_codec_selected"] == row["lf_payload_codec"]
+
+
 def test_bridge_blocks_missing_lf_payload_codec_instead_of_faking_v1(
     tmp_path: Path,
 ) -> None:

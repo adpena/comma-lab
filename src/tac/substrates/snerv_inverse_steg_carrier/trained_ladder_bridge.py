@@ -98,6 +98,16 @@ def build_snerv_trained_ladder_row_from_advisory(
         full_pair_count=int(full_pair_count),
         repo_root=repo_root,
     )
+    lf_codec_identity = _lf_payload_codec_identity(advisory_result)
+    payload["lf_payload_codec_identity"] = lf_codec_identity
+    for row in payload.get("rows", []):
+        if isinstance(row, dict):
+            row["lf_payload_codec_requested"] = lf_codec_identity["requested"]
+            row["lf_payload_codec_selected"] = lf_codec_identity["selected"]
+            if lf_codec_identity["selection_report"] is not None:
+                row["lf_payload_codec_selection_report"] = lf_codec_identity[
+                    "selection_report"
+                ]
     payload["bridge_schema"] = SNERV_ADVISORY_TRAINED_LADDER_BRIDGE_SCHEMA
     payload["archive_path_kind"] = kind
     payload["bridge_notes"] = (
@@ -470,7 +480,7 @@ def _trainer_metadata(
     qat_bits: int | None,
     official_controls: Mapping[str, Any],
 ) -> dict[str, Any]:
-    lf_payload_codec = _attr(advisory_result, "lf_payload_codec")
+    lf_payload_codec_identity = _lf_payload_codec_identity(advisory_result)
     metadata: dict[str, Any] = {
         "schema": SNERV_ADVISORY_TRAINER_METADATA_SCHEMA,
         "n_pairs": _int_attr(advisory_result, "n_pairs"),
@@ -491,7 +501,8 @@ def _trainer_metadata(
         "snerv_temporal_mode": _attr(advisory_result, "snerv_temporal_mode"),
         "decoder_feature_count": _int_attr(advisory_result, "decoder_feature_count"),
         "receiver_codec_mode": archive_path_kind,
-        "lf_payload_codec": lf_payload_codec,
+        "lf_payload_codec": lf_payload_codec_identity["selected"],
+        "lf_payload_codec_requested": lf_payload_codec_identity["requested"],
         "decoder_precision_mode": _attr(advisory_result, "decoder_payload_codec"),
         "step_map_codec": _attr(advisory_result, "linf_steps_payload_codec"),
         "target_bits_per_coeff": target_bits_per_coeff,
@@ -502,6 +513,10 @@ def _trainer_metadata(
         ),
         "source": "snerv_advisory_receiver_export",
     }
+    if lf_payload_codec_identity["selection_report"] is not None:
+        metadata["lf_payload_codec_selection_report"] = lf_payload_codec_identity[
+            "selection_report"
+        ]
     if qat_bits is not None:
         metadata["qat_bits"] = int(qat_bits)
     official_solution = _attr(advisory_result, "official_modelsize_solution")
@@ -525,6 +540,69 @@ def _trainer_metadata(
         if packet_sha is not None:
             metadata["archive_sha256"] = packet_sha
     return {key: value for key, value in metadata.items() if value is not None}
+
+
+def _lf_payload_codec_identity(advisory_result: Any) -> dict[str, Any]:
+    """Return requested-vs-selected LF codec identity for byte economics.
+
+    Launch controls such as ``auto`` and ``portfolio_auto`` are not archive
+    grammars.  The trained ladder row must price the concrete receiver-selected
+    grammar, while preserving the requested launch control for provenance.
+    """
+
+    requested = _attr(advisory_result, "lf_payload_codec_requested")
+    if requested is None:
+        requested = _attr(advisory_result, "lf_payload_codec")
+    requested_text = str(requested) if requested is not None else None
+
+    selected = _attr(advisory_result, "lf_payload_codec_selected")
+    report = _attr(advisory_result, "lf_payload_codec_selection_report")
+    report_copy = dict(report) if isinstance(report, Mapping) else None
+    if selected is None:
+        selected = _selected_lf_payload_codec_from_report(
+            report_copy,
+            fallback=requested_text,
+        )
+    selected_text = str(selected) if selected is not None else None
+    return {
+        "schema": "snerv_lf_payload_codec_identity.v1",
+        "requested": requested_text,
+        "selected": selected_text,
+        "selection_report": report_copy,
+        "selected_is_requested": selected_text == requested_text,
+        "requested_is_launch_control": (
+            requested_text is not None
+            and requested_text.strip().lower() in {"auto", "portfolio", "portfolio_auto"}
+        ),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _selected_lf_payload_codec_from_report(
+    report: Mapping[str, Any] | None,
+    *,
+    fallback: str | None,
+) -> str | None:
+    if not isinstance(report, Mapping):
+        return fallback
+    schema = str(report.get("schema") or "")
+    if schema == "snerv_lf_quant_payload.v2":
+        modes = _sorted_histogram_keys(report.get("mode_histogram"))
+        wrappers = _sorted_histogram_keys(report.get("wrapper_histogram"))
+        if len(modes) == 1 and len(wrappers) == 1:
+            return f"v2:{modes[0]}:{wrappers[0]}"
+        if modes or wrappers:
+            mode_label = "+".join(modes) if modes else "unknown_modes"
+            wrapper_label = "+".join(wrappers) if wrappers else "unknown_wrappers"
+            return f"v2:portfolio:{mode_label}:{wrapper_label}"
+        return "v2:unknown"
+    return str(report.get("codec") or fallback) if (report.get("codec") or fallback) else None
+
+
+def _sorted_histogram_keys(value: Any) -> list[str]:
+    if not isinstance(value, Mapping):
+        return []
+    return sorted(str(key) for key, count in value.items() if int(count or 0) > 0)
 
 
 def _packet_receiver_proof(advisory_result: Any) -> dict[str, Any]:
