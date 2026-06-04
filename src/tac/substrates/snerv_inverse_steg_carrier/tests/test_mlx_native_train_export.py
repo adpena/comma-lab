@@ -35,6 +35,7 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
     SNERV_MLX_NATIVE_REPORT_FILENAME,
+    _build_snerv_mlx_native_byte_cap_control,
     _model_size_from_candidate,
     build_snerv_mlx_native_packet_from_numpy_pairs,
     train_export_snerv_mlx_native,
@@ -2238,11 +2239,112 @@ def test_train_export_blocks_over_hard_byte_ceiling_using_measured_archive_bytes
     assert cap["archive_bytes"] == report["archive_bytes"]
     assert cap["under_hard_byte_ceiling"] is False
     assert cap["delta_bytes_vs_hard_byte_ceiling"] == report["archive_bytes"] - 8
+    assert cap["section_bytes"]["lf_payload"] == cap["lf_payload_bytes"]
+    assert cap["lf_payload_bytes"] > 8
+    assert cap["lf_payload_exceeds_hard_byte_ceiling"] is True
+    assert cap["lf_payload_fraction_of_packet"] > 0.0
+    assert "snerv_lf_payload_exceeds_hard_byte_ceiling" in cap["blockers"]
+    assert (
+        "snerv_lf_payload_recode_or_representation_change_required_for_hard_ceiling"
+        in cap["blockers"]
+    )
     assert "snerv_mlx_native_archive_exceeds_hard_byte_ceiling" in cap["blockers"]
     assert "snerv_mlx_native_archive_exceeds_hard_byte_ceiling" in report["blockers"]
+    assert "snerv_lf_payload_exceeds_hard_byte_ceiling" in report["blockers"]
     assert report["score_claim"] is False
     assert report["promotion_eligible"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_byte_cap_control_reports_lf_pressure_without_under_ceiling_blocker() -> None:
+    cap = _build_snerv_mlx_native_byte_cap_control(
+        candidate={"candidate_id": "under-cap"},
+        hard_byte_ceiling=512,
+        packet_bytes=300,
+        section_bytes={
+            "metadata_payload": 12,
+            "lf_payload": 190,
+            "decoder_payload": 64,
+            "step_map_packet": 34,
+        },
+        archive_bytes=360,
+        archive_sha256="a" * 64,
+        run_archive_export=True,
+    )
+
+    assert cap["attached"] is True
+    assert cap["enforced"] is True
+    assert cap["under_hard_byte_ceiling"] is True
+    assert cap["delta_bytes_vs_hard_byte_ceiling"] == -152
+    assert cap["lf_payload_bytes"] == 190
+    assert cap["largest_section_name"] == "lf_payload"
+    assert cap["lf_payload_is_largest_section"] is True
+    assert cap["lf_payload_exceeds_hard_byte_ceiling"] is False
+    assert cap["lf_payload_can_cover_archive_overrun"] is None
+    assert cap["blockers"] == []
+
+
+def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
+    cap = _build_snerv_mlx_native_byte_cap_control(
+        candidate={"candidate_id": "official-pressure"},
+        hard_byte_ceiling=700,
+        packet_bytes=800,
+        section_bytes={
+            "metadata_payload": 16,
+            "lf_payload": 80,
+            "decoder_payload": 500,
+            "step_map_packet": 24,
+        },
+        official_receiver_tensor_map={
+            "receiver_tensor_map_verified": True,
+            "total_tensor_bytes": 400,
+            "category_bytes": {
+                "official_mfu_weight_payload": 160,
+                "official_hfr_weight_payload": 40,
+                "official_tub_output2_payload": 200,
+            },
+        },
+        archive_bytes=1000,
+        archive_sha256="b" * 64,
+        run_archive_export=True,
+    )
+
+    assert cap["official_decoder_payload_component_pressure_bound"] is True
+    assert cap["official_decoder_payload_component_bytes"] == {
+        "official_hfr_weight_payload": 40,
+        "official_mfu_weight_payload": 160,
+        "official_tub_output2_payload": 200,
+    }
+    assert cap["largest_pressure_scope"] == "snar_archive_section"
+    assert cap["largest_pressure_name"] == "decoder_payload"
+    assert cap["largest_pressure_bytes"] == 500
+    section_rows = {row["name"]: row for row in cap["section_pressure_rows"]}
+    assert section_rows["decoder_payload"]["byte_basis"] == (
+        "exact_receiver_packet_section_bytes"
+    )
+    component_rows = {
+        row["name"]: row for row in cap["official_decoder_payload_component_rows"]
+    }
+    assert component_rows["official_tub_output2_payload"]["byte_basis"] == (
+        "receiver_tensor_manifest_raw_float64_bytes_inside_single_lzma_decoder_payload"
+    )
+    assert component_rows["official_tub_output2_payload"][
+        "fraction_of_official_raw_tensor_bytes"
+    ] == pytest.approx(0.5)
+    assert component_rows["official_tub_output2_payload"][
+        "fraction_of_decoder_payload_section"
+    ] == pytest.approx(0.4)
+    assert "snerv_decoder_payload_is_largest_section_on_over_ceiling_export" in cap[
+        "blockers"
+    ]
+    assert (
+        "snerv_decoder_payload_component_recode_or_modelsize_change_required_for_hard_ceiling"
+        in cap["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_component_byte_pressure_requires_modelsize_waterfill"
+        in cap["blockers"]
+    )
 
 
 def test_native_export_modelsize_candidate_consumes_official_fc_dim_solution() -> None:
@@ -3241,6 +3343,27 @@ def test_official_receiver_tensor_map_accepts_nbytes_manifest(
                     "nbytes": 32,
                     "sha256": "b" * 64,
                 },
+                {
+                    "name": "inputs.tub.current",
+                    "shape": [2],
+                    "dtype": "float64_le",
+                    "bytes": 16,
+                    "sha256": "c" * 64,
+                },
+                {
+                    "name": "tub.output2_raw",
+                    "shape": [8],
+                    "dtype": "float64_le",
+                    "bytes": 64,
+                    "sha256": "d" * 64,
+                },
+                {
+                    "name": "tub.temporal_encoder.weight",
+                    "shape": [5],
+                    "dtype": "float64_le",
+                    "nbytes": 40,
+                    "sha256": "e" * 64,
+                },
             ],
         }
 
@@ -3251,12 +3374,20 @@ def test_official_receiver_tensor_map_accepts_nbytes_manifest(
 
     assert tensor_map["receiver_tensor_map_verified"] is True
     assert tensor_map["blockers"] == []
-    assert tensor_map["total_tensor_bytes"] == 64
+    assert tensor_map["total_tensor_bytes"] == 184
     assert tensor_map["category_bytes"]["official_mfu_weight_payload"] == 32
     assert tensor_map["category_bytes"]["official_hfr_weight_payload"] == 32
+    assert tensor_map["category_bytes"]["official_tub_input_payload"] == 16
+    assert tensor_map["category_bytes"]["official_tub_output2_payload"] == 64
+    assert tensor_map["category_bytes"]["official_tub_weight_payload"] == 40
     rows = {row["name"]: row for row in tensor_map["rows"]}
     assert rows["mfu.blocks.0.weight"]["manifest_byte_key"] == "nbytes"
     assert rows["hfr.heads.0.bias"]["manifest_byte_key"] == "bytes+nbytes"
+    assert rows["tub.output2_raw"]["category"] == "official_tub_output2_payload"
+    assert (
+        rows["tub.temporal_encoder.weight"]["category"]
+        == "official_tub_weight_payload"
+    )
 
 
 def test_official_receiver_tensor_map_blocks_mismatched_byte_dialects(

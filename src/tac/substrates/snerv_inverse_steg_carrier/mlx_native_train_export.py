@@ -1070,11 +1070,21 @@ def train_export_snerv_mlx_native(
                 receiver_proof_timeout_seconds=receiver_proof_timeout_seconds,
             )
     receiver_proof = dict(package.get("receiver_proof") or {}) if package else {}
-    selected_archive_metadata = unpack_snerv_archive(selected_packet).metadata
+    selected_archive = unpack_snerv_archive(selected_packet)
+    selected_archive_metadata = selected_archive.metadata
+    selected_section_bytes = {
+        str(name): len(blob) for name, blob in selected_archive.sections.items()
+    }
     byte_cap_control = _build_snerv_mlx_native_byte_cap_control(
         candidate=candidate,
         hard_byte_ceiling=hard_byte_ceiling,
         packet_bytes=len(selected_packet),
+        section_bytes=selected_section_bytes,
+        official_receiver_tensor_map=(
+            _official_receiver_tensor_map_from_packet(selected_packet)
+            if official_primitives_requested
+            else None
+        ),
         archive_bytes=(
             int(receiver_proof["archive_bytes"])
             if receiver_proof.get("archive_bytes") is not None
@@ -4998,6 +5008,10 @@ def _official_receiver_tensor_category(name: str) -> str:
         return "official_tub_input_payload"
     if name.startswith("inputs.mfu."):
         return "official_mfu_input_payload"
+    if name in {"tub.temporal_encoder_concat", "tub.output2_raw"}:
+        return "official_tub_output2_payload"
+    if name.startswith("tub."):
+        return "official_tub_weight_payload"
     return "official_decoder_graph_topology_payload"
 
 
@@ -5350,17 +5364,85 @@ def _build_snerv_mlx_native_byte_cap_control(
     candidate: Mapping[str, Any],
     hard_byte_ceiling: int | None,
     packet_bytes: int,
+    section_bytes: Mapping[str, int] | None = None,
+    official_receiver_tensor_map: Mapping[str, Any] | None = None,
     archive_bytes: int | None,
     archive_sha256: str | None,
     run_archive_export: bool,
 ) -> dict[str, Any]:
     controller = candidate.get("byte_cap_controller")
     controller_payload = dict(controller) if isinstance(controller, Mapping) else None
+    measured_section_bytes = {
+        str(name): int(value)
+        for name, value in (section_bytes or {}).items()
+        if int(value) >= 0
+    }
+    lf_payload_bytes = int(measured_section_bytes.get("lf_payload", 0))
+    largest_section_name: str | None = None
+    largest_section_bytes: int | None = None
+    if measured_section_bytes:
+        largest_section_name, largest_section_bytes = max(
+            measured_section_bytes.items(),
+            key=lambda item: int(item[1]),
+        )
+    packet_denominator = max(int(packet_bytes), 1)
+    archive_denominator = (
+        max(int(archive_bytes), 1) if archive_bytes is not None else None
+    )
+    section_pressure_rows = _snerv_archive_section_pressure_rows(
+        measured_section_bytes,
+        packet_bytes=int(packet_bytes),
+        archive_bytes=archive_bytes,
+        hard_byte_ceiling=hard_byte_ceiling,
+    )
+    official_component_rows = _snerv_official_decoder_component_pressure_rows(
+        official_receiver_tensor_map,
+        decoder_payload_bytes=measured_section_bytes.get("decoder_payload"),
+        packet_bytes=int(packet_bytes),
+        archive_bytes=archive_bytes,
+        hard_byte_ceiling=hard_byte_ceiling,
+    )
+    largest_pressure_row = max(
+        section_pressure_rows + official_component_rows,
+        key=lambda row: int(row.get("bytes", 0)),
+        default=None,
+    )
     base = {
         "schema": "snerv_mlx_native_hard_byte_ceiling_control.v1",
         "attached": hard_byte_ceiling is not None,
         "hard_byte_ceiling": hard_byte_ceiling,
         "packet_bytes": int(packet_bytes),
+        "section_bytes": measured_section_bytes,
+        "section_pressure_rows": section_pressure_rows,
+        "official_decoder_payload_component_rows": official_component_rows,
+        "official_decoder_payload_component_bytes": {
+            str(row["name"]): int(row["bytes"])
+            for row in official_component_rows
+        },
+        "official_decoder_payload_component_pressure_bound": bool(
+            official_component_rows
+        ),
+        "largest_pressure_scope": (
+            str(largest_pressure_row.get("scope")) if largest_pressure_row else None
+        ),
+        "largest_pressure_name": (
+            str(largest_pressure_row.get("name")) if largest_pressure_row else None
+        ),
+        "largest_pressure_bytes": (
+            int(largest_pressure_row.get("bytes", 0)) if largest_pressure_row else None
+        ),
+        "lf_payload_bytes": lf_payload_bytes,
+        "lf_payload_fraction_of_packet": float(lf_payload_bytes / packet_denominator),
+        "lf_payload_fraction_of_archive": (
+            float(lf_payload_bytes / archive_denominator)
+            if archive_denominator is not None
+            else None
+        ),
+        "largest_section_name": largest_section_name,
+        "largest_section_bytes": (
+            int(largest_section_bytes) if largest_section_bytes is not None else None
+        ),
+        "lf_payload_is_largest_section": largest_section_name == "lf_payload",
         "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
         "archive_sha256": str(archive_sha256) if archive_sha256 else None,
         "run_archive_export": bool(run_archive_export),
@@ -5374,12 +5456,20 @@ def _build_snerv_mlx_native_byte_cap_control(
             "under_hard_byte_ceiling": None,
             "delta_bytes_vs_hard_byte_ceiling": None,
             "enforced": False,
+            "archive_overrun_bytes": None,
+            "lf_payload_exceeds_hard_byte_ceiling": None,
+            "lf_payload_can_cover_archive_overrun": None,
             "blockers": [],
         }
 
     blockers: list[str] = []
     under: bool | None = None
     delta: int | None = None
+    archive_overrun_bytes: int | None = None
+    lf_payload_exceeds_hard_byte_ceiling = bool(
+        lf_payload_bytes > int(hard_byte_ceiling)
+    )
+    lf_payload_can_cover_archive_overrun: bool | None = None
     if not run_archive_export:
         blockers.append("snerv_mlx_native_hard_byte_ceiling_not_enforced_archive_export_disabled")
     elif archive_bytes is None:
@@ -5388,15 +5478,169 @@ def _build_snerv_mlx_native_byte_cap_control(
         delta = int(archive_bytes) - int(hard_byte_ceiling)
         under = delta <= 0
         if not under:
+            archive_overrun_bytes = int(delta)
+            lf_payload_can_cover_archive_overrun = bool(
+                lf_payload_bytes >= archive_overrun_bytes
+            )
             blockers.append("snerv_mlx_native_archive_exceeds_hard_byte_ceiling")
+            if lf_payload_exceeds_hard_byte_ceiling:
+                blockers.append("snerv_lf_payload_exceeds_hard_byte_ceiling")
+            if largest_section_name == "lf_payload":
+                blockers.append(
+                    "snerv_lf_payload_is_largest_section_on_over_ceiling_export"
+                )
+            if largest_section_name == "decoder_payload":
+                blockers.append(
+                    "snerv_decoder_payload_is_largest_section_on_over_ceiling_export"
+                )
+            if (
+                lf_payload_exceeds_hard_byte_ceiling
+                or lf_payload_can_cover_archive_overrun
+            ):
+                blockers.append(
+                    "snerv_lf_payload_recode_or_representation_change_required_for_hard_ceiling"
+                )
+            if (
+                largest_section_name == "decoder_payload"
+                and measured_section_bytes.get("decoder_payload", 0)
+                >= archive_overrun_bytes
+            ):
+                blockers.append(
+                    "snerv_decoder_payload_component_recode_or_modelsize_change_required_for_hard_ceiling"
+                )
+                if official_component_rows:
+                    blockers.append(
+                        "snerv_official_mfu_hfr_tub_component_byte_pressure_requires_modelsize_waterfill"
+                    )
 
     return {
         **base,
         "under_hard_byte_ceiling": under,
         "delta_bytes_vs_hard_byte_ceiling": delta,
+        "archive_overrun_bytes": archive_overrun_bytes,
+        "lf_payload_exceeds_hard_byte_ceiling": lf_payload_exceeds_hard_byte_ceiling,
+        "lf_payload_can_cover_archive_overrun": lf_payload_can_cover_archive_overrun,
         "enforced": bool(run_archive_export and archive_bytes is not None),
         "blockers": _ordered_unique(blockers),
     }
+
+
+def _snerv_archive_section_pressure_rows(
+    section_bytes: Mapping[str, int],
+    *,
+    packet_bytes: int,
+    archive_bytes: int | None,
+    hard_byte_ceiling: int | None,
+) -> list[dict[str, Any]]:
+    """Build exact SNAR1 section rows for byte-cap/modelsize controllers."""
+
+    packet_denominator = max(int(packet_bytes), 1)
+    archive_denominator = (
+        max(int(archive_bytes), 1) if archive_bytes is not None else None
+    )
+    largest_name: str | None = None
+    if section_bytes:
+        largest_name = max(section_bytes.items(), key=lambda item: int(item[1]))[0]
+    rows: list[dict[str, Any]] = []
+    for name, nbytes in sorted(
+        section_bytes.items(), key=lambda item: (-int(item[1]), str(item[0]))
+    ):
+        bytes_int = int(nbytes)
+        rows.append(
+            {
+                "scope": "snar_archive_section",
+                "name": str(name),
+                "bytes": bytes_int,
+                "byte_basis": "exact_receiver_packet_section_bytes",
+                "fraction_of_packet": float(bytes_int / packet_denominator),
+                "fraction_of_archive": (
+                    float(bytes_int / archive_denominator)
+                    if archive_denominator is not None
+                    else None
+                ),
+                "is_largest_section": str(name) == largest_name,
+                "exceeds_hard_byte_ceiling": (
+                    bool(bytes_int > int(hard_byte_ceiling))
+                    if hard_byte_ceiling is not None
+                    else None
+                ),
+            }
+        )
+    return rows
+
+
+def _snerv_official_decoder_component_pressure_rows(
+    official_receiver_tensor_map: Mapping[str, Any] | None,
+    *,
+    decoder_payload_bytes: int | None,
+    packet_bytes: int,
+    archive_bytes: int | None,
+    hard_byte_ceiling: int | None,
+) -> list[dict[str, Any]]:
+    """Expose official MFU/HFR/TUB raw tensor byte pressure inside decoder_payload.
+
+    The current official payload stores all receiver tensors under one LZMA
+    decoder section, so component rows are not exact ZIP byte spans.  They are
+    real receiver-manifest tensor byte masses, which is the right control
+    surface for modelsize, QAT, and waterfilling before a future packet compiler
+    splits or reorders the stream.
+    """
+
+    if not isinstance(official_receiver_tensor_map, Mapping):
+        return []
+    if official_receiver_tensor_map.get("receiver_tensor_map_verified") is not True:
+        return []
+    category_bytes_raw = official_receiver_tensor_map.get("category_bytes")
+    if not isinstance(category_bytes_raw, Mapping):
+        return []
+    packet_denominator = max(int(packet_bytes), 1)
+    archive_denominator = (
+        max(int(archive_bytes), 1) if archive_bytes is not None else None
+    )
+    decoder_denominator = (
+        max(int(decoder_payload_bytes), 1)
+        if decoder_payload_bytes is not None
+        else None
+    )
+    total_tensor_bytes = max(
+        int(official_receiver_tensor_map.get("total_tensor_bytes") or 0),
+        1,
+    )
+    rows: list[dict[str, Any]] = []
+    for name, value in sorted(
+        category_bytes_raw.items(), key=lambda item: (-int(item[1]), str(item[0]))
+    ):
+        bytes_int = int(value)
+        rows.append(
+            {
+                "scope": "official_mfu_hfr_tub_decoder_payload_category",
+                "name": str(name),
+                "bytes": bytes_int,
+                "byte_basis": (
+                    "receiver_tensor_manifest_raw_float64_bytes_inside_single_lzma_decoder_payload"
+                ),
+                "fraction_of_official_raw_tensor_bytes": float(
+                    bytes_int / total_tensor_bytes
+                ),
+                "fraction_of_decoder_payload_section": (
+                    float(bytes_int / decoder_denominator)
+                    if decoder_denominator is not None
+                    else None
+                ),
+                "fraction_of_packet": float(bytes_int / packet_denominator),
+                "fraction_of_archive": (
+                    float(bytes_int / archive_denominator)
+                    if archive_denominator is not None
+                    else None
+                ),
+                "exceeds_hard_byte_ceiling": (
+                    bool(bytes_int > int(hard_byte_ceiling))
+                    if hard_byte_ceiling is not None
+                    else None
+                ),
+            }
+        )
+    return rows
 
 
 def _fc_dim_from_candidate(candidate: Mapping[str, Any]) -> int:

@@ -562,6 +562,21 @@ def _official_components_from_checkpoint_state(
     h = int(ll_h) * 2
     w = int(ll_w) * 2
     tub_zero = np.zeros((channels, h, w), dtype=np.float64)
+    tub_temporal_encoder_concat, tub_output2_raw = (
+        _official_tub_output2_payload_from_checkpoint_state(state)
+    )
+    default_temporal_shape = (1, 4, max(1, ll_h // 2), max(1, ll_w // 2))
+    default_output2_shape = (2, 8, max(1, ll_h // 2), max(1, ll_w // 2))
+    temporal_encoder_output_shape = (
+        tuple(int(v) for v in tub_temporal_encoder_concat.shape)
+        if tub_temporal_encoder_concat is not None
+        else default_temporal_shape
+    )
+    output2_decoder_output_shape = (
+        tuple(int(v) for v in tub_output2_raw.shape)
+        if tub_output2_raw is not None
+        else default_output2_shape
+    )
     return {
         "mfu": _official_passthrough_mfu(channels=channels),
         "hfr_heads": _official_hfr_heads_from_checkpoint_state(state),
@@ -576,9 +591,19 @@ def _official_components_from_checkpoint_state(
         "tub_current": tub_zero,
         "tub_previous": tub_zero,
         "tub_next_frame": tub_zero,
-        "temporal_encoder_output_shape": (1, 4, max(1, ll_h // 2), max(1, ll_w // 2)),
+        "temporal_encoder_output_shape": temporal_encoder_output_shape,
         "fc_hw": (2, 2),
-        "output2_decoder_output_shape": (2, 8, max(1, ll_h // 2), max(1, ll_w // 2)),
+        "output2_decoder_output_shape": output2_decoder_output_shape,
+        **(
+            {
+                "tub_temporal_encoder_concat": tub_temporal_encoder_concat,
+                "tub_output2_raw": tub_output2_raw,
+                "official_checkpoint_tub_output2_payload_preserved": True,
+            }
+            if tub_temporal_encoder_concat is not None
+            and tub_output2_raw is not None
+            else {"official_checkpoint_tub_output2_payload_preserved": False}
+        ),
         "n_pairs": n_frames // 2,
         "frames_per_pair": 2,
         "channels": channels,
@@ -632,6 +657,33 @@ def _official_hfr_head_from_checkpoint_state(
     )
 
 
+def _official_tub_output2_payload_from_checkpoint_state(
+    state: dict[str, np.ndarray],
+) -> tuple[np.ndarray | None, np.ndarray | None]:
+    temporal = _checkpoint_state_optional_array(
+        state,
+        "tub.temporal_encoder_concat",
+        "tub_temporal_encoder_concat",
+    )
+    raw = _checkpoint_state_optional_array(
+        state,
+        "tub.output2_raw",
+        "tub_output2_raw",
+    )
+    if (temporal is None) != (raw is None):
+        raise ValueError(
+            "official checkpoint TUB output2 payload requires both "
+            "tub.temporal_encoder_concat and tub.output2_raw"
+        )
+    if temporal is None or raw is None:
+        return None, None
+    temporal = np.asarray(temporal, dtype=np.float64)
+    raw = np.asarray(raw, dtype=np.float64)
+    _validate_official_checkpoint_tensor("tub.temporal_encoder_concat", temporal)
+    _validate_official_checkpoint_tensor("tub.output2_raw", raw)
+    return temporal, raw
+
+
 def _checkpoint_state_array(
     state: dict[str, np.ndarray],
     *keys: str,
@@ -641,6 +693,16 @@ def _checkpoint_state_array(
             return np.asarray(state[key])
     joined = ", ".join(keys)
     raise ValueError(f"official checkpoint state missing any of: {joined}")
+
+
+def _checkpoint_state_optional_array(
+    state: dict[str, np.ndarray],
+    *keys: str,
+) -> np.ndarray | None:
+    for key in keys:
+        if key in state:
+            return np.asarray(state[key])
+    return None
 
 
 def _validate_official_checkpoint_tensor(name: str, value: np.ndarray) -> None:

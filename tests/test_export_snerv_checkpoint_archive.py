@@ -5,6 +5,11 @@ from pathlib import Path
 
 import numpy as np
 
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    decode_official_mfu_hfr_tub_decoder_payload,
+    unpack_snerv_archive,
+)
+
 TOOL_PATH = (
     Path(__file__).resolve().parents[1] / "tools" / "export_snerv_checkpoint_archive.py"
 )
@@ -87,6 +92,69 @@ def test_official_checkpoint_packet_uses_official_payload() -> None:
     assert summary["snerv_official_mfu_hfr_tub_export_bound"] is True
     frames = tool.decode_snerv_archive_frames(packet.packet)
     assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -> None:
+    tool = _load_tool()
+    model_size = tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+    )
+    state = _official_checkpoint_state()
+    state["tub.temporal_encoder_concat"] = np.arange(
+        1 * 4 * 4 * 4,
+        dtype=np.float32,
+    ).reshape(1, 4, 4, 4)
+    state["tub.output2_raw"] = (
+        np.arange(2 * 8 * 4 * 4, dtype=np.float32).reshape(2, 8, 4, 4) / 31.0
+    )
+
+    packet = tool.build_snerv_official_checkpoint_packet(
+        state,
+        model_size=model_size,
+        metadata_extra={"unit_test": True},
+    )
+    decoded = unpack_snerv_archive(packet.packet)
+    official_payload = decode_official_mfu_hfr_tub_decoder_payload(
+        decoded.sections["decoder_payload"]
+    )
+    proof = official_payload.execute()
+
+    storage = decoded.metadata["official_tub_output2_storage"]
+    assert storage["stored"] is True
+    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["tensor_names"] == [
+        "tub.temporal_encoder_concat",
+        "tub.output2_raw",
+    ]
+    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
+    assert proof["executed_components"]["official_tub_output2_fusion"] is True
+    rows = {row["name"]: row for row in proof["output_tensors"]}
+    assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
+    assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
+    assert decoded.metadata["source_faithful_stack"] is False
+    assert decoded.metadata["score_claim"] is False
+
+
+def test_official_checkpoint_packet_fails_closed_on_incomplete_tub_output2_pair() -> None:
+    tool = _load_tool()
+    model_size = tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+    )
+    state = _official_checkpoint_state()
+    state["tub.temporal_encoder_concat"] = np.zeros((1, 4, 4, 4), dtype=np.float32)
+
+    try:
+        tool.build_snerv_official_checkpoint_packet(
+            state,
+            model_size=model_size,
+            metadata_extra={"unit_test": True},
+        )
+    except ValueError as exc:
+        assert "requires both tub.temporal_encoder_concat and tub.output2_raw" in str(exc)
+    else:  # pragma: no cover - assertion guard
+        raise AssertionError("official checkpoint output2 export must fail closed")
 
 
 def test_official_checkpoint_packet_fails_closed_without_official_atoms() -> None:
