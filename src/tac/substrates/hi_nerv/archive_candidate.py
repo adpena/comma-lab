@@ -74,25 +74,35 @@ def hi_nerv_mlx_numpy_portability_contract(
     *,
     canonical_npz_bridge_used: bool = True,
     training_backend: str = "mlx",
+    latent_codec: str = "int16_raw",
 ) -> dict[str, Any]:
     """Return the honest portability contract for the current HiNeRV receiver."""
 
     backend = str(training_backend)
+    normalized_latent_codec = str(latent_codec)
+    receiver_dependencies = ["torch", "brotli", "python_stdlib"]
+    notes = (
+        "HiNeRV MLX export is NumPy-array backed, but the contest receiver "
+        "currently decodes with PyTorch. This is contest-compliant when "
+        "dependency closure passes, but not pure NumPy inflate."
+    )
+    if normalized_latent_codec == "int16_hi_ac_brotli_q11":
+        receiver_dependencies.insert(2, "constriction")
+        notes += (
+            " The selected high-byte arithmetic latent codec also requires "
+            "the constriction range-coder dependency at inflate time."
+        )
     return build_mlx_numpy_portability_contract(
         substrate_id="hi_nerv",
         training_backend=backend,
         exported_state_kind=f"pytorch_layout_numpy_arrays_from_{backend}_model",
         archive_payload_kind="hiv1_monolithic_0_bin",
         receiver_runtime_kind="torch_decode_receiver",
-        receiver_dependencies=("torch", "brotli", "python_stdlib"),
+        receiver_dependencies=tuple(receiver_dependencies),
         numpy_array_export=True,
         canonical_npz_bridge_used=canonical_npz_bridge_used,
         pure_numpy_inflate=False,
-        notes=(
-            "HiNeRV MLX export is NumPy-array backed, but the contest receiver "
-            "currently decodes with PyTorch. This is contest-compliant when "
-            "dependency closure passes, but not pure NumPy inflate."
-        ),
+        notes=notes,
     )
 
 
@@ -564,6 +574,7 @@ def export_hi_nerv_mlx_archive(
                 "emitted_by": "export_hi_nerv_mlx_archive",
                 "archive_bytes_are_authority_for_rate": True,
                 "decoder_codec": decoder_codec,
+                "latent_codec": latent_codec,
                 "hi_nerv_bitstream_preparation": bitstream_report,
                 "hi_nerv_bitstream_preparation_path": (
                     bitstream_report_path.as_posix()
@@ -603,6 +614,7 @@ def export_hi_nerv_mlx_archive(
                 "schema": "hi_nerv_mlx_runtime_adapter_manifest.v1",
                 "latent_pyramid": ["coarse", "mid", "fine"],
                 "decoder_codec": decoder_codec,
+                "latent_codec": latent_codec,
                 "hi_nerv_bitstream_preparation": bitstream_report,
                 "hi_nerv_bitstream_preparation_path": (
                     bitstream_report_path.as_posix()
@@ -611,7 +623,8 @@ def export_hi_nerv_mlx_archive(
                 "state_npz_bridge_manifest": npz_bridge_manifest,
                 "mlx_numpy_portability_contract": (
                     hi_nerv_mlx_numpy_portability_contract(
-                        training_backend=source_backend
+                        training_backend=source_backend,
+                        latent_codec=latent_codec,
                     )
                 ),
             },

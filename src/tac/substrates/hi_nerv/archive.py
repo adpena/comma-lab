@@ -52,6 +52,7 @@ import struct
 from dataclasses import dataclass
 
 import brotli  # type: ignore[import-not-found]
+import numpy as np
 import torch
 
 from tac.substrates._shared.decoder_state_codec import (
@@ -71,10 +72,16 @@ assert HIV1_HEADER_SIZE == 33, "HIV1 header size invariant"
 BROTLI_QUALITY: int = 9
 LATENT_CODEC_RAW_INT16: str = "int16_raw"
 LATENT_CODEC_BROTLI_INT16_Q11: str = "int16_brotli_q11"
+LATENT_CODEC_HI_AC_INT16_Q11: str = "int16_hi_ac_brotli_q11"
 SUPPORTED_LATENT_CODECS: tuple[str, ...] = (
     LATENT_CODEC_RAW_INT16,
     LATENT_CODEC_BROTLI_INT16_Q11,
+    LATENT_CODEC_HI_AC_INT16_Q11,
 )
+LATENT_HI_AC_MAGIC: bytes = b"HILA1"
+LATENT_HI_AC_HEADER_FMT: str = "<5sIIII"
+LATENT_HI_AC_HEADER_SIZE: int = struct.calcsize(LATENT_HI_AC_HEADER_FMT)
+assert LATENT_HI_AC_HEADER_SIZE == 21, "HiNeRV latent hi-ac header invariant"
 
 
 @dataclass(frozen=True)
@@ -381,8 +388,6 @@ def parse_archive(blob: bytes) -> HinervArchive:
     sd = _deserialize_state_dict(decoder_blob)
     meta = json.loads(meta_blob.decode("utf-8"))
 
-    import numpy as np
-
     latent_codec = str(meta.get("_latent_codec", LATENT_CODEC_RAW_INT16))
 
     def _decode_latent(buf: bytes, np_dim: int, lat_dim: int, name: str) -> torch.Tensor:
@@ -392,9 +397,10 @@ def parse_archive(blob: bytes) -> HinervArchive:
             expected_raw_bytes=int(np_dim) * int(lat_dim) * 2,
             name=name,
         )
-        return torch.from_numpy(
-            np.frombuffer(raw, dtype=np.int16).copy()
-        ).view(np_dim, lat_dim)
+        return torch.from_numpy(np.frombuffer(raw, dtype="<i2").copy()).view(
+            np_dim,
+            lat_dim,
+        )
 
     qc = _decode_latent(lat_c_blob, num_pairs, dim_c, "latents_coarse")
     qm = _decode_latent(lat_m_blob, num_pairs, dim_m, "latents_mid")
@@ -431,6 +437,8 @@ def _encode_latent_blob(raw: bytes, *, codec: str) -> bytes:
         return bytes(raw)
     if normalized == LATENT_CODEC_BROTLI_INT16_Q11:
         return bytes(brotli.compress(raw, quality=11))
+    if normalized == LATENT_CODEC_HI_AC_INT16_Q11:
+        return _encode_latent_hi_ac_blob(raw)
     valid = ", ".join(SUPPORTED_LATENT_CODECS)
     raise ValueError(f"unsupported HiNeRV latent codec {normalized!r}; expected one of {valid}")
 
@@ -447,6 +455,12 @@ def _decode_latent_blob(
         raw = bytes(blob)
     elif normalized == LATENT_CODEC_BROTLI_INT16_Q11:
         raw = bytes(brotli.decompress(blob))
+    elif normalized == LATENT_CODEC_HI_AC_INT16_Q11:
+        raw = _decode_latent_hi_ac_blob(
+            blob,
+            expected_raw_bytes=expected_raw_bytes,
+            name=name,
+        )
     else:
         valid = ", ".join(SUPPORTED_LATENT_CODECS)
         raise ValueError(
@@ -458,3 +472,115 @@ def _decode_latent_blob(
             f"for codec {normalized}"
         )
     return raw
+
+
+def _encode_latent_hi_ac_blob(raw: bytes) -> bytes:
+    """Encode int16 latent bytes as Brotli low byte + arithmetic high byte."""
+
+    raw_bytes = bytes(raw)
+    if not raw_bytes or len(raw_bytes) % 2:
+        raise ValueError("HiNeRV latent hi-ac codec requires non-empty int16 bytes")
+    words = np.frombuffer(raw_bytes, dtype="<u2")
+    lo = (words & 0x00FF).astype(np.uint8)
+    hi = ((words >> 8) & 0x00FF).astype(np.uint8)
+    hist = np.bincount(hi.astype(np.int32), minlength=256).astype("<u4")
+    lo_payload = bytes(brotli.compress(lo.tobytes(), quality=11))
+    hist_payload = bytes(brotli.compress(hist.tobytes(), quality=11))
+    hi_payload = _encode_high_bytes_arithmetic(hi, hist.astype(np.float64))
+    header = struct.pack(
+        LATENT_HI_AC_HEADER_FMT,
+        LATENT_HI_AC_MAGIC,
+        int(words.size),
+        len(lo_payload),
+        len(hist_payload),
+        len(hi_payload),
+    )
+    return header + lo_payload + hist_payload + hi_payload
+
+
+def _decode_latent_hi_ac_blob(
+    blob: bytes,
+    *,
+    expected_raw_bytes: int,
+    name: str,
+) -> bytes:
+    if expected_raw_bytes <= 0 or int(expected_raw_bytes) % 2:
+        raise ValueError(f"{name} expected_raw_bytes must be positive even int16 bytes")
+    if len(blob) < LATENT_HI_AC_HEADER_SIZE:
+        raise ValueError(f"{name} latent hi-ac blob too short")
+    magic, n_symbols, lo_len, hist_len, hi_len = struct.unpack(
+        LATENT_HI_AC_HEADER_FMT,
+        blob[:LATENT_HI_AC_HEADER_SIZE],
+    )
+    if magic != LATENT_HI_AC_MAGIC:
+        raise ValueError(f"{name} bad latent hi-ac magic: {magic!r}")
+    if int(n_symbols) * 2 != int(expected_raw_bytes):
+        raise ValueError(
+            f"{name} latent hi-ac symbol count {int(n_symbols)} does not match "
+            f"expected raw bytes {int(expected_raw_bytes)}"
+        )
+    cursor = LATENT_HI_AC_HEADER_SIZE
+    end_lo = cursor + int(lo_len)
+    end_hist = end_lo + int(hist_len)
+    end_hi = end_hist + int(hi_len)
+    if end_hi != len(blob):
+        raise ValueError(f"{name} latent hi-ac section lengths do not cover blob")
+    lo = np.frombuffer(brotli.decompress(blob[cursor:end_lo]), dtype=np.uint8)
+    hist_raw = brotli.decompress(blob[end_lo:end_hist])
+    if len(hist_raw) != 256 * np.dtype("<u4").itemsize:
+        raise ValueError(f"{name} latent hi-ac histogram length mismatch")
+    hist = np.frombuffer(hist_raw, dtype="<u4").astype(np.float64)
+    if lo.size != int(n_symbols):
+        raise ValueError(f"{name} latent hi-ac low-byte count mismatch")
+    hi = _decode_high_bytes_arithmetic(
+        blob[end_hist:end_hi],
+        histogram=hist,
+        n_symbols=int(n_symbols),
+    )
+    words = (
+        hi.astype(np.uint16).astype("<u2") << np.uint16(8)
+    ) | lo.astype(np.uint16).astype("<u2")
+    return words.astype("<u2", copy=False).tobytes()
+
+
+def _make_latent_categorical(histogram: np.ndarray):
+    import constriction
+
+    weights = np.asarray(histogram, dtype=np.float64)
+    if weights.shape != (256,):
+        raise ValueError(f"latent histogram must have shape (256,), got {weights.shape}")
+    weights = np.maximum(weights, 1e-10)
+    weights /= weights.sum()
+    return constriction.stream.model.Categorical(weights, perfect=False)
+
+
+def _encode_high_bytes_arithmetic(hi: np.ndarray, histogram: np.ndarray) -> bytes:
+    import constriction
+
+    symbols = np.asarray(hi, dtype=np.uint8).astype(np.int32)
+    if symbols.ndim != 1 or symbols.size == 0:
+        raise ValueError("latent hi-byte stream must be non-empty 1D")
+    encoder = constriction.stream.queue.RangeEncoder()
+    encoder.encode(symbols, _make_latent_categorical(histogram))
+    return np.asarray(encoder.get_compressed(), dtype=">u4").tobytes()
+
+
+def _decode_high_bytes_arithmetic(
+    payload: bytes,
+    *,
+    histogram: np.ndarray,
+    n_symbols: int,
+) -> np.ndarray:
+    import constriction
+
+    if n_symbols <= 0:
+        raise ValueError(f"n_symbols must be > 0; got {n_symbols}")
+    if len(payload) % 4:
+        raise ValueError("latent hi-byte arithmetic payload is not uint32 aligned")
+    words = np.frombuffer(payload, dtype=">u4").astype(np.uint32)
+    decoder = constriction.stream.queue.RangeDecoder(words)
+    categorical = _make_latent_categorical(histogram)
+    hi = np.zeros(int(n_symbols), dtype=np.int32)
+    for index in range(int(n_symbols)):
+        hi[index] = decoder.decode(categorical)
+    return hi.astype(np.uint8)

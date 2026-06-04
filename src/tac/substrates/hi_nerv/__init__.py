@@ -19,12 +19,12 @@ Council design memo:
 | L1 substrate must be score-aware | PLANNED (score_aware_loss.py wired; trainer at L1) |
 | L2 export-first archive grammar | PASS (archive.py declared BEFORE training) |
 | L3 monolithic 0.bin | PASS (single-file fixed-offset grammar, 33-byte header) |
-| L4 inflate <= 100 LOC, <= 2 deps | PASS (target ~95 LOC; torch + brotli) |
+| L4 inflate <= 100 LOC, <= 2 deps | PASS for base codecs (torch + brotli); optional latent arithmetic codec also requires constriction |
 | L5 full RGB renderer | PASS (NOT a mask codec) |
 | L6 score-domain Lagrangian | PASS (B(theta)/N + d_seg + sqrt(d_pose)) |
 | L7 bolt-on <= 350 LOC | substrate_engineering exception (~580 total) |
 | L8 eval-roundtrip + diff yuv6 | PLANNED (wired at L1 SCAFFOLD) |
-| L9 runtime closure | PASS (torch + brotli; declared) |
+| L9 runtime closure | PASS for base codecs (torch + brotli); optional latent arithmetic codec declares constriction |
 | L10 mask/pose coupling | N/A (renderer replaces full slot) |
 | L11 no-op detector | PASS (executable byte-mutation smoke in tests) |
 | L12 single-LOC review discipline | PASS (each file reviewable in 30s) |
@@ -37,7 +37,7 @@ Catalog #124 archive-grammar 8 fields:
                                * 3 latent_pyramid sections (scales 0,1,2)
                                * 4 decoder sections (coarse_dec, mid_dec, fine_dec, head)
     inflate_runtime_loc_budget: <= 100 LOC
-    runtime_dep_closure:       torch, brotli
+    runtime_dep_closure:       torch, brotli; optional constriction for hi-ac latents
     export_format:             brotli-compressed pyramid decoder state_dict
                                + int16 per-scale latents + utf8-json meta
     score_aware_loss:          L = alpha*B/N + beta*d_seg + gamma*sqrt(d_pose)
@@ -90,8 +90,8 @@ from .official_patch import (
     official_flat_patch_index_to_thw,
     official_patch_index_contract,
     official_patch_to_video,
-    official_vidx_to_pidx,
     official_video_to_patch,
+    official_vidx_to_pidx,
 )
 from .score_aware_loss import HinervScoreAwareLoss, ScoreAwareLossWeights
 
@@ -124,8 +124,8 @@ __all__ = [
     "official_grid_trilinear3d_forward",
     "official_patch_index_contract",
     "official_patch_to_video",
-    "official_vidx_to_pidx",
     "official_video_to_patch",
+    "official_vidx_to_pidx",
     "pack_archive",
     "pack_archive_from_exported_state_dict",
     "parse_archive",

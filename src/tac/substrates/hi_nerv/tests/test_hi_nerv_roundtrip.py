@@ -26,6 +26,7 @@ from tac.substrates.hi_nerv.archive import (
     HIV1_MAGIC,
     HIV1_SCHEMA_VERSION,
     LATENT_CODEC_BROTLI_INT16_Q11,
+    LATENT_CODEC_HI_AC_INT16_Q11,
     LATENT_CODEC_RAW_INT16,
     pack_archive,
     parse_archive,
@@ -163,6 +164,50 @@ def test_lossless_brotli_latent_codec_roundtrips_receiver_latents_and_shrinks():
     )
     assert coded_sections.meta["_latent_codec"] == LATENT_CODEC_BROTLI_INT16_Q11
     assert coded_sections.meta["_latent_codec_lossless"] is True
+    assert torch.equal(parsed.latents_coarse, lc)
+    assert torch.equal(parsed.latents_mid, lm)
+    assert torch.equal(parsed.latents_fine, lf)
+
+
+def test_lossless_high_byte_arithmetic_latent_codec_roundtrips_and_shrinks():
+    decoder_sd = {"tiny.weight": torch.zeros((1, 1), dtype=torch.float32)}
+    lc = torch.zeros((600, 28), dtype=torch.float32)
+    lm = torch.zeros((600, 12), dtype=torch.float32)
+    lf = torch.zeros((600, 8), dtype=torch.float32)
+    meta = _smoke_meta(_smoke_cfg())
+
+    raw_blob = pack_archive(
+        decoder_sd,
+        lc,
+        lm,
+        lf,
+        meta,
+        latent_codec=LATENT_CODEC_RAW_INT16,
+    )
+    coded_blob = pack_archive(
+        decoder_sd,
+        lc,
+        lm,
+        lf,
+        meta,
+        latent_codec=LATENT_CODEC_HI_AC_INT16_Q11,
+    )
+    raw_sections = split_archive_sections(raw_blob)
+    coded_sections = split_archive_sections(coded_blob)
+    parsed = parse_archive(coded_blob)
+
+    assert coded_sections.meta["_latent_codec"] == LATENT_CODEC_HI_AC_INT16_Q11
+    assert coded_sections.meta["_latent_codec_lossless"] is True
+    assert (
+        len(coded_sections.latents_coarse_blob)
+        + len(coded_sections.latents_mid_blob)
+        + len(coded_sections.latents_fine_blob)
+    ) < (
+        len(raw_sections.latents_coarse_blob)
+        + len(raw_sections.latents_mid_blob)
+        + len(raw_sections.latents_fine_blob)
+    )
+    assert coded_sections.latents_coarse_blob[:5] == b"HILA1"
     assert torch.equal(parsed.latents_coarse, lc)
     assert torch.equal(parsed.latents_mid, lm)
     assert torch.equal(parsed.latents_fine, lf)

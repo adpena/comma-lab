@@ -834,3 +834,48 @@ def test_archive_export_emits_hprc_spine_for_brotli_latents(tmp_path: Path) -> N
     )
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     assert proof["runtime_consumption_proof_ready"] is True
+
+
+def test_archive_export_emits_hprc_spine_for_high_byte_arithmetic_latents(
+    tmp_path: Path,
+) -> None:
+    from tac.substrates.hi_nerv.archive import parse_archive, split_archive_sections
+    from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
+
+    archive_path, archive_sha, archive_bytes = export_hi_nerv_mlx_archive(
+        _exportable_torch_model(),
+        tmp_path / "hi_nerv_export_hi_ac_latents",
+        repo_root=REPO_ROOT,
+        decoder_codec="int8_mixed",
+        latent_codec="int16_hi_ac_brotli_q11",
+        retain_receiver_proof_output=False,
+        source_backend="pytorch_test_export",
+    )
+
+    export_dir = tmp_path / "hi_nerv_export_hi_ac_latents"
+    manifest_path = export_dir / "hprc_representation_spine_hi_nerv_manifest.json"
+    package_path = export_dir / "archive_bound_candidate_adapter_package.json"
+    proof_path = export_dir / "receiver_proof" / "hi_nerv_mlx_receiver_proof.json"
+
+    assert archive_path.is_file()
+    assert len(archive_sha) == 64
+    assert archive_bytes == archive_path.stat().st_size
+    inner = (export_dir / "0.bin").read_bytes()
+    sections = split_archive_sections(inner)
+    parsed = parse_archive(inner)
+    assert sections.meta["_latent_codec"] == "int16_hi_ac_brotli_q11"
+    assert sections.latents_coarse_blob.startswith(b"HILA1")
+    assert parsed.latents_coarse.shape[0] == _exportable_torch_model().cfg.num_pairs
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    package = json.loads(package_path.read_text(encoding="utf-8"))
+    proof = json.loads(proof_path.read_text(encoding="utf-8"))
+    extra = manifest["manifest"]["representation_spine"]["manifest_extra"]
+    assert extra["latent_codec"] == "int16_hi_ac_brotli_q11"
+    runtime_manifest = package["archive_bound_candidate_adapter_package"][
+        "candidate_rows"
+    ][0]["runtime_adapter_manifest"]
+    assert runtime_manifest["latent_codec"] == "int16_hi_ac_brotli_q11"
+    portability = runtime_manifest["mlx_numpy_portability_contract"]
+    assert "constriction" in portability["non_numpy_receiver_dependencies"]
+    assert proof["runtime_consumption_proof_ready"] is True
