@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -190,6 +191,17 @@ def export_checkpoint_archive(
         "receiver_proof_path": receiver_proof_path.as_posix() if receiver_proof_path.is_file() else None,
         "receiver_proof_sha256": sha256_file(receiver_proof_path) if receiver_proof_path.is_file() else None,
         "receiver_proof_ready": bool(receiver_proof.get("runtime_consumption_proof_ready")),
+        "modelsize_byte_cap_feedback_row": _modelsize_byte_cap_feedback_row(
+            candidate=candidate,
+            archive_bytes=int(archive_bytes),
+            hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
+            decoder_codec=resolved_decoder_codec,
+            receiver_proof_ready=bool(
+                receiver_proof.get("runtime_consumption_proof_ready")
+            ),
+            archive_path=Path(archive_path),
+            archive_sha256=archive_sha256,
+        ),
         "blockers": _blockers(
             archive_bytes=int(archive_bytes),
             hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
@@ -200,6 +212,69 @@ def export_checkpoint_archive(
         **FALSE_AUTHORITY,
     }
     return report
+
+
+def _modelsize_byte_cap_feedback_row(
+    *,
+    candidate: dict[str, Any],
+    archive_bytes: int,
+    hard_byte_ceilings: Any,
+    decoder_codec: str,
+    receiver_proof_ready: bool,
+    archive_path: Path,
+    archive_sha256: str,
+) -> dict[str, Any]:
+    ceiling = (
+        _min_positive_int(hard_byte_ceilings)
+        or _optional_int(candidate.get("hard_byte_ceiling"))
+    )
+    nominal = (
+        _optional_int(candidate.get("nominal_total_payload_bytes"))
+        or _optional_int(candidate.get("total_payload_bytes"))
+        or _optional_int(candidate.get("estimated_total_payload_bytes"))
+    )
+    archive_minus_nominal = (
+        None if nominal is None else int(archive_bytes) - int(nominal)
+    )
+    archive_to_nominal = (
+        None
+        if nominal is None or int(nominal) <= 0
+        else float(archive_bytes) / float(nominal)
+    )
+    overrun = (
+        None if ceiling is None else max(0, int(archive_bytes) - int(ceiling))
+    )
+    required_nominal_max = None
+    if (
+        ceiling is not None
+        and nominal is not None
+        and int(archive_bytes) > 0
+    ):
+        required_nominal_max = math.floor(
+            float(ceiling) * float(nominal) / float(archive_bytes)
+        )
+    return {
+        "schema": "nerv_modelsize_byte_cap_feedback_row.v1",
+        "family": "hi_nerv",
+        "candidate_id": candidate.get("candidate_id"),
+        "codec": str(decoder_codec),
+        "decoder_codec": str(decoder_codec),
+        "modelsize_candidate": candidate,
+        "hard_byte_ceiling": ceiling,
+        "nominal_total_payload_bytes": nominal,
+        "measured_archive_bytes": int(archive_bytes),
+        "archive_bytes": int(archive_bytes),
+        "archive_path": archive_path.as_posix(),
+        "archive_sha256": archive_sha256,
+        "archive_minus_nominal_bytes": archive_minus_nominal,
+        "archive_to_nominal_ratio": archive_to_nominal,
+        "calibrated_archive_overrun_bytes": overrun,
+        "required_nominal_payload_bytes_max": required_nominal_max,
+        "receiver_proof_ready": bool(receiver_proof_ready),
+        "receiver_closed": bool(receiver_proof_ready),
+        "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
+        **FALSE_AUTHORITY,
+    }
 
 
 def _resolve_decoder_codec(
@@ -386,6 +461,18 @@ def _optional_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _min_positive_int(values: Any) -> int | None:
+    if values is None:
+        return None
+    if isinstance(values, (str, bytes)):
+        values = [values]
+    try:
+        ints = [int(value) for value in values if int(value) > 0]
+    except (TypeError, ValueError):
+        return None
+    return min(ints) if ints else None
 
 
 def _optional_nonempty_str(value: Any) -> str | None:

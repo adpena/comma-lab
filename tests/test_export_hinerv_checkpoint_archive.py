@@ -85,12 +85,14 @@ def test_candidate_decoder_codec_reaches_archive_export_when_runner_is_default(
                     "embed_dim": 8,
                     "decoder_channel": 6,
                     "decoder_codec": "int7_mixed",
+                    "nominal_total_payload_bytes": 6,
+                    "hard_byte_ceiling": 5,
                 },
                 "command_args": {
                     "num_pairs": 2,
                     "compact_decoder_codec": "portfolio_auto",
                 },
-                "hard_byte_ceilings": [1000],
+                "hard_byte_ceilings": [5],
             }
         ),
         encoding="utf-8",
@@ -155,6 +157,19 @@ def test_candidate_decoder_codec_reaches_archive_export_when_runner_is_default(
         ]
         is True
     )
+    feedback = report["modelsize_byte_cap_feedback_row"]
+    assert feedback["schema"] == "nerv_modelsize_byte_cap_feedback_row.v1"
+    assert feedback["family"] == "hi_nerv"
+    assert feedback["candidate_id"] == "hinerv_candidate_codec_export"
+    assert feedback["decoder_codec"] == "int7_mixed"
+    assert feedback["hard_byte_ceiling"] == 5
+    assert feedback["nominal_total_payload_bytes"] == 6
+    assert feedback["measured_archive_bytes"] == 7
+    assert feedback["archive_minus_nominal_bytes"] == 1
+    assert feedback["archive_to_nominal_ratio"] == pytest.approx(7 / 6)
+    assert feedback["calibrated_archive_overrun_bytes"] == 2
+    assert feedback["required_nominal_payload_bytes_max"] == 4
+    assert feedback["receiver_closed"] is False
     assert "candidate_decoder_codec_not_export_authority" not in report["blockers"]
 
 

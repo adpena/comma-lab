@@ -3113,6 +3113,78 @@ def test_build_long_training_campaign_plan_cli_extracts_waterfill_from_archive_l
     ]["runner_admission"]["refusal_reasons"]
 
 
+def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
+    tmp_path: Path,
+) -> None:
+    hinerv = tmp_path / "hinerv_budget.json"
+    snerv = tmp_path / "snerv_budget.json"
+    out_json = tmp_path / "campaign.json"
+    feedback_root = tmp_path / "exports"
+    export_dir = feedback_root / "hinerv_epoch16749"
+    export_dir.mkdir(parents=True)
+    candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    export_report = export_dir / "export_report.json"
+    export_report.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": candidate["candidate_id"],
+                "archive_bytes": 214_497,
+                "decoder_codec": candidate["decoder_codec"],
+                "receiver_proof_ready": True,
+                "modelsize_candidate": candidate,
+                "hard_byte_ceilings": [178_000],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
+    snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
+
+    rc = cli.main(
+        [
+            "--hinerv-modelsize-budget",
+            hinerv.as_posix(),
+            "--snerv-modelsize-budget",
+            snerv.as_posix(),
+            "--optimizer-kind",
+            "lion",
+            "--epochs",
+            "16",
+            "--max-candidates-per-family",
+            "1",
+            "--auto-modelsize-byte-cap-feedback-root",
+            feedback_root.as_posix(),
+            "--output-json",
+            out_json.as_posix(),
+        ]
+    )
+
+    assert rc == 0
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    assert payload["modelsize_byte_cap_feedback_path_count"] == 1
+    assert payload["modelsize_byte_cap_feedback_paths"] == [
+        export_report.resolve(strict=False).as_posix()
+    ]
+    hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
+    assert hi["runner_modelsize_candidate_id"] == "auto"
+    assert hi["local_mlx_launch_command_ready"] is False
+    assert (
+        "hi_nerv_modelsize_auto_calibrated_byte_cap_over_ceiling"
+        in hi["blockers"]
+    )
+    preflight = hi["modelsize_byte_cap_preflight"]
+    assert preflight["matching_observation_count"] == 1
+    assert preflight["matching_observations"][0]["measured_archive_bytes"] == 214_497
+    assert preflight["predicted_archive_bytes"] == 214_497
+    assert preflight["predicted_under_hard_byte_ceiling"] is False
+
+
 def test_build_long_training_campaign_plan_cli_selects_archive_ladder_waterfill_candidate(
     tmp_path: Path,
 ) -> None:

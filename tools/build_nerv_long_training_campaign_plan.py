@@ -91,6 +91,23 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--auto-modelsize-byte-cap-feedback-root",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Search this artifact root for receiver-proof HiNeRV/SNeRV "
+            "checkpoint export reports and feed the newest rows into calibrated "
+            "hard-byte-cap modelsize selection. Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--auto-modelsize-byte-cap-feedback-limit",
+        type=int,
+        default=8,
+        help="Maximum discovered checkpoint export reports to consume.",
+    )
+    parser.add_argument(
         "--decoder-weight-waterfill-source",
         action="append",
         default=[],
@@ -131,6 +148,15 @@ def main(argv: list[str] | None = None) -> int:
         f"nerv_long_training_campaign_{_safe_token(args.output_json.stem)}.v1"
     )
     planner_row_queue_artifact_path = args.output_queue or args.output_json
+    modelsize_byte_cap_feedback_paths = _dedupe_paths(
+        [
+            *(path for path in args.modelsize_byte_cap_feedback_json),
+            *_discover_modelsize_byte_cap_feedback_paths(
+                args.auto_modelsize_byte_cap_feedback_root,
+                limit=int(args.auto_modelsize_byte_cap_feedback_limit),
+            ),
+        ]
+    )
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_load(args.hinerv_modelsize_budget),
         snerv_modelsize_budget=_load(args.snerv_modelsize_budget),
@@ -143,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
         joint_recon_weight_manifest_paths=tuple(args.joint_recon_weight_manifest),
         candidate_feedback_sources=tuple(_load_feedback_sources(args.candidate_feedback_source)),
         modelsize_byte_cap_feedback_paths=tuple(
-            path.as_posix() for path in args.modelsize_byte_cap_feedback_json
+            path.as_posix() for path in modelsize_byte_cap_feedback_paths
         ),
         decoder_weight_waterfill_sources=tuple(
             _load_decoder_weight_waterfill_sources(
@@ -204,6 +230,70 @@ def _load(path: Path) -> dict:
     if not isinstance(payload, dict):
         raise TypeError(f"{path}: expected JSON object")
     return payload
+
+
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    out: list[Path] = []
+    seen: set[str] = set()
+    for raw in paths:
+        path = Path(raw).expanduser().resolve(strict=False)
+        key = path.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(path)
+    return out
+
+
+def _discover_modelsize_byte_cap_feedback_paths(
+    roots: list[Path],
+    *,
+    limit: int,
+) -> list[Path]:
+    if limit <= 0:
+        return []
+    candidates: list[tuple[float, Path]] = []
+    for raw_root in roots:
+        root = Path(raw_root).expanduser().resolve(strict=False)
+        if not root.is_dir():
+            continue
+        for name in ("export_report.json", "hinerv_checkpoint_archive_export.json"):
+            for path in root.rglob(name):
+                if _is_receiver_proof_modelsize_byte_cap_export(path):
+                    candidates.append((path.stat().st_mtime, path))
+    candidates.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
+    return _dedupe_paths([path for _mtime, path in candidates])[:limit]
+
+
+def _is_receiver_proof_modelsize_byte_cap_export(path: Path) -> bool:
+    try:
+        payload = _load(path)
+    except (OSError, TypeError, json.JSONDecodeError):
+        return False
+    if payload.get("schema") not in {
+        "hinerv_checkpoint_archive_export.v1",
+        "snerv_checkpoint_archive_export.v1",
+    }:
+        return False
+    if payload.get("family") not in {"hi_nerv", "snerv"}:
+        return False
+    candidate = payload.get("modelsize_candidate")
+    if not isinstance(candidate, dict):
+        return False
+    if not any(
+        bool(payload.get(key))
+        for key in (
+            "receiver_proof_ready",
+            "receiver_proof_passed",
+            "runtime_consumption_proof_ready",
+            "receiver_contract_satisfied",
+        )
+    ):
+        return False
+    try:
+        return int(payload.get("archive_bytes") or 0) > 0
+    except (TypeError, ValueError):
+        return False
 
 
 def _load_feedback_sources(paths: list[Path]) -> list[dict]:
