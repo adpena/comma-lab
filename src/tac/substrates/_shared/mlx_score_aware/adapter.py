@@ -1041,7 +1041,8 @@ class MlxScoreAwareAdapter:
         rng = np.random.RandomState(seed)
         priority_resolution = self._resolve_priority_local_rows()
         priority = tuple(priority_resolution["priority_local_pair_indices"])
-        priority_take = min(size, len(priority))
+        reserve_random_fill = bool(priority and size > 1 and num_pairs > 1)
+        priority_take = min(size - int(reserve_random_fill), len(priority))
         random_fill_count = size - priority_take
         priority_selected: list[int] = []
         if priority_take:
@@ -1050,11 +1051,18 @@ class MlxScoreAwareAdapter:
             priority_selected = [int(value) for value in rotated_priority[:priority_take]]
         if random_fill_count:
             priority_set = set(priority_selected)
-            remaining = [
+            full_priority_set = set(priority)
+            remaining_non_priority = [
+                pair_index
+                for pair_index in range(num_pairs)
+                if pair_index not in full_priority_set
+            ]
+            remaining = remaining_non_priority or [
                 pair_index
                 for pair_index in range(num_pairs)
                 if pair_index not in priority_set
             ]
+            random_fill_count = min(random_fill_count, len(remaining))
             random_selected = rng.choice(
                 remaining,
                 size=random_fill_count,
@@ -1095,6 +1103,7 @@ class MlxScoreAwareAdapter:
             "priority_pair_indices_in_batch": priority_selected,
             "priority_local_pair_indices_in_batch": priority_selected,
             "priority_source_pair_indices_in_batch": priority_source_pair_indices,
+            "priority_random_fill_reserved": bool(reserve_random_fill),
             "unresolved_priority_pair_indices": list(
                 priority_resolution["unresolved_priority_pair_indices"]
             ),

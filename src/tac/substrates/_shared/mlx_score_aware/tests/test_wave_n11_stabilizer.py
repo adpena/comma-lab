@@ -122,6 +122,7 @@ def test_adapter_priority_pair_sampling_consumes_hard_pair_indices(
     assert observed["sampling_policy"] == "priority_pairs_then_random_fill"
     assert observed["prioritized_pair_count"] == 2
     assert observed["priority_pair_indices_in_batch"] == [3, 1]
+    assert observed["priority_random_fill_reserved"] is True
     assert observed["random_fill_count"] == 1
     assert observed["pair_indices"] == [3, 1, 2]
     assert observed["score_claim"] is False
@@ -153,23 +154,24 @@ def test_adapter_priority_pair_sampling_maps_source_ids_to_local_rows(
     batch = a.sample_batch(batch_size=2, seed=0)
     observed = a.batch_observability(batch)
 
-    assert [int(value) for value in batch.tolist()] == [2, 0]
+    assert [int(value) for value in batch.tolist()] == [2, 3]
     assert observed["sampling_policy"] == "priority_pairs_then_random_fill"
     assert observed["requested_priority_pair_indices"] == [105, 417, 999]
     assert observed["prioritized_pair_count"] == 2
-    assert observed["priority_pair_indices_in_batch"] == [2, 0]
-    assert observed["priority_local_pair_indices_in_batch"] == [2, 0]
-    assert observed["priority_source_pair_indices_in_batch"] == [105, 417]
+    assert observed["priority_pair_indices_in_batch"] == [2]
+    assert observed["priority_local_pair_indices_in_batch"] == [2]
+    assert observed["priority_source_pair_indices_in_batch"] == [105]
+    assert observed["priority_random_fill_reserved"] is True
     assert observed["unresolved_priority_pair_indices"] == [999]
     assert observed["priority_pair_alignment_mode"] == (
         "source_priority_pairs_to_local_rows"
     )
-    assert observed["pair_indices"] == [2, 0]
-    assert observed["source_pair_indices"] == [105, 417]
+    assert observed["pair_indices"] == [2, 3]
+    assert observed["source_pair_indices"] == [105, 8]
     assert observed["pair_index_alignment_mode"] == (
         "local_target_rows_to_source_pair_indices"
     )
-    assert observed["random_fill_count"] == 0
+    assert observed["random_fill_count"] == 1
     assert observed["score_claim"] is False
     assert observed["ready_for_exact_eval_dispatch"] is False
 
@@ -190,9 +192,10 @@ def test_adapter_priority_pair_sampling_rotates_by_seed(
     batch = a.sample_batch(batch_size=2, seed=1)
     observed = a.batch_observability()
 
-    assert [int(value) for value in batch.tolist()] == [1, 2]
-    assert observed["priority_pair_indices_in_batch"] == [1, 2]
-    assert observed["random_fill_count"] == 0
+    assert [int(value) for value in batch.tolist()] == [1, 0]
+    assert observed["priority_pair_indices_in_batch"] == [1]
+    assert observed["priority_random_fill_reserved"] is True
+    assert observed["random_fill_count"] == 1
 
 
 def test_adapter_rejects_malformed_priority_pair_indices(

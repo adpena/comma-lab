@@ -383,8 +383,10 @@ def test_run_mlx_score_aware_full_main_end_to_end(tmp_path: Path) -> None:
     assert d.get("promotion_eligible") is False
     first_batch = d["per_epoch_metrics"][0]["batch_observability"]["train_batch"]
     assert first_batch["sampling_policy"] == "priority_pairs_then_random_fill"
-    assert first_batch["priority_pair_indices_in_batch"] == [3, 1]
-    assert first_batch["pair_indices"] == [3, 1]
+    assert first_batch["priority_pair_indices_in_batch"] == [3]
+    assert first_batch["priority_random_fill_reserved"] is True
+    assert first_batch["random_fill_count"] == 1
+    assert first_batch["pair_indices"] == [3, 2]
     assert first_batch["score_claim"] is False
 
 
