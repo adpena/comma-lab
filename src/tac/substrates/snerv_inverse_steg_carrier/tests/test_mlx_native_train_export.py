@@ -37,6 +37,7 @@ from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     SNERV_MLX_NATIVE_REPORT_FILENAME,
     _build_snerv_mlx_native_byte_cap_control,
     _model_size_from_candidate,
+    _snerv_receiver_frame_reconstruction_profile,
     build_snerv_mlx_native_packet_from_numpy_pairs,
     train_export_snerv_mlx_native,
     write_snerv_mlx_prefilter_profile,
@@ -823,8 +824,52 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert "snerv_mlx_score_aware_long_training_not_executed" in report["blockers"]
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" in report["blockers"]
     assert report["scorer_loop_qat"]["requested"] is False
+    target_profile = report["receiver_target_reconstruction_profile"]
+    export_profile = report["receiver_export_reconstruction_profile"]
+    assert target_profile["schema"] == (
+        "snerv_receiver_frame_reconstruction_profile.v1"
+    )
+    assert target_profile["receiver_decoded_selected_packet"] is True
+    assert target_profile["reference_kind"] == "source_targets_nchw255"
+    assert target_profile["shape_matches"] is True
+    assert target_profile["receiver_frames_finite"] is True
+    assert target_profile["blockers"] == []
+    assert np.isfinite(float(target_profile["mse_nchw255"]))
+    assert target_profile["worst_pairs_by_mse"][0]["source_pair_idx"] == 0
+    assert export_profile["reference_kind"] == "source_targets_nchw255"
+    assert export_profile["mse_nchw255"] == pytest.approx(
+        target_profile["mse_nchw255"]
+    )
     frames = decode_snerv_archive_frames(packet_path.read_bytes())
     assert frames.shape == (1, 2, 3, 16, 16)
+
+
+def test_receiver_frame_reconstruction_profile_rejects_wrong_reference_layout() -> None:
+    packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        _tiny_pairs(pairs=1),
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        source_pair_indices=(11,),
+    )
+    bad_reference = np.transpose(_tiny_pairs(pairs=1), (0, 1, 3, 4, 2))
+
+    profile = _snerv_receiver_frame_reconstruction_profile(
+        packet.packet,
+        reference_pairs_nchw255=bad_reference,
+        source_pair_indices=(11,),
+        profile_id="unit_bad_reference_layout",
+        reference_kind="bad_nhwc_reference",
+        packet_source="unit",
+    )
+
+    assert profile["shape_matches"] is False
+    assert profile["source_pair_indices"] == [11]
+    assert profile["blockers"] == [
+        "snerv_receiver_frame_reconstruction_reference_not_nchw_pair_tensor"
+    ]
 
 
 def test_train_export_executes_real_mlx_hf_decoder_training(
@@ -2009,6 +2054,19 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
     assert frames.shape == (2, 2, 3, 16, 16)
     assert np.isfinite(frames).all()
+    target_profile = report["receiver_target_reconstruction_profile"]
+    export_profile = report["receiver_export_reconstruction_profile"]
+    assert target_profile["profile_id"] == "selected_packet_vs_source_targets"
+    assert "official_mfu_hfr_tub" in target_profile["packet_source"]
+    assert target_profile["shape_matches"] is True
+    assert target_profile["blockers"] == []
+    assert export_profile["profile_id"] == "selected_packet_vs_export_reference"
+    assert export_profile["reference_kind"] == (
+        "score_aware_long_training_selected_pairs_nchw255"
+    )
+    assert export_profile["shape_matches"] is True
+    assert export_profile["blockers"] == []
+    assert np.isfinite(float(export_profile["mse_nchw255"]))
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 

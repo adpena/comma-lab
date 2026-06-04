@@ -147,6 +147,9 @@ SNERV_SCORE_AWARE_CHECKPOINT_SELECTION_SCHEMA = (
 SNERV_ARCHIVE_SECTION_QAT_WEIGHT_POLICY_SCHEMA = (
     "snerv_archive_section_qat_weight_policy.v1"
 )
+SNERV_RECEIVER_FRAME_RECONSTRUCTION_PROFILE_SCHEMA = (
+    "snerv_receiver_frame_reconstruction_profile.v1"
+)
 NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
 SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS = 262_144
@@ -658,6 +661,8 @@ class SnervMlxNativeArtifact:
     lf_payload_codec: str
     model_size: dict[str, Any]
     bridge_drift: dict[str, Any]
+    receiver_target_reconstruction_profile: dict[str, Any]
+    receiver_export_reconstruction_profile: dict[str, Any]
     scorer_custody: dict[str, Any]
     scorer_loop_qat: dict[str, Any]
     storage_preflight: dict[str, Any]
@@ -1481,6 +1486,32 @@ def train_export_snerv_mlx_native(
     selected_section_bytes = {
         str(name): len(blob) for name, blob in selected_archive.sections.items()
     }
+    receiver_target_profile = _snerv_receiver_frame_reconstruction_profile(
+        selected_packet,
+        reference_pairs_nchw255=pairs_nchw255,
+        source_pair_indices=source_pair_indices,
+        profile_id="selected_packet_vs_source_targets",
+        reference_kind="source_targets_nchw255",
+        packet_source=selected_packet_source,
+    )
+    receiver_export_profile = _snerv_receiver_frame_reconstruction_profile(
+        selected_packet,
+        reference_pairs_nchw255=pairs_for_packet,
+        source_pair_indices=source_pair_indices,
+        profile_id="selected_packet_vs_export_reference",
+        reference_kind=(
+            "score_aware_long_training_selected_pairs_nchw255"
+            if score_aware_long_training_public.get("executed") is True
+            else "source_targets_nchw255"
+        ),
+        packet_source=selected_packet_source,
+    )
+    blockers.extend(
+        str(blocker)
+        for profile in (receiver_target_profile, receiver_export_profile)
+        for blocker in profile.get("blockers") or ()
+        if str(blocker)
+    )
     byte_cap_control = _build_snerv_mlx_native_byte_cap_control(
         candidate=candidate,
         hard_byte_ceiling=hard_byte_ceiling,
@@ -1610,6 +1641,8 @@ def train_export_snerv_mlx_native(
         lf_payload_codec=active_lf_payload_codec,
         model_size=model_size.as_jsonable(),
         bridge_drift=bridge,
+        receiver_target_reconstruction_profile=receiver_target_profile,
+        receiver_export_reconstruction_profile=receiver_export_profile,
         scorer_custody=scorer_custody,
         scorer_loop_qat=scorer_loop_qat_public,
         storage_preflight=storage_preflight,
@@ -5524,6 +5557,135 @@ def _verify_receiver_frame_decode(
         raise SnervMlxNativeExportError(f"receiver decode shape {decoded.shape} != reference {tuple(reference_shape)}")
     if not np.isfinite(decoded).all():
         raise SnervMlxNativeExportError("receiver decode produced nonfinite values")
+
+
+def _snerv_receiver_frame_reconstruction_profile(
+    packet: bytes,
+    *,
+    reference_pairs_nchw255: np.ndarray,
+    source_pair_indices: Sequence[int],
+    profile_id: str,
+    reference_kind: str,
+    packet_source: str,
+    worst_pair_count: int = 16,
+) -> dict[str, Any]:
+    """Profile receiver-decoded pixels against the named reference tensor.
+
+    This is distortion evidence, not score authority and not source-forward
+    parity.  It exists in the native export report because the scorer only ever
+    sees receiver-decoded pixels; long-run selection and byte-cap controls need
+    this profile before they spend hours optimizing a train-side tensor that the
+    SNAR1 receiver materializes differently.
+    """
+
+    reference = np.asarray(reference_pairs_nchw255, dtype=np.float32)
+    reference_shape = tuple(int(value) for value in reference.shape)
+    profile: dict[str, Any] = {
+        "schema": SNERV_RECEIVER_FRAME_RECONSTRUCTION_PROFILE_SCHEMA,
+        "profile_id": str(profile_id),
+        "reference_kind": str(reference_kind),
+        "packet_source": str(packet_source),
+        "source_pair_indices": [int(value) for value in source_pair_indices],
+        "worst_pair_count": int(max(0, worst_pair_count)),
+        "receiver_decoded_selected_packet": True,
+        "shape_matches": False,
+        "receiver_frames_finite": False,
+        "reference_frames_finite": bool(np.isfinite(reference).all()),
+        "score_claim": False,
+        "frontier_score_claim": False,
+        "rank_or_kill_eligible": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+        "blockers": [],
+    }
+    if (
+        reference.ndim != 5
+        or int(reference.shape[1]) != 2
+        or int(reference.shape[2]) != 3
+    ):
+        return {
+            **profile,
+            "reference_shape": [int(value) for value in reference_shape],
+            "blockers": [
+                "snerv_receiver_frame_reconstruction_reference_not_nchw_pair_tensor"
+            ],
+        }
+    try:
+        decoded = decode_snerv_archive_frames(packet).astype(np.float32, copy=False)
+    except Exception as exc:
+        return {
+            **profile,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                "snerv_receiver_frame_reconstruction_decode_failed",
+                f"snerv_receiver_frame_reconstruction_exception_{type(exc).__name__}",
+            ],
+        }
+
+    decoded_shape = tuple(int(v) for v in decoded.shape)
+    shape_matches = decoded_shape == reference_shape
+    receiver_finite = bool(np.isfinite(decoded).all())
+    blockers: list[str] = []
+    if not shape_matches:
+        blockers.append("snerv_receiver_frame_reconstruction_shape_mismatch")
+    if len(decoded_shape) != 5:
+        blockers.append(
+            "snerv_receiver_frame_reconstruction_decoded_not_nchw_pair_tensor"
+        )
+    if not receiver_finite:
+        blockers.append("snerv_receiver_frame_reconstruction_nonfinite_receiver")
+    if profile["reference_frames_finite"] is not True:
+        blockers.append("snerv_receiver_frame_reconstruction_nonfinite_reference")
+
+    profile.update(
+        {
+            "decoded_shape": [int(value) for value in decoded.shape],
+            "reference_shape": [int(value) for value in reference.shape],
+            "shape_matches": shape_matches,
+            "receiver_frames_finite": receiver_finite,
+            "blockers": blockers,
+        }
+    )
+    if blockers:
+        return profile
+
+    diff = decoded - reference
+    abs_diff = np.abs(diff)
+    mse = float(np.mean(diff * diff))
+    mae = float(np.mean(abs_diff))
+    max_abs = float(np.max(abs_diff)) if abs_diff.size else 0.0
+    per_pair_mse = np.mean(diff * diff, axis=(1, 2, 3, 4))
+    per_pair_mae = np.mean(abs_diff, axis=(1, 2, 3, 4))
+    per_pair_max_abs = np.max(abs_diff, axis=(1, 2, 3, 4))
+    order = np.argsort(-per_pair_mse, kind="stable")
+    worst_rows: list[dict[str, Any]] = []
+    source_indices = [int(value) for value in source_pair_indices]
+    for rank, pair_idx_np in enumerate(order[: max(0, int(worst_pair_count))]):
+        pair_idx = int(pair_idx_np)
+        source_pair_idx = (
+            source_indices[pair_idx] if pair_idx < len(source_indices) else pair_idx
+        )
+        worst_rows.append(
+            {
+                "rank": int(rank),
+                "pair_idx": pair_idx,
+                "source_pair_idx": int(source_pair_idx),
+                "mse_nchw255": float(per_pair_mse[pair_idx]),
+                "mae_nchw255": float(per_pair_mae[pair_idx]),
+                "max_abs_nchw255": float(per_pair_max_abs[pair_idx]),
+            }
+        )
+    profile.update(
+        {
+            "mse_nchw255": mse,
+            "mae_nchw255": mae,
+            "max_abs_nchw255": max_abs,
+            "rmse_nchw255": float(np.sqrt(max(mse, 0.0))),
+            "worst_pairs_by_mse": worst_rows,
+            "blockers": [],
+        }
+    )
+    return profile
 
 
 def _official_primitives_packet_metadata(
