@@ -471,6 +471,8 @@ def _admission_row(
         "source_report_sha256": _source_report_sha256(report),
         "source_report_producer": _source_report_producer(report),
         "mode": mode,
+        "source_packet_path": source_packet.get("path"),
+        "candidate_packet_path": candidate_packet.get("path"),
         "source_packet_bytes": source_packet_bytes,
         "candidate_packet_bytes": candidate_packet_bytes,
         "candidate_packet_header_bytes": candidate_packet_header_bytes,

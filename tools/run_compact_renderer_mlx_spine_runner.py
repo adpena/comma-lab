@@ -1472,6 +1472,33 @@ def _resolve_torch_scorer_device_alias(
     )
 
 
+def _resolve_mlx_prefilter_scorer_device_alias(
+    requested_device: str | None,
+    *,
+    fallback_device: str | None = None,
+) -> str:
+    """Resolve local MLX prefilter device aliases to MLX's cpu/gpu dialect."""
+
+    raw = str(requested_device or "").strip().lower()
+    if not raw:
+        raw = str(fallback_device or "cpu").strip().lower()
+    aliases = {
+        "": "cpu",
+        "cpu": "cpu",
+        "gpu": "gpu",
+        "mps": "gpu",
+        "metal": "gpu",
+        "mlx-gpu": "gpu",
+        "cuda": "gpu",
+    }
+    if raw not in aliases:
+        raise CompactRendererMlxSpineRunnerError(
+            "mlx prefilter scorer device must resolve to MLX 'cpu' or 'gpu'; "
+            f"got {requested_device!r}"
+        )
+    return aliases[raw]
+
+
 def adapt_pr95_mlx_report_to_spine(
     *,
     pr95_mlx_report_path: str | Path,
@@ -3570,8 +3597,11 @@ def _run_snerv_native_mlx_export_attachment(
                 score_aware_long_training_pr95_muon_policy
             ),
             write_mlx_prefilter_profile=bool(write_mlx_prefilter_profile),
-            mlx_prefilter_scorer_device=str(
-                mlx_prefilter_scorer_device or distillation_device
+            mlx_prefilter_scorer_device=(
+                _resolve_mlx_prefilter_scorer_device_alias(
+                    mlx_prefilter_scorer_device,
+                    fallback_device=distillation_device,
+                )
             ),
             mlx_prefilter_scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
             mlx_prefilter_progress_every=int(mlx_prefilter_progress_every),
@@ -4797,8 +4827,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             write_mlx_prefilter_profile=bool(
                 int(num_pairs) >= CONTEST_PAIR_COUNT
             ),
-            mlx_prefilter_scorer_device=str(
-                mlx_prefilter_scorer_device or distillation_device
+            mlx_prefilter_scorer_device=(
+                _resolve_mlx_prefilter_scorer_device_alias(
+                    mlx_prefilter_scorer_device,
+                    fallback_device=distillation_device,
+                )
             ),
             mlx_prefilter_scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
             mlx_prefilter_progress_every=int(mlx_prefilter_progress_every),
@@ -5688,8 +5721,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         write_mlx_prefilter_profile=bool(
             run_native_mlx_export and int(num_pairs) >= CONTEST_PAIR_COUNT
         ),
-        mlx_prefilter_scorer_device=str(
-            mlx_prefilter_scorer_device or distillation_device
+        mlx_prefilter_scorer_device=_resolve_mlx_prefilter_scorer_device_alias(
+            mlx_prefilter_scorer_device,
+            fallback_device=distillation_device,
         ),
         mlx_prefilter_scorer_batch_pairs=int(mlx_prefilter_scorer_batch_pairs),
         mlx_prefilter_progress_every=int(mlx_prefilter_progress_every),
@@ -7833,6 +7867,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     effective_requested_distillation_device = str(
         requested_distillation_device or distillation_device
     )
+    effective_mlx_prefilter_scorer_device = (
+        _resolve_mlx_prefilter_scorer_device_alias(
+            mlx_prefilter_scorer_device,
+            fallback_device=effective_requested_distillation_device,
+        )
+    )
     if (
         _has_disallowed_existing_output_artifacts(
             out,
@@ -8442,7 +8482,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             auto_segnet_boundary_recon_weight=auto_segnet_boundary_recon_weight,
             recon_pixel_weight_tau=recon_pixel_weight_tau,
             recon_pixel_weight_normalize=recon_pixel_weight_normalize,
-            mlx_prefilter_scorer_device=mlx_prefilter_scorer_device,
+            mlx_prefilter_scorer_device=effective_mlx_prefilter_scorer_device,
             mlx_prefilter_scorer_batch_pairs=mlx_prefilter_scorer_batch_pairs,
             mlx_prefilter_progress_every=mlx_prefilter_progress_every,
             telemetry_flush_interval_epochs=telemetry_flush_interval_epochs,
@@ -8995,15 +9035,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 ),
                 "local_mlx_prefilter": {
                     "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
-                    "scorer_device": (
-                        mlx_prefilter_scorer_device or distillation_device
-                    ),
+                    "scorer_device": effective_mlx_prefilter_scorer_device,
                     "scorer_batch_pairs": int(mlx_prefilter_scorer_batch_pairs),
                     "progress_every": int(mlx_prefilter_progress_every),
                     "singleton_required_for_local_cpu_replay_unlock": True,
                     "gpu_profiles_are_prefilter_only": (
-                        str(mlx_prefilter_scorer_device or distillation_device)
-                        != "cpu"
+                        effective_mlx_prefilter_scorer_device != "cpu"
                     ),
                     "batched_profiles_are_prefilter_only": (
                         int(mlx_prefilter_scorer_batch_pairs) != 1
@@ -11800,8 +11837,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     resolved_distillation_device = _resolve_torch_scorer_device_alias(
         str(distillation_device)
     )
-    effective_prefilter_scorer_device = str(
-        mlx_prefilter_scorer_device or requested_distillation_device
+    effective_prefilter_scorer_device = _resolve_mlx_prefilter_scorer_device_alias(
+        mlx_prefilter_scorer_device,
+        fallback_device=requested_distillation_device,
     )
     if segnet_distillation_weight < 0.0:
         raise CompactRendererMlxSpineRunnerError(

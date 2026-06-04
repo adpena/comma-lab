@@ -4,12 +4,14 @@ from __future__ import annotations
 import json
 
 import numpy as np
+import pytest
 
 from tac.analysis.nerv_modelsize_budget import build_hinerv_config_from_size_knobs
 from tools import export_hinerv_checkpoint_archive as export_mod
 from tools.export_hinerv_checkpoint_archive import (
     _blockers,
     _build_receiver_raw_cache_quality_gate,
+    _canonical_mlx_prefilter_device,
     _export_hard_byte_ceiling,
     _hinerv_source_pair_indices,
     _maybe_write_receiver_raw_cache_mlx_prefilter,
@@ -281,6 +283,18 @@ def test_hinerv_checkpoint_prefilter_normalizes_non_singleton_batch_pairs(
         profile["scorer_batch_pairs_normalization"]["reason"]
         == "production_mlx_scorer_response_uses_singleton_batches_after_recorded_segnet_batch_shape_drift"
     )
+
+
+def test_hinerv_checkpoint_prefilter_device_aliases_use_mlx_dialect() -> None:
+    assert _canonical_mlx_prefilter_device("mps") == "gpu"
+    assert _canonical_mlx_prefilter_device("metal") == "gpu"
+    assert _canonical_mlx_prefilter_device("mlx-gpu") == "gpu"
+    assert _canonical_mlx_prefilter_device("gpu") == "gpu"
+    assert _canonical_mlx_prefilter_device("cpu") == "cpu"
+    assert _canonical_mlx_prefilter_device("") == "cpu"
+
+    with pytest.raises(ValueError, match="mlx prefilter scorer device"):
+        _canonical_mlx_prefilter_device("cuda")
 
 
 def test_hinerv_checkpoint_prefilter_requires_prefix_source_pair_indices(

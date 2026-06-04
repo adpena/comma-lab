@@ -838,7 +838,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         distillation_temperature=2.0,
         segnet_tau_boundary=1.25,
         segnet_hinge_margin=0.5,
-        distillation_device="cpu",
+        distillation_device="mps",
         allow_segnet_only_research=False,
         coder_aware_qat=True,
         coder_qat_quant_bits=8,
@@ -851,7 +851,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         score_aware_long_training_pr95_faithful_curriculum=True,
         score_aware_long_training_pr95_muon_policy="faithful_stage8_only",
         write_mlx_prefilter_profile=True,
-        mlx_prefilter_scorer_device="gpu",
+        mlx_prefilter_scorer_device=None,
         mlx_prefilter_scorer_batch_pairs=4,
         mlx_prefilter_progress_every=7,
     )
@@ -2079,6 +2079,43 @@ def test_torch_scorer_device_alias_fails_closed_without_gpu() -> None:
         )
 
 
+def test_mlx_prefilter_scorer_device_alias_uses_mlx_device_dialect() -> None:
+    assert (
+        runner_mod._resolve_mlx_prefilter_scorer_device_alias(
+            None,
+            fallback_device="mps",
+        )
+        == "gpu"
+    )
+    assert (
+        runner_mod._resolve_mlx_prefilter_scorer_device_alias(
+            "metal",
+            fallback_device="cpu",
+        )
+        == "gpu"
+    )
+    assert (
+        runner_mod._resolve_mlx_prefilter_scorer_device_alias(
+            "mps",
+            fallback_device="cpu",
+        )
+        == "gpu"
+    )
+    assert (
+        runner_mod._resolve_mlx_prefilter_scorer_device_alias(
+            None,
+            fallback_device="cpu",
+        )
+        == "cpu"
+    )
+
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="mlx prefilter scorer device",
+    ):
+        runner_mod._resolve_mlx_prefilter_scorer_device_alias("vulkan")
+
+
 def test_hinerv_execute_allows_runner_startup_marker_only_dir(
     tmp_path: Path,
     monkeypatch,
@@ -2127,9 +2164,13 @@ def test_hinerv_execute_allows_runner_startup_marker_only_dir(
     assert captured_train_kwargs
     assert captured_train_kwargs["distillation_device"] == "mps"
     assert captured_train_kwargs["requested_distillation_device"] == "gpu"
+    assert captured_train_kwargs["mlx_prefilter_scorer_device"] == "gpu"
     assert captured_train_kwargs["prioritized_pair_indices"] == ()
     assert captured_train_kwargs["use_hierarchical_feature_grid"] is True
     assert captured_train_kwargs["use_convnext_blocks"] is True
+    assert out["score_aware_training"]["local_mlx_prefilter"]["scorer_device"] == (
+        "gpu"
+    )
     assert out["execute_family"] == "hi_nerv"
     assert out["training_executed"] is True
     assert marker.is_file()

@@ -156,6 +156,17 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-snar-header-minimization-report",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_snar_header_minimization.v1 JSON to attach materialized "
+            "SNAR1 header-prune packet/archive bytes to the over-ceiling "
+            "reroute queue. Repeatable."
+        ),
+    )
+    parser.add_argument(
         "--snerv-official-source-audit",
         type=Path,
         help=(
@@ -231,6 +242,9 @@ def main(argv: list[str] | None = None) -> int:
         snerv_snar_header_grammar_profile_sources=tuple(
             _load(path) for path in args.snerv_snar_header_grammar_profile
         ),
+        snerv_snar_header_minimization_report_sources=tuple(
+            _load(path) for path in args.snerv_snar_header_minimization_report
+        ),
         snerv_official_source_audit=(
             None if args.snerv_official_source_audit is None else _load(args.snerv_official_source_audit)
         ),
@@ -282,6 +296,9 @@ def main(argv: list[str] | None = None) -> int:
                 ],
                 "snerv_snar_header_grammar_profile_source_count": report[
                     "snerv_snar_header_grammar_profile_source_count"
+                ],
+                "snerv_snar_header_minimization_report_source_count": report[
+                    "snerv_snar_header_minimization_report_source_count"
                 ],
                 "score_claim": report["score_claim"],
                 "ready_for_exact_eval_dispatch": report["ready_for_exact_eval_dispatch"],

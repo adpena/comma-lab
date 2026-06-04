@@ -145,6 +145,44 @@ class SnervMlxNativeExportError(ValueError):
     """Raised when the native MLX SNeRV adapter cannot build a valid export."""
 
 
+def _resolve_torch_scorer_device_alias(
+    requested_device: str,
+    *,
+    torch_module: Any | None = None,
+) -> str:
+    """Resolve direct SNeRV scorer-teacher device aliases to PyTorch devices."""
+
+    requested = str(requested_device or "cpu").strip().lower()
+    if requested in {"cpu", "cuda", "mps"}:
+        return requested
+    if requested == "metal":
+        return "mps"
+    if requested != "gpu":
+        raise SnervMlxNativeExportError(
+            f"unsupported scorer distillation device: {requested_device!r}"
+        )
+    torch = torch_module
+    if torch is None:
+        try:
+            import torch as torch  # type: ignore[no-redef]
+        except Exception as exc:  # pragma: no cover - import failure is environment.
+            raise SnervMlxNativeExportError(
+                "distillation_device='gpu' requires PyTorch to resolve a concrete "
+                "scorer teacher device"
+            ) from exc
+    cuda = getattr(torch, "cuda", None)
+    if bool(getattr(cuda, "is_available", lambda: False)()):
+        return "cuda"
+    backends = getattr(torch, "backends", None)
+    mps = getattr(backends, "mps", None)
+    if bool(getattr(mps, "is_available", lambda: False)()):
+        return "mps"
+    raise SnervMlxNativeExportError(
+        "distillation_device='gpu' requested, but neither torch.cuda nor "
+        "torch.backends.mps is available"
+    )
+
+
 def _candidate_first_non_null(
     candidate: Mapping[str, Any],
     keys: Sequence[str],
@@ -1606,6 +1644,12 @@ def _run_score_aware_long_training_attachment(
         strict=False
     )
     distillation_requested = bool(seg_weight > 0.0 or pose_weight > 0.0)
+    requested_distillation_device = str(distillation_device)
+    resolved_distillation_device = (
+        _resolve_torch_scorer_device_alias(requested_distillation_device)
+        if distillation_requested
+        else requested_distillation_device
+    )
     official_training_requested = bool(
         model_size.official_mfu_hfr_tub_numeric_primitives_requested
     )
@@ -1688,7 +1732,14 @@ def _run_score_aware_long_training_attachment(
             "distillation_temperature": float(distillation_temperature),
             "segnet_tau_boundary": float(segnet_tau_boundary),
             "segnet_hinge_margin": float(segnet_hinge_margin),
-            "distillation_device": str(distillation_device),
+            "requested_distillation_device": requested_distillation_device,
+            "distillation_device": resolved_distillation_device,
+            "distillation_device_resolution": {
+                "schema": "snerv_native_torch_scorer_device_resolution.v1",
+                "requested": requested_distillation_device,
+                "resolved": resolved_distillation_device,
+                "scope": "real_pytorch_segnet_posenet_teacher_cache",
+            },
             "scorer_upstream_dir": resolved_scorer_upstream_dir.as_posix(),
             "has_real_segnet_teacher": False,
             "has_real_posenet_teacher": False,
@@ -2072,7 +2123,7 @@ def _run_score_aware_long_training_attachment(
             scorer_teacher = build_mlx_segnet_pair_teacher(
                 teacher_probe_bundle,
                 upstream_dir=resolved_scorer_upstream_dir,
-                device=str(distillation_device),
+                device=resolved_distillation_device,
             )
             learnable_student_head = build_learnable_student_head(
                 num_classes=int(scorer_teacher.num_classes),
@@ -2082,7 +2133,7 @@ def _run_score_aware_long_training_attachment(
             pose_scorer_teacher = build_mlx_posenet_pair_teacher(
                 teacher_probe_bundle,
                 upstream_dir=resolved_scorer_upstream_dir,
-                device=str(distillation_device),
+                device=resolved_distillation_device,
             )
             learnable_pose_student_head = build_learnable_pose_student_head(
                 pose_dims=int(pose_scorer_teacher.pose_dims),

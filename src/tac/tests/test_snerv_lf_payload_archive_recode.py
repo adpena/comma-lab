@@ -122,6 +122,14 @@ def test_recode_snerv_lf_payload_archive_cli_writes_matching_report(
     assert report["lf_planes_exact_equal"] is True
     assert report["receiver_contract_satisfied"] is True
 
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [report],
+        hard_byte_ceiling=report["source_packet"]["bytes"],
+    )
+    assert plan["admission_rows"][0]["candidate_packet_path"] == (
+        output_packet.as_posix()
+    )
+
 
 def test_snerv_lf_payload_recode_admission_consumes_real_snar_recode() -> None:
     source = _packet(lf_codec="raw_i64")

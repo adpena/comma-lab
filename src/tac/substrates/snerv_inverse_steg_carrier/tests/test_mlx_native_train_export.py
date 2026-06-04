@@ -165,6 +165,45 @@ def test_checkpoint_retention_candidate_null_preserves_safe_default() -> None:
         mod._coerce_checkpoint_keep_every(0)
 
 
+def test_torch_scorer_device_alias_resolves_gpu_for_direct_snerv_export() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    fake_mps = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: False),
+        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: True)),
+    )
+    assert (
+        mod._resolve_torch_scorer_device_alias(
+            "gpu",
+            torch_module=fake_mps,
+        )
+        == "mps"
+    )
+    fake_cuda = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: True),
+        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: True)),
+    )
+    assert (
+        mod._resolve_torch_scorer_device_alias(
+            "gpu",
+            torch_module=fake_cuda,
+        )
+        == "cuda"
+    )
+    fake_cpu_only = SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: False),
+        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False)),
+    )
+    with pytest.raises(
+        mod.SnervMlxNativeExportError,
+        match=r"neither torch\.cuda nor torch\.backends\.mps",
+    ):
+        mod._resolve_torch_scorer_device_alias(
+            "gpu",
+            torch_module=fake_cpu_only,
+        )
+
+
 def test_pr95_every_stage_muon_falls_back_when_snerv_has_no_matrix_targets(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1033,6 +1072,11 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         "build_mlx_posenet_pair_teacher",
         fake_build_posenet_teacher,
     )
+    monkeypatch.setattr(
+        mod,
+        "_resolve_torch_scorer_device_alias",
+        lambda value: "mps" if value == "gpu" else value,
+    )
 
     report = train_export_snerv_mlx_native(
         output_dir=tmp_path / "score_aware_real_teacher_train",
@@ -1058,7 +1102,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         pose_distillation_loss="huber",
         pose_distillation_huber_delta=2.0,
         segnet_distillation_objective="kl_t2",
-        distillation_device="cpu",
+        distillation_device="gpu",
         coder_aware_qat=True,
         coder_qat_quant_bits=4,
         coder_qat_c1a_entropy_weight=0.0,
@@ -1067,8 +1111,8 @@ def test_train_export_long_training_binds_real_scorer_teachers(
 
     assert captured["segnet_upstream_dir"] == fake_upstream.resolve(strict=False)
     assert captured["posenet_upstream_dir"] == fake_upstream.resolve(strict=False)
-    assert captured["segnet_device"] == "cpu"
-    assert captured["posenet_device"] == "cpu"
+    assert captured["segnet_device"] == "mps"
+    assert captured["posenet_device"] == "mps"
     assert captured["segnet_bundle_hw"] == (16, 16)
     assert captured["posenet_bundle_hw"] == (16, 16)
     assert report["score_aware_long_training_executed"] is True
@@ -1082,6 +1126,14 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     long_training = report["score_aware_long_training"]
     assert long_training["has_real_segnet_teacher"] is True
     assert long_training["has_real_posenet_teacher"] is True
+    assert long_training["teacher_binding"]["requested_distillation_device"] == "gpu"
+    assert long_training["teacher_binding"]["distillation_device"] == "mps"
+    assert long_training["teacher_binding"]["distillation_device_resolution"] == {
+        "schema": "snerv_native_torch_scorer_device_resolution.v1",
+        "requested": "gpu",
+        "resolved": "mps",
+        "scope": "real_pytorch_segnet_posenet_teacher_cache",
+    }
     assert long_training["coder_aware_qat"]["enabled"] is True
     assert long_training["coder_aware_qat"]["quant_bits"] == 4
     assert long_training["pr95_faithful_curriculum_enabled"] is True

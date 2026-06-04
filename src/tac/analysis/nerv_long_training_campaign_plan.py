@@ -450,6 +450,7 @@ def build_nerv_long_training_campaign_plan(
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
     snerv_lf_payload_byte_report_sources: Sequence[Mapping[str, Any]] = (),
     snerv_snar_header_grammar_profile_sources: Sequence[Mapping[str, Any]] = (),
+    snerv_snar_header_minimization_report_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
     pr95_baseline_identity: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
@@ -593,6 +594,9 @@ def build_nerv_long_training_campaign_plan(
         ),
         measured_lf_payload_paths=byte_cap_feedback_paths,
         snar_header_grammar_profiles=snerv_snar_header_grammar_profile_sources,
+        snar_header_minimization_reports=(
+            snerv_snar_header_minimization_report_sources
+        ),
         output_root=Path(output_root) / "snerv_lf_over_ceiling_reroutes",
         queue_id=DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
     )
@@ -670,6 +674,9 @@ def build_nerv_long_training_campaign_plan(
         "snerv_lf_payload_byte_report_source_count": len(snerv_lf_payload_byte_report_sources),
         "snerv_snar_header_grammar_profile_source_count": len(
             snerv_snar_header_grammar_profile_sources
+        ),
+        "snerv_snar_header_minimization_report_source_count": len(
+            snerv_snar_header_minimization_report_sources
         ),
         "decoder_weight_waterfill_row_count": _unique_index_row_count(decoder_weight_waterfill_index),
         "decoder_weight_waterfill_unattached_source_count": len(decoder_weight_waterfill_unattached_sources),
@@ -874,7 +881,9 @@ def _hinerv_campaign_row(
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     runner_candidate_id = "auto" if modelsize_byte_cap_feedback_paths else candidate_id
     runner_candidate_label = (
-        "auto_bytecap" if modelsize_byte_cap_feedback_paths else candidate_id
+        _auto_bytecap_candidate_label(candidate_id)
+        if modelsize_byte_cap_feedback_paths
+        else candidate_id
     )
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
     num_pairs = int(candidate.get("num_pairs") or 600)
@@ -1215,7 +1224,9 @@ def _snerv_campaign_row(
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
     runner_candidate_id = "auto" if modelsize_byte_cap_feedback_paths else candidate_id
     runner_candidate_label = (
-        "auto_bytecap" if modelsize_byte_cap_feedback_paths else candidate_id
+        _auto_bytecap_candidate_label(candidate_id)
+        if modelsize_byte_cap_feedback_paths
+        else candidate_id
     )
     source_control_blockers = _snerv_source_bound_control_blockers(candidate)
     source_parity = _source_parity_family_report(
@@ -5214,6 +5225,12 @@ def _safe_id(value: str) -> str:
         for ch in str(value)
     ).strip("_")
     return out or "row"
+
+
+def _auto_bytecap_candidate_label(candidate_id: str) -> str:
+    """Make auto-bytecap planner rows unique without changing runner selection."""
+
+    return f"auto_bytecap::{_safe_id(candidate_id or 'candidate')}"
 
 
 def _utc_compact_timestamp() -> str:

@@ -1090,6 +1090,7 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
                 source_packet_bytes=2_347_142,
                 candidate_packet_bytes=1_485_285,
                 candidate_packet_header_bytes=1_346_233,
+                candidate_packet_path="/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
                 source_lf_bytes=879_633,
                 candidate_lf_bytes=17_779,
             ),
@@ -1109,6 +1110,7 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
     expected_overrun = 1_485_285 - snerv["hard_byte_ceiling"]
     assert reroute_queue["local_recode_command_row_count"] == 0
+    assert reroute_queue["local_executable_command_row_count"] == 1
     assert reroute_queue["queue_row_count"] == 4
     assert (
         "snerv_lf_recode_selected_mode_still_over_byte_waterline"
@@ -1156,22 +1158,35 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     )
 
     header_rewrite = rows_by_type["snar_header_grammar_rewrite_materialization"]
-    assert header_rewrite["blocked"] is True
-    assert header_rewrite["command_argv"] == []
+    assert header_rewrite["blocked"] is False
+    assert header_rewrite["command_argv"][:4] == [
+        "uv",
+        "run",
+        "python",
+        "tools/minimize_snerv_snar_header.py",
+    ]
+    assert "--packet" in header_rewrite["command_argv"]
+    assert header_rewrite["command_argv"][
+        header_rewrite["command_argv"].index("--packet") + 1
+    ] == "/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar"
+    assert "--output-packet" in header_rewrite["command_argv"]
+    assert "--output-archive-zip" in header_rewrite["command_argv"]
+    assert header_rewrite["command_argv"][
+        header_rewrite["command_argv"].index("--output-archive-zip") + 1
+    ].endswith("/archive.zip")
+    assert "--hard-byte-ceiling" in header_rewrite["command_argv"]
+    assert int(
+        header_rewrite["command_argv"][
+            header_rewrite["command_argv"].index("--hard-byte-ceiling") + 1
+        ]
+    ) == snerv["hard_byte_ceiling"]
     assert header_rewrite["dispatch_allowed"] is False
     assert header_rewrite["local_mlx_long_training_allowed"] is False
     assert (
         header_rewrite["planner_action"]
-        == "materialize_byte_charged_snar_header_grammar_rewrite_then_receiver_replay"
+        == "run_receiver_proven_snar1_header_prune_then_rerun_recode_admission"
     )
-    assert (
-        "snerv_snar_header_grammar_rewrite_packet_missing"
-        in header_rewrite["blockers"]
-    )
-    assert (
-        "snerv_snar_header_grammar_rewrite_receiver_proof_missing"
-        in header_rewrite["blockers"]
-    )
+    assert header_rewrite["blockers"] == []
 
     representation_rows = [
         row
@@ -1190,6 +1205,71 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     )
     assert all(
         "snerv_snar_header_grammar_rewrite_precedes_lf_representation_change"
+        in row["blockers"]
+        for row in representation_rows
+    )
+
+
+def test_long_training_campaign_plan_consumes_snerv_header_minimization_result() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_lf_payload_recode_sources=(
+            _snerv_lf_recode_report(
+                mode="auto",
+                source_packet_bytes=2_347_142,
+                candidate_packet_bytes=1_485_285,
+                candidate_packet_header_bytes=1_346_233,
+                candidate_packet_path="/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
+                source_lf_bytes=879_633,
+                candidate_lf_bytes=17_779,
+            ),
+        ),
+        snerv_snar_header_grammar_profile_sources=(
+            _snerv_snar_header_grammar_profile(
+                packet_sha256="b" * 64,
+                packet_bytes=1_485_285,
+                header_bytes=1_346_233,
+                metadata_json_bytes=1_345_466,
+                section_total_bytes=139_052,
+            ),
+        ),
+        snerv_snar_header_minimization_report_sources=(
+            _snerv_snar_header_minimization_report(source_packet_sha256="b" * 64),
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
+    rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
+    result = rows_by_type["snar_header_minimization_result"]
+    assert report["launchable_local_row_count"] == 0
+    assert snerv["experiment_queue_entry"]["status"] == "disabled"
+    assert reroute_queue["snar_header_minimization_report_count"] == 1
+    assert result["blocked"] is True
+    assert result["command_argv"] == []
+    assert result["snar_header_minimization_report_attached"] is True
+    assert result["snar_header_minimization_report"]["candidate_packet_bytes"] == 139_855
+    assert result["snar_header_minimization_report"][
+        "candidate_archive_zip_bytes"
+    ] == 139_963
+    assert result["snar_header_minimization_report"]["receiver_contract_satisfied"] is True
+    assert (
+        "snerv_snar_header_minimized_packet_full_video_replay_missing"
+        in result["blockers"]
+    )
+    assert result["score_claim"] is False
+    representation_rows = [
+        row
+        for row in reroute_queue["queue_rows"]
+        if row["work_order_type"] == "lf_representation_change_candidate"
+    ]
+    assert all(
+        "snerv_snar_header_minimization_result_precedes_lf_representation_change"
         in row["blockers"]
         for row in representation_rows
     )
@@ -1924,6 +2004,44 @@ def test_long_training_campaign_plan_threads_modelsize_byte_cap_feedback_paths()
         assert [argv[index + 1] for index in indices] == report[
             "modelsize_byte_cap_feedback_paths"
         ]
+
+
+def test_long_training_campaign_plan_auto_bytecap_queue_ids_stay_unique(
+    tmp_path: Path,
+) -> None:
+    first = dict(_snerv_budget()["selected_candidates"][0])
+    second = dict(first)
+    second["candidate_id"] = str(first["candidate_id"]).replace(
+        "fc11e2",
+        "fc9e0",
+    )
+    second["fc_dim"] = 9
+    second["decoder_feature_count"] = 9
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidates((first, second)),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=2,
+        modelsize_byte_cap_feedback_paths=(
+            "/Volumes/VertigoDataTier/pact/exports/snerv_feedback.json",
+        ),
+    )
+
+    snerv_rows = [row for row in report["campaign_rows"] if row["family"] == "snerv"]
+    assert len(snerv_rows) == 2
+    assert {row["runner_modelsize_candidate_id"] for row in snerv_rows} == {"auto"}
+    assert len({row["row_id"] for row in snerv_rows}) == 2
+    assert all(row["row_id"].startswith("snerv::auto_bytecap::") for row in snerv_rows)
+    queue_path = tmp_path / "queue.json"
+    queue_path.write_text(
+        json.dumps(report["experiment_queue"], sort_keys=True),
+        encoding="utf-8",
+    )
+    loaded = load_queue_definition(queue_path)
+    experiment_ids = [exp["id"] for exp in loaded["experiments"]]
+    assert len(experiment_ids) == len(set(experiment_ids))
 
 
 def test_long_training_campaign_plan_blocks_snerv_auto_when_calibrated_byte_cap_is_over(
@@ -4950,6 +5068,7 @@ def _snerv_lf_recode_report(
     source_lf_bytes: int,
     candidate_lf_bytes: int,
     candidate_packet_header_bytes: int | None = None,
+    candidate_packet_path: str | None = None,
 ) -> dict:
     return {
         "schema": "snerv_lf_payload_archive_recode.v1",
@@ -4958,6 +5077,7 @@ def _snerv_lf_recode_report(
         "candidate_packet": {
             "bytes": candidate_packet_bytes,
             "sha256": "b" * 64,
+            **({} if candidate_packet_path is None else {"path": candidate_packet_path}),
             **(
                 {}
                 if candidate_packet_header_bytes is None
@@ -5059,6 +5179,51 @@ def _snerv_snar_header_grammar_profile(
             "build_receiver_visible_snar_header_minimization_candidate"
         ],
         "blockers": ["snerv_snar_packet_header_grammar_rewrite_required"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_snar_header_minimization_report(*, source_packet_sha256: str) -> dict:
+    return {
+        "schema": "snerv_snar_header_minimization.v1",
+        "source_packet": {
+            "path": "/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar",
+            "bytes": 1_485_285,
+            "sha256": source_packet_sha256,
+            "header_bytes": 1_346_233,
+        },
+        "candidate_packet": {
+            "path": "/Volumes/VertigoDataTier/pact/snerv_test/candidate.minimized.snar",
+            "bytes": 139_855,
+            "sha256": "c" * 64,
+            "header_bytes": 803,
+        },
+        "candidate_archive_zip": {
+            "path": "/Volumes/VertigoDataTier/pact/snerv_test/archive.zip",
+            "bytes": 139_963,
+            "sha256": "d" * 64,
+            "member": "0.bin",
+        },
+        "packet_byte_delta": -1_345_430,
+        "header_byte_delta": -1_345_430,
+        "receiver_contract_satisfied": True,
+        "hard_byte_ceiling_rows": [
+            {
+                "hard_byte_ceiling": 178_000,
+                "candidate_packet_under_ceiling": True,
+                "candidate_archive_zip_under_ceiling": True,
+                "candidate_packet_over_ceiling_bytes": 0,
+                "candidate_archive_zip_over_ceiling_bytes": 0,
+            }
+        ],
+        "blockers": [
+            "snerv_snar_header_minimization_false_authority",
+            "full_video_scorer_replay_missing",
+            "paired_contest_cpu_cuda_auth_eval_missing",
+        ],
         "score_claim": False,
         "promotion_eligible": False,
         "rank_or_kill_eligible": False,

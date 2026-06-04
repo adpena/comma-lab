@@ -57,6 +57,7 @@ def build_snerv_lf_over_ceiling_reroute_queue(
     measured_lf_payload_sources: Sequence[Mapping[str, Any]] = (),
     measured_lf_payload_paths: Sequence[str | Path] = (),
     snar_header_grammar_profiles: Sequence[Mapping[str, Any]] = (),
+    snar_header_minimization_reports: Sequence[Mapping[str, Any]] = (),
     output_root: str | Path,
     queue_id: str = DEFAULT_QUEUE_ID,
     generated_utc: str | None = None,
@@ -76,6 +77,8 @@ def build_snerv_lf_over_ceiling_reroute_queue(
         measured_lf_payload_paths=measured_lf_payload_paths,
     )
     header_profiles = _header_profile_index(snar_header_grammar_profiles)
+    header_minimization_source_count = len(tuple(snar_header_minimization_reports))
+    header_minimizations = _header_minimization_index(snar_header_minimization_reports)
     rows: list[dict[str, Any]] = []
     for campaign_row in campaign_rows:
         if not _needs_lf_reroute(campaign_row):
@@ -86,6 +89,7 @@ def build_snerv_lf_over_ceiling_reroute_queue(
                 campaign_row=campaign_row,
                 evidence=selected,
                 header_profiles=header_profiles,
+                header_minimizations=header_minimizations,
                 output_root=Path(output_root),
             )
         )
@@ -101,6 +105,7 @@ def build_snerv_lf_over_ceiling_reroute_queue(
         row for row in rows if row["work_order_type"] == "lossless_lf_recode_probe"
         and not row["blocked"]
     ]
+    executable_rows = [row for row in rows if row.get("command_argv") and not row["blocked"]]
     return {
         "schema": SCHEMA,
         "queue_id": str(queue_id),
@@ -118,9 +123,11 @@ def build_snerv_lf_over_ceiling_reroute_queue(
         "source_campaign_row_count": len(tuple(campaign_rows)),
         "measured_lf_payload_source_count": len(evidence),
         "snar_header_grammar_profile_count": len(header_profiles),
+        "snar_header_minimization_report_count": header_minimization_source_count,
         "queue_rows": rows,
         "queue_row_count": len(rows),
         "blocked_queue_row_count": len(blocked_rows),
+        "local_executable_command_row_count": len(executable_rows),
         "local_recode_command_row_count": len(recode_ready_rows),
         "representation_candidate_row_count": sum(
             1 for row in rows if row["work_order_type"] == "lf_representation_change_candidate"
@@ -160,11 +167,13 @@ def _queue_rows_for_campaign_row(
     campaign_row: Mapping[str, Any],
     evidence: Mapping[str, Any] | None,
     header_profiles: Mapping[str, Mapping[str, Any]],
+    header_minimizations: Mapping[str, Mapping[str, Any]],
     output_root: Path,
 ) -> list[dict[str, Any]]:
     recode_evidence = _recode_admission_evidence_from_campaign_row(
         campaign_row,
         header_profiles=header_profiles,
+        header_minimizations=header_minimizations,
     )
     if recode_evidence is not None:
         return _queue_rows_for_recode_admission(
@@ -295,7 +304,19 @@ def _queue_rows_for_recode_admission(
         )
     ]
     if over_waterline is not None and over_waterline > 0:
-        if _header_rewrite_should_precede_lf_representation(evidence):
+        if _header_minimization_satisfies_waterline(evidence):
+            rows.append(
+                _header_minimization_result_row(
+                    campaign_row=campaign_row,
+                    evidence=evidence,
+                    output_root=output_root,
+                    required_savings_bytes=over_waterline,
+                )
+            )
+            representation_precedence_blockers = [
+                "snerv_snar_header_minimization_result_precedes_lf_representation_change"
+            ]
+        elif _header_rewrite_should_precede_lf_representation(evidence):
             rows.append(
                 _header_rewrite_work_order_row(
                     campaign_row=campaign_row,
@@ -346,7 +367,7 @@ def _queue_rows_for_recode_admission(
     return rows
 
 
-def _header_rewrite_work_order_row(
+def _header_minimization_result_row(
     *,
     campaign_row: Mapping[str, Any],
     evidence: Mapping[str, Any],
@@ -356,18 +377,75 @@ def _header_rewrite_work_order_row(
     return _base_row(
         campaign_row=campaign_row,
         evidence=evidence,
-        representation_candidate_id="snerv_snar_header_grammar_rewrite_materialization",
-        work_order_type="snar_header_grammar_rewrite_materialization",
-        planner_action="materialize_byte_charged_snar_header_grammar_rewrite_then_receiver_replay",
-        priority=12,
+        representation_candidate_id="snerv_snar_header_minimization_result",
+        work_order_type="snar_header_minimization_result",
+        planner_action="preserve_minimized_snar1_packet_then_run_full_video_replay_and_admission",
+        priority=11,
         blocked=True,
         blockers=[
-            "snerv_snar_packet_header_grammar_rewrite_required",
-            "snerv_snar_header_grammar_rewrite_packet_missing",
-            "snerv_snar_header_grammar_rewrite_receiver_proof_missing",
-            "snerv_snar_header_grammar_rewrite_recode_admission_not_rerun",
+            "snerv_snar_header_minimized_packet_false_authority",
+            "snerv_snar_header_minimized_packet_recode_admission_not_rerun",
+            "snerv_snar_header_minimized_packet_full_video_replay_missing",
+            "paired_contest_cpu_cuda_auth_eval_missing",
         ],
         command_argv=[],
+        output_root=output_root,
+        required_lf_savings_bytes=required_savings_bytes,
+        lf_payload_bytes=_positive_int(evidence.get("candidate_lf_payload_bytes")),
+    )
+
+
+def _header_rewrite_work_order_row(
+    *,
+    campaign_row: Mapping[str, Any],
+    evidence: Mapping[str, Any],
+    output_root: Path,
+    required_savings_bytes: int,
+) -> dict[str, Any]:
+    packet_path = str(
+        evidence.get("candidate_packet_path")
+        or evidence.get("packet_path")
+        or ""
+    ).strip()
+    token = _campaign_candidate_token(campaign_row, "snar_header_minimized")
+    out_dir = output_root / token
+    blockers: list[str] = []
+    if not packet_path:
+        blockers.append("snerv_snar_header_grammar_rewrite_packet_missing")
+    ceiling = _positive_int(campaign_row.get("hard_byte_ceiling"))
+    command = (
+        []
+        if not packet_path
+        else [
+            "uv",
+            "run",
+            "python",
+            "tools/minimize_snerv_snar_header.py",
+            "--packet",
+            packet_path,
+            "--output-packet",
+            (out_dir / "candidate.minimized.snar").as_posix(),
+            "--output-archive-zip",
+            (out_dir / "archive.zip").as_posix(),
+            "--output-json",
+            (out_dir / "snerv_snar_header_minimization.json").as_posix(),
+            *(
+                []
+                if ceiling is None
+                else ["--hard-byte-ceiling", str(ceiling)]
+            ),
+        ]
+    )
+    return _base_row(
+        campaign_row=campaign_row,
+        evidence=evidence,
+        representation_candidate_id="snerv_snar_header_grammar_rewrite_materialization",
+        work_order_type="snar_header_grammar_rewrite_materialization",
+        planner_action="run_receiver_proven_snar1_header_prune_then_rerun_recode_admission",
+        priority=12,
+        blocked=not bool(packet_path),
+        blockers=blockers,
+        command_argv=command,
         output_root=output_root,
         required_lf_savings_bytes=required_savings_bytes,
         lf_payload_bytes=_positive_int(evidence.get("candidate_lf_payload_bytes")),
@@ -390,6 +468,23 @@ def _header_rewrite_should_precede_lf_representation(
         and row.get("header_bytes_can_cover_overrun") is True
         and _positive_int(row.get("packet_over_ceiling_bytes")) is not None
         for row in ceiling_rows
+    )
+
+
+def _header_minimization_satisfies_waterline(evidence: Mapping[str, Any]) -> bool:
+    summary = evidence.get("snar_header_minimization_report")
+    if not isinstance(summary, Mapping):
+        return False
+    if summary.get("receiver_contract_satisfied") is not True:
+        return False
+    rows = summary.get("hard_byte_ceiling_rows")
+    if not isinstance(rows, Sequence):
+        return False
+    return any(
+        isinstance(row, Mapping)
+        and row.get("candidate_packet_under_ceiling") is True
+        and row.get("candidate_archive_zip_under_ceiling") is not False
+        for row in rows
     )
 
 
@@ -548,6 +643,8 @@ def _base_row(
         "candidate_packet_header_bytes": _positive_int(
             evidence_ref.get("candidate_packet_header_bytes")
         ),
+        "source_packet_path": evidence_ref.get("source_packet_path"),
+        "candidate_packet_path": evidence_ref.get("candidate_packet_path"),
         "measured_lf_payload_bytes": lf_payload_bytes,
         "post_recode_over_waterline_bytes": _positive_int(
             evidence_ref.get("post_recode_over_waterline_bytes")
@@ -560,6 +657,12 @@ def _base_row(
             evidence_ref.get("snar_header_grammar_profile_attached")
         ),
         "snar_header_grammar_profile": evidence_ref.get("snar_header_grammar_profile"),
+        "snar_header_minimization_report_attached": bool(
+            evidence_ref.get("snar_header_minimization_report_attached")
+        ),
+        "snar_header_minimization_report": evidence_ref.get(
+            "snar_header_minimization_report"
+        ),
         "required_lf_savings_bytes": required_lf_savings_bytes,
         "required_lf_savings_rate_score": (
             None
@@ -615,6 +718,7 @@ def _recode_admission_evidence_from_campaign_row(
     campaign_row: Mapping[str, Any],
     *,
     header_profiles: Mapping[str, Mapping[str, Any]],
+    header_minimizations: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, Any] | None:
     plan = campaign_row.get("snerv_lf_payload_recode_admission_plan")
     if not isinstance(plan, Mapping):
@@ -633,6 +737,10 @@ def _recode_admission_evidence_from_campaign_row(
     header_profile = _matching_header_profile(
         packet_sha256=candidate_packet_sha256,
         header_profiles=header_profiles,
+    )
+    header_minimization = _matching_header_minimization(
+        packet_sha256=candidate_packet_sha256,
+        header_minimizations=header_minimizations,
     )
     blockers = [
         str(blocker)
@@ -662,8 +770,14 @@ def _recode_admission_evidence_from_campaign_row(
             selected.get("candidate_packet_header_bytes")
             or _nested(header_profile or {}, ("header", "bytes"))
         ),
+        "source_packet_path": selected.get("source_packet_path"),
+        "candidate_packet_path": selected.get("candidate_packet_path"),
         "snar_header_grammar_profile_attached": header_profile is not None,
         "snar_header_grammar_profile": _header_profile_summary(header_profile),
+        "snar_header_minimization_report_attached": header_minimization is not None,
+        "snar_header_minimization_report": _header_minimization_summary(
+            header_minimization
+        ),
         "packet_byte_delta": _int_or_none(selected.get("packet_byte_delta")),
         "post_recode_over_waterline_bytes": _positive_int(
             selected.get("post_recode_over_waterline_bytes")
@@ -696,6 +810,25 @@ def _header_profile_index(
     return out
 
 
+def _header_minimization_index(
+    reports: Sequence[Mapping[str, Any]],
+) -> dict[str, Mapping[str, Any]]:
+    out: dict[str, Mapping[str, Any]] = {}
+    for report in reports:
+        if not isinstance(report, Mapping):
+            continue
+        if str(report.get("schema") or "") != "snerv_snar_header_minimization.v1":
+            continue
+        for sha in (
+            _nested(report, ("source_packet", "sha256")),
+            _nested(report, ("candidate_packet", "sha256")),
+        ):
+            text = str(sha or "").strip()
+            if text:
+                out.setdefault(text, report)
+    return out
+
+
 def _matching_header_profile(
     *,
     packet_sha256: Any,
@@ -705,6 +838,17 @@ def _matching_header_profile(
     if not sha:
         return None
     return header_profiles.get(sha)
+
+
+def _matching_header_minimization(
+    *,
+    packet_sha256: Any,
+    header_minimizations: Mapping[str, Mapping[str, Any]],
+) -> Mapping[str, Any] | None:
+    sha = str(packet_sha256 or "").strip()
+    if not sha:
+        return None
+    return header_minimizations.get(sha)
 
 
 def _header_profile_summary(profile: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -728,6 +872,32 @@ def _header_profile_summary(profile: Mapping[str, Any] | None) -> dict[str, Any]
         "hard_byte_ceiling_rows": list(profile.get("hard_byte_ceiling_rows") or ()),
         "next_actions": list(profile.get("next_actions") or ()),
         "blockers": list(profile.get("blockers") or ()),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _header_minimization_summary(report: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(report, Mapping):
+        return None
+    return {
+        "schema": report.get("schema"),
+        "source_packet_path": _nested(report, ("source_packet", "path")),
+        "source_packet_sha256": _nested(report, ("source_packet", "sha256")),
+        "source_packet_bytes": _positive_int(_nested(report, ("source_packet", "bytes"))),
+        "candidate_packet_path": _nested(report, ("candidate_packet", "path")),
+        "candidate_packet_sha256": _nested(report, ("candidate_packet", "sha256")),
+        "candidate_packet_bytes": _positive_int(_nested(report, ("candidate_packet", "bytes"))),
+        "candidate_archive_zip_path": _nested(report, ("candidate_archive_zip", "path")),
+        "candidate_archive_zip_sha256": _nested(report, ("candidate_archive_zip", "sha256")),
+        "candidate_archive_zip_bytes": _positive_int(
+            _nested(report, ("candidate_archive_zip", "bytes"))
+        ),
+        "packet_byte_delta": _int_or_none(report.get("packet_byte_delta")),
+        "header_byte_delta": _int_or_none(report.get("header_byte_delta")),
+        "receiver_contract_satisfied": report.get("receiver_contract_satisfied") is True,
+        "hard_byte_ceiling_rows": list(report.get("hard_byte_ceiling_rows") or ()),
+        "blockers": list(report.get("blockers") or ()),
+        "next_actions": list(report.get("next_actions") or ()),
         **FALSE_AUTHORITY,
     }
 
@@ -866,6 +1036,7 @@ def _recode_evidence(
         "candidate_packet_bytes": _positive_int(candidate_packet.get("bytes")),
         "packet_byte_delta": _int_or_none(payload.get("packet_byte_delta")),
         "packet_path": source_packet.get("path"),
+        "candidate_packet_path": candidate_packet.get("path"),
         "packet_sha256": source_packet.get("sha256"),
         "receiver_contract_satisfied": payload.get("receiver_contract_satisfied") is True,
         "blockers": list(payload.get("blockers") or ()),
@@ -923,6 +1094,7 @@ def _admission_evidence(
         "candidate_packet_bytes": _positive_int(selected.get("candidate_packet_bytes")),
         "packet_byte_delta": _int_or_none(selected.get("packet_byte_delta")),
         "packet_path": selected.get("source_packet_path"),
+        "candidate_packet_path": selected.get("candidate_packet_path"),
         "packet_sha256": selected.get("source_packet_sha256"),
         "receiver_contract_satisfied": selected.get("receiver_contract_satisfied") is True,
         "blockers": list(payload.get("blockers") or ()),
