@@ -345,6 +345,17 @@ def test_fit_scale_guard_pair_sampler_spreads_full_video() -> None:
     ) == [0, 120, 240, 359, 479, 599]
 
 
+def test_fit_scale_guard_posenet_yuv6_pair_contract() -> None:
+    tool = _load_tool()
+    rgb_pairs = np.zeros((1, 2, 384, 512, 3), dtype=np.float32)
+
+    yuv6 = tool._rgb_pairs_nhwc255_to_posenet_yuv6_pair(rgb_pairs)
+
+    assert yuv6.shape == (1, 12, 192, 256)
+    np.testing.assert_allclose(yuv6[:, [0, 1, 2, 3, 6, 7, 8, 9]], 0.0)
+    np.testing.assert_allclose(yuv6[:, [4, 5, 10, 11]], 128.0)
+
+
 def test_summary_keeps_false_authority_fields() -> None:
     tool = _load_tool()
     report = {

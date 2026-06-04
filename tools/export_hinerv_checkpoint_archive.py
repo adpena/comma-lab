@@ -56,6 +56,10 @@ HINERV_CHECKPOINT_FIT_SCALE_GUARD_SCHEMA = "hinerv_checkpoint_fit_scale_guard.v1
 HINERV_CHECKPOINT_FIT_SCALE_MAX_LAST_FRAME_MAE = 64.0
 HINERV_CHECKPOINT_FIT_SCALE_MAX_MEAN_DELTA = 32.0
 HINERV_CHECKPOINT_FIT_SCALE_MAX_STD_DELTA = 64.0
+HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_MAE = 64.0
+HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_MEAN_DELTA = 32.0
+HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_STD_DELTA = 64.0
+HINERV_SCORER_RGB_HW = (384, 512)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -603,6 +607,13 @@ def _build_checkpoint_receiver_fit_scale_guard(
             "max_last_frame_std_abs_delta": (
                 HINERV_CHECKPOINT_FIT_SCALE_MAX_STD_DELTA
             ),
+            "max_posenet_yuv6_pair_mae": HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_MAE,
+            "max_posenet_yuv6_pair_mean_abs_delta": (
+                HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_MEAN_DELTA
+            ),
+            "max_posenet_yuv6_pair_std_abs_delta": (
+                HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_STD_DELTA
+            ),
         },
         "blockers": [],
         **FALSE_AUTHORITY,
@@ -655,12 +666,24 @@ def _build_checkpoint_receiver_fit_scale_guard(
         candidate_last = candidate[:, 1]
         reference_last = reference[:, 1]
         last_frame_mae = float(np.mean(np.abs(candidate_last - reference_last)))
+        candidate_yuv6 = _rgb_pairs_nhwc255_to_posenet_yuv6_pair(candidate)
+        reference_yuv6 = _rgb_pairs_nhwc255_to_posenet_yuv6_pair(reference)
+        yuv6_pair_mae = float(np.mean(np.abs(candidate_yuv6 - reference_yuv6)))
         candidate_mean = float(np.mean(candidate_last))
         candidate_std = float(np.std(candidate_last))
         reference_mean = float(np.mean(reference_last))
         reference_std = float(np.std(reference_last))
         mean_delta = abs(candidate_mean - reference_mean)
         std_delta = abs(candidate_std - reference_std)
+        candidate_yuv6_mean = float(np.mean(candidate_yuv6))
+        candidate_yuv6_std = float(np.std(candidate_yuv6))
+        reference_yuv6_mean = float(np.mean(reference_yuv6))
+        reference_yuv6_std = float(np.std(reference_yuv6))
+        yuv6_mean_delta = abs(candidate_yuv6_mean - reference_yuv6_mean)
+        yuv6_std_delta = abs(candidate_yuv6_std - reference_yuv6_std)
+        yuv6_saturation_fraction = float(
+            np.mean((candidate_yuv6 <= 1.0) | (candidate_yuv6 >= 254.0))
+        )
         saturation_fraction = float(
             np.mean((candidate_last <= 1.0) | (candidate_last >= 254.0))
         )
@@ -668,6 +691,11 @@ def _build_checkpoint_receiver_fit_scale_guard(
             last_frame_mae <= HINERV_CHECKPOINT_FIT_SCALE_MAX_LAST_FRAME_MAE
             and mean_delta <= HINERV_CHECKPOINT_FIT_SCALE_MAX_MEAN_DELTA
             and std_delta <= HINERV_CHECKPOINT_FIT_SCALE_MAX_STD_DELTA
+            and yuv6_pair_mae <= HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_MAE
+            and yuv6_mean_delta
+            <= HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_MEAN_DELTA
+            and yuv6_std_delta
+            <= HINERV_CHECKPOINT_FIT_SCALE_MAX_POSENET_YUV6_STD_DELTA
         )
         blockers = [] if gate_passed else ["hinerv_checkpoint_fit_scale_gate_failed"]
         return {
@@ -684,16 +712,48 @@ def _build_checkpoint_receiver_fit_scale_guard(
                 "max": float(np.max(candidate_last)),
                 "saturation_fraction_le1_or_ge254": saturation_fraction,
             },
+            "candidate_posenet_yuv6_pair_stats": {
+                "mean": candidate_yuv6_mean,
+                "std": candidate_yuv6_std,
+                "min": float(np.min(candidate_yuv6)),
+                "max": float(np.max(candidate_yuv6)),
+                "saturation_fraction_le1_or_ge254": yuv6_saturation_fraction,
+                "shape": [int(v) for v in candidate_yuv6.shape],
+                "channel_order_12": [
+                    "frame0_y00",
+                    "frame0_y10",
+                    "frame0_y01",
+                    "frame0_y11",
+                    "frame0_U",
+                    "frame0_V",
+                    "frame1_y00",
+                    "frame1_y10",
+                    "frame1_y01",
+                    "frame1_y11",
+                    "frame1_U",
+                    "frame1_V",
+                ],
+            },
             "reference_last_rgb_stats": {
                 "mean": reference_mean,
                 "std": reference_std,
                 "min": float(np.min(reference_last)),
                 "max": float(np.max(reference_last)),
             },
+            "reference_posenet_yuv6_pair_stats": {
+                "mean": reference_yuv6_mean,
+                "std": reference_yuv6_std,
+                "min": float(np.min(reference_yuv6)),
+                "max": float(np.max(reference_yuv6)),
+                "shape": [int(v) for v in reference_yuv6.shape],
+            },
             "fit_distance": {
                 "last_frame_rgb_mae": last_frame_mae,
                 "last_frame_mean_abs_delta": mean_delta,
                 "last_frame_std_abs_delta": std_delta,
+                "posenet_yuv6_pair_mae": yuv6_pair_mae,
+                "posenet_yuv6_pair_mean_abs_delta": yuv6_mean_delta,
+                "posenet_yuv6_pair_std_abs_delta": yuv6_std_delta,
             },
             "blockers": blockers,
         }
@@ -704,6 +764,55 @@ def _build_checkpoint_receiver_fit_scale_guard(
             "error": f"{type(exc).__name__}: {exc}",
             "blockers": ["hinerv_checkpoint_fit_scale_guard_execution_failed"],
         }
+
+
+def _resize_rgb_nhwc255_for_scorer(rgb: Any) -> Any:
+    import numpy as np
+
+    arr = np.asarray(rgb, dtype=np.float32)
+    if arr.ndim != 4 or arr.shape[-1] != 3:
+        raise ValueError(f"expected NHWC RGB tensor, got shape {arr.shape}")
+    target_h, target_w = HINERV_SCORER_RGB_HW
+    if arr.shape[1:3] == (target_h, target_w):
+        return arr
+    from PIL import Image
+
+    out = np.empty((arr.shape[0], target_h, target_w, 3), dtype=np.float32)
+    for idx, frame in enumerate(arr):
+        frame_u8 = np.clip(np.rint(frame), 0, 255).astype(np.uint8)
+        resized = Image.fromarray(frame_u8, mode="RGB").resize(
+            (target_w, target_h),
+            Image.Resampling.BILINEAR,
+        )
+        out[idx] = np.asarray(resized, dtype=np.float32)
+    return out
+
+
+def _rgb_pairs_nhwc255_to_posenet_yuv6_pair(rgb_pairs: Any) -> Any:
+    """Convert sampled RGB pairs to upstream PoseNet's 12-channel YUV6 cache."""
+
+    import numpy as np
+
+    from tac.framework_agnostic.backend import Backend
+    from tac.framework_agnostic.canonical_kernels import rgb_to_yuv6
+
+    pairs = np.asarray(rgb_pairs, dtype=np.float32)
+    if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[-1] != 3:
+        raise ValueError(
+            "expected RGB pairs with shape (pairs, 2, H, W, 3); "
+            f"got {pairs.shape}"
+        )
+    flat = pairs.reshape((-1, pairs.shape[2], pairs.shape[3], 3))
+    flat = _resize_rgb_nhwc255_for_scorer(flat)
+    nchw = np.transpose(flat, (0, 3, 1, 2))
+    yuv6 = rgb_to_yuv6(nchw, backend=Backend.NUMPY, value_range=255.0)
+    yuv6 = np.asarray(yuv6, dtype=np.float32)
+    return yuv6.reshape((pairs.shape[0], 2, 6, yuv6.shape[-2], yuv6.shape[-1])).reshape(
+        pairs.shape[0],
+        12,
+        yuv6.shape[-2],
+        yuv6.shape[-1],
+    )
 
 
 def _blockers(
