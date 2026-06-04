@@ -15276,8 +15276,11 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
     candidate_mapping = candidate if isinstance(candidate, Mapping) else {}
     if not candidate_mapping:
         candidate_mapping = _startup_modelsize_candidate_from_node(node)
+    # Checkpoint exports also carry top-level ``packet_bytes``. That is the
+    # realized receiver packet size, not the modelsize ladder's nominal payload
+    # estimate, so nested candidate metadata must win when present.
     nominal = _compact_first_present_int(
-        node,
+        candidate_mapping,
         (
             "nominal_total_payload_bytes",
             "total_payload_bytes",
@@ -15287,7 +15290,7 @@ def _modelsize_byte_cap_feedback_row(node: Mapping[str, Any]) -> dict[str, Any] 
     )
     if nominal is None:
         nominal = _compact_first_present_int(
-            candidate_mapping,
+            node,
             (
                 "nominal_total_payload_bytes",
                 "total_payload_bytes",

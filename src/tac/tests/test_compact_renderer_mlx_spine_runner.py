@@ -2324,6 +2324,48 @@ def test_modelsize_byte_cap_feedback_loader_accepts_checkpoint_exports(
     ]
 
 
+def test_modelsize_byte_cap_feedback_loader_prefers_nested_candidate_nominal_over_packet_bytes(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "snerv_export.json"
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_checkpoint_archive_export.v1",
+                "family": "snerv",
+                "archive_bytes": 444_036,
+                "packet_bytes": 2_347_396,
+                "decoder_codec": "int8_symmetric",
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "modelsize_candidate": {
+                    "candidate_id": "snerv-row",
+                    "family": "snerv",
+                    "hard_byte_ceiling": 216_000,
+                    "nominal_total_payload_bytes": 188_854,
+                    "decoder_payload_codec": "int8_symmetric",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rows = runner_mod._load_modelsize_byte_cap_feedback_rows([path])
+
+    assert rows == [
+        {
+            "family": "snerv",
+            "candidate_id": "snerv-row",
+            "measured_archive_bytes": 444_036,
+            "nominal_total_payload_bytes": 188_854,
+            "hard_byte_ceiling": 216_000,
+            "decoder_codec": "int8_symmetric",
+            "receiver_closed": True,
+            "source_path": path.resolve(strict=False).as_posix(),
+        }
+    ]
+
+
 def test_modelsize_byte_cap_feedback_loader_reads_startup_candidate_fallback(
     tmp_path: Path,
 ) -> None:
