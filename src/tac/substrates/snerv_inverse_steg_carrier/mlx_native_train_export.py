@@ -594,95 +594,100 @@ def train_export_snerv_mlx_native(
         and isinstance(score_aware_long_training.get("_trained_pairs_nchw255"), np.ndarray)
         else pairs_nchw255
     )
+    trained_official_packet = score_aware_long_training.get("_trained_official_packet")
     score_aware_long_training_public = {
         key: value
         for key, value in score_aware_long_training.items()
-        if key != "_trained_pairs_nchw255"
+        if key not in {"_trained_pairs_nchw255", "_trained_official_packet"}
     }
-    closed_form_archive = build_snerv_mlx_native_packet_from_numpy_pairs(
-        pairs_for_packet,
-        levels=levels,
-        wavelet=wavelet,
-        target_bits_per_coeff=target_bits_per_coeff,
-        step_map_bits_per_coeff=step_map_bits_per_coeff,
-        decoder_payload_codec=active_decoder_payload_codec,
-        lf_payload_codec=active_lf_payload_codec,
-        model_size=model_size,
-        source_pair_indices=source_pair_indices,
-        recon_pixel_weight=recon_weight,
-        recon_pixel_weight_metadata=recon_weight_metadata,
-        hf_decoder_saliency_gain=float(
-            candidate.get(
-                "hf_decoder_saliency_gain",
-                candidate.get("snerv_hf_decoder_saliency_gain", 1.0),
-            )
+    packet_metadata_extra = {
+        "source_video_path": Path(source_video_path).as_posix(),
+        "pair_index_alignment_mode": (
+            "explicit_source_pair_indices" if explicit_pair_indices else "prefix_source_pair_indices"
         ),
-        native_mlx_decoder_train_steps=int(
-            candidate.get(
-                "native_mlx_decoder_train_steps",
-                candidate.get("snerv_native_mlx_decoder_train_steps", native_mlx_decoder_train_steps),
-            )
+        "human_visual_fidelity_objective": False,
+        "contest_scorer_distortion_objective": (
+            _recon_pixel_weight_metadata_is_verified_gradient_manifest(recon_weight_metadata)
+            if recon_weight is not None
+            else False
         ),
-        native_mlx_decoder_train_lr=float(
-            candidate.get(
-                "native_mlx_decoder_train_lr",
-                candidate.get("snerv_native_mlx_decoder_train_lr", native_mlx_decoder_train_lr),
-            )
+        "score_aware_long_training": score_aware_long_training_public,
+        "score_aware_long_training_executed": bool(
+            score_aware_long_training_public.get("executed") is True
         ),
-        native_mlx_decoder_train_ridge=float(
-            candidate.get(
-                "native_mlx_decoder_train_ridge",
-                candidate.get("snerv_native_mlx_decoder_train_ridge", native_mlx_decoder_train_ridge),
-            )
+        "score_aware_long_training_kind": str(
+            score_aware_long_training_public.get("training_kind") or "none"
         ),
-        native_mlx_decoder_train_optimizer=str(
-            candidate.get(
-                "native_mlx_decoder_train_optimizer",
-                candidate.get("snerv_native_mlx_decoder_train_optimizer", native_mlx_decoder_train_optimizer),
-            )
+        "score_aware_long_training_optimizer": str(
+            score_aware_long_training_public.get("optimizer_kind") or "none"
         ),
-        metadata_extra={
-            "source_video_path": Path(source_video_path).as_posix(),
-            "pair_index_alignment_mode": (
-                "explicit_source_pair_indices" if explicit_pair_indices else "prefix_source_pair_indices"
-            ),
-            "human_visual_fidelity_objective": False,
-            "contest_scorer_distortion_objective": (
-                _recon_pixel_weight_metadata_is_verified_gradient_manifest(recon_weight_metadata)
-                if recon_weight is not None
-                else False
-            ),
-            "score_aware_long_training": score_aware_long_training_public,
-            "score_aware_long_training_executed": bool(
-                score_aware_long_training_public.get("executed") is True
-            ),
-            "score_aware_long_training_kind": str(
-                score_aware_long_training_public.get("training_kind") or "none"
-            ),
-            "score_aware_long_training_optimizer": str(
-                score_aware_long_training_public.get("optimizer_kind") or "none"
-            ),
-            **(
-                {
-                    "native_mlx_training_executed": True,
-                    "native_mlx_training_kind": str(
-                        score_aware_long_training_public.get("training_kind")
-                        or "snerv_mlx_score_aware_haar_renderer"
-                    ),
-                }
-                if score_aware_long_training_public.get("executed") is True
-                else {}
-            ),
-            **(
-                _official_primitives_packet_metadata(
-                    official_binding,
-                    blockers=official_primitives_blockers,
+        **(
+            {
+                "native_mlx_training_executed": True,
+                "native_mlx_training_kind": str(
+                    score_aware_long_training_public.get("training_kind")
+                    or "snerv_mlx_score_aware_haar_renderer"
+                ),
+            }
+            if score_aware_long_training_public.get("executed") is True
+            else {}
+        ),
+        **(
+            _official_primitives_packet_metadata(
+                official_binding,
+                blockers=official_primitives_blockers,
+            )
+            if official_binding is not None
+            else {}
+        ),
+    }
+    if isinstance(trained_official_packet, SnervArchivePacket):
+        closed_form_archive = trained_official_packet
+    else:
+        closed_form_archive = build_snerv_mlx_native_packet_from_numpy_pairs(
+            pairs_for_packet,
+            levels=levels,
+            wavelet=wavelet,
+            target_bits_per_coeff=target_bits_per_coeff,
+            step_map_bits_per_coeff=step_map_bits_per_coeff,
+            decoder_payload_codec=active_decoder_payload_codec,
+            lf_payload_codec=active_lf_payload_codec,
+            model_size=model_size,
+            source_pair_indices=source_pair_indices,
+            recon_pixel_weight=recon_weight,
+            recon_pixel_weight_metadata=recon_weight_metadata,
+            hf_decoder_saliency_gain=float(
+                candidate.get(
+                    "hf_decoder_saliency_gain",
+                    candidate.get("snerv_hf_decoder_saliency_gain", 1.0),
                 )
-                if official_binding is not None
-                else {}
             ),
-        },
-    )
+            native_mlx_decoder_train_steps=int(
+                candidate.get(
+                    "native_mlx_decoder_train_steps",
+                    candidate.get("snerv_native_mlx_decoder_train_steps", native_mlx_decoder_train_steps),
+                )
+            ),
+            native_mlx_decoder_train_lr=float(
+                candidate.get(
+                    "native_mlx_decoder_train_lr",
+                    candidate.get("snerv_native_mlx_decoder_train_lr", native_mlx_decoder_train_lr),
+                )
+            ),
+            native_mlx_decoder_train_ridge=float(
+                candidate.get(
+                    "native_mlx_decoder_train_ridge",
+                    candidate.get("snerv_native_mlx_decoder_train_ridge", native_mlx_decoder_train_ridge),
+                )
+            ),
+            native_mlx_decoder_train_optimizer=str(
+                candidate.get(
+                    "native_mlx_decoder_train_optimizer",
+                    candidate.get("snerv_native_mlx_decoder_train_optimizer", native_mlx_decoder_train_optimizer),
+                )
+            ),
+            metadata_extra=packet_metadata_extra,
+        )
     scorer_loop_qat = _run_scorer_loop_qat_attachment(
         requested=bool(run_scorer_loop_qat),
         output_dir=out / "snerv_scorer_loop_qat",
@@ -1185,11 +1190,19 @@ def _run_score_aware_long_training_attachment(
         strict=False
     )
     distillation_requested = bool(seg_weight > 0.0 or pose_weight > 0.0)
+    official_training_requested = bool(
+        model_size.official_mfu_hfr_tub_numeric_primitives_requested
+    )
+    training_kind = (
+        "snerv_mlx_official_mfu_hfr_tub_score_renderer"
+        if official_training_requested
+        else "snerv_mlx_score_aware_haar_renderer"
+    )
     base_payload = {
         "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
         "requested_epochs": int(requested_epochs),
         "executed": False,
-        "training_kind": "snerv_mlx_score_aware_haar_renderer",
+        "training_kind": training_kind,
         "optimizer_kind": str(optimizer_kind),
         "levels": int(levels),
         "wavelet": str(wavelet),
@@ -1208,6 +1221,14 @@ def _run_score_aware_long_training_attachment(
             "pair_indices": [int(value) for value in prioritized_pair_indices],
             "pair_count": len(prioritized_pair_indices),
             "sampling_scope": "score_aware_training_batches_not_target_hydration",
+            **FALSE_AUTHORITY,
+        },
+        "official_mfu_hfr_tub_train_export": {
+            "schema": "snerv_official_mfu_hfr_tub_train_export_binding.v1",
+            "requested": official_training_requested,
+            "train_renderer_bound": False,
+            "trained_receiver_payload_exported": False,
+            "source_forward_replay_authority": False,
             **FALSE_AUTHORITY,
         },
         "contest_scorer_distortion_objective": bool(
@@ -1290,7 +1311,8 @@ def _run_score_aware_long_training_attachment(
         write_json(report_path, payload)
         return {**payload, "report_path": report_path.as_posix()}
     pairs = np.asarray(pairs_nchw255, dtype=np.float32)
-    if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
+    official_source_forward_replay: dict[str, Any] | None = None
+    if official_training_requested:
         source_forward_replay = _build_official_mfu_hfr_tub_long_training_replay_contract(
             output_dir=out,
             pairs_nchw255=pairs,
@@ -1298,18 +1320,29 @@ def _run_score_aware_long_training_attachment(
             source_pair_indices=source_pair_indices,
             allow_overwrite=allow_overwrite,
         )
-        payload = {
-            **base_payload,
-            "official_mfu_hfr_tub_source_forward_replay": source_forward_replay,
-            "blockers": _ordered_unique(
-                str(blocker)
-                for blocker in source_forward_replay.get("blockers") or ()
-                if str(blocker)
-            ),
-        }
-        write_json(report_path, payload)
-        return {**payload, "report_path": report_path.as_posix()}
-    if str(wavelet).strip().lower() not in {"haar", "db1"}:
+        official_source_forward_replay = (
+            _official_long_training_replay_with_renderer_binding(
+                source_forward_replay
+            )
+        )
+        official_validation_blockers: list[str] = []
+        if int(levels) != 1:
+            official_validation_blockers.append(
+                "snerv_score_aware_long_training_official_mfu_hfr_tub_requires_haar_j1"
+            )
+        if str(wavelet).strip().lower() not in {"haar", "db1"}:
+            official_validation_blockers.append(
+                "snerv_score_aware_long_training_official_mfu_hfr_tub_requires_haar_j1"
+            )
+        if official_validation_blockers:
+            payload = {
+                **base_payload,
+                "official_mfu_hfr_tub_source_forward_replay": official_source_forward_replay,
+                "blockers": _ordered_unique(official_validation_blockers),
+            }
+            write_json(report_path, payload)
+            return {**payload, "report_path": report_path.as_posix()}
+    if (not official_training_requested) and str(wavelet).strip().lower() not in {"haar", "db1"}:
         payload = {
             **base_payload,
             "blockers": [
@@ -1344,16 +1377,53 @@ def _run_score_aware_long_training_attachment(
             build_learnable_student_head,
         )
         from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
+            SNERV_MLX_OFFICIAL_MFU_HFR_TUB_RENDERER_SCHEMA,
             SNERV_MLX_RENDERER_SCHEMA,
             SnervMlxHaarScoreRenderer,
+            SnervMlxOfficialMfuHfrTubScoreRenderer,
         )
 
-        model = SnervMlxHaarScoreRenderer.from_numpy_pairs(
-            pairs,
-            levels=int(levels),
-            wavelet="haar",
-            model_size=model_size,
-        )
+        if official_training_requested:
+            official_components = _official_mfu_hfr_tub_bootstrap_components_from_pairs(
+                pairs,
+                model_size=model_size,
+            )
+            model = SnervMlxOfficialMfuHfrTubScoreRenderer(
+                mfu=official_components["mfu"],
+                hfr_heads=official_components["hfr_heads"],
+                low=np.asarray(official_components["low"], dtype=np.float32),
+                skip_mid=np.asarray(
+                    official_components["skip_mid"],
+                    dtype=np.float32,
+                ),
+                skip_high=np.asarray(
+                    official_components["skip_high"],
+                    dtype=np.float32,
+                ),
+                output_hw=(int(pairs.shape[-2]), int(pairs.shape[-1])),
+                model_size=model_size,
+                tub_current=np.asarray(
+                    official_components["tub_current"],
+                    dtype=np.float32,
+                ),
+                tub_previous=np.asarray(
+                    official_components["tub_previous"],
+                    dtype=np.float32,
+                ),
+                tub_next_frame=np.asarray(
+                    official_components["tub_next_frame"],
+                    dtype=np.float32,
+                ),
+            )
+            renderer_schema = SNERV_MLX_OFFICIAL_MFU_HFR_TUB_RENDERER_SCHEMA
+        else:
+            model = SnervMlxHaarScoreRenderer.from_numpy_pairs(
+                pairs,
+                levels=int(levels),
+                wavelet="haar",
+                model_size=model_size,
+            )
+            renderer_schema = SNERV_MLX_RENDERER_SCHEMA
         pr95_optimizer_split = partition_pr95_mlx_parameter_names(
             model.parameters()
         )
@@ -1367,7 +1437,8 @@ def _run_score_aware_long_training_attachment(
             "adamw_tensor_count": len(pr95_optimizer_split.get("adamw") or []),
             "muon_parameter_names": list(pr95_optimizer_split.get("muon") or []),
             "adamw_parameter_names": list(pr95_optimizer_split.get("adamw") or []),
-            "vector_decoder_kernels_are_not_matrix_muon_targets": True,
+            "vector_decoder_kernels_are_not_matrix_muon_targets": not official_training_requested,
+            "official_mfu_hfr_tub_matrix_payload_atoms_bound": official_training_requested,
             **FALSE_AUTHORITY,
         }
         if (
@@ -1494,7 +1565,7 @@ def _run_score_aware_long_training_attachment(
             else "rgb",
             "substrate_artifact_metadata": {
                 "schema": "snerv_mlx_score_aware_renderer_bundle.v1",
-                "renderer_schema": SNERV_MLX_RENDERER_SCHEMA,
+                "renderer_schema": renderer_schema,
                 "source_pair_indices": [int(value) for value in source_pair_indices],
                 "receiver_export_path": "SNAR1_numpy_portable_packet_after_training",
                 "human_visual_fidelity_objective": False,
@@ -1615,9 +1686,9 @@ def _run_score_aware_long_training_attachment(
             ),
             notes=(
                 "SNeRV MLX score-aware train/export attachment: train LF "
-                "latents plus shared HF decoder weights with the canonical "
-                "shared MLX harness, then export trained renders through the "
-                "NumPy-portable SNAR1 receiver packet builder."
+                "latents or official MFU/HFR/TUB receiver payload atoms with "
+                "the canonical shared MLX harness, then export trained bytes "
+                "through the NumPy-portable SNAR1 receiver packet builder."
             ),
             on_epoch_end=_on_epoch_end,
         )
@@ -1665,6 +1736,17 @@ def _run_score_aware_long_training_attachment(
             selection_warnings.append(
                 "snerv_score_aware_long_training_selected_initial_no_improvement"
             )
+        official_packet: SnervArchivePacket | None = None
+        official_train_export = dict(base_payload["official_mfu_hfr_tub_train_export"])
+        if official_training_requested:
+            official_train_export.update(
+                {
+                    "train_renderer_bound": True,
+                    "trained_receiver_payload_exported": False,
+                    "train_renderer_schema": renderer_schema,
+                    "source_forward_replay_authority": False,
+                }
+            )
         payload = {
             **base_payload,
             "executed": not blockers,
@@ -1701,6 +1783,14 @@ def _run_score_aware_long_training_attachment(
             "coder_aware_qat": coder_qat_metadata(coder_qat_cfg),
             "coder_aware_qat_bound": bool(coder_qat_cfg.enabled),
             "teacher_binding": teacher_binding,
+            "official_mfu_hfr_tub_train_export": official_train_export,
+            **(
+                {
+                    "official_mfu_hfr_tub_source_forward_replay": official_source_forward_replay,
+                }
+                if official_source_forward_replay is not None
+                else {}
+            ),
             "has_real_segnet_teacher": scorer_teacher is not None,
             "has_real_posenet_teacher": pose_scorer_teacher is not None,
             "renderer": model.metadata(),
@@ -1731,12 +1821,47 @@ def _run_score_aware_long_training_attachment(
             },
             "blockers": blockers,
         }
+        if official_training_requested and not blockers:
+            trained_official_train_export = {
+                **official_train_export,
+                "trained_receiver_payload_exported": True,
+            }
+            payload_for_packet = {
+                **payload,
+                "official_mfu_hfr_tub_train_export": trained_official_train_export,
+            }
+            official_packet = _build_official_mfu_hfr_tub_packet_from_components(
+                model.export_official_components(),
+                source_pair_indices=source_pair_indices,
+                model_size=model_size,
+                metadata_extra={
+                    "source_pair_indices": [int(value) for value in source_pair_indices],
+                    "source_pair_indices_preserved": True,
+                    "allocation_mode": "official_mfu_hfr_tub_trained_mlx_receiver_payload",
+                    "hf_decoder_fit_mode": "official_mfu_hfr_tub_mlx_trained_payload_atoms",
+                    "score_aware_long_training": payload_for_packet,
+                    "score_aware_long_training_executed": True,
+                    "score_aware_long_training_kind": training_kind,
+                    "score_aware_long_training_optimizer": str(optimizer_kind),
+                    "native_mlx_training_executed": True,
+                    "native_mlx_training_kind": training_kind,
+                    "official_mfu_hfr_tub_train_export": trained_official_train_export,
+                },
+            )
+            payload["official_mfu_hfr_tub_train_export"] = {
+                **trained_official_train_export,
+                "trained_packet_bytes": int(official_packet.total_bytes),
+                "trained_packet_sha256": _sha256_bytes(official_packet.packet),
+            }
         write_json(report_path, payload)
-        return {
+        result = {
             **payload,
             "report_path": report_path.as_posix(),
             "_trained_pairs_nchw255": trained_pairs,
         }
+        if official_packet is not None:
+            result["_trained_official_packet"] = official_packet
+        return result
     except Exception as exc:
         payload = {
             **base_payload,
@@ -1922,6 +2047,40 @@ def _official_long_training_replay_component_rows(
             }
         )
     return rows
+
+
+def _official_long_training_replay_with_renderer_binding(
+    replay: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Mark receiver replay custody as consumed by a real train-time renderer."""
+
+    payload = dict(replay)
+    payload["score_aware_long_training_renderer_bound"] = True
+    payload["train_renderer_bound"] = True
+    payload["trained_weight_mapping_to_long_training_bound"] = True
+    payload["blockers"] = _ordered_unique(
+        str(blocker)
+        for blocker in payload.get("blockers") or ()
+        if str(blocker)
+        not in {
+            "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
+            "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
+        }
+    )
+    rows: list[dict[str, Any]] = []
+    for raw_row in payload.get("component_rows") or ():
+        row = dict(raw_row)
+        row["score_aware_long_training_renderer_bound"] = True
+        row["train_renderer_bound"] = True
+        row["blockers"] = [
+            str(blocker)
+            for blocker in row.get("blockers") or ()
+            if str(blocker)
+            != "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
+        ]
+        rows.append(row)
+    payload["component_rows"] = rows
+    return payload
 
 
 def _run_scorer_loop_qat_attachment(
@@ -2473,6 +2632,29 @@ def _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
     ``(pairs, frames, channels, H, W)`` tensor from the official payload path.
     """
 
+    components = _official_mfu_hfr_tub_bootstrap_components_from_pairs(
+        pairs,
+        model_size=model_size,
+    )
+    return _build_official_mfu_hfr_tub_packet_from_components(
+        components,
+        source_pair_indices=source_pair_indices,
+        model_size=model_size,
+        metadata_extra={
+            "hf_decoder_fit_mode": "official_hfr_heads_least_squares_from_haar_ll",
+            "allocation_mode": "official_mfu_hfr_tub_frame_producing_bootstrap",
+            **dict(metadata_extra or {}),
+        },
+    )
+
+
+def _official_mfu_hfr_tub_bootstrap_components_from_pairs(
+    pairs: np.ndarray,
+    *,
+    model_size: SnervModelSizeConfig,
+) -> dict[str, Any]:
+    """Initialize official MFU/HFR/TUB payload atoms from target pair frames."""
+
     if pairs.shape[0] < 1 or pairs.shape[1] < 2 or pairs.shape[2] != 3:
         raise SnervMlxNativeExportError(
             "official MFU/HFR/TUB export requires at least one RGB frame pair"
@@ -2521,18 +2703,65 @@ def _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
     low = np.zeros((target_frames.shape[0], channels, ll_h // 4, ll_w // 4), dtype=np.float64)
     skip_mid = np.zeros((target_frames.shape[0], channels, ll_h // 2, ll_w // 2), dtype=np.float64)
     skip_high = ll
+    return {
+        "mfu": mfu,
+        "hfr_heads": hfr_heads,
+        "low": low,
+        "skip_mid": skip_mid,
+        "skip_high": skip_high,
+        "tub_current": target_chw,
+        "tub_previous": previous_chw,
+        "tub_next_frame": target_chw,
+        "temporal_encoder_output_shape": (1, 4, max(1, ll_h // 2), max(1, ll_w // 2)),
+        "fc_hw": (2, 2),
+        "output2_decoder_output_shape": (2, 8, max(1, ll_h // 2), max(1, ll_w // 2)),
+        "n_pairs": n_pairs,
+        "frames_per_pair": frames_per_pair,
+        "channels": channels,
+        "h": h,
+        "w": w,
+        "model_size": model_size.as_jsonable(),
+    }
+
+
+def _build_official_mfu_hfr_tub_packet_from_components(
+    components: Mapping[str, Any],
+    *,
+    source_pair_indices: Sequence[int],
+    model_size: SnervModelSizeConfig,
+    metadata_extra: Mapping[str, Any] | None,
+) -> SnervArchivePacket:
+    """Pack trained official MFU/HFR/TUB atoms into the receiver SNAR grammar."""
+
+    low = np.asarray(components["low"], dtype=np.float64)
+    skip_mid = np.asarray(components["skip_mid"], dtype=np.float64)
+    skip_high = np.asarray(components["skip_high"], dtype=np.float64)
+    n_frames = int(skip_high.shape[0])
+    if n_frames <= 0 or n_frames % 2:
+        raise SnervMlxNativeExportError(
+            f"official MFU/HFR/TUB components require even frame count; got {n_frames}"
+        )
+    n_pairs = n_frames // 2
+    frames_per_pair = 2
+    channels = int(skip_high.shape[1])
+    h = int(skip_high.shape[-2]) * 2
+    w = int(skip_high.shape[-1]) * 2
     official_payload = encode_official_mfu_hfr_tub_decoder_payload(
-        mfu=mfu,
-        hfr_heads=hfr_heads,
+        mfu=components["mfu"],
+        hfr_heads=components["hfr_heads"],
         low=low,
         skip_mid=skip_mid,
         skip_high=skip_high,
-        tub_current=target_chw,
-        tub_previous=previous_chw,
-        tub_next_frame=target_chw,
-        temporal_encoder_output_shape=(1, 4, max(1, ll_h // 2), max(1, ll_w // 2)),
-        fc_hw=(2, 2),
-        output2_decoder_output_shape=(2, 8, max(1, ll_h // 2), max(1, ll_w // 2)),
+        tub_current=np.asarray(components["tub_current"], dtype=np.float64),
+        tub_previous=np.asarray(components["tub_previous"], dtype=np.float64),
+        tub_next_frame=np.asarray(components["tub_next_frame"], dtype=np.float64),
+        temporal_encoder_output_shape=tuple(
+            int(v) for v in components.get("temporal_encoder_output_shape") or (1, 4, max(1, h // 4), max(1, w // 4))
+        ),
+        fc_hw=tuple(int(v) for v in components.get("fc_hw") or (2, 2)),
+        output2_decoder_output_shape=tuple(
+            int(v) for v in components.get("output2_decoder_output_shape") or (2, 8, max(1, h // 4), max(1, w // 4))
+        ),
     )
     step_packet = encode_step_maps_waterfill(
         [np.ones((1, 1), dtype=np.float32)],
@@ -2576,7 +2805,10 @@ def _build_official_mfu_hfr_tub_packet_from_numpy_pairs(
         step_map_packet=step_packet.packet,
         metadata=metadata,
     )
-    _verify_receiver_frame_decode(archive, reference_shape=pairs.shape)
+    _verify_receiver_frame_decode(
+        archive,
+        reference_shape=(n_pairs, frames_per_pair, channels, h, w),
+    )
     return archive
 
 

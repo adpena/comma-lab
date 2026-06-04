@@ -1125,7 +1125,7 @@ def test_train_export_official_primitives_mode_emits_receiver_bound_surrogate(
     assert Path(report["report_path"]).is_file()
 
 
-def test_official_primitives_long_training_refusal_writes_source_forward_replay_contract(
+def test_official_primitives_long_training_exports_trained_official_payload(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1142,7 +1142,7 @@ def test_official_primitives_long_training_refusal_writes_source_forward_replay_
     monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
 
     report = train_export_snerv_mlx_native(
-        output_dir=tmp_path / "official_long_training_refusal",
+        output_dir=tmp_path / "official_long_training_bound",
         num_pairs=2,
         source_video_path="unit.mkv",
         modelsize_candidate={
@@ -1166,13 +1166,43 @@ def test_official_primitives_long_training_refusal_writes_source_forward_replay_
         "snerv_score_aware_long_training_official_mfu_hfr_tub_renderer_not_bound"
     )
     assert old_blocker not in report["blockers"]
-    assert report["score_aware_long_training_executed"] is False
+    assert report["score_aware_long_training_executed"] is True
+    assert report["score_aware_long_training_kind"] == (
+        "snerv_mlx_official_mfu_hfr_tub_score_renderer"
+    )
+    assert report["native_mlx_training_executed"] is True
+    assert report["native_mlx_training_kind"] == (
+        "snerv_mlx_official_mfu_hfr_tub_score_renderer"
+    )
     assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
     assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
+    assert (
+        "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
+        not in report["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
+        not in report["blockers"]
+    )
+    assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in report[
+        "blockers"
+    ]
 
     long_training = report["score_aware_long_training"]
     assert long_training["requested_epochs"] == 1
-    assert long_training["executed"] is False
+    assert long_training["executed"] is True
+    assert long_training["training_kind"] == (
+        "snerv_mlx_official_mfu_hfr_tub_score_renderer"
+    )
+    assert long_training["renderer"]["schema"] == (
+        "snerv_mlx_official_mfu_hfr_tub_score_renderer.v1"
+    )
+    train_export = long_training["official_mfu_hfr_tub_train_export"]
+    assert train_export["requested"] is True
+    assert train_export["train_renderer_bound"] is True
+    assert train_export["trained_receiver_payload_exported"] is True
+    assert len(train_export["trained_packet_sha256"]) == 64
+    assert train_export["source_forward_replay_authority"] is False
     assert old_blocker not in long_training["blockers"]
     replay = long_training["official_mfu_hfr_tub_source_forward_replay"]
     assert replay["schema"] == (
@@ -1183,7 +1213,9 @@ def test_official_primitives_long_training_refusal_writes_source_forward_replay_
     assert replay["receiver_official_payload_forward_replay_passed"] is True
     assert replay["source_forward_replay_bound"] is False
     assert replay["source_forward_replay_verified"] is False
-    assert replay["score_aware_long_training_renderer_bound"] is False
+    assert replay["score_aware_long_training_renderer_bound"] is True
+    assert replay["train_renderer_bound"] is True
+    assert replay["trained_weight_mapping_to_long_training_bound"] is True
     assert replay["official_torch_source_forward_replay_passed"] is False
     assert replay["selected_packet_authority"]["status"] == (
         "frame_producing_official_export"
@@ -1203,20 +1235,26 @@ def test_official_primitives_long_training_refusal_writes_source_forward_replay_
     assert all(
         row["receiver_payload_forward_replay_proven"] is True
         and row["official_source_forward_parity_proven"] is False
+        and row["score_aware_long_training_renderer_bound"] is True
         for row in replay["component_rows"]
     )
     assert (
         "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
-        in replay["blockers"]
+        not in replay["blockers"]
     )
     assert "snerv_official_mfu_hfr_tub_source_forward_replay_missing" in replay[
         "blockers"
     ]
-    assert "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing" in report[
-        "blockers"
-    ]
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
+    assert decoded.metadata["score_aware_long_training_executed"] is True
+    assert decoded.metadata["score_aware_long_training"]["executed"] is True
+    assert decoded.metadata["score_aware_long_training"]["official_mfu_hfr_tub_train_export"][
+        "trained_receiver_payload_exported"
+    ] is True
+    frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
+    assert frames.shape == (2, 2, 3, 16, 16)
+    assert np.isfinite(frames).all()
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 

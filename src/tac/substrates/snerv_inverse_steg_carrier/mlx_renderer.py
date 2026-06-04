@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -33,6 +33,14 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     dwt2_multilevel,
     fit_hf_decoder_least_squares,
 )
+from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
+    OfficialConv2dNchw,
+    OfficialHfrConvBlock,
+    OfficialHfrHeads,
+)
+
+if TYPE_CHECKING:
+    from tac.substrates.snerv_inverse_steg_carrier.official_mfu import OfficialSnervMfu
 
 try:  # pragma: no cover - exercised on Apple Silicon with MLX installed.
     import mlx.core as mx
@@ -48,6 +56,9 @@ else:
 
 
 SNERV_MLX_RENDERER_SCHEMA = "snerv_mlx_score_aware_haar_renderer.v1"
+SNERV_MLX_OFFICIAL_MFU_HFR_TUB_RENDERER_SCHEMA = (
+    "snerv_mlx_official_mfu_hfr_tub_score_renderer.v1"
+)
 
 
 class SnervMlxRendererError(ValueError):
@@ -655,9 +666,353 @@ def _haar_idwt2_level_mlx(ll: Any, lh: Any, hl: Any, hh: Any) -> Any:
     )
 
 
+class SnervMlxOfficialMfuHfrTubScoreRenderer(nn.Module if nn is not None else object):  # type: ignore[misc]
+    """Train-time MLX wrapper around receiver-bound official MFU/HFR/TUB tensors.
+
+    The receiver payload stores official MFU weights, official HFR weights, and
+    official MFU input tensors.  This module makes those payload atoms trainable
+    in the shared MLX score-aware harness instead of fitting them only after a
+    local surrogate renderer has produced frames.
+    """
+
+    schema = SNERV_MLX_OFFICIAL_MFU_HFR_TUB_RENDERER_SCHEMA
+
+    def __init__(
+        self,
+        *,
+        mfu: OfficialSnervMfu,
+        hfr_heads: OfficialHfrHeads,
+        low: np.ndarray,
+        skip_mid: np.ndarray,
+        skip_high: np.ndarray,
+        output_hw: tuple[int, int],
+        model_size: SnervModelSizeConfig | None = None,
+        tub_current: np.ndarray | None = None,
+        tub_previous: np.ndarray | None = None,
+        tub_next_frame: np.ndarray | None = None,
+    ) -> None:
+        _require_mlx()
+        super().__init__()
+        low_np = np.asarray(low, dtype=np.float32)
+        skip_mid_np = np.asarray(skip_mid, dtype=np.float32)
+        skip_high_np = np.asarray(skip_high, dtype=np.float32)
+        if low_np.ndim != 4 or skip_mid_np.ndim != 4 or skip_high_np.ndim != 4:
+            raise SnervMlxRendererError(
+                "official MFU/HFR renderer expects low/skip tensors in NCHW"
+            )
+        if int(skip_high_np.shape[0]) % 2:
+            raise SnervMlxRendererError(
+                "official MFU/HFR renderer stores pair-major frames; frame count "
+                f"must be even, got {skip_high_np.shape[0]}"
+            )
+        if not (
+            np.isfinite(low_np).all()
+            and np.isfinite(skip_mid_np).all()
+            and np.isfinite(skip_high_np).all()
+        ):
+            raise SnervMlxRendererError("official MFU/HFR renderer inputs contain non-finite values")
+        self.mfu = mfu
+        self.model_size = model_size or SnervModelSizeConfig(
+            adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+        )
+        self.num_pairs = int(skip_high_np.shape[0]) // 2
+        self.output_hw = (int(output_hw[0]), int(output_hw[1]))
+        self.low = mx.array(low_np, dtype=mx.float32)  # type: ignore[union-attr]
+        self.skip_mid = mx.array(skip_mid_np, dtype=mx.float32)  # type: ignore[union-attr]
+        self.skip_high = mx.array(skip_high_np, dtype=mx.float32)  # type: ignore[union-attr]
+        self._hfr_head_names = ("lh", "hl", "hh")
+        self._import_hfr_heads(hfr_heads)
+        self._tub_current_np = _official_tub_frame_or_default(
+            tub_current,
+            skip_high_np,
+            frame_index=min(1, int(skip_high_np.shape[0]) - 1),
+        )
+        self._tub_previous_np = _official_tub_frame_or_default(
+            tub_previous,
+            skip_high_np,
+            frame_index=0,
+        )
+        self._tub_next_frame_np = _official_tub_frame_or_default(
+            tub_next_frame,
+            skip_high_np,
+            frame_index=min(1, int(skip_high_np.shape[0]) - 1),
+        )
+
+    def _import_hfr_heads(self, heads: OfficialHfrHeads) -> None:
+        for name, head in zip(
+            self._hfr_head_names,
+            (heads.lh_head, heads.hl_head, heads.hh_head),
+            strict=True,
+        ):
+            setattr(
+                self,
+                f"hfr_{name}_conv1_weight",
+                mx.array(np.asarray(head.conv1.weight, dtype=np.float32), dtype=mx.float32),  # type: ignore[union-attr]
+            )
+            setattr(
+                self,
+                f"hfr_{name}_conv1_bias",
+                mx.array(np.asarray(head.conv1.bias, dtype=np.float32), dtype=mx.float32),  # type: ignore[union-attr]
+            )
+            setattr(
+                self,
+                f"hfr_{name}_conv2_weight",
+                mx.array(np.asarray(head.conv2.weight, dtype=np.float32), dtype=mx.float32),  # type: ignore[union-attr]
+            )
+            setattr(
+                self,
+                f"hfr_{name}_conv2_bias",
+                mx.array(np.asarray(head.conv2.bias, dtype=np.float32), dtype=mx.float32),  # type: ignore[union-attr]
+            )
+
+    def reconstruct_pair(self, pair_indices: Any) -> tuple[Any, Any]:
+        """Return ``(rgb_0, rgb_1)`` NCHW in ``[0, 1]`` for the shared harness."""
+
+        _require_mlx()
+        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+        if idx.ndim == 0:
+            idx = idx.reshape((1,))
+        frame_offsets = mx.arange(2, dtype=mx.int32).reshape((1, 2))  # type: ignore[union-attr]
+        frame_indices = (idx.reshape((-1, 1)) * 2 + frame_offsets).reshape((-1,))
+        low = mx.take(self.low, frame_indices, axis=0)  # type: ignore[union-attr]
+        skip_mid = mx.take(self.skip_mid, frame_indices, axis=0)  # type: ignore[union-attr]
+        skip_high = mx.take(self.skip_high, frame_indices, axis=0)  # type: ignore[union-attr]
+        mfu_out = self.mfu.forward_mlx(
+            low,
+            skip_mid,
+            skip_high,
+            accumulation_mode="optimized",
+        )
+        lh = self._hfr_head_forward("lh", mfu_out.pyr_out)
+        hl = self._hfr_head_forward("hl", mfu_out.pyr_out)
+        hh = self._hfr_head_forward("hh", mfu_out.pyr_out)
+        recon = _haar_idwt2_level_mlx_nchw(mfu_out.pyr_out, lh, hl, hh)
+        b = int(idx.shape[0])
+        h, w = self.output_hw
+        pair = recon.reshape((b, 2, 3, h, w))
+        pair01 = mx.clip(pair / 255.0, 0.0, 1.0)  # type: ignore[union-attr]
+        return pair01[:, 0], pair01[:, 1]
+
+    def __call__(self, pair_indices: Any) -> Any:
+        rgb0, rgb1 = self.reconstruct_pair(pair_indices)
+        return mx.stack([rgb0, rgb1], axis=1) * 255.0  # type: ignore[union-attr]
+
+    def render_pairs_nchw255(
+        self,
+        *,
+        pair_indices: Sequence[int] | None = None,
+        batch_size: int = 8,
+    ) -> np.ndarray:
+        _require_mlx()
+        indices = (
+            tuple(range(self.num_pairs))
+            if pair_indices is None
+            else tuple(int(value) for value in pair_indices)
+        )
+        if not indices:
+            raise SnervMlxRendererError("pair_indices must not be empty")
+        chunks: list[np.ndarray] = []
+        for start in range(0, len(indices), max(1, int(batch_size))):
+            chunk = indices[start : start + max(1, int(batch_size))]
+            arr = self(mx.array(chunk, dtype=mx.int32))  # type: ignore[union-attr]
+            mx.eval(arr)  # type: ignore[union-attr]
+            chunks.append(np.asarray(arr, dtype=np.float32))
+        return np.clip(np.concatenate(chunks, axis=0), 0.0, 255.0).astype(
+            np.float32,
+            copy=False,
+        )
+
+    def export_state_dict(self) -> dict[str, np.ndarray]:
+        _require_mlx()
+        out: dict[str, np.ndarray] = {
+            "low": np.asarray(self.low, dtype=np.float32).copy(),
+            "skip_mid": np.asarray(self.skip_mid, dtype=np.float32).copy(),
+            "skip_high": np.asarray(self.skip_high, dtype=np.float32).copy(),
+        }
+        for name in self._hfr_head_names:
+            for layer in ("conv1", "conv2"):
+                for field in ("weight", "bias"):
+                    key = f"hfr.{name}.{layer}.{field}"
+                    out[key] = np.asarray(
+                        getattr(self, f"hfr_{name}_{layer}_{field}"),
+                        dtype=np.float32,
+                    ).copy()
+        return out
+
+    def import_state_dict(self, state: dict[str, np.ndarray]) -> None:
+        _require_mlx()
+        expected = set(self.export_state_dict())
+        observed = set(state)
+        if observed != expected:
+            missing = sorted(expected - observed)
+            extra = sorted(observed - expected)
+            raise SnervMlxRendererError(
+                "official MFU/HFR renderer state key mismatch; "
+                f"missing={missing[:8]} extra={extra[:8]}"
+            )
+        for key, attr in (
+            ("low", "low"),
+            ("skip_mid", "skip_mid"),
+            ("skip_high", "skip_high"),
+        ):
+            arr = np.asarray(state[key], dtype=np.float32)
+            current = getattr(self, attr)
+            if tuple(arr.shape) != tuple(current.shape):
+                raise SnervMlxRendererError(
+                    f"{key} shape mismatch; state={tuple(arr.shape)} "
+                    f"model={tuple(current.shape)}"
+                )
+            setattr(self, attr, mx.array(arr, dtype=mx.float32))  # type: ignore[union-attr]
+        for name in self._hfr_head_names:
+            for layer in ("conv1", "conv2"):
+                for field in ("weight", "bias"):
+                    key = f"hfr.{name}.{layer}.{field}"
+                    attr = f"hfr_{name}_{layer}_{field}"
+                    arr = np.asarray(state[key], dtype=np.float32)
+                    current = getattr(self, attr)
+                    if tuple(arr.shape) != tuple(current.shape):
+                        raise SnervMlxRendererError(
+                            f"{key} shape mismatch; state={tuple(arr.shape)} "
+                            f"model={tuple(current.shape)}"
+                        )
+                    setattr(self, attr, mx.array(arr, dtype=mx.float32))  # type: ignore[union-attr]
+
+    def export_official_components(self) -> dict[str, Any]:
+        """Return receiver encoder inputs from the current trained MLX state."""
+
+        state = self.export_state_dict()
+        return {
+            "mfu": self.mfu,
+            "hfr_heads": OfficialHfrHeads(
+                lh_head=self._export_hfr_head("lh", state),
+                hl_head=self._export_hfr_head("hl", state),
+                hh_head=self._export_hfr_head("hh", state),
+            ),
+            "low": state["low"].astype(np.float64),
+            "skip_mid": state["skip_mid"].astype(np.float64),
+            "skip_high": state["skip_high"].astype(np.float64),
+            "tub_current": self._tub_current_np.astype(np.float64),
+            "tub_previous": self._tub_previous_np.astype(np.float64),
+            "tub_next_frame": self._tub_next_frame_np.astype(np.float64),
+        }
+
+    def metadata(self) -> dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "num_pairs": int(self.num_pairs),
+            "output_hw": [int(v) for v in self.output_hw],
+            "mfu_spec": {
+                "low_channels": int(self.mfu.spec.low_channels),
+                "mid_channels": int(self.mfu.spec.mid_channels),
+                "high_channels": int(self.mfu.spec.high_channels),
+                "mid_stride": int(self.mfu.spec.mid_stride),
+                "high_stride": int(self.mfu.spec.high_stride),
+                "num_blocks": int(self.mfu.spec.num_blocks),
+            },
+            "model_size": self.model_size.as_jsonable(),
+            "trainable_parameter_count": int(self.num_parameters()),
+            "trainable_payload_atoms": [
+                "inputs.mfu.low",
+                "inputs.mfu.skip_mid",
+                "inputs.mfu.skip_high",
+                "hfr.lh",
+                "hfr.hl",
+                "hfr.hh",
+            ],
+            "receiver_export_payload_schema": "snerv_decoder_payload.official_mfu_hfr_tub.v1",
+            "source_forward_replay_authority": False,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def num_parameters(self) -> int:
+        _require_mlx()
+        total = 0
+        for _name, arr in tree_flatten(self.parameters()):  # type: ignore[operator]
+            total += int(np.prod(tuple(arr.shape)))
+        return total
+
+    def _hfr_head_forward(self, name: str, pyr_out: Any) -> Any:
+        conv1 = _trainable_conv2d_nchw_mlx(
+            pyr_out,
+            getattr(self, f"hfr_{name}_conv1_weight"),
+            getattr(self, f"hfr_{name}_conv1_bias"),
+            padding=0,
+        )
+        hidden = mx.where(conv1 >= 0.0, conv1, 0.1 * conv1)  # type: ignore[union-attr]
+        return _trainable_conv2d_nchw_mlx(
+            hidden,
+            getattr(self, f"hfr_{name}_conv2_weight"),
+            getattr(self, f"hfr_{name}_conv2_bias"),
+            padding=1,
+        )
+
+    def _export_hfr_head(
+        self,
+        name: str,
+        state: dict[str, np.ndarray],
+    ) -> OfficialHfrConvBlock:
+        return OfficialHfrConvBlock(
+            conv1=OfficialConv2dNchw(
+                state[f"hfr.{name}.conv1.weight"].astype(np.float64),
+                state[f"hfr.{name}.conv1.bias"].astype(np.float64),
+                padding=0,
+            ),
+            conv2=OfficialConv2dNchw(
+                state[f"hfr.{name}.conv2.weight"].astype(np.float64),
+                state[f"hfr.{name}.conv2.bias"].astype(np.float64),
+                padding=1,
+            ),
+        )
+
+
+def _official_tub_frame_or_default(
+    value: np.ndarray | None,
+    skip_high: np.ndarray,
+    *,
+    frame_index: int,
+) -> np.ndarray:
+    if value is not None:
+        arr = np.asarray(value, dtype=np.float32)
+    else:
+        arr = np.asarray(skip_high[int(frame_index)], dtype=np.float32)
+    if arr.ndim != 3:
+        raise SnervMlxRendererError(f"official TUB frame must be CHW, got {arr.shape}")
+    if not np.isfinite(arr).all():
+        raise SnervMlxRendererError("official TUB frame contains non-finite values")
+    return arr.copy()
+
+
+def _trainable_conv2d_nchw_mlx(x: Any, weight_oihw: Any, bias: Any, *, padding: int) -> Any:
+    x_nhwc = mx.transpose(x, (0, 2, 3, 1))  # type: ignore[union-attr]
+    weight_ohwi = mx.transpose(weight_oihw, (0, 2, 3, 1))  # type: ignore[union-attr]
+    out = mx.conv2d(  # type: ignore[union-attr]
+        x_nhwc,
+        weight_ohwi,
+        stride=(1, 1),
+        padding=(int(padding), int(padding)),
+    )
+    out = out + mx.reshape(bias, (1, 1, 1, int(bias.shape[0])))  # type: ignore[union-attr]
+    return mx.transpose(out, (0, 3, 1, 2))  # type: ignore[union-attr]
+
+
+def _haar_idwt2_level_mlx_nchw(ll: Any, lh: Any, hl: Any, hh: Any) -> Any:
+    a = (ll + lh + hl + hh) * 0.5
+    b = (ll + lh - hl - hh) * 0.5
+    c = (ll - lh + hl - hh) * 0.5
+    d = (ll - lh - hl + hh) * 0.5
+    n, c_count, h, w = (int(ll.shape[0]), int(ll.shape[1]), int(ll.shape[2]), int(ll.shape[3]))
+    row0 = mx.stack([a, b], axis=-1).reshape((n, c_count, h, w * 2))  # type: ignore[union-attr]
+    row1 = mx.stack([c, d], axis=-1).reshape((n, c_count, h, w * 2))  # type: ignore[union-attr]
+    return mx.stack([row0, row1], axis=-2).reshape((n, c_count, h * 2, w * 2))  # type: ignore[union-attr]
+
+
 __all__ = [
+    "SNERV_MLX_OFFICIAL_MFU_HFR_TUB_RENDERER_SCHEMA",
     "SNERV_MLX_RENDERER_SCHEMA",
     "SnervMlxHaarScoreRenderer",
+    "SnervMlxOfficialMfuHfrTubScoreRenderer",
     "SnervMlxRendererError",
     "export_snerv_mlx_renderer_state_dict",
 ]
