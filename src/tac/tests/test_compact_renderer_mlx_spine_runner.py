@@ -1428,19 +1428,74 @@ def test_hinerv_execute_forwards_prioritized_pair_indices(
         == "source_video_pair_indices_0_to_model_num_pairs_minus_1"
     )
     assert prioritized["model_num_pairs"] == 4
-    assert prioritized["hydrated_target_pair_count"] == 2
+    assert prioritized["hydrated_target_pair_count"] == 4
     assert prioritized["source_pair_indices"] == [3, 1]
-    assert prioritized["local_target_rows_are_compact"] is True
-    assert prioritized["arbitrary_source_pair_hydration"] is True
-    assert prioritized["target_hydration_pair_indices_consumed"] is True
+    assert prioritized["local_target_rows_are_compact"] is False
+    assert prioritized["arbitrary_source_pair_hydration"] is False
+    assert prioritized["target_hydration_pair_indices_consumed"] is False
     assert (
         prioritized["target_hydration_pair_indices_consumed_by_renderer_bundle"]
-        is True
+        is False
     )
-    assert prioritized["requires_num_pairs_covering_pair_ids"] is True
+    assert prioritized["sampling_scope"] == (
+        "full_video_target_hydration_with_prioritized_sampling"
+    )
+    assert prioritized["requires_num_pairs_covering_pair_ids"] is False
     assert prioritized["score_claim"] is False
     assert prioritized["promotion_eligible"] is False
     assert out["score_claim"] is False
+
+
+def test_hinerv_execute_forwards_explicit_pr95_curriculum_total_epochs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_pr95_total_epochs",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        hi_nerv_pr95_curriculum_total_epochs=29_650,
+        repo_root=REPO_ROOT,
+    )
+
+    optimizer_policy = captured_train_kwargs["hi_nerv_optimizer_policy"]
+    assert captured_train_kwargs["pr95_curriculum_total_epochs"] == 29_650
+    assert optimizer_policy["resolved_policy"] == "pr95_curriculum"
+    assert optimizer_policy["pr95_faithful_curriculum_enabled"] is True
+    assert optimizer_policy["pr95_curriculum_total_epochs"] == 29_650
+    assert optimizer_policy["pr95_curriculum_total_epochs_requested"] == 29_650
+    assert optimizer_policy["pr95_curriculum_total_epochs_defaulted"] is False
+    assert out["hi_nerv_optimizer_policy"]["pr95_curriculum_total_epochs"] == 29_650
+    assert out["score_aware_training"]["pr95_curriculum_total_epochs"] == 29_650
+    assert out["score_aware_training"]["pr95_curriculum_total_epochs_consumed"] is True
 
 
 def test_parse_prioritized_pair_indices_arg() -> None:
@@ -1473,6 +1528,25 @@ def test_parse_prioritized_pair_indices_file_arg(tmp_path: Path) -> None:
     )
 
     assert runner_mod._prioritized_pair_indices_from_args(args) == (3, 2, 8)
+
+
+def test_hinerv_priority_hydration_contract_explicit_sparse_mode() -> None:
+    contract = runner_mod._hi_nerv_priority_target_hydration_contract(
+        prioritized_pair_indices=(7, 2),
+        model_num_pairs=10,
+        hydrated_target_pair_count=2,
+        sparse_target_hydration=True,
+    )
+
+    assert contract["enabled"] is True
+    assert contract["sampling_scope"] == "sparse_source_pair_target_hydration"
+    assert contract["pair_index_domain"] == (
+        "source_video_pair_indices_0_to_model_num_pairs_minus_1"
+    )
+    assert contract["local_target_rows_are_compact"] is True
+    assert contract["arbitrary_source_pair_hydration"] is True
+    assert contract["target_hydration_pair_indices_consumed"] is True
+    assert contract["requires_num_pairs_covering_pair_ids"] is True
 
 
 def test_parse_prioritized_pair_indices_allows_source_ids_above_num_pairs() -> None:
@@ -1512,7 +1586,7 @@ def test_hinerv_execute_rejects_out_of_range_prioritized_pairs(
         )
 
 
-def test_hinerv_private_smoke_uses_sparse_source_pair_target_hydration(
+def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -1565,6 +1639,9 @@ def test_hinerv_private_smoke_uses_sparse_source_pair_target_hydration(
         captured["run_prioritized_pair_indices"] = tuple(
             kwargs["prioritized_pair_indices"]
         )
+        captured["run_pr95_curriculum_total_epochs"] = int(
+            kwargs["pr95_curriculum_total_epochs"]
+        )
         archive = tmp_path / "fake_hinerv_sparse_hydration_archive.zip"
         _write_synthetic_pr95_archive(archive, pairs=10)
         return FakeArtifact(
@@ -1595,7 +1672,7 @@ def test_hinerv_private_smoke_uses_sparse_source_pair_target_hydration(
     )
 
     artifact = runner_mod._run_hi_nerv_mlx_scoreaware_smoke(
-        output_dir=tmp_path / "private_smoke_sparse_priority_hydration",
+        output_dir=tmp_path / "private_smoke_full_priority_hydration",
         num_pairs=10,
         epochs=1,
         batch_pair_indices_per_step=2,
@@ -1660,24 +1737,182 @@ def test_hinerv_private_smoke_uses_sparse_source_pair_target_hydration(
     )
 
     decode_call = captured["decode_call"]
-    assert decode_call["num_pairs"] == 2
-    assert decode_call["pair_indices"] == (7, 2)
-    assert captured["bundle_num_pairs"] == 2
-    assert captured["bundle_source_pair_indices"] == (7, 2)
+    assert decode_call["num_pairs"] == 10
+    assert decode_call["pair_indices"] == ()
+    assert captured["bundle_num_pairs"] == 10
+    assert captured["bundle_source_pair_indices"] == ()
     assert captured["model_num_pairs"] == 10
     assert captured["run_prioritized_pair_indices"] == (7, 2)
+    assert captured["run_pr95_curriculum_total_epochs"] == 8
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
     training = metadata["score_aware_training"]
     assert metadata["model_num_pairs"] == 10
-    assert metadata["hydrated_target_pair_count"] == 2
-    assert metadata["source_pair_indices"] == [7, 2]
+    assert metadata["hydrated_target_pair_count"] == 10
+    assert metadata["source_pair_indices"] == []
+    assert metadata["sparse_prioritized_target_hydration"] is False
     priority = training["prioritized_pair_training"]
-    assert priority["sampling_scope"] == "sparse_source_pair_target_hydration"
-    assert priority["target_hydration_pair_indices_consumed"] is True
+    assert priority["sampling_scope"] == (
+        "full_video_target_hydration_with_prioritized_sampling"
+    )
+    assert priority["target_hydration_pair_indices_consumed"] is False
     assert (
         priority["target_hydration_pair_indices_consumed_by_renderer_bundle"]
-        is True
+        is False
     )
+    assert training["pr95_curriculum_total_epochs"] is None
+    assert training["pr95_curriculum_total_epochs_consumed"] is False
+
+
+def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
+
+    captured: dict[str, object] = {}
+
+    class FakeHinervModel:
+        def __init__(self, cfg):
+            self.cfg = cfg
+
+        def configure_decoder_fake_quant_forward(self, **_kwargs):
+            return None
+
+        def num_parameters(self):
+            return 123
+
+    class FakeArtifact:
+        def __init__(self, payload: dict[str, object]) -> None:
+            self._payload = payload
+
+        def as_dict(self) -> dict[str, object]:
+            return dict(self._payload)
+
+    def fake_decode_mlx_targets(
+        _video_path,
+        *,
+        num_pairs,
+        output_height,
+        output_width,
+        pair_indices=None,
+    ):
+        captured["decode_pair_indices"] = tuple(pair_indices or ())
+        shape = (int(num_pairs), int(output_height), int(output_width), 3)
+        return np.zeros(shape, dtype=np.float32), np.zeros(shape, dtype=np.float32)
+
+    def fake_run_mlx_score_aware_full_main(**kwargs):
+        captured["run_pr95_curriculum_total_epochs"] = int(
+            kwargs["pr95_curriculum_total_epochs"]
+        )
+        captured["run_pr95_enabled"] = bool(
+            kwargs["pr95_faithful_curriculum_enabled"]
+        )
+        archive = tmp_path / "fake_hinerv_pr95_total_archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        return FakeArtifact(
+            {
+                "archive_path": archive.as_posix(),
+                "archive_bytes": archive.stat().st_size,
+                "archive_sha256": runner_mod._sha256_file(archive),
+                "substrate_artifact_metadata": dict(
+                    kwargs["bundle"].substrate_artifact_metadata
+                ),
+            }
+        )
+
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "decode_mlx_targets",
+        fake_decode_mlx_targets,
+    )
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "run_mlx_score_aware_full_main",
+        fake_run_mlx_score_aware_full_main,
+    )
+    monkeypatch.setattr(
+        hinerv_mlx_renderer,
+        "HinervSubstrateMLX",
+        FakeHinervModel,
+    )
+
+    artifact = runner_mod._run_hi_nerv_mlx_scoreaware_smoke(
+        output_dir=tmp_path / "private_smoke_pr95_total",
+        num_pairs=2,
+        epochs=3,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=tmp_path / "not_read_by_fake_decoder.mkv",
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+        local_grid_levels=2,
+        local_grid_channels=4,
+        convnext_mlp_ratio=2,
+        convnext_kernel_size=7,
+        mid_injection_block_index=1,
+        fine_injection_block_index=4,
+        decoder_codec="portfolio_auto",
+        hi_nerv_latent_codec="int16_brotli_q11",
+        ema_decay=0.9,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_distillation_loss="mse",
+        pose_distillation_huber_delta=1.0,
+        recon_loss_stage_weight=1.0,
+        segnet_loss_stage_weight=1.0,
+        pose_loss_stage_weight=1.0,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_tau_boundary=1.0,
+        segnet_hinge_margin=1.0,
+        distillation_device="cpu",
+        requested_distillation_device=None,
+        allow_segnet_only_research=False,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.0,
+        coder_qat_magnitude_weight=0.0,
+        coder_qat_delta_weight=0.0,
+        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+        coder_qat_c1a_sample_size=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
+        recon_pixel_weight_path=None,
+        decoder_weight_waterfill_plan=None,
+        recon_pixel_weight_auto_discovery=None,
+        auto_segnet_boundary_recon_weight=False,
+        recon_pixel_weight_tau=1.0,
+        recon_pixel_weight_normalize="mean",
+        mlx_prefilter_scorer_device=None,
+        mlx_prefilter_scorer_batch_pairs=1,
+        mlx_prefilter_progress_every=50,
+        telemetry_flush_interval_epochs=1,
+        checkpoint_interval_epochs=1,
+        checkpoint_dir=None,
+        resume_from_checkpoint=None,
+        optimizer_kind="adamw",
+        hi_nerv_optimizer_policy={
+            "pr95_faithful_curriculum_enabled": True,
+            "pr95_muon_policy": "faithful_stage8_only",
+        },
+        pr95_curriculum_total_epochs=29_650,
+        optimizer_controls={},
+        prioritized_pair_indices=(),
+        random_seed=0,
+        scorer_upstream_dir=REPO_ROOT / "upstream",
+        repo_root=REPO_ROOT,
+    )
+
+    metadata = artifact.as_dict()["substrate_artifact_metadata"]
+    training = metadata["score_aware_training"]
+    assert captured["run_pr95_enabled"] is True
+    assert captured["run_pr95_curriculum_total_epochs"] == 29_650
+    assert training["pr95_faithful_curriculum_enabled"] is True
+    assert training["pr95_curriculum_total_epochs"] == 29_650
+    assert training["pr95_curriculum_total_epochs_consumed"] is True
 
 
 def test_hinerv_private_smoke_rejects_out_of_range_prioritized_pairs(
@@ -3216,6 +3451,23 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     )
     assert args.checkpoint_dir is None
     assert args.resume_from_checkpoint is None
+    assert args.hi_nerv_pr95_curriculum_total_epochs is None
+
+
+def test_compact_runner_parser_accepts_hi_nerv_pr95_curriculum_total_epochs() -> None:
+    args = _parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--epochs",
+            "100",
+            "--hi-nerv-pr95-curriculum-total-epochs",
+            "29650",
+        ]
+    )
+
+    assert args.epochs == 100
+    assert args.hi_nerv_pr95_curriculum_total_epochs == 29_650
 
 
 def test_compact_runner_checkpoint_controls_parse_and_validate() -> None:

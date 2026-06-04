@@ -3473,6 +3473,7 @@ def _resolve_hi_nerv_optimizer_policy(
     requested_policy: str,
     epochs: int,
     optimizer_kind: str,
+    pr95_curriculum_total_epochs: int | None = None,
     pr95_muon_policy: str = "auto",
 ) -> dict[str, Any]:
     """Resolve whether HiNeRV uses PR95 curriculum or native MLX optimizer.
@@ -3492,6 +3493,11 @@ def _resolve_hi_nerv_optimizer_policy(
     optimizer = str(
         optimizer_kind or DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
     ).strip().lower()
+    explicit_total_epochs = pr95_curriculum_total_epochs is not None
+    resolved_total_epochs = _resolve_hi_nerv_pr95_curriculum_total_epochs(
+        epochs=epochs,
+        requested_total_epochs=pr95_curriculum_total_epochs,
+    )
     requested_muon_policy = str(pr95_muon_policy or "auto").strip().lower()
     if requested_muon_policy not in HI_NERV_PR95_MUON_POLICIES:
         raise CompactRendererMlxSpineRunnerError(
@@ -3505,17 +3511,12 @@ def _resolve_hi_nerv_optimizer_policy(
         # every-stage Muon policy wired through the shared harness.
         resolved = (
             "pr95_curriculum"
-            if int(epochs) >= 8 and optimizer in {"adamw", "pact_muon_adamw"}
+            if (int(epochs) >= 8 or explicit_total_epochs)
+            and optimizer in {"adamw", "pact_muon_adamw"}
             else "native_optimizer"
         )
     else:
         resolved = policy
-    if resolved == "pr95_curriculum" and int(epochs) < 8:
-        raise CompactRendererMlxSpineRunnerError(
-            "hi_nerv PR95 curriculum requires epochs >= 8; use "
-            "--hi-nerv-optimizer-policy native_optimizer for short native "
-            "optimizer probes"
-        )
     if resolved == "pr95_curriculum" and optimizer not in {"adamw", "pact_muon_adamw"}:
         raise CompactRendererMlxSpineRunnerError(
             "hi_nerv PR95 curriculum owns the optimizer schedule "
@@ -3542,6 +3543,14 @@ def _resolve_hi_nerv_optimizer_policy(
         "resolved_policy": resolved,
         "optimizer_kind": optimizer,
         "pr95_faithful_curriculum_enabled": pr95_enabled,
+        "pr95_curriculum_total_epochs": (
+            resolved_total_epochs if pr95_enabled else None
+        ),
+        "pr95_curriculum_total_epochs_requested": (
+            int(pr95_curriculum_total_epochs) if explicit_total_epochs else None
+        ),
+        "pr95_curriculum_total_epochs_defaulted": not explicit_total_epochs,
+        "pr95_curriculum_total_epochs_consumed": pr95_enabled,
         "pr95_muon_policy_requested": requested_muon_policy,
         "pr95_muon_policy": resolved_muon_policy,
         "native_optimizer_active": resolved == "native_optimizer",
@@ -3557,6 +3566,25 @@ def _resolve_hi_nerv_optimizer_policy(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _resolve_hi_nerv_pr95_curriculum_total_epochs(
+    *,
+    epochs: int,
+    requested_total_epochs: int | None,
+) -> int:
+    if requested_total_epochs is None:
+        return max(8, int(epochs))
+    if isinstance(requested_total_epochs, bool):
+        raise CompactRendererMlxSpineRunnerError(
+            "hi_nerv_pr95_curriculum_total_epochs must be an integer >= 8"
+        )
+    total_epochs = int(requested_total_epochs)
+    if total_epochs < 8:
+        raise CompactRendererMlxSpineRunnerError(
+            "hi_nerv_pr95_curriculum_total_epochs must be >= 8"
+        )
+    return total_epochs
 
 
 def _resolve_mlx_score_aware_optimizer_controls(
@@ -6889,6 +6917,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     optimizer_kind: str = DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     hi_nerv_optimizer_policy: str = "auto",
     hi_nerv_pr95_muon_policy: str = "auto",
+    hi_nerv_pr95_curriculum_total_epochs: int | None = None,
     optimizer_grad_clip_max_norm: float | None = (
         DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_GRAD_CLIP_MAX_NORM
     ),
@@ -6902,6 +6931,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     segnet_loss_stage_weight: float = 1.0,
     pose_loss_stage_weight: float = 1.0,
     prioritized_pair_indices: tuple[int, ...] = (),
+    sparse_prioritized_target_hydration: bool = False,
     random_seed: int = 0,
     run_local_cpu_replay: bool | None = None,
     keep_local_replay_inflated: bool = False,
@@ -6946,6 +6976,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         requested_policy=hi_nerv_optimizer_policy,
         epochs=int(epochs),
         optimizer_kind=str(optimizer_kind),
+        pr95_curriculum_total_epochs=hi_nerv_pr95_curriculum_total_epochs,
         pr95_muon_policy=str(hi_nerv_pr95_muon_policy),
     )
     optimizer_controls = _resolve_mlx_score_aware_optimizer_controls(
@@ -7569,11 +7600,17 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             resume_from_checkpoint=resolved_resume_from_checkpoint,
             optimizer_kind=str(optimizer_kind),
             hi_nerv_optimizer_policy=optimizer_policy,
+            pr95_curriculum_total_epochs=optimizer_policy.get(
+                "pr95_curriculum_total_epochs"
+            ),
             optimizer_controls=optimizer_controls,
             recon_loss_stage_weight=float(recon_loss_stage_weight),
             segnet_loss_stage_weight=float(segnet_loss_stage_weight),
             pose_loss_stage_weight=float(pose_loss_stage_weight),
             prioritized_pair_indices=prioritized_pair_indices,
+            sparse_prioritized_target_hydration=bool(
+                sparse_prioritized_target_hydration
+            ),
             random_seed=random_seed,
             scorer_upstream_dir=scorer_upstream,
             repo_root=root,
@@ -7881,8 +7918,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         prioritized_pair_indices=tuple(int(value) for value in prioritized_pair_indices),
         model_num_pairs=int(num_pairs),
         hydrated_target_pair_count=(
-            len(prioritized_pair_indices) if prioritized_pair_indices else int(num_pairs)
+            len(prioritized_pair_indices)
+            if bool(prioritized_pair_indices)
+            and bool(sparse_prioritized_target_hydration)
+            else int(num_pairs)
         ),
+        sparse_target_hydration=bool(sparse_prioritized_target_hydration),
     )
 
     final = _base_report(
@@ -7984,6 +8025,12 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "optimizer_policy": optimizer_policy,
                 "optimizer_controls": optimizer_controls,
                 "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+                "pr95_curriculum_total_epochs": optimizer_policy.get(
+                    "pr95_curriculum_total_epochs"
+                ),
+                "pr95_curriculum_total_epochs_consumed": bool(
+                    optimizer_policy.get("pr95_curriculum_total_epochs_consumed")
+                ),
                 "native_optimizer_active": bool(
                     optimizer_policy.get("native_optimizer_active")
                 ),
@@ -10412,23 +10459,29 @@ def _hi_nerv_priority_target_hydration_contract(
     prioritized_pair_indices: tuple[int, ...],
     model_num_pairs: int,
     hydrated_target_pair_count: int,
+    sparse_target_hydration: bool = False,
 ) -> dict[str, Any]:
     """Return the machine-readable HiNeRV hard-pair hydration contract."""
 
-    sparse = bool(prioritized_pair_indices)
+    enabled = bool(prioritized_pair_indices)
+    sparse = bool(enabled and sparse_target_hydration)
     return {
         "schema": "compact_hi_nerv_prioritized_pair_training.v1",
-        "enabled": sparse,
+        "enabled": enabled,
         "pair_indices": [int(value) for value in prioritized_pair_indices],
         "pair_count": len(prioritized_pair_indices),
         "sampling_scope": (
             "sparse_source_pair_target_hydration"
             if sparse
-            else "training_batch_emphasis_only"
+            else (
+                "full_video_target_hydration_with_prioritized_sampling"
+                if enabled
+                else "training_batch_emphasis_only"
+            )
         ),
         "pair_index_domain": (
             "source_video_pair_indices_0_to_model_num_pairs_minus_1"
-            if sparse
+            if enabled
             else "decoded_prefix_pair_indices_0_to_num_pairs_minus_1"
         ),
         "model_num_pairs": int(model_num_pairs),
@@ -10732,7 +10785,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     random_seed: int,
     scorer_upstream_dir: Path,
     repo_root: Path,
+    pr95_curriculum_total_epochs: int | None = None,
     candidate_curriculum_plan: Mapping[str, Any] | None = None,
+    sparse_prioritized_target_hydration: bool = False,
 ) -> Any:
     pairs = int(num_pairs)
     if pairs < 1:
@@ -10745,7 +10800,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
     except HardPairIndicesError as exc:
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
-    sparse_priority_target_hydration = bool(prioritized_pair_indices)
+    sparse_priority_target_hydration = bool(
+        prioritized_pair_indices and sparse_prioritized_target_hydration
+    )
     hydrated_source_pair_indices = (
         tuple(int(value) for value in prioritized_pair_indices)
         if sparse_priority_target_hydration
@@ -10758,6 +10815,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         prioritized_pair_indices=hydrated_source_pair_indices,
         model_num_pairs=pairs,
         hydrated_target_pair_count=hydrated_target_pair_count,
+        sparse_target_hydration=sparse_priority_target_hydration,
     )
 
     from tac.substrates._shared.mlx_score_aware import (
@@ -10872,6 +10930,22 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     pr95_curriculum_enabled = bool(
         optimizer_policy.get("pr95_faithful_curriculum_enabled")
     )
+    resolved_pr95_curriculum_total_epochs = (
+        _resolve_hi_nerv_pr95_curriculum_total_epochs(
+            epochs=epochs,
+            requested_total_epochs=(
+                pr95_curriculum_total_epochs
+                if pr95_curriculum_total_epochs is not None
+                else optimizer_policy.get("pr95_curriculum_total_epochs")
+            ),
+        )
+    )
+    optimizer_policy["pr95_curriculum_total_epochs"] = (
+        resolved_pr95_curriculum_total_epochs if pr95_curriculum_enabled else None
+    )
+    optimizer_policy["pr95_curriculum_total_epochs_consumed"] = (
+        pr95_curriculum_enabled
+    )
     pr95_muon_policy = str(
         optimizer_policy.get("pr95_muon_policy") or "faithful_stage8_only"
     )
@@ -10930,6 +11004,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         "model_num_pairs": pairs,
         "hydrated_target_pair_count": hydrated_target_pair_count,
         "source_pair_indices": [int(value) for value in hydrated_source_pair_indices],
+        "sparse_prioritized_target_hydration": bool(sparse_priority_target_hydration),
         "full_video_pairs_required_for_promotion": 600,
         "decoder_codec": str(decoder_codec),
         "hi_nerv_latent_codec": str(hi_nerv_latent_codec),
@@ -10982,6 +11057,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 optimizer_policy
             ),
             "pr95_faithful_curriculum_enabled": pr95_curriculum_enabled,
+            "pr95_curriculum_total_epochs": (
+                resolved_pr95_curriculum_total_epochs
+                if pr95_curriculum_enabled
+                else None
+            ),
+            "pr95_curriculum_total_epochs_consumed": pr95_curriculum_enabled,
             "pr95_muon_policy": (
                 pr95_muon_policy if pr95_curriculum_enabled else None
             ),
@@ -11186,7 +11267,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             loss_weights=stage_weights,
         ),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
-        pr95_curriculum_total_epochs=max(8, int(epochs)),
+        pr95_curriculum_total_epochs=resolved_pr95_curriculum_total_epochs,
         pr95_muon_policy=pr95_muon_policy,
         ema_archive_selection_enabled=True,
         grad_clip_max_norm=optimizer_control.get("grad_clip_max_norm"),
@@ -12667,6 +12748,10 @@ def _planner_row_command_control_blockers(
         ("--snerv-official-enc-strds", "snerv_official_enc_strds"),
         ("--snerv-official-dec-strds", "snerv_official_dec_strds"),
         ("--hi-nerv-optimizer-policy", "hi_nerv_optimizer_policy"),
+        (
+            "--hi-nerv-pr95-curriculum-total-epochs",
+            "hi_nerv_pr95_curriculum_total_epochs",
+        ),
         ("--decoder-weight-waterfill-plan-json", "decoder_weight_waterfill_plan_json"),
         ("--recon-pixel-weight-path", "recon_pixel_weight_path"),
         ("--snerv-model-size-adapter", "snerv_model_size_adapter"),
@@ -13642,6 +13727,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "hard-pair coverage to emphasize in MLX batches."
         ),
     )
+    parser.add_argument(
+        "--sparse-prioritized-target-hydration",
+        action="store_true",
+        help=(
+            "HiNeRV only: hydrate only prioritized source pairs as local "
+            "training targets. The default keeps full-video targets resident "
+            "and uses prioritized pairs only as sampler pressure, matching the "
+            "full-video contest objective."
+        ),
+    )
     parser.add_argument("--learning-rate", default=1e-3, type=float)
     parser.add_argument(
         "--optimizer-kind",
@@ -13678,6 +13773,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "every_stage for the Pact Muon+AdamW default, giving a "
             "contest-specific PR95-but-harder default without changing short "
             "native optimizer smokes."
+        ),
+    )
+    parser.add_argument(
+        "--hi-nerv-pr95-curriculum-total-epochs",
+        default=None,
+        type=int,
+        help=(
+            "Total PR95 curriculum clock for --execute-family hi_nerv. "
+            "Defaults to max(8, --epochs), so bounded chunks can train for "
+            "fewer epochs while preserving a source-scale schedule such as 29650."
         ),
     )
     parser.add_argument(
@@ -15187,6 +15292,9 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_kind=args.optimizer_kind,
             hi_nerv_optimizer_policy=args.hi_nerv_optimizer_policy,
             hi_nerv_pr95_muon_policy=args.hi_nerv_pr95_muon_policy,
+            hi_nerv_pr95_curriculum_total_epochs=(
+                args.hi_nerv_pr95_curriculum_total_epochs
+            ),
             optimizer_grad_clip_max_norm=args.optimizer_grad_clip_max_norm,
             optimizer_weight_decay=args.optimizer_weight_decay,
             optimizer_warmup_epochs=args.optimizer_warmup_epochs,
@@ -15202,6 +15310,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_loss_stage_weight=args.segnet_loss_stage_weight,
             pose_loss_stage_weight=args.pose_loss_stage_weight,
             prioritized_pair_indices=prioritized_pair_indices,
+            sparse_prioritized_target_hydration=(
+                args.sparse_prioritized_target_hydration
+            ),
             run_local_cpu_replay=args.run_local_cpu_replay,
             keep_local_replay_inflated=args.keep_local_replay_inflated,
             cleanup_failed_local_replay_scratch=not args.retain_failed_local_replay_scratch,
