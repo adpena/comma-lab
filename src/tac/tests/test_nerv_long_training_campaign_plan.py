@@ -3930,6 +3930,24 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
+        # Deliberately only in file-backed evidence: campaign feedback must not
+        # drop official authority fields when the native export block is compact.
+        "packet_metadata_summary": {
+            "schema": "snerv_checkpoint_packet_metadata_summary.v1",
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
+            "snerv_official_mfu_hfr_tub_export_bound": True,
+            "snerv_official_mfu_hfr_tub_export_bound_semantics": (
+                "receiver_payload_bound_not_source_forward_parity"
+            ),
+            "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
+            "snerv_official_mfu_hfr_tub_frame_producing_export": True,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
+            "source_faithful_stack": False,
+            "official_source_parity_blockers": [
+                "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
+            ],
+        },
     }
 
     report = build_nerv_long_training_campaign_plan(
@@ -3945,6 +3963,11 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     feedback = snerv["candidate_feedback"]
     assert feedback["byte_feedback_source"] == "snerv_mlx_native_file_backed_export"
+    assert feedback["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
+    assert (
+        feedback["snerv_official_mfu_hfr_tub_source_forward_replay_authority"]
+        is False
+    )
     assert feedback["feedback_scope"] == "full600_native_file_backed_snar1_export"
     assert feedback["feedback_ready"] is True
     assert feedback["scope_matches_candidate"] is True
@@ -3959,6 +3982,16 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         "candidate_feedback_evidence_blockers"
     ]
     training_plan = snerv["curriculum_plan"]["training_plan"]
+    official_split = snerv["curriculum_plan"][
+        "official_source_forward_authority_split"
+    ]
+    assert official_split["receiver_payload_bound"] is True
+    assert official_split["receiver_bound_training_evidence_usable"] is True
+    assert official_split["full_source_forward_authority_proven"] is False
+    assert (
+        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
+        in official_split["blockers"]
+    )
     assert training_plan["native_mlx_train_export_planned"] is True
     assert training_plan["native_mlx_train_export_verified"] is True
     assert training_plan["native_mlx_scorer_loop_qat_planned"] is True
@@ -3969,6 +4002,14 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert "snerv_mlx_native_file_backed_export_proof_missing_or_failed" not in snerv["blockers"]
     assert "snerv_mlx_native_packet_file_missing" not in snerv["blockers"]
     assert "snerv_mlx_native_full600_campaign_not_ready" not in snerv["blockers"]
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in snerv["blockers"]
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
+        in snerv["blockers"]
+    )
     assert "snerv_full_video_local_prefilter_missing" in snerv["blockers"]
     assert "snerv_local_cpu_replay_gate_missing" in snerv["blockers"]
     assert snerv["score_claim"] is False

@@ -4100,6 +4100,12 @@ def _augment_feedback_row(
     out = dict(row)
     native = source.get("snerv_mlx_native_export")
     native_file_evidence = source.get("snerv_mlx_native_file_backed_export_evidence")
+    native_file_metadata = (
+        native_file_evidence.get("packet_metadata_summary")
+        if isinstance(native_file_evidence, Mapping)
+        and isinstance(native_file_evidence.get("packet_metadata_summary"), Mapping)
+        else {}
+    )
     if isinstance(native_file_evidence, Mapping):
         out.setdefault(
             "snerv_mlx_native_file_backed_export_evidence",
@@ -4184,6 +4190,50 @@ def _augment_feedback_row(
             "snerv_mlx_native_export_receiver_proof_path",
             native.get("receiver_proof_path"),
         )
+        for key in (
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested",
+            "snerv_official_mfu_hfr_tub_export_bound",
+            "snerv_official_mfu_hfr_tub_export_bound_semantics",
+            "snerv_official_mfu_hfr_tub_receiver_payload_bound",
+            "snerv_official_mfu_hfr_tub_frame_producing_export",
+            "snerv_official_mfu_hfr_tub_source_forward_replay_bound",
+            "snerv_official_mfu_hfr_tub_source_forward_replay_authority",
+            "source_faithful_stack",
+        ):
+            out.setdefault(
+                key,
+                _first_mapping_value(
+                    key,
+                    native,
+                    native_file_evidence,
+                    native_file_metadata,
+                ),
+            )
+        out.setdefault(
+            "official_source_parity_blockers",
+            list(
+                native.get("official_source_parity_blockers")
+                or native.get("snerv_official_mfu_hfr_tub_export_blockers")
+                or (
+                    native_file_evidence.get("official_source_parity_blockers")
+                    if isinstance(native_file_evidence, Mapping)
+                    else None
+                )
+                or (
+                    native_file_evidence.get(
+                        "snerv_official_mfu_hfr_tub_export_blockers"
+                    )
+                    if isinstance(native_file_evidence, Mapping)
+                    else None
+                )
+                or (
+                    native_file_metadata.get("official_source_parity_blockers")
+                    if isinstance(native_file_metadata, Mapping)
+                    else None
+                )
+                or []
+            ),
+        )
     if "receiver_proof_attached" not in out:
         receiver_paths = out.get("receiver_proof_report_paths")
         out["receiver_proof_attached"] = bool(
@@ -4200,6 +4250,13 @@ def _augment_feedback_row(
             out.get("local_cpu_replay_gate_executed") or out.get("local_cpu_replay_summary_present")
         )
     return out
+
+
+def _first_mapping_value(key: str, *sources: Any) -> Any:
+    for source in sources:
+        if isinstance(source, Mapping) and source.get(key) is not None:
+            return source.get(key)
+    return None
 
 
 def _snerv_native_artifact_evidence_from_feedback(
@@ -4220,6 +4277,31 @@ def _snerv_native_artifact_evidence_from_feedback(
         "receiver_proof_passed": feedback.get("snerv_mlx_native_export_receiver_proof_passed")
         or feedback.get("native_mlx_receiver_proof_passed"),
         "receiver_contract_satisfied": feedback.get("snerv_mlx_native_export_receiver_contract_satisfied"),
+        "snerv_official_mfu_hfr_tub_numeric_primitives_requested": feedback.get(
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested"
+        ),
+        "snerv_official_mfu_hfr_tub_export_bound": feedback.get(
+            "snerv_official_mfu_hfr_tub_export_bound"
+        ),
+        "snerv_official_mfu_hfr_tub_export_bound_semantics": feedback.get(
+            "snerv_official_mfu_hfr_tub_export_bound_semantics"
+        ),
+        "snerv_official_mfu_hfr_tub_receiver_payload_bound": feedback.get(
+            "snerv_official_mfu_hfr_tub_receiver_payload_bound"
+        ),
+        "snerv_official_mfu_hfr_tub_frame_producing_export": feedback.get(
+            "snerv_official_mfu_hfr_tub_frame_producing_export"
+        ),
+        "snerv_official_mfu_hfr_tub_source_forward_replay_bound": feedback.get(
+            "snerv_official_mfu_hfr_tub_source_forward_replay_bound"
+        ),
+        "snerv_official_mfu_hfr_tub_source_forward_replay_authority": feedback.get(
+            "snerv_official_mfu_hfr_tub_source_forward_replay_authority"
+        ),
+        "source_faithful_stack": feedback.get("source_faithful_stack"),
+        "official_source_parity_blockers": feedback.get(
+            "official_source_parity_blockers"
+        ),
         "native_mlx_training_executed": feedback.get("snerv_mlx_native_training_executed"),
         "native_mlx_hf_decoder_training": feedback.get("snerv_mlx_native_hf_decoder_training"),
         "native_mlx_training_export_guard": feedback.get(

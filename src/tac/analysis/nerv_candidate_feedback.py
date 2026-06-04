@@ -153,6 +153,14 @@ def _mapping_or_empty(value: Any) -> dict[str, Any]:
     return dict(value) if isinstance(value, Mapping) else {}
 
 
+def _first_present(*sources_and_key: Any) -> Any:
+    *sources, key = sources_and_key
+    for source in sources:
+        if isinstance(source, Mapping) and source.get(key) is not None:
+            return source.get(key)
+    return None
+
+
 def _sha256_file(path: Path) -> str | None:
     import hashlib
 
@@ -211,6 +219,9 @@ def build_nerv_candidate_feedback_row(
         or _mapping_or_empty(curriculum.get("training_plan")).get(
             "native_mlx_file_backed_export_evidence"
         )
+    )
+    snerv_native_packet_metadata = _mapping_or_empty(
+        snerv_native_evidence.get("packet_metadata_summary")
     )
     snerv_native_scorer_loop = _mapping_or_empty(
         snerv_native_export.get("scorer_loop_qat")
@@ -332,6 +343,62 @@ def build_nerv_candidate_feedback_row(
         ),
         "snerv_mlx_native_export_receiver_contract_satisfied": (
             snerv_native_export.get("receiver_contract_satisfied")
+        ),
+        "snerv_official_mfu_hfr_tub_numeric_primitives_requested": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "snerv_official_mfu_hfr_tub_numeric_primitives_requested",
+        ),
+        "snerv_official_mfu_hfr_tub_export_bound": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "snerv_official_mfu_hfr_tub_export_bound",
+        ),
+        "snerv_official_mfu_hfr_tub_export_bound_semantics": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "snerv_official_mfu_hfr_tub_export_bound_semantics",
+        ),
+        "snerv_official_mfu_hfr_tub_receiver_payload_bound": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "snerv_official_mfu_hfr_tub_receiver_payload_bound",
+        ),
+        "snerv_official_mfu_hfr_tub_frame_producing_export": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "snerv_official_mfu_hfr_tub_frame_producing_export",
+        ),
+        "snerv_official_mfu_hfr_tub_source_forward_replay_bound": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_bound",
+        ),
+        "snerv_official_mfu_hfr_tub_source_forward_replay_authority": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "snerv_official_mfu_hfr_tub_source_forward_replay_authority",
+        ),
+        "source_faithful_stack": _first_present(
+            snerv_native_export,
+            snerv_native_evidence,
+            snerv_native_packet_metadata,
+            "source_faithful_stack",
+        ),
+        "official_source_parity_blockers": list(
+            snerv_native_export.get("official_source_parity_blockers")
+            or snerv_native_export.get("snerv_official_mfu_hfr_tub_export_blockers")
+            or snerv_native_evidence.get("official_source_parity_blockers")
+            or snerv_native_evidence.get("snerv_official_mfu_hfr_tub_export_blockers")
+            or snerv_native_packet_metadata.get("official_source_parity_blockers")
+            or []
         ),
         "snerv_mlx_native_export_packet_source": snerv_native_export.get(
             "packet_source"
