@@ -18,9 +18,12 @@ from math import ceil
 from typing import Any
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_BASE_MODEL_SIZE_ADAPTER,
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     SNERV_TEMPORAL_MODES,
     SnervCarrierError,
+    normalize_snerv_model_size_adapter,
     official_snerv_modelsize_to_fc_dim,
 )
 
@@ -202,7 +205,7 @@ DEFAULT_SNERV_DECODER_CODECS = (
     "int4_symmetric",
     "int2_symmetric",
 )
-DEFAULT_SNERV_MODEL_SIZE_ADAPTER = "snerv_fc_dim_emb_size_adapter_v1"
+DEFAULT_SNERV_MODEL_SIZE_ADAPTER = SNERV_BASE_MODEL_SIZE_ADAPTER
 DEFAULT_SNERV_TEMPORAL_MODE = "delta"
 SNERV_OFFICIAL_CLI_DEFAULT_PROFILE_ID = "official_cli_default"
 SNERV_CONTEST_RECEIVER_PROFILE_ID = "contest_receiver_profile"
@@ -252,6 +255,7 @@ DEFAULT_SNERV_OFFICIAL_DEC_STRDS = DEFAULT_SNERV_MODELSIZE_DEC_STRDS
 _SNERV_ADAPTER_TO_ID_TOKEN = {
     DEFAULT_SNERV_MODEL_SIZE_ADAPTER: "base",
     SNERV_SPECTRA_PRESERVING_ADAPTER: "spectra",
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER: "official",
 }
 _SNERV_ID_TOKEN_TO_ADAPTER = {
     value: key for key, value in _SNERV_ADAPTER_TO_ID_TOKEN.items()
@@ -314,7 +318,7 @@ def _snerv_profile_for_strides(
 def snerv_model_size_adapter_id_token(adapter: str) -> str:
     """Encode a SNeRV adapter string into a lossless candidate-id token."""
 
-    normalized = str(adapter)
+    normalized = normalize_snerv_model_size_adapter(str(adapter))
     known = _SNERV_ADAPTER_TO_ID_TOKEN.get(normalized)
     if known is not None:
         return known
@@ -330,7 +334,9 @@ def snerv_model_size_adapter_from_id_token(token: str) -> str:
         return known
     if normalized.startswith("hx"):
         try:
-            return bytes.fromhex(normalized[2:]).decode("utf-8")
+            return normalize_snerv_model_size_adapter(
+                bytes.fromhex(normalized[2:]).decode("utf-8")
+            )
         except (UnicodeDecodeError, ValueError) as exc:
             raise NervModelSizeBudgetError(
                 f"invalid SNeRV adapter id token: {token!r}"
@@ -1265,6 +1271,7 @@ def analyze_snerv_modelsize_candidate(
         temporal_mode=str(temporal_mode),
         adapter=str(snerv_model_size_adapter),
     )
+    snerv_model_size_adapter = str(model_size.adapter)
     decoder_weight_count = int(levels) * 3 * int(model_size.feature_count)
     decoder_bits = snerv_decoder_codec_nominal_bits(decoder_payload_codec)
     lf_payload = ceil(lf_total * float(bits_per_coeff) / 8.0)
@@ -1306,7 +1313,7 @@ def analyze_snerv_modelsize_candidate(
         bits_per_coeff=float(bits_per_coeff),
         step_map_bits_per_coeff=float(step_map_bits_per_coeff),
         decoder_payload_codec=str(decoder_payload_codec),
-        snerv_model_size_adapter=str(snerv_model_size_adapter),
+        snerv_model_size_adapter=str(model_size.adapter),
         capacity_source=(
             "manual_fc_dim"
             if official_modelsize_mparams is None

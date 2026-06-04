@@ -26,7 +26,9 @@ from tac.analysis.nerv_modelsize_budget import (
 )
 from tac.substrates.hi_nerv.architecture import HinervSubstrate
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
+    SnervModelSizeConfig,
 )
 
 
@@ -532,6 +534,21 @@ def test_snerv_modelsize_candidate_id_tokens_losslessly_bind_receiver_controls()
     assert snerv_model_size_adapter_from_id_token("spectra") == (
         SNERV_SPECTRA_PRESERVING_ADAPTER
     )
+    assert snerv_model_size_adapter_id_token(
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    ) == "official"
+    assert snerv_model_size_adapter_from_id_token("official") == (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+    assert (
+        snerv_model_size_adapter_id_token(
+            "snerv_official_mfu_hfr_tub_primitives_adapter"
+        )
+        == "official"
+    )
+    assert SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_primitives_adapter"
+    ).official_mfu_hfr_tub_numeric_primitives_requested
     custom_adapter = "snerv_custom/research:v2"
     custom_token = snerv_model_size_adapter_id_token(custom_adapter)
     assert custom_token.startswith("hx")

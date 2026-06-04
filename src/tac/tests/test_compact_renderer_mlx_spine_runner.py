@@ -25,6 +25,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     pack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
 )
@@ -2438,6 +2439,52 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
         official_sn["fc_dim"]
     )
     assert official_sn["ready_for_exact_eval_dispatch"] is False
+    spectra_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        snerv_official_modelsize_mparams=(0.05,),
+        snerv_model_size_adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
+    )
+    assert spectra_sn is not None
+    assert spectra_sn["capacity_source"] == "official_snerv_modelsize"
+    assert spectra_sn["snerv_model_size_adapter"] == SNERV_SPECTRA_PRESERVING_ADAPTER
+    assert "_adspectra_oms0p05_" in spectra_sn["candidate_id"]
+    reparsed_spectra_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=spectra_sn["candidate_id"],
+        hard_byte_ceilings=(178_000,),
+    )
+    assert reparsed_spectra_sn is not None
+    assert reparsed_spectra_sn["snerv_model_size_adapter"] == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    assert reparsed_spectra_sn["candidate_id"] == spectra_sn["candidate_id"]
+    official_primitives_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        snerv_official_modelsize_mparams=(0.05,),
+        snerv_model_size_adapter="snerv_official_mfu_hfr_tub_primitives_adapter",
+    )
+    assert official_primitives_sn is not None
+    assert official_primitives_sn["capacity_source"] == "official_snerv_modelsize"
+    assert official_primitives_sn["snerv_model_size_adapter"] == (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+    assert "_adofficial_oms0p05_" in official_primitives_sn["candidate_id"]
+    reparsed_official_primitives_sn = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=official_primitives_sn["candidate_id"],
+        hard_byte_ceilings=(178_000,),
+    )
+    assert reparsed_official_primitives_sn is not None
+    assert reparsed_official_primitives_sn["snerv_model_size_adapter"] == (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+    assert reparsed_official_primitives_sn["candidate_id"] == (
+        official_primitives_sn["candidate_id"]
+    )
     target_hi = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
         candidate_id="auto",
@@ -2538,6 +2585,34 @@ def test_execute_modelsize_candidate_auto_uses_tightest_viable_byte_ceiling() ->
             candidate_id="missing-candidate",
             hard_byte_ceilings=(178_000,),
         )
+
+
+def test_snerv_modelsize_resolution_uses_effective_spectra_adapter() -> None:
+    args = SimpleNamespace(
+        snerv_spectra_preserving_adapter=True,
+        snerv_model_size_adapter=None,
+    )
+    assert runner_mod._effective_snerv_modelsize_adapter_for_resolution(args) == (
+        SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    candidate = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+        snerv_official_modelsize_mparams=(0.05,),
+        snerv_model_size_adapter=runner_mod._effective_snerv_modelsize_adapter_for_resolution(
+            args
+        ),
+    )
+    assert candidate is not None
+    assert candidate["snerv_model_size_adapter"] == SNERV_SPECTRA_PRESERVING_ADAPTER
+
+    conflict_args = SimpleNamespace(
+        snerv_spectra_preserving_adapter=True,
+        snerv_model_size_adapter="snerv_fc_dim_emb_size_adapter_v1",
+    )
+    with pytest.raises(SystemExit):
+        runner_mod._effective_snerv_modelsize_adapter_for_resolution(conflict_args)
 
 
 def test_byte_cap_controller_uses_measured_archive_feedback() -> None:

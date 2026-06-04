@@ -13,7 +13,9 @@ import numpy as np
 import pytest
 
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_BASE_MODEL_SIZE_ADAPTER,
     SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF,
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_OFFICIAL_TEMPORAL_HAAR_DWT1D_PROOF,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
@@ -29,6 +31,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     fit_hf_decoder_least_squares,
     fit_hf_decoder_weighted_least_squares,
     generate_hf_from_lf,
+    normalize_snerv_model_size_adapter,
     official_snerv_modelsize_to_fc_dim,
     quantize_lf,
 )
@@ -248,6 +251,24 @@ def test_spectra_preserving_mfu_adapter_changes_features_and_reconstruction():
         orig_hw=frames[0].shape,
     )
     assert not np.allclose(decode_frame(code, base), decode_frame(code, mfu))
+
+
+def test_model_size_adapter_aliases_normalize_to_receiver_visible_ids() -> None:
+    assert normalize_snerv_model_size_adapter(None) == SNERV_BASE_MODEL_SIZE_ADAPTER
+    assert (
+        normalize_snerv_model_size_adapter("snerv_spectra_preserving_adapter")
+        == SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
+    assert (
+        normalize_snerv_model_size_adapter(
+            "snerv_official_mfu_hfr_tub_primitives_adapter"
+        )
+        == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+    assert (
+        SnervModelSizeConfig(adapter="snerv_spectra_preserving_adapter").adapter
+        == SNERV_SPECTRA_PRESERVING_ADAPTER
+    )
 
 
 def test_mfu_rejects_fc_dim_that_cannot_consume_requested_scales():

@@ -66,6 +66,7 @@ from tac.analysis.nerv_long_training_campaign_plan import (  # noqa: E402
     build_nerv_long_training_campaign_plan,
 )
 from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
+    DEFAULT_SNERV_MODEL_SIZE_ADAPTER,
     DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
     DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
@@ -135,6 +136,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     SNERV_SPECTRA_PRESERVING_ADAPTER,
+    normalize_snerv_model_size_adapter,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (  # noqa: E402
     build_snerv_mlx_native_adapter_contract,
@@ -1974,6 +1976,7 @@ def _resolve_execute_modelsize_candidate(
     snerv_modelsize_control_profile_id: str = DEFAULT_SNERV_MODELSIZE_CONTROL_PROFILE_ID,
     snerv_official_enc_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_ENC_STRDS,
     snerv_official_dec_strds: tuple[int, ...] = DEFAULT_SNERV_MODELSIZE_DEC_STRDS,
+    snerv_model_size_adapter: str | None = None,
     snerv_temporal_context: int = 0,
     snerv_temporal_modes: tuple[str, ...] = ("delta",),
     byte_cap_feedback_rows: Sequence[Mapping[str, Any]] = (),
@@ -2021,6 +2024,11 @@ def _resolve_execute_modelsize_candidate(
                 official_modelsize_mparams=snerv_targets,
                 official_enc_strds=tuple(int(value) for value in snerv_official_enc_strds),
                 official_dec_strds=tuple(int(value) for value in snerv_official_dec_strds),
+                snerv_model_size_adapter=(
+                    normalize_snerv_model_size_adapter(snerv_model_size_adapter)
+                    if snerv_model_size_adapter
+                    else DEFAULT_SNERV_MODEL_SIZE_ADAPTER
+                ),
                 modelsize_control_profile_id=str(snerv_modelsize_control_profile_id),
                 temporal_context=int(snerv_temporal_context),
                 temporal_modes=tuple(str(value) for value in snerv_temporal_modes),
@@ -2152,6 +2160,36 @@ def _resolve_execute_modelsize_candidate(
         f"unknown {family} --modelsize-candidate-id {token!r}; "
         "rerun plan mode and select one of the emitted candidate_id values"
     )
+
+
+def _effective_snerv_modelsize_adapter_for_resolution(args: argparse.Namespace) -> str:
+    """Return the SNeRV adapter that modelsize auto-selection must size.
+
+    Runtime launch already gives planner candidates precedence, but auto
+    candidate enumeration happens before runtime dispatch.  Keep the resolver
+    pointed at the same adapter requested by the operator-facing controls so
+    ``--snerv-spectra-preserving-adapter`` cannot silently size a base SNAR1
+    graph and fail only after campaign startup.
+    """
+
+    raw_explicit_adapter = str(
+        getattr(args, "snerv_model_size_adapter", "") or ""
+    ).strip()
+    explicit_adapter = (
+        normalize_snerv_model_size_adapter(raw_explicit_adapter)
+        if raw_explicit_adapter
+        else ""
+    )
+    spectra_requested = bool(getattr(args, "snerv_spectra_preserving_adapter", False))
+    if spectra_requested:
+        if explicit_adapter and explicit_adapter != SNERV_SPECTRA_PRESERVING_ADAPTER:
+            raise SystemExit(
+                "--snerv-spectra-preserving-adapter conflicts with "
+                f"--snerv-model-size-adapter {explicit_adapter!r}; use "
+                f"{SNERV_SPECTRA_PRESERVING_ADAPTER!r} or omit the manual adapter"
+            )
+        return SNERV_SPECTRA_PRESERVING_ADAPTER
+    return explicit_adapter or DEFAULT_SNERV_MODEL_SIZE_ADAPTER
 
 
 def _modelsize_candidate_resolution_disabled(candidate_id: Any) -> bool:
@@ -2654,7 +2692,7 @@ def _modelsize_candidate_from_self_describing_id(
                     matched.group("adapter_token")
                 )
                 if "adapter_token" in groups
-                else "snerv_fc_dim_emb_size_adapter_v1"
+                else DEFAULT_SNERV_MODEL_SIZE_ADAPTER
             ),
             official_modelsize_mparams=(
                 _float_token(groups["official_modelsize"])
@@ -3982,8 +4020,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     resolved_snerv_hfr_gain = float(
         candidate.get("hfr_gain", candidate.get("snerv_hfr_gain", snerv_hfr_gain))
     )
-    candidate_adapter = str(candidate.get("snerv_model_size_adapter") or "")
-    explicit_adapter = str(snerv_model_size_adapter_override or "")
+    raw_candidate_adapter = str(candidate.get("snerv_model_size_adapter") or "")
+    candidate_adapter = (
+        normalize_snerv_model_size_adapter(raw_candidate_adapter)
+        if raw_candidate_adapter
+        else ""
+    )
+    raw_explicit_adapter = str(snerv_model_size_adapter_override or "")
+    explicit_adapter = (
+        normalize_snerv_model_size_adapter(raw_explicit_adapter)
+        if raw_explicit_adapter
+        else ""
+    )
     if candidate_adapter:
         if (
             snerv_spectra_preserving_adapter
@@ -14717,6 +14765,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.snerv_official_dec_strds is not None
         else tuple(int(value) for value in snerv_modelsize_profile["dec_strds"])
     )
+    snerv_modelsize_adapter_for_resolution = (
+        _effective_snerv_modelsize_adapter_for_resolution(args)
+    )
     modelsize_candidate: dict[str, Any] | None = None
     if args.execute_family in {"hi_nerv", "snerv"}:
         modelsize_candidate = _resolve_execute_modelsize_candidate(
@@ -14738,6 +14789,7 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_official_enc_strds=snerv_official_enc_strds,
             snerv_official_dec_strds=snerv_official_dec_strds,
+            snerv_model_size_adapter=snerv_modelsize_adapter_for_resolution,
             snerv_temporal_context=(
                 0 if args.snerv_temporal_context is None else int(args.snerv_temporal_context)
             ),

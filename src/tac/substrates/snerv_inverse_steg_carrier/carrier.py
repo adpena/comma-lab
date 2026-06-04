@@ -58,7 +58,9 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
 
 __all__ = [
     "DEFAULT_SNERV_MODEL_SIZE",
+    "SNERV_BASE_MODEL_SIZE_ADAPTER",
     "SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF",
+    "SNERV_MODEL_SIZE_ADAPTER_ALIASES",
     "SNERV_OFFICIAL_DEFAULT_DEC_STRDS",
     "SNERV_OFFICIAL_DEFAULT_ENC_STRDS",
     "SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER",
@@ -79,6 +81,7 @@ __all__ = [
     "fit_hf_decoder_least_squares",
     "fit_hf_decoder_weighted_least_squares",
     "generate_hf_from_lf",
+    "normalize_snerv_model_size_adapter",
     "official_snerv_modelsize_to_fc_dim",
     "quantize_lf",
 ]
@@ -86,12 +89,24 @@ __all__ = [
 # A 3x3 separable linear HF predictor per detail subband (LH, HL, HH).
 _DETAIL_KEYS: Final[tuple[str, str, str]] = ("LH", "HL", "HH")
 _PREDICTOR_TAPS: Final[int] = 9  # 3x3 kernel
+SNERV_BASE_MODEL_SIZE_ADAPTER: Final[str] = "snerv_fc_dim_emb_size_adapter_v1"
 SNERV_SPECTRA_PRESERVING_ADAPTER: Final[str] = (
     "snerv_spectra_preserving_mfu_hfr_temporal_adapter_v1"
 )
 SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER: Final[str] = (
     "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
 )
+SNERV_MODEL_SIZE_ADAPTER_ALIASES: Final[dict[str, str]] = {
+    SNERV_BASE_MODEL_SIZE_ADAPTER: SNERV_BASE_MODEL_SIZE_ADAPTER,
+    "snerv_spectra_preserving_adapter": SNERV_SPECTRA_PRESERVING_ADAPTER,
+    SNERV_SPECTRA_PRESERVING_ADAPTER: SNERV_SPECTRA_PRESERVING_ADAPTER,
+    "snerv_official_mfu_hfr_tub_primitives_adapter": (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    ),
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER: (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    ),
+}
 SNERV_MFU_HFR_TEMPORAL_RECEIVER_PROOF: Final[str] = (
     "receiver_safe_numpy_mfu_hfr_temporal_blocks_no_torch_no_scorer"
 )
@@ -110,6 +125,21 @@ SNERV_TEMPORAL_MODES: Final[frozenset[str]] = frozenset(
 
 class SnervCarrierError(ValueError):
     """Raised when the SNeRV carrier contract is violated."""
+
+
+def normalize_snerv_model_size_adapter(adapter: str | None) -> str:
+    """Return the canonical receiver-visible SNeRV adapter id.
+
+    Operator CLIs and older ledgers used shorter source-family labels while the
+    executable carrier uses versioned adapter ids. Normalize at the carrier
+    boundary so modelsize selection, export, and replay all agree on the same
+    source-faithful path instead of minting hex custom-adapter ids.
+    """
+
+    value = str(adapter or SNERV_BASE_MODEL_SIZE_ADAPTER).strip()
+    if not value:
+        return SNERV_BASE_MODEL_SIZE_ADAPTER
+    return SNERV_MODEL_SIZE_ADAPTER_ALIASES.get(value, value)
 
 
 @dataclass(frozen=True)
@@ -132,7 +162,7 @@ class SnervModelSizeConfig:
     hfr_gain: float = 0.0
     temporal_context: int = 0
     temporal_mode: str = "delta"
-    adapter: str = "snerv_fc_dim_emb_size_adapter_v1"
+    adapter: str = SNERV_BASE_MODEL_SIZE_ADAPTER
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "fc_dim", int(self.fc_dim))
@@ -146,6 +176,11 @@ class SnervModelSizeConfig:
         object.__setattr__(self, "hfr_gain", float(self.hfr_gain))
         object.__setattr__(self, "temporal_context", int(self.temporal_context))
         object.__setattr__(self, "temporal_mode", str(self.temporal_mode))
+        object.__setattr__(
+            self,
+            "adapter",
+            normalize_snerv_model_size_adapter(self.adapter),
+        )
         if self.fc_dim < 1:
             raise SnervCarrierError("fc_dim must be >= 1")
         if self.emb_size < 0:
