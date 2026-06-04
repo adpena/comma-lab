@@ -47,6 +47,7 @@ CLAUDE.md compliance: deterministic, no /tmp, no scorer load.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import struct
 from dataclasses import dataclass
@@ -82,6 +83,9 @@ LATENT_HI_AC_MAGIC: bytes = b"HILA1"
 LATENT_HI_AC_HEADER_FMT: str = "<5sIIII"
 LATENT_HI_AC_HEADER_SIZE: int = struct.calcsize(LATENT_HI_AC_HEADER_FMT)
 assert LATENT_HI_AC_HEADER_SIZE == 21, "HiNeRV latent hi-ac header invariant"
+HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA: str = (
+    "hinerv_archive_section_telemetry.v1"
+)
 
 
 @dataclass(frozen=True)
@@ -118,6 +122,70 @@ class HinervArchiveSections:
     latent_dim_mid: int
     latent_dim_fine: int
     num_pairs: int
+
+
+@dataclass(frozen=True)
+class _Hiv1Layout:
+    schema_version: int
+    latent_dim_coarse: int
+    latent_dim_mid: int
+    latent_dim_fine: int
+    num_pairs: int
+    decoder_range: tuple[int, int]
+    latents_coarse_range: tuple[int, int]
+    latents_mid_range: tuple[int, int]
+    latents_fine_range: tuple[int, int]
+    meta_range: tuple[int, int]
+
+
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _read_hiv1_layout(blob: bytes) -> _Hiv1Layout:
+    if len(blob) < HIV1_HEADER_SIZE:
+        raise ValueError(
+            f"archive too short ({len(blob)} bytes; need >= {HIV1_HEADER_SIZE})"
+        )
+    (
+        magic,
+        version,
+        dim_c,
+        dim_m,
+        dim_f,
+        num_pairs,
+        decoder_len,
+        lat_c_len,
+        lat_m_len,
+        lat_f_len,
+        meta_len,
+    ) = struct.unpack(HIV1_HEADER_FMT, blob[:HIV1_HEADER_SIZE])
+    if magic != HIV1_MAGIC:
+        raise ValueError(f"bad magic: {magic!r} (expected {HIV1_MAGIC!r})")
+    if version != HIV1_SCHEMA_VERSION:
+        raise ValueError(f"unsupported schema version: {version}")
+    end_header = HIV1_HEADER_SIZE
+    end_decoder = end_header + decoder_len
+    end_lat_c = end_decoder + lat_c_len
+    end_lat_m = end_lat_c + lat_m_len
+    end_lat_f = end_lat_m + lat_f_len
+    end_meta = end_lat_f + meta_len
+    if end_meta != len(blob):
+        raise ValueError(
+            f"archive size {len(blob)} != expected {end_meta} from header"
+        )
+    return _Hiv1Layout(
+        schema_version=int(version),
+        latent_dim_coarse=int(dim_c),
+        latent_dim_mid=int(dim_m),
+        latent_dim_fine=int(dim_f),
+        num_pairs=int(num_pairs),
+        decoder_range=(end_header, end_decoder),
+        latents_coarse_range=(end_decoder, end_lat_c),
+        latents_mid_range=(end_lat_c, end_lat_m),
+        latents_fine_range=(end_lat_m, end_lat_f),
+        meta_range=(end_lat_f, end_meta),
+    )
 
 
 def _serialize_state_dict(
@@ -251,49 +319,166 @@ def pack_archive(
 def split_archive_sections(blob: bytes) -> HinervArchiveSections:
     """Return raw HIV1 sections without dequantizing latent payloads."""
 
-    if len(blob) < HIV1_HEADER_SIZE:
-        raise ValueError(
-            f"archive too short ({len(blob)} bytes; need >= {HIV1_HEADER_SIZE})"
-        )
-    (
-        magic,
-        version,
-        dim_c,
-        dim_m,
-        dim_f,
-        num_pairs,
-        decoder_len,
-        lat_c_len,
-        lat_m_len,
-        lat_f_len,
-        meta_len,
-    ) = struct.unpack(HIV1_HEADER_FMT, blob[:HIV1_HEADER_SIZE])
-    if magic != HIV1_MAGIC:
-        raise ValueError(f"bad magic: {magic!r} (expected {HIV1_MAGIC!r})")
-    if version != HIV1_SCHEMA_VERSION:
-        raise ValueError(f"unsupported schema version: {version}")
-    end_header = HIV1_HEADER_SIZE
-    end_decoder = end_header + decoder_len
-    end_lat_c = end_decoder + lat_c_len
-    end_lat_m = end_lat_c + lat_m_len
-    end_lat_f = end_lat_m + lat_f_len
-    end_meta = end_lat_f + meta_len
-    if end_meta != len(blob):
-        raise ValueError(
-            f"archive size {len(blob)} != expected {end_meta} from header"
-        )
+    layout = _read_hiv1_layout(blob)
+    decoder_start, decoder_end = layout.decoder_range
+    lat_c_start, lat_c_end = layout.latents_coarse_range
+    lat_m_start, lat_m_end = layout.latents_mid_range
+    lat_f_start, lat_f_end = layout.latents_fine_range
+    meta_start, meta_end = layout.meta_range
     return HinervArchiveSections(
-        decoder_blob=blob[end_header:end_decoder],
-        latents_coarse_blob=blob[end_decoder:end_lat_c],
-        latents_mid_blob=blob[end_lat_c:end_lat_m],
-        latents_fine_blob=blob[end_lat_m:end_lat_f],
-        meta=json.loads(blob[end_lat_f:end_meta].decode("utf-8")),
-        schema_version=int(version),
-        latent_dim_coarse=int(dim_c),
-        latent_dim_mid=int(dim_m),
-        latent_dim_fine=int(dim_f),
-        num_pairs=int(num_pairs),
+        decoder_blob=blob[decoder_start:decoder_end],
+        latents_coarse_blob=blob[lat_c_start:lat_c_end],
+        latents_mid_blob=blob[lat_m_start:lat_m_end],
+        latents_fine_blob=blob[lat_f_start:lat_f_end],
+        meta=json.loads(blob[meta_start:meta_end].decode("utf-8")),
+        schema_version=layout.schema_version,
+        latent_dim_coarse=layout.latent_dim_coarse,
+        latent_dim_mid=layout.latent_dim_mid,
+        latent_dim_fine=layout.latent_dim_fine,
+        num_pairs=layout.num_pairs,
     )
+
+
+def build_archive_section_telemetry(
+    blob: bytes,
+    *,
+    archive_zip_bytes: int | None = None,
+) -> dict[str, object]:
+    """Return exact HIV1 section bytes for byte-cap/modelsize controllers."""
+
+    layout = _read_hiv1_layout(blob)
+    meta = json.loads(blob[layout.meta_range[0] : layout.meta_range[1]].decode("utf-8"))
+    latent_codec = str(meta.get("_latent_codec", LATENT_CODEC_RAW_INT16))
+    decoder_codec = meta.get("_decoder_state_codec")
+    decoder_codec_name = (
+        str(decoder_codec.get("codec") or "unknown")
+        if isinstance(decoder_codec, dict)
+        else "unknown"
+    )
+
+    def _section_row(
+        *,
+        name: str,
+        role: str,
+        byte_range: tuple[int, int],
+        codec: str | None = None,
+        scale: str | None = None,
+        raw_bytes: int | None = None,
+    ) -> dict[str, object]:
+        start, end = byte_range
+        payload = blob[start:end]
+        row: dict[str, object] = {
+            "name": name,
+            "role": role,
+            "offset": int(start),
+            "end_offset": int(end),
+            "bytes": len(payload),
+            "sha256": _sha256_bytes(payload),
+        }
+        if codec is not None:
+            row["codec"] = codec
+        if scale is not None:
+            row["scale"] = scale
+        if raw_bytes is not None:
+            row["raw_bytes"] = int(raw_bytes)
+            row["coded_to_raw_ratio"] = (
+                None
+                if int(raw_bytes) <= 0
+                else float(len(payload)) / float(raw_bytes)
+            )
+        return row
+
+    latent_rows = [
+        _section_row(
+            name="latents_coarse",
+            role="latent",
+            byte_range=layout.latents_coarse_range,
+            codec=latent_codec,
+            scale="coarse",
+            raw_bytes=int(meta.get("_latent_raw_bytes_coarse") or 0),
+        ),
+        _section_row(
+            name="latents_mid",
+            role="latent",
+            byte_range=layout.latents_mid_range,
+            codec=latent_codec,
+            scale="mid",
+            raw_bytes=int(meta.get("_latent_raw_bytes_mid") or 0),
+        ),
+        _section_row(
+            name="latents_fine",
+            role="latent",
+            byte_range=layout.latents_fine_range,
+            codec=latent_codec,
+            scale="fine",
+            raw_bytes=int(meta.get("_latent_raw_bytes_fine") or 0),
+        ),
+    ]
+    sections: list[dict[str, object]] = [
+        _section_row(
+            name="hiv1_header",
+            role="header",
+            byte_range=(0, HIV1_HEADER_SIZE),
+        ),
+        _section_row(
+            name="decoder_state",
+            role="decoder",
+            byte_range=layout.decoder_range,
+            codec=decoder_codec_name,
+        ),
+        *latent_rows,
+        _section_row(
+            name="meta_json",
+            role="metadata",
+            byte_range=layout.meta_range,
+            codec="utf8_json",
+        ),
+    ]
+    section_payload_bytes = sum(int(row["bytes"]) for row in sections)
+    dominant_sections = sorted(
+        sections,
+        key=lambda row: int(row["bytes"]),
+        reverse=True,
+    )
+    payload: dict[str, object] = {
+        "schema": HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA,
+        "profile_ready": True,
+        "archive_payload_kind": "hiv1_monolithic_0_bin",
+        "hiv1_schema_version": layout.schema_version,
+        "num_pairs": layout.num_pairs,
+        "latent_dims": {
+            "coarse": layout.latent_dim_coarse,
+            "mid": layout.latent_dim_mid,
+            "fine": layout.latent_dim_fine,
+        },
+        "decoder_codec": decoder_codec_name,
+        "latent_codec": latent_codec,
+        "hprc_bin_bytes": len(blob),
+        "inner_payload_bytes": len(blob),
+        "section_payload_bytes": int(section_payload_bytes),
+        "sections": sections,
+        "dominant_sections": dominant_sections[:4],
+        "blockers": [],
+    }
+    if archive_zip_bytes is not None:
+        overhead = int(archive_zip_bytes) - len(blob)
+        payload["archive_zip_bytes"] = int(archive_zip_bytes)
+        payload["archive_zip_overhead_bytes"] = int(overhead)
+        payload["archive_zip_overhead_fraction"] = (
+            None
+            if int(archive_zip_bytes) <= 0
+            else float(overhead) / float(archive_zip_bytes)
+        )
+        payload["sections_with_zip_overhead"] = [
+            *sections,
+            {
+                "name": "archive_zip_overhead",
+                "role": "container_overhead",
+                "bytes": int(overhead),
+                "codec": "zip_runtime_container",
+            },
+        ]
+    return payload
 
 
 def repack_archive_decoder_codec(

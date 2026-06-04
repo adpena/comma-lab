@@ -42,6 +42,7 @@ from tac.repo_io import sha256_file, write_json_artifact  # noqa: E402
 from tac.substrates._shared.mlx_score_aware import RendererBundle  # noqa: E402
 from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter  # noqa: E402
 from tac.substrates._shared.numpy_portable_inflate import unpack_state_dict_numpy  # noqa: E402
+from tac.substrates.hi_nerv.archive import build_archive_section_telemetry  # noqa: E402
 from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive  # noqa: E402
 from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX  # noqa: E402
 
@@ -302,6 +303,10 @@ def export_checkpoint_archive(
             archive_bytes=int(archive_bytes),
             hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
             decoder_codec=resolved_decoder_codec,
+            latent_codec=resolved_latent_codec,
+            archive_section_telemetry=section_profile.get(
+                "archive_section_telemetry"
+            ),
             receiver_proof_ready=bool(
                 receiver_proof.get("runtime_consumption_proof_ready")
             ),
@@ -387,6 +392,10 @@ def export_checkpoint_archive(
             archive_bytes=int(archive_bytes),
             hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
             decoder_codec=resolved_decoder_codec,
+            latent_codec=resolved_latent_codec,
+            archive_section_telemetry=section_profile.get(
+                "archive_section_telemetry"
+            ),
             receiver_proof_ready=bool(
                 receiver_proof.get("runtime_consumption_proof_ready")
             ),
@@ -428,6 +437,8 @@ def _modelsize_byte_cap_feedback_row(
     archive_bytes: int,
     hard_byte_ceilings: Any,
     decoder_codec: str,
+    latent_codec: str,
+    archive_section_telemetry: Any,
     receiver_proof_ready: bool,
     archive_path: Path,
     archive_sha256: str,
@@ -469,6 +480,8 @@ def _modelsize_byte_cap_feedback_row(
         "candidate_id": candidate.get("candidate_id"),
         "codec": str(decoder_codec),
         "decoder_codec": str(decoder_codec),
+        "latent_codec": str(latent_codec),
+        "archive_section_telemetry": archive_section_telemetry,
         "modelsize_candidate": candidate,
         "hard_byte_ceiling": ceiling,
         "hard_byte_ceiling_enforced_by_export": hard_byte_ceiling_enforced_by_export,
@@ -1000,6 +1013,76 @@ def _optional_nonempty_str(value: Any) -> str | None:
 
 
 def _section_profile(output_dir: Path, *, archive_bytes: int) -> dict[str, Any]:
+    telemetry_path = output_dir / "hi_nerv_archive_section_telemetry.json"
+    if telemetry_path.is_file():
+        telemetry = _read_json(telemetry_path)
+        telemetry_sha256 = sha256_file(telemetry_path)
+    else:
+        bin_path = output_dir / "0.bin"
+        if bin_path.is_file():
+            telemetry = build_archive_section_telemetry(
+                bin_path.read_bytes(),
+                archive_zip_bytes=int(archive_bytes),
+            )
+            telemetry_sha256 = None
+        else:
+            telemetry = None
+            telemetry_sha256 = None
+    if isinstance(telemetry, dict):
+        sections = []
+        for section in telemetry.get("sections") or []:
+            if not isinstance(section, dict):
+                continue
+            byte_count = int(section.get("bytes") or 0)
+            sections.append(
+                {
+                    "name": str(section.get("name") or ""),
+                    "role": str(section.get("role") or ""),
+                    "bytes": byte_count,
+                    "archive_fraction": (
+                        byte_count / float(archive_bytes)
+                        if archive_bytes > 0
+                        else None
+                    ),
+                    "sha256": section.get("sha256"),
+                    "offset": section.get("offset"),
+                    "end_offset": section.get("end_offset"),
+                    "codec": section.get("codec"),
+                    "scale": section.get("scale"),
+                    "raw_bytes": section.get("raw_bytes"),
+                    "coded_to_raw_ratio": section.get("coded_to_raw_ratio"),
+                }
+            )
+        section_bytes = sum(int(section["bytes"]) for section in sections)
+        overhead_bytes = int(archive_bytes) - int(
+            telemetry.get("inner_payload_bytes") or section_bytes
+        )
+        return {
+            "schema": "hinerv_checkpoint_archive_rate_byte_profile.v1",
+            "profile_ready": bool(sections),
+            "profile_source": "hiv1_archive_section_telemetry",
+            "archive_section_telemetry_path": (
+                telemetry_path.as_posix() if telemetry_path.is_file() else None
+            ),
+            "archive_section_telemetry_sha256": telemetry_sha256,
+            "archive_section_telemetry": telemetry,
+            "hprc_bin_bytes": int(
+                telemetry.get("hprc_bin_bytes")
+                or telemetry.get("inner_payload_bytes")
+                or section_bytes
+            ),
+            "archive_bytes": int(archive_bytes),
+            "section_payload_bytes": int(section_bytes),
+            "archive_overhead_and_manifest_bytes": int(overhead_bytes),
+            "sections": sections,
+            "dominant_sections": sorted(
+                sections,
+                key=lambda row: int(row["bytes"]),
+                reverse=True,
+            )[:4],
+            "blockers": [] if sections else ["hiv1_archive_sections_missing"],
+        }
+
     manifest_path = output_dir / "hprc_representation_spine_hi_nerv_manifest.json"
     if not manifest_path.is_file():
         return {

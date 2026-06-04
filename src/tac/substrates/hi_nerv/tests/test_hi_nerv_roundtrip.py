@@ -22,12 +22,14 @@ from tac.substrates.hi_nerv.architecture import (
     trilinear_upsample,
 )
 from tac.substrates.hi_nerv.archive import (
+    HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA,
     HIV1_HEADER_SIZE,
     HIV1_MAGIC,
     HIV1_SCHEMA_VERSION,
     LATENT_CODEC_BROTLI_INT16_Q11,
     LATENT_CODEC_HI_AC_INT16_Q11,
     LATENT_CODEC_RAW_INT16,
+    build_archive_section_telemetry,
     pack_archive,
     parse_archive,
     repack_archive_decoder_codec,
@@ -117,6 +119,53 @@ def test_archive_pack_then_parse_roundtrip_recovers_tensors():
 
 def test_header_size_invariant_is_33_bytes():
     assert HIV1_HEADER_SIZE == 33
+
+
+def test_archive_section_telemetry_reports_exact_hiv1_sections():
+    cfg = _smoke_cfg()
+    torch.manual_seed(7)
+    model = HinervSubstrate(cfg)
+    sd = model.state_dict()
+    decoder_sd = {
+        k: v
+        for k, v in sd.items()
+        if k not in ("latents_coarse", "latents_mid", "latents_fine")
+    }
+
+    blob = pack_archive(
+        decoder_sd,
+        sd["latents_coarse"],
+        sd["latents_mid"],
+        sd["latents_fine"],
+        _smoke_meta(cfg),
+        latent_codec=LATENT_CODEC_BROTLI_INT16_Q11,
+    )
+    telemetry = build_archive_section_telemetry(
+        blob,
+        archive_zip_bytes=len(blob) + 123,
+    )
+
+    assert telemetry["schema"] == HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA
+    assert telemetry["profile_ready"] is True
+    assert telemetry["inner_payload_bytes"] == len(blob)
+    assert telemetry["archive_zip_bytes"] == len(blob) + 123
+    assert telemetry["archive_zip_overhead_bytes"] == 123
+    rows = {row["name"]: row for row in telemetry["sections"]}
+    assert set(rows) == {
+        "hiv1_header",
+        "decoder_state",
+        "latents_coarse",
+        "latents_mid",
+        "latents_fine",
+        "meta_json",
+    }
+    assert rows["hiv1_header"]["offset"] == 0
+    assert rows["hiv1_header"]["bytes"] == HIV1_HEADER_SIZE
+    assert rows["latents_coarse"]["codec"] == LATENT_CODEC_BROTLI_INT16_Q11
+    assert rows["latents_coarse"]["scale"] == "coarse"
+    assert rows["latents_coarse"]["raw_bytes"] == sd["latents_coarse"].numel() * 2
+    assert rows["meta_json"]["end_offset"] == len(blob)
+    assert sum(int(row["bytes"]) for row in telemetry["sections"]) == len(blob)
 
 
 def test_lossless_brotli_latent_codec_roundtrips_receiver_latents_and_shrinks():

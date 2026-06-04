@@ -40,7 +40,10 @@ from tac.substrates.hi_nerv.architecture import (
     HinervSubstrate,
     validate_decoder_state_dict,
 )
-from tac.substrates.hi_nerv.archive import pack_archive
+from tac.substrates.hi_nerv.archive import (
+    build_archive_section_telemetry,
+    pack_archive,
+)
 from tac.substrates.hi_nerv.bitstream import (
     prepare_hi_nerv_decoder_bitstream_state,
 )
@@ -68,6 +71,7 @@ _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
 _STATE_NPZ_NAME = "hi_nerv_mlx_exported_state.npz"
 _STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
 _BITSTREAM_PREPARATION_REPORT_NAME = "hi_nerv_bitstream_preparation.json"
+_ARCHIVE_SECTION_TELEMETRY_NAME = "hi_nerv_archive_section_telemetry.json"
 
 
 def hi_nerv_mlx_numpy_portability_contract(
@@ -551,6 +555,15 @@ def export_hi_nerv_mlx_archive(
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
+    archive_section_telemetry = build_archive_section_telemetry(
+        bin_bytes,
+        archive_zip_bytes=int(archive_bytes),
+    )
+    archive_section_telemetry_path = out_dir / _ARCHIVE_SECTION_TELEMETRY_NAME
+    archive_section_telemetry_path.write_text(
+        json.dumps(archive_section_telemetry, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
     if hard_byte_ceiling is not None:
         ceiling = int(hard_byte_ceiling)
         if ceiling <= 0:
@@ -575,6 +588,10 @@ def export_hi_nerv_mlx_archive(
                 "archive_bytes_are_authority_for_rate": True,
                 "decoder_codec": decoder_codec,
                 "latent_codec": latent_codec,
+                "archive_section_telemetry": archive_section_telemetry,
+                "archive_section_telemetry_path": (
+                    archive_section_telemetry_path.as_posix()
+                ),
                 "hi_nerv_bitstream_preparation": bitstream_report,
                 "hi_nerv_bitstream_preparation_path": (
                     bitstream_report_path.as_posix()
@@ -615,6 +632,10 @@ def export_hi_nerv_mlx_archive(
                 "latent_pyramid": ["coarse", "mid", "fine"],
                 "decoder_codec": decoder_codec,
                 "latent_codec": latent_codec,
+                "archive_section_telemetry": archive_section_telemetry,
+                "archive_section_telemetry_path": (
+                    archive_section_telemetry_path.as_posix()
+                ),
                 "hi_nerv_bitstream_preparation": bitstream_report,
                 "hi_nerv_bitstream_preparation_path": (
                     bitstream_report_path.as_posix()
@@ -649,6 +670,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     quant_noise_scale: float = 0.0,
     quant_noise_seed: int = 0,
     decoder_weight_waterfill_plan: Mapping[str, Any] | None = None,
+    latent_codec: str = "int16_raw",
     hard_byte_ceiling: int | None = None,
 ) -> dict[str, Any]:
     """Export HiNeRV MLX bytes and emit the shared candidate package."""
@@ -665,6 +687,7 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         quant_noise_scale=quant_noise_scale,
         quant_noise_seed=quant_noise_seed,
         decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        latent_codec=latent_codec,
         hard_byte_ceiling=hard_byte_ceiling,
     )
     root = (
@@ -682,6 +705,10 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     )
     bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
     bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
+    archive_section_telemetry_path = out_dir / _ARCHIVE_SECTION_TELEMETRY_NAME
+    archive_section_telemetry = json.loads(
+        archive_section_telemetry_path.read_text(encoding="utf-8")
+    )
     return emit_archive_bound_candidate_runtime_package(
         adapter_id=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_ID,
         candidate_family=HI_NERV_MLX_ARCHIVE_CANDIDATE_FAMILY,
@@ -704,13 +731,17 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
             "schema": "hi_nerv_mlx_runtime_adapter_manifest.v1",
             "latent_pyramid": ["coarse", "mid", "fine"],
             "decoder_codec": decoder_codec,
+            "latent_codec": latent_codec,
+            "archive_section_telemetry": archive_section_telemetry,
+            "archive_section_telemetry_path": archive_section_telemetry_path.as_posix(),
             "hi_nerv_bitstream_preparation": bitstream_report,
             "hi_nerv_bitstream_preparation_path": bitstream_report_path.as_posix(),
             "num_pairs": int(cfg.num_pairs),
             "state_npz_bridge_manifest": npz_bridge_manifest,
             "mlx_numpy_portability_contract": (
                 hi_nerv_mlx_numpy_portability_contract(
-                    training_backend=source_backend
+                    training_backend=source_backend,
+                    latent_codec=latent_codec,
                 )
             ),
         },

@@ -52,8 +52,10 @@ from .architecture import (
     validate_decoder_state_dict,
 )
 from .archive import (
+    HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA,
     HinervArchive,
     HinervArchiveSections,
+    build_archive_section_telemetry,
     pack_archive,
     parse_archive,
     repack_archive_decoder_codec,
@@ -96,6 +98,7 @@ from .official_patch import (
 from .score_aware_loss import HinervScoreAwareLoss, ScoreAwareLossWeights
 
 __all__ = [
+    "HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA",
     "HINERV_OFFICIAL_GRID_TRILINEAR3D_NUMPY_PROOF",
     "HINERV_OFFICIAL_GRID_TRILINEAR3D_SOURCE_CONTRACT",
     "HINERV_OFFICIAL_PATCH_INDEX_NUMPY_PROOF",
@@ -115,6 +118,7 @@ __all__ = [
     "ScoreAwareLossWeights",
     "apply_decoder_pruning",
     "apply_decoder_quant_noise",
+    "build_archive_section_telemetry",
     "expected_decoder_state_shapes",
     "export_hi_nerv_mlx_archive",
     "export_hi_nerv_mlx_archive_bound_candidate_package",

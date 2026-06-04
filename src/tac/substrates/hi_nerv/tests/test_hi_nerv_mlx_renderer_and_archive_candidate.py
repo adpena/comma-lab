@@ -703,6 +703,9 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     bitstream_report_path = (
         tmp_path / "hi_nerv_export" / "hi_nerv_bitstream_preparation.json"
     )
+    archive_section_telemetry_path = (
+        tmp_path / "hi_nerv_export" / "hi_nerv_archive_section_telemetry.json"
+    )
     proof_path = (
         tmp_path
         / "hi_nerv_export"
@@ -714,6 +717,7 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert npz_path.is_file()
     assert npz_manifest_path.is_file()
     assert bitstream_report_path.is_file()
+    assert archive_section_telemetry_path.is_file()
     assert proof_path.is_file()
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -721,6 +725,9 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     package = json.loads(package_path.read_text(encoding="utf-8"))
     npz_manifest = json.loads(npz_manifest_path.read_text(encoding="utf-8"))
     bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
+    archive_section_telemetry = json.loads(
+        archive_section_telemetry_path.read_text(encoding="utf-8")
+    )
     assert manifest["family"] == "hi_nerv"
     assert proof["runtime_consumption_proof_ready"] is True
     assert proof["receiver_output_kind"] == "file"
@@ -734,6 +741,22 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         npz_manifest["artifact_sha256"]
     )
     assert spine_extra["hi_nerv_bitstream_preparation"] == bitstream_report
+    assert (
+        spine_extra["archive_section_telemetry_path"]
+        == archive_section_telemetry_path.as_posix()
+    )
+    assert spine_extra["archive_section_telemetry"] == archive_section_telemetry
+    assert archive_section_telemetry["archive_zip_bytes"] == archive_bytes
+    assert {
+        row["name"] for row in archive_section_telemetry["sections"]
+    } == {
+        "hiv1_header",
+        "decoder_state",
+        "latents_coarse",
+        "latents_mid",
+        "latents_fine",
+        "meta_json",
+    }
     row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
     runtime_manifest = row["runtime_adapter_manifest"]
     assert runtime_manifest["state_npz_bridge_manifest"]["artifact_sha256"] == (
@@ -742,6 +765,10 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert runtime_manifest["hi_nerv_bitstream_preparation"] == bitstream_report
     assert runtime_manifest["hi_nerv_bitstream_preparation_path"] == (
         bitstream_report_path.as_posix()
+    )
+    assert runtime_manifest["archive_section_telemetry"] == archive_section_telemetry
+    assert runtime_manifest["archive_section_telemetry_path"] == (
+        archive_section_telemetry_path.as_posix()
     )
     portability = row["runtime_adapter_manifest"][
         "mlx_numpy_portability_contract"
@@ -879,3 +906,29 @@ def test_archive_export_emits_hprc_spine_for_high_byte_arithmetic_latents(
     portability = runtime_manifest["mlx_numpy_portability_contract"]
     assert "constriction" in portability["non_numpy_receiver_dependencies"]
     assert proof["runtime_consumption_proof_ready"] is True
+
+
+def test_archive_bound_package_wrapper_preserves_high_byte_latent_codec(
+    tmp_path: Path,
+) -> None:
+    from tac.substrates.hi_nerv.archive_candidate import (
+        export_hi_nerv_mlx_archive_bound_candidate_package,
+    )
+
+    package = export_hi_nerv_mlx_archive_bound_candidate_package(
+        _exportable_torch_model(),
+        tmp_path / "hi_nerv_package_hi_ac_latents",
+        repo_root=REPO_ROOT,
+        decoder_codec="int8_mixed",
+        latent_codec="int16_hi_ac_brotli_q11",
+        source_backend="pytorch_test_export",
+    )
+
+    row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    runtime_manifest = row["runtime_adapter_manifest"]
+    assert runtime_manifest["latent_codec"] == "int16_hi_ac_brotli_q11"
+    assert runtime_manifest["archive_section_telemetry"]["latent_codec"] == (
+        "int16_hi_ac_brotli_q11"
+    )
+    portability = runtime_manifest["mlx_numpy_portability_contract"]
+    assert "constriction" in portability["non_numpy_receiver_dependencies"]
