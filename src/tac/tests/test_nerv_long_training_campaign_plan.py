@@ -22,6 +22,9 @@ from tac.analysis.nerv_long_training_campaign_plan import (
 from tac.substrates._shared.mlx_score_aware.adapter import (
     SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS,
 )
+from tac.substrates.snerv_inverse_steg_carrier.carrier import (
+    SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+)
 from tools import build_nerv_long_training_campaign_plan as cli
 
 
@@ -494,6 +497,49 @@ def test_long_training_campaign_plan_executes_snerv_official_temporal_mode() -> 
     assert queue_command == snerv_row["command_argv"]
     assert queue_command[queue_command.index("--snerv-temporal-mode") + 1] == "official_haar_dwt1d_lowpass"
     assert snerv_row["implementation_status"] == "native_rate_aware_long_training_queue_ready"
+
+
+def test_long_training_campaign_plan_executes_snerv_official_mfu_hfr_tub_adapter() -> None:
+    snerv_budget = _snerv_budget()
+    candidate = dict(snerv_budget["selected_candidates"][0])
+    candidate.update(
+        {
+            "candidate_id": (
+                "snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_"
+                "p1_mfu1-2-4_hfr0_t0_adofficial_oms0p05_"
+                "int2_symmetric_ceil178000"
+            ),
+            "levels": 1,
+            "decoder_payload_codec": "int2_symmetric",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "emb_size": 0,
+            "capacity_source": "official_snerv_modelsize",
+            "modelsize_mparams": 0.05,
+        }
+    )
+    snerv_budget["selected_candidates"] = [candidate]
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=snerv_budget,
+        optimizer_kinds=("pact_muon_adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    argv = snerv_row["command_argv"]
+    assert "--snerv-spectra-preserving-adapter" not in argv
+    assert argv[argv.index("--snerv-model-size-adapter") + 1] == (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+    assert argv[argv.index("--modelsize-candidate-id") + 1] == candidate["candidate_id"]
+    assert snerv_row["source_bound_capacity_controls"]["levels"] == 1
+    assert snerv_row["source_bound_capacity_controls"]["emb_size"] == 0
+    assert snerv_row["source_bound_capacity_controls"][
+        "candidate_id_matches_source_controls"
+    ] is True
 
 
 def test_long_training_campaign_plan_blocks_snerv_id_control_mismatch() -> None:
