@@ -146,6 +146,29 @@ def test_official_hfr_convblock_shape_and_stack_contract() -> None:
     assert payload["ready_for_exact_eval_dispatch"] is False
 
 
+def test_official_hfr_heads_forward_mlx_preserves_tensor_and_stack_contract() -> None:
+    mx = pytest.importorskip("mlx.core")
+
+    rng = np.random.default_rng(11)
+    heads = OfficialHfrHeads(
+        lh_head=_head(rng, in_ch=4, hidden_ch=5),
+        hl_head=_head(rng, in_ch=4, hidden_ch=5),
+        hh_head=_head(rng, in_ch=4, hidden_ch=5),
+    )
+    pyr_out = rng.standard_normal((2, 4, 5, 6)).astype(np.float32)
+
+    expected = heads.forward(pyr_out)
+    got = heads.forward_mlx(mx.array(pyr_out), accumulation_mode="optimized")
+
+    assert tuple(int(v) for v in got.yh_out.shape) == (2, 3, 3, 5, 6)
+    np.testing.assert_allclose(np.asarray(got.lh), expected.lh, atol=1e-4, rtol=2e-3)
+    np.testing.assert_allclose(np.asarray(got.hl), expected.hl, atol=1e-4, rtol=2e-3)
+    np.testing.assert_allclose(np.asarray(got.hh), expected.hh, atol=1e-4, rtol=2e-3)
+    np.testing.assert_allclose(np.asarray(got.yh_out[:, :, 0]), np.asarray(got.lh))
+    np.testing.assert_allclose(np.asarray(got.yh_out[:, :, 1]), np.asarray(got.hl))
+    np.testing.assert_allclose(np.asarray(got.yh_out[:, :, 2]), np.asarray(got.hh))
+
+
 def test_official_hfr_rejects_non_source_shapes() -> None:
     rng = np.random.default_rng(2)
     with pytest.raises(OfficialSnervHfrError, match="conv1 kernel must be 1x1"):

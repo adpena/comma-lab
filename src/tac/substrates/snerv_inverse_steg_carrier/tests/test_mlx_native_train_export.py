@@ -1787,7 +1787,7 @@ def test_official_renderer_exports_output2_payload_into_receiver_packet() -> Non
     metadata = model.metadata()
     packet = mod._build_official_mfu_hfr_tub_packet_from_components(
         exported,
-        source_pair_indices=[8, 9],
+        source_pair_indices=[0, 1],
         model_size=model_size,
         metadata_extra={"allocation_mode": "unit_renderer_output2_payload_bound"},
     )
@@ -1796,6 +1796,8 @@ def test_official_renderer_exports_output2_payload_into_receiver_packet() -> Non
         decoded.sections["decoder_payload"]
     )
     proof = official_payload.execute()
+    receiver_frames = decoded.decode_frames(clip_to_uint8_range=False)
+    mlx_frames = model.render_pairs_nchw255(pair_indices=[0, 1], batch_size=2)
 
     assert "tub_temporal_encoder_concat" in exported
     assert "tub_output2_raw" in exported
@@ -1804,6 +1806,9 @@ def test_official_renderer_exports_output2_payload_into_receiver_packet() -> Non
     assert decoded.metadata["official_tub_output2_storage"]["stored"] is True
     assert decoded.metadata["official_tub_output2_receiver_executed"] is True
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
+    pixel_drift = np.abs(mlx_frames - receiver_frames)
+    assert float(pixel_drift.max()) < 0.02
+    assert float(pixel_drift.mean()) < 0.005
 
 
 def test_official_primitives_long_training_exports_trained_official_payload(

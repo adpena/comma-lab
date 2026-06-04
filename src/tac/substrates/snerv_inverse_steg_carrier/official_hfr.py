@@ -204,14 +204,14 @@ class OfficialHfrHeads:
     ) -> OfficialHfrHeadsOutput:
         import mlx.core as mx
 
-        x = _ensure_nchw_shape(pyr_out)
-        if int(x.shape[1]) != self.in_channels:
+        x_shape = _ensure_nchw_shape(pyr_out)
+        if int(x_shape[1]) != self.in_channels:
             raise OfficialSnervHfrError(
-                f"pyr_out channels {x.shape[1]} do not match HFR in_channels {self.in_channels}"
+                f"pyr_out channels {x_shape[1]} do not match HFR in_channels {self.in_channels}"
             )
-        lh = self.lh_head.forward_mlx(x, accumulation_mode=accumulation_mode)
-        hl = self.hl_head.forward_mlx(x, accumulation_mode=accumulation_mode)
-        hh = self.hh_head.forward_mlx(x, accumulation_mode=accumulation_mode)
+        lh = self.lh_head.forward_mlx(pyr_out, accumulation_mode=accumulation_mode)
+        hl = self.hl_head.forward_mlx(pyr_out, accumulation_mode=accumulation_mode)
+        hh = self.hh_head.forward_mlx(pyr_out, accumulation_mode=accumulation_mode)
         yh_out = mx.stack([lh, hl, hh], axis=2)
         return OfficialHfrHeadsOutput(lh=lh, hl=hl, hh=hh, yh_out=yh_out)
 
