@@ -10318,32 +10318,41 @@ class _PoseInstabilityEpochMonitor:
     def __init__(
         self,
         *,
+        start_epoch: int = 0,
         min_epoch: int = 64,
         consecutive_bad_epochs: int = 8,
         pose_loss_threshold: float = 1_000.0,
         pose_axis_threshold: float = 1_000.0,
+        hard_pair_sampling_active: bool = False,
     ) -> None:
+        self.start_epoch = max(0, int(start_epoch))
         self.min_epoch = max(0, int(min_epoch))
         self.consecutive_bad_epochs = max(1, int(consecutive_bad_epochs))
         self.pose_loss_threshold = float(pose_loss_threshold)
         self.pose_axis_threshold = float(pose_axis_threshold)
+        self.hard_pair_sampling_active = bool(hard_pair_sampling_active)
         self.bad_epoch_count = 0
         self.last_reason = ""
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "schema": "compact_pose_instability_epoch_monitor.v1",
+            "start_epoch": int(self.start_epoch),
             "min_epoch": int(self.min_epoch),
+            "min_local_epochs": int(self.min_epoch),
             "consecutive_bad_epochs": int(self.consecutive_bad_epochs),
             "pose_loss_threshold": float(self.pose_loss_threshold),
             "pose_axis_threshold": float(self.pose_axis_threshold),
+            "hard_pair_sampling_active": bool(self.hard_pair_sampling_active),
+            "hard_pair_axis_stop_enabled": not bool(self.hard_pair_sampling_active),
             "bad_epoch_count": int(self.bad_epoch_count),
             "last_reason": self.last_reason,
         }
 
     def __call__(self, metrics: Any) -> None:
         epoch = int(metrics.epoch)
-        if epoch < self.min_epoch:
+        local_epoch = max(0, epoch - self.start_epoch)
+        if local_epoch < self.min_epoch:
             return
         loss_components = getattr(metrics, "loss_components", None)
         per_axis = getattr(metrics, "per_axis_decomposition", None)
@@ -10359,22 +10368,49 @@ class _PoseInstabilityEpochMonitor:
             self.bad_epoch_count += 1
             self.last_reason = (
                 f"hi_nerv_pose_instability_epoch_{epoch}:"
+                f"local_epoch={local_epoch}:"
                 f"pose_loss={pose_loss}:pose_axis={pose_axis}:"
                 f"bad_epochs={self.bad_epoch_count}"
             )
         else:
             self.bad_epoch_count = 0
             self.last_reason = ""
+        if self.hard_pair_sampling_active:
+            if self.last_reason:
+                self.last_reason = (
+                    f"{self.last_reason}:stop_suppressed_for_hard_pair_sampling"
+                )
+            return
         if self.bad_epoch_count >= self.consecutive_bad_epochs:
             raise LongTrainingStopRequested(
                 "hi_nerv_pose_instability_guard:"
                 f"epoch={epoch}:"
+                f"local_epoch={local_epoch}:"
+                f"start_epoch={self.start_epoch}:"
                 f"pose_loss={pose_loss}:"
                 f"pose_axis={pose_axis}:"
                 f"consecutive_bad_epochs={self.bad_epoch_count}:"
                 f"thresholds=loss>={self.pose_loss_threshold},"
                 f"axis>={self.pose_axis_threshold}"
             )
+
+
+def _resume_start_epoch_for_pose_monitor(
+    resume_from_checkpoint: str | Path | None,
+) -> int:
+    """Return the first local epoch for a resumed run's pose guard window."""
+
+    if resume_from_checkpoint is None:
+        return 0
+    path = Path(resume_from_checkpoint).expanduser().resolve(strict=False)
+    if not path.is_file():
+        return 0
+    try:
+        payload = _load_json(path)
+        global_epoch = int(payload.get("global_epoch", -1))
+    except Exception:
+        return 0
+    return max(0, global_epoch + 1)
 
 
 def _modelsize_budget_rows_from_plan(plan: Any) -> list[dict[str, Any]]:
@@ -10813,7 +10849,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         quant_bits=int(coder_qat_cfg.quant_bits) if bool(coder_qat_cfg.enabled) else None,
         per_tensor_bits=decoder_waterfill_fake_quant_bits_by_name,
     )
-    pose_instability_monitor = _PoseInstabilityEpochMonitor()
+    pose_instability_monitor = _PoseInstabilityEpochMonitor(
+        start_epoch=_resume_start_epoch_for_pose_monitor(resume_from_checkpoint),
+        hard_pair_sampling_active=bool(prioritized_pair_indices),
+    )
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
         return build_decoder_coder_qat_terms(model_obj, coder_qat_cfg)

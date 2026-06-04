@@ -2642,6 +2642,77 @@ def test_pose_instability_epoch_monitor_requires_sustained_bad_pose() -> None:
         monitor(bad_b)
 
 
+def test_pose_instability_epoch_monitor_uses_resume_local_epoch_window() -> None:
+    monitor = runner_mod._PoseInstabilityEpochMonitor(
+        start_epoch=9_000,
+        min_epoch=2,
+        consecutive_bad_epochs=2,
+        pose_loss_threshold=100.0,
+        pose_axis_threshold=100.0,
+    )
+    first_bad_resume_epoch = SimpleNamespace(
+        epoch=9_000,
+        loss_components={"loss_part_pose_distill": 101.0},
+        per_axis_decomposition={"pose": 101.0},
+    )
+    second_bad_resume_epoch = SimpleNamespace(
+        epoch=9_001,
+        loss_components={"loss_part_pose_distill": 101.0},
+        per_axis_decomposition={"pose": 101.0},
+    )
+    third_bad_resume_epoch = SimpleNamespace(
+        epoch=9_002,
+        loss_components={"loss_part_pose_distill": 101.0},
+        per_axis_decomposition={"pose": 101.0},
+    )
+    fourth_bad_resume_epoch = SimpleNamespace(
+        epoch=9_003,
+        loss_components={"loss_part_pose_distill": 101.0},
+        per_axis_decomposition={"pose": 101.0},
+    )
+
+    monitor(first_bad_resume_epoch)
+    monitor(second_bad_resume_epoch)
+    assert monitor.bad_epoch_count == 0
+    monitor(third_bad_resume_epoch)
+    assert monitor.bad_epoch_count == 1
+    with pytest.raises(
+        runner_mod.LongTrainingStopRequested,
+        match=r"local_epoch=3:.*start_epoch=9000",
+    ):
+        monitor(fourth_bad_resume_epoch)
+
+
+def test_pose_instability_epoch_monitor_logs_but_does_not_stop_hard_pair_refit() -> None:
+    monitor = runner_mod._PoseInstabilityEpochMonitor(
+        min_epoch=0,
+        consecutive_bad_epochs=1,
+        pose_loss_threshold=100.0,
+        pose_axis_threshold=100.0,
+        hard_pair_sampling_active=True,
+    )
+    bad = SimpleNamespace(
+        epoch=9_000,
+        loss_components={"loss_part_pose_distill": 101.0},
+        per_axis_decomposition={"pose": 101.0},
+    )
+
+    monitor(bad)
+
+    assert monitor.bad_epoch_count == 1
+    assert monitor.as_dict()["hard_pair_axis_stop_enabled"] is False
+    assert "stop_suppressed_for_hard_pair_sampling" in monitor.last_reason
+
+
+def test_resume_start_epoch_for_pose_monitor_reads_checkpoint_meta(tmp_path: Path) -> None:
+    meta = tmp_path / "epoch008999.meta.json"
+    meta.write_text(json.dumps({"global_epoch": 8_999}), encoding="utf-8")
+
+    assert runner_mod._resume_start_epoch_for_pose_monitor(meta) == 9_000
+    assert runner_mod._resume_start_epoch_for_pose_monitor(None) == 0
+    assert runner_mod._resume_start_epoch_for_pose_monitor(tmp_path / "missing.json") == 0
+
+
 def test_active_campaign_lock_identity_excludes_output_dir(tmp_path: Path) -> None:
     weight = tmp_path / "weights.npz"
     np.savez_compressed(weight, weight=np.ones((1,), dtype=np.float32))
