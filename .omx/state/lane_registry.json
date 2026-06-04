@@ -67634,7 +67634,7 @@
         },
         "strict_preflight": {
           "status": true,
-          "evidence": "42 MLX adapter tests, 80 planner tests, focused Aurora planner tests, ruff, py_compile, argparse smoke, lane validate, and 1-pair/1-epoch Aurora false-authority SSD timing smoke passed"
+          "evidence": "42 MLX adapter tests, 80 planner tests, focused Aurora planner tests, ruff, py_compile, argparse smoke, lane validate, and matched 1p1e plus 2p3e false-authority SSD timing smokes passed"
         },
         "three_clean_review": {
           "status": false,
@@ -67659,5 +67659,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-04T14:44:22Z"
+  "updated_at": "2026-06-04T14:49:06Z"
 }

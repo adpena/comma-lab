@@ -125,11 +125,33 @@ one-epoch execution proof and timing datapoint. It does not close full-video,
 real-teacher, modelsize, receiver-replay, local-CPU replay, or exact CPU/CUDA
 blockers.
 
+## Matched 2-Pair/3-Epoch Timing Controls
+
+Typed comparison artifact:
+
+- `.omx/research/aurora_like_hinerv_timing_smoke_comparison_20260604T143436Z.json`
+
+All rows are `[macOS-MLX research-signal:false-authority]` with
+`score_claim=false`, `promotion_eligible=false`, and
+`ready_for_exact_eval_dispatch=false`.
+
+| optimizer | report | archive bytes | mean sec/epoch | loss first | loss last | loss delta |
+|---|---:|---:|---:|---:|---:|---:|
+| `aurora_like` | `/Volumes/VertigoDataTier/pact/aurora_like_hinerv_timing_smoke_2p3e_20260604T143436Z/compact_renderer_mlx_spine_runner_report.json` | 29922 | 0.3736739159 | 0.3304578662 | 0.3237922192 | -0.0066656470 |
+| `pact_muon_adamw` | `/Volumes/VertigoDataTier/pact/pact_muon_adamw_hinerv_timing_smoke_2p3e_20260604T143436Z/compact_renderer_mlx_spine_runner_report.json` | 29925 | 0.3036402861 | 0.3303452730 | 0.3167002797 | -0.0136449933 |
+| `muon` | `/Volumes/VertigoDataTier/pact/muon_hinerv_timing_smoke_2p3e_20260604T143436Z/compact_renderer_mlx_spine_runner_report.json` | 29723 | 0.2654019992 | 0.3303391039 | 0.3302627802 | -0.0000763237 |
+
+Preliminary non-authority observation: Pact Muon+AdamW had the largest tiny-smoke
+loss drop, Aurora-like was second, and native Muon barely moved on this exact
+manual shape. This is useful for routing the next real-teacher/modelsize smoke,
+not for rank/kill/promotion.
+
 ## Next Executable Gate
 
-Run matched false-authority timing/convergence smokes for `pact_muon_adamw` and
-`muon` using the same 1-pair/1-epoch shape, then a 2-4 pair/3-epoch smoke if the
-three optimizers are stable. Required output fields:
+Wire `.omx/research/aurora_like_hinerv_timing_smoke_comparison_20260604T143436Z.json`
+into a planner/admission consumer, or run the next 8-epoch modelsize-conditioned
+real-teacher false-authority smoke if the operator wants more local MLX evidence
+before CUDA/CPU exact-axis work. Required output fields:
 
 - optimizer kind
 - seconds per epoch
