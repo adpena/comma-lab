@@ -157,6 +157,38 @@ def load_default_scorers(
     )
 
 
+def load_default_segnet(
+    upstream_dir: str | Path,
+    device: str | torch.device | None = None,
+):
+    """Load only the frozen upstream SegNet scorer.
+
+    SegNet-only MLX teacher construction should not instantiate PoseNet. PoseNet
+    pulls in FastViT/timm surfaces that are irrelevant to SegNet and can fail or
+    stall local MLX training before any decoded-frame signal is available.
+    """
+    if device is None:
+        device = detect_device()
+    device = torch.device(device) if isinstance(device, str) else device
+
+    upstream = Path(upstream_dir)
+    p = str(upstream)
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+    from modules import SegNet
+    from safetensors.torch import load_file
+
+    segnet = SegNet().eval()
+    segnet.load_state_dict(
+        load_file(str(upstream / "models" / "segnet.safetensors"), device="cpu")
+    )
+    segnet = segnet.to(device)
+    for param in segnet.parameters():
+        param.requires_grad = False
+    return segnet
+
+
 def load_differentiable_scorers(
     upstream_dir: str | Path,
     device: str | torch.device | None = None,

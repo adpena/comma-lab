@@ -535,6 +535,7 @@ class MlxScoreAwareAdapter:
         self.substrate_id = substrate_id
         self._optimizer: Any = None
         self._optimizer_lr: float | None = None
+        self._last_student_head_metrics: dict[str, float] = {}
 
         # Wave N+11 stabilizer state (frozen at construction; train_step reads).
         if grad_clip_max_norm is not None and float(grad_clip_max_norm) <= 0.0:
@@ -1210,6 +1211,14 @@ class MlxScoreAwareAdapter:
         mx = self._mx
         mlx_optim = self._mlx_optim
         eval_targets: list[Any] = []
+        student_metrics: dict[str, float] = {
+            "segnet_student_head_update_active": 0.0,
+            "segnet_student_live_calibration_active": 0.0,
+            "segnet_student_live_calibration_teacher_available": 0.0,
+            "segnet_student_live_calibration_weight": float(
+                self.bundle.segnet_student_live_calibration_weight
+            ),
+        }
 
         segnet_stage_weight = component_loss_weight(loss_weights, "distill")
         head = self.bundle.learnable_student_head
@@ -1227,7 +1236,31 @@ class MlxScoreAwareAdapter:
                 self._head_optimizer_lr = learning_rate
                 self._head_opt_state = {}
 
+            live_calibration_weight = float(
+                self.bundle.segnet_student_live_calibration_weight
+            )
+            live_teacher_fn = None
+            if live_calibration_weight > 0.0:
+                live_teacher_fn = getattr(
+                    self.bundle.scorer_teacher,
+                    "teacher_logits_for_frames_nhwc01",
+                    None,
+                )
+                if not callable(live_teacher_fn):
+                    raise ValueError(
+                        "segnet_student_live_calibration_weight > 0 but "
+                        "scorer_teacher has no teacher_logits_for_frames_nhwc01 "
+                        "candidate-frame teacher surface."
+                    )
+                student_metrics[
+                    "segnet_student_live_calibration_teacher_available"
+                ] = 1.0
+
+            last_target_distill: Any | None = None
+            last_live_distill: Any | None = None
+
             def _head_loss_fn(head_params: Mapping[str, Any]) -> Any:
+                nonlocal last_live_distill, last_target_distill
                 from tac.substrates._shared.mlx_score_aware.loss import (
                     _apply_eval_roundtrip_ste_nhwc01,
                     decode_frames_nhwc01,
@@ -1265,10 +1298,27 @@ class MlxScoreAwareAdapter:
                     teacher_logits=teacher,
                     config=loss_cfg,
                 )
+                live_distill = mx.array(0.0, dtype=mx.float32)
+                if live_teacher_fn is not None:
+                    live_teacher = mx.stop_gradient(live_teacher_fn(seg_rgb))
+                    if tuple(student.shape) != tuple(live_teacher.shape):
+                        raise ValueError(
+                            "SegNet live-calibration student/teacher shape "
+                            "mismatch: "
+                            f"student={tuple(student.shape)} "
+                            f"teacher={tuple(live_teacher.shape)}"
+                        )
+                    live_distill = score_teacher_distillation_loss(
+                        student_logits=student,
+                        teacher_logits=live_teacher,
+                        config=loss_cfg,
+                    )
+                last_target_distill = distill
+                last_live_distill = live_distill
                 return (
                     float(self.bundle.distillation_weight)
                     * segnet_stage_weight
-                    * distill
+                    * (distill + live_calibration_weight * live_distill)
                 )
 
             head_params = {"weight": head.weight, "bias": head.bias}
@@ -1276,6 +1326,44 @@ class MlxScoreAwareAdapter:
             self._head_optimizer.update(head_params, hgrads)
             head.weight = head_params["weight"]
             head.bias = head_params["bias"]
+            metric_targets = [
+                _hloss,
+                last_target_distill,
+                last_live_distill,
+                head.weight,
+                head.bias,
+            ]
+            mx.eval(*(target for target in metric_targets if target is not None))
+            student_metrics["segnet_student_head_update_active"] = 1.0
+            student_metrics["loss_part_segnet_student_head_total"] = float(
+                _hloss.item()
+            )
+            if last_target_distill is not None:
+                target_scalar = float(last_target_distill.item())
+                student_metrics["loss_part_segnet_student_head_target_distill"] = (
+                    target_scalar
+                )
+                student_metrics[
+                    "loss_part_weighted_segnet_student_head_target_distill"
+                ] = (
+                    float(self.bundle.distillation_weight)
+                    * segnet_stage_weight
+                    * target_scalar
+                )
+            if last_live_distill is not None and live_calibration_weight > 0.0:
+                live_scalar = float(last_live_distill.item())
+                student_metrics["segnet_student_live_calibration_active"] = 1.0
+                student_metrics["loss_part_segnet_student_live_calibration"] = (
+                    live_scalar
+                )
+                student_metrics[
+                    "loss_part_weighted_segnet_student_live_calibration"
+                ] = (
+                    float(self.bundle.distillation_weight)
+                    * segnet_stage_weight
+                    * live_calibration_weight
+                    * live_scalar
+                )
             eval_targets.extend(
                 [head.weight, head.bias, self._head_optimizer.state]
             )
@@ -1347,6 +1435,7 @@ class MlxScoreAwareAdapter:
                 [pose_head.weight, pose_head.bias, self._pose_head_optimizer.state]
             )
 
+        self._last_student_head_metrics = student_metrics
         return eval_targets
 
     def artifact_metadata(self) -> Mapping[str, Any]:
@@ -1367,6 +1456,24 @@ class MlxScoreAwareAdapter:
             "segnet_distillation_objective": self.bundle.segnet_distillation_objective,
             "segnet_tau_boundary": float(self.bundle.segnet_tau_boundary),
             "segnet_hinge_margin": float(self.bundle.segnet_hinge_margin),
+            "segnet_student_live_calibration": {
+                "schema": "mlx_score_aware_segnet_student_live_calibration.v1",
+                "enabled": (
+                    float(self.bundle.segnet_student_live_calibration_weight) > 0.0
+                    and self.bundle.scorer_teacher is not None
+                    and self.bundle.distillation_weight > 0.0
+                ),
+                "weight": float(
+                    self.bundle.segnet_student_live_calibration_weight
+                ),
+                "teacher_surface": "teacher_logits_for_frames_nhwc01",
+                "candidate_frame_domain": "decoded_eval_roundtrip_nhwc01",
+                "purpose": (
+                    "calibrate_student_head_to_real_segnet_candidate_response_"
+                    "before_renderer_uses_student_surrogate_gradients"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "segnet_teacher_frame_index": int(self.bundle.segnet_teacher_frame_index),
             "segnet_distillation_weight": float(self.bundle.distillation_weight),
             "pose_distillation_weight": float(self.bundle.pose_distillation_weight),
@@ -2416,13 +2523,13 @@ class MlxScoreAwareAdapter:
             *post_update_eval_targets,
         ]
 
-        eval_targets.extend(
-            self._train_student_heads(
-                batch=batch,
-                learning_rate=learning_rate,
-                loss_weights=effective_loss_weights,
-            )
+        student_head_eval_targets = self._train_student_heads(
+            batch=batch,
+            learning_rate=learning_rate,
+            loss_weights=effective_loss_weights,
         )
+        post_update_metrics.update(self._last_student_head_metrics)
+        eval_targets.extend(student_head_eval_targets)
 
         mx.eval(*eval_targets)
         native_optimizer_metrics = {
@@ -2569,6 +2676,7 @@ class MlxScoreAwareAdapter:
             learning_rate=learning_rate,
             loss_weights=loss_weights,
         )
+        post_update_metrics.update(self._last_student_head_metrics)
         mx.eval(
             self.model.parameters(),
             loss_value,
@@ -2703,6 +2811,7 @@ class MlxScoreAwareAdapter:
             learning_rate=learning_rate,
             loss_weights=loss_weights,
         )
+        post_update_metrics.update(self._last_student_head_metrics)
 
         mx.eval(
             self.model.parameters(),

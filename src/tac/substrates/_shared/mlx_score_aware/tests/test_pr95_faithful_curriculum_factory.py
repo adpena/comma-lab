@@ -952,6 +952,89 @@ def test_pr95_curriculum_path_respects_zero_student_head_stage_weight() -> None:
 
 
 @requires_mlx
+def test_segnet_student_live_calibration_requires_candidate_frame_teacher() -> None:
+    from tac.substrates._shared.mlx_score_aware.bundle import RendererBundle
+    from tac.substrates._shared.mlx_score_aware.device_gate import (
+        MlxScoreAwareHarnessError,
+    )
+
+    base = _make_minimal_pr95_score_bundle()
+
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="segnet_student_live_calibration_weight",
+    ):
+        RendererBundle(
+            model=base.model,
+            target_rgb_0=base.target_rgb_0,
+            target_rgb_1=base.target_rgb_1,
+            num_pairs=base.num_pairs,
+            forward_convention=base.forward_convention,
+            distillation_weight=base.distillation_weight,
+            scorer_teacher=base.scorer_teacher,
+            learnable_student_head=base.learnable_student_head,
+            segnet_student_live_calibration_weight=1.0,
+            pose_distillation_weight=base.pose_distillation_weight,
+            pose_scorer_teacher=base.pose_scorer_teacher,
+            learnable_pose_student_head=base.learnable_pose_student_head,
+        )
+
+
+@requires_mlx
+def test_pr95_curriculum_trains_student_head_with_live_candidate_segnet_calibration() -> None:
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class _LiveSegTeacher:
+        def __init__(self, cached: object) -> None:
+            self.cached = cached
+            self.num_classes = int(cached.num_classes)
+            self.live_call_count = 0
+
+        def teacher_logits_for_indices(self, idx: object) -> object:
+            return self.cached.teacher_logits_for_indices(idx)
+
+        def teacher_logits_for_frames_nhwc01(self, frames: object) -> object:
+            self.live_call_count += 1
+            b, h, w, _c = frames.shape
+            mean = mx.mean(frames, axis=-1, keepdims=True)
+            channels = [mean * float(i + 1) for i in range(self.num_classes)]
+            return mx.concatenate(channels, axis=-1).reshape(
+                (int(b), int(h), int(w), self.num_classes)
+            )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    live_teacher = _LiveSegTeacher(bundle.scorer_teacher)
+    bundle.scorer_teacher = live_teacher
+    bundle.segnet_student_live_calibration_weight = 0.75
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+
+    assert live_teacher.live_call_count >= 1
+    assert metrics["segnet_student_head_update_active"] == pytest.approx(1.0)
+    assert metrics["segnet_student_live_calibration_active"] == pytest.approx(1.0)
+    assert metrics[
+        "segnet_student_live_calibration_teacher_available"
+    ] == pytest.approx(1.0)
+    assert metrics["segnet_student_live_calibration_weight"] == pytest.approx(0.75)
+    assert metrics["loss_part_segnet_student_live_calibration"] >= 0.0
+    assert metrics["loss_part_weighted_segnet_student_live_calibration"] >= 0.0
+
+
+@requires_mlx
 def test_pr95_curriculum_stage_loss_consumes_launch_score_weight_controls_NO_FAKE() -> None:
     """SNeRV/HiNeRV score pressure controls are literal decoder loss weights."""
 
@@ -1104,6 +1187,11 @@ def test_pr95_curriculum_dual_ascent_observes_stage_surrogate_aliases_NO_FAKE() 
         learning_rate=1e-3,
         loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
     )
+    adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
     mx.eval(adapter.model.parameters())
 
     assert metrics["loss_part_distill"] == pytest.approx(
@@ -1126,6 +1214,83 @@ def test_pr95_curriculum_dual_ascent_observes_stage_surrogate_aliases_NO_FAKE() 
     ] == pytest.approx(metrics["loss_part_pr95_stage_pose_surrogate"])
     assert metrics["dual_ascent_lambda__hi_nerv_segnet_last_frame_distill"] > 0.0
     assert metrics["dual_ascent_lambda__hi_nerv_posenet_yuv6_pair_distill"] > 0.0
+
+
+@requires_mlx
+def test_pr95_curriculum_snerv_dual_ascent_observes_stage_surrogate_aliases_NO_FAKE() -> None:
+    """SNeRV PR95 runs must not leave scorer-distill dual constraints unpriced."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+        build_default_nerv_train_time_dual_ascent_config,
+    )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    dual_config = build_default_nerv_train_time_dual_ascent_config(
+        family="snerv",
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+    )
+    for constraint in dual_config["constraints"]:
+        constraint["target"] = 0.0
+        constraint.pop("target_fraction_of_initial", None)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_snerv_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=8,
+        train_time_dual_ascent_config=dual_config,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+    followup_metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+    mx.eval(adapter.model.parameters())
+
+    assert metrics["loss_part_distill"] == pytest.approx(
+        metrics["loss_part_pr95_stage_seg_surrogate"]
+    )
+    assert metrics["loss_part_pose_distill"] == pytest.approx(
+        metrics["loss_part_pr95_stage_pose_surrogate"]
+    )
+    assert metrics[
+        "dual_ascent_missing_metric__snerv_segnet_last_frame_distill"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"
+    ] == pytest.approx(0.0)
+    assert metrics["dual_ascent_metric__snerv_segnet_last_frame_distill"] == (
+        pytest.approx(metrics["loss_part_pr95_stage_seg_surrogate"])
+    )
+    assert metrics["dual_ascent_metric__snerv_posenet_yuv6_pair_distill"] == (
+        pytest.approx(metrics["loss_part_pr95_stage_pose_surrogate"])
+    )
+    assert (
+        followup_metrics["dual_ascent_missing_metric__snerv_segnet_last_frame_distill"]
+        == pytest.approx(0.0)
+    )
+    assert (
+        followup_metrics["dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"]
+        == pytest.approx(0.0)
+    )
+    assert followup_metrics["dual_ascent_metric__snerv_posenet_yuv6_pair_distill"] == (
+        pytest.approx(followup_metrics["loss_part_pr95_stage_pose_surrogate"])
+    )
+    assert followup_metrics["dual_ascent_lambda__snerv_segnet_last_frame_distill"] > 0.0
+    assert (
+        followup_metrics["dual_ascent_lambda__snerv_posenet_yuv6_pair_distill"] > 0.0
+    )
 
 
 @requires_mlx

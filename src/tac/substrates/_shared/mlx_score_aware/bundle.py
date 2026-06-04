@@ -236,6 +236,14 @@ class RendererBundle:
         segnet_distillation_objective: SegNet scorer-teacher objective. Defaults
             to KL T=2.0; boundary objectives route through the same scorer-bound
             loss and sibling-head optimizer.
+        segnet_student_live_calibration_weight: extra sibling-head-only
+            calibration weight against the REAL SegNet logits of the decoded
+            candidate frame. The cached target teacher supplies the objective
+            direction (match target semantics); this live term keeps the tiny
+            student head calibrated to the real scorer response on the current
+            renderer output so the renderer does not optimize an unfaithful
+            surrogate. ``0.0`` disables it for legacy ablations; HiNeRV/SNeRV
+            long-run launchers default it on when real SegNet is bound.
         segnet_tau_boundary: boundary-band temperature for boundary-aware SegNet
             objectives.
         segnet_hinge_margin: Crammer-Singer margin buffer for the
@@ -380,6 +388,7 @@ class RendererBundle:
     segnet_teacher_frame_index: int = 1
     distillation_temperature: float = 2.0
     segnet_distillation_objective: str = DISTILLATION_OBJECTIVE_KL_T2
+    segnet_student_live_calibration_weight: float = 0.0
     segnet_tau_boundary: float = 1.0
     segnet_hinge_margin: float = 1.0
     distillation_num_classes: int = 5
@@ -478,6 +487,11 @@ class RendererBundle:
                 "segnet_distillation_objective must be one of "
                 f"{VALID_DISTILLATION_OBJECTIVES!r}; got "
                 f"{self.segnet_distillation_objective!r}"
+            )
+        if self.segnet_student_live_calibration_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_student_live_calibration_weight must be >= 0; got "
+                f"{self.segnet_student_live_calibration_weight}"
             )
         if self.segnet_tau_boundary <= 0.0:
             raise MlxScoreAwareHarnessError(
@@ -596,6 +610,27 @@ class RendererBundle:
                     "the scorer-blind mock for a $0 no-real-SegNet smoke (the "
                     "result is reconstruction-proxy, NOT scorer-bound)."
                 )
+            if (
+                has_real
+                and self.segnet_student_live_calibration_weight > 0.0
+            ):
+                live_fn = getattr(
+                    self.scorer_teacher,
+                    "teacher_logits_for_frames_nhwc01",
+                    None,
+                )
+                has_empty_live_adapter = (
+                    hasattr(self.scorer_teacher, "live_segnet_adapter")
+                    and self.scorer_teacher.live_segnet_adapter is None
+                )
+                if not callable(live_fn) or has_empty_live_adapter:
+                    raise MlxScoreAwareHarnessError(
+                        "segnet_student_live_calibration_weight > 0 requires "
+                        "a real SegNet teacher that can evaluate decoded "
+                        "candidate frames via teacher_logits_for_frames_nhwc01. "
+                        "Use build_mlx_segnet_pair_teacher or set the "
+                        "calibration weight to 0 for a legacy ablation."
+                    )
         # POSE axis fail-closed (the dominant-at-frontier scorer component): a
         # pose distillation term MUST bind the REAL PoseNet via
         # ``pose_scorer_teacher`` + ``learnable_pose_student_head``. There is no

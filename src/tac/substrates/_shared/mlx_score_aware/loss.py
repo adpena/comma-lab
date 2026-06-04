@@ -672,7 +672,7 @@ def build_mlx_segnet_pair_teacher(
     import numpy as np
 
     from tac.local_acceleration.mlx_scorer_adapters import MLXSegNetAdapter
-    from tac.scorer import load_default_scorers
+    from tac.scorer import load_default_segnet
     from tac.substrates._shared.mlx_score_aware.device_gate import (
         MlxScoreAwareHarnessError,
     )
@@ -689,7 +689,7 @@ def build_mlx_segnet_pair_teacher(
             f"(384, 512) for student/teacher shape alignment; got ({h}, {w}). "
             "Decode the harness targets at the canonical contest eval size."
         )
-    _posenet, segnet = load_default_scorers(str(upstream_dir), device=device)
+    segnet = load_default_segnet(str(upstream_dir), device=device)
     segnet.eval()
     mlx_segnet = MLXSegNetAdapter(segnet)
     # One gradient-free SegNet forward per pair target SegNet frame, chunked to
@@ -713,6 +713,7 @@ def build_mlx_segnet_pair_teacher(
         height=int(logits_np.shape[1]),
         width=int(logits_np.shape[2]),
         num_classes=int(logits_np.shape[3]),
+        live_segnet_adapter=mlx_segnet,
     )
 
 

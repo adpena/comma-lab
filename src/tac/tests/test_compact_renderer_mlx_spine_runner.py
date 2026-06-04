@@ -989,6 +989,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         score_aware_long_training_grad_clip_max_norm=None,
         score_aware_long_training_weight_decay=0.01,
         score_aware_long_training_eval_roundtrip_ste=True,
+        score_aware_long_training_section_byte_refresh_every_steps=25,
         checkpoint_retention_keep_last_n=2,
         checkpoint_retention_keep_best_n=1,
         checkpoint_retention_keep_every_n_epochs=None,
@@ -2960,7 +2961,9 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     assert consumption["candidate_id"] == "hinerv-private-smoke-candidate"
     assert consumption["consumed_by_runner_config"] is True
     assert consumption["consumed_by_decoder_codec"] is True
-    assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is True
+    assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is False
+    assert consumption["archive_export_hard_byte_ceiling_measurement_bypass"] is True
+    assert consumption["hard_byte_ceiling_consumed_by_train_time_dual_ascent"] is True
     assert consumption["hard_byte_ceiling"] == 178_000
     assert metadata["config"]["latent_dim_mid"] == 4
     assert metadata["config"]["embed_dim"] == 4
@@ -5405,6 +5408,8 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
             "boundary_argmax_hinge",
             "--distillation-temperature",
             "1.5",
+            "--segnet-student-live-calibration-weight",
+            "0.625",
             "--segnet-tau-boundary",
             "0.8",
             "--segnet-hinge-margin",
@@ -5440,6 +5445,7 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.pose_distillation_huber_delta == 2.5
     assert args.segnet_distillation_objective == "boundary_argmax_hinge"
     assert args.distillation_temperature == 1.5
+    assert args.segnet_student_live_calibration_weight == pytest.approx(0.625)
     assert args.segnet_tau_boundary == 0.8
     assert args.segnet_hinge_margin == 1.25
     assert args.distillation_device == "cpu"
@@ -10028,6 +10034,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         pose_distillation_huber_delta=2.25,
         segnet_distillation_objective="boundary_decision_tckd",
         distillation_temperature=3.0,
+        segnet_student_live_calibration_weight=0.625,
         segnet_tau_boundary=0.75,
         segnet_hinge_margin=1.25,
         prioritized_pair_indices=(7, 2, 7),
@@ -10079,6 +10086,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         "boundary_decision_tckd"
     )
     assert native_calls[0]["distillation_temperature"] == pytest.approx(3.0)
+    assert native_calls[0]["segnet_student_live_calibration_weight"] == pytest.approx(
+        0.625
+    )
     assert native_calls[0]["segnet_tau_boundary"] == pytest.approx(0.75)
     assert native_calls[0]["segnet_hinge_margin"] == pytest.approx(1.25)
     assert native_calls[0]["distillation_device"] == "cpu"
