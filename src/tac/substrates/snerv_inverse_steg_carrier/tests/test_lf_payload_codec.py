@@ -266,6 +266,29 @@ def test_archive_lf_payload_codec_v2_is_receiver_decoded() -> None:
         np.testing.assert_array_equal(got, ref)
 
 
+def test_archive_lf_payload_auto_considers_v2_integer_portfolio() -> None:
+    rng = np.random.default_rng(7)
+    plane = rng.integers(0, 4, size=(128, 128), dtype=np.int64)
+
+    auto_payload = encode_lf_quant_payload([plane], codec="auto")
+    portfolio_payload = encode_lf_quant_payload([plane], codec="portfolio_auto")
+    legacy_payload = encode_lf_quant_payload([plane], codec="int64_lzma")
+    spatial_payload = encode_lf_quant_payload(
+        [plane],
+        codec="spatial_delta_zigzag_leb128_lzma",
+    )
+    decoded = decode_lf_quant_payload(auto_payload)
+
+    np.testing.assert_array_equal(decoded[0], plane)
+    assert auto_payload.startswith(SNERV_LF_QUANT_V2_MAGIC)
+    assert len(auto_payload) == min(
+        len(portfolio_payload),
+        len(legacy_payload),
+        len(spatial_payload),
+    )
+    assert len(auto_payload) < len(legacy_payload)
+
+
 def test_archive_lf_payload_codec_v1_default_stays_legacy() -> None:
     plane = np.array([[1, -2], [3, -4]], dtype=np.int64)
 

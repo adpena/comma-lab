@@ -1324,6 +1324,7 @@ def encode_lf_quant_payload(
         candidates = (
             _encode_lf_quant_payload_int64_lzma(arrays),
             _encode_lf_quant_payload_spatial_delta_leb128_lzma(arrays),
+            encode_lf_quant_payload_v2(arrays, mode="portfolio_auto"),
         )
         return min(candidates, key=len)
     try:
