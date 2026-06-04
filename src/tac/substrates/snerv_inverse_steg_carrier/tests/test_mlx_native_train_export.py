@@ -1645,8 +1645,14 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     )
     assert (
         "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
-        not in report["blockers"]
+        in report["blockers"]
     )
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" in report[
+        "blockers"
+    ]
+    assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in report[
+        "blockers"
+    ]
     stale_blocker = "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
     assert stale_blocker not in report["blockers"]
     assert "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing" in report[
@@ -1666,6 +1672,27 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert train_export["requested"] is True
     assert train_export["train_renderer_bound"] is True
     assert train_export["trained_receiver_payload_exported"] is True
+    assert train_export["trained_receiver_state_bound"] is True
+    assert train_export["trained_receiver_state_mapping_scope"] == (
+        "mlx_receiver_component_state_not_upstream_official_state_dict"
+    )
+    assert train_export["trained_weight_mapping_to_long_training_bound"] is False
+    assert train_export["official_trained_checkpoint_state_dict_loaded"] is False
+    assert (
+        train_export["official_trained_checkpoint_state_dict_mapping_verified"]
+        is False
+    )
+    assert (
+        train_export["official_trained_checkpoint_source_forward_replay_verified"]
+        is False
+    )
+    assert (
+        "snerv_official_mfu_hfr_tub_weight_mapping_missing"
+        in train_export["authority_blockers"]
+    )
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" in train_export[
+        "authority_blockers"
+    ]
     assert len(train_export["trained_packet_sha256"]) == 64
     assert train_export["source_forward_replay_authority"] is False
     assert old_blocker not in long_training["blockers"]
@@ -1680,7 +1707,16 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert replay["source_forward_replay_verified"] is False
     assert replay["score_aware_long_training_renderer_bound"] is True
     assert replay["train_renderer_bound"] is True
-    assert replay["trained_weight_mapping_to_long_training_bound"] is True
+    assert replay["trained_receiver_state_bound"] is True
+    assert replay["trained_receiver_state_mapping_scope"] == (
+        "mlx_receiver_payload_components_bound_to_training_state"
+    )
+    assert replay["trained_weight_mapping_to_long_training_bound"] is False
+    assert replay["official_trained_checkpoint_loaded"] is False
+    assert replay["official_trained_checkpoint_state_dict_mapping_verified"] is False
+    assert (
+        replay["official_trained_checkpoint_source_forward_replay_verified"] is False
+    )
     assert replay["official_torch_source_forward_replay_passed"] is False
     assert replay["official_tub_fixture_source_forward_replay_proven"] is True
     assert replay["official_tub_source_forward_fixture_replay"][
@@ -1705,12 +1741,21 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         row["receiver_payload_forward_replay_proven"] is True
         and row["official_source_forward_parity_proven"] is False
         and row["score_aware_long_training_renderer_bound"] is True
+        and row["trained_receiver_state_bound"] is True
+        and row["official_trained_checkpoint_state_dict_mapping_verified"] is False
         for row in replay["component_rows"]
     )
     assert (
         "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
         not in replay["blockers"]
     )
+    assert (
+        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
+        in replay["blockers"]
+    )
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" in replay[
+        "blockers"
+    ]
     assert stale_blocker not in replay["blockers"]
     assert "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing" in replay[
         "blockers"

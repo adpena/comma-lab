@@ -135,6 +135,12 @@ FALSE_AUTHORITY = {
     "promotion_eligible": False,
     "ready_for_exact_eval_dispatch": False,
 }
+SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER = (
+    "snerv_official_trained_checkpoint_state_dict_mapping_missing"
+)
+SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER = (
+    "snerv_official_trained_checkpoint_source_forward_replay_missing"
+)
 NATIVE_MLX_DECODER_LOSS_WORSEN_REL_TOL = 1.0e-7
 SNERV_OFFICIAL_LONG_TRAINING_REPLAY_MAX_PAIRS = 16
 SNERV_OFFICIAL_HFR_BOOTSTRAP_LS_MAX_ROWS = 262_144
@@ -1713,6 +1719,12 @@ def _run_score_aware_long_training_attachment(
             "requested": official_training_requested,
             "train_renderer_bound": False,
             "trained_receiver_payload_exported": False,
+            "trained_receiver_state_bound": False,
+            "trained_receiver_state_mapping_scope": "none",
+            "trained_weight_mapping_to_long_training_bound": False,
+            "official_trained_checkpoint_state_dict_loaded": False,
+            "official_trained_checkpoint_state_dict_mapping_verified": False,
+            "official_trained_checkpoint_source_forward_replay_verified": False,
             "source_forward_replay_authority": False,
             **FALSE_AUTHORITY,
         },
@@ -2283,6 +2295,14 @@ def _run_score_aware_long_training_attachment(
                 {
                     "train_renderer_bound": True,
                     "trained_receiver_payload_exported": False,
+                    "trained_receiver_state_bound": False,
+                    "trained_receiver_state_mapping_scope": (
+                        "train_renderer_bound_before_receiver_payload_export"
+                    ),
+                    "trained_weight_mapping_to_long_training_bound": False,
+                    "official_trained_checkpoint_state_dict_loaded": False,
+                    "official_trained_checkpoint_state_dict_mapping_verified": False,
+                    "official_trained_checkpoint_source_forward_replay_verified": False,
                     "train_renderer_schema": renderer_schema,
                     "source_forward_replay_authority": False,
                 }
@@ -2367,6 +2387,19 @@ def _run_score_aware_long_training_attachment(
             trained_official_train_export = {
                 **official_train_export,
                 "trained_receiver_payload_exported": True,
+                "trained_receiver_state_bound": True,
+                "trained_receiver_state_mapping_scope": (
+                    "mlx_receiver_component_state_not_upstream_official_state_dict"
+                ),
+                "trained_weight_mapping_to_long_training_bound": False,
+                "official_trained_checkpoint_state_dict_loaded": False,
+                "official_trained_checkpoint_state_dict_mapping_verified": False,
+                "official_trained_checkpoint_source_forward_replay_verified": False,
+                "authority_blockers": [
+                    "snerv_official_mfu_hfr_tub_weight_mapping_missing",
+                    SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER,
+                    SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
+                ],
             }
             payload_for_packet = {
                 **payload,
@@ -2450,6 +2483,13 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
         "source_forward_replay_verified": False,
         "source_forward_replay_authority": False,
         "score_aware_long_training_renderer_bound": False,
+        "train_renderer_bound": False,
+        "trained_receiver_state_bound": False,
+        "trained_receiver_state_mapping_scope": "none",
+        "trained_weight_mapping_to_long_training_bound": False,
+        "official_trained_checkpoint_loaded": False,
+        "official_trained_checkpoint_state_dict_mapping_verified": False,
+        "official_trained_checkpoint_source_forward_replay_verified": False,
         "receiver_official_payload_forward_replay_passed": False,
         "official_torch_source_forward_replay_passed": False,
         "component_rows": [],
@@ -2504,6 +2544,8 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             "" if replay_passed else "snerv_official_mfu_hfr_tub_receiver_payload_replay_failed",
             "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
             "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
+            SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER,
+            SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
             *source_forward_blockers,
         ]
         payload = {
@@ -2588,6 +2630,13 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
         "source_forward_replay_verified": False,
         "source_forward_replay_authority": False,
         "score_aware_long_training_renderer_bound": False,
+        "train_renderer_bound": False,
+        "trained_receiver_state_bound": False,
+        "trained_receiver_state_mapping_scope": "none",
+        "trained_weight_mapping_to_long_training_bound": False,
+        "official_trained_checkpoint_loaded": False,
+        "official_trained_checkpoint_state_dict_mapping_verified": False,
+        "official_trained_checkpoint_source_forward_replay_verified": False,
         "receiver_official_payload_forward_replay_passed": False,
         "official_torch_source_forward_replay_passed": False,
         "official_tub_source_forward_fixture_replay": tub_fixture_replay,
@@ -2625,6 +2674,9 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
                 "receiver_tensor_payload_present": False,
                 "official_source_forward_parity_proven": False,
                 "score_aware_long_training_renderer_bound": False,
+                "train_renderer_bound": False,
+                "trained_receiver_state_bound": False,
+                "official_trained_checkpoint_state_dict_mapping_verified": False,
                 "deferred_for_full_video_training_start": True,
                 "blockers": [
                     "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
@@ -2657,6 +2709,8 @@ def _build_deferred_official_mfu_hfr_tub_long_training_replay_contract(
                 blocker,
                 "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
                 "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
+                SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER,
+                SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER,
                 *source_forward_blockers,
             )
         ),
@@ -2731,6 +2785,9 @@ def _official_long_training_replay_component_rows(
                     else []
                 ),
                 "score_aware_long_training_renderer_bound": False,
+                "train_renderer_bound": False,
+                "trained_receiver_state_bound": False,
+                "official_trained_checkpoint_state_dict_mapping_verified": False,
                 "blockers": [
                     "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
                     *source_blockers,
@@ -2807,14 +2864,20 @@ def _official_long_training_replay_with_renderer_binding(
     payload = dict(replay)
     payload["score_aware_long_training_renderer_bound"] = True
     payload["train_renderer_bound"] = True
-    payload["trained_weight_mapping_to_long_training_bound"] = True
+    payload["trained_receiver_state_bound"] = True
+    payload["trained_receiver_state_mapping_scope"] = (
+        "mlx_receiver_payload_components_bound_to_training_state"
+    )
+    payload["trained_weight_mapping_to_long_training_bound"] = False
+    payload["official_trained_checkpoint_loaded"] = False
+    payload["official_trained_checkpoint_state_dict_mapping_verified"] = False
+    payload["official_trained_checkpoint_source_forward_replay_verified"] = False
     payload["blockers"] = _ordered_unique(
         str(blocker)
         for blocker in payload.get("blockers") or ()
         if str(blocker)
         not in {
             "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing",
-            "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing",
         }
     )
     rows: list[dict[str, Any]] = []
@@ -2822,6 +2885,8 @@ def _official_long_training_replay_with_renderer_binding(
         row = dict(raw_row)
         row["score_aware_long_training_renderer_bound"] = True
         row["train_renderer_bound"] = True
+        row["trained_receiver_state_bound"] = True
+        row["official_trained_checkpoint_state_dict_mapping_verified"] = False
         row["blockers"] = [
             str(blocker)
             for blocker in row.get("blockers") or ()
