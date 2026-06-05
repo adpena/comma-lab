@@ -1221,11 +1221,26 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
                 "executed": True,
                 "epochs": 8,
                 "optimizer": "pact_muon_adamw",
+                "scorer_input_distribution_guard_bound": True,
+                "scorer_input_contrast_floor_bound": True,
+                "scorer_input_shape_tether_bound": True,
                 "training_telemetry_contract": {
                     "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
                     "telemetry_exists": True,
                     "row_count": 1,
                     "passed": True,
+                    "expected_scorer_input_guard_metric": True,
+                    "scorer_input_guard_metric_observed": True,
+                    "scorer_input_guard_dual_metric_observed": True,
+                    "expected_scorer_input_contrast_floor_metric": True,
+                    "scorer_input_contrast_floor_metric_observed": True,
+                    "scorer_input_contrast_floor_segnet_ratio_metric_observed": True,
+                    "scorer_input_contrast_floor_posenet_ratio_metric_observed": True,
+                    "expected_scorer_input_shape_tether_metric": True,
+                    "scorer_input_shape_tether_metric_observed": True,
+                    "scorer_input_shape_tether_segnet_metric_observed": True,
+                    "scorer_input_shape_tether_posenet_pair_metric_observed": True,
+                    "scorer_input_shape_tether_posenet_delta_metric_observed": True,
                     "blockers": [],
                 },
             },
@@ -1288,6 +1303,8 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         scorer_loop_qat_decoder_payload_codec="int4_symmetric",
         scorer_loop_qat_lf_payload_codec="int4_symmetric",
         scorer_loop_qat_component_guard_mode="pose_seg_hard",
+        scorer_loop_qat_pair_guard_min_score_improved_fraction=0.875,
+        scorer_loop_qat_pair_guard_max_pose_worsened_fraction=0.125,
         scorer_loop_qat_device="gpu",
         recon_pixel_weight_path=None,
         recon_pixel_weight_manifest_path=None,
@@ -1358,6 +1375,12 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         "component_score_no_rate"
     )
     assert captured["score_aware_long_training_optimizer"] == "pact_muon_adamw"
+    assert captured["scorer_loop_qat_pair_guard_min_score_improved_fraction"] == (
+        pytest.approx(0.875)
+    )
+    assert captured["scorer_loop_qat_pair_guard_max_pose_worsened_fraction"] == (
+        pytest.approx(0.125)
+    )
     assert captured["score_aware_long_training_pr95_faithful_curriculum"] is True
     assert captured["score_aware_long_training_loss_weights"] == stage_weights
     assert captured["score_aware_long_training_pose_warmup_epochs"] == 2
@@ -1514,6 +1537,8 @@ def test_snerv_native_export_attachment_blocks_failed_training_telemetry_contrac
         scorer_loop_qat_decoder_payload_codec="int4_symmetric",
         scorer_loop_qat_lf_payload_codec="int4_symmetric",
         scorer_loop_qat_component_guard_mode="score_primary",
+        scorer_loop_qat_pair_guard_min_score_improved_fraction=1.0,
+        scorer_loop_qat_pair_guard_max_pose_worsened_fraction=0.0,
         scorer_loop_qat_device="gpu",
         recon_pixel_weight_path=None,
         recon_pixel_weight_manifest_path=None,
@@ -1613,6 +1638,8 @@ def test_snerv_native_export_attachment_refuses_long_training_when_tether_smoke_
         scorer_loop_qat_decoder_payload_codec="int4_symmetric",
         scorer_loop_qat_lf_payload_codec="int4_symmetric",
         scorer_loop_qat_component_guard_mode="score_primary",
+        scorer_loop_qat_pair_guard_min_score_improved_fraction=1.0,
+        scorer_loop_qat_pair_guard_max_pose_worsened_fraction=0.0,
         scorer_loop_qat_device="gpu",
         recon_pixel_weight_path=None,
         recon_pixel_weight_manifest_path=None,
@@ -7118,6 +7145,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_scorer_loop_seg_slack == 0.002
     assert sn.snerv_scorer_loop_pair_stride == 3
     assert sn.snerv_scorer_loop_start_pair == 7
+    assert sn.snerv_scorer_loop_pair_guard_min_score_improved_fraction == 1.0
+    assert sn.snerv_scorer_loop_pair_guard_max_pose_worsened_fraction == 0.0
     assert sn.snerv_scorer_loop_component_guard_mode == "pose_seg_hard"
     assert sn.snerv_spectra_preserving_adapter is True
     assert sn.snerv_mfu_scales == "1,3"
@@ -12117,6 +12146,14 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["scorer_loop_qat_search_mode"] == "top_weight_coordinate"
     assert native_calls[0]["scorer_loop_qat_qat_bits"] == 4
     assert native_calls[0]["scorer_loop_qat_component_guard_mode"] == "pose_seg_hard"
+    assert (
+        native_calls[0]["scorer_loop_qat_pair_guard_min_score_improved_fraction"]
+        == pytest.approx(1.0)
+    )
+    assert (
+        native_calls[0]["scorer_loop_qat_pair_guard_max_pose_worsened_fraction"]
+        == pytest.approx(0.0)
+    )
     assert native_calls[0]["scorer_loop_qat_decoder_payload_codec"] == (
         "int2_symmetric"
     )

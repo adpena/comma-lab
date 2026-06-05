@@ -3647,6 +3647,8 @@ def _run_snerv_native_mlx_export_attachment(
     scorer_loop_qat_decoder_payload_codec: str,
     scorer_loop_qat_lf_payload_codec: str,
     scorer_loop_qat_component_guard_mode: str,
+    scorer_loop_qat_pair_guard_min_score_improved_fraction: float,
+    scorer_loop_qat_pair_guard_max_pose_worsened_fraction: float,
     scorer_loop_qat_device: str,
     recon_pixel_weight_path: str | Path | None,
     recon_pixel_weight_manifest_path: str | Path | None,
@@ -3806,6 +3808,12 @@ def _run_snerv_native_mlx_export_attachment(
             scorer_loop_qat_lf_payload_codec=str(scorer_loop_qat_lf_payload_codec),
             scorer_loop_qat_component_guard_mode=str(
                 scorer_loop_qat_component_guard_mode
+            ),
+            scorer_loop_qat_pair_guard_min_score_improved_fraction=float(
+                scorer_loop_qat_pair_guard_min_score_improved_fraction
+            ),
+            scorer_loop_qat_pair_guard_max_pose_worsened_fraction=float(
+                scorer_loop_qat_pair_guard_max_pose_worsened_fraction
             ),
             scorer_loop_qat_device=str(scorer_loop_qat_device),
             recon_pixel_weight_path=recon_pixel_weight_path,
@@ -4930,8 +4938,8 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_scorer_loop_seg_slack: float = 0.0,
     snerv_scorer_loop_pair_stride: int = 1,
     snerv_scorer_loop_start_pair: int = 0,
-    snerv_scorer_loop_pair_guard_min_score_improved_fraction: float = 0.0,
-    snerv_scorer_loop_pair_guard_max_pose_worsened_fraction: float = 1.0,
+    snerv_scorer_loop_pair_guard_min_score_improved_fraction: float = 1.0,
+    snerv_scorer_loop_pair_guard_max_pose_worsened_fraction: float = 0.0,
     snerv_scorer_loop_component_guard_mode: str = "pose_seg_hard",
     random_seed: int = 0,
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
@@ -5435,6 +5443,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             scorer_loop_qat_lf_payload_codec=str(snerv_scorer_loop_lf_payload_codec),
             scorer_loop_qat_component_guard_mode=str(
                 snerv_scorer_loop_component_guard_mode
+            ),
+            scorer_loop_qat_pair_guard_min_score_improved_fraction=float(
+                snerv_scorer_loop_pair_guard_min_score_improved_fraction
+            ),
+            scorer_loop_qat_pair_guard_max_pose_worsened_fraction=float(
+                snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
             ),
             scorer_loop_qat_device=str(distillation_device),
             recon_pixel_weight_path=effective_recon_pixel_weight_path,
@@ -6438,6 +6452,12 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         scorer_loop_qat_lf_payload_codec=str(snerv_scorer_loop_lf_payload_codec),
         scorer_loop_qat_component_guard_mode=str(
             snerv_scorer_loop_component_guard_mode
+        ),
+        scorer_loop_qat_pair_guard_min_score_improved_fraction=float(
+            snerv_scorer_loop_pair_guard_min_score_improved_fraction
+        ),
+        scorer_loop_qat_pair_guard_max_pose_worsened_fraction=float(
+            snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
         ),
         scorer_loop_qat_device=str(distillation_device),
         recon_pixel_weight_path=effective_recon_pixel_weight_path,
@@ -20328,12 +20348,12 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--snerv-scorer-loop-start-pair", default=0, type=int)
     parser.add_argument(
         "--snerv-scorer-loop-pair-guard-min-score-improved-fraction",
-        default=0.0,
+        default=1.0,
         type=float,
     )
     parser.add_argument(
         "--snerv-scorer-loop-pair-guard-max-pose-worsened-fraction",
-        default=1.0,
+        default=0.0,
         type=float,
     )
     parser.add_argument(

@@ -799,6 +799,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "posenet_dual_lambda_active_observed": bool(pose_dual_lambda_active_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
+        "scorer_input_guard_dual_metric_observed": bool(guard_loss_observed),
         "scorer_input_contrast_floor_metric_observed": bool(
             contrast_floor_loss_observed
         ),
@@ -1832,6 +1833,8 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat_decoder_payload_codec: str | None = None,
     scorer_loop_qat_lf_payload_codec: str | None = None,
     scorer_loop_qat_component_guard_mode: str = "pose_seg_hard",
+    scorer_loop_qat_pair_guard_min_score_improved_fraction: float = 1.0,
+    scorer_loop_qat_pair_guard_max_pose_worsened_fraction: float = 0.0,
     scorer_loop_qat_device: str = "cpu",
     recon_pixel_weight_path: str | Path | None = None,
     recon_pixel_weight_manifest_path: str | Path | None = None,
@@ -2552,6 +2555,12 @@ def train_export_snerv_mlx_native(
         decoder_payload_codec=active_decoder_payload_codec,
         lf_payload_codec=active_lf_payload_codec,
         component_guard_mode=str(scorer_loop_qat_component_guard_mode),
+        pair_guard_min_score_improved_fraction=float(
+            scorer_loop_qat_pair_guard_min_score_improved_fraction
+        ),
+        pair_guard_max_pose_worsened_fraction=float(
+            scorer_loop_qat_pair_guard_max_pose_worsened_fraction
+        ),
         device=str(scorer_loop_qat_device),
         allow_overwrite=allow_overwrite,
     )
@@ -2564,6 +2573,7 @@ def train_export_snerv_mlx_native(
         and best_packet
         and scorer_loop_qat.get("accepted_improvement") is True
         and scorer_loop_qat.get("receiver_contract_satisfied") is True
+        and scorer_loop_qat.get("ready_for_pose_guard_gate") is True
     )
     best_packet_source_pair_indices = (
         _packet_source_pair_indices(best_packet) if isinstance(best_packet, bytes) and best_packet else None
@@ -5669,6 +5679,8 @@ def _run_scorer_loop_qat_attachment(
     decoder_payload_codec: str,
     lf_payload_codec: str,
     component_guard_mode: str,
+    pair_guard_min_score_improved_fraction: float,
+    pair_guard_max_pose_worsened_fraction: float,
     device: str,
     allow_overwrite: bool,
 ) -> dict[str, Any]:
@@ -5686,6 +5698,12 @@ def _run_scorer_loop_qat_attachment(
             "executed": False,
             "source_pair_indices": [int(value) for value in pair_indices or ()],
             "component_guard_mode": str(component_guard_mode),
+            "pair_guard_min_score_improved_fraction": float(
+                pair_guard_min_score_improved_fraction
+            ),
+            "pair_guard_max_pose_worsened_fraction": float(
+                pair_guard_max_pose_worsened_fraction
+            ),
             "decoder_payload_codec": str(decoder_payload_codec),
             "lf_payload_codec": str(lf_payload_codec),
             "receiver_contract_satisfied": False,
@@ -5726,6 +5744,12 @@ def _run_scorer_loop_qat_attachment(
             max_trials=int(max_trials),
             search_mode=str(search_mode),
             component_guard_mode=str(component_guard_mode),
+            pair_guard_min_score_improved_fraction=float(
+                pair_guard_min_score_improved_fraction
+            ),
+            pair_guard_max_pose_worsened_fraction=float(
+                pair_guard_max_pose_worsened_fraction
+            ),
         )
         result_payload = result.as_jsonable()
         best_packet = getattr(result, "best_packet", b"")
@@ -5834,6 +5858,12 @@ def _run_scorer_loop_qat_attachment(
                 or result_payload.get("lf_payload_codec_selection_report")
             ),
             "component_guard_mode": str(result_payload.get("component_guard_mode") or component_guard_mode),
+            "pair_guard_min_score_improved_fraction": float(
+                pair_guard_min_score_improved_fraction
+            ),
+            "pair_guard_max_pose_worsened_fraction": float(
+                pair_guard_max_pose_worsened_fraction
+            ),
             "pair_robust_admission": result_payload.get("pair_robust_admission"),
             "accepted_improvement": bool(result_payload.get("accepted_improvement")),
             "receiver_contract_satisfied": bool(result_payload.get("receiver_contract_satisfied")),
@@ -5857,6 +5887,12 @@ def _run_scorer_loop_qat_attachment(
             "decoder_payload_codec": str(decoder_payload_codec),
             "lf_payload_codec": str(lf_payload_codec),
             "component_guard_mode": str(component_guard_mode),
+            "pair_guard_min_score_improved_fraction": float(
+                pair_guard_min_score_improved_fraction
+            ),
+            "pair_guard_max_pose_worsened_fraction": float(
+                pair_guard_max_pose_worsened_fraction
+            ),
             "full_video_coverage": False,
             "emitted_packet_uses_scorer_loop_best_decoder": False,
             "blockers": ["snerv_scorer_loop_qat_attachment_failed"],

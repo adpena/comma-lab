@@ -155,6 +155,18 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         public_sig.parameters["scorer_loop_qat_component_guard_mode"].default
         == "pose_seg_hard"
     )
+    assert (
+        public_sig.parameters[
+            "scorer_loop_qat_pair_guard_min_score_improved_fraction"
+        ].default
+        == 1.0
+    )
+    assert (
+        public_sig.parameters[
+            "scorer_loop_qat_pair_guard_max_pose_worsened_fraction"
+        ].default
+        == 0.0
+    )
     attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
     assert "pr95_muon_policy" in attachment_sig.parameters
     assert "scorer_input_distribution_guard_weight" in attachment_sig.parameters
@@ -617,6 +629,7 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["posenet_dual_lambda_active_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
+    assert contract["scorer_input_guard_dual_metric_observed"] is True
     assert contract["expected_scorer_input_contrast_floor_metric"] is True
     assert contract["scorer_input_contrast_floor_metric_observed"] is True
     assert (
@@ -5069,6 +5082,8 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert captured["decoder_payload_codec"] == "int8_symmetric"
     assert captured["lf_payload_codec"] == "portfolio_auto"
     assert captured["component_guard_mode"] == "pose_seg_hard"
+    assert captured["pair_guard_min_score_improved_fraction"] == 1.0
+    assert captured["pair_guard_max_pose_worsened_fraction"] == 0.0
     assert captured["snerv_fc_dim"] == 5
     assert captured["snerv_mfu_scales"] == (1, 2)
     assert captured["snerv_temporal_context"] == 1
@@ -5132,6 +5147,132 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" not in report["blockers"]
     assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]
     assert report["score_claim"] is False
+
+
+def test_train_export_rejects_qat_packet_when_pose_guard_not_ready(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
+
+    pairs = _tiny_pairs(pairs=2)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+    best_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs + 1.0,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=3.0,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="auto",
+    ).packet
+    best_packet_sha256 = hashlib.sha256(best_packet).hexdigest()
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    class FakeQatResult:
+        def __init__(self) -> None:
+            self.best_packet = best_packet
+
+        def as_jsonable(self) -> dict:
+            return {
+                "schema": "snerv_scorer_loop_decoder_qat_smoke.v1",
+                "axis_tag": "[macOS-CPU advisory]",
+                "n_pairs": 2,
+                "decoder_payload_codec": "int8_symmetric",
+                "lf_payload_codec": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_requested": "portfolio_auto",
+                "lf_payload_codec_selected": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_selection_report": {
+                    "schema": "snerv_lf_quant_payload.v2",
+                    "mode_histogram": {"signed_int2_bitpack": 1},
+                    "wrapper_histogram": {"none": 1},
+                    "section_bytes": 42,
+                },
+                "scorer_loop_evaluations": 2,
+                "accepted_improvement": True,
+                "receiver_contract_satisfied": True,
+                "ready_for_pose_guard_gate": False,
+                "baseline": {
+                    "archive_bytes": 111,
+                    "archive_sha256": "1" * 64,
+                    "score_linf": 3.0,
+                },
+                "best": {
+                    "archive_bytes": len(best_packet),
+                    "archive_sha256": best_packet_sha256,
+                    "score_linf": 2.5,
+                },
+                "best_packet_bytes": len(best_packet),
+                "best_packet_sha256": best_packet_sha256,
+                "component_guard_mode": "pose_seg_hard",
+                "pair_robust_admission": {
+                    "schema": "snerv_pair_robust_admission.v1",
+                    "n_pairs": 2,
+                    "min_score_improved_fraction": 1.0,
+                    "max_pose_worsened_fraction": 0.0,
+                    "pose_slack": 0.0,
+                    "score_improved_fraction": 0.5,
+                    "pose_worsened_fraction": 0.5,
+                    "permissive_guard": False,
+                    "passed": False,
+                    "blockers": [],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "rank_or_kill_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                "blockers": ["pair_robust_pose_guard_not_ready_unit"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        qat_mod,
+        "run_snerv_scorer_loop_decoder_qat_smoke",
+        lambda **_kwargs: FakeQatResult(),
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "pose_guard_reject",
+        num_pairs=2,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "decoder_payload_codec": "int8_symmetric",
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+        run_scorer_loop_qat=True,
+        scorer_loop_qat_max_trials=1,
+        scorer_loop_qat_component_guard_mode="pose_seg_hard",
+    )
+
+    scorer_loop = report["scorer_loop_qat"]
+    assert scorer_loop["accepted_improvement"] is True
+    assert scorer_loop["receiver_contract_satisfied"] is True
+    assert scorer_loop["ready_for_pose_guard_gate"] is False
+    assert scorer_loop["pair_guard_min_score_improved_fraction"] == 1.0
+    assert scorer_loop["pair_guard_max_pose_worsened_fraction"] == 0.0
+    assert scorer_loop["pair_robust_admission"]["passed"] is False
+    assert scorer_loop["best_packet_materialized"] is True
+    assert scorer_loop["best_packet_path_sha256"] == best_packet_sha256
+    assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is False
+    assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" in report[
+        "blockers"
+    ]
+    assert report["packet_source"] == "mlx_target_hydration_numpy_closed_form_decoder_fit"
+    assert report["packet_sha256"] != best_packet_sha256
+    assert Path(report["packet_path"]).read_bytes() != best_packet
 
 
 def test_train_export_rejects_qat_packet_with_mismatched_source_pair_indices(
