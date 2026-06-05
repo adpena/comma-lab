@@ -1289,11 +1289,38 @@ def decode_snerv_archive_frame_planes_from_decoded(
     """Decode archived LF planes into receiver frames from an unpacked archive."""
 
     if is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
+        metadata = decoded.metadata
+        expected_frame_count = _metadata_int(metadata, "n_pairs", minimum=1) * _metadata_int(
+            metadata,
+            "frames_per_pair",
+            default=2,
+            minimum=1,
+        )
         if frame_plane_indices is not None:
-            raise SnervArchiveError(
-                "selected-frame decode is not supported for official MFU/HFR/TUB "
-                "proof payloads"
+            channels = _metadata_int(metadata, "channels", default=3, minimum=1)
+            selected = _validate_frame_plane_indices(
+                frame_plane_indices,
+                plane_count=expected_frame_count
+                * channels,
             )
+            frame_indices = _frame_indices_from_plane_indices(
+                selected,
+                channels=channels,
+            )
+            decoded_planes = _decode_official_mfu_hfr_tub_selected_frame_planes(
+                decoded.sections["decoder_payload"],
+                frame_indices=frame_indices,
+                expected_frame_count=expected_frame_count,
+                clip_to_uint8_range=clip_to_uint8_range,
+            )
+            frame_to_local = {
+                int(frame_index): local
+                for local, frame_index in enumerate(frame_indices)
+            }
+            return [
+                decoded_planes[frame_to_local[int(index) // channels] * channels + int(index) % channels]
+                for index in selected
+            ]
         return decoded.decode_official_mfu_hfr_tub_payload().decode_frame_planes(
             clip_to_uint8_range=clip_to_uint8_range,
         )
@@ -1379,6 +1406,28 @@ def decode_snerv_archive_pair_frames_from_decoded(
     channels = _metadata_int(metadata, "channels", default=3, minimum=1)
     h, w = _metadata_hw(metadata)
     clean_pair_indices = _validate_pair_indices(pair_indices, n_pairs=n_pairs)
+    if is_official_mfu_hfr_tub_decoder_payload(decoded.sections["decoder_payload"]):
+        frame_indices = [
+            pair_index * frames_per_pair + frame_index
+            for pair_index in clean_pair_indices
+            for frame_index in range(frames_per_pair)
+        ]
+        frames = _decode_official_mfu_hfr_tub_selected_frames(
+            decoded.sections["decoder_payload"],
+            frame_indices=frame_indices,
+            expected_frame_count=n_pairs * frames_per_pair,
+            clip_to_uint8_range=clip_to_uint8_range,
+        )
+        expected = (len(clean_pair_indices) * frames_per_pair, channels, h, w)
+        if tuple(frames.shape) != expected:
+            raise SnervArchiveError(
+                "official selected receiver replay frame shape mismatch: "
+                f"got {tuple(frames.shape)}, expected {expected}"
+            )
+        return np.asarray(
+            frames.reshape(len(clean_pair_indices), frames_per_pair, channels, h, w),
+            dtype=np.float32,
+        )
     frame_plane_indices = _frame_plane_indices_for_pairs(
         clean_pair_indices,
         frames_per_pair=frames_per_pair,
@@ -1453,6 +1502,19 @@ def _frame_plane_indices_for_pairs(
         for frame_index in range(int(frames_per_pair))
         for channel in range(int(channels))
     ]
+
+
+def _frame_indices_from_plane_indices(
+    frame_plane_indices: Sequence[int],
+    *,
+    channels: int,
+) -> list[int]:
+    """Return ordered unique frame indices from flat frame-plane indices."""
+
+    if int(channels) <= 0:
+        raise SnervArchiveError("channels must be positive for frame-plane decode")
+    frame_indices = [int(index) // int(channels) for index in frame_plane_indices]
+    return list(dict.fromkeys(frame_indices))
 
 
 def _validate_frame_plane_indices(
@@ -2170,6 +2232,24 @@ def decode_official_mfu_hfr_tub_decoder_payload(
 ) -> OfficialMfuHfrTubReceiverPayload:
     """Decode official MFU/HFR/TUB receiver primitive payload bytes."""
 
+    header, tensors = _decode_official_mfu_hfr_tub_payload_tensor_manifest(payload)
+    tensors = _expand_official_skip_high_storage(header, tensors)
+    tensors = _expand_official_tub_input_storage(header, tensors)
+    payload_obj = OfficialMfuHfrTubReceiverPayload(
+        header=dict(header),
+        tensors=tensors,
+        payload_sha256=_sha256(bytes(payload)),
+        payload_bytes=len(bytes(payload)),
+    )
+    _validate_official_payload_exec_surfaces(payload_obj)
+    return payload_obj
+
+
+def _decode_official_mfu_hfr_tub_payload_tensor_manifest(
+    payload: bytes,
+) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
+    """Decode official payload tensors without expanding compact frame state."""
+
     header, compressed = _unpack_subpacket(
         payload,
         magic=SNERV_DECODER_MAGIC,
@@ -2190,16 +2270,207 @@ def decode_official_mfu_hfr_tub_decoder_payload(
     if _sha256(raw) != str(header["raw_tensor_sha256"]):
         raise SnervArchiveError("official primitive payload raw sha256 mismatch")
     tensors = _unpack_tensor_manifest(raw, header.get("tensor_manifest") or [])
-    tensors = _expand_official_skip_high_storage(header, tensors)
-    tensors = _expand_official_tub_input_storage(header, tensors)
+    return dict(header), tensors
+
+
+def _decode_official_mfu_hfr_tub_selected_frames(
+    payload: bytes,
+    *,
+    frame_indices: Sequence[int],
+    expected_frame_count: int,
+    clip_to_uint8_range: bool,
+) -> np.ndarray:
+    """Render selected official MFU/HFR/TUB frames without expanding full video state."""
+
+    selected = _validate_official_frame_indices(
+        frame_indices,
+        expected_frame_count=expected_frame_count,
+    )
+    header, tensors = _decode_official_mfu_hfr_tub_payload_tensor_manifest(payload)
+    selected_tensors = _selected_official_mfu_hfr_tub_tensors(
+        header,
+        tensors,
+        selected_frame_indices=selected,
+        expected_frame_count=expected_frame_count,
+    )
     payload_obj = OfficialMfuHfrTubReceiverPayload(
         header=dict(header),
-        tensors=tensors,
+        tensors=selected_tensors,
         payload_sha256=_sha256(bytes(payload)),
         payload_bytes=len(bytes(payload)),
     )
-    _validate_official_payload_exec_surfaces(payload_obj)
-    return payload_obj
+    frames = payload_obj.decode_frames(clip_to_uint8_range=clip_to_uint8_range)
+    if int(frames.shape[0]) != len(selected):
+        raise SnervArchiveError(
+            "official selected receiver replay frame count mismatch: "
+            f"got {int(frames.shape[0])}, expected {len(selected)}"
+        )
+    return np.asarray(frames, dtype=np.float32)
+
+
+def _decode_official_mfu_hfr_tub_selected_frame_planes(
+    payload: bytes,
+    *,
+    frame_indices: Sequence[int],
+    expected_frame_count: int,
+    clip_to_uint8_range: bool,
+) -> list[np.ndarray]:
+    frames = _decode_official_mfu_hfr_tub_selected_frames(
+        payload,
+        frame_indices=frame_indices,
+        expected_frame_count=expected_frame_count,
+        clip_to_uint8_range=clip_to_uint8_range,
+    )
+    return [
+        np.asarray(frames[frame, channel], dtype=np.float32)
+        for frame in range(int(frames.shape[0]))
+        for channel in range(int(frames.shape[1]))
+    ]
+
+
+def _validate_official_frame_indices(
+    frame_indices: Sequence[int],
+    *,
+    expected_frame_count: int,
+) -> list[int]:
+    if int(expected_frame_count) <= 0:
+        raise SnervArchiveError("official expected_frame_count must be positive")
+    out = [int(index) for index in frame_indices]
+    if not out:
+        raise SnervArchiveError("official selected frame_indices must be non-empty")
+    invalid = [idx for idx in out if idx < 0 or idx >= int(expected_frame_count)]
+    if invalid:
+        preview = invalid[:8]
+        suffix = "" if len(invalid) <= 8 else f" ... +{len(invalid) - 8} more"
+        raise SnervArchiveError(
+            f"official selected frame_indices outside [0,{int(expected_frame_count)}): "
+            f"{preview}{suffix}"
+        )
+    return out
+
+
+def _selected_official_mfu_hfr_tub_tensors(
+    header: Mapping[str, Any],
+    tensors: dict[str, np.ndarray],
+    *,
+    selected_frame_indices: Sequence[int],
+    expected_frame_count: int,
+) -> dict[str, np.ndarray]:
+    out = dict(tensors)
+    selected = tuple(int(idx) for idx in selected_frame_indices)
+    out["inputs.mfu.low"] = _slice_official_frame_axis(
+        _tensor(tensors, "inputs.mfu.low"),
+        selected,
+        expected_frame_count=expected_frame_count,
+        name="inputs.mfu.low",
+    )
+    out["inputs.mfu.skip_mid"] = _slice_official_frame_axis(
+        _tensor(tensors, "inputs.mfu.skip_mid"),
+        selected,
+        expected_frame_count=expected_frame_count,
+        name="inputs.mfu.skip_mid",
+    )
+    out["inputs.mfu.skip_high"] = _selected_official_skip_high_tensor(
+        header,
+        _tensor(tensors, "inputs.mfu.skip_high"),
+        selected_frame_indices=selected,
+        expected_frame_count=expected_frame_count,
+    )
+    _validate_selected_official_output2_binding(
+        tensors,
+        selected_frame_indices=selected,
+        expected_frame_count=expected_frame_count,
+    )
+    return out
+
+
+def _slice_official_frame_axis(
+    tensor: np.ndarray,
+    frame_indices: Sequence[int],
+    *,
+    expected_frame_count: int,
+    name: str,
+) -> np.ndarray:
+    arr = _canonical_float64_tensor(tensor, name=name)
+    if arr.ndim != 4:
+        raise SnervArchiveError(f"official tensor {name!r} must be NCHW, got {arr.shape}")
+    if int(arr.shape[0]) != int(expected_frame_count):
+        raise SnervArchiveError(
+            f"official tensor {name!r} frame count {int(arr.shape[0])} != "
+            f"expected archive frame count {int(expected_frame_count)}"
+        )
+    return np.ascontiguousarray(arr[list(frame_indices)], dtype="<f8")
+
+
+def _selected_official_skip_high_tensor(
+    header: Mapping[str, Any],
+    skip_high: np.ndarray,
+    *,
+    selected_frame_indices: Sequence[int],
+    expected_frame_count: int,
+) -> np.ndarray:
+    storage = header.get("skip_high_storage")
+    if storage is None:
+        return _slice_official_frame_axis(
+            skip_high,
+            selected_frame_indices,
+            expected_frame_count=expected_frame_count,
+            name="inputs.mfu.skip_high",
+        )
+    if not isinstance(storage, Mapping):
+        raise SnervArchiveError("official skip_high storage metadata must be an object")
+    codec = _normalize_official_skip_high_codec(str(storage.get("codec", "full")))
+    source_shape = tuple(int(v) for v in storage.get("source_shape") or ())
+    if len(source_shape) != 4 or any(v <= 0 for v in source_shape):
+        raise SnervArchiveError("official skip_high selected source shape is invalid")
+    if int(source_shape[0]) != int(expected_frame_count):
+        raise SnervArchiveError(
+            "official skip_high source frame count does not match archive metadata; "
+            f"source={int(source_shape[0])} expected={int(expected_frame_count)}"
+        )
+    arr = _canonical_float64_tensor(skip_high, name="inputs.mfu.skip_high")
+    if codec == OFFICIAL_SKIP_HIGH_CODEC_FULL:
+        return _slice_official_frame_axis(
+            arr,
+            selected_frame_indices,
+            expected_frame_count=expected_frame_count,
+            name="inputs.mfu.skip_high",
+        )
+    expected_tail = {
+        OFFICIAL_SKIP_HIGH_CODEC_SHARED_MEAN: tuple(source_shape[1:]),
+        OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN: (int(source_shape[1]), 1, 1),
+        OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN: (1, 1, 1),
+    }.get(codec)
+    if expected_tail is None:
+        raise SnervArchiveError(f"unsupported official skip_high codec: {codec!r}")
+    if arr.ndim != 4 or int(arr.shape[0]) != 1 or tuple(arr.shape[1:]) != expected_tail:
+        raise SnervArchiveError(
+            "official compact skip_high selected payload shape mismatch; "
+            f"got {tuple(arr.shape)}, expected {(1, *expected_tail)}"
+        )
+    selected_shape = (len(tuple(selected_frame_indices)), *source_shape[1:])
+    return np.broadcast_to(arr, selected_shape).astype("<f8", copy=True)
+
+
+def _validate_selected_official_output2_binding(
+    tensors: Mapping[str, np.ndarray],
+    *,
+    selected_frame_indices: Sequence[int],
+    expected_frame_count: int,
+) -> None:
+    has_temporal = "tub.temporal_encoder_concat" in tensors
+    has_raw = "tub.output2_raw" in tensors
+    if has_temporal != has_raw:
+        raise SnervArchiveError(
+            "official selected TUB output2 payload has incomplete tensor pair"
+        )
+    if not has_temporal:
+        return
+    if len(tuple(selected_frame_indices)) != int(expected_frame_count):
+        raise SnervArchiveError(
+            "official selected-pair decode cannot apply full-video TUB output2 "
+            "payload to a frame subset; elide output2 or request all frames"
+        )
 
 
 def _normalize_official_skip_high_codec(codec: str | None) -> str:

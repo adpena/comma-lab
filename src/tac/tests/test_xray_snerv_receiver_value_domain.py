@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import numpy as np
 
+from tools import export_snerv_checkpoint_archive as export_tool
 from tools import xray_snerv_receiver_value_domain as tool
 
 
@@ -222,7 +223,15 @@ def test_snerv_receiver_value_domain_xray_emits_noncollapse_closures(
     monkeypatch,
 ) -> None:
     packet = b"clean-snar"
-    clean = np.full((1, 2, 1, 1, 2, 2), 128.0, dtype=np.float32)
+    clean = np.asarray(
+        [
+            [
+                [[[[124.0, 126.0], [128.0, 130.0]]]],
+                [[[[132.0, 134.0], [136.0, 138.0]]]],
+            ]
+        ],
+        dtype=np.float32,
+    )
 
     def fake_unpack(packet_bytes: bytes):
         assert packet_bytes == packet
@@ -263,3 +272,113 @@ def test_snerv_receiver_value_domain_xray_emits_noncollapse_closures(
         "snerv_renderer_nondegenerate_target_value_domain_not_passed",
     ]
     assert report["blockers"] == ["snerv_receiver_value_domain_xray_false_authority"]
+
+
+def test_snerv_receiver_value_domain_xray_rejects_constant_receiver_decode(
+    monkeypatch,
+) -> None:
+    packet = b"constant-snar"
+    constant = np.full((1, 2, 1, 1, 2, 2), 128.0, dtype=np.float32)
+
+    def fake_unpack(packet_bytes: bytes):
+        assert packet_bytes == packet
+        return SimpleNamespace(
+            metadata={"n_pairs": 1, "frames_per_pair": 2},
+            sections={
+                "metadata_payload": b"meta",
+                "lf_payload": b"lf",
+                "decoder_payload": b"decoder",
+                "step_map_packet": b"step",
+            },
+        )
+
+    monkeypatch.setattr(tool, "unpack_snerv_archive", fake_unpack)
+    monkeypatch.setattr(
+        tool,
+        "decode_snerv_archive_pair_frames",
+        lambda packet_bytes, pair_indices, *, clip_to_uint8_range: constant,
+    )
+    monkeypatch.setattr(
+        tool,
+        "inspect_decoder_payload_header",
+        lambda payload: {"schema": "unit_decoder_payload.v1"},
+    )
+
+    report = tool.build_snerv_receiver_value_domain_xray(
+        packet=packet,
+        pair_indices=(0,),
+        packet_path="/tmp/constant.snar",
+    )
+
+    assert report["verdict"] == "RECEIVER_VALUE_DOMAIN_OUT_OF_RANGE"
+    assert report["receiver_payload_decode_sample_proven"] is True
+    assert report["value_domain_noncollapse_proof_passed"] is False
+    assert report["closed_campaign_blockers"] == []
+    assert "snerv_receiver_decode_clipped_output_near_constant" in report["blockers"]
+    assert "snerv_receiver_decode_last_frame_near_constant_for_segnet" in (
+        report["blockers"]
+    )
+
+
+def test_snerv_receiver_value_domain_xray_decodes_official_payload_selected_pairs() -> None:
+    model_size = export_tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+        official_tub_output2_store_for_receiver_proof=True,
+    )
+    packet = export_tool.build_snerv_official_checkpoint_packet(
+        _official_checkpoint_state_with_tub_output2_payload(),
+        model_size=model_size,
+        metadata_extra={"unit_test": True},
+    )
+
+    report = tool.build_snerv_receiver_value_domain_xray(
+        packet=packet.packet,
+        pair_indices=(0,),
+        packet_path="/tmp/official_output2.snar",
+    )
+
+    assert report["value_domain_sample_status"] == "selected_pair_decode_completed"
+    assert report["receiver_payload_decode_sample_proven"] is True
+    assert report["sample_shape_b2chw"] == [1, 2, 3, 16, 16]
+    assert report["value_domain_noncollapse_proof_passed"] is True
+    assert report["closed_campaign_blockers"] == [
+        "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse",
+        "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
+        "snerv_renderer_nondegenerate_target_value_domain_not_passed",
+    ]
+    assert "snerv_official_payload_selected_pair_value_xray_unavailable" not in (
+        report["blockers"]
+    )
+    assert report["decoder_payload_header"]["schema"] == (
+        "snerv_decoder_payload.official_mfu_hfr_tub.v1"
+    )
+
+
+def _official_checkpoint_state_with_tub_output2_payload() -> dict[str, np.ndarray]:
+    state = _official_checkpoint_state()
+    state["tub.temporal_encoder_concat"] = np.linspace(
+        0.0,
+        1.0,
+        1 * 6 * 8 * 8,
+        dtype=np.float32,
+    ).reshape(1, 6, 8, 8)
+    state["tub.output2_raw"] = (
+        np.arange(2 * 12 * 8 * 8, dtype=np.float32).reshape(2, 12, 8, 8)
+        / 251.0
+    )
+    return state
+
+
+def _official_checkpoint_state() -> dict[str, np.ndarray]:
+    state: dict[str, np.ndarray] = {
+        "low": np.zeros((2, 3, 2, 2), dtype=np.float32),
+        "skip_mid": np.zeros((2, 3, 4, 4), dtype=np.float32),
+        "skip_high": np.asarray([[[[32.0]]]], dtype=np.float32),
+    }
+    for name in ("lh", "hl", "hh"):
+        state[f"hfr_{name}_conv1_weight"] = np.zeros((3, 3, 1, 1), dtype=np.float32)
+        state[f"hfr_{name}_conv1_bias"] = np.zeros((3,), dtype=np.float32)
+        state[f"hfr_{name}_conv2_weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
+        state[f"hfr_{name}_conv2_bias"] = np.zeros((3,), dtype=np.float32)
+    return state

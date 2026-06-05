@@ -223,6 +223,10 @@ def _value_domain_blockers(
         blockers.append("snerv_receiver_decode_clipped_output_saturated")
     if float(last_frame_clipped_stats.get("saturation_fraction") or 0.0) >= 0.5:
         blockers.append("snerv_receiver_decode_last_frame_saturated_for_segnet")
+    if float(clipped_stats.get("std") or 0.0) <= 1.0e-6:
+        blockers.append("snerv_receiver_decode_clipped_output_near_constant")
+    if float(last_frame_clipped_stats.get("std") or 0.0) <= 1.0e-6:
+        blockers.append("snerv_receiver_decode_last_frame_near_constant_for_segnet")
     return _ordered_unique(blockers)
 
 
@@ -252,6 +256,10 @@ def _recommended_next_actions(blockers: Sequence[str]) -> list[str]:
         actions.append("repair_last_frame_receiver_dynamic_range_before_segnet_spend")
     if "snerv_receiver_decode_clipping_changes_pixels" in blockers:
         actions.append("compare_unclipped_to_clipped_receiver_histograms_by_section")
+    if "snerv_receiver_decode_clipped_output_near_constant" in blockers:
+        actions.append("repair_receiver_value_noncollapse_before_lf_conditioned_hf_spend")
+    if "snerv_receiver_decode_last_frame_near_constant_for_segnet" in blockers:
+        actions.append("restore_last_frame_contrast_before_lf_conditioned_hf_spend")
     if (
         "snerv_official_skip_high_scalar_mean_receiver_expand_collapse_risk"
         in blockers

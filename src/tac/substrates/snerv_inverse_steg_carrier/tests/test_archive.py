@@ -31,6 +31,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frame_planes,
     decode_snerv_archive_frames,
+    decode_snerv_archive_pair_frames,
     decode_snerv_archive_step_maps,
     encode_decoder_payload,
     encode_lf_metadata_payload,
@@ -989,6 +990,90 @@ def test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames() -> None:
     assert np.isfinite(frames).all()
     np.testing.assert_array_equal(frames.reshape(2, 3, 16, 16), direct_frames)
     assert not np.allclose(frames[0, 0], frames[0, 1])
+
+
+def test_official_mfu_hfr_tub_archive_selected_pair_matches_full_decode() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [np.asarray(bundle["low"]) + 0.125 * idx for idx in range(4)],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [np.asarray(bundle["skip_mid"]) - 0.075 * idx for idx in range(4)],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [np.asarray(bundle["skip_high"]) + 0.25 * idx for idx in range(4)],
+        axis=0,
+    )
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        skip_high_codec="scalar_mean",
+    )
+    step_packet = encode_step_maps([np.ones((2, 2), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((2, 2), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 2,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+
+    full = decode_snerv_archive_frames(archive.packet)
+    selected = decode_snerv_archive_pair_frames(archive.packet, [1])
+
+    assert selected.shape == (1, 2, 3, 16, 16)
+    np.testing.assert_array_equal(selected, full[1:2])
+    assert not np.allclose(selected, full[0:1])
+
+
+def test_official_mfu_hfr_tub_archive_selected_planes_are_exact_subset() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [np.asarray(bundle["low"]) + 0.1 * idx for idx in range(2)],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [np.asarray(bundle["skip_mid"]) - 0.1 * idx for idx in range(2)],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [np.asarray(bundle["skip_high"]) + 0.2 * idx for idx in range(2)],
+        axis=0,
+    )
+    official_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    step_packet = encode_step_maps([np.ones((2, 2), dtype=np.float32)], bins=4).packet
+    archive = pack_snerv_archive(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
+        lf_payload=encode_lf_quant_payload([np.zeros((2, 2), dtype=np.int64)]),
+        decoder_payload=official_payload,
+        step_map_packet=step_packet,
+        metadata={
+            "lf_plane_count": 1,
+            "levels": 1,
+            "wavelet": "haar",
+            "orig_hw": [16, 16],
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+        },
+    )
+
+    full_planes = decode_snerv_archive_frame_planes(archive.packet)
+    decoded = unpack_snerv_archive(archive.packet)
+    selected_planes = decoded.decode_frame_planes(frame_plane_indices=[1, 5])
+
+    assert len(selected_planes) == 2
+    np.testing.assert_array_equal(selected_planes[0], full_planes[1])
+    np.testing.assert_array_equal(selected_planes[1], full_planes[5])
 
 
 def test_official_mfu_hfr_tub_shared_skip_high_payload_expands_receiver_state() -> None:
