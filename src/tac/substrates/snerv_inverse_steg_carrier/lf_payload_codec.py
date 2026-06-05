@@ -15,7 +15,7 @@ import hashlib
 import json
 import lzma
 import struct
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -259,6 +259,37 @@ def inspect_lf_quant_payload_v2(payload: bytes) -> LfPayloadCodecReport:
             )
         )
     return _build_report(payload, rows, payload_bytes=len(body))
+
+
+def selected_lf_payload_codec_label(
+    report: Mapping[str, Any] | None,
+    *,
+    requested_codec: str | None = None,
+) -> str | None:
+    """Return the concrete receiver-selected LF codec label from a report.
+
+    ``auto`` and ``portfolio_auto`` are launch controls, not archive grammars.
+    This helper gives every exporter, scorer-loop row, and trained-ladder bridge
+    the same byte-economics label for the grammar the receiver actually decodes.
+    """
+
+    if not isinstance(report, Mapping):
+        return str(requested_codec) if requested_codec is not None else None
+    schema = str(report.get("schema") or "")
+    if schema == SNERV_LF_QUANT_V2_SCHEMA:
+        modes = _sorted_nonzero_histogram_keys(report.get("mode_histogram"))
+        wrappers = _sorted_nonzero_histogram_keys(report.get("wrapper_histogram"))
+        if len(modes) == 1 and len(wrappers) == 1:
+            return f"v2:{modes[0]}:{wrappers[0]}"
+        if modes or wrappers:
+            mode_label = "+".join(modes) if modes else "unknown_modes"
+            wrapper_label = "+".join(wrappers) if wrappers else "unknown_wrappers"
+            return f"v2:portfolio:{mode_label}:{wrapper_label}"
+        return "v2:unknown"
+    codec = report.get("codec")
+    if codec:
+        return str(codec)
+    return str(requested_codec) if requested_codec is not None else None
 
 
 def is_lf_quant_payload_v2(payload: bytes) -> bool:
@@ -526,6 +557,20 @@ def _histogram(values: Iterable[str]) -> dict[str, int]:
     for value in values:
         out[value] = out.get(value, 0) + 1
     return out
+
+
+def _sorted_nonzero_histogram_keys(value: Any) -> list[str]:
+    if not isinstance(value, Mapping):
+        return []
+    out: list[str] = []
+    for key, count in value.items():
+        try:
+            parsed_count = int(count)
+        except (TypeError, ValueError):
+            continue
+        if parsed_count > 0:
+            out.append(str(key))
+    return sorted(out)
 
 
 def _validate_lf_plane(plane: np.ndarray) -> np.ndarray:
@@ -851,4 +896,5 @@ __all__ = [
     "encode_lf_quant_payload_v2_with_report",
     "inspect_lf_quant_payload_v2",
     "is_lf_quant_payload_v2",
+    "selected_lf_payload_codec_label",
 ]

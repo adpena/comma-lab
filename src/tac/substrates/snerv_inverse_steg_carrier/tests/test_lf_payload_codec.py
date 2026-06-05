@@ -16,6 +16,7 @@ from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     decode_lf_quant_payload_v2,
     encode_lf_quant_payload_v2_with_report,
     inspect_lf_quant_payload_v2,
+    selected_lf_payload_codec_label,
 )
 
 
@@ -217,6 +218,47 @@ def test_lf_payload_v2_portfolio_can_pick_sparse_bitmask_for_scattered_tiny_supp
 
     np.testing.assert_array_equal(decode_lf_quant_payload_v2(packet)[0], plane)
     assert report.mode_histogram == {"sparse_signed_varint": 1}
+    assert (
+        selected_lf_payload_codec_label(
+            report.as_jsonable(),
+            requested_codec="portfolio_auto",
+        )
+        == "v2:sparse_signed_varint:none"
+    )
+
+
+def test_selected_lf_payload_codec_label_reports_mixed_receiver_grammar() -> None:
+    label = selected_lf_payload_codec_label(
+        {
+            "schema": "snerv_lf_quant_payload.v2",
+            "mode_histogram": {
+                "zero_run_varint": 2,
+                "sparse_signed_varint": 1,
+                "ignored": 0,
+            },
+            "wrapper_histogram": {"brotli_q9": 1, "none": 2},
+        },
+        requested_codec="auto",
+    )
+
+    assert label == "v2:portfolio:sparse_signed_varint+zero_run_varint:brotli_q9+none"
+
+
+def test_selected_lf_payload_codec_label_falls_back_for_legacy_report() -> None:
+    assert (
+        selected_lf_payload_codec_label(
+            {"schema": "snerv_lf_quant_payload.v1", "codec": "legacy_lzma"},
+            requested_codec="auto",
+        )
+        == "legacy_lzma"
+    )
+    assert (
+        selected_lf_payload_codec_label(
+            {"schema": "snerv_lf_quant_payload.v1"},
+            requested_codec="auto",
+        )
+        == "auto"
+    )
 
 
 def test_lf_payload_v2_portfolio_can_pick_unsigned_escape_for_nonnegative_tail() -> None:

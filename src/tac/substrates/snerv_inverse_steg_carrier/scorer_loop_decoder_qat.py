@@ -40,6 +40,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
+    inspect_lf_quant_payload_header,
     pack_snerv_archive,
     resolve_decoder_payload_codec,
 )
@@ -51,6 +52,9 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     encode_frame_lf,
     fit_hf_decoder_least_squares,
     quantize_lf,
+)
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    selected_lf_payload_codec_label,
 )
 from tac.substrates.snerv_inverse_steg_carrier.section_value import (
     NEUTRALIZABLE_SNERV_SECTIONS,
@@ -189,6 +193,9 @@ class SnervDecoderEval:
     quantized_decoder: QuantizedDecoderStats
     per_pair: tuple[SnervPairEval, ...]
     lf_payload_codec: str = "unknown"
+    lf_payload_codec_requested: str = "unknown"
+    lf_payload_codec_selected: str = "unknown"
+    lf_payload_codec_selection_report: dict[str, Any] | None = None
     lf_payload_bytes: int = 0
     section_value_pressure_linf: float = 0.0
     section_value_pressure_ready: bool = True
@@ -1569,7 +1576,28 @@ def _evaluate_decoder(
         iteration=int(iteration),
         archive_bytes=archive.total_bytes,
         archive_sha256=_sha256(archive.packet),
-        lf_payload_codec=str(lf_payload_codec),
+        lf_payload_codec=str(
+            archive.metadata.get("lf_payload_codec_selected")
+            or archive.metadata.get("lf_payload_codec")
+            or lf_payload_codec
+        ),
+        lf_payload_codec_requested=str(
+            archive.metadata.get("lf_payload_codec_requested")
+            or lf_payload_codec
+        ),
+        lf_payload_codec_selected=str(
+            archive.metadata.get("lf_payload_codec_selected")
+            or archive.metadata.get("lf_payload_codec")
+            or lf_payload_codec
+        ),
+        lf_payload_codec_selection_report=(
+            dict(archive.metadata["lf_payload_codec_selection_report"])
+            if isinstance(
+                archive.metadata.get("lf_payload_codec_selection_report"),
+                dict,
+            )
+            else None
+        ),
         lf_payload_bytes=int(archive.section_bytes.get("lf_payload", 0)),
         d_seg_linf=d_seg,
         d_pose_linf=d_pose,
@@ -1697,14 +1725,21 @@ def _pack_receiver_archive(
 ) -> SnervArchivePacket:
     decoder_payload_codec_requested = str(decoder_payload_codec)
     decoder_payload_codec_resolved = resolve_decoder_payload_codec(decoder_payload_codec_requested)
+    lf_payload_codec_requested = str(lf_payload_codec)
+    lf_payload = encode_lf_quant_payload(
+        list(prepared.lf_quant_planes),
+        codec=lf_payload_codec_requested,
+    )
+    lf_payload_codec_report = inspect_lf_quant_payload_header(lf_payload)
+    lf_payload_codec_selected = selected_lf_payload_codec_label(
+        lf_payload_codec_report,
+        requested_codec=lf_payload_codec_requested,
+    )
     return pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(
             lf_zero_points=list(prepared.lf_zero_points),
         ),
-        lf_payload=encode_lf_quant_payload(
-            list(prepared.lf_quant_planes),
-            codec=lf_payload_codec,
-        ),
+        lf_payload=lf_payload,
         decoder_payload=encode_decoder_payload(
             decoder,
             codec=decoder_payload_codec_resolved,
@@ -1722,7 +1757,10 @@ def _pack_receiver_archive(
             "hf_decoder_fit_mode": "scorer_loop_decoder_qat_smoke",
             "decoder_payload_codec": decoder_payload_codec_resolved,
             "decoder_payload_codec_requested": decoder_payload_codec_requested,
-            "lf_payload_codec": str(lf_payload_codec),
+            "lf_payload_codec": lf_payload_codec_selected,
+            "lf_payload_codec_requested": lf_payload_codec_requested,
+            "lf_payload_codec_selected": lf_payload_codec_selected,
+            "lf_payload_codec_selection_report": lf_payload_codec_report,
             "snerv_model_size_adapter": prepared.model_size.adapter,
             "snerv_spectra_preserving_adapter_enabled": (
                 prepared.model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
@@ -1790,6 +1828,9 @@ def _replace_eval_acceptance(
         archive_bytes=row.archive_bytes,
         archive_sha256=row.archive_sha256,
         lf_payload_codec=row.lf_payload_codec,
+        lf_payload_codec_requested=row.lf_payload_codec_requested,
+        lf_payload_codec_selected=row.lf_payload_codec_selected,
+        lf_payload_codec_selection_report=row.lf_payload_codec_selection_report,
         lf_payload_bytes=row.lf_payload_bytes,
         d_seg_linf=row.d_seg_linf,
         d_pose_linf=row.d_pose_linf,

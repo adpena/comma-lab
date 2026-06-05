@@ -15,6 +15,9 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
     SNERV_SPECTRA_PRESERVING_ADAPTER,
 )
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    selected_lf_payload_codec_label,
+)
 
 SNERV_ADVISORY_TRAINED_LADDER_BRIDGE_SCHEMA = (
     "snerv_advisory_trained_ladder_bridge.v1"
@@ -559,9 +562,9 @@ def _lf_payload_codec_identity(advisory_result: Any) -> dict[str, Any]:
     report = _attr(advisory_result, "lf_payload_codec_selection_report")
     report_copy = dict(report) if isinstance(report, Mapping) else None
     if selected is None:
-        selected = _selected_lf_payload_codec_from_report(
+        selected = selected_lf_payload_codec_label(
             report_copy,
-            fallback=requested_text,
+            requested_codec=requested_text,
         )
     selected_text = str(selected) if selected is not None else None
     return {
@@ -576,33 +579,6 @@ def _lf_payload_codec_identity(advisory_result: Any) -> dict[str, Any]:
         ),
         **FALSE_AUTHORITY,
     }
-
-
-def _selected_lf_payload_codec_from_report(
-    report: Mapping[str, Any] | None,
-    *,
-    fallback: str | None,
-) -> str | None:
-    if not isinstance(report, Mapping):
-        return fallback
-    schema = str(report.get("schema") or "")
-    if schema == "snerv_lf_quant_payload.v2":
-        modes = _sorted_histogram_keys(report.get("mode_histogram"))
-        wrappers = _sorted_histogram_keys(report.get("wrapper_histogram"))
-        if len(modes) == 1 and len(wrappers) == 1:
-            return f"v2:{modes[0]}:{wrappers[0]}"
-        if modes or wrappers:
-            mode_label = "+".join(modes) if modes else "unknown_modes"
-            wrapper_label = "+".join(wrappers) if wrappers else "unknown_wrappers"
-            return f"v2:portfolio:{mode_label}:{wrapper_label}"
-        return "v2:unknown"
-    return str(report.get("codec") or fallback) if (report.get("codec") or fallback) else None
-
-
-def _sorted_histogram_keys(value: Any) -> list[str]:
-    if not isinstance(value, Mapping):
-        return []
-    return sorted(str(key) for key, count in value.items() if int(count or 0) > 0)
 
 
 def _packet_receiver_proof(advisory_result: Any) -> dict[str, Any]:

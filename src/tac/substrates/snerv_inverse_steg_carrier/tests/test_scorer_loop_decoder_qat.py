@@ -256,7 +256,11 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
     )
 
     assert row.receiver_archive_replay_verified is True
-    assert row.lf_payload_codec == "portfolio_auto"
+    assert row.lf_payload_codec == "v2:signed_int2_bitpack:none"
+    assert row.lf_payload_codec_requested == "portfolio_auto"
+    assert row.lf_payload_codec_selected == "v2:signed_int2_bitpack:none"
+    assert row.lf_payload_codec_selection_report is not None
+    assert row.lf_payload_codec_selection_report["section_bytes"] == row.lf_payload_bytes
     assert row.lf_payload_bytes > 0
     assert row.section_value_pressure_ready is True
     assert len(row.section_value_neutralizations) == 2
@@ -373,7 +377,12 @@ def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
     assert archive.metadata["snerv_hfr_gain"] == pytest.approx(0.25)
     assert archive.metadata["snerv_temporal_context"] == 1
     assert archive.metadata["decoder_payload_codec"] == "float32_lzma"
-    assert archive.metadata["lf_payload_codec"] == "portfolio_auto"
+    assert archive.metadata["lf_payload_codec"] == "v2:signed_int2_bitpack:none"
+    assert archive.metadata["lf_payload_codec_requested"] == "portfolio_auto"
+    assert archive.metadata["lf_payload_codec_selected"] == "v2:signed_int2_bitpack:none"
+    assert archive.metadata["lf_payload_codec_selection_report"]["section_bytes"] == (
+        archive.section_bytes["lf_payload"]
+    )
     assert archive.section_bytes["lf_payload"] > 0
     assert archive.metadata["decoder_feature_count"] == cfg.feature_count
 

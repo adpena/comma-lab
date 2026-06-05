@@ -4329,48 +4329,43 @@ def test_official_receiver_tensor_map_accepts_nbytes_manifest(
 
     def fake_header(payload: bytes) -> dict[str, object]:
         assert payload == b"decoder"
-        return {
+        header: dict[str, object] = {
             "schema": mod.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
             "codec": "lzma_raw_tensor_payload",
-            "tensor_manifest": [
-                {
-                    "name": "mfu.blocks.0.weight",
-                    "shape": [2, 2],
-                    "dtype": "float64_le",
-                    "nbytes": 32,
-                    "sha256": "a" * 64,
-                },
-                {
-                    "name": "hfr.heads.0.bias",
-                    "shape": [4],
-                    "dtype": "float64_le",
-                    "bytes": 32,
-                    "nbytes": 32,
-                    "sha256": "b" * 64,
-                },
-                {
-                    "name": "inputs.tub.current",
-                    "shape": [2],
-                    "dtype": "float64_le",
-                    "bytes": 16,
-                    "sha256": "c" * 64,
-                },
-                {
-                    "name": "tub.output2_raw",
-                    "shape": [8],
-                    "dtype": "float64_le",
-                    "bytes": 64,
-                    "sha256": "d" * 64,
-                },
-                {
-                    "name": "tub.temporal_encoder.weight",
-                    "shape": [5],
-                    "dtype": "float64_le",
-                    "nbytes": 40,
-                    "sha256": "e" * 64,
-                },
-            ],
+            "mfu_spec": {"num_blocks": 0},
+            "tub_output2_storage": {"stored": True},
         }
+        required = mod._official_receiver_required_tensor_keys_from_header(
+            header,
+            present_tensor_names=set(),
+        )
+
+        def row(name: str, *, shape: tuple[int, ...] = (1,), dialect: str = "nbytes"):
+            nbytes = int(np.prod(shape)) * np.dtype("<f8").itemsize
+            out = {
+                "name": name,
+                "shape": list(shape),
+                "dtype": "float64_le",
+                "sha256": hashlib.sha256(name.encode("utf-8")).hexdigest(),
+            }
+            if dialect in {"bytes", "bytes+nbytes"}:
+                out["bytes"] = nbytes
+            if dialect in {"nbytes", "bytes+nbytes"}:
+                out["nbytes"] = nbytes
+            return out
+
+        rows = []
+        for name in sorted(required):
+            shape = (2, 2) if name == "mfu.upsample_mid.weight" else (1,)
+            dialect = (
+                "bytes+nbytes"
+                if name == "hfr.lh.conv1.bias"
+                else "nbytes"
+            )
+            rows.append(row(name, shape=shape, dialect=dialect))
+        rows.append(row("tub.temporal_encoder.weight", shape=(5,), dialect="nbytes"))
+        header["tensor_manifest"] = rows
+        return header
 
     monkeypatch.setattr(mod, "unpack_snerv_archive", fake_unpack)
     monkeypatch.setattr(mod, "inspect_decoder_payload_header", fake_header)
@@ -4379,20 +4374,65 @@ def test_official_receiver_tensor_map_accepts_nbytes_manifest(
 
     assert tensor_map["receiver_tensor_map_verified"] is True
     assert tensor_map["blockers"] == []
-    assert tensor_map["total_tensor_bytes"] == 184
-    assert tensor_map["category_bytes"]["official_mfu_weight_payload"] == 32
-    assert tensor_map["category_bytes"]["official_hfr_weight_payload"] == 32
-    assert tensor_map["category_bytes"]["official_tub_input_payload"] == 16
-    assert tensor_map["category_bytes"]["official_tub_output2_payload"] == 64
+    assert tensor_map["missing_required_tensor_keys"] == []
+    assert tensor_map["required_tensor_key_count"] > 20
+    assert tensor_map["total_tensor_bytes"] == sum(
+        row["bytes"] for row in tensor_map["rows"]
+    )
+    assert tensor_map["category_bytes"]["official_mfu_weight_payload"] > 0
+    assert tensor_map["category_bytes"]["official_hfr_weight_payload"] > 0
+    assert tensor_map["category_bytes"]["official_tub_input_payload"] > 0
+    assert tensor_map["category_bytes"]["official_tub_output2_payload"] == 16
     assert tensor_map["category_bytes"]["official_tub_weight_payload"] == 40
     rows = {row["name"]: row for row in tensor_map["rows"]}
-    assert rows["mfu.blocks.0.weight"]["manifest_byte_key"] == "nbytes"
-    assert rows["hfr.heads.0.bias"]["manifest_byte_key"] == "bytes+nbytes"
+    assert rows["mfu.upsample_mid.weight"]["manifest_byte_key"] == "nbytes"
+    assert rows["hfr.lh.conv1.bias"]["manifest_byte_key"] == "bytes+nbytes"
     assert rows["tub.output2_raw"]["category"] == "official_tub_output2_payload"
     assert (
         rows["tub.temporal_encoder.weight"]["category"]
         == "official_tub_weight_payload"
     )
+
+
+def test_official_receiver_tensor_map_blocks_partial_required_manifest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    monkeypatch.setattr(
+        mod,
+        "unpack_snerv_archive",
+        lambda _packet: type(
+            "Decoded", (), {"sections": {"decoder_payload": b"decoder"}}
+        )(),
+    )
+    monkeypatch.setattr(
+        mod,
+        "inspect_decoder_payload_header",
+        lambda _payload: {
+            "schema": mod.DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+            "codec": "lzma_raw_tensor_payload",
+            "mfu_spec": {"num_blocks": 0},
+            "tensor_manifest": [
+                {
+                    "name": "mfu.upsample_mid.weight",
+                    "shape": [1],
+                    "dtype": "float64_le",
+                    "bytes": 8,
+                    "sha256": "a" * 64,
+                }
+            ],
+        },
+    )
+
+    tensor_map = mod._official_receiver_tensor_map_from_packet(b"packet")
+
+    assert tensor_map["receiver_tensor_map_verified"] is False
+    assert tensor_map["official_decoder_payload_selected"] is True
+    assert tensor_map["blockers"] == [
+        "snerv_official_receiver_tensor_map_missing_required_tensors"
+    ]
+    assert "mfu.upsample_mid.bias" in tensor_map["missing_required_tensor_keys"]
 
 
 def test_official_receiver_tensor_map_blocks_mismatched_byte_dialects(

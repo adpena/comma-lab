@@ -55,6 +55,7 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
+    OFFICIAL_MFU_HFR_TUB_REQUIRED_TENSOR_KEYS,
     SnervArchivePacket,
     decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frames,
@@ -97,6 +98,9 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     dwt2_multilevel,
     dwt2_native_synthesis_adjoint,
     idwt2_multilevel,
+)
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    selected_lf_payload_codec_label,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_adapter_contract import (
     build_snerv_mlx_native_training_export_guard,
@@ -4830,34 +4834,6 @@ def write_snerv_mlx_prefilter_profile(
     return payload
 
 
-def _selected_lf_payload_codec_label(
-    report: Mapping[str, Any],
-    *,
-    requested_codec: str,
-) -> str:
-    """Return the concrete LF codec label chosen by a lossless auto portfolio."""
-
-    schema = str(report.get("schema") or "")
-    if schema == "snerv_lf_quant_payload.v2":
-        modes = _sorted_histogram_keys(report.get("mode_histogram"))
-        wrappers = _sorted_histogram_keys(report.get("wrapper_histogram"))
-        if len(modes) == 1 and len(wrappers) == 1:
-            return f"v2:{modes[0]}:{wrappers[0]}"
-        mode_label = "+".join(modes) if modes else "unknown_modes"
-        wrapper_label = "+".join(wrappers) if wrappers else "unknown_wrappers"
-        return f"v2:portfolio:{mode_label}:{wrapper_label}"
-    codec = report.get("codec")
-    if codec:
-        return str(codec)
-    return str(requested_codec)
-
-
-def _sorted_histogram_keys(histogram: Any) -> list[str]:
-    if not isinstance(histogram, Mapping):
-        return []
-    return sorted(str(key) for key, value in histogram.items() if int(value) > 0)
-
-
 def build_snerv_mlx_native_packet_from_numpy_pairs(
     pairs_nchw255: np.ndarray,
     *,
@@ -5054,7 +5030,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
     lf_payload_codec_requested = str(lf_payload_codec)
     lf_payload = encode_lf_quant_payload(lf_quant_planes, codec=lf_payload_codec_requested)
     lf_payload_codec_report = inspect_lf_quant_payload_header(lf_payload)
-    lf_payload_codec_selected = _selected_lf_payload_codec_label(
+    lf_payload_codec_selected = selected_lf_payload_codec_label(
         lf_payload_codec_report,
         requested_codec=lf_payload_codec_requested,
     )
@@ -6932,6 +6908,7 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
             "decoder_payload_schema": str(header.get("schema") or ""),
         }
     rows = []
+    tensor_names: set[str] = set()
     category_counts: dict[str, int] = {}
     category_bytes: dict[str, int] = {}
     for raw_row in header.get("tensor_manifest") or ():
@@ -6942,8 +6919,16 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
                 "blockers": ["snerv_official_receiver_tensor_map_malformed_row"],
             }
         name = str(raw_row.get("name") or "")
+        if not name:
+            return {
+                **base,
+                "official_decoder_payload_selected": True,
+                "blockers": ["snerv_official_receiver_tensor_map_malformed_row"],
+                "error": "official tensor manifest row missing name",
+            }
         try:
             nbytes, byte_key = _official_receiver_tensor_manifest_nbytes(raw_row)
+            shape = _official_receiver_tensor_manifest_shape(raw_row)
         except (TypeError, ValueError) as exc:
             return {
                 **base,
@@ -6951,25 +6936,77 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
                 "blockers": ["snerv_official_receiver_tensor_map_invalid_tensor_bytes"],
                 "error": str(exc),
             }
+        dtype = str(raw_row.get("dtype") or "")
+        if dtype != "float64_le":
+            return {
+                **base,
+                "official_decoder_payload_selected": True,
+                "blockers": ["snerv_official_receiver_tensor_map_invalid_tensor_dtype"],
+                "error": f"official tensor {name!r} dtype {dtype!r} is not float64_le",
+            }
+        expected_nbytes = int(np.prod(shape)) * np.dtype("<f8").itemsize
+        if expected_nbytes != int(nbytes):
+            return {
+                **base,
+                "official_decoder_payload_selected": True,
+                "blockers": ["snerv_official_receiver_tensor_map_invalid_tensor_bytes"],
+                "error": (
+                    f"official tensor {name!r} shape implies {expected_nbytes} "
+                    f"bytes but manifest records {nbytes}"
+                ),
+            }
+        sha256 = str(raw_row.get("sha256") or "")
+        if not _official_receiver_tensor_manifest_sha256_valid(sha256):
+            return {
+                **base,
+                "official_decoder_payload_selected": True,
+                "blockers": ["snerv_official_receiver_tensor_map_invalid_tensor_sha256"],
+                "error": f"official tensor {name!r} missing valid sha256",
+            }
         category = _official_receiver_tensor_category(name)
         row = {
             "name": name,
             "category": category,
-            "shape": [int(value) for value in raw_row.get("shape") or ()],
-            "dtype": str(raw_row.get("dtype") or ""),
+            "shape": [int(value) for value in shape],
+            "dtype": dtype,
             "bytes": nbytes,
             "manifest_byte_key": byte_key,
-            "sha256": str(raw_row.get("sha256") or ""),
+            "sha256": sha256,
         }
         rows.append(row)
+        tensor_names.add(name)
         category_counts[category] = category_counts.get(category, 0) + 1
         category_bytes[category] = category_bytes.get(category, 0) + nbytes
     manifest_sha = hashlib.sha256(
         json.dumps(rows, sort_keys=True, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    try:
+        required_tensor_names = _official_receiver_required_tensor_keys_from_header(
+            header,
+            present_tensor_names=tensor_names,
+        )
+    except (TypeError, ValueError) as exc:
+        return {
+            **base,
+            "official_decoder_payload_selected": True,
+            "row_count": len(rows),
+            "total_tensor_bytes": int(sum(int(row["bytes"]) for row in rows)),
+            "category_counts": dict(sorted(category_counts.items())),
+            "category_bytes": dict(sorted(category_bytes.items())),
+            "tensor_manifest_sha256": manifest_sha,
+            "rows": rows,
+            "blockers": ["snerv_official_receiver_tensor_map_required_key_contract_invalid"],
+            "error": str(exc),
+        }
+    missing_required = sorted(required_tensor_names.difference(tensor_names))
+    blockers = []
+    if not rows:
+        blockers.append("snerv_official_receiver_tensor_map_rows_missing")
+    if missing_required:
+        blockers.append("snerv_official_receiver_tensor_map_missing_required_tensors")
     return {
         **base,
-        "receiver_tensor_map_verified": bool(rows),
+        "receiver_tensor_map_verified": bool(rows) and not blockers,
         "official_decoder_payload_selected": True,
         "decoder_payload_schema": str(header.get("schema") or ""),
         "decoder_payload_codec": str(header.get("codec") or ""),
@@ -6977,9 +7014,11 @@ def _official_receiver_tensor_map_from_packet(packet: bytes) -> dict[str, Any]:
         "total_tensor_bytes": int(sum(int(row["bytes"]) for row in rows)),
         "category_counts": dict(sorted(category_counts.items())),
         "category_bytes": dict(sorted(category_bytes.items())),
+        "required_tensor_key_count": len(required_tensor_names),
+        "missing_required_tensor_keys": missing_required,
         "tensor_manifest_sha256": manifest_sha,
         "rows": rows,
-        "blockers": [],
+        "blockers": blockers,
     }
 
 
@@ -7016,6 +7055,50 @@ def _official_receiver_tensor_manifest_nbytes(
     if value <= 0:
         raise ValueError("official tensor manifest row has non-positive byte count")
     return int(value), key
+
+
+def _official_receiver_tensor_manifest_shape(
+    raw_row: Mapping[str, Any],
+) -> tuple[int, ...]:
+    shape = tuple(int(value) for value in raw_row.get("shape") or ())
+    if not shape or any(value <= 0 for value in shape):
+        raise ValueError("official tensor manifest row has invalid shape")
+    return shape
+
+
+def _official_receiver_tensor_manifest_sha256_valid(value: str) -> bool:
+    digest = str(value or "").strip().lower()
+    return len(digest) == 64 and all(ch in "0123456789abcdef" for ch in digest)
+
+
+def _official_receiver_required_tensor_keys_from_header(
+    header: Mapping[str, Any],
+    *,
+    present_tensor_names: set[str],
+) -> set[str]:
+    """Return tensor names required for executable official receiver replay."""
+
+    raw_spec = header.get("mfu_spec")
+    if not isinstance(raw_spec, Mapping):
+        raise ValueError("official receiver tensor map missing mfu_spec")
+    num_blocks = int(raw_spec.get("num_blocks", 0))
+    if num_blocks < 0:
+        raise ValueError("official receiver tensor map has negative num_blocks")
+    required = set(OFFICIAL_MFU_HFR_TUB_REQUIRED_TENSOR_KEYS)
+    for prefix in ("mfu.rb_mid", "mfu.rb_high"):
+        for idx in range(num_blocks):
+            for conv in ("conv1", "conv2"):
+                required.add(f"{prefix}.block{idx}.{conv}.weight")
+                required.add(f"{prefix}.block{idx}.{conv}.bias")
+    output2_names = {"tub.temporal_encoder_concat", "tub.output2_raw"}
+    storage = header.get("tub_output2_storage")
+    output2_required = False
+    if isinstance(storage, Mapping):
+        output2_required = bool(storage.get("stored"))
+    present_output2 = present_tensor_names.intersection(output2_names)
+    if output2_required or present_output2:
+        required.update(output2_names)
+    return required
 
 
 def _official_receiver_tensor_category(name: str) -> str:
