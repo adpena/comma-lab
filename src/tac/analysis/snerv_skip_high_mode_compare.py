@@ -65,6 +65,18 @@ def build_skip_high_mode_comparison(
         baseline_label=baseline_label,
         candidate_label=candidate_label,
     )
+    pairwise_candidates = [
+        _pairwise_replacement_comparison(
+            rows=rows,
+            prefilter_rows=prefilter_rows,
+            hard_byte_ceiling=hard_byte_ceiling,
+            baseline_label=baseline_label,
+            candidate_label=str(row["label"]),
+        )
+        for row in rows
+        if _label_token(str(row.get("label") or ""))
+        != _label_token(str(baseline_label))
+    ]
     blockers = ["snerv_skip_high_mode_comparison_false_authority"]
     if not rows:
         blockers.append("snerv_skip_high_binary_profiles_missing")
@@ -74,6 +86,15 @@ def build_skip_high_mode_comparison(
         blockers.append("no_skip_high_mode_with_both_byte_cap_and_non_scalar_storage")
     if any(row["scorer_input_out_of_distribution"] for row in prefilter_rows):
         blockers.append("skip_high_prefilter_scorer_input_out_of_distribution")
+    if any(row["partial_replay"] for row in prefilter_rows):
+        blockers.append("skip_high_prefilter_partial_replay_only")
+    if any(row["early_stop_uncompetitive"] for row in prefilter_rows):
+        blockers.append("skip_high_prefilter_early_stopped_uncompetitive")
+    if not any(
+        row["under_hard_byte_ceiling"] and not row["skip_high_spatial_collapse_risk"]
+        for row in rows
+    ):
+        blockers.append("no_skip_high_mode_with_byte_cap_and_spatial_storage")
     if not any(
         row["under_hard_byte_ceiling"] and row["local_replay_admissible"]
         for row in prefilter_rows
@@ -87,6 +108,11 @@ def build_skip_high_mode_comparison(
         key=lambda row: row["archive_bytes"],
         default=None,
     )
+    best_spatial = min(
+        (row for row in rows if not row["skip_high_spatial_collapse_risk"]),
+        key=lambda row: row["archive_bytes"],
+        default=None,
+    )
     return {
         "schema": SCHEMA,
         "generated_utc": datetime.now(UTC).isoformat(),
@@ -97,8 +123,10 @@ def build_skip_high_mode_comparison(
         "binary_profile_rows": rows,
         "prefilter_profile_rows": prefilter_rows,
         "scalar_to_non_scalar_replacement": pairwise,
+        "scalar_to_candidate_replacements": pairwise_candidates,
         "best_rate_row": _row_ref(best_rate),
         "best_non_scalar_skip_high_row": _row_ref(best_non_scalar),
+        "best_spatial_skip_high_row": _row_ref(best_spatial),
         "runnable_local_mlx_smoke_command": (
             str(local_mlx_smoke_command).strip()
             if local_mlx_smoke_command
@@ -157,12 +185,12 @@ def render_markdown_report(payload: Mapping[str, Any]) -> str:
         "",
         "## Binary Profiles",
         "",
-        "| label | codec | archive bytes | stored shape | stored raw bytes | under cap | scalar collapse |",
-        "|---|---:|---:|---|---:|---:|---:|",
+        "| label | codec | archive bytes | stored shape | stored raw bytes | under cap | scalar collapse | spatial collapse |",
+        "|---|---:|---:|---|---:|---:|---:|---:|",
     ]
     for row in rows:
         lines.append(
-            "| {label} | {codec} | {archive_bytes} | `{shape}` | {stored_raw_bytes} | {under} | {collapse} |".format(
+            "| {label} | {codec} | {archive_bytes} | `{shape}` | {stored_raw_bytes} | {under} | {collapse} | {spatial} |".format(
                 label=row["label"],
                 codec=row["skip_high_codec"],
                 archive_bytes=row["archive_bytes"],
@@ -170,23 +198,29 @@ def render_markdown_report(payload: Mapping[str, Any]) -> str:
                 stored_raw_bytes=row["skip_high_stored_raw_bytes"],
                 under=row["under_hard_byte_ceiling"],
                 collapse=row["scalar_collapse_risk"],
+                spatial=row["skip_high_spatial_collapse_risk"],
             )
         )
     lines.extend(["", "## Prefilter Profiles", ""])
     if prefilter_rows:
         lines.extend(
             [
-                "| label | score | Seg term | Pose term | local replay | OOD |",
-                "|---|---:|---:|---:|---:|---:|",
+                "| label | score | Seg term | Pose term | pairs | local replay | OOD |",
+                "|---|---:|---:|---:|---:|---:|---:|",
             ]
         )
         for row in prefilter_rows:
             lines.append(
-                "| {label} | {score} | {seg} | {pose} | {replay} | {ood} |".format(
+                "| {label} | {score} | {seg} | {pose} | {pairs} | {replay} | {ood} |".format(
                     label=row["label"],
                     score=_fmt(row["canonical_score"]),
                     seg=_fmt(row["seg_term"]),
                     pose=_fmt(row["pose_term"]),
+                    pairs=(
+                        f"{row['observed_pair_count']}/{row['required_pairs']}"
+                        if row.get("required_pairs")
+                        else "n/a"
+                    ),
                     replay=row["local_replay_admissible"],
                     ood=row["scorer_input_out_of_distribution"],
                 )
@@ -210,6 +244,37 @@ def render_markdown_report(payload: Mapping[str, Any]) -> str:
                 f"- component delta status: `{pairwise.get('component_delta_status')}`",
             ]
         )
+    replacements = payload.get("scalar_to_candidate_replacements") or []
+    if replacements:
+        lines.extend(["", "## Scalar To Candidate Portfolio", ""])
+        lines.extend(
+            [
+                "| candidate | byte delta | rate delta | SegNet frame-1 delta | PoseNet pair delta | status |",
+                "|---|---:|---:|---:|---:|---|",
+            ]
+        )
+        for replacement in replacements:
+            replacement = _mapping(replacement)
+            byte_pressure = _mapping(replacement.get("byte_pressure"))
+            deltas = _mapping(replacement.get("scorer_component_deltas"))
+            lines.append(
+                "| {candidate} | {byte_delta} | {rate_delta} | {seg_delta} | {pose_delta} | {status} |".format(
+                    candidate=replacement.get("candidate_label"),
+                    byte_delta=byte_pressure.get(
+                        "archive_byte_delta_candidate_minus_baseline"
+                    ),
+                    rate_delta=_fmt(
+                        byte_pressure.get("rate_score_delta_candidate_minus_baseline")
+                    ),
+                    seg_delta=_fmt(
+                        deltas.get("segnet_frame1_argmax_distortion_delta")
+                    ),
+                    pose_delta=_fmt(
+                        deltas.get("posenet_two_frame_pose_distortion_delta")
+                    ),
+                    status=replacement.get("component_delta_status"),
+                )
+            )
     command = payload.get("runnable_local_mlx_smoke_command")
     if command:
         lines.extend(["", "## Runnable Local MLX Smoke", "", "```bash", str(command), "```"])
@@ -241,8 +306,10 @@ def _binary_profile_row(
         package = _mapping(payload.get("package_profile"))
         archive_bytes = _int_or_none(package.get("archive_bytes")) or 0
     stored_shape = [int(v) for v in skip.get("stored_shape") or []]
+    source_shape = [int(v) for v in skip.get("source_shape") or []]
     stored_raw = _int_or_none(skip.get("stored_raw_bytes")) or 0
     source_raw = _int_or_none(skip.get("source_raw_bytes")) or 0
+    receiver_expands = bool(skip.get("receiver_expands_skip_high"))
     return {
         "label": str(label),
         "path": resolved.as_posix(),
@@ -254,17 +321,21 @@ def _binary_profile_row(
         "bytes_over_hard_ceiling": int(archive_bytes) - int(hard_byte_ceiling),
         "skip_high_codec": skip.get("codec"),
         "skip_high_stored_shape": stored_shape,
-        "skip_high_source_shape": [int(v) for v in skip.get("source_shape") or []],
+        "skip_high_source_shape": source_shape,
         "skip_high_stored_raw_bytes": stored_raw,
         "skip_high_source_raw_bytes": source_raw,
         "skip_high_raw_byte_savings": _int_or_none(skip.get("raw_byte_savings")),
-        "receiver_expands_skip_high": bool(skip.get("receiver_expands_skip_high")),
+        "receiver_expands_skip_high": receiver_expands,
         "lossless_relative_to_source_skip_high": bool(
             skip.get("lossless_relative_to_source_skip_high")
         ),
         "scalar_collapse_risk": bool(
-            skip.get("receiver_expands_skip_high")
-            and (stored_raw <= 8 or _shape_numel(stored_shape) <= 1)
+            receiver_expands and (stored_raw <= 8 or _shape_numel(stored_shape) <= 1)
+        ),
+        "skip_high_spatial_collapse_risk": _skip_high_spatial_collapse_risk(
+            stored_shape=stored_shape,
+            source_shape=source_shape,
+            receiver_expands=receiver_expands,
         ),
         "decoder_payload_bytes": _int_or_none(
             _mapping(payload.get("section_summary")).get("largest_section_bytes")
@@ -284,6 +355,13 @@ def _prefilter_profile_row(
 ) -> dict[str, Any]:
     resolved = Path(path).expanduser().resolve(strict=False)
     payload = read_json(resolved)
+    if payload.get("schema") == "snerv_skip_high_channelmean_early_stop_summary.v1":
+        return _early_stop_prefilter_summary_row(
+            label,
+            resolved,
+            payload,
+            hard_byte_ceiling=hard_byte_ceiling,
+        )
     score = _mapping(payload.get("score_components"))
     diagnosis = _mapping(payload.get("scorer_input_diagnosis"))
     archive_bytes = _int_or_none(payload.get("archive_bytes")) or 0
@@ -310,6 +388,11 @@ def _prefilter_profile_row(
         "under_hard_byte_ceiling": int(archive_bytes) <= int(hard_byte_ceiling),
         "scope_full_video": scope.get("full_video"),
         "scorer_batch_pairs": batch_pairs,
+        "observed_pair_count": None,
+        "required_pairs": None,
+        "partial_replay": False,
+        "early_stop_uncompetitive": False,
+        "early_stop_decision": None,
         "canonical_score": _float_or_none(score.get("canonical_score")),
         "seg_term": _float_or_none(score.get("seg_term")),
         "pose_term": _float_or_none(score.get("pose_term")),
@@ -351,6 +434,67 @@ def _prefilter_profile_row(
     }
 
 
+def _early_stop_prefilter_summary_row(
+    label: str,
+    path: Path,
+    payload: Mapping[str, Any],
+    *,
+    hard_byte_ceiling: int,
+) -> dict[str, Any]:
+    archive_bytes = _int_or_none(payload.get("archive_bytes")) or 0
+    seg = _float_or_none(payload.get("cumulative_avg_segnet_dist"))
+    pose = _float_or_none(payload.get("cumulative_avg_posenet_dist"))
+    seg_term = None if seg is None else 100.0 * float(seg)
+    pose_term = None if pose is None else math.sqrt(10.0 * float(pose))
+    score = _float_or_none(payload.get("cumulative_canonical_score"))
+    if score is None and seg_term is not None and pose_term is not None:
+        score = float(seg_term) + float(pose_term) + float(archive_bytes) * RATE_SCORE_PER_BYTE
+    observed = _int_or_none(payload.get("observed_pair_count"))
+    required = _int_or_none(payload.get("required_pairs"))
+    decision = str(payload.get("decision") or "")
+    early_uncompetitive = (
+        "uncompetitive" in decision
+        or (seg is not None and float(seg) >= 0.25)
+        or (score is not None and float(score) >= 10.0)
+    )
+    blockers = [
+        "mlx_local_replay_not_contest_auth_axis",
+        "snerv_skip_high_prefilter_early_stop_summary",
+        "snerv_skip_high_prefilter_partial_replay",
+    ]
+    if early_uncompetitive:
+        blockers.append("snerv_skip_high_prefilter_early_stopped_uncompetitive")
+    return {
+        "label": str(label),
+        "path": path.as_posix(),
+        "sha256": _sha256_file(path),
+        "schema": payload.get("schema"),
+        "archive_bytes": int(archive_bytes),
+        "under_hard_byte_ceiling": int(archive_bytes) <= int(hard_byte_ceiling),
+        "scope_full_video": "partial_early_stop",
+        "scorer_batch_pairs": None,
+        "observed_pair_count": observed,
+        "required_pairs": required,
+        "partial_replay": True,
+        "early_stop_uncompetitive": bool(early_uncompetitive),
+        "early_stop_decision": decision or None,
+        "canonical_score": score,
+        "seg_term": seg_term,
+        "pose_term": pose_term,
+        "rate_term": float(archive_bytes) * RATE_SCORE_PER_BYTE,
+        "avg_segnet_dist": seg,
+        "avg_posenet_dist": pose,
+        "segnet_frame1_argmax_distortion": seg,
+        "posenet_two_frame_pose_distortion": pose,
+        "upstream_evaluate_geometry": dict(UPSTREAM_EVALUATE_GEOMETRY),
+        "scorer_input_out_of_distribution": False,
+        "scorer_input_verdict": "EARLY_STOP_PROGRESS_ONLY_NO_DISTRIBUTION_GATE",
+        "local_replay_admissible": False,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _pairwise_replacement_comparison(
     *,
     rows: list[dict[str, Any]],
@@ -382,10 +526,24 @@ def _pairwise_replacement_comparison(
         blockers.append("skip_high_replacement_baseline_prefilter_profile_missing")
     if candidate_prefilter is None:
         blockers.append("non_scalar_skip_high_prefilter_profile_missing")
+    if bool(candidate.get("skip_high_spatial_collapse_risk")):
+        blockers.append("skip_high_replacement_candidate_spatial_collapse")
     if bool(candidate["scalar_collapse_risk"]):
         blockers.append("skip_high_replacement_candidate_is_still_scalar_collapse")
     if not bool(candidate["under_hard_byte_ceiling"]):
         blockers.append("non_scalar_skip_high_candidate_over_hard_byte_ceiling")
+    if any(
+        bool(row.get("partial_replay"))
+        for row in (baseline_prefilter, candidate_prefilter)
+        if row is not None
+    ):
+        blockers.append("skip_high_replacement_component_profile_partial")
+    if any(
+        bool(row.get("early_stop_uncompetitive"))
+        for row in (baseline_prefilter, candidate_prefilter)
+        if row is not None
+    ):
+        blockers.append("skip_high_replacement_component_profile_uncompetitive")
 
     byte_delta = int(candidate["archive_bytes"]) - int(baseline["archive_bytes"])
     rate_delta = float(byte_delta) * RATE_SCORE_PER_BYTE
@@ -393,10 +551,9 @@ def _pairwise_replacement_comparison(
         baseline_prefilter=baseline_prefilter,
         candidate_prefilter=candidate_prefilter,
     )
-    component_delta_status = (
-        "measured_false_authority"
-        if baseline_prefilter is not None and candidate_prefilter is not None
-        else "missing_non_scalar_component_profile"
+    component_delta_status = _component_delta_status(
+        baseline_prefilter=baseline_prefilter,
+        candidate_prefilter=candidate_prefilter,
     )
     return {
         "schema": "snerv_skip_high_scalar_to_non_scalar_replacement.v1",
@@ -516,6 +673,20 @@ def _scorer_component_deltas(
     return out
 
 
+def _component_delta_status(
+    *,
+    baseline_prefilter: Mapping[str, Any] | None,
+    candidate_prefilter: Mapping[str, Any] | None,
+) -> str:
+    if baseline_prefilter is None or candidate_prefilter is None:
+        return "missing_non_scalar_component_profile"
+    if bool(baseline_prefilter.get("partial_replay")) or bool(
+        candidate_prefilter.get("partial_replay")
+    ):
+        return "measured_partial_false_authority"
+    return "measured_false_authority"
+
+
 def _delta_or_none(
     baseline: Mapping[str, Any] | None,
     candidate: Mapping[str, Any] | None,
@@ -563,12 +734,25 @@ def _crux(
     out: list[str] = []
     scalar_rows = [row for row in rows if row["scalar_collapse_risk"]]
     non_scalar_rows = [row for row in rows if not row["scalar_collapse_risk"]]
+    spatial_rows = [row for row in rows if not row["skip_high_spatial_collapse_risk"]]
     if scalar_rows:
         best = min(scalar_rows, key=lambda row: row["archive_bytes"])
         out.append(
             "rate-admissible scalar skip-high is cheap "
             f"({best['archive_bytes']} bytes) but collapses stored skip-high to "
             f"{best['skip_high_stored_raw_bytes']} raw bytes."
+        )
+    spatial_collapse_rows = [
+        row
+        for row in rows
+        if row["under_hard_byte_ceiling"] and row["skip_high_spatial_collapse_risk"]
+    ]
+    if spatial_collapse_rows:
+        best = min(spatial_collapse_rows, key=lambda row: row["archive_bytes"])
+        out.append(
+            "byte-cap-friendly channel/scalar skip-high still erases spatial structure; "
+            f"best collapsed mode is {best['label']} at {best['archive_bytes']} bytes "
+            f"with stored shape {best['skip_high_stored_shape']}."
         )
     if non_scalar_rows:
         best = min(non_scalar_rows, key=lambda row: row["archive_bytes"])
@@ -577,10 +761,22 @@ def _crux(
             f"best attached profile is {best['archive_bytes']} bytes "
             f"({best['bytes_over_hard_ceiling']} vs hard ceiling)."
         )
+    if spatial_rows:
+        best = min(spatial_rows, key=lambda row: row["archive_bytes"])
+        out.append(
+            "spatial skip-high preservation currently starts at "
+            f"{best['archive_bytes']} bytes; this is the representation-before-coding "
+            "target for learned/generated storage."
+        )
     if any(row["scorer_input_out_of_distribution"] for row in prefilter_rows):
         out.append(
             "attached scorer prefilter evidence is out of distribution; do not "
             "promote or exact-dispatch from these local scores."
+        )
+    if any(row["early_stop_uncompetitive"] for row in prefilter_rows):
+        out.append(
+            "at least one partial MLX scorer replay stopped early as uncompetitive; "
+            "treat its deltas as falsification signal, not a full-video score."
         )
     if not out:
         out.append("no attached profiles were sufficient to localize the skip-high crux")
@@ -600,6 +796,17 @@ def _next_actions(
     if any(row["scalar_collapse_risk"] and row["under_hard_byte_ceiling"] for row in rows):
         actions.append(
             "do not use scalar_mean as the promotion path unless a receiver value-domain xray disproves the collapse mechanism"
+        )
+    if any(
+        row["skip_high_spatial_collapse_risk"] and row["under_hard_byte_ceiling"]
+        for row in rows
+    ):
+        actions.append(
+            "do not treat channel_mean as burning down non-scalar skip-high; it is a byte-saving falsification row unless new training repairs SegNet"
+        )
+    if any(not row["skip_high_spatial_collapse_risk"] for row in rows):
+        actions.append(
+            "attack the spatial skip-high byte gap with learned/generated shared structure instead of storing the full shared_mean plane verbatim"
         )
     if prefilter_rows and not any(row["local_replay_admissible"] for row in prefilter_rows):
         actions.append(
@@ -630,6 +837,21 @@ def _shape_numel(shape: list[int]) -> int:
     for dim in shape:
         out *= int(dim)
     return out
+
+
+def _skip_high_spatial_collapse_risk(
+    *,
+    stored_shape: list[int],
+    source_shape: list[int],
+    receiver_expands: bool,
+) -> bool:
+    if not receiver_expands or len(stored_shape) < 4:
+        return False
+    if len(source_shape) < 4:
+        return False
+    source_h, source_w = int(source_shape[-2]), int(source_shape[-1])
+    stored_h, stored_w = int(stored_shape[-2]), int(stored_shape[-1])
+    return (source_h > 1 or source_w > 1) and (stored_h <= 1 and stored_w <= 1)
 
 
 def _int_or_none(value: Any) -> int | None:

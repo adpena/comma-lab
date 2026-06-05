@@ -128,6 +128,28 @@ def _write_component_prefilter(
     )
 
 
+def _write_channel_early_stop_summary(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_skip_high_channelmean_early_stop_summary.v1",
+                "archive_bytes": 115_510,
+                "observed_pair_count": 75,
+                "required_pairs": 600,
+                "cumulative_avg_segnet_dist": 0.5071230705579122,
+                "cumulative_avg_posenet_dist": 144.1225729370117,
+                "cumulative_canonical_score": 88.68472976244142,
+                "decision": "stopped_early_uncompetitive_scalar_like_segnet_collapse",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_skip_high_comparison_finds_rate_vs_value_domain_crux(tmp_path: Path) -> None:
     scalar = tmp_path / "scalar.json"
     shared = tmp_path / "shared.json"
@@ -253,3 +275,114 @@ def test_skip_high_comparison_reports_upstream_geometry_component_deltas(
     assert payload["runnable_local_mlx_smoke_command"].startswith("uv run python")
     assert payload["score_claim"] is False
     assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_skip_high_comparison_keeps_channel_mean_as_partial_falsification_row(
+    tmp_path: Path,
+) -> None:
+    scalar = tmp_path / "scalar.json"
+    channel = tmp_path / "channel.json"
+    shared = tmp_path / "shared.json"
+    scalar_prefilter = tmp_path / "scalar_prefilter.json"
+    channel_summary = tmp_path / "channel_early_stop.json"
+    shared_prefilter = tmp_path / "shared_prefilter.json"
+    _write_binary_profile(
+        scalar,
+        archive_bytes=91_445,
+        codec="scalar_mean_float64",
+        stored_raw_bytes=8,
+        stored_shape=[1, 1, 1, 1],
+    )
+    _write_binary_profile(
+        channel,
+        archive_bytes=115_510,
+        codec="channel_mean_float64",
+        stored_raw_bytes=24,
+        stored_shape=[1, 3, 1, 1],
+    )
+    _write_binary_profile(
+        shared,
+        archive_bytes=436_084,
+        codec="shared_mean_float64",
+        stored_raw_bytes=1_179_648,
+        stored_shape=[1, 3, 192, 256],
+    )
+    _write_component_prefilter(
+        scalar_prefilter,
+        archive_bytes=91_445,
+        avg_segnet_dist=0.5048246002693971,
+        avg_posenet_dist=162.05871206919352,
+    )
+    _write_channel_early_stop_summary(channel_summary)
+    _write_component_prefilter(
+        shared_prefilter,
+        archive_bytes=436_084,
+        avg_segnet_dist=0.03815101622603834,
+        avg_posenet_dist=163.49418909708658,
+    )
+
+    payload = build_skip_high_mode_comparison(
+        binary_profiles={
+            "scalar_mean": scalar,
+            "channel_mean": channel,
+            "shared_mean": shared,
+        },
+        prefilter_profiles={
+            "scalar_mean": scalar_prefilter,
+            "channel_mean": channel_summary,
+            "shared_mean": shared_prefilter,
+        },
+        hard_byte_ceiling=178_000,
+        baseline_label="scalar_mean",
+        candidate_label="shared_mean",
+    )
+
+    rows = {row["label"]: row for row in payload["binary_profile_rows"]}
+    assert rows["channel_mean"]["scalar_collapse_risk"] is False
+    assert rows["channel_mean"]["skip_high_spatial_collapse_risk"] is True
+    assert rows["shared_mean"]["skip_high_spatial_collapse_risk"] is False
+    assert payload["best_non_scalar_skip_high_row"]["label"] == "channel_mean"
+    assert payload["best_spatial_skip_high_row"]["label"] == "shared_mean"
+    assert "no_skip_high_mode_with_both_byte_cap_and_non_scalar_storage" not in payload[
+        "blockers"
+    ]
+    assert "no_skip_high_mode_with_byte_cap_and_spatial_storage" in payload[
+        "blockers"
+    ]
+    assert "skip_high_prefilter_early_stopped_uncompetitive" in payload["blockers"]
+
+    channel_row = next(
+        row for row in payload["prefilter_profile_rows"] if row["label"] == "channel_mean"
+    )
+    assert channel_row["partial_replay"] is True
+    assert channel_row["early_stop_uncompetitive"] is True
+    assert channel_row["segnet_frame1_argmax_distortion"] == pytest.approx(
+        0.5071230705579122
+    )
+
+    replacements = {
+        row["candidate_label"]: row
+        for row in payload["scalar_to_candidate_replacements"]
+    }
+    assert replacements["channel_mean"]["component_delta_status"] == (
+        "measured_partial_false_authority"
+    )
+    assert "skip_high_replacement_candidate_spatial_collapse" in replacements[
+        "channel_mean"
+    ]["blockers"]
+    assert "skip_high_replacement_component_profile_partial" in replacements[
+        "channel_mean"
+    ]["blockers"]
+    assert replacements["channel_mean"]["scorer_component_deltas"][
+        "segnet_frame1_argmax_distortion_delta"
+    ] > 0.0
+    assert replacements["shared_mean"]["component_delta_status"] == (
+        "measured_false_authority"
+    )
+    assert replacements["shared_mean"]["scorer_component_deltas"][
+        "segnet_frame1_argmax_distortion_delta"
+    ] < -0.4
+
+    md = render_markdown_report(payload)
+    assert "spatial collapse" in md
+    assert "Scalar To Candidate Portfolio" in md
