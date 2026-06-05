@@ -1406,8 +1406,8 @@ def test_pr95_curriculum_snerv_dual_ascent_observes_stage_surrogate_aliases_NO_F
 
 
 @requires_mlx
-def test_pr95_curriculum_zero_launch_score_weight_uses_unamplified_default() -> None:
-    """Zero keeps a 1:1 default unless source amplification is explicitly requested."""
+def test_pr95_curriculum_zero_launch_score_weight_stays_zero() -> None:
+    """Explicit zero is an ablation/control, not an implicit PR95 default."""
 
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
 
@@ -1423,12 +1423,41 @@ def test_pr95_curriculum_zero_launch_score_weight_uses_unamplified_default() -> 
 
     assert adapter._pr95_stage_score_weight_controls() == pytest.approx(
         (
-            1.0,
-            1.0,
-            1.0,
-            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
         )
     )
+
+
+@requires_mlx
+def test_pr95_curriculum_segnet_only_research_does_not_require_posenet() -> None:
+    """SegNet-only research may use PR95 stages without silently re-enabling PoseNet."""
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.pose_distillation_weight = 0.0
+    bundle.pose_scorer_teacher = None
+    bundle.learnable_pose_student_head = None
+    bundle.allow_segnet_only_research = True
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate_segnet_only_research",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 0.0},
+    )
+
+    assert metrics["loss_part_pr95_stage_effective_pose_weight"] == pytest.approx(0.0)
+    assert metrics["finite_update_guard_active"] == pytest.approx(1.0)
 
 
 @requires_mlx
