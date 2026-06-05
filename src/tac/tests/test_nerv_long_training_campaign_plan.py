@@ -2820,12 +2820,40 @@ def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
         ),
         encoding="utf-8",
     )
+    telemetry_feedback = (
+        tmp_path
+        / "telemetry"
+        / "nerv_candidate_training_telemetry_feedback_row.json"
+    )
+    telemetry_feedback.parent.mkdir()
+    telemetry_feedback.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "feedback_scope": "full600_training_telemetry",
+                "family": "snerv",
+                "candidate_id": "snerv_scalarmean_hardpair_successor_fix2",
+                "measured_num_pairs": 600,
+                "degenerate_renderer_risk_detected": True,
+                "direct_feedback_blockers": [
+                    "snerv_scorer_domain_tether_missing_telemetry"
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
     ignored = tmp_path / "nested" / "not_candidate_feedback_row.json"
     ignored.write_text('{"schema":"other.v1"}', encoding="utf-8")
 
     discovered = cli._discover_candidate_feedback_paths([tmp_path], limit=8)
 
     assert feedback.resolve(strict=False) in discovered
+    assert telemetry_feedback.resolve(strict=False) in discovered
     assert ignored.resolve(strict=False) not in discovered
 
 
@@ -3494,6 +3522,85 @@ def test_long_training_campaign_plan_reuses_snerv_upstream_eval_gate_as_context_
     assert snerv["experiment_queue_entry"]["score_claim"] is False
 
 
+def test_long_training_campaign_plan_blocks_snerv_degenerate_renderer_context() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "feedback_scope": "full600_training_telemetry",
+                "family": "snerv",
+                "candidate_id": "snerv_scalarmean_hardpair_successor_fix2",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "launch_control_feedback_ready": False,
+                "receiver_proof_attached": False,
+                "full_video_local_prefilter_attached": False,
+                "local_cpu_replay_gate_attached": False,
+                "training_stopped": True,
+                "training_telemetry": {
+                    "last_epoch": 29_649,
+                    "row_count": 29_650,
+                },
+                "degenerate_renderer_risk_detected": True,
+                "recommended_launch_mutations": [
+                    "bind_snerv_posenet_yuv6_and_segnet_last_frame_distill_metrics_before_more_long_training",
+                    "reject_snerv_degenerate_renderer_even_when_archive_bytes_are_frontier",
+                    "preserve_snerv_snar2_snsa2_byte_layout_while_rebinding_scorer_tethers",
+                ],
+                "direct_feedback_blockers": [
+                    "snerv_scorer_domain_tether_missing_telemetry",
+                    "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry",
+                    "snerv_segnet_last_frame_distill_metric_missing_telemetry",
+                    "snerv_scorer_domain_tether_lambda_inactive_telemetry",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    feedback = snerv["candidate_feedback"]
+    assert feedback["feedback_match_scope"] == (
+        "family_snerv_degenerate_renderer_training_telemetry_context"
+    )
+    assert feedback["candidate_id_match"] is False
+    assert feedback["source_candidate_id"] == "snerv_scalarmean_hardpair_successor_fix2"
+    assert feedback["target_candidate_id"] == snerv["candidate_id"]
+    assert feedback["context_only"] is True
+    assert feedback["receiver_proof_attached"] is False
+    assert feedback["full_video_local_prefilter_attached"] is False
+    assert feedback["local_cpu_replay_gate_attached"] is False
+    assert feedback["measured_archive_bytes"] is None
+    assert feedback["measured_payload_bytes"] is None
+    assert feedback["feedback_ready"] is False
+    assert (
+        feedback["feedback_reuse_policy"]
+        == "family_snerv_degenerate_renderer_context_only_no_archive_receiver_replay_or_launch_authority"
+    )
+    assert "snerv_scorer_domain_tether_missing_telemetry" in (
+        snerv["candidate_feedback_evidence_blockers"]
+    )
+    assert "snerv_scorer_domain_tether_missing_telemetry" in snerv["blockers"]
+    queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert "snerv_scorer_domain_tether_missing_telemetry" in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert snerv["experiment_queue_entry"]["status"] == "disabled"
+    assert snerv["score_claim"] is False
+
+
 def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -4033,6 +4140,8 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         "receiver_contract_satisfied": True,
         "file_backed_export_proof_passed": True,
         "required_pair_file_backed_export_proof_passed": True,
+        "checkpoint_trained_state_exportable": True,
+        "score_aware_long_training_trained_state_exportable": True,
         "blockers": [],
         "score_claim": False,
         "promotion_eligible": False,
@@ -4050,6 +4159,8 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
             "snerv_official_mfu_hfr_tub_frame_producing_export": True,
             "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
             "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
+            "checkpoint_trained_state_exportable": True,
+            "score_aware_long_training_trained_state_exportable": True,
             "source_faithful_stack": False,
             "official_source_parity_blockers": [
                 "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
@@ -4057,6 +4168,8 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         },
         "official_checkpoint_export_binding": {
             "schema": "snerv_official_checkpoint_export_binding.v1",
+            "trained_state_exportable": True,
+            "official_trained_state_exportable": True,
             "official_trained_checkpoint_mapping_manifest": {
                 "schema": (
                     "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
@@ -4099,6 +4212,11 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
         feedback["snerv_official_trained_checkpoint_state_dict_mapping_verified"]
         is False
     )
+    assert feedback["snerv_trained_state_exportable"] is True
+    assert feedback["snerv_checkpoint_trained_state_exportable"] is True
+    assert feedback["snerv_score_aware_long_training_trained_state_exportable"] is True
+    assert feedback["checkpoint_trained_state_exportable"] is True
+    assert feedback["score_aware_long_training_trained_state_exportable"] is True
     assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in feedback[
         "snerv_official_trained_checkpoint_mapping_blockers"
     ]

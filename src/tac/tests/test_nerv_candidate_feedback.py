@@ -852,6 +852,16 @@ def _snerv_native_runner_report(
         "archive_path": archive.as_posix(),
         "archive_bytes": archive.stat().st_size,
         "archive_sha256": archive_sha,
+        "checkpoint_trained_state_exportable": True,
+        "score_aware_long_training_trained_state_exportable": True,
+        "score_aware_long_training": {
+            "schema": "snerv_checkpoint_export_score_aware_long_training.v1",
+            "executed": True,
+            "trained_state_exportable": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "receiver_proof_passed": True,
         "receiver_contract_satisfied": True,
         "receiver_reconstruction": {
@@ -881,6 +891,8 @@ def _snerv_native_runner_report(
         },
         "official_checkpoint_export_binding": {
             "schema": "snerv_official_checkpoint_export_binding.v1",
+            "trained_state_exportable": True,
+            "official_trained_state_exportable": True,
             "official_trained_checkpoint_mapping_manifest": {
                 "schema": (
                     "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
@@ -981,6 +993,9 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert row["snerv_mlx_native_receiver_target_mse_nchw255"] == pytest.approx(1.25)
     assert row["snerv_mlx_native_receiver_export_mse_nchw255"] == pytest.approx(0.125)
     assert row["snerv_mlx_native_receiver_reconstruction_blockers"] == []
+    assert row["snerv_trained_state_exportable"] is True
+    assert row["snerv_checkpoint_trained_state_exportable"] is True
+    assert row["snerv_score_aware_long_training_trained_state_exportable"] is True
     assert row["snerv_official_trained_checkpoint_loaded"] is False
     assert (
         row["snerv_official_trained_checkpoint_state_dict_mapping_verified"] is False
@@ -1371,6 +1386,72 @@ def test_training_telemetry_feedback_uses_family_specific_blockers(
         "treat_previous_hi_nerv_run_as" not in mutation
         for mutation in row["training_telemetry"]["recommended_launch_mutations"]
     )
+
+
+def test_training_telemetry_feedback_blocks_snerv_degenerate_renderer(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "snerv_degenerate_renderer_telemetry.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 0.8,
+                "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 1.0,
+                "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.0,
+                "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 1.0,
+                "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.0,
+            },
+            "per_axis_decomposition": {"pose": 0.8, "seg": 0.4},
+        }
+        for epoch in range(96)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="snerv",
+        candidate_id="snerv_scalarmean_hardpair_successor_fix2",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+    )
+
+    assert row["family"] == "snerv"
+    assert row["feedback_scope"] == "full600_training_telemetry"
+    assert row["degenerate_renderer_risk_detected"] is True
+    assert row["training_control_action"] == (
+        "checkpoint_then_block_degenerate_renderer_successor"
+    )
+    assert row["training_control_should_stop_current_run"] is True
+    assert "snerv_scorer_domain_tether_missing_telemetry" in row["blockers"]
+    assert "snerv_scorer_domain_tether_missing_telemetry" in row[
+        "direct_feedback_blockers"
+    ]
+    assert "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry" in row[
+        "direct_feedback_blockers"
+    ]
+    assert "snerv_segnet_last_frame_distill_metric_missing_telemetry" in row[
+        "direct_feedback_blockers"
+    ]
+    health = row["snerv_scorer_domain_tether_health"]
+    assert health["metric_health"]["snerv_posenet_yuv6_pair_distill"][
+        "missing_metric_recent_fraction"
+    ] == 1.0
+    assert health["metric_health"]["snerv_segnet_last_frame_distill"][
+        "lambda_recent_active_fraction"
+    ] == 0.0
+    assert "reject_snerv_degenerate_renderer_even_when_archive_bytes_are_frontier" in row[
+        "recommended_launch_mutations"
+    ]
+    assert "preserve_snerv_snar2_snsa2_byte_layout_while_rebinding_scorer_tethers" in row[
+        "recommended_launch_mutations"
+    ]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
 
 
 def test_training_telemetry_feedback_uses_current_segnet_pressure_for_pr95_stage(

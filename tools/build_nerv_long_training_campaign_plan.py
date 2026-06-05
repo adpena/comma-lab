@@ -399,6 +399,7 @@ def _discover_candidate_feedback_paths(
         return []
     names = (
         "snerv_upstream_eval_candidate_feedback_row.json",
+        "nerv_candidate_training_telemetry_feedback_row.json",
         "nerv_candidate_feedback_row.json",
         "candidate_feedback_row.json",
     )

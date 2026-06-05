@@ -1907,6 +1907,10 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "snerv_nominal_payload_far_over_ceiling_refuse_long_training",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only",
+        "snerv_scorer_domain_tether_lambda_inactive_telemetry",
+        "snerv_scorer_domain_tether_missing_telemetry",
+        "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry",
+        "snerv_segnet_last_frame_distill_metric_missing_telemetry",
         "snerv_upstream_eval_gate_failed",
         "snerv_upstream_eval_gate_score_bad",
         "snerv_upstream_eval_gate_score_missing",
@@ -4216,6 +4220,11 @@ def _augment_feedback_row(
             "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven",
             "snerv_official_tub_temporal_encoder_weight_mapping_proven",
             "snerv_official_trained_checkpoint_state_dict_mapping_verified",
+            "snerv_trained_state_exportable",
+            "snerv_checkpoint_trained_state_exportable",
+            "snerv_score_aware_long_training_trained_state_exportable",
+            "checkpoint_trained_state_exportable",
+            "score_aware_long_training_trained_state_exportable",
             "source_faithful_stack",
         ):
             out.setdefault(
@@ -4668,6 +4677,26 @@ def _family_level_candidate_feedback_applicable(
                     for blocker in row.get("direct_feedback_blockers") or ()
                 )
             )
+        if feedback_kind == "training_telemetry":
+            target_candidate_id = str(candidate.get("candidate_id") or "").strip()
+            source_candidate_id = str(row.get("candidate_id") or "").strip()
+            if (
+                not target_candidate_id
+                or not source_candidate_id
+                or source_candidate_id == target_candidate_id
+            ):
+                return False
+            measured_num_pairs = int(row.get("measured_num_pairs") or 0)
+            target_num_pairs = int(candidate.get("num_pairs") or 0)
+            return bool(
+                target_num_pairs > 0
+                and measured_num_pairs == target_num_pairs
+                and str(row.get("feedback_scope") or "")
+                == "full600_training_telemetry"
+                and row.get("degenerate_renderer_risk_detected") is True
+                and "snerv_scorer_domain_tether_missing_telemetry"
+                in {str(blocker) for blocker in row.get("direct_feedback_blockers") or ()}
+            )
         if feedback_kind != "full_video_mlx_scorer_response":
             return False
         target_candidate_id = str(candidate.get("candidate_id") or "").strip()
@@ -4725,12 +4754,15 @@ def _sanitize_family_level_candidate_feedback(
     if _family_key(str(row.get("family") or "")) != "hi_nerv":
         feedback_kind = str(row.get("feedback_kind") or "").strip()
         is_upstream_eval = feedback_kind == "upstream_eval_gate"
+        is_training_telemetry = feedback_kind == "training_telemetry"
         out["source_candidate_id"] = source_candidate_id
         out["target_candidate_id"] = str(target_candidate_id)
         out["candidate_id_match"] = False
         out["feedback_match_scope"] = (
             "family_upstream_eval_gate_context"
             if is_upstream_eval
+            else "family_snerv_degenerate_renderer_training_telemetry_context"
+            if is_training_telemetry
             else "family_full_video_mlx_response_context"
         )
         out["family_scope_matches_target"] = True
@@ -4746,6 +4778,8 @@ def _sanitize_family_level_candidate_feedback(
         out["feedback_reuse_policy"] = (
             "family_upstream_eval_context_only_no_archive_receiver_replay_or_launch_authority"
             if is_upstream_eval
+            else "family_snerv_degenerate_renderer_context_only_no_archive_receiver_replay_or_launch_authority"
+            if is_training_telemetry
             else "family_full_video_context_only_no_archive_receiver_replay_or_launch_authority"
         )
         out.update(FALSE_AUTHORITY)
