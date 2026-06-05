@@ -613,7 +613,7 @@ def _read_packet(packet: bytes) -> tuple[dict[str, Any], bytes]:
     if _sha256(body) != str(header.get("payload_sha256")):
         raise SnervLfPayloadCodecError("LF v2 payload sha256 mismatch")
     header["header_format"] = header_format
-    header["header_bytes"] = int(header_len)
+    header["header_bytes"] = _HEADER.size + int(header_len)
     return header, body
 
 
