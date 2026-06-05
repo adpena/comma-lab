@@ -5851,6 +5851,11 @@ def _run_scorer_loop_qat_attachment(
             best_packet_materialized and best_packet_path_sha256 == result_payload.get("best_packet_sha256")
         ):
             blockers.append("snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export")
+
+        def _payload_value(key: str, default: Any) -> Any:
+            value = result_payload.get(key)
+            return default if value is None else value
+
         payload = {
             "schema": "snerv_mlx_native_scorer_loop_qat_attachment.v1",
             "requested": True,
@@ -5908,22 +5913,26 @@ def _run_scorer_loop_qat_attachment(
             "pair_guard_max_pose_worsened_fraction": float(
                 pair_guard_max_pose_worsened_fraction
             ),
-            "perturb_scale": float(result_payload.get("perturb_scale") or perturb_scale),
+            "perturb_scale": float(_payload_value("perturb_scale", perturb_scale)),
             "byte_pressure_multiplier": float(
-                result_payload.get("byte_pressure_multiplier")
-                or byte_pressure_multiplier
+                _payload_value("byte_pressure_multiplier", byte_pressure_multiplier)
             ),
             "section_value_pressure_multiplier": float(
-                result_payload.get("section_value_pressure_multiplier")
-                or section_value_pressure_multiplier
+                _payload_value(
+                    "section_value_pressure_multiplier",
+                    section_value_pressure_multiplier,
+                )
             ),
-            "max_archive_byte_growth": result_payload.get("max_archive_byte_growth"),
+            "max_archive_byte_growth": _payload_value(
+                "max_archive_byte_growth", max_archive_byte_growth
+            ),
             "byte_growth_admission_mode": str(
-                result_payload.get("byte_growth_admission_mode")
-                or byte_growth_admission_mode
+                _payload_value(
+                    "byte_growth_admission_mode", byte_growth_admission_mode
+                )
             ),
-            "pose_slack": float(result_payload.get("pose_slack") or pose_slack),
-            "seg_slack": float(result_payload.get("seg_slack") or seg_slack),
+            "pose_slack": float(_payload_value("pose_slack", pose_slack)),
+            "seg_slack": float(_payload_value("seg_slack", seg_slack)),
             "seed": int(seed),
             "pair_robust_admission": result_payload.get("pair_robust_admission"),
             "accepted_improvement": bool(result_payload.get("accepted_improvement")),

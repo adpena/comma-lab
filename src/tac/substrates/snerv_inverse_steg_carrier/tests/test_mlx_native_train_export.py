@@ -5018,6 +5018,13 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
                     "wrapper_histogram": {"none": 1},
                     "section_bytes": 42,
                 },
+                "perturb_scale": 0.0,
+                "byte_pressure_multiplier": 2.0,
+                "section_value_pressure_multiplier": 0.0,
+                "max_archive_byte_growth": 0,
+                "byte_growth_admission_mode": "rate_paid",
+                "pose_slack": 0.0,
+                "seg_slack": 0.0,
                 "scorer_loop_evaluations": 2,
                 "accepted_improvement": True,
                 "receiver_contract_satisfied": True,
@@ -5127,6 +5134,14 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["requested"] is True
     assert scorer_loop["executed"] is True
     assert scorer_loop["component_guard_mode"] == "pose_seg_hard"
+    assert scorer_loop["perturb_scale"] == pytest.approx(0.0)
+    assert scorer_loop["byte_pressure_multiplier"] == pytest.approx(2.0)
+    assert scorer_loop["section_value_pressure_multiplier"] == pytest.approx(0.0)
+    assert scorer_loop["max_archive_byte_growth"] == 0
+    assert scorer_loop["byte_growth_admission_mode"] == "rate_paid"
+    assert scorer_loop["pose_slack"] == pytest.approx(0.0)
+    assert scorer_loop["seg_slack"] == pytest.approx(0.0)
+    assert scorer_loop["seed"] == 99
     assert scorer_loop["lf_payload_codec"] == best_packet_metadata[
         "lf_payload_codec_selected"
     ]

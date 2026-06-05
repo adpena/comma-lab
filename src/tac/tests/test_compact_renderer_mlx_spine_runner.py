@@ -1306,6 +1306,14 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         scorer_loop_qat_pair_guard_min_score_improved_fraction=0.875,
         scorer_loop_qat_pair_guard_max_pose_worsened_fraction=0.125,
         scorer_loop_qat_device="gpu",
+        scorer_loop_qat_perturb_scale=0.03125,
+        scorer_loop_qat_byte_pressure_multiplier=2.0,
+        scorer_loop_qat_section_value_pressure_multiplier=1.5,
+        scorer_loop_qat_max_archive_byte_growth=9,
+        scorer_loop_qat_byte_growth_admission_mode="rate_paid",
+        scorer_loop_qat_pose_slack=0.004,
+        scorer_loop_qat_seg_slack=0.005,
+        scorer_loop_qat_seed=99,
         recon_pixel_weight_path=None,
         recon_pixel_weight_manifest_path=None,
         recon_pixel_weight_normalize="mean",
@@ -1381,6 +1389,16 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert captured["scorer_loop_qat_pair_guard_max_pose_worsened_fraction"] == (
         pytest.approx(0.125)
     )
+    assert captured["scorer_loop_qat_perturb_scale"] == pytest.approx(0.03125)
+    assert captured["scorer_loop_qat_byte_pressure_multiplier"] == pytest.approx(2.0)
+    assert captured["scorer_loop_qat_section_value_pressure_multiplier"] == (
+        pytest.approx(1.5)
+    )
+    assert captured["scorer_loop_qat_max_archive_byte_growth"] == 9
+    assert captured["scorer_loop_qat_byte_growth_admission_mode"] == "rate_paid"
+    assert captured["scorer_loop_qat_pose_slack"] == pytest.approx(0.004)
+    assert captured["scorer_loop_qat_seg_slack"] == pytest.approx(0.005)
+    assert captured["scorer_loop_qat_seed"] == 99
     assert captured["score_aware_long_training_pr95_faithful_curriculum"] is True
     assert captured["score_aware_long_training_loss_weights"] == stage_weights
     assert captured["score_aware_long_training_pose_warmup_epochs"] == 2
@@ -1540,6 +1558,14 @@ def test_snerv_native_export_attachment_blocks_failed_training_telemetry_contrac
         scorer_loop_qat_pair_guard_min_score_improved_fraction=1.0,
         scorer_loop_qat_pair_guard_max_pose_worsened_fraction=0.0,
         scorer_loop_qat_device="gpu",
+        scorer_loop_qat_perturb_scale=0.02,
+        scorer_loop_qat_byte_pressure_multiplier=1.0,
+        scorer_loop_qat_section_value_pressure_multiplier=1.0,
+        scorer_loop_qat_max_archive_byte_growth=None,
+        scorer_loop_qat_byte_growth_admission_mode="hard_cap",
+        scorer_loop_qat_pose_slack=0.0,
+        scorer_loop_qat_seg_slack=0.0,
+        scorer_loop_qat_seed=0,
         recon_pixel_weight_path=None,
         recon_pixel_weight_manifest_path=None,
         recon_pixel_weight_normalize="mean",
@@ -1641,6 +1667,14 @@ def test_snerv_native_export_attachment_refuses_long_training_when_tether_smoke_
         scorer_loop_qat_pair_guard_min_score_improved_fraction=1.0,
         scorer_loop_qat_pair_guard_max_pose_worsened_fraction=0.0,
         scorer_loop_qat_device="gpu",
+        scorer_loop_qat_perturb_scale=0.02,
+        scorer_loop_qat_byte_pressure_multiplier=1.0,
+        scorer_loop_qat_section_value_pressure_multiplier=1.0,
+        scorer_loop_qat_max_archive_byte_growth=None,
+        scorer_loop_qat_byte_growth_admission_mode="hard_cap",
+        scorer_loop_qat_pose_slack=0.0,
+        scorer_loop_qat_seg_slack=0.0,
+        scorer_loop_qat_seed=0,
         recon_pixel_weight_path=None,
         recon_pixel_weight_manifest_path=None,
         recon_pixel_weight_normalize="mean",
@@ -12615,7 +12649,9 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
         snerv_scorer_loop_lf_payload_codec="auto",
         snerv_scorer_loop_perturb_scale=0.03,
         snerv_scorer_loop_byte_pressure_multiplier=1.25,
+        snerv_scorer_loop_section_value_pressure_multiplier=1.75,
         snerv_scorer_loop_max_archive_byte_growth=77,
+        snerv_scorer_loop_byte_growth_admission_mode="rate_paid",
         snerv_scorer_loop_pose_slack=0.001,
         snerv_scorer_loop_seg_slack=0.002,
         snerv_scorer_loop_pair_stride=3,
@@ -12664,8 +12700,13 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     assert captured_qat_kwargs["max_trials"] == 5
     assert captured_qat_kwargs["search_mode"] == "learned_random_subspace"
     assert captured_qat_kwargs["step_map_bins"] == 8
+    assert captured_qat_kwargs["perturb_scale"] == pytest.approx(0.03)
     assert captured_qat_kwargs["byte_pressure_multiplier"] == 1.25
+    assert captured_qat_kwargs["section_value_pressure_multiplier"] == pytest.approx(
+        1.75
+    )
     assert captured_qat_kwargs["max_archive_byte_growth"] == 77
+    assert captured_qat_kwargs["byte_growth_admission_mode"] == "rate_paid"
     assert captured_qat_kwargs["pose_slack"] == 0.001
     assert captured_qat_kwargs["seg_slack"] == 0.002
     assert captured_qat_kwargs["pair_stride"] == 3
@@ -12684,6 +12725,14 @@ def test_snerv_coder_aware_qat_executes_receiver_priced_scorer_loop(
     )
     assert qat["pair_robust_admission"]["passed"] is True
     assert qat["lf_payload_codec"] == "auto"
+    assert qat["perturb_scale"] == pytest.approx(0.03)
+    assert qat["byte_pressure_multiplier"] == pytest.approx(1.25)
+    assert qat["section_value_pressure_multiplier"] == pytest.approx(1.75)
+    assert qat["max_archive_byte_growth"] == 77
+    assert qat["byte_growth_admission_mode"] == "rate_paid"
+    assert qat["pose_slack"] == pytest.approx(0.001)
+    assert qat["seg_slack"] == pytest.approx(0.002)
+    assert qat["seed"] == 123
     assert qat["accepted_improvement"] is True
     assert qat["receiver_contract_satisfied"] is True
     assert qat["ready_for_pose_guard_gate"] is True
