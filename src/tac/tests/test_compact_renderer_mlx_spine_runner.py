@@ -11549,7 +11549,21 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             float(kwargs.get("segnet_distillation_weight") or 0.0) > 0.0
             and float(kwargs.get("pose_distillation_weight") or 0.0) > 0.0
         )
+        scorer_input_distribution_guard_bound = bool(
+            float(
+                kwargs.get(
+                    "score_aware_long_training_scorer_input_distribution_guard_weight"
+                )
+                or 0.0
+            )
+            > 0.0
+        )
         modelsize_candidate = dict(kwargs.get("modelsize_candidate") or {})
+        omit_top_level_long_training_controls = bool(
+            modelsize_candidate.get(
+                "test_omit_top_level_score_aware_long_training_controls"
+            )
+        )
         hard_byte_ceiling = int(modelsize_candidate.get("hard_byte_ceiling") or 0)
         byte_cap_control = {
             "schema": "snerv_mlx_native_hard_byte_ceiling_control.v1",
@@ -11613,19 +11627,11 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 if long_training_executed
                 else "full_batch_hf_decoder_gradient_descent"
             ),
-            "score_aware_long_training_executed": long_training_executed,
+            "score_aware_long_training_executed": False,
             "score_aware_long_training_real_teachers_bound": real_teachers_bound,
             "score_aware_long_training_has_real_segnet_teacher": real_teachers_bound,
             "score_aware_long_training_has_real_posenet_teacher": real_teachers_bound,
-            "score_aware_long_training_scorer_input_distribution_guard_bound": bool(
-                float(
-                    kwargs.get(
-                        "score_aware_long_training_scorer_input_distribution_guard_weight"
-                    )
-                    or 0.0
-                )
-                > 0.0
-            ),
+            "score_aware_long_training_scorer_input_distribution_guard_bound": False,
             "score_aware_long_training_kind": (
                 "snerv_mlx_score_aware_haar_renderer"
                 if long_training_executed
@@ -11638,6 +11644,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "score_aware_long_training": {
                 "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
                 "executed": long_training_executed,
+                "scorer_input_distribution_guard_bound": (
+                    scorer_input_distribution_guard_bound
+                ),
                 "training_telemetry_contract": {
                     "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
                     "passed": long_training_executed,
@@ -11661,6 +11670,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 ),
                 "eval_roundtrip_ste_enabled": bool(
                     kwargs.get("score_aware_long_training_eval_roundtrip_ste")
+                ),
+                "coder_aware_qat_bound": True,
+                "pr95_faithful_curriculum_enabled": bool(
+                    kwargs.get(
+                        "score_aware_long_training_pr95_faithful_curriculum"
+                    )
+                ),
+                "pr95_muon_policy": str(
+                    kwargs.get("score_aware_long_training_pr95_muon_policy") or ""
                 ),
                 "scorer_input_distribution_guard": {
                     "schema": "snerv_mlx_score_aware_scorer_input_distribution_guard.v1",
@@ -11793,6 +11811,17 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+        if omit_top_level_long_training_controls:
+            for key in (
+                "score_aware_long_training_executed",
+                "score_aware_long_training_real_teachers_bound",
+                "score_aware_long_training_has_real_segnet_teacher",
+                "score_aware_long_training_has_real_posenet_teacher",
+                "score_aware_long_training_scorer_input_distribution_guard_bound",
+                "score_aware_long_training_telemetry_contract_passed",
+                "score_aware_long_training_control_bound",
+            ):
+                payload.pop(key, None)
         submission = out / "submission"
         submission.mkdir(exist_ok=True)
         (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
@@ -11920,6 +11949,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "hard_byte_ceiling": 178_000,
             "nominal_total_payload_bytes": 150_000,
             "nominal_under_ceiling": True,
+            "test_omit_top_level_score_aware_long_training_controls": True,
         },
         run_native_mlx_export=True,
         run_scorer_loop_qat=True,
@@ -12111,6 +12141,13 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["score_aware_long_training_real_teachers_bound"] is True
     assert native["score_aware_long_training_has_real_segnet_teacher"] is True
     assert native["score_aware_long_training_has_real_posenet_teacher"] is True
+    assert (
+        native["score_aware_long_training_scorer_input_distribution_guard_bound"]
+        is True
+    )
+    assert native["score_aware_long_training_coder_qat_bound"] is True
+    assert native["score_aware_long_training_pr95_curriculum_bound"] is False
+    assert native["score_aware_long_training_pr95_muon_policy"] == "every_stage"
     assert native["native_mlx_hf_decoder_training"]["requested_steps"] == 11
     assert native["native_mlx_hf_decoder_training"]["learning_rate"] == pytest.approx(
         0.004
@@ -12174,8 +12211,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
     assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
     assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
-    assert "snerv_qat_forward_missing" in plan["blockers"]
-    assert "snerv_coder_aware_regularizer_missing" in plan["blockers"]
+    assert "snerv_qat_forward_missing" not in plan["blockers"]
+    assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
     assert plan["pr95_stack_binding"]["complete"] is False
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
         "blockers"

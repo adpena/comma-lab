@@ -3849,12 +3849,52 @@ def _run_snerv_native_mlx_export_attachment(
         snerv_training_telemetry_contract = (
             snerv_score_aware_long_training.get("training_telemetry_contract")
         )
-        snerv_score_aware_long_training_control_bound = bool(
+        snerv_score_aware_long_training_executed = bool(
             artifact.get("score_aware_long_training_executed")
+            or snerv_score_aware_long_training.get("executed") is True
+        )
+        snerv_score_aware_long_training_guard_bound = bool(
+            artifact.get("score_aware_long_training_scorer_input_distribution_guard_bound")
+            or snerv_score_aware_long_training.get(
+                "scorer_input_distribution_guard_bound"
+            )
+            is True
+        )
+        snerv_score_aware_long_training_coder_qat_bound = bool(
+            artifact.get("score_aware_long_training_coder_qat_bound")
+            or snerv_score_aware_long_training.get("coder_aware_qat_bound") is True
+        )
+        snerv_score_aware_long_training_pr95_curriculum_bound = bool(
+            artifact.get("score_aware_long_training_pr95_curriculum_bound")
+            or snerv_score_aware_long_training.get("pr95_faithful_curriculum_enabled")
+            is True
+        )
+        snerv_score_aware_long_training_pr95_muon_policy = (
+            artifact.get("score_aware_long_training_pr95_muon_policy")
+            or snerv_score_aware_long_training.get("pr95_muon_policy")
+        )
+        snerv_score_aware_long_training_real_teachers_bound = bool(
+            artifact.get("score_aware_long_training_real_teachers_bound")
+            or (
+                snerv_score_aware_long_training.get("has_real_segnet_teacher") is True
+                and snerv_score_aware_long_training.get("has_real_posenet_teacher")
+                is True
+            )
+        )
+        snerv_score_aware_long_training_has_real_segnet_teacher = bool(
+            artifact.get("score_aware_long_training_has_real_segnet_teacher")
+            or snerv_score_aware_long_training.get("has_real_segnet_teacher") is True
+        )
+        snerv_score_aware_long_training_has_real_posenet_teacher = bool(
+            artifact.get("score_aware_long_training_has_real_posenet_teacher")
+            or snerv_score_aware_long_training.get("has_real_posenet_teacher") is True
+        )
+        snerv_score_aware_long_training_control_bound = bool(
+            snerv_score_aware_long_training_executed
             and isinstance(snerv_training_telemetry_contract, Mapping)
             and snerv_training_telemetry_contract.get("passed") is True
         )
-        if bool(artifact.get("score_aware_long_training_executed")):
+        if snerv_score_aware_long_training_executed:
             if isinstance(snerv_training_telemetry_contract, Mapping):
                 blockers.extend(
                     str(blocker)
@@ -3986,8 +4026,8 @@ def _run_snerv_native_mlx_export_attachment(
             "score_aware_hf_decoder_fit_executed": bool(
                 artifact.get("score_aware_hf_decoder_fit_executed")
             ),
-            "score_aware_long_training_executed": bool(
-                artifact.get("score_aware_long_training_executed")
+            "score_aware_long_training_executed": (
+                snerv_score_aware_long_training_executed
             ),
             "score_aware_long_training_telemetry_contract_passed": bool(
                 isinstance(snerv_training_telemetry_contract, Mapping)
@@ -4002,23 +4042,26 @@ def _run_snerv_native_mlx_export_attachment(
                 if isinstance(snerv_training_telemetry_contract, Mapping)
                 else None
             ),
-            "score_aware_long_training_real_teachers_bound": bool(
-                artifact.get("score_aware_long_training_real_teachers_bound")
+            "score_aware_long_training_real_teachers_bound": (
+                snerv_score_aware_long_training_real_teachers_bound
             ),
-            "score_aware_long_training_has_real_segnet_teacher": bool(
-                artifact.get("score_aware_long_training_has_real_segnet_teacher")
+            "score_aware_long_training_has_real_segnet_teacher": (
+                snerv_score_aware_long_training_has_real_segnet_teacher
             ),
-            "score_aware_long_training_has_real_posenet_teacher": bool(
-                artifact.get("score_aware_long_training_has_real_posenet_teacher")
+            "score_aware_long_training_has_real_posenet_teacher": (
+                snerv_score_aware_long_training_has_real_posenet_teacher
             ),
-            "score_aware_long_training_coder_qat_bound": bool(
-                artifact.get("score_aware_long_training_coder_qat_bound")
+            "score_aware_long_training_scorer_input_distribution_guard_bound": (
+                snerv_score_aware_long_training_guard_bound
             ),
-            "score_aware_long_training_pr95_curriculum_bound": bool(
-                artifact.get("score_aware_long_training_pr95_curriculum_bound")
+            "score_aware_long_training_coder_qat_bound": (
+                snerv_score_aware_long_training_coder_qat_bound
             ),
-            "score_aware_long_training_pr95_muon_policy": artifact.get(
-                "score_aware_long_training_pr95_muon_policy"
+            "score_aware_long_training_pr95_curriculum_bound": (
+                snerv_score_aware_long_training_pr95_curriculum_bound
+            ),
+            "score_aware_long_training_pr95_muon_policy": (
+                snerv_score_aware_long_training_pr95_muon_policy
             ),
             "score_aware_long_training_pr95_faithful_optimizer_schedule_bound": bool(
                 artifact.get(
