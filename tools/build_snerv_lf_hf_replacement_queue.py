@@ -116,6 +116,28 @@ def main(argv: list[str] | None = None) -> int:
             "NumPy receiver, and section-byte telemetry blockers."
         ),
     )
+    parser.add_argument(
+        "--temporal-lf-predictor-receiver-payload-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_temporal_lf_predictor_receiver_proof.v1 JSON. Repeatable; "
+            "used to clear only temporal LF predictor implementation and "
+            "correction-stream byte-charging blockers."
+        ),
+    )
+    parser.add_argument(
+        "--lf-super-resolution-receiver-payload-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_lf_super_resolution_tiny_anchor_receiver_proof.v1 JSON. "
+            "Repeatable; used to clear only tiny-anchor receiver payload and "
+            "component-delta telemetry blockers."
+        ),
+    )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--output-md", type=Path)
@@ -161,6 +183,14 @@ def main(argv: list[str] | None = None) -> int:
         load_json_with_source_identity(path)
         for path in args.joint_codebook_receiver_payload_proof
     ]
+    temporal_lf_predictor_receiver_payload_proofs = [
+        load_json_with_source_identity(path)
+        for path in args.temporal_lf_predictor_receiver_payload_proof
+    ]
+    lf_super_resolution_receiver_payload_proofs = [
+        load_json_with_source_identity(path)
+        for path in args.lf_super_resolution_receiver_payload_proof
+    ]
 
     report = build_snerv_lf_hf_replacement_queue(
         lf_payload_reports=lf_reports,
@@ -172,6 +202,12 @@ def main(argv: list[str] | None = None) -> int:
         value_domain_xray_reports=value_domain_xray_reports,
         hf_residual_receiver_payload_proofs=hf_residual_receiver_payload_proofs,
         joint_codebook_receiver_payload_proofs=joint_codebook_receiver_payload_proofs,
+        temporal_lf_predictor_receiver_payload_proofs=(
+            temporal_lf_predictor_receiver_payload_proofs
+        ),
+        lf_super_resolution_receiver_payload_proofs=(
+            lf_super_resolution_receiver_payload_proofs
+        ),
         output_root=output_root,
         lane_id=str(args.lane_id),
         queue_id=str(args.queue_id),

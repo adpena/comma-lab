@@ -63,7 +63,6 @@ _SOURCE_FORWARD_FRAME_REPLAY_CLOSED_BLOCKERS = (
 )
 _SOURCE_FORWARD_QUEUE_FAMILIES = (
     "official_tub_lf_hf_decoder_replacement",
-    "temporal_lf_predictor_gate",
 )
 _RENDERER_BLOCKERS = (
     "snerv_renderer_nondegenerate_smoke_missing",
@@ -95,6 +94,14 @@ _JOINT_CODEBOOK_CLOSED_BLOCKERS = (
     "snerv_joint_lf_hf_codebook_numpy_receiver_missing",
     "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
 )
+_TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS = (
+    "snerv_temporal_lf_predictor_gate_not_implemented",
+    "snerv_temporal_lf_predictor_correction_stream_not_byte_charged",
+)
+_LF_SUPER_RESOLUTION_CLOSED_BLOCKERS = (
+    "snerv_lf_super_resolution_receiver_payload_not_implemented",
+    "snerv_lf_downsampled_anchor_component_deltas_missing",
+)
 
 
 class SnervLfHfReplacementQueueError(ValueError):
@@ -112,6 +119,8 @@ def build_snerv_lf_hf_replacement_queue(
     value_domain_xray_reports: Sequence[Mapping[str, Any]] = (),
     hf_residual_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
     joint_codebook_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    temporal_lf_predictor_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    lf_super_resolution_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
     output_root: str | Path,
     lane_id: str = DEFAULT_LANE_ID,
     queue_id: str = DEFAULT_QUEUE_ID,
@@ -156,6 +165,12 @@ def build_snerv_lf_hf_replacement_queue(
     joint_codebook_state = _joint_codebook_state(
         joint_codebook_receiver_payload_proofs
     )
+    temporal_lf_predictor_state = _temporal_lf_predictor_state(
+        temporal_lf_predictor_receiver_payload_proofs
+    )
+    lf_super_resolution_state = _lf_super_resolution_state(
+        lf_super_resolution_receiver_payload_proofs
+    )
     current_state = _current_state(
         campaign_rows=campaign_rows,
         reroute_state=reroute_state,
@@ -166,6 +181,8 @@ def build_snerv_lf_hf_replacement_queue(
         value_domain_state=value_domain_state,
         hf_residual_payload_state=hf_residual_payload_state,
         joint_codebook_state=joint_codebook_state,
+        temporal_lf_predictor_state=temporal_lf_predictor_state,
+        lf_super_resolution_state=lf_super_resolution_state,
     )
     selected_evidence = _selected_lf_evidence(evidence_rows)
     input_source_paths = {
@@ -184,12 +201,18 @@ def build_snerv_lf_hf_replacement_queue(
         "joint_codebook_receiver_payload_proofs": _source_paths(
             joint_codebook_receiver_payload_proofs
         ),
+        "temporal_lf_predictor_receiver_payload_proofs": _source_paths(
+            temporal_lf_predictor_receiver_payload_proofs
+        ),
+        "lf_super_resolution_receiver_payload_proofs": _source_paths(
+            lf_super_resolution_receiver_payload_proofs
+        ),
     }
     rebuild_command = _queue_rebuild_command(
         output_root=root,
         input_source_paths=input_source_paths,
     )
-    next_unblock_command = _dedupe_command(
+    official_next_unblock_command = _dedupe_command(
         _nested(
             official_replacement_authority_state,
             ("next_unblock_command_argv",),
@@ -210,6 +233,9 @@ def build_snerv_lf_hf_replacement_queue(
                 selected_evidence=selected_evidence,
             )
         ]
+    next_unblock_command = official_next_unblock_command or _first_unblock_command(
+        rows
+    )
     blocked_rows = [row for row in rows if row["blocked"]]
     executable_rows = [row for row in rows if row["command_argv"] and not row["blocked"]]
     roadmap_dag_nodes = _roadmap_dag_nodes(
@@ -247,6 +273,8 @@ def build_snerv_lf_hf_replacement_queue(
         "value_domain_evidence": value_domain_state,
         "hf_residual_payload_evidence": hf_residual_payload_state,
         "joint_codebook_evidence": joint_codebook_state,
+        "temporal_lf_predictor_evidence": temporal_lf_predictor_state,
+        "lf_super_resolution_evidence": lf_super_resolution_state,
         "lf_payload_evidence_rows": evidence_rows,
         "lf_payload_evidence_row_count": len(evidence_rows),
         "selected_lf_payload_evidence": selected_evidence,
@@ -524,7 +552,7 @@ def _candidate_rows(
                         "snerv_hf_residual_generator_receiver_payload_not_implemented",
                     ),
                     campaign_blocker_prefixes=_SKIP_HIGH_BLOCKERS + _RENDERER_BLOCKERS,
-                    command_kind="blocked_until_hf_payload_exists",
+                    command_kind="lf_conditioned_hf_residual_payload_proof",
                     priority=20,
                 ),
                 _candidate_row(
@@ -545,7 +573,7 @@ def _candidate_rows(
                         "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
                     ),
                     campaign_blocker_prefixes=_RENDERER_BLOCKERS,
-                    command_kind="blocked_until_codebook_export_exists",
+                    command_kind="joint_lf_hf_codebook_payload_proof",
                     priority=30,
                 ),
                 _candidate_row(
@@ -564,8 +592,8 @@ def _candidate_rows(
                         "snerv_temporal_lf_predictor_gate_not_implemented",
                         "snerv_temporal_lf_predictor_correction_stream_not_byte_charged",
                     ),
-                    campaign_blocker_prefixes=_SOURCE_FORWARD_BLOCKERS + _RENDERER_BLOCKERS,
-                    command_kind="blocked_until_temporal_lf_gate_exists",
+                    campaign_blocker_prefixes=(),
+                    command_kind="temporal_lf_predictor_payload_proof",
                     priority=40,
                 ),
                 _candidate_row(
@@ -585,7 +613,7 @@ def _candidate_rows(
                         "snerv_lf_downsampled_anchor_component_deltas_missing",
                     ),
                     campaign_blocker_prefixes=_RENDERER_BLOCKERS,
-                    command_kind="blocked_until_lf_super_resolution_export_exists",
+                    command_kind="lf_super_resolution_tiny_anchor_payload_proof",
                     priority=50,
                 ),
                 _candidate_row(
@@ -696,6 +724,20 @@ def _candidate_row(
         )
         or ()
     )
+    temporal_lf_predictor_closed = set(
+        _nested(
+            current_state,
+            ("temporal_lf_predictor_evidence", "closed_campaign_blockers"),
+        )
+        or ()
+    )
+    lf_super_resolution_closed = set(
+        _nested(
+            current_state,
+            ("lf_super_resolution_evidence", "closed_campaign_blockers"),
+        )
+        or ()
+    )
     official_replacement_closed = set(
         _nested(
             current_state,
@@ -754,6 +796,8 @@ def _candidate_row(
         for blocker in static_blockers
         if str(blocker) not in hf_residual_payload_closed
         and str(blocker) not in joint_codebook_closed
+        and str(blocker) not in temporal_lf_predictor_closed
+        and str(blocker) not in lf_super_resolution_closed
     ]
     joint_codebook_extra_blockers: list[str] = []
     if solution_family == "joint_lf_hf_factorized_codebook":
@@ -761,6 +805,32 @@ def _candidate_row(
             str(blocker)
             for blocker in (
                 _nested(current_state, ("joint_codebook_evidence", "queue_blockers"))
+                or ()
+            )
+            if blocker
+        ]
+    temporal_lf_predictor_extra_blockers: list[str] = []
+    if solution_family == "temporal_lf_predictor_gate":
+        temporal_lf_predictor_extra_blockers = [
+            str(blocker)
+            for blocker in (
+                _nested(
+                    current_state,
+                    ("temporal_lf_predictor_evidence", "queue_blockers"),
+                )
+                or ()
+            )
+            if blocker
+        ]
+    lf_super_resolution_extra_blockers: list[str] = []
+    if solution_family == "lf_super_resolution_from_tiny_anchor":
+        lf_super_resolution_extra_blockers = [
+            str(blocker)
+            for blocker in (
+                _nested(
+                    current_state,
+                    ("lf_super_resolution_evidence", "queue_blockers"),
+                )
                 or ()
             )
             if blocker
@@ -773,6 +843,8 @@ def _candidate_row(
         and blocker not in value_domain_closed
         and blocker not in hf_residual_payload_closed
         and blocker not in joint_codebook_closed
+        and blocker not in temporal_lf_predictor_closed
+        and blocker not in lf_super_resolution_closed
         and blocker not in official_replacement_closed
     ]
     blockers = _dedupe(
@@ -786,6 +858,8 @@ def _candidate_row(
             *value_domain_extra_blockers,
             *hf_residual_payload_extra_blockers,
             *joint_codebook_extra_blockers,
+            *temporal_lf_predictor_extra_blockers,
+            *lf_super_resolution_extra_blockers,
         ]
     )
     if (
@@ -807,6 +881,7 @@ def _candidate_row(
             ]
         )
     command: list[str] = []
+    unblock_command: list[str] = []
     if (
         command_kind == "bounded_snerv_training_smoke"
         and not blockers
@@ -819,6 +894,85 @@ def _candidate_row(
         )
         if not command:
             blockers = _dedupe([*blockers, "snerv_lf_hf_base_snerv_command_missing"])
+    if command_kind == "lf_conditioned_hf_residual_payload_proof" and not blockers:
+        command = _lf_conditioned_hf_residual_payload_proof_command(
+            current_state,
+            queue_row_id=queue_row_id,
+            output_root=output_root,
+        )
+        if not command:
+            blockers = _dedupe(
+                [*blockers, "snerv_lf_conditioned_hf_residual_bounded_command_missing"]
+            )
+    if command_kind == "joint_lf_hf_codebook_payload_proof" and not blockers:
+        command = _joint_lf_hf_codebook_payload_proof_command(
+            current_state,
+            queue_row_id=queue_row_id,
+            output_root=output_root,
+        )
+        if not command:
+            blockers = _dedupe(
+                [*blockers, "snerv_joint_lf_hf_codebook_bounded_command_missing"]
+            )
+    if command_kind == "lf_super_resolution_tiny_anchor_payload_proof":
+        lf_super_resolution_proof_blockers = set(_LF_SUPER_RESOLUTION_CLOSED_BLOCKERS)
+        non_lf_super_resolution_blockers = [
+            blocker
+            for blocker in blockers
+            if blocker not in lf_super_resolution_proof_blockers
+        ]
+        if non_lf_super_resolution_blockers:
+            blockers = _dedupe(non_lf_super_resolution_blockers)
+        elif blockers:
+            unblock_command = _lf_super_resolution_tiny_anchor_payload_proof_command(
+                current_state,
+                selected_evidence=selected_evidence,
+                queue_row_id=queue_row_id,
+                output_root=output_root,
+            )
+            if not unblock_command:
+                blockers = _dedupe(
+                    [*blockers, "snerv_lf_super_resolution_bounded_command_missing"]
+                )
+        elif not blockers:
+            blockers = _dedupe(
+                [
+                    *blockers,
+                    "snerv_lf_super_resolution_receiver_runtime_binding_missing",
+                ]
+            )
+    if command_kind == "temporal_lf_predictor_payload_proof":
+        temporal_proof_blockers = set(_TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS)
+        non_temporal_blockers = [
+            blocker for blocker in blockers if blocker not in temporal_proof_blockers
+        ]
+        if non_temporal_blockers:
+            blockers = _dedupe(non_temporal_blockers)
+        elif blockers:
+            unblock_command = _temporal_lf_predictor_payload_proof_command(
+                current_state,
+                selected_evidence=selected_evidence,
+                queue_row_id=queue_row_id,
+                output_root=output_root,
+            )
+            if not unblock_command:
+                blockers = _dedupe(
+                    [
+                        *blockers,
+                        "snerv_temporal_lf_predictor_bounded_command_missing",
+                    ]
+                )
+        elif not blockers:
+            blockers = _dedupe(
+                [
+                    *blockers,
+                    "snerv_temporal_lf_predictor_receiver_runtime_binding_missing",
+                ]
+            )
+    if not blockers and not command:
+        blockers = _dedupe(
+            [*blockers, f"snerv_lf_hf_{solution_family}_runnable_command_missing"]
+        )
     status = "local_bounded_smoke_ready_no_authority" if command and not blockers else "blocked_until_prerequisite_evidence"
     return {
         "schema": ROW_SCHEMA,
@@ -877,6 +1031,12 @@ def _candidate_row(
             "hf_residual_payload_evidence"
         ),
         "joint_codebook_evidence": current_state.get("joint_codebook_evidence"),
+        "temporal_lf_predictor_evidence": current_state.get(
+            "temporal_lf_predictor_evidence"
+        ),
+        "lf_super_resolution_evidence": current_state.get(
+            "lf_super_resolution_evidence"
+        ),
         "target_consumers": [
             "nerv_long_training_campaign_plan",
             "snerv_lf_over_ceiling_reroute_queue",
@@ -884,6 +1044,7 @@ def _candidate_row(
             "cathedral_autopilot",
         ],
         "command_argv": command,
+        "unblock_command_argv": unblock_command,
         "output_root": output_root.as_posix(),
         **QUEUE_FALSE_AUTHORITY,
     }
@@ -936,6 +1097,211 @@ def _bounded_snerv_smoke_command(
     return out
 
 
+def _lf_conditioned_hf_residual_payload_proof_command(
+    current_state: Mapping[str, Any],
+    *,
+    queue_row_id: str,
+    output_root: Path,
+) -> list[str]:
+    packet_path = _evidence_packet_path(
+        current_state,
+        ("value_domain_evidence", "hf_residual_payload_evidence"),
+    )
+    if not packet_path:
+        return []
+    output_dir = output_root / queue_row_id / "lf_conditioned_hf_residual_payload_proof"
+    return [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_lf_conditioned_hf_residual_payload_proof.py",
+        "--packet",
+        packet_path,
+        "--pair-indices",
+        _evidence_pair_indices_csv(
+            current_state,
+            ("value_domain_evidence", "hf_residual_payload_evidence"),
+        ),
+        "--output-json",
+        (output_dir / "snerv_lf_conditioned_hf_residual_receiver_proof.json").as_posix(),
+        "--output-payload",
+        (output_dir / "snerv_lf_conditioned_hf_residual.slhr").as_posix(),
+    ]
+
+
+def _joint_lf_hf_codebook_payload_proof_command(
+    current_state: Mapping[str, Any],
+    *,
+    queue_row_id: str,
+    output_root: Path,
+) -> list[str]:
+    packet_path = _evidence_packet_path(
+        current_state,
+        ("joint_codebook_evidence", "value_domain_evidence"),
+    )
+    if not packet_path:
+        return []
+    output_dir = output_root / queue_row_id / "joint_lf_hf_codebook_payload_proof"
+    return [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_joint_lf_hf_codebook_payload_proof.py",
+        "--packet",
+        packet_path,
+        "--pair-indices",
+        _evidence_pair_indices_csv(
+            current_state,
+            ("joint_codebook_evidence", "value_domain_evidence"),
+        ),
+        "--output-json",
+        (
+            output_dir
+            / "snerv_joint_lf_hf_factorized_codebook_receiver_proof.json"
+        ).as_posix(),
+        "--output-payload",
+        (output_dir / "snerv_joint_lf_hf_factorized_codebook.sjlc").as_posix(),
+    ]
+
+
+def _lf_super_resolution_tiny_anchor_payload_proof_command(
+    current_state: Mapping[str, Any],
+    *,
+    selected_evidence: Mapping[str, Any] | None = None,
+    queue_row_id: str,
+    output_root: Path,
+) -> list[str]:
+    packet_path = _evidence_packet_path(
+        current_state,
+        ("lf_super_resolution_evidence", "value_domain_evidence"),
+    )
+    if not packet_path and selected_evidence is not None:
+        packet_path = str(
+            selected_evidence.get("packet_path")
+            or selected_evidence.get("candidate_packet_path")
+            or ""
+        ).strip()
+    if not packet_path:
+        return []
+    output_dir = output_root / queue_row_id / "lf_super_resolution_tiny_anchor_proof"
+    return [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_lf_super_resolution_tiny_anchor_payload_proof.py",
+        "--packet",
+        packet_path,
+        "--pair-indices",
+        _evidence_pair_indices_csv(
+            current_state,
+            ("lf_super_resolution_evidence", "value_domain_evidence"),
+        ),
+        "--output-json",
+        (
+            output_dir
+            / "snerv_lf_super_resolution_tiny_anchor_receiver_proof.json"
+        ).as_posix(),
+        "--output-payload",
+        (output_dir / "snerv_lf_super_resolution_tiny_anchor.slsr").as_posix(),
+    ]
+
+
+def _temporal_lf_predictor_payload_proof_command(
+    current_state: Mapping[str, Any],
+    *,
+    selected_evidence: Mapping[str, Any] | None,
+    queue_row_id: str,
+    output_root: Path,
+) -> list[str]:
+    packet_path = _evidence_packet_path(
+        current_state,
+        (
+            "value_domain_evidence",
+            "temporal_lf_predictor_evidence",
+            "hf_residual_payload_evidence",
+            "joint_codebook_evidence",
+        ),
+    )
+    if not packet_path and selected_evidence is not None:
+        packet_path = str(
+            selected_evidence.get("packet_path")
+            or selected_evidence.get("candidate_packet_path")
+            or ""
+        ).strip()
+    if not packet_path:
+        return []
+    output_dir = output_root / queue_row_id / "temporal_lf_predictor_payload_proof"
+    return [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_temporal_lf_predictor_payload_proof.py",
+        "--packet",
+        packet_path,
+        "--pair-indices",
+        _evidence_pair_indices_csv(
+            current_state,
+            (
+                "value_domain_evidence",
+                "temporal_lf_predictor_evidence",
+                "hf_residual_payload_evidence",
+                "joint_codebook_evidence",
+            ),
+        ),
+        "--output-json",
+        (output_dir / "snerv_temporal_lf_predictor_receiver_proof.json").as_posix(),
+        "--output-payload",
+        (output_dir / "snerv_temporal_lf_predictor.stlp").as_posix(),
+    ]
+
+def _evidence_packet_path(
+    current_state: Mapping[str, Any],
+    evidence_keys: Sequence[str],
+) -> str:
+    for evidence_key in evidence_keys:
+        packet_path = _nested(current_state, (evidence_key, "packet_path"))
+        packet_path = str(packet_path or "").strip()
+        if packet_path:
+            return packet_path
+    return ""
+
+
+def _evidence_pair_indices_csv(
+    current_state: Mapping[str, Any],
+    evidence_keys: Sequence[str],
+) -> str:
+    raw: Any = None
+    for evidence_key in evidence_keys:
+        raw = _nested(current_state, (evidence_key, "pair_indices"))
+        if raw:
+            break
+    values: list[int] = []
+    if isinstance(raw, str):
+        pieces: Sequence[Any] = [part.strip() for part in raw.split(",")]
+    elif isinstance(raw, Sequence) and not isinstance(raw, (bytes, bytearray)):
+        pieces = raw
+    else:
+        pieces = ()
+    for piece in pieces:
+        if piece is None or str(piece).strip() == "":
+            continue
+        try:
+            values.append(int(piece))
+        except (TypeError, ValueError):
+            continue
+    if not values:
+        values = [0, 1]
+    return ",".join(str(value) for value in values)
+
+
+def _first_unblock_command(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    for row in rows:
+        command = _dedupe_command(row.get("unblock_command_argv") or ())
+        if command:
+            return command
+    return []
+
+
 def _global_blocker_row(
     *,
     output_root: Path,
@@ -959,6 +1325,7 @@ def _global_blocker_row(
         "selected_lf_payload_evidence": selected_evidence,
         "target_consumers": ["nerv_long_training_campaign_plan"],
         "command_argv": [],
+        "unblock_command_argv": [],
         "output_root": output_root.as_posix(),
         **QUEUE_FALSE_AUTHORITY,
     }
@@ -1460,11 +1827,21 @@ def _value_domain_state(
         "packet_path": selected.get("packet_path"),
         "packet_bytes": _positive_int(selected.get("packet_bytes")),
         "packet_sha256": selected.get("packet_sha256"),
+        "pair_indices": selected.get("pair_indices"),
         "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
         "value_domain_sample_status": selected.get("value_domain_sample_status"),
         "receiver_payload_decode_sample_proven": decode_sample,
         "value_domain_noncollapse_proof_passed": noncollapse,
         "verdict": selected.get("verdict"),
+        "official_skip_high_value_domain": selected.get(
+            "official_skip_high_value_domain"
+        ),
+        "official_scalar_skip_high_value_domain_scan": selected.get(
+            "official_scalar_skip_high_value_domain_scan"
+        ),
+        "recommended_next_actions": [
+            str(action) for action in selected.get("recommended_next_actions") or ()
+        ],
         "closed_campaign_blockers": _dedupe(closed) if noncollapse else [],
         "queue_blockers": _dedupe(queue_blockers),
         "blockers": _dedupe([*selected_blockers, *queue_blockers]),
@@ -1548,6 +1925,7 @@ def _hf_residual_payload_state(
         "compressed_payload_bytes": _positive_int(
             selected.get("compressed_payload_bytes")
         ),
+        "pair_indices": selected.get("pair_indices"),
         "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
         "receiver_payload_implemented": implemented,
         "receiver_decode_proven": decoded,
@@ -1632,6 +2010,7 @@ def _joint_codebook_state(
         ),
         "codebook_entry_count": _positive_int(selected.get("codebook_entry_count")),
         "block_count": _positive_int(selected.get("block_count")),
+        "pair_indices": selected.get("pair_indices"),
         "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
         "receiver_payload_implemented": implemented,
         "receiver_decode_proven": decoded,
@@ -1643,6 +2022,190 @@ def _joint_codebook_state(
         **QUEUE_FALSE_AUTHORITY,
     }
 
+
+def _temporal_lf_predictor_state(
+    temporal_lf_predictor_receiver_payload_proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in temporal_lf_predictor_receiver_payload_proofs
+        if isinstance(row, Mapping)
+        and row.get("schema") == "snerv_temporal_lf_predictor_receiver_proof.v1"
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_temporal_lf_predictor_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "receiver_payload_implemented": False,
+            "receiver_decode_proven": False,
+            "numpy_receiver_decode": False,
+            "correction_stream_byte_charged": False,
+            "section_native_byte_telemetry_present": False,
+            "closed_campaign_blockers": [],
+            "queue_blockers": list(_TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS),
+            "blockers": list(_TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS),
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("report_path") or ""),
+        ),
+    )
+    implemented = selected.get("receiver_payload_implemented") is True
+    decoded = selected.get("receiver_decode_proven") is True
+    numpy_decode = selected.get("numpy_receiver_decode") is True
+    correction_charged = selected.get("correction_stream_byte_charged") is True
+    telemetry = selected.get("section_native_byte_telemetry_present") is True
+    proof_passed = (
+        implemented and decoded and numpy_decode and correction_charged and telemetry
+    )
+    selected_blockers = [
+        str(blocker)
+        for blocker in selected.get("blockers") or ()
+        if str(blocker)
+        and str(blocker) != "snerv_temporal_lf_predictor_payload_false_authority"
+    ]
+    closed = [
+        blocker
+        for blocker in selected.get("closed_campaign_blockers") or ()
+        if blocker in _TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS
+    ]
+    queue_blockers: list[str] = []
+    if not proof_passed:
+        queue_blockers.extend(_TEMPORAL_LF_PREDICTOR_CLOSED_BLOCKERS)
+    queue_blockers.extend(selected_blockers)
+    return {
+        "schema": "snerv_temporal_lf_predictor_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path") or selected.get("report_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "packet_path": selected.get("packet_path"),
+        "source_packet_sha256": selected.get("source_packet_sha256"),
+        "payload_path": selected.get("payload_path"),
+        "payload_bytes": _positive_int(selected.get("payload_bytes")),
+        "payload_sha256": selected.get("payload_sha256"),
+        "first_lf_anchor_bytes": _positive_int(
+            selected.get("first_lf_anchor_bytes")
+        ),
+        "correction_stream_raw_bytes": _positive_int(
+            selected.get("correction_stream_raw_bytes")
+        ),
+        "compressed_payload_bytes": _positive_int(
+            selected.get("compressed_payload_bytes")
+        ),
+        "pair_indices": selected.get("pair_indices"),
+        "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
+        "lf_shape_b2chw": selected.get("lf_shape_b2chw"),
+        "receiver_payload_implemented": implemented,
+        "receiver_decode_proven": decoded,
+        "numpy_receiver_decode": numpy_decode,
+        "correction_stream_byte_charged": correction_charged,
+        "section_native_byte_telemetry_present": telemetry,
+        "closed_campaign_blockers": _dedupe(closed) if proof_passed else [],
+        "queue_blockers": _dedupe(queue_blockers),
+        "blockers": _dedupe([*selected_blockers, *queue_blockers]),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _lf_super_resolution_state(
+    lf_super_resolution_receiver_payload_proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in lf_super_resolution_receiver_payload_proofs
+        if isinstance(row, Mapping)
+        and row.get("schema")
+        == "snerv_lf_super_resolution_tiny_anchor_receiver_proof.v1"
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_lf_super_resolution_tiny_anchor_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "receiver_payload_implemented": False,
+            "receiver_decode_proven": False,
+            "numpy_receiver_decode": False,
+            "tiny_anchor_component_deltas_present": False,
+            "section_native_byte_telemetry_present": False,
+            "closed_campaign_blockers": [],
+            "queue_blockers": list(_LF_SUPER_RESOLUTION_CLOSED_BLOCKERS),
+            "blockers": list(_LF_SUPER_RESOLUTION_CLOSED_BLOCKERS),
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("report_path") or ""),
+        ),
+    )
+    implemented = selected.get("receiver_payload_implemented") is True
+    decoded = selected.get("receiver_decode_proven") is True
+    numpy_decode = selected.get("numpy_receiver_decode") is True
+    component_deltas = selected.get("tiny_anchor_component_deltas_present") is True
+    telemetry = selected.get("section_native_byte_telemetry_present") is True
+    proof_passed = implemented and decoded and numpy_decode and component_deltas and telemetry
+    selected_blockers = [
+        str(blocker)
+        for blocker in selected.get("blockers") or ()
+        if str(blocker)
+        and str(blocker)
+        != "snerv_lf_super_resolution_tiny_anchor_payload_false_authority"
+    ]
+    closed = [
+        blocker
+        for blocker in selected.get("closed_campaign_blockers") or ()
+        if blocker in _LF_SUPER_RESOLUTION_CLOSED_BLOCKERS
+    ]
+    queue_blockers: list[str] = []
+    if not proof_passed:
+        queue_blockers.extend(_LF_SUPER_RESOLUTION_CLOSED_BLOCKERS)
+    queue_blockers.extend(selected_blockers)
+    return {
+        "schema": "snerv_lf_super_resolution_tiny_anchor_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path") or selected.get("report_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "packet_path": selected.get("packet_path"),
+        "source_packet_sha256": selected.get("source_packet_sha256"),
+        "payload_path": selected.get("payload_path"),
+        "payload_bytes": _positive_int(selected.get("payload_bytes")),
+        "payload_sha256": selected.get("payload_sha256"),
+        "anchor_raw_bytes": _positive_int(selected.get("anchor_raw_bytes")),
+        "compressed_payload_bytes": _positive_int(
+            selected.get("compressed_payload_bytes")
+        ),
+        "pair_indices": selected.get("pair_indices"),
+        "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
+        "anchor_shape_b2chw": selected.get("anchor_shape_b2chw"),
+        "receiver_component_delta_stats": selected.get(
+            "receiver_component_delta_stats"
+        ),
+        "component_delta_scope": selected.get("component_delta_scope"),
+        "receiver_payload_implemented": implemented,
+        "receiver_decode_proven": decoded,
+        "numpy_receiver_decode": numpy_decode,
+        "tiny_anchor_component_deltas_present": component_deltas,
+        "section_native_byte_telemetry_present": telemetry,
+        "closed_campaign_blockers": _dedupe(closed) if proof_passed else [],
+        "queue_blockers": _dedupe(queue_blockers),
+        "blockers": _dedupe([*selected_blockers, *queue_blockers]),
+        **QUEUE_FALSE_AUTHORITY,
+    }
 
 def _snerv_campaign_rows(campaign_plans: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -1702,6 +2265,8 @@ def _current_state(
     value_domain_state: Mapping[str, Any],
     hf_residual_payload_state: Mapping[str, Any],
     joint_codebook_state: Mapping[str, Any],
+    temporal_lf_predictor_state: Mapping[str, Any],
+    lf_super_resolution_state: Mapping[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     demoted_blockers: list[str] = []
@@ -1736,6 +2301,8 @@ def _current_state(
         "value_domain_evidence": dict(value_domain_state),
         "hf_residual_payload_evidence": dict(hf_residual_payload_state),
         "joint_codebook_evidence": dict(joint_codebook_state),
+        "temporal_lf_predictor_evidence": dict(temporal_lf_predictor_state),
+        "lf_super_resolution_evidence": dict(lf_super_resolution_state),
         "blockers": _dedupe(blockers),
     }
 
@@ -1757,8 +2324,11 @@ def _source_paths(items: Sequence[Mapping[str, Any]]) -> list[str]:
     for item in items:
         if not isinstance(item, Mapping):
             continue
-        path = item.get("_source_path") or item.get("source_path") or item.get(
-            "report_path"
+        path = (
+            item.get("_source_path")
+            or item.get("_candidate_feedback_source_path")
+            or item.get("source_path")
+            or item.get("report_path")
         )
         if path:
             paths.append(str(path))
@@ -1784,6 +2354,12 @@ def _queue_rebuild_command(
         ),
         "joint_codebook_receiver_payload_proofs": (
             "--joint-codebook-receiver-payload-proof"
+        ),
+        "temporal_lf_predictor_receiver_payload_proofs": (
+            "--temporal-lf-predictor-receiver-payload-proof"
+        ),
+        "lf_super_resolution_receiver_payload_proofs": (
+            "--lf-super-resolution-receiver-payload-proof"
         ),
     }
     for key, flag in flag_by_key.items():

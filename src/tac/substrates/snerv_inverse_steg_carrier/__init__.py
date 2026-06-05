@@ -61,6 +61,14 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     lf_coeff_count,
     synthesis_adjoint_residual,
 )
+from tac.substrates.snerv_inverse_steg_carrier.lf_super_resolution_tiny_anchor import (
+    LfSuperResolutionTinyAnchorPacket,
+    SnervLfSuperResolutionTinyAnchorError,
+    build_lf_super_resolution_tiny_anchor_receiver_proof,
+    decode_lf_super_resolution_tiny_anchor_payload,
+    encode_lf_super_resolution_tiny_anchor_payload,
+    inspect_lf_super_resolution_tiny_anchor_payload,
+)
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     FALSE_AUTHORITY as OFFICIAL_SNERV_HFR_FALSE_AUTHORITY,
 )
@@ -121,6 +129,14 @@ from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
 from tac.substrates.snerv_inverse_steg_carrier.official_tub_torch import (
     official_output2_fusion_torch,
 )
+from tac.substrates.snerv_inverse_steg_carrier.temporal_lf_predictor import (
+    SnervTemporalLfPredictorError,
+    TemporalLfPredictorPacket,
+    build_temporal_lf_predictor_receiver_proof,
+    decode_temporal_lf_predictor_payload,
+    encode_temporal_lf_predictor_payload,
+    inspect_temporal_lf_predictor_payload,
+)
 
 __all__ = [
     "DEFAULT_SNERV_MODEL_SIZE",
@@ -148,6 +164,7 @@ __all__ = [
     "HfGenerationDecoder",
     "HighFrequencyRestorer",
     "LfSaliency",
+    "LfSuperResolutionTinyAnchorPacket",
     "MultiResolutionFusionUnit",
     "NchwShape",
     "OfficialConv2dNchw",
@@ -173,11 +190,16 @@ __all__ = [
     "SnervCarrierError",
     "SnervDwtError",
     "SnervFrameCode",
+    "SnervLfSuperResolutionTinyAnchorError",
     "SnervModelSizeConfig",
     "SnervTemporalExtension",
+    "SnervTemporalLfPredictorError",
+    "TemporalLfPredictorPacket",
     "TensorSpec",
     "WaveletPyramid",
     "allocate_lf_linf",
+    "build_lf_super_resolution_tiny_anchor_receiver_proof",
+    "build_temporal_lf_predictor_receiver_proof",
     "concat_nchw_arrays",
     "concat_nchw_mlx",
     "concat_nchw_specs",
@@ -186,14 +208,20 @@ __all__ = [
     "conv_transpose2d_nchw",
     "conv_transpose2d_nchw_mlx",
     "decode_frame",
+    "decode_lf_super_resolution_tiny_anchor_payload",
+    "decode_temporal_lf_predictor_payload",
     "dequantize_lf",
     "dwt2_multilevel",
     "dwt2_native_synthesis_adjoint",
     "encode_frame_lf",
+    "encode_lf_super_resolution_tiny_anchor_payload",
+    "encode_temporal_lf_predictor_payload",
     "fit_hf_decoder_least_squares",
     "fit_hf_decoder_weighted_least_squares",
     "generate_hf_from_lf",
     "idwt2_multilevel",
+    "inspect_lf_super_resolution_tiny_anchor_payload",
+    "inspect_temporal_lf_predictor_payload",
     "leaky_relu01",
     "leaky_relu01_mlx",
     "lf_coeff_count",

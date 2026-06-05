@@ -142,6 +142,35 @@ def test_lf_hf_replacement_queue_embeds_rebuild_command_with_source_paths(
     assert report["next_unblock_command_argv"] == ["uv", "run", "python", "next.py"]
 
 
+def test_lf_hf_rebuild_command_uses_candidate_feedback_source_alias(
+    tmp_path: Path,
+) -> None:
+    feedback = {
+        **_candidate_feedback_row(guard_proof_passed=True),
+        "_candidate_feedback_source_path": "/ssd/feedback_from_plan_wrapper.json",
+    }
+    feedback.pop("_source_path", None)
+
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        candidate_feedback_rows=[feedback],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    command = report["runnable_rebuild_command_argv"]
+    assert command[command.index("--candidate-feedback-row") + 1] == (
+        "/ssd/feedback_from_plan_wrapper.json"
+    )
+    assert report["input_source_paths"]["candidate_feedback_rows"] == [
+        "/ssd/feedback_from_plan_wrapper.json"
+    ]
+
+
 def test_lf_hf_queue_accepts_checkpoint_export_as_lf_payload_evidence(
     tmp_path: Path,
 ) -> None:
@@ -440,6 +469,65 @@ def test_lf_hf_queue_consumes_value_domain_noncollapse_for_lf_conditioned_hf(
     assert row["command_argv"] == []
 
 
+def test_lf_hf_queue_preserves_scalar_skip_high_xray_details(
+    tmp_path: Path,
+) -> None:
+    xray = {
+        **_value_domain_xray(noncollapse=False),
+        "official_skip_high_value_domain": {
+            "schema": "snerv_official_skip_high_value_domain_summary.v1",
+            "scalar_mean_storage": True,
+            "max_unclipped_outside_0_255_fraction_by_channel": 0.5,
+            "blockers": [
+                "snerv_official_skip_high_scalar_mean_receiver_range_unfit"
+            ],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "official_scalar_skip_high_value_domain_scan": {
+            "schema": "snerv_official_scalar_skip_high_value_domain_scan.v1",
+            "scan_executed": True,
+            "range_safe_scalar_value_count": 0,
+            "safe_scalar_value_count": 0,
+            "blockers": [
+                "snerv_official_scalar_skip_high_no_range_safe_scalar_found"
+            ],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "recommended_next_actions": [
+            "rerun_bounded_snerv_smoke_with_non_scalar_skip_high_storage"
+        ],
+        "blockers": [
+            "snerv_receiver_value_domain_xray_false_authority",
+            "snerv_official_skip_high_scalar_mean_receiver_range_unfit",
+            "snerv_official_scalar_skip_high_no_range_safe_scalar_found",
+        ],
+    }
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        value_domain_xray_reports=[xray],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    evidence = report["value_domain_evidence"]
+    assert evidence["official_skip_high_value_domain"]["scalar_mean_storage"] is True
+    assert evidence["official_scalar_skip_high_value_domain_scan"][
+        "safe_scalar_value_count"
+    ] == 0
+    assert evidence["recommended_next_actions"] == [
+        "rerun_bounded_snerv_smoke_with_non_scalar_skip_high_storage"
+    ]
+    assert "snerv_official_skip_high_scalar_mean_receiver_range_unfit" in evidence[
+        "queue_blockers"
+    ]
+
+
 def test_lf_hf_queue_consumes_hf_residual_receiver_payload_proof(
     tmp_path: Path,
 ) -> None:
@@ -475,6 +563,22 @@ def test_lf_hf_queue_consumes_hf_residual_receiver_payload_proof(
         "runnable_rebuild_command_argv"
     ]
     assert row["blocked"] is False
+    assert row["status"] == "local_bounded_smoke_ready_no_authority"
+    command = row["command_argv"]
+    assert command[:4] == [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_lf_conditioned_hf_residual_payload_proof.py",
+    ]
+    assert command[command.index("--packet") + 1] == "/ssd/candidate.snar"
+    assert command[command.index("--pair-indices") + 1] == "0,1"
+    assert command[command.index("--output-json") + 1].startswith(
+        (tmp_path / "queue" / row["queue_row_id"]).as_posix()
+    )
+    assert command[command.index("--output-payload") + 1].endswith(
+        "snerv_lf_conditioned_hf_residual.slhr"
+    )
 
 
 def test_lf_hf_queue_consumes_joint_codebook_receiver_payload_proof(
@@ -516,6 +620,208 @@ def test_lf_hf_queue_consumes_joint_codebook_receiver_payload_proof(
         "runnable_rebuild_command_argv"
     ]
     assert row["blocked"] is False
+    assert row["status"] == "local_bounded_smoke_ready_no_authority"
+    command = row["command_argv"]
+    assert command[:4] == [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_joint_lf_hf_codebook_payload_proof.py",
+    ]
+    assert command[command.index("--packet") + 1] == "/ssd/candidate.snar"
+    assert command[command.index("--pair-indices") + 1] == "0,1"
+    assert command[command.index("--output-json") + 1].startswith(
+        (tmp_path / "queue" / row["queue_row_id"]).as_posix()
+    )
+    assert command[command.index("--output-payload") + 1].endswith(
+        "snerv_joint_lf_hf_factorized_codebook.sjlc"
+    )
+
+
+def test_lf_hf_queue_emits_temporal_lf_predictor_payload_proof_unblock_command(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        value_domain_xray_reports=[_value_domain_xray(noncollapse=True)],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "temporal_lf_predictor_gate"
+    )
+    command = row["unblock_command_argv"]
+
+    assert row["blocked"] is True
+    assert row["command_argv"] == []
+    assert command[:4] == [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_temporal_lf_predictor_payload_proof.py",
+    ]
+    assert command[command.index("--packet") + 1] == "/ssd/candidate.snar"
+    assert command[command.index("--pair-indices") + 1] == "0,1"
+    assert command[command.index("--output-json") + 1].startswith(
+        (tmp_path / "queue" / row["queue_row_id"]).as_posix()
+    )
+    assert command[command.index("--output-payload") + 1].endswith(
+        "snerv_temporal_lf_predictor.stlp"
+    )
+    assert report["next_unblock_command_argv"] == command
+    assert "snerv_lf_hf_source_forward_artifact_missing" not in row["blockers"]
+    assert "snerv_temporal_lf_predictor_gate_not_implemented" in row["blockers"]
+    assert (
+        "snerv_temporal_lf_predictor_correction_stream_not_byte_charged"
+        in row["blockers"]
+    )
+
+
+def test_lf_hf_queue_consumes_temporal_lf_predictor_receiver_payload_proof(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        temporal_lf_predictor_receiver_payload_proofs=[
+            _temporal_lf_predictor_receiver_payload_proof()
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "temporal_lf_predictor_gate"
+    )
+    blockers = set(row["blockers"])
+    evidence = row["temporal_lf_predictor_evidence"]
+    assert evidence["receiver_payload_implemented"] is True
+    assert evidence["receiver_decode_proven"] is True
+    assert evidence["numpy_receiver_decode"] is True
+    assert evidence["correction_stream_byte_charged"] is True
+    assert evidence["section_native_byte_telemetry_present"] is True
+    assert "snerv_temporal_lf_predictor_gate_not_implemented" not in blockers
+    assert (
+        "snerv_temporal_lf_predictor_correction_stream_not_byte_charged"
+        not in blockers
+    )
+    assert report["temporal_lf_predictor_evidence"]["closed_campaign_blockers"] == [
+        "snerv_temporal_lf_predictor_gate_not_implemented",
+        "snerv_temporal_lf_predictor_correction_stream_not_byte_charged",
+    ]
+    assert "--temporal-lf-predictor-receiver-payload-proof" in report[
+        "runnable_rebuild_command_argv"
+    ]
+    assert "snerv_lf_hf_source_forward_artifact_missing" not in blockers
+    assert "snerv_temporal_lf_predictor_receiver_runtime_binding_missing" in blockers
+    assert row["blocked"] is True
+    assert row["command_argv"] == []
+    assert row["unblock_command_argv"] == []
+
+
+def test_lf_hf_queue_records_missing_lf_super_resolution_proof(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        value_domain_xray_reports=[_value_domain_xray(noncollapse=True)],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "lf_super_resolution_from_tiny_anchor"
+    )
+    blockers = set(row["blockers"])
+
+    assert report["lf_super_resolution_evidence"]["artifact_count"] == 0
+    assert (
+        report["current_state"]["lf_super_resolution_evidence"]["schema"]
+        == "snerv_lf_super_resolution_tiny_anchor_evidence.v1"
+    )
+    assert "snerv_lf_super_resolution_receiver_payload_not_implemented" in blockers
+    assert "snerv_lf_downsampled_anchor_component_deltas_missing" in blockers
+    assert row["blocked"] is True
+    assert row["command_argv"] == []
+    command = row["unblock_command_argv"]
+    assert command[:4] == [
+        "uv",
+        "run",
+        "python",
+        "tools/build_snerv_lf_super_resolution_tiny_anchor_payload_proof.py",
+    ]
+    assert command[command.index("--packet") + 1] == "/ssd/candidate.snar"
+    assert command[command.index("--pair-indices") + 1] == "0,1"
+    assert command[command.index("--output-payload") + 1].endswith(
+        "snerv_lf_super_resolution_tiny_anchor.slsr"
+    )
+    assert report["next_unblock_command_argv"][3] == (
+        "tools/build_snerv_temporal_lf_predictor_payload_proof.py"
+    )
+
+
+def test_lf_hf_queue_consumes_lf_super_resolution_receiver_payload_proof(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        lf_super_resolution_receiver_payload_proofs=[
+            _lf_super_resolution_receiver_payload_proof()
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "lf_super_resolution_from_tiny_anchor"
+    )
+    blockers = set(row["blockers"])
+    evidence = row["lf_super_resolution_evidence"]
+    assert evidence["receiver_payload_implemented"] is True
+    assert evidence["receiver_decode_proven"] is True
+    assert evidence["numpy_receiver_decode"] is True
+    assert evidence["tiny_anchor_component_deltas_present"] is True
+    assert evidence["component_delta_scope"] == (
+        "receiver_pixel_domain_not_scorer_component"
+    )
+    assert evidence["section_native_byte_telemetry_present"] is True
+    assert "snerv_lf_super_resolution_receiver_payload_not_implemented" not in blockers
+    assert "snerv_lf_downsampled_anchor_component_deltas_missing" not in blockers
+    assert report["lf_super_resolution_evidence"]["closed_campaign_blockers"] == [
+        "snerv_lf_super_resolution_receiver_payload_not_implemented",
+        "snerv_lf_downsampled_anchor_component_deltas_missing",
+    ]
+    assert "--lf-super-resolution-receiver-payload-proof" in report[
+        "runnable_rebuild_command_argv"
+    ]
+    assert "snerv_lf_super_resolution_receiver_runtime_binding_missing" in blockers
+    assert row["blocked"] is True
+    assert row["command_argv"] == []
+    assert row["unblock_command_argv"] == []
 
 
 def test_lf_hf_queue_keeps_distribution_guard_blocker_for_tether_only_proof(
@@ -1048,6 +1354,7 @@ def _value_domain_xray(*, noncollapse: bool) -> dict[str, object]:
         "packet_path": "/ssd/candidate.snar",
         "packet_bytes": 1234,
         "packet_sha256": "f" * 64,
+        "pair_indices": [0, 1],
         "sample_shape_b2chw": [1, 2, 3, 16, 24],
         "value_domain_sample_status": "selected_pair_decode_completed",
         "receiver_payload_decode_sample_proven": True,
@@ -1090,6 +1397,7 @@ def _hf_residual_receiver_payload_proof() -> dict[str, object]:
         "payload_path": "/ssd/lf_conditioned_hf_residual.slhr",
         "payload_bytes": 456,
         "payload_sha256": "2" * 64,
+        "pair_indices": [0, 1],
         "sample_shape_b2chw": [1, 2, 3, 16, 24],
         "receiver_payload_implemented": True,
         "receiver_decode_proven": True,
@@ -1117,6 +1425,7 @@ def _joint_codebook_receiver_payload_proof() -> dict[str, object]:
         "payload_path": "/ssd/joint_lf_hf_factorized_codebook.sjlc",
         "payload_bytes": 512,
         "payload_sha256": "5" * 64,
+        "pair_indices": [0, 1],
         "sample_shape_b2chw": [1, 2, 3, 16, 24],
         "receiver_payload_implemented": True,
         "receiver_decode_proven": True,
@@ -1133,6 +1442,74 @@ def _joint_codebook_receiver_payload_proof() -> dict[str, object]:
             "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
         ],
         "blockers": ["snerv_joint_lf_hf_factorized_codebook_false_authority"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _temporal_lf_predictor_receiver_payload_proof() -> dict[str, object]:
+    return {
+        "schema": "snerv_temporal_lf_predictor_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/ssd/snerv_temporal_lf_predictor_receiver_proof.json",
+        "_source_sha256": "6" * 64,
+        "packet_path": "/ssd/candidate.snar",
+        "source_packet_sha256": "7" * 64,
+        "payload_path": "/ssd/temporal_lf_predictor.stlp",
+        "payload_bytes": 384,
+        "payload_sha256": "8" * 64,
+        "pair_indices": [0, 1],
+        "sample_shape_b2chw": [1, 2, 3, 16, 24],
+        "lf_shape_b2chw": [1, 2, 3, 4, 6],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "numpy_receiver_decode": True,
+        "correction_stream_byte_charged": True,
+        "section_native_byte_telemetry_present": True,
+        "first_lf_anchor_bytes": 288,
+        "correction_stream_raw_bytes": 144,
+        "compressed_payload_bytes": 192,
+        "closed_campaign_blockers": [
+            "snerv_temporal_lf_predictor_gate_not_implemented",
+            "snerv_temporal_lf_predictor_correction_stream_not_byte_charged",
+        ],
+        "blockers": ["snerv_temporal_lf_predictor_payload_false_authority"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _lf_super_resolution_receiver_payload_proof() -> dict[str, object]:
+    return {
+        "schema": "snerv_lf_super_resolution_tiny_anchor_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/ssd/snerv_lf_super_resolution_tiny_anchor_receiver_proof.json",
+        "_source_sha256": "9" * 64,
+        "packet_path": "/ssd/candidate.snar",
+        "source_packet_sha256": "a" * 64,
+        "payload_path": "/ssd/lf_super_resolution_tiny_anchor.slsr",
+        "payload_bytes": 320,
+        "payload_sha256": "b" * 64,
+        "pair_indices": [0, 1],
+        "sample_shape_b2chw": [1, 2, 3, 16, 24],
+        "anchor_shape_b2chw": [1, 2, 3, 2, 3],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "numpy_receiver_decode": True,
+        "tiny_anchor_component_deltas_present": True,
+        "component_delta_scope": "receiver_pixel_domain_not_scorer_component",
+        "section_native_byte_telemetry_present": True,
+        "anchor_raw_bytes": 72,
+        "compressed_payload_bytes": 128,
+        "receiver_component_delta_stats": {
+            "all_frames": {"count": 2304, "mean_abs": 4.0, "max_abs": 16.0},
+            "scope": "receiver_pixel_domain_not_scorer_component",
+        },
+        "closed_campaign_blockers": [
+            "snerv_lf_super_resolution_receiver_payload_not_implemented",
+            "snerv_lf_downsampled_anchor_component_deltas_missing",
+        ],
+        "blockers": ["snerv_lf_super_resolution_tiny_anchor_payload_false_authority"],
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
