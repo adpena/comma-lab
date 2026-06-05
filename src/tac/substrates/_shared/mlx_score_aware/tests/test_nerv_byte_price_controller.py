@@ -27,6 +27,8 @@ def _custody(**extra: object) -> dict[str, object]:
         "archive_sha256": "a" * 64,
         "axis_tag": "[contest-CUDA]",
         "receiver_proof_status": "satisfied",
+        "receiver_proof_path": "/Volumes/VertigoDataTier/pact/proofs/receiver.json",
+        "receiver_proof_sha256": "b" * 64,
         "full_video_coverage": True,
     }
     row.update(extra)
@@ -84,6 +86,34 @@ def test_missing_custody_fails_closed_even_when_math_would_cut() -> None:
     assert row["decision"] == DEMOTE
     assert "missing_archive_sha256" in row["blockers"]
     assert row["delta_total_score"] == -0.100
+
+
+def test_bare_receiver_proof_status_without_identity_fails_closed() -> None:
+    plan = build_nerv_byte_price_plan(
+        [
+            {
+                "row_id": "bare_status",
+                "section_id": "selectors_rc",
+                "bytes": 100,
+                "delta_nonrate_score": 0.050,
+                "archive_sha256": "a" * 64,
+                "axis_tag": "[contest-CUDA]",
+                "receiver_proof_status": "satisfied",
+                "full_video_coverage": True,
+            }
+        ],
+        byte_price=_price(),
+    )
+
+    row = plan["decision_rows"][0]
+    assert row["economic_decision"] == CUT
+    assert row["decision"] == DEMOTE
+    assert row["receiver_proof_status"] == "satisfied"
+    assert row["receiver_proof_path"] is None
+    assert row["receiver_proof_sha256"] is None
+    assert "receiver_proof_not_satisfied" not in row["blockers"]
+    assert "receiver_proof_path_missing" in row["blockers"]
+    assert "receiver_proof_sha256_missing_or_invalid" in row["blockers"]
 
 
 def test_residual_admission_is_strictly_negative_total_only() -> None:
@@ -187,6 +217,10 @@ def test_artifact_level_runtime_ready_and_full_video_scope_are_custody_context()
             "archive_sha256": "b" * 64,
             "runtime_consumption_proof": {
                 "runtime_consumption_proof_ready": True,
+                "runtime_consumption_proof_path": (
+                    "/Volumes/VertigoDataTier/pact/proofs/runtime.json"
+                ),
+                "runtime_consumption_proof_sha256": "c" * 64,
                 "score_claim": False,
             },
             "scope_status": {"full_video": "executed"},
@@ -204,6 +238,10 @@ def test_artifact_level_runtime_ready_and_full_video_scope_are_custody_context()
 
     row = plan["decision_rows"][0]
     assert row["receiver_proof_status"] == "runtime_consumption_proof_ready"
+    assert row["receiver_proof_path"] == (
+        "/Volumes/VertigoDataTier/pact/proofs/runtime.json"
+    )
+    assert row["receiver_proof_sha256"] == "c" * 64
     assert row["full_video_coverage"] is True
     assert row["decision"] == CUT
     assert "receiver_proof_not_satisfied" not in row["blockers"]

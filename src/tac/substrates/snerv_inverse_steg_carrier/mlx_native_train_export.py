@@ -1831,7 +1831,7 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat_qat_bits: int = 8,
     scorer_loop_qat_decoder_payload_codec: str | None = None,
     scorer_loop_qat_lf_payload_codec: str | None = None,
-    scorer_loop_qat_component_guard_mode: str = "score_primary",
+    scorer_loop_qat_component_guard_mode: str = "pose_seg_hard",
     scorer_loop_qat_device: str = "cpu",
     recon_pixel_weight_path: str | Path | None = None,
     recon_pixel_weight_manifest_path: str | Path | None = None,

@@ -7118,6 +7118,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_scorer_loop_seg_slack == 0.002
     assert sn.snerv_scorer_loop_pair_stride == 3
     assert sn.snerv_scorer_loop_start_pair == 7
+    assert sn.snerv_scorer_loop_component_guard_mode == "pose_seg_hard"
     assert sn.snerv_spectra_preserving_adapter is True
     assert sn.snerv_mfu_scales == "1,3"
     assert sn.snerv_model_size_adapter == "snerv_manual_unit_adapter"

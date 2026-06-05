@@ -151,6 +151,10 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         ].default
         == DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT
     )
+    assert (
+        public_sig.parameters["scorer_loop_qat_component_guard_mode"].default
+        == "pose_seg_hard"
+    )
     attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
     assert "pr95_muon_policy" in attachment_sig.parameters
     assert "scorer_input_distribution_guard_weight" in attachment_sig.parameters

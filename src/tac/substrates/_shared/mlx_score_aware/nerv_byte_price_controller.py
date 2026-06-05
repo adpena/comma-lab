@@ -94,6 +94,18 @@ _ARCHIVE_SHA_KEYS = (
     "candidate_archive_sha",
     "source_archive_sha256",
 )
+_RECEIVER_PROOF_PATH_KEYS = (
+    "receiver_proof_path",
+    "receiver_proof_report_path",
+    "receiver_closed_proof_path",
+    "runtime_consumption_proof_path",
+)
+_RECEIVER_PROOF_SHA_KEYS = (
+    "receiver_proof_sha256",
+    "receiver_proof_report_sha256",
+    "receiver_closed_proof_sha256",
+    "runtime_consumption_proof_sha256",
+)
 _CANDIDATE_KEYS = (
     "candidate_id",
     "candidate",
@@ -182,6 +194,8 @@ class SectionAdmissionInput:
     archive_sha256: str | None
     axis_labels: tuple[str, ...]
     receiver_proof_status: str
+    receiver_proof_path: str | None
+    receiver_proof_sha256: str | None
     full_video_coverage: bool
     source: dict[str, Any]
     blockers: tuple[str, ...]
@@ -200,6 +214,8 @@ class SectionAdmissionInput:
             "archive_sha256": self.archive_sha256,
             "axis_labels": list(self.axis_labels),
             "receiver_proof_status": self.receiver_proof_status,
+            "receiver_proof_path": self.receiver_proof_path,
+            "receiver_proof_sha256": self.receiver_proof_sha256,
             "full_video_coverage": self.full_video_coverage,
             "blockers": list(self.blockers),
             "source": self.source,
@@ -226,6 +242,8 @@ class SectionAdmissionDecision:
     archive_sha256: str | None
     axis_labels: tuple[str, ...]
     receiver_proof_status: str
+    receiver_proof_path: str | None
+    receiver_proof_sha256: str | None
     full_video_coverage: bool
     blockers: tuple[str, ...]
     source: dict[str, Any]
@@ -252,6 +270,8 @@ class SectionAdmissionDecision:
             "archive_sha256": self.archive_sha256,
             "axis_labels": list(self.axis_labels),
             "receiver_proof_status": self.receiver_proof_status,
+            "receiver_proof_path": self.receiver_proof_path,
+            "receiver_proof_sha256": self.receiver_proof_sha256,
             "full_video_coverage": self.full_video_coverage,
             "blockers": list(self.blockers),
             "source": self.source,
@@ -432,6 +452,8 @@ def _decision_for_row(
         archive_sha256=row.archive_sha256,
         axis_labels=row.axis_labels,
         receiver_proof_status=row.receiver_proof_status,
+        receiver_proof_path=row.receiver_proof_path,
+        receiver_proof_sha256=row.receiver_proof_sha256,
         full_video_coverage=row.full_video_coverage,
         blockers=final_blockers,
         source=row.source,
@@ -473,6 +495,10 @@ def _normalize_section_row(
     archive_sha = _archive_sha256(row) or _archive_sha256(artifact_context)
     axis_labels = _axis_labels(row, artifact_context)
     receiver_status = _receiver_proof_status(row, artifact_context)
+    receiver_proof_path, receiver_proof_sha = _receiver_proof_identity(
+        row,
+        artifact_context,
+    )
     full_video = _full_video_coverage(row, artifact_context)
     blockers = _row_blockers(
         row,
@@ -480,6 +506,8 @@ def _normalize_section_row(
         archive_sha256=archive_sha,
         axis_labels=axis_labels,
         receiver_proof_status=receiver_status,
+        receiver_proof_path=receiver_proof_path,
+        receiver_proof_sha256=receiver_proof_sha,
         full_video_coverage=full_video,
     )
     return SectionAdmissionInput(
@@ -501,6 +529,8 @@ def _normalize_section_row(
         archive_sha256=archive_sha,
         axis_labels=axis_labels,
         receiver_proof_status=receiver_status,
+        receiver_proof_path=receiver_proof_path,
+        receiver_proof_sha256=receiver_proof_sha,
         full_video_coverage=full_video,
         source=source,
         blockers=tuple(blockers),
@@ -612,6 +642,8 @@ def _row_blockers(
     archive_sha256: str | None,
     axis_labels: Sequence[str],
     receiver_proof_status: str,
+    receiver_proof_path: str | None,
+    receiver_proof_sha256: str | None,
     full_video_coverage: bool,
 ) -> list[str]:
     blockers = [
@@ -630,9 +662,30 @@ def _row_blockers(
         blockers.append("missing_archive_sha256")
     if receiver_proof_status.lower() not in _RECEIVER_PROOF_GOOD:
         blockers.append("receiver_proof_not_satisfied")
+    if not receiver_proof_path:
+        blockers.append("receiver_proof_path_missing")
+    if not _is_sha256_hex(receiver_proof_sha256):
+        blockers.append("receiver_proof_sha256_missing_or_invalid")
     if not full_video_coverage:
         blockers.append("full_video_coverage_missing")
     return _ordered_unique(blockers)
+
+
+def _receiver_proof_identity(
+    row: Mapping[str, Any],
+    artifact_context: Mapping[str, Any],
+) -> tuple[str | None, str | None]:
+    path: str | None = None
+    sha: str | None = None
+    for mapping in (row, artifact_context):
+        path = path or _first_string(mapping, _RECEIVER_PROOF_PATH_KEYS)
+        sha = sha or _first_string(mapping, _RECEIVER_PROOF_SHA_KEYS)
+        for key in ("receiver_proof", "runtime_consumption_proof"):
+            proof = mapping.get(key)
+            if isinstance(proof, Mapping):
+                path = path or _first_string(proof, _RECEIVER_PROOF_PATH_KEYS)
+                sha = sha or _first_string(proof, _RECEIVER_PROOF_SHA_KEYS)
+    return path, sha
 
 
 def _receiver_proof_status(
@@ -772,6 +825,13 @@ def _archive_sha256(mapping: Mapping[str, Any]) -> str | None:
             if value:
                 return value
     return None
+
+
+def _is_sha256_hex(value: str | None) -> bool:
+    if value is None:
+        return False
+    text = str(value).strip().lower()
+    return len(text) == 64 and all(ch in "0123456789abcdef" for ch in text)
 
 
 def _ids_for_decision(

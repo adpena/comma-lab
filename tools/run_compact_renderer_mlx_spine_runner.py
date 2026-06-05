@@ -3515,6 +3515,116 @@ def _run_snerv_score_aware_long_training_scorer_tether_gate(
     }
 
 
+def _snerv_score_aware_long_training_required_control_contract(
+    *,
+    executed: bool,
+    score_aware_long_training: Mapping[str, Any],
+    training_telemetry_contract: Mapping[str, Any] | None,
+    scorer_input_distribution_guard_weight: float,
+    scorer_input_contrast_floor_weight: float,
+    scorer_input_shape_tether_weight: float,
+) -> dict[str, Any]:
+    """Require configured SNeRV scorer-domain controls to appear in telemetry."""
+
+    telemetry = (
+        training_telemetry_contract
+        if isinstance(training_telemetry_contract, Mapping)
+        else None
+    )
+    definitions = (
+        {
+            "control_id": "scorer_input_distribution_guard",
+            "weight": float(scorer_input_distribution_guard_weight),
+            "bound_key": "scorer_input_distribution_guard_bound",
+            "expected_key": "expected_scorer_input_guard_metric",
+            "observed_keys": (
+                "scorer_input_guard_metric_observed",
+                "scorer_input_guard_dual_metric_observed",
+            ),
+        },
+        {
+            "control_id": "scorer_input_contrast_floor",
+            "weight": float(scorer_input_contrast_floor_weight),
+            "bound_key": "scorer_input_contrast_floor_bound",
+            "expected_key": "expected_scorer_input_contrast_floor_metric",
+            "observed_keys": (
+                "scorer_input_contrast_floor_metric_observed",
+                "scorer_input_contrast_floor_segnet_ratio_metric_observed",
+                "scorer_input_contrast_floor_posenet_ratio_metric_observed",
+            ),
+        },
+        {
+            "control_id": "scorer_input_shape_tether",
+            "weight": float(scorer_input_shape_tether_weight),
+            "bound_key": "scorer_input_shape_tether_bound",
+            "expected_key": "expected_scorer_input_shape_tether_metric",
+            "observed_keys": (
+                "scorer_input_shape_tether_metric_observed",
+                "scorer_input_shape_tether_segnet_metric_observed",
+                "scorer_input_shape_tether_posenet_pair_metric_observed",
+                "scorer_input_shape_tether_posenet_delta_metric_observed",
+            ),
+        },
+    )
+    controls: dict[str, Any] = {}
+    blockers: list[str] = []
+    for definition in definitions:
+        control_id = str(definition["control_id"])
+        weight = float(definition["weight"])
+        required = bool(executed and weight > 0.0)
+        bound_key = str(definition["bound_key"])
+        bound = bool(score_aware_long_training.get(bound_key) is True)
+        expected_key = str(definition["expected_key"])
+        observed_keys = tuple(str(key) for key in definition["observed_keys"])
+        telemetry_expected = bool(
+            telemetry is not None and telemetry.get(expected_key) is True
+        )
+        observed = {
+            key: bool(telemetry is not None and telemetry.get(key) is True)
+            for key in observed_keys
+        }
+        telemetry_observed = bool(telemetry_expected and all(observed.values()))
+        control_passed = bool(not required or (bound and telemetry_observed))
+        controls[control_id] = {
+            "required": required,
+            "configured_weight": weight,
+            "bound": bound,
+            "bound_key": bound_key,
+            "telemetry_expected_key": expected_key,
+            "telemetry_expected": telemetry_expected,
+            "telemetry_observed": telemetry_observed,
+            "telemetry_observed_keys": observed,
+            "passed": control_passed,
+        }
+        if not required:
+            continue
+        if not bound:
+            blockers.append(
+                f"snerv_score_aware_long_training_{control_id}_required_control_not_bound"
+            )
+        if telemetry is None:
+            blockers.append(
+                "snerv_score_aware_long_training_required_control_telemetry_contract_missing"
+            )
+        elif telemetry.get("passed") is not True:
+            blockers.append(
+                "snerv_score_aware_long_training_required_control_telemetry_contract_failed"
+            )
+        elif not telemetry_observed:
+            blockers.append(
+                f"snerv_score_aware_long_training_{control_id}_required_telemetry_missing"
+            )
+    blockers = _dedupe(blockers)
+    return {
+        "schema": "snerv_score_aware_long_training_required_control_contract.v1",
+        "executed": bool(executed),
+        "passed": not blockers,
+        "controls": controls,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _run_snerv_native_mlx_export_attachment(
     *,
     requested: bool,
@@ -3889,10 +3999,31 @@ def _run_snerv_native_mlx_export_attachment(
             artifact.get("score_aware_long_training_has_real_posenet_teacher")
             or snerv_score_aware_long_training.get("has_real_posenet_teacher") is True
         )
+        snerv_required_control_contract = (
+            _snerv_score_aware_long_training_required_control_contract(
+                executed=snerv_score_aware_long_training_executed,
+                score_aware_long_training=snerv_score_aware_long_training,
+                training_telemetry_contract=(
+                    snerv_training_telemetry_contract
+                    if isinstance(snerv_training_telemetry_contract, Mapping)
+                    else None
+                ),
+                scorer_input_distribution_guard_weight=(
+                    score_aware_long_training_scorer_input_distribution_guard_weight
+                ),
+                scorer_input_contrast_floor_weight=(
+                    score_aware_long_training_scorer_input_contrast_floor_weight
+                ),
+                scorer_input_shape_tether_weight=(
+                    score_aware_long_training_scorer_input_shape_tether_weight
+                ),
+            )
+        )
         snerv_score_aware_long_training_control_bound = bool(
             snerv_score_aware_long_training_executed
             and isinstance(snerv_training_telemetry_contract, Mapping)
             and snerv_training_telemetry_contract.get("passed") is True
+            and snerv_required_control_contract.get("passed") is True
         )
         if snerv_score_aware_long_training_executed:
             if isinstance(snerv_training_telemetry_contract, Mapping):
@@ -3910,6 +4041,7 @@ def _run_snerv_native_mlx_export_attachment(
                 blockers.append(
                     "snerv_score_aware_long_training_telemetry_contract_missing"
                 )
+            blockers.extend(snerv_required_control_contract.get("blockers") or [])
         receiver_reconstruction = _snerv_receiver_reconstruction_summary(
             target_profile=artifact.get("receiver_target_reconstruction_profile"),
             export_profile=artifact.get("receiver_export_reconstruction_profile"),
@@ -4041,6 +4173,12 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             "score_aware_long_training_control_bound": (
                 snerv_score_aware_long_training_control_bound
+            ),
+            "score_aware_long_training_required_control_contract": (
+                snerv_required_control_contract
+            ),
+            "score_aware_long_training_required_scorer_domain_controls_bound": bool(
+                snerv_required_control_contract.get("passed") is True
             ),
             "score_aware_long_training": snerv_score_aware_long_training,
             "score_aware_long_training_telemetry_contract": (
@@ -4794,7 +4932,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_scorer_loop_start_pair: int = 0,
     snerv_scorer_loop_pair_guard_min_score_improved_fraction: float = 0.0,
     snerv_scorer_loop_pair_guard_max_pose_worsened_fraction: float = 1.0,
-    snerv_scorer_loop_component_guard_mode: str = "score_primary",
+    snerv_scorer_loop_component_guard_mode: str = "pose_seg_hard",
     random_seed: int = 0,
     upstream_dir: str | Path = DEFAULT_UPSTREAM_DIR,
     allow_overwrite: bool = False,
@@ -20201,11 +20339,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--snerv-scorer-loop-component-guard-mode",
         choices=("score_primary", "pose_hard", "pose_seg_hard"),
-        default="score_primary",
+        default="pose_seg_hard",
         help=(
-            "SNeRV scorer-loop/QAT acceptance guard. score_primary accepts "
-            "true score wins; pose_hard and pose_seg_hard are stricter "
-            "receiver-priced probes and must remain explicit in metadata."
+            "SNeRV scorer-loop/QAT acceptance guard. pose_seg_hard is the "
+            "full-stack training default; score_primary remains available for "
+            "scalar-only scorer probes and must remain explicit in metadata."
         ),
     )
     parser.add_argument(
