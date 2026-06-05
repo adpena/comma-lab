@@ -677,6 +677,48 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
 
 
 @mlx_only
+def test_adapter_train_step_emits_weighted_direct_live_segnet_part() -> None:
+    import mlx.core as mx
+
+    class _LiveSegTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            return mx.ones((int(idx.shape[0]), 384, 512, self.num_classes))
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            b, h, w, _c = frames.shape
+            return mx.zeros((int(b), int(h), int(w), self.num_classes))
+
+    base = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        scorer_teacher=_LiveSegTeacher(),
+        segnet_direct_live_distillation_weight=0.25,
+    )
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="dreamer_v3_rssm")
+
+    metrics = adapter.train_step(
+        mx.array([0, 1], dtype=mx.int32),
+        learning_rate=1e-2,
+        loss_weights={"distill": 0.5},
+    )
+
+    raw = metrics["loss_part_segnet_direct_live_distill"]
+    assert metrics["score_aware_loss_parts_active"] == pytest.approx(1.0)
+    assert metrics["loss_part_stage_weight_segnet_direct_live_distill"] == pytest.approx(
+        0.5
+    )
+    assert metrics[
+        "loss_part_weighted_segnet_direct_live_distill"
+    ] == pytest.approx(raw * 0.25 * 0.5)
+
+
+@mlx_only
 def test_adapter_train_step_updates_dual_ascent_once_and_records_metadata() -> None:
     import mlx.core as mx
 
@@ -944,6 +986,43 @@ def test_adapter_artifact_metadata_records_score_aware_objective() -> None:
     assert "score_claim" not in json.dumps(
         metadata["decoder_weight_gradient_saliency"], sort_keys=True
     )
+
+
+@mlx_only
+def test_adapter_metadata_marks_direct_live_active_without_student_distill() -> None:
+    import mlx.core as mx
+
+    class _LiveSegTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            return mx.ones((int(idx.shape[0]), 384, 512, self.num_classes))
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            b, h, w, _c = frames.shape
+            return mx.zeros((int(b), int(h), int(w), self.num_classes))
+
+    base = _tiny_dreamer_bundle(distill=0.0)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        scorer_teacher=_LiveSegTeacher(),
+        distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.75,
+        segnet_distillation_objective="boundary_argmax_hinge",
+    )
+    metadata = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+    ).artifact_metadata()
+
+    direct = metadata["score_aware_training"]["segnet_direct_live_distillation"]
+    assert direct["enabled"] is True
+    assert direct["weight"] == pytest.approx(0.75)
+    assert direct["objective"] == "boundary_argmax_hinge"
 
 
 @mlx_only

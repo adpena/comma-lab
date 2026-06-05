@@ -1361,11 +1361,11 @@ def _require_scorer_upstream_dir_for_distillation(
     if segnet_distillation_weight <= 0.0 and pose_distillation_weight <= 0.0:
         return
     upstream = Path(upstream_dir).expanduser().resolve(strict=False)
-    required = (
-        upstream / "modules.py",
-        upstream / "models" / "posenet.safetensors",
-        upstream / "models" / "segnet.safetensors",
-    )
+    required = [upstream / "modules.py"]
+    if segnet_distillation_weight > 0.0:
+        required.append(upstream / "models" / "segnet.safetensors")
+    if pose_distillation_weight > 0.0:
+        required.append(upstream / "models" / "posenet.safetensors")
     missing = [path.as_posix() for path in required if not path.is_file()]
     if missing:
         raise CompactRendererMlxSpineRunnerError(
@@ -4640,6 +4640,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
     segnet_student_live_calibration_weight: float = 1.0,
+    segnet_direct_live_distillation_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     allow_segnet_only_research: bool = False,
@@ -6131,6 +6132,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         segnet_student_live_calibration_weight=float(
             segnet_student_live_calibration_weight
         ),
+        segnet_direct_live_distillation_weight=float(
+            segnet_direct_live_distillation_weight
+        ),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
         distillation_device=str(distillation_device),
@@ -7045,6 +7049,8 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
     distillation_temperature: float,
+    segnet_student_live_calibration_weight: float,
+    segnet_direct_live_distillation_weight: float,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
@@ -7096,6 +7102,10 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "segnet_distillation_weight must be >= 0"
         )
+    if segnet_direct_live_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "segnet_direct_live_distillation_weight must be >= 0"
+        )
     if pose_distillation_weight < 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_weight must be >= 0"
@@ -7109,7 +7119,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "pose_distillation_huber_delta must be > 0"
         )
     if (
-        segnet_distillation_weight > 0.0
+        (segnet_distillation_weight > 0.0 or segnet_direct_live_distillation_weight > 0.0)
         and pose_distillation_weight <= 0.0
         and not allow_segnet_only_research
     ):
@@ -7120,7 +7130,10 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         )
     _require_scorer_upstream_dir_for_distillation(
         upstream_dir=scorer_upstream_dir,
-        segnet_distillation_weight=segnet_distillation_weight,
+        segnet_distillation_weight=max(
+            float(segnet_distillation_weight),
+            float(segnet_direct_live_distillation_weight),
+        ),
         pose_distillation_weight=pose_distillation_weight,
     )
     packet = parse_pr95_public_archive_zip(Path(source_archive_zip))
@@ -7190,6 +7203,21 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
             "segnet_distillation_objective": segnet_distillation_objective,
             "distillation_temperature": float(distillation_temperature),
+            "segnet_student_live_calibration_weight": float(
+                segnet_student_live_calibration_weight
+            ),
+            "segnet_direct_live_distillation": {
+                "schema": "pr95_hnerv_segnet_direct_live_distillation_control.v1",
+                "enabled": float(segnet_direct_live_distillation_weight) > 0.0,
+                "weight": float(segnet_direct_live_distillation_weight),
+                "teacher_surface": "teacher_logits_for_frames_nhwc01",
+                "objective": str(segnet_distillation_objective),
+                "loss": (
+                    "real_segnet_live_logits_default_mse_or_configured_"
+                    "argmax_hinge"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "segnet_tau_boundary": float(segnet_tau_boundary),
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "distillation_device": resolved_distillation_device,
@@ -7236,16 +7264,17 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     learnable_student_head = None
     pose_scorer_teacher = None
     learnable_pose_student_head = None
-    if segnet_distillation_weight > 0.0:
+    if segnet_distillation_weight > 0.0 or segnet_direct_live_distillation_weight > 0.0:
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
             device=resolved_distillation_device,
         )
-        learnable_student_head = build_learnable_student_head(
-            num_classes=int(scorer_teacher.num_classes),
-            seed=int(random_seed),
-        )
+        if segnet_distillation_weight > 0.0:
+            learnable_student_head = build_learnable_student_head(
+                num_classes=int(scorer_teacher.num_classes),
+                seed=int(random_seed),
+            )
     if pose_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
@@ -7263,6 +7292,12 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         learnable_student_head=learnable_student_head,
         distillation_temperature=float(distillation_temperature),
         segnet_distillation_objective=segnet_distillation_objective,
+        segnet_student_live_calibration_weight=float(
+            segnet_student_live_calibration_weight
+        ),
+        segnet_direct_live_distillation_weight=float(
+            segnet_direct_live_distillation_weight
+        ),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
         distillation_num_classes=(
@@ -7323,6 +7358,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
     segnet_student_live_calibration_weight: float = 1.0,
+    segnet_direct_live_distillation_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
@@ -7388,6 +7424,10 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             pose_distillation_huber_delta=pose_distillation_huber_delta,
             segnet_distillation_objective=segnet_distillation_objective,
             distillation_temperature=distillation_temperature,
+            segnet_student_live_calibration_weight=segnet_student_live_calibration_weight,
+            segnet_direct_live_distillation_weight=(
+                segnet_direct_live_distillation_weight
+            ),
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
             distillation_device=distillation_device,
@@ -8195,6 +8235,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     segnet_distillation_objective: str = "kl_t2",
     distillation_temperature: float = 2.0,
     segnet_student_live_calibration_weight: float = 1.0,
+    segnet_direct_live_distillation_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
@@ -8232,6 +8273,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     receiver_cache_quality_min_segnet_std: float = 1.0,
     receiver_cache_quality_min_segnet_dynamic_range: float = 16.0,
     receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate: float = 64.0,
+    receiver_cache_quality_segnet_argmax_probe: bool = True,
+    receiver_cache_quality_segnet_argmax_batch_frames: int = 4,
+    receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
     telemetry_flush_interval_epochs: int = 1,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
@@ -9117,6 +9161,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             segnet_student_live_calibration_weight=float(
                 segnet_student_live_calibration_weight
             ),
+            segnet_direct_live_distillation_weight=float(
+                segnet_direct_live_distillation_weight
+            ),
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
             scorer_input_distribution_guard_weight=float(
@@ -9328,6 +9375,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             max_segnet_mae_vs_reference_for_fit_gate=float(
                 receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+            ),
+            segnet_argmax_probe=bool(receiver_cache_quality_segnet_argmax_probe),
+            segnet_argmax_batch_frames=int(
+                receiver_cache_quality_segnet_argmax_batch_frames
+            ),
+            max_segnet_argmax_disagreement_for_fit_gate=float(
+                receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
             ),
             repo_root=root,
         )
@@ -12821,6 +12875,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     segnet_distillation_objective: str,
     distillation_temperature: float,
     segnet_student_live_calibration_weight: float = 1.0,
+    segnet_direct_live_distillation_weight: float = 0.0,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
@@ -12969,7 +13024,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         epochs=epochs,
     )
     if (
-        segnet_distillation_weight > 0.0
+        (
+            segnet_distillation_weight > 0.0
+            or segnet_direct_live_distillation_weight > 0.0
+        )
         and pose_distillation_weight <= 0.0
         and not allow_segnet_only_research
     ):
@@ -12980,7 +13038,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         )
     _require_scorer_upstream_dir_for_distillation(
         upstream_dir=scorer_upstream_dir,
-        segnet_distillation_weight=segnet_distillation_weight,
+        segnet_distillation_weight=max(
+            float(segnet_distillation_weight),
+            float(segnet_direct_live_distillation_weight),
+        ),
         pose_distillation_weight=pose_distillation_weight,
     )
     if recon_pixel_weight_path is not None and auto_segnet_boundary_recon_weight:
@@ -13208,6 +13269,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     train_time_dual_ascent_config = build_default_nerv_train_time_dual_ascent_config(
         family="hi_nerv",
         segnet_distillation_weight=float(segnet_distillation_weight),
+        segnet_direct_live_distillation_weight=float(
+            segnet_direct_live_distillation_weight
+        ),
         pose_distillation_weight=float(pose_distillation_weight),
         coder_qat_loss_weight_map=coder_qat_loss_weight_map,
         section_byte_budgets=train_time_section_byte_control.get(
@@ -13564,6 +13628,18 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             },
             "eval_roundtrip_ste": _hi_nerv_eval_roundtrip_ste_metadata(),
             "pose_student_input_preprocess": _hi_nerv_pose_preprocess_metadata(),
+            "segnet_direct_live_distillation": {
+                "schema": "hi_nerv_segnet_direct_live_distillation_control.v1",
+                "enabled": float(segnet_direct_live_distillation_weight) > 0.0,
+                "weight": float(segnet_direct_live_distillation_weight),
+                "teacher_surface": "teacher_logits_for_frames_nhwc01",
+                "objective": str(segnet_distillation_objective),
+                "loss": (
+                    "real_segnet_live_logits_default_mse_or_configured_"
+                    "argmax_hinge"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
             "local_mlx_prefilter": {
                 "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
@@ -13636,16 +13712,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     learnable_student_head = None
     pose_scorer_teacher = None
     learnable_pose_student_head = None
-    if segnet_distillation_weight > 0.0:
+    if segnet_distillation_weight > 0.0 or segnet_direct_live_distillation_weight > 0.0:
         scorer_teacher = build_mlx_segnet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
             device=resolved_distillation_device,
         )
-        learnable_student_head = build_learnable_student_head(
-            num_classes=int(scorer_teacher.num_classes),
-            seed=int(random_seed),
-        )
+        if segnet_distillation_weight > 0.0:
+            learnable_student_head = build_learnable_student_head(
+                num_classes=int(scorer_teacher.num_classes),
+                seed=int(random_seed),
+            )
     if auto_segnet_boundary_recon_weight:
         if scorer_teacher is None:
             raise CompactRendererMlxSpineRunnerError(
@@ -13683,6 +13760,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         segnet_distillation_objective=segnet_distillation_objective,
         segnet_student_live_calibration_weight=float(
             segnet_student_live_calibration_weight
+        ),
+        segnet_direct_live_distillation_weight=float(
+            segnet_direct_live_distillation_weight
         ),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
@@ -13776,6 +13856,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         segnet_student_live_calibration_weight=float(
             segnet_student_live_calibration_weight
         ),
+        segnet_direct_live_distillation_weight=float(
+            segnet_direct_live_distillation_weight
+        ),
         pr95_faithful_curriculum_enabled=bool(pr95_curriculum_enabled),
         coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
         train_time_section_byte_control_bound=bool(
@@ -13845,6 +13928,9 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
     min_segnet_std: float,
     min_segnet_dynamic_range: float,
     max_segnet_mae_vs_reference_for_fit_gate: float,
+    segnet_argmax_probe: bool,
+    segnet_argmax_batch_frames: int,
+    max_segnet_argmax_disagreement_for_fit_gate: float,
     repo_root: str | Path,
 ) -> dict[str, Any] | None:
     """Run the HiNeRV receiver-render scorer-domain fit gate from the runner.
@@ -13965,6 +14051,13 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             max_segnet_mae_vs_reference_for_fit_gate=float(
                 max_segnet_mae_vs_reference_for_fit_gate
             ),
+            segnet_argmax_probe_upstream_dir=(
+                (root / "upstream") if bool(segnet_argmax_probe) else None
+            ),
+            segnet_argmax_probe_batch_frames=int(segnet_argmax_batch_frames),
+            max_segnet_argmax_disagreement_for_fit_gate=float(
+                max_segnet_argmax_disagreement_for_fit_gate
+            ),
         )
     except Exception as exc:
         return _write_hi_nerv_runner_receiver_cache_quality_refusal(
@@ -14018,6 +14111,9 @@ def _hi_nerv_receiver_cache_quality_summary(
         return None
     gate = report.get("quality_gate") if isinstance(report, Mapping) else None
     gate_stats = gate.get("stats") if isinstance(gate, Mapping) else None
+    argmax_probe = (
+        report.get("segnet_argmax_probe") if isinstance(report, Mapping) else None
+    )
     return {
         "schema": "hi_nerv_receiver_cache_quality_summary.v1",
         "report_path": report.get("report_path"),
@@ -14041,6 +14137,22 @@ def _hi_nerv_receiver_cache_quality_summary(
         "distance_to_reference": (
             gate.get("distance_to_reference") if isinstance(gate, Mapping) else None
         ),
+        "segnet_argmax_probe_path": report.get("segnet_argmax_probe_path"),
+        "segnet_argmax_probe_passed": (
+            bool(argmax_probe.get("fit_gate_passed"))
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
+        "segnet_argmax_disagreement_rate": (
+            argmax_probe.get("segnet_argmax_disagreement_rate")
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
+        "segnet_boundary_argmax_disagreement_rate": (
+            argmax_probe.get("boundary_argmax_disagreement_rate")
+            if isinstance(argmax_probe, Mapping)
+            else None
+        ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
     }
 
@@ -14052,6 +14164,7 @@ def _compact_score_aware_training_telemetry_contract(
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
     segnet_student_live_calibration_weight: float,
+    segnet_direct_live_distillation_weight: float = 0.0,
     pr95_faithful_curriculum_enabled: bool,
     coder_aware_qat_bound: bool,
     train_time_section_byte_control_bound: bool,
@@ -14066,12 +14179,14 @@ def _compact_score_aware_training_telemetry_contract(
     expected_live_calibration = bool(
         expected_seg and float(segnet_student_live_calibration_weight) > 0.0
     )
+    expected_direct_live = float(segnet_direct_live_distillation_weight) > 0.0
     expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
     expected_any = bool(
         expected_seg
         or expected_pose
         or expected_live_calibration
+        or expected_direct_live
         or expected_section
         or expected_guard
     )
@@ -14087,6 +14202,7 @@ def _compact_score_aware_training_telemetry_contract(
     guard_loss_observed = False
     live_calibration_active_observed = False
     live_calibration_loss_observed = False
+    direct_live_loss_observed = False
     section_rate_observed = False
     seg_dual_observed = False
     pose_dual_observed = False
@@ -14159,6 +14275,17 @@ def _compact_score_aware_training_telemetry_contract(
                     )
                 )
             )
+            direct_live_loss_observed = (
+                direct_live_loss_observed
+                or any(
+                    _telemetry_finite(row, key)
+                    for key in (
+                        "loss_part_segnet_direct_live_distill",
+                        "loss_part_pr95_stage_segnet_direct_live_distill",
+                        "loss_part_weighted_pr95_stage_segnet_direct_live_distill",
+                    )
+                )
+            )
             section_rate_observed = section_rate_observed or any(
                 key.startswith("train_time_section_rate_score__")
                 and _finite_json_number(value)
@@ -14202,6 +14329,10 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(
             f"{family_key}_score_aware_training_live_segnet_calibration_loss_missing"
         )
+    if expected_direct_live and not direct_live_loss_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_direct_live_segnet_loss_missing"
+        )
     if pr95_faithful_curriculum_enabled and pr95_seg_loss_observed and not seg_loss_observed:
         blockers.append(f"{family_key}_score_aware_training_pr95_seg_alias_missing")
     if pr95_faithful_curriculum_enabled and pr95_pose_loss_observed and not pose_loss_observed:
@@ -14217,6 +14348,7 @@ def _compact_score_aware_training_telemetry_contract(
         "expected_segnet_dual": bool(expected_seg),
         "expected_posenet_dual": bool(expected_pose),
         "expected_segnet_live_calibration": bool(expected_live_calibration),
+        "expected_segnet_direct_live_distillation": bool(expected_direct_live),
         "expected_section_rate_metrics": bool(expected_section),
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
@@ -14232,6 +14364,9 @@ def _compact_score_aware_training_telemetry_contract(
         ),
         "segnet_live_calibration_loss_observed": bool(
             live_calibration_loss_observed
+        ),
+        "segnet_direct_live_distillation_loss_observed": bool(
+            direct_live_loss_observed
         ),
         "pr95_stage_seg_loss_observed": bool(pr95_seg_loss_observed),
         "pr95_stage_pose_loss_observed": bool(pr95_pose_loss_observed),
@@ -17482,6 +17617,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "legacy ablations."
         ),
     )
+    parser.add_argument(
+        "--segnet-direct-live-distillation-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "HiNeRV scorer-crux probe: add a renderer-gradient loss through "
+            "the real MLX SegNet(candidate) logits toward the target-frame "
+            "real SegNet logits. Unlike the student-live calibration term, "
+            "this backprops the real SegNet input VJP into decoded pixels. "
+            "Default 0 for legacy comparability; use small positive weights "
+            "for short nondegeneracy probes before long training."
+        ),
+    )
     parser.add_argument("--segnet-tau-boundary", default=1.0, type=float)
     parser.add_argument("--segnet-hinge-margin", default=1.0, type=float)
     parser.add_argument(
@@ -17770,6 +17918,34 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Maximum candidate-vs-source SegNet RGB MAE accepted by the "
             "HiNeRV post-export receiver-quality fit gate."
+        ),
+    )
+    parser.add_argument(
+        "--skip-receiver-cache-quality-segnet-argmax-probe",
+        dest="receiver_cache_quality_segnet_argmax_probe",
+        action="store_false",
+        default=True,
+        help=(
+            "HiNeRV only: skip the real SegNet argmax disagreement probe inside "
+            "the post-export receiver-quality gate. Default runs it."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-segnet-argmax-batch-frames",
+        default=4,
+        type=int,
+        help=(
+            "Frames per real SegNet forward for the HiNeRV receiver argmax "
+            "probe. Default 4 for bounded local MLX memory."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-segnet-argmax-disagreement-for-fit-gate",
+        default=0.25,
+        type=float,
+        help=(
+            "Maximum candidate-vs-source real SegNet argmax pixel-disagreement "
+            "rate accepted by the HiNeRV post-export receiver-quality gate."
         ),
     )
     parser.add_argument(
@@ -18650,6 +18826,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_student_live_calibration_weight=(
                 args.segnet_student_live_calibration_weight
             ),
+            segnet_direct_live_distillation_weight=(
+                args.segnet_direct_live_distillation_weight
+            ),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
@@ -18923,6 +19102,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_student_live_calibration_weight=(
                 args.segnet_student_live_calibration_weight
             ),
+            segnet_direct_live_distillation_weight=(
+                args.segnet_direct_live_distillation_weight
+            ),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             allow_segnet_only_research=args.allow_segnet_only_research,
@@ -19008,6 +19190,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_student_live_calibration_weight=(
                 args.segnet_student_live_calibration_weight
             ),
+            segnet_direct_live_distillation_weight=(
+                args.segnet_direct_live_distillation_weight
+            ),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             scorer_input_distribution_guard_weight=(
@@ -19073,6 +19258,15 @@ def main(argv: list[str] | None = None) -> int:
             ),
             receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate=(
                 args.receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+            ),
+            receiver_cache_quality_segnet_argmax_probe=(
+                args.receiver_cache_quality_segnet_argmax_probe
+            ),
+            receiver_cache_quality_segnet_argmax_batch_frames=(
+                args.receiver_cache_quality_segnet_argmax_batch_frames
+            ),
+            receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate=(
+                args.receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
             ),
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,

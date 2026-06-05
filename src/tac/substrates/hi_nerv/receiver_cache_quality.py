@@ -36,6 +36,9 @@ HI_NERV_DIRECT_RECEIVER_CACHE_AUDIT_SCHEMA = (
 HI_NERV_DIRECT_RECEIVER_CACHE_REPORT_SCHEMA = (
     "hi_nerv_direct_receiver_cache_report.v1"
 )
+HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA = (
+    "hi_nerv_receiver_cache_segnet_argmax_probe.v1"
+)
 
 
 def write_hi_nerv_receiver_cache_quality_report(
@@ -52,6 +55,10 @@ def write_hi_nerv_receiver_cache_quality_report(
     min_posenet_yuv6_std: float = 1.0,
     min_posenet_yuv6_dynamic_range: float = 16.0,
     max_posenet_yuv6_mae_vs_reference_for_fit_gate: float = 64.0,
+    segnet_argmax_probe_upstream_dir: str | Path | None = None,
+    segnet_argmax_probe_device: str = "cpu",
+    segnet_argmax_probe_batch_frames: int = 4,
+    max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
 ) -> dict[str, Any]:
     """Render a small HiNeRV receiver cache and optionally run a quality gate.
 
@@ -105,11 +112,61 @@ def write_hi_nerv_receiver_cache_quality_report(
             ),
         )
 
+    segnet_argmax_probe: dict[str, Any] | None = None
+    segnet_argmax_probe_path: Path | None = None
+    if reference_cache_dir is not None and segnet_argmax_probe_upstream_dir is not None:
+        segnet_argmax_probe_path = out / "segnet_argmax_probe.json"
+        try:
+            segnet_argmax_probe = write_hi_nerv_receiver_cache_segnet_argmax_probe(
+                output_json=segnet_argmax_probe_path,
+                candidate_cache_dir=cache_dir,
+                reference_cache_dir=reference_cache_dir,
+                upstream_dir=segnet_argmax_probe_upstream_dir,
+                sample_pairs=int(sample_pairs or max_pairs),
+                batch_frames=int(segnet_argmax_probe_batch_frames),
+                device=str(segnet_argmax_probe_device),
+                max_segnet_argmax_disagreement_for_fit_gate=float(
+                    max_segnet_argmax_disagreement_for_fit_gate
+                ),
+            )
+        except Exception as exc:  # pragma: no cover - exercised by runner refusal path
+            segnet_argmax_probe = {
+                "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
+                "candidate_cache_dir": cache_dir.as_posix(),
+                "reference_cache_dir": Path(reference_cache_dir)
+                .expanduser()
+                .resolve(strict=False)
+                .as_posix(),
+                "upstream_dir": Path(segnet_argmax_probe_upstream_dir)
+                .expanduser()
+                .resolve(strict=False)
+                .as_posix(),
+                "fit_gate_passed": False,
+                "failure": repr(exc),
+                "blockers": [
+                    "hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority",
+                    "hi_nerv_receiver_cache_segnet_argmax_probe_failed",
+                ],
+                **FALSE_AUTHORITY,
+            }
+            segnet_argmax_probe["report_path"] = segnet_argmax_probe_path.as_posix()
+            write_json(segnet_argmax_probe_path, segnet_argmax_probe)
+
     blockers = ["hi_nerv_receiver_cache_quality_is_false_authority"]
     if quality_gate is None:
         blockers.append("hi_nerv_receiver_cache_quality_reference_gate_not_run")
     else:
         blockers.extend(str(v) for v in quality_gate.get("blockers") or [])
+    if segnet_argmax_probe is not None:
+        blockers.extend(str(v) for v in segnet_argmax_probe.get("blockers") or [])
+
+    quality_gate_passed = (
+        bool(quality_gate.get("fit_gate_passed")) if quality_gate else False
+    )
+    if segnet_argmax_probe is not None:
+        quality_gate_passed = quality_gate_passed and bool(
+            segnet_argmax_probe.get("fit_gate_passed")
+        )
 
     report = {
         "schema": HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA,
@@ -132,9 +189,13 @@ def write_hi_nerv_receiver_cache_quality_report(
             quality_gate_path.as_posix() if quality_gate_path is not None else None
         ),
         "quality_gate": quality_gate,
-        "quality_gate_passed": (
-            bool(quality_gate.get("fit_gate_passed")) if quality_gate else False
+        "segnet_argmax_probe_path": (
+            segnet_argmax_probe_path.as_posix()
+            if segnet_argmax_probe_path is not None
+            else None
         ),
+        "segnet_argmax_probe": segnet_argmax_probe,
+        "quality_gate_passed": quality_gate_passed,
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
     }
@@ -142,6 +203,169 @@ def write_hi_nerv_receiver_cache_quality_report(
     report["report_path"] = report_path.as_posix()
     write_json(report_path, report)
     return report
+
+
+def write_hi_nerv_receiver_cache_segnet_argmax_probe(
+    *,
+    output_json: str | Path,
+    candidate_cache_dir: str | Path,
+    reference_cache_dir: str | Path,
+    upstream_dir: str | Path,
+    sample_pairs: int = 16,
+    batch_frames: int = 4,
+    device: str = "cpu",
+    max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+) -> dict[str, Any]:
+    """Run real SegNet argmax disagreement on receiver-cache RGB tensors.
+
+    The ordinary cache gate catches flat or badly scaled tensors.  This probe
+    asks the scorer-shaped question directly: after the same SegNet forward the
+    contest uses, how many last-frame pixels flip class relative to the source?
+    It is still local false-authority evidence, but it is score-facing evidence.
+    """
+
+    report = build_hi_nerv_receiver_cache_segnet_argmax_probe(
+        candidate_cache_dir=candidate_cache_dir,
+        reference_cache_dir=reference_cache_dir,
+        upstream_dir=upstream_dir,
+        sample_pairs=sample_pairs,
+        batch_frames=batch_frames,
+        device=device,
+        max_segnet_argmax_disagreement_for_fit_gate=(
+            max_segnet_argmax_disagreement_for_fit_gate
+        ),
+    )
+    out = Path(output_json).expanduser().resolve(strict=False)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    report["report_path"] = out.as_posix()
+    write_json(out, report)
+    return report
+
+
+def build_hi_nerv_receiver_cache_segnet_argmax_probe(
+    *,
+    candidate_cache_dir: str | Path,
+    reference_cache_dir: str | Path,
+    upstream_dir: str | Path,
+    sample_pairs: int = 16,
+    batch_frames: int = 4,
+    device: str = "cpu",
+    max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+    segnet_logits_fn: Any | None = None,
+) -> dict[str, Any]:
+    """Build the SegNet argmax probe payload.
+
+    ``segnet_logits_fn`` exists for tests and alternative scorer backends.  It
+    receives NCHW RGB scorer tensors in the upstream 0..255 domain and returns
+    logits in either NCHW or NHWC class layout.
+    """
+
+    if sample_pairs < 1:
+        raise ValueError(f"sample_pairs must be >= 1, got {sample_pairs}")
+    if batch_frames < 1:
+        raise ValueError(f"batch_frames must be >= 1, got {batch_frames}")
+    threshold = float(max_segnet_argmax_disagreement_for_fit_gate)
+    if not 0.0 <= threshold <= 1.0:
+        raise ValueError(
+            "max_segnet_argmax_disagreement_for_fit_gate must be in [0, 1], "
+            f"got {threshold}"
+        )
+
+    candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
+    reference = Path(reference_cache_dir).expanduser().resolve(strict=False)
+    upstream = Path(upstream_dir).expanduser().resolve(strict=False)
+    cand_seg = _load_cache_array(candidate, "segnet_last_rgb.npy")
+    ref_seg = _load_cache_array(reference, "segnet_last_rgb.npy")
+    n = _sample_count(cand_seg, ref_seg, sample_pairs)
+    cand_sample = np.asarray(cand_seg[:n], dtype=np.float32)
+    ref_sample = np.asarray(ref_seg[:n], dtype=np.float32)
+    _validate_segnet_cache_tensor("candidate_segnet_last_rgb", cand_sample)
+    _validate_segnet_cache_tensor("reference_segnet_last_rgb", ref_sample)
+    if cand_sample.shape[1:] != ref_sample.shape[1:]:
+        raise ValueError(
+            "candidate/reference SegNet cache shape mismatch: "
+            f"{cand_sample.shape} vs {ref_sample.shape}"
+        )
+
+    logits_fn = segnet_logits_fn or _build_real_mlx_segnet_logits_fn(
+        upstream_dir=upstream,
+        device=device,
+    )
+    cand_argmax, cand_margin = _run_segnet_argmax_batches(
+        cand_sample,
+        logits_fn=logits_fn,
+        batch_frames=int(batch_frames),
+    )
+    ref_argmax, ref_margin = _run_segnet_argmax_batches(
+        ref_sample,
+        logits_fn=logits_fn,
+        batch_frames=int(batch_frames),
+    )
+    if cand_argmax.shape != ref_argmax.shape:
+        raise ValueError(
+            "candidate/reference SegNet argmax shape mismatch: "
+            f"{cand_argmax.shape} vs {ref_argmax.shape}"
+        )
+
+    mismatch = cand_argmax != ref_argmax
+    total_pixels = int(mismatch.size)
+    mismatch_pixels = int(np.count_nonzero(mismatch))
+    disagreement = float(mismatch_pixels / total_pixels) if total_pixels else 1.0
+    boundary_mask = _segnet_boundary_mask(ref_argmax)
+    boundary_pixels = int(np.count_nonzero(boundary_mask))
+    boundary_mismatch_pixels = int(np.count_nonzero(mismatch & boundary_mask))
+    interior_pixels = int(total_pixels - boundary_pixels)
+    interior_mismatch_pixels = int(mismatch_pixels - boundary_mismatch_pixels)
+    max_class = int(max(np.max(cand_argmax), np.max(ref_argmax), 0))
+    class_count = max(max_class + 1, 5)
+    blockers = ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"]
+    if disagreement > threshold:
+        blockers.append("candidate_segnet_argmax_disagreement_too_high")
+
+    return {
+        "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
+        "candidate_cache_dir": candidate.as_posix(),
+        "reference_cache_dir": reference.as_posix(),
+        "upstream_dir": upstream.as_posix(),
+        "scorer_backend": (
+            "injected_segnet_logits_fn" if segnet_logits_fn is not None else "mlx_segnet_adapter"
+        ),
+        "device": str(device),
+        "sample_pairs": int(n),
+        "batch_frames": int(batch_frames),
+        "argmax_shape": [int(dim) for dim in cand_argmax.shape],
+        "total_pixels": total_pixels,
+        "mismatch_pixels": mismatch_pixels,
+        "segnet_argmax_disagreement_rate": disagreement,
+        "boundary_pixels": boundary_pixels,
+        "boundary_mismatch_pixels": boundary_mismatch_pixels,
+        "boundary_argmax_disagreement_rate": (
+            float(boundary_mismatch_pixels / boundary_pixels)
+            if boundary_pixels
+            else None
+        ),
+        "interior_pixels": interior_pixels,
+        "interior_mismatch_pixels": interior_mismatch_pixels,
+        "interior_argmax_disagreement_rate": (
+            float(interior_mismatch_pixels / interior_pixels)
+            if interior_pixels
+            else None
+        ),
+        "candidate_argmax_histogram": [
+            int(v) for v in np.bincount(cand_argmax.reshape(-1), minlength=class_count)
+        ],
+        "reference_argmax_histogram": [
+            int(v) for v in np.bincount(ref_argmax.reshape(-1), minlength=class_count)
+        ],
+        "candidate_top2_margin": _margin_stats(cand_margin),
+        "reference_top2_margin": _margin_stats(ref_margin),
+        "thresholds": {
+            "max_segnet_argmax_disagreement_for_fit_gate": threshold,
+        },
+        "fit_gate_passed": disagreement <= threshold,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def write_hi_nerv_direct_receiver_cache_from_payload(
@@ -330,6 +554,111 @@ def _read_hiv1_payload_from_archive_zip(archive_zip_path: Path) -> tuple[str, by
     return member_name, payload
 
 
+def _build_real_mlx_segnet_logits_fn(*, upstream_dir: Path, device: str) -> Any:
+    from tac.local_acceleration.mlx_scorer_adapters import (
+        MLXSegNetAdapter,
+        run_mlx_segnet_nchw,
+    )
+    from tac.scorer import load_default_segnet
+
+    segnet = load_default_segnet(upstream_dir, device=device)
+    segnet.eval()
+    adapter = MLXSegNetAdapter(segnet)
+
+    def run(x_nchw: np.ndarray) -> np.ndarray:
+        return np.asarray(run_mlx_segnet_nchw(adapter, x_nchw), dtype=np.float32)
+
+    return run
+
+
+def _load_cache_array(root: Path, name: str) -> np.ndarray:
+    path = root / name
+    if not path.is_file():
+        raise FileNotFoundError(f"cache array missing: {path}")
+    arr = np.load(path, mmap_mode="r")
+    if arr.ndim < 2:
+        raise ValueError(f"cache array has invalid rank: {path}")
+    return arr
+
+
+def _sample_count(a: np.ndarray, b: np.ndarray, sample_pairs: int) -> int:
+    n = min(int(a.shape[0]), int(b.shape[0]), int(sample_pairs))
+    if n < 1:
+        raise ValueError("cache arrays have no sample rows")
+    return n
+
+
+def _validate_segnet_cache_tensor(name: str, value: np.ndarray) -> None:
+    if value.ndim != 4:
+        raise ValueError(f"{name} must be NCHW rank-4, got shape={value.shape}")
+    if int(value.shape[1]) != 3:
+        raise ValueError(f"{name} must have 3 RGB channels, got shape={value.shape}")
+    if int(value.shape[2]) < 1 or int(value.shape[3]) < 1:
+        raise ValueError(f"{name} has invalid spatial shape={value.shape}")
+
+
+def _run_segnet_argmax_batches(
+    frames_nchw: np.ndarray,
+    *,
+    logits_fn: Any,
+    batch_frames: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    argmax_chunks: list[np.ndarray] = []
+    margin_chunks: list[np.ndarray] = []
+    for start in range(0, int(frames_nchw.shape[0]), int(batch_frames)):
+        chunk = np.ascontiguousarray(frames_nchw[start : start + int(batch_frames)])
+        logits = np.asarray(logits_fn(chunk), dtype=np.float32)
+        class_axis = _infer_segnet_logits_class_axis(logits)
+        logits_last = np.moveaxis(logits, class_axis, -1)
+        argmax_chunks.append(np.argmax(logits_last, axis=-1).astype(np.int16))
+        margin_chunks.append(_top2_margin(logits_last))
+    return (
+        np.concatenate(argmax_chunks, axis=0),
+        np.concatenate(margin_chunks, axis=0),
+    )
+
+
+def _infer_segnet_logits_class_axis(logits: np.ndarray) -> int:
+    if logits.ndim != 4:
+        raise ValueError(f"SegNet logits must be rank-4, got shape={logits.shape}")
+    if int(logits.shape[1]) == 5:
+        return 1
+    if int(logits.shape[-1]) == 5:
+        return -1
+    if 2 <= int(logits.shape[1]) <= 32 and int(logits.shape[2]) > 32:
+        return 1
+    if 2 <= int(logits.shape[-1]) <= 32 and int(logits.shape[1]) > 32:
+        return -1
+    raise ValueError(f"cannot infer SegNet class axis from shape={logits.shape}")
+
+
+def _top2_margin(logits_nhwc: np.ndarray) -> np.ndarray:
+    if logits_nhwc.shape[-1] < 2:
+        raise ValueError("SegNet logits need at least two classes for top-2 margin")
+    top2 = np.partition(logits_nhwc, kth=-2, axis=-1)[..., -2:]
+    return (top2[..., 1] - top2[..., 0]).astype(np.float32)
+
+
+def _segnet_boundary_mask(argmax_nhw: np.ndarray) -> np.ndarray:
+    boundary = np.zeros(argmax_nhw.shape, dtype=bool)
+    boundary[:, 1:, :] |= argmax_nhw[:, 1:, :] != argmax_nhw[:, :-1, :]
+    boundary[:, :-1, :] |= argmax_nhw[:, 1:, :] != argmax_nhw[:, :-1, :]
+    boundary[:, :, 1:] |= argmax_nhw[:, :, 1:] != argmax_nhw[:, :, :-1]
+    boundary[:, :, :-1] |= argmax_nhw[:, :, 1:] != argmax_nhw[:, :, :-1]
+    return boundary
+
+
+def _margin_stats(margin: np.ndarray) -> dict[str, float]:
+    return {
+        "mean": float(np.mean(margin)),
+        "p10": float(np.quantile(margin, 0.10)),
+        "p50": float(np.quantile(margin, 0.50)),
+        "p90": float(np.quantile(margin, 0.90)),
+        "min": float(np.min(margin)),
+        "max": float(np.max(margin)),
+    }
+
+
 def _ordered_unique(values: list[str]) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
@@ -344,6 +673,9 @@ __all__ = [
     "HI_NERV_DIRECT_RECEIVER_CACHE_AUDIT_SCHEMA",
     "HI_NERV_DIRECT_RECEIVER_CACHE_REPORT_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA",
+    "HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA",
+    "build_hi_nerv_receiver_cache_segnet_argmax_probe",
     "write_hi_nerv_direct_receiver_cache_from_payload",
     "write_hi_nerv_receiver_cache_quality_report",
+    "write_hi_nerv_receiver_cache_segnet_argmax_probe",
 ]

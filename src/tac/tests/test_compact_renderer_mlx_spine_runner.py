@@ -335,6 +335,9 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
         min_segnet_std=1.25,
         min_segnet_dynamic_range=7.5,
         max_segnet_mae_vs_reference_for_fit_gate=22.0,
+        segnet_argmax_probe=True,
+        segnet_argmax_batch_frames=3,
+        max_segnet_argmax_disagreement_for_fit_gate=0.125,
         repo_root=REPO_ROOT,
     )
 
@@ -346,6 +349,11 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
     assert captured["min_segnet_std"] == pytest.approx(1.25)
     assert captured["min_segnet_dynamic_range"] == pytest.approx(7.5)
     assert captured["max_segnet_mae_vs_reference_for_fit_gate"] == pytest.approx(22.0)
+    assert Path(captured["segnet_argmax_probe_upstream_dir"]) == REPO_ROOT / "upstream"
+    assert captured["segnet_argmax_probe_batch_frames"] == 3
+    assert captured["max_segnet_argmax_disagreement_for_fit_gate"] == pytest.approx(
+        0.125
+    )
     summary = runner_mod._hi_nerv_receiver_cache_quality_summary(report)
     assert summary["quality_gate_passed"] is True
     assert summary["candidate_posenet_yuv6_pair_stats"] == {"std": 3.0}
@@ -432,6 +440,9 @@ def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
         min_segnet_std=1.0,
         min_segnet_dynamic_range=16.0,
         max_segnet_mae_vs_reference_for_fit_gate=64.0,
+        segnet_argmax_probe=False,
+        segnet_argmax_batch_frames=4,
+        max_segnet_argmax_disagreement_for_fit_gate=0.25,
         repo_root=REPO_ROOT,
     )
 
@@ -446,6 +457,7 @@ def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
     assert captured_reference["max_pairs"] == 4
     assert captured_reference["batch_pairs"] == 2
     assert Path(captured_quality["reference_cache_dir"]) == reference_dir
+    assert captured_quality["segnet_argmax_probe_upstream_dir"] is None
     assert report["quality_gate_passed"] is False
     assert "candidate_posenet_yuv6_pair_low_dynamic_range" in report["blockers"]
 
@@ -1633,6 +1645,8 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "loss_part_pr95_stage_seg_surrogate": 1.25,
                     "loss_part_pr95_stage_pose_surrogate": 5.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.125,
+                    "loss_part_pr95_stage_segnet_direct_live_distill": 0.03125,
+                    "loss_part_weighted_pr95_stage_segnet_direct_live_distill": 0.015625,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.0625,
                     "loss_part_weighted_segnet_student_live_calibration": 0.0625,
@@ -1653,6 +1667,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
         segnet_student_live_calibration_weight=1.0,
+        segnet_direct_live_distillation_weight=0.5,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
@@ -1667,6 +1682,50 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
+    assert contract["expected_segnet_direct_live_distillation"] is True
+    assert contract["segnet_direct_live_distillation_loss_observed"] is True
+
+
+def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_loss(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_distill": 1.25,
+                    "loss_part_pose_distill": 2.5,
+                    "loss_part_pose_score_term": 5.0,
+                    "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_loss_missing"
+        in contract["blockers"]
+    )
 
 
 def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(

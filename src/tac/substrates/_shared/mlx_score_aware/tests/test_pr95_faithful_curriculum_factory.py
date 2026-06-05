@@ -949,6 +949,58 @@ def test_pr95_curriculum_path_respects_zero_student_head_stage_weight() -> None:
     assert moved == pytest.approx(0.0)
     assert "loss_part_stage_weight_pose_distill" not in metrics
     assert "loss_part_pr95_stage_pose_surrogate" in metrics
+    assert "loss_part_pose_distill" not in metrics
+    assert "loss_part_pose_score_term" not in metrics
+
+
+@requires_mlx
+def test_pr95_curriculum_zero_pose_stage_does_not_pollute_pose_dual_NO_FAKE() -> None:
+    """A curriculum pose warmup mask must not update PoseNet dual state."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=8,
+        train_time_dual_ascent_config={
+            "enabled": True,
+            "constraints": [
+                {
+                    "constraint_id": "hi_nerv_posenet_yuv6_pair_distill",
+                    "metric_name": "loss_part_pose_score_term",
+                    "loss_weight_key": "pose_distill",
+                    "target": 0.0,
+                    "dual_lr": 0.2,
+                    "max_lambda": 6.0,
+                }
+            ],
+        },
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 0.0},
+    )
+    mx.eval(adapter.model.parameters())
+
+    assert metrics["loss_part_pr95_stage_pose_distill_weight"] == pytest.approx(0.0)
+    assert metrics["loss_part_pr95_stage_effective_pose_weight"] == pytest.approx(0.0)
+    assert metrics["loss_part_weighted_pr95_stage_pose_surrogate"] == pytest.approx(0.0)
+    assert "loss_part_pose_score_term" not in metrics
+    assert metrics[
+        "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "dual_ascent_lambda__hi_nerv_posenet_yuv6_pair_distill"
+    ] == pytest.approx(0.0)
 
 
 @requires_mlx
@@ -962,7 +1014,7 @@ def test_segnet_student_live_calibration_requires_candidate_frame_teacher() -> N
 
     with pytest.raises(
         MlxScoreAwareHarnessError,
-        match="segnet_student_live_calibration_weight",
+        match="live SegNet candidate-frame terms require",
     ):
         RendererBundle(
             model=base.model,
@@ -1032,6 +1084,60 @@ def test_pr95_curriculum_trains_student_head_with_live_candidate_segnet_calibrat
     assert metrics["segnet_student_live_calibration_weight"] == pytest.approx(0.75)
     assert metrics["loss_part_segnet_student_live_calibration"] >= 0.0
     assert metrics["loss_part_weighted_segnet_student_live_calibration"] >= 0.0
+
+
+@requires_mlx
+def test_pr95_curriculum_consumes_direct_live_segnet_distillation_NO_FAKE() -> None:
+    """Direct live SegNet loss must run the candidate-frame scorer surface."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class _LiveSegTeacher:
+        def __init__(self, cached: object) -> None:
+            self.cached = cached
+            self.num_classes = int(cached.num_classes)
+            self.live_call_count = 0
+
+        def teacher_logits_for_indices(self, idx: object) -> object:
+            return self.cached.teacher_logits_for_indices(idx)
+
+        def teacher_logits_for_frames_nhwc01(self, frames: object) -> object:
+            self.live_call_count += 1
+            b, h, w, _c = frames.shape
+            mean = mx.mean(frames, axis=-1, keepdims=True)
+            channels = [mean * float(i + 1) for i in range(self.num_classes)]
+            return mx.concatenate(channels, axis=-1).reshape(
+                (int(b), int(h), int(w), self.num_classes)
+            )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    live_teacher = _LiveSegTeacher(bundle.scorer_teacher)
+    bundle.scorer_teacher = live_teacher
+    bundle.segnet_direct_live_distillation_weight = 0.5
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+
+    assert live_teacher.live_call_count >= 1
+    assert metrics[
+        "loss_part_pr95_stage_segnet_direct_live_distill"
+    ] >= 0.0
+    assert metrics[
+        "loss_part_weighted_pr95_stage_segnet_direct_live_distill"
+    ] >= 0.0
 
 
 @requires_mlx

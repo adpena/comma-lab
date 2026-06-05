@@ -305,6 +305,10 @@ class TrainTimeDualAscentController:
             state = self._states[constraint.constraint_id]
             contribution = float(state.lambda_value) * float(constraint.weight_scale)
             state.last_weight_contribution = contribution
+            if constraint.loss_weight_key in weights and (
+                float(weights[constraint.loss_weight_key]) == 0.0
+            ):
+                continue
             if contribution:
                 weights[constraint.loss_weight_key] = (
                     float(weights.get(constraint.loss_weight_key, 0.0))
@@ -408,6 +412,7 @@ def build_default_nerv_train_time_dual_ascent_config(
     *,
     family: str,
     segnet_distillation_weight: float = 0.0,
+    segnet_direct_live_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
     section_byte_budgets: Mapping[str, int | float] | None = None,
@@ -431,6 +436,7 @@ def build_default_nerv_train_time_dual_ascent_config(
 
     constraints: list[dict[str, Any]] = []
     seg_weight = _nonnegative_weight(segnet_distillation_weight)
+    direct_live_seg_weight = _nonnegative_weight(segnet_direct_live_distillation_weight)
     pose_weight = _nonnegative_weight(pose_distillation_weight)
     byte_price = _positive_weight(contest_rate_score_per_byte)
     if seg_weight > 0.0:
@@ -449,6 +455,27 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "SegNet scores only the last frame of each pair; this "
                     "dual raises the scorer-bound distillation price when "
                     "last-frame boundary loss stalls above its active target."
+                ),
+            )
+        )
+    if direct_live_seg_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_distill",
+                metric_name="loss_part_segnet_direct_live_distill",
+                loss_weight_key="distill",
+                base_weight=direct_live_seg_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.2,
+                max_lambda=6.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "Direct live SegNet logits price the same frame-1 scorer "
+                    "axis as the student surrogate, but backpropagate through "
+                    "the real candidate-frame SegNet response. The lambda is "
+                    "applied through the SegNet stage key so explicit zero "
+                    "curriculum masks cannot be bypassed."
                 ),
             )
         )

@@ -244,6 +244,15 @@ class RendererBundle:
             renderer output so the renderer does not optimize an unfaithful
             surrogate. ``0.0`` disables it for legacy ablations; HiNeRV/SNeRV
             long-run launchers default it on when real SegNet is bound.
+        segnet_direct_live_distillation_weight: optional renderer-gradient
+            weight against the REAL ported SegNet logits of the decoded
+            candidate frame. Unlike ``segnet_student_live_calibration_weight``
+            (which updates only the tiny student head), this term backprops
+            through ``teacher_logits_for_frames_nhwc01(decoded_frame)`` to the
+            renderer pixels and matches the target-frame real SegNet logits.
+            It is default-off because it is heavier and remains MLX-local
+            false-authority evidence, but it is the scorer-faithful antidote to
+            all-one-class SegNet masks when the student surrogate is too weak.
         segnet_tau_boundary: boundary-band temperature for boundary-aware SegNet
             objectives.
         segnet_hinge_margin: Crammer-Singer margin buffer for the
@@ -391,6 +400,7 @@ class RendererBundle:
     distillation_temperature: float = 2.0
     segnet_distillation_objective: str = DISTILLATION_OBJECTIVE_KL_T2
     segnet_student_live_calibration_weight: float = 0.0
+    segnet_direct_live_distillation_weight: float = 0.0
     segnet_tau_boundary: float = 1.0
     segnet_hinge_margin: float = 1.0
     distillation_num_classes: int = 5
@@ -494,6 +504,11 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 "segnet_student_live_calibration_weight must be >= 0; got "
                 f"{self.segnet_student_live_calibration_weight}"
+            )
+        if self.segnet_direct_live_distillation_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_distillation_weight must be >= 0; got "
+                f"{self.segnet_direct_live_distillation_weight}"
             )
         if self.segnet_tau_boundary <= 0.0:
             raise MlxScoreAwareHarnessError(
@@ -612,27 +627,32 @@ class RendererBundle:
                     "the scorer-blind mock for a $0 no-real-SegNet smoke (the "
                     "result is reconstruction-proxy, NOT scorer-bound)."
                 )
-            if (
-                has_real
+        live_segnet_candidate_frame_terms_active = bool(
+            (
+                self.distillation_weight > 0.0
                 and self.segnet_student_live_calibration_weight > 0.0
-            ):
-                live_fn = getattr(
-                    self.scorer_teacher,
-                    "teacher_logits_for_frames_nhwc01",
-                    None,
+            )
+            or self.segnet_direct_live_distillation_weight > 0.0
+        )
+        if live_segnet_candidate_frame_terms_active:
+            has_real = self.scorer_teacher is not None
+            live_fn = getattr(
+                self.scorer_teacher,
+                "teacher_logits_for_frames_nhwc01",
+                None,
+            )
+            has_empty_live_adapter = (
+                hasattr(self.scorer_teacher, "live_segnet_adapter")
+                and self.scorer_teacher.live_segnet_adapter is None
+            )
+            if not has_real or not callable(live_fn) or has_empty_live_adapter:
+                raise MlxScoreAwareHarnessError(
+                    "live SegNet candidate-frame terms require "
+                    "a real SegNet teacher that can evaluate decoded "
+                    "candidate frames via teacher_logits_for_frames_nhwc01. "
+                    "Use build_mlx_segnet_pair_teacher or set the "
+                    "live calibration/direct weights to 0 for a legacy ablation."
                 )
-                has_empty_live_adapter = (
-                    hasattr(self.scorer_teacher, "live_segnet_adapter")
-                    and self.scorer_teacher.live_segnet_adapter is None
-                )
-                if not callable(live_fn) or has_empty_live_adapter:
-                    raise MlxScoreAwareHarnessError(
-                        "segnet_student_live_calibration_weight > 0 requires "
-                        "a real SegNet teacher that can evaluate decoded "
-                        "candidate frames via teacher_logits_for_frames_nhwc01. "
-                        "Use build_mlx_segnet_pair_teacher or set the "
-                        "calibration weight to 0 for a legacy ablation."
-                    )
         # POSE axis fail-closed (the dominant-at-frontier scorer component): a
         # pose distillation term MUST bind the REAL PoseNet via
         # ``pose_scorer_teacher`` + ``learnable_pose_student_head``. There is no

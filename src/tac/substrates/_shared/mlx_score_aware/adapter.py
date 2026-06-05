@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from tac.substrates._shared.mlx_score_aware.device_gate import (
+    MlxScoreAwareHarnessError,
     require_mlx_for_harness,
 )
 from tac.substrates._shared.mlx_score_aware.dual_ascent import (
@@ -202,6 +203,58 @@ def _nonnegative_float_or_none(value: Any) -> float | None:
     if not math.isfinite(out) or out < 0.0:
         return None
     return out
+
+
+def _active_pr95_stage_metric_weight(
+    metrics: Mapping[str, Any],
+    effective_weight_key: str,
+    stage_weight_key: str,
+) -> bool:
+    """Return whether a PR95-stage metric is active for train-time controls."""
+
+    raw = metrics.get(effective_weight_key)
+    if raw is None:
+        raw = metrics.get(stage_weight_key)
+    if raw is None:
+        return True
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return False
+    return math.isfinite(value) and value > 0.0
+
+
+def _assert_mlx_loss_and_gradients_finite(
+    mx: Any,
+    loss_value: Any,
+    grads: Any,
+    *,
+    context: str,
+) -> dict[str, float]:
+    """Fail before optimizer state is mutated by non-finite MLX gradients."""
+
+    from mlx.utils import tree_flatten
+
+    loss_finite = mx.all(mx.isfinite(loss_value))
+    checks: list[tuple[str, Any]] = []
+    for raw_name, leaf in tree_flatten(grads):
+        if leaf is None:
+            continue
+        checks.append((_tree_name_to_saliency_group(raw_name), mx.all(mx.isfinite(leaf))))
+    mx.eval(loss_finite, *(check for _name, check in checks))
+    nonfinite = [name for name, check in checks if not bool(check.item())]
+    if not bool(loss_finite.item()) or nonfinite:
+        raise MlxScoreAwareHarnessError(
+            f"{context} produced non-finite loss/gradients before optimizer "
+            "update; refusing to poison optimizer state. "
+            f"loss_finite={bool(loss_finite.item())}; "
+            f"nonfinite_gradient_leaves={nonfinite[:16]}"
+        )
+    return {
+        "finite_update_guard_active": 1.0,
+        "finite_update_guard_checked_gradient_leaf_count": float(len(checks)),
+        "finite_update_guard_nonfinite_gradient_leaf_count": 0.0,
+    }
 
 
 def _build_aurora_like_mlx_optimizer(
@@ -781,6 +834,15 @@ class MlxScoreAwareAdapter:
                     * scalar
                 )
                 out["loss_part_stage_weight_distill"] = segnet_stage_weight
+            elif name == "segnet_direct_live_distill":
+                out["loss_part_weighted_segnet_direct_live_distill"] = (
+                    float(self.bundle.segnet_direct_live_distillation_weight)
+                    * segnet_stage_weight
+                    * scalar
+                )
+                out["loss_part_stage_weight_segnet_direct_live_distill"] = (
+                    segnet_stage_weight
+                )
             elif name == "pose_distill":
                 out["loss_part_weighted_pose_distill"] = (
                     float(self.bundle.pose_distillation_weight)
@@ -815,7 +877,9 @@ class MlxScoreAwareAdapter:
             elif name in weights:
                 out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
         out["score_aware_loss_parts_active"] = float(
-            ("distill" in parts) or ("pose_distill" in parts)
+            ("distill" in parts)
+            or ("segnet_direct_live_distill" in parts)
+            or ("pose_distill" in parts)
         )
         return out
 
@@ -851,13 +915,30 @@ class MlxScoreAwareAdapter:
             _prepare_recon_pixel_weight,
             _weighted_recon,
             decode_frames_nhwc01,
+            direct_live_segnet_logit_distillation_loss,
             pose_student_inputs_nhwc,
             scorer_input_distribution_guard_loss,
         )
 
-        if (
-            self.bundle.scorer_teacher is None
-            or self.bundle.learnable_student_head is None
+        (
+            seg_control_multiplier,
+            pose_control_multiplier,
+            effective_seg_weight,
+            effective_pose_weight,
+        ) = self._pr95_stage_score_weight_controls(loss_weights=loss_weights)
+        seg_stage_weight = component_loss_weight(loss_weights, "distill")
+        pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
+        direct_live_weight = float(
+            self.bundle.segnet_direct_live_distillation_weight
+        )
+        direct_live_active = bool(
+            direct_live_weight > 0.0 and seg_stage_weight != 0.0
+        )
+        seg_surrogate_active = bool(float(effective_seg_weight) != 0.0)
+        pose_surrogate_active = bool(float(effective_pose_weight) != 0.0)
+
+        if self.bundle.scorer_teacher is None or (
+            seg_surrogate_active and self.bundle.learnable_student_head is None
         ):
             raise ValueError(
                 "PR95-faithful stage loss requires a real SegNet teacher and "
@@ -865,8 +946,11 @@ class MlxScoreAwareAdapter:
                 "score_aware_loss."
             )
         if (
-            self.bundle.pose_scorer_teacher is None
-            or self.bundle.learnable_pose_student_head is None
+            pose_surrogate_active
+            and (
+                self.bundle.pose_scorer_teacher is None
+                or self.bundle.learnable_pose_student_head is None
+            )
         ):
             raise ValueError(
                 "PR95-faithful stage loss requires a real PoseNet teacher and "
@@ -904,32 +988,42 @@ class MlxScoreAwareAdapter:
             )
 
         seg_rgb = rgb_1 if self.bundle.segnet_teacher_frame_index == 1 else rgb_0
-        student_logits_nhwc = self.bundle.learnable_student_head(seg_rgb)
-        teacher_logits_nhwc = mx.stop_gradient(
-            self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
-        )
-        if tuple(student_logits_nhwc.shape) != tuple(teacher_logits_nhwc.shape):
-            raise ValueError(
-                "PR95-faithful SegNet student/teacher shape mismatch: "
-                f"student={tuple(student_logits_nhwc.shape)} "
-                f"teacher={tuple(teacher_logits_nhwc.shape)}"
+        if seg_surrogate_active:
+            student_logits_nhwc = self.bundle.learnable_student_head(seg_rgb)
+            teacher_logits_nhwc = mx.stop_gradient(
+                self.bundle.scorer_teacher.teacher_logits_for_indices(batch)
             )
-        targets_hard_nhw = mx.argmax(teacher_logits_nhwc, axis=-1)
-        seg_logits_nchw = mx.transpose(student_logits_nhwc, (0, 3, 1, 2))
+            if tuple(student_logits_nhwc.shape) != tuple(teacher_logits_nhwc.shape):
+                raise ValueError(
+                    "PR95-faithful SegNet student/teacher shape mismatch: "
+                    f"student={tuple(student_logits_nhwc.shape)} "
+                    f"teacher={tuple(teacher_logits_nhwc.shape)}"
+                )
+            targets_hard_nhw = mx.argmax(teacher_logits_nhwc, axis=-1)
+            seg_logits_nchw = mx.transpose(student_logits_nhwc, (0, 3, 1, 2))
+        else:
+            seg_logits_nchw = None
+            targets_hard_nhw = None
 
-        pose_rgb_0, pose_rgb_1 = pose_student_inputs_nhwc(
-            self.bundle, rgb_0, rgb_1
-        )
-        pose_pred = self.bundle.learnable_pose_student_head(pose_rgb_0, pose_rgb_1)
-        pose_target = mx.stop_gradient(
-            self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
-        )
-        if int(pose_pred.shape[-1]) < 6 or int(pose_target.shape[-1]) < 6:
-            raise ValueError(
-                "PR95-faithful PoseNet stage loss requires at least 6 pose "
-                f"dims; got pred={tuple(pose_pred.shape)} "
-                f"target={tuple(pose_target.shape)}"
+        if pose_surrogate_active:
+            pose_rgb_0, pose_rgb_1 = pose_student_inputs_nhwc(
+                self.bundle, rgb_0, rgb_1
             )
+            pose_pred = self.bundle.learnable_pose_student_head(
+                pose_rgb_0, pose_rgb_1
+            )
+            pose_target = mx.stop_gradient(
+                self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
+            )
+            if int(pose_pred.shape[-1]) < 6 or int(pose_target.shape[-1]) < 6:
+                raise ValueError(
+                    "PR95-faithful PoseNet stage loss requires at least 6 pose "
+                    f"dims; got pred={tuple(pose_pred.shape)} "
+                    f"target={tuple(pose_target.shape)}"
+                )
+        else:
+            pose_pred = None
+            pose_target = None
 
         extra_qat_total, extra_qat_parts = self._extra_loss_terms_and_weighted_total(
             model,
@@ -953,31 +1047,37 @@ class MlxScoreAwareAdapter:
                 )
 
         loss_family = str(stage_verdict.loss_family)
-        (
-            seg_control_multiplier,
-            pose_control_multiplier,
-            effective_seg_weight,
-            effective_pose_weight,
-        ) = self._pr95_stage_score_weight_controls(loss_weights=loss_weights)
-        seg_stage_weight = component_loss_weight(loss_weights, "distill")
-        pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
-        seg_loss = pr95_mlx_stage_seg_loss(
-            loss_family,
-            seg_logits_nchw,
-            targets_hard_nhw,
-        )
-        per_dim_scale = getattr(
-            self.bundle.pose_scorer_teacher,
-            "per_dim_scale",
-            None,
-        )
-        pose_distill, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
-            self.bundle,
-            student_pose=pose_pred[:, :6],
-            teacher_pose=pose_target[:, :6],
-            per_dim_scale=per_dim_scale,
-        )
-        pose_loss = mx.sqrt(10.0 * pose_distill + 1.0e-12)
+        if seg_surrogate_active:
+            seg_loss = pr95_mlx_stage_seg_loss(
+                loss_family,
+                seg_logits_nchw,
+                targets_hard_nhw,
+            )
+        else:
+            seg_loss = mx.array(0.0, dtype=mx.float32)
+        direct_live_seg_loss = None
+        if direct_live_active:
+            direct_live_seg_loss = direct_live_segnet_logit_distillation_loss(
+                self.bundle,
+                seg_rgb,
+                batch,
+            )
+        if pose_surrogate_active:
+            per_dim_scale = getattr(
+                self.bundle.pose_scorer_teacher,
+                "per_dim_scale",
+                None,
+            )
+            pose_distill, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
+                self.bundle,
+                student_pose=pose_pred[:, :6],
+                teacher_pose=pose_target[:, :6],
+                per_dim_scale=per_dim_scale,
+            )
+            pose_loss = mx.sqrt(10.0 * pose_distill + 1.0e-12)
+        else:
+            pose_loss = mx.array(0.0, dtype=mx.float32)
+            pose_distill_raw_mse = mx.array(0.0, dtype=mx.float32)
         recon_stage_weight = component_loss_weight(loss_weights, "recon")
         scorer_input_guard_stage_weight = component_loss_weight(
             loss_weights,
@@ -988,6 +1088,11 @@ class MlxScoreAwareAdapter:
             + float(effective_pose_weight) * pose_loss
             + recon_stage_weight * recon
         )
+        if direct_live_seg_loss is not None:
+            total = (
+                total
+                + direct_live_weight * seg_stage_weight * direct_live_seg_loss
+            )
         guard_parts: dict[str, Any] = {}
         if (
             self.bundle.scorer_input_distribution_guard_weight > 0.0
@@ -1055,6 +1160,8 @@ class MlxScoreAwareAdapter:
             parts[f"pr95_stage_{name}"] = value
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
+        if direct_live_seg_loss is not None:
+            parts["pr95_stage_segnet_direct_live_distill"] = direct_live_seg_loss
         parts.update(extra_qat_parts)
         # Keep the symbolic surface reachable for tests and downstream source
         # audits without putting a string into float-only metrics.
@@ -1079,10 +1186,6 @@ class MlxScoreAwareAdapter:
         pose_control = float(
             getattr(self.bundle, "pose_distillation_weight", 0.0)
         )
-        if seg_control == 0.0:
-            seg_control = 1.0
-        if pose_control == 0.0:
-            pose_control = 1.0
         seg_base = (
             PR95_STAGE_BASE_SEG_WEIGHT
             if self._pr95_stage_source_weight_amplification_enabled
@@ -1174,6 +1277,14 @@ class MlxScoreAwareAdapter:
             elif name == "pr95_stage_pose_surrogate":
                 out["loss_part_weighted_pr95_stage_pose_surrogate"] = (
                     effective_pose_weight * scalar
+                )
+            elif name == "pr95_stage_segnet_direct_live_distill":
+                out[
+                    "loss_part_weighted_pr95_stage_segnet_direct_live_distill"
+                ] = (
+                    float(self.bundle.segnet_direct_live_distillation_weight)
+                    * component_loss_weight(loss_weights, "distill")
+                    * scalar
                 )
             elif name == "pr95_c1a_entropy":
                 out["loss_part_weighted_pr95_c1a_entropy"] = (
@@ -1481,6 +1592,29 @@ class MlxScoreAwareAdapter:
                 "purpose": (
                     "calibrate_student_head_to_real_segnet_candidate_response_"
                     "before_renderer_uses_student_surrogate_gradients"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "segnet_direct_live_distillation": {
+                "schema": "mlx_score_aware_segnet_direct_live_distillation.v1",
+                "enabled": (
+                    float(self.bundle.segnet_direct_live_distillation_weight)
+                    > 0.0
+                    and self.bundle.scorer_teacher is not None
+                ),
+                "weight": float(
+                    self.bundle.segnet_direct_live_distillation_weight
+                ),
+                "teacher_surface": "teacher_logits_for_frames_nhwc01",
+                "candidate_frame_domain": "decoded_eval_roundtrip_nhwc01",
+                "objective": str(self.bundle.segnet_distillation_objective),
+                "loss": (
+                    "real_segnet_live_logits_default_mse_or_configured_"
+                    "argmax_hinge"
+                ),
+                "purpose": (
+                    "backpropagate_real_segnet_input_vjp_into_renderer_pixels_"
+                    "when_student_surrogate_collapses_to_one_class"
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
@@ -2278,6 +2412,11 @@ class MlxScoreAwareAdapter:
         if (
             "loss_part_distill" not in metrics
             and "loss_part_pr95_stage_seg_surrogate" in metrics
+            and _active_pr95_stage_metric_weight(
+                metrics,
+                "loss_part_pr95_stage_effective_seg_weight",
+                "loss_part_pr95_stage_distill_weight",
+            )
         ):
             metrics["loss_part_distill"] = metrics[
                 "loss_part_pr95_stage_seg_surrogate"
@@ -2285,6 +2424,11 @@ class MlxScoreAwareAdapter:
         if (
             "loss_part_pose_distill" not in metrics
             and "loss_part_pr95_stage_pose_surrogate" in metrics
+            and _active_pr95_stage_metric_weight(
+                metrics,
+                "loss_part_pr95_stage_effective_pose_weight",
+                "loss_part_pr95_stage_pose_distill_weight",
+            )
         ):
             metrics["loss_part_pose_distill"] = metrics[
                 "loss_part_pr95_stage_pose_surrogate"
@@ -2292,6 +2436,11 @@ class MlxScoreAwareAdapter:
         if (
             "loss_part_pose_score_term" not in metrics
             and "loss_part_pr95_stage_pose_surrogate" in metrics
+            and _active_pr95_stage_metric_weight(
+                metrics,
+                "loss_part_pr95_stage_effective_pose_weight",
+                "loss_part_pr95_stage_pose_distill_weight",
+            )
         ):
             metrics["loss_part_pose_score_term"] = metrics[
                 "loss_part_pr95_stage_pose_surrogate"
@@ -2502,6 +2651,12 @@ class MlxScoreAwareAdapter:
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
+        finite_guard_metrics = _assert_mlx_loss_and_gradients_finite(
+            mx,
+            loss_value,
+            grads,
+            context=f"{self.substrate_id}_mlx_score_aware_train_step",
+        )
         self._accumulate_decoder_weight_gradient_saliency(grads)
         # Wave N+11 stabilizer: apply mlx.optimizers.clip_grad_norm BEFORE
         # optimizer.update so the NaN-at-ep-16-18 gradient-explosion signature
@@ -2597,6 +2752,7 @@ class MlxScoreAwareAdapter:
         return self._with_dual_ascent_metrics(
             {
                 "total": float(loss_value.item()),
+                **finite_guard_metrics,
                 **native_optimizer_metrics,
                 **post_update_metrics,
             }
@@ -2640,6 +2796,12 @@ class MlxScoreAwareAdapter:
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
+        finite_guard_metrics = _assert_mlx_loss_and_gradients_finite(
+            mx,
+            loss_value,
+            grads,
+            context=f"{self.substrate_id}_pact_muon_adamw_train_step",
+        )
         self._accumulate_decoder_weight_gradient_saliency(grads)
         if self._wave_n11_grad_clip_max_norm is not None:
             grads, total_norm = mlx_optim.clip_grad_norm(
@@ -2703,6 +2865,7 @@ class MlxScoreAwareAdapter:
         )
         return {
             "total": float(loss_value.item()),
+            **finite_guard_metrics,
             "pact_optimizer_uses_muon": 1.0,
             "pact_muon_tensor_count": float(step_summary["muon_tensor_count"]),
             "pact_adamw_tensor_count": float(step_summary["adamw_tensor_count"]),
@@ -2794,6 +2957,12 @@ class MlxScoreAwareAdapter:
 
         loss_and_grad_fn = mlx_nn.value_and_grad(self.model, _loss_fn_inner)
         loss_value, grads = loss_and_grad_fn(self.model)
+        finite_guard_metrics = _assert_mlx_loss_and_gradients_finite(
+            mx,
+            loss_value,
+            grads,
+            context=f"{self.substrate_id}_pr95_curriculum_train_step",
+        )
         self._accumulate_decoder_weight_gradient_saliency(grads)
 
         # Apply ONE canonical Muon+AdamW (or AdamW-only) step. The canonical
@@ -2839,6 +3008,7 @@ class MlxScoreAwareAdapter:
         )
         return {
             "total": float(loss_value.item()),
+            **finite_guard_metrics,
             "pr95_stage_index": float(stage_verdict.stage_index),
             "pr95_stage_qat_active": float(int(bool(stage_verdict.qat_active))),
             "pr95_stage_uses_muon": float(int(stage_verdict.uses_muon)),

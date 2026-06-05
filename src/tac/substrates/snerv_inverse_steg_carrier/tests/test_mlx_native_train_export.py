@@ -194,6 +194,7 @@ def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs(
 
     policy = mod._snerv_score_aware_checkpoint_selection_policy(
         segnet_distillation_weight=0.25,
+        segnet_direct_live_distillation_weight=0.5,
         pose_distillation_weight=0.1,
         has_real_segnet_teacher=False,
         has_real_posenet_teacher=False,
@@ -206,7 +207,11 @@ def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs(
     assert policy["selection_metric"] == "score_aware_composite_full_video_surrogate"
     assert policy["fail_closed_on_missing_parts"] is True
     assert "distill" in policy["required_loss_parts"]
+    assert "segnet_direct_live_distill" in policy["required_loss_parts"]
     assert "pose_distill" in policy["required_loss_parts"]
+    assert "real_segnet_direct_live_distillation" in policy[
+        "active_score_surfaces"
+    ]
     assert "snerv_score_aware_checkpoint_selection_segnet_teacher_missing" in policy[
         "blockers"
     ]
@@ -286,6 +291,8 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "loss_part_pr95_stage_seg_surrogate": 1.0,
                     "loss_part_pr95_stage_pose_surrogate": 2.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.25,
+                    "loss_part_pr95_stage_segnet_direct_live_distill": 0.0625,
+                    "loss_part_weighted_pr95_stage_segnet_direct_live_distill": 0.03125,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.125,
                     "loss_part_weighted_segnet_student_live_calibration": 0.125,
@@ -307,6 +314,7 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
         segnet_student_live_calibration_weight=1.0,
+        segnet_direct_live_distillation_weight=0.5,
         pr95_faithful_curriculum_enabled=True,
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
@@ -323,6 +331,52 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
+    assert contract["expected_segnet_direct_live_distillation"] is True
+    assert contract["segnet_direct_live_distillation_loss_observed"] is True
+
+
+def test_score_aware_telemetry_contract_rejects_missing_direct_live_loss(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_distill": 1.0,
+                    "loss_part_pose_distill": 2.0,
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_loss_missing"
+        in contract["blockers"]
+    )
 
 
 def test_score_aware_telemetry_contract_rejects_inactive_scorer_tether_lambdas(

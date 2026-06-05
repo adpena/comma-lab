@@ -102,6 +102,32 @@ def test_dual_ascent_projects_lambda_down_when_constraint_satisfied() -> None:
     )
 
 
+def test_dual_ascent_respects_explicit_zero_curriculum_stage_masks() -> None:
+    controller = TrainTimeDualAscentController.from_config(
+        {
+            "enabled": True,
+            "constraints": [
+                {
+                    "constraint_id": "pose",
+                    "metric_name": "loss_part_pose_score_term",
+                    "loss_weight_key": "pose_distill",
+                    "target": 0.0,
+                    "dual_lr": 1.0,
+                    "initial_lambda": 3.0,
+                }
+            ],
+        }
+    )
+
+    assert controller.effective_loss_weights({"pose_distill": 0.0})[
+        "pose_distill"
+    ] == pytest.approx(0.0)
+    assert controller.effective_loss_weights({"pose_distill": 0.25})[
+        "pose_distill"
+    ] == pytest.approx(3.25)
+    assert controller.effective_loss_weights({})["pose_distill"] == pytest.approx(3.0)
+
+
 def test_dual_ascent_rejects_missing_target() -> None:
     with pytest.raises(TrainTimeDualAscentError, match="needs target"):
         TrainTimeDualAscentController.from_config(
@@ -180,6 +206,21 @@ def test_default_nerv_dual_ascent_config_prices_active_scorer_and_coder_terms() 
     )
     assert config["score_claim"] is False
     assert config["promotion_eligible"] is False
+
+
+def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=3.0,
+    )
+
+    assert config["enabled"] is True
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    direct = constraints["hi_nerv_segnet_direct_live_distill"]
+    assert direct["metric_name"] == "loss_part_segnet_direct_live_distill"
+    assert direct["loss_weight_key"] == "distill"
+    assert direct["weight_scale"] == pytest.approx(3.0)
 
 
 def test_default_nerv_dual_ascent_config_prices_section_byte_budgets() -> None:

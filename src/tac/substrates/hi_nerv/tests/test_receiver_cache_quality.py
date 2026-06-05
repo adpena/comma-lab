@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 
 from tac.repo_io import sha256_file
@@ -13,6 +14,8 @@ from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hi_nerv.receiver_cache_quality import (
     HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA,
+    HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
+    build_hi_nerv_receiver_cache_segnet_argmax_probe,
     write_hi_nerv_receiver_cache_quality_report,
 )
 
@@ -84,6 +87,45 @@ def test_hi_nerv_receiver_cache_quality_attaches_gate_against_reference(
     assert report["quality_gate_passed"] is True
     assert report["score_claim"] is False
     assert Path(report["quality_gate_path"]).is_file()
+
+
+def test_hi_nerv_receiver_cache_segnet_argmax_probe_prices_real_flip_surface(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    candidate.mkdir()
+    reference.mkdir()
+    ref = np.zeros((1, 3, 4, 4), dtype=np.float32)
+    cand = ref.copy()
+    cand[0, 0, 0, 0] = 255.0
+    np.save(reference / "segnet_last_rgb.npy", ref)
+    np.save(candidate / "segnet_last_rgb.npy", cand)
+
+    def fake_segnet_logits(x_nchw: np.ndarray) -> np.ndarray:
+        b, _c, h, w = x_nchw.shape
+        logits = np.zeros((b, 5, h, w), dtype=np.float32)
+        logits[:, 0, :, :] = 1.0
+        logits[:, 1, :, :] = (x_nchw[:, 0, :, :] > 128.0).astype(np.float32) * 3.0
+        return logits
+
+    report = build_hi_nerv_receiver_cache_segnet_argmax_probe(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        upstream_dir=tmp_path / "upstream",
+        sample_pairs=1,
+        batch_frames=1,
+        max_segnet_argmax_disagreement_for_fit_gate=0.05,
+        segnet_logits_fn=fake_segnet_logits,
+    )
+
+    assert report["schema"] == HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA
+    assert report["scorer_backend"] == "injected_segnet_logits_fn"
+    assert report["total_pixels"] == 16
+    assert report["mismatch_pixels"] == 1
+    assert report["segnet_argmax_disagreement_rate"] == pytest.approx(1.0 / 16.0)
+    assert report["fit_gate_passed"] is False
+    assert "candidate_segnet_argmax_disagreement_too_high" in report["blockers"]
 
 
 def _write_tiny_hiv1_archive(path: Path) -> Path:

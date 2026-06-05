@@ -633,6 +633,60 @@ def scorer_input_distribution_guard_loss(
     }
 
 
+def direct_live_segnet_logit_distillation_loss(
+    bundle: RendererBundle,
+    seg_rgb_nhwc01: Any,
+    idx: Any,
+) -> Any:
+    """Score-facing direct SegNet VJP term for decoded candidate frames.
+
+    This is deliberately separate from the tiny learnable student head.  The
+    live teacher surface runs the real ported SegNet on the decoded candidate
+    frame, so gradients flow through SegNet's input Jacobian back into the
+    renderer pixels.  The target logits remain the cached real SegNet response
+    on the source frame.
+    """
+
+    mx = require_mlx_for_harness()
+    if bundle.scorer_teacher is None:
+        raise ValueError(
+            "segnet_direct_live_distillation_weight > 0 requires scorer_teacher"
+        )
+    live_fn = getattr(bundle.scorer_teacher, "teacher_logits_for_frames_nhwc01", None)
+    if not callable(live_fn):
+        raise ValueError(
+            "segnet_direct_live_distillation_weight > 0 requires "
+            "teacher_logits_for_frames_nhwc01"
+        )
+    candidate_logits = live_fn(seg_rgb_nhwc01)
+    target_logits = mx.stop_gradient(bundle.scorer_teacher.teacher_logits_for_indices(idx))
+    if tuple(candidate_logits.shape) != tuple(target_logits.shape):
+        raise ValueError(
+            "direct live SegNet candidate/target logits shape mismatch: "
+            f"candidate={tuple(candidate_logits.shape)} "
+            f"target={tuple(target_logits.shape)}"
+        )
+    if bundle.segnet_distillation_objective == "boundary_argmax_hinge":
+        from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+            HintonMlxCustomLossFnConfig,
+            score_teacher_distillation_loss,
+        )
+
+        loss_cfg = HintonMlxCustomLossFnConfig(
+            temperature=bundle.distillation_temperature,
+            distillation_objective=bundle.segnet_distillation_objective,
+            tau_boundary=bundle.segnet_tau_boundary,
+            hinge_margin=bundle.segnet_hinge_margin,
+            student_head_out_channels=bundle.distillation_num_classes,
+        )
+        return score_teacher_distillation_loss(
+            student_logits=candidate_logits,
+            teacher_logits=target_logits,
+            config=loss_cfg,
+        )
+    return mx.mean((candidate_logits - target_logits) ** 2)
+
+
 def score_aware_loss(
     bundle: RendererBundle,
     idx: Any,
@@ -796,6 +850,17 @@ def score_aware_loss(
             )
         total = total + bundle.distillation_weight * segnet_stage_weight * distill
         parts["distill"] = distill
+
+    direct_live_weight = float(bundle.segnet_direct_live_distillation_weight)
+    if direct_live_weight > 0.0 and segnet_stage_weight != 0.0:
+        seg_rgb = rgb_1 if bundle.segnet_teacher_frame_index == 1 else rgb_0
+        direct_live_distill = direct_live_segnet_logit_distillation_loss(
+            bundle,
+            seg_rgb,
+            idx,
+        )
+        total = total + direct_live_weight * segnet_stage_weight * direct_live_distill
+        parts["segnet_direct_live_distill"] = direct_live_distill
 
     if bundle.pose_distillation_weight > 0.0 and pose_stage_weight != 0.0:
         # PRODUCTION pose path (Catalog #164 + the C6 IBPS / DreamerV3 lesson,

@@ -128,6 +128,33 @@ def test_rejects_bad_segnet_distillation_objective_and_tau() -> None:
         )
 
 
+def test_direct_live_segnet_distillation_requires_live_candidate_teacher() -> None:
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="live SegNet candidate-frame terms require",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            distillation_weight=0.0,
+            segnet_direct_live_distillation_weight=0.5,
+        )
+
+
+def test_student_live_calibration_is_inert_when_segnet_distillation_is_disabled() -> None:
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=None,
+        target_rgb_1=None,
+        num_pairs=4,
+        distillation_weight=0.0,
+        segnet_student_live_calibration_weight=1.0,
+    )
+    assert bundle.segnet_student_live_calibration_weight == 1.0
+
+
 def test_rejects_bad_num_classes() -> None:
     with pytest.raises(MlxScoreAwareHarnessError, match="distillation_num_classes"):
         RendererBundle(
