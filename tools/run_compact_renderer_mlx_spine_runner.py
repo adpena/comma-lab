@@ -4361,14 +4361,18 @@ def _resolve_hi_nerv_optimizer_policy(
             f"{HI_NERV_PR95_MUON_POLICIES}; got {pr95_muon_policy!r}"
         )
     if policy == "auto":
-        # Preserve the PR95-faithful control row for the historical AdamW
-        # curriculum.  For the Pact default, long campaigns should still use
-        # PR95's 8-stage scorer/QAT schedule, but with the contest-specific
-        # every-stage Muon policy wired through the shared harness.
+        # Auto may choose the PR95 curriculum only for an explicit PR95 total
+        # epoch request or for the Pact default long-run optimizer.  A named
+        # native optimizer experiment such as ``--optimizer-kind adamw`` must
+        # not be silently swallowed by the PR95 stage schedule; that exact bug
+        # made collapse probes look like AdamW while still using delegated
+        # PR95 partition clipping.
         resolved = (
             "pr95_curriculum"
-            if (int(epochs) >= 8 or explicit_total_epochs)
-            and optimizer in {"adamw", "pact_muon_adamw"}
+            if (
+                (explicit_total_epochs and optimizer in {"adamw", "pact_muon_adamw"})
+                or (int(epochs) >= 8 and optimizer == "pact_muon_adamw")
+            )
             else "native_optimizer"
         )
     else:
@@ -4679,6 +4683,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     allow_segnet_only_research: bool = False,
@@ -7144,6 +7149,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     segnet_direct_live_class_histogram_weight: float,
     segnet_direct_live_class_balanced_hinge_weight: float,
     segnet_direct_live_class_balanced_ce_weight: float,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str,
@@ -7415,6 +7421,9 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         segnet_direct_live_class_balanced_ce_weight=float(
             segnet_direct_live_class_balanced_ce_weight
         ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            segnet_direct_live_class_balanced_squared_hinge_weight
+        ),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
         distillation_num_classes=(
@@ -7480,6 +7489,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
@@ -7560,6 +7570,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             ),
             segnet_direct_live_class_balanced_ce_weight=(
                 segnet_direct_live_class_balanced_ce_weight
+            ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=(
+                segnet_direct_live_class_balanced_squared_hinge_weight
             ),
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
@@ -8373,6 +8386,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
@@ -9253,7 +9267,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         allow_segnet_only_research=bool(allow_segnet_only_research),
         allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
     )
-    if prelaunch_blockers:
+    native_optimizer_bypasses_pr95_prelaunch = bool(
+        optimizer_policy.get("native_optimizer_active")
+    )
+    if prelaunch_blockers and not native_optimizer_bypasses_pr95_prelaunch:
         refusal = _base_report(
             output_dir=out,
             mode="hi_nerv_pr95_binding_prelaunch_refused",
@@ -9366,6 +9383,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             segnet_direct_live_class_balanced_ce_weight=float(
                 segnet_direct_live_class_balanced_ce_weight
+            ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=float(
+                segnet_direct_live_class_balanced_squared_hinge_weight
             ),
             segnet_tau_boundary=segnet_tau_boundary,
             segnet_hinge_margin=segnet_hinge_margin,
@@ -13120,6 +13140,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
@@ -13284,6 +13305,14 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     ):
         raise CompactRendererMlxSpineRunnerError(
             "segnet_direct_live_class_balanced_ce_weight must be finite and >= 0"
+        )
+    if (
+        not math.isfinite(float(segnet_direct_live_class_balanced_squared_hinge_weight))
+        or float(segnet_direct_live_class_balanced_squared_hinge_weight) < 0.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "segnet_direct_live_class_balanced_squared_hinge_weight must be "
+            "finite and >= 0"
         )
     if (
         not math.isfinite(float(scorer_input_contrast_floor_weight))
@@ -13600,6 +13629,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         segnet_direct_live_class_balanced_ce_weight=float(
             segnet_direct_live_class_balanced_ce_weight
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            segnet_direct_live_class_balanced_squared_hinge_weight
         ),
         pose_distillation_weight=float(pose_distillation_weight),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
@@ -14024,12 +14056,16 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "class_balanced_ce_weight": float(
                     segnet_direct_live_class_balanced_ce_weight
                 ),
+                "class_balanced_squared_hinge_weight": float(
+                    segnet_direct_live_class_balanced_squared_hinge_weight
+                ),
                 "teacher_surface": "teacher_logits_for_frames_nhwc01",
                 "objective": str(segnet_distillation_objective),
                 "loss": (
                     "real_segnet_live_logits_default_mse_or_configured_"
                     "argmax_hinge_plus_optional_target_class_histogram_or_"
-                    "class_balanced_bootstrap_tether_or_class_balanced_ce"
+                    "class_balanced_bootstrap_tether_or_class_balanced_ce_or_"
+                    "class_balanced_squared_hinge"
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
@@ -14166,6 +14202,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         segnet_direct_live_class_balanced_ce_weight=float(
             segnet_direct_live_class_balanced_ce_weight
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            segnet_direct_live_class_balanced_squared_hinge_weight
         ),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
@@ -16990,6 +17029,10 @@ def _planner_row_command_control_blockers(
             "segnet_direct_live_class_balanced_ce_weight",
         ),
         (
+            "--segnet-direct-live-class-balanced-squared-hinge-weight",
+            "segnet_direct_live_class_balanced_squared_hinge_weight",
+        ),
+        (
             "--scorer-input-distribution-guard-weight",
             "scorer_input_distribution_guard_weight",
         ),
@@ -17044,6 +17087,7 @@ def _planner_row_flag_values_match(flag: str, *, actual: str, expected: str) -> 
         "--segnet-direct-live-class-histogram-weight",
         "--segnet-direct-live-class-balanced-hinge-weight",
         "--segnet-direct-live-class-balanced-ce-weight",
+        "--segnet-direct-live-class-balanced-squared-hinge-weight",
         "--scorer-input-distribution-guard-weight",
         "--scorer-input-contrast-floor-weight",
         "--scorer-input-contrast-floor-segnet-min-std-ratio",
@@ -18419,6 +18463,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "collapse basin."
         ),
     )
+    parser.add_argument(
+        "--segnet-direct-live-class-balanced-squared-hinge-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "Relative weight for the direct-live SegNet class-balanced squared "
+            "Crammer-Singer hinge. This keeps the upstream argmax decision "
+            "boundary but gives far-from-boundary collapsed classes stronger "
+            "gradient than the linear hinge."
+        ),
+    )
     parser.add_argument("--segnet-tau-boundary", default=1.0, type=float)
     parser.add_argument("--segnet-hinge-margin", default=1.0, type=float)
     parser.add_argument(
@@ -19697,6 +19752,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_direct_live_class_balanced_ce_weight=(
                 args.segnet_direct_live_class_balanced_ce_weight
             ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=(
+                args.segnet_direct_live_class_balanced_squared_hinge_weight
+            ),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             distillation_device=args.distillation_device,
@@ -19994,6 +20052,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_direct_live_class_balanced_ce_weight=(
                 args.segnet_direct_live_class_balanced_ce_weight
             ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=(
+                args.segnet_direct_live_class_balanced_squared_hinge_weight
+            ),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,
             allow_segnet_only_research=args.allow_segnet_only_research,
@@ -20093,6 +20154,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             segnet_direct_live_class_balanced_ce_weight=(
                 args.segnet_direct_live_class_balanced_ce_weight
+            ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=(
+                args.segnet_direct_live_class_balanced_squared_hinge_weight
             ),
             segnet_tau_boundary=args.segnet_tau_boundary,
             segnet_hinge_margin=args.segnet_hinge_margin,

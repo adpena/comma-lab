@@ -180,6 +180,105 @@ def test_bias_gradient_multiplier_zeroes_non_head_bias_but_keeps_weights_live() 
     assert float(mx.max(mx.abs(model.decoder.weight - weight_before)).item()) > 0.0
 
 
+def test_native_optimizer_reports_single_global_clip_application() -> None:
+    import mlx.nn as nn
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class TinyRenderer(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.decoder = nn.Linear(1, 3)
+
+        def reconstruct_pair(self, idx):
+            batch_size = int(idx.shape[0])
+            z = mx.ones((batch_size, 2, 2, 1), dtype=mx.float32)
+            rgb = mx.sigmoid(self.decoder(z))
+            nchw = mx.transpose(rgb, (0, 3, 1, 2))
+            return nchw, nchw
+
+    model = TinyRenderer()
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=mx.zeros((2, 2, 2, 3), dtype=mx.float32),
+        target_rgb_1=mx.ones((2, 2, 2, 3), dtype=mx.float32),
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="native_clip_telemetry_test",
+        optimizer_kind="adamw",
+        weight_decay=0.0,
+        grad_clip_max_norm=1.0e-6,
+    )
+
+    metrics = adapter.train_step(
+        batch=mx.array([0, 1], dtype=mx.int32),
+        learning_rate=1e-2,
+        loss_weights={"recon": 1.0},
+    )
+
+    assert metrics["gradient_clip_enabled"] == pytest.approx(1.0)
+    assert metrics["gradient_clip_actual_application_count"] == pytest.approx(1.0)
+    assert metrics["gradient_clip_delegated_to_pr95_partition_helper"] == pytest.approx(
+        0.0
+    )
+    assert metrics["gradient_global_norm_pre_clip"] > 0.0
+    assert metrics["gradient_clip_would_clip"] == pytest.approx(1.0)
+    assert 0.0 < metrics["gradient_clip_scale"] < 1.0
+
+
+def test_pact_muon_reports_delegated_partition_clip_without_double_global_clip() -> None:
+    import mlx.nn as nn
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class TinyRenderer(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.decoder = nn.Linear(1, 3)
+
+        def reconstruct_pair(self, idx):
+            batch_size = int(idx.shape[0])
+            z = mx.ones((batch_size, 2, 2, 1), dtype=mx.float32)
+            rgb = mx.sigmoid(self.decoder(z))
+            nchw = mx.transpose(rgb, (0, 3, 1, 2))
+            return nchw, nchw
+
+    model = TinyRenderer()
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=mx.zeros((2, 2, 2, 3), dtype=mx.float32),
+        target_rgb_1=mx.ones((2, 2, 2, 3), dtype=mx.float32),
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="pact_muon_clip_telemetry_test",
+        optimizer_kind="pact_muon_adamw",
+        weight_decay=0.0,
+        grad_clip_max_norm=1.0e-6,
+    )
+
+    metrics = adapter.train_step(
+        batch=mx.array([0, 1], dtype=mx.int32),
+        learning_rate=1e-2,
+        loss_weights={"recon": 1.0},
+    )
+
+    assert metrics["gradient_clip_enabled"] == pytest.approx(1.0)
+    assert metrics["gradient_clip_actual_application_count"] == pytest.approx(0.0)
+    assert metrics["gradient_clip_delegated_to_pr95_partition_helper"] == pytest.approx(
+        1.0
+    )
+    assert metrics["gradient_global_norm_pre_clip"] > 0.0
+    assert metrics["gradient_clip_would_clip"] == pytest.approx(1.0)
+    assert 0.0 < metrics["gradient_clip_scale"] < 1.0
+    assert metrics["pact_optimizer_uses_muon"] == pytest.approx(1.0)
+
+
 def test_renderer_bundle_validation_fail_closed() -> None:
     target_0, target_1 = _targets()
     with pytest.raises(MlxScoreAwareHarnessError, match="forward_convention"):
@@ -794,6 +893,76 @@ def test_direct_live_segnet_class_balanced_ce_is_sharp_collapse_escape_loss() ->
     assert _scalar(
         ce_parts["segnet_direct_live_distill"]
     ) > _scalar(raw_parts["segnet_direct_live_distill"])
+
+
+def test_direct_live_segnet_squared_hinge_prices_far_margin_collapse() -> None:
+    target_0 = mx.zeros((2, 4, 4, 3))
+    target_1 = mx.ones((2, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 4.0
+            arr[..., 1] = 3.5
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 2] = 8.0
+            arr[..., 0] = -4.0
+            return mx.array(arr)
+
+    common = {
+        "model": ReconstructPairModel(target_0, target_1),
+        "target_rgb_0": target_0,
+        "target_rgb_1": target_1,
+        "num_pairs": 2,
+        "forward_convention": "reconstruct_pair_nchw01",
+        "scorer_teacher": _LiveTeacher(),
+        "segnet_direct_live_distillation_weight": 1.0,
+        "segnet_direct_live_base_loss_weight": 0.0,
+        "allow_segnet_only_research": True,
+        "segnet_distillation_objective": "argmax_hinge",
+        "segnet_hinge_margin": 0.5,
+    }
+    linear_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_balanced_hinge_weight=1.0,
+    )
+    squared_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_balanced_squared_hinge_weight=1.0,
+    )
+
+    _linear_total, linear_parts = score_aware_loss(linear_bundle, mx.array([0, 1]))
+    _squared_total, squared_parts = score_aware_loss(
+        squared_bundle,
+        mx.array([0, 1]),
+    )
+
+    linear = _scalar(linear_parts["segnet_direct_live_class_balanced_hinge_loss"])
+    squared = _scalar(
+        squared_parts["segnet_direct_live_class_balanced_squared_hinge_loss"]
+    )
+    assert linear == pytest.approx(12.5)
+    assert squared == pytest.approx(156.25)
+    assert squared > linear * 10.0
+    assert _scalar(
+        squared_parts["segnet_direct_live_class_balanced_squared_hinge_class_0"]
+    ) == pytest.approx(156.25)
+    assert _scalar(
+        squared_parts[
+            "segnet_direct_live_class_balanced_squared_hinge_target_occupied_class_fraction"
+        ]
+    ) == pytest.approx(0.2)
+    assert _scalar(
+        squared_parts["segnet_direct_live_distill"]
+    ) > _scalar(linear_parts["segnet_direct_live_distill"])
 
 
 def test_direct_live_segnet_base_loss_weight_zero_keeps_ce_escape_active() -> None:

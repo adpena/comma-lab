@@ -216,6 +216,7 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
         segnet_direct_live_class_histogram_weight=2.0,
         segnet_direct_live_class_balanced_hinge_weight=5.0,
         segnet_direct_live_class_balanced_ce_weight=7.0,
+        segnet_direct_live_class_balanced_squared_hinge_weight=11.0,
     )
 
     assert config["enabled"] is True
@@ -242,6 +243,14 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
     )
     assert balanced_ce["loss_weight_key"] == "distill"
     assert balanced_ce["weight_scale"] == pytest.approx(7.0)
+    squared_hinge = constraints[
+        "hi_nerv_segnet_direct_live_class_balanced_squared_hinge"
+    ]
+    assert squared_hinge["metric_name"] == (
+        "loss_part_segnet_direct_live_class_balanced_squared_hinge_loss"
+    )
+    assert squared_hinge["loss_weight_key"] == "distill"
+    assert squared_hinge["weight_scale"] == pytest.approx(11.0)
 
 
 def test_default_nerv_dual_ascent_config_prices_contrast_floor_guard() -> None:

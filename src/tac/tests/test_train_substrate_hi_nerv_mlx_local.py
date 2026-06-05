@@ -910,6 +910,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "0.5",
             "--segnet-direct-live-class-balanced-ce-weight",
             "0.25",
+            "--segnet-direct-live-class-balanced-squared-hinge-weight",
+            "0.75",
             "--scorer-input-contrast-floor-weight",
             "0.5",
             "--scorer-input-contrast-floor-segnet-min-std-ratio",
@@ -941,10 +943,13 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["segnet_student_live_calibration_active"] is True
     assert controls["segnet_distillation_objective"] == "boundary_argmax_hinge"
     assert controls["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
-    assert controls["segnet_direct_live_class_escape_weight"] == pytest.approx(0.5)
+    assert controls["segnet_direct_live_class_escape_weight"] == pytest.approx(0.75)
     assert controls["segnet_direct_live"]["class_histogram_weight"] == pytest.approx(0.25)
     assert controls["segnet_direct_live"]["class_balanced_hinge_weight"] == pytest.approx(0.5)
     assert controls["segnet_direct_live"]["class_balanced_ce_weight"] == pytest.approx(0.25)
+    assert controls["segnet_direct_live"][
+        "class_balanced_squared_hinge_weight"
+    ] == pytest.approx(0.75)
     assert controls["train_time_decoder_controls_enabled"] is False
     assert controls["export_decoder_pruning_ratio"] == pytest.approx(0.0)
     assert controls["ema_archive_selection_enabled"] is True

@@ -1663,6 +1663,7 @@ def train_export_snerv_mlx_native(
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
@@ -2108,6 +2109,15 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_segnet_direct_live_class_balanced_ce_weight",
                     segnet_direct_live_class_balanced_ce_weight,
+                ),
+            )
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            candidate.get(
+                "segnet_direct_live_class_balanced_squared_hinge_weight",
+                candidate.get(
+                    "snerv_segnet_direct_live_class_balanced_squared_hinge_weight",
+                    segnet_direct_live_class_balanced_squared_hinge_weight,
                 ),
             )
         ),
@@ -3280,6 +3290,7 @@ def _run_score_aware_long_training_attachment(
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
@@ -3329,6 +3340,9 @@ def _run_score_aware_long_training_attachment(
     )
     direct_live_balanced_ce_weight = float(
         segnet_direct_live_class_balanced_ce_weight
+    )
+    direct_live_balanced_squared_hinge_weight = float(
+        segnet_direct_live_class_balanced_squared_hinge_weight
     )
     pose_loss = str(pose_distillation_loss)
     pose_huber_delta = float(pose_distillation_huber_delta)
@@ -3486,6 +3500,9 @@ def _run_score_aware_long_training_attachment(
             "segnet_direct_live_class_balanced_ce_weight": (
                 direct_live_balanced_ce_weight
             ),
+            "segnet_direct_live_class_balanced_squared_hinge_weight": (
+                direct_live_balanced_squared_hinge_weight
+            ),
             "segnet_tau_boundary": float(segnet_tau_boundary),
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "requested_distillation_device": requested_distillation_device,
@@ -3549,6 +3566,13 @@ def _run_score_aware_long_training_attachment(
     if not np.isfinite(direct_live_balanced_ce_weight) or direct_live_balanced_ce_weight < 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_segnet_direct_live_class_balanced_ce_weight_invalid"
+        )
+    if (
+        not np.isfinite(direct_live_balanced_squared_hinge_weight)
+        or direct_live_balanced_squared_hinge_weight < 0.0
+    ):
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_direct_live_class_balanced_squared_hinge_weight_invalid"
         )
     if guard_weight < 0.0:
         validation_blockers.append(
@@ -3910,6 +3934,18 @@ def _run_score_aware_long_training_attachment(
                 family="snerv",
                 segnet_distillation_weight=seg_weight,
                 segnet_direct_live_distillation_weight=direct_live_weight,
+                segnet_direct_live_class_histogram_weight=(
+                    direct_live_histogram_weight
+                ),
+                segnet_direct_live_class_balanced_hinge_weight=(
+                    direct_live_balanced_hinge_weight
+                ),
+                segnet_direct_live_class_balanced_ce_weight=(
+                    direct_live_balanced_ce_weight
+                ),
+                segnet_direct_live_class_balanced_squared_hinge_weight=(
+                    direct_live_balanced_squared_hinge_weight
+                ),
                 pose_distillation_weight=pose_weight,
                 scorer_input_contrast_floor_weight=contrast_floor_weight,
                 coder_qat_loss_weight_map=coder_qat_loss_weight_map,
@@ -4128,6 +4164,9 @@ def _run_score_aware_long_training_attachment(
             ),
             segnet_direct_live_class_balanced_ce_weight=(
                 direct_live_balanced_ce_weight
+            ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=(
+                direct_live_balanced_squared_hinge_weight
             ),
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),

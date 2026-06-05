@@ -2281,6 +2281,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         segnet_direct_live_class_histogram_weight=0.125,
         segnet_direct_live_class_balanced_hinge_weight=0.375,
         segnet_direct_live_class_balanced_ce_weight=0.625,
+        segnet_direct_live_class_balanced_squared_hinge_weight=0.875,
         distillation_device="gpu",
         coder_aware_qat=True,
         coder_qat_quant_bits=4,
@@ -2398,6 +2399,12 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert (
         long_training["teacher_binding"]["segnet_direct_live_class_balanced_ce_weight"]
         == 0.625
+    )
+    assert (
+        long_training["teacher_binding"][
+            "segnet_direct_live_class_balanced_squared_hinge_weight"
+        ]
+        == 0.875
     )
     assert long_training["teacher_binding"]["learnable_student_head_bound"] is True
     assert long_training["teacher_binding"]["learnable_pose_student_head_bound"] is True

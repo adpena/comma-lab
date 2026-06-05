@@ -257,6 +257,58 @@ def _assert_mlx_loss_and_gradients_finite(
     }
 
 
+def _mlx_gradient_global_norm(mx: Any, grads: Any) -> float | None:
+    """Return the global L2 norm for an MLX gradient tree, or None if empty."""
+
+    from mlx.utils import tree_flatten
+
+    norm_sq = None
+    for _raw_name, leaf in tree_flatten(grads):
+        if leaf is None:
+            continue
+        term = mx.sum(leaf * leaf)
+        norm_sq = term if norm_sq is None else norm_sq + term
+    if norm_sq is None:
+        return None
+    norm = mx.sqrt(norm_sq)
+    mx.eval(norm)
+    return float(norm.item())
+
+
+def _gradient_clip_metrics_from_norm(
+    *,
+    pre_clip_norm: float | None,
+    max_norm: float | None,
+    actual_application_count: int,
+    delegated_to_pr95_partition_helper: bool = False,
+) -> dict[str, float]:
+    """Build per-step update-health telemetry for score-collapse debugging."""
+
+    max_norm_value = None if max_norm is None else float(max_norm)
+    clipped = (
+        max_norm_value is not None
+        and pre_clip_norm is not None
+        and pre_clip_norm > max_norm_value
+    )
+    if not clipped or pre_clip_norm is None or max_norm_value is None:
+        scale = 1.0
+    else:
+        scale = max_norm_value / (pre_clip_norm + 1.0e-6)
+    return {
+        "gradient_clip_enabled": float(max_norm_value is not None),
+        "gradient_clip_max_norm": 0.0 if max_norm_value is None else max_norm_value,
+        "gradient_global_norm_pre_clip": (
+            0.0 if pre_clip_norm is None else float(pre_clip_norm)
+        ),
+        "gradient_clip_would_clip": float(clipped),
+        "gradient_clip_scale": float(scale),
+        "gradient_clip_actual_application_count": float(actual_application_count),
+        "gradient_clip_delegated_to_pr95_partition_helper": float(
+            delegated_to_pr95_partition_helper
+        ),
+    }
+
+
 def _build_aurora_like_mlx_optimizer(
     *,
     learning_rate: Any,
@@ -1747,13 +1799,17 @@ class MlxScoreAwareAdapter:
                 "class_balanced_ce_weight": float(
                     self.bundle.segnet_direct_live_class_balanced_ce_weight
                 ),
+                "class_balanced_squared_hinge_weight": float(
+                    self.bundle.segnet_direct_live_class_balanced_squared_hinge_weight
+                ),
                 "teacher_surface": "teacher_logits_for_frames_nhwc01",
                 "candidate_frame_domain": "decoded_eval_roundtrip_nhwc01",
                 "objective": str(self.bundle.segnet_distillation_objective),
                 "loss": (
                     "real_segnet_live_logits_default_mse_or_configured_"
                     "argmax_hinge_plus_optional_target_class_histogram_or_"
-                    "class_balanced_bootstrap_tether_or_class_balanced_ce"
+                    "class_balanced_bootstrap_tether_or_class_balanced_ce_or_"
+                    "class_balanced_squared_hinge"
                 ),
                 "purpose": (
                     "backpropagate_real_segnet_input_vjp_into_renderer_pixels_"
@@ -2997,6 +3053,7 @@ class MlxScoreAwareAdapter:
         # optimizer.update so the NaN-at-ep-16-18 gradient-explosion signature
         # cannot propagate into the AdamW second-moment buffers (which then
         # poison subsequent steps). Mamba-2 canonical max_norm=1.0.
+        grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
         if self._wave_n11_grad_clip_max_norm is not None:
             grads, total_norm = mlx_optim.clip_grad_norm(
                 grads, self._wave_n11_grad_clip_max_norm
@@ -3006,6 +3063,13 @@ class MlxScoreAwareAdapter:
             self._wave_n11_grad_norm_history.append(grad_norm_pre_clip)
             if grad_norm_pre_clip > self._wave_n11_grad_clip_max_norm:
                 self._wave_n11_clipped_count += 1
+        clip_metrics = _gradient_clip_metrics_from_norm(
+            pre_clip_norm=grad_norm_pre_clip,
+            max_norm=self._wave_n11_grad_clip_max_norm,
+            actual_application_count=(
+                1 if self._wave_n11_grad_clip_max_norm is not None else 0
+            ),
+        )
         self._wave_n11_step_count += 1
         self._optimizer.update(self.model, grads)
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
@@ -3089,6 +3153,7 @@ class MlxScoreAwareAdapter:
                 "total": float(loss_value.item()),
                 **finite_guard_metrics,
                 **gradient_multiplier_metrics,
+                **clip_metrics,
                 **native_optimizer_metrics,
                 **post_update_metrics,
             }
@@ -3113,7 +3178,6 @@ class MlxScoreAwareAdapter:
 
         mx = self._mx
         mlx_nn = self._mlx_nn
-        mlx_optim = self._mlx_optim
         self._active_loss_weights = dict(loss_weights)
         from tac.local_acceleration.pr95_hnerv_mlx import (
             Pr95MlxOptimizerConfig,
@@ -3140,15 +3204,24 @@ class MlxScoreAwareAdapter:
         )
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
         self._accumulate_decoder_weight_gradient_saliency(grads)
+        grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
         if self._wave_n11_grad_clip_max_norm is not None:
-            grads, total_norm = mlx_optim.clip_grad_norm(
-                grads, self._wave_n11_grad_clip_max_norm
+            self._wave_n11_grad_norm_history.append(
+                0.0 if grad_norm_pre_clip is None else grad_norm_pre_clip
             )
-            mx.eval(total_norm)
-            grad_norm_pre_clip = float(total_norm.item())
-            self._wave_n11_grad_norm_history.append(grad_norm_pre_clip)
-            if grad_norm_pre_clip > self._wave_n11_grad_clip_max_norm:
+            if (
+                grad_norm_pre_clip is not None
+                and grad_norm_pre_clip > self._wave_n11_grad_clip_max_norm
+            ):
                 self._wave_n11_clipped_count += 1
+        clip_metrics = _gradient_clip_metrics_from_norm(
+            pre_clip_norm=grad_norm_pre_clip,
+            max_norm=self._wave_n11_grad_clip_max_norm,
+            actual_application_count=0,
+            delegated_to_pr95_partition_helper=(
+                self._wave_n11_grad_clip_max_norm is not None
+            ),
+        )
         effective_lr = self._effective_wave_n11_learning_rate(learning_rate)
         weight_decay = (
             0.0
@@ -3204,6 +3277,7 @@ class MlxScoreAwareAdapter:
             "total": float(loss_value.item()),
             **finite_guard_metrics,
             **gradient_multiplier_metrics,
+            **clip_metrics,
             "pact_optimizer_uses_muon": 1.0,
             "pact_muon_tensor_count": float(step_summary["muon_tensor_count"]),
             "pact_adamw_tensor_count": float(step_summary["adamw_tensor_count"]),
@@ -3303,6 +3377,7 @@ class MlxScoreAwareAdapter:
         )
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
         self._accumulate_decoder_weight_gradient_saliency(grads)
+        grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
 
         # Apply ONE canonical Muon+AdamW (or AdamW-only) step. The canonical
         # helper handles Muon NS iteration + Muon/AdamW partition + per-name
@@ -3310,6 +3385,20 @@ class MlxScoreAwareAdapter:
         # Muon-eligible params get the NS treatment (stage 8 ON) or fall
         # through to AdamW (stages 1-7 OFF).
         config = stage_verdict.optimizer_config
+        clip_metrics = _gradient_clip_metrics_from_norm(
+            pre_clip_norm=grad_norm_pre_clip,
+            max_norm=max(
+                value
+                for value in (config.grad_clip, config.grad_clip_muon)
+                if value is not None
+            )
+            if config.grad_clip is not None or config.grad_clip_muon is not None
+            else None,
+            actual_application_count=0,
+            delegated_to_pr95_partition_helper=(
+                config.grad_clip is not None or config.grad_clip_muon is not None
+            ),
+        )
         _summary = apply_pr95_mlx_optimizer_step(
             self.model,
             grads,
@@ -3349,6 +3438,7 @@ class MlxScoreAwareAdapter:
             "total": float(loss_value.item()),
             **finite_guard_metrics,
             **gradient_multiplier_metrics,
+            **clip_metrics,
             "pr95_stage_index": float(stage_verdict.stage_index),
             "pr95_stage_qat_active": float(int(bool(stage_verdict.qat_active))),
             "pr95_stage_uses_muon": float(int(stage_verdict.uses_muon)),
@@ -3654,6 +3744,33 @@ class MlxScoreAwareAdapter:
         # post-training); emit 0.0 per AxisDecomposition NaN-safe rule.
         out["archive_bytes"] = 0.0
         return out
+
+    def archive_selection_health(
+        self, model: Any, batch: Any
+    ) -> Mapping[str, float] | None:
+        """Return non-score health metrics used to choose live vs EMA exports."""
+
+        mx = self._mx
+        try:
+            _total, parts = score_aware_loss(
+                self.bundle,
+                batch,
+                loss_weights=self._active_loss_weights,
+            )
+        except Exception:
+            return None
+        out: dict[str, float] = {}
+        for key in (
+            "segnet_direct_live_candidate_occupied_class_fraction",
+            "segnet_direct_live_target_occupied_class_fraction",
+            "segnet_direct_live_argmax_disagreement",
+        ):
+            value = parts.get(key)
+            if value is None:
+                continue
+            mx.eval(value)
+            out[key] = float(value.item())
+        return out or None
 
 
 __all__ = [

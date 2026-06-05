@@ -416,6 +416,7 @@ def build_default_nerv_train_time_dual_ascent_config(
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
@@ -449,6 +450,9 @@ def build_default_nerv_train_time_dual_ascent_config(
     )
     direct_live_balanced_ce_weight = _nonnegative_weight(
         segnet_direct_live_class_balanced_ce_weight
+    )
+    direct_live_balanced_squared_hinge_weight = _nonnegative_weight(
+        segnet_direct_live_class_balanced_squared_hinge_weight
     )
     pose_weight = _nonnegative_weight(pose_distillation_weight)
     contrast_floor_weight = _nonnegative_weight(scorer_input_contrast_floor_weight)
@@ -553,6 +557,31 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "exact upstream SegNet argmax label on the last frame, "
                     "but gives stronger gradients when the target probability "
                     "is crushed in a one-class renderer basin."
+                ),
+            )
+        )
+    if direct_live_balanced_squared_hinge_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=(
+                    f"{family}_segnet_direct_live_class_balanced_squared_hinge"
+                ),
+                metric_name=(
+                    "loss_part_segnet_direct_live_class_balanced_squared_hinge_loss"
+                ),
+                loss_weight_key="distill",
+                base_weight=direct_live_balanced_squared_hinge_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.25,
+                max_lambda=10.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "Class-balanced squared Crammer-Singer hinge keeps the "
+                    "same upstream SegNet argmax decision boundary as the "
+                    "linear hinge, but gives far-from-boundary collapsed "
+                    "target classes larger gradients until hard occupancy "
+                    "can escape the one-class basin."
                 ),
             )
         )

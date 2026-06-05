@@ -285,6 +285,13 @@ class RendererBundle:
             basins because crushed target probabilities receive larger
             gradients; it is still exactly scoped to upstream SegNet's
             last-frame argmax decision surface.
+        segnet_direct_live_class_balanced_squared_hinge_weight: relative weight
+            for a class-balanced squared Crammer-Singer margin over the same
+            target argmax surface. The linear hinge is boundary-faithful near a
+            usable renderer, but the HiNeRV collapse probes showed a far-from-
+            boundary all-class-2 basin where the hard argmax never escaped.
+            Squaring the positive margin prices far-from-boundary pixels more
+            aggressively while preserving the exact decision-boundary geometry.
         segnet_tau_boundary: boundary-band temperature for boundary-aware SegNet
             objectives.
         segnet_hinge_margin: Crammer-Singer margin buffer for the
@@ -448,6 +455,7 @@ class RendererBundle:
     segnet_direct_live_class_histogram_weight: float = 0.0
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0
     segnet_direct_live_class_balanced_ce_weight: float = 0.0
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0
     segnet_tau_boundary: float = 1.0
     segnet_hinge_margin: float = 1.0
     distillation_num_classes: int = 5
@@ -579,6 +587,12 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 "segnet_direct_live_class_balanced_ce_weight must be >= 0; got "
                 f"{self.segnet_direct_live_class_balanced_ce_weight}"
+            )
+        if self.segnet_direct_live_class_balanced_squared_hinge_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_class_balanced_squared_hinge_weight must be "
+                ">= 0; got "
+                f"{self.segnet_direct_live_class_balanced_squared_hinge_weight}"
             )
         if self.segnet_tau_boundary <= 0.0:
             raise MlxScoreAwareHarnessError(

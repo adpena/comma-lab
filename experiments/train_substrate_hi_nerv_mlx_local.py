@@ -135,6 +135,7 @@ class HiNervTrainTimeControlConfig:
     segnet_direct_live_class_histogram_weight: float = 0.0
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0
     segnet_direct_live_class_balanced_ce_weight: float = 0.0
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0
     segnet_tau_boundary: float = 1.0
     segnet_hinge_margin: float = 1.0
     train_time_decoder_pruning_ratio: float = 0.0
@@ -228,6 +229,10 @@ class HiNervTrainTimeControlConfig:
             self.segnet_direct_live_class_balanced_ce_weight,
             "segnet_direct_live_class_balanced_ce_weight",
         )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_class_balanced_squared_hinge_weight,
+            "segnet_direct_live_class_balanced_squared_hinge_weight",
+        )
         _require_finite_positive(self.segnet_tau_boundary, "segnet_tau_boundary")
         _require_finite_positive(self.segnet_hinge_margin, "segnet_hinge_margin")
         if int(self.decoder_fake_quant_bits) < 1 or int(self.decoder_fake_quant_bits) > 16:
@@ -312,6 +317,9 @@ class HiNervTrainTimeControlConfig:
             ),
             segnet_direct_live_class_balanced_ce_weight=float(
                 self.segnet_direct_live_class_balanced_ce_weight
+            ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=float(
+                self.segnet_direct_live_class_balanced_squared_hinge_weight
             ),
             segnet_tau_boundary=float(self.segnet_tau_boundary),
             segnet_hinge_margin=float(self.segnet_hinge_margin),
@@ -417,6 +425,9 @@ class HiNervTrainTimeControlConfig:
                 ),
                 "class_balanced_ce_weight": float(
                     self.segnet_direct_live_class_balanced_ce_weight
+                ),
+                "class_balanced_squared_hinge_weight": float(
+                    self.segnet_direct_live_class_balanced_squared_hinge_weight
                 ),
                 "tau_boundary": float(self.segnet_tau_boundary),
                 "hinge_margin": float(self.segnet_hinge_margin),
@@ -699,6 +710,13 @@ def _full_main(args: argparse.Namespace) -> int:
         ),
         segnet_direct_live_class_balanced_ce_weight=(
             float(train_time_controls.segnet_direct_live_class_balanced_ce_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=(
+            float(
+                train_time_controls.segnet_direct_live_class_balanced_squared_hinge_weight
+            )
             if scorer_teacher is not None
             else 0.0
         ),
@@ -1255,6 +1273,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--segnet-direct-live-class-histogram-weight", type=float, default=0.0)
     parser.add_argument("--segnet-direct-live-class-balanced-hinge-weight", type=float, default=0.0)
     parser.add_argument("--segnet-direct-live-class-balanced-ce-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--segnet-direct-live-class-balanced-squared-hinge-weight",
+        type=float,
+        default=0.0,
+    )
     parser.add_argument("--segnet-tau-boundary", type=float, default=1.0)
     parser.add_argument("--segnet-hinge-margin", type=float, default=1.0)
     parser.add_argument("--allow-mock-scorer-teacher", action="store_true")
@@ -1783,6 +1806,13 @@ def _train_time_control_config_from_args(
         ),
         segnet_direct_live_class_balanced_ce_weight=float(
             getattr(args, "segnet_direct_live_class_balanced_ce_weight", 0.0)
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            getattr(
+                args,
+                "segnet_direct_live_class_balanced_squared_hinge_weight",
+                0.0,
+            )
         ),
         segnet_tau_boundary=float(getattr(args, "segnet_tau_boundary", 1.0)),
         segnet_hinge_margin=float(getattr(args, "segnet_hinge_margin", 1.0)),
@@ -2773,6 +2803,9 @@ def _pr95_full_control_contract(
         float(train_time_controls.segnet_direct_live_class_histogram_weight),
         float(train_time_controls.segnet_direct_live_class_balanced_hinge_weight),
         float(train_time_controls.segnet_direct_live_class_balanced_ce_weight),
+        float(
+            train_time_controls.segnet_direct_live_class_balanced_squared_hinge_weight
+        ),
     )
     pose_distillation_weight = float(getattr(args, "pose_distillation_weight", 0.0))
     eval_roundtrip_ste = bool(getattr(args, "eval_roundtrip_ste", False))

@@ -902,6 +902,58 @@ def _segnet_class_balanced_hinge_loss_and_metrics(
     return loss, metrics
 
 
+def _segnet_class_balanced_squared_hinge_loss_and_metrics(
+    *,
+    bundle: RendererBundle,
+    candidate_logits: Any,
+    target_logits: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Class-balanced squared margin for far-from-boundary collapse escape.
+
+    The linear Crammer-Singer hinge is the right local boundary geometry for
+    upstream SegNet argmax flips.  In the observed HiNeRV collapse basin the
+    candidate is not local: every hard pixel is class 2, while minority target
+    classes only receive soft probability mass.  Squaring the positive margin
+    keeps the same decision boundary but makes large violations carry larger
+    gradients until each target class is close enough for the linear hinge to
+    take over.
+    """
+
+    mx = require_mlx_for_harness()
+    from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+        _argmax_hinge_per_pixel,
+    )
+
+    class_count = int(candidate_logits.shape[-1])
+    target_idx = mx.argmax(target_logits, axis=-1)
+    hinge = _argmax_hinge_per_pixel(
+        candidate_logits,
+        target_logits,
+        margin=float(bundle.segnet_hinge_margin),
+    )
+    squared = hinge * hinge
+    total = mx.array(0.0, dtype=mx.float32)
+    occupied = mx.array(0.0, dtype=mx.float32)
+    metrics: dict[str, Any] = {}
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    for class_index in range(class_count):
+        mask = (target_idx == class_index).astype(mx.float32)
+        mass = mx.sum(mask)
+        class_active = (mass > 0.0).astype(mx.float32)
+        class_loss = mx.sum(mask * squared) / mx.maximum(mass, eps)
+        total = total + class_active * class_loss
+        occupied = occupied + class_active
+        metrics[
+            f"segnet_direct_live_class_balanced_squared_hinge_class_{class_index}"
+        ] = class_loss
+    loss = total / mx.maximum(occupied, eps)
+    metrics["segnet_direct_live_class_balanced_squared_hinge_loss"] = loss
+    metrics[
+        "segnet_direct_live_class_balanced_squared_hinge_target_occupied_class_fraction"
+    ] = occupied / float(max(class_count, 1))
+    return loss, metrics
+
+
 def _segnet_class_balanced_ce_loss_and_metrics(
     *,
     candidate_logits: Any,
@@ -1058,6 +1110,23 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         metrics.update(balanced_ce_metrics)
         metrics["segnet_direct_live_class_balanced_ce_weight"] = mx.array(
             balanced_ce_weight,
+            dtype=mx.float32,
+        )
+    squared_hinge_weight = float(
+        bundle.segnet_direct_live_class_balanced_squared_hinge_weight
+    )
+    if squared_hinge_weight > 0.0:
+        squared_hinge, squared_hinge_metrics = (
+            _segnet_class_balanced_squared_hinge_loss_and_metrics(
+                bundle=bundle,
+                candidate_logits=candidate_logits,
+                target_logits=target_logits,
+            )
+        )
+        loss = loss + squared_hinge_weight * squared_hinge
+        metrics.update(squared_hinge_metrics)
+        metrics["segnet_direct_live_class_balanced_squared_hinge_weight"] = mx.array(
+            squared_hinge_weight,
             dtype=mx.float32,
         )
     return loss, metrics

@@ -166,6 +166,25 @@ class _BinaryStateAdapter(_MockSubstrateAdapter):
         model.load_state_dict(json.loads(payload[5:].decode("utf-8")))
 
 
+class _ArchiveSelectionHealthAdapter(_MockSubstrateAdapter):
+    """Adapter whose EMA view has lower proxy tie-break but collapsed health."""
+
+    def __init__(self):
+        super().__init__(emit_archive=True, emit_per_axis=True)
+        self.health_call_count = 0
+
+    def archive_selection_health(
+        self,
+        model: Any,
+        batch: Any,
+    ) -> Mapping[str, float] | None:
+        self.health_call_count += 1
+        occupied = 0.8 if self.health_call_count == 1 else 0.2
+        return {
+            "segnet_direct_live_candidate_occupied_class_fraction": occupied,
+        }
+
+
 def _make_simple_config(
     tmp_path: Path,
     *,
@@ -917,6 +936,41 @@ def test_run_long_training_selects_between_live_and_ema_archives(
 
     data = artifact.as_dict()
     assert data["archive_selection_manifest_path"] == manifest_path.as_posix()
+
+
+def test_run_long_training_archive_selection_rejects_ema_class_collapse(
+    tmp_path: Path,
+) -> None:
+    config = LongTrainingConfig(
+        substrate_id="test_substrate",
+        lane_id="lane_test_substrate_archive_selection_health_20260605",
+        epochs=4,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(name="warmup", start_epoch=0, end_epoch=2),
+            CurriculumStage(name="main", start_epoch=2, end_epoch=4),
+        ),
+        checkpoint_interval_epochs=2,
+        early_stopping_patience=40,
+        output_dir=tmp_path / "archive_selection_health",
+        ema_archive_selection_enabled=True,
+    )
+    adapter = _ArchiveSelectionHealthAdapter()
+    artifact = run_long_training(adapter, config)
+
+    assert artifact.archive_selection_manifest_path is not None
+    manifest = json.loads(
+        artifact.archive_selection_manifest_path.read_text(encoding="utf-8")
+    )
+    assert manifest["selected_candidate_kind"] == "live"
+    assert manifest["selected_archive_path"] == artifact.archive_path.as_posix()
+    rows = {row["candidate_kind"]: row for row in manifest["rows"]}
+    assert rows["live"]["score_components"][
+        "selection_health_segnet_direct_live_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.8)
+    assert rows["ema"]["score_components"][
+        "selection_health_segnet_direct_live_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.2)
 
 
 def test_run_long_training_defers_archive_when_adapter_returns_none(tmp_path: Path) -> None:

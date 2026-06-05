@@ -7672,6 +7672,56 @@ def test_hinerv_long_campaign_refuses_when_pr95_prelaunch_gate_incomplete(
     assert Path(out["report_path"]).is_file()
 
 
+def test_hinerv_long_native_optimizer_probe_bypasses_pr95_prelaunch_gate(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        submission = out / "submission"
+        submission.mkdir()
+        (submission / "inflate.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_native_adamw_long_probe",
+        num_pairs=2,
+        epochs=8,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        optimizer_kind="adamw",
+        repo_root=REPO_ROOT,
+    )
+
+    assert out["mode"] == "executed_hi_nerv_mlx_scoreaware_and_exported"
+    assert out["training_executed"] is True
+    assert captured_train_kwargs["optimizer_kind"] == "adamw"
+    policy = captured_train_kwargs["hi_nerv_optimizer_policy"]
+    assert policy["resolved_policy"] == "native_optimizer"
+    assert policy["optimizer_kind_consumed_by_native_mlx"] is True
+    assert policy["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert "pr95_long_campaign_prelaunch_gate_failed" not in out["blockers"]
+
+
 def test_hinerv_trained_archive_byte_oracle_writes_receiver_closed_ladder(
     tmp_path: Path,
 ) -> None:
@@ -10384,7 +10434,7 @@ def test_hinerv_modelsize_launch_preserves_explicit_segnet_only_research(
     assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" in out["blockers"]
 
 
-def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() -> None:
+def test_hinerv_optimizer_policy_refuses_and_avoids_silent_optimizer_swallowing() -> None:
     with pytest.raises(
         runner_mod.CompactRendererMlxSpineRunnerError,
         match="non-PR95-compatible --optimizer-kind would be ignored",
@@ -10403,10 +10453,21 @@ def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() 
     assert native["resolved_policy"] == "native_optimizer"
     assert native["optimizer_kind_consumed_by_native_mlx"] is True
 
+    native_adamw = runner_mod._resolve_hi_nerv_optimizer_policy(
+        requested_policy="auto",
+        epochs=29_650,
+        optimizer_kind="adamw",
+    )
+    assert native_adamw["resolved_policy"] == "native_optimizer"
+    assert native_adamw["optimizer_kind_consumed_by_native_mlx"] is True
+    assert native_adamw["optimizer_kind_consumed_by_pr95_curriculum"] is False
+    assert native_adamw["pr95_faithful_curriculum_enabled"] is False
+
     pr95 = runner_mod._resolve_hi_nerv_optimizer_policy(
         requested_policy="auto",
         epochs=29_650,
         optimizer_kind="adamw",
+        pr95_curriculum_total_epochs=29_650,
     )
     assert pr95["resolved_policy"] == "pr95_curriculum"
     assert pr95["pr95_faithful_curriculum_enabled"] is True

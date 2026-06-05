@@ -2916,13 +2916,32 @@ def _archive_selection_components(
         )
         return None
     if components is None:
-        return None
-    out: dict[str, float] = {}
-    for key, value in components.items():
+        out: dict[str, float] = {}
+    else:
+        out = {}
+        for key, value in components.items():
+            try:
+                out[str(key)] = float(value)
+            except (TypeError, ValueError):
+                continue
+    health_hook = getattr(adapter, "archive_selection_health", None)
+    if callable(health_hook):
         try:
-            out[str(key)] = float(value)
-        except (TypeError, ValueError):
-            continue
+            health = health_hook(adapter.model, batch)
+        except Exception as exc:
+            print(
+                "[long_training_canonical] WARN: archive-selection "
+                f"health probe failed: {exc!r}"
+            )
+            health = None
+        if isinstance(health, Mapping):
+            for key, value in health.items():
+                try:
+                    out[f"selection_health_{key}"] = float(value)
+                except (TypeError, ValueError):
+                    continue
+    if not out:
+        return None
     return out
 
 
@@ -2954,8 +2973,34 @@ def _archive_selection_proxy_score(
     for key, value in components.items():
         if key in {"archive_bytes", "bytes", "rate"}:
             continue
+        if str(key).startswith("selection_health_"):
+            continue
         proxy += float(value)
     return proxy
+
+
+def _archive_selection_health_sort_key(row: Mapping[str, Any]) -> tuple[int, float]:
+    """Return hard health tier before proxy-score archive selection.
+
+    Training-time direct-live SegNet escape can be erased by EMA smoothing.
+    When an adapter exposes candidate occupied-class fraction, prefer any
+    non-collapsed archive view over a proxy-cheaper but class-collapsed view.
+    """
+
+    components = row.get("score_components")
+    if not isinstance(components, Mapping):
+        return (0, 0.0)
+    raw = components.get(
+        "selection_health_segnet_direct_live_candidate_occupied_class_fraction"
+    )
+    try:
+        occupied = float(raw)
+    except (TypeError, ValueError):
+        return (0, 0.0)
+    if not math.isfinite(occupied):
+        return (0, 0.0)
+    collapsed = occupied <= 0.200001
+    return (1 if collapsed else 0, -occupied)
 
 
 def _export_live_ema_archive_selection(
@@ -3059,6 +3104,7 @@ def _export_live_ema_archive_selection(
         selected = min(
             exported,
             key=lambda row: (
+                *_archive_selection_health_sort_key(row),
                 float(row["proxy_score"]),
                 0 if row.get("candidate_kind") == "ema" else 1,
             ),
