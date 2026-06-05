@@ -13582,6 +13582,96 @@ def _hi_nerv_section_metric_payload_from_telemetry(
     }
 
 
+def _hi_nerv_startup_archive_section_telemetry_from_model(
+    *,
+    model: Any,
+    cfg: Any,
+    decoder_codec: str,
+    latent_codec: str,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Measure initial live HIV1 sections so byte caps act from step zero."""
+
+    metadata: dict[str, Any] = {
+        "schema": "hi_nerv_startup_archive_section_telemetry_from_model.v1",
+        "generated_from_initial_model": True,
+        "validated": False,
+        "packet_grammar": "HIV1",
+        "decoder_codec": str(decoder_codec),
+        "latent_codec": str(latent_codec),
+        "source": "initial_model_export_state_dict_in_memory_hiv1_pack",
+        "writes_artifacts": False,
+        "blockers": [],
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    export_state_dict = getattr(model, "export_state_dict", None)
+    if not callable(export_state_dict):
+        metadata["blockers"] = ["hi_nerv_startup_model_export_state_dict_missing"]
+        return None, metadata
+    try:
+        exported_state_dict = export_state_dict()
+        if not isinstance(exported_state_dict, Mapping):
+            raise CompactRendererMlxSpineRunnerError(
+                "HiNeRV startup export_state_dict returned "
+                f"{type(exported_state_dict).__name__}, expected Mapping"
+            )
+        from tac.substrates.hi_nerv.archive import build_archive_section_telemetry
+        from tac.substrates.hi_nerv.archive_candidate import (
+            pack_archive_from_exported_state_dict,
+        )
+
+        packet_bytes = pack_archive_from_exported_state_dict(
+            exported_state_dict=dict(exported_state_dict),
+            cfg=cfg,
+            decoder_codec=str(decoder_codec),
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            latent_codec=str(latent_codec),
+        )
+        if isinstance(packet_bytes, tuple):
+            packet_bytes = packet_bytes[0]
+        telemetry = build_archive_section_telemetry(packet_bytes)
+        if not isinstance(telemetry, Mapping):
+            raise CompactRendererMlxSpineRunnerError(
+                "build_archive_section_telemetry returned "
+                f"{type(telemetry).__name__}, expected Mapping"
+            )
+        sections = telemetry.get("sections")
+        metadata.update(
+            {
+                "validated": bool(
+                    telemetry.get("schema") == "hinerv_archive_section_telemetry.v1"
+                    and telemetry.get("profile_ready") is True
+                ),
+                "source_schema": telemetry.get("schema"),
+                "profile_ready": telemetry.get("profile_ready"),
+                "archive_zip_bytes": telemetry.get("archive_zip_bytes"),
+                "inner_payload_bytes": telemetry.get("inner_payload_bytes"),
+                "section_payload_bytes": telemetry.get("section_payload_bytes"),
+                "section_count": (
+                    len(sections)
+                    if isinstance(sections, Sequence)
+                    and not isinstance(sections, (str, bytes))
+                    else 0
+                ),
+            }
+        )
+        if not metadata["validated"]:
+            metadata["blockers"] = [
+                "hi_nerv_startup_archive_section_telemetry_not_profile_ready"
+            ]
+            return dict(telemetry), metadata
+        return dict(telemetry), metadata
+    except Exception as exc:
+        metadata["blockers"] = [
+            "hi_nerv_startup_archive_section_telemetry_failed:"
+            f"{type(exc).__name__}:{exc}"
+        ]
+        return None, metadata
+
+
 def _build_hi_nerv_live_train_time_section_byte_metrics_callback(
     *,
     cfg: Any,
@@ -14181,6 +14271,57 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+    startup_archive_section_telemetry_metadata: dict[str, Any] | None = None
+    if (
+        archive_section_telemetry is None
+        and hard_byte_ceiling is not None
+        and bool(coder_aware_qat)
+    ):
+        (
+            generated_telemetry,
+            startup_archive_section_telemetry_metadata,
+        ) = _hi_nerv_startup_archive_section_telemetry_from_model(
+            model=model,
+            cfg=cfg,
+            decoder_codec=str(decoder_codec),
+            latent_codec=str(hi_nerv_latent_codec),
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        )
+        if generated_telemetry is not None and not list(
+            startup_archive_section_telemetry_metadata.get("blockers") or []
+        ):
+            archive_section_telemetry = generated_telemetry
+            archive_section_telemetry_metadata = {
+                **dict(archive_section_telemetry_metadata or {}),
+                "generated_from_initial_model": True,
+                "attached": False,
+                "validated": True,
+                "source_schema": generated_telemetry.get("schema"),
+                "profile_ready": generated_telemetry.get("profile_ready"),
+                "startup_generation": startup_archive_section_telemetry_metadata,
+            }
+        else:
+            archive_section_telemetry_metadata = {
+                **dict(archive_section_telemetry_metadata or {}),
+                "generated_from_initial_model": True,
+                "startup_generation": startup_archive_section_telemetry_metadata,
+                "blockers": _dedupe(
+                    [
+                        *list(
+                            dict(archive_section_telemetry_metadata or {}).get(
+                                "blockers"
+                            )
+                            or []
+                        ),
+                        *list(
+                            (
+                                startup_archive_section_telemetry_metadata or {}
+                            ).get("blockers")
+                            or []
+                        ),
+                    ]
+                ),
+            }
     optimizer_policy = dict(hi_nerv_optimizer_policy or {})
     optimizer_control = dict(optimizer_controls or {})
     pr95_curriculum_enabled = bool(

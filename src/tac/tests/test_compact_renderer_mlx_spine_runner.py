@@ -3922,6 +3922,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         recon_loss_stage_weight=1.0,
         segnet_loss_stage_weight=1.0,
         pose_loss_stage_weight=1.0,
+        scorer_input_guard_stage_weight=1.0,
+        scorer_input_contrast_floor_stage_weight=None,
+        scorer_input_shape_tether_stage_weight=None,
+        segnet_direct_live_stage_weight=None,
         segnet_distillation_objective="kl_t2",
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
@@ -4164,6 +4168,10 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         recon_loss_stage_weight=1.0,
         segnet_loss_stage_weight=1.0,
         pose_loss_stage_weight=1.0,
+        scorer_input_guard_stage_weight=1.0,
+        scorer_input_contrast_floor_stage_weight=None,
+        scorer_input_shape_tether_stage_weight=None,
+        segnet_direct_live_stage_weight=None,
         segnet_distillation_objective="kl_t2",
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
@@ -10281,6 +10289,10 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         recon_loss_stage_weight=1.0,
         segnet_loss_stage_weight=1.0,
         pose_loss_stage_weight=1.0,
+        scorer_input_guard_stage_weight=1.0,
+        scorer_input_contrast_floor_stage_weight=None,
+        scorer_input_shape_tether_stage_weight=None,
+        segnet_direct_live_stage_weight=None,
         segnet_distillation_objective="kl_t2",
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
@@ -10367,7 +10379,7 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
 
 
 @pytest.mark.skipif(not _MLX_AVAILABLE, reason="MLX required (Apple Silicon)")
-def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
+def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -10547,6 +10559,10 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         recon_loss_stage_weight=1.0,
         segnet_loss_stage_weight=1.0,
         pose_loss_stage_weight=1.0,
+        scorer_input_guard_stage_weight=1.0,
+        scorer_input_contrast_floor_stage_weight=None,
+        scorer_input_shape_tether_stage_weight=None,
+        segnet_direct_live_stage_weight=None,
         segnet_distillation_objective="kl_t2",
         distillation_temperature=2.0,
         segnet_tau_boundary=1.0,
@@ -10588,21 +10604,6 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         random_seed=0,
         scorer_upstream_dir=REPO_ROOT / "upstream",
         repo_root=REPO_ROOT,
-        archive_section_telemetry={
-            "schema": "hinerv_archive_section_telemetry.v1",
-            "profile_ready": True,
-            "archive_zip_bytes": 400,
-            "sections": [
-                {"name": "decoder_state", "role": "decoder", "bytes": 200},
-                {"name": "latents_coarse", "role": "latent", "bytes": 40},
-                {"name": "latents_mid", "role": "latent", "bytes": 40},
-            ],
-        },
-        archive_section_telemetry_metadata={
-            "schema": "compact_hi_nerv_archive_section_telemetry_attachment.v1",
-            "attached": True,
-            "validated": True,
-        },
     )
 
     assert artifact.as_dict()["substrate_artifact_metadata"] == captured["metadata"]
@@ -10633,9 +10634,9 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         "latents_coarse": 41,
         "latents_mid": 42,
     }
-    assert len(live_pack_calls) == 1
-    assert live_pack_calls[0]["decoder_codec"] == "int4_mixed"
-    assert live_pack_calls[0]["latent_codec"] == "int16_brotli_q11"
+    assert len(live_pack_calls) == 2
+    assert all(call["decoder_codec"] == "int4_mixed" for call in live_pack_calls)
+    assert all(call["latent_codec"] == "int16_brotli_q11" for call in live_pack_calls)
     metadata = captured["metadata"]["score_aware_training"]
     assert metadata["archive_section_qat_weight_policy"]["active"] is True
     section_control = metadata["train_time_section_byte_control"]
@@ -10646,9 +10647,9 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
     assert consumption["train_time_section_byte_control_blockers"] == []
     assert consumption["hard_byte_ceiling_train_time_dual_ascent_blockers"] == []
     assert section_control["section_byte_budgets"] == {
-        "decoder_state": 89_000,
-        "latents_coarse": 17_800,
-        "latents_mid": 17_800,
+        "decoder_state": 127_576,
+        "latents_coarse": 24_907,
+        "latents_mid": 25_515,
     }
     assert section_control["section_byte_loss_weight_key_map"] == {
         "decoder_state": "coder_qat_quant_residual",
@@ -10666,6 +10667,12 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
         "latents_coarse": 41,
         "latents_mid": 42,
     }
+    attachment = metadata["archive_section_telemetry_attachment"]
+    assert attachment["generated_from_initial_model"] is True
+    assert attachment["validated"] is True
+    assert attachment["startup_generation"]["source_schema"] == (
+        "hinerv_archive_section_telemetry.v1"
+    )
 
 
 def _write_hinerv_waterfill_plan(
