@@ -57,6 +57,34 @@ def test_hi_nerv_receiver_cache_quality_writes_direct_cache_from_archive(
     assert audit["score_claim"] is False
 
 
+def test_hi_nerv_receiver_cache_quality_uses_explicit_source_pair_indices(
+    tmp_path: Path,
+) -> None:
+    archive = _write_tiny_hiv1_archive(tmp_path / "archive.zip")
+
+    report = write_hi_nerv_receiver_cache_quality_report(
+        archive_zip_path=archive,
+        output_dir=tmp_path / "quality",
+        max_pairs=1,
+        batch_pairs=1,
+        pair_indices=(1,),
+    )
+
+    cache_dir = Path(report["candidate_cache_dir"])
+    pair_indices = np.load(cache_dir / "pair_indices.npy")
+    direct = report["direct_receiver_cache_report"]
+    audit = json.loads(
+        (cache_dir / "hi_nerv_direct_receiver_render_cache_identity_audit.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert pair_indices.tolist() == [[2, 3]]
+    assert direct["selected_pair_indices"] == [1]
+    assert direct["pair_index_scope"] == "explicit_source_pair_indices"
+    assert audit["direct_render"]["selected_pair_indices"] == [1]
+
+
 def test_hi_nerv_receiver_cache_quality_attaches_gate_against_reference(
     tmp_path: Path,
 ) -> None:

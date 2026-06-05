@@ -9610,6 +9610,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             reference_cache_dir=receiver_cache_quality_reference_cache_dir,
             max_pairs=int(receiver_cache_quality_max_pairs),
             batch_pairs=int(receiver_cache_quality_batch_pairs),
+            pair_indices=tuple(int(value) for value in prioritized_pair_indices),
             min_segnet_std=float(receiver_cache_quality_min_segnet_std),
             min_segnet_dynamic_range=float(
                 receiver_cache_quality_min_segnet_dynamic_range
@@ -14412,6 +14413,54 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     return artifact
 
 
+def _write_hi_nerv_runner_source_pair_reference_cache(
+    *,
+    source_video_path: str | Path,
+    output_dir: str | Path,
+    pair_indices: Sequence[int],
+    batch_pairs: int,
+    repo_root: str | Path,
+) -> dict[str, Any]:
+    pairs = tuple(int(value) for value in pair_indices)
+    if not pairs:
+        raise ValueError("pair_indices must be non-empty for source-pair reference cache")
+    root = Path(repo_root).expanduser().resolve(strict=False)
+    source = Path(source_video_path).expanduser().resolve(strict=False)
+    if not source.is_file():
+        raise FileNotFoundError(f"source video missing: {source}")
+    import numpy as np
+
+    from tac.local_acceleration.mlx_preprocess import (
+        write_scorer_input_cache_from_pair_batches,
+    )
+    from tac.local_acceleration.pr95_hnerv_mlx_training import (
+        load_pr95_source_pairs_nhwc,
+    )
+
+    pair_array = np.array([[2 * idx, 2 * idx + 1] for idx in pairs], dtype=np.int64)
+    source_pairs = load_pr95_source_pairs_nhwc(
+        source,
+        pair_indices=pairs,
+        upstream_dir=root / "upstream",
+    )
+    source_pairs_u8 = np.clip(np.rint(source_pairs), 0, 255).astype(np.uint8)
+    return write_scorer_input_cache_from_pair_batches(
+        [source_pairs_u8],
+        output_dir,
+        pair_count=len(pairs),
+        pair_indices=pair_array,
+        frame_shape_hwc=(
+            int(source_pairs_u8.shape[2]),
+            int(source_pairs_u8.shape[3]),
+            int(source_pairs_u8.shape[4]),
+        ),
+        source=source.as_posix(),
+        source_kind="video_selected_source_pairs",
+        batch_pairs=int(batch_pairs),
+        compute_raw_sha256=True,
+    )
+
+
 def _write_hi_nerv_runner_post_export_receiver_cache_quality(
     *,
     requested: bool,
@@ -14428,6 +14477,7 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
     segnet_argmax_batch_frames: int,
     max_segnet_argmax_disagreement_for_fit_gate: float,
     repo_root: str | Path,
+    pair_indices: Sequence[int] = (),
 ) -> dict[str, Any] | None:
     """Run the HiNeRV receiver-render scorer-domain fit gate from the runner.
 
@@ -14478,6 +14528,8 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             archive_path=archive,
         )
 
+    selected_pair_indices = tuple(int(value) for value in pair_indices)
+    quality_pair_indices = selected_pair_indices[: int(max_pairs)]
     reference: Path
     if reference_cache_dir is not None:
         reference = Path(reference_cache_dir).expanduser()
@@ -14509,16 +14561,25 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             )
         reference = report_dir / "source_video_reference_cache"
         try:
-            from tac.local_acceleration.mlx_preprocess import (
-                write_scorer_input_cache_from_video_file,
-            )
+            if quality_pair_indices:
+                _write_hi_nerv_runner_source_pair_reference_cache(
+                    source_video_path=source,
+                    output_dir=reference,
+                    pair_indices=quality_pair_indices,
+                    batch_pairs=int(batch_pairs),
+                    repo_root=root,
+                )
+            else:
+                from tac.local_acceleration.mlx_preprocess import (
+                    write_scorer_input_cache_from_video_file,
+                )
 
-            write_scorer_input_cache_from_video_file(
-                source,
-                reference,
-                max_pairs=int(max_pairs),
-                batch_pairs=int(batch_pairs),
-            )
+                write_scorer_input_cache_from_video_file(
+                    source,
+                    reference,
+                    max_pairs=int(max_pairs),
+                    batch_pairs=int(batch_pairs),
+                )
         except Exception as exc:
             return _write_hi_nerv_runner_receiver_cache_quality_refusal(
                 output_dir=out,
@@ -14542,6 +14603,7 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             max_pairs=int(max_pairs),
             batch_pairs=int(batch_pairs),
             sample_pairs=int(max_pairs),
+            pair_indices=quality_pair_indices or None,
             min_segnet_std=float(min_segnet_std),
             min_segnet_dynamic_range=float(min_segnet_dynamic_range),
             max_segnet_mae_vs_reference_for_fit_gate=float(

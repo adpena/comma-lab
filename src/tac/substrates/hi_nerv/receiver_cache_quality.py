@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import zipfile
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +56,7 @@ def write_hi_nerv_receiver_cache_quality_report(
     max_pairs: int = 1,
     batch_pairs: int = 1,
     sample_pairs: int | None = None,
+    pair_indices: Sequence[int] | None = None,
     min_segnet_std: float = 1.0,
     min_segnet_dynamic_range: float = 16.0,
     max_segnet_mae_vs_reference_for_fit_gate: float = 64.0,
@@ -100,6 +101,7 @@ def write_hi_nerv_receiver_cache_quality_report(
         output_cache_dir=cache_dir,
         max_pairs=int(max_pairs),
         batch_pairs=int(batch_pairs),
+        pair_indices=pair_indices,
     )
 
     quality_gate: dict[str, Any] | None = None
@@ -446,6 +448,7 @@ def write_hi_nerv_direct_receiver_cache_from_payload(
     output_cache_dir: str | Path,
     max_pairs: int,
     batch_pairs: int = 1,
+    pair_indices: Sequence[int] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Write a direct receiver scorer-input cache from raw HIV1 payload bytes."""
 
@@ -459,10 +462,12 @@ def write_hi_nerv_direct_receiver_cache_from_payload(
     cache_dir = Path(output_cache_dir).expanduser().resolve(strict=False)
     arc, cfg, model = build_model_from_archive(archive_payload, device="cpu")
     raw_pair_count = int(cfg.num_pairs)
-    pair_count = min(raw_pair_count, int(max_pairs))
-    if pair_count < 1:
-        raise ValueError("HiNeRV direct receiver cache has no complete pairs")
-    selected_pair_indices = list(range(pair_count))
+    selected_pair_indices = _select_receiver_cache_pair_indices(
+        raw_pair_count=raw_pair_count,
+        max_pairs=int(max_pairs),
+        pair_indices=pair_indices,
+    )
+    pair_count = len(selected_pair_indices)
     h, w = CAMERA_HW
     scorer_pair_indices = np.array(
         [[2 * idx, 2 * idx + 1] for idx in selected_pair_indices],
@@ -547,8 +552,13 @@ def write_hi_nerv_direct_receiver_cache_from_payload(
         "direct_render": {
             "raw_pair_count": raw_pair_count,
             "selected_pair_count": int(pair_count),
-            "selected_pair_ranges": [[0, int(pair_count) - 1]],
-            "pair_index_scope": "prefix_from_zero",
+            "selected_pair_indices": [int(value) for value in selected_pair_indices],
+            "selected_pair_ranges": _pair_index_ranges(selected_pair_indices),
+            "pair_index_scope": (
+                "explicit_source_pair_indices"
+                if pair_indices is not None
+                else "prefix_from_zero"
+            ),
             "frame_shape_hwc": [h, w, 3],
             "batch_pairs": int(batch_pairs),
             "max_pairs": int(max_pairs),
@@ -584,8 +594,13 @@ def write_hi_nerv_direct_receiver_cache_from_payload(
         "raw_pair_count": raw_pair_count,
         "cached_pair_count": int(manifest["pair_count"]),
         "selected_pair_count": int(pair_count),
-        "selected_pair_ranges": [[0, int(pair_count) - 1]],
-        "pair_index_scope": "prefix_from_zero",
+        "selected_pair_indices": [int(value) for value in selected_pair_indices],
+        "selected_pair_ranges": _pair_index_ranges(selected_pair_indices),
+        "pair_index_scope": (
+            "explicit_source_pair_indices"
+            if pair_indices is not None
+            else "prefix_from_zero"
+        ),
         "frame_shape_hwc": [h, w, 3],
         "direct_render_raw_bytes": int(manifest["pair_count"]) * 2 * h * w * 3,
         "direct_render_raw_pair_count": int(manifest["pair_count"]),
@@ -603,6 +618,56 @@ def write_hi_nerv_direct_receiver_cache_from_payload(
         **FALSE_AUTHORITY,
     }
     return report, manifest
+
+
+def _select_receiver_cache_pair_indices(
+    *,
+    raw_pair_count: int,
+    max_pairs: int,
+    pair_indices: Sequence[int] | None,
+) -> list[int]:
+    if int(raw_pair_count) < 1:
+        raise ValueError("HiNeRV direct receiver cache has no complete pairs")
+    if int(max_pairs) < 1:
+        raise ValueError(f"max_pairs must be >= 1, got {max_pairs}")
+    if pair_indices is None:
+        return list(range(min(int(raw_pair_count), int(max_pairs))))
+    selected: list[int] = []
+    seen: set[int] = set()
+    for raw in pair_indices:
+        value = int(raw)
+        if value < 0:
+            raise ValueError(f"pair_indices must be non-negative, got {value}")
+        if value >= int(raw_pair_count):
+            raise ValueError(
+                f"pair index {value} exceeds HiNeRV archive pair count {raw_pair_count}"
+            )
+        if value in seen:
+            continue
+        selected.append(value)
+        seen.add(value)
+        if len(selected) >= int(max_pairs):
+            break
+    if not selected:
+        raise ValueError("pair_indices selected no receiver-cache pairs")
+    return selected
+
+
+def _pair_index_ranges(indices: Sequence[int]) -> list[list[int]]:
+    values = [int(value) for value in indices]
+    if not values:
+        return []
+    ranges: list[list[int]] = []
+    start = values[0]
+    prev = values[0]
+    for value in values[1:]:
+        if value == prev + 1:
+            prev = value
+            continue
+        ranges.append([start, prev])
+        start = prev = value
+    ranges.append([start, prev])
+    return ranges
 
 
 def _read_hiv1_payload_from_archive_zip(archive_zip_path: Path) -> tuple[str, bytes]:

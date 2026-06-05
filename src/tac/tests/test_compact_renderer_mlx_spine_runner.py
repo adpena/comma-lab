@@ -615,6 +615,75 @@ def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
     ] is False
 
 
+def test_hinerv_runner_receiver_cache_quality_forwards_prioritized_pairs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive bytes")
+    source = tmp_path / "source.mkv"
+    source.write_bytes(b"unit source video")
+    captured_reference: dict[str, object] = {}
+    captured_quality: dict[str, object] = {}
+
+    from tac.substrates.hi_nerv import receiver_cache_quality
+
+    def fake_write_reference_cache(**kwargs):
+        captured_reference.update(kwargs)
+        output_dir = Path(kwargs["output_dir"])
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "manifest.json").write_text("{}", encoding="utf-8")
+        return {"pair_count": len(kwargs["pair_indices"])}
+
+    def fake_write_hi_nerv_receiver_cache_quality_report(**kwargs):
+        captured_quality.update(kwargs)
+        return {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": (tmp_path / "report.json").as_posix(),
+            "archive_path": Path(kwargs["archive_zip_path"]).as_posix(),
+            "archive_sha256": "c" * 64,
+            "candidate_cache_dir": (tmp_path / "candidate_cache").as_posix(),
+            "reference_cache_dir": Path(kwargs["reference_cache_dir"]).as_posix(),
+            "quality_gate_passed": False,
+            "quality_gate": {"verdict": "CACHE_QUALITY_GATE_FAILED", "stats": {}},
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+        }
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_write_hi_nerv_runner_source_pair_reference_cache",
+        fake_write_reference_cache,
+    )
+    monkeypatch.setattr(
+        receiver_cache_quality,
+        "write_hi_nerv_receiver_cache_quality_report",
+        fake_write_hi_nerv_receiver_cache_quality_report,
+    )
+
+    report = runner_mod._write_hi_nerv_runner_post_export_receiver_cache_quality(
+        requested=True,
+        archive_zip_path=archive,
+        source_video_path=source,
+        output_dir=tmp_path / "training",
+        reference_cache_dir=None,
+        max_pairs=2,
+        batch_pairs=1,
+        pair_indices=(3, 1, 3),
+        min_segnet_std=1.0,
+        min_segnet_dynamic_range=16.0,
+        max_segnet_mae_vs_reference_for_fit_gate=64.0,
+        segnet_argmax_probe=False,
+        segnet_argmax_batch_frames=4,
+        max_segnet_argmax_disagreement_for_fit_gate=0.25,
+        repo_root=REPO_ROOT,
+    )
+
+    assert report["quality_gate_passed"] is False
+    assert captured_reference["pair_indices"] == (3, 1)
+    assert captured_quality["pair_indices"] == (3, 1)
+    assert captured_quality["sample_pairs"] == 2
+
+
 def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
     tmp_path: Path,
 ) -> None:
