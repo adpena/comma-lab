@@ -403,6 +403,18 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
             "--decoder-fake-quant-forward",
             "--decoder-fake-quant-bits",
             "4",
+            "--segnet-direct-live-distillation-weight",
+            "0.4",
+            "--segnet-direct-live-base-loss-weight",
+            "0.25",
+            "--segnet-direct-live-class-balanced-ce-weight",
+            "0.75",
+            "--scorer-input-contrast-floor-weight",
+            "0.5",
+            "--scorer-input-contrast-floor-segnet-min-std-ratio",
+            "0.625",
+            "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+            "0.75",
             "--train-time-decoder-pruning-ratio",
             "0.125",
             "--train-time-decoder-quant-noise-bits",
@@ -424,6 +436,7 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
 
     cfg = _train_time_control_config_from_args(args)
     metadata = cfg.metadata()
+    contract = _pr95_full_control_contract(args, train_time_controls=cfg)
 
     assert metadata["schema"] == HI_NERV_TRAIN_TIME_CONTROL_SCHEMA
     assert metadata["stage_loss_schedule"] == "pr95_faithful_8stage"
@@ -432,6 +445,23 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
     assert metadata["coder_qat_enabled"] is True
     assert metadata["coder_qat_c1a_sigma"] == pytest.approx(0.35)
     assert metadata["segnet_student_live_calibration_weight"] == pytest.approx(1.0)
+    direct_live = metadata["segnet_direct_live"]
+    assert direct_live["enabled"] is True
+    assert direct_live["weight"] == pytest.approx(0.4)
+    assert direct_live["base_loss_weight"] == pytest.approx(0.25)
+    assert direct_live["class_balanced_ce_weight"] == pytest.approx(0.75)
+    assert contract["controls"]["segnet_direct_live_base_loss_weight"] == pytest.approx(
+        0.25
+    )
+    assert contract["controls"]["segnet_direct_live"]["base_loss_weight"] == pytest.approx(
+        0.25
+    )
+    contrast_floor = metadata["scorer_input_contrast_floor"]
+    assert contrast_floor["enabled"] is True
+    assert contrast_floor["weight"] == pytest.approx(0.5)
+    assert contrast_floor["segnet_last_rgb_min_std_ratio"] == pytest.approx(0.625)
+    assert contrast_floor["posenet_yuv6_pair_min_std_ratio"] == pytest.approx(0.75)
+    assert contrast_floor["human_visual_fidelity_objective"] is False
     assert metadata["decoder_fake_quant_forward_enabled"] is True
     assert metadata["decoder_fake_quant_bits"] == 4
     assert metadata["train_time_decoder_controls_enabled"] is True
@@ -489,6 +519,13 @@ def test_hinerv_train_time_control_config_rejects_ambiguous_or_fake_controls() -
         _train_time_control_config_from_args(
             _build_parser().parse_args(
                 ["--full", "--train-time-decoder-quant-noise-scale", "0.1"]
+            )
+        )
+
+    with pytest.raises(ValueError, match="segnet_direct_live_base_loss_weight"):
+        _train_time_control_config_from_args(
+            _build_parser().parse_args(
+                ["--full", "--segnet-direct-live-base-loss-weight", "-0.1"]
             )
         )
 
@@ -833,18 +870,30 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "distill": 0.0,
         "pose_distill": 0.0,
         "scorer_input_guard": 1.0,
+        "scorer_input_contrast_floor": 1.0,
+        "scorer_input_shape_tether": 1.0,
+        "segnet_direct_live_distill": 0.0,
+        "segnet_direct_live_base_loss": 1.0,
     }
     assert stages[1].loss_weights == {
         "recon": 1.0,
         "distill": 1.0,
         "pose_distill": 0.0,
         "scorer_input_guard": 1.0,
+        "scorer_input_contrast_floor": 1.0,
+        "scorer_input_shape_tether": 1.0,
+        "segnet_direct_live_distill": 1.0,
+        "segnet_direct_live_base_loss": 1.0,
     }
     assert stages[2].loss_weights == {
         "recon": 0.25,
         "distill": 1.0,
         "pose_distill": 1.0,
         "scorer_input_guard": 1.0,
+        "scorer_input_contrast_floor": 1.0,
+        "scorer_input_shape_tether": 1.0,
+        "segnet_direct_live_distill": 1.0,
+        "segnet_direct_live_base_loss": 1.0,
     }
     assert stages[1].lr_scale == pytest.approx(0.3)
     assert stages[2].lr_scale == pytest.approx(0.1)
@@ -1065,7 +1114,9 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["segnet_student_live_calibration_active"] is True
     assert controls["segnet_distillation_objective"] == "boundary_argmax_hinge"
     assert controls["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
+    assert controls["segnet_direct_live_base_loss_weight"] == pytest.approx(1.0)
     assert controls["segnet_direct_live_class_escape_weight"] == pytest.approx(0.75)
+    assert controls["segnet_direct_live"]["base_loss_weight"] == pytest.approx(1.0)
     assert controls["segnet_direct_live"]["class_histogram_weight"] == pytest.approx(0.25)
     assert controls["segnet_direct_live"]["class_balanced_hinge_weight"] == pytest.approx(0.5)
     assert controls["segnet_direct_live"]["class_balanced_ce_weight"] == pytest.approx(0.25)
@@ -1491,6 +1542,70 @@ def test_hinerv_mlx_trainer_forwards_section_byte_dual_controls_to_harness() -> 
         )
         for call in bundle_calls
     )
+
+
+def test_hinerv_mlx_trainer_forwards_contrast_floor_and_direct_live_bundle_kwargs() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    final_bundle_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "RendererBundle"
+        and any(keyword.arg == "export_archive_fn" for keyword in node.keywords)
+    ]
+
+    assert len(final_bundle_calls) == 1
+    bundle_call = final_bundle_calls[0]
+
+    def keyword_reads_train_time_control(keyword_name: str, attr_name: str) -> bool:
+        for keyword in bundle_call.keywords:
+            if keyword.arg != keyword_name:
+                continue
+            return any(
+                isinstance(node, ast.Attribute)
+                and node.attr == attr_name
+                and isinstance(node.value, ast.Name)
+                and node.value.id == "train_time_controls"
+                for node in ast.walk(keyword.value)
+            )
+        return False
+
+    assert keyword_reads_train_time_control(
+        "segnet_direct_live_base_loss_weight",
+        "segnet_direct_live_base_loss_weight",
+    )
+    assert keyword_reads_train_time_control(
+        "scorer_input_contrast_floor_weight",
+        "scorer_input_contrast_floor_weight",
+    )
+    assert keyword_reads_train_time_control(
+        "scorer_input_contrast_floor_segnet_min_std_ratio",
+        "scorer_input_contrast_floor_segnet_min_std_ratio",
+    )
+    assert keyword_reads_train_time_control(
+        "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+        "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+    )
+
+
+def test_hinerv_mlx_trainer_direct_live_weight_builds_real_segnet_teacher() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "segnet_teacher_needed = bool(" in source
+    assert (
+        "or float(train_time_controls.segnet_direct_live_distillation_weight) > 0.0"
+        in source
+    )
+    assert "if segnet_teacher_needed:" in source
+    assert "scorer_teacher = build_mlx_segnet_pair_teacher(" in source
 
 
 def test_hinerv_mlx_trainer_hydrates_targets_from_source_pairs() -> None:

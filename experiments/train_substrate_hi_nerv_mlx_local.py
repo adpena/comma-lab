@@ -132,6 +132,7 @@ class HiNervTrainTimeControlConfig:
     segnet_distillation_objective: str = "kl_t2"
     distillation_temperature: float = 2.0
     segnet_direct_live_distillation_weight: float = 0.0
+    segnet_direct_live_base_loss_weight: float = 1.0
     segnet_direct_live_class_histogram_weight: float = 0.0
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0
     segnet_direct_live_class_balanced_ce_weight: float = 0.0
@@ -217,6 +218,10 @@ class HiNervTrainTimeControlConfig:
         _require_finite_nonnegative(
             self.segnet_direct_live_distillation_weight,
             "segnet_direct_live_distillation_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_base_loss_weight,
+            "segnet_direct_live_base_loss_weight",
         )
         _require_finite_nonnegative(
             self.segnet_direct_live_class_histogram_weight,
@@ -313,6 +318,9 @@ class HiNervTrainTimeControlConfig:
             distillation_temperature=float(self.distillation_temperature),
             segnet_direct_live_distillation_weight=float(
                 self.segnet_direct_live_distillation_weight
+            ),
+            segnet_direct_live_base_loss_weight=float(
+                self.segnet_direct_live_base_loss_weight
             ),
             segnet_direct_live_class_histogram_weight=float(
                 self.segnet_direct_live_class_histogram_weight
@@ -425,6 +433,7 @@ class HiNervTrainTimeControlConfig:
                 "objective": str(self.segnet_distillation_objective),
                 "distillation_temperature": float(self.distillation_temperature),
                 "weight": float(self.segnet_direct_live_distillation_weight),
+                "base_loss_weight": float(self.segnet_direct_live_base_loss_weight),
                 "class_histogram_weight": float(
                     self.segnet_direct_live_class_histogram_weight
                 ),
@@ -684,7 +693,15 @@ def _full_main(args: argparse.Namespace) -> int:
     learnable_student_head = None
     learnable_pose_student_head = None
     pose_distillation_weight = 0.0
-    if float(args.distillation_weight) > 0.0 and not args.allow_mock_scorer_teacher:
+    segnet_teacher_needed = bool(
+        (
+            float(args.distillation_weight) > 0.0
+            and not bool(args.allow_mock_scorer_teacher)
+        )
+        or float(train_time_controls.segnet_direct_live_distillation_weight) > 0.0
+    )
+    pose_teacher_needed = bool(float(args.pose_distillation_weight) > 0.0)
+    if segnet_teacher_needed or pose_teacher_needed:
         bundle_no_teacher = RendererBundle(
             model=model,
             target_rgb_0=target_rgb_0,
@@ -696,20 +713,23 @@ def _full_main(args: argparse.Namespace) -> int:
             pose_dims=DEFAULT_POSE_DIMS,
             source_pair_indices=source_pair_indices,
         )
+    if segnet_teacher_needed:
         scorer_teacher = build_mlx_segnet_pair_teacher(
             bundle_no_teacher,
             upstream_dir=str(args.upstream_dir),
             device="cpu",
         )
+        if float(args.distillation_weight) > 0.0:
+            learnable_student_head = build_learnable_student_head(
+                num_classes=DEFAULT_SEGNET_CLASSES,
+                in_channels=3,
+                seed=int(args.seed),
+            )
+    if pose_teacher_needed:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             bundle_no_teacher,
             upstream_dir=str(args.upstream_dir),
             device="cpu",
-        )
-        learnable_student_head = build_learnable_student_head(
-            num_classes=DEFAULT_SEGNET_CLASSES,
-            in_channels=3,
-            seed=int(args.seed),
         )
         learnable_pose_student_head = build_learnable_pose_student_head(
             pose_dims=DEFAULT_POSE_DIMS,
@@ -746,6 +766,9 @@ def _full_main(args: argparse.Namespace) -> int:
             float(train_time_controls.segnet_direct_live_distillation_weight)
             if scorer_teacher is not None
             else 0.0
+        ),
+        segnet_direct_live_base_loss_weight=float(
+            train_time_controls.segnet_direct_live_base_loss_weight
         ),
         segnet_direct_live_class_histogram_weight=(
             float(train_time_controls.segnet_direct_live_class_histogram_weight)
@@ -1349,6 +1372,17 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--distillation-temperature", type=float, default=2.0)
     parser.add_argument("--segnet-direct-live-distillation-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--segnet-direct-live-base-loss-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Relative multiplier on RendererBundle's base direct-live SegNet "
+            "logit/argmax objective. Keep at 1.0 for normal fit; set lower only "
+            "for explicit class-escape research where class-balanced terms own "
+            "the early pressure."
+        ),
+    )
     parser.add_argument("--segnet-direct-live-class-histogram-weight", type=float, default=0.0)
     parser.add_argument("--segnet-direct-live-class-balanced-hinge-weight", type=float, default=0.0)
     parser.add_argument("--segnet-direct-live-class-balanced-ce-weight", type=float, default=0.0)
@@ -2095,6 +2129,9 @@ def _train_time_control_config_from_args(
         distillation_temperature=float(getattr(args, "distillation_temperature", 2.0)),
         segnet_direct_live_distillation_weight=float(
             getattr(args, "segnet_direct_live_distillation_weight", 0.0)
+        ),
+        segnet_direct_live_base_loss_weight=float(
+            getattr(args, "segnet_direct_live_base_loss_weight", 1.0)
         ),
         segnet_direct_live_class_histogram_weight=float(
             getattr(args, "segnet_direct_live_class_histogram_weight", 0.0)
@@ -3200,6 +3237,10 @@ def _build_staged_scorer_curriculum(
                 "distill": 0.0,
                 "pose_distill": 0.0,
                 "scorer_input_guard": 1.0,
+                "scorer_input_contrast_floor": 1.0,
+                "scorer_input_shape_tether": 1.0,
+                "segnet_direct_live_distill": 0.0,
+                "segnet_direct_live_base_loss": 1.0,
             },
             lr_scale=1.0,
             notes=(
@@ -3216,6 +3257,10 @@ def _build_staged_scorer_curriculum(
                 "distill": 1.0,
                 "pose_distill": 0.0,
                 "scorer_input_guard": 1.0,
+                "scorer_input_contrast_floor": 1.0,
+                "scorer_input_shape_tether": 1.0,
+                "segnet_direct_live_distill": 1.0,
+                "segnet_direct_live_base_loss": 1.0,
             },
             lr_scale=float(segnet_lr_scale),
             notes=(
@@ -3232,6 +3277,10 @@ def _build_staged_scorer_curriculum(
                 "distill": 1.0,
                 "pose_distill": 1.0,
                 "scorer_input_guard": 1.0,
+                "scorer_input_contrast_floor": 1.0,
+                "scorer_input_shape_tether": 1.0,
+                "segnet_direct_live_distill": 1.0,
+                "segnet_direct_live_base_loss": 1.0,
             },
             lr_scale=float(final_lr_scale),
             notes=(
@@ -3475,6 +3524,9 @@ def _pr95_full_control_contract(
                 train_time_controls.segnet_distillation_objective
             ),
             "segnet_direct_live_distillation_weight": segnet_direct_live_weight,
+            "segnet_direct_live_base_loss_weight": float(
+                train_time_controls.segnet_direct_live_base_loss_weight
+            ),
             "segnet_direct_live_class_escape_weight": segnet_class_escape_weight,
             "segnet_direct_live": train_time_controls.metadata()["segnet_direct_live"],
             "real_posenet_distillation_loss": pose_distillation_weight > 0.0,
