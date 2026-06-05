@@ -88,6 +88,11 @@ def test_nerv_long_training_campaign_admission_builds_storage_gated_queue(
     assert selected["metadata"]["human_visual_fidelity_relevance"] == (
         "irrelevant_unless_scorer_causal"
     )
+    row_guard = admission["selected_rows"][0]["pr95_distortion_practices_guard"]
+    assert row_guard["schema"] == "pr95_distortion_practices_guard.v1"
+    assert row_guard["launch_allowed"] is True
+    assert row_guard["blockers"] == []
+    assert admission["pr95_distortion_source_inventory"]["source_ready"] is True
 
 
 def test_nerv_long_training_campaign_admission_blocks_without_active_claim(
@@ -226,6 +231,45 @@ def test_nerv_long_training_campaign_admission_blocks_active_local_mlx_process(
     assert admission["active_local_mlx_processes"][0]["pid"] == 12345
     assert admission["score_claim"] is False
     assert admission["ready_for_exact_eval_dispatch"] is False
+
+
+def test_nerv_long_training_campaign_admission_blocks_missing_pr95_distortion_practice(
+    tmp_path: Path,
+) -> None:
+    verdict = _runnable_verdict(tmp_path / "ssd")
+    selected = verdict["selected_local_mlx_experiments"][0]
+    command = selected["command"]
+    command[command.index("--pose-distillation-weight") + 1] = "0"
+    claims = _claims_file(
+        tmp_path,
+        lane_id="lane_nerv_local_mlx",
+        instance_job_id="job_first",
+    )
+
+    admission = build_nerv_long_training_campaign_execution_admission(
+        verdict,
+        repo_root=tmp_path,
+        active_claims_path=claims,
+        lane_id="lane_nerv_local_mlx",
+        instance_job_id="job_first",
+        limit=1,
+        storage_expected_bytes_per_row=1024,
+        storage_reserve_free_gb=0.0,
+        allowed_output_roots=(tmp_path / "ssd",),
+        now_utc="2026-06-02T18:40:00Z",
+    )
+
+    assert admission["experiment_queue_ready"] is False
+    assert admission["admitted_experiment_count"] == 0
+    assert (
+        "hi_nerv_pr95_distortion_scorer_preprocess_eval_roundtrip_yuv6_missing"
+        in admission["blockers"]
+    )
+    row_guard = admission["selected_rows"][0]["pr95_distortion_practices_guard"]
+    assert row_guard["launch_allowed"] is False
+    assert "hi_nerv_pr95_distortion_dual_component_real_scorer_pressure_missing" in row_guard[
+        "blockers"
+    ]
 
 
 def test_nerv_long_training_campaign_admission_cli_writes_artifacts(

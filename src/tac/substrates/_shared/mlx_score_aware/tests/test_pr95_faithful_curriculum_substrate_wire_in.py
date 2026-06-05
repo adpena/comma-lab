@@ -436,6 +436,10 @@ def test_harness_signature_accepts_pr95_faithful_curriculum_kwargs() -> None:
         "harness signature missing checkpoint metric mode kwarg; "
         "score-facing archive selection is FAKE if absent"
     )
+    assert "checkpoint_selection_metric_required" in params, (
+        "harness signature missing strict checkpoint metric kwarg; "
+        "score-facing archive selection can silently fall back to total"
+    )
     assert "pr95_muon_policy" in params, (
         "harness signature missing PR95 Muon policy kwarg; contest optimizer "
         "control is FAKE if absent"
@@ -452,6 +456,7 @@ def test_harness_signature_accepts_pr95_faithful_curriculum_kwargs() -> None:
     assert params["ema_archive_selection_enabled"].default is False
     assert params["checkpoint_selection_metric_key"].default == "total"
     assert params["checkpoint_selection_metric_mode"].default == "min"
+    assert params["checkpoint_selection_metric_required"].default is False
 
 
 def test_harness_source_constructs_adapter_with_pr95_kwargs() -> None:

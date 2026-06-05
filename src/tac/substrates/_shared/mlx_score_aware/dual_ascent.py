@@ -413,7 +413,11 @@ def build_default_nerv_train_time_dual_ascent_config(
     family: str,
     segnet_distillation_weight: float = 0.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_class_histogram_weight: float = 0.0,
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    scorer_input_contrast_floor_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
     section_byte_budgets: Mapping[str, int | float] | None = None,
     section_byte_loss_weight_key_map: Mapping[str, str] | None = None,
@@ -437,7 +441,17 @@ def build_default_nerv_train_time_dual_ascent_config(
     constraints: list[dict[str, Any]] = []
     seg_weight = _nonnegative_weight(segnet_distillation_weight)
     direct_live_seg_weight = _nonnegative_weight(segnet_direct_live_distillation_weight)
+    direct_live_hist_weight = _nonnegative_weight(
+        segnet_direct_live_class_histogram_weight
+    )
+    direct_live_balanced_hinge_weight = _nonnegative_weight(
+        segnet_direct_live_class_balanced_hinge_weight
+    )
+    direct_live_balanced_ce_weight = _nonnegative_weight(
+        segnet_direct_live_class_balanced_ce_weight
+    )
     pose_weight = _nonnegative_weight(pose_distillation_weight)
+    contrast_floor_weight = _nonnegative_weight(scorer_input_contrast_floor_weight)
     byte_price = _positive_weight(contest_rate_score_per_byte)
     if seg_weight > 0.0:
         constraints.append(
@@ -479,6 +493,69 @@ def build_default_nerv_train_time_dual_ascent_config(
                 ),
             )
         )
+    if direct_live_hist_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_class_histogram",
+                metric_name="loss_part_segnet_direct_live_class_histogram_loss",
+                loss_weight_key="distill",
+                base_weight=direct_live_hist_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.2,
+                max_lambda=6.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "The upstream SegNet score is an argmax-flip rate on the "
+                    "last frame.  During collapse escape, direct-live hinge "
+                    "can improve while the global class measure stays one-"
+                    "class; this dual raises SegNet stage pressure when the "
+                    "target class-measure tether stalls."
+                ),
+            )
+        )
+    if direct_live_balanced_hinge_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_class_balanced_hinge",
+                metric_name="loss_part_segnet_direct_live_class_balanced_hinge_loss",
+                loss_weight_key="distill",
+                base_weight=direct_live_balanced_hinge_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.2,
+                max_lambda=6.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "Class-balanced Crammer-Singer hinge keeps minority "
+                    "SegNet target classes trainable while matching "
+                    "evaluate.py's last-frame argmax surface.  The dual "
+                    "prevents dominant-class pixels from hiding this "
+                    "collapse-escape loss inside the aggregate direct-live "
+                    "term."
+                ),
+            )
+        )
+    if direct_live_balanced_ce_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_segnet_direct_live_class_balanced_ce",
+                metric_name="loss_part_segnet_direct_live_class_balanced_ce_loss",
+                loss_weight_key="distill",
+                base_weight=direct_live_balanced_ce_weight,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.2,
+                max_lambda=6.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "Class-balanced hard-target cross-entropy targets the "
+                    "exact upstream SegNet argmax label on the last frame, "
+                    "but gives stronger gradients when the target probability "
+                    "is crushed in a one-class renderer basin."
+                ),
+            )
+        )
     if pose_weight > 0.0:
         constraints.append(
             _constraint_payload(
@@ -495,6 +572,28 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "PoseNet scores the pair through PR95/YUV6 preprocessing; "
                     "this dual prices pair-level pose loss separately from "
                     "SegNet boundary loss."
+                ),
+            )
+        )
+    if contrast_floor_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_scorer_input_contrast_floor",
+                metric_name="loss_part_scorer_input_contrast_floor",
+                loss_weight_key="scorer_input_guard",
+                base_weight=contrast_floor_weight,
+                target=0.0,
+                target_fraction=1.0,
+                dual_lr=0.2,
+                max_lambda=4.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "The contrast floor is a scorer-input feasibility "
+                    "constraint, not human visual fidelity: it prices flat "
+                    "SegNet frame-1 RGB and PoseNet YUV6-pair inputs only when "
+                    "the one-sided hinge is nonzero, so the upstream "
+                    "evaluate.py scorer losses remain trainable."
                 ),
             )
         )

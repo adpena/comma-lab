@@ -455,6 +455,8 @@ def _discover_candidate_feedback_paths(
     if limit <= 0:
         return []
     names = (
+        "hinerv_smoke_comparison_candidate_feedback_refresh.json",
+        "nerv_queue_training_feedback_refresh.json",
         "snerv_upstream_eval_candidate_feedback_row.json",
         "nerv_candidate_training_telemetry_feedback_row.json",
         "nerv_candidate_feedback_row.json",
@@ -466,7 +468,11 @@ def _discover_candidate_feedback_paths(
         root = Path(raw_root).expanduser().resolve(strict=False)
         if not root.is_dir():
             continue
-        for pattern in (*names, "*candidate_feedback*row*.json"):
+        for pattern in (
+            *names,
+            "*candidate_feedback*row*.json",
+            "*candidate_feedback*refresh*.json",
+        ):
             for path in root.rglob(pattern):
                 key = path.resolve(strict=False).as_posix()
                 if key in seen:

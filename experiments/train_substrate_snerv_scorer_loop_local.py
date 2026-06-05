@@ -42,7 +42,9 @@ from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     FALSE_AUTHORITY,
 )
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
+    BYTE_GROWTH_ADMISSION_MODES,
     COMPONENT_GUARD_MODES,
+    DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS,
     run_snerv_scorer_loop_decoder_qat_smoke,
 )
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
@@ -179,6 +181,16 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--max-archive-byte-growth", type=int, default=None)
+    parser.add_argument(
+        "--byte-growth-admission-mode",
+        choices=BYTE_GROWTH_ADMISSION_MODES,
+        default="hard_cap",
+        help=(
+            "hard_cap rejects archive growth above --max-archive-byte-growth; "
+            "rate_paid admits extra bytes only when the byte-pressured local "
+            "objective still improves. False-authority training guard only."
+        ),
+    )
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seg-slack", type=float, default=0.0)
     parser.add_argument(
@@ -195,6 +207,14 @@ def _build_parser() -> argparse.ArgumentParser:
         "--pair-guard-max-pose-worsened-fraction",
         type=float,
         default=1.0,
+    )
+    parser.add_argument(
+        "--dynamic-range-repair-gains",
+        default="",
+        help=(
+            "Comma-separated HF-decoder gain candidates to receiver-replay before "
+            "the perturbation search, or 'auto' for the bounded default set."
+        ),
     )
     parser.add_argument(
         "--snerv-native-mlx-decoder-train-steps",
@@ -258,6 +278,7 @@ def _score_loop_kwargs_from_args(args: argparse.Namespace) -> dict[str, Any]:
             if args.max_archive_byte_growth is None
             else int(args.max_archive_byte_growth)
         ),
+        "byte_growth_admission_mode": str(args.byte_growth_admission_mode),
         "pose_slack": float(args.pose_slack),
         "seg_slack": float(args.seg_slack),
         "component_guard_mode": str(args.component_guard_mode),
@@ -266,6 +287,9 @@ def _score_loop_kwargs_from_args(args: argparse.Namespace) -> dict[str, Any]:
         ),
         "pair_guard_max_pose_worsened_fraction": float(
             args.pair_guard_max_pose_worsened_fraction
+        ),
+        "dynamic_range_repair_gains": _parse_dynamic_range_repair_gains(
+            args.dynamic_range_repair_gains
         ),
         "seed": int(args.seed),
     }
@@ -281,6 +305,7 @@ def _build_report(
     best_packet_materialization: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = result.as_jsonable()
+    distortion_contract = _distortion_contract_from_result_payload(payload)
     best_packet_materialization = best_packet_materialization or {
         "schema": "snerv_scorer_loop_best_packet_materialization.v1",
         "materialized": False,
@@ -299,6 +324,7 @@ def _build_report(
     native_mlx_decoder_training_controls = _native_mlx_decoder_training_controls(args)
     blockers = [
         *result_blockers,
+        *distortion_contract["blockers"],
         *(best_packet_materialization.get("blockers") or ()),
         *native_mlx_decoder_training_controls["blockers"],
         "full_600_pair_receiver_proof_missing",
@@ -316,6 +342,7 @@ def _build_report(
         "storage_preflight": storage_payload,
         "score_loop_kwargs": _score_loop_kwargs_from_args(args),
         "native_mlx_decoder_training_controls": native_mlx_decoder_training_controls,
+        "distortion_contract": distortion_contract,
         "n_pairs": payload.get("n_pairs"),
         "levels": payload.get("levels"),
         "wavelet": payload.get("wavelet"),
@@ -356,6 +383,7 @@ def _build_report(
 
 
 def render_snerv_scorer_loop_local_markdown(report: dict[str, Any]) -> str:
+    distortion_contract = report.get("distortion_contract") or {}
     lines = [
         "# SNeRV scorer-loop QAT local trainer",
         "",
@@ -379,6 +407,8 @@ def render_snerv_scorer_loop_local_markdown(report: dict[str, Any]) -> str:
         f"Best packet bytes: `{report.get('best_packet_bytes')}`",
         f"Best packet SHA-256: `{report.get('best_packet_sha256')}`",
         f"Best packet path: `{report.get('best_packet_path')}`",
+        f"PoseNet YUV6 gradient proof present: `{distortion_contract.get('posenet_yuv6_gradient_proof_present')}`",
+        f"PoseNet YUV6 gradient reachable: `{distortion_contract.get('posenet_yuv6_gradient_reachable')}`",
         "",
         "## Blockers",
         "",
@@ -511,6 +541,74 @@ def _native_mlx_decoder_training_controls(args: argparse.Namespace) -> dict[str,
     }
 
 
+def _distortion_contract_from_result_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Persist the upstream evaluate.py distortion contract into terminal reports.
+
+    SNeRV scorer-loop rows are often consumed by later planners as "pose-guard"
+    evidence.  The upstream scorer makes that dangerous unless the PoseNet path
+    is explicitly gradient-reachable: PoseNet scores both frames through YUV6,
+    while the original ``rgb_to_yuv6`` is no-grad.  This report-level guard keeps
+    the PR95/evaluate.py lesson attached to every row that tries to pass the
+    pose continuation gate.
+    """
+
+    proof = _extract_posenet_yuv6_gradient_proof(payload)
+    proof_present = isinstance(proof, dict)
+    proof_schema = proof.get("schema") if proof_present else None
+    gradient_reachable = (
+        bool(proof.get("gradient_reachable")) if proof_present else False
+    )
+    blockers: list[str] = []
+    if bool(payload.get("ready_for_pose_guard_gate")):
+        if not proof_present:
+            blockers.append(
+                "snerv_pose_guard_gate_missing_posenet_yuv6_gradient_reachability_proof"
+            )
+        elif proof_schema != "posenet_yuv6_gradient_reachability_proof.v1":
+            blockers.append(
+                "snerv_pose_guard_gate_posenet_yuv6_gradient_proof_schema_mismatch"
+            )
+        elif not gradient_reachable:
+            blockers.append(
+                "snerv_pose_guard_gate_posenet_yuv6_gradient_not_reachable"
+            )
+    if proof_present:
+        blockers.extend(str(value) for value in proof.get("blockers") or ())
+    return {
+        "schema": "snerv_scorer_loop_distortion_contract.v1",
+        "upstream_evaluate_source": "upstream/evaluate.py",
+        "upstream_modules_source": "upstream/modules.py",
+        "upstream_frame_utils_source": "upstream/frame_utils.py",
+        "segnet_domain": "last_frame_only_x[:, -1, ...]_at_384x512",
+        "posenet_domain": "two_frame_pair_through_12ch_yuv6_at_384x512",
+        "rate_term": "25 * archive_zip_bytes / uncompressed_total_bytes",
+        "pose_guard_gate_requested": bool(payload.get("ready_for_pose_guard_gate")),
+        "posenet_yuv6_gradient_proof_present": proof_present,
+        "posenet_yuv6_gradient_reachable": gradient_reachable,
+        "posenet_yuv6_gradient_reachability": dict(proof) if proof_present else None,
+        "blockers": list(dict.fromkeys(blockers)),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _extract_posenet_yuv6_gradient_proof(
+    payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    for key in (
+        "posenet_yuv6_gradient_reachability",
+        "posenet_yuv6_gradient_reachability_proof",
+    ):
+        value = payload.get(key)
+        if isinstance(value, dict):
+            return value
+    score_exact = payload.get("score_exact_saliency")
+    if isinstance(score_exact, dict):
+        value = score_exact.get("posenet_yuv6_gradient_reachability")
+        if isinstance(value, dict):
+            return value
+    return None
+
+
 def _nested(payload: dict[str, Any], *keys: str) -> Any:
     current: Any = payload
     for key in keys:
@@ -536,6 +634,21 @@ def _parse_positive_int_csv(raw: str) -> tuple[int, ...]:
         values.append(value)
     if not values:
         raise ValueError("at least one positive integer is required")
+    return tuple(values)
+
+
+def _parse_dynamic_range_repair_gains(raw: str) -> tuple[float, ...]:
+    text = str(raw or "").strip()
+    if not text:
+        return ()
+    if text.lower() == "auto":
+        return DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS
+    values = []
+    for chunk in text.split(","):
+        token = chunk.strip()
+        if not token:
+            continue
+        values.append(float(token))
     return tuple(values)
 
 
@@ -574,7 +687,9 @@ __all__ = [
     "TRAINER_SCHEMA",
     "_build_parser",
     "_build_report",
+    "_distortion_contract_from_result_payload",
     "_materialize_best_packet",
+    "_parse_dynamic_range_repair_gains",
     "_resolve_output_dir",
     "_score_loop_kwargs_from_args",
     "main",

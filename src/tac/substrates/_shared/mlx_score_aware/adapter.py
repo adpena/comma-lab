@@ -897,6 +897,18 @@ class MlxScoreAwareAdapter:
                 out["loss_part_config_weight_scorer_input_distribution_guard"] = (
                     float(self.bundle.scorer_input_distribution_guard_weight)
                 )
+            elif name == "scorer_input_contrast_floor":
+                out["loss_part_weighted_scorer_input_contrast_floor"] = (
+                    float(self.bundle.scorer_input_contrast_floor_weight)
+                    * scorer_input_guard_stage_weight
+                    * scalar
+                )
+                out["loss_part_stage_weight_scorer_input_contrast_floor"] = (
+                    scorer_input_guard_stage_weight
+                )
+                out["loss_part_config_weight_scorer_input_contrast_floor"] = (
+                    float(self.bundle.scorer_input_contrast_floor_weight)
+                )
             elif name in weights:
                 out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
         out["score_aware_loss_parts_active"] = float(
@@ -940,6 +952,7 @@ class MlxScoreAwareAdapter:
             _weighted_recon,
             decode_frames_nhwc01,
             pose_student_inputs_nhwc,
+            scorer_input_contrast_floor_loss,
             scorer_input_distribution_guard_loss,
         )
 
@@ -1138,6 +1151,24 @@ class MlxScoreAwareAdapter:
                 * scorer_input_guard_stage_weight
                 * guard
             )
+        contrast_floor_parts: dict[str, Any] = {}
+        if (
+            self.bundle.scorer_input_contrast_floor_weight > 0.0
+            and scorer_input_guard_stage_weight != 0.0
+        ):
+            contrast_floor, contrast_floor_parts = scorer_input_contrast_floor_loss(
+                self.bundle,
+                rgb_0,
+                rgb_1,
+                gt_0,
+                gt_1,
+            )
+            total = (
+                total
+                + float(self.bundle.scorer_input_contrast_floor_weight)
+                * scorer_input_guard_stage_weight
+                * contrast_floor
+            )
         if cat_entropy_term is not None and float(stage_verdict.cat_lambda) > 0.0:
             total = total + float(stage_verdict.cat_lambda) * cat_entropy_term
         if extra_qat_total is not None:
@@ -1184,6 +1215,8 @@ class MlxScoreAwareAdapter:
             ),
         }
         for name, value in guard_parts.items():
+            parts[f"pr95_stage_{name}"] = value
+        for name, value in contrast_floor_parts.items():
             parts[f"pr95_stage_{name}"] = value
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
@@ -1338,6 +1371,13 @@ class MlxScoreAwareAdapter:
                     out["loss_part_config_weight_segnet_direct_live_distill"] = (
                         direct_live_config_weight
                     )
+            elif name.startswith("pr95_stage_segnet_direct_live_"):
+                generic_name = name.replace(
+                    "pr95_stage_segnet_direct_live_",
+                    "segnet_direct_live_",
+                    1,
+                )
+                out[f"loss_part_{generic_name}"] = scalar
             elif name == "pr95_c1a_entropy":
                 out["loss_part_weighted_pr95_c1a_entropy"] = (
                     float(stage_verdict.cat_lambda) * scalar
@@ -1360,6 +1400,44 @@ class MlxScoreAwareAdapter:
                 out[
                     "loss_part_config_weight_pr95_stage_scorer_input_distribution_guard"
                 ] = float(self.bundle.scorer_input_distribution_guard_weight)
+            elif name == "pr95_stage_scorer_input_contrast_floor":
+                guard_stage_weight = component_loss_weight(
+                    loss_weights,
+                    "scorer_input_guard",
+                )
+                weighted = (
+                    float(self.bundle.scorer_input_contrast_floor_weight)
+                    * guard_stage_weight
+                    * scalar
+                )
+                out[
+                    "loss_part_weighted_pr95_stage_scorer_input_contrast_floor"
+                ] = weighted
+                out[
+                    "loss_part_stage_weight_pr95_stage_scorer_input_contrast_floor"
+                ] = guard_stage_weight
+                out[
+                    "loss_part_config_weight_pr95_stage_scorer_input_contrast_floor"
+                ] = float(self.bundle.scorer_input_contrast_floor_weight)
+                if (
+                    float(self.bundle.scorer_input_contrast_floor_weight) > 0.0
+                    and guard_stage_weight > 0.0
+                ):
+                    out["loss_part_scorer_input_contrast_floor"] = scalar
+                    out["loss_part_weighted_scorer_input_contrast_floor"] = weighted
+                    out[
+                        "loss_part_stage_weight_scorer_input_contrast_floor"
+                    ] = guard_stage_weight
+                    out[
+                        "loss_part_config_weight_scorer_input_contrast_floor"
+                    ] = float(self.bundle.scorer_input_contrast_floor_weight)
+            elif name.startswith("pr95_stage_scorer_input_contrast_floor_"):
+                generic_name = name.replace(
+                    "pr95_stage_scorer_input_contrast_floor_",
+                    "scorer_input_contrast_floor_",
+                    1,
+                )
+                out[f"loss_part_{generic_name}"] = scalar
             elif name in self.bundle.extra_loss_weights:
                 out[f"loss_part_weighted_{name}"] = (
                     float(self.bundle.extra_loss_weights[name]) * scalar
@@ -1657,16 +1735,48 @@ class MlxScoreAwareAdapter:
                 "weight": float(
                     self.bundle.segnet_direct_live_distillation_weight
                 ),
+                "class_histogram_weight": float(
+                    self.bundle.segnet_direct_live_class_histogram_weight
+                ),
+                "class_balanced_hinge_weight": float(
+                    self.bundle.segnet_direct_live_class_balanced_hinge_weight
+                ),
+                "class_balanced_ce_weight": float(
+                    self.bundle.segnet_direct_live_class_balanced_ce_weight
+                ),
                 "teacher_surface": "teacher_logits_for_frames_nhwc01",
                 "candidate_frame_domain": "decoded_eval_roundtrip_nhwc01",
                 "objective": str(self.bundle.segnet_distillation_objective),
                 "loss": (
                     "real_segnet_live_logits_default_mse_or_configured_"
-                    "argmax_hinge"
+                    "argmax_hinge_plus_optional_target_class_histogram_or_"
+                    "class_balanced_bootstrap_tether_or_class_balanced_ce"
                 ),
                 "purpose": (
                     "backpropagate_real_segnet_input_vjp_into_renderer_pixels_"
                     "when_student_surrogate_collapses_to_one_class"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "scorer_input_contrast_floor": {
+                "schema": "mlx_score_aware_scorer_input_contrast_floor.v1",
+                "enabled": (
+                    float(self.bundle.scorer_input_contrast_floor_weight) > 0.0
+                ),
+                "weight": float(self.bundle.scorer_input_contrast_floor_weight),
+                "segnet_last_rgb_min_std_ratio": float(
+                    self.bundle.scorer_input_contrast_floor_segnet_min_std_ratio
+                ),
+                "posenet_yuv6_pair_min_std_ratio": float(
+                    self.bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+                ),
+                "domains": {
+                    "segnet": "last_frame_rgb_nhwc01",
+                    "posenet": "two_frame_pr95_yuv6_pair_nhwc01",
+                },
+                "purpose": (
+                    "refuse_flat_scorer_input_basin_before_live_segnet_or_pose_"
+                    "surrogates_optimize_inside_argmax_collapse"
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },

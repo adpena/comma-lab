@@ -49,6 +49,10 @@ from tac.analysis.nerv_scorer_objective import (
     PEIRCE_P1_CONTEST_SCORER_GEOMETRY,
 )
 from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_contract
+from tac.analysis.pr95_distortion_practices_guard import (
+    build_pr95_distortion_practices_row_guard,
+    build_pr95_distortion_source_inventory,
+)
 from tac.analysis.snerv_lf_over_ceiling_reroute_queue import (
     DEFAULT_QUEUE_ID as DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
 )
@@ -596,6 +600,9 @@ def build_nerv_long_training_campaign_plan(
     upstream_evaluate_priority_contract = _upstream_evaluate_priority_contract()
     tilde_oss_leverage_policy = _tilde_oss_leverage_policy()
     pr95_baseline_binding = _pr95_baseline_identity_binding(pr95_baseline_identity)
+    pr95_distortion_source_inventory = build_pr95_distortion_source_inventory(
+        _repo_root()
+    )
     snerv_scorer_tether_smoke_gate = _snerv_scorer_tether_smoke_gate(
         snerv_scorer_tether_smoke_report
     )
@@ -650,6 +657,9 @@ def build_nerv_long_training_campaign_plan(
                     ),
                     tilde_oss_leverage_policy=tilde_oss_leverage_policy,
                     pr95_baseline_identity_binding=pr95_baseline_binding,
+                    pr95_distortion_source_inventory=(
+                        pr95_distortion_source_inventory
+                    ),
                     planner_row_queue_artifact_path=planner_queue_artifact,
                     modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 )
@@ -672,6 +682,7 @@ def build_nerv_long_training_campaign_plan(
                 ),
                 tilde_oss_leverage_policy=tilde_oss_leverage_policy,
                 pr95_baseline_identity_binding=pr95_baseline_binding,
+                pr95_distortion_source_inventory=pr95_distortion_source_inventory,
                 snerv_scorer_tether_smoke_gate=snerv_scorer_tether_smoke_gate,
                 planner_row_queue_artifact_path=planner_queue_artifact,
                 modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
@@ -821,6 +832,31 @@ def build_nerv_long_training_campaign_plan(
         "pr95_baseline_identity_consumed_by_rows": all(
             isinstance(row.get("pr95_baseline_identity_binding"), Mapping)
             for row in rows
+        ),
+        "pr95_distortion_source_inventory": pr95_distortion_source_inventory,
+        "pr95_distortion_source_ready": bool(
+            pr95_distortion_source_inventory.get("source_ready")
+        ),
+        "pr95_distortion_practices_consumed_by_rows": all(
+            isinstance(row.get("pr95_distortion_practices_guard"), Mapping)
+            for row in rows
+        ),
+        "pr95_distortion_practices_blockers": _dedupe(
+            [
+                blocker
+                for row in rows
+                for blocker in (
+                    row.get("pr95_distortion_practices_guard", {}).get(
+                        "blockers",
+                        [],
+                    )
+                    if isinstance(
+                        row.get("pr95_distortion_practices_guard"),
+                        Mapping,
+                    )
+                    else []
+                )
+            ]
         ),
         "snerv_scorer_tether_smoke_gate": snerv_scorer_tether_smoke_gate,
         "snerv_scorer_tether_smoke_report_attached": bool(
@@ -1000,6 +1036,7 @@ def _hinerv_campaign_row(
     upstream_evaluate_priority_contract: Mapping[str, Any] | None = None,
     tilde_oss_leverage_policy: Mapping[str, Any] | None = None,
     pr95_baseline_identity_binding: Mapping[str, Any] | None = None,
+    pr95_distortion_source_inventory: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
 ) -> dict[str, Any]:
@@ -1093,6 +1130,7 @@ def _hinerv_campaign_row(
         eval_roundtrip_ste_attached=True,
         differentiable_pose_preprocess_attached=True,
         ema_archive_selection_attached=True,
+        scorer_input_distribution_guard_attached=True,
         receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
         full_video_local_prefilter_attached=bool(feedback.get("full_video_local_prefilter_attached")),
         local_cpu_replay_gate_attached=bool(feedback.get("local_cpu_replay_gate_attached")),
@@ -1224,6 +1262,27 @@ def _hinerv_campaign_row(
                 _float_token(float(launch_feedback_adjustment["pose_distillation_huber_delta"])),
             ]
         )
+    pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
+        {
+            "id": row_id,
+            "family": "hi_nerv",
+            "command_argv": command,
+            "curriculum_plan": curriculum,
+            "pr95_staged_curriculum": bool(
+                (curriculum.get("pr95_stage_plan") or {}).get("enabled")
+            ),
+            "eval_roundtrip_ste_attached": bool(
+                (curriculum.get("scorer_pressure") or {}).get(
+                    "eval_roundtrip_ste_attached"
+                )
+            ),
+        },
+        repo_root=_repo_root(),
+        source_inventory=pr95_distortion_source_inventory,
+    )
+    pr95_distortion_blockers = list(
+        pr95_distortion_guard.get("blockers") or []
+    )
     candidate_authority_blockers = list(candidate.get("_candidate_authority_blockers") or [])
     blockers = [
         ("" if joint_recon_weight else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"),
@@ -1245,6 +1304,7 @@ def _hinerv_campaign_row(
         *official_control_blockers,
         *optimizer_launch_blockers,
         *modelsize_byte_cap_blockers,
+        *pr95_distortion_blockers,
         *list(source_parity["required_blockers"]),
         *list(curriculum.get("blockers") or []),
         *feedback_evidence_blockers,
@@ -1267,16 +1327,17 @@ def _hinerv_campaign_row(
     if candidate.get("nominal_under_ceiling") is not True:
         blockers.append("hinerv_candidate_nominal_over_byte_ceiling")
     blockers = _dedupe(blockers)
+    launch_blockers = _experiment_launch_blockers(blockers)
     prelaunch_gate = dict(curriculum.get("long_campaign_prelaunch_gate") or {})
     launch_ready = bool(
         prelaunch_gate.get("launch_allowed")
-        and joint_recon_weight
-        and decoder_weight_waterfill_runner_admitted
         and archive_section_telemetry_gate_ready
+        and not launch_blockers
         and not candidate_authority_blockers
         and not official_control_blockers
         and not optimizer_launch_blockers
         and not modelsize_byte_cap_blockers
+        and not pr95_distortion_blockers
         and not source_parity["required_blockers"]
     )
     if candidate_authority_blockers:
@@ -1285,18 +1346,22 @@ def _hinerv_campaign_row(
         implementation_status = "hinerv_official_controls_required_for_launch"
     elif optimizer_launch_blockers:
         implementation_status = "optimizer_timing_smoke_required_before_campaign_launch"
+    elif pr95_distortion_blockers:
+        implementation_status = "pr95_distortion_practices_required_for_launch"
     elif source_parity["required_blockers"]:
         implementation_status = "source_parity_required_gap_blocks_launch"
     elif decoder_weight_waterfill and not decoder_weight_waterfill_runner_admitted:
         implementation_status = "decoder_weight_waterfill_plan_advisory_only_blocks_launch"
-    elif not decoder_weight_waterfill:
-        implementation_status = "decoder_weight_waterfill_plan_required_for_launch"
     elif not archive_section_telemetry_gate_ready:
         implementation_status = "archive_section_telemetry_advisory_only_blocks_launch"
     elif launch_ready:
-        implementation_status = "shared_mlx_scoreaware_runner_launchable"
+        implementation_status = (
+            "shared_mlx_scoreaware_runner_launchable_without_optional_waterfill"
+            if not decoder_weight_waterfill
+            else "shared_mlx_scoreaware_runner_launchable"
+        )
     else:
-        implementation_status = "shared_mlx_scoreaware_runner_waiting_for_verified_joint_recon_weight"
+        implementation_status = "shared_mlx_scoreaware_runner_waiting_for_hard_gate"
     return _row(
         row_id=row_id,
         family="hi_nerv",
@@ -1324,6 +1389,7 @@ def _hinerv_campaign_row(
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
+            "pr95_distortion_practices_guard": pr95_distortion_guard,
             "optimizer_policy": _hinerv_optimizer_policy_control(
                 optimizer_kind=optimizer_kind,
                 optimizer_policy=optimizer_policy,
@@ -1376,6 +1442,7 @@ def _snerv_campaign_row(
     upstream_evaluate_priority_contract: Mapping[str, Any] | None = None,
     tilde_oss_leverage_policy: Mapping[str, Any] | None = None,
     pr95_baseline_identity_binding: Mapping[str, Any] | None = None,
+    pr95_distortion_source_inventory: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_gate: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
@@ -1640,6 +1707,21 @@ def _snerv_campaign_row(
                 lf_recode_selected_mode,
             ]
         )
+    pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
+        {
+            "id": row_id,
+            "family": "snerv",
+            "command_argv": command,
+            "curriculum_plan": curriculum,
+            "pr95_faithful_curriculum_enabled": bool(pr95_curriculum_bound),
+            "eval_roundtrip_ste_attached": bool(eval_roundtrip_bound),
+        },
+        repo_root=_repo_root(),
+        source_inventory=pr95_distortion_source_inventory,
+    )
+    pr95_distortion_blockers = list(
+        pr95_distortion_guard.get("blockers") or []
+    )
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
     hard_byte_ceiling_satisfied_for_long_training = (
         _snerv_hard_byte_ceiling_satisfied_for_long_training(
@@ -1666,6 +1748,7 @@ def _snerv_campaign_row(
             *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
             *modelsize_byte_cap_blockers,
+            *pr95_distortion_blockers,
             *list(scorer_tether_smoke_gate.get("blockers") or []),
             *list(renderer_nondegenerate_gate.get("blockers") or []),
             *list(source_parity["required_blockers"]),
@@ -1680,6 +1763,7 @@ def _snerv_campaign_row(
         not source_control_blockers
         and not candidate.get("_candidate_authority_blockers")
         and not modelsize_byte_cap_blockers
+        and not pr95_distortion_blockers
         and not source_parity["required_blockers"]
     )
     scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
@@ -1710,6 +1794,8 @@ def _snerv_campaign_row(
         implementation_status=(
             "source_bound_capacity_controls_incomplete"
             if not source_controls_ready
+            else "pr95_distortion_practices_required_for_launch"
+            if pr95_distortion_blockers
             else "snerv_scorer_tether_smoke_gate_blocked"
             if not scorer_tether_smoke_ready
             else "native_rate_aware_long_training_renderer_proof_blocked"
@@ -1745,6 +1831,7 @@ def _snerv_campaign_row(
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
+            "pr95_distortion_practices_guard": pr95_distortion_guard,
             "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
             "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
             "quant_bits": int(quant_bits),
@@ -1803,6 +1890,7 @@ def _snerv_campaign_row(
                 "upstream_evaluate_score_binding": upstream_evaluate_binding,
                 "tilde_oss_leverage_binding": tilde_oss_binding,
                 "pr95_baseline_identity_binding": pr95_baseline_binding,
+                "pr95_distortion_practices_guard": pr95_distortion_guard,
                 "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
                 "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
                 **FALSE_AUTHORITY,
@@ -1978,6 +2066,7 @@ def _experiment_for_row(
     upstream_evaluate_binding = metadata.get("upstream_evaluate_score_binding")
     tilde_oss_binding = metadata.get("tilde_oss_leverage_binding")
     pr95_baseline_binding = metadata.get("pr95_baseline_identity_binding")
+    pr95_distortion_guard = metadata.get("pr95_distortion_practices_guard")
     snerv_runtime_authority_split = metadata.get(
         "snerv_official_runtime_authority_split"
     )
@@ -2014,6 +2103,10 @@ def _experiment_for_row(
                 pr95_baseline_binding,
                 Mapping,
             ),
+            "pr95_distortion_practices_consumed": isinstance(
+                pr95_distortion_guard,
+                Mapping,
+            ),
             "source_bound_capacity_controls_consumed": isinstance(
                 source_controls,
                 Mapping,
@@ -2041,6 +2134,11 @@ def _experiment_for_row(
             "pr95_baseline_identity_binding": (
                 pr95_baseline_binding
                 if isinstance(pr95_baseline_binding, Mapping)
+                else None
+            ),
+            "pr95_distortion_practices_guard": (
+                pr95_distortion_guard
+                if isinstance(pr95_distortion_guard, Mapping)
                 else None
             ),
             "snerv_official_runtime_authority_split": (
@@ -2100,8 +2198,6 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
     exact_names = {
         "aurora_requires_local_timing_convergence_smoke",
         "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted",
-        "hinerv_decoder_weight_waterfill_plan_missing",
-        "requires_verified_joint_p18_p19_recon_pixel_weight_artifact",
         "snerv_candidate_id_source_bound_controls_mismatch",
         "snerv_candidate_id_source_bound_controls_unparseable",
         "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training",
@@ -2135,8 +2231,14 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "snerv_upstream_eval_gate_failed",
         "snerv_upstream_eval_gate_score_bad",
         "snerv_upstream_eval_gate_score_missing",
+        "pr95_distortion_source_inventory_incomplete",
     }
-    prefixes = ("snerv_source_bound_control_missing:", "source_parity:")
+    prefixes = (
+        "snerv_source_bound_control_missing:",
+        "source_parity:",
+        "hi_nerv_pr95_distortion_",
+        "snerv_pr95_distortion_",
+    )
     return _dedupe(
         [
             str(blocker)
@@ -6529,6 +6631,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "upstream_evaluate_score_binding",
         "tilde_oss_leverage_binding",
         "pr95_baseline_identity_binding",
+        "pr95_distortion_practices_guard",
         "source_faithfulness_controls",
         "source_bound_capacity_controls",
         "source_bound_capacity_control_blockers",

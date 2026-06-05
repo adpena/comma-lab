@@ -158,6 +158,7 @@ def render_snerv_scorer_loop_geometry_markdown(report: Mapping[str, Any]) -> str
 def _analyze_one(path: Path) -> dict[str, Any]:
     payload = read_json(path)
     result = _result_payload(payload)
+    best_packet_materialization = _best_packet_materialization(payload)
     baseline = _required_mapping(result, "baseline")
     best = _required_mapping(result, "best")
     evaluations = [_as_mapping(row) for row in result.get("evaluations") or []]
@@ -188,6 +189,7 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         if row["accepted"] is not True
         and row["label"] != str(baseline.get("label"))
         and float(row.get("score_delta_linf") or 0.0) < 0.0
+        and "nes_probe_only_not_candidate" not in set(row.get("blockers") or ())
     ]
     best_rejected_score_descent = (
         min(rejected_score_descents, key=lambda row: float(row["score_delta_linf"]))
@@ -252,6 +254,11 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         "rejected_score_descent_count": len(rejected_score_descents),
         "best_rejected_score_descent": best_rejected_score_descent,
         "accepted_trials": accepted_trials,
+        "best_packet_materialized": best_packet_materialization["materialized"],
+        "best_packet_path": best_packet_materialization["path"],
+        "best_packet_bytes": best_packet_materialization["bytes"],
+        "best_packet_sha256": best_packet_materialization["sha256"],
+        "best_packet_materialization": best_packet_materialization,
         "best_pair_deltas": list(result.get("best_pair_deltas") or ()),
         "operating_regime": {
             "d_pose": regime.d_pose,
@@ -468,6 +475,11 @@ def _allocator_unit(row: Mapping[str, Any]) -> dict[str, Any]:
         "rejected_candidate_count": row.get("rejected_trial_count"),
         "rejected_score_descent_count": row.get("rejected_score_descent_count"),
         "best_rejected_score_descent": row.get("best_rejected_score_descent"),
+        "best_packet_materialized": row.get("best_packet_materialized"),
+        "best_packet_path": row.get("best_packet_path"),
+        "best_packet_bytes": row.get("best_packet_bytes"),
+        "best_packet_sha256": row.get("best_packet_sha256"),
+        "best_packet_materialization": row.get("best_packet_materialization"),
         "best_pair_deltas": row.get("best_pair_deltas"),
         "section_value_rows": row.get("section_value_rows") or [],
         "byte_price_plan": row.get("byte_price_plan") or {},
@@ -485,6 +497,9 @@ def _recommended_next_actions(
 ) -> list[dict[str, Any]]:
     best_mode = str(aggregate.get("best_search_mode"))
     accepted_trial_count = int(aggregate.get("accepted_trial_count") or 0)
+    best_packet_materialized = any(
+        row.get("best_packet_materialized") is True for row in reports
+    )
     actions = [
         {
             "id": "replace_random_directions_with_decoder_weight_vjp",
@@ -522,12 +537,16 @@ def _recommended_next_actions(
                 "priority": 8,
                 "why": (
                     "accepted local moves are distortion-driven; next carrier must "
-                    "materialize the best decoder into the receiver archive and price "
-                    "PR95-style byte maps/stream splits"
+                    f"{'price' if best_packet_materialized else 'materialize'} "
+                    "the best decoder with PR95-style byte maps/stream splits"
                 ),
                 "blockers": [
                     "mixed_precision_decoder_payload_grammar_not_byte_optimized",
-                    "best_decoder_packet_materialization_missing",
+                    *(
+                        []
+                        if best_packet_materialized
+                        else ["best_decoder_packet_materialization_missing"]
+                    ),
                 ],
             },
         )
@@ -594,6 +613,25 @@ def _result_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     if isinstance(result, Mapping):
         return result
     return payload
+
+
+def _best_packet_materialization(payload: Mapping[str, Any]) -> dict[str, Any]:
+    materialization = payload.get("best_packet_materialization")
+    if isinstance(materialization, Mapping):
+        return {
+            "materialized": materialization.get("materialized") is True,
+            "path": materialization.get("best_packet_path"),
+            "bytes": materialization.get("best_packet_bytes"),
+            "sha256": materialization.get("best_packet_sha256"),
+            "source": "best_packet_materialization",
+        }
+    return {
+        "materialized": payload.get("best_packet_materialized") is True,
+        "path": payload.get("best_packet_path"),
+        "bytes": payload.get("best_packet_bytes"),
+        "sha256": payload.get("best_packet_sha256"),
+        "source": "top_level_fields",
+    }
 
 
 def _pose_term(d_pose: float) -> float:

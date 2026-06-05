@@ -150,6 +150,22 @@ class _MockSubstrateAdapter:
         return {"d_seg": 0.05, "d_pose": 0.001, "rate": 0.15}
 
 
+class _BinaryStateAdapter(_MockSubstrateAdapter):
+    """Adapter fixture for MLX-style binary state plus JSON metadata resume."""
+
+    def export_state_dict(self, model: Any, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        emitted = path.with_suffix(path.suffix + ".npsd")
+        payload = json.dumps(model.state_dict(), sort_keys=True).encode("utf-8")
+        emitted.write_bytes(b"NPSD\x01" + payload)
+
+    def import_state_dict(self, model: Any, path: Path) -> None:
+        payload = path.read_bytes()
+        if not payload.startswith(b"NPSD\x01"):
+            raise ValueError(f"not a test binary state file: {path}")
+        model.load_state_dict(json.loads(payload[5:].decode("utf-8")))
+
+
 def _make_simple_config(
     tmp_path: Path,
     *,
@@ -579,6 +595,36 @@ def test_checkpoint_writer_records_adapter_emitted_suffixed_state_paths(
     assert meta["ema_shadow_state_path"].endswith(".ema_shadow.state.npsd")
     assert Path(meta["live_state_path"]).is_file()
     assert Path(meta["ema_shadow_state_path"]).is_file()
+
+
+def test_checkpoint_writer_accepts_binary_state_path_for_resume_metadata(
+    tmp_path: Path,
+) -> None:
+    """Operators may resume from the copied .npsd path, not only .meta.json."""
+
+    config = _make_simple_config(tmp_path)
+    writer = CheckpointWriter(
+        checkpoint_dir=tmp_path / "ckpt",
+        substrate_id=config.substrate_id,
+        lane_id=config.lane_id,
+        curriculum_hash=config.curriculum_hash(),
+    )
+    adapter = _BinaryStateAdapter()
+    ema = PolyakEMAShadow(adapter.model, decay=0.99)
+    meta_path = writer.write(
+        adapter=adapter,
+        ema_shadow=ema,
+        global_epoch=5,
+        loss=0.1,
+        wall_clock_seconds=10.0,
+    )
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    live_state_path = Path(meta["live_state_path"])
+
+    loaded = writer.load_resume_metadata(live_state_path)
+
+    assert loaded["global_epoch"] == 5
+    assert loaded["live_state_path"] == live_state_path.as_posix()
 
 
 def test_checkpoint_writer_persists_kahan_compensation_metadata(tmp_path: Path) -> None:
@@ -1092,6 +1138,101 @@ def test_run_long_training_can_select_checkpoint_by_score_facing_metric(
     )
 
 
+def test_run_long_training_tie_breaks_flat_score_metric_by_surrogate(
+    tmp_path: Path,
+) -> None:
+    class _FlatArgmaxImprovingSurrogate(_MockSubstrateAdapter):
+        def __init__(self):
+            super().__init__()
+            self.surrogate = [2.0, 1.5, 1.0]
+            self.totals = [0.1, 100.0, 999.0]
+
+        def loss_fn(self, model, batch, loss_weights):
+            self.step_count += 1
+            i = self.step_count - 1
+            return {
+                "total": self.totals[i],
+                "recon": self.totals[i],
+                "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                "loss_part_segnet_direct_live_distill": self.surrogate[i],
+            }
+
+    config = LongTrainingConfig(
+        substrate_id="score_tie_break_substrate",
+        lane_id="lane_score_tie_break_substrate_20260605",
+        epochs=3,
+        curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=3),),
+        checkpoint_interval_epochs=3,
+        early_stopping_patience=100,
+        checkpoint_selection_metric_key=(
+            "loss_part_segnet_direct_live_argmax_disagreement"
+        ),
+        checkpoint_selection_metric_mode="min",
+        checkpoint_selection_metric_required=True,
+        checkpoint_selection_tie_break_metric_key=(
+            "loss_part_segnet_direct_live_distill"
+        ),
+        checkpoint_selection_tie_break_metric_mode="min",
+        checkpoint_selection_tie_break_metric_required=True,
+        output_dir=tmp_path / "score_metric_tie_break_checkpoint_selection",
+    )
+
+    artifact = run_long_training(
+        _FlatArgmaxImprovingSurrogate(),
+        config,
+    )
+
+    selection = artifact.as_dict()["checkpoint_selection"]
+    assert selection["selected_role"] == "final"
+    assert selection["selected_global_epoch"] == 2
+    assert selection["selected_loss"] == pytest.approx(999.0)
+    assert selection["selected_metric"] == pytest.approx(0.5)
+    assert selection["best_observed_metric"] == pytest.approx(0.5)
+    assert selection["best_observed_tie_break_metric"] == pytest.approx(1.0)
+    assert selection["tie_break_metric_key"] == (
+        "loss_part_segnet_direct_live_distill"
+    )
+    assert selection["checkpoint_selection_metric_blockers"] == []
+    artifact_json = json.loads((config.output_dir / "training_artifact.json").read_text())
+    assert artifact_json["config_snapshot"][
+        "checkpoint_selection_tie_break_metric_key"
+    ] == "loss_part_segnet_direct_live_distill"
+
+
+def test_run_long_training_strict_checkpoint_metric_refuses_missing_score_metric(
+    tmp_path: Path,
+) -> None:
+    class _MissingScoreMetric(_MockSubstrateAdapter):
+        def loss_fn(self, model, batch, loss_weights):
+            self.step_count += 1
+            return {"total": 0.25, "recon": 0.25}
+
+    config = LongTrainingConfig(
+        substrate_id="strict_score_metric_substrate",
+        lane_id="lane_strict_score_metric_substrate_20260605",
+        epochs=1,
+        curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=1),),
+        checkpoint_selection_metric_key=(
+            "loss_part_segnet_direct_live_argmax_disagreement"
+        ),
+        checkpoint_selection_metric_required=True,
+        output_dir=tmp_path / "strict_score_metric_checkpoint_selection",
+        notes="strict score metric prevents fallback-total archive export",
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "checkpoint_selection_metric_missing:"
+            "loss_part_segnet_direct_live_argmax_disagreement"
+        ),
+    ):
+        run_long_training(_MissingScoreMetric(), config)
+
+    assert not (config.output_dir / "training_artifact.json").exists()
+    assert not (config.output_dir / "test_archive.bin").exists()
+
+
 def test_checkpoint_retention_moves_old_periodic_checkpoints_to_cold_store(
     tmp_path: Path,
 ) -> None:
@@ -1147,38 +1288,42 @@ def test_checkpoint_retention_moves_old_periodic_checkpoints_to_cold_store(
 def test_checkpoint_resume_advances_global_epoch(tmp_path: Path) -> None:
     # Phase 1: run 3 epochs.
     config1 = _make_simple_config(tmp_path / "phase1", epochs=3, checkpoint_interval=1)
-    adapter1 = _MockSubstrateAdapter()
+    adapter1 = _BinaryStateAdapter()
     run_long_training(adapter1, config1)
     # Pick a meta_path from the checkpoint_dir.
     ckpt_dir = config1.resolved_checkpoint_dir()
     meta_files = sorted(ckpt_dir.glob("*.meta.json"))
     assert meta_files, "no checkpoints emitted"
     resume_meta = meta_files[0]
+    resume_state = Path(
+        json.loads(resume_meta.read_text(encoding="utf-8"))["live_state_path"]
+    )
 
     # Phase 2: resume from epoch 0 checkpoint to epoch 5.
     config2 = LongTrainingConfig(
         substrate_id=config1.substrate_id,
         lane_id=config1.lane_id,
         epochs=5,
-        # MUST use identical curriculum so curriculum_hash matches.
+        # Changing the already-executed prefix must still fail closed.
         curriculum_stages=(
-            (
-                *config1.curriculum_stages,
-                CurriculumStage(name="extra", start_epoch=config1.epochs, end_epoch=5),
-            )
-            if config1.epochs < 5
-            else config1.curriculum_stages
+            CurriculumStage(
+                name=config1.curriculum_stages[0].name,
+                start_epoch=config1.curriculum_stages[0].start_epoch,
+                end_epoch=config1.curriculum_stages[0].end_epoch,
+                loss_weights={"recon": 2.0},
+            ),
+            *config1.curriculum_stages[1:],
+            CurriculumStage(name="extra", start_epoch=config1.epochs, end_epoch=5),
         ),
         output_dir=tmp_path / "phase2",
         early_stopping_patience=100,
         resume_from_checkpoint=resume_meta,
     )
-    # The curriculum changed (now has extra stage) so the hash differs;
-    # this test specifically verifies the cross-curriculum guard FIRES.
+    # The already-executed curriculum changed, so the guard still fires.
     with pytest.raises(ValueError, match="curriculum_hash differs"):
-        run_long_training(_MockSubstrateAdapter(), config2)
+        run_long_training(_BinaryStateAdapter(), config2)
 
-    adapter2 = _MockSubstrateAdapter()
+    adapter2 = _BinaryStateAdapter()
     config_resume = LongTrainingConfig(
         substrate_id=config1.substrate_id,
         lane_id=config1.lane_id,
@@ -1186,12 +1331,95 @@ def test_checkpoint_resume_advances_global_epoch(tmp_path: Path) -> None:
         curriculum_stages=config1.curriculum_stages,
         output_dir=tmp_path / "phase2_match",
         early_stopping_patience=100,
-        resume_from_checkpoint=resume_meta,
+        resume_from_checkpoint=resume_state,
     )
     artifact2 = run_long_training(adapter2, config_resume)
     # Resume worked; no exception raised.
     assert artifact2.total_epochs_completed >= 1
     assert adapter2.batch_history[0][1] == config_resume.seed + 1
+
+
+def test_checkpoint_resume_allows_prefix_compatible_longer_budget_from_state_path(
+    tmp_path: Path,
+) -> None:
+    config1 = LongTrainingConfig(
+        substrate_id="test_substrate",
+        lane_id="lane_test_prefix_resume_20260526",
+        epochs=3,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(name="main", start_epoch=0, end_epoch=3),
+        ),
+        checkpoint_interval_epochs=3,
+        early_stopping_patience=100,
+        output_dir=tmp_path / "phase1",
+    )
+    run_long_training(_BinaryStateAdapter(), config1)
+    meta_path = next(config1.resolved_checkpoint_dir().glob("final_*.meta.json"))
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    resume_state = Path(meta["live_state_path"])
+
+    adapter2 = _BinaryStateAdapter()
+    config2 = LongTrainingConfig(
+        substrate_id=config1.substrate_id,
+        lane_id=config1.lane_id,
+        epochs=5,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(name="main", start_epoch=0, end_epoch=5),
+        ),
+        checkpoint_interval_epochs=1,
+        early_stopping_patience=100,
+        output_dir=tmp_path / "phase2",
+        resume_from_checkpoint=resume_state,
+    )
+    artifact = run_long_training(adapter2, config2)
+
+    assert adapter2.batch_history[0][1] == config2.seed + 3
+    assert artifact.total_epochs_completed == 2
+    assert (config2.batch_pair_indices_per_step, config2.seed + 4) in (
+        adapter2.batch_history
+    )
+
+
+def test_midrun_checkpoint_resume_allows_prior_full_curriculum_prefix_match(
+    tmp_path: Path,
+) -> None:
+    config1 = LongTrainingConfig(
+        substrate_id="test_substrate",
+        lane_id="lane_test_midrun_prefix_resume_20260526",
+        epochs=4,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(name="main", start_epoch=0, end_epoch=4),
+        ),
+        checkpoint_interval_epochs=1,
+        early_stopping_patience=100,
+        output_dir=tmp_path / "phase1",
+    )
+    run_long_training(_BinaryStateAdapter(), config1)
+    meta_path = next(config1.resolved_checkpoint_dir().glob("epoch000002_*.meta.json"))
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    resume_state = Path(meta["live_state_path"])
+
+    adapter2 = _BinaryStateAdapter()
+    config2 = LongTrainingConfig(
+        substrate_id=config1.substrate_id,
+        lane_id=config1.lane_id,
+        epochs=6,
+        batch_pair_indices_per_step=2,
+        curriculum_stages=(
+            CurriculumStage(name="main", start_epoch=0, end_epoch=6),
+        ),
+        checkpoint_interval_epochs=1,
+        early_stopping_patience=100,
+        output_dir=tmp_path / "phase2",
+        resume_from_checkpoint=resume_state,
+    )
+    artifact2 = run_long_training(adapter2, config2)
+
+    assert adapter2.batch_history[0][1] == config2.seed + 3
+    assert artifact2.total_epochs_completed == 3
 
 
 # ---------------------------------------------------------------------------

@@ -166,6 +166,80 @@ def test_snerv_scorer_loop_geometry_surfaces_rejected_score_descent(
     )
 
 
+def test_snerv_scorer_loop_geometry_ignores_probe_only_rejected_descent_for_repair(
+    tmp_path: Path,
+) -> None:
+    path = _write_result(tmp_path / "snerv_result.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    result = payload["result"]
+    baseline = result["baseline"]
+    probe = dict(result["evaluations"][2])
+    probe.update(
+        {
+            "label": "nes_probe_001_minus_probe",
+            "accepted": False,
+            "score_linf": baseline["score_linf"] - 0.25,
+            "archive_bytes": baseline["archive_bytes"] + 4,
+            "rate_term": (baseline["archive_bytes"] + 4) * BYTE_PRICE,
+            "blockers": ["nes_probe_only_not_candidate"],
+        }
+    )
+    result["evaluations"][2] = probe
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    report = build_snerv_scorer_loop_geometry_report([path])
+
+    assert report["reports"][0]["accepted_trial_count"] == 1
+    assert report["reports"][0]["rejected_score_descent_count"] == 0
+    assert report["reports"][0]["best_rejected_score_descent"] is None
+    assert "snerv_rejected_scorer_descent_admission_repair_required" not in report[
+        "blockers"
+    ]
+    action_ids = {action["id"] for action in report["recommended_next_actions"]}
+    assert "repair_rejected_scorer_descent_admission" not in action_ids
+    assert "scale_score_primary_random_subspace_batch" in action_ids
+
+
+def test_snerv_scorer_loop_geometry_preserves_materialized_packet_for_full600(
+    tmp_path: Path,
+) -> None:
+    path = _write_result(
+        tmp_path / "snerv_result.json",
+        best_packet_materialized=True,
+    )
+
+    report = build_snerv_scorer_loop_geometry_report([path])
+
+    row = report["reports"][0]
+    assert row["accepted_improvement"] is True
+    assert row["best_packet_materialized"] is True
+    assert row["best_packet_path"] == "/ssd/snerv/best_packet.snar"
+    assert row["best_packet_bytes"] == 117736
+    assert row["best_packet_sha256"] == "f" * 64
+    bind_action = {
+        action["id"]: action for action in report["recommended_next_actions"]
+    }["bind_archive_codec_to_descent_step"]
+    assert "best_decoder_packet_materialization_missing" not in bind_action[
+        "blockers"
+    ]
+
+    bridge = build_nerv_rate_allocator_bridge(
+        master_bridge={
+            "schema": "nerv_master_consumer_bridge.v1",
+            "baseline_to_beat": "pr95",
+            "top_priority_carriers": ["snerv", "hi_nerv"],
+            "master_consumer_units": [report["allocator_units"][0]],
+            "blockers": [],
+        }
+    )
+    scale_order = bridge["rate_allocator_work_orders"][0]
+    assert scale_order["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    assert scale_order["payload"]["best_packet_materialized"] is True
+    assert scale_order["payload"]["best_packet_path"] == "/ssd/snerv/best_packet.snar"
+    assert scale_order["payload"]["best_packet_sha256"] == "f" * 64
+    assert "section_value_profile_missing" not in scale_order["blockers"]
+
+
 def test_snerv_scorer_loop_geometry_cli_writes_json_and_markdown(
     tmp_path: Path,
 ) -> None:
@@ -246,6 +320,7 @@ def _write_result(
     best_bytes: int = 998,
     search_mode: str = "learned_random_subspace",
     n_pairs: int = 4,
+    best_packet_materialized: bool = False,
 ) -> Path:
     payload = {
         "schema": "snerv_scorer_loop_qat_local_trainer.v1",
@@ -317,5 +392,22 @@ def _write_result(
             "blockers": ["local_smoke_only_not_full_600_pairs"],
         },
     }
+    if best_packet_materialized:
+        payload.update(
+            {
+                "best_packet_materialized": True,
+                "best_packet_path": "/ssd/snerv/best_packet.snar",
+                "best_packet_bytes": 117736,
+                "best_packet_sha256": "f" * 64,
+                "best_packet_materialization": {
+                    "schema": "snerv_scorer_loop_best_packet_materialization.v1",
+                    "materialized": True,
+                    "best_packet_path": "/ssd/snerv/best_packet.snar",
+                    "best_packet_bytes": 117736,
+                    "best_packet_sha256": "f" * 64,
+                    "blockers": [],
+                },
+            }
+        )
     path.write_text(json.dumps(payload), encoding="utf-8")
     return path

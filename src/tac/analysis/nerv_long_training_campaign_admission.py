@@ -24,6 +24,10 @@ from comma_lab.scheduler.experiment_queue import (
 from comma_lab.scheduler.storage_preflight import (
     build_scheduler_storage_preflight_experiment,
 )
+from tac.analysis.pr95_distortion_practices_guard import (
+    build_pr95_distortion_practices_row_guard,
+    build_pr95_distortion_source_inventory,
+)
 from tac.deploy.claims import active_claim_row
 from tac.optimization.proxy_candidate_contract import (
     PROXY_FALSE_AUTHORITY_FIELDS,
@@ -139,11 +143,20 @@ def build_nerv_long_training_campaign_execution_admission(
     allowed_roots = tuple(
         Path(root).expanduser().resolve(strict=False) for root in allowed_output_roots
     )
+    pr95_source_repo = _pr95_source_repo_root(repo)
+    pr95_distortion_source_inventory = build_pr95_distortion_source_inventory(
+        pr95_source_repo
+    )
     row_records: list[dict[str, Any]] = []
     admitted_rows: list[Mapping[str, Any]] = []
     output_dirs: list[Path] = []
     for row in selected_rows:
-        record = _row_record(row, allowed_roots=allowed_roots)
+        record = _row_record(
+            row,
+            allowed_roots=allowed_roots,
+            repo_root=pr95_source_repo,
+            pr95_distortion_source_inventory=pr95_distortion_source_inventory,
+        )
         row_records.append(record)
         blockers.extend(record["blockers"])
         if record["admitted"]:
@@ -199,6 +212,12 @@ def build_nerv_long_training_campaign_execution_admission(
         "local_mlx_timeout_seconds": int(local_mlx_timeout_seconds),
         "active_local_mlx_process_count": len(active_process_records),
         "active_local_mlx_processes": active_process_records,
+        "pr95_distortion_source_inventory": {
+            "schema": pr95_distortion_source_inventory.get("schema"),
+            "sha256": pr95_distortion_source_inventory.get("sha256"),
+            "source_ready": pr95_distortion_source_inventory.get("source_ready"),
+            "blockers": pr95_distortion_source_inventory.get("blockers"),
+        },
         "output_parent": None if output_parent is None else output_parent.as_posix(),
         "allowed_output_roots": [root.as_posix() for root in allowed_roots],
         "experiment_queue": queue,
@@ -418,6 +437,8 @@ def _row_record(
     row: Mapping[str, Any],
     *,
     allowed_roots: Sequence[Path],
+    repo_root: Path,
+    pr95_distortion_source_inventory: Mapping[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     row_id = str(row.get("id") or "")
@@ -453,6 +474,12 @@ def _row_record(
             blockers.append("selected_row_gate_not_local_mlx_executable")
         if gate.get("cpu_replay_ready") is True or gate.get("exact_gate_ready") is True:
             blockers.append("selected_row_gate_overclaims_replay_or_exact_ready")
+    pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
+        row,
+        repo_root=repo_root,
+        source_inventory=pr95_distortion_source_inventory,
+    )
+    blockers.extend(_list(pr95_distortion_guard.get("blockers")))
     return {
         "schema": "nerv_long_training_campaign_admission_row.v1",
         "id": row_id,
@@ -471,6 +498,7 @@ def _row_record(
             ]
         ),
         "command": command,
+        "pr95_distortion_practices_guard": pr95_distortion_guard,
         "admitted": not blockers,
         "blockers": _dedupe(blockers),
         **PROXY_FALSE_AUTHORITY_FIELDS,
@@ -636,6 +664,12 @@ def _common_output_parent(output_dirs: Sequence[Path]) -> Path | None:
 def _resolve_path(path: str | Path, *, repo_root: Path) -> Path:
     value = Path(path).expanduser()
     return value if value.is_absolute() else repo_root / value
+
+
+def _pr95_source_repo_root(repo_root: Path) -> Path:
+    if (repo_root / "upstream" / "evaluate.py").is_file():
+        return repo_root
+    return Path(__file__).resolve().parents[3]
 
 
 def _is_relative_to(path: Path, root: Path) -> bool:

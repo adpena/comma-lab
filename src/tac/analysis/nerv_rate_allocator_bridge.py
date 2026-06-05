@@ -762,6 +762,10 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                     )
                 )
                 continue
+            section_value_rows = _mapping_list(unit.get("section_value_rows"))
+            section_value_profile_blockers = (
+                [] if section_value_rows else ["section_value_profile_missing"]
+            )
             orders.append(
                 _work_order(
                     work_order_id=(
@@ -821,12 +825,17 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                         "rejected_candidate_count": unit.get(
                             "rejected_candidate_count"
                         ),
+                        "best_packet_materialized": unit.get(
+                            "best_packet_materialized"
+                        )
+                        is True,
+                        "best_packet_path": unit.get("best_packet_path"),
+                        "best_packet_bytes": unit.get("best_packet_bytes"),
+                        "best_packet_sha256": unit.get("best_packet_sha256"),
                         "best_pair_deltas": _mapping_list(
                             unit.get("best_pair_deltas")
                         ),
-                        "section_value_rows": _mapping_list(
-                            unit.get("section_value_rows")
-                        ),
+                        "section_value_rows": section_value_rows,
                         "byte_price_plan": dict(unit.get("byte_price_plan") or {}),
                         "accepted_improvement": unit.get("accepted_improvement"),
                         "ready_for_pose_guard_gate": unit.get(
@@ -840,7 +849,7 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                     blockers=[
                         *blockers,
                         "full600_receiver_proof_required",
-                        "section_value_profile_missing",
+                        *section_value_profile_blockers,
                         "paired_contest_cpu_cuda_auth_eval_missing",
                     ],
                 )

@@ -494,6 +494,30 @@ def _make_minimal_pr95_score_bundle() -> object:
     )
 
 
+def _force_high_contrast_scorer_targets(bundle: object) -> None:
+    """Give contrast-floor regressions a non-degenerate scorer-domain target."""
+
+    import mlx.core as mx
+
+    checker = mx.array(
+        [
+            [[0.0, 1.0], [1.0, 0.0]],
+            [[1.0, 0.0], [0.0, 1.0]],
+        ],
+        dtype=mx.float32,
+    )
+    target_0 = mx.broadcast_to(
+        mx.reshape(checker[0], (1, 2, 2, 1)),
+        (int(bundle.num_pairs), 2, 2, 3),
+    )
+    target_1 = mx.broadcast_to(
+        mx.reshape(checker[1], (1, 2, 2, 1)),
+        (int(bundle.num_pairs), 2, 2, 3),
+    )
+    bundle.target_rgb_0 = target_0
+    bundle.target_rgb_1 = target_1
+
+
 @requires_mlx
 def test_adapter_default_off_preserves_legacy_adamw_path() -> None:
     """Backward compat: pr95_faithful_curriculum_enabled=False keeps legacy adapter."""
@@ -1144,6 +1168,66 @@ def test_pr95_curriculum_consumes_direct_live_segnet_distillation_NO_FAKE() -> N
     assert metrics["loss_part_weighted_segnet_direct_live_distill"] == pytest.approx(
         metrics["loss_part_weighted_pr95_stage_segnet_direct_live_distill"]
     )
+    assert metrics[
+        "loss_part_segnet_direct_live_argmax_disagreement"
+    ] == pytest.approx(
+        metrics[
+            "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement"
+        ]
+    )
+    assert metrics[
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
+    ] == pytest.approx(
+        metrics[
+            "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction"
+        ]
+    )
+
+
+@requires_mlx
+def test_pr95_curriculum_consumes_scorer_input_contrast_floor_NO_FAKE() -> None:
+    """PR95-stage training must not bypass scorer-domain contrast protection."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    _force_high_contrast_scorer_targets(bundle)
+    bundle.scorer_input_contrast_floor_weight = 0.5
+    bundle.scorer_input_contrast_floor_segnet_min_std_ratio = 0.75
+    bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio = 0.75
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_contrast_floor_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=8,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+    mx.eval(adapter.model.parameters())
+
+    assert metrics["loss_part_pr95_stage_scorer_input_contrast_floor"] > 0.0
+    assert metrics["loss_part_scorer_input_contrast_floor"] == pytest.approx(
+        metrics["loss_part_pr95_stage_scorer_input_contrast_floor"]
+    )
+    assert metrics[
+        "loss_part_weighted_pr95_stage_scorer_input_contrast_floor"
+    ] == pytest.approx(metrics["loss_part_weighted_scorer_input_contrast_floor"])
+    assert (
+        "loss_part_pr95_stage_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio"
+        in metrics
+    )
+    assert (
+        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio"
+        in metrics
+    )
 
 
 @requires_mlx
@@ -1223,6 +1307,65 @@ def test_pr95_curriculum_dual_ascent_observes_direct_live_segnet_alias_NO_FAKE()
     ] > 0.0
     assert followup_metrics[
         "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill"
+    ] == pytest.approx(0.0)
+
+
+@requires_mlx
+def test_pr95_curriculum_dual_ascent_observes_contrast_floor_alias_NO_FAKE() -> None:
+    """Contrast-floor PR95-stage metric must feed the shared dual controller."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+        build_default_nerv_train_time_dual_ascent_config,
+    )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    _force_high_contrast_scorer_targets(bundle)
+    bundle.scorer_input_contrast_floor_weight = 0.5
+    bundle.scorer_input_contrast_floor_segnet_min_std_ratio = 0.75
+    bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio = 0.75
+    dual_config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        scorer_input_contrast_floor_weight=0.5,
+    )
+    for constraint in dual_config["constraints"]:
+        constraint["target"] = 0.0
+        constraint.pop("target_fraction_of_initial", None)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_contrast_floor_dual_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=8,
+        train_time_dual_ascent_config=dual_config,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+    followup_metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+    )
+    mx.eval(adapter.model.parameters())
+
+    assert metrics[
+        "dual_ascent_missing_metric__hi_nerv_scorer_input_contrast_floor"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "dual_ascent_metric__hi_nerv_scorer_input_contrast_floor"
+    ] == pytest.approx(metrics["loss_part_scorer_input_contrast_floor"])
+    assert metrics[
+        "dual_ascent_lambda__hi_nerv_scorer_input_contrast_floor"
+    ] > 0.0
+    assert followup_metrics[
+        "dual_ascent_missing_metric__hi_nerv_scorer_input_contrast_floor"
     ] == pytest.approx(0.0)
 
 

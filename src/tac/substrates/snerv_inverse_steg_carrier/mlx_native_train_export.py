@@ -245,6 +245,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
     pose_distillation_weight: float,
     segnet_direct_live_distillation_weight: float = 0.0,
     scorer_input_distribution_guard_weight: float = 0.0,
+    scorer_input_contrast_floor_weight: float = 0.0,
     has_real_segnet_teacher: bool,
     has_real_posenet_teacher: bool,
     coder_aware_qat_bound: bool,
@@ -265,6 +266,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
     direct_live_weight = float(segnet_direct_live_distillation_weight)
     pose_weight = float(pose_distillation_weight)
     guard_weight = float(scorer_input_distribution_guard_weight)
+    contrast_floor_weight = float(scorer_input_contrast_floor_weight)
     weighted_qat_terms = {
         str(name): float(weight)
         for name, weight in dict(coder_qat_loss_weight_map or {}).items()
@@ -297,6 +299,9 @@ def _snerv_score_aware_checkpoint_selection_policy(
     if guard_weight > 0.0:
         active_surfaces.append("scorer_input_distribution_guard")
         required_loss_parts.append("scorer_input_distribution_guard")
+    if contrast_floor_weight > 0.0:
+        active_surfaces.append("scorer_input_contrast_floor")
+        required_loss_parts.append("scorer_input_contrast_floor")
     if bool(coder_aware_qat_bound):
         active_surfaces.append("coder_aware_qat")
         if not weighted_qat_terms:
@@ -332,6 +337,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
         "required_loss_parts": _ordered_unique(required_loss_parts),
         "segnet_direct_live_distillation_weight": direct_live_weight,
         "scorer_input_distribution_guard_weight": guard_weight,
+        "scorer_input_contrast_floor_weight": contrast_floor_weight,
         "weighted_coder_qat_terms": weighted_qat_terms,
         "fail_closed_on_missing_parts": uses_score_aware,
         "full_reduction": (
@@ -380,6 +386,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
     coder_aware_qat_bound: bool,
     train_time_section_byte_control_bound: bool,
     scorer_input_distribution_guard_weight: float,
+    scorer_input_contrast_floor_weight: float = 0.0,
 ) -> dict[str, Any]:
     """Validate that a SNeRV long run actually drove score-aware controls."""
 
@@ -393,6 +400,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
     expected_direct_live = float(segnet_direct_live_distillation_weight) > 0.0
     expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
+    expected_contrast_floor = float(scorer_input_contrast_floor_weight) > 0.0
     expected_any = bool(
         expected_seg
         or expected_pose
@@ -400,6 +408,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
         or expected_direct_live
         or expected_section
         or expected_guard
+        or expected_contrast_floor
     )
     row_count = 0
     malformed_rows = 0
@@ -409,6 +418,9 @@ def _snerv_score_aware_long_training_telemetry_contract(
     pose_loss_observed = False
     section_rate_observed = False
     guard_loss_observed = False
+    contrast_floor_loss_observed = False
+    contrast_floor_segnet_ratio_observed = False
+    contrast_floor_posenet_ratio_observed = False
     live_calibration_active_observed = False
     live_calibration_loss_observed = False
     direct_live_loss_observed = False
@@ -494,6 +506,33 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 for key in (
                     "loss_part_scorer_input_distribution_guard",
                     "loss_part_pr95_stage_scorer_input_distribution_guard",
+                )
+            )
+            contrast_floor_loss_observed = contrast_floor_loss_observed or any(
+                _finite_number_in_row(row, key)
+                for key in (
+                    "loss_part_scorer_input_contrast_floor",
+                    "loss_part_pr95_stage_scorer_input_contrast_floor",
+                )
+            )
+            contrast_floor_segnet_ratio_observed = (
+                contrast_floor_segnet_ratio_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+                        "loss_part_pr95_stage_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+                    )
+                )
+            )
+            contrast_floor_posenet_ratio_observed = (
+                contrast_floor_posenet_ratio_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+                        "loss_part_pr95_stage_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+                    )
                 )
             )
             live_calibration_active_observed = (
@@ -598,6 +637,18 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append("snerv_score_aware_long_training_section_rate_metric_missing")
     if expected_guard and not guard_loss_observed:
         blockers.append("snerv_score_aware_long_training_scorer_input_guard_metric_missing")
+    if expected_contrast_floor and not contrast_floor_loss_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_scorer_input_contrast_floor_metric_missing"
+        )
+    if expected_contrast_floor and not contrast_floor_segnet_ratio_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_scorer_input_contrast_floor_segnet_ratio_metric_missing"
+        )
+    if expected_contrast_floor and not contrast_floor_posenet_ratio_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_ratio_metric_missing"
+        )
     if expected_live_calibration and not live_calibration_active_observed:
         blockers.append(
             "snerv_score_aware_long_training_live_segnet_calibration_never_active"
@@ -652,6 +703,9 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "expected_segnet_direct_live_distillation": bool(expected_direct_live),
         "expected_section_rate_metrics": bool(expected_section),
         "expected_scorer_input_guard_metric": bool(expected_guard),
+        "expected_scorer_input_contrast_floor_metric": bool(
+            expected_contrast_floor
+        ),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
@@ -660,6 +714,15 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "posenet_dual_lambda_active_observed": bool(pose_dual_lambda_active_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
+        "scorer_input_contrast_floor_metric_observed": bool(
+            contrast_floor_loss_observed
+        ),
+        "scorer_input_contrast_floor_segnet_ratio_metric_observed": bool(
+            contrast_floor_segnet_ratio_observed
+        ),
+        "scorer_input_contrast_floor_posenet_ratio_metric_observed": bool(
+            contrast_floor_posenet_ratio_observed
+        ),
         "segnet_live_calibration_active_observed": bool(
             live_calibration_active_observed
         ),
@@ -1576,6 +1639,9 @@ def train_export_snerv_mlx_native(
     ),
     score_aware_long_training_scorer_input_distribution_guard_saturation_margin: float = 0.02,
     score_aware_long_training_scorer_input_distribution_guard_temperature: float = 0.01,
+    score_aware_long_training_scorer_input_contrast_floor_weight: float = 0.0,
+    score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
+    score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
     score_aware_long_training_checkpoint_retention_keep_last_n: int | None = (
         SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
     ),
@@ -1898,6 +1964,33 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature",
                     score_aware_long_training_scorer_input_distribution_guard_temperature,
+                ),
+            )
+        ),
+        scorer_input_contrast_floor_weight=float(
+            candidate.get(
+                "score_aware_long_training_scorer_input_contrast_floor_weight",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_contrast_floor_weight",
+                    score_aware_long_training_scorer_input_contrast_floor_weight,
+                ),
+            )
+        ),
+        scorer_input_contrast_floor_segnet_min_std_ratio=float(
+            candidate.get(
+                "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio",
+                    score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio,
+                ),
+            )
+        ),
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
+            candidate.get(
+                "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+                    score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio,
                 ),
             )
         ),
@@ -2893,6 +2986,8 @@ def export_snerv_mlx_archive(
     *,
     retain_receiver_output: bool = False,
     receiver_proof_timeout_seconds: int = 1800,
+    hard_byte_ceiling: int | None = None,
+    allow_over_hard_byte_ceiling_for_measurement: bool = False,
 ) -> dict[str, Any]:
     """Export SNAR1 packet bytes through the canonical archive-bound package."""
 
@@ -2900,6 +2995,10 @@ def export_snerv_mlx_archive(
     out = Path(output_dir).expanduser().resolve(strict=False)
     packet = _packet_bytes_from_artifact(model_or_artifact)
     decoded = unpack_snerv_archive(packet)
+    export_hard_byte_ceiling = _snerv_export_hard_byte_ceiling(
+        explicit=hard_byte_ceiling,
+        metadata=decoded.metadata,
+    )
     storage = build_snerv_mlx_native_storage_preflight(
         output_dir=out,
         n_pairs=int(decoded.metadata.get("n_pairs", 0)),
@@ -2918,7 +3017,127 @@ def export_snerv_mlx_archive(
         receiver_proof_timeout_seconds=receiver_proof_timeout_seconds,
     )
     package["snerv_mlx_native_storage_preflight"] = storage
+    _enforce_snerv_mlx_archive_hard_byte_ceiling(
+        package,
+        output_dir=out,
+        hard_byte_ceiling=export_hard_byte_ceiling,
+        measurement_bypass_enabled=bool(
+            allow_over_hard_byte_ceiling_for_measurement
+        ),
+    )
     return package
+
+
+def _snerv_export_hard_byte_ceiling(
+    *,
+    explicit: int | None,
+    metadata: Mapping[str, Any],
+) -> int | None:
+    value = explicit
+    if value is None:
+        value = metadata.get(
+            "hard_byte_ceiling",
+            metadata.get("hard_byte_ceiling_requested_by_candidate_or_startup"),
+        )
+    if value is None:
+        return None
+    try:
+        ceiling = int(value)
+    except (TypeError, ValueError) as exc:
+        raise SnervMlxNativeExportError(
+            "SNeRV hard_byte_ceiling must be an integer"
+        ) from exc
+    if ceiling <= 0:
+        raise SnervMlxNativeExportError("SNeRV hard_byte_ceiling must be positive")
+    return ceiling
+
+
+def _enforce_snerv_mlx_archive_hard_byte_ceiling(
+    package: dict[str, Any],
+    *,
+    output_dir: Path,
+    hard_byte_ceiling: int | None,
+    measurement_bypass_enabled: bool,
+) -> None:
+    receiver_proof = dict(package.get("receiver_proof") or {})
+    archive_bytes = _positive_int_or_none(receiver_proof.get("archive_bytes"))
+    archive_path = (
+        str(receiver_proof.get("archive_path"))
+        if receiver_proof.get("archive_path")
+        else None
+    )
+    archive_sha256 = (
+        str(receiver_proof.get("archive_sha256"))
+        if receiver_proof.get("archive_sha256")
+        else None
+    )
+    blockers: list[str] = []
+    overrun: int | None = None
+    measurement_bypass_applies = False
+    if hard_byte_ceiling is not None:
+        if archive_bytes is None:
+            blockers.append(
+                "snerv_mlx_native_hard_byte_ceiling_archive_bytes_missing"
+            )
+        else:
+            overrun = int(archive_bytes) - int(hard_byte_ceiling)
+            if overrun > 0:
+                blockers.extend(
+                    [
+                        "snerv_mlx_native_archive_exceeds_hard_byte_ceiling",
+                        "archive_bytes_exceed_tightest_hard_ceiling",
+                    ]
+                )
+                if measurement_bypass_enabled:
+                    blockers.append("hard_byte_ceiling_export_bypassed_for_measurement")
+                    measurement_bypass_applies = True
+    blockers = _ordered_unique(blockers)
+    gate = {
+        "schema": "snerv_mlx_archive_hard_byte_ceiling_export_gate.v1",
+        "hard_byte_ceiling": int(hard_byte_ceiling)
+        if hard_byte_ceiling is not None
+        else None,
+        "archive_bytes": int(archive_bytes) if archive_bytes is not None else None,
+        "archive_path": archive_path,
+        "archive_sha256": archive_sha256,
+        "archive_overrun_bytes": (
+            max(0, int(overrun)) if overrun is not None else None
+        ),
+        "checked": bool(hard_byte_ceiling is not None and archive_bytes is not None),
+        "strict_export_enforced": bool(
+            hard_byte_ceiling is not None and not measurement_bypass_enabled
+        ),
+        "measurement_bypass_enabled": bool(measurement_bypass_enabled),
+        "measurement_bypass_applies": bool(measurement_bypass_applies),
+        "export_allowed": not blockers or bool(measurement_bypass_applies),
+        "passed": not blockers,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+    package["hard_byte_ceiling_export_gate"] = gate
+    if blockers:
+        package["blockers"] = _ordered_unique(
+            [
+                *(str(blocker) for blocker in package.get("blockers") or [] if blocker),
+                *blockers,
+            ]
+        )
+    if blockers and not measurement_bypass_applies:
+        manifest_path = output_dir / "snerv_hard_byte_ceiling_export_blocker.json"
+        write_json(
+            manifest_path,
+            {
+                **gate,
+                "blocker_manifest_path": manifest_path.as_posix(),
+                "failure_class": "strict_hard_byte_ceiling_export_refusal",
+            },
+        )
+        raise SnervMlxNativeExportError(
+            "SNeRV archive export exceeds the hard byte ceiling; "
+            f"archive_bytes={archive_bytes} hard_byte_ceiling={hard_byte_ceiling} "
+            f"blockers={','.join(blockers)} "
+            f"blocker_manifest={manifest_path.as_posix()}"
+        )
 
 
 def write_snerv_mlx_receiver_proof(
@@ -2998,6 +3217,9 @@ def _run_score_aware_long_training_attachment(
     scorer_input_distribution_guard_weight: float,
     scorer_input_distribution_guard_saturation_margin: float,
     scorer_input_distribution_guard_temperature: float,
+    scorer_input_contrast_floor_weight: float,
+    scorer_input_contrast_floor_segnet_min_std_ratio: float,
+    scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float,
     checkpoint_retention_keep_last_n: int | None,
     checkpoint_retention_keep_best_n: int,
     checkpoint_retention_keep_every_n_epochs: int | None,
@@ -3044,6 +3266,13 @@ def _run_score_aware_long_training_attachment(
     guard_weight = float(scorer_input_distribution_guard_weight)
     guard_saturation_margin = float(scorer_input_distribution_guard_saturation_margin)
     guard_temperature = float(scorer_input_distribution_guard_temperature)
+    contrast_floor_weight = float(scorer_input_contrast_floor_weight)
+    contrast_floor_segnet_ratio = float(
+        scorer_input_contrast_floor_segnet_min_std_ratio
+    )
+    contrast_floor_posenet_ratio = float(
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+    )
     live_calibration_weight = float(segnet_student_live_calibration_weight)
     direct_live_weight = float(segnet_direct_live_distillation_weight)
     pose_loss = str(pose_distillation_loss)
@@ -3116,6 +3345,23 @@ def _run_score_aware_long_training_attachment(
             "ready_for_exact_eval_dispatch": False,
         },
         "scorer_input_distribution_guard_bound": False,
+        "scorer_input_contrast_floor": {
+            "schema": "snerv_mlx_score_aware_scorer_input_contrast_floor.v1",
+            "requested": contrast_floor_weight > 0.0,
+            "enabled": contrast_floor_weight > 0.0,
+            "bound_to_renderer_bundle": False,
+            "weight": contrast_floor_weight,
+            "segnet_last_rgb_min_std_ratio": contrast_floor_segnet_ratio,
+            "posenet_yuv6_pair_min_std_ratio": contrast_floor_posenet_ratio,
+            "target_surface": (
+                "segnet_last_frame_rgb_and_posenet_two_frame_yuv6_std_ratio"
+            ),
+            "human_visual_fidelity_objective": False,
+            "score_authority": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "scorer_input_contrast_floor_bound": False,
         "prioritized_pair_training": {
             "schema": "snerv_mlx_score_aware_long_training_priority_pairs.v1",
             "enabled": bool(prioritized_pair_indices),
@@ -3230,6 +3476,18 @@ def _run_score_aware_long_training_attachment(
     if guard_temperature <= 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature_nonpositive"
+        )
+    if not np.isfinite(contrast_floor_weight) or contrast_floor_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_scorer_input_contrast_floor_weight_invalid"
+        )
+    if not np.isfinite(contrast_floor_segnet_ratio) or contrast_floor_segnet_ratio <= 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_scorer_input_contrast_floor_segnet_ratio_invalid"
+        )
+    if not np.isfinite(contrast_floor_posenet_ratio) or contrast_floor_posenet_ratio <= 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_ratio_invalid"
         )
     if pose_loss not in {"mse", "huber"}:
         validation_blockers.append(
@@ -3568,6 +3826,7 @@ def _run_score_aware_long_training_attachment(
                 segnet_distillation_weight=seg_weight,
                 segnet_direct_live_distillation_weight=direct_live_weight,
                 pose_distillation_weight=pose_weight,
+                scorer_input_contrast_floor_weight=contrast_floor_weight,
                 coder_qat_loss_weight_map=coder_qat_loss_weight_map,
                 section_byte_budgets=train_time_section_byte_control.get(
                     "section_byte_budgets"
@@ -3638,6 +3897,11 @@ def _run_score_aware_long_training_attachment(
             ).items()
             if key not in metadata_forbidden_authority_keys
         }
+        contrast_floor_metadata = {
+            key: value
+            for key, value in dict(base_payload["scorer_input_contrast_floor"]).items()
+            if key not in metadata_forbidden_authority_keys
+        }
         pr95_optimizer_coverage_metadata = {
             key: value
             for key, value in dict(pr95_optimizer_coverage).items()
@@ -3693,6 +3957,10 @@ def _run_score_aware_long_training_attachment(
                 "scorer_input_distribution_guard": {
                     **guard_metadata,
                     "bound_to_renderer_bundle": guard_weight > 0.0,
+                },
+                "scorer_input_contrast_floor": {
+                    **contrast_floor_metadata,
+                    "bound_to_renderer_bundle": contrast_floor_weight > 0.0,
                 },
                 "contest_scorer_distortion_objective": bool(
                     _recon_pixel_weight_metadata_is_verified_gradient_manifest(
@@ -3787,12 +4055,18 @@ def _run_score_aware_long_training_attachment(
             scorer_input_distribution_guard_weight=guard_weight,
             scorer_input_distribution_guard_saturation_margin=guard_saturation_margin,
             scorer_input_distribution_guard_temperature=guard_temperature,
+            scorer_input_contrast_floor_weight=contrast_floor_weight,
+            scorer_input_contrast_floor_segnet_min_std_ratio=contrast_floor_segnet_ratio,
+            scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
+                contrast_floor_posenet_ratio
+            ),
         )
         selection_policy = _snerv_score_aware_checkpoint_selection_policy(
             segnet_distillation_weight=seg_weight,
             segnet_direct_live_distillation_weight=direct_live_weight,
             pose_distillation_weight=pose_weight,
             scorer_input_distribution_guard_weight=guard_weight,
+            scorer_input_contrast_floor_weight=contrast_floor_weight,
             has_real_segnet_teacher=scorer_teacher is not None,
             has_real_posenet_teacher=pose_scorer_teacher is not None,
             coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
@@ -3900,6 +4174,12 @@ def _run_score_aware_long_training_attachment(
                     * raw_parts["scorer_input_distribution_guard"]
                 )
                 total += weighted_parts["scorer_input_distribution_guard"]
+            if "scorer_input_contrast_floor" in raw_parts:
+                weighted_parts["scorer_input_contrast_floor"] = (
+                    float(bundle.scorer_input_contrast_floor_weight)
+                    * raw_parts["scorer_input_contrast_floor"]
+                )
+                total += weighted_parts["scorer_input_contrast_floor"]
             for name, weight in coder_terms.items():
                 if name in raw_parts:
                     weighted_parts[name] = float(weight) * raw_parts[name]
@@ -4121,11 +4401,12 @@ def _run_score_aware_long_training_attachment(
                     pr95_faithful_curriculum_enabled
                 ),
                 coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
-                train_time_section_byte_control_bound=bool(
-                    train_time_section_byte_control.get("active") is True
-                ),
-                scorer_input_distribution_guard_weight=guard_weight,
-            )
+            train_time_section_byte_control_bound=bool(
+                train_time_section_byte_control.get("active") is True
+            ),
+            scorer_input_distribution_guard_weight=guard_weight,
+            scorer_input_contrast_floor_weight=contrast_floor_weight,
+        )
         )
         blockers.extend(training_telemetry_contract.get("blockers") or ())
         if not np.isfinite(final_mse):
@@ -4218,6 +4499,11 @@ def _run_score_aware_long_training_attachment(
                 "bound_to_renderer_bundle": guard_weight > 0.0,
             },
             "scorer_input_distribution_guard_bound": guard_weight > 0.0,
+            "scorer_input_contrast_floor": {
+                **dict(base_payload["scorer_input_contrast_floor"]),
+                "bound_to_renderer_bundle": contrast_floor_weight > 0.0,
+            },
+            "scorer_input_contrast_floor_bound": contrast_floor_weight > 0.0,
             "pr95_faithful_curriculum_enabled": bool(
                 pr95_faithful_curriculum_enabled
             ),

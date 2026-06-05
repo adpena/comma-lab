@@ -213,6 +213,9 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
         family="hi_nerv",
         segnet_distillation_weight=0.0,
         segnet_direct_live_distillation_weight=3.0,
+        segnet_direct_live_class_histogram_weight=2.0,
+        segnet_direct_live_class_balanced_hinge_weight=5.0,
+        segnet_direct_live_class_balanced_ce_weight=7.0,
     )
 
     assert config["enabled"] is True
@@ -221,6 +224,41 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
     assert direct["metric_name"] == "loss_part_segnet_direct_live_distill"
     assert direct["loss_weight_key"] == "distill"
     assert direct["weight_scale"] == pytest.approx(3.0)
+    hist = constraints["hi_nerv_segnet_direct_live_class_histogram"]
+    assert hist["metric_name"] == (
+        "loss_part_segnet_direct_live_class_histogram_loss"
+    )
+    assert hist["loss_weight_key"] == "distill"
+    assert hist["weight_scale"] == pytest.approx(2.0)
+    balanced = constraints["hi_nerv_segnet_direct_live_class_balanced_hinge"]
+    assert balanced["metric_name"] == (
+        "loss_part_segnet_direct_live_class_balanced_hinge_loss"
+    )
+    assert balanced["loss_weight_key"] == "distill"
+    assert balanced["weight_scale"] == pytest.approx(5.0)
+    balanced_ce = constraints["hi_nerv_segnet_direct_live_class_balanced_ce"]
+    assert balanced_ce["metric_name"] == (
+        "loss_part_segnet_direct_live_class_balanced_ce_loss"
+    )
+    assert balanced_ce["loss_weight_key"] == "distill"
+    assert balanced_ce["weight_scale"] == pytest.approx(7.0)
+
+
+def test_default_nerv_dual_ascent_config_prices_contrast_floor_guard() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="snerv",
+        scorer_input_contrast_floor_weight=0.25,
+    )
+
+    assert config["enabled"] is True
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    floor = constraints["snerv_scorer_input_contrast_floor"]
+    assert floor["metric_name"] == "loss_part_scorer_input_contrast_floor"
+    assert floor["loss_weight_key"] == "scorer_input_guard"
+    assert floor["target"] == pytest.approx(0.0)
+    assert floor["target_fraction_of_initial"] is None
+    assert floor["weight_scale"] == pytest.approx(0.25)
+    assert "evaluate.py" in floor["rationale"]
 
 
 def test_default_nerv_dual_ascent_config_prices_section_byte_budgets() -> None:

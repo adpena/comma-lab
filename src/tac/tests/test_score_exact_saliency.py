@@ -28,10 +28,14 @@ torch = pytest.importorskip("torch")
 from tac.analysis.score_exact_saliency import (  # noqa: E402
     PoseFisher,
     ProducerProfile,
+    ScoreExactSaliencyError,
     SegFlipRisk,
+    assert_posenet_yuv6_gradient_reachable,
     build_producer_provenance,
     compute_s_pose_fisher,
     compute_s_seg_flip_risk,
+    load_score_exact_scorers,
+    probe_posenet_yuv6_gradient_reachability,
     profile_producer,
     saliency_concentration,
     stream_real_pairs,
@@ -151,6 +155,48 @@ def test_profile_producer_uses_diagnostics_free_hot_path_by_default(monkeypatch)
         ("seg", False),
         ("pose:batched_vjp", False),
     ]
+
+
+class _DifferentiablePosePreprocess(torch.nn.Module):
+    def preprocess_input(self, x):
+        b, t, c, h, w = x.shape
+        return x.reshape(b, t * c, h, w).repeat_interleave(2, dim=1)[:, :12]
+
+
+class _DetachedPosePreprocess(torch.nn.Module):
+    def preprocess_input(self, x):
+        b, t, c, h, w = x.shape
+        with torch.no_grad():
+            return x.reshape(b, t * c, h, w).repeat_interleave(2, dim=1)[:, :12]
+
+
+def test_posenet_yuv6_gradient_probe_passes_differentiable_preprocess():
+    proof = probe_posenet_yuv6_gradient_reachability(_DifferentiablePosePreprocess())
+
+    assert proof.gradient_reachable is True
+    assert proof.blockers == ()
+    assert proof.grad_abs_sum > 0.0
+    assert proof.grad_nonzero_fraction > 0.0
+    assert proof.yuv6_shape == (1, 12, 8, 10)
+    payload = proof.as_jsonable()
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_posenet_yuv6_gradient_probe_blocks_upstream_no_grad_preprocess():
+    proof = probe_posenet_yuv6_gradient_reachability(_DetachedPosePreprocess())
+
+    assert proof.gradient_reachable is False
+    assert "posenet_yuv6_preprocess_output_detached" in proof.blockers
+    assert "posenet_yuv6_preprocess_gradient_abs_sum_too_small" in proof.blockers
+    with pytest.raises(ScoreExactSaliencyError, match="not reachable"):
+        assert_posenet_yuv6_gradient_reachable(_DetachedPosePreprocess())
+
+
+def test_score_exact_loader_defaults_to_strict_yuv6_gradient_guard():
+    signature = __import__("inspect").signature(load_score_exact_scorers)
+    assert signature.parameters["verify_posenet_yuv6_gradient"].default is True
 
 
 def test_concentration_gini_bounded():

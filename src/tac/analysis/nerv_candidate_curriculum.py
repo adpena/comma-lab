@@ -594,6 +594,7 @@ def build_hinerv_candidate_curriculum_plan(
     num_pairs: int,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    segnet_direct_live_distillation_weight: float = 0.0,
     coder_aware_qat: bool,
     coder_qat_quant_bits: int,
     recon_pixel_weight_attached: bool,
@@ -648,7 +649,11 @@ def build_hinerv_candidate_curriculum_plan(
         launch_mutations.append("aligned_coder_qat_quant_bits_to_candidate_codec")
     if epochs < 8:
         blockers.append("hinerv_candidate_curriculum_requires_min_8_epochs")
-    if _num(segnet_distillation_weight) <= 0.0:
+    real_segnet_teacher_attached = bool(
+        _num(segnet_distillation_weight) > 0.0
+        or _num(segnet_direct_live_distillation_weight) > 0.0
+    )
+    if not real_segnet_teacher_attached:
         blockers.append("hinerv_candidate_curriculum_requires_real_segnet_teacher")
     if _num(pose_distillation_weight) <= 0.0:
         blockers.append("hinerv_candidate_curriculum_requires_real_posenet_teacher")
@@ -671,12 +676,15 @@ def build_hinerv_candidate_curriculum_plan(
         ),
     )
     blockers.extend(scorer_input_health_gate.get("blockers") or [])
-    scorer_input_distribution_guard_verified = bool(
+    scorer_input_distribution_guard_profile_verified = bool(
         scorer_input_distribution_guard_attached
         and (
             not scorer_input_health_gate["profile_required"]
             or scorer_input_health_gate["local_replay_admissible"]
         )
+    )
+    scorer_input_distribution_guard_verified = bool(
+        scorer_input_distribution_guard_attached
     )
     byte_feedback = _base_byte_feedback(
         candidate=candidate_row,
@@ -719,7 +727,7 @@ def build_hinerv_candidate_curriculum_plan(
         evidence=build_pr95_stack_binding_evidence(
             modelsize_archive_budget=candidate_selected,
             pr95_staged_curriculum=pr95_staged_bound,
-            real_segnet_teacher=_num(segnet_distillation_weight) > 0.0,
+            real_segnet_teacher=real_segnet_teacher_attached,
             real_posenet_teacher=_num(pose_distillation_weight) > 0.0,
             differentiable_pose_preprocess=bool(
                 differentiable_pose_preprocess_attached
@@ -764,6 +772,10 @@ def build_hinerv_candidate_curriculum_plan(
         },
         "scorer_pressure": {
             "segnet_distillation_weight": float(segnet_distillation_weight),
+            "segnet_direct_live_distillation_weight": float(
+                segnet_direct_live_distillation_weight
+            ),
+            "real_segnet_teacher_attached": real_segnet_teacher_attached,
             "pose_distillation_weight": float(pose_distillation_weight),
             "joint_p18_p19_weight_attached": bool(recon_pixel_weight_attached),
             "eval_roundtrip_ste_attached": bool(eval_roundtrip_ste_attached),
@@ -772,6 +784,9 @@ def build_hinerv_candidate_curriculum_plan(
             ),
             "scorer_input_distribution_guard_verified": (
                 scorer_input_distribution_guard_verified
+            ),
+            "scorer_input_distribution_guard_profile_verified": (
+                scorer_input_distribution_guard_profile_verified
             ),
             "scorer_input_health_gate": scorer_input_health_gate,
             "ema_archive_selection_attached": bool(

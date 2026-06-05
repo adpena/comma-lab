@@ -158,7 +158,50 @@ def test_hinerv_candidate_curriculum_enables_lowbit_qat_and_blocks_missing_score
     assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
     assert "hi_nerv_real_segnet_teacher_missing" in plan["blockers"]
     assert "hi_nerv_eval_roundtrip_ste_missing" in plan["blockers"]
-    assert "hi_nerv_differentiable_pose_preprocess_missing" in plan["blockers"]
+
+
+def test_hinerv_candidate_curriculum_counts_direct_live_segnet_as_real_teacher() -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        latent_dim=12,
+        embed_dim=24,
+        decoder_channel=32,
+        decoder_codec="int4_mixed",
+    ).as_dict()
+
+    plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=8,
+        num_pairs=600,
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.5,
+        pose_distillation_weight=1.0,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        eval_roundtrip_ste_attached=True,
+        scorer_input_distribution_guard_attached=True,
+        differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
+        pr95_staged_curriculum_bound=True,
+        muon_adamw_partition_bound=True,
+    )
+
+    assert "hinerv_candidate_curriculum_requires_real_segnet_teacher" not in plan[
+        "blockers"
+    ]
+    assert "hi_nerv_real_segnet_teacher_missing" not in plan["blockers"]
+    assert plan["scorer_pressure"]["real_segnet_teacher_attached"] is True
+    assert plan["scorer_pressure"]["segnet_distillation_weight"] == 0.0
+    assert plan["scorer_pressure"]["segnet_direct_live_distillation_weight"] == 0.5
+    segnet_rows = [
+        row
+        for row in plan["pr95_stack_binding"]["rows"]
+        if row["requirement_id"] == "real_segnet_teacher"
+    ]
+    assert len(segnet_rows) == 1
+    assert segnet_rows[0]["satisfied"] is True
     assert plan["score_claim"] is False
     assert plan["ready_for_exact_eval_dispatch"] is False
 
@@ -214,9 +257,13 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert plan["scorer_input_health_gate"]["local_replay_admissible"] is False
     assert "hinerv_local_scorer_input_profile_missing" in plan["blockers"]
     assert "hinerv_local_scorer_input_health_gate_failed" in plan["blockers"]
-    assert plan["scorer_pressure"]["scorer_input_distribution_guard_verified"] is False
-    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is False
-    assert "hi_nerv_scorer_input_distribution_guard_missing" in plan[
+    assert plan["scorer_pressure"]["scorer_input_distribution_guard_verified"] is True
+    assert (
+        plan["scorer_pressure"]["scorer_input_distribution_guard_profile_verified"]
+        is False
+    )
+    assert plan["long_campaign_prelaunch_gate"]["launch_allowed"] is True
+    assert "hi_nerv_scorer_input_distribution_guard_missing" not in plan[
         "long_campaign_prelaunch_gate"
     ]["blockers"]
     assert "hi_nerv_eval_roundtrip_ste_missing" not in plan[
@@ -260,6 +307,12 @@ def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() ->
     assert receiver_proven["scorer_input_health_gate"]["local_replay_admissible"] is True
     assert (
         receiver_proven["scorer_pressure"]["scorer_input_distribution_guard_verified"]
+        is True
+    )
+    assert (
+        receiver_proven["scorer_pressure"][
+            "scorer_input_distribution_guard_profile_verified"
+        ]
         is True
     )
 

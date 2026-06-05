@@ -15,6 +15,7 @@ if str(REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (  # noqa: E402
+    BYTE_GROWTH_ADMISSION_MODES,
     COMPONENT_GUARD_MODES,
     DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS,
     run_snerv_scorer_loop_decoder_qat_smoke,
@@ -88,6 +89,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument("--max-archive-byte-growth", type=int, default=None)
+    parser.add_argument(
+        "--byte-growth-admission-mode",
+        choices=BYTE_GROWTH_ADMISSION_MODES,
+        default="hard_cap",
+        help=(
+            "hard_cap rejects archive growth above --max-archive-byte-growth; "
+            "rate_paid admits extra bytes only when the byte-pressured local "
+            "objective still improves. False-authority training guard only."
+        ),
+    )
     parser.add_argument("--pose-slack", type=float, default=0.0)
     parser.add_argument("--seg-slack", type=float, default=0.0)
     parser.add_argument(
@@ -137,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         byte_pressure_multiplier=args.byte_pressure_multiplier,
         section_value_pressure_multiplier=args.section_value_pressure_multiplier,
         max_archive_byte_growth=args.max_archive_byte_growth,
+        byte_growth_admission_mode=args.byte_growth_admission_mode,
         pose_slack=args.pose_slack,
         seg_slack=args.seg_slack,
         component_guard_mode=args.component_guard_mode,
@@ -181,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
         f"{result.section_value_pressure_multiplier}"
     )
     print(f"  max_archive_byte_growth: {result.max_archive_byte_growth}")
+    print(f"  byte_growth_admission_mode: {result.byte_growth_admission_mode}")
     print(
         "  best_rate_aware_objective_linf: "
         f"{result.best.rate_aware_objective_linf}"

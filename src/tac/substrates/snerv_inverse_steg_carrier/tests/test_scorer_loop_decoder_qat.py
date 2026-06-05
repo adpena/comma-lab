@@ -19,6 +19,7 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SnervModelSizeConfig,
 )
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (
+    BYTE_GROWTH_ADMISSION_MODES,
     COMPONENT_GUARD_MODES,
     CONTEST_BYTE_PRICE,
     SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF,
@@ -101,6 +102,7 @@ def test_scorer_loop_smoke_defaults_to_portfolio_lf_payload_codec() -> None:
 
     assert sig.parameters["lf_payload_codec"].default == "portfolio_auto"
     assert sig.parameters["snerv_temporal_mode"].default == "delta"
+    assert sig.parameters["byte_growth_admission_mode"].default == "hard_cap"
     assert sig.parameters["dynamic_range_repair_gains"].default == ()
     assert "pair_indices" in sig.parameters
 
@@ -553,6 +555,79 @@ def test_decoder_trial_pose_guard_can_hard_block_archive_byte_growth() -> None:
             max_archive_byte_growth=0,
         )
         is False
+    )
+
+
+def test_decoder_trial_pose_guard_can_admit_rate_paid_byte_growth() -> None:
+    current = _eval(
+        label="baseline",
+        score=7.0,
+        d_pose=0.2,
+        d_seg=0.01,
+        replay=True,
+        archive_bytes=1000,
+        rate_term=0.010,
+    )
+    candidate = _eval(
+        label="lower_score_four_extra_bytes",
+        score=6.8,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=1004,
+        rate_term=0.011,
+    )
+    unpaid = _eval(
+        label="raw_score_gain_unpaid_after_byte_pressure",
+        score=6.999,
+        d_pose=0.19,
+        d_seg=0.009,
+        replay=True,
+        archive_bytes=2000,
+        rate_term=0.100,
+    )
+
+    assert BYTE_GROWTH_ADMISSION_MODES == ("hard_cap", "rate_paid")
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            byte_pressure_multiplier=8.0,
+            max_archive_byte_growth=0,
+        )
+        is False
+    )
+    assert (
+        decoder_trial_passes_pose_guard(
+            candidate,
+            current,
+            byte_pressure_multiplier=8.0,
+            max_archive_byte_growth=0,
+            byte_growth_admission_mode="rate_paid",
+        )
+        is True
+    )
+    assert (
+        decoder_trial_passes_pose_guard(
+            unpaid,
+            current,
+            byte_pressure_multiplier=8.0,
+            max_archive_byte_growth=0,
+            byte_growth_admission_mode="rate_paid",
+        )
+        is False
+    )
+    assert qat_mod._trial_blockers(
+        unpaid,
+        current,
+        pose_slack=0.0,
+        seg_slack=0.0,
+        byte_pressure_multiplier=8.0,
+        max_archive_byte_growth=0,
+        byte_growth_admission_mode="rate_paid",
+    ) == (
+        "rate_aware_score_gate_failed",
+        "byte_growth_rate_paid_objective_not_improved",
     )
 
 

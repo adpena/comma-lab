@@ -19,6 +19,12 @@ from typing import Any
 import numpy as np
 
 from tac.analysis.mlx_cache_quality_gate import write_mlx_cache_quality_gate
+from tac.analysis.nerv_distortion_crux import (
+    DEFAULT_DISTORTION_CRUX_MIN_ROUTABLE_PAIRS,
+    DEFAULT_DISTORTION_CRUX_TOP_K,
+    NERV_DISTORTION_CRUX_SCHEMA,
+    write_nerv_distortion_crux_report,
+)
 from tac.local_acceleration.mlx_preprocess import (
     write_scorer_input_cache_from_pair_batches,
 )
@@ -39,6 +45,7 @@ HI_NERV_DIRECT_RECEIVER_CACHE_REPORT_SCHEMA = (
 HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA = (
     "hi_nerv_receiver_cache_segnet_argmax_probe.v1"
 )
+HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA = NERV_DISTORTION_CRUX_SCHEMA
 
 
 def write_hi_nerv_receiver_cache_quality_report(
@@ -59,6 +66,10 @@ def write_hi_nerv_receiver_cache_quality_report(
     segnet_argmax_probe_device: str = "cpu",
     segnet_argmax_probe_batch_frames: int = 4,
     max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+    distortion_crux_probe: bool = True,
+    distortion_crux_top_k: int = DEFAULT_DISTORTION_CRUX_TOP_K,
+    distortion_crux_min_routable_pairs: int = DEFAULT_DISTORTION_CRUX_MIN_ROUTABLE_PAIRS,
+    max_posenet_temporal_delta_mae_for_fit_gate: float = 64.0,
 ) -> dict[str, Any]:
     """Render a small HiNeRV receiver cache and optionally run a quality gate.
 
@@ -152,6 +163,47 @@ def write_hi_nerv_receiver_cache_quality_report(
             segnet_argmax_probe["report_path"] = segnet_argmax_probe_path.as_posix()
             write_json(segnet_argmax_probe_path, segnet_argmax_probe)
 
+    distortion_crux: dict[str, Any] | None = None
+    distortion_crux_path: Path | None = None
+    if reference_cache_dir is not None and bool(distortion_crux_probe):
+        distortion_crux_path = out / "distortion_crux_probe.json"
+        try:
+            distortion_crux = write_nerv_distortion_crux_report(
+                output_json=distortion_crux_path,
+                candidate_cache_dir=cache_dir,
+                reference_cache_dir=reference_cache_dir,
+                sample_pairs=int(sample_pairs or max_pairs),
+                top_k=int(distortion_crux_top_k),
+                min_routable_pairs=int(distortion_crux_min_routable_pairs),
+                max_segnet_last_frame_mae_for_fit_gate=float(
+                    max_segnet_mae_vs_reference_for_fit_gate
+                ),
+                max_posenet_yuv6_pair_mae_for_fit_gate=float(
+                    max_posenet_yuv6_mae_vs_reference_for_fit_gate
+                ),
+                max_posenet_temporal_delta_mae_for_fit_gate=float(
+                    max_posenet_temporal_delta_mae_for_fit_gate
+                ),
+            )
+        except Exception as exc:  # pragma: no cover - failure path is runner-owned
+            distortion_crux = {
+                "schema": HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA,
+                "candidate_cache_dir": cache_dir.as_posix(),
+                "reference_cache_dir": Path(reference_cache_dir)
+                .expanduser()
+                .resolve(strict=False)
+                .as_posix(),
+                "fit_gate_passed": False,
+                "failure": repr(exc),
+                "blockers": [
+                    "nerv_distortion_crux_is_false_authority",
+                    "hi_nerv_receiver_cache_distortion_crux_probe_failed",
+                ],
+                **FALSE_AUTHORITY,
+            }
+            distortion_crux["report_path"] = distortion_crux_path.as_posix()
+            write_json(distortion_crux_path, distortion_crux)
+
     blockers = ["hi_nerv_receiver_cache_quality_is_false_authority"]
     if quality_gate is None:
         blockers.append("hi_nerv_receiver_cache_quality_reference_gate_not_run")
@@ -159,6 +211,8 @@ def write_hi_nerv_receiver_cache_quality_report(
         blockers.extend(str(v) for v in quality_gate.get("blockers") or [])
     if segnet_argmax_probe is not None:
         blockers.extend(str(v) for v in segnet_argmax_probe.get("blockers") or [])
+    if distortion_crux is not None:
+        blockers.extend(str(v) for v in distortion_crux.get("blockers") or [])
 
     quality_gate_passed = (
         bool(quality_gate.get("fit_gate_passed")) if quality_gate else False
@@ -166,6 +220,10 @@ def write_hi_nerv_receiver_cache_quality_report(
     if segnet_argmax_probe is not None:
         quality_gate_passed = quality_gate_passed and bool(
             segnet_argmax_probe.get("fit_gate_passed")
+        )
+    if distortion_crux is not None:
+        quality_gate_passed = quality_gate_passed and bool(
+            distortion_crux.get("fit_gate_passed")
         )
 
     report = {
@@ -195,6 +253,17 @@ def write_hi_nerv_receiver_cache_quality_report(
             else None
         ),
         "segnet_argmax_probe": segnet_argmax_probe,
+        "distortion_crux_probe_path": (
+            distortion_crux_path.as_posix()
+            if distortion_crux_path is not None
+            else None
+        ),
+        "distortion_crux_probe": distortion_crux,
+        "hard_pair_coverage": (
+            distortion_crux.get("hard_pair_coverage")
+            if isinstance(distortion_crux, dict)
+            else None
+        ),
         "quality_gate_passed": quality_gate_passed,
         "blockers": _ordered_unique(blockers),
         **FALSE_AUTHORITY,
@@ -672,6 +741,7 @@ def _ordered_unique(values: list[str]) -> list[str]:
 __all__ = [
     "HI_NERV_DIRECT_RECEIVER_CACHE_AUDIT_SCHEMA",
     "HI_NERV_DIRECT_RECEIVER_CACHE_REPORT_SCHEMA",
+    "HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA",
     "build_hi_nerv_receiver_cache_segnet_argmax_probe",

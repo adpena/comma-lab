@@ -255,6 +255,7 @@ def export_snerv_checkpoint_archive(
             **FALSE_AUTHORITY,
         },
         "score_aware_long_training_kind": "checkpoint_harvest_interrupted_run",
+        "hard_byte_ceiling": hard_byte_ceiling,
         **FALSE_AUTHORITY,
     }
     if model_size.official_mfu_hfr_tub_numeric_primitives_requested:
@@ -294,6 +295,10 @@ def export_snerv_checkpoint_archive(
             repo_root=root,
             retain_receiver_output=bool(retain_receiver_proof_output),
             receiver_proof_timeout_seconds=int(receiver_proof_timeout_seconds),
+            hard_byte_ceiling=hard_byte_ceiling,
+            allow_over_hard_byte_ceiling_for_measurement=bool(
+                allow_over_hard_byte_ceiling_for_measurement
+            ),
         )
     receiver_proof = dict(package.get("receiver_proof") or {}) if package else {}
     archive_path = receiver_proof.get("archive_path") if receiver_proof else None

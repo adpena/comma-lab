@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import ast
 import builtins
+import inspect
 import json
 from pathlib import Path
 
@@ -45,6 +46,8 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _prioritized_pair_training_metadata,
     _receiver_cache_quality_manifest_summary,
     _resolve_output_dir,
+    _smoke_forward_statistics,
+    _smoke_main,
     _train_time_control_config_from_args,
 )
 from tac.analysis.nerv_modelsize_budget import analyze_hinerv_modelsize_candidate
@@ -83,6 +86,55 @@ def test_hinerv_mlx_trainer_binds_modelsize_row_and_overrides() -> None:
     assert cfg.decoder_channels == (9, 8, 7, 6, 5, 4, 3)
     assert cfg.output_height == 96
     assert cfg.output_width == 128
+
+
+def test_hinerv_smoke_forward_statistics_records_target_initialized_head_error() -> None:
+    import numpy as np
+
+    target0_channel = np.array([0.10, 0.20, 0.30], dtype=np.float32)
+    target1_channel = np.array([0.60, 0.70, 0.80], dtype=np.float32)
+    target0 = np.broadcast_to(target0_channel, (1, 2, 2, 3)).copy()
+    target1 = np.broadcast_to(target1_channel, (1, 2, 2, 3)).copy()
+    output = np.zeros((1, 2, 3, 2, 2), dtype=np.float32)
+    output[0, 0] = (target0_channel * 255.0).reshape(3, 1, 1)
+    output[0, 1] = (target1_channel * 255.0).reshape(3, 1, 1)
+
+    stats = _smoke_forward_statistics(
+        output=output,
+        target_rgb_0=target0,
+        target_rgb_1=target1,
+    )
+
+    assert stats["output_std"] > 0.0
+    assert stats["target_std_255"] > 0.0
+    assert stats["target_mean_abs_error_after_bias_init"] == pytest.approx(0.0)
+    assert stats["target_channel_mean_abs_error_after_bias_init_255"][0] == pytest.approx(
+        [0.0, 0.0, 0.0]
+    )
+    assert stats["target_channel_mean_abs_error_after_bias_init_255"][1] == pytest.approx(
+        [0.0, 0.0, 0.0]
+    )
+    assert stats["target_channel_means_255"][0] == pytest.approx([25.5, 51.0, 76.5])
+    assert stats["target_channel_means_255"][1] == pytest.approx([153.0, 178.5, 204.0])
+    assert stats["output_channel_means_255"][0] == pytest.approx(
+        stats["target_channel_means_255"][0]
+    )
+    assert stats["output_channel_means_255"][1] == pytest.approx(
+        stats["target_channel_means_255"][1]
+    )
+    assert stats["neutral_gray_global_abs_error_255"] > 10.0
+    assert max(stats["neutral_gray_channel_abs_error_255"][0]) > 50.0
+
+
+def test_hinerv_smoke_main_initializes_decoded_target_head_before_forward() -> None:
+    source = inspect.getsource(_smoke_main)
+
+    decode_pos = source.index("decode_mlx_targets(")
+    init_pos = source.index("_initialize_output_head_target_bias(")
+    forward_pos = source.index("output = model(idx)")
+    stats_pos = source.index("_smoke_forward_statistics(")
+
+    assert decode_pos < init_pos < forward_pos < stats_pos
 
 
 def test_hinerv_mlx_trainer_consumes_modelsize_candidate_for_config_codec_and_byte_cap(

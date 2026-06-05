@@ -253,6 +253,30 @@ class RendererBundle:
             It is default-off because it is heavier and remains MLX-local
             false-authority evidence, but it is the scorer-faithful antidote to
             all-one-class SegNet masks when the student surrogate is too weak.
+        segnet_direct_live_class_histogram_weight: relative weight for the
+            differentiable class-measure tether inside the direct-live SegNet
+            loss. The exact upstream ``d_seg`` is an argmax-flip rate, but a
+            collapsed renderer can still reduce per-pixel hinge loss by moving
+            one dominant class while leaving the global class measure wrong.
+            This term matches the candidate soft class histogram to the target
+            argmax histogram from the real SegNet cache, making class collapse a
+            train-time loss rather than export-only telemetry. Default-off
+            because the first bounded HiNeRV probes showed histogram-only
+            pressure can preserve soft class mass while stalling hard argmax
+            escape.
+        segnet_direct_live_class_balanced_hinge_weight: relative weight for a
+            bootstrap-only class-balanced Crammer-Singer hinge. It averages the
+            per-pixel argmax hinge within each target class and then averages
+            across occupied target classes, so minority but score-relevant
+            classes cannot be swamped by the dominant road/undrivable mass.
+            This is a training escape control, not an evaluation reweighting:
+            the exact upstream ``d_seg`` remains uniform over pixels.
+        segnet_direct_live_class_balanced_ce_weight: relative weight for a
+            class-balanced hard-target cross-entropy over the real SegNet
+            target argmax. This is sharper than the hinge in one-class collapse
+            basins because crushed target probabilities receive larger
+            gradients; it is still exactly scoped to upstream SegNet's
+            last-frame argmax decision surface.
         segnet_tau_boundary: boundary-band temperature for boundary-aware SegNet
             objectives.
         segnet_hinge_margin: Crammer-Singer margin buffer for the
@@ -366,6 +390,17 @@ class RendererBundle:
             term tracks mass near ``<= 0.02`` or ``>= 0.98``.
         scorer_input_distribution_guard_temperature: positive logistic
             temperature for the soft saturation mass. Smaller is sharper.
+        scorer_input_contrast_floor_weight: optional train-time hinge against
+            scorer-domain contrast collapse on the exact upstream domains:
+            SegNet's last-frame RGB tensor and PoseNet's two-frame YUV6 tensor.
+            Unlike the distribution guard, this does not pull toward a
+            particular image; it only refuses the flat-input basin by requiring
+            candidate per-channel std to clear a reference-relative floor.
+        scorer_input_contrast_floor_segnet_min_std_ratio: minimum candidate /
+            reference std ratio for SegNet's last-frame RGB scorer input.
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: minimum
+            candidate / reference std ratio for PoseNet's concatenated two-frame
+            YUV6 scorer input.
         source_pair_indices: optional local-target-row -> source-video-pair
             mapping. When set, ``num_pairs`` is the hydrated target row count
             and each local row decodes the corresponding source model/latent
@@ -401,6 +436,9 @@ class RendererBundle:
     segnet_distillation_objective: str = DISTILLATION_OBJECTIVE_KL_T2
     segnet_student_live_calibration_weight: float = 0.0
     segnet_direct_live_distillation_weight: float = 0.0
+    segnet_direct_live_class_histogram_weight: float = 0.0
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0
     segnet_tau_boundary: float = 1.0
     segnet_hinge_margin: float = 1.0
     distillation_num_classes: int = 5
@@ -424,6 +462,9 @@ class RendererBundle:
     scorer_input_distribution_guard_weight: float = 0.0
     scorer_input_distribution_guard_saturation_margin: float = 0.02
     scorer_input_distribution_guard_temperature: float = 0.01
+    scorer_input_contrast_floor_weight: float = 0.0
+    scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5
+    scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5
     source_pair_indices: tuple[int, ...] | None = None
     train_time_section_byte_metrics: (
         Callable[[Any, Any, Mapping[str, float]], Mapping[str, Any]] | None
@@ -510,6 +551,21 @@ class RendererBundle:
                 "segnet_direct_live_distillation_weight must be >= 0; got "
                 f"{self.segnet_direct_live_distillation_weight}"
             )
+        if self.segnet_direct_live_class_histogram_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_class_histogram_weight must be >= 0; got "
+                f"{self.segnet_direct_live_class_histogram_weight}"
+            )
+        if self.segnet_direct_live_class_balanced_hinge_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_class_balanced_hinge_weight must be >= 0; got "
+                f"{self.segnet_direct_live_class_balanced_hinge_weight}"
+            )
+        if self.segnet_direct_live_class_balanced_ce_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_class_balanced_ce_weight must be >= 0; got "
+                f"{self.segnet_direct_live_class_balanced_ce_weight}"
+            )
         if self.segnet_tau_boundary <= 0.0:
             raise MlxScoreAwareHarnessError(
                 f"segnet_tau_boundary must be > 0; got {self.segnet_tau_boundary}"
@@ -584,6 +640,21 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 "scorer_input_distribution_guard_temperature must be > 0; got "
                 f"{self.scorer_input_distribution_guard_temperature}"
+            )
+        if self.scorer_input_contrast_floor_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "scorer_input_contrast_floor_weight must be >= 0; got "
+                f"{self.scorer_input_contrast_floor_weight}"
+            )
+        if self.scorer_input_contrast_floor_segnet_min_std_ratio <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "scorer_input_contrast_floor_segnet_min_std_ratio must be > 0; got "
+                f"{self.scorer_input_contrast_floor_segnet_min_std_ratio}"
+            )
+        if self.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be > 0; got "
+                f"{self.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio}"
             )
         try:
             cam_h, cam_w = self.eval_roundtrip_camera_hw

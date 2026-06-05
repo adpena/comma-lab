@@ -211,24 +211,25 @@ def _optional_float(value: Any) -> float | None:
 
 def _recommended_scorer_loop_commands(*, levels: int, bits: float) -> tuple[str, ...]:
     result_path = ".omx/research/snerv_scorer_loop_decoder_qat_after_work_order_<UTC>.json"
-    progress_path = ".omx/research/snerv_scorer_loop_decoder_qat_after_work_order_<UTC>.progress.jsonl"
     geometry_json = ".omx/research/snerv_scorer_loop_geometry_after_work_order_<UTC>.json"
     geometry_md = ".omx/research/snerv_scorer_loop_geometry_after_work_order_<UTC>.md"
     return (
         (
-            ".venv/bin/python tools/run_snerv_scorer_loop_decoder_qat_smoke.py "
+            ".venv/bin/python experiments/train_substrate_snerv_scorer_loop_local.py "
+            "--score-loop "
             f"--n-pairs 4 --levels {levels} --target-bits-per-coeff {bits:.3g} "
             "--search-mode nes_pair_robust --max-trials 2 "
             "--byte-pressure-multiplier 8.0 "
             "--section-value-pressure-multiplier 1.0 "
             "--max-archive-byte-growth 0 "
+            "--byte-growth-admission-mode rate_paid "
             "--pose-slack 0.0 --seg-slack 0.00005 "
             "--pair-guard-min-score-improved-fraction 0.75 "
-            "--pair-guard-max-pose-worsened-fraction 0.0 "
+            "--pair-guard-max-pose-worsened-fraction 0.25 "
             "--component-guard-mode score_primary "
             "--dynamic-range-repair-gains auto "
-            f"--progress-jsonl {progress_path} "
-            f"--out {result_path}"
+            f"--research-json {result_path} "
+            f"--research-md {result_path.removesuffix('.json')}.md"
         ),
         (
             ".venv/bin/python tools/build_snerv_scorer_loop_geometry.py "

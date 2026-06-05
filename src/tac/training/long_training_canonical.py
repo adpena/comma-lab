@@ -116,7 +116,7 @@ import shutil
 import time
 import traceback
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from itertools import pairwise
 from pathlib import Path
@@ -272,6 +272,62 @@ def _jsonable_mapping(mapping: Mapping[str, Any]) -> dict[str, Any]:
 def _sha256_text(payload: str) -> str:
     """Hex sha256 of a text payload."""
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _curriculum_hash_for_stages(stages: Sequence[CurriculumStage]) -> str:
+    payload = json.dumps(
+        [s.as_dict() for s in sorted(stages, key=lambda s: s.start_epoch)],
+        sort_keys=True,
+    )
+    return _sha256_text(payload)
+
+
+def _prefix_curriculum_hash_at_epoch_boundary(
+    stages: Sequence[CurriculumStage],
+    *,
+    boundary_epoch: int,
+) -> str | None:
+    """Hash ``stages`` truncated to the already-executed epoch boundary."""
+
+    if boundary_epoch <= 0:
+        return None
+    prefix: list[CurriculumStage] = []
+    for stage in sorted(stages, key=lambda s: s.start_epoch):
+        if stage.start_epoch >= boundary_epoch:
+            break
+        end_epoch = min(stage.end_epoch, boundary_epoch)
+        if end_epoch <= stage.start_epoch:
+            continue
+        prefix.append(replace(stage, end_epoch=end_epoch))
+        if stage.end_epoch >= boundary_epoch:
+            break
+    if not prefix or prefix[0].start_epoch != 0 or prefix[-1].end_epoch != boundary_epoch:
+        return None
+    for prev, curr in pairwise(prefix):
+        if prev.end_epoch != curr.start_epoch:
+            return None
+    return _curriculum_hash_for_stages(tuple(prefix))
+
+
+def _matching_prefix_curriculum_boundary(
+    stages: Sequence[CurriculumStage],
+    *,
+    min_boundary_epoch: int,
+    expected_hash: str,
+) -> int | None:
+    """Return the earliest safe prefix boundary matching ``expected_hash``."""
+
+    max_boundary_epoch = max((stage.end_epoch for stage in stages), default=0)
+    for boundary_epoch in range(max(1, min_boundary_epoch), max_boundary_epoch + 1):
+        if (
+            _prefix_curriculum_hash_at_epoch_boundary(
+                stages,
+                boundary_epoch=boundary_epoch,
+            )
+            == expected_hash
+        ):
+            return int(boundary_epoch)
+    return None
 
 
 def _validate_substrate_artifact_metadata(
@@ -555,6 +611,21 @@ class LongTrainingConfig:
             a blocker and fall back to total loss for that epoch.
         checkpoint_selection_metric_mode: ``"min"`` for losses/errors,
             ``"max"`` for rewards/occupancy metrics.
+        checkpoint_selection_metric_required: when True, a missing, nonnumeric,
+            or nonfinite named checkpoint metric is a hard training failure
+            instead of a fallback to total loss. Score-aware compact renderers
+            use this for direct scorer metrics so a collapsed archive cannot be
+            exported just because guard/coder total loss decreased.
+        checkpoint_selection_tie_break_metric_key: optional secondary loss_dict
+            key used only when the primary checkpoint metric is exactly tied
+            within the canonical tolerance. This is for discontinuous scorer
+            proxies such as argmax disagreement: when the discrete metric is
+            flat, archive export should prefer the checkpoint with the best
+            continuous distance-to-boundary surrogate.
+        checkpoint_selection_tie_break_metric_mode: ``"min"`` or ``"max"`` for
+            the secondary metric.
+        checkpoint_selection_tie_break_metric_required: hard-fail if the
+            configured secondary metric is missing/non-finite.
         early_stopping_patience: stop training if no loss improvement for N
             consecutive checkpoint-intervals.
         score_aware_loss_kwargs: optional substrate-specific kwargs threaded
@@ -610,6 +681,10 @@ class LongTrainingConfig:
     best_checkpoint_for_archive_export: bool = True
     checkpoint_selection_metric_key: str = "total"
     checkpoint_selection_metric_mode: str = "min"
+    checkpoint_selection_metric_required: bool = False
+    checkpoint_selection_tie_break_metric_key: str = ""
+    checkpoint_selection_tie_break_metric_mode: str = "min"
+    checkpoint_selection_tie_break_metric_required: bool = False
     early_stopping_patience: int = DEFAULT_EARLY_STOPPING_PATIENCE
     score_aware_loss_kwargs: Mapping[str, Any] = field(default_factory=dict)
     optimizer_class: str = "adamw"
@@ -776,6 +851,27 @@ class LongTrainingConfig:
                 "checkpoint_selection_metric_mode must be one of {'min', 'max'}; "
                 f"got {self.checkpoint_selection_metric_mode!r}"
             )
+        if not isinstance(self.checkpoint_selection_metric_required, bool):
+            raise TypeError(
+                "checkpoint_selection_metric_required must be bool; got "
+                f"{type(self.checkpoint_selection_metric_required).__name__}"
+            )
+        if not isinstance(self.checkpoint_selection_tie_break_metric_key, str):
+            raise TypeError(
+                "checkpoint_selection_tie_break_metric_key must be str; got "
+                f"{type(self.checkpoint_selection_tie_break_metric_key).__name__}"
+            )
+        if self.checkpoint_selection_tie_break_metric_mode not in {"min", "max"}:
+            raise ValueError(
+                "checkpoint_selection_tie_break_metric_mode must be one of "
+                "{'min', 'max'}; got "
+                f"{self.checkpoint_selection_tie_break_metric_mode!r}"
+            )
+        if not isinstance(self.checkpoint_selection_tie_break_metric_required, bool):
+            raise TypeError(
+                "checkpoint_selection_tie_break_metric_required must be bool; got "
+                f"{type(self.checkpoint_selection_tie_break_metric_required).__name__}"
+            )
         if not isinstance(self.early_stopping_patience, int) or self.early_stopping_patience <= 0:
             raise ValueError(
                 f"early_stopping_patience must be positive int; "
@@ -863,11 +959,7 @@ class LongTrainingConfig:
 
     def curriculum_hash(self) -> str:
         """Canonical hash over curriculum_stages for resume validation."""
-        payload = json.dumps(
-            [s.as_dict() for s in sorted(self.curriculum_stages, key=lambda s: s.start_epoch)],
-            sort_keys=True,
-        )
-        return _sha256_text(payload)
+        return _curriculum_hash_for_stages(self.curriculum_stages)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -905,6 +997,18 @@ class LongTrainingConfig:
             ),
             "checkpoint_selection_metric_mode": str(
                 self.checkpoint_selection_metric_mode
+            ),
+            "checkpoint_selection_metric_required": bool(
+                self.checkpoint_selection_metric_required
+            ),
+            "checkpoint_selection_tie_break_metric_key": str(
+                self.checkpoint_selection_tie_break_metric_key
+            ),
+            "checkpoint_selection_tie_break_metric_mode": str(
+                self.checkpoint_selection_tie_break_metric_mode
+            ),
+            "checkpoint_selection_tie_break_metric_required": bool(
+                self.checkpoint_selection_tie_break_metric_required
             ),
             "early_stopping_patience": int(self.early_stopping_patience),
             "score_aware_loss_kwargs": dict(self.score_aware_loss_kwargs),
@@ -1372,6 +1476,7 @@ def _resolve_checkpoint_selection_metric(
     loss_dict: Mapping[str, Any],
     total_loss: float,
     metric_key: str,
+    strict: bool = False,
 ) -> tuple[float, str | None]:
     """Return the metric that controls best-checkpoint archive export."""
 
@@ -1379,12 +1484,20 @@ def _resolve_checkpoint_selection_metric(
     if not key or key == "total":
         return float(total_loss), None
     if key not in loss_dict:
+        if strict:
+            raise RuntimeError(f"checkpoint_selection_metric_missing:{key}")
         return float(total_loss), f"checkpoint_selection_metric_missing:{key}"
     try:
         value = float(loss_dict[key])
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as err:
+        if strict:
+            raise RuntimeError(
+                f"checkpoint_selection_metric_non_numeric:{key}"
+            ) from err
         return float(total_loss), f"checkpoint_selection_metric_non_numeric:{key}"
     if not math.isfinite(value):
+        if strict:
+            raise RuntimeError(f"checkpoint_selection_metric_nonfinite:{key}")
         return float(total_loss), f"checkpoint_selection_metric_nonfinite:{key}"
     return value, None
 
@@ -1398,6 +1511,30 @@ def _checkpoint_metric_improved(
     if mode == "max":
         return current > best + 1e-9
     return current < best - 1e-9
+
+
+def _checkpoint_selection_improved(
+    *,
+    current: float,
+    best: float,
+    mode: str,
+    current_tie_break: float | None = None,
+    best_tie_break: float | None = None,
+    tie_break_mode: str = "min",
+) -> bool:
+    if _checkpoint_metric_improved(current=current, best=best, mode=mode):
+        return True
+    if abs(float(current) - float(best)) > 1e-9:
+        return False
+    if current_tie_break is None:
+        return False
+    if best_tie_break is None:
+        return True
+    return _checkpoint_metric_improved(
+        current=float(current_tie_break),
+        best=float(best_tie_break),
+        mode=tie_break_mode,
+    )
 
 
 def _ordered_unique(values: Sequence[str]) -> list[str]:
@@ -2039,11 +2176,44 @@ class CheckpointWriter:
         meta_path.write_text(json.dumps(meta, sort_keys=True, indent=2) + "\n")
         return meta_path
 
-    def load_resume_metadata(self, resume_from: Path) -> Mapping[str, Any]:
-        """Load checkpoint metadata; refuse cross-substrate / cross-curriculum resume."""
+    @staticmethod
+    def resolve_resume_metadata_path(resume_from: Path) -> Path:
+        """Resolve a resume path to canonical checkpoint metadata JSON.
+
+        Operators naturally copy the hot state path from training reports
+        (``*.live.state.npsd`` / ``*.ema_shadow.state.npsd``).  The metadata
+        remains the authority for substrate/curriculum guards, so accept the
+        state path only by resolving its sibling ``*.meta.json``.
+        """
+
         if not resume_from.is_file():
             raise FileNotFoundError(f"resume checkpoint not found: {resume_from}")
-        meta = json.loads(resume_from.read_text())
+        if resume_from.name.endswith(".meta.json"):
+            return resume_from
+        for suffix in (".live.state.npsd", ".ema_shadow.state.npsd"):
+            if resume_from.name.endswith(suffix):
+                meta_path = resume_from.with_name(
+                    resume_from.name[: -len(suffix)] + ".meta.json"
+                )
+                if meta_path.is_file():
+                    return meta_path
+                raise FileNotFoundError(
+                    "resume checkpoint state exists but sibling metadata is "
+                    f"missing: state={resume_from}, expected_meta={meta_path}"
+                )
+        return resume_from
+
+    def load_resume_metadata(
+        self,
+        resume_from: Path,
+        *,
+        current_curriculum_stages: Sequence[CurriculumStage] | None = None,
+    ) -> Mapping[str, Any]:
+        """Load checkpoint metadata; refuse cross-substrate / cross-curriculum resume."""
+        resume_from = self.resolve_resume_metadata_path(resume_from)
+        if not resume_from.is_file():
+            raise FileNotFoundError(f"resume checkpoint not found: {resume_from}")
+        meta = json.loads(resume_from.read_text(encoding="utf-8"))
         if meta.get("substrate_id") != self.substrate_id:
             raise ValueError(
                 f"resume checkpoint substrate_id={meta.get('substrate_id')!r} "
@@ -2051,6 +2221,30 @@ class CheckpointWriter:
                 f"Catalog #229 PV cross-substrate-resume guard."
             )
         if meta.get("curriculum_hash") != self.curriculum_hash:
+            boundary_epoch = int(meta.get("global_epoch", -1)) + 1
+            matching_boundary_epoch = (
+                _matching_prefix_curriculum_boundary(
+                    current_curriculum_stages,
+                    min_boundary_epoch=boundary_epoch,
+                    expected_hash=str(meta.get("curriculum_hash")),
+                )
+                if current_curriculum_stages is not None
+                else None
+            )
+            if matching_boundary_epoch is not None:
+                meta = {
+                    **dict(meta),
+                    "resume_curriculum_validation": {
+                        "schema": "long_training_prefix_compatible_resume.v1",
+                        "mode": "prefix_compatible_future_extension",
+                        "checkpoint_curriculum_hash": str(meta.get("curriculum_hash")),
+                        "current_curriculum_hash": self.curriculum_hash,
+                        "prefix_curriculum_hash": str(meta.get("curriculum_hash")),
+                        "prefix_boundary_epoch": int(matching_boundary_epoch),
+                        "resume_state_next_epoch": int(boundary_epoch),
+                    },
+                }
+                return meta
             raise ValueError(
                 "resume checkpoint curriculum_hash differs; refusing per "
                 "Catalog #229 PV (curriculum must match for valid resume)."
@@ -2327,7 +2521,9 @@ def apply_checkpoint_retention(
     }
     if config.resume_from_checkpoint is not None:
         protected_meta_paths.add(
-            config.resume_from_checkpoint.expanduser().resolve(strict=False)
+            CheckpointWriter.resolve_resume_metadata_path(
+                config.resume_from_checkpoint.expanduser().resolve(strict=False)
+            )
         )
     keep_last_n = config.checkpoint_retention_keep_last_n
     if keep_last_n is not None and keep_last_n > 0:
@@ -3007,7 +3203,10 @@ def run_long_training(
     resume_global_epoch = 0
     resume_meta: Mapping[str, Any] | None = None
     if config.resume_from_checkpoint is not None:
-        resume_meta = checkpoint_writer.load_resume_metadata(config.resume_from_checkpoint)
+        resume_meta = checkpoint_writer.load_resume_metadata(
+            config.resume_from_checkpoint,
+            current_curriculum_stages=config.curriculum_stages,
+        )
         resume_global_epoch = int(resume_meta.get("global_epoch", -1)) + 1
         checkpoint_accumulation = str(resume_meta.get("ema_accumulation") or "naive")
         if checkpoint_accumulation != config.ema_accumulation:
@@ -3044,6 +3243,7 @@ def run_long_training(
         if config.checkpoint_selection_metric_mode == "max"
         else float("inf")
     )
+    best_tie_break_metric: float | None = None
     best_epoch = -1
     best_wall_clock = 0.0
     best_live_state: Mapping[str, Any] | None = None
@@ -3149,10 +3349,28 @@ def run_long_training(
             loss_dict=loss_dict,
             total_loss=total_loss,
             metric_key=config.checkpoint_selection_metric_key,
+            strict=bool(config.checkpoint_selection_metric_required),
         )
+        tie_break_metric: float | None = None
+        tie_break_metric_blocker: str | None = None
+        if str(config.checkpoint_selection_tie_break_metric_key).strip():
+            tie_break_metric, tie_break_metric_blocker = (
+                _resolve_checkpoint_selection_metric(
+                    loss_dict=loss_dict,
+                    total_loss=total_loss,
+                    metric_key=config.checkpoint_selection_tie_break_metric_key,
+                    strict=bool(
+                        config.checkpoint_selection_tie_break_metric_required
+                    ),
+                )
+            )
         last_selection_metric = float(selection_metric)
         if selection_metric_blocker is not None:
             checkpoint_selection_metric_blockers.append(selection_metric_blocker)
+        if tie_break_metric_blocker is not None:
+            checkpoint_selection_metric_blockers.append(
+                f"checkpoint_selection_tie_break_{tie_break_metric_blocker}"
+            )
         metrics = PerEpochMetrics(
             epoch=epoch,
             stage_name=stage.name,
@@ -3193,12 +3411,18 @@ def run_long_training(
                 print(f"[long_training_canonical] WARN: on_epoch_end callback failed: {exc!r}")
 
         # 7) Early-stopping bookkeeping.
-        if _checkpoint_metric_improved(
+        if _checkpoint_selection_improved(
             current=float(selection_metric),
             best=float(best_metric),
             mode=config.checkpoint_selection_metric_mode,
+            current_tie_break=tie_break_metric,
+            best_tie_break=best_tie_break_metric,
+            tie_break_mode=config.checkpoint_selection_tie_break_metric_mode,
         ):
             best_metric = float(selection_metric)
+            best_tie_break_metric = (
+                float(tie_break_metric) if tie_break_metric is not None else None
+            )
             best_loss = total_loss
             best_epoch = int(epoch)
             best_wall_clock = float(wall_clock)
@@ -3425,6 +3649,18 @@ def run_long_training(
         ),
         "selection_metric_key": config.checkpoint_selection_metric_key,
         "selection_metric_mode": config.checkpoint_selection_metric_mode,
+        "selection_metric_required": bool(
+            config.checkpoint_selection_metric_required
+        ),
+        "tie_break_metric_key": str(
+            config.checkpoint_selection_tie_break_metric_key
+        ),
+        "tie_break_metric_mode": str(
+            config.checkpoint_selection_tie_break_metric_mode
+        ),
+        "tie_break_metric_required": bool(
+            config.checkpoint_selection_tie_break_metric_required
+        ),
         "selected_role": selected_checkpoint_role,
         "selected_meta_path": selected_meta_path.as_posix(),
         "selected_global_epoch": selected_meta.get("global_epoch"),
@@ -3447,6 +3683,11 @@ def run_long_training(
         "best_observed_epoch": int(best_epoch),
         "best_observed_loss": float(best_loss),
         "best_observed_metric": float(best_metric),
+        "best_observed_tie_break_metric": (
+            float(best_tie_break_metric)
+            if best_tie_break_metric is not None
+            else None
+        ),
         "best_meta_path": best_meta_path.as_posix() if best_meta_path else None,
         "best_state_capture_error": best_state_capture_error,
         "best_checkpoint_emission_error": best_checkpoint_emission_error,

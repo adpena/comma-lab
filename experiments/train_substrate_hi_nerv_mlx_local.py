@@ -790,9 +790,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
     )
     output = model(idx)
     mx.eval(output)
-    output_mean = float(mx.mean(output))
-    target_mean = float(
-        (mx.mean(smoke_target_rgb_0) + mx.mean(smoke_target_rgb_1)) * 0.5 * 255.0
+    forward_smoke_stats = _smoke_forward_statistics(
+        output=output,
+        target_rgb_0=smoke_target_rgb_0,
+        target_rgb_1=smoke_target_rgb_1,
     )
     archive_path = archive_sha256 = None
     archive_bytes = None
@@ -840,13 +841,8 @@ def _smoke_main(args: argparse.Namespace) -> int:
         "forward_smoke": {
             "input_indices": [int(v) for v in idx.tolist()],
             "output_shape": [int(v) for v in output.shape],
-            "output_min": float(mx.min(output)),
-            "output_max": float(mx.max(output)),
-            "output_mean": output_mean,
-            "output_std": float(mx.std(output)),
             "target_pair_count_for_bias_init": int(idx.shape[0]),
-            "target_mean_255": target_mean,
-            "target_mean_abs_error_after_bias_init": abs(output_mean - target_mean),
+            **forward_smoke_stats,
         },
         "output_head_target_bias_init": _metadata_safe(output_head_target_bias_init),
         "decoder_codec": effective_decoder_codec,
@@ -882,6 +878,97 @@ def _smoke_main(args: argparse.Namespace) -> int:
         )
     )
     return 0
+
+
+def _smoke_forward_statistics(
+    *,
+    output: Any,
+    target_rgb_0: Any,
+    target_rgb_1: Any,
+) -> dict[str, Any]:
+    """Build smoke diagnostics proving decoded-target output-head initialization."""
+
+    import numpy as np
+
+    out = np.asarray(output, dtype=np.float32)
+    target0 = np.asarray(target_rgb_0, dtype=np.float32) * 255.0
+    target1 = np.asarray(target_rgb_1, dtype=np.float32) * 255.0
+    if out.ndim != 5 or int(out.shape[1]) != 2 or int(out.shape[2]) != 3:
+        raise ValueError(
+            "HiNeRV smoke output must be Bx2x3xHxW in 0..255 space; got "
+            f"shape={tuple(int(v) for v in out.shape)}"
+        )
+    if (
+        target0.ndim != 4
+        or target1.ndim != 4
+        or int(target0.shape[-1]) != 3
+        or int(target1.shape[-1]) != 3
+    ):
+        raise ValueError(
+            "HiNeRV smoke targets must be NHWC with 3 channels; got "
+            f"target0={tuple(int(v) for v in target0.shape)} "
+            f"target1={tuple(int(v) for v in target1.shape)}"
+        )
+    if int(out.shape[0]) != int(target0.shape[0]) or int(out.shape[0]) != int(target1.shape[0]):
+        raise ValueError(
+            "HiNeRV smoke output/target batch mismatch: "
+            f"output={int(out.shape[0])} target0={int(target0.shape[0])} "
+            f"target1={int(target1.shape[0])}"
+        )
+    output_hw = tuple(int(v) for v in out.shape[-2:])
+    target0_hw = tuple(int(v) for v in target0.shape[1:3])
+    target1_hw = tuple(int(v) for v in target1.shape[1:3])
+    if output_hw != target0_hw or output_hw != target1_hw:
+        raise ValueError(
+            "HiNeRV smoke output/target geometry mismatch: "
+            f"output_hw={output_hw} target0_hw={target0_hw} target1_hw={target1_hw}"
+        )
+
+    output_nhwc = np.transpose(out, (0, 1, 3, 4, 2))
+    targets = np.stack([target0, target1], axis=1)
+    output_channel_mean = output_nhwc.mean(axis=(0, 2, 3))
+    output_channel_std = output_nhwc.std(axis=(0, 2, 3))
+    target_channel_mean = targets.mean(axis=(0, 2, 3))
+    target_channel_std = targets.std(axis=(0, 2, 3))
+    channel_mean_abs_error = np.abs(output_channel_mean - target_channel_mean)
+    neutral_gray_channel_abs_error = np.abs(127.5 - target_channel_mean)
+
+    return {
+        "output_min": float(out.min()),
+        "output_max": float(out.max()),
+        "output_mean": float(out.mean()),
+        "output_std": float(out.std()),
+        "target_mean_255": float(targets.mean()),
+        "target_std_255": float(targets.std()),
+        "target_mean_abs_error_after_bias_init": float(
+            abs(float(out.mean()) - float(targets.mean()))
+        ),
+        "target_channel_means_255": [
+            [float(v) for v in frame_values]
+            for frame_values in target_channel_mean.tolist()
+        ],
+        "target_channel_stds_255": [
+            [float(v) for v in frame_values]
+            for frame_values in target_channel_std.tolist()
+        ],
+        "output_channel_means_255": [
+            [float(v) for v in frame_values]
+            for frame_values in output_channel_mean.tolist()
+        ],
+        "output_channel_stds_255": [
+            [float(v) for v in frame_values]
+            for frame_values in output_channel_std.tolist()
+        ],
+        "target_channel_mean_abs_error_after_bias_init_255": [
+            [float(v) for v in frame_values]
+            for frame_values in channel_mean_abs_error.tolist()
+        ],
+        "neutral_gray_channel_abs_error_255": [
+            [float(v) for v in frame_values]
+            for frame_values in neutral_gray_channel_abs_error.tolist()
+        ],
+        "neutral_gray_global_abs_error_255": float(abs(127.5 - float(targets.mean()))),
+    }
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -2814,6 +2901,7 @@ def _receiver_cache_quality_manifest_summary(
         return None
     gate = report.get("quality_gate") if isinstance(report, dict) else None
     gate_stats = gate.get("stats") if isinstance(gate, dict) else None
+    crux = report.get("distortion_crux_probe") if isinstance(report, dict) else None
     return {
         "schema": "hi_nerv_receiver_cache_quality_summary.v1",
         "report_path": report.get("report_path"),
@@ -2826,7 +2914,22 @@ def _receiver_cache_quality_manifest_summary(
         "candidate_segnet_last_rgb_stats": (
             gate_stats.get("candidate_segnet_last_rgb") if isinstance(gate_stats, dict) else None
         ),
+        "candidate_posenet_yuv6_pair_stats": (
+            gate_stats.get("candidate_posenet_yuv6_pair") if isinstance(gate_stats, dict) else None
+        ),
         "distance_to_reference": (gate.get("distance_to_reference") if isinstance(gate, dict) else None),
+        "distortion_crux_probe_path": report.get("distortion_crux_probe_path"),
+        "distortion_crux_probe_passed": (
+            bool(crux.get("fit_gate_passed")) if isinstance(crux, dict) else None
+        ),
+        "distortion_crux_dominant_domain": (
+            crux.get("aggregate", {}).get("dominant_domain_top_k")
+            if isinstance(crux, dict) and isinstance(crux.get("aggregate"), dict)
+            else None
+        ),
+        "hard_pair_coverage": (
+            crux.get("hard_pair_coverage") if isinstance(crux, dict) else None
+        ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
     }
 

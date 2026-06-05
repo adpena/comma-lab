@@ -227,6 +227,28 @@ def test_renderer_bundle_validation_fail_closed() -> None:
             num_pairs=2,
             scorer_input_distribution_guard_temperature=0.0,
         )
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="scorer_input_contrast_floor_weight",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=target_0,
+            target_rgb_1=target_1,
+            num_pairs=2,
+            scorer_input_contrast_floor_weight=-1.0,
+        )
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=target_0,
+            target_rgb_1=target_1,
+            num_pairs=2,
+            scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.0,
+        )
 
 
 def test_decode_frames_supports_reconstruct_pair_nchw01() -> None:
@@ -340,6 +362,42 @@ def test_score_aware_loss_applies_scorer_input_distribution_guard() -> None:
     assert "scorer_input_distribution_guard" in parts_guard
     assert "scorer_input_distribution_guard" not in parts_disabled
     assert _scalar(parts_guard["scorer_input_distribution_guard"]) > 0.0
+    assert _scalar(total_guard) > _scalar(total_disabled)
+
+
+def test_score_aware_loss_applies_scorer_input_contrast_floor() -> None:
+    target_0, target_1 = _targets()
+    flat = mx.ones_like(target_0) * 0.5
+    bundle = RendererBundle(
+        model=ReconstructPairModel(flat, flat),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_input_distribution_guard_weight=0.0,
+        scorer_input_contrast_floor_weight=2.0,
+        scorer_input_contrast_floor_segnet_min_std_ratio=0.7,
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.6,
+    )
+    idx = mx.array([0, 1], dtype=mx.int32)
+
+    total_guard, parts_guard = score_aware_loss(bundle, idx)
+    total_disabled, parts_disabled = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={"scorer_input_guard": 0.0},
+    )
+    mx.eval(total_guard, total_disabled)
+
+    assert "scorer_input_contrast_floor" in parts_guard
+    assert "scorer_input_contrast_floor" not in parts_disabled
+    assert _scalar(parts_guard["scorer_input_contrast_floor"]) > 0.0
+    assert _scalar(
+        parts_guard["scorer_input_contrast_floor_segnet_last_rgb_min_std_ratio"]
+    ) < 0.7
+    assert _scalar(
+        parts_guard["scorer_input_contrast_floor_posenet_yuv6_pair_min_std_ratio"]
+    ) < 0.6
     assert _scalar(total_guard) > _scalar(total_disabled)
 
 
@@ -469,6 +527,7 @@ def test_direct_live_segnet_routes_argmax_hinge_objective() -> None:
         "forward_convention": "reconstruct_pair_nchw01",
         "scorer_teacher": _LiveTeacher(),
         "segnet_direct_live_distillation_weight": 1.0,
+        "segnet_direct_live_class_histogram_weight": 0.0,
         "allow_segnet_only_research": True,
     }
     mse_bundle = RendererBundle(**common, segnet_distillation_objective="kl_t2")
@@ -527,6 +586,7 @@ def test_direct_live_segnet_routes_all_pixel_argmax_hinge_objective() -> None:
         forward_convention="reconstruct_pair_nchw01",
         scorer_teacher=_LiveTeacher(),
         segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_class_histogram_weight=0.0,
         allow_segnet_only_research=True,
         segnet_distillation_objective="argmax_hinge",
         segnet_hinge_margin=0.5,
@@ -538,6 +598,202 @@ def test_direct_live_segnet_routes_all_pixel_argmax_hinge_objective() -> None:
     assert _scalar(
         parts["segnet_direct_live_argmax_disagreement"]
     ) == pytest.approx(1.0)
+
+
+def test_direct_live_segnet_class_histogram_tether_penalizes_collapse() -> None:
+    target_0 = mx.zeros((2, 4, 4, 3))
+    target_1 = mx.ones((2, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 4.0
+            arr[..., 1] = 3.5
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 1] = 4.0
+            arr[..., 0] = 3.0
+            return mx.array(arr)
+
+    common = {
+        "model": ReconstructPairModel(target_0, target_1),
+        "target_rgb_0": target_0,
+        "target_rgb_1": target_1,
+        "num_pairs": 2,
+        "forward_convention": "reconstruct_pair_nchw01",
+        "scorer_teacher": _LiveTeacher(),
+        "segnet_direct_live_distillation_weight": 1.0,
+        "allow_segnet_only_research": True,
+        "segnet_distillation_objective": "argmax_hinge",
+        "segnet_hinge_margin": 0.5,
+    }
+    raw_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_histogram_weight=0.0,
+    )
+    tethered_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_histogram_weight=1.0,
+    )
+
+    _raw_total, raw_parts = score_aware_loss(raw_bundle, mx.array([0, 1]))
+    _tethered_total, tethered_parts = score_aware_loss(
+        tethered_bundle,
+        mx.array([0, 1]),
+    )
+
+    assert _scalar(tethered_parts["segnet_direct_live_class_histogram_loss"]) > 0.0
+    assert _scalar(
+        tethered_parts["segnet_direct_live_class_histogram_cross_entropy"]
+    ) > 0.0
+    assert _scalar(
+        tethered_parts["segnet_direct_live_class_histogram_l1"]
+    ) > 0.0
+    assert _scalar(
+        tethered_parts["segnet_direct_live_class_histogram_loss"]
+    ) == pytest.approx(
+        _scalar(tethered_parts["segnet_direct_live_class_histogram_cross_entropy"])
+        + _scalar(tethered_parts["segnet_direct_live_class_histogram_l1"])
+    )
+    assert _scalar(
+        tethered_parts["segnet_direct_live_distill"]
+    ) > _scalar(raw_parts["segnet_direct_live_distill"])
+    assert _scalar(
+        tethered_parts["segnet_direct_live_target_hist_class_0_fraction"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        tethered_parts["segnet_direct_live_candidate_soft_class_1_fraction"]
+    ) > _scalar(
+        tethered_parts["segnet_direct_live_candidate_soft_class_0_fraction"]
+    )
+
+
+def test_direct_live_segnet_class_balanced_hinge_is_train_time_loss() -> None:
+    target_0 = mx.zeros((2, 4, 4, 3))
+    target_1 = mx.ones((2, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 4.0
+            arr[..., 1] = 3.5
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 1] = 4.0
+            arr[..., 0] = 3.0
+            return mx.array(arr)
+
+    common = {
+        "model": ReconstructPairModel(target_0, target_1),
+        "target_rgb_0": target_0,
+        "target_rgb_1": target_1,
+        "num_pairs": 2,
+        "forward_convention": "reconstruct_pair_nchw01",
+        "scorer_teacher": _LiveTeacher(),
+        "segnet_direct_live_distillation_weight": 1.0,
+        "allow_segnet_only_research": True,
+        "segnet_distillation_objective": "argmax_hinge",
+        "segnet_hinge_margin": 0.5,
+    }
+    raw_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_balanced_hinge_weight=0.0,
+    )
+    balanced_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_balanced_hinge_weight=1.0,
+    )
+
+    _raw_total, raw_parts = score_aware_loss(raw_bundle, mx.array([0, 1]))
+    _balanced_total, balanced_parts = score_aware_loss(
+        balanced_bundle,
+        mx.array([0, 1]),
+    )
+
+    assert _scalar(
+        balanced_parts["segnet_direct_live_class_balanced_hinge_loss"]
+    ) == pytest.approx(1.5)
+    assert _scalar(
+        balanced_parts["segnet_direct_live_class_balanced_hinge_class_0"]
+    ) == pytest.approx(1.5)
+    assert _scalar(
+        balanced_parts["segnet_direct_live_target_occupied_class_fraction"]
+    ) == pytest.approx(0.2)
+    assert _scalar(
+        balanced_parts["segnet_direct_live_distill"]
+    ) > _scalar(raw_parts["segnet_direct_live_distill"])
+
+
+def test_direct_live_segnet_class_balanced_ce_is_sharp_collapse_escape_loss() -> None:
+    target_0 = mx.zeros((2, 4, 4, 3))
+    target_1 = mx.ones((2, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 4.0
+            arr[..., 1] = 3.5
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 2] = 8.0
+            arr[..., 0] = -4.0
+            return mx.array(arr)
+
+    common = {
+        "model": ReconstructPairModel(target_0, target_1),
+        "target_rgb_0": target_0,
+        "target_rgb_1": target_1,
+        "num_pairs": 2,
+        "forward_convention": "reconstruct_pair_nchw01",
+        "scorer_teacher": _LiveTeacher(),
+        "segnet_direct_live_distillation_weight": 1.0,
+        "allow_segnet_only_research": True,
+        "segnet_distillation_objective": "argmax_hinge",
+        "segnet_hinge_margin": 0.5,
+    }
+    raw_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_balanced_ce_weight=0.0,
+    )
+    ce_bundle = RendererBundle(
+        **common,
+        segnet_direct_live_class_balanced_ce_weight=1.0,
+    )
+
+    _raw_total, raw_parts = score_aware_loss(raw_bundle, mx.array([0, 1]))
+    _ce_total, ce_parts = score_aware_loss(ce_bundle, mx.array([0, 1]))
+
+    assert _scalar(ce_parts["segnet_direct_live_class_balanced_ce_loss"]) > 10.0
+    assert _scalar(
+        ce_parts["segnet_direct_live_class_balanced_ce_class_0"]
+    ) > 10.0
+    assert _scalar(
+        ce_parts["segnet_direct_live_class_balanced_ce_target_occupied_class_fraction"]
+    ) == pytest.approx(0.2)
+    assert _scalar(
+        ce_parts["segnet_direct_live_distill"]
+    ) > _scalar(raw_parts["segnet_direct_live_distill"])
 
 
 def test_pose_distill_composes_real_pose_teacher_and_head() -> None:

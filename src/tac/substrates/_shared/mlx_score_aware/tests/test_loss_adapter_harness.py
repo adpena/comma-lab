@@ -1031,6 +1031,8 @@ def test_adapter_metadata_marks_direct_live_active_without_student_distill() -> 
     direct = metadata["score_aware_training"]["segnet_direct_live_distillation"]
     assert direct["enabled"] is True
     assert direct["weight"] == pytest.approx(0.75)
+    assert direct["class_histogram_weight"] == pytest.approx(0.0)
+    assert direct["class_balanced_hinge_weight"] == pytest.approx(0.0)
     assert direct["objective"] == "boundary_argmax_hinge"
 
 
@@ -1336,6 +1338,14 @@ def test_run_mlx_score_aware_full_main_forwards_telemetry_flush_interval(
         telemetry_flush_interval_epochs=1,
         checkpoint_dir=tmp_path / "external_checkpoints",
         resume_from_checkpoint=tmp_path / "external_checkpoints/epoch000001.meta.json",
+        checkpoint_selection_metric_key=(
+            "loss_part_segnet_direct_live_argmax_disagreement"
+        ),
+        checkpoint_selection_metric_required=True,
+        checkpoint_selection_tie_break_metric_key=(
+            "loss_part_segnet_direct_live_distill"
+        ),
+        checkpoint_selection_tie_break_metric_required=True,
         notes="telemetry flush pass-through unit test",
     )
 
@@ -1345,6 +1355,14 @@ def test_run_mlx_score_aware_full_main_forwards_telemetry_flush_interval(
     assert captured["config"].resume_from_checkpoint == (
         tmp_path / "external_checkpoints/epoch000001.meta.json"
     )
+    assert captured["config"].checkpoint_selection_metric_key == (
+        "loss_part_segnet_direct_live_argmax_disagreement"
+    )
+    assert captured["config"].checkpoint_selection_metric_required is True
+    assert captured["config"].checkpoint_selection_tie_break_metric_key == (
+        "loss_part_segnet_direct_live_distill"
+    )
+    assert captured["config"].checkpoint_selection_tie_break_metric_required is True
 
 
 @mlx_only

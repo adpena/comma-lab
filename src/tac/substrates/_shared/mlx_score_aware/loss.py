@@ -633,6 +633,113 @@ def scorer_input_distribution_guard_loss(
     }
 
 
+def _std_floor_guard_parts(
+    candidate: Any,
+    reference: Any,
+    *,
+    min_ratio: float,
+) -> dict[str, Any]:
+    """Hinge against contrast collapse on a scorer-domain tensor.
+
+    ``candidate`` and ``reference`` are same-domain channels-last tensors. The
+    reference is gradient-blocked; the loss only pushes the candidate out of
+    the flat-input basin until its per-sample/per-channel std reaches
+    ``min_ratio * reference_std``. Normalizing by ``reference_std`` keeps the
+    control scale-stable between RGB and YUV6.
+    """
+
+    mx = require_mlx_for_harness()
+    ref = mx.stop_gradient(reference)
+    cand_centered = candidate - mx.mean(candidate, axis=(1, 2), keepdims=True)
+    ref_centered = ref - mx.mean(ref, axis=(1, 2), keepdims=True)
+    cand_std = mx.sqrt(mx.mean(cand_centered * cand_centered, axis=(1, 2)) + 1.0e-12)
+    ref_std = mx.stop_gradient(
+        mx.sqrt(mx.mean(ref_centered * ref_centered, axis=(1, 2)) + 1.0e-12)
+    )
+    ratio = cand_std / mx.maximum(ref_std, 1.0e-6)
+    deficit = mx.maximum(float(min_ratio) - ratio, 0.0)
+    loss = mx.mean(deficit * deficit)
+    return {
+        "total": loss,
+        "mean_ratio": mx.mean(ratio),
+        "min_ratio": mx.min(ratio),
+        "target_min_ratio": mx.array(float(min_ratio), dtype=mx.float32),
+        "candidate_std": mx.mean(cand_std),
+        "reference_std": mx.mean(ref_std),
+    }
+
+
+def scorer_input_contrast_floor_loss(
+    bundle: RendererBundle,
+    rgb_0: Any,
+    rgb_1: Any,
+    gt_0: Any,
+    gt_1: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Return scorer-domain std-floor loss for SegNet RGB and PoseNet YUV6.
+
+    Upstream ``evaluate.py`` scores SegNet on only the last frame of each pair
+    and PoseNet on both frames after RGB->YUV6. This term is therefore scoped
+    to those exact input domains; it is not a human visual-fidelity proxy.
+    """
+
+    mx = require_mlx_for_harness()
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    segnet_parts = _std_floor_guard_parts(
+        rgb_1,
+        gt_1,
+        min_ratio=float(bundle.scorer_input_contrast_floor_segnet_min_std_ratio),
+    )
+    yuv0 = rgb_to_yuv6_mlx(rgb_0 * 255.0) / 255.0
+    yuv1 = rgb_to_yuv6_mlx(rgb_1 * 255.0) / 255.0
+    ref_yuv0 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_0 * 255.0) / 255.0)
+    ref_yuv1 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_1 * 255.0) / 255.0)
+    pose_parts = _std_floor_guard_parts(
+        mx.concatenate([yuv0, yuv1], axis=-1),
+        mx.concatenate([ref_yuv0, ref_yuv1], axis=-1),
+        min_ratio=float(
+            bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+        ),
+    )
+    total = segnet_parts["total"] + pose_parts["total"]
+    return total, {
+        "scorer_input_contrast_floor": total,
+        "scorer_input_contrast_floor_segnet_last_rgb": segnet_parts["total"],
+        "scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": (
+            segnet_parts["mean_ratio"]
+        ),
+        "scorer_input_contrast_floor_segnet_last_rgb_min_std_ratio": (
+            segnet_parts["min_ratio"]
+        ),
+        "scorer_input_contrast_floor_segnet_last_rgb_target_min_std_ratio": (
+            segnet_parts["target_min_ratio"]
+        ),
+        "scorer_input_contrast_floor_segnet_last_rgb_candidate_std": (
+            segnet_parts["candidate_std"]
+        ),
+        "scorer_input_contrast_floor_segnet_last_rgb_reference_std": (
+            segnet_parts["reference_std"]
+        ),
+        "scorer_input_contrast_floor_posenet_yuv6_pair": pose_parts["total"],
+        "scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": (
+            pose_parts["mean_ratio"]
+        ),
+        "scorer_input_contrast_floor_posenet_yuv6_pair_min_std_ratio": (
+            pose_parts["min_ratio"]
+        ),
+        "scorer_input_contrast_floor_posenet_yuv6_pair_target_min_std_ratio": (
+            pose_parts["target_min_ratio"]
+        ),
+        "scorer_input_contrast_floor_posenet_yuv6_pair_candidate_std": (
+            pose_parts["candidate_std"]
+        ),
+        "scorer_input_contrast_floor_posenet_yuv6_pair_reference_std": (
+            pose_parts["reference_std"]
+        ),
+    }
+
+
 def _segnet_argmax_surface_metrics(
     *,
     candidate_logits: Any,
@@ -688,6 +795,162 @@ def _segnet_argmax_surface_metrics(
     return metrics
 
 
+def _segnet_class_histogram_loss_and_metrics(
+    *,
+    bundle: RendererBundle,
+    candidate_logits: Any,
+    target_logits: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Match candidate class measure to the real SegNet target measure.
+
+    ``argmax_hinge`` prices per-pixel decision correctness.  The HiNeRV collapse
+    probes showed the missing orthogonal constraint: the candidate can remain
+    nearly one-class globally while the hinge improves.  This term is the
+    differentiable class-measure tether:
+
+    * target measure = stop-gradient hard argmax histogram from upstream SegNet;
+    * candidate measure = mean softmax mass over the live candidate logits;
+    * loss = cross-entropy ``H(target_hist, candidate_soft_hist)`` plus a
+      symmetric class-measure L1 term.
+
+    It is not a visual prior and not a proxy score claim.  It is a necessary
+    condition for low ``d_seg`` because a one-class candidate cannot match the
+    target argmax distribution unless the target is itself one-class.  The L1
+    component is deliberate: the first HiNeRV direct-live collapse probes showed
+    that asymmetric cross-entropy alone underprices overproduced classes while
+    the hard argmax surface remains collapsed.
+    """
+
+    mx = require_mlx_for_harness()
+    class_count = int(candidate_logits.shape[-1])
+    if class_count < 1:
+        raise ValueError("SegNet class histogram loss requires >=1 class")
+    target_idx = mx.argmax(target_logits, axis=-1)
+    eye = mx.eye(class_count, dtype=mx.float32)
+    target_one_hot = mx.take(eye, target_idx.reshape(-1), axis=0)
+    target_hist = mx.stop_gradient(mx.mean(target_one_hot, axis=0))
+    temperature = float(bundle.distillation_temperature)
+    if temperature <= 0.0:
+        raise ValueError(
+            "segnet class histogram loss requires positive "
+            f"distillation_temperature; got {temperature}"
+        )
+    logits = candidate_logits / temperature
+    logits = logits - mx.max(logits, axis=-1, keepdims=True)
+    exp_logits = mx.exp(logits)
+    candidate_probs = exp_logits / mx.sum(exp_logits, axis=-1, keepdims=True)
+    candidate_hist = mx.mean(candidate_probs.reshape(-1, class_count), axis=0)
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    candidate_hist_safe = mx.maximum(candidate_hist, eps)
+    cross_entropy = -mx.sum(target_hist * mx.log(candidate_hist_safe))
+    l1 = mx.sum(mx.abs(candidate_hist - target_hist))
+    loss = cross_entropy + l1
+    metrics: dict[str, Any] = {
+        "segnet_direct_live_class_histogram_loss": loss,
+        "segnet_direct_live_class_histogram_cross_entropy": cross_entropy,
+        "segnet_direct_live_class_histogram_l1": l1,
+    }
+    for class_index in range(class_count):
+        metrics[
+            f"segnet_direct_live_candidate_soft_class_{class_index}_fraction"
+        ] = candidate_hist[class_index]
+        metrics[
+            f"segnet_direct_live_target_hist_class_{class_index}_fraction"
+        ] = target_hist[class_index]
+    return loss, metrics
+
+
+def _segnet_class_balanced_hinge_loss_and_metrics(
+    *,
+    bundle: RendererBundle,
+    candidate_logits: Any,
+    target_logits: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Class-balanced bootstrap hinge for direct-live SegNet collapse escape."""
+
+    mx = require_mlx_for_harness()
+    from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+        _argmax_hinge_per_pixel,
+    )
+
+    class_count = int(candidate_logits.shape[-1])
+    target_idx = mx.argmax(target_logits, axis=-1)
+    hinge = _argmax_hinge_per_pixel(
+        candidate_logits,
+        target_logits,
+        margin=float(bundle.segnet_hinge_margin),
+    )
+    total = mx.array(0.0, dtype=mx.float32)
+    occupied = mx.array(0.0, dtype=mx.float32)
+    metrics: dict[str, Any] = {}
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    for class_index in range(class_count):
+        mask = (target_idx == class_index).astype(mx.float32)
+        mass = mx.sum(mask)
+        class_active = (mass > 0.0).astype(mx.float32)
+        class_loss = mx.sum(mask * hinge) / mx.maximum(mass, eps)
+        total = total + class_active * class_loss
+        occupied = occupied + class_active
+        metrics[
+            f"segnet_direct_live_class_balanced_hinge_class_{class_index}"
+        ] = class_loss
+    loss = total / mx.maximum(occupied, eps)
+    metrics["segnet_direct_live_class_balanced_hinge_loss"] = loss
+    metrics["segnet_direct_live_target_occupied_class_fraction"] = (
+        occupied / float(max(class_count, 1))
+    )
+    return loss, metrics
+
+
+def _segnet_class_balanced_ce_loss_and_metrics(
+    *,
+    candidate_logits: Any,
+    target_logits: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Class-balanced hard-target CE for direct-live SegNet collapse escape.
+
+    The contest term is hard argmax disagreement, so the target label is the
+    real SegNet argmax.  In the observed HiNeRV one-class basin, hinge and
+    histogram pressure moved soft mass but did not cross the hard class-2
+    decision surface.  Cross-entropy gives larger gradients when the true
+    target probability is crushed, while class balancing keeps minority target
+    labels visible instead of letting dominant pixels absorb the loss.
+    """
+
+    mx = require_mlx_for_harness()
+    class_count = int(candidate_logits.shape[-1])
+    if class_count < 1:
+        raise ValueError("SegNet class-balanced CE requires >=1 class")
+    target_idx = mx.argmax(target_logits, axis=-1)
+    logits = candidate_logits - mx.max(candidate_logits, axis=-1, keepdims=True)
+    log_probs = logits - mx.log(mx.sum(mx.exp(logits), axis=-1, keepdims=True))
+    target_log_prob = mx.squeeze(
+        mx.take_along_axis(log_probs, target_idx[..., None], axis=-1),
+        axis=-1,
+    )
+    per_pixel = -target_log_prob
+    total = mx.array(0.0, dtype=mx.float32)
+    occupied = mx.array(0.0, dtype=mx.float32)
+    metrics: dict[str, Any] = {}
+    eps = mx.array(1.0e-6, dtype=mx.float32)
+    for class_index in range(class_count):
+        mask = (target_idx == class_index).astype(mx.float32)
+        mass = mx.sum(mask)
+        class_active = (mass > 0.0).astype(mx.float32)
+        class_loss = mx.sum(mask * per_pixel) / mx.maximum(mass, eps)
+        total = total + class_active * class_loss
+        occupied = occupied + class_active
+        metrics[
+            f"segnet_direct_live_class_balanced_ce_class_{class_index}"
+        ] = class_loss
+    loss = total / mx.maximum(occupied, eps)
+    metrics["segnet_direct_live_class_balanced_ce_loss"] = loss
+    metrics["segnet_direct_live_class_balanced_ce_target_occupied_class_fraction"] = (
+        occupied / float(max(class_count, 1))
+    )
+    return loss, metrics
+
+
 def _direct_live_segnet_logit_distillation_loss_and_metrics(
     bundle: RendererBundle,
     seg_rgb_nhwc01: Any,
@@ -741,10 +1004,55 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
     else:
         loss = mx.mean((candidate_logits - target_logits) ** 2)
-    return loss, _segnet_argmax_surface_metrics(
+    metrics = _segnet_argmax_surface_metrics(
         candidate_logits=candidate_logits,
         target_logits=target_logits,
     )
+    hist_weight = float(bundle.segnet_direct_live_class_histogram_weight)
+    if hist_weight > 0.0:
+        hist_loss, hist_metrics = _segnet_class_histogram_loss_and_metrics(
+            bundle=bundle,
+            candidate_logits=candidate_logits,
+            target_logits=target_logits,
+        )
+        loss = loss + hist_weight * hist_loss
+        metrics.update(hist_metrics)
+        metrics["segnet_direct_live_class_histogram_weight"] = mx.array(
+            hist_weight,
+            dtype=mx.float32,
+        )
+    balanced_hinge_weight = float(
+        bundle.segnet_direct_live_class_balanced_hinge_weight
+    )
+    if balanced_hinge_weight > 0.0:
+        balanced_hinge, balanced_metrics = (
+            _segnet_class_balanced_hinge_loss_and_metrics(
+                bundle=bundle,
+                candidate_logits=candidate_logits,
+                target_logits=target_logits,
+            )
+        )
+        loss = loss + balanced_hinge_weight * balanced_hinge
+        metrics.update(balanced_metrics)
+        metrics["segnet_direct_live_class_balanced_hinge_weight"] = mx.array(
+            balanced_hinge_weight,
+            dtype=mx.float32,
+        )
+    balanced_ce_weight = float(bundle.segnet_direct_live_class_balanced_ce_weight)
+    if balanced_ce_weight > 0.0:
+        balanced_ce, balanced_ce_metrics = (
+            _segnet_class_balanced_ce_loss_and_metrics(
+                candidate_logits=candidate_logits,
+                target_logits=target_logits,
+            )
+        )
+        loss = loss + balanced_ce_weight * balanced_ce
+        metrics.update(balanced_ce_metrics)
+        metrics["segnet_direct_live_class_balanced_ce_weight"] = mx.array(
+            balanced_ce_weight,
+            dtype=mx.float32,
+        )
+    return loss, metrics
 
 
 def direct_live_segnet_logit_distillation_loss(
@@ -859,6 +1167,25 @@ def score_aware_loss(
             * guard
         )
         parts.update(guard_parts)
+
+    if (
+        bundle.scorer_input_contrast_floor_weight > 0.0
+        and scorer_input_guard_stage_weight != 0.0
+    ):
+        contrast_floor, contrast_floor_parts = scorer_input_contrast_floor_loss(
+            bundle,
+            rgb_0,
+            rgb_1,
+            gt_0,
+            gt_1,
+        )
+        total = (
+            total
+            + float(bundle.scorer_input_contrast_floor_weight)
+            * scorer_input_guard_stage_weight
+            * contrast_floor
+        )
+        parts.update(contrast_floor_parts)
 
     if bundle.distillation_weight > 0.0 and segnet_stage_weight != 0.0:
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (

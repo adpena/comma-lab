@@ -48,7 +48,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
-    assert report["launchable_local_row_count"] == 0
+    assert report["launchable_local_row_count"] == 2
     assert report["snerv_lf_over_ceiling_reroute_queue"]["schema"] == (
         "snerv_lf_over_ceiling_reroute_queue.v1"
     )
@@ -61,6 +61,20 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["source_parity_contract"]["schema"] == ("nerv_source_parity_contract.v1")
     assert report["source_parity_required_for_long_training_ready"] is True
     assert "snerv_official_mfu_hfr_tub_parity_missing" in report["source_parity_nonblocking_gaps"]
+    assert report["pr95_distortion_source_ready"] is True
+    assert report["pr95_distortion_practices_consumed_by_rows"] is True
+    assert report["pr95_distortion_practices_blockers"] == []
+    assert all(
+        row["pr95_distortion_practices_guard"]["launch_allowed"] is True
+        for row in report["campaign_rows"]
+    )
+    assert all(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "pr95_distortion_practices_consumed"
+        ]
+        is True
+        for row in report["campaign_rows"]
+    )
 
     hi_rows = [row for row in report["campaign_rows"] if row["family"] == "hi_nerv"]
     assert {row["optimizer_kind"] for row in hi_rows} == {"lion", "adafactor"}
@@ -130,8 +144,8 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         row["command_argv"][row["command_argv"].index("--telemetry-flush-interval-epochs") + 1] == "1"
         for row in hi_rows
     )
-    assert all(row["local_mlx_launch_command_ready"] is False for row in hi_rows)
-    assert all(row["local_mlx_executable"] is False for row in hi_rows)
+    assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
+    assert all(row["local_mlx_executable"] is True for row in hi_rows)
     assert all("--auto-joint-recon-pixel-weight" not in row["command_argv"] for row in hi_rows)
     assert all("--recon-pixel-weight-path" not in row["command_argv"] for row in hi_rows)
     assert all("requires_verified_joint_p18_p19_recon_pixel_weight_artifact" in row["blockers"] for row in hi_rows)
@@ -152,7 +166,21 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all(row["source_parity"]["required_blockers"] == [] for row in hi_rows)
     assert all(row["source_parity"]["score_claim"] is False for row in hi_rows)
     assert all("hi_nerv_byte_closed_archive_export_missing" in row["promotion_blockers"] for row in hi_rows)
-    assert all(row["experiment_queue_entry"]["status"] == "disabled" for row in hi_rows)
+    assert all(row["experiment_queue_entry"]["status"] == "queued" for row in hi_rows)
+    assert all(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "queue_launch_blockers"
+        ]
+        == []
+        for row in hi_rows
+    )
+    assert all(
+        row["experiment_queue_entry"]["launch_authority_contract"][
+            "pr95_distortion_practices_guard"
+        ]
+        == row["pr95_distortion_practices_guard"]
+        for row in hi_rows
+    )
     assert all(row["experiment_queue_entry"]["cpu_replay_ready"] is False for row in hi_rows)
     assert all(row["experiment_queue_entry"]["exact_gate_ready"] is False for row in hi_rows)
     hi_step = hi_rows[0]["experiment_queue_entry"]["steps"][0]
@@ -186,7 +214,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["implementation_status"] == "native_rate_aware_long_training_rate_blocked"
+    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
     assert snerv_row["hard_byte_ceiling_satisfied_for_long_training"] is False
     assert snerv_row["score_lowering_gate"]["command_materialized"] is False
     assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
@@ -196,6 +224,8 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
         in snerv_row["blockers"]
     )
+    assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
     assert (
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority"
         not in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
@@ -222,6 +252,9 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
     assert launch_contract["cpu_replay_ready"] is False
     assert launch_contract["exact_gate_ready"] is False
+    assert launch_contract["pr95_distortion_practices_guard"] == (
+        snerv_row["pr95_distortion_practices_guard"]
+    )
     assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" not in snerv_row["blockers"]
     assert snerv_row["execution_epochs"] == 29_650
     assert snerv_row["current_command_is_bounded_proof_not_long_training"] is False
@@ -469,6 +502,91 @@ def test_long_training_campaign_plan_binds_pr95_baseline_identity() -> None:
     assert "modal_dispatch_allowed: `False`" in markdown
     assert "paired_exact_eval_ready: `False`" in markdown
     assert "pr95_contest_cpu_exact_eval_missing" in markdown
+
+
+def test_long_training_campaign_plan_pr95_distortion_guard_blocks_queue_launch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert (
+        plan_module._experiment_launch_blockers(
+            ["requires_verified_joint_p18_p19_recon_pixel_weight_artifact"]
+        )
+        == []
+    )
+
+    def fake_source_inventory(_: object) -> dict:
+        return {
+            "schema": "pr95_distortion_source_inventory.v1",
+            "source_ready": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def fake_row_guard(
+        row: dict,
+        *,
+        repo_root: object,
+        source_inventory: dict | None = None,
+    ) -> dict:
+        family = str(row["family"])
+        blocker = (
+            f"{family}_pr95_distortion_"
+            "scorer_preprocess_eval_roundtrip_yuv6_missing"
+        )
+        return {
+            "schema": "pr95_distortion_practices_guard.v1",
+            "family": family,
+            "row_id": row.get("id"),
+            "required_for_family": True,
+            "source_inventory_schema": (source_inventory or {}).get("schema"),
+            "launch_allowed": False,
+            "practice_rows": [],
+            "blockers": [blocker],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(
+        plan_module,
+        "build_pr95_distortion_source_inventory",
+        fake_source_inventory,
+    )
+    monkeypatch.setattr(
+        plan_module,
+        "build_pr95_distortion_practices_row_guard",
+        fake_row_guard,
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        batch_pairs=8,
+        learning_rate=3.0e-4,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+    )
+
+    assert report["pr95_distortion_practices_consumed_by_rows"] is True
+    assert set(report["pr95_distortion_practices_blockers"]) == {
+        "hi_nerv_pr95_distortion_scorer_preprocess_eval_roundtrip_yuv6_missing",
+        "snerv_pr95_distortion_scorer_preprocess_eval_roundtrip_yuv6_missing",
+    }
+    for row in report["campaign_rows"]:
+        guard = row["pr95_distortion_practices_guard"]
+        blocker = guard["blockers"][0]
+        launch_contract = row["experiment_queue_entry"]["launch_authority_contract"]
+        assert guard["launch_allowed"] is False
+        assert blocker in row["blockers"]
+        assert blocker in launch_contract["queue_launch_blockers"]
+        assert launch_contract["pr95_distortion_practices_consumed"] is True
+        assert launch_contract["pr95_distortion_practices_guard"] == guard
+        assert row["experiment_queue_entry"]["blocked"] is True
 
 
 def test_long_training_campaign_plan_source_parity_required_blocker_disables_row(
@@ -756,8 +874,10 @@ def test_long_training_campaign_plan_executes_snerv_official_temporal_mode() -> 
     assert queue_command == snerv_row["command_argv"]
     assert queue_command[queue_command.index("--snerv-temporal-mode") + 1] == "official_haar_dwt1d_lowpass"
     assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["implementation_status"] == "native_rate_aware_long_training_rate_blocked"
+    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
     assert snerv_row["hard_byte_ceiling_satisfied_for_long_training"] is False
+    assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
     assert "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in snerv_row["blockers"]
 
 
@@ -1355,7 +1475,7 @@ def test_long_training_campaign_plan_consumes_snerv_header_minimization_result()
     reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
     rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
     result = rows_by_type["snar_header_minimization_result"]
-    assert report["launchable_local_row_count"] == 0
+    assert report["launchable_local_row_count"] == 1
     assert snerv["experiment_queue_entry"]["status"] == "disabled"
     assert reroute_queue["snar_header_minimization_report_count"] == 1
     assert result["blocked"] is True
@@ -1655,7 +1775,9 @@ def test_long_training_campaign_plan_refuses_far_over_ceiling_snerv_long_run() -
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["local_mlx_launch_command_ready"] is False
-    assert snerv_row["implementation_status"] == ("native_rate_aware_long_training_rate_blocked")
+    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
+    assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
     assert "snerv_nominal_payload_far_over_ceiling_refuse_long_training" in snerv_row["blockers"]
     assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
 
@@ -2453,8 +2575,9 @@ def test_long_training_campaign_plan_keeps_snerv_bounded_proof_explicit() -> Non
     assert report["snerv_bounded_proof_only"] is True
     assert snerv["execution_epochs"] == 5
     assert snerv["current_command_is_bounded_proof_not_long_training"] is True
-    assert snerv["implementation_status"] == "bounded_native_export_scorer_loop_stage_ready"
+    assert snerv["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
     assert snerv["command_argv"][snerv["command_argv"].index("--epochs") + 1] == "5"
+    assert "snerv_scorer_tether_smoke_report_missing" in snerv["blockers"]
     assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" in snerv["blockers"]
     assert snerv["curriculum_plan"]["training_plan"]["native_mlx_long_training_bound"] is False
 
@@ -3107,6 +3230,44 @@ def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
         ),
         encoding="utf-8",
     )
+    hinerv_refresh = (
+        tmp_path
+        / "hinerv_smoke"
+        / "hinerv_smoke_comparison_candidate_feedback_refresh.json"
+    )
+    hinerv_refresh.parent.mkdir()
+    hinerv_refresh.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_queue_training_feedback_refresh.v1",
+                "rows": [
+                    {
+                        "experiment_id": "hinerv_directlive_smoke",
+                        "step_id": "embedded_runner_candidate_feedback",
+                        "status": "harvested",
+                        "family": "hi_nerv",
+                        "candidate_id": "hinerv_tiny",
+                        "row": {
+                            "schema": "nerv_candidate_feedback_row.v1",
+                            "feedback_kind": "smoke_comparison_harvest",
+                            "family": "hi_nerv",
+                            "candidate_id": "hinerv_tiny",
+                            "measured_num_pairs": 600,
+                            "measured_archive_bytes": 121_000,
+                            "score_claim": False,
+                            "promotion_eligible": False,
+                            "ready_for_exact_eval_dispatch": False,
+                        },
+                    }
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
     ignored = tmp_path / "nested" / "not_candidate_feedback_row.json"
     ignored.write_text('{"schema":"other.v1"}', encoding="utf-8")
 
@@ -3114,6 +3275,7 @@ def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
 
     assert feedback.resolve(strict=False) in discovered
     assert telemetry_feedback.resolve(strict=False) in discovered
+    assert hinerv_refresh.resolve(strict=False) in discovered
     assert ignored.resolve(strict=False) not in discovered
 
 

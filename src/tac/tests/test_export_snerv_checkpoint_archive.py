@@ -295,7 +295,9 @@ def test_snerv_checkpoint_export_records_over_cap_measurement_feedback(
         encoding="utf-8",
     )
 
-    def fake_export_snerv_mlx_archive(*_args, **_kwargs):
+    def fake_export_snerv_mlx_archive(*_args, **kwargs):
+        assert kwargs["hard_byte_ceiling"] == 178_000
+        assert kwargs["allow_over_hard_byte_ceiling_for_measurement"] is True
         archive = tmp_path / "archive.zip"
         archive.write_bytes(b"x" * 214_187)
         return {

@@ -74,6 +74,7 @@ COMPONENT_GUARD_MODES: tuple[str, ...] = (
     "pose_hard",
     "pose_seg_hard",
 )
+BYTE_GROWTH_ADMISSION_MODES: tuple[str, ...] = ("hard_cap", "rate_paid")
 DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS: tuple[float, ...] = (0.5, 0.75, 1.25, 1.5, 2.0)
 ProgressCallback = Callable[["SnervDecoderEval"], None]
 
@@ -241,6 +242,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     byte_pressure_multiplier: float
     section_value_pressure_multiplier: float
     max_archive_byte_growth: int | None
+    byte_growth_admission_mode: str
     pose_slack: float
     seg_slack: float
     pair_guard_min_score_improved_fraction: float
@@ -341,6 +343,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     byte_pressure_multiplier: float = 1.0,
     section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
+    byte_growth_admission_mode: str = "hard_cap",
     pose_slack: float = 0.0,
     seg_slack: float = 0.0,
     pair_guard_min_score_improved_fraction: float = 0.0,
@@ -408,6 +411,9 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             "pair_guard_max_pose_worsened_fraction must be in [0, 1]"
         )
     component_mode = _validate_component_guard_mode(component_guard_mode)
+    byte_growth_mode = _validate_byte_growth_admission_mode(
+        byte_growth_admission_mode
+    )
     dynamic_range_gains = _normalize_dynamic_range_repair_gains(
         dynamic_range_repair_gains
     )
@@ -489,6 +495,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             byte_pressure_multiplier=byte_pressure_multiplier,
             section_value_pressure_multiplier=section_value_pressure_multiplier,
             max_archive_byte_growth=max_archive_byte_growth,
+            byte_growth_admission_mode=byte_growth_mode,
             pair_guard_min_score_improved_fraction=(
                 pair_guard_min_score_improved_fraction
             ),
@@ -521,6 +528,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                                     section_value_pressure_multiplier
                                 ),
                                 max_archive_byte_growth=max_archive_byte_growth,
+                                byte_growth_admission_mode=byte_growth_mode,
                                 pair_guard_min_score_improved_fraction=(
                                     pair_guard_min_score_improved_fraction
                                 ),
@@ -587,6 +595,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 byte_pressure_multiplier=byte_pressure_multiplier,
                 section_value_pressure_multiplier=section_value_pressure_multiplier,
                 max_archive_byte_growth=max_archive_byte_growth,
+                byte_growth_admission_mode=byte_growth_mode,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -602,6 +611,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 byte_pressure_multiplier=byte_pressure_multiplier,
                 section_value_pressure_multiplier=section_value_pressure_multiplier,
                 max_archive_byte_growth=max_archive_byte_growth,
+                byte_growth_admission_mode=byte_growth_mode,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -632,6 +642,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                                     max_archive_byte_growth=(
                                         max_archive_byte_growth
                                     ),
+                                    byte_growth_admission_mode=byte_growth_mode,
                                     pair_guard_min_score_improved_fraction=(
                                         pair_guard_min_score_improved_fraction
                                     ),
@@ -672,6 +683,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 byte_pressure_multiplier=byte_pressure_multiplier,
                 section_value_pressure_multiplier=section_value_pressure_multiplier,
                 max_archive_byte_growth=max_archive_byte_growth,
+                byte_growth_admission_mode=byte_growth_mode,
                 pair_guard_min_score_improved_fraction=(
                     pair_guard_min_score_improved_fraction
                 ),
@@ -698,6 +710,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                             section_value_pressure_multiplier
                         ),
                         max_archive_byte_growth=max_archive_byte_growth,
+                        byte_growth_admission_mode=byte_growth_mode,
                         pair_guard_min_score_improved_fraction=(
                             pair_guard_min_score_improved_fraction
                         ),
@@ -738,6 +751,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                     byte_pressure_multiplier=byte_pressure_multiplier,
                     section_value_pressure_multiplier=section_value_pressure_multiplier,
                     max_archive_byte_growth=max_archive_byte_growth,
+                    byte_growth_admission_mode=byte_growth_mode,
                     pair_guard_min_score_improved_fraction=(
                         pair_guard_min_score_improved_fraction
                     ),
@@ -764,6 +778,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                                 section_value_pressure_multiplier
                             ),
                             max_archive_byte_growth=max_archive_byte_growth,
+                            byte_growth_admission_mode=byte_growth_mode,
                             pair_guard_min_score_improved_fraction=(
                                 pair_guard_min_score_improved_fraction
                             ),
@@ -849,6 +864,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             if max_archive_byte_growth is None
             else int(max_archive_byte_growth)
         ),
+        byte_growth_admission_mode=byte_growth_mode,
         pose_slack=float(pose_slack),
         seg_slack=float(seg_slack),
         pair_guard_min_score_improved_fraction=float(
@@ -1022,6 +1038,7 @@ def decoder_trial_passes_pose_guard(
     byte_pressure_multiplier: float = 1.0,
     section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
+    byte_growth_admission_mode: str = "hard_cap",
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
     component_guard_mode: str = "score_primary",
@@ -1029,6 +1046,9 @@ def decoder_trial_passes_pose_guard(
     """Return whether a local decoder trial may replace the current best."""
 
     component_mode = _validate_component_guard_mode(component_guard_mode)
+    byte_growth_mode = _validate_byte_growth_admission_mode(
+        byte_growth_admission_mode
+    )
     if pose_slack < 0:
         raise SnervScorerLoopDecoderQatError("pose_slack must be >= 0")
     if seg_slack < 0:
@@ -1082,10 +1102,13 @@ def decoder_trial_passes_pose_guard(
             byte_pressure_multiplier=byte_pressure_multiplier,
             section_value_pressure_multiplier=section_value_pressure_multiplier,
         )
-        and (
-            max_archive_byte_growth is None
-            or candidate.archive_bytes
-            <= current_best.archive_bytes + int(max_archive_byte_growth)
+        and not _byte_growth_blockers(
+            candidate,
+            current_best,
+            max_archive_byte_growth=max_archive_byte_growth,
+            byte_growth_admission_mode=byte_growth_mode,
+            byte_pressure_multiplier=byte_pressure_multiplier,
+            section_value_pressure_multiplier=section_value_pressure_multiplier,
         )
         and not pair_guard_blockers
     )
@@ -1219,6 +1242,7 @@ def _trial_blockers(
     byte_pressure_multiplier: float = 1.0,
     section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
+    byte_growth_admission_mode: str = "hard_cap",
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
     component_guard_mode: str = "score_primary",
@@ -1254,12 +1278,16 @@ def _trial_blockers(
         section_value_pressure_multiplier=section_value_pressure_multiplier,
     ):
         blockers.append("rate_aware_score_gate_failed")
-    if (
-        max_archive_byte_growth is not None
-        and candidate.archive_bytes
-        > current_best.archive_bytes + int(max_archive_byte_growth)
-    ):
-        blockers.append("byte_growth_guard_failed")
+    blockers.extend(
+        _byte_growth_blockers(
+            candidate,
+            current_best,
+            max_archive_byte_growth=max_archive_byte_growth,
+            byte_growth_admission_mode=byte_growth_admission_mode,
+            byte_pressure_multiplier=byte_pressure_multiplier,
+            section_value_pressure_multiplier=section_value_pressure_multiplier,
+        )
+    )
     blockers.extend(
         _pair_guard_blockers(
             candidate,
@@ -1279,6 +1307,53 @@ def _validate_component_guard_mode(mode: str) -> str:
             f"component_guard_mode must be one of {COMPONENT_GUARD_MODES}"
         )
     return parsed
+
+
+def _validate_byte_growth_admission_mode(mode: str) -> str:
+    parsed = str(mode)
+    if parsed not in BYTE_GROWTH_ADMISSION_MODES:
+        raise SnervScorerLoopDecoderQatError(
+            f"byte_growth_admission_mode must be one of {BYTE_GROWTH_ADMISSION_MODES}"
+        )
+    return parsed
+
+
+def _byte_growth_blockers(
+    candidate: SnervDecoderEval,
+    current_best: SnervDecoderEval,
+    *,
+    max_archive_byte_growth: int | None,
+    byte_growth_admission_mode: str,
+    byte_pressure_multiplier: float,
+    section_value_pressure_multiplier: float,
+) -> tuple[str, ...]:
+    mode = _validate_byte_growth_admission_mode(byte_growth_admission_mode)
+    if max_archive_byte_growth is not None and max_archive_byte_growth < 0:
+        raise SnervScorerLoopDecoderQatError(
+            "max_archive_byte_growth must be >= 0 when provided"
+        )
+    if (
+        max_archive_byte_growth is None
+        or candidate.archive_bytes
+        <= current_best.archive_bytes + int(max_archive_byte_growth)
+    ):
+        return ()
+    if mode == "hard_cap":
+        return ("byte_growth_guard_failed",)
+    blockers: list[str] = []
+    if candidate.score_linf >= current_best.score_linf:
+        blockers.append("byte_growth_rate_paid_score_descent_missing")
+    if _rate_aware_eval_objective(
+        candidate,
+        byte_pressure_multiplier=byte_pressure_multiplier,
+        section_value_pressure_multiplier=section_value_pressure_multiplier,
+    ) >= _rate_aware_eval_objective(
+        current_best,
+        byte_pressure_multiplier=byte_pressure_multiplier,
+        section_value_pressure_multiplier=section_value_pressure_multiplier,
+    ):
+        blockers.append("byte_growth_rate_paid_objective_not_improved")
+    return tuple(blockers)
 
 
 def _pair_guard_blockers(
@@ -1328,6 +1403,7 @@ def _nes_pair_robust_objective(
     byte_pressure_multiplier: float = 1.0,
     section_value_pressure_multiplier: float = 1.0,
     max_archive_byte_growth: int | None = None,
+    byte_growth_admission_mode: str = "hard_cap",
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
 ) -> float:
@@ -1347,15 +1423,21 @@ def _nes_pair_robust_objective(
     penalty = 0.0
     if not candidate.receiver_archive_replay_verified:
         penalty += 1.0e9
-    if (
-        max_archive_byte_growth is not None
-        and candidate.archive_bytes
-        > current_best.archive_bytes + int(max_archive_byte_growth)
+    if _byte_growth_blockers(
+        candidate,
+        current_best,
+        max_archive_byte_growth=max_archive_byte_growth,
+        byte_growth_admission_mode=byte_growth_admission_mode,
+        byte_pressure_multiplier=byte_pressure_multiplier,
+        section_value_pressure_multiplier=section_value_pressure_multiplier,
     ):
         penalty += 1.0e6 * float(
-            candidate.archive_bytes
-            - current_best.archive_bytes
-            - int(max_archive_byte_growth)
+            max(
+                1,
+                candidate.archive_bytes
+                - current_best.archive_bytes
+                - int(max_archive_byte_growth or 0),
+            )
         )
     penalty += 1.0e6 * max(
         0.0,
@@ -2048,6 +2130,7 @@ def _sha256(blob: bytes) -> str:
 
 __all__ = [
     "AXIS_TAG",
+    "BYTE_GROWTH_ADMISSION_MODES",
     "COMPONENT_GUARD_MODES",
     "DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS",
     "SCHEMA",

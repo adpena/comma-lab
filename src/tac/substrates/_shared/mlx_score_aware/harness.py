@@ -91,6 +91,10 @@ def run_mlx_score_aware_full_main(
     ema_archive_selection_enabled: bool = False,
     checkpoint_selection_metric_key: str = "total",
     checkpoint_selection_metric_mode: str = "min",
+    checkpoint_selection_metric_required: bool = False,
+    checkpoint_selection_tie_break_metric_key: str = "",
+    checkpoint_selection_tie_break_metric_mode: str = "min",
+    checkpoint_selection_tie_break_metric_required: bool = False,
 ) -> Any:
     """Run the canonical MLX-first score-aware ``_full_main`` body.
 
@@ -205,6 +209,9 @@ def run_mlx_score_aware_full_main(
             ``LongTrainingConfig``. Compact carriers use this to keep archive
             export tied to direct scorer movement instead of aggregate guard or
             coder losses.
+        checkpoint_selection_metric_required: fail closed when the named
+            checkpoint metric is absent or malformed. Direct-live scorer runs
+            use this to prevent fallback-total exports from collapsed renderers.
 
     Returns:
         the canonical ``TrainingArtifact`` from ``run_long_training``.
@@ -316,6 +323,18 @@ def run_mlx_score_aware_full_main(
         ema_archive_selection_enabled=bool(ema_archive_selection_enabled),
         checkpoint_selection_metric_key=str(checkpoint_selection_metric_key),
         checkpoint_selection_metric_mode=str(checkpoint_selection_metric_mode),
+        checkpoint_selection_metric_required=bool(
+            checkpoint_selection_metric_required
+        ),
+        checkpoint_selection_tie_break_metric_key=str(
+            checkpoint_selection_tie_break_metric_key
+        ),
+        checkpoint_selection_tie_break_metric_mode=str(
+            checkpoint_selection_tie_break_metric_mode
+        ),
+        checkpoint_selection_tie_break_metric_required=bool(
+            checkpoint_selection_tie_break_metric_required
+        ),
         notes=(
             notes
             or (

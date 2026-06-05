@@ -40,9 +40,11 @@ from tools.run_compact_renderer_mlx_spine_runner import (  # noqa: E402
     COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
     CompactRendererMlxSpineRunnerError,
     _parse_args,
+    _pr95_long_campaign_prelaunch_blockers,
     _require_scorer_upstream_dir_for_distillation,
     _resolve_execute_modelsize_candidate,
     _resolve_source_video_path,
+    _validate_hi_nerv_frontier_training_config,
     adapt_pr95_mlx_report_to_spine,
     adapt_pr95_stage8_report_to_spine,
     build_plan_only_report,
@@ -87,6 +89,52 @@ def _passing_snerv_scorer_tether_smoke_report(*, steps: int = 2) -> dict[str, ob
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def test_hi_nerv_frontier_gate_counts_direct_live_segnet_as_real_teacher() -> None:
+    gate = _validate_hi_nerv_frontier_training_config(
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pose_distillation_weight=0.0,
+        allow_segnet_only_research=True,
+        allow_unscored_research_smoke=False,
+        score_aware_training_plan={},
+    )
+
+    assert gate["launch_allowed"] is True
+    assert gate["real_segnet_teacher_attached"] is True
+    assert gate["real_posenet_teacher_attached"] is False
+    assert gate["segnet_only_research_allowed"] is True
+    assert "hi_nerv_real_segnet_teacher_missing" not in gate["blockers"]
+    assert "hi_nerv_real_posenet_teacher_missing" in gate["blockers"]
+
+
+def test_hi_nerv_pr95_prelaunch_allows_explicit_segnet_only_research_probe() -> None:
+    plan = {
+        "long_campaign_prelaunch_gate": {
+            "launch_allowed": False,
+            "blockers": ["hi_nerv_real_posenet_teacher_missing"],
+        }
+    }
+
+    strict = _pr95_long_campaign_prelaunch_blockers(
+        plan,
+        epochs=8,
+        allow_segnet_only_research=False,
+        allow_unscored_research_smoke=False,
+    )
+    waived = _pr95_long_campaign_prelaunch_blockers(
+        plan,
+        epochs=8,
+        allow_segnet_only_research=True,
+        allow_unscored_research_smoke=False,
+    )
+
+    assert strict == [
+        "pr95_long_campaign_prelaunch_gate_failed",
+        "hi_nerv_real_posenet_teacher_missing",
+    ]
+    assert waived == []
 
 
 @pytest.fixture(autouse=True)
@@ -315,6 +363,22 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
                 },
                 "distance_to_reference": {"segnet_last_rgb_mae": 1.5},
             },
+            "distortion_crux_probe_path": (tmp_path / "crux.json").as_posix(),
+            "distortion_crux_probe": {
+                "schema": "nerv_scorer_input_distortion_crux.v1",
+                "fit_gate_passed": True,
+                "aggregate": {
+                    "dominant_domain_top_k": "posenet_yuv6_pair",
+                    "posenet_yuv6_pair_mae_255": {"mean": 2.25},
+                },
+                "hard_pair_coverage": {
+                    "schema": "nerv_hard_pair_coverage_evidence.v1",
+                    "score_axis_hard_pair_coverage": False,
+                    "coverage_valid_for_distortion": False,
+                    "prioritized_pair_indices": [2, 0],
+                    "hard_pair_count": 2,
+                },
+            },
             "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
         }
 
@@ -357,6 +421,45 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
     summary = runner_mod._hi_nerv_receiver_cache_quality_summary(report)
     assert summary["quality_gate_passed"] is True
     assert summary["candidate_posenet_yuv6_pair_stats"] == {"std": 3.0}
+    assert summary["distortion_crux_probe_passed"] is True
+    assert summary["distortion_crux_dominant_domain"] == "posenet_yuv6_pair"
+    assert summary["hard_pair_coverage"]["prioritized_pair_indices"] == [2, 0]
+    assert (
+        runner_mod._hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
+            report
+        )
+        is None
+    )
+
+
+def test_hinerv_runner_receiver_cache_quality_exposes_routable_crux_pairs() -> None:
+    report = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "distortion_crux_probe": {
+            "schema": "nerv_scorer_input_distortion_crux.v1",
+            "fit_gate_passed": False,
+            "hard_pair_coverage": {
+                "schema": "nerv_hard_pair_coverage_evidence.v1",
+                "score_axis_hard_pair_coverage": True,
+                "coverage_valid_for_distortion": True,
+                "representative_distortion_evidence": True,
+                "prioritized_pair_indices": [17, 4, 17],
+                "hard_pair_count": 2,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        },
+        "blockers": ["nerv_distortion_crux_posenet_yuv6_pair_mae_too_high"],
+    }
+
+    coverage = runner_mod._hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
+        report
+    )
+
+    assert coverage is not None
+    assert coverage["prioritized_pair_indices"] == [17, 4, 17]
+    assert coverage["score_claim"] is False
 
 
 def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
@@ -3212,6 +3315,15 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["bundle_scorer_input_distribution_guard_temperature"] = float(
             bundle.scorer_input_distribution_guard_temperature
         )
+        captured["bundle_scorer_input_contrast_floor_weight"] = float(
+            bundle.scorer_input_contrast_floor_weight
+        )
+        captured["bundle_scorer_input_contrast_floor_segnet_min_std_ratio"] = float(
+            bundle.scorer_input_contrast_floor_segnet_min_std_ratio
+        )
+        captured[
+            "bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
+        ] = float(bundle.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio)
         captured["run_prioritized_pair_indices"] = tuple(
             kwargs["prioritized_pair_indices"]
         )
@@ -3282,6 +3394,9 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         scorer_input_distribution_guard_weight=0.25,
         scorer_input_distribution_guard_saturation_margin=0.03,
         scorer_input_distribution_guard_temperature=0.02,
+        scorer_input_contrast_floor_weight=0.75,
+        scorer_input_contrast_floor_segnet_min_std_ratio=0.6,
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.4,
         distillation_device="cpu",
         requested_distillation_device=None,
         allow_segnet_only_research=False,
@@ -3330,6 +3445,15 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured[
         "bundle_scorer_input_distribution_guard_temperature"
     ] == pytest.approx(0.02)
+    assert captured["bundle_scorer_input_contrast_floor_weight"] == pytest.approx(
+        0.75
+    )
+    assert captured[
+        "bundle_scorer_input_contrast_floor_segnet_min_std_ratio"
+    ] == pytest.approx(0.6)
+    assert captured[
+        "bundle_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
+    ] == pytest.approx(0.4)
     assert captured["run_prioritized_pair_indices"] == (7, 2)
     assert captured["run_pr95_curriculum_total_epochs"] == 8
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
@@ -3355,6 +3479,16 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert guard["weight"] == pytest.approx(0.25)
     assert guard["saturation_margin"] == pytest.approx(0.03)
     assert guard["temperature"] == pytest.approx(0.02)
+    contrast = training["scorer_input_contrast_floor"]
+    assert contrast["enabled"] is True
+    assert contrast["bound_to_renderer_bundle"] is True
+    assert contrast["weight"] == pytest.approx(0.75)
+    assert contrast["segnet_last_rgb_min_std_ratio"] == pytest.approx(0.6)
+    assert contrast["posenet_yuv6_pair_min_std_ratio"] == pytest.approx(0.4)
+    assert contrast["domains"] == {
+        "segnet": "last_frame_rgb_after_eval_roundtrip",
+        "posenet": "two_frame_pr95_yuv6_after_eval_roundtrip",
+    }
     init_call = captured["output_head_target_bias_init_call"]
     assert init_call["target0_shape"] == (10, 384, 512, 3)
     assert init_call["target1_shape"] == (10, 384, 512, 3)
@@ -3825,7 +3959,7 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
         row["family"]
         for row in launchable_local_rows
     }
-    assert ready_families == {"snerv"}
+    assert "hi_nerv" in ready_families
     assert any(
         row["family"] == "hi_nerv"
         and "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"
@@ -3837,17 +3971,17 @@ def test_plan_only_report_keeps_all_compact_families_false_authority(
     ]
     assert snerv_campaign_rows
     assert all(
-        row["local_mlx_launch_command_ready"]
-        is row["hard_byte_ceiling_satisfied_for_long_training"]
+        (not row["local_mlx_launch_command_ready"])
+        or row["hard_byte_ceiling_satisfied_for_long_training"]
         for row in snerv_campaign_rows
     )
     assert all(
         row["score_lowering_gate"]["command_materialized"]
-        is row["hard_byte_ceiling_satisfied_for_long_training"]
+        is row["local_mlx_launch_command_ready"]
         and row["score_lowering_gate"]["local_mlx_executable"]
-        is row["hard_byte_ceiling_satisfied_for_long_training"]
+        is row["local_mlx_launch_command_ready"]
         and row["score_lowering_gate"]["prelaunch_allowed"]
-        is row["hard_byte_ceiling_satisfied_for_long_training"]
+        is row["local_mlx_launch_command_ready"]
         and row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
         and row["score_lowering_gate"]["cpu_replay_ready"] is False
         and row["score_lowering_gate"]["exact_gate_ready"] is False
@@ -5790,14 +5924,19 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert len(calls) == 1
     kw_names = {kw.arg for kw in calls[0].keywords if kw.arg is not None}
     assert "train_time_dual_ascent_config" in kw_names
+    assert "gradient_multiplier_by_name" in kw_names
     assert "bias_gradient_multiplier" in kw_names
     assert "output_head_bias_gradient_multiplier" in kw_names
     assert "checkpoint_selection_metric_key" in kw_names
     assert "checkpoint_selection_metric_mode" in kw_names
+    assert "checkpoint_selection_metric_required" in kw_names
     target_source = ast.get_source_segment(source, target_fn) or ""
+    assert "segnet_direct_live_class_histogram_weight" in target_source
+    assert "segnet_direct_live_class_balanced_hinge_weight" in target_source
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
     assert "build_hinerv_archive_section_qat_weight_policy" in target_source
     assert "loss_part_segnet_direct_live_argmax_disagreement" in target_source
+    assert "checkpoint_selection_metric_required" in target_source
     assert "archive_section_qat_policy = " in target_source
     assert "latent_qat_cfg = CoderAwareQATConfig" in target_source
     assert 'terms[f"latent_qat_{suffix}"] = value' in target_source
@@ -5861,6 +6000,7 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     args = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "1"])
 
     assert args.optimizer_kind == runner_mod.DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    assert args.gradient_multiplier_by_name == []
     assert args.bias_gradient_multiplier is None
     assert args.output_head_bias_gradient_multiplier == pytest.approx(1.0)
     assert (
@@ -5879,6 +6019,10 @@ def test_compact_runner_parser_accepts_hi_nerv_pr95_curriculum_total_epochs() ->
             "hi_nerv",
             "--epochs",
             "100",
+            "--gradient-multiplier-by-name",
+            "head_rgb_1.weight=4",
+            "--gradient-multiplier-by-name",
+            "blocks.6.conv.weight=2.5",
             "--bias-gradient-multiplier",
             "0.25",
             "--output-head-bias-gradient-multiplier",
@@ -5889,6 +6033,10 @@ def test_compact_runner_parser_accepts_hi_nerv_pr95_curriculum_total_epochs() ->
     )
 
     assert args.epochs == 100
+    assert dict(args.gradient_multiplier_by_name) == {
+        "head_rgb_1.weight": pytest.approx(4.0),
+        "blocks.6.conv.weight": pytest.approx(2.5),
+    }
     assert args.bias_gradient_multiplier == pytest.approx(0.25)
     assert args.output_head_bias_gradient_multiplier == pytest.approx(0.5)
     assert args.hi_nerv_pr95_curriculum_total_epochs == 29_650
@@ -6336,6 +6484,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.03125",
             "--scorer-input-distribution-guard-temperature",
             "0.015625",
+            "--scorer-input-contrast-floor-weight",
+            "0.375",
+            "--scorer-input-contrast-floor-segnet-min-std-ratio",
+            "0.625",
+            "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+            "0.75",
             "--mlx-prefilter-scorer-batch-pairs",
             "8",
             "--mlx-prefilter-scorer-device",
@@ -6442,6 +6596,12 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "0.04",
             "--scorer-input-distribution-guard-temperature",
             "0.02",
+            "--scorer-input-contrast-floor-weight",
+            "0.875",
+            "--scorer-input-contrast-floor-segnet-min-std-ratio",
+            "0.55",
+            "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+            "0.45",
             "--snerv-score-aware-long-training-pr95-muon-policy",
             "every_stage",
         ]
@@ -6466,6 +6626,13 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
         0.03125
     )
     assert hi.scorer_input_distribution_guard_temperature == pytest.approx(0.015625)
+    assert hi.scorer_input_contrast_floor_weight == pytest.approx(0.375)
+    assert hi.scorer_input_contrast_floor_segnet_min_std_ratio == pytest.approx(
+        0.625
+    )
+    assert hi.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio == pytest.approx(
+        0.75
+    )
     assert hi.mlx_prefilter_scorer_batch_pairs == 8
     assert hi.mlx_prefilter_scorer_device == "gpu"
     assert hi.mlx_prefilter_progress_every == 10
@@ -6520,6 +6687,11 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.scorer_input_distribution_guard_weight == pytest.approx(0.5)
     assert sn.scorer_input_distribution_guard_saturation_margin == pytest.approx(0.04)
     assert sn.scorer_input_distribution_guard_temperature == pytest.approx(0.02)
+    assert sn.scorer_input_contrast_floor_weight == pytest.approx(0.875)
+    assert sn.scorer_input_contrast_floor_segnet_min_std_ratio == pytest.approx(0.55)
+    assert sn.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio == pytest.approx(
+        0.45
+    )
     assert sn.snerv_score_aware_long_training_pr95_muon_policy == "every_stage"
 
 
@@ -6671,12 +6843,20 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
             "--allow-manual-compact-family-launch",
             "--segnet-direct-live-distillation-weight",
             "0.25",
+            "--segnet-direct-live-class-histogram-weight",
+            "0.5",
+            "--segnet-direct-live-class-balanced-hinge-weight",
+            "0.75",
             "--allow-segnet-only-research",
         ]
     )
 
     assert rc == 0
     assert captured["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
+    assert captured["segnet_direct_live_class_histogram_weight"] == pytest.approx(0.5)
+    assert captured["segnet_direct_live_class_balanced_hinge_weight"] == pytest.approx(
+        0.75
+    )
     assert json.loads(capsys.readouterr().out)["ready_for_exact_eval_dispatch"] is False
 
 
@@ -9980,6 +10160,60 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     ]
 
 
+def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_direct_live_joint_teacher",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=1.0,
+        segnet_distillation_objective="argmax_hinge",
+        pose_distillation_weight=0.01,
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=0.05,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["segnet_distillation_weight"] == 0.0
+    assert captured_train_kwargs["segnet_direct_live_distillation_weight"] == 1.0
+    assert captured_train_kwargs["pose_distillation_weight"] == pytest.approx(0.01)
+    gate = out["score_aware_training_config_gate"]
+    assert gate["frontier_targeting"] is True
+    assert gate["real_segnet_teacher_attached"] is True
+    assert gate["real_posenet_teacher_attached"] is True
+    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
+        "blockers"
+    ]
+
+
 def test_hinerv_modelsize_launch_preserves_explicit_segnet_only_research(
     tmp_path: Path,
     monkeypatch,
@@ -10786,6 +11020,36 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                         or 0.0
                     ),
                 },
+                "scorer_input_contrast_floor": {
+                    "schema": "snerv_mlx_score_aware_scorer_input_contrast_floor.v1",
+                    "enabled": bool(
+                        float(
+                            kwargs.get(
+                                "score_aware_long_training_scorer_input_contrast_floor_weight"
+                            )
+                            or 0.0
+                        )
+                        > 0.0
+                    ),
+                    "weight": float(
+                        kwargs.get(
+                            "score_aware_long_training_scorer_input_contrast_floor_weight"
+                        )
+                        or 0.0
+                    ),
+                    "segnet_last_rgb_min_std_ratio": float(
+                        kwargs.get(
+                            "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio"
+                        )
+                        or 0.0
+                    ),
+                    "posenet_yuv6_pair_min_std_ratio": float(
+                        kwargs.get(
+                            "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
+                        )
+                        or 0.0
+                    ),
+                },
                 "has_real_segnet_teacher": real_teachers_bound,
                 "has_real_posenet_teacher": real_teachers_bound,
                 "teacher_binding": {
@@ -11008,6 +11272,9 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         scorer_input_distribution_guard_weight=0.375,
         scorer_input_distribution_guard_saturation_margin=0.03125,
         scorer_input_distribution_guard_temperature=0.015625,
+        scorer_input_contrast_floor_weight=0.875,
+        scorer_input_contrast_floor_segnet_min_std_ratio=0.55,
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.45,
         snerv_official_skip_high_mode_override="shared_mean",
         segnet_distillation_weight=0.025,
         pose_distillation_weight=0.0025,
@@ -11059,6 +11326,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0][
         "score_aware_long_training_scorer_input_distribution_guard_temperature"
     ] == pytest.approx(0.015625)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_input_contrast_floor_weight"
+    ] == pytest.approx(0.875)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio"
+    ] == pytest.approx(0.55)
+    assert native_calls[0][
+        "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
+    ] == pytest.approx(0.45)
     assert native_calls[0]["segnet_distillation_weight"] == pytest.approx(0.025)
     assert native_calls[0]["pose_distillation_weight"] == pytest.approx(0.0025)
     assert native_calls[0]["pose_distillation_loss"] == "huber"
@@ -11105,6 +11381,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native_calls[0]["modelsize_candidate"][
         "snerv_score_aware_long_training_scorer_input_distribution_guard_temperature"
     ] == pytest.approx(0.015625)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_input_contrast_floor_weight"
+    ] == pytest.approx(0.875)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio"
+    ] == pytest.approx(0.55)
+    assert native_calls[0]["modelsize_candidate"][
+        "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
+    ] == pytest.approx(0.45)
     assert Path(native_calls[0]["recon_pixel_weight_path"]) == recon_weight_path
     assert (
         Path(native_calls[0]["recon_pixel_weight_manifest_path"])

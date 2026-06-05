@@ -73,6 +73,10 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
+class ScoreExactSaliencyError(RuntimeError):
+    """Raised when score-exact saliency cannot be produced faithfully."""
+
+
 # ---------------------------------------------------------------------------
 # Canonical scorer loading + real-frame decode (consolidated from the verified
 # mirror harness tools/verify_upstream_scorer_mirror_fidelity.py).
@@ -89,6 +93,7 @@ def load_score_exact_scorers(
     upstream_dir: str | Path = "upstream",
     *,
     device: torch.device | str = "cpu",
+    verify_posenet_yuv6_gradient: bool = True,
 ) -> tuple[torch.nn.Module, torch.nn.Module]:
     """Load frozen upstream PoseNet+SegNet and make them differentiable.
 
@@ -119,7 +124,148 @@ def load_score_exact_scorers(
     from tac.scorer import make_scorers_differentiable
 
     make_scorers_differentiable(dn.posenet, dn.segnet)
+    if verify_posenet_yuv6_gradient:
+        assert_posenet_yuv6_gradient_reachable(dn.posenet)
     return dn.posenet, dn.segnet
+
+
+@dataclass(frozen=True)
+class PoseYuv6GradientReachabilityProof:
+    """Cheap proof that PoseNet's YUV6 preprocess remains gradient-reachable."""
+
+    schema: str
+    gradient_reachable: bool
+    input_shape: tuple[int, ...]
+    yuv6_shape: tuple[int, ...] | None
+    grad_abs_sum: float
+    grad_nonzero_fraction: float
+    blockers: tuple[str, ...]
+    score_claim: bool = False
+    promotion_eligible: bool = False
+    ready_for_exact_eval_dispatch: bool = False
+
+    def as_jsonable(self) -> dict[str, Any]:
+        return {
+            "schema": self.schema,
+            "gradient_reachable": self.gradient_reachable,
+            "input_shape": list(self.input_shape),
+            "yuv6_shape": None if self.yuv6_shape is None else list(self.yuv6_shape),
+            "grad_abs_sum": self.grad_abs_sum,
+            "grad_nonzero_fraction": self.grad_nonzero_fraction,
+            "blockers": list(self.blockers),
+            "score_claim": self.score_claim,
+            "promotion_eligible": self.promotion_eligible,
+            "ready_for_exact_eval_dispatch": self.ready_for_exact_eval_dispatch,
+        }
+
+
+def probe_posenet_yuv6_gradient_reachability(
+    posenet: torch.nn.Module,
+    *,
+    input_hw: tuple[int, int] = (8, 10),
+    min_grad_abs_sum: float = 1.0e-9,
+    min_grad_nonzero_fraction: float = 0.01,
+) -> PoseYuv6GradientReachabilityProof:
+    """Probe PoseNet preprocessing for the PR95 YUV6 no-grad bug class.
+
+    Upstream ``PoseNet.preprocess_input`` routes through
+    ``frame_utils.rgb_to_yuv6``, which is ``@torch.no_grad`` and severs the
+    PoseNet training signal. The score-exact saliency loader patches that
+    method; this probe makes the patch consumed and fail-closed before SNeRV
+    scorer-loop or P19 Fisher consumers can mistake a detached YUV6 surface for
+    useful distortion guidance.
+    """
+
+    h, w = input_hw
+    blockers: list[str] = []
+    if h < 2 or w < 2 or h % 2 or w % 2:
+        raise ValueError("input_hw must contain even dimensions >= 2")
+    if min_grad_abs_sum < 0.0:
+        raise ValueError("min_grad_abs_sum must be non-negative")
+    if not 0.0 <= min_grad_nonzero_fraction <= 1.0:
+        raise ValueError("min_grad_nonzero_fraction must be in [0, 1]")
+
+    device = _module_device(posenet)
+    rgb = torch.linspace(
+        32.0,
+        223.0,
+        steps=1 * 2 * 3 * h * w,
+        dtype=torch.float32,
+        device=device,
+    ).reshape(1, 2, 3, h, w)
+    rgb.requires_grad_(True)
+    yuv6_shape: tuple[int, ...] | None = None
+    grad_abs_sum = 0.0
+    grad_nonzero_fraction = 0.0
+    try:
+        yuv6 = posenet.preprocess_input(rgb)
+        yuv6_shape = tuple(int(v) for v in yuv6.shape)
+        if not yuv6.requires_grad:
+            blockers.append("posenet_yuv6_preprocess_output_detached")
+        else:
+            loss = yuv6.square().mean()
+            if not loss.requires_grad:
+                blockers.append("posenet_yuv6_probe_loss_detached")
+            else:
+                grad = torch.autograd.grad(
+                    loss,
+                    rgb,
+                    allow_unused=True,
+                    retain_graph=False,
+                    create_graph=False,
+                )[0]
+                if grad is None:
+                    blockers.append("posenet_yuv6_preprocess_input_gradient_missing")
+                else:
+                    finite = bool(torch.isfinite(grad).all().item())
+                    if not finite:
+                        blockers.append("posenet_yuv6_preprocess_gradient_nonfinite")
+                    grad_abs_sum = float(grad.abs().sum().detach().cpu().item())
+                    grad_nonzero_fraction = float(
+                        (grad.abs() > 0).float().mean().detach().cpu().item()
+                    )
+    except Exception as exc:
+        blockers.append("posenet_yuv6_gradient_probe_exception")
+        blockers.append(_safe_blocker_text(str(exc)))
+
+    if grad_abs_sum <= min_grad_abs_sum:
+        blockers.append("posenet_yuv6_preprocess_gradient_abs_sum_too_small")
+    if grad_nonzero_fraction < min_grad_nonzero_fraction:
+        blockers.append("posenet_yuv6_preprocess_gradient_nonzero_fraction_too_small")
+
+    deduped = tuple(dict.fromkeys(blockers))
+    return PoseYuv6GradientReachabilityProof(
+        schema="posenet_yuv6_gradient_reachability_proof.v1",
+        gradient_reachable=not deduped,
+        input_shape=tuple(int(v) for v in rgb.shape),
+        yuv6_shape=yuv6_shape,
+        grad_abs_sum=grad_abs_sum,
+        grad_nonzero_fraction=grad_nonzero_fraction,
+        blockers=deduped,
+    )
+
+
+def assert_posenet_yuv6_gradient_reachable(
+    posenet: torch.nn.Module,
+    *,
+    input_hw: tuple[int, int] = (8, 10),
+    min_grad_abs_sum: float = 1.0e-9,
+    min_grad_nonzero_fraction: float = 0.01,
+) -> PoseYuv6GradientReachabilityProof:
+    """Return the reachability proof or fail closed with explicit blockers."""
+
+    proof = probe_posenet_yuv6_gradient_reachability(
+        posenet,
+        input_hw=input_hw,
+        min_grad_abs_sum=min_grad_abs_sum,
+        min_grad_nonzero_fraction=min_grad_nonzero_fraction,
+    )
+    if not proof.gradient_reachable:
+        blockers = ", ".join(proof.blockers)
+        raise ScoreExactSaliencyError(
+            f"PoseNet YUV6 preprocess gradient is not reachable: {blockers}"
+        )
+    return proof
 
 
 def decode_real_pairs(
@@ -769,6 +915,23 @@ def profile_producer(
 # ---------------------------------------------------------------------------
 
 
+def _module_device(module: torch.nn.Module) -> torch.device:
+    for param in module.parameters(recurse=True):
+        return param.device
+    for buffer in module.buffers(recurse=True):
+        return buffer.device
+    return torch.device("cpu")
+
+
+def _safe_blocker_text(text: str) -> str:
+    return (
+        text.replace("\n", " ")
+        .replace("\r", " ")
+        .replace("\t", " ")
+        .strip()[:200]
+    )
+
+
 def _as_single_pair(pair_btchw: torch.Tensor) -> torch.Tensor:
     """Coerce input to a single-pair (1, 2, 3, H, W) tensor."""
     if pair_btchw.dim() == 4:  # (2, 3, H, W)
@@ -784,14 +947,18 @@ def _as_single_pair(pair_btchw: torch.Tensor) -> torch.Tensor:
 
 __all__ = [
     "PoseFisher",
+    "PoseYuv6GradientReachabilityProof",
     "ProducerProfile",
     "SaliencyConcentration",
+    "ScoreExactSaliencyError",
     "SegFlipRisk",
+    "assert_posenet_yuv6_gradient_reachable",
     "build_producer_provenance",
     "compute_s_pose_fisher",
     "compute_s_seg_flip_risk",
     "decode_real_pairs",
     "load_score_exact_scorers",
+    "probe_posenet_yuv6_gradient_reachability",
     "profile_producer",
     "saliency_concentration",
     "stream_real_pairs",

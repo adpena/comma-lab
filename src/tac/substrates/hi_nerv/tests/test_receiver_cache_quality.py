@@ -13,6 +13,7 @@ from tac.repo_io import sha256_file
 from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hi_nerv.receiver_cache_quality import (
+    HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA,
     HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA,
     HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
     build_hi_nerv_receiver_cache_segnet_argmax_probe,
@@ -85,6 +86,13 @@ def test_hi_nerv_receiver_cache_quality_attaches_gate_against_reference(
     assert report["quality_gate"]["schema"] == "mlx_cache_quality_gate.v1"
     assert report["quality_gate"]["verdict"] == "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
     assert report["quality_gate_passed"] is True
+    assert report["distortion_crux_probe"]["schema"] == (
+        HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA
+    )
+    assert report["distortion_crux_probe"]["fit_gate_passed"] is True
+    assert report["distortion_crux_probe"]["hard_pair_rows"][0]["pair_index"] == 0
+    assert report["hard_pair_coverage"]["score_axis_hard_pair_coverage"] is False
+    assert Path(report["distortion_crux_probe_path"]).is_file()
     assert report["score_claim"] is False
     assert Path(report["quality_gate_path"]).is_file()
 

@@ -42,6 +42,8 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
             "1.75",
             "--max-archive-byte-growth",
             "128",
+            "--byte-growth-admission-mode",
+            "rate_paid",
             "--pose-slack",
             "0.01",
             "--seg-slack",
@@ -63,6 +65,8 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
             "official_haar_dwt1d_lowpass",
             "--snerv-scorer-loop-lf-payload-codec",
             "auto",
+            "--dynamic-range-repair-gains",
+            "auto",
             "--snerv-native-mlx-decoder-train-steps",
             "5",
             "--snerv-native-mlx-decoder-train-lr",
@@ -82,6 +86,7 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
     assert kwargs["byte_pressure_multiplier"] == pytest.approx(2.5)
     assert kwargs["section_value_pressure_multiplier"] == pytest.approx(1.75)
     assert kwargs["max_archive_byte_growth"] == 128
+    assert kwargs["byte_growth_admission_mode"] == "rate_paid"
     assert kwargs["pose_slack"] == pytest.approx(0.01)
     assert kwargs["seg_slack"] == pytest.approx(0.02)
     assert kwargs["component_guard_mode"] == "pose_seg_hard"
@@ -93,6 +98,9 @@ def test_snerv_scorer_loop_trainer_maps_kwargs() -> None:
     assert kwargs["snerv_temporal_context"] == 1
     assert kwargs["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert kwargs["lf_payload_codec"] == "auto"
+    assert kwargs["dynamic_range_repair_gains"] == (
+        trainer.DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS
+    )
     controls = trainer._native_mlx_decoder_training_controls(args)
     assert controls["requested_steps"] == 5
     assert controls["learning_rate"] == pytest.approx(0.0008)
@@ -175,8 +183,50 @@ def test_snerv_scorer_loop_trainer_builds_false_authority_report(
     assert report["accepted_improvement"] is True
     assert "paired_contest_cpu_cuda_pass_missing" in report["blockers"]
     assert "official_snerv_mfu_hfr_tub_parity_not_proven" in report["blockers"]
+    assert (
+        "snerv_pose_guard_gate_missing_posenet_yuv6_gradient_reachability_proof"
+        in report["blockers"]
+    )
+    assert report["distortion_contract"]["segnet_domain"] == (
+        "last_frame_only_x[:, -1, ...]_at_384x512"
+    )
+    assert report["distortion_contract"]["posenet_domain"] == (
+        "two_frame_pair_through_12ch_yuv6_at_384x512"
+    )
+    assert report["distortion_contract"]["posenet_yuv6_gradient_proof_present"] is False
     markdown = trainer.render_snerv_scorer_loop_local_markdown(report)
     assert "SNeRV scorer-loop QAT local trainer" in markdown
+    assert "PoseNet YUV6 gradient proof present" in markdown
+
+
+def test_snerv_scorer_loop_distortion_contract_accepts_reachable_yuv6_proof() -> None:
+    payload = _FakeResultWithYuv6Proof().as_jsonable()
+
+    contract = trainer._distortion_contract_from_result_payload(payload)
+
+    assert contract["pose_guard_gate_requested"] is True
+    assert contract["posenet_yuv6_gradient_proof_present"] is True
+    assert contract["posenet_yuv6_gradient_reachable"] is True
+    assert contract["blockers"] == []
+    assert contract["posenet_yuv6_gradient_reachability"]["schema"] == (
+        "posenet_yuv6_gradient_reachability_proof.v1"
+    )
+    assert contract["score_claim"] is False
+    assert contract["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_scorer_loop_distortion_contract_blocks_detached_yuv6_proof() -> None:
+    payload = _FakeResultWithYuv6Proof(gradient_reachable=False).as_jsonable()
+
+    contract = trainer._distortion_contract_from_result_payload(payload)
+
+    assert contract["posenet_yuv6_gradient_proof_present"] is True
+    assert contract["posenet_yuv6_gradient_reachable"] is False
+    assert (
+        "snerv_pose_guard_gate_posenet_yuv6_gradient_not_reachable"
+        in contract["blockers"]
+    )
+    assert "posenet_yuv6_preprocess_output_detached" in contract["blockers"]
 
 
 def test_snerv_scorer_loop_trainer_cli_writes_reports(
@@ -225,6 +275,10 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
             "6",
             "--snerv-native-mlx-decoder-train-lr",
             "0.0009",
+            "--byte-growth-admission-mode",
+            "rate_paid",
+            "--dynamic-range-repair-gains",
+            "1.5,2.0",
         ]
     )
 
@@ -239,6 +293,8 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert calls["snerv_temporal_mode"] == "official_haar_dwt1d_lowpass"
     assert calls["lf_payload_codec"] == "auto"
     assert calls["component_guard_mode"] == "score_primary"
+    assert calls["byte_growth_admission_mode"] == "rate_paid"
+    assert calls["dynamic_range_repair_gains"] == (1.5, 2.0)
     payload = json.loads(research_json.read_text(encoding="utf-8"))
     assert payload["schema"] == trainer.TRAINER_SCHEMA
     assert payload["score_claim"] is False
@@ -316,3 +372,27 @@ class _FakeResult:
             "rank_or_kill_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         }
+
+
+class _FakeResultWithYuv6Proof(_FakeResult):
+    def __init__(self, *, gradient_reachable: bool = True) -> None:
+        self._gradient_reachable = gradient_reachable
+
+    def as_jsonable(self) -> dict[str, Any]:
+        payload = super().as_jsonable()
+        blockers = [] if self._gradient_reachable else [
+            "posenet_yuv6_preprocess_output_detached"
+        ]
+        payload["posenet_yuv6_gradient_reachability"] = {
+            "schema": "posenet_yuv6_gradient_reachability_proof.v1",
+            "gradient_reachable": self._gradient_reachable,
+            "input_shape": [1, 2, 3, 8, 10],
+            "yuv6_shape": [1, 12, 8, 10],
+            "grad_abs_sum": 0.5 if self._gradient_reachable else 0.0,
+            "grad_nonzero_fraction": 0.2 if self._gradient_reachable else 0.0,
+            "blockers": blockers,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        return payload
