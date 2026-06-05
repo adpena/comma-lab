@@ -8317,6 +8317,64 @@ def test_hinerv_trained_archive_byte_oracle_blocks_receiver_class_collapse(
     assert "hi_nerv_receiver_cache_segnet_argmax_class_collapse" in oracle["blockers"]
 
 
+def test_hinerv_trained_archive_byte_oracle_blocks_numeric_receiver_class_collapse(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"x" * 64)
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_receiver_proof.v1",
+                "receiver_archive_replay_verified": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    oracle = runner_mod._write_hi_nerv_trained_archive_byte_oracle(
+        output_dir=tmp_path,
+        artifact_dict={
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": archive_sha,
+        },
+        modelsize_candidate={
+            "candidate_id": "hi_nerv_oracle_numeric_collapsed",
+            "modelsize_mparams": 0.02,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 16,
+        },
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        receiver_proof_path=proof,
+        local_cpu_replay_summary={
+            "axis_tag": "[contest-CPU]",
+            "score_claim": False,
+            "blockers": [],
+        },
+        mlx_prefilter_coverage={"has_full_video_mlx_prefilter": True},
+        post_export_receiver_cache_quality_summary={
+            "schema": "hi_nerv_receiver_cache_quality_summary.v1",
+            "quality_gate_passed": True,
+            "segnet_candidate_occupied_class_fraction": 0.2,
+            "segnet_reference_occupied_class_fraction": 1.0,
+            "blockers": [],
+        },
+        repo_root=REPO_ROOT,
+    )
+
+    assert oracle["row"]["post_export_receiver_cache_quality_feedback_ready"] is False
+    assert oracle["feedback_ready"] is False
+    assert (
+        "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse_numeric"
+        in oracle["blockers"]
+    )
+
+
 def test_measured_archive_byte_cap_report_allows_selected_looser_ceiling() -> None:
     report = runner_mod._measured_archive_byte_cap_report(
         archive_bytes=240_000,

@@ -12342,6 +12342,7 @@ def _write_hi_nerv_trained_archive_byte_oracle(
     )
     receiver_quality_blockers: list[str] = []
     receiver_quality_feedback_ready = False
+    receiver_quality_numeric_class_collapse = False
     if isinstance(post_export_receiver_cache_quality_summary, Mapping):
         receiver_quality_blockers = [
             str(blocker)
@@ -12349,11 +12350,19 @@ def _write_hi_nerv_trained_archive_byte_oracle(
                 post_export_receiver_cache_quality_summary.get("blockers") or []
             )
         ]
+        receiver_quality_numeric_class_collapse = (
+            _hi_nerv_receiver_cache_quality_numeric_class_collapse(
+                post_export_receiver_cache_quality_summary
+            )
+        )
         receiver_quality_feedback_ready = bool(
             post_export_receiver_cache_quality_summary.get("quality_gate_passed")
-        ) and not any(
-            "argmax_class_collapse" in blocker
-            for blocker in receiver_quality_blockers
+        ) and not (
+            receiver_quality_numeric_class_collapse
+            or any(
+                "argmax_class_collapse" in blocker
+                for blocker in receiver_quality_blockers
+            )
         )
     row: dict[str, Any] = {
         "schema": "hi_nerv_trained_archive_byte_oracle_row.v1",
@@ -12438,6 +12447,10 @@ def _write_hi_nerv_trained_archive_byte_oracle(
             blockers.append(
                 "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse"
             )
+        if receiver_quality_numeric_class_collapse:
+            blockers.append(
+                "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse_numeric"
+            )
         blockers.extend(receiver_quality_blockers)
     else:
         blockers.append(
@@ -12486,6 +12499,27 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         "receiver_closed_modelsize_ladder_sha256": _sha256_file(ladder_path),
         "receiver_closed_modelsize_ladder": ladder,
     }
+
+
+def _hi_nerv_receiver_cache_quality_numeric_class_collapse(
+    summary: Mapping[str, Any],
+    *,
+    min_material_occupied_fraction: float = 0.400001,
+) -> bool:
+    candidate_fraction = _compact_finite_float_from_keys(
+        summary,
+        ("segnet_candidate_occupied_class_fraction",),
+    )
+    reference_fraction = _compact_finite_float_from_keys(
+        summary,
+        ("segnet_reference_occupied_class_fraction",),
+    )
+    if candidate_fraction is None or reference_fraction is None:
+        return False
+    return (
+        float(candidate_fraction) < float(min_material_occupied_fraction)
+        and float(reference_fraction) >= float(min_material_occupied_fraction)
+    )
 
 
 def _measured_archive_byte_cap_report(
