@@ -362,7 +362,8 @@ def test_pose_distill_composes_real_pose_teacher_and_head() -> None:
     total, parts = score_aware_loss(bundle, mx.array([0, 1]))
     assert _scalar(parts["recon"]) < 1e-10
     assert _scalar(parts["pose_distill"]) == pytest.approx(1.0)
-    assert _scalar(total) == pytest.approx(2.0)
+    assert _scalar(parts["pose_score_term"]) == pytest.approx(10.0**0.5)
+    assert _scalar(total) == pytest.approx(2.0 * (10.0**0.5))
     assert head.seen_means == pytest.approx(
         (_scalar(mx.mean(target_0)), _scalar(mx.mean(target_1)))
     )
@@ -398,7 +399,8 @@ def test_pose_distill_huber_keeps_raw_mse_telemetry() -> None:
     assert _scalar(parts["recon"]) < 1e-10
     assert _scalar(parts["pose_distill_raw_mse"]) == pytest.approx(100.0)
     assert _scalar(parts["pose_distill"]) == pytest.approx(19.0)
-    assert _scalar(total) == pytest.approx(19.0)
+    assert _scalar(parts["pose_score_term"]) == pytest.approx((10.0 * 19.0) ** 0.5)
+    assert _scalar(total) == pytest.approx((10.0 * 19.0) ** 0.5)
 
 
 def test_build_mlx_posenet_pair_teacher_uses_upstream_pair_scale(

@@ -158,6 +158,9 @@ from tac.training.long_training_canonical import (  # noqa: E402
 from tools.emit_compact_renderer_spine_adapter import (  # noqa: E402
     emit_compact_renderer_spine_adapter,
 )
+from tools.run_snerv_scorer_tether_smoke import (  # noqa: E402
+    run_snerv_scorer_tether_smoke,
+)
 
 COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA = "compact_renderer_mlx_spine_runner.v1"
 ACTIVE_CAMPAIGN_LOCK_SCHEMA = "compact_renderer_active_campaign_lock.v1"
@@ -3448,6 +3451,72 @@ def _run_snerv_scorer_loop_qat_attachment(
     }
 
 
+def _run_snerv_score_aware_long_training_scorer_tether_gate(
+    *,
+    attachment_dir: Path,
+    required: bool,
+    steps: int,
+) -> dict[str, Any]:
+    gate_path = attachment_dir / "snerv_scorer_tether_smoke_gate.json"
+    normalized_steps = max(int(steps), 0)
+    if not required:
+        payload = {
+            "schema": "snerv_score_aware_long_training_scorer_tether_gate.v1",
+            "required": False,
+            "executed": False,
+            "passed": True,
+            "steps": normalized_steps,
+            "status": "not_required_without_score_aware_long_training",
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
+        _write_json(gate_path, payload)
+        return {
+            **payload,
+            "gate_path": gate_path.as_posix(),
+            "gate_sha256": _sha256_file(gate_path),
+        }
+
+    try:
+        report = run_snerv_scorer_tether_smoke(steps=normalized_steps)
+    except Exception as exc:  # pragma: no cover - defensive launcher gate
+        report = {
+            "schema": "snerv_scorer_tether_smoke.v1",
+            "passed": False,
+            "steps": normalized_steps,
+            "failure": repr(exc),
+            "blockers": [
+                "snerv_scorer_tether_smoke_exception_before_long_training",
+                f"snerv_scorer_tether_smoke_exception_type:{type(exc).__name__}",
+            ],
+            **FALSE_AUTHORITY,
+        }
+    blockers = [
+        str(blocker)
+        for blocker in report.get("blockers") or []
+        if str(blocker)
+    ]
+    if report.get("passed") is not True:
+        blockers.insert(0, "snerv_scorer_tether_smoke_failed_before_long_training")
+    payload = {
+        "schema": "snerv_score_aware_long_training_scorer_tether_gate.v1",
+        "required": True,
+        "executed": True,
+        "passed": report.get("passed") is True,
+        "steps": normalized_steps,
+        "smoke_schema": report.get("schema"),
+        "smoke_report": report,
+        "blockers": _dedupe(blockers),
+        **FALSE_AUTHORITY,
+    }
+    _write_json(gate_path, payload)
+    return {
+        **payload,
+        "gate_path": gate_path.as_posix(),
+        "gate_sha256": _sha256_file(gate_path),
+    }
+
+
 def _run_snerv_native_mlx_export_attachment(
     *,
     requested: bool,
@@ -3486,6 +3555,7 @@ def _run_snerv_native_mlx_export_attachment(
     score_aware_long_training_grad_clip_max_norm: float | None,
     score_aware_long_training_weight_decay: float | None,
     score_aware_long_training_eval_roundtrip_ste: bool,
+    score_aware_long_training_scorer_tether_smoke_steps: int = 2,
     score_aware_long_training_scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
     score_aware_long_training_scorer_input_distribution_guard_saturation_margin: float = 0.02,
     score_aware_long_training_scorer_input_distribution_guard_temperature: float = 0.01,
@@ -3545,6 +3615,38 @@ def _run_snerv_native_mlx_export_attachment(
         return {**payload, "result_path": result_path.as_posix()}
 
     try:
+        scorer_tether_gate = _run_snerv_score_aware_long_training_scorer_tether_gate(
+            attachment_dir=attachment_dir,
+            required=int(score_aware_long_training_epochs) > 0,
+            steps=int(score_aware_long_training_scorer_tether_smoke_steps),
+        )
+        if (
+            int(score_aware_long_training_epochs) > 0
+            and scorer_tether_gate.get("passed") is not True
+        ):
+            payload = {
+                "schema": "compact_runner_snerv_mlx_native_export_attachment.v1",
+                "executed": False,
+                "requested": True,
+                "axis_tag": "[macOS-MLX research-signal]",
+                "num_pairs": int(num_pairs),
+                "native_mlx_training_executed": False,
+                "score_aware_long_training_executed": False,
+                "snerv_scorer_tether_smoke_gate": scorer_tether_gate,
+                "blockers": _dedupe(
+                    [
+                        "snerv_scorer_tether_smoke_failed_before_long_training",
+                        *list(scorer_tether_gate.get("blockers") or []),
+                    ]
+                ),
+                **FALSE_AUTHORITY,
+            }
+            _write_json(result_path, payload)
+            return {
+                **payload,
+                "result_path": result_path.as_posix(),
+                "result_sha256": _sha256_file(result_path),
+            }
         from tac.substrates.snerv_inverse_steg_carrier import (
             mlx_native_train_export as native_mod,
         )
@@ -3680,6 +3782,7 @@ def _run_snerv_native_mlx_export_attachment(
         blockers = [
             *list(artifact.get("blockers") or []),
             *list(native_training_export_guard.get("blockers") or []),
+            *list(scorer_tether_gate.get("blockers") or []),
         ]
         if int(num_pairs) < CONTEST_PAIR_COUNT:
             blockers.append("snerv_mlx_native_export_partial_pair_coverage")
@@ -3771,6 +3874,7 @@ def _run_snerv_native_mlx_export_attachment(
             "native_mlx_hf_decoder_training": artifact.get(
                 "native_mlx_hf_decoder_training"
             ),
+            "snerv_scorer_tether_smoke_gate": scorer_tether_gate,
             "native_mlx_training_export_guard": native_training_export_guard,
             "artifact_report_path": artifact.get("report_path"),
             "packet_path": artifact.get("packet_path"),
@@ -4473,6 +4577,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_score_aware_long_training_grad_clip_max_norm: float | None = 1.0,
     snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
     snerv_score_aware_long_training_eval_roundtrip_ste: bool = False,
+    snerv_score_aware_long_training_scorer_tether_smoke_steps: int = 2,
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
     scorer_input_distribution_guard_saturation_margin: float = 0.02,
     scorer_input_distribution_guard_temperature: float = 0.01,
@@ -4920,6 +5025,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs": (
             checkpoint_retention_keep_every_n_epochs
         ),
+        "snerv_score_aware_long_training_scorer_tether_smoke_steps": int(
+            snerv_score_aware_long_training_scorer_tether_smoke_steps
+        ),
     }
     native_long_training_requested = bool(
         run_native_mlx_export and int(snerv_score_aware_long_training_epochs) > 0
@@ -4992,6 +5100,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
             score_aware_long_training_eval_roundtrip_ste=bool(
                 snerv_score_aware_long_training_eval_roundtrip_ste
+            ),
+            score_aware_long_training_scorer_tether_smoke_steps=int(
+                snerv_score_aware_long_training_scorer_tether_smoke_steps
             ),
             score_aware_long_training_scorer_input_distribution_guard_weight=float(
                 scorer_input_distribution_guard_weight
@@ -5402,6 +5513,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                     "decoder_payload_codec": decoder_payload_codec,
                     "source_pair_indices": list(
                         snerv_mlx_native_export.get("source_pair_indices") or []
+                    ),
+                    "scorer_tether_smoke_gate": snerv_mlx_native_export.get(
+                        "snerv_scorer_tether_smoke_gate"
                     ),
                     "prioritized_pair_training": {
                         "schema": "compact_snerv_prioritized_pair_training.v1",
@@ -5877,6 +5991,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_checkpoint_retention_keep_every_n_epochs": (
             checkpoint_retention_keep_every_n_epochs
         ),
+        "snerv_score_aware_long_training_scorer_tether_smoke_steps": int(
+            snerv_score_aware_long_training_scorer_tether_smoke_steps
+        ),
     }
     snerv_mlx_native_export = _run_snerv_native_mlx_export_attachment(
         requested=bool(run_native_mlx_export),
@@ -5936,6 +6053,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         score_aware_long_training_eval_roundtrip_ste=bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
+        ),
+        score_aware_long_training_scorer_tether_smoke_steps=int(
+            snerv_score_aware_long_training_scorer_tether_smoke_steps
         ),
         score_aware_long_training_scorer_input_distribution_guard_weight=float(
             scorer_input_distribution_guard_weight
@@ -13230,7 +13350,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 "temperature": float(scorer_input_distribution_guard_temperature),
                 "target_surface": (
-                    "decoded_rgb01_vs_target_rgb01_mean_std_soft_saturation"
+                    "decoded_rgb01_yuv6_vs_target_scorer_inputs_mean_std_"
+                    "dynamic_range_soft_saturation_spatial_gradient"
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
@@ -17916,6 +18037,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--snerv-score-aware-long-training-scorer-tether-smoke-steps",
+        default=2,
+        type=int,
+        help=(
+            "Required runner preflight smoke steps before any nonzero SNeRV "
+            "score-aware long training launch. Two is the minimum that can "
+            "prove PosNet/SegNet tether metrics are present and lambdas activate."
+        ),
+    )
+    parser.add_argument(
         "--snerv-score-aware-long-training-pr95-faithful-curriculum",
         action="store_true",
         help=(
@@ -18656,6 +18787,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_score_aware_long_training_eval_roundtrip_ste=(
                 args.snerv_score_aware_long_training_eval_roundtrip_ste
+            ),
+            snerv_score_aware_long_training_scorer_tether_smoke_steps=(
+                args.snerv_score_aware_long_training_scorer_tether_smoke_steps
             ),
             scorer_input_distribution_guard_weight=(
                 args.scorer_input_distribution_guard_weight

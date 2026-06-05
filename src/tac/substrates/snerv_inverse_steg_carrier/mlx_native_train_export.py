@@ -565,6 +565,45 @@ def _snerv_score_aware_long_training_telemetry_contract(
     }
 
 
+def _bind_snerv_scorer_tether_dual_targets(
+    config: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Require SNeRV scorer-tether duals to activate instead of self-normalizing."""
+
+    tether_ids = {
+        "snerv_segnet_last_frame_distill",
+        "snerv_posenet_yuv6_pair_distill",
+    }
+    out = dict(config)
+    bound_constraints: list[dict[str, Any]] = []
+    for raw in config.get("constraints") or []:
+        if not isinstance(raw, Mapping):
+            continue
+        row = dict(raw)
+        if str(row.get("constraint_id") or "") in tether_ids:
+            row["target"] = 0.0
+            row.pop("target_fraction_of_initial", None)
+            row["scorer_tether_launch_gate_target_bound"] = True
+        bound_constraints.append(row)
+    out["constraints"] = bound_constraints
+    out["snerv_scorer_tether_launch_gate_target_policy"] = {
+        "schema": "snerv_scorer_tether_dual_target_policy.v1",
+        "target": 0.0,
+        "target_fraction_of_initial_removed": True,
+        "constraint_ids": sorted(
+            str(row.get("constraint_id") or "")
+            for row in bound_constraints
+            if row.get("scorer_tether_launch_gate_target_bound") is True
+        ),
+        "rationale": (
+            "Short prelaunch SNeRV long-training smokes must prove scorer "
+            "tether lambdas activate before scalar/shared/spectra successors launch."
+        ),
+        **FALSE_AUTHORITY,
+    }
+    return out
+
+
 def _finite_number_in_row(row: Mapping[str, Any], key: str) -> bool:
     value = _telemetry_row_value(row, key)
     return _finite_number(value)
@@ -3386,6 +3425,9 @@ def _run_score_aware_long_training_attachment(
                     "section_byte_loss_weight_scale_map"
                 ),
             )
+        )
+        train_time_dual_ascent_config = _bind_snerv_scorer_tether_dual_targets(
+            train_time_dual_ascent_config
         )
 
         def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:

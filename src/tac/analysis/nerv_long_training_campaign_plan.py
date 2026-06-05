@@ -132,6 +132,7 @@ HINERV_WATERFILL_CANDIDATE_BINDING_FIELDS: tuple[str, ...] = (
     "target_modelsize_mparams",
     "hard_byte_ceiling",
 )
+HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA = "hinerv_archive_section_telemetry.v1"
 DEFAULT_OPTIMIZER_KINDS = (
     "pact_muon_adamw",
     "adamw",
@@ -164,6 +165,18 @@ TILDE_OSS_LEVERAGE_POLICY_SCHEMA = "nerv_tilde_oss_leverage_policy.v1"
 ROW_TILDE_OSS_BINDING_SCHEMA = "nerv_row_tilde_oss_binding.v1"
 PR95_BASELINE_IDENTITY_BINDING_SCHEMA = "nerv_pr95_baseline_identity_binding.v1"
 SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA = "snerv_scorer_tether_smoke_gate.v1"
+SNERV_SCORER_TETHER_FEEDBACK_BLOCKERS = frozenset(
+    {
+        "snerv_scorer_domain_tether_missing_telemetry",
+        "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry",
+        "snerv_segnet_last_frame_distill_metric_missing_telemetry",
+        "snerv_scorer_domain_tether_lambda_inactive_telemetry",
+        "snerv_score_aware_long_training_dual_segnet_metric_never_observed",
+        "snerv_score_aware_long_training_dual_posenet_metric_never_observed",
+        "snerv_score_aware_long_training_dual_segnet_lambda_never_active",
+        "snerv_score_aware_long_training_dual_posenet_lambda_never_active",
+    }
+)
 
 
 class NervLongTrainingCampaignPlanError(ValueError):
@@ -480,6 +493,7 @@ def build_nerv_long_training_campaign_plan(
     candidate_feedback_sources: Sequence[Mapping[str, Any]] = (),
     modelsize_byte_cap_feedback_paths: Sequence[str | Path] = (),
     decoder_weight_waterfill_sources: Sequence[Mapping[str, Any]] = (),
+    archive_section_telemetry_sources: Sequence[Mapping[str, Any]] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
     snerv_lf_payload_byte_report_sources: Sequence[Mapping[str, Any]] = (),
     snerv_snar_header_grammar_profile_sources: Sequence[Mapping[str, Any]] = (),
@@ -517,6 +531,9 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(joint_recon_weight_manifest_paths)
     candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
     decoder_weight_waterfill_index = _decoder_weight_waterfill_index(decoder_weight_waterfill_sources)
+    archive_section_telemetry_index = _archive_section_telemetry_index(
+        archive_section_telemetry_sources
+    )
     byte_cap_feedback_paths = tuple(
         Path(path).as_posix() for path in modelsize_byte_cap_feedback_paths
     )
@@ -580,6 +597,7 @@ def build_nerv_long_training_campaign_plan(
                     joint_recon_weight_artifacts=joint_recon_weight_artifacts,
                     candidate_feedback_index=candidate_feedback_index,
                     decoder_weight_waterfill_index=decoder_weight_waterfill_index,
+                    archive_section_telemetry_index=archive_section_telemetry_index,
                     source_parity_contract=source_parity_contract,
                     upstream_evaluate_priority_contract=(
                         upstream_evaluate_priority_contract
@@ -640,6 +658,10 @@ def build_nerv_long_training_campaign_plan(
     )
     decoder_weight_waterfill_unattached_sources = _decoder_weight_waterfill_unattached_sources(
         index=decoder_weight_waterfill_index,
+        campaign_rows=rows,
+    )
+    archive_section_telemetry_unattached_sources = _archive_section_telemetry_unattached_sources(
+        index=archive_section_telemetry_index,
         campaign_rows=rows,
     )
     return {
@@ -708,6 +730,10 @@ def build_nerv_long_training_campaign_plan(
         "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
         "candidate_feedback_row_count": _unique_index_row_count(candidate_feedback_index),
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
+        "archive_section_telemetry_source_count": len(archive_section_telemetry_sources),
+        "archive_section_telemetry_row_count": _unique_index_row_count(
+            archive_section_telemetry_index
+        ),
         "snerv_lf_payload_recode_source_count": len(snerv_lf_payload_recode_sources),
         "snerv_lf_payload_byte_report_source_count": len(snerv_lf_payload_byte_report_sources),
         "snerv_snar_header_grammar_profile_source_count": len(
@@ -719,6 +745,10 @@ def build_nerv_long_training_campaign_plan(
         "decoder_weight_waterfill_row_count": _unique_index_row_count(decoder_weight_waterfill_index),
         "decoder_weight_waterfill_unattached_source_count": len(decoder_weight_waterfill_unattached_sources),
         "decoder_weight_waterfill_unattached_sources": (decoder_weight_waterfill_unattached_sources),
+        "archive_section_telemetry_unattached_source_count": len(
+            archive_section_telemetry_unattached_sources
+        ),
+        "archive_section_telemetry_unattached_sources": archive_section_telemetry_unattached_sources,
         "snerv_lf_over_ceiling_reroute_queue": snerv_lf_over_ceiling_reroute_queue,
         "snerv_lf_over_ceiling_reroute_queue_schema": snerv_lf_over_ceiling_reroute_queue["schema"],
         "snerv_lf_over_ceiling_reroute_queue_row_count": snerv_lf_over_ceiling_reroute_queue["queue_row_count"],
@@ -770,6 +800,12 @@ def build_nerv_long_training_campaign_plan(
             for row in rows
             if isinstance(row.get("decoder_weight_waterfill_plan"), Mapping)
             and row["decoder_weight_waterfill_plan"].get("attached") is True
+        ),
+        "archive_section_telemetry_attached_row_count": sum(
+            1
+            for row in rows
+            if isinstance(row.get("archive_section_telemetry"), Mapping)
+            and row["archive_section_telemetry"].get("attached") is True
         ),
         "promotion_policy": {
             "schema": "nerv_long_training_campaign_promotion_policy.v1",
@@ -913,6 +949,7 @@ def _hinerv_campaign_row(
     joint_recon_weight_artifacts: Mapping[int, Mapping[str, Any]] | None = None,
     candidate_feedback_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     decoder_weight_waterfill_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
+    archive_section_telemetry_index: (Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None) = None,
     source_parity_contract: Mapping[str, Any] | None = None,
     upstream_evaluate_priority_contract: Mapping[str, Any] | None = None,
     tilde_oss_leverage_policy: Mapping[str, Any] | None = None,
@@ -946,6 +983,11 @@ def _hinerv_campaign_row(
         candidate=candidate,
         family="hi_nerv",
         index=decoder_weight_waterfill_index,
+    )
+    archive_section_telemetry = _archive_section_telemetry_for(
+        candidate=candidate,
+        family="hi_nerv",
+        index=archive_section_telemetry_index,
     )
     modelsize_byte_cap_preflight = _modelsize_byte_cap_preflight(
         candidate=candidate,
@@ -1108,6 +1150,25 @@ def _hinerv_campaign_row(
                 str(decoder_weight_waterfill["path"]),
             ]
         )
+    archive_section_telemetry_metadata = (
+        _archive_section_telemetry_row_metadata(archive_section_telemetry)
+        if archive_section_telemetry
+        else _archive_section_telemetry_missing_metadata()
+    )
+    if archive_section_telemetry_metadata.get("runner_admitted") is True:
+        command.extend(
+            [
+                "--archive-section-telemetry-json",
+                str(archive_section_telemetry_metadata["path"]),
+            ]
+        )
+    archive_section_telemetry_runner_admitted = (
+        archive_section_telemetry_metadata.get("runner_admitted") is True
+    )
+    archive_section_telemetry_gate_ready = (
+        not archive_section_telemetry_metadata.get("attached")
+        or archive_section_telemetry_runner_admitted
+    )
     if launch_feedback_adjustment.get("pose_protected_pathway_applied") is True:
         command.extend(
             [
@@ -1125,6 +1186,12 @@ def _hinerv_campaign_row(
             ""
             if not decoder_weight_waterfill or decoder_weight_waterfill_runner_admitted
             else "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted"
+        ),
+        (
+            ""
+            if not archive_section_telemetry_metadata.get("attached")
+            or archive_section_telemetry_runner_admitted
+            else "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted"
         ),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
         "requires_local_cpu_replay_win_before_exact_cpu_auth",
@@ -1159,6 +1226,7 @@ def _hinerv_campaign_row(
         prelaunch_gate.get("launch_allowed")
         and joint_recon_weight
         and decoder_weight_waterfill_runner_admitted
+        and archive_section_telemetry_gate_ready
         and not candidate_authority_blockers
         and not official_control_blockers
         and not optimizer_launch_blockers
@@ -1177,6 +1245,8 @@ def _hinerv_campaign_row(
         implementation_status = "decoder_weight_waterfill_plan_advisory_only_blocks_launch"
     elif not decoder_weight_waterfill:
         implementation_status = "decoder_weight_waterfill_plan_required_for_launch"
+    elif not archive_section_telemetry_gate_ready:
+        implementation_status = "archive_section_telemetry_advisory_only_blocks_launch"
     elif launch_ready:
         implementation_status = "shared_mlx_scoreaware_runner_launchable"
     else:
@@ -1225,6 +1295,7 @@ def _hinerv_campaign_row(
                     **FALSE_AUTHORITY,
                 }
             ),
+            "archive_section_telemetry": archive_section_telemetry_metadata,
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
             "prioritized_pair_training": _prioritized_pair_training_plan(
@@ -1320,7 +1391,14 @@ def _snerv_campaign_row(
         modelsize_byte_cap_preflight=modelsize_byte_cap_preflight,
     )
     prioritized_pair_indices = _feedback_prioritized_pair_indices(feedback)
-    feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
+    raw_feedback_evidence_blockers = _candidate_feedback_evidence_blockers(feedback)
+    (
+        feedback_evidence_blockers,
+        smoke_suppressed_feedback_blockers,
+    ) = _snerv_feedback_blockers_after_tether_smoke(
+        raw_feedback_evidence_blockers,
+        scorer_tether_smoke_gate,
+    )
     execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
     quant_bits = min(
         8,
@@ -1623,7 +1701,13 @@ def _snerv_campaign_row(
                 "snerv_official_trained_checkpoint_mapping_manifest"
             ),
             "candidate_feedback": feedback or None,
+            "candidate_feedback_evidence_blockers_before_tether_smoke": (
+                raw_feedback_evidence_blockers
+            ),
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
+            "snerv_scorer_tether_smoke_suppressed_feedback_blockers": (
+                smoke_suppressed_feedback_blockers
+            ),
             "prioritized_pair_training": prioritized_pair_training,
             "snerv_lf_payload_recode_admission_plan": lf_recode_admission_plan,
             "snerv_lf_payload_codec_from_admission_plan": lf_recode_selected_mode,
@@ -2012,6 +2096,25 @@ def _candidate_feedback_evidence_blockers(
         if blocker
     )
     return _dedupe(blockers)
+
+
+def _snerv_feedback_blockers_after_tether_smoke(
+    blockers: Sequence[str],
+    scorer_tether_smoke_gate: Mapping[str, Any],
+) -> tuple[list[str], list[str]]:
+    """Clear stale tether-path feedback blockers once the local smoke proves the path."""
+
+    values = _dedupe(str(blocker) for blocker in blockers if str(blocker))
+    if scorer_tether_smoke_gate.get("passed") is not True:
+        return values, []
+    kept: list[str] = []
+    suppressed: list[str] = []
+    for blocker in values:
+        if blocker in SNERV_SCORER_TETHER_FEEDBACK_BLOCKERS:
+            suppressed.append(blocker)
+        else:
+            kept.append(blocker)
+    return kept, suppressed
 
 
 def _feedback_prioritized_pair_indices(feedback: Mapping[str, Any]) -> tuple[int, ...]:
@@ -5572,6 +5675,534 @@ def _decoder_weight_waterfill_unattached_sources(
     return sorted(by_path.values(), key=lambda item: str(item.get("path") or ""))
 
 
+def _archive_section_telemetry_index(
+    sources: Sequence[Mapping[str, Any]],
+) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    index: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for source in sources:
+        row = _normalize_archive_section_telemetry_source(source)
+        family = _family_key(str(row.get("family") or "hi_nerv"))
+        if family != "hi_nerv":
+            continue
+        for candidate_key in _candidate_index_keys(row):
+            index.setdefault((family, candidate_key), []).append(row)
+    return {
+        key: sorted(
+            rows,
+            key=lambda row: (
+                int(_archive_section_telemetry_runner_admitted(row)),
+                int(row.get("receiver_cache_quality_gate_passed") is True),
+                int(row.get("archive_under_hard_byte_ceiling") is True),
+                int(row.get("num_pairs") or 0),
+                -int(
+                    row.get("archive_zip_bytes")
+                    or row.get("inner_payload_bytes")
+                    or 0
+                ),
+            ),
+            reverse=True,
+        )
+        for key, rows in index.items()
+    }
+
+
+def _normalize_archive_section_telemetry_source(
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    if source.get("schema") != HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA:
+        raise NervLongTrainingCampaignPlanError(
+            "archive_section_telemetry_sources must have schema "
+            f"{HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA}; got {source.get('schema')!r}"
+        )
+    path = (
+        source.get("_archive_section_telemetry_path")
+        or source.get("archive_section_telemetry_path")
+        or source.get("path")
+    )
+    if not path:
+        raise NervLongTrainingCampaignPlanError(
+            "archive_section_telemetry_source missing _archive_section_telemetry_path"
+        )
+    out = dict(source)
+    out["path"] = str(path)
+    out.setdefault("_archive_section_telemetry_source_path", str(path))
+    out.setdefault("family", "hi_nerv")
+    out.setdefault(
+        "candidate_id",
+        source.get("row_id") or source.get("_modelsize_row_id"),
+    )
+    if source.get("_archive_section_telemetry_sha256") is None:
+        telemetry_path = Path(str(path)).expanduser().resolve(strict=False)
+        if telemetry_path.is_file():
+            out["_archive_section_telemetry_sha256"] = _sha256_file(telemetry_path)
+    archive_zip_bytes = _positive_int_or_none(
+        out.get("archive_zip_bytes")
+        or out.get("measured_archive_bytes")
+        or out.get("archive_bytes")
+    )
+    if archive_zip_bytes is not None:
+        out["archive_zip_bytes"] = archive_zip_bytes
+    inner_payload_bytes = _positive_int_or_none(out.get("inner_payload_bytes"))
+    if inner_payload_bytes is not None:
+        out["inner_payload_bytes"] = inner_payload_bytes
+    section_payload_bytes = _positive_int_or_none(out.get("section_payload_bytes"))
+    if section_payload_bytes is not None:
+        out["section_payload_bytes"] = section_payload_bytes
+    out["section_bytes"] = _archive_section_telemetry_section_bytes(out)
+    if out.get("runtime_consumption_proof_ready") is True and not str(
+        out.get("receiver_proof_status") or ""
+    ).strip():
+        out["receiver_proof_status"] = "runtime_consumption_proof_ready"
+    if (
+        out.get("quality_gate_passed") is not None
+        and out.get("receiver_cache_quality_gate_passed") is None
+    ):
+        out["receiver_cache_quality_gate_passed"] = bool(out.get("quality_gate_passed"))
+    if (
+        out.get("quality_gate_verdict")
+        and out.get("receiver_cache_quality_gate_verdict") is None
+    ):
+        out["receiver_cache_quality_gate_verdict"] = out.get("quality_gate_verdict")
+    if out.get("report_path") and out.get("receiver_cache_quality_report_path") is None:
+        out["receiver_cache_quality_report_path"] = out.get("report_path")
+    out["receiver_proof_binding"] = _archive_section_telemetry_receiver_proof_binding(
+        out
+    )
+    out["receiver_cache_quality_binding"] = (
+        _archive_section_telemetry_cache_quality_binding(out)
+    )
+    out["archive_under_hard_byte_ceiling"] = _archive_section_telemetry_under_ceiling(
+        out
+    )
+    blockers = [
+        *(str(blocker) for blocker in source.get("blockers") or () if str(blocker)),
+        *_archive_section_telemetry_static_blockers(out),
+        *(str(blocker) for blocker in out["receiver_proof_binding"].get("blockers") or ()),
+        *(str(blocker) for blocker in out["receiver_cache_quality_binding"].get("blockers") or ()),
+    ]
+    out["blockers"] = _dedupe(blockers)
+    return out
+
+
+def _archive_section_telemetry_static_blockers(
+    row: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    if row.get("profile_ready") is not True:
+        blockers.append("hinerv_archive_section_telemetry_not_profile_ready")
+    sections = row.get("sections")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        blockers.append("hinerv_archive_section_telemetry_sections_missing")
+    elif not any(
+        isinstance(section, Mapping)
+        and str(section.get("name") or "") == "decoder_state"
+        and _positive_int_or_none(section.get("bytes")) is not None
+        for section in sections
+    ):
+        blockers.append("hinerv_archive_section_telemetry_decoder_state_missing")
+    if _positive_int_or_none(row.get("archive_zip_bytes")) is None:
+        blockers.append("hinerv_archive_section_telemetry_archive_zip_bytes_missing")
+    if _positive_int_or_none(row.get("num_pairs")) != 600:
+        blockers.append("hinerv_archive_section_telemetry_full600_missing")
+    for key in _AUTHORITY_TRUE_KEYS:
+        if row.get(key) is True:
+            blockers.append(
+                f"hinerv_archive_section_telemetry_authority_flag_true:{key}"
+            )
+    return blockers
+
+
+def _archive_section_telemetry_section_bytes(row: Mapping[str, Any]) -> dict[str, int]:
+    sections = row.get("sections_with_zip_overhead") or row.get("sections")
+    if not isinstance(sections, Sequence) or isinstance(sections, (str, bytes)):
+        return {}
+    out: dict[str, int] = {}
+    for index, section in enumerate(sections):
+        if not isinstance(section, Mapping):
+            continue
+        name = str(section.get("name") or f"section_{index:04d}").strip()
+        nbytes = _positive_int_or_none(section.get("bytes"))
+        if name and nbytes is not None:
+            out[name] = nbytes
+    return dict(sorted(out.items()))
+
+
+def _archive_section_telemetry_under_ceiling(row: Mapping[str, Any]) -> bool | None:
+    archive_bytes = _positive_int_or_none(row.get("archive_zip_bytes"))
+    hard_ceiling = _positive_int_or_none(row.get("hard_byte_ceiling"))
+    if archive_bytes is None or hard_ceiling is None:
+        return None
+    return int(archive_bytes) <= int(hard_ceiling)
+
+
+def _archive_section_telemetry_receiver_proof_binding(
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    status = str(source.get("receiver_proof_status") or "").strip().lower()
+    archive_sha = str(source.get("archive_sha256") or "").strip().lower()
+    proof_path_raw = str(
+        source.get("receiver_proof_path")
+        or source.get("receiver_proof_report_path")
+        or ""
+    ).strip()
+    expected_proof_sha = str(source.get("receiver_proof_sha256") or "").strip().lower()
+    blockers: list[str] = []
+    proof_path: Path | None = None
+    proof_sha: str | None = None
+    proof_archive_sha: str | None = None
+    proof_runtime_ready = False
+
+    if status not in TRUSTED_RECEIVER_PROOF_STATUSES:
+        blockers.append("hinerv_archive_section_telemetry_receiver_proof_not_satisfied")
+    if not _is_sha256_hex(archive_sha):
+        blockers.append(
+            "hinerv_archive_section_telemetry_archive_sha256_missing_or_invalid"
+        )
+    if not proof_path_raw:
+        blockers.append("hinerv_archive_section_telemetry_receiver_proof_path_missing")
+    else:
+        proof_path = _archive_section_telemetry_resolve_path(
+            proof_path_raw,
+            source=source,
+        )
+        if not proof_path.is_file():
+            blockers.append(
+                "hinerv_archive_section_telemetry_receiver_proof_path_not_file"
+            )
+        else:
+            proof_sha = _sha256_file(proof_path)
+            if expected_proof_sha and expected_proof_sha != proof_sha:
+                blockers.append(
+                    "hinerv_archive_section_telemetry_receiver_proof_sha256_mismatch"
+                )
+            try:
+                payload = json.loads(proof_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                blockers.append(
+                    "hinerv_archive_section_telemetry_receiver_proof_unreadable:"
+                    f"{type(exc).__name__}"
+                )
+            else:
+                if not isinstance(payload, Mapping):
+                    blockers.append(
+                        "hinerv_archive_section_telemetry_receiver_proof_payload_not_object"
+                    )
+                else:
+                    proof_archive_sha = _first_sha_value(
+                        payload,
+                        (
+                            "archive_sha256",
+                            "archive_zip_sha256",
+                            "candidate_archive_sha256",
+                        ),
+                    )
+                    proof_runtime_ready = any(
+                        payload.get(key) is True
+                        for key in (
+                            "runtime_consumption_proof_ready",
+                            "runtime_consumption_proof_passed",
+                            "receiver_archive_replay_verified",
+                            "receiver_proof_passed",
+                        )
+                    )
+                    if proof_archive_sha != archive_sha:
+                        blockers.append(
+                            "hinerv_archive_section_telemetry_receiver_proof_archive_sha256_mismatch"
+                        )
+                    if not proof_runtime_ready:
+                        blockers.append(
+                            "hinerv_archive_section_telemetry_receiver_proof_runtime_consumption_not_ready"
+                        )
+    blockers = _dedupe(blockers)
+    return {
+        "schema": "hinerv_archive_section_telemetry_receiver_proof_binding.v1",
+        "status": status or None,
+        "bound": not blockers,
+        "archive_sha256": archive_sha or None,
+        "proof_path": None if proof_path is None else proof_path.as_posix(),
+        "proof_sha256": proof_sha,
+        "expected_proof_sha256": expected_proof_sha or None,
+        "proof_archive_sha256": proof_archive_sha,
+        "proof_runtime_consumption_ready": proof_runtime_ready,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _archive_section_telemetry_cache_quality_binding(
+    source: Mapping[str, Any],
+) -> dict[str, Any]:
+    path_raw = str(source.get("receiver_cache_quality_report_path") or "").strip()
+    expected_sha = str(
+        source.get("receiver_cache_quality_report_sha256") or ""
+    ).strip().lower()
+    blockers: list[str] = []
+    path: Path | None = None
+    actual_sha: str | None = None
+    gate_passed = bool(source.get("receiver_cache_quality_gate_passed") is True)
+    if not gate_passed:
+        blockers.append(
+            "hinerv_archive_section_telemetry_receiver_cache_quality_gate_not_passed"
+        )
+    if not path_raw:
+        blockers.append(
+            "hinerv_archive_section_telemetry_receiver_cache_quality_report_path_missing"
+        )
+    else:
+        path = _archive_section_telemetry_resolve_path(path_raw, source=source)
+        if not path.is_file():
+            blockers.append(
+                "hinerv_archive_section_telemetry_receiver_cache_quality_report_path_not_file"
+            )
+        else:
+            actual_sha = _sha256_file(path)
+            if expected_sha and expected_sha != actual_sha:
+                blockers.append(
+                    "hinerv_archive_section_telemetry_receiver_cache_quality_report_sha256_mismatch"
+                )
+    blockers = _dedupe(blockers)
+    return {
+        "schema": "hinerv_archive_section_telemetry_receiver_cache_quality_binding.v1",
+        "bound": not blockers,
+        "quality_gate_passed": gate_passed,
+        "quality_gate_verdict": source.get("receiver_cache_quality_gate_verdict"),
+        "report_path": None if path is None else path.as_posix(),
+        "report_sha256": actual_sha,
+        "expected_report_sha256": expected_sha or None,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _archive_section_telemetry_resolve_path(
+    value: str,
+    *,
+    source: Mapping[str, Any],
+) -> Path:
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path.resolve(strict=False)
+    base_raw = source.get("_archive_section_telemetry_source_path") or source.get(
+        "path"
+    )
+    base = (
+        Path(str(base_raw)).expanduser().resolve(strict=False).parent
+        if base_raw
+        else Path.cwd()
+    )
+    return (base / path).resolve(strict=False)
+
+
+def _archive_section_telemetry_for(
+    *,
+    candidate: Mapping[str, Any],
+    family: str,
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+) -> dict[str, Any]:
+    candidate_id = str(candidate.get("candidate_id") or "").strip()
+    if not candidate_id:
+        return {}
+    rows = list((index or {}).get((_family_key(family), candidate_id)) or [])
+    mismatch_row: dict[str, Any] = {}
+    for row in rows:
+        candidate_row = dict(row)
+        candidate_row.setdefault("hard_byte_ceiling", candidate.get("hard_byte_ceiling"))
+        source_candidate = candidate_row.get("_modelsize_candidate")
+        mismatch_blockers = _waterfill_modelsize_candidate_mismatch_blockers(
+            candidate=candidate,
+            waterfill_candidate=source_candidate,
+        )
+        if mismatch_blockers:
+            if not mismatch_row:
+                mismatch_row = dict(candidate_row)
+                mismatch_row["blockers"] = _dedupe(
+                    [
+                        *(
+                            str(v)
+                            for v in mismatch_row.get("blockers") or ()
+                            if str(v)
+                        ),
+                        *(
+                            blocker.replace(
+                                "decoder_weight_waterfill",
+                                "archive_section_telemetry",
+                            )
+                            for blocker in mismatch_blockers
+                        ),
+                    ]
+                )
+            continue
+        under_ceiling = _archive_section_telemetry_under_ceiling(candidate_row)
+        candidate_row["archive_under_hard_byte_ceiling"] = under_ceiling
+        if under_ceiling is False:
+            candidate_row["blockers"] = _dedupe(
+                [
+                    *(str(v) for v in candidate_row.get("blockers") or () if str(v)),
+                    "hinerv_archive_section_telemetry_archive_over_hard_byte_ceiling",
+                ]
+            )
+        elif under_ceiling is None:
+            candidate_row["blockers"] = _dedupe(
+                [
+                    *(str(v) for v in candidate_row.get("blockers") or () if str(v)),
+                    "hinerv_archive_section_telemetry_hard_byte_ceiling_binding_missing",
+                ]
+            )
+        return candidate_row
+    return mismatch_row
+
+
+def _archive_section_telemetry_row_metadata(row: Mapping[str, Any]) -> dict[str, Any]:
+    runner_admission = _archive_section_telemetry_runner_admission(row)
+    return {
+        "schema": "nerv_long_training_archive_section_telemetry_attachment.v1",
+        "attached": True,
+        "path": str(row.get("path")),
+        "sha256": row.get("_archive_section_telemetry_sha256"),
+        "source_path": row.get("_archive_section_telemetry_source_path"),
+        "family": row.get("family"),
+        "candidate_id": row.get("candidate_id"),
+        "candidate_keys": list(_candidate_index_keys(row)),
+        "num_pairs": _positive_int_or_none(row.get("num_pairs")),
+        "archive_sha256": row.get("archive_sha256"),
+        "archive_zip_bytes": _positive_int_or_none(row.get("archive_zip_bytes")),
+        "inner_payload_bytes": _positive_int_or_none(row.get("inner_payload_bytes")),
+        "section_payload_bytes": _positive_int_or_none(row.get("section_payload_bytes")),
+        "section_bytes": dict(row.get("section_bytes") or {}),
+        "section_count": len(row.get("section_bytes") or {}),
+        "section_names": list((row.get("section_bytes") or {}).keys()),
+        "decoder_state_section_present": "decoder_state"
+        in dict(row.get("section_bytes") or {}),
+        "decoder_codec": row.get("decoder_codec"),
+        "latent_codec": row.get("latent_codec"),
+        "profile_ready": bool(row.get("profile_ready")),
+        "hard_byte_ceiling": _positive_int_or_none(row.get("hard_byte_ceiling")),
+        "archive_under_hard_byte_ceiling": row.get("archive_under_hard_byte_ceiling"),
+        "receiver_proof_binding": (
+            dict(row["receiver_proof_binding"])
+            if isinstance(row.get("receiver_proof_binding"), Mapping)
+            else _archive_section_telemetry_receiver_proof_binding(row)
+        ),
+        "receiver_cache_quality_binding": (
+            dict(row["receiver_cache_quality_binding"])
+            if isinstance(row.get("receiver_cache_quality_binding"), Mapping)
+            else _archive_section_telemetry_cache_quality_binding(row)
+        ),
+        "runner_admission": runner_admission,
+        "runner_admitted": bool(runner_admission["admitted"]),
+        "blockers": list(row.get("blockers") or []),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _archive_section_telemetry_missing_metadata() -> dict[str, Any]:
+    return {
+        "schema": "nerv_long_training_archive_section_telemetry_attachment.v1",
+        "attached": False,
+        "reason": "no_matching_hinerv_archive_section_telemetry",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _archive_section_telemetry_runner_admitted(row: Mapping[str, Any]) -> bool:
+    return bool(_archive_section_telemetry_runner_admission(row)["admitted"])
+
+
+def _archive_section_telemetry_runner_admission(
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    blockers = {str(blocker) for blocker in row.get("blockers") or () if str(blocker)}
+    refusal_reasons: list[str] = []
+    if row.get("profile_ready") is not True:
+        refusal_reasons.append("hinerv_archive_section_telemetry_not_profile_ready")
+    if not row.get("section_bytes"):
+        refusal_reasons.append("hinerv_archive_section_telemetry_sections_missing")
+    if row.get("archive_under_hard_byte_ceiling") is not True:
+        refusal_reasons.append(
+            "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling"
+        )
+    receiver_binding = row.get("receiver_proof_binding")
+    if not isinstance(receiver_binding, Mapping) or receiver_binding.get("bound") is not True:
+        refusal_reasons.append("hinerv_archive_section_telemetry_receiver_proof_not_bound")
+    if isinstance(receiver_binding, Mapping):
+        refusal_reasons.extend(str(v) for v in receiver_binding.get("blockers") or ())
+    cache_binding = row.get("receiver_cache_quality_binding")
+    if not isinstance(cache_binding, Mapping) or cache_binding.get("bound") is not True:
+        refusal_reasons.append(
+            "hinerv_archive_section_telemetry_receiver_cache_quality_not_bound"
+        )
+    if isinstance(cache_binding, Mapping):
+        refusal_reasons.extend(str(v) for v in cache_binding.get("blockers") or ())
+    refusal_reasons.extend(sorted(blockers))
+    refusal_reasons = _dedupe(refusal_reasons)
+    return {
+        "schema": "hinerv_archive_section_telemetry_runner_admission.v1",
+        "admitted": not refusal_reasons,
+        "mode": (
+            "runner_train_time_section_qat_pressure"
+            if not refusal_reasons
+            else "advisory_byte_profile_only"
+        ),
+        "refusal_reasons": refusal_reasons,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _archive_section_telemetry_unattached_sources(
+    *,
+    index: Mapping[tuple[str, str], Sequence[Mapping[str, Any]]] | None,
+    campaign_rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    attached_paths = {
+        str(plan.get("path") or "")
+        for row in campaign_rows
+        if isinstance((plan := row.get("archive_section_telemetry")), Mapping)
+        and plan.get("attached") is True
+    }
+    target_candidates_by_family: dict[str, list[str]] = {}
+    for row in campaign_rows:
+        family = _family_key(str(row.get("family") or ""))
+        candidate_id = str(row.get("candidate_id") or "").strip()
+        if family and candidate_id:
+            target_candidates_by_family.setdefault(family, []).append(candidate_id)
+
+    by_path: dict[str, dict[str, Any]] = {}
+    for (family, _candidate_key), source_rows in (index or {}).items():
+        for source in source_rows:
+            path = str(source.get("path") or "")
+            if not path or path in attached_paths or path in by_path:
+                continue
+            family_key = _family_key(str(source.get("family") or family))
+            by_path[path] = {
+                "schema": (
+                    "nerv_long_training_unattached_archive_section_telemetry_source.v1"
+                ),
+                "attached": False,
+                "reason": "no_matching_campaign_candidate_id",
+                "path": path,
+                "sha256": source.get("_archive_section_telemetry_sha256"),
+                "source_path": source.get("_archive_section_telemetry_source_path"),
+                "family": family_key,
+                "source_candidate_id": source.get("candidate_id"),
+                "candidate_keys": list(_candidate_index_keys(source)),
+                "target_candidate_ids": sorted(
+                    _dedupe(target_candidates_by_family.get(family_key, []))
+                ),
+                "archive_zip_bytes": _positive_int_or_none(
+                    source.get("archive_zip_bytes")
+                ),
+                "archive_under_hard_byte_ceiling": source.get(
+                    "archive_under_hard_byte_ceiling"
+                ),
+                "receiver_cache_quality_gate_passed": bool(
+                    source.get("receiver_cache_quality_gate_passed")
+                ),
+                "blockers": list(source.get("blockers") or []),
+                **FALSE_AUTHORITY,
+            }
+    return sorted(by_path.values(), key=lambda item: str(item.get("path") or ""))
+
+
 def _hinerv_feedback_launch_adjustment(
     *,
     feedback: Mapping[str, Any],
@@ -5801,6 +6432,7 @@ def _hinerv_feedback_official_control_score(row: Mapping[str, Any]) -> int:
 
 def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
     keys = (
+        "archive_section_telemetry",
         "coder_qat_control",
         "decoder_weight_waterfill_plan",
         "feedback_launch_adjustment",
@@ -5929,6 +6561,14 @@ def _plan_level_blocker(blocker: str) -> bool:
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority",
         "snerv_lf_payload_rate_axis_over_ceiling_until_representation_changes",
     }
+
+
+def _positive_int_or_none(value: Any) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _dedupe(values: Sequence[str]) -> list[str]:

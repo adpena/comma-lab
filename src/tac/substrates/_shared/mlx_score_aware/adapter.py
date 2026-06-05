@@ -788,6 +788,15 @@ class MlxScoreAwareAdapter:
                     * scalar
                 )
                 out["loss_part_stage_weight_pose_distill"] = pose_stage_weight
+            elif name == "pose_score_term":
+                weighted = (
+                    float(self.bundle.pose_distillation_weight)
+                    * pose_stage_weight
+                    * scalar
+                )
+                out["loss_part_weighted_pose_score_term"] = weighted
+                out["loss_part_weighted_pose_distill"] = weighted
+                out["loss_part_stage_weight_pose_distill"] = pose_stage_weight
             elif name == "recon":
                 out["loss_part_weighted_recon"] = recon_stage_weight * scalar
                 out["loss_part_stage_weight_recon"] = recon_stage_weight
@@ -1420,10 +1429,11 @@ class MlxScoreAwareAdapter:
                         None,
                     ),
                 )
+                pose_score_term = mx.sqrt(10.0 * pose_distill + 1.0e-12)
                 return (
                     float(self.bundle.pose_distillation_weight)
                     * pose_stage_weight
-                    * pose_distill
+                    * pose_score_term
                 )
 
             pose_params = {"weight": pose_head.weight, "bias": pose_head.bias}

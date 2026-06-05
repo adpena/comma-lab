@@ -138,6 +138,34 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--archive-section-telemetry-source",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "HiNeRV hinerv_archive_section_telemetry.v1 JSON or an export "
+            "wrapper containing archive_section_telemetry. Valid matched "
+            "telemetry is threaded into run_compact_renderer_mlx_spine_runner.py "
+            "as --archive-section-telemetry-json."
+        ),
+    )
+    parser.add_argument(
+        "--auto-archive-section-telemetry-root",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Search this artifact root for HiNeRV archive-section telemetry "
+            "JSON and feed the newest rows into campaign rows. Repeatable."
+        ),
+    )
+    parser.add_argument(
+        "--auto-archive-section-telemetry-limit",
+        type=int,
+        default=8,
+        help="Maximum discovered archive-section telemetry artifacts to consume.",
+    )
+    parser.add_argument(
         "--snerv-lf-payload-recode-source",
         action="append",
         default=[],
@@ -247,6 +275,15 @@ def main(argv: list[str] | None = None) -> int:
             ),
         ]
     )
+    archive_section_telemetry_paths = _dedupe_paths(
+        [
+            *(path for path in args.archive_section_telemetry_source),
+            *_discover_archive_section_telemetry_paths(
+                args.auto_archive_section_telemetry_root,
+                limit=int(args.auto_archive_section_telemetry_limit),
+            ),
+        ]
+    )
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_load(args.hinerv_modelsize_budget),
         snerv_modelsize_budget=_load(args.snerv_modelsize_budget),
@@ -266,6 +303,9 @@ def main(argv: list[str] | None = None) -> int:
                 args.decoder_weight_waterfill_source,
                 sidecar_root=args.output_json.parent / "decoder_weight_waterfill_sidecars",
             )
+        ),
+        archive_section_telemetry_sources=tuple(
+            _load_archive_section_telemetry_sources(archive_section_telemetry_paths)
         ),
         snerv_lf_payload_recode_sources=tuple(
             _load(path) for path in args.snerv_lf_payload_recode_source
@@ -333,6 +373,9 @@ def main(argv: list[str] | None = None) -> int:
                 "launchable_local_row_count": report["launchable_local_row_count"],
                 "blocked_row_count": report["blocked_row_count"],
                 "decoder_weight_waterfill_attached_row_count": report["decoder_weight_waterfill_attached_row_count"],
+                "archive_section_telemetry_attached_row_count": report[
+                    "archive_section_telemetry_attached_row_count"
+                ],
                 "snerv_lf_over_ceiling_reroute_queue_row_count": report[
                     "snerv_lf_over_ceiling_reroute_queue_row_count"
                 ],
@@ -435,6 +478,36 @@ def _discover_candidate_feedback_paths(
     return _dedupe_paths([path for _mtime, path in candidates])[:limit]
 
 
+def _discover_archive_section_telemetry_paths(
+    roots: list[Path],
+    *,
+    limit: int,
+) -> list[Path]:
+    if limit <= 0:
+        return []
+    candidates: list[tuple[float, Path]] = []
+    seen: set[str] = set()
+    for raw_root in roots:
+        root = Path(raw_root).expanduser().resolve(strict=False)
+        if not root.is_dir():
+            continue
+        for pattern in (
+            "hi_nerv_archive_section_telemetry.json",
+            "*archive_section_telemetry*.json",
+            "export_report.json",
+            "hinerv_checkpoint_archive_export.json",
+        ):
+            for path in root.rglob(pattern):
+                key = path.resolve(strict=False).as_posix()
+                if key in seen:
+                    continue
+                seen.add(key)
+                if _is_archive_section_telemetry_source(path):
+                    candidates.append((path.stat().st_mtime, path))
+    candidates.sort(key=lambda item: (item[0], item[1].as_posix()), reverse=True)
+    return _dedupe_paths([path for _mtime, path in candidates])[:limit]
+
+
 def _is_candidate_feedback_source(path: Path) -> bool:
     try:
         payload = _load(path)
@@ -457,6 +530,20 @@ def _is_candidate_feedback_source(path: Path) -> bool:
             for item in rows
         )
     return False
+
+
+def _is_archive_section_telemetry_source(path: Path) -> bool:
+    try:
+        payload = _load(path)
+    except (OSError, TypeError, json.JSONDecodeError):
+        return False
+    if payload.get("schema") == "hinerv_archive_section_telemetry.v1":
+        return True
+    nested = payload.get("archive_section_telemetry")
+    return (
+        isinstance(nested, dict)
+        and nested.get("schema") == "hinerv_archive_section_telemetry.v1"
+    )
 
 
 def _is_receiver_proof_modelsize_byte_cap_export(path: Path) -> bool:
@@ -642,6 +729,69 @@ def _load_feedback_sources(paths: list[Path]) -> list[dict]:
         else:
             out.append(_feedback_payload_with_path(payload, path))
     return out
+
+
+def _load_archive_section_telemetry_sources(paths: list[Path]) -> list[dict]:
+    out: list[dict] = []
+    for path in paths:
+        payload = _load(path)
+        if not _archive_section_telemetry_payload_ready(payload):
+            raise TypeError(
+                f"{path}: unsupported archive section telemetry schema "
+                f"{payload.get('schema')!r}"
+            )
+        resolved = path.expanduser().resolve(strict=False)
+        loaded = _archive_section_telemetry_payload_with_path(payload, resolved)
+        loaded.setdefault("_archive_section_telemetry_path", resolved.as_posix())
+        loaded.setdefault("_archive_section_telemetry_source_path", resolved.as_posix())
+        if resolved.is_file():
+            loaded.setdefault("_archive_section_telemetry_sha256", sha256_file(resolved))
+        out.append(loaded)
+    return out
+
+
+def _archive_section_telemetry_payload_with_path(
+    payload: dict,
+    path: Path,
+) -> dict:
+    if payload.get("schema") == "hinerv_archive_section_telemetry.v1":
+        return dict(payload)
+    nested = payload.get("archive_section_telemetry")
+    if not isinstance(nested, dict):
+        return dict(payload)
+    out = dict(nested)
+    for key in (
+        "candidate_id",
+        "row_id",
+        "family",
+        "archive_sha256",
+        "archive_bytes",
+        "archive_zip_bytes",
+        "hard_byte_ceiling",
+        "receiver_proof_path",
+        "receiver_proof_sha256",
+        "receiver_proof_status",
+        "runtime_consumption_proof_ready",
+        "receiver_cache_quality_report_path",
+        "receiver_cache_quality_report_sha256",
+        "receiver_cache_quality_gate_passed",
+        "receiver_cache_quality_gate_verdict",
+    ):
+        if out.get(key) is None and payload.get(key) is not None:
+            out[key] = payload[key]
+    out.setdefault("_archive_section_telemetry_wrapper_schema", payload.get("schema"))
+    out.setdefault("_archive_section_telemetry_wrapper_path", path.as_posix())
+    return out
+
+
+def _archive_section_telemetry_payload_ready(payload: dict) -> bool:
+    if payload.get("schema") == "hinerv_archive_section_telemetry.v1":
+        return True
+    nested = payload.get("archive_section_telemetry")
+    return (
+        isinstance(nested, dict)
+        and nested.get("schema") == "hinerv_archive_section_telemetry.v1"
+    )
 
 
 def _feedback_payload_with_path(payload: dict, path: Path) -> dict:

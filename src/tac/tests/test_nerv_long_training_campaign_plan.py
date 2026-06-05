@@ -1707,6 +1707,62 @@ def test_long_training_campaign_plan_admits_receiver_proven_hinerv_waterfill(
     assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" not in hi["blockers"]
 
 
+def test_long_training_campaign_plan_attaches_hinerv_archive_section_telemetry_fixture_path(
+    tmp_path: Path,
+) -> None:
+    telemetry_path = tmp_path / "hinerv_archive_section_telemetry.json"
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "family": "hi_nerv",
+        "candidate_id": "hinerv_tiny",
+        "profile_ready": True,
+        "archive_zip_bytes": 160_000,
+        "section_payload_bytes": 159_000,
+        "sections": [
+            {"name": "decoder_state", "bytes": 120_000},
+            {"name": "latents", "bytes": 39_000},
+        ],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    telemetry_path.write_text(json.dumps(telemetry, sort_keys=True), encoding="utf-8")
+    telemetry["_archive_section_telemetry_path"] = telemetry_path.as_posix()
+    telemetry["_archive_section_telemetry_source_path"] = telemetry_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        archive_section_telemetry_sources=(telemetry,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    argv = hi["command_argv"]
+    assert "--archive-section-telemetry-json" not in argv
+    attachment = hi["archive_section_telemetry"]
+    assert attachment["attached"] is True
+    assert attachment["runner_admitted"] is False
+    assert attachment["sha256"] == _sha256(telemetry_path)
+    assert attachment["candidate_keys"] == ["hinerv_tiny"]
+    assert attachment["section_names"] == ["decoder_state", "latents"]
+    assert "hinerv_archive_section_telemetry_receiver_proof_path_missing" in (
+        attachment["runner_admission"]["refusal_reasons"]
+    )
+    assert (
+        "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted"
+        in hi["blockers"]
+    )
+    assert report["archive_section_telemetry_source_count"] == 1
+    assert report["archive_section_telemetry_row_count"] == 1
+    assert report["archive_section_telemetry_attached_row_count"] == 1
+    assert report["archive_section_telemetry_unattached_source_count"] == 0
+
+
 def test_long_training_campaign_plan_rejects_status_only_receiver_proof(
     tmp_path: Path,
 ) -> None:
@@ -1775,6 +1831,115 @@ def test_long_training_campaign_plan_rejects_generic_receiver_proof_string(
     assert "decoder_weight_waterfill_receiver_proof_not_ready" in refusal_reasons
     assert "receiver_proof_not_satisfied" in refusal_reasons
     assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" in hi["blockers"]
+
+
+def test_long_training_campaign_plan_attaches_hinerv_archive_section_telemetry(
+    tmp_path: Path,
+) -> None:
+    proof_path = _receiver_proof(tmp_path, archive_sha="b" * 64)
+    cache_path = _receiver_cache_quality_report(tmp_path, passed=True)
+    telemetry_path = tmp_path / "hi_nerv_archive_section_telemetry.json"
+    telemetry = _archive_section_telemetry(
+        candidate_id="hinerv_tiny",
+        archive_sha="b" * 64,
+        archive_zip_bytes=177_500,
+        receiver_proof_path=proof_path,
+        cache_quality_report_path=cache_path,
+    )
+    telemetry_path.write_text(json.dumps(telemetry, sort_keys=True), encoding="utf-8")
+    telemetry["_archive_section_telemetry_path"] = telemetry_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        archive_section_telemetry_sources=(telemetry,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    argv = hi["command_argv"]
+    assert "--archive-section-telemetry-json" in argv
+    assert argv[argv.index("--archive-section-telemetry-json") + 1] == (
+        telemetry_path.as_posix()
+    )
+    attachment = hi["archive_section_telemetry"]
+    assert attachment["attached"] is True
+    assert attachment["runner_admitted"] is True
+    assert attachment["sha256"] == _sha256(telemetry_path)
+    assert attachment["candidate_keys"] == ["hinerv_tiny"]
+    assert attachment["section_count"] == 3
+    assert attachment["section_names"] == [
+        "archive_zip_overhead",
+        "decoder_state",
+        "latents_mid",
+    ]
+    assert attachment["decoder_state_section_present"] is True
+    assert attachment["archive_under_hard_byte_ceiling"] is True
+    assert attachment["receiver_proof_binding"]["bound"] is True
+    assert attachment["receiver_cache_quality_binding"]["bound"] is True
+    assert report["archive_section_telemetry_source_count"] == 1
+    assert report["archive_section_telemetry_row_count"] == 1
+    assert report["archive_section_telemetry_attached_row_count"] == 1
+    assert report["archive_section_telemetry_unattached_source_count"] == 0
+    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" not in hi[
+        "blockers"
+    ]
+    assert hi["score_claim"] is False
+
+
+def test_long_training_campaign_plan_blocks_bad_hinerv_archive_section_telemetry(
+    tmp_path: Path,
+) -> None:
+    proof_path = _receiver_proof(tmp_path, archive_sha="b" * 64)
+    cache_path = _receiver_cache_quality_report(tmp_path, passed=False)
+    telemetry_path = tmp_path / "hi_nerv_archive_section_telemetry_bad.json"
+    telemetry = _archive_section_telemetry(
+        candidate_id="hinerv_tiny",
+        archive_sha="b" * 64,
+        archive_zip_bytes=181_000,
+        receiver_proof_path=proof_path,
+        cache_quality_report_path=cache_path,
+        cache_quality_passed=False,
+        profile_ready=False,
+        sections=({"name": "latents_mid", "role": "latent", "bytes": 64},),
+    )
+    telemetry_path.write_text(json.dumps(telemetry, sort_keys=True), encoding="utf-8")
+    telemetry["_archive_section_telemetry_path"] = telemetry_path.as_posix()
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root=tmp_path / "campaigns",
+        max_candidates_per_family=1,
+        archive_section_telemetry_sources=(telemetry,),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    attachment = hi["archive_section_telemetry"]
+    assert attachment["attached"] is True
+    assert attachment["runner_admitted"] is False
+    assert "--archive-section-telemetry-json" not in hi["command_argv"]
+    assert "hinerv_archive_section_telemetry_not_profile_ready" in attachment[
+        "blockers"
+    ]
+    assert "hinerv_archive_section_telemetry_decoder_state_missing" in attachment[
+        "blockers"
+    ]
+    assert "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling" in (
+        attachment["runner_admission"]["refusal_reasons"]
+    )
+    assert (
+        "hinerv_archive_section_telemetry_receiver_cache_quality_gate_not_passed"
+        in attachment["runner_admission"]["refusal_reasons"]
+    )
+    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi[
+        "blockers"
+    ]
 
 
 def test_long_training_campaign_plan_routes_hinerv_hard_pair_feedback(
@@ -3683,6 +3848,86 @@ def test_long_training_campaign_plan_blocks_snerv_degenerate_renderer_context() 
     assert snerv["score_claim"] is False
 
 
+def test_long_training_campaign_plan_tether_smoke_clears_stale_tether_blockers() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report={
+            "schema": "snerv_scorer_tether_smoke.v1",
+            "created_utc": "2026-06-05T00:51:03Z",
+            "steps": 2,
+            "passed": True,
+            "blockers": [],
+            "metric_summary": {
+                "final": {
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 1.0,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 1.0,
+                },
+                "step_count": 2,
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "feedback_kind": "training_telemetry",
+                "feedback_scope": "full600_training_telemetry",
+                "family": "snerv",
+                "candidate_id": "snerv_scalarmean_hardpair_successor_fix2",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "launch_control_feedback_ready": False,
+                "receiver_proof_attached": False,
+                "full_video_local_prefilter_attached": False,
+                "local_cpu_replay_gate_attached": False,
+                "degenerate_renderer_risk_detected": True,
+                "direct_feedback_blockers": [
+                    "snerv_scorer_domain_tether_missing_telemetry",
+                    "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry",
+                    "snerv_segnet_last_frame_distill_metric_missing_telemetry",
+                    "snerv_scorer_domain_tether_lambda_inactive_telemetry",
+                    "snerv_score_aware_long_training_dual_segnet_lambda_never_active",
+                    "snerv_score_aware_long_training_dual_posenet_lambda_never_active",
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert "snerv_scorer_domain_tether_missing_telemetry" in (
+        snerv["candidate_feedback_evidence_blockers_before_tether_smoke"]
+    )
+    assert "snerv_scorer_domain_tether_missing_telemetry" in (
+        snerv["snerv_scorer_tether_smoke_suppressed_feedback_blockers"]
+    )
+    assert "snerv_scorer_domain_tether_missing_telemetry" not in (
+        snerv["candidate_feedback_evidence_blockers"]
+    )
+    queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert "snerv_scorer_domain_tether_missing_telemetry" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert "snerv_scorer_domain_tether_lambda_inactive_telemetry" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert snerv["score_claim"] is False
+
+
 def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -4619,8 +4864,10 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     out_snerv_lf_reroute_queue = tmp_path / "snerv_lf_reroute_queue.json"
     feedback_jsonl = tmp_path / "feedback.jsonl"
     waterfill_bundle = tmp_path / "hinerv_archive_ladder_waterfill.json"
+    archive_section_telemetry = tmp_path / "hi_nerv_archive_section_telemetry.json"
     snerv_tether_smoke = tmp_path / "snerv_scorer_tether_smoke.json"
     proof_path = _receiver_proof(tmp_path, archive_sha="a" * 64)
+    cache_quality_path = _receiver_cache_quality_report(tmp_path, passed=True)
     hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
     snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
     feedback_jsonl.write_text(
@@ -4646,6 +4893,19 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
             },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    archive_section_telemetry.write_text(
+        json.dumps(
+            _archive_section_telemetry(
+                candidate_id="hinerv_tiny",
+                archive_sha="a" * 64,
+                archive_zip_bytes=177_000,
+                receiver_proof_path=proof_path,
+                cache_quality_report_path=cache_quality_path,
+            ),
             sort_keys=True,
         ),
         encoding="utf-8",
@@ -4687,6 +4947,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(feedback_jsonl),
             "--decoder-weight-waterfill-source",
             str(waterfill_bundle),
+            "--archive-section-telemetry-source",
+            str(archive_section_telemetry),
             "--snerv-scorer-tether-smoke-report",
             str(snerv_tether_smoke),
             "--epochs",
@@ -4708,6 +4970,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert payload["planner_row_queue_artifact_path"] == out_queue.as_posix()
     assert payload["candidate_feedback_row_count"] == 1
     assert payload["decoder_weight_waterfill_attached_row_count"] == 1
+    assert payload["archive_section_telemetry_attached_row_count"] == 1
     assert payload["snerv_scorer_tether_smoke_report_attached"] is True
     assert payload["snerv_scorer_tether_smoke_gate"]["passed"] is True
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
@@ -4715,6 +4978,10 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert hi["command_argv"][hi["command_argv"].index("--planner-row-queue-artifact") + 1] == out_queue.as_posix()
     assert "--recon-pixel-weight-path" in hi["command_argv"]
     assert "--decoder-weight-waterfill-plan-json" in hi["command_argv"]
+    assert "--archive-section-telemetry-json" in hi["command_argv"]
+    assert hi["command_argv"][hi["command_argv"].index("--archive-section-telemetry-json") + 1] == (
+        archive_section_telemetry.resolve(strict=False).as_posix()
+    )
     waterfill_sidecar = Path(hi["command_argv"][hi["command_argv"].index("--decoder-weight-waterfill-plan-json") + 1])
     assert waterfill_sidecar.is_file()
     assert waterfill_sidecar.parent.name == "decoder_weight_waterfill_sidecars"
@@ -5937,6 +6204,93 @@ def _decoder_weight_waterfill_plan(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+
+
+def _archive_section_telemetry(
+    *,
+    candidate_id: str,
+    archive_sha: str = "a" * 64,
+    archive_zip_bytes: int = 177_500,
+    receiver_proof_path: Path | None = None,
+    cache_quality_report_path: Path | None = None,
+    cache_quality_passed: bool = True,
+    profile_ready: bool = True,
+    sections: tuple[dict[str, object], ...] = (
+        {"name": "decoder_state", "role": "decoder", "bytes": 1200},
+        {"name": "latents_mid", "role": "latent", "bytes": 64},
+    ),
+) -> dict:
+    return {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "family": "hi_nerv",
+        "candidate_id": candidate_id,
+        "profile_ready": bool(profile_ready),
+        "archive_sha256": archive_sha,
+        "archive_zip_bytes": int(archive_zip_bytes),
+        "inner_payload_bytes": int(archive_zip_bytes) - 42,
+        "section_payload_bytes": sum(int(row.get("bytes") or 0) for row in sections),
+        "sections": list(sections),
+        "sections_with_zip_overhead": [
+            *list(sections),
+            {
+                "name": "archive_zip_overhead",
+                "role": "container_overhead",
+                "bytes": 42,
+            },
+        ],
+        "num_pairs": 600,
+        "hard_byte_ceiling": 178_000,
+        "receiver_proof_status": (
+            "runtime_consumption_proof_ready"
+            if receiver_proof_path is not None
+            else "missing"
+        ),
+        "receiver_proof_path": (
+            receiver_proof_path.as_posix() if receiver_proof_path is not None else None
+        ),
+        "receiver_cache_quality_report_path": (
+            cache_quality_report_path.as_posix()
+            if cache_quality_report_path is not None
+            else None
+        ),
+        "receiver_cache_quality_gate_passed": bool(cache_quality_passed),
+        "receiver_cache_quality_gate_verdict": (
+            "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+            if cache_quality_passed
+            else "FIT_OR_SCALE_FAILURE"
+        ),
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _receiver_cache_quality_report(root: Path, *, passed: bool) -> Path:
+    out = root / f"hi_nerv_receiver_cache_quality_{int(passed)}.json"
+    out.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_receiver_cache_quality_report.v1",
+                "quality_gate_passed": bool(passed),
+                "quality_gate": {
+                    "schema": "mlx_cache_quality_gate.v1",
+                    "fit_gate_passed": bool(passed),
+                    "verdict": (
+                        "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
+                        if passed
+                        else "FIT_OR_SCALE_FAILURE"
+                    ),
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return out
 
 
 def _pr95_baseline_identity() -> dict:

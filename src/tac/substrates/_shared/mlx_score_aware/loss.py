@@ -425,6 +425,42 @@ def _scorer_input_fit_guard_parts(
     return {"total": mse + mae, "mse": mse, "mae": mae}
 
 
+def _spatial_gradient_guard_parts(
+    candidate: Any,
+    reference: Any,
+) -> dict[str, Any]:
+    """Match scorer-domain local contrast with dense gradients.
+
+    Global dynamic range is too sparse a training signal for collapsed NeRV
+    renderers: only the current extrema get range gradients. The contest
+    networks consume downsampled spatial structure, so match first differences
+    on the same scorer-domain tensor instead of adding a perceptual image loss.
+    """
+
+    mx = require_mlx_for_harness()
+    ref = mx.stop_gradient(reference)
+    cand_dx = candidate[:, :, 1:, :] - candidate[:, :, :-1, :]
+    ref_dx = ref[:, :, 1:, :] - ref[:, :, :-1, :]
+    cand_dy = candidate[:, 1:, :, :] - candidate[:, :-1, :, :]
+    ref_dy = ref[:, 1:, :, :] - ref[:, :-1, :, :]
+    dx_fit = _scorer_input_fit_guard_parts(cand_dx, ref_dx)
+    dy_fit = _scorer_input_fit_guard_parts(cand_dy, ref_dy)
+    dx_distribution = _value_domain_distribution_guard_parts(cand_dx, ref_dx)
+    dy_distribution = _value_domain_distribution_guard_parts(cand_dy, ref_dy)
+    total = (
+        dx_fit["total"]
+        + dy_fit["total"]
+        + dx_distribution["std"]
+        + dy_distribution["std"]
+    )
+    return {
+        "total": total,
+        "mse": dx_fit["mse"] + dy_fit["mse"],
+        "mae": dx_fit["mae"] + dy_fit["mae"],
+        "std": dx_distribution["std"] + dy_distribution["std"],
+    }
+
+
 def _frame_distribution_guard_parts(
     bundle: RendererBundle,
     rgb: Any,
@@ -442,13 +478,18 @@ def _frame_distribution_guard_parts(
 
     distribution = _value_domain_distribution_guard_parts(rgb, gt)
     saturation = _soft_saturation_guard_parts(bundle, rgb, gt)
-    total = distribution["total"] + saturation["total"]
+    spatial_gradient = _spatial_gradient_guard_parts(rgb, gt)
+    total = distribution["total"] + saturation["total"] + spatial_gradient["total"]
     return {
         "total": total,
         "mean": distribution["mean"],
         "std": distribution["std"],
         "dynamic_range": distribution["dynamic_range"],
         "soft_saturation": saturation["soft_saturation"],
+        "spatial_gradient": spatial_gradient["total"],
+        "spatial_gradient_mse": spatial_gradient["mse"],
+        "spatial_gradient_mae": spatial_gradient["mae"],
+        "spatial_gradient_std": spatial_gradient["std"],
     }
 
 
@@ -482,8 +523,14 @@ def _posenet_yuv6_distribution_guard_parts(
         temporal_delta,
         ref_temporal_delta,
     )
+    pair_spatial_gradient = _spatial_gradient_guard_parts(pair, ref_pair)
     total = pair_parts["total"] + temporal_parts["total"]
-    total = total + pair_fit["total"] + temporal_delta_fit["total"]
+    total = (
+        total
+        + pair_fit["total"]
+        + temporal_delta_fit["total"]
+        + pair_spatial_gradient["total"]
+    )
     return {
         "total": total,
         "pair": pair_parts["total"],
@@ -492,6 +539,10 @@ def _posenet_yuv6_distribution_guard_parts(
         "pair_mean": pair_parts["mean"],
         "pair_std": pair_parts["std"],
         "pair_dynamic_range": pair_parts["dynamic_range"],
+        "pair_spatial_gradient": pair_spatial_gradient["total"],
+        "pair_spatial_gradient_mse": pair_spatial_gradient["mse"],
+        "pair_spatial_gradient_mae": pair_spatial_gradient["mae"],
+        "pair_spatial_gradient_std": pair_spatial_gradient["std"],
         "temporal_delta": temporal_parts["total"],
         "temporal_delta_mse": temporal_delta_fit["mse"],
         "temporal_delta_mae": temporal_delta_fit["mae"],
@@ -526,6 +577,18 @@ def scorer_input_distribution_guard_loss(
         "scorer_input_distribution_guard_soft_saturation": (
             parts_0["soft_saturation"] + parts_1["soft_saturation"]
         ),
+        "scorer_input_distribution_guard_spatial_gradient": (
+            parts_0["spatial_gradient"] + parts_1["spatial_gradient"]
+        ),
+        "scorer_input_distribution_guard_spatial_gradient_mse": (
+            parts_0["spatial_gradient_mse"] + parts_1["spatial_gradient_mse"]
+        ),
+        "scorer_input_distribution_guard_spatial_gradient_mae": (
+            parts_0["spatial_gradient_mae"] + parts_1["spatial_gradient_mae"]
+        ),
+        "scorer_input_distribution_guard_segnet_frame1_spatial_gradient": (
+            parts_1["spatial_gradient"]
+        ),
         "scorer_input_distribution_guard_segnet_frame1_mse": segnet_frame1_fit[
             "mse"
         ],
@@ -538,6 +601,15 @@ def scorer_input_distribution_guard_loss(
         "scorer_input_distribution_guard_yuv6_pair_dynamic_range": yuv6_parts[
             "pair_dynamic_range"
         ],
+        "scorer_input_distribution_guard_yuv6_pair_spatial_gradient": (
+            yuv6_parts["pair_spatial_gradient"]
+        ),
+        "scorer_input_distribution_guard_yuv6_pair_spatial_gradient_mse": (
+            yuv6_parts["pair_spatial_gradient_mse"]
+        ),
+        "scorer_input_distribution_guard_yuv6_pair_spatial_gradient_mae": (
+            yuv6_parts["pair_spatial_gradient_mae"]
+        ),
         "scorer_input_distribution_guard_yuv6_pair_mse": yuv6_parts["pair_mse"],
         "scorer_input_distribution_guard_yuv6_pair_mae": yuv6_parts["pair_mae"],
         "scorer_input_distribution_guard_yuv6_temporal_delta": yuv6_parts[
@@ -756,8 +828,15 @@ def score_aware_loss(
             teacher_pose=teacher_pose,
             per_dim_scale=per_dim_scale,
         )
-        total = total + bundle.pose_distillation_weight * pose_stage_weight * pose_distill
+        pose_score_term = mx.sqrt(10.0 * pose_distill + 1.0e-12)
+        total = (
+            total
+            + bundle.pose_distillation_weight
+            * pose_stage_weight
+            * pose_score_term
+        )
         parts["pose_distill"] = pose_distill
+        parts["pose_score_term"] = pose_score_term
         if bundle.pose_distillation_loss != "mse":
             parts["pose_distill_raw_mse"] = pose_distill_raw_mse
 

@@ -1009,6 +1009,37 @@ def _write_nerv_feedback_row(
     )
 
 
+def _write_snerv_scorer_tether_smoke(
+    path: Path,
+    *,
+    passed: bool = True,
+    score_claim: bool = False,
+) -> Path:
+    return _write_json(
+        path,
+        {
+            "schema": "snerv_scorer_tether_smoke.v1",
+            "passed": passed,
+            "steps": 2,
+            "blockers": [] if passed else ["unit_tether_smoke_failed"],
+            "metric_summary": {
+                "final": {
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 1.0,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 1.0,
+                },
+                "step_count": 2,
+            },
+            "score_claim": score_claim,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+
 def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
     tmp_path: Path,
     monkeypatch,
@@ -1024,6 +1055,7 @@ def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
         family="snerv",
     )
     feedback_root = tmp_path / "feedback"
+    smoke_root = tmp_path / "smoke"
     snerv_row = _write_nerv_feedback_row(
         feedback_root
         / "snerv_run"
@@ -1038,8 +1070,12 @@ def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
         feedback_kind="training_telemetry",
         candidate_id="hinerv_waterfill_guard",
     )
+    smoke = _write_snerv_scorer_tether_smoke(
+        smoke_root / "snerv_scorer_tether_smoke.json",
+    )
     monkeypatch.setattr(mod, "NERV_MODELSIZE_BUDGET_SCAN_ROOTS", (budget_root,))
     monkeypatch.setattr(mod, "NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS", (feedback_root,))
+    monkeypatch.setattr(mod, "SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS", (smoke_root,))
 
     payload = mod._nerv_long_training_campaign_plan_summary()
 
@@ -1053,6 +1089,10 @@ def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
     assert command_args.count("--auto-candidate-feedback-root") == 2
     assert str(snerv_row.parent) in command_args
     assert str(hinerv_row.parent) in command_args
+    assert "--snerv-scorer-tether-smoke-report" in command_args
+    assert str(smoke) in command_args
+    assert payload["selected_snerv_scorer_tether_smoke"]["path"] == str(smoke)
+    assert payload["selected_snerv_scorer_tether_smoke"]["status"] == "USABLE"
     assert "--candidate-feedback-source" not in command_args
     assert payload["score_claim"] is False
     assert payload["promotion_eligible"] is False
@@ -1075,6 +1115,7 @@ def test_operator_briefing_nerv_plan_filters_feedback_authority_leaks(
         family="snerv",
     )
     feedback_root = tmp_path / "feedback"
+    smoke_root = tmp_path / "smoke"
     good_row = _write_nerv_feedback_row(
         feedback_root / "good" / "nerv_candidate_training_telemetry_feedback_row.json",
         family="snerv",
@@ -1088,8 +1129,16 @@ def test_operator_briefing_nerv_plan_filters_feedback_authority_leaks(
         candidate_id="snerv_bad",
         score_claim=True,
     )
+    good_smoke = _write_snerv_scorer_tether_smoke(
+        smoke_root / "good" / "snerv_scorer_tether_smoke.json",
+    )
+    bad_smoke = _write_snerv_scorer_tether_smoke(
+        smoke_root / "bad" / "snerv_scorer_tether_smoke.json",
+        score_claim=True,
+    )
     monkeypatch.setattr(mod, "NERV_MODELSIZE_BUDGET_SCAN_ROOTS", (budget_root,))
     monkeypatch.setattr(mod, "NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS", (feedback_root,))
+    monkeypatch.setattr(mod, "SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS", (smoke_root,))
 
     payload = mod._nerv_long_training_campaign_plan_summary()
 
@@ -1106,6 +1155,16 @@ def test_operator_briefing_nerv_plan_filters_feedback_authority_leaks(
     assert blocked
     assert blocked[0]["status"] == "BLOCKED_AUTHORITY_LEAK"
     assert blocked[0]["blockers"] == ["truthy_authority:score_claim"]
+    assert payload["selected_snerv_scorer_tether_smoke"]["path"] == str(good_smoke)
+    assert str(good_smoke) in payload["default_campaign_plan_command_args"]
+    assert str(bad_smoke) not in payload["default_campaign_plan_command_args"]
+    smoke_blocked = [
+        row for row in payload["latest_snerv_scorer_tether_smoke_rows"]
+        if row["path"] == str(bad_smoke)
+    ]
+    assert smoke_blocked
+    assert smoke_blocked[0]["status"] == "BLOCKED_AUTHORITY_LEAK"
+    assert smoke_blocked[0]["blockers"] == ["truthy_authority:score_claim"]
 
 def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
     mod = _load_briefing_module()

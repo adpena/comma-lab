@@ -238,6 +238,38 @@ def test_score_aware_checkpoint_selection_policy_preserves_mse_fallback() -> Non
     assert policy["blockers"] == []
 
 
+def test_snerv_scorer_tether_dual_targets_are_strict_before_long_training() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+    from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+        build_default_nerv_train_time_dual_ascent_config,
+    )
+
+    base = build_default_nerv_train_time_dual_ascent_config(
+        family="snerv",
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+    )
+    bound = mod._bind_snerv_scorer_tether_dual_targets(base)
+    constraints = {row["constraint_id"]: row for row in bound["constraints"]}
+
+    for constraint_id in (
+        "snerv_segnet_last_frame_distill",
+        "snerv_posenet_yuv6_pair_distill",
+    ):
+        assert constraints[constraint_id]["target"] == pytest.approx(0.0)
+        assert "target_fraction_of_initial" not in constraints[constraint_id]
+        assert (
+            constraints[constraint_id]["scorer_tether_launch_gate_target_bound"]
+            is True
+        )
+    assert bound["snerv_scorer_tether_launch_gate_target_policy"][
+        "constraint_ids"
+    ] == [
+        "snerv_posenet_yuv6_pair_distill",
+        "snerv_segnet_last_frame_distill",
+    ]
+
+
 def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     tmp_path: Path,
 ) -> None:

@@ -89,6 +89,11 @@ NERV_MODELSIZE_BUDGET_SCAN_ROOTS = (
     Path("/Volumes/VertigoDataTier/pact"),
     Path("/Volumes/APDataStore/pact/experiments/results"),
 )
+SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS = (
+    REPO_ROOT / "experiments" / "results",
+    Path("/Volumes/VertigoDataTier/pact/experiments/results"),
+    Path("/Volumes/APDataStore/pact/experiments/results"),
+)
 PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
     REPO_ROOT / ".omx" / "research",
@@ -120,6 +125,10 @@ NERV_CANDIDATE_FEEDBACK_ROW_NAMES = (
     "nerv_candidate_training_telemetry_feedback_row.json",
     "nerv_candidate_feedback_row.json",
     "candidate_feedback_row.json",
+)
+SNERV_SCORER_TETHER_SMOKE_NAMES = (
+    "snerv_scorer_tether_smoke.json",
+    "*snerv_scorer_tether_smoke*.json",
 )
 PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
 TENSOR_PAYLOAD_GRAMMAR_REPORT_GLOB = "*tensor_payload*report*.json"
@@ -3738,6 +3747,90 @@ def _nerv_campaign_feedback_row(path: Path) -> dict[str, object]:
     }
 
 
+def _snerv_scorer_tether_smoke_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+    *,
+    limit: int = 8,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = SNERV_SCORER_TETHER_SMOKE_SCAN_ROOTS
+    if limit <= 0:
+        return []
+    seen: set[Path] = set()
+    candidates: list[Path] = []
+    for raw_root in scan_roots:
+        root = Path(raw_root).expanduser()
+        if not root.is_dir():
+            continue
+        for pattern in SNERV_SCORER_TETHER_SMOKE_NAMES:
+            try:
+                matches = root.rglob(pattern)
+                for path in matches:
+                    resolved = path.resolve(strict=False)
+                    if resolved in seen or not path.is_file():
+                        continue
+                    seen.add(resolved)
+                    candidates.append(path)
+            except OSError:
+                continue
+    return sorted(
+        candidates,
+        key=lambda path: (_path_mtime_ns(path), path.as_posix()),
+        reverse=True,
+    )[:limit]
+
+
+def _snerv_scorer_tether_smoke_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base = {
+        "path": _repo_rel(path),
+        "root": _repo_rel(path.parent),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": _path_mtime_ns(path),
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {
+            **base,
+            "status": "BLOCKED_UNREADABLE",
+            "blockers": [str(payload["_error"])],
+        }
+    schema = str(payload.get("schema") or "")
+    if schema != "snerv_scorer_tether_smoke.v1":
+        return {
+            **base,
+            "status": "BLOCKED_SCHEMA",
+            "schema": schema,
+            "blockers": [f"unexpected_schema:{schema or 'missing'}"],
+        }
+    bad_authority = _authority_truthy(payload)
+    if bad_authority:
+        return {
+            **base,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "schema": schema,
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+        }
+    blockers = _unique_strings(
+        payload.get("blockers") if isinstance(payload.get("blockers"), list) else []
+    )
+    if payload.get("passed") is not True:
+        blockers = _unique_strings(
+            ["snerv_scorer_tether_smoke_failed", *blockers]
+        )
+    return {
+        **base,
+        "status": "USABLE" if not blockers else "BLOCKED_FAILED",
+        "schema": schema,
+        "passed": payload.get("passed") is True,
+        "steps": _safe_int(payload.get("steps")),
+        "metric_summary": payload.get("metric_summary")
+        if isinstance(payload.get("metric_summary"), dict)
+        else {},
+        "blockers": blockers,
+    }
+
+
 def _nerv_modelsize_budget_paths(
     family: str,
     scan_roots: tuple[Path, ...] | None = None,
@@ -3823,6 +3916,7 @@ def _nerv_long_training_campaign_plan_command(
     hinerv_budget: dict[str, object],
     snerv_budget: dict[str, object],
     feedback_roots: list[str],
+    snerv_scorer_tether_smoke_path: str = "",
 ) -> list[str]:
     if not hinerv_budget.get("path") or not snerv_budget.get("path"):
         return []
@@ -3849,6 +3943,13 @@ def _nerv_long_training_campaign_plan_command(
         args.extend(["--auto-candidate-feedback-root", root])
     if feedback_roots:
         args.extend(["--auto-candidate-feedback-limit", str(max(8, len(feedback_roots)))])
+    if snerv_scorer_tether_smoke_path:
+        args.extend(
+            [
+                "--snerv-scorer-tether-smoke-report",
+                snerv_scorer_tether_smoke_path,
+            ]
+        )
     return args
 
 
@@ -3860,13 +3961,25 @@ def _nerv_long_training_campaign_plan_summary() -> dict[str, object]:
         _nerv_campaign_feedback_row(path)
         for path in _nerv_campaign_feedback_row_paths()
     ]
+    smoke_rows = [
+        _snerv_scorer_tether_smoke_row(path)
+        for path in _snerv_scorer_tether_smoke_paths()
+    ]
     usable_rows = [row for row in rows if row.get("status") == "USABLE"]
     blocked_rows = [row for row in rows if row.get("status") != "USABLE"]
+    usable_smoke_rows = [
+        row for row in smoke_rows if row.get("status") == "USABLE"
+    ]
+    blocked_smoke_rows = [
+        row for row in smoke_rows if row.get("status") != "USABLE"
+    ]
+    selected_smoke = usable_smoke_rows[0] if usable_smoke_rows else {}
     feedback_roots = _unique_strings([row.get("root") for row in usable_rows])
     command_args = _nerv_long_training_campaign_plan_command(
         hinerv_budget=hinerv_budget,
         snerv_budget=snerv_budget,
         feedback_roots=feedback_roots,
+        snerv_scorer_tether_smoke_path=str(selected_smoke.get("path") or ""),
     )
     budget_blockers = _unique_strings(
         [
@@ -3910,6 +4023,11 @@ def _nerv_long_training_campaign_plan_summary() -> dict[str, object]:
         "blocked_feedback_row_count": len(blocked_rows),
         "feedback_roots": feedback_roots,
         "latest_feedback_rows": rows[:8],
+        "snerv_scorer_tether_smoke_row_count": len(smoke_rows),
+        "snerv_scorer_tether_smoke_usable_row_count": len(usable_smoke_rows),
+        "snerv_scorer_tether_smoke_blocked_row_count": len(blocked_smoke_rows),
+        "selected_snerv_scorer_tether_smoke": selected_smoke,
+        "latest_snerv_scorer_tether_smoke_rows": smoke_rows[:8],
         "default_campaign_plan_command_args": command_args,
         "default_campaign_plan_command": (
             (
@@ -3937,6 +4055,12 @@ def _format_nerv_long_training_campaign_plan_summary() -> str:
             f"usable={payload['usable_feedback_row_count']} "
             f"blocked={payload['blocked_feedback_row_count']}"
         ),
+        (
+            "SNeRV tether smokes: "
+            f"total={payload['snerv_scorer_tether_smoke_row_count']} "
+            f"usable={payload['snerv_scorer_tether_smoke_usable_row_count']} "
+            f"blocked={payload['snerv_scorer_tether_smoke_blocked_row_count']}"
+        ),
     ]
     hinerv_budget = payload.get("hinerv_modelsize_budget")
     snerv_budget = payload.get("snerv_modelsize_budget")
@@ -3959,6 +4083,15 @@ def _format_nerv_long_training_campaign_plan_summary() -> str:
             blockers = row.get("blockers")
             if blockers:
                 lines.append(f"    blockers={blockers}")
+    smoke = payload.get("selected_snerv_scorer_tether_smoke")
+    if isinstance(smoke, dict) and smoke.get("path"):
+        lines.append(
+            "selected SNeRV tether smoke: "
+            f"{smoke.get('path')} passed={smoke.get('passed')}"
+        )
+        blockers = smoke.get("blockers")
+        if blockers:
+            lines.append(f"  blockers={blockers}")
     command = str(payload.get("default_campaign_plan_command") or "")
     if command:
         lines.append("default feedback-aware campaign-plan command:")

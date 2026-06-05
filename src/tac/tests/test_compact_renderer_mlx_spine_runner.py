@@ -67,6 +67,39 @@ except ImportError:
     _AV_AVAILABLE = False
 
 
+def _passing_snerv_scorer_tether_smoke_report(*, steps: int = 2) -> dict[str, object]:
+    return {
+        "schema": "snerv_scorer_tether_smoke.v1",
+        "operation": "unit_stub_snerv_pr95_scorer_tether_dual_ascent_smoke",
+        "steps": int(steps),
+        "passed": True,
+        "blockers": [],
+        "metric_summary": {
+            "step_count": int(steps),
+            "final": {
+                "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
+                "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.25,
+            },
+        },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+@pytest.fixture(autouse=True)
+def _stub_snerv_scorer_tether_smoke(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        runner_mod,
+        "run_snerv_scorer_tether_smoke",
+        lambda *, steps=2: _passing_snerv_scorer_tether_smoke_report(
+            steps=int(steps)
+        ),
+    )
+
+
 def _fake_snerv_receiver_reconstruction_profile(
     *,
     profile_id: str,
@@ -996,6 +1029,7 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         score_aware_long_training_grad_clip_max_norm=None,
         score_aware_long_training_weight_decay=0.01,
         score_aware_long_training_eval_roundtrip_ste=True,
+        score_aware_long_training_scorer_tether_smoke_steps=3,
         score_aware_long_training_section_byte_refresh_every_steps=25,
         checkpoint_retention_keep_last_n=2,
         checkpoint_retention_keep_best_n=1,
@@ -1053,6 +1087,11 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     assert out["receiver_reconstruction_verified"] is True
     assert out["receiver_reconstruction"]["target_mse_nchw255"] == pytest.approx(0.75)
     assert out["receiver_reconstruction"]["export_mse_nchw255"] == pytest.approx(0.0)
+    assert out["snerv_scorer_tether_smoke_gate"]["required"] is True
+    assert out["snerv_scorer_tether_smoke_gate"]["executed"] is True
+    assert out["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert out["snerv_scorer_tether_smoke_gate"]["steps"] == 3
+    assert Path(out["snerv_scorer_tether_smoke_gate"]["gate_path"]).is_file()
     assert out["score_aware_long_training_telemetry_contract"]["passed"] is True
     assert out["native_mlx_full600_campaign_ready"] is True
     assert out["score_claim"] is False
@@ -1216,6 +1255,110 @@ def test_snerv_native_export_attachment_blocks_failed_training_telemetry_contrac
         "blockers"
     ]
     assert out["native_mlx_full600_campaign_ready"] is False
+
+
+def test_snerv_native_export_attachment_refuses_long_training_when_tether_smoke_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as native_mod
+
+    def failing_smoke(*, steps: int = 2) -> dict[str, object]:
+        return {
+            "schema": "snerv_scorer_tether_smoke.v1",
+            "steps": int(steps),
+            "passed": False,
+            "blockers": ["snerv_posenet_yuv6_pair_distill_dual_lambda_inactive"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    def fail_native_export(**_kwargs):
+        raise AssertionError("native SNeRV export must not launch after failed tether smoke")
+
+    monkeypatch.setattr(runner_mod, "run_snerv_scorer_tether_smoke", failing_smoke)
+    monkeypatch.setattr(native_mod, "train_export_snerv_mlx_native", fail_native_export)
+
+    out = runner_mod._run_snerv_native_mlx_export_attachment(
+        requested=True,
+        output_dir=tmp_path / "snerv_native_attachment_failed_tether",
+        num_pairs=2,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        scorer_upstream_dir=REPO_ROOT / "upstream",
+        modelsize_candidate={"candidate_id": "snerv-failed-tether-test"},
+        prioritized_pair_indices=(),
+        scorer_error_pair_sampling_weights={},
+        scorer_error_pair_curriculum={},
+        repo_root=REPO_ROOT,
+        allow_overwrite=False,
+        retain_receiver_output=False,
+        receiver_proof_timeout_seconds=12,
+        run_scorer_loop_qat=False,
+        scorer_loop_qat_max_trials=0,
+        scorer_loop_qat_search_mode="learned_random_subspace",
+        scorer_loop_qat_qat_bits=4,
+        scorer_loop_qat_decoder_payload_codec="int4_symmetric",
+        scorer_loop_qat_lf_payload_codec="int4_symmetric",
+        scorer_loop_qat_component_guard_mode="score_primary",
+        scorer_loop_qat_device="gpu",
+        recon_pixel_weight_path=None,
+        recon_pixel_weight_manifest_path=None,
+        recon_pixel_weight_normalize="mean",
+        native_mlx_decoder_train_steps=0,
+        native_mlx_decoder_train_lr=1e-5,
+        native_mlx_decoder_train_ridge=1e-6,
+        native_mlx_decoder_train_optimizer="closed_form",
+        score_aware_long_training_epochs=8,
+        score_aware_long_training_lr=1e-3,
+        score_aware_long_training_batch_pairs=2,
+        score_aware_long_training_optimizer="pact_muon_adamw",
+        score_aware_long_training_grad_clip_max_norm=None,
+        score_aware_long_training_weight_decay=0.01,
+        score_aware_long_training_eval_roundtrip_ste=True,
+        score_aware_long_training_scorer_tether_smoke_steps=5,
+        score_aware_long_training_section_byte_refresh_every_steps=25,
+        checkpoint_retention_keep_last_n=2,
+        checkpoint_retention_keep_best_n=1,
+        checkpoint_retention_keep_every_n_epochs=None,
+        checkpoint_retention_cold_store_roots=(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        pose_distillation_loss="huber",
+        pose_distillation_huber_delta=0.5,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_tau_boundary=1.25,
+        segnet_hinge_margin=0.5,
+        distillation_device="mps",
+        allow_segnet_only_research=False,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_magnitude_weight=0.0001,
+        coder_qat_delta_weight=0.0002,
+        coder_qat_c1a_entropy_weight=0.0001,
+        coder_qat_c1a_sigma=0.2,
+        coder_qat_c1a_sample_size=512,
+        score_aware_long_training_pr95_faithful_curriculum=True,
+        score_aware_long_training_pr95_muon_policy="faithful_stage8_only",
+        write_mlx_prefilter_profile=False,
+        mlx_prefilter_scorer_device=None,
+        mlx_prefilter_scorer_batch_pairs=1,
+        mlx_prefilter_progress_every=0,
+    )
+
+    assert out["executed"] is False
+    assert out["native_mlx_training_executed"] is False
+    assert out["score_aware_long_training_executed"] is False
+    assert "snerv_scorer_tether_smoke_failed_before_long_training" in out["blockers"]
+    assert "snerv_posenet_yuv6_pair_distill_dual_lambda_inactive" in out["blockers"]
+    gate = out["snerv_scorer_tether_smoke_gate"]
+    assert gate["required"] is True
+    assert gate["executed"] is True
+    assert gate["passed"] is False
+    assert gate["steps"] == 5
+    assert Path(gate["gate_path"]).is_file()
 
 
 def test_write_decoder_weight_saliency_artifact_for_waterfill(tmp_path: Path) -> None:
@@ -6084,6 +6227,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "--snerv-score-aware-long-training-weight-decay",
             "-1",
             "--snerv-score-aware-long-training-eval-roundtrip-ste",
+            "--snerv-score-aware-long-training-scorer-tether-smoke-steps",
+            "4",
             "--scorer-input-distribution-guard-weight",
             "0.5",
             "--scorer-input-distribution-guard-saturation-margin",
@@ -6163,6 +6308,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_score_aware_long_training_grad_clip_max_norm == 0.75
     assert sn.snerv_score_aware_long_training_weight_decay == -1.0
     assert sn.snerv_score_aware_long_training_eval_roundtrip_ste is True
+    assert sn.snerv_score_aware_long_training_scorer_tether_smoke_steps == 4
     assert sn.scorer_input_distribution_guard_weight == pytest.approx(0.5)
     assert sn.scorer_input_distribution_guard_saturation_margin == pytest.approx(0.04)
     assert sn.scorer_input_distribution_guard_temperature == pytest.approx(0.02)
@@ -10625,6 +10771,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["native_mlx_training_kind"] == (
         "snerv_mlx_score_aware_haar_renderer"
     )
+    assert native["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert native["snerv_scorer_tether_smoke_gate"]["required"] is True
     assert native["score_aware_long_training_executed"] is True
     assert native["score_aware_long_training_real_teachers_bound"] is True
     assert native["score_aware_long_training_has_real_segnet_teacher"] is True
@@ -10650,6 +10798,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert recon_weight["primary_archive_source"] == "snerv_native_mlx_export_direct"
     assert out["score_aware_training"]["mlx_native_train_export_attached"] is True
     assert out["score_aware_training"]["mlx_native_receiver_proof_passed"] is True
+    assert out["score_aware_training"]["scorer_tether_smoke_gate"]["passed"] is True
     assert (
         out["score_aware_training"]["mlx_native_receiver_reconstruction_verified"]
         is True
