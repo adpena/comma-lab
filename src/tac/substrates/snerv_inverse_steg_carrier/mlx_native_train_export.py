@@ -1836,6 +1836,14 @@ def train_export_snerv_mlx_native(
     scorer_loop_qat_pair_guard_min_score_improved_fraction: float = 1.0,
     scorer_loop_qat_pair_guard_max_pose_worsened_fraction: float = 0.0,
     scorer_loop_qat_device: str = "cpu",
+    scorer_loop_qat_perturb_scale: float = 0.02,
+    scorer_loop_qat_byte_pressure_multiplier: float = 1.0,
+    scorer_loop_qat_section_value_pressure_multiplier: float = 1.0,
+    scorer_loop_qat_max_archive_byte_growth: int | None = None,
+    scorer_loop_qat_byte_growth_admission_mode: str = "hard_cap",
+    scorer_loop_qat_pose_slack: float = 0.0,
+    scorer_loop_qat_seg_slack: float = 0.0,
+    scorer_loop_qat_seed: int = 1337,
     recon_pixel_weight_path: str | Path | None = None,
     recon_pixel_weight_manifest_path: str | Path | None = None,
     recon_pixel_weight_normalize: str = "mean",
@@ -2562,6 +2570,16 @@ def train_export_snerv_mlx_native(
             scorer_loop_qat_pair_guard_max_pose_worsened_fraction
         ),
         device=str(scorer_loop_qat_device),
+        perturb_scale=float(scorer_loop_qat_perturb_scale),
+        byte_pressure_multiplier=float(scorer_loop_qat_byte_pressure_multiplier),
+        section_value_pressure_multiplier=float(
+            scorer_loop_qat_section_value_pressure_multiplier
+        ),
+        max_archive_byte_growth=scorer_loop_qat_max_archive_byte_growth,
+        byte_growth_admission_mode=str(scorer_loop_qat_byte_growth_admission_mode),
+        pose_slack=float(scorer_loop_qat_pose_slack),
+        seg_slack=float(scorer_loop_qat_seg_slack),
+        seed=int(scorer_loop_qat_seed),
         allow_overwrite=allow_overwrite,
     )
     selected_packet = bytes(closed_form_archive.packet)
@@ -5682,6 +5700,14 @@ def _run_scorer_loop_qat_attachment(
     pair_guard_min_score_improved_fraction: float,
     pair_guard_max_pose_worsened_fraction: float,
     device: str,
+    perturb_scale: float,
+    byte_pressure_multiplier: float,
+    section_value_pressure_multiplier: float,
+    max_archive_byte_growth: int | None,
+    byte_growth_admission_mode: str,
+    pose_slack: float,
+    seg_slack: float,
+    seed: int,
     allow_overwrite: bool,
 ) -> dict[str, Any]:
     """Attach real SegNet/PoseNet scorer-loop evidence to a native export."""
@@ -5704,6 +5730,16 @@ def _run_scorer_loop_qat_attachment(
             "pair_guard_max_pose_worsened_fraction": float(
                 pair_guard_max_pose_worsened_fraction
             ),
+            "perturb_scale": float(perturb_scale),
+            "byte_pressure_multiplier": float(byte_pressure_multiplier),
+            "section_value_pressure_multiplier": float(
+                section_value_pressure_multiplier
+            ),
+            "max_archive_byte_growth": max_archive_byte_growth,
+            "byte_growth_admission_mode": str(byte_growth_admission_mode),
+            "pose_slack": float(pose_slack),
+            "seg_slack": float(seg_slack),
+            "seed": int(seed),
             "decoder_payload_codec": str(decoder_payload_codec),
             "lf_payload_codec": str(lf_payload_codec),
             "receiver_contract_satisfied": False,
@@ -5743,6 +5779,13 @@ def _run_scorer_loop_qat_attachment(
             qat_bits=int(qat_bits),
             max_trials=int(max_trials),
             search_mode=str(search_mode),
+            perturb_scale=float(perturb_scale),
+            byte_pressure_multiplier=float(byte_pressure_multiplier),
+            section_value_pressure_multiplier=float(section_value_pressure_multiplier),
+            max_archive_byte_growth=max_archive_byte_growth,
+            byte_growth_admission_mode=str(byte_growth_admission_mode),
+            pose_slack=float(pose_slack),
+            seg_slack=float(seg_slack),
             component_guard_mode=str(component_guard_mode),
             pair_guard_min_score_improved_fraction=float(
                 pair_guard_min_score_improved_fraction
@@ -5750,6 +5793,7 @@ def _run_scorer_loop_qat_attachment(
             pair_guard_max_pose_worsened_fraction=float(
                 pair_guard_max_pose_worsened_fraction
             ),
+            seed=int(seed),
         )
         result_payload = result.as_jsonable()
         best_packet = getattr(result, "best_packet", b"")
@@ -5864,6 +5908,23 @@ def _run_scorer_loop_qat_attachment(
             "pair_guard_max_pose_worsened_fraction": float(
                 pair_guard_max_pose_worsened_fraction
             ),
+            "perturb_scale": float(result_payload.get("perturb_scale") or perturb_scale),
+            "byte_pressure_multiplier": float(
+                result_payload.get("byte_pressure_multiplier")
+                or byte_pressure_multiplier
+            ),
+            "section_value_pressure_multiplier": float(
+                result_payload.get("section_value_pressure_multiplier")
+                or section_value_pressure_multiplier
+            ),
+            "max_archive_byte_growth": result_payload.get("max_archive_byte_growth"),
+            "byte_growth_admission_mode": str(
+                result_payload.get("byte_growth_admission_mode")
+                or byte_growth_admission_mode
+            ),
+            "pose_slack": float(result_payload.get("pose_slack") or pose_slack),
+            "seg_slack": float(result_payload.get("seg_slack") or seg_slack),
+            "seed": int(seed),
             "pair_robust_admission": result_payload.get("pair_robust_admission"),
             "accepted_improvement": bool(result_payload.get("accepted_improvement")),
             "receiver_contract_satisfied": bool(result_payload.get("receiver_contract_satisfied")),
@@ -5893,6 +5954,16 @@ def _run_scorer_loop_qat_attachment(
             "pair_guard_max_pose_worsened_fraction": float(
                 pair_guard_max_pose_worsened_fraction
             ),
+            "perturb_scale": float(perturb_scale),
+            "byte_pressure_multiplier": float(byte_pressure_multiplier),
+            "section_value_pressure_multiplier": float(
+                section_value_pressure_multiplier
+            ),
+            "max_archive_byte_growth": max_archive_byte_growth,
+            "byte_growth_admission_mode": str(byte_growth_admission_mode),
+            "pose_slack": float(pose_slack),
+            "seg_slack": float(seg_slack),
+            "seed": int(seed),
             "full_video_coverage": False,
             "emitted_packet_uses_scorer_loop_best_decoder": False,
             "blockers": ["snerv_scorer_loop_qat_attachment_failed"],

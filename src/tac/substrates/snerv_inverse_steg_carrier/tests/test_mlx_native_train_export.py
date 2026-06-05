@@ -167,6 +167,25 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         ].default
         == 0.0
     )
+    assert public_sig.parameters["scorer_loop_qat_perturb_scale"].default == 0.02
+    assert (
+        public_sig.parameters["scorer_loop_qat_byte_pressure_multiplier"].default
+        == 1.0
+    )
+    assert (
+        public_sig.parameters[
+            "scorer_loop_qat_section_value_pressure_multiplier"
+        ].default
+        == 1.0
+    )
+    assert public_sig.parameters["scorer_loop_qat_max_archive_byte_growth"].default is None
+    assert (
+        public_sig.parameters["scorer_loop_qat_byte_growth_admission_mode"].default
+        == "hard_cap"
+    )
+    assert public_sig.parameters["scorer_loop_qat_pose_slack"].default == 0.0
+    assert public_sig.parameters["scorer_loop_qat_seg_slack"].default == 0.0
+    assert public_sig.parameters["scorer_loop_qat_seed"].default == 1337
     attachment_sig = inspect.signature(mod._run_score_aware_long_training_attachment)
     assert "pr95_muon_policy" in attachment_sig.parameters
     assert "scorer_input_distribution_guard_weight" in attachment_sig.parameters
@@ -5074,6 +5093,14 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
         scorer_loop_qat_search_mode="top_weight_coordinate",
         scorer_loop_qat_qat_bits=4,
         scorer_loop_qat_component_guard_mode="pose_seg_hard",
+        scorer_loop_qat_perturb_scale=0.03125,
+        scorer_loop_qat_byte_pressure_multiplier=2.0,
+        scorer_loop_qat_section_value_pressure_multiplier=1.5,
+        scorer_loop_qat_max_archive_byte_growth=9,
+        scorer_loop_qat_byte_growth_admission_mode="rate_paid",
+        scorer_loop_qat_pose_slack=0.004,
+        scorer_loop_qat_seg_slack=0.005,
+        scorer_loop_qat_seed=99,
     )
 
     assert captured["n_pairs"] == 1
@@ -5082,6 +5109,14 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert captured["decoder_payload_codec"] == "int8_symmetric"
     assert captured["lf_payload_codec"] == "portfolio_auto"
     assert captured["component_guard_mode"] == "pose_seg_hard"
+    assert captured["perturb_scale"] == 0.03125
+    assert captured["byte_pressure_multiplier"] == 2.0
+    assert captured["section_value_pressure_multiplier"] == 1.5
+    assert captured["max_archive_byte_growth"] == 9
+    assert captured["byte_growth_admission_mode"] == "rate_paid"
+    assert captured["pose_slack"] == 0.004
+    assert captured["seg_slack"] == 0.005
+    assert captured["seed"] == 99
     assert captured["pair_guard_min_score_improved_fraction"] == 1.0
     assert captured["pair_guard_max_pose_worsened_fraction"] == 0.0
     assert captured["snerv_fc_dim"] == 5

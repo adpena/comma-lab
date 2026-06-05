@@ -7013,6 +7013,10 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "1.25",
             "--snerv-scorer-loop-section-value-pressure-multiplier",
             "1.75",
+            "--snerv-scorer-loop-max-archive-byte-growth",
+            "11",
+            "--snerv-scorer-loop-byte-growth-admission-mode",
+            "rate_paid",
             "--snerv-scorer-loop-lf-payload-codec",
             "auto",
             "--snerv-scorer-loop-pose-slack",
@@ -7140,6 +7144,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert sn.snerv_scorer_loop_search_mode == "learned_random_subspace"
     assert sn.snerv_scorer_loop_byte_pressure_multiplier == 1.25
     assert sn.snerv_scorer_loop_section_value_pressure_multiplier == 1.75
+    assert sn.snerv_scorer_loop_max_archive_byte_growth == 11
+    assert sn.snerv_scorer_loop_byte_growth_admission_mode == "rate_paid"
     assert sn.snerv_scorer_loop_lf_payload_codec == "auto"
     assert sn.snerv_scorer_loop_pose_slack == 0.001
     assert sn.snerv_scorer_loop_seg_slack == 0.002

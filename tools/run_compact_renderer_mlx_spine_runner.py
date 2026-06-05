@@ -3255,6 +3255,7 @@ def _run_snerv_scorer_loop_qat_attachment(
     byte_pressure_multiplier: float,
     section_value_pressure_multiplier: float,
     max_archive_byte_growth: int | None,
+    byte_growth_admission_mode: str,
     pose_slack: float,
     seg_slack: float,
     pair_stride: int,
@@ -3283,6 +3284,20 @@ def _run_snerv_scorer_loop_qat_attachment(
             "component_guard_mode": str(component_guard_mode),
             "decoder_payload_codec": str(decoder_payload_codec),
             "lf_payload_codec": str(lf_payload_codec),
+            "perturb_scale": float(perturb_scale),
+            "byte_pressure_multiplier": float(byte_pressure_multiplier),
+            "section_value_pressure_multiplier": float(
+                section_value_pressure_multiplier
+            ),
+            "max_archive_byte_growth": (
+                None
+                if max_archive_byte_growth is None
+                else int(max_archive_byte_growth)
+            ),
+            "byte_growth_admission_mode": str(byte_growth_admission_mode),
+            "pose_slack": float(pose_slack),
+            "seg_slack": float(seg_slack),
+            "seed": int(seed),
             "blockers": ["snerv_scorer_loop_qat_not_requested"],
             "score_claim": False,
             "promotion_eligible": False,
@@ -3335,6 +3350,7 @@ def _run_snerv_scorer_loop_qat_attachment(
                 if max_archive_byte_growth is None
                 else int(max_archive_byte_growth)
             ),
+            byte_growth_admission_mode=str(byte_growth_admission_mode),
             pose_slack=float(pose_slack),
             seg_slack=float(seg_slack),
             pair_guard_min_score_improved_fraction=float(
@@ -3393,11 +3409,22 @@ def _run_snerv_scorer_loop_qat_attachment(
             "component_guard_mode": str(
                 result_payload.get("component_guard_mode") or component_guard_mode
             ),
-            "pair_robust_admission": result_payload.get(
-                "pair_robust_admission"
-            ),
+            "perturb_scale": float(perturb_scale),
+            "byte_pressure_multiplier": float(byte_pressure_multiplier),
             "section_value_pressure_multiplier": float(
                 section_value_pressure_multiplier
+            ),
+            "max_archive_byte_growth": (
+                None
+                if max_archive_byte_growth is None
+                else int(max_archive_byte_growth)
+            ),
+            "byte_growth_admission_mode": str(byte_growth_admission_mode),
+            "pose_slack": float(pose_slack),
+            "seg_slack": float(seg_slack),
+            "seed": int(seed),
+            "pair_robust_admission": result_payload.get(
+                "pair_robust_admission"
             ),
             "result": result_payload,
             "accepted_improvement": bool(
@@ -3434,6 +3461,7 @@ def _run_snerv_scorer_loop_qat_attachment(
             "component_guard_mode": str(component_guard_mode),
             "decoder_payload_codec": str(decoder_payload_codec),
             "lf_payload_codec": str(lf_payload_codec),
+            "byte_growth_admission_mode": str(byte_growth_admission_mode),
             "progress_jsonl_path": progress_path.as_posix(),
             "blockers": ["snerv_scorer_loop_qat_failed"],
             "score_claim": False,
@@ -3650,6 +3678,14 @@ def _run_snerv_native_mlx_export_attachment(
     scorer_loop_qat_pair_guard_min_score_improved_fraction: float,
     scorer_loop_qat_pair_guard_max_pose_worsened_fraction: float,
     scorer_loop_qat_device: str,
+    scorer_loop_qat_perturb_scale: float,
+    scorer_loop_qat_byte_pressure_multiplier: float,
+    scorer_loop_qat_section_value_pressure_multiplier: float,
+    scorer_loop_qat_max_archive_byte_growth: int | None,
+    scorer_loop_qat_byte_growth_admission_mode: str,
+    scorer_loop_qat_pose_slack: float,
+    scorer_loop_qat_seg_slack: float,
+    scorer_loop_qat_seed: int,
     recon_pixel_weight_path: str | Path | None,
     recon_pixel_weight_manifest_path: str | Path | None,
     recon_pixel_weight_normalize: str,
@@ -3816,6 +3852,24 @@ def _run_snerv_native_mlx_export_attachment(
                 scorer_loop_qat_pair_guard_max_pose_worsened_fraction
             ),
             scorer_loop_qat_device=str(scorer_loop_qat_device),
+            scorer_loop_qat_perturb_scale=float(scorer_loop_qat_perturb_scale),
+            scorer_loop_qat_byte_pressure_multiplier=float(
+                scorer_loop_qat_byte_pressure_multiplier
+            ),
+            scorer_loop_qat_section_value_pressure_multiplier=float(
+                scorer_loop_qat_section_value_pressure_multiplier
+            ),
+            scorer_loop_qat_max_archive_byte_growth=(
+                None
+                if scorer_loop_qat_max_archive_byte_growth is None
+                else int(scorer_loop_qat_max_archive_byte_growth)
+            ),
+            scorer_loop_qat_byte_growth_admission_mode=str(
+                scorer_loop_qat_byte_growth_admission_mode
+            ),
+            scorer_loop_qat_pose_slack=float(scorer_loop_qat_pose_slack),
+            scorer_loop_qat_seg_slack=float(scorer_loop_qat_seg_slack),
+            scorer_loop_qat_seed=int(scorer_loop_qat_seed),
             recon_pixel_weight_path=recon_pixel_weight_path,
             recon_pixel_weight_manifest_path=recon_pixel_weight_manifest_path,
             recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
@@ -4934,6 +4988,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_scorer_loop_byte_pressure_multiplier: float = 1.0,
     snerv_scorer_loop_section_value_pressure_multiplier: float = 1.0,
     snerv_scorer_loop_max_archive_byte_growth: int | None = None,
+    snerv_scorer_loop_byte_growth_admission_mode: str = "hard_cap",
     snerv_scorer_loop_pose_slack: float = 0.0,
     snerv_scorer_loop_seg_slack: float = 0.0,
     snerv_scorer_loop_pair_stride: int = 1,
@@ -5451,6 +5506,22 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
             ),
             scorer_loop_qat_device=str(distillation_device),
+            scorer_loop_qat_perturb_scale=float(snerv_scorer_loop_perturb_scale),
+            scorer_loop_qat_byte_pressure_multiplier=float(
+                snerv_scorer_loop_byte_pressure_multiplier
+            ),
+            scorer_loop_qat_section_value_pressure_multiplier=float(
+                snerv_scorer_loop_section_value_pressure_multiplier
+            ),
+            scorer_loop_qat_max_archive_byte_growth=(
+                snerv_scorer_loop_max_archive_byte_growth
+            ),
+            scorer_loop_qat_byte_growth_admission_mode=str(
+                snerv_scorer_loop_byte_growth_admission_mode
+            ),
+            scorer_loop_qat_pose_slack=float(snerv_scorer_loop_pose_slack),
+            scorer_loop_qat_seg_slack=float(snerv_scorer_loop_seg_slack),
+            scorer_loop_qat_seed=int(random_seed),
             recon_pixel_weight_path=effective_recon_pixel_weight_path,
             recon_pixel_weight_manifest_path=(
                 effective_recon_pixel_weight_manifest_path
@@ -6303,6 +6374,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             snerv_scorer_loop_section_value_pressure_multiplier
         ),
         max_archive_byte_growth=snerv_scorer_loop_max_archive_byte_growth,
+        byte_growth_admission_mode=str(snerv_scorer_loop_byte_growth_admission_mode),
         pose_slack=float(snerv_scorer_loop_pose_slack),
         seg_slack=float(snerv_scorer_loop_seg_slack),
         pair_stride=int(snerv_scorer_loop_pair_stride),
@@ -6460,6 +6532,20 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             snerv_scorer_loop_pair_guard_max_pose_worsened_fraction
         ),
         scorer_loop_qat_device=str(distillation_device),
+        scorer_loop_qat_perturb_scale=float(snerv_scorer_loop_perturb_scale),
+        scorer_loop_qat_byte_pressure_multiplier=float(
+            snerv_scorer_loop_byte_pressure_multiplier
+        ),
+        scorer_loop_qat_section_value_pressure_multiplier=float(
+            snerv_scorer_loop_section_value_pressure_multiplier
+        ),
+        scorer_loop_qat_max_archive_byte_growth=snerv_scorer_loop_max_archive_byte_growth,
+        scorer_loop_qat_byte_growth_admission_mode=str(
+            snerv_scorer_loop_byte_growth_admission_mode
+        ),
+        scorer_loop_qat_pose_slack=float(snerv_scorer_loop_pose_slack),
+        scorer_loop_qat_seg_slack=float(snerv_scorer_loop_seg_slack),
+        scorer_loop_qat_seed=int(random_seed),
         recon_pixel_weight_path=effective_recon_pixel_weight_path,
         recon_pixel_weight_manifest_path=effective_recon_pixel_weight_manifest_path,
         recon_pixel_weight_normalize=str(recon_pixel_weight_normalize),
@@ -20342,6 +20428,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument("--snerv-scorer-loop-max-archive-byte-growth", type=int)
+    parser.add_argument(
+        "--snerv-scorer-loop-byte-growth-admission-mode",
+        choices=("hard_cap", "rate_paid"),
+        default="hard_cap",
+        help=(
+            "SNeRV scorer-loop QAT archive-byte admission. hard_cap refuses "
+            "growth above --snerv-scorer-loop-max-archive-byte-growth; "
+            "rate_paid allows growth only when the measured score gain pays "
+            "the charged byte price."
+        ),
+    )
     parser.add_argument("--snerv-scorer-loop-pose-slack", default=0.0, type=float)
     parser.add_argument("--snerv-scorer-loop-seg-slack", default=0.0, type=float)
     parser.add_argument("--snerv-scorer-loop-pair-stride", default=1, type=int)
@@ -21150,6 +21247,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_scorer_loop_max_archive_byte_growth=(
                 args.snerv_scorer_loop_max_archive_byte_growth
+            ),
+            snerv_scorer_loop_byte_growth_admission_mode=(
+                args.snerv_scorer_loop_byte_growth_admission_mode
             ),
             snerv_scorer_loop_pose_slack=args.snerv_scorer_loop_pose_slack,
             snerv_scorer_loop_seg_slack=args.snerv_scorer_loop_seg_slack,
