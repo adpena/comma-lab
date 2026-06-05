@@ -211,6 +211,42 @@ def test_two_full600_modelsize_rows_are_ready_for_ladder_input(tmp_path: Path) -
     assert payload["score_claim"] is False
 
 
+def test_receiver_proven_over_cap_row_is_demote_only(tmp_path: Path) -> None:
+    over_cap = {
+        **_full_row(tmp_path, "over_cap", 0.04, 16, 80_001, 0.004, 0.002, "4"),
+        "hard_byte_ceiling": 80_000,
+    }
+    under_cap = {
+        **_full_row(tmp_path, "under_cap", 0.08, 24, 79_999, 0.003, 0.002, "5"),
+        "hard_byte_ceiling": 80_000,
+    }
+    payload = build_nerv_receiver_closed_ladder_row_harvest(
+        [
+            {
+                "schema": "snerv_receiver_closed_cap_probe.v1",
+                "axis_tag": "[contest-CPU]",
+                "n_pairs": 600,
+                "rows": [over_cap, under_cap],
+            }
+        ],
+        carrier_id="snerv",
+        repo_root=tmp_path,
+    )
+
+    rows = {row["row_id"]: row for row in payload["harvested_rows"]}
+    assert payload["status"] == "receiver_closed_ladder_rows_blocked"
+    assert payload["receiver_proof_row_count"] == 1
+    assert payload["ladder_candidate_row_count"] == 1
+    assert rows["over_cap"]["receiver_proof_passed"] is False
+    assert rows["over_cap"]["archive_under_hard_byte_ceiling"] is False
+    assert rows["over_cap"]["archive_over_hard_byte_ceiling_bytes"] == 1
+    assert "receiver_proven_archive_over_hard_byte_ceiling" in rows["over_cap"][
+        "harvest_blockers"
+    ]
+    assert rows["under_cap"]["receiver_proof_passed"] is True
+    assert rows["under_cap"]["archive_under_hard_byte_ceiling"] is True
+
+
 def test_family_mismatch_is_preserved_in_harvest_rows(tmp_path: Path) -> None:
     payload = build_nerv_receiver_closed_ladder_row_harvest(
         [

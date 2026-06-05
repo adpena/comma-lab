@@ -240,6 +240,28 @@ def _harvest_row(
             "bytes",
         ),
     )
+    hard_byte_ceiling = _first_int(
+        candidate,
+        source_payload,
+        keys=(
+            "hard_byte_ceiling",
+            "target_archive_byte_cap",
+            "archive_byte_ceiling",
+            ("solved_budget", "hard_byte_ceiling"),
+            ("modelsize_candidate", "hard_byte_ceiling"),
+            ("modelsize_candidate_selection", "candidate", "hard_byte_ceiling"),
+        ),
+    )
+    archive_under_hard_byte_ceiling = (
+        None
+        if archive_bytes is None or hard_byte_ceiling is None
+        else bool(int(archive_bytes) <= int(hard_byte_ceiling))
+    )
+    archive_over_hard_byte_ceiling_bytes = (
+        None
+        if archive_bytes is None or hard_byte_ceiling is None
+        else max(0, int(archive_bytes) - int(hard_byte_ceiling))
+    )
     archive_sha = _first_string(
         candidate,
         source_payload,
@@ -405,6 +427,7 @@ def _harvest_row(
         local_receiver_replay
         and receiver_proof_identity_bound
         and sample_scope == "full600_or_better"
+        and archive_under_hard_byte_ceiling is not False
         and not axis_blocked
         and not authority_blockers
     )
@@ -416,6 +439,8 @@ def _harvest_row(
         blockers.append("source_row_not_accepted")
     if archive_bytes is None:
         blockers.append("measured_archive_bytes_missing")
+    if archive_under_hard_byte_ceiling is False:
+        blockers.append("receiver_proven_archive_over_hard_byte_ceiling")
     if archive_sha is None:
         blockers.append("archive_sha256_missing")
     if nonrate_score is None:
@@ -479,6 +504,9 @@ def _harvest_row(
         "snerv_step_map_bits_per_coeff": snerv_step_map_bits_per_coeff,
         "decoder_payload_codec": decoder_payload_codec,
         "archive_bytes": archive_bytes,
+        "hard_byte_ceiling": hard_byte_ceiling,
+        "archive_under_hard_byte_ceiling": archive_under_hard_byte_ceiling,
+        "archive_over_hard_byte_ceiling_bytes": archive_over_hard_byte_ceiling_bytes,
         "archive_sha256": archive_sha,
         "d_seg": d_seg,
         "d_pose": d_pose,
