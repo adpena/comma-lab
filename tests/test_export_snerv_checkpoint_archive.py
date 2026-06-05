@@ -371,6 +371,7 @@ def test_official_checkpoint_export_report_binds_tub_output2_activation_payload(
                     ),
                     "official_skip_high_mode": "scalar_mean",
                     "official_tub_output2_store_for_receiver_proof": True,
+                    "official_tub_output2_export_mode": "proof_only",
                 },
                 "hard_byte_ceilings": [100_000],
                 "command_args": {"num_pairs": 1},
@@ -416,6 +417,70 @@ def test_official_checkpoint_export_report_binds_tub_output2_activation_payload(
     )
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_checkpoint_export_auto_elides_tub_output2_proof_payload_by_default(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    state = _official_checkpoint_state_with_tub_output2_payload()
+    state_path = tmp_path / "official_state_with_tub_output2.npsd"
+    state_path.write_bytes(pack_state_dict_numpy(state))
+    checkpoint_meta = tmp_path / "checkpoint.meta.json"
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "global_epoch": 31,
+                "ema_shadow_state_path": state_path.as_posix(),
+                "live_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "official_checkpoint_tub_output2_auto_elide",
+                    "snerv_model_size_adapter": (
+                        "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+                    ),
+                    "official_skip_high_mode": "scalar_mean",
+                    "official_tub_output2_store_for_receiver_proof": True,
+                },
+                "hard_byte_ceilings": [100_000],
+                "command_args": {"num_pairs": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = tool.export_snerv_checkpoint_archive(
+        startup_json=startup,
+        checkpoint_meta=checkpoint_meta,
+        output_dir=tmp_path / "export",
+        state_kind="ema",
+        repo_root=tmp_path,
+    )
+
+    binding = report["official_checkpoint_export_binding"]
+    assert binding["official_tub_output2_activation_payload_bound"] is False
+    assert binding["official_tub_output2_receiver_executed"] is False
+    assert binding["official_tub_output2_storage"]["stored"] is False
+    assert binding["official_tub_output2_storage"][
+        "proof_only_elided_from_selected_runtime_packet"
+    ] is True
+    assert binding["official_tub_output2_byte_cap_admission"] == "not_present"
+    assert (
+        "snerv_official_tub_output2_non_score_causal_bytes_present"
+        not in report["blockers"]
+    )
+    assert (
+        "snerv_official_tub_output2_elide_or_bind_source_faithful_frame_decode"
+        not in report["blockers"]
+    )
 
 
 def test_official_checkpoint_packet_fails_closed_on_incomplete_tub_output2_pair() -> None:

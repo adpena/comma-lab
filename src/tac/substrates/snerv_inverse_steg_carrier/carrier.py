@@ -168,6 +168,8 @@ class SnervModelSizeConfig:
     adapter: str = SNERV_BASE_MODEL_SIZE_ADAPTER
     official_skip_high_mode: str = "full"
     official_tub_output2_store_for_receiver_proof: bool = False
+    official_tub_output2_export_mode: str = "auto_elide"
+    official_tub_output2_store_for_receiver_proof_requested: bool = False
     fc_dim_source: str = "constructor"
 
     def __post_init__(self) -> None:
@@ -191,6 +193,19 @@ class SnervModelSizeConfig:
             self,
             "official_tub_output2_store_for_receiver_proof",
             bool(self.official_tub_output2_store_for_receiver_proof),
+        )
+        object.__setattr__(
+            self,
+            "official_tub_output2_export_mode",
+            str(self.official_tub_output2_export_mode).strip().lower(),
+        )
+        object.__setattr__(
+            self,
+            "official_tub_output2_store_for_receiver_proof_requested",
+            bool(
+                self.official_tub_output2_store_for_receiver_proof_requested
+                or self.official_tub_output2_store_for_receiver_proof
+            ),
         )
         object.__setattr__(self, "fc_dim_source", str(self.fc_dim_source).strip())
         object.__setattr__(
@@ -219,6 +234,14 @@ class SnervModelSizeConfig:
                 "official_skip_high_mode must be one of "
                 f"{sorted(SNERV_OFFICIAL_SKIP_HIGH_MODES)}"
             )
+        if self.official_tub_output2_export_mode not in {
+            "auto_elide",
+            "proof_only",
+        }:
+            raise SnervCarrierError(
+                "official_tub_output2_export_mode must be one of "
+                "['auto_elide', 'proof_only']"
+            )
         if not self.fc_dim_source:
             raise SnervCarrierError("fc_dim_source must be non-empty")
 
@@ -242,6 +265,12 @@ class SnervModelSizeConfig:
             "official_skip_high_mode": self.official_skip_high_mode,
             "official_tub_output2_store_for_receiver_proof": bool(
                 self.official_tub_output2_store_for_receiver_proof
+            ),
+            "official_tub_output2_export_mode": (
+                self.official_tub_output2_export_mode
+            ),
+            "official_tub_output2_store_for_receiver_proof_requested": bool(
+                self.official_tub_output2_store_for_receiver_proof_requested
             ),
             "fc_dim_source": self.fc_dim_source,
             "feature_count": int(self.feature_count),

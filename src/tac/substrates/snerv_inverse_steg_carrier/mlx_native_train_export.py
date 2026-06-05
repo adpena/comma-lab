@@ -9157,6 +9157,32 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
     ):
         adapter = SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
     fc_dim, fc_dim_source = _fc_dim_resolution_from_candidate(candidate)
+    requested_tub_output2_store = bool(
+        candidate.get(
+            "official_tub_output2_store_for_receiver_proof",
+            candidate.get("snerv_official_tub_output2_store_for_receiver_proof", False),
+        )
+    )
+    tub_output2_export_mode = str(
+        candidate.get(
+            "official_tub_output2_export_mode",
+            candidate.get(
+                "snerv_official_tub_output2_export_mode",
+                "auto_elide",
+            ),
+        )
+    ).strip().lower()
+    if tub_output2_export_mode not in {"auto_elide", "proof_only"}:
+        raise SnervCarrierError(
+            "official_tub_output2_export_mode must be one of "
+            "['auto_elide', 'proof_only']"
+        )
+    # Candidate parsing is the train/export automation boundary. TUB output_2
+    # is source-parity useful, but it is not frame-decode score-causal in the
+    # current receiver. Only an explicit proof-only candidate may pay for it.
+    store_tub_output2 = bool(
+        requested_tub_output2_store and tub_output2_export_mode == "proof_only"
+    )
     return SnervModelSizeConfig(
         fc_dim=fc_dim,
         fc_dim_source=fc_dim_source,
@@ -9182,11 +9208,10 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
                 candidate.get("snerv_official_skip_high_mode", "full"),
             )
         ),
-        official_tub_output2_store_for_receiver_proof=bool(
-            candidate.get(
-                "official_tub_output2_store_for_receiver_proof",
-                candidate.get("snerv_official_tub_output2_store_for_receiver_proof", False),
-            )
+        official_tub_output2_store_for_receiver_proof=store_tub_output2,
+        official_tub_output2_export_mode=tub_output2_export_mode,
+        official_tub_output2_store_for_receiver_proof_requested=(
+            requested_tub_output2_store
         ),
         adapter=adapter,
     )
