@@ -57,6 +57,7 @@ def test_adapter_joint_scorer_proxy_penalizes_pose_warmup_missing_metric() -> No
     adapter = object.__new__(MlxScoreAwareAdapter)
     metrics = {
         "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.25,
+        "loss_part_pr95_stage_effective_pose_weight": 1.0,
     }
 
     adapter._add_dual_ascent_metric_aliases(metrics)
@@ -67,6 +68,23 @@ def test_adapter_joint_scorer_proxy_penalizes_pose_warmup_missing_metric() -> No
     assert metrics["loss_part_joint_scorer_proxy_nonrate"] == pytest.approx(
         1.0e9 + 25.0
     )
+
+
+def test_adapter_joint_scorer_proxy_not_synthesized_when_pose_stage_inactive() -> None:
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    adapter = object.__new__(MlxScoreAwareAdapter)
+    metrics = {
+        "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.25,
+        "loss_part_pr95_stage_effective_pose_weight": 0.0,
+    }
+
+    adapter._add_dual_ascent_metric_aliases(metrics)
+
+    assert metrics["loss_part_segnet_direct_live_argmax_disagreement"] == (
+        pytest.approx(0.25)
+    )
+    assert "loss_part_joint_scorer_proxy_nonrate" not in metrics
 
 
 @requires_mlx

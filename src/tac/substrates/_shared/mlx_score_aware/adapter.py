@@ -2761,14 +2761,20 @@ class MlxScoreAwareAdapter:
             ]
         seg_argmax = metrics.get("loss_part_segnet_direct_live_argmax_disagreement")
         pose_score = metrics.get("loss_part_pose_score_term")
+        pose_expected = _active_pr95_stage_metric_weight(
+            metrics,
+            "loss_part_pr95_stage_effective_pose_weight",
+            "loss_part_pr95_stage_pose_distill_weight",
+        )
         if (
             "loss_part_joint_scorer_proxy_nonrate" not in metrics
             and seg_argmax is not None
         ):
             if pose_score is None:
-                metrics["loss_part_joint_scorer_proxy_nonrate"] = (
-                    1.0e9 + 100.0 * float(seg_argmax)
-                )
+                if pose_expected:
+                    metrics["loss_part_joint_scorer_proxy_nonrate"] = (
+                        1.0e9 + 100.0 * float(seg_argmax)
+                    )
                 return
             metrics["loss_part_joint_scorer_proxy_nonrate"] = (
                 100.0 * float(seg_argmax) + float(pose_score)

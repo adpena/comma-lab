@@ -13631,6 +13631,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     joint_scorer_checkpoint_selection_active = bool(
         float(segnet_direct_live_distillation_weight) > 0.0
         and float(pose_distillation_weight) > 0.0
+        and not bool(allow_segnet_only_research)
     )
     direct_live_checkpoint_selection_active = bool(
         float(segnet_direct_live_distillation_weight) > 0.0
