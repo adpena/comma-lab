@@ -954,7 +954,16 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         "meta_json",
     }
     row = package["archive_bound_candidate_adapter_package"]["candidate_rows"][0]
+    assert row["runtime_adapter_ready"] is False
+    assert row["contest_runtime_decoder_adapter_ready"] is False
+    assert (
+        "hi_nerv_mlx_live_receiver_export_parity_not_applicable_non_mlx_source_backend"
+        in row["blockers"]
+    )
+    assert "runtime_adapter_ready_requires_no_extra_blockers" in row["blockers"]
     runtime_manifest = row["runtime_adapter_manifest"]
+    assert runtime_manifest["runtime_adapter_ready"] is False
+    assert runtime_manifest["contest_runtime_decoder_adapter_ready"] is False
     assert runtime_manifest["state_npz_bridge_manifest"]["artifact_sha256"] == (
         npz_manifest["artifact_sha256"]
     )

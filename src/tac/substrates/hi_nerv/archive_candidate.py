@@ -426,6 +426,18 @@ def _sha256_numpy_array(array: np.ndarray) -> str:
     return h.hexdigest()
 
 
+def _live_receiver_export_parity_extra_blockers(
+    proof: Mapping[str, Any],
+) -> list[str]:
+    if proof.get("proof_status") == "sampled_live_receiver_export_parity_passed":
+        return []
+    return [
+        str(blocker)
+        for blocker in proof.get("blockers") or []
+        if str(blocker).startswith("hi_nerv_mlx_live_receiver_export_")
+    ]
+
+
 def _build_decoder_rendered_pixel_proof(
     *,
     decoder_state_before: Mapping[str, torch.Tensor],
@@ -819,6 +831,9 @@ def export_hi_nerv_mlx_archive(
             },
             candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
             wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+            extra_blockers=_live_receiver_export_parity_extra_blockers(
+                live_receiver_export_parity
+            ),
             mlx_triage_argv=mlx_triage_argv,
         )
     return (archive_zip_path, archive_sha256, archive_bytes)
@@ -923,6 +938,9 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
         },
         candidate_row_schema="hi_nerv_mlx_archive_bound_candidate_row.v1",
         wrapper_schema=HI_NERV_MLX_ARCHIVE_BOUND_ADAPTER_PACKAGE_SCHEMA,
+        extra_blockers=_live_receiver_export_parity_extra_blockers(
+            live_receiver_export_parity
+        ),
         mlx_triage_argv=mlx_triage_argv,
     )
 

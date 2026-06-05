@@ -257,20 +257,22 @@ def build_archive_bound_candidate_runtime_package(
 ) -> dict[str, Any]:
     """Build and persist the shared archive-bound candidate package."""
 
+    extra_blocker_list = ordered_unique(list(extra_blockers or []))
     proof_passed = (
         receiver_proof.get("runtime_consumption_proof_ready") is True
         and receiver_proof.get("runtime_consumption_proof_passed") is True
         and receiver_proof.get("receiver_contract_satisfied") is True
         and not receiver_proof.get("blockers")
     )
+    runtime_ready = proof_passed and not extra_blocker_list
     proof_path = str(receiver_proof.get("proof_path") or "")
     runtime_tree_sha256 = tree_sha256(submission_dir)
     runtime_manifest = {
         "schema": "archive_bound_runtime_adapter_manifest.v1",
         "runtime_adapter_present": True,
         "contest_runtime_decoder_adapter_present": True,
-        "runtime_adapter_ready": proof_passed,
-        "contest_runtime_decoder_adapter_ready": proof_passed,
+        "runtime_adapter_ready": runtime_ready,
+        "contest_runtime_decoder_adapter_ready": runtime_ready,
         "decode_only_receiver_contract": True,
         "submission_dir": _repo_relative(submission_dir, repo_root),
         "runtime_tree_sha256": runtime_tree_sha256,
@@ -298,8 +300,8 @@ def build_archive_bound_candidate_runtime_package(
         "receiver_contract_satisfied": proof_passed,
         "runtime_adapter_present": True,
         "contest_runtime_decoder_adapter_present": True,
-        "runtime_adapter_ready": proof_passed,
-        "contest_runtime_decoder_adapter_ready": proof_passed,
+        "runtime_adapter_ready": runtime_ready,
+        "contest_runtime_decoder_adapter_ready": runtime_ready,
         "runtime_adapter_manifest": runtime_manifest,
         "semantic_payload_changed": True,
         "score_affecting_payload_changed": True,
@@ -318,8 +320,13 @@ def build_archive_bound_candidate_runtime_package(
         "blockers": ordered_unique(
             [
                 *list(receiver_proof.get("blockers") or []),
-                *list(extra_blockers or []),
+                *extra_blocker_list,
                 *([] if proof_passed else ["runtime_adapter_ready_requires_receiver_proof"]),
+                *(
+                    []
+                    if not extra_blocker_list
+                    else ["runtime_adapter_ready_requires_no_extra_blockers"]
+                ),
             ]
         ),
         "score_claim_valid": False,

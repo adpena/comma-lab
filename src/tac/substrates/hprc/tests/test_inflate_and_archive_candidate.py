@@ -116,8 +116,14 @@ def test_hprc_export_emits_archive_bound_package(tmp_path: Path, monkeypatch) ->
     assert row["candidate_family"] == hprc_candidate.HPRC_ARCHIVE_CANDIDATE_FAMILY
     assert row["byte_closed_candidate_materialized"] is True
     assert row["runtime_consumption_proof_ready"] is True
+    assert row["runtime_adapter_ready"] is False
+    assert row["contest_runtime_decoder_adapter_ready"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
     assert "hprc_v0_receiver_scaffold_not_trained_renderer" in row["blockers"]
+    assert "runtime_adapter_ready_requires_no_extra_blockers" in row["blockers"]
+    runtime_manifest = row["runtime_adapter_manifest"]
+    assert runtime_manifest["runtime_adapter_ready"] is False
+    assert runtime_manifest["contest_runtime_decoder_adapter_ready"] is False
     contract = row["archive_bound_candidate_contract"]
     runtime_payload = contract["runtime_payload_consumption"]
     portability = row["runtime_adapter_manifest"][
