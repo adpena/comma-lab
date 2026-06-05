@@ -2999,7 +2999,9 @@ def _archive_selection_health_sort_key(row: Mapping[str, Any]) -> tuple[int, flo
         return (0, 0.0)
     if not math.isfinite(occupied):
         return (0, 0.0)
-    collapsed = occupied <= 0.200001
+    # Match the receiver/export SegNet argmax survival gate: two occupied
+    # classes out of five is still a collapse for scorer-faithful HiNeRV.
+    collapsed = occupied < 0.400001
     return (1 if collapsed else 0, -occupied)
 
 
