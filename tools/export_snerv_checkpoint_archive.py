@@ -1692,12 +1692,20 @@ def _official_checkpoint_export_binding(
     official_mapping_state = _official_state_dict_slice_for_mapping(
         checkpoint_state or {}
     )
+    official_mapping_has_upstream_keys = any(
+        str(key).startswith(("decoder.", "encoder."))
+        for key in official_mapping_state
+    )
     official_state_manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
         official_mapping_state or None,
         state_dict_kind=(
             "checkpoint_export_upstream_official_state_dict_slice"
-            if official_mapping_state
-            else "checkpoint_export_has_receiver_atoms_not_upstream_official_state_dict"
+            if official_mapping_has_upstream_keys
+            else (
+                "checkpoint_export_native_mlx_receiver_state_dict"
+                if official_mapping_state
+                else "checkpoint_export_has_receiver_atoms_not_upstream_official_state_dict"
+            )
         ),
         source="export_snerv_checkpoint_archive.official_checkpoint_export_binding",
     )
@@ -1705,6 +1713,22 @@ def _official_checkpoint_export_binding(
         official_state_manifest.get(
             "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
         )
+        is True
+    )
+    hfr_mapping_proven = bool(
+        official_state_manifest.get(
+            "official_hfr_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
+    )
+    mfu_mapping_proven = bool(
+        official_state_manifest.get(
+            "official_mfu_trained_checkpoint_weight_mapping_proven"
+        )
+        is True
+    )
+    mfu_activation_bound = bool(
+        official_state_manifest.get("official_mfu_receiver_activation_payload_bound")
         is True
     )
     tub_mapping_proven = bool(
@@ -1716,11 +1740,24 @@ def _official_checkpoint_export_binding(
     preserved_blockers = [
         *(
             []
-            if mfu_hfr_mapping_proven
-            else [
-                "snerv_official_mfu_hfr_tub_weight_mapping_missing",
-                "snerv_official_trained_checkpoint_state_dict_mapping_missing",
-            ]
+            if hfr_mapping_proven
+            else ["snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete"]
+        ),
+        *(
+            []
+            if mfu_mapping_proven
+            else (
+                [
+                    "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping"
+                ]
+                if mfu_activation_bound
+                else ["snerv_official_trained_checkpoint_mfu_weight_mapping_incomplete"]
+            )
+        ),
+        *(
+            []
+            if mfu_hfr_mapping_proven and tub_mapping_proven
+            else ["snerv_official_trained_checkpoint_state_dict_mapping_missing"]
         ),
         "snerv_official_trained_checkpoint_source_forward_replay_missing",
         *(
@@ -1729,6 +1766,7 @@ def _official_checkpoint_export_binding(
             else [
                 "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded",
                 "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+                "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
             ]
         ),
     ]
@@ -1811,6 +1849,39 @@ def _official_checkpoint_export_binding(
         "official_trained_checkpoint_state_dict_slice_present": bool(
             official_mapping_state
         ),
+        "official_trained_checkpoint_state_dict_mapping_dialect": (
+            official_state_manifest.get("state_dict_mapping_dialect")
+        ),
+        "official_hfr_trained_checkpoint_weight_mapping_proven": bool(
+            official_state_manifest.get(
+                "official_hfr_trained_checkpoint_weight_mapping_proven"
+            )
+            is True
+        ),
+        "official_mfu_trained_checkpoint_weight_mapping_proven": bool(
+            official_state_manifest.get(
+                "official_mfu_trained_checkpoint_weight_mapping_proven"
+            )
+            is True
+        ),
+        "official_mfu_receiver_activation_payload_bound": bool(
+            official_state_manifest.get(
+                "official_mfu_receiver_activation_payload_bound"
+            )
+            is True
+        ),
+        "official_tub_receiver_activation_payload_bound": bool(
+            official_state_manifest.get(
+                "official_tub_receiver_activation_payload_bound"
+            )
+            is True
+        ),
+        "official_native_receiver_state_mapping_proven": bool(
+            official_state_manifest.get(
+                "official_native_receiver_state_mapping_proven"
+            )
+            is True
+        ),
         "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": (
             mfu_hfr_mapping_proven
         ),
@@ -1857,10 +1928,21 @@ def _packet_metadata_from_snerv_packet(packet: bytes) -> dict[str, Any]:
 def _official_state_dict_slice_for_mapping(
     state: dict[str, np.ndarray],
 ) -> dict[str, np.ndarray]:
+    native_receiver_keys = {
+        "low",
+        "skip_mid",
+        "skip_high",
+        "tub.temporal_encoder_concat",
+        "tub_temporal_encoder_concat",
+        "tub.output2_raw",
+        "tub_output2_raw",
+    }
     return {
         str(key): value
         for key, value in state.items()
-        if str(key).startswith(("decoder.", "encoder."))
+        if str(key).startswith(("decoder.", "encoder.", "hfr."))
+        or str(key).startswith("hfr_")
+        or str(key) in native_receiver_keys
     }
 
 

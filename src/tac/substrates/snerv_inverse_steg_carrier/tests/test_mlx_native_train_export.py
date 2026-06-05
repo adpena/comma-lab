@@ -110,6 +110,10 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     public_sig = inspect.signature(train_export_snerv_mlx_native)
     assert "score_aware_long_training_pr95_muon_policy" in public_sig.parameters
     assert (
+        "score_aware_long_training_pr95_source_weight_amplification"
+        in public_sig.parameters
+    )
+    assert (
         "score_aware_long_training_scorer_input_distribution_guard_weight"
         in public_sig.parameters
     )
@@ -121,7 +125,31 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         "score_aware_long_training_scorer_input_shape_tether_weight"
         in public_sig.parameters
     )
+    assert (
+        "score_aware_long_training_posenet_temporal_signal_floor_weight"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_posenet_temporal_signal_min_std_ratio"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio"
+        in public_sig.parameters
+    )
     assert "score_aware_long_training_loss_weights" in public_sig.parameters
+    assert (
+        "score_aware_long_training_gradient_multiplier_by_name"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_bias_gradient_multiplier"
+        in public_sig.parameters
+    )
+    assert (
+        "score_aware_long_training_output_head_bias_gradient_multiplier"
+        in public_sig.parameters
+    )
     assert "score_aware_long_training_pose_warmup_epochs" in public_sig.parameters
     assert (
         "score_aware_long_training_scorer_input_shape_warmup_epochs"
@@ -191,6 +219,12 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     assert "scorer_input_distribution_guard_weight" in attachment_sig.parameters
     assert "scorer_input_contrast_floor_weight" in attachment_sig.parameters
     assert "scorer_input_shape_tether_weight" in attachment_sig.parameters
+    assert "posenet_temporal_signal_floor_weight" in attachment_sig.parameters
+    assert "posenet_temporal_signal_min_std_ratio" in attachment_sig.parameters
+    assert (
+        "posenet_temporal_signal_min_mean_abs_ratio"
+        in attachment_sig.parameters
+    )
     assert (
         "scorer_input_contrast_floor_segnet_min_std_ratio"
         in attachment_sig.parameters
@@ -199,6 +233,9 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"
         in attachment_sig.parameters
     )
+    assert "gradient_multiplier_by_name" in attachment_sig.parameters
+    assert "bias_gradient_multiplier" in attachment_sig.parameters
+    assert "output_head_bias_gradient_multiplier" in attachment_sig.parameters
 
     source = Path(mod.__file__).read_text(encoding="utf-8")
     tree = ast.parse(source)
@@ -229,6 +266,24 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         in {kw.arg for kw in call.keywords if kw.arg}
         for call in attachment_calls
     )
+    assert any(
+        "posenet_temporal_signal_floor_weight"
+        in {kw.arg for kw in call.keywords if kw.arg}
+        for call in attachment_calls
+    )
+    assert any(
+        "gradient_multiplier_by_name" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in attachment_calls
+    )
+    assert any(
+        "bias_gradient_multiplier" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in attachment_calls
+    )
+    assert any(
+        "output_head_bias_gradient_multiplier"
+        in {kw.arg for kw in call.keywords if kw.arg}
+        for call in attachment_calls
+    )
     harness_calls = [
         node
         for node in ast.walk(tree)
@@ -239,6 +294,19 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     assert harness_calls
     assert any(
         "pr95_muon_policy" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in harness_calls
+    )
+    assert any(
+        "gradient_multiplier_by_name" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in harness_calls
+    )
+    assert any(
+        "bias_gradient_multiplier" in {kw.arg for kw in call.keywords if kw.arg}
+        for call in harness_calls
+    )
+    assert any(
+        "output_head_bias_gradient_multiplier"
+        in {kw.arg for kw in call.keywords if kw.arg}
         for call in harness_calls
     )
 
@@ -270,6 +338,24 @@ def test_checkpoint_retention_candidate_null_preserves_safe_default() -> None:
         mod._coerce_checkpoint_keep_best(-1)
     with pytest.raises(mod.SnervMlxNativeExportError, match="> 0"):
         mod._coerce_checkpoint_keep_every(0)
+
+
+def test_snerv_gradient_multiplier_candidate_coercion() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    assert mod._coerce_gradient_multiplier_by_name(
+        {"decoder.weight": 0.25}
+    ) == {"decoder.weight": 0.25}
+    assert mod._coerce_gradient_multiplier_by_name(
+        [{"name": "rgb_1.bias", "value": 0.0}]
+    ) == {"rgb_1.bias": 0.0}
+    assert mod._coerce_gradient_multiplier_by_name(
+        [["blocks.0.weight", 2.0]]
+    ) == {"blocks.0.weight": 2.0}
+    with pytest.raises(mod.SnervMlxNativeExportError, match="finite and >= 0"):
+        mod._coerce_gradient_multiplier_by_name({"bad": -1.0})
+    with pytest.raises(mod.SnervMlxNativeExportError, match="name/value"):
+        mod._coerce_gradient_multiplier_by_name([{"name": "bad"}])
 
 
 def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs() -> None:
@@ -393,6 +479,28 @@ def test_score_aware_checkpoint_selection_policy_prices_shape_tether() -> None:
     assert "scorer_input_shape_tether" in policy["active_score_surfaces"]
     assert "scorer_input_shape_tether" in policy["required_loss_parts"]
     assert policy["scorer_input_shape_tether_weight"] == pytest.approx(0.625)
+    assert policy["blockers"] == []
+
+
+def test_score_aware_checkpoint_selection_policy_prices_posenet_temporal_signal_floor() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._snerv_score_aware_checkpoint_selection_policy(
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        posenet_temporal_signal_floor_weight=0.5,
+        has_real_segnet_teacher=False,
+        has_real_posenet_teacher=False,
+        coder_aware_qat_bound=False,
+        coder_qat_loss_weight_map={},
+        pr95_faithful_curriculum_enabled=False,
+    )
+
+    assert policy["uses_score_aware_composite"] is True
+    assert policy["mse_fallback"] is False
+    assert "posenet_temporal_signal_floor" in policy["active_score_surfaces"]
+    assert "posenet_temporal_signal_floor" in policy["required_loss_parts"]
+    assert policy["posenet_temporal_signal_floor_weight"] == pytest.approx(0.5)
     assert policy["blockers"] == []
 
 
@@ -606,6 +714,9 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb": 0.0625,
                     "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair": 0.09375,
                     "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.09375,
+                    "loss_part_pr95_stage_posenet_temporal_signal_floor": 0.03125,
+                    "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_std_ratio": 0.7,
+                    "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_abs_ratio": 0.6,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.0625,
                     "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.5,
                     "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.6,
@@ -613,12 +724,21 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.125,
                     "loss_part_weighted_segnet_student_live_calibration": 0.125,
+                    "train_time_archive_rate_score": 0.02,
                     "train_time_section_rate_score__decoder_payload": 0.01,
                     "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_scorer_input_distribution_guard": 0.0,
                     "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
                     "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                    "dual_ascent_lambda__snerv_archive_total_bytes": 0.375,
                     "dual_ascent_lambda__snerv_decoder_payload_section_bytes": 0.125,
+                    "dual_ascent_weight_applied__snerv_archive_total_bytes": 1.0,
+                    "dual_ascent_weight_applied__snerv_decoder_payload_section_bytes": 1.0,
+                    "gradient_multiplier_requested_control_count": 1.0,
+                    "gradient_multiplier_applied_leaf_count": 1.0,
+                    "gradient_multiplier_missing_requested_count": 0.0,
+                    "gradient_multiplier_requested_but_unapplied": 0.0,
                 },
             },
             sort_keys=True,
@@ -639,6 +759,8 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
         scorer_input_distribution_guard_weight=2.0,
         scorer_input_contrast_floor_weight=0.875,
         scorer_input_shape_tether_weight=0.625,
+        posenet_temporal_signal_floor_weight=0.5,
+        gradient_multiplier_controls_requested=True,
     )
 
     assert contract["passed"] is True
@@ -647,8 +769,18 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["posenet_dual_metric_observed"] is True
     assert contract["segnet_dual_lambda_active_observed"] is True
     assert contract["posenet_dual_lambda_active_observed"] is True
+    assert contract["archive_rate_metric_observed"] is True
+    assert contract["archive_byte_dual_lambda_active_observed"] is True
+    assert contract["archive_byte_dual_weight_applied_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["section_byte_dual_lambda_active_observed"] is True
+    assert contract["section_byte_dual_weight_applied_observed"] is True
+    assert contract["section_byte_dual_zero_base_masked_observed"] is False
+    assert contract["expected_gradient_multiplier_controls"] is True
+    assert contract["gradient_multiplier_requested_observed"] is True
+    assert contract["gradient_multiplier_applied_observed"] is True
+    assert contract["gradient_multiplier_missing_requested_observed"] is False
+    assert contract["gradient_multiplier_noop_observed"] is False
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["scorer_input_guard_dual_metric_observed"] is True
     assert contract["expected_scorer_input_contrast_floor_metric"] is True
@@ -666,6 +798,16 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["scorer_input_shape_tether_segnet_metric_observed"] is True
     assert contract["scorer_input_shape_tether_posenet_pair_metric_observed"] is True
     assert contract["scorer_input_shape_tether_posenet_delta_metric_observed"] is True
+    assert contract["expected_posenet_temporal_signal_floor_metric"] is True
+    assert contract["posenet_temporal_signal_floor_metric_observed"] is True
+    assert (
+        contract["posenet_temporal_signal_floor_std_ratio_metric_observed"]
+        is True
+    )
+    assert (
+        contract["posenet_temporal_signal_floor_mean_abs_ratio_metric_observed"]
+        is True
+    )
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
@@ -690,11 +832,13 @@ def test_score_aware_telemetry_contract_rejects_section_rate_without_section_dua
                 "loss_components": {
                     "loss_part_distill": 1.0,
                     "loss_part_pose_distill": 2.0,
+                    "train_time_archive_rate_score": 0.02,
                     "train_time_section_rate_score__decoder_payload": 0.01,
                     "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
                     "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
                     "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                    "dual_ascent_lambda__snerv_archive_total_bytes": 0.375,
                 },
             },
             sort_keys=True,
@@ -719,6 +863,198 @@ def test_score_aware_telemetry_contract_rejects_section_rate_without_section_dua
     assert contract["section_byte_dual_lambda_active_observed"] is False
     assert (
         "snerv_score_aware_long_training_section_byte_dual_lambda_never_active"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_rejects_missing_temporal_floor_ratios(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_posenet_temporal_signal_floor": 0.5,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+        posenet_temporal_signal_floor_weight=0.5,
+    )
+
+    assert contract["passed"] is False
+    assert contract["posenet_temporal_signal_floor_metric_observed"] is True
+    assert contract["posenet_temporal_signal_floor_std_ratio_metric_observed"] is False
+    assert (
+        contract["posenet_temporal_signal_floor_mean_abs_ratio_metric_observed"]
+        is False
+    )
+    assert (
+        "snerv_score_aware_long_training_posenet_temporal_signal_floor_std_ratio_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_posenet_temporal_signal_floor_mean_abs_ratio_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_rejects_dual_lambda_without_weight_application(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "train_time_archive_rate_score": 0.02,
+                    "train_time_section_rate_score__decoder_payload": 0.01,
+                    "dual_ascent_lambda__snerv_archive_total_bytes": 0.375,
+                    "dual_ascent_lambda__snerv_decoder_payload_section_bytes": 0.125,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["archive_byte_dual_lambda_active_observed"] is True
+    assert contract["archive_byte_dual_weight_applied_observed"] is False
+    assert contract["section_byte_dual_lambda_active_observed"] is True
+    assert contract["section_byte_dual_weight_applied_observed"] is False
+    assert (
+        "snerv_score_aware_long_training_archive_byte_dual_weight_never_applied"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_section_byte_dual_weight_never_applied"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_rejects_stale_gradient_multiplier(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "gradient_multiplier_requested_control_count": 1.0,
+                    "gradient_multiplier_applied_leaf_count": 0.0,
+                    "gradient_multiplier_missing_requested_count": 1.0,
+                    "gradient_multiplier_requested_but_unapplied": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+        gradient_multiplier_controls_requested=True,
+    )
+
+    assert contract["passed"] is False
+    assert contract["gradient_multiplier_requested_observed"] is True
+    assert contract["gradient_multiplier_applied_observed"] is False
+    assert contract["gradient_multiplier_missing_requested_observed"] is True
+    assert contract["gradient_multiplier_noop_observed"] is True
+    assert (
+        "snerv_score_aware_long_training_gradient_multiplier_never_applied"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_gradient_multiplier_missing_requested_leaf"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_gradient_multiplier_requested_but_unapplied"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_rejects_guard_loss_without_guard_dual(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_scorer_input_distribution_guard": 0.25,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=1.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["scorer_input_guard_metric_observed"] is True
+    assert contract["scorer_input_guard_dual_metric_observed"] is False
+    assert (
+        "snerv_score_aware_long_training_dual_scorer_input_guard_metric_never_observed"
         in contract["blockers"]
     )
 
@@ -1267,6 +1603,11 @@ def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
         recon_pixel_weight_metadata=None,
         hf_decoder_saliency_gain=1.0,
         train_time_section_byte_control={
+            "active": True,
+            "section_byte_budgets": {"decoder_payload": 5},
+            "section_byte_loss_weight_key_map": {
+                "decoder_payload": "coder_qat_quant_residual"
+            },
             "metrics_payload": {
                 "schema": "snerv_train_time_section_byte_metrics.v1",
                 "archive_bytes": 10,
@@ -1464,10 +1805,9 @@ def test_snerv_live_section_byte_metrics_callback_blocks_official_static_fallbac
     )
 
     assert callback is not None
-    payload = dict(callback(FakePartialOfficialModel(), None, {}))
+    payload = callback(FakePartialOfficialModel(), None, {})
 
-    assert payload["schema"] == "snerv_train_time_section_byte_metrics_fallback.v1"
-    assert payload["archive_bytes"] == 10
+    assert payload is None
     assert metadata["active"] is False
     assert metadata["fallback_count"] == 1
     assert metadata["last_fallback_reason"] == (
@@ -1475,11 +1815,15 @@ def test_snerv_live_section_byte_metrics_callback_blocks_official_static_fallbac
     )
     assert (
         mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_COMPONENTS_MISSING_BLOCKER
-        in payload["blockers"]
+        in metadata["blockers"]
     )
     assert (
         mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_FALLBACK_BLOCKER
-        in payload["blockers"]
+        in metadata["blockers"]
+    )
+    assert (
+        "snerv_live_section_byte_active_control_static_fallback_forbidden"
+        in metadata["blockers"]
     )
 
     blockers = mod._snerv_live_section_byte_metrics_blockers(
@@ -1498,6 +1842,56 @@ def test_snerv_live_section_byte_metrics_callback_blocks_official_static_fallbac
     assert (
         mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_NEVER_REFRESHED_BLOCKER
         in blockers
+    )
+    assert (
+        "snerv_live_section_byte_active_control_static_fallback_forbidden"
+        in blockers
+    )
+    assert (
+        "snerv_live_section_byte_active_control_never_refreshed_current_packet"
+        in blockers
+    )
+
+
+def test_snerv_live_section_byte_metrics_callback_allows_inactive_diagnostic_fallback() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    class FakeBrokenNativeModel:
+        pass
+
+    callback, metadata = mod._build_snerv_live_train_time_section_byte_metrics_callback(
+        model_size=SnervModelSizeConfig(fc_dim=4, emb_size=1, patch_radius=1),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(3,),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        train_time_section_byte_control={
+            "active": False,
+            "metrics_payload": {
+                "schema": "snerv_train_time_section_byte_metrics.v1",
+                "archive_bytes": 10,
+                "section_bytes": {"decoder_payload": 5},
+            },
+        },
+        batch_size=1,
+        refresh_every_steps=1,
+    )
+
+    assert callback is not None
+    payload = dict(callback(FakeBrokenNativeModel(), None, {}))
+
+    assert payload["schema"] == "snerv_train_time_section_byte_metrics_fallback.v1"
+    assert payload["archive_bytes"] == 10
+    assert metadata["fallback_count"] == 1
+    assert (
+        "snerv_live_section_byte_active_control_static_fallback_forbidden"
+        not in payload["blockers"]
     )
 
 
@@ -1694,6 +2088,7 @@ def test_score_aware_long_training_stage_weights_reach_snerv_harness(
         "scorer_input_guard": 0.25,
         "scorer_input_contrast_floor": 0.375,
         "scorer_input_shape_tether": 0.625,
+        "posenet_temporal_signal_floor": 0.875,
         "segnet_direct_live_distill": 0.125,
     }
     report = train_export_snerv_mlx_native(
@@ -1733,6 +2128,9 @@ def test_score_aware_long_training_stage_weights_reach_snerv_harness(
     assert stages[2].loss_weights["pose_distill"] == pytest.approx(0.75)
     assert stages[2].loss_weights["segnet_direct_live_distill"] == pytest.approx(
         0.125
+    )
+    assert stages[2].loss_weights["posenet_temporal_signal_floor"] == pytest.approx(
+        0.875
     )
     long_training = report["score_aware_long_training"]
     assert long_training["stage_loss_weights"] == stage_weights
@@ -2657,7 +3055,7 @@ def test_train_export_does_not_infer_exportable_state_from_executed(
             "bits_per_coeff": 3.0,
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int8_symmetric",
-            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_epochs": 2,
         },
         scorer_upstream_dir="upstream",
         output_height=16,
@@ -2763,7 +3161,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
             "step_map_bits_per_coeff": 0.5,
             "decoder_payload_codec": "int8_symmetric",
             "hard_byte_ceiling": 10_000,
-            "score_aware_long_training_epochs": 1,
+            "score_aware_long_training_epochs": 2,
             "score_aware_long_training_lr": 1.0e-3,
             "score_aware_long_training_batch_pairs": 2,
             "score_aware_long_training_optimizer": "pact_muon_adamw",
@@ -2774,6 +3172,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
             "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio": 0.55,
             "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": 0.45,
             "score_aware_long_training_scorer_input_shape_tether_weight": 0.625,
+            "score_aware_long_training_posenet_temporal_signal_floor_weight": 0.5,
+            "score_aware_long_training_posenet_temporal_signal_min_std_ratio": 0.4,
+            "score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio": 0.35,
+            "score_aware_long_training_pr95_source_weight_amplification": True,
         },
         scorer_upstream_dir=fake_upstream,
         output_height=16,
@@ -2809,6 +3211,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert report["score_aware_long_training_has_real_posenet_teacher"] is True
     assert report["score_aware_long_training_coder_qat_bound"] is True
     assert report["score_aware_long_training_pr95_curriculum_bound"] is True
+    assert (
+        report["score_aware_long_training_pr95_source_weight_amplification_bound"]
+        is True
+    )
     assert report["score_aware_long_training_muon_adamw_partition_bound"] is True
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
     assert "snerv_score_aware_long_training_dual_segnet_lambda_never_active" not in report[
@@ -2819,6 +3225,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert long_training["trained_state_exportable"] is True
     assert long_training["executed"] is True
     assert long_training["training_telemetry_contract"]["passed"] is True
+    assert long_training["pr95_stage_source_weight_amplification_enabled"] is True
     assert long_training["has_real_segnet_teacher"] is True
     assert long_training["has_real_posenet_teacher"] is True
     assert long_training["teacher_binding"]["requested_distillation_device"] == "gpu"
@@ -2909,6 +3316,21 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    assert long_training["posenet_temporal_signal_floor_bound"] is True
+    assert long_training["posenet_temporal_signal_floor"] == {
+        "schema": "snerv_mlx_score_aware_posenet_temporal_signal_floor.v1",
+        "requested": True,
+        "enabled": True,
+        "bound_to_renderer_bundle": True,
+        "weight": 0.5,
+        "min_std_ratio": 0.4,
+        "min_mean_abs_ratio": 0.35,
+        "target_surface": "exact_upstream_posenet_yuv6_frame1_minus_frame0_temporal_signal",
+        "human_visual_fidelity_objective": False,
+        "score_authority": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
     assert long_training["pr95_faithful_curriculum_enabled"] is True
     assert long_training["muon_adamw_partition_bound"] is True
     assert long_training["teacher_binding"]["pose_distillation_loss"] == "huber"
@@ -2966,6 +3388,9 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert "scorer_input_shape_tether" in long_training[
         "checkpoint_selection_policy"
     ]["active_score_surfaces"]
+    assert "posenet_temporal_signal_floor" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
     assert "scorer_input_distribution_guard" in long_training[
         "checkpoint_selection_policy"
     ]["required_loss_parts"]
@@ -2973,6 +3398,9 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         "checkpoint_selection_policy"
     ]["required_loss_parts"]
     assert "scorer_input_shape_tether" in long_training[
+        "checkpoint_selection_policy"
+    ]["required_loss_parts"]
+    assert "posenet_temporal_signal_floor" in long_training[
         "checkpoint_selection_policy"
     ]["required_loss_parts"]
     assert "segnet_direct_live_distill" in long_training[
@@ -3006,6 +3434,12 @@ def test_train_export_long_training_binds_real_scorer_teachers(
             "scorer_input_shape_tether_weight"
         ]
         == 0.625
+    )
+    assert (
+        long_training["checkpoint_selection_policy"][
+            "posenet_temporal_signal_floor_weight"
+        ]
+        == 0.5
     )
     assert long_training["best_checkpoint_selection"]["selection_metric"] == (
         "score_aware_composite_full_video_surrogate"
@@ -3047,6 +3481,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         "weighted_scorer_input_shape_tether"
         in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
     )
+    assert (
+        "weighted_posenet_temporal_signal_floor"
+        in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
+    )
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert (
         decoded.metadata[
@@ -3059,6 +3497,9 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     ] is True
     assert decoded.metadata["score_aware_long_training"][
         "scorer_input_shape_tether_bound"
+    ] is True
+    assert decoded.metadata["score_aware_long_training"][
+        "posenet_temporal_signal_floor_bound"
     ] is True
     assert decoded.metadata["score_aware_long_training"]["teacher_binding"][
         "has_real_segnet_teacher"

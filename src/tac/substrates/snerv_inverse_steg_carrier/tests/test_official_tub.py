@@ -124,6 +124,51 @@ def test_official_snerv_t_tub_source_contract_is_pinned() -> None:
         150,
         "output_2 = output_2.view(n, -1, self.fc_h, self.fc_w, h, w).permute(0,1,4,2,5,3).reshape(n,-1,self.fc_h * h, self.fc_w * w)",
     )
+    _assert_source_line(repo, "model/snerv_t.py", 161, "### MFU")
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        162,
+        "up1 = self.decoder[self.decoder_len+3](embed_list[-3])",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        163,
+        "unet1 = self.decoder[self.decoder_len+4](torch.cat([up1, embed_list[-2]], dim=1))",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        165,
+        "pyr_out = self.decoder[self.decoder_len+6](torch.cat([unet1_up, embed_list[-1]], dim=1))",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        167,
+        "img_yl = OutImg(self.head_layer(pyr_out), self.out_bias)",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        168,
+        "yl_out = img_yl * (img_embed[2][1]-img_embed[2][0]) + img_embed[2][0] ### needed",
+    )
+    _assert_source_line(repo, "model/snerv_t.py", 170, "### HFR")
+    _assert_source_line(repo, "model/snerv_t.py", 171, "HF_in = pyr_out")
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        176,
+        "yh_out = torch.stack([lh_out, hl_out, hh_out], dim=2)",
+    )
+    _assert_source_line(
+        repo,
+        "model/snerv_t.py",
+        178,
+        "img_out = idwt([yl_out, [yh_out]])",
+    )
     _assert_source_line(repo, "requirements.txt", 1, "torch==1.8.1")
     _assert_source_line(repo, "requirements.txt", 13, "pytorch-wavelets==1.3.0")
     _assert_source_line(repo, "requirements.txt", 14, "PyWavelets==1.4.1")
@@ -326,6 +371,46 @@ def test_official_tub_output2_fusion_numpy_matches_source_split_concat_shuffle()
     assert metadata["shape"]["fused_output2_shape"] == [2, 3, 4, 9]
 
 
+def test_official_tub_frame_reconstruction_numpy_matches_hfr_idwt_source_path() -> None:
+    img_yl = np.array([[[[0.25, 0.75], [0.5, 1.0]]]], dtype=np.float64)
+    yl_norm = (2.0, 10.0)
+    lh = np.array([[[[1.0, -2.0], [0.5, 1.5]]]], dtype=np.float64)
+    hl = np.array([[[[0.25, 0.75], [-1.0, 2.0]]]], dtype=np.float64)
+    hh = np.array([[[[-0.5, 1.0], [0.0, -1.5]]]], dtype=np.float64)
+    yh_out = np.stack([lh, hl, hh], axis=2)
+
+    out = official_tub_mod.official_tub_frame_reconstruction_numpy(
+        img_yl,
+        yh_out,
+        yl_norm=yl_norm,
+    )
+
+    yl_out = img_yl * (yl_norm[1] - yl_norm[0]) + yl_norm[0]
+    expected = np.empty((1, 1, 4, 4), dtype=np.float64)
+    expected[:, :, 0::2, 0::2] = (yl_out + lh + hl + hh) * 0.5
+    expected[:, :, 0::2, 1::2] = (yl_out + lh - hl - hh) * 0.5
+    expected[:, :, 1::2, 0::2] = (yl_out - lh + hl - hh) * 0.5
+    expected[:, :, 1::2, 1::2] = (yl_out - lh - hl + hh) * 0.5
+
+    np.testing.assert_array_equal(out.yl_out, yl_out)
+    np.testing.assert_array_equal(out.frame, expected)
+    metadata = out.as_jsonable_metadata()
+    assert metadata["source_contract"] == (
+        official_tub_mod.OFFICIAL_SNERV_T_TUB_FRAME_RECONSTRUCTION_CONTRACT
+    )
+    assert metadata["portable_frame_reconstruction_primitive_proven"] is True
+    assert metadata["source_forward_parity_proven"] is False
+    assert metadata["full_tub_source_forward_parity_proven"] is False
+    assert metadata["source_forward_replay_authority"] is False
+    assert metadata["score_claim"] is False
+    assert metadata["ready_for_exact_eval_dispatch"] is False
+    assert metadata["output_shapes"]["frame"] == [1, 1, 4, 4]
+    with pytest.raises(OfficialTubError, match="not score"):
+        replace(out, score_claim=True)
+    with pytest.raises(OfficialTubError, match="not score"):
+        replace(out, source_forward_replay_authority=True)
+
+
 def test_official_tub_output2_fusion_torch_matches_numpy_reference() -> None:
     torch = pytest.importorskip("torch")
     temporal = np.arange(1 * 12 * 2 * 3, dtype=np.float64).reshape(1, 12, 2, 3)
@@ -428,4 +513,22 @@ def test_official_tub_rejects_non_source_inputs() -> None:
             np.full((1, 8, 2, 2), np.nan),
             np.zeros((2, 8, 2, 2)),
             fc_hw=(2, 2),
+        )
+    with pytest.raises(OfficialTubError, match="shaped"):
+        official_tub_mod.official_tub_frame_reconstruction_numpy(
+            np.zeros((1, 1, 2, 2)),
+            np.zeros((1, 1, 2, 2)),
+            yl_norm=(0.0, 1.0),
+        )
+    with pytest.raises(OfficialTubError, match="exactly 3 HFR bands"):
+        official_tub_mod.official_tub_frame_reconstruction_numpy(
+            np.zeros((1, 1, 2, 2)),
+            np.zeros((1, 1, 2, 2, 2)),
+            yl_norm=(0.0, 1.0),
+        )
+    with pytest.raises(OfficialTubError, match="finite increasing"):
+        official_tub_mod.official_tub_frame_reconstruction_numpy(
+            np.zeros((1, 1, 2, 2)),
+            np.zeros((1, 1, 3, 2, 2)),
+            yl_norm=(1.0, 1.0),
         )

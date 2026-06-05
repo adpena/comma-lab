@@ -174,6 +174,9 @@ class HiNervTrainTimeControlConfig:
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5
     scorer_input_shape_tether_weight: float = 0.0
+    posenet_temporal_signal_floor_weight: float = 0.0
+    posenet_temporal_signal_min_std_ratio: float = 0.25
+    posenet_temporal_signal_min_mean_abs_ratio: float = 0.25
     output_head_target_bias_init_enabled: bool = True
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0
 
@@ -313,6 +316,18 @@ class HiNervTrainTimeControlConfig:
             self.scorer_input_shape_tether_weight,
             "scorer_input_shape_tether_weight",
         )
+        _require_finite_nonnegative(
+            self.posenet_temporal_signal_floor_weight,
+            "posenet_temporal_signal_floor_weight",
+        )
+        _require_finite_positive(
+            self.posenet_temporal_signal_min_std_ratio,
+            "posenet_temporal_signal_min_std_ratio",
+        )
+        _require_finite_positive(
+            self.posenet_temporal_signal_min_mean_abs_ratio,
+            "posenet_temporal_signal_min_mean_abs_ratio",
+        )
         _validate_unit_open_interval(
             self.output_head_target_bias_init_epsilon,
             "output_head_target_bias_init_epsilon",
@@ -399,6 +414,15 @@ class HiNervTrainTimeControlConfig:
             ),
             scorer_input_shape_tether_weight=float(
                 self.scorer_input_shape_tether_weight
+            ),
+            posenet_temporal_signal_floor_weight=float(
+                self.posenet_temporal_signal_floor_weight
+            ),
+            posenet_temporal_signal_min_std_ratio=float(
+                self.posenet_temporal_signal_min_std_ratio
+            ),
+            posenet_temporal_signal_min_mean_abs_ratio=float(
+                self.posenet_temporal_signal_min_mean_abs_ratio
             ),
             output_head_target_bias_init_enabled=bool(
                 self.output_head_target_bias_init_enabled
@@ -564,6 +588,24 @@ class HiNervTrainTimeControlConfig:
                 ),
                 "human_visual_fidelity_objective": False,
             },
+            "posenet_temporal_signal_floor": {
+                "schema": "hi_nerv_train_time_posenet_temporal_signal_floor.v1",
+                "enabled": float(self.posenet_temporal_signal_floor_weight) > 0.0,
+                "weight": float(self.posenet_temporal_signal_floor_weight),
+                "min_std_ratio": float(self.posenet_temporal_signal_min_std_ratio),
+                "min_mean_abs_ratio": float(
+                    self.posenet_temporal_signal_min_mean_abs_ratio
+                ),
+                "target_surface": (
+                    "exact_upstream_posenet_yuv6_frame1_minus_frame0_temporal_signal"
+                ),
+                "reason": (
+                    "HiNeRV compact smokes showed pairwise YUV6 temporal signal "
+                    "collapsing to near zero while archive bytes looked healthy; "
+                    "PoseNet cannot recover ego-motion from identical decoded frames."
+                ),
+                "human_visual_fidelity_objective": False,
+            },
             "output_head_target_bias_init": {
                 "schema": "hi_nerv_output_head_target_bias_init_control.v1",
                 "enabled": bool(self.output_head_target_bias_init_enabled),
@@ -643,6 +685,7 @@ def _full_main(args: argparse.Namespace) -> int:
     local_training_pair_indices = (
         tuple(range(effective_training_num_pairs)) if source_pair_indices is not None else prioritized_pair_indices
     )
+    optimizer_control = _optimizer_control_metadata_from_args(args)
     decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(
         args,
         modelsize_candidate=modelsize_candidate,
@@ -713,7 +756,44 @@ def _full_main(args: argparse.Namespace) -> int:
             if bool(train_time_section_byte_control.get("enabled"))
             else train_time_section_byte_control
         ),
+        require_measured_section_byte_control=True,
     )
+    if pr95_full_control_contract.get("production_full_control_ready") is not True:
+        refusal = _direct_trainer_launch_refusal_payload(
+            {
+                **canonicalization,
+                "trainer_launch_allowed": True,
+                "blockers": [],
+            },
+            mode="full",
+            pr95_full_control_contract=pr95_full_control_contract,
+        )
+        write_json(
+            output_dir / "hi_nerv_mlx_training_launch_preflight.json",
+            {
+                "schema": TRAINER_SCHEMA,
+                "authority": TRAINER_AUTHORITY,
+                "output_dir": output_dir.as_posix(),
+                "storage_preflight": storage_payload,
+                "direct_trainer_canonicalization": canonicalization,
+                "pr95_full_control_contract": pr95_full_control_contract,
+                "train_time_controls": train_time_controls.metadata(),
+                "train_time_section_byte_control": _metadata_safe(
+                    train_time_section_byte_control
+                ),
+                "train_time_dual_ascent_config": _metadata_safe(
+                    train_time_dual_ascent_config
+                ),
+                "modelsize_candidate_consumption": modelsize_candidate_consumption,
+                "blockers": list(pr95_full_control_contract.get("blockers") or []),
+                "training_executed": False,
+                "export_executed": False,
+                "command": sys.argv,
+                **FALSE_AUTHORITY,
+            },
+        )
+        print(json.dumps(refusal, sort_keys=True), file=sys.stderr)
+        return 2
 
     scorer_teacher = None
     pose_scorer_teacher = None
@@ -844,6 +924,15 @@ def _full_main(args: argparse.Namespace) -> int:
         scorer_input_shape_tether_weight=(
             train_time_controls.scorer_input_shape_tether_weight
         ),
+        posenet_temporal_signal_floor_weight=(
+            train_time_controls.posenet_temporal_signal_floor_weight
+        ),
+        posenet_temporal_signal_min_std_ratio=(
+            train_time_controls.posenet_temporal_signal_min_std_ratio
+        ),
+        posenet_temporal_signal_min_mean_abs_ratio=(
+            train_time_controls.posenet_temporal_signal_min_mean_abs_ratio
+        ),
         export_archive_fn=lambda model_obj, out_dir: export_hi_nerv_mlx_archive(
             model_obj,
             out_dir,
@@ -877,6 +966,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 if source_pair_indices is not None
                 else "identity_local_rows_are_source_pairs"
             ),
+            "optimizer_control": _metadata_safe(optimizer_control),
             "decoder_codec": effective_decoder_codec,
             "decoder_fake_quant_forward": _metadata_safe(decoder_fake_quant_forward),
             "decoder_weight_waterfill_plan": _metadata_safe(
@@ -904,6 +994,9 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "scorer_input_contrast_floor": _metadata_safe(
                 train_time_controls.metadata()["scorer_input_contrast_floor"]
+            ),
+            "posenet_temporal_signal_floor": _metadata_safe(
+                train_time_controls.metadata()["posenet_temporal_signal_floor"]
             ),
             "segnet_direct_live": _metadata_safe(
                 train_time_controls.metadata()["segnet_direct_live"]
@@ -952,6 +1045,7 @@ def _full_main(args: argparse.Namespace) -> int:
                 prioritized_pair_indices,
                 target_hydration_pair_indices_consumed=source_pair_indices is not None,
             ),
+            "optimizer_control": _metadata_safe(optimizer_control),
             "blockers": [
                 *canonicalization["blockers"],
                 *pr95_full_control_contract["blockers"],
@@ -973,9 +1067,12 @@ def _full_main(args: argparse.Namespace) -> int:
         curriculum_stages=_curriculum_stages_from_args(args),
         pr95_faithful_curriculum_enabled=bool(args.pr95_faithful_curriculum),
         pr95_curriculum_total_epochs=args.pr95_curriculum_total_epochs,
+        pr95_stage_source_weight_amplification_enabled=bool(
+            optimizer_control["pr95_stage_source_weight_amplification_enabled"]
+        ),
         grad_clip_max_norm=args.grad_clip_max_norm,
         warmup_epochs=int(args.warmup_epochs),
-        warmup_steps_per_epoch=1,
+        warmup_steps_per_epoch=int(optimizer_control["warmup_steps_per_epoch"]),
         weight_decay=args.weight_decay,
         optimizer_kind=str(args.optimizer_kind),
         cosine_decay_enabled=bool(args.cosine_decay),
@@ -984,6 +1081,15 @@ def _full_main(args: argparse.Namespace) -> int:
         ema_archive_selection_enabled=bool(args.ema_archive_selection),
         train_time_dual_ascent_config=train_time_dual_ascent_config,
         prioritized_pair_indices=local_training_pair_indices,
+        pair_sampling_weights=optimizer_control["pair_sampling_weights"],
+        pair_sampling_default_weight=float(
+            optimizer_control["pair_sampling_default_weight"]
+        ),
+        gradient_multiplier_by_name=optimizer_control["gradient_multiplier_by_name"],
+        bias_gradient_multiplier=optimizer_control["bias_gradient_multiplier"],
+        output_head_bias_gradient_multiplier=float(
+            optimizer_control["output_head_bias_gradient_multiplier"]
+        ),
         notes=(
             "HiNeRV MLX-local score-aware training through the canonical "
             "mlx_score_aware harness, with optional real SegNet/PoseNet teacher "
@@ -1451,6 +1557,15 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pose-student-input-preprocess", choices=("rgb", "pr95_yuv6"), default="pr95_yuv6")
     parser.add_argument("--pr95-faithful-curriculum", action="store_true")
     parser.add_argument("--pr95-curriculum-total-epochs", type=int, default=None)
+    parser.add_argument(
+        "--pr95-stage-source-weight-amplification",
+        action="store_true",
+        help=(
+            "Forward PR95's source-scale SegNet:PoseNet stage weighting into "
+            "the shared MLX adapter. This is a real training-loss actuator, not "
+            "a metadata tag."
+        ),
+    )
     parser.add_argument("--staged-scorer-curriculum", action="store_true")
     parser.add_argument("--staged-scorer-recon-fraction", type=float, default=0.75)
     parser.add_argument("--staged-scorer-segnet-fraction", type=float, default=0.15)
@@ -1527,8 +1642,30 @@ def _build_parser() -> argparse.ArgumentParser:
             "variance. False-authority MLX pressure only."
         ),
     )
+    parser.add_argument(
+        "--posenet-temporal-signal-floor-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "PoseNet-specific one-sided train-time floor on the exact PR95 "
+            "YUV6 temporal delta frame_1-frame_0. This attacks compact "
+            "renderer pair-collapse where archive bytes look healthy but "
+            "PoseNet sees nearly identical frames."
+        ),
+    )
+    parser.add_argument(
+        "--posenet-temporal-signal-min-std-ratio",
+        type=float,
+        default=0.25,
+    )
+    parser.add_argument(
+        "--posenet-temporal-signal-min-mean-abs-ratio",
+        type=float,
+        default=0.25,
+    )
     parser.add_argument("--grad-clip-max-norm", type=float, default=None)
     parser.add_argument("--warmup-epochs", type=int, default=0)
+    parser.add_argument("--optimizer-warmup-steps-per-epoch", type=int, default=1)
     parser.add_argument("--weight-decay", type=float, default=None)
     parser.add_argument(
         "--optimizer-kind",
@@ -1538,6 +1675,35 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cosine-decay", action="store_true")
     parser.add_argument("--cosine-decay-total-epochs", type=int, default=None)
     parser.add_argument("--cosine-decay-min-lr-ratio", type=float, default=1.0e-2)
+    parser.add_argument("--pair-sampling-default-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--pair-sampling-weight",
+        action="append",
+        default=[],
+        metavar="PAIR=WEIGHT",
+        help=(
+            "Source-pair sampling mass consumed by the shared adapter. Repeat "
+            "for hard-pair/XRay weights; this changes local training batches "
+            "only and carries no score authority."
+        ),
+    )
+    parser.add_argument(
+        "--gradient-multiplier",
+        action="append",
+        default=[],
+        metavar="PARAM=VALUE",
+        help=(
+            "Exact named-parameter gradient multiplier consumed inside the "
+            "shared MLX adapter before clipping/update. Repeat for decoder "
+            "waterfill/ablation experiments."
+        ),
+    )
+    parser.add_argument("--bias-gradient-multiplier", type=float, default=None)
+    parser.add_argument(
+        "--output-head-bias-gradient-multiplier",
+        type=float,
+        default=1.0,
+    )
     parser.add_argument("--ema-archive-selection", action="store_true")
     parser.add_argument("--smoke-export-archive", action="store_true")
     parser.add_argument("--post-export-receiver-cache-quality-gate", action="store_true")
@@ -2175,7 +2341,11 @@ def _train_time_dual_ascent_config_from_args(
         scorer_input_shape_tether_weight=float(
             train_time_controls.scorer_input_shape_tether_weight
         ),
+        posenet_temporal_signal_floor_weight=float(
+            train_time_controls.posenet_temporal_signal_floor_weight
+        ),
         coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+        archive_byte_budget=section_control.get("hard_byte_ceiling"),
         section_byte_budgets=section_control.get("section_byte_budgets"),
         section_byte_loss_weight_key_map=section_control.get(
             "section_byte_loss_weight_key_map"
@@ -2320,6 +2490,15 @@ def _train_time_control_config_from_args(
         ),
         scorer_input_shape_tether_weight=float(
             getattr(args, "scorer_input_shape_tether_weight", 0.0)
+        ),
+        posenet_temporal_signal_floor_weight=float(
+            getattr(args, "posenet_temporal_signal_floor_weight", 0.0)
+        ),
+        posenet_temporal_signal_min_std_ratio=float(
+            getattr(args, "posenet_temporal_signal_min_std_ratio", 0.25)
+        ),
+        posenet_temporal_signal_min_mean_abs_ratio=float(
+            getattr(args, "posenet_temporal_signal_min_mean_abs_ratio", 0.25)
         ),
         output_head_target_bias_init_enabled=bool(
             getattr(args, "output_head_target_bias_init", True)
@@ -3205,6 +3384,114 @@ def _prioritized_pair_indices_from_args(args: argparse.Namespace) -> tuple[int, 
         raise ValueError(f"invalid HiNeRV prioritized pair indices: {exc}") from exc
 
 
+def _parse_finite_nonnegative_pairs(
+    entries: list[str] | tuple[str, ...] | None,
+    *,
+    field: str,
+    integer_keys: bool,
+) -> dict[Any, float]:
+    out: dict[Any, float] = {}
+    for raw_entry in entries or []:
+        text = str(raw_entry)
+        if "=" not in text:
+            raise ValueError(f"{field} entries must be KEY=VALUE; got {text!r}")
+        raw_key, raw_value = text.split("=", 1)
+        key_text = raw_key.strip()
+        if not key_text:
+            raise ValueError(f"{field} key must be non-empty")
+        if integer_keys:
+            try:
+                key: Any = int(key_text)
+            except ValueError as exc:
+                raise ValueError(f"{field} key must be an integer pair index") from exc
+            if int(key) < 0:
+                raise ValueError(f"{field} pair index must be non-negative; got {key}")
+        else:
+            key = key_text
+        try:
+            value = float(raw_value)
+        except ValueError as exc:
+            raise ValueError(f"{field}[{key!r}] must be a finite float") from exc
+        if not math.isfinite(value) or value < 0.0:
+            raise ValueError(f"{field}[{key!r}] must be finite and >= 0; got {value!r}")
+        out[key] = value
+    return out
+
+
+def _pair_sampling_weights_from_args(args: argparse.Namespace) -> dict[int, float]:
+    return {
+        int(key): float(value)
+        for key, value in _parse_finite_nonnegative_pairs(
+            list(getattr(args, "pair_sampling_weight", []) or []),
+            field="pair_sampling_weight",
+            integer_keys=True,
+        ).items()
+    }
+
+
+def _gradient_multiplier_by_name_from_args(
+    args: argparse.Namespace,
+) -> dict[str, float]:
+    return {
+        str(key): float(value)
+        for key, value in _parse_finite_nonnegative_pairs(
+            list(getattr(args, "gradient_multiplier", []) or []),
+            field="gradient_multiplier",
+            integer_keys=False,
+        ).items()
+    }
+
+
+def _optimizer_control_metadata_from_args(args: argparse.Namespace) -> dict[str, Any]:
+    warmup_steps_per_epoch = int(getattr(args, "optimizer_warmup_steps_per_epoch", 1))
+    if warmup_steps_per_epoch <= 0:
+        raise ValueError("optimizer_warmup_steps_per_epoch must be positive")
+    pair_sampling_default_weight = float(
+        getattr(args, "pair_sampling_default_weight", 1.0)
+    )
+    if (
+        not math.isfinite(pair_sampling_default_weight)
+        or pair_sampling_default_weight < 0.0
+    ):
+        raise ValueError("pair_sampling_default_weight must be finite and >= 0")
+    pair_sampling_weights = _pair_sampling_weights_from_args(args)
+    gradient_multiplier_by_name = _gradient_multiplier_by_name_from_args(args)
+    bias_gradient_multiplier = getattr(args, "bias_gradient_multiplier", None)
+    if bias_gradient_multiplier is not None:
+        bias_gradient_multiplier = float(bias_gradient_multiplier)
+        if not math.isfinite(bias_gradient_multiplier) or bias_gradient_multiplier < 0.0:
+            raise ValueError("bias_gradient_multiplier must be finite and >= 0")
+    output_head_bias_gradient_multiplier = float(
+        getattr(args, "output_head_bias_gradient_multiplier", 1.0)
+    )
+    if (
+        not math.isfinite(output_head_bias_gradient_multiplier)
+        or output_head_bias_gradient_multiplier < 0.0
+    ):
+        raise ValueError("output_head_bias_gradient_multiplier must be finite and >= 0")
+    return {
+        "schema": "hi_nerv_direct_trainer_optimizer_control.v1",
+        "warmup_steps_per_epoch": int(warmup_steps_per_epoch),
+        "pr95_stage_source_weight_amplification_enabled": bool(
+            getattr(args, "pr95_stage_source_weight_amplification", False)
+        ),
+        "pair_sampling_default_weight": float(pair_sampling_default_weight),
+        "pair_sampling_weights": {
+            int(key): float(value) for key, value in pair_sampling_weights.items()
+        },
+        "gradient_multiplier_by_name": {
+            str(key): float(value)
+            for key, value in gradient_multiplier_by_name.items()
+        },
+        "bias_gradient_multiplier": bias_gradient_multiplier,
+        "output_head_bias_gradient_multiplier": float(
+            output_head_bias_gradient_multiplier
+        ),
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _prioritized_pair_training_metadata(
     pair_indices: tuple[int, ...],
     *,
@@ -3338,6 +3625,7 @@ def _build_staged_scorer_curriculum(
                 "scorer_input_guard": 1.0,
                 "scorer_input_contrast_floor": 1.0,
                 "scorer_input_shape_tether": 1.0,
+                "posenet_temporal_signal_floor": 1.0,
                 "segnet_direct_live_distill": 0.0,
                 "segnet_direct_live_base_loss": 1.0,
             },
@@ -3358,6 +3646,7 @@ def _build_staged_scorer_curriculum(
                 "scorer_input_guard": 1.0,
                 "scorer_input_contrast_floor": 1.0,
                 "scorer_input_shape_tether": 1.0,
+                "posenet_temporal_signal_floor": 1.0,
                 "segnet_direct_live_distill": 1.0,
                 "segnet_direct_live_base_loss": 1.0,
             },
@@ -3378,6 +3667,7 @@ def _build_staged_scorer_curriculum(
                 "scorer_input_guard": 1.0,
                 "scorer_input_contrast_floor": 1.0,
                 "scorer_input_shape_tether": 1.0,
+                "posenet_temporal_signal_floor": 1.0,
                 "segnet_direct_live_distill": 1.0,
                 "segnet_direct_live_base_loss": 1.0,
             },
@@ -3492,6 +3782,7 @@ def _pr95_full_control_contract(
     *,
     train_time_controls: HiNervTrainTimeControlConfig | None = None,
     train_time_section_byte_control: Mapping[str, Any] | None = None,
+    require_measured_section_byte_control: bool = False,
 ) -> dict[str, Any]:
     """Fail-closed production-full control audit for PR95-critical HiNeRV runs."""
 
@@ -3517,6 +3808,9 @@ def _pr95_full_control_contract(
     eval_roundtrip_ste = bool(getattr(args, "eval_roundtrip_ste", False))
     pose_preprocess = str(getattr(args, "pose_student_input_preprocess", ""))
     pr95_curriculum = bool(getattr(args, "pr95_faithful_curriculum", False))
+    pr95_source_weight_amplification = bool(
+        getattr(args, "pr95_stage_source_weight_amplification", False)
+    )
     pr95_total_epochs = getattr(args, "pr95_curriculum_total_epochs", None)
     epochs = int(getattr(args, "epochs", 0))
     coder_qat = bool(getattr(args, "coder_qat", False))
@@ -3540,6 +3834,29 @@ def _pr95_full_control_contract(
         isinstance(train_time_section_byte_control, Mapping)
         and train_time_section_byte_control.get("active") is True
     )
+    measured_section_byte_control_blockers = [
+        str(blocker)
+        for blocker in (
+            train_time_section_byte_control.get("blockers", [])
+            if isinstance(train_time_section_byte_control, Mapping)
+            else []
+        )
+    ]
+    measured_section_byte_controlled_count = int(
+        train_time_section_byte_control.get("controlled_section_count") or 0
+        if isinstance(train_time_section_byte_control, Mapping)
+        else 0
+    )
+    measured_section_pending_count = int(
+        train_time_section_byte_control.get("pending_section_count") or 0
+        if isinstance(train_time_section_byte_control, Mapping)
+        else 0
+    )
+    section_byte_measurement_phase = (
+        "post_model_measured"
+        if measured_section_byte_control_attached
+        else "pre_model_requested"
+    )
     ema_archive_selection = bool(getattr(args, "ema_archive_selection", False))
     archive_parse_back_selection = bool(getattr(args, "post_export_receiver_cache_quality_gate", False))
     scorer_input_guard_weight = float(
@@ -3553,6 +3870,9 @@ def _pr95_full_control_contract(
     ]
     scorer_input_shape_metadata = train_time_controls.metadata()[
         "scorer_input_shape_tether"
+    ]
+    posenet_temporal_signal_metadata = train_time_controls.metadata()[
+        "posenet_temporal_signal_floor"
     ]
     output_head_bias_metadata = train_time_controls.metadata()[
         "output_head_target_bias_init"
@@ -3580,6 +3900,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_pr95_yuv6_differentiable_pose_path")
     if not pr95_curriculum:
         blockers.append("hinerv_full_missing_pr95_faithful_curriculum")
+    if pr95_curriculum and not pr95_source_weight_amplification:
+        blockers.append("hinerv_full_missing_pr95_source_weight_amplification")
     if epochs < CANONICAL_PR95_FULL_EPOCHS:
         blockers.append("hinerv_full_pr95_epoch_budget_below_29650")
     if pr95_total_epochs is not None and int(pr95_total_epochs) != CANONICAL_PR95_FULL_EPOCHS:
@@ -3598,6 +3920,11 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_train_time_hard_byte_ceiling")
     if not train_time_section_byte_metrics_enabled:
         blockers.append("hinerv_full_missing_train_time_section_byte_metrics")
+    if require_measured_section_byte_control and hard_byte_ceiling_attached:
+        if not measured_section_byte_control_attached:
+            blockers.append("hinerv_full_missing_measured_train_time_section_byte_control")
+        elif not measured_section_byte_control_active:
+            blockers.append("hinerv_full_train_time_section_byte_control_not_active")
     if measured_section_byte_control_attached and not measured_section_byte_control_active:
         blockers.append("hinerv_full_train_time_section_byte_control_not_active")
     if not ema_archive_selection:
@@ -3610,8 +3937,11 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_scorer_input_contrast_floor")
     if float(train_time_controls.scorer_input_shape_tether_weight) <= 0.0:
         blockers.append("hinerv_full_missing_scorer_input_shape_tether")
+    if float(train_time_controls.posenet_temporal_signal_floor_weight) <= 0.0:
+        blockers.append("hinerv_full_missing_posenet_temporal_signal_floor")
     if not bool(output_head_bias_metadata["enabled"]):
         blockers.append("hinerv_full_missing_output_head_target_bias_init")
+    blockers = list(dict.fromkeys(blockers))
 
     return {
         "schema": PR95_FULL_CONTROL_CONTRACT_SCHEMA,
@@ -3642,9 +3972,25 @@ def _pr95_full_control_contract(
             "eval_roundtrip_ste_enabled": eval_roundtrip_ste,
             "pose_student_input_preprocess": pose_preprocess,
             "pr95_faithful_curriculum_enabled": pr95_curriculum,
+            "pr95_stage_source_weight_amplification_enabled": (
+                pr95_source_weight_amplification
+            ),
             "epochs": epochs,
             "canonical_pr95_full_epochs": CANONICAL_PR95_FULL_EPOCHS,
             "pr95_curriculum_total_epochs": pr95_total_epochs,
+            "optimizer_warmup_steps_per_epoch": int(
+                getattr(args, "optimizer_warmup_steps_per_epoch", 1)
+            ),
+            "pair_sampling_weight_count": len(
+                list(getattr(args, "pair_sampling_weight", []) or [])
+            ),
+            "gradient_multiplier_count": len(
+                list(getattr(args, "gradient_multiplier", []) or [])
+            ),
+            "bias_gradient_multiplier": getattr(args, "bias_gradient_multiplier", None),
+            "output_head_bias_gradient_multiplier": float(
+                getattr(args, "output_head_bias_gradient_multiplier", 1.0)
+            ),
             "coder_qat_enabled": coder_qat,
             "coder_qat_c1a_entropy_weight": c1a_entropy_weight,
             "coder_qat_c1a_sigma": c1a_sigma,
@@ -3654,11 +4000,26 @@ def _pr95_full_control_contract(
             "train_time_section_byte_metrics_enabled": (
                 train_time_section_byte_metrics_enabled
             ),
+            "train_time_section_byte_control_measurement_phase": (
+                section_byte_measurement_phase
+            ),
+            "train_time_section_byte_control_required_for_training": bool(
+                require_measured_section_byte_control and hard_byte_ceiling_attached
+            ),
             "measured_train_time_section_byte_control_attached": (
                 measured_section_byte_control_attached
             ),
             "measured_train_time_section_byte_control_active": (
                 measured_section_byte_control_active
+            ),
+            "measured_train_time_section_byte_controlled_section_count": (
+                measured_section_byte_controlled_count
+            ),
+            "measured_train_time_section_byte_pending_section_count": (
+                measured_section_pending_count
+            ),
+            "measured_train_time_section_byte_control_blockers": (
+                measured_section_byte_control_blockers
             ),
             "measured_train_time_section_byte_control": _metadata_safe(
                 train_time_section_byte_control
@@ -3734,6 +4095,21 @@ def _pr95_full_control_contract(
             ),
             "scorer_input_shape_tether_components": (
                 scorer_input_shape_metadata["components"]
+            ),
+            "posenet_temporal_signal_floor_enabled": bool(
+                posenet_temporal_signal_metadata["enabled"]
+            ),
+            "posenet_temporal_signal_floor_weight": float(
+                train_time_controls.posenet_temporal_signal_floor_weight
+            ),
+            "posenet_temporal_signal_min_std_ratio": float(
+                train_time_controls.posenet_temporal_signal_min_std_ratio
+            ),
+            "posenet_temporal_signal_min_mean_abs_ratio": float(
+                train_time_controls.posenet_temporal_signal_min_mean_abs_ratio
+            ),
+            "posenet_temporal_signal_floor": (
+                posenet_temporal_signal_metadata
             ),
             "output_head_target_bias_init_enabled": bool(
                 output_head_bias_metadata["enabled"]
@@ -4020,10 +4396,11 @@ def _maybe_write_post_export_receiver_cache_quality(
         min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
             args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
         ),
+        segnet_argmax_probe_upstream_dir=args.upstream_dir,
         require_mlx_scorer_response_probe=bool(
             args.receiver_cache_quality_mlx_scorer_response_probe
         ),
-        mlx_scorer_response_upstream_dir=REPO_ROOT / "upstream",
+        mlx_scorer_response_upstream_dir=args.upstream_dir,
         mlx_scorer_response_device_type=str(
             args.receiver_cache_quality_mlx_scorer_response_device_type
         ),

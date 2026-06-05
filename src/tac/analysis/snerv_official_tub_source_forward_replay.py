@@ -31,6 +31,7 @@ import numpy as np
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
     official_output2_fusion_numpy,
+    official_tub_frame_reconstruction_numpy,
     prepare_official_tub_graph_inputs,
 )
 
@@ -50,10 +51,14 @@ FALSE_AUTHORITY: dict[str, bool] = {
     "ready_for_exact_eval_dispatch": False,
 }
 
+TUB_FRAME_RECONSTRUCTION_BLOCKER = (
+    "snerv_official_tub_frame_reconstruction_source_forward_replay_missing"
+)
 TUB_CLOSED_BY_FIXTURE_REPLAY: tuple[str, ...] = (
     "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity",
     "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
     "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing",
+    TUB_FRAME_RECONSTRUCTION_BLOCKER,
 )
 TUB_PRESERVED_BLOCKERS: tuple[str, ...] = (
     "snerv_official_trained_checkpoint_state_dict_not_loaded",
@@ -170,7 +175,15 @@ def build_snerv_official_tub_source_forward_replay_artifact(
             "portable_output2_fusion_receiver_mapping_proven"
         ]
         and payload["full_forward_equivalence"]["manual_replay_matches_official_forward"]
+        and payload["frame_reconstruction_equivalence"][
+            "source_forward_frame_reconstruction_matches_official"
+        ]
         and payload["temporal_path"]["output_tensors_finite"]
+    )
+    fixture_blockers = (
+        []
+        if replay_passed
+        else _tub_fixture_replay_blockers(payload)
     )
     return {
         **base,
@@ -183,7 +196,8 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         "source_fixture_not_training_config": True,
         "source_fixture_reason": (
             "small shape chosen to exercise upstream SNeRV_T temporal encoder, "
-            "output_2 fusion, and five-stage temporal decoder semantics on CPU"
+            "output_2 fusion, five-stage temporal decoder, MFU/HFR heads, "
+            "and final source-forward frame reconstruction semantics on CPU"
         ),
         "source_pins": _source_pins(official_root),
         "dependency_contract": {
@@ -199,15 +213,19 @@ def build_snerv_official_tub_source_forward_replay_artifact(
         "portable_output2_fusion": payload["portable_output2_fusion"],
         "temporal_path": payload["temporal_path"],
         "full_forward_equivalence": payload["full_forward_equivalence"],
+        "frame_reconstruction_equivalence": payload[
+            "frame_reconstruction_equivalence"
+        ],
         "component_rows": [
             payload["graph_input_parity"],
             payload["portable_output2_fusion"],
             payload["temporal_path"],
             payload["full_forward_equivalence"],
+            payload["frame_reconstruction_equivalence"],
         ],
         "closed_blockers": list(TUB_CLOSED_BY_FIXTURE_REPLAY) if replay_passed else [],
         "preserved_blockers": preserved,
-        "blockers": preserved,
+        "blockers": _ordered_unique([*fixture_blockers, *preserved]),
         "full_tub_source_forward_parity_proven": False,
         "source_forward_parity_proven": False,
         **FALSE_AUTHORITY,
@@ -295,6 +313,19 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
         "final_decoder_output": manual["final_decoder_output"],
     }
     forward_error = _max_abs_error(full_forward_arrays, manual_forward_arrays)
+    forward_passed = forward_error == 0.0
+    official_frame_arrays = {
+        "img_yl": _tensor_array(img_yl),
+        "yh_out": _tensor_array(yh_out),
+        "img_out": _tensor_array(img_out),
+    }
+    manual_frame_arrays = {
+        "img_yl": manual["img_yl"],
+        "yh_out": manual["yh_out"],
+        "img_out": manual["frame_reconstruction"],
+    }
+    frame_error = _max_abs_error(official_frame_arrays, manual_frame_arrays)
+    frame_passed = frame_error == 0.0
 
     temporal_arrays = {
         "temporal_encoder_prev": manual["temporal_encoder_prev"],
@@ -303,6 +334,13 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
         "output2_raw": manual["output2_raw"],
         "output2_shuffled": manual["output2_shuffled"],
         "final_decoder_output": manual["final_decoder_output"],
+        "mfu_up1": manual["mfu_up1"],
+        "mfu_unet1": manual["mfu_unet1"],
+        "mfu_unet1_up": manual["mfu_unet1_up"],
+        "mfu_pyr_out": manual["mfu_pyr_out"],
+        "manual_img_yl": manual["img_yl"],
+        "manual_yh_out": manual["yh_out"],
+        "manual_frame_reconstruction": manual["frame_reconstruction"],
         "full_img_out": _tensor_array(img_out),
         "full_img_yl": _tensor_array(img_yl),
         "full_yh_out": _tensor_array(yh_out),
@@ -376,17 +414,69 @@ def _run_source_fixture(official_root: Path) -> dict[str, Any]:
             "classification": (
                 "manual_tub_extraction_matches_official_snerv_t_forward_embed_list"
             ),
-            "manual_replay_matches_official_forward": forward_error == 0.0,
+            "manual_replay_matches_official_forward": forward_passed,
             "max_abs_error": forward_error,
             "official_forward_sha256": _hash_named_arrays(full_forward_arrays),
             "manual_replay_sha256": _hash_named_arrays(manual_forward_arrays),
             "output_hashes_bit_identical": _hash_named_arrays(full_forward_arrays)
             == _hash_named_arrays(manual_forward_arrays),
             "output_shapes": _shape_map(full_forward_arrays),
-            "blockers": [],
+            "blockers": (
+                []
+                if forward_passed
+                else ["snerv_official_tub_manual_forward_replay_mismatch"]
+            ),
+            **FALSE_AUTHORITY,
+        },
+        "frame_reconstruction_equivalence": {
+            "schema": COMPONENT_SCHEMA,
+            "component_id": "tub_mfu_hfr_frame_reconstruction_equivalence",
+            "classification": (
+                "manual_tub_mfu_hfr_path_plus_numpy_idwt_matches_official_snerv_t_img_out"
+            ),
+            "source_forward_frame_reconstruction_matches_official": frame_passed,
+            "max_abs_error": frame_error,
+            "official_forward_sha256": _hash_named_arrays(official_frame_arrays),
+            "manual_reconstruction_sha256": _hash_named_arrays(manual_frame_arrays),
+            "output_hashes_bit_identical": _hash_named_arrays(official_frame_arrays)
+            == _hash_named_arrays(manual_frame_arrays),
+            "output_shapes": _shape_map(official_frame_arrays),
+            "portable_frame_reconstruction_metadata": manual[
+                "frame_reconstruction_metadata"
+            ],
+            "closed_blockers": [
+                TUB_FRAME_RECONSTRUCTION_BLOCKER
+            ] if frame_passed else [],
+            "blockers": [] if frame_passed else [TUB_FRAME_RECONSTRUCTION_BLOCKER],
             **FALSE_AUTHORITY,
         },
     }
+
+
+def _tub_fixture_replay_blockers(payload: Mapping[str, Any]) -> list[str]:
+    blockers: list[str] = []
+    if not payload["graph_input_parity"]["graph_input_parity_passed"]:
+        blockers.append(
+            "snerv_official_tub_graph_inputs_only_not_full_source_forward_parity"
+        )
+    if not payload["portable_output2_fusion"][
+        "portable_output2_fusion_receiver_mapping_proven"
+    ]:
+        blockers.extend(
+            [
+                "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+                "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing",
+            ]
+        )
+    if not payload["full_forward_equivalence"]["manual_replay_matches_official_forward"]:
+        blockers.append("snerv_official_tub_manual_forward_replay_mismatch")
+    if not payload["frame_reconstruction_equivalence"][
+        "source_forward_frame_reconstruction_matches_official"
+    ]:
+        blockers.append(TUB_FRAME_RECONSTRUCTION_BLOCKER)
+    if not payload["temporal_path"]["output_tensors_finite"]:
+        blockers.append("snerv_official_tub_temporal_encoder_output2_nonfinite")
+    return _ordered_unique(blockers)
 
 
 def _manual_tub_source_replay(
@@ -394,8 +484,9 @@ def _manual_tub_source_replay(
     current: Any,
     previous: Any,
     next_frame: Any,
-) -> dict[str, np.ndarray]:
+) -> dict[str, Any]:
     import torch
+    from model.layers import OutImg
     from pytorch_wavelets import DWT, DWT1D
 
     yl, _ = DWT(J=1, wave="haar", mode="periodization").cuda()(
@@ -423,6 +514,8 @@ def _manual_tub_source_replay(
         (embed_lv_n.permute(2, 1, 0).reshape(1, c, h, w)) / 2.0
     )
     temporal_concat = torch.cat([temporal_prev, temporal_next], 1)
+    img_embed = [embed_curr, temporal_concat, yl_norm]
+    embed_list = [img_embed]
     output = model.decoder[0](embed_curr)
     out_n, _out_c, out_h, out_w = output.shape
     output = (
@@ -431,6 +524,7 @@ def _manual_tub_source_replay(
         .reshape(out_n, -1, model.fc_h * out_h, model.fc_w * out_w)
     )
     decoder0_shuffled = output
+    embed_list.append(output)
     emb_ch = temporal_concat.size(1) // 2
     output2_decoder_input = torch.cat(
         [temporal_concat[:, 0:emb_ch], temporal_concat[:, emb_ch:]],
@@ -452,6 +546,25 @@ def _manual_tub_source_replay(
             output = layer(output, output2)
         else:
             output, output2 = layer(output, output2)
+        embed_list.append(output)
+    up1 = model.decoder[model.decoder_len + 3](embed_list[-3])
+    unet1 = model.decoder[model.decoder_len + 4](
+        torch.cat([up1, embed_list[-2]], dim=1)
+    )
+    unet1_up = model.decoder[model.decoder_len + 5](unet1)
+    pyr_out = model.decoder[model.decoder_len + 6](
+        torch.cat([unet1_up, embed_list[-1]], dim=1)
+    )
+    img_yl = OutImg(model.head_layer(pyr_out), model.out_bias)
+    lh_out = model.decoder[model.decoder_len](pyr_out)
+    hl_out = model.decoder[model.decoder_len + 1](pyr_out)
+    hh_out = model.decoder[model.decoder_len + 2](pyr_out)
+    yh_out = torch.stack([lh_out, hl_out, hh_out], dim=2)
+    frame_reconstruction = official_tub_frame_reconstruction_numpy(
+        _tensor_array(img_yl),
+        _tensor_array(yh_out),
+        yl_norm=tuple(float(v) for v in _tensor_array(yl_norm)),
+    )
     prev_lowpass_over_2 = (
         embed_lv_p.permute(2, 1, 0).reshape(1, c, h, w) / 2.0
     )
@@ -472,6 +585,15 @@ def _manual_tub_source_replay(
         "output2_raw": _tensor_array(output2_raw),
         "output2_shuffled": _tensor_array(output2_shuffled),
         "final_decoder_output": _tensor_array(output),
+        "mfu_up1": _tensor_array(up1),
+        "mfu_unet1": _tensor_array(unet1),
+        "mfu_unet1_up": _tensor_array(unet1_up),
+        "mfu_pyr_out": _tensor_array(pyr_out),
+        "img_yl": _tensor_array(img_yl),
+        "yh_out": _tensor_array(yh_out),
+        "yl_out": frame_reconstruction.yl_out,
+        "frame_reconstruction": frame_reconstruction.frame,
+        "frame_reconstruction_metadata": frame_reconstruction.as_jsonable_metadata(),
     }
 
 
@@ -612,6 +734,7 @@ def _source_pins(official_root: Path) -> dict[str, Any]:
             "tub_graph_inputs": "model/snerv_t.py:125-136",
             "output2_fusion": "model/snerv_t.py:142-150",
             "temporal_decoder_loop": "model/snerv_t.py:152-159",
+            "mfu_hfr_frame_reconstruction": "model/snerv_t.py:161-173",
         },
         "requirements_lines": {
             "torch": "requirements.txt:1",

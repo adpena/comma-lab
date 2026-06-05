@@ -937,6 +937,61 @@ def test_pr95_stage_4_consumes_real_coder_qat_terms_NO_FAKE() -> None:
 
 
 @requires_mlx
+def test_pr95_stage_qat_uses_dual_adjusted_extra_loss_weights_NO_FAKE() -> None:
+    """Byte duals must actuate the PR95-stage QAT loss, not only telemetry."""
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.extra_loss_terms = lambda _model, _idx: {
+        "coder_qat_quant_residual": mx.array(3.0, dtype=mx.float32)
+    }
+    bundle.extra_loss_weights = {"coder_qat_quant_residual": 0.0}
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=80,
+    )
+    stage_starts = {
+        int(stage_index): int(start_epoch)
+        for stage_index, start_epoch, _end_epoch in (
+            adapter._pr95_curriculum_factory.stage_epoch_boundaries
+        )
+    }
+    stage_4 = adapter._pr95_curriculum_factory.current_stage_verdict(
+        stage_starts[4]
+    )
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    total_zero, _parts_zero = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage_4,
+        model=adapter.model,
+        loss_weights={"coder_qat_quant_residual": 0.0},
+    )
+    total_dual, parts_dual = adapter._pr95_stage_loss_and_parts(
+        batch=batch,
+        stage_verdict=stage_4,
+        model=adapter.model,
+        loss_weights={"coder_qat_quant_residual": 2.0},
+    )
+    metrics_dual = adapter._pr95_stage_loss_part_metrics(
+        batch,
+        stage_verdict=stage_4,
+        loss_weights={"coder_qat_quant_residual": 2.0},
+    )
+    mx.eval(total_zero, total_dual, *parts_dual.values())
+
+    assert "coder_qat_quant_residual" in parts_dual
+    assert float(total_dual.item()) - float(total_zero.item()) == pytest.approx(6.0)
+    assert metrics_dual["loss_part_weighted_coder_qat_quant_residual"] == (
+        pytest.approx(6.0)
+    )
+
+
+@requires_mlx
 def test_mlx_score_adapter_forwards_post_optimizer_projection_NO_FAKE() -> None:
     """Substrate proximal projections must run through the training harness."""
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter

@@ -646,6 +646,66 @@ def test_mlx_scorer_response_cli_can_score_deterministic_pair_window(tmp_path: P
     assert payload["avg_segnet_dist"] == 0.0
 
 
+def test_torch_cpu_scorer_response_cli_can_anchor_mlx_drift_checks(
+    tmp_path: Path,
+) -> None:
+    pair_indices = np.array([[0, 1]], dtype=np.int64)
+    seg = np.zeros((1, 3, 64, 80), dtype=np.float32)
+    pose = np.zeros((1, 12, 64, 80), dtype=np.float32)
+    reference_dir = _write_test_cache(
+        tmp_path / "reference",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    candidate_dir = _write_test_cache(
+        tmp_path / "candidate",
+        seg=seg,
+        pose=pose,
+        pair_indices=pair_indices,
+    )
+    output = tmp_path / "torch_cpu_response.json"
+    archive_size_bytes = 1000
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "tools" / "run_torch_scorer_response_from_cache.py"),
+            "--reference-cache-dir",
+            str(reference_dir),
+            "--candidate-cache-dir",
+            str(candidate_dir),
+            "--archive-size-bytes",
+            str(archive_size_bytes),
+            "--output",
+            str(output),
+            "--repo-root",
+            str(REPO),
+            *_upstream_cli_args(),
+            "--components-dir",
+            str(tmp_path / "torch_components"),
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    stdout = json.loads(completed.stdout)
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    expected_rate_score = 25.0 * archive_size_bytes / ORIGINAL_VIDEO_BYTES
+    assert stdout["score_claim"] is False
+    assert stdout["n_samples"] == 1
+    assert payload["schema"] == "torch_cpu_scorer_response.v1"
+    assert payload["score_axis"] == "[macOS-PyTorch-CPU advisory]"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    assert payload["avg_posenet_dist"] == 0.0
+    assert payload["avg_segnet_dist"] == 0.0
+    assert abs(payload["canonical_score"] - expected_rate_score) < 1.0e-12
+    assert payload["components"]["artifacts"]["posenet_distortion"]["sha256"]
+    assert payload["components"]["artifacts"]["segnet_distortion"]["sha256"]
+
+
 def test_mlx_scorer_response_pairing_accepts_candidate_subset_by_pair_indices(
     tmp_path: Path,
 ) -> None:

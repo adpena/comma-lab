@@ -756,35 +756,81 @@ def _official_planes_to_frames(
     )
 
 
+def _official_mfu_hfr_receiver_frame_shape(
+    *,
+    mfu: OfficialSnervMfu,
+    hfr_heads: OfficialHfrHeads,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+) -> tuple[int, int, int, int]:
+    """Return the frame tensor shape produced by the archived MFU/HFR bytes."""
+
+    mfu_out = mfu.forward(low, skip_mid, skip_high)
+    hfr_out = hfr_heads.forward(mfu_out.pyr_out)
+    ll = np.asarray(mfu_out.pyr_out)
+    yh = np.asarray(hfr_out.yh_out)
+    if ll.ndim != 4:
+        raise SnervArchiveError(f"official MFU pyr_out must be NCHW, got {ll.shape}")
+    if yh.ndim != 5 or int(yh.shape[2]) != 3:
+        raise SnervArchiveError(
+            f"official HFR yh_out must be (N,C,3,H,W), got {yh.shape}"
+        )
+    if int(ll.shape[0]) != int(yh.shape[0]):
+        raise SnervArchiveError(
+            f"official MFU batch {ll.shape[0]} != HFR batch {yh.shape[0]}"
+        )
+    if tuple(int(v) for v in ll.shape[-2:]) != tuple(int(v) for v in yh.shape[-2:]):
+        raise SnervArchiveError(
+            f"official LL shape {ll.shape[-2:]} != HFR detail shape {yh.shape[-2:]}"
+        )
+    detail_channels = int(yh.shape[1])
+    if int(ll.shape[1]) not in (1, detail_channels):
+        raise SnervArchiveError(
+            "official MFU pyr_out channels must be 1 or match HFR channels "
+            f"({ll.shape[1]} vs {detail_channels})"
+        )
+    return (
+        int(ll.shape[0]),
+        detail_channels,
+        int(ll.shape[-2]) * 2,
+        int(ll.shape[-1]) * 2,
+    )
+
+
 def _apply_official_tub_output2_frame_residual(
     frames: np.ndarray,
     output2_fused: np.ndarray,
     *,
     clip_to_uint8_range: bool,
 ) -> np.ndarray:
-    """Project stored official ``output_2`` bytes into receiver-visible frames.
+    """Add source-shaped official ``output_2`` bytes to receiver frames.
 
-    This is receiver-payload authority only: it proves the archived output_2
-    bytes affect rendered frames.  It is not full trained source-forward
-    authority, because the learned temporal decoder weights remain separately
-    blocked until an upstream checkpoint replay closes them.
+    The receiver refuses resize, frame reuse, or channel modulo projection here.
+    A stored TUB activation is frame-bound only when its fused NCHW tensor
+    already has the exact receiver frame shape produced by the archived
+    MFU/HFR bytes.
     """
 
     out = np.asarray(output2_fused, dtype=np.float32)
     frame_array = np.asarray(frames, dtype=np.float32)
+    if frame_array.ndim != 4:
+        raise SnervArchiveError(
+            f"official receiver frames must be NCHW, got {frame_array.shape}"
+        )
     if out.ndim != 4:
-        raise SnervArchiveError(f"official TUB output2 fused tensor must be NCHW, got {out.shape}")
-    frame_count, channels, h, w = (int(v) for v in frame_array.shape)
-    if int(out.shape[0]) <= 0 or int(out.shape[1]) <= 0:
+        raise SnervArchiveError(
+            f"official TUB output2 fused tensor must be NCHW, got {out.shape}"
+        )
+    if any(int(v) <= 0 for v in out.shape):
         raise SnervArchiveError("official TUB output2 fused tensor must be non-empty")
-    residual = np.zeros_like(frame_array, dtype=np.float32)
-    for frame in range(frame_count):
-        src_frame = out[min(frame, int(out.shape[0]) - 1)]
-        for channel in range(channels):
-            src = src_frame[channel % int(out.shape[1])]
-            resized = _nearest_resize_2d(src, h, w)
-            residual[frame, channel] = resized
-    mixed = frame_array + residual
+    if tuple(int(v) for v in out.shape) != tuple(int(v) for v in frame_array.shape):
+        raise SnervArchiveError(
+            "official TUB output2 fused tensor shape must match receiver frames "
+            f"for source-faithful frame decode; got {tuple(int(v) for v in out.shape)}, "
+            f"expected {tuple(int(v) for v in frame_array.shape)}"
+        )
+    mixed = frame_array + out
     if clip_to_uint8_range:
         mixed = np.clip(mixed, 0.0, 255.0)
     return np.asarray(mixed, dtype=np.float32)
@@ -1733,12 +1779,20 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         next_frame=tub_next_frame,
         codec=tub_input_codec,
     )
+    receiver_frame_shape = _official_mfu_hfr_receiver_frame_shape(
+        mfu=mfu,
+        hfr_heads=hfr_heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high_plan["effective"],
+    )
     output2_plan = _official_tub_output2_storage_plan(
         temporal_encoder_concat=tub_temporal_encoder_concat,
         output2_raw=tub_output2_raw,
         fc_hw=fc_hw,
         temporal_encoder_output_shape=temporal_encoder_output_shape,
         output2_decoder_output_shape=output2_decoder_output_shape,
+        receiver_frame_shape=receiver_frame_shape,
         store_for_receiver_proof=bool(store_tub_output2_for_receiver_proof),
     )
     source_forward_blockers = _official_mfu_hfr_tub_source_forward_blockers(
@@ -2398,8 +2452,10 @@ def _official_tub_output2_storage_plan(
     fc_hw: tuple[int, int] | None,
     temporal_encoder_output_shape: tuple[int, int, int, int] | None,
     output2_decoder_output_shape: tuple[int, int, int, int] | None,
+    receiver_frame_shape: tuple[int, int, int, int],
     store_for_receiver_proof: bool,
 ) -> dict[str, Any]:
+    receiver_shape = tuple(int(v) for v in receiver_frame_shape)
     if (temporal_encoder_concat is None) != (output2_raw is None):
         raise SnervArchiveError(
             "official TUB output2 payload requires both temporal_encoder_concat "
@@ -2419,6 +2475,10 @@ def _official_tub_output2_storage_plan(
                 "proof_only_false_authority_metadata": False,
                 "receiver_executes_output2_fusion_from_payload": False,
                 "receiver_frame_decode_consumes_output2": False,
+                "receiver_frame_decode_binding_status": "not_present",
+                "receiver_frame_shape": [int(v) for v in receiver_shape],
+                "receiver_output2_frame_shape_match": False,
+                "frame_decode_blockers": [],
                 "train_time_loss_coupled": False,
                 "scored_pixel_render_bound": False,
                 "score_lagrangian_admission": "not_present",
@@ -2453,11 +2513,19 @@ def _official_tub_output2_storage_plan(
             raise SnervArchiveError(
                 "official TUB output2 raw shape mismatch; "
                 f"tensor={raw_shape} config={expected}"
-            )
+    )
     # Validate the exact receiver algebra at export time before bytes are stored.
     fusion = official_output2_fusion_numpy(temporal, raw, fc_hw=fc_hw)
+    fused_shape = tuple(int(v) for v in fusion.output2_fused.shape)
+    frame_shape_matches = fused_shape == receiver_shape
+    frame_decode_blockers = (
+        []
+        if frame_shape_matches
+        else ["snerv_tub_output2_receiver_frame_shape_mismatch"]
+    )
     source_raw_bytes = int(temporal.size + raw.size) * np.dtype("<f8").itemsize
     should_store = bool(store_for_receiver_proof)
+    frame_decode_bound = bool(should_store and frame_shape_matches)
     stored = (
         {
             "temporal_encoder_concat": temporal,
@@ -2478,25 +2546,45 @@ def _official_tub_output2_storage_plan(
             "stored": should_store,
             "source_payload_present": True,
             "proof_only_elided_from_selected_runtime_packet": not should_store,
-            "proof_only_false_authority_metadata": not should_store,
+            "proof_only_false_authority_metadata": not frame_decode_bound,
             "storage_policy": (
                 "store_for_receiver_proof"
                 if should_store
                 else "elide_until_receiver_frame_decode_bound"
             ),
             "receiver_executes_output2_fusion_from_payload": should_store,
-            "receiver_frame_decode_consumes_output2": should_store,
+            "receiver_frame_decode_consumes_output2": frame_decode_bound,
+            "receiver_frame_decode_binding_status": (
+                "source_shape_matched"
+                if frame_decode_bound
+                else (
+                    "blocked_output2_fused_shape_mismatch"
+                    if should_store
+                    else "elided_from_runtime_packet"
+                )
+            ),
+            "receiver_frame_shape": [int(v) for v in receiver_shape],
+            "receiver_output2_frame_shape_match": frame_shape_matches,
+            "frame_decode_blockers": list(frame_decode_blockers if should_store else []),
             "train_time_loss_coupled": False,
-            "scored_pixel_render_bound": should_store,
+            "scored_pixel_render_bound": frame_decode_bound,
             "score_lagrangian_admission": (
                 "receiver_frame_decode_bound_proof_only_false_authority"
-                if should_store
-                else "elided_non_score_causal_payload"
+                if frame_decode_bound
+                else (
+                    "blocked_output2_fused_shape_mismatch_false_authority"
+                    if should_store
+                    else "elided_non_score_causal_payload"
+                )
             ),
             "score_lagrangian_action": (
                 "keep_only_for_receiver_proof_until_trained_source_forward_parity"
-                if should_store
-                else "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
+                if frame_decode_bound
+                else (
+                    "fix_output2_shape_or_load_source_forward_tub_decoder"
+                    if should_store
+                    else "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
+                )
             ),
             "tensor_names": [
                 "tub.temporal_encoder_concat",
@@ -2508,7 +2596,7 @@ def _official_tub_output2_storage_plan(
             "output2_decoder_input_shape": [
                 int(v) for v in fusion.decoder_input.shape
             ],
-            "output2_fused_shape": [int(v) for v in fusion.output2_fused.shape],
+            "output2_fused_shape": [int(v) for v in fused_shape],
             "temporal_encoder_concat_sha256": _sha256(temporal.tobytes()),
             "output2_raw_sha256": _sha256(raw.tobytes()),
             "output2_decoder_input_sha256": _sha256(
@@ -2524,8 +2612,12 @@ def _official_tub_output2_storage_plan(
             "contest_scorer_authority": False,
             "source_forward_blockers": (
                 []
-                if should_store
-                else ["snerv_tub_output2_source_payload_elided_from_runtime_packet"]
+                if frame_decode_bound
+                else (
+                    frame_decode_blockers
+                    if should_store
+                    else ["snerv_tub_output2_source_payload_elided_from_runtime_packet"]
+                )
             ),
             **FALSE_AUTHORITY,
         },

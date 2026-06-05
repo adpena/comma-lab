@@ -23,6 +23,7 @@ def build_scoreaware_stage_loss_weights(
     scorer_input_guard: float = 1.0,
     scorer_input_contrast_floor: float | None = None,
     scorer_input_shape_tether: float | None = None,
+    posenet_temporal_signal_floor: float | None = None,
     segnet_direct_live: float | None = None,
 ) -> dict[str, float]:
     """Return canonical per-component stage weights for shared MLX training."""
@@ -34,6 +35,9 @@ def build_scoreaware_stage_loss_weights(
     shape = guard if scorer_input_shape_tether is None else float(
         scorer_input_shape_tether
     )
+    temporal = guard if posenet_temporal_signal_floor is None else float(
+        posenet_temporal_signal_floor
+    )
     direct_live = float(segnet) if segnet_direct_live is None else float(
         segnet_direct_live
     )
@@ -44,6 +48,7 @@ def build_scoreaware_stage_loss_weights(
         "scorer_input_guard": guard,
         "scorer_input_contrast_floor": contrast,
         "scorer_input_shape_tether": shape,
+        "posenet_temporal_signal_floor": temporal,
         "segnet_direct_live_distill": direct_live,
     }
     bad = [
@@ -83,6 +88,11 @@ def coerce_scoreaware_stage_loss_weights(
             None
             if "scorer_input_shape_tether" not in raw
             else float(raw["scorer_input_shape_tether"])
+        ),
+        posenet_temporal_signal_floor=(
+            None
+            if "posenet_temporal_signal_floor" not in raw
+            else float(raw["posenet_temporal_signal_floor"])
         ),
         segnet_direct_live=(
             None

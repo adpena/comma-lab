@@ -423,6 +423,15 @@ class RendererBundle:
             contrast floor: it does not care about human fidelity, only that the
             byte-realized scorer tensors carry the target's score-causal local
             structure instead of a low-rank/flat surrogate.
+        posenet_temporal_signal_floor_weight: optional one-sided hinge dedicated
+            to the PoseNet YUV6 temporal delta. The generic YUV6-pair contrast
+            floor can pass while adjacent decoded frames are nearly identical;
+            this control separately requires the candidate temporal-delta std
+            and mean-absolute signal to clear reference-relative floors.
+        posenet_temporal_signal_min_std_ratio: minimum candidate/reference std
+            ratio for the YUV6 temporal delta.
+        posenet_temporal_signal_min_mean_abs_ratio: minimum candidate/reference
+            mean-absolute ratio for the YUV6 temporal delta.
         source_pair_indices: optional local-target-row -> source-video-pair
             mapping. When set, ``num_pairs`` is the hydrated target row count
             and each local row decodes the corresponding source model/latent
@@ -490,6 +499,9 @@ class RendererBundle:
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5
     scorer_input_shape_tether_weight: float = 0.0
+    posenet_temporal_signal_floor_weight: float = 0.0
+    posenet_temporal_signal_min_std_ratio: float = 0.25
+    posenet_temporal_signal_min_mean_abs_ratio: float = 0.25
     source_pair_indices: tuple[int, ...] | None = None
     train_time_section_byte_metrics: (
         Callable[[Any, Any, Mapping[str, float]], Mapping[str, Any]] | None
@@ -696,6 +708,21 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 "scorer_input_shape_tether_weight must be >= 0; got "
                 f"{self.scorer_input_shape_tether_weight}"
+            )
+        if self.posenet_temporal_signal_floor_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "posenet_temporal_signal_floor_weight must be >= 0; got "
+                f"{self.posenet_temporal_signal_floor_weight}"
+            )
+        if self.posenet_temporal_signal_min_std_ratio <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "posenet_temporal_signal_min_std_ratio must be > 0; got "
+                f"{self.posenet_temporal_signal_min_std_ratio}"
+            )
+        if self.posenet_temporal_signal_min_mean_abs_ratio <= 0.0:
+            raise MlxScoreAwareHarnessError(
+                "posenet_temporal_signal_min_mean_abs_ratio must be > 0; got "
+                f"{self.posenet_temporal_signal_min_mean_abs_ratio}"
             )
         try:
             cam_h, cam_w = self.eval_roundtrip_camera_hw

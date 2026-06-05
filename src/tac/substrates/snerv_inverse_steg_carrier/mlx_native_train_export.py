@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import shutil
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -269,6 +270,66 @@ def _candidate_first_non_null(
     return fallback
 
 
+def _coerce_gradient_multiplier_by_name(value: Any) -> dict[str, float]:
+    """Normalize exact parameter-name gradient multipliers for shared MLX runs."""
+
+    if value is None:
+        return {}
+    items: Iterable[tuple[Any, Any]]
+    if isinstance(value, Mapping):
+        items = value.items()
+    elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        parsed: list[tuple[Any, Any]] = []
+        for row in value:
+            if isinstance(row, Mapping):
+                if "name" in row and "value" in row:
+                    parsed.append((row["name"], row["value"]))
+                elif "parameter" in row and "multiplier" in row:
+                    parsed.append((row["parameter"], row["multiplier"]))
+                else:
+                    raise SnervMlxNativeExportError(
+                        "gradient multiplier rows must contain name/value or "
+                        "parameter/multiplier"
+                    )
+            elif isinstance(row, Sequence) and not isinstance(
+                row, (str, bytes, bytearray)
+            ):
+                pair = list(row)
+                if len(pair) != 2:
+                    raise SnervMlxNativeExportError(
+                        "gradient multiplier sequence rows must be pairs"
+                    )
+                parsed.append((pair[0], pair[1]))
+            else:
+                raise SnervMlxNativeExportError(
+                    "gradient multipliers must be a mapping or sequence of pairs"
+                )
+        items = parsed
+    else:
+        raise SnervMlxNativeExportError(
+            "gradient multipliers must be a mapping or sequence of pairs"
+        )
+    out: dict[str, float] = {}
+    for raw_name, raw_multiplier in items:
+        name = str(raw_name)
+        if not name:
+            raise SnervMlxNativeExportError(
+                "gradient multiplier parameter names must be non-empty"
+            )
+        try:
+            multiplier = float(raw_multiplier)
+        except (TypeError, ValueError) as exc:
+            raise SnervMlxNativeExportError(
+                f"gradient multiplier {name!r} must be a finite float"
+            ) from exc
+        if not math.isfinite(multiplier) or multiplier < 0.0:
+            raise SnervMlxNativeExportError(
+                f"gradient multiplier {name!r} must be finite and >= 0"
+            )
+        out[name] = multiplier
+    return out
+
+
 def _snerv_score_aware_checkpoint_selection_policy(
     *,
     segnet_distillation_weight: float,
@@ -277,6 +338,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
     scorer_input_distribution_guard_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_shape_tether_weight: float = 0.0,
+    posenet_temporal_signal_floor_weight: float = 0.0,
     has_real_segnet_teacher: bool,
     has_real_posenet_teacher: bool,
     coder_aware_qat_bound: bool,
@@ -299,6 +361,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
     guard_weight = float(scorer_input_distribution_guard_weight)
     contrast_floor_weight = float(scorer_input_contrast_floor_weight)
     shape_tether_weight = float(scorer_input_shape_tether_weight)
+    temporal_floor_weight = float(posenet_temporal_signal_floor_weight)
     weighted_qat_terms = {
         str(name): float(weight)
         for name, weight in dict(coder_qat_loss_weight_map or {}).items()
@@ -337,6 +400,9 @@ def _snerv_score_aware_checkpoint_selection_policy(
     if shape_tether_weight > 0.0:
         active_surfaces.append("scorer_input_shape_tether")
         required_loss_parts.append("scorer_input_shape_tether")
+    if temporal_floor_weight > 0.0:
+        active_surfaces.append("posenet_temporal_signal_floor")
+        required_loss_parts.append("posenet_temporal_signal_floor")
     if bool(coder_aware_qat_bound):
         active_surfaces.append("coder_aware_qat")
         if not weighted_qat_terms:
@@ -378,6 +444,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
         "scorer_input_distribution_guard_weight": guard_weight,
         "scorer_input_contrast_floor_weight": contrast_floor_weight,
         "scorer_input_shape_tether_weight": shape_tether_weight,
+        "posenet_temporal_signal_floor_weight": temporal_floor_weight,
         "weighted_coder_qat_terms": weighted_qat_terms,
         "fail_closed_on_missing_parts": uses_score_aware,
         "full_reduction": (
@@ -428,6 +495,8 @@ def _snerv_score_aware_long_training_telemetry_contract(
     scorer_input_distribution_guard_weight: float,
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_shape_tether_weight: float = 0.0,
+    posenet_temporal_signal_floor_weight: float = 0.0,
+    gradient_multiplier_controls_requested: bool = False,
 ) -> dict[str, Any]:
     """Validate that a SNeRV long run actually drove score-aware controls."""
 
@@ -443,6 +512,8 @@ def _snerv_score_aware_long_training_telemetry_contract(
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
     expected_contrast_floor = float(scorer_input_contrast_floor_weight) > 0.0
     expected_shape_tether = float(scorer_input_shape_tether_weight) > 0.0
+    expected_temporal_floor = float(posenet_temporal_signal_floor_weight) > 0.0
+    expected_gradient_multiplier = bool(gradient_multiplier_controls_requested)
     expected_any = bool(
         expected_seg
         or expected_pose
@@ -452,13 +523,17 @@ def _snerv_score_aware_long_training_telemetry_contract(
         or expected_guard
         or expected_contrast_floor
         or expected_shape_tether
+        or expected_temporal_floor
+        or expected_gradient_multiplier
     )
     row_count = 0
     malformed_rows = 0
     seg_dual_observed = False
     pose_dual_observed = False
+    guard_dual_observed = False
     seg_loss_observed = False
     pose_loss_observed = False
+    archive_rate_observed = False
     section_rate_observed = False
     guard_loss_observed = False
     contrast_floor_loss_observed = False
@@ -468,6 +543,9 @@ def _snerv_score_aware_long_training_telemetry_contract(
     shape_tether_segnet_observed = False
     shape_tether_posenet_pair_observed = False
     shape_tether_posenet_delta_observed = False
+    temporal_floor_loss_observed = False
+    temporal_floor_std_ratio_observed = False
+    temporal_floor_mean_abs_ratio_observed = False
     live_calibration_active_observed = False
     live_calibration_loss_observed = False
     direct_live_loss_observed = False
@@ -478,11 +556,19 @@ def _snerv_score_aware_long_training_telemetry_contract(
     pr95_pose_loss_observed = False
     seg_dual_lambda_active_observed = False
     pose_dual_lambda_active_observed = False
+    archive_dual_lambda_active_observed = False
     section_dual_lambda_active_observed = False
+    archive_dual_weight_applied_observed = False
+    section_dual_weight_applied_observed = False
+    section_dual_zero_base_masked_observed = False
     pr95_seg_effective_weight_seen = False
     pr95_seg_effective_weight_active = False
     pr95_pose_effective_weight_seen = False
     pr95_pose_effective_weight_active = False
+    gradient_multiplier_requested_observed = False
+    gradient_multiplier_applied_observed = False
+    gradient_multiplier_missing_requested_observed = False
+    gradient_multiplier_noop_observed = False
     if not path.is_file():
         blockers = (
             ["snerv_score_aware_long_training_telemetry_missing"]
@@ -620,6 +706,33 @@ def _snerv_score_aware_long_training_telemetry_contract(
                     )
                 )
             )
+            temporal_floor_loss_observed = temporal_floor_loss_observed or any(
+                _finite_number_in_row(row, key)
+                for key in (
+                    "loss_part_posenet_temporal_signal_floor",
+                    "loss_part_pr95_stage_posenet_temporal_signal_floor",
+                )
+            )
+            temporal_floor_std_ratio_observed = (
+                temporal_floor_std_ratio_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_posenet_temporal_signal_floor_mean_std_ratio",
+                        "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_std_ratio",
+                    )
+                )
+            )
+            temporal_floor_mean_abs_ratio_observed = (
+                temporal_floor_mean_abs_ratio_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_posenet_temporal_signal_floor_mean_abs_ratio",
+                        "loss_part_pr95_stage_posenet_temporal_signal_floor_mean_abs_ratio",
+                    )
+                )
+            )
             live_calibration_active_observed = (
                 live_calibration_active_observed
                 or _row_float_equals(
@@ -678,10 +791,57 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 and _finite_number(value)
                 for key, value in _telemetry_row_items(row)
             )
+            archive_rate_observed = archive_rate_observed or _finite_number_in_row(
+                row,
+                "train_time_archive_rate_score",
+            )
+            archive_dual_lambda_active_observed = (
+                archive_dual_lambda_active_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_lambda__snerv_archive_total_bytes",
+                )
+            )
+            archive_dual_weight_applied_observed = (
+                archive_dual_weight_applied_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_weight_applied__snerv_archive_total_bytes",
+                )
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_effective_loss_weight__snerv_archive_total_bytes",
+                )
+            )
             section_dual_lambda_active_observed = (
                 section_dual_lambda_active_observed
                 or any(
                     str(key).startswith("dual_ascent_lambda__snerv_")
+                    and str(key).endswith("_section_bytes")
+                    and _finite_number(value)
+                    and abs(float(value)) > 0.0
+                    for key, value in _telemetry_row_items(row)
+                )
+            )
+            section_dual_weight_applied_observed = (
+                section_dual_weight_applied_observed
+                or any(
+                    (
+                        str(key).startswith("dual_ascent_weight_applied__snerv_")
+                        or str(key).startswith(
+                            "dual_ascent_effective_loss_weight__snerv_"
+                        )
+                    )
+                    and str(key).endswith("_section_bytes")
+                    and _finite_number(value)
+                    and abs(float(value)) > 0.0
+                    for key, value in _telemetry_row_items(row)
+                )
+            )
+            section_dual_zero_base_masked_observed = (
+                section_dual_zero_base_masked_observed
+                or any(
+                    str(key).startswith("dual_ascent_zero_base_masked__snerv_")
                     and str(key).endswith("_section_bytes")
                     and _finite_number(value)
                     and abs(float(value)) > 0.0
@@ -698,6 +858,11 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill",
                 0.0,
             )
+            guard_dual_observed = guard_dual_observed or _row_float_equals(
+                row,
+                "dual_ascent_missing_metric__snerv_scorer_input_distribution_guard",
+                0.0,
+            )
             seg_dual_lambda_active_observed = (
                 seg_dual_lambda_active_observed
                 or _row_nonzero_finite_number(
@@ -710,6 +875,35 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 or _row_nonzero_finite_number(
                     row,
                     "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill",
+                )
+            )
+            gradient_multiplier_requested_observed = (
+                gradient_multiplier_requested_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "gradient_multiplier_requested_control_count",
+                )
+            )
+            gradient_multiplier_applied_observed = (
+                gradient_multiplier_applied_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "gradient_multiplier_applied_leaf_count",
+                )
+            )
+            gradient_multiplier_missing_requested_observed = (
+                gradient_multiplier_missing_requested_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "gradient_multiplier_missing_requested_count",
+                )
+            )
+            gradient_multiplier_noop_observed = (
+                gradient_multiplier_noop_observed
+                or _row_float_equals(
+                    row,
+                    "gradient_multiplier_requested_but_unapplied",
+                    1.0,
                 )
             )
     if row_count <= 0:
@@ -734,8 +928,38 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append(
             "snerv_score_aware_long_training_section_byte_dual_lambda_never_active"
         )
+    if (
+        expected_section
+        and section_dual_lambda_active_observed
+        and not section_dual_weight_applied_observed
+    ):
+        blockers.append(
+            "snerv_score_aware_long_training_section_byte_dual_weight_never_applied"
+        )
+    if expected_section and section_dual_zero_base_masked_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_section_byte_dual_zero_base_masked"
+        )
+    if expected_section and not archive_rate_observed:
+        blockers.append("snerv_score_aware_long_training_archive_rate_metric_missing")
+    if expected_section and not archive_dual_lambda_active_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_archive_byte_dual_lambda_never_active"
+        )
+    if (
+        expected_section
+        and archive_dual_lambda_active_observed
+        and not archive_dual_weight_applied_observed
+    ):
+        blockers.append(
+            "snerv_score_aware_long_training_archive_byte_dual_weight_never_applied"
+        )
     if expected_guard and not guard_loss_observed:
         blockers.append("snerv_score_aware_long_training_scorer_input_guard_metric_missing")
+    if expected_guard and not guard_dual_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_dual_scorer_input_guard_metric_never_observed"
+        )
     if expected_contrast_floor and not contrast_floor_loss_observed:
         blockers.append(
             "snerv_score_aware_long_training_scorer_input_contrast_floor_metric_missing"
@@ -763,6 +987,18 @@ def _snerv_score_aware_long_training_telemetry_contract(
     if expected_shape_tether and not shape_tether_posenet_delta_observed:
         blockers.append(
             "snerv_score_aware_long_training_scorer_input_shape_tether_posenet_delta_metric_missing"
+        )
+    if expected_temporal_floor and not temporal_floor_loss_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_posenet_temporal_signal_floor_metric_missing"
+        )
+    if expected_temporal_floor and not temporal_floor_std_ratio_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_posenet_temporal_signal_floor_std_ratio_metric_missing"
+        )
+    if expected_temporal_floor and not temporal_floor_mean_abs_ratio_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_posenet_temporal_signal_floor_mean_abs_ratio_metric_missing"
         )
     if expected_live_calibration and not live_calibration_active_observed:
         blockers.append(
@@ -805,6 +1041,22 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append("snerv_score_aware_long_training_pr95_seg_alias_missing")
     if pr95_faithful_curriculum_enabled and pr95_pose_alias_required and not pose_loss_observed:
         blockers.append("snerv_score_aware_long_training_pr95_pose_alias_missing")
+    if expected_gradient_multiplier and not gradient_multiplier_requested_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_gradient_multiplier_metric_missing"
+        )
+    if expected_gradient_multiplier and not gradient_multiplier_applied_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_gradient_multiplier_never_applied"
+        )
+    if expected_gradient_multiplier and gradient_multiplier_missing_requested_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_gradient_multiplier_missing_requested_leaf"
+        )
+    if expected_gradient_multiplier and gradient_multiplier_noop_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_gradient_multiplier_requested_but_unapplied"
+        )
     blockers = _ordered_unique(blockers)
     return {
         "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
@@ -818,23 +1070,42 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "expected_segnet_direct_live_distillation": bool(expected_direct_live),
         "expected_section_rate_metrics": bool(expected_section),
         "expected_section_byte_dual_lambda": bool(expected_section),
+        "expected_archive_rate_metric": bool(expected_section),
+        "expected_archive_byte_dual_lambda": bool(expected_section),
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "expected_scorer_input_contrast_floor_metric": bool(
             expected_contrast_floor
         ),
         "expected_scorer_input_shape_tether_metric": bool(expected_shape_tether),
+        "expected_posenet_temporal_signal_floor_metric": bool(
+            expected_temporal_floor
+        ),
+        "expected_gradient_multiplier_controls": bool(expected_gradient_multiplier),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
         "posenet_dual_metric_observed": bool(pose_dual_observed),
         "segnet_dual_lambda_active_observed": bool(seg_dual_lambda_active_observed),
         "posenet_dual_lambda_active_observed": bool(pose_dual_lambda_active_observed),
+        "archive_rate_metric_observed": bool(archive_rate_observed),
+        "archive_byte_dual_lambda_active_observed": bool(
+            archive_dual_lambda_active_observed
+        ),
+        "archive_byte_dual_weight_applied_observed": bool(
+            archive_dual_weight_applied_observed
+        ),
         "section_rate_metric_observed": bool(section_rate_observed),
         "section_byte_dual_lambda_active_observed": bool(
             section_dual_lambda_active_observed
         ),
+        "section_byte_dual_weight_applied_observed": bool(
+            section_dual_weight_applied_observed
+        ),
+        "section_byte_dual_zero_base_masked_observed": bool(
+            section_dual_zero_base_masked_observed
+        ),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
-        "scorer_input_guard_dual_metric_observed": bool(guard_loss_observed),
+        "scorer_input_guard_dual_metric_observed": bool(guard_dual_observed),
         "scorer_input_contrast_floor_metric_observed": bool(
             contrast_floor_loss_observed
         ),
@@ -855,6 +1126,15 @@ def _snerv_score_aware_long_training_telemetry_contract(
         ),
         "scorer_input_shape_tether_posenet_delta_metric_observed": bool(
             shape_tether_posenet_delta_observed
+        ),
+        "posenet_temporal_signal_floor_metric_observed": bool(
+            temporal_floor_loss_observed
+        ),
+        "posenet_temporal_signal_floor_std_ratio_metric_observed": bool(
+            temporal_floor_std_ratio_observed
+        ),
+        "posenet_temporal_signal_floor_mean_abs_ratio_metric_observed": bool(
+            temporal_floor_mean_abs_ratio_observed
         ),
         "segnet_live_calibration_active_observed": bool(
             live_calibration_active_observed
@@ -882,6 +1162,16 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "pr95_stage_pose_effective_weight_active_observed": bool(
             pr95_pose_effective_weight_active
         ),
+        "gradient_multiplier_requested_observed": bool(
+            gradient_multiplier_requested_observed
+        ),
+        "gradient_multiplier_applied_observed": bool(
+            gradient_multiplier_applied_observed
+        ),
+        "gradient_multiplier_missing_requested_observed": bool(
+            gradient_multiplier_missing_requested_observed
+        ),
+        "gradient_multiplier_noop_observed": bool(gradient_multiplier_noop_observed),
         "passed": not blockers,
         "blockers": blockers,
     }
@@ -1442,6 +1732,16 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
     official_metrics_require_current_components = bool(
         model_size.official_mfu_hfr_tub_numeric_primitives_requested
     )
+    explicit_diagnostic_payload = train_time_section_byte_control.get("active") is False
+    byte_control_requires_live_refresh = bool(
+        not explicit_diagnostic_payload
+        and (
+            static_payload is not None
+            or train_time_section_byte_control.get("active")
+            or train_time_section_byte_control.get("section_byte_budgets")
+            or train_time_section_byte_control.get("section_byte_loss_weight_key_map")
+        )
+    )
     metadata: dict[str, Any] = {
         "schema": "snerv_live_train_time_section_byte_metrics_callback.v1",
         "attached": static_payload is not None,
@@ -1453,6 +1753,9 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
         "uses_current_renderer_state": True,
         "requires_current_official_components": (
             official_metrics_require_current_components
+        ),
+        "requires_live_refresh_for_active_byte_control": (
+            byte_control_requires_live_refresh
         ),
         "writes_artifacts": False,
         "authority_class": "macos_mlx_research_signal_false_authority",
@@ -1475,6 +1778,10 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
         metadata["fallback_count"] = int(metadata.get("fallback_count", 0)) + 1
         metadata["last_fallback_reason"] = str(reason)
         fallback_blockers = [str(reason)]
+        if byte_control_requires_live_refresh:
+            fallback_blockers.append(
+                "snerv_live_section_byte_active_control_static_fallback_forbidden"
+            )
         if official_metrics_require_current_components:
             fallback_blockers.extend(
                 (
@@ -1488,6 +1795,8 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
                 *fallback_blockers,
             ]
         )
+        if byte_control_requires_live_refresh:
+            return None
         payload = dict(static_payload)
         payload["schema"] = "snerv_train_time_section_byte_metrics_fallback.v1"
         payload["live_profile"] = {
@@ -1590,7 +1899,7 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
             return dict(cache)
         try:
             return _build_live_payload(model_obj)
-        except Exception as exc:  # Train-time byte pressure must fail soft.
+        except Exception as exc:
             metadata["last_exception"] = f"{type(exc).__name__}: {exc}"
             return _fallback_payload(
                 f"snerv_live_section_byte_refresh_failed_{type(exc).__name__}"
@@ -1619,6 +1928,15 @@ def _snerv_live_section_byte_metrics_blockers(
         if metadata.get("active") is not True:
             blockers.append(
                 SNERV_LIVE_SECTION_BYTE_OFFICIAL_NEVER_REFRESHED_BLOCKER
+            )
+    if metadata.get("requires_live_refresh_for_active_byte_control") is True:
+        if int(metadata.get("fallback_count") or 0) > 0:
+            blockers.append(
+                "snerv_live_section_byte_active_control_static_fallback_forbidden"
+            )
+        if metadata.get("active") is not True:
+            blockers.append(
+                "snerv_live_section_byte_active_control_never_refreshed_current_packet"
             )
     return _ordered_unique(blockers)
 
@@ -1855,6 +2173,9 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_shape_tether_weight: float = 0.0,
+    score_aware_long_training_posenet_temporal_signal_floor_weight: float = 0.0,
+    score_aware_long_training_posenet_temporal_signal_min_std_ratio: float = 0.25,
+    score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio: float = 0.25,
     score_aware_long_training_loss_weights: Mapping[str, float] | None = None,
     score_aware_long_training_pose_warmup_epochs: int = 0,
     score_aware_long_training_scorer_input_shape_warmup_epochs: int = 0,
@@ -1892,6 +2213,10 @@ def train_export_snerv_mlx_native(
     coder_qat_c1a_sample_size: int = 512,
     score_aware_long_training_pr95_faithful_curriculum: bool = False,
     score_aware_long_training_pr95_muon_policy: str = "every_stage",
+    score_aware_long_training_pr95_source_weight_amplification: bool = False,
+    score_aware_long_training_gradient_multiplier_by_name: Mapping[str, float] | Sequence[Any] | None = None,
+    score_aware_long_training_bias_gradient_multiplier: float | None = None,
+    score_aware_long_training_output_head_bias_gradient_multiplier: float = 1.0,
     write_mlx_prefilter_profile: bool = False,
     mlx_prefilter_scorer_device: str = "cpu",
     mlx_prefilter_scorer_batch_pairs: int = 1,
@@ -2235,6 +2560,33 @@ def train_export_snerv_mlx_native(
                 ),
             )
         ),
+        posenet_temporal_signal_floor_weight=float(
+            candidate.get(
+                "score_aware_long_training_posenet_temporal_signal_floor_weight",
+                candidate.get(
+                    "snerv_score_aware_long_training_posenet_temporal_signal_floor_weight",
+                    score_aware_long_training_posenet_temporal_signal_floor_weight,
+                ),
+            )
+        ),
+        posenet_temporal_signal_min_std_ratio=float(
+            candidate.get(
+                "score_aware_long_training_posenet_temporal_signal_min_std_ratio",
+                candidate.get(
+                    "snerv_score_aware_long_training_posenet_temporal_signal_min_std_ratio",
+                    score_aware_long_training_posenet_temporal_signal_min_std_ratio,
+                ),
+            )
+        ),
+        posenet_temporal_signal_min_mean_abs_ratio=float(
+            candidate.get(
+                "score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio",
+                candidate.get(
+                    "snerv_score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio",
+                    score_aware_long_training_posenet_temporal_signal_min_mean_abs_ratio,
+                ),
+            )
+        ),
         score_aware_long_training_loss_weights=_candidate_first_non_null(
             candidate,
             (
@@ -2494,6 +2846,43 @@ def train_export_snerv_mlx_native(
                     "snerv_score_aware_long_training_pr95_muon_policy",
                     score_aware_long_training_pr95_muon_policy,
                 ),
+            )
+        ),
+        pr95_stage_source_weight_amplification_enabled=bool(
+            candidate.get(
+                "score_aware_long_training_pr95_source_weight_amplification",
+                candidate.get(
+                    "snerv_score_aware_long_training_pr95_source_weight_amplification",
+                    score_aware_long_training_pr95_source_weight_amplification,
+                ),
+            )
+        ),
+        gradient_multiplier_by_name=_coerce_gradient_multiplier_by_name(
+            _candidate_first_non_null(
+                candidate,
+                (
+                    "score_aware_long_training_gradient_multiplier_by_name",
+                    "snerv_score_aware_long_training_gradient_multiplier_by_name",
+                ),
+                score_aware_long_training_gradient_multiplier_by_name,
+            )
+        ),
+        bias_gradient_multiplier=_candidate_first_non_null(
+            candidate,
+            (
+                "score_aware_long_training_bias_gradient_multiplier",
+                "snerv_score_aware_long_training_bias_gradient_multiplier",
+            ),
+            score_aware_long_training_bias_gradient_multiplier,
+        ),
+        output_head_bias_gradient_multiplier=float(
+            _candidate_first_non_null(
+                candidate,
+                (
+                    "score_aware_long_training_output_head_bias_gradient_multiplier",
+                    "snerv_score_aware_long_training_output_head_bias_gradient_multiplier",
+                ),
+                score_aware_long_training_output_head_bias_gradient_multiplier,
             )
         ),
         prioritized_pair_indices=priority_pair_indices,
@@ -3126,6 +3515,12 @@ def train_export_snerv_mlx_native(
         score_aware_long_training_public.get("pr95_muon_policy")
         or "every_stage"
     )
+    payload["score_aware_long_training_pr95_source_weight_amplification_bound"] = bool(
+        score_aware_long_training_public.get(
+            "pr95_stage_source_weight_amplification_enabled"
+        )
+        is True
+    )
     payload["score_aware_long_training_pr95_faithful_optimizer_schedule_bound"] = bool(
         score_aware_long_training_public.get("pr95_faithful_curriculum_enabled")
         is True
@@ -3724,6 +4119,9 @@ def _run_score_aware_long_training_attachment(
     scorer_input_contrast_floor_segnet_min_std_ratio: float,
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float,
     scorer_input_shape_tether_weight: float = 0.0,
+    posenet_temporal_signal_floor_weight: float = 0.0,
+    posenet_temporal_signal_min_std_ratio: float = 0.25,
+    posenet_temporal_signal_min_mean_abs_ratio: float = 0.25,
     score_aware_long_training_loss_weights: Mapping[str, float] | None = None,
     score_aware_long_training_pose_warmup_epochs: int = 0,
     score_aware_long_training_scorer_input_shape_warmup_epochs: int = 0,
@@ -3760,6 +4158,10 @@ def _run_score_aware_long_training_attachment(
     coder_qat_c1a_sample_size: int,
     pr95_faithful_curriculum_enabled: bool,
     pr95_muon_policy: str,
+    pr95_stage_source_weight_amplification_enabled: bool = False,
+    gradient_multiplier_by_name: Mapping[str, float] | None = None,
+    bias_gradient_multiplier: float | None = None,
+    output_head_bias_gradient_multiplier: float = 1.0,
     prioritized_pair_indices: tuple[int, ...],
     scorer_error_pair_sampling_weights: Mapping[int, float] | None,
     scorer_error_pair_curriculum: Mapping[str, Any] | None,
@@ -3787,6 +4189,11 @@ def _run_score_aware_long_training_attachment(
         scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
     )
     shape_tether_weight = float(scorer_input_shape_tether_weight)
+    temporal_floor_weight = float(posenet_temporal_signal_floor_weight)
+    temporal_floor_std_ratio = float(posenet_temporal_signal_min_std_ratio)
+    temporal_floor_mean_abs_ratio = float(
+        posenet_temporal_signal_min_mean_abs_ratio
+    )
     live_calibration_weight = float(segnet_student_live_calibration_weight)
     direct_live_weight = float(segnet_direct_live_distillation_weight)
     direct_live_base_loss_weight = float(segnet_direct_live_base_loss_weight)
@@ -3807,6 +4214,23 @@ def _run_score_aware_long_training_attachment(
         for pair, weight in dict(scorer_error_pair_sampling_weights or {}).items()
     }
     scorer_error_pair_curriculum = dict(scorer_error_pair_curriculum or {})
+    gradient_multiplier_by_name = _coerce_gradient_multiplier_by_name(
+        gradient_multiplier_by_name
+    )
+    if bias_gradient_multiplier is not None:
+        bias_gradient_multiplier = float(bias_gradient_multiplier)
+        if not math.isfinite(bias_gradient_multiplier) or bias_gradient_multiplier < 0.0:
+            raise SnervMlxNativeExportError(
+                "bias_gradient_multiplier must be finite and >= 0"
+            )
+    output_head_bias_gradient_multiplier = float(output_head_bias_gradient_multiplier)
+    if (
+        not math.isfinite(output_head_bias_gradient_multiplier)
+        or output_head_bias_gradient_multiplier < 0.0
+    ):
+        raise SnervMlxNativeExportError(
+            "output_head_bias_gradient_multiplier must be finite and >= 0"
+        )
     resolved_scorer_upstream_dir = Path(scorer_upstream_dir).expanduser().resolve(
         strict=False
     )
@@ -3857,6 +4281,30 @@ def _run_score_aware_long_training_attachment(
         "training_kind": training_kind,
         "optimizer_kind": str(optimizer_kind),
         "stage_loss_weights": stage_loss_weights,
+        "gradient_multiplier_controls": {
+            "schema": "snerv_score_aware_long_training_gradient_multiplier_controls.v1",
+            "enabled": bool(
+                any(float(value) != 1.0 for value in gradient_multiplier_by_name.values())
+                or (
+                    bias_gradient_multiplier is not None
+                    and float(bias_gradient_multiplier) != 1.0
+                )
+                or float(output_head_bias_gradient_multiplier) != 1.0
+            ),
+            "exact_active_name_count": sum(
+                1
+                for value in gradient_multiplier_by_name.values()
+                if float(value) != 1.0
+            ),
+            "bias_gradient_multiplier": bias_gradient_multiplier,
+            "output_head_bias_gradient_multiplier": float(
+                output_head_bias_gradient_multiplier
+            ),
+            "authority": "macos_mlx_training_lagrangian_false_authority",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "curriculum_warmup_epochs": {
             "pose_distillation_warmup_epochs": int(
                 score_aware_long_training_pose_warmup_epochs
@@ -3942,6 +4390,23 @@ def _run_score_aware_long_training_attachment(
             "ready_for_exact_eval_dispatch": False,
         },
         "scorer_input_shape_tether_bound": False,
+        "posenet_temporal_signal_floor": {
+            "schema": "snerv_mlx_score_aware_posenet_temporal_signal_floor.v1",
+            "requested": temporal_floor_weight > 0.0,
+            "enabled": temporal_floor_weight > 0.0,
+            "bound_to_renderer_bundle": False,
+            "weight": temporal_floor_weight,
+            "min_std_ratio": temporal_floor_std_ratio,
+            "min_mean_abs_ratio": temporal_floor_mean_abs_ratio,
+            "target_surface": (
+                "exact_upstream_posenet_yuv6_frame1_minus_frame0_temporal_signal"
+            ),
+            "human_visual_fidelity_objective": False,
+            "score_authority": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "posenet_temporal_signal_floor_bound": False,
         "prioritized_pair_training": {
             "schema": "snerv_mlx_score_aware_long_training_priority_pairs.v1",
             "enabled": bool(prioritized_pair_indices),
@@ -4112,6 +4577,21 @@ def _run_score_aware_long_training_attachment(
     if not np.isfinite(shape_tether_weight) or shape_tether_weight < 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_scorer_input_shape_tether_weight_invalid"
+        )
+    if not np.isfinite(temporal_floor_weight) or temporal_floor_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_posenet_temporal_signal_floor_weight_invalid"
+        )
+    if not np.isfinite(temporal_floor_std_ratio) or temporal_floor_std_ratio <= 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_posenet_temporal_signal_floor_std_ratio_invalid"
+        )
+    if (
+        not np.isfinite(temporal_floor_mean_abs_ratio)
+        or temporal_floor_mean_abs_ratio <= 0.0
+    ):
+        validation_blockers.append(
+            "snerv_score_aware_long_training_posenet_temporal_signal_floor_mean_abs_ratio_invalid"
         )
     if pose_loss not in {"mse", "huber"}:
         validation_blockers.append(
@@ -4465,7 +4945,11 @@ def _run_score_aware_long_training_attachment(
                 scorer_input_distribution_guard_weight=guard_weight,
                 scorer_input_contrast_floor_weight=contrast_floor_weight,
                 scorer_input_shape_tether_weight=shape_tether_weight,
+                posenet_temporal_signal_floor_weight=temporal_floor_weight,
                 coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+                archive_byte_budget=train_time_section_byte_control.get(
+                    "hard_byte_ceiling"
+                ),
                 section_byte_budgets=train_time_section_byte_control.get(
                     "section_byte_budgets"
                 ),
@@ -4540,6 +5024,11 @@ def _run_score_aware_long_training_attachment(
             for key, value in dict(base_payload["scorer_input_contrast_floor"]).items()
             if key not in metadata_forbidden_authority_keys
         }
+        temporal_floor_metadata = {
+            key: value
+            for key, value in dict(base_payload["posenet_temporal_signal_floor"]).items()
+            if key not in metadata_forbidden_authority_keys
+        }
         pr95_optimizer_coverage_metadata = {
             key: value
             for key, value in dict(pr95_optimizer_coverage).items()
@@ -4599,6 +5088,10 @@ def _run_score_aware_long_training_attachment(
                 "scorer_input_contrast_floor": {
                     **contrast_floor_metadata,
                     "bound_to_renderer_bundle": contrast_floor_weight > 0.0,
+                },
+                "posenet_temporal_signal_floor": {
+                    **temporal_floor_metadata,
+                    "bound_to_renderer_bundle": temporal_floor_weight > 0.0,
                 },
                 "contest_scorer_distortion_objective": bool(
                     _recon_pixel_weight_metadata_is_verified_gradient_manifest(
@@ -4710,6 +5203,11 @@ def _run_score_aware_long_training_attachment(
                 contrast_floor_posenet_ratio
             ),
             scorer_input_shape_tether_weight=shape_tether_weight,
+            posenet_temporal_signal_floor_weight=temporal_floor_weight,
+            posenet_temporal_signal_min_std_ratio=temporal_floor_std_ratio,
+            posenet_temporal_signal_min_mean_abs_ratio=(
+                temporal_floor_mean_abs_ratio
+            ),
         )
         recon_selection_stage_weight = float(stage_loss_weights.get("recon", 1.0))
         seg_selection_stage_weight = float(stage_loss_weights.get("distill", 1.0))
@@ -4734,6 +5232,12 @@ def _run_score_aware_long_training_attachment(
                 guard_selection_stage_weight,
             )
         )
+        temporal_floor_selection_stage_weight = float(
+            stage_loss_weights.get(
+                "posenet_temporal_signal_floor",
+                guard_selection_stage_weight,
+            )
+        )
         selection_policy = _snerv_score_aware_checkpoint_selection_policy(
             segnet_distillation_weight=seg_weight * seg_selection_stage_weight,
             segnet_direct_live_distillation_weight=(
@@ -4748,6 +5252,9 @@ def _run_score_aware_long_training_attachment(
             ),
             scorer_input_shape_tether_weight=(
                 shape_tether_weight * shape_tether_selection_stage_weight
+            ),
+            posenet_temporal_signal_floor_weight=(
+                temporal_floor_weight * temporal_floor_selection_stage_weight
             ),
             has_real_segnet_teacher=scorer_teacher is not None,
             has_real_posenet_teacher=pose_scorer_teacher is not None,
@@ -4888,6 +5395,13 @@ def _run_score_aware_long_training_attachment(
                     * raw_parts["scorer_input_shape_tether"]
                 )
                 total += weighted_parts["scorer_input_shape_tether"]
+            if "posenet_temporal_signal_floor" in raw_parts:
+                weighted_parts["posenet_temporal_signal_floor"] = (
+                    float(bundle.posenet_temporal_signal_floor_weight)
+                    * temporal_floor_selection_stage_weight
+                    * raw_parts["posenet_temporal_signal_floor"]
+                )
+                total += weighted_parts["posenet_temporal_signal_floor"]
             for name, weight in coder_terms.items():
                 if name in raw_parts:
                     weighted_parts[name] = float(weight) * raw_parts[name]
@@ -5074,12 +5588,20 @@ def _run_score_aware_long_training_attachment(
                 else None
             ),
             pr95_muon_policy=effective_pr95_muon_policy,
+            pr95_stage_source_weight_amplification_enabled=bool(
+                pr95_stage_source_weight_amplification_enabled
+            ),
             prioritized_pair_indices=tuple(
                 int(value) for value in prioritized_pair_indices
             ),
             pair_sampling_weights=scorer_error_pair_sampling_weights,
             pair_sampling_default_weight=float(
                 scorer_error_pair_curriculum.get("default_weight", 1.0)
+            ),
+            gradient_multiplier_by_name=gradient_multiplier_by_name,
+            bias_gradient_multiplier=bias_gradient_multiplier,
+            output_head_bias_gradient_multiplier=float(
+                output_head_bias_gradient_multiplier
             ),
             train_time_dual_ascent_config=train_time_dual_ascent_config,
             notes=(
@@ -5118,13 +5640,17 @@ def _run_score_aware_long_training_attachment(
                     pr95_faithful_curriculum_enabled
                 ),
                 coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
-            train_time_section_byte_control_bound=bool(
-                train_time_section_byte_control.get("active") is True
-            ),
-            scorer_input_distribution_guard_weight=guard_weight,
-            scorer_input_contrast_floor_weight=contrast_floor_weight,
-            scorer_input_shape_tether_weight=shape_tether_weight,
-        )
+                train_time_section_byte_control_bound=bool(
+                    train_time_section_byte_control.get("active") is True
+                ),
+                scorer_input_distribution_guard_weight=guard_weight,
+                scorer_input_contrast_floor_weight=contrast_floor_weight,
+                scorer_input_shape_tether_weight=shape_tether_weight,
+                posenet_temporal_signal_floor_weight=temporal_floor_weight,
+                gradient_multiplier_controls_requested=bool(
+                    base_payload["gradient_multiplier_controls"]["enabled"]
+                ),
+            )
         )
         blockers.extend(training_telemetry_contract.get("blockers") or ())
         blockers.extend(
@@ -5235,11 +5761,19 @@ def _run_score_aware_long_training_attachment(
                 "bound_to_renderer_bundle": shape_tether_weight > 0.0,
             },
             "scorer_input_shape_tether_bound": shape_tether_weight > 0.0,
+            "posenet_temporal_signal_floor": {
+                **dict(base_payload["posenet_temporal_signal_floor"]),
+                "bound_to_renderer_bundle": temporal_floor_weight > 0.0,
+            },
+            "posenet_temporal_signal_floor_bound": temporal_floor_weight > 0.0,
             "pr95_faithful_curriculum_enabled": bool(
                 pr95_faithful_curriculum_enabled
             ),
             "pr95_muon_policy_requested": str(pr95_muon_policy),
             "pr95_muon_policy": effective_pr95_muon_policy,
+            "pr95_stage_source_weight_amplification_enabled": bool(
+                pr95_stage_source_weight_amplification_enabled
+            ),
             "pr95_optimizer_coverage": pr95_optimizer_coverage,
             "optimizer_binding_mode": (
                 "pr95_faithful_curriculum"

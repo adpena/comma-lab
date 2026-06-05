@@ -64,6 +64,9 @@ def test_snerv_receiver_value_domain_xray_detects_unclipped_saturation(
 
     assert report["schema"] == "snerv_receiver_value_domain_xray.v1"
     assert report["verdict"] == "RECEIVER_VALUE_DOMAIN_OUT_OF_RANGE"
+    assert report["receiver_payload_decode_sample_proven"] is True
+    assert report["value_domain_noncollapse_proof_passed"] is False
+    assert report["closed_campaign_blockers"] == []
     assert report["packet_section_bytes"]["lf_payload"] == 16
     assert report["unclipped_receiver_stats"]["outside_0_255_fraction"] > 0.0
     assert report["clip_delta_abs_stats"]["mean_abs"] > 0.0
@@ -199,6 +202,9 @@ def test_snerv_receiver_value_domain_xray_falls_back_to_official_header(
 
     assert report["verdict"] == "OFFICIAL_SKIP_HIGH_SCALAR_MEAN_COLLAPSE_RISK"
     assert report["sample_shape_b2chw"] is None
+    assert report["receiver_payload_decode_sample_proven"] is False
+    assert report["value_domain_noncollapse_proof_passed"] is False
+    assert report["closed_campaign_blockers"] == []
     assert report["value_domain_sample_status"] == (
         "selected_pair_decode_unavailable_for_official_payload"
     )
@@ -210,3 +216,50 @@ def test_snerv_receiver_value_domain_xray_falls_back_to_official_header(
         report["recommended_next_actions"]
     )
     assert report["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_receiver_value_domain_xray_emits_noncollapse_closures(
+    monkeypatch,
+) -> None:
+    packet = b"clean-snar"
+    clean = np.full((1, 2, 1, 1, 2, 2), 128.0, dtype=np.float32)
+
+    def fake_unpack(packet_bytes: bytes):
+        assert packet_bytes == packet
+        return SimpleNamespace(
+            metadata={"n_pairs": 1, "frames_per_pair": 2},
+            sections={
+                "metadata_payload": b"meta",
+                "lf_payload": b"lf",
+                "decoder_payload": b"decoder",
+                "step_map_packet": b"step",
+            },
+        )
+
+    monkeypatch.setattr(tool, "unpack_snerv_archive", fake_unpack)
+    monkeypatch.setattr(
+        tool,
+        "decode_snerv_archive_pair_frames",
+        lambda packet_bytes, pair_indices, *, clip_to_uint8_range: clean,
+    )
+    monkeypatch.setattr(
+        tool,
+        "inspect_decoder_payload_header",
+        lambda payload: {"schema": "unit_decoder_payload.v1"},
+    )
+
+    report = tool.build_snerv_receiver_value_domain_xray(
+        packet=packet,
+        pair_indices=(0,),
+        packet_path="/tmp/clean.snar",
+    )
+
+    assert report["verdict"] == "receiver_value_domain_sample_within_limits"
+    assert report["receiver_payload_decode_sample_proven"] is True
+    assert report["value_domain_noncollapse_proof_passed"] is True
+    assert report["closed_campaign_blockers"] == [
+        "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse",
+        "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
+        "snerv_renderer_nondegenerate_target_value_domain_not_passed",
+    ]
+    assert report["blockers"] == ["snerv_receiver_value_domain_xray_false_authority"]

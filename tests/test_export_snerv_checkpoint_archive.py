@@ -169,11 +169,25 @@ def test_official_checkpoint_export_report_classifies_receiver_payload(
     assert manifest["schema"] == (
         "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
     )
-    assert manifest["official_trained_checkpoint_loaded"] is False
-    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in manifest[
+    assert manifest["official_trained_checkpoint_loaded"] is True
+    assert manifest["state_dict_mapping_dialect"] == "native_mlx_receiver_state"
+    assert manifest["official_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert manifest["official_mfu_trained_checkpoint_weight_mapping_proven"] is False
+    assert manifest["official_mfu_receiver_activation_payload_bound"] is True
+    assert manifest["official_native_receiver_state_mapping_proven"] is True
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" not in manifest[
         "blockers"
     ]
-    assert binding["official_trained_checkpoint_state_dict_slice_present"] is False
+    assert "snerv_official_trained_checkpoint_decoder_len_not_resolved" not in manifest[
+        "blockers"
+    ]
+    assert binding["official_trained_checkpoint_state_dict_slice_present"] is True
+    assert binding["official_trained_checkpoint_state_dict_mapping_dialect"] == (
+        "native_mlx_receiver_state"
+    )
+    assert binding["official_hfr_trained_checkpoint_weight_mapping_proven"] is True
+    assert binding["official_mfu_receiver_activation_payload_bound"] is True
+    assert binding["official_native_receiver_state_mapping_proven"] is True
     assert (
         binding["official_mfu_hfr_trained_checkpoint_weight_mapping_proven"]
         is False
@@ -185,6 +199,21 @@ def test_official_checkpoint_export_report_classifies_receiver_payload(
     assert binding["official_export_bound"] is False
     assert binding["source_forward_replay_authority"] is False
     assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" in (
+        binding["preserved_blockers"]
+    )
+    assert "snerv_official_mfu_hfr_tub_weight_mapping_missing" not in (
+        binding["preserved_blockers"]
+    )
+    assert "snerv_official_trained_checkpoint_hfr_weight_mapping_incomplete" not in (
+        binding["preserved_blockers"]
+    )
+    assert "snerv_official_mfu_native_receiver_activation_payload_not_upstream_weight_mapping" in (
+        binding["preserved_blockers"]
+    )
+    assert "snerv_official_tub_trained_temporal_encoder_decoder_weights_not_loaded" in (
+        binding["preserved_blockers"]
+    )
+    assert "snerv_official_tub_portable_output2_decoder_weight_mapping_missing" in (
         binding["preserved_blockers"]
     )
     assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in (
@@ -282,7 +311,7 @@ def test_official_checkpoint_export_report_consumes_upstream_decoder_keys(
     assert (
         binding["official_trained_checkpoint_state_dict_mapping_verified"] is False
     )
-    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" not in (
+    assert "snerv_official_trained_checkpoint_state_dict_mapping_missing" in (
         binding["preserved_blockers"]
     )
     assert "snerv_official_trained_checkpoint_source_forward_replay_missing" in (
@@ -306,12 +335,15 @@ def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -
         official_tub_output2_store_for_receiver_proof=True,
     )
     state = _official_checkpoint_state()
-    state["tub.temporal_encoder_concat"] = np.arange(
-        1 * 4 * 4 * 4,
+    state["tub.temporal_encoder_concat"] = np.linspace(
+        0.0,
+        1.0,
+        1 * 6 * 8 * 8,
         dtype=np.float32,
-    ).reshape(1, 4, 4, 4)
+    ).reshape(1, 6, 8, 8)
     state["tub.output2_raw"] = (
-        np.arange(2 * 8 * 4 * 4, dtype=np.float32).reshape(2, 8, 4, 4) / 31.0
+        np.arange(2 * 12 * 8 * 8, dtype=np.float32).reshape(2, 12, 8, 8)
+        / 251.0
     )
 
     packet = tool.build_snerv_official_checkpoint_packet(
@@ -334,9 +366,12 @@ def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -
     ]
     assert decoded.metadata["official_tub_output2_receiver_executed"] is True
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
+    assert storage["receiver_frame_decode_consumes_output2"] is True
+    assert storage["receiver_frame_shape"] == [2, 3, 16, 16]
+    assert storage["receiver_output2_frame_shape_match"] is True
     rows = {row["name"]: row for row in proof["output_tensors"]}
-    assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
-    assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
+    assert rows["tub.output2_decoder_input"]["shape"] == [2, 3, 8, 8]
+    assert rows["tub.output2_fused"]["shape"] == [2, 3, 16, 16]
     assert decoded.metadata["source_faithful_stack"] is False
     assert decoded.metadata["score_claim"] is False
 
@@ -558,12 +593,15 @@ def _official_checkpoint_state() -> dict[str, np.ndarray]:
 
 def _official_checkpoint_state_with_tub_output2_payload() -> dict[str, np.ndarray]:
     state = _official_checkpoint_state()
-    state["tub.temporal_encoder_concat"] = np.arange(
-        1 * 4 * 4 * 4,
+    state["tub.temporal_encoder_concat"] = np.linspace(
+        0.0,
+        1.0,
+        1 * 6 * 8 * 8,
         dtype=np.float32,
-    ).reshape(1, 4, 4, 4)
+    ).reshape(1, 6, 8, 8)
     state["tub.output2_raw"] = (
-        np.arange(2 * 8 * 4 * 4, dtype=np.float32).reshape(2, 8, 4, 4) / 31.0
+        np.arange(2 * 12 * 8 * 8, dtype=np.float32).reshape(2, 12, 8, 8)
+        / 251.0
     )
     return state
 

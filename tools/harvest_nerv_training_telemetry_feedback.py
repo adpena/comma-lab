@@ -90,6 +90,9 @@ def main(argv: list[str] | None = None) -> int:
 def _summary(result: dict[str, Any]) -> dict[str, Any]:
     row = dict(result.get("row") or {})
     telemetry = dict(row.get("training_telemetry") or {})
+    hinerv_control = dict(row.get("hinerv_train_time_control_health") or {})
+    hinerv_section = dict(hinerv_control.get("section_byte_control_health") or {})
+    gradient_control = dict(row.get("gradient_multiplier_control_health") or {})
     return {
         "schema": result.get("schema"),
         "row_path": result.get("row_path"),
@@ -127,6 +130,49 @@ def _summary(result: dict[str, Any]) -> dict[str, Any]:
         "training_control_action": row.get("training_control_action"),
         "training_control_should_stop_current_run": row.get(
             "training_control_should_stop_current_run"
+        ),
+        "direct_feedback_blockers": row.get("direct_feedback_blockers"),
+        "hinerv_train_time_control_blockers": row.get(
+            "hinerv_train_time_control_blockers"
+        ),
+        "hinerv_section_rate_metric_observed": hinerv_section.get(
+            "section_rate_metric_observed"
+        ),
+        "hinerv_section_byte_dual_lambda_active_observed": hinerv_section.get(
+            "section_byte_dual_lambda_active_observed"
+        ),
+        "hinerv_section_byte_dual_weight_applied_observed": hinerv_section.get(
+            "section_byte_dual_weight_applied_observed"
+        ),
+        "hinerv_section_byte_dual_zero_base_masked_observed": hinerv_section.get(
+            "section_byte_dual_zero_base_masked_observed"
+        ),
+        "hinerv_archive_rate_metric_observed": hinerv_section.get(
+            "archive_rate_metric_observed"
+        ),
+        "hinerv_archive_byte_dual_lambda_active_observed": hinerv_section.get(
+            "archive_byte_dual_lambda_active_observed"
+        ),
+        "hinerv_archive_byte_dual_weight_applied_observed": hinerv_section.get(
+            "archive_byte_dual_weight_applied_observed"
+        ),
+        "gradient_multiplier_control_inert_risk_detected": row.get(
+            "gradient_multiplier_control_inert_risk_detected"
+        ),
+        "gradient_multiplier_control_blockers": row.get(
+            "gradient_multiplier_control_blockers"
+        ),
+        "gradient_multiplier_requested_observed": gradient_control.get(
+            "requested_observed"
+        ),
+        "gradient_multiplier_applied_observed": gradient_control.get(
+            "applied_observed"
+        ),
+        "gradient_multiplier_missing_requested_observed": gradient_control.get(
+            "missing_requested_observed"
+        ),
+        "gradient_multiplier_requested_but_unapplied_observed": (
+            gradient_control.get("requested_but_unapplied_observed")
         ),
         "training_stopped": row.get("training_stopped"),
         "last_epoch": telemetry.get("last_epoch"),

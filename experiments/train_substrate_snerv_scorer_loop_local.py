@@ -76,6 +76,41 @@ def _score_loop_main(args: argparse.Namespace) -> int:
     }
     write_json(launch_path, launch)
 
+    native_mlx_controls = _native_mlx_decoder_training_controls(args)
+    if native_mlx_controls["blockers"]:
+        refusal_path = output_dir / "snerv_scorer_loop_qat_launch_refusal.json"
+        refusal = {
+            "schema": "snerv_scorer_loop_qat_launch_refusal.v1",
+            "authority": TRAINER_AUTHORITY,
+            "family": "snerv",
+            "output_dir": output_dir.as_posix(),
+            "launch_preflight_path": launch_path.as_posix(),
+            "launch_refusal_reason": (
+                "native_mlx_decoder_training_requested_on_cpu_scorer_loop_harness"
+            ),
+            "native_mlx_decoder_training_controls": native_mlx_controls,
+            "redirect_to": (
+                "tools/run_compact_renderer_mlx_spine_runner.py "
+                "--execute-family snerv --snerv-score-aware-long-training-epochs N"
+            ),
+            "blockers": list(native_mlx_controls["blockers"]),
+            **FALSE_AUTHORITY,
+        }
+        write_json(refusal_path, refusal)
+        print(
+            json.dumps(
+                {
+                    "schema": refusal["schema"],
+                    "report_path": refusal_path.as_posix(),
+                    "blockers": refusal["blockers"],
+                    "score_claim": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+                sort_keys=True,
+            )
+        )
+        return 2
+
     result = run_snerv_scorer_loop_decoder_qat_smoke(
         **_score_loop_kwargs_from_args(args)
     )
@@ -221,9 +256,9 @@ def _build_parser() -> argparse.ArgumentParser:
         type=int,
         default=0,
         help=(
-            "Record a requested native-MLX HF decoder training step count. "
-            "This local CPU scorer-loop harness does not execute native MLX "
-            "decoder training."
+            "Native-MLX HF decoder training step count. Values >0 fail closed "
+            "in this local CPU scorer-loop harness; run the compact spine "
+            "SNeRV native MLX export/training path for real decoder training."
         ),
     )
     parser.add_argument(

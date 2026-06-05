@@ -110,6 +110,7 @@ def build_snerv_receiver_value_domain_xray(
         last_frame_clipped_stats=last_frame_clipped_stats,
         clip_delta_stats=clip_delta_stats,
     )
+    noncollapse_passed = not _domain_is_bad(blockers)
     return {
         "schema": SCHEMA,
         "generated_utc": datetime.now(UTC).isoformat(),
@@ -123,6 +124,12 @@ def build_snerv_receiver_value_domain_xray(
         },
         "pair_indices": list(clean_indices),
         "sample_shape_b2chw": list(np.asarray(clipped).shape),
+        "value_domain_sample_status": "selected_pair_decode_completed",
+        "receiver_payload_decode_sample_proven": True,
+        "value_domain_noncollapse_proof_passed": noncollapse_passed,
+        "closed_campaign_blockers": _closed_value_domain_blockers(
+            noncollapse_passed
+        ),
         "unclipped_receiver_stats": unclipped_stats,
         "clipped_receiver_stats": clipped_stats,
         "unclipped_last_frame_stats": last_frame_unclipped_stats,
@@ -180,6 +187,9 @@ def _official_payload_header_only_report(
         "pair_indices": list(pair_indices),
         "sample_shape_b2chw": None,
         "value_domain_sample_status": "selected_pair_decode_unavailable_for_official_payload",
+        "receiver_payload_decode_sample_proven": False,
+        "value_domain_noncollapse_proof_passed": False,
+        "closed_campaign_blockers": [],
         "decode_failure": decode_failure,
         "profile_scorer_input_diagnosis": (
             dict(profile_diagnosis) if isinstance(profile_diagnosis, Mapping) else None
@@ -222,6 +232,16 @@ def _domain_is_bad(blockers: Sequence[str]) -> bool:
         for blocker in blockers
         if blocker != "snerv_receiver_value_domain_xray_false_authority"
     )
+
+
+def _closed_value_domain_blockers(noncollapse_passed: bool) -> list[str]:
+    if not noncollapse_passed:
+        return []
+    return [
+        "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse",
+        "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
+        "snerv_renderer_nondegenerate_target_value_domain_not_passed",
+    ]
 
 
 def _recommended_next_actions(blockers: Sequence[str]) -> list[str]:

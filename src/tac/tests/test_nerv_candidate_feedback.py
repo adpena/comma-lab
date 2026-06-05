@@ -1731,10 +1731,13 @@ def test_training_telemetry_feedback_detects_segnet_stagnation(
     assert row["score_claim"] is False
 
 
-def test_training_telemetry_feedback_blocks_hinerv_section_rate_without_section_lambda(
+@pytest.mark.parametrize("family", ["hi_nerv", "snerv"])
+def test_training_telemetry_feedback_blocks_nerv_section_rate_without_section_lambda(
     tmp_path: Path,
+    family: str,
 ) -> None:
-    telemetry = tmp_path / "hinerv_section_rate_without_lambda.jsonl"
+    family_slug = "hinerv" if family == "hi_nerv" else family
+    telemetry = tmp_path / f"{family}_section_rate_without_lambda.jsonl"
     rows = [
         {
             "epoch": epoch,
@@ -1742,11 +1745,14 @@ def test_training_telemetry_feedback_blocks_hinerv_section_rate_without_section_
             "loss_components": {
                 "loss_part_pose_distill": 1.0,
                 "loss_part_distill": 5.0,
+                "train_time_archive_rate_score": 0.01,
                 "train_time_section_rate_score__decoder_payload": 0.002,
-                "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
-                "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
-                "dual_ascent_lambda__hi_nerv_segnet_last_frame_distill": 0.25,
-                "dual_ascent_lambda__hi_nerv_posenet_yuv6_pair_distill": 0.5,
+                f"dual_ascent_missing_metric__{family}_segnet_last_frame_distill": 0.0,
+                f"dual_ascent_missing_metric__{family}_posenet_yuv6_pair_distill": 0.0,
+                f"dual_ascent_lambda__{family}_segnet_last_frame_distill": 0.25,
+                f"dual_ascent_lambda__{family}_posenet_yuv6_pair_distill": 0.5,
+                f"dual_ascent_lambda__{family}_archive_total_bytes": 0.375,
+                f"dual_ascent_weight_applied__{family}_archive_total_bytes": 1.0,
             },
             "per_axis_decomposition": {"pose": 2.0, "seg": 5.0},
         }
@@ -1759,14 +1765,28 @@ def test_training_telemetry_feedback_blocks_hinerv_section_rate_without_section_
 
     row = build_nerv_training_telemetry_feedback_row(
         telemetry_path=telemetry,
-        family="hi_nerv",
-        candidate_id="hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000",
+        family=family,
+        candidate_id=f"{family}_np600_ld4_ed12_dc8_portfolio_auto_ceil36000",
         candidate_num_pairs=600,
     )
 
-    health = row["hinerv_train_time_control_health"]
+    health = row["nerv_train_time_control_health"]
+    assert health["family"] == family
     assert health["control_inert_risk_detected"] is True
     assert health["section_byte_control_health"]["section_rate_metric_observed"] is True
+    assert health["section_byte_control_health"]["archive_rate_metric_observed"] is True
+    assert (
+        health["section_byte_control_health"][
+            "archive_byte_dual_lambda_active_observed"
+        ]
+        is True
+    )
+    assert (
+        health["section_byte_control_health"][
+            "archive_byte_dual_weight_applied_observed"
+        ]
+        is True
+    )
     assert (
         health["section_byte_control_health"][
             "section_byte_dual_lambda_active_observed"
@@ -1774,13 +1794,138 @@ def test_training_telemetry_feedback_blocks_hinerv_section_rate_without_section_
         is False
     )
     assert (
-        "hi_nerv_train_time_section_byte_dual_lambda_inactive_telemetry"
+        f"{family}_train_time_section_byte_dual_lambda_inactive_telemetry"
         in row["direct_feedback_blockers"]
     )
     assert (
-        "relaunch_hinerv_with_live_byte_cap_dual_ascent_actuating_from_step_zero"
+        f"relaunch_{family_slug}_with_live_byte_cap_dual_ascent_actuating_from_step_zero"
         in row["recommended_launch_mutations"]
     )
+    family_health_key = (
+        "hinerv_train_time_control_health"
+        if family == "hi_nerv"
+        else "snerv_train_time_control_health"
+    )
+    assert row[family_health_key]["family"] == family
+
+
+@pytest.mark.parametrize("family", ["hi_nerv", "snerv"])
+def test_training_telemetry_feedback_blocks_nerv_dual_lambda_without_weight_application(
+    tmp_path: Path,
+    family: str,
+) -> None:
+    telemetry = tmp_path / f"{family}_lambda_without_weight_application.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 5.0,
+                "train_time_archive_rate_score": 0.01,
+                "train_time_section_rate_score__decoder_payload": 0.002,
+                f"dual_ascent_missing_metric__{family}_segnet_last_frame_distill": 0.0,
+                f"dual_ascent_missing_metric__{family}_posenet_yuv6_pair_distill": 0.0,
+                f"dual_ascent_lambda__{family}_segnet_last_frame_distill": 0.25,
+                f"dual_ascent_lambda__{family}_posenet_yuv6_pair_distill": 0.5,
+                f"dual_ascent_lambda__{family}_archive_total_bytes": 0.375,
+                f"dual_ascent_lambda__{family}_decoder_payload_section_bytes": 0.125,
+            },
+            "per_axis_decomposition": {"pose": 2.0, "seg": 5.0},
+        }
+        for epoch in range(8)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family=family,
+        candidate_id=f"{family}_np600_ld4_ed12_dc8_portfolio_auto_ceil36000",
+        candidate_num_pairs=600,
+    )
+
+    health = row["nerv_train_time_control_health"]
+    section = health["section_byte_control_health"]
+    assert health["family"] == family
+    assert section["archive_byte_dual_lambda_active_observed"] is True
+    assert section["section_byte_dual_lambda_active_observed"] is True
+    assert section["archive_byte_dual_weight_applied_observed"] is False
+    assert section["section_byte_dual_weight_applied_observed"] is False
+    assert (
+        f"{family}_train_time_archive_byte_dual_weight_not_applied_telemetry"
+        in row["direct_feedback_blockers"]
+    )
+    assert (
+        f"{family}_train_time_section_byte_dual_weight_not_applied_telemetry"
+        in row["direct_feedback_blockers"]
+    )
+
+
+@pytest.mark.parametrize("family", ["hi_nerv", "snerv"])
+def test_training_telemetry_feedback_blocks_stale_gradient_waterfill_actuator(
+    tmp_path: Path,
+    family: str,
+) -> None:
+    telemetry = tmp_path / f"{family}_stale_gradient_waterfill.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 5.0,
+                "gradient_multiplier_requested_control_count": 2.0,
+                "gradient_multiplier_applied_leaf_count": 0.0,
+                "gradient_multiplier_missing_requested_count": 2.0,
+                "gradient_multiplier_requested_but_unapplied": 1.0,
+            },
+            "per_axis_decomposition": {"pose": 2.0, "seg": 5.0},
+        }
+        for epoch in range(8)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family=family,
+        candidate_id=f"{family}_candidate",
+        candidate_num_pairs=600,
+        stop_reason="training_running_midrun_feedback_snapshot",
+    )
+
+    health = row["gradient_multiplier_control_health"]
+    assert health["control_inert_risk_detected"] is True
+    assert health["requested_observed"] is True
+    assert health["applied_observed"] is False
+    assert health["missing_requested_observed"] is True
+    assert health["requested_but_unapplied_observed"] is True
+    assert (
+        f"{family}_train_time_gradient_multiplier_never_applied_telemetry"
+        in row["direct_feedback_blockers"]
+    )
+    assert (
+        f"{family}_train_time_gradient_multiplier_missing_requested_leaf_telemetry"
+        in row["direct_feedback_blockers"]
+    )
+    assert (
+        f"refresh_{family}_gradient_multiplier_names_from_current_model_leaf_inventory"
+        in row["recommended_launch_mutations"]
+    )
+    assert (
+        f"relaunch_{family}_with_verified_decoder_weight_waterfill_actuators"
+        in row["recommended_launch_mutations"]
+    )
+    assert row["training_control_action"] == (
+        "checkpoint_then_supersede_with_verified_optimizer_actuators"
+    )
+    assert row["training_control_should_stop_current_run"] is True
+    assert row["training_control_successor_required"] is True
 
 
 def test_training_telemetry_feedback_uses_family_specific_blockers(
@@ -2266,7 +2411,13 @@ def test_harvest_training_telemetry_feedback_tool_output_json_is_guarded(
             {
                 "epoch": 1,
                 "learning_rate": 2.7e-5,
-                "loss_components": {"loss_part_pose_distill": 1.0},
+                "loss_components": {
+                    "gradient_multiplier_applied_leaf_count": 0.0,
+                    "gradient_multiplier_missing_requested_count": 1.0,
+                    "gradient_multiplier_requested_but_unapplied": 1.0,
+                    "gradient_multiplier_requested_control_count": 1.0,
+                    "loss_part_pose_distill": 1.0,
+                },
                 "per_axis_decomposition": {"pose": 1.0, "seg": 6.0},
             },
             sort_keys=True,
@@ -2294,7 +2445,13 @@ def test_harvest_training_telemetry_feedback_tool_output_json_is_guarded(
     ]
 
     assert harvest_training_feedback_main(argv) == 0
-    capsys.readouterr()
+    captured = capsys.readouterr()
+    summary = json.loads(captured.out)
+    assert summary["gradient_multiplier_control_inert_risk_detected"] is True
+    assert summary["gradient_multiplier_requested_observed"] is True
+    assert summary["gradient_multiplier_applied_observed"] is False
+    assert summary["gradient_multiplier_missing_requested_observed"] is True
+    assert summary["gradient_multiplier_requested_but_unapplied_observed"] is True
     assert output_json.is_file()
     manifest = json.loads(output_json.read_text(encoding="utf-8"))
     assert manifest["row"]["observed_segnet_distillation_weight"] == 2.0

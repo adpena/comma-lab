@@ -21,12 +21,16 @@ ensure_repo_imports(REPO_ROOT)
 
 from tac.analysis.snerv_official_source_forward_harness import (  # noqa: E402
     build_snerv_official_source_forward_harness_artifact,
+    build_snerv_official_trained_checkpoint_mapping_manifest,
 )
 from tac.analysis.snerv_official_source_parity_audit import (  # noqa: E402
     build_snerv_official_source_parity_audit,
     render_snerv_official_source_parity_markdown,
 )
-from tac.repo_io import write_json_artifact, write_text_artifact  # noqa: E402
+from tac.repo_io import sha256_file, write_json_artifact, write_text_artifact  # noqa: E402
+from tac.substrates._shared.numpy_portable_inflate import (  # noqa: E402
+    unpack_state_dict_numpy,
+)
 
 
 def _default_output_json() -> Path:
@@ -70,6 +74,37 @@ def _build_parser() -> argparse.ArgumentParser:
             "to use .omx/research."
         ),
     )
+    parser.add_argument(
+        "--checkpoint-export-report",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_checkpoint_archive_export.v1 JSON carrying "
+            "official_checkpoint_export_binding evidence. Repeatable; closes "
+            "only receiver-bound export debt, not source-forward authority."
+        ),
+    )
+    parser.add_argument(
+        "--trained-checkpoint-state-dict",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Optional trusted local NumPy-portable .npsd trained checkpoint "
+            "state. Loaded into a mapping manifest; native MLX keys still do "
+            "not prove official decoder source-forward parity."
+        ),
+    )
+    parser.add_argument(
+        "--tub-source-forward-artifact",
+        type=Path,
+        help=(
+            "Optional snerv_official_tub_source_forward_replay.v1 JSON. When "
+            "omitted, the audit builds the bounded local TUB source-fixture "
+            "artifact itself."
+        ),
+    )
     parser.add_argument("--expected-output-json-sha256")
     parser.add_argument("--expected-output-md-sha256")
     parser.add_argument("--expected-output-forward-parity-artifact-sha256")
@@ -91,12 +126,32 @@ def main(argv: list[str] | None = None) -> int:
     if output_forward_parity_artifact is not None and not output_forward_parity_artifact.is_absolute():
         output_forward_parity_artifact = REPO_ROOT / output_forward_parity_artifact
 
+    checkpoint_export_reports = tuple(
+        _load_json(path) for path in args.checkpoint_export_report
+    )
+    trained_checkpoint_mapping_manifests = (
+        *_trained_checkpoint_manifests_from_export_reports(checkpoint_export_reports),
+        *(
+            _load_trained_checkpoint_mapping_manifest(path)
+            for path in args.trained_checkpoint_state_dict
+        ),
+    )
+
     forward_artifact_result = None
     forward_artifact_path = args.official_forward_parity_artifact
     if output_forward_parity_artifact is not None:
         forward_artifact = build_snerv_official_source_forward_harness_artifact(
             official_repo_dir=args.official_repo_dir,
             repo_root=args.repo_root,
+            checkpoint_export_reports=checkpoint_export_reports,
+            trained_checkpoint_mapping_manifests=(
+                trained_checkpoint_mapping_manifests
+            ),
+            tub_source_forward_artifact=(
+                None
+                if args.tub_source_forward_artifact is None
+                else _load_json(args.tub_source_forward_artifact)
+            ),
         )
         forward_artifact_result = write_json_artifact(
             output_forward_parity_artifact,
@@ -152,6 +207,122 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0
+
+
+def _load_json(path: Path) -> dict:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise TypeError(f"{path}: expected JSON object")
+    payload.setdefault("_source_path", path.as_posix())
+    return payload
+
+
+def _trained_checkpoint_manifests_from_export_reports(
+    reports: tuple[dict, ...],
+) -> tuple[dict, ...]:
+    manifests = []
+    for report in reports:
+        state_path_raw = report.get("checkpoint_state_path")
+        if not state_path_raw:
+            continue
+        manifests.append(
+            _load_trained_checkpoint_mapping_manifest(
+                Path(str(state_path_raw)),
+                expected_sha256=str(report.get("checkpoint_state_sha256") or ""),
+                state_dict_kind=(
+                    "checkpoint_export_native_mlx_state_dict_"
+                    f"{report.get('checkpoint_state_kind') or 'unknown'}"
+                ),
+                source_label=str(report.get("_source_path") or ""),
+            )
+        )
+    return tuple(manifests)
+
+
+def _load_trained_checkpoint_mapping_manifest(
+    path: Path,
+    *,
+    expected_sha256: str = "",
+    state_dict_kind: str = "trusted_local_native_mlx_checkpoint_state_dict",
+    source_label: str | None = None,
+) -> dict:
+    resolved = path.expanduser().resolve(strict=False)
+    source = source_label or resolved.as_posix()
+    if not resolved.is_file():
+        return _failed_trained_checkpoint_mapping_manifest(
+            path=resolved,
+            source=source,
+            state_dict_kind=state_dict_kind,
+            blocker="snerv_official_trained_checkpoint_state_dict_path_missing",
+        )
+    actual_sha256 = sha256_file(resolved)
+    expected = str(expected_sha256 or "").strip().lower()
+    if expected and actual_sha256 != expected:
+        manifest = _failed_trained_checkpoint_mapping_manifest(
+            path=resolved,
+            source=source,
+            state_dict_kind=state_dict_kind,
+            blocker="snerv_official_trained_checkpoint_state_dict_sha256_mismatch",
+        )
+        manifest["expected_state_dict_sha256"] = expected
+        manifest["actual_state_dict_sha256"] = actual_sha256
+        return manifest
+    try:
+        state = unpack_state_dict_numpy(resolved.read_bytes())
+    except Exception as exc:  # pragma: no cover - fail-closed file-format guard.
+        manifest = _failed_trained_checkpoint_mapping_manifest(
+            path=resolved,
+            source=source,
+            state_dict_kind=state_dict_kind,
+            blocker="snerv_official_trained_checkpoint_state_dict_load_failed",
+        )
+        manifest["load_error_type"] = type(exc).__name__
+        manifest["load_error"] = str(exc)
+        return manifest
+    manifest = build_snerv_official_trained_checkpoint_mapping_manifest(
+        state,
+        decoder_len=None,
+        state_dict_kind=state_dict_kind,
+        source=source,
+    )
+    manifest["state_dict_path"] = resolved.as_posix()
+    manifest["state_dict_file_sha256"] = actual_sha256
+    return manifest
+
+
+def _failed_trained_checkpoint_mapping_manifest(
+    *,
+    path: Path,
+    source: str,
+    state_dict_kind: str,
+    blocker: str,
+) -> dict:
+    return {
+        "schema": "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1",
+        "state_dict_kind": state_dict_kind,
+        "state_dict_source": source,
+        "state_dict_path": path.as_posix(),
+        "state_dict_key_count": 0,
+        "decoder_len": None,
+        "official_trained_checkpoint_loaded": False,
+        "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+        "official_tub_temporal_encoder_weight_mapping_proven": False,
+        "mapped_weight_key_count": 0,
+        "weight_entries": [],
+        "component_rows": [],
+        "closed_campaign_blockers": [],
+        "blockers": [
+            blocker,
+            "snerv_official_trained_checkpoint_state_dict_not_loaded",
+            "snerv_official_trained_checkpoint_source_forward_replay_missing",
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "rank_or_kill_eligible": False,
+        "production_hardened_claim": False,
+        "source_faithful_stack_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
 
 
 if __name__ == "__main__":

@@ -659,6 +659,9 @@ def test_long_training_campaign_plan_source_parity_required_blocker_disables_row
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
         snerv_modelsize_budget=_snerv_budget(),
+        candidate_feedback_sources=(
+            _snerv_scorer_input_distribution_guard_feedback_row(),
+        ),
         optimizer_kinds=("adamw",),
         epochs=29_650,
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
@@ -716,6 +719,9 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
         snerv_modelsize_budget=_snerv_budget(),
+        candidate_feedback_sources=(
+            _snerv_scorer_input_distribution_guard_feedback_row(),
+        ),
         optimizer_kinds=("adamw",),
         epochs=29_650,
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
@@ -774,14 +780,19 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
 
 def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_queue() -> None:
     source_forward = _snerv_source_forward_artifact(
+        official_export_bound=True,
         receiver_consumes_output2=True,
         source_authority=False,
         full_tub_parity=False,
+        trained_checkpoint_loaded=True,
     )
 
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
         snerv_modelsize_budget=_snerv_budget(),
+        candidate_feedback_sources=(
+            _snerv_scorer_input_distribution_guard_feedback_row(),
+        ),
         optimizer_kinds=("adamw",),
         epochs=29_650,
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
@@ -792,11 +803,68 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     queue = report["snerv_lf_hf_replacement_queue"]
     state = queue["source_forward_evidence"]
     assert report["snerv_official_source_forward_artifact_count"] == 1
+    assert report["snerv_official_source_forward_evidence"]["official_checkpoint_export_bound"] is True
     assert state["receiver_payload_frame_replay_proven"] is True
+    assert state["receiver_bound_export_proven"] is True
     assert state["receiver_frame_decode_consumes_output2"] is True
+    assert state["official_trained_checkpoint_loaded"] is True
     assert state["source_forward_replay_authority"] is False
+    snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    split = snerv_row["curriculum_plan"]["official_source_forward_authority_split"]
+    assert split["snerv_official_source_forward_evidence_consumed"] is True
+    assert split["export_bound"] is True
+    assert split["receiver_payload_bound"] is True
+    assert split["frame_producing_export"] is True
+    assert split["receiver_bound_training_evidence_usable"] is True
+    assert split["full_source_forward_authority_proven"] is False
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in split["blockers"]
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in split["blockers"]
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" not in split["blockers"]
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in split["blockers"]
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in split["blockers"]
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" not in split["blockers"]
+    assert "snerv_official_trained_checkpoint_decoder_len_not_resolved" in split["blockers"]
+    row_blockers = set(snerv_row["blockers"])
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in row_blockers
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in row_blockers
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" not in row_blockers
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" not in row_blockers
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in row_blockers
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in row_blockers
+    assert "snerv_official_trained_checkpoint_decoder_len_not_resolved" in row_blockers
+    launch_contract = snerv_row["experiment_queue_entry"]["launch_authority_contract"]
+    assert launch_contract["snerv_official_runtime_authority_split"][
+        "snerv_official_source_forward_evidence_consumed"
+    ] is True
+    assert launch_contract["snerv_official_runtime_authority_split"][
+        "receiver_bound_export_proven"
+    ] is True
+    assert launch_contract["snerv_official_runtime_authority_split"][
+        "full_source_forward_authority_proven"
+    ] is False
+    queue_launch_blockers = set(launch_contract["queue_launch_blockers"])
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in queue_launch_blockers
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in queue_launch_blockers
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" not in queue_launch_blockers
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" not in queue_launch_blockers
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in queue_launch_blockers
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in queue_launch_blockers
+    assert "snerv_official_trained_checkpoint_decoder_len_not_resolved" in queue_launch_blockers
+    assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
+    scorer_state = queue["scorer_domain_evidence"]
+    assert scorer_state["artifact_count"] == 1
+    assert scorer_state["scorer_domain_tether_proof_passed"] is True
+    assert scorer_state["scorer_input_distribution_guard_proof_passed"] is True
     assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in queue["blockers"]
     assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in queue["blockers"]
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" not in queue["blockers"]
+    assert "snerv_scorer_input_distribution_guard_missing" not in queue["blockers"]
     assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in queue["blockers"]
     official = next(
         row
@@ -805,6 +873,8 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     )
     assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in official["blockers"]
     assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in official["blockers"]
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" not in official["blockers"]
+    assert "snerv_scorer_input_distribution_guard_missing" not in official["blockers"]
     assert (
         "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
         in official["blockers"]
@@ -6301,9 +6371,11 @@ def _passing_snerv_tether_smoke_report() -> dict:
 
 def _snerv_source_forward_artifact(
     *,
+    official_export_bound: bool = False,
     receiver_consumes_output2: bool,
     source_authority: bool,
     full_tub_parity: bool,
+    trained_checkpoint_loaded: bool = False,
 ) -> dict:
     blockers = []
     if not receiver_consumes_output2:
@@ -6320,7 +6392,57 @@ def _snerv_source_forward_artifact(
         "generated_utc": "20260605T000000Z",
         "_source_path": "/Volumes/VertigoDataTier/pact/snerv_forward_harness.json",
         "_source_sha256": "a" * 64,
+        "official_export_bound": bool(official_export_bound),
+        "official_checkpoint_export_binding_evidence": {
+            "schema": "snerv_official_checkpoint_export_binding_evidence.v1",
+            "official_export_bound": bool(official_export_bound),
+            "official_receiver_payload_bound": bool(official_export_bound),
+            "official_receiver_tensor_map_verified": bool(official_export_bound),
+            "native_checkpoint_export_bound_to_official_payload": bool(
+                official_export_bound
+            ),
+            "closed_campaign_blockers": (
+                ["snerv_official_mfu_hfr_tub_export_not_bound"]
+                if official_export_bound
+                else []
+            ),
+            "blockers": (
+                []
+                if official_export_bound
+                else ["snerv_official_mfu_hfr_tub_export_not_bound"]
+            ),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "full_tub_source_forward_parity_proven": bool(full_tub_parity),
+        "official_trained_checkpoint_loaded": bool(trained_checkpoint_loaded),
+        "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+        "official_tub_temporal_encoder_weight_mapping_proven": False,
+        "official_trained_checkpoint_state_dict_mapping_verified": False,
+        "official_trained_checkpoint_mapping_manifest": (
+            {
+                "schema": "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1",
+                "artifact_count": 1,
+                "state_dict_kind": "unit_test_native_mlx_state_dict",
+                "state_dict_source": "/Volumes/VertigoDataTier/pact/unit/native.npsd",
+                "state_dict_key_count": 15,
+                "decoder_len": None,
+                "official_trained_checkpoint_loaded": True,
+                "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
+                "official_tub_temporal_encoder_weight_mapping_proven": False,
+                "closed_campaign_blockers": [
+                    "snerv_official_trained_checkpoint_state_dict_not_loaded"
+                ],
+                "blockers": [
+                    "snerv_official_trained_checkpoint_decoder_len_not_resolved",
+                    "snerv_official_trained_checkpoint_source_forward_replay_missing",
+                ],
+                "score_claim": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
+            if trained_checkpoint_loaded
+            else None
+        ),
         "receiver_payload_frame_replay": {
             "schema": "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay.v1",
             "receiver_runtime_decode_proven": True,
@@ -6335,6 +6457,57 @@ def _snerv_source_forward_artifact(
         "blockers": blockers,
         "score_claim": False,
         "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_scorer_input_distribution_guard_feedback_row() -> dict:
+    metric_health = {
+        "snerv_posenet_yuv6_pair_distill": {
+            "metric_observed": True,
+            "lambda_active_observed": True,
+            "missing_metric_value": 0.0,
+            "lambda_value": 0.5,
+        },
+        "snerv_segnet_last_frame_distill": {
+            "metric_observed": True,
+            "lambda_active_observed": True,
+            "missing_metric_value": 0.0,
+            "lambda_value": 0.75,
+        },
+    }
+    return {
+        "schema": "nerv_candidate_feedback_row.v1",
+        "created_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/Volumes/VertigoDataTier/pact/snerv_guard_feedback.json",
+        "_source_sha256": "d" * 64,
+        "family": "snerv",
+        "snerv_scorer_domain_tether_passed": True,
+        "snerv_scorer_domain_tether_blockers": [],
+        "snerv_scorer_domain_tether_health": {
+            "schema": "snerv_scorer_domain_tether_smoke_health.v1",
+            "passed": True,
+            "metric_health": metric_health,
+            "missing_metrics": [],
+            "lambda_inactive_metrics": [],
+            "blockers": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "snerv_scorer_input_distribution_guard_proof_passed": True,
+        "snerv_scorer_input_distribution_guard_proof": {
+            "schema": "snerv_scorer_input_distribution_guard_proof.v1",
+            "required": True,
+            "bound": True,
+            "telemetry_contract_passed": True,
+            "metric_observed": True,
+            "dual_metric_observed": True,
+            "passed": True,
+            "blockers": [],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
 

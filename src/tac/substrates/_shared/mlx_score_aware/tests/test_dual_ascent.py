@@ -128,6 +128,42 @@ def test_dual_ascent_respects_explicit_zero_curriculum_stage_masks() -> None:
     assert controller.effective_loss_weights({})["pose_distill"] == pytest.approx(3.0)
 
 
+def test_dual_ascent_byte_constraints_can_activate_zero_base_qat_weight() -> None:
+    controller = TrainTimeDualAscentController.from_config(
+        {
+            "enabled": True,
+            "constraints": [
+                {
+                    "constraint_id": "archive_total_bytes",
+                    "metric_name": "train_time_archive_rate_score",
+                    "loss_weight_key": "coder_qat_quant_residual",
+                    "target": 0.0,
+                    "initial_lambda": 2.0,
+                    "weight_scale": 0.25,
+                    "activate_when_base_weight_zero": True,
+                }
+            ],
+        }
+    )
+
+    weights = controller.effective_loss_weights({"coder_qat_quant_residual": 0.0})
+    assert weights["coder_qat_quant_residual"] == pytest.approx(0.5)
+
+    metrics = controller.observe({"train_time_archive_rate_score": 1.0})
+    assert metrics["dual_ascent_weight_contribution__archive_total_bytes"] == (
+        pytest.approx(0.5)
+    )
+    assert metrics["dual_ascent_effective_loss_weight__archive_total_bytes"] == (
+        pytest.approx(0.5)
+    )
+    assert metrics["dual_ascent_weight_applied__archive_total_bytes"] == pytest.approx(
+        1.0
+    )
+    assert metrics["dual_ascent_zero_base_masked__archive_total_bytes"] == (
+        pytest.approx(0.0)
+    )
+
+
 def test_dual_ascent_rejects_missing_target() -> None:
     with pytest.raises(TrainTimeDualAscentError, match="needs target"):
         TrainTimeDualAscentController.from_config(
@@ -223,25 +259,25 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
     constraints = {row["constraint_id"]: row for row in config["constraints"]}
     direct = constraints["hi_nerv_segnet_direct_live_distill"]
     assert direct["metric_name"] == "loss_part_segnet_direct_live_distill"
-    assert direct["loss_weight_key"] == "distill"
+    assert direct["loss_weight_key"] == "segnet_direct_live_distill"
     assert direct["weight_scale"] == pytest.approx(3.0)
     hist = constraints["hi_nerv_segnet_direct_live_class_histogram"]
     assert hist["metric_name"] == (
         "loss_part_segnet_direct_live_class_histogram_loss"
     )
-    assert hist["loss_weight_key"] == "distill"
+    assert hist["loss_weight_key"] == "segnet_direct_live_class_histogram"
     assert hist["weight_scale"] == pytest.approx(2.0)
     balanced = constraints["hi_nerv_segnet_direct_live_class_balanced_hinge"]
     assert balanced["metric_name"] == (
         "loss_part_segnet_direct_live_class_balanced_hinge_loss"
     )
-    assert balanced["loss_weight_key"] == "distill"
+    assert balanced["loss_weight_key"] == "segnet_direct_live_class_balanced_hinge"
     assert balanced["weight_scale"] == pytest.approx(5.0)
     balanced_ce = constraints["hi_nerv_segnet_direct_live_class_balanced_ce"]
     assert balanced_ce["metric_name"] == (
         "loss_part_segnet_direct_live_class_balanced_ce_loss"
     )
-    assert balanced_ce["loss_weight_key"] == "distill"
+    assert balanced_ce["loss_weight_key"] == "segnet_direct_live_class_balanced_ce"
     assert balanced_ce["weight_scale"] == pytest.approx(7.0)
     squared_hinge = constraints[
         "hi_nerv_segnet_direct_live_class_balanced_squared_hinge"
@@ -249,8 +285,25 @@ def test_default_nerv_dual_ascent_config_prices_direct_live_segnet_term() -> Non
     assert squared_hinge["metric_name"] == (
         "loss_part_segnet_direct_live_class_balanced_squared_hinge_loss"
     )
-    assert squared_hinge["loss_weight_key"] == "distill"
+    assert squared_hinge["loss_weight_key"] == (
+        "segnet_direct_live_class_balanced_squared_hinge"
+    )
     assert squared_hinge["weight_scale"] == pytest.approx(11.0)
+
+
+def test_direct_live_dual_ascent_survives_generic_distill_zero() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        segnet_direct_live_distillation_weight=1.0,
+    )
+    controller = TrainTimeDualAscentController.from_config(config)
+
+    controller.observe({"loss_part_segnet_direct_live_distill": 4.0})
+    controller.observe({"loss_part_segnet_direct_live_distill": 5.0})
+    weights = controller.effective_loss_weights({"distill": 0.0})
+
+    assert weights["distill"] == pytest.approx(0.0)
+    assert weights["segnet_direct_live_distill"] > 0.0
 
 
 def test_default_nerv_dual_ascent_config_prices_contrast_floor_guard() -> None:
@@ -263,7 +316,7 @@ def test_default_nerv_dual_ascent_config_prices_contrast_floor_guard() -> None:
     constraints = {row["constraint_id"]: row for row in config["constraints"]}
     floor = constraints["snerv_scorer_input_contrast_floor"]
     assert floor["metric_name"] == "loss_part_scorer_input_contrast_floor"
-    assert floor["loss_weight_key"] == "scorer_input_guard"
+    assert floor["loss_weight_key"] == "scorer_input_contrast_floor"
     assert floor["target"] == pytest.approx(0.0)
     assert floor["target_fraction_of_initial"] is None
     assert floor["weight_scale"] == pytest.approx(0.25)
@@ -297,15 +350,36 @@ def test_default_nerv_dual_ascent_config_prices_shape_tether_guard() -> None:
     constraints = {row["constraint_id"]: row for row in config["constraints"]}
     tether = constraints["hi_nerv_scorer_input_shape_tether"]
     assert tether["metric_name"] == "loss_part_scorer_input_shape_tether"
-    assert tether["loss_weight_key"] == "scorer_input_guard"
+    assert tether["loss_weight_key"] == "scorer_input_shape_tether"
     assert tether["target_fraction_of_initial"] == pytest.approx(0.97)
     assert tether["weight_scale"] == pytest.approx(1.5)
     assert "PoseNet YUV6" in tether["rationale"]
 
 
+def test_default_nerv_dual_ascent_config_prices_posenet_temporal_signal_floor() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        posenet_temporal_signal_floor_weight=2.25,
+    )
+
+    assert config["enabled"] is True
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    floor = constraints["hi_nerv_posenet_temporal_signal_floor"]
+    assert floor["metric_name"] == "loss_part_posenet_temporal_signal_floor"
+    assert floor["loss_weight_key"] == "posenet_temporal_signal_floor"
+    assert floor["target"] == pytest.approx(0.0)
+    assert floor["target_fraction_of_initial"] is None
+    assert floor["weight_scale"] == pytest.approx(2.25)
+    assert "frame_1-frame_0" in floor["rationale"]
+    assert "YUV6 temporal delta" in floor["rationale"]
+
+
 def test_default_nerv_dual_ascent_config_prices_section_byte_budgets() -> None:
     config = build_default_nerv_train_time_dual_ascent_config(
         family="snerv",
+        archive_byte_budget=2_500,
+        archive_byte_loss_weight_key="coder_qat_delta",
+        archive_byte_loss_weight_scale=0.5,
         section_byte_budgets={"decoder_payload": 1_000, "lf payload": 2_000},
         section_byte_loss_weight_key_map={"decoder_payload": "coder_qat_delta"},
         section_byte_loss_weight_scale_map={"decoder_payload": 0.25},
@@ -313,20 +387,62 @@ def test_default_nerv_dual_ascent_config_prices_section_byte_budgets() -> None:
 
     assert config["enabled"] is True
     constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    archive = constraints["snerv_archive_total_bytes"]
     decoder = constraints["snerv_decoder_payload_section_bytes"]
     lf = constraints["snerv_lf_payload_section_bytes"]
     byte_price = config["contest_grounding"][
         "archive_byte_price_score_per_byte"
     ]
+    assert archive["metric_name"] == "train_time_archive_rate_score"
+    assert archive["loss_weight_key"] == "coder_qat_delta"
+    assert archive["target"] == pytest.approx(2_500 * byte_price)
+    assert archive["weight_scale"] == pytest.approx(0.5)
+    assert archive["activate_when_base_weight_zero"] is True
     assert decoder["metric_name"] == (
         "train_time_section_rate_score__decoder_payload"
     )
     assert decoder["loss_weight_key"] == "coder_qat_delta"
     assert decoder["target"] == pytest.approx(1_000 * byte_price)
     assert decoder["weight_scale"] == pytest.approx(0.25)
+    assert decoder["activate_when_base_weight_zero"] is True
     assert lf["metric_name"] == "train_time_section_rate_score__lf_payload"
     assert lf["loss_weight_key"] == "coder_qat_c1a_entropy"
     assert lf["target"] == pytest.approx(2_000 * byte_price)
+    assert lf["activate_when_base_weight_zero"] is True
+
+
+def test_default_nerv_dual_ascent_archive_budget_uses_active_section_qat_key() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        coder_qat_loss_weight_map={"coder_qat_quant_residual": 0.25},
+        archive_byte_budget=10_000,
+        section_byte_budgets={"decoder_state": 4_000},
+        section_byte_loss_weight_key_map={
+            "decoder_state": "coder_qat_quant_residual"
+        },
+    )
+
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    archive = constraints["hi_nerv_archive_total_bytes"]
+    assert archive["loss_weight_key"] == "coder_qat_quant_residual"
+
+
+def test_default_nerv_dual_ascent_section_budget_prefers_active_qat_key() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="snerv",
+        coder_qat_loss_weight_map={
+            "coder_qat_quant_residual": 1.0e-3,
+            "coder_qat_c1a_entropy": 0.0,
+        },
+        archive_byte_budget=10_000,
+        section_byte_budgets={"lf_payload": 4_000},
+    )
+
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    archive = constraints["snerv_archive_total_bytes"]
+    lf = constraints["snerv_lf_payload_section_bytes"]
+    assert archive["loss_weight_key"] == "coder_qat_quant_residual"
+    assert lf["loss_weight_key"] == "coder_qat_quant_residual"
 
 
 def test_default_nerv_dual_ascent_config_disables_without_active_terms() -> None:

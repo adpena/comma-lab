@@ -271,10 +271,6 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
             "official_haar_dwt1d_lowpass",
             "--snerv-scorer-loop-lf-payload-codec",
             "auto",
-            "--snerv-native-mlx-decoder-train-steps",
-            "6",
-            "--snerv-native-mlx-decoder-train-lr",
-            "0.0009",
             "--byte-growth-admission-mode",
             "rate_paid",
             "--dynamic-range-repair-gains",
@@ -308,12 +304,11 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert Path(payload["best_packet_path"]).read_bytes() == _FakeResult.best_packet
     assert payload["best_packet_materialization"]["materialized"] is True
     controls = payload["native_mlx_decoder_training_controls"]
-    assert controls["requested_steps"] == 6
-    assert controls["learning_rate"] == pytest.approx(0.0009)
+    assert controls["requested_steps"] == 0
     assert controls["native_mlx_training_executed"] is False
     assert (
         "snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_scorer_loop_harness"
-        in payload["blockers"]
+        not in payload["blockers"]
     )
     assert (
         "snerv_native_scorer_loop_best_packet_not_materialized"
@@ -326,6 +321,50 @@ def test_snerv_scorer_loop_trainer_cli_writes_reports(
     assert (output_dir / "snerv_scorer_loop_qat_launch_preflight.json").exists()
     assert (output_dir / "snerv_scorer_loop_qat_result.json").exists()
     assert (output_dir / "best_packet.snar").read_bytes() == _FakeResult.best_packet
+
+
+def test_snerv_scorer_loop_refuses_native_mlx_decoder_training_controls(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    output_dir = tmp_path / "out"
+    calls: dict[str, Any] = {}
+
+    def fake_runner(**kwargs: Any) -> _FakeResult:
+        calls.update(kwargs)
+        return _FakeResult()
+
+    monkeypatch.setattr(trainer, "run_snerv_scorer_loop_decoder_qat_smoke", fake_runner)
+
+    rc = trainer.main(
+        [
+            "--score-loop",
+            "--output-dir",
+            str(output_dir),
+            "--allow-local-output-dir",
+            "--snerv-native-mlx-decoder-train-steps",
+            "6",
+            "--snerv-native-mlx-decoder-train-lr",
+            "0.0009",
+        ]
+    )
+
+    assert rc == 2
+    assert calls == {}
+    refusal_path = output_dir / "snerv_scorer_loop_qat_launch_refusal.json"
+    payload = json.loads(refusal_path.read_text(encoding="utf-8"))
+    assert payload["schema"] == "snerv_scorer_loop_qat_launch_refusal.v1"
+    assert payload["score_claim"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+    controls = payload["native_mlx_decoder_training_controls"]
+    assert controls["requested_steps"] == 6
+    assert controls["learning_rate"] == pytest.approx(0.0009)
+    assert controls["native_mlx_training_executed"] is False
+    assert (
+        "snerv_native_mlx_decoder_training_controls_unreachable_from_cpu_scorer_loop_harness"
+        in payload["blockers"]
+    )
+    assert "tools/run_compact_renderer_mlx_spine_runner.py" in payload["redirect_to"]
 
 
 class _FakeResult:

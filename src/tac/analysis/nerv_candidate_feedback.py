@@ -1303,9 +1303,44 @@ def build_nerv_candidate_feedback_row(
             if snerv_official_checkpoint_mapping
             else None
         ),
+        "snerv_official_hfr_trained_checkpoint_weight_mapping_proven": (
+            snerv_official_checkpoint_mapping.get(
+                "official_hfr_trained_checkpoint_weight_mapping_proven"
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_mfu_trained_checkpoint_weight_mapping_proven": (
+            snerv_official_checkpoint_mapping.get(
+                "official_mfu_trained_checkpoint_weight_mapping_proven"
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
         "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven": (
             snerv_official_checkpoint_mapping.get(
                 "official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_mfu_receiver_activation_payload_bound": (
+            snerv_official_checkpoint_mapping.get(
+                "official_mfu_receiver_activation_payload_bound"
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_tub_receiver_activation_payload_bound": (
+            snerv_official_checkpoint_mapping.get(
+                "official_tub_receiver_activation_payload_bound"
+            )
+            if snerv_official_checkpoint_mapping
+            else None
+        ),
+        "snerv_official_native_receiver_state_mapping_proven": (
+            snerv_official_checkpoint_mapping.get(
+                "official_native_receiver_state_mapping_proven"
             )
             if snerv_official_checkpoint_mapping
             else None
@@ -2559,8 +2594,14 @@ def build_nerv_training_telemetry_feedback_row(
     snerv_scorer_tether_health = (
         _snerv_scorer_tether_health(rows) if family_key == "snerv" else {}
     )
-    hinerv_train_time_control_health = (
-        _hinerv_train_time_control_health(rows) if family_key == "hi_nerv" else {}
+    nerv_train_time_control_health = (
+        _nerv_train_time_control_health(rows, family_key=family_key)
+        if family_key in {"hi_nerv", "snerv"}
+        else {}
+    )
+    gradient_multiplier_control_health = _gradient_multiplier_control_health(
+        rows,
+        family_key=family_key,
     )
     recommended_launch_mutations = _training_telemetry_mutations_for_family(
         family_key,
@@ -2568,7 +2609,13 @@ def build_nerv_training_telemetry_feedback_row(
             *list(health.get("recommended_launch_mutations") or []),
             *list(snerv_scorer_tether_health.get("recommended_launch_mutations") or []),
             *list(
-                hinerv_train_time_control_health.get(
+                nerv_train_time_control_health.get(
+                    "recommended_launch_mutations"
+                )
+                or []
+            ),
+            *list(
+                gradient_multiplier_control_health.get(
                     "recommended_launch_mutations"
                 )
                 or []
@@ -2584,8 +2631,23 @@ def build_nerv_training_telemetry_feedback_row(
             snerv_scorer_tether_health if snerv_scorer_tether_health else None
         ),
         "hinerv_train_time_control_health": (
-            hinerv_train_time_control_health
-            if hinerv_train_time_control_health
+            nerv_train_time_control_health
+            if family_key == "hi_nerv" and nerv_train_time_control_health
+            else None
+        ),
+        "snerv_train_time_control_health": (
+            nerv_train_time_control_health
+            if family_key == "snerv" and nerv_train_time_control_health
+            else None
+        ),
+        "nerv_train_time_control_health": (
+            nerv_train_time_control_health
+            if nerv_train_time_control_health
+            else None
+        ),
+        "gradient_multiplier_control_health": (
+            gradient_multiplier_control_health
+            if gradient_multiplier_control_health
             else None
         ),
         "recommended_launch_mutations": recommended_launch_mutations,
@@ -2650,14 +2712,22 @@ def build_nerv_training_telemetry_feedback_row(
         ]
         blockers.extend(scorer_tether_blockers)
         direct_blockers.extend(scorer_tether_blockers)
-    if bool(hinerv_train_time_control_health.get("control_inert_risk_detected")):
+    if bool(nerv_train_time_control_health.get("control_inert_risk_detected")):
         control_blockers = [
             str(blocker)
-            for blocker in hinerv_train_time_control_health.get("blockers") or []
+            for blocker in nerv_train_time_control_health.get("blockers") or []
             if blocker
         ]
         blockers.extend(control_blockers)
         direct_blockers.extend(control_blockers)
+    if bool(gradient_multiplier_control_health.get("control_inert_risk_detected")):
+        gradient_blockers = [
+            str(blocker)
+            for blocker in gradient_multiplier_control_health.get("blockers") or []
+            if blocker
+        ]
+        blockers.extend(gradient_blockers)
+        direct_blockers.extend(gradient_blockers)
     training_stopped = not _is_midrun_feedback_snapshot(stop_reason)
     training_control = _training_control_recommendation(
         health=health_for_control,
@@ -2730,12 +2800,40 @@ def build_nerv_training_telemetry_feedback_row(
             snerv_scorer_tether_health.get("blockers") or []
         ),
         "hinerv_train_time_control_health": (
-            hinerv_train_time_control_health
-            if hinerv_train_time_control_health
+            nerv_train_time_control_health
+            if family_key == "hi_nerv" and nerv_train_time_control_health
+            else None
+        ),
+        "snerv_train_time_control_health": (
+            nerv_train_time_control_health
+            if family_key == "snerv" and nerv_train_time_control_health
+            else None
+        ),
+        "nerv_train_time_control_health": (
+            nerv_train_time_control_health
+            if nerv_train_time_control_health
             else None
         ),
         "hinerv_train_time_control_blockers": list(
-            hinerv_train_time_control_health.get("blockers") or []
+            nerv_train_time_control_health.get("blockers") or []
+            if family_key == "hi_nerv"
+            else []
+        ),
+        "snerv_train_time_control_blockers": (
+            list(nerv_train_time_control_health.get("blockers") or [])
+            if family_key == "snerv"
+            else []
+        ),
+        "gradient_multiplier_control_health": (
+            gradient_multiplier_control_health
+            if gradient_multiplier_control_health
+            else None
+        ),
+        "gradient_multiplier_control_blockers": list(
+            gradient_multiplier_control_health.get("blockers") or []
+        ),
+        "gradient_multiplier_control_inert_risk_detected": bool(
+            gradient_multiplier_control_health.get("control_inert_risk_detected")
         ),
         "pose_instability_detected": bool(health["pose_instability_detected"]),
         "pose_instability_ever_detected": bool(
@@ -3613,18 +3711,24 @@ def _snerv_scorer_tether_metric_health(
     }
 
 
-def _hinerv_train_time_control_health(
+def _nerv_train_time_control_health(
     rows: Sequence[Mapping[str, Any]],
+    *,
+    family_key: str,
 ) -> dict[str, Any]:
+    family_key = _family_key(family_key)
     metric_names = (
-        "hi_nerv_segnet_last_frame_distill",
-        "hi_nerv_posenet_yuv6_pair_distill",
+        f"{family_key}_segnet_last_frame_distill",
+        f"{family_key}_posenet_yuv6_pair_distill",
     )
     metric_health = {
         metric: _snerv_scorer_tether_metric_health(rows, metric=metric)
         for metric in metric_names
     }
-    section_health = _hinerv_section_byte_control_health(rows)
+    section_health = _nerv_section_byte_control_health(
+        rows,
+        family_key=family_key,
+    )
     inactive_metrics = [
         metric
         for metric, health in metric_health.items()
@@ -3637,33 +3741,61 @@ def _hinerv_train_time_control_health(
     ]
     blockers: list[str] = []
     if missing_metrics:
-        blockers.append("hi_nerv_train_time_dual_missing_metric_telemetry")
+        blockers.append(f"{family_key}_train_time_dual_missing_metric_telemetry")
     if inactive_metrics:
-        blockers.append("hi_nerv_train_time_dual_lambda_inactive_telemetry")
-    if "hi_nerv_segnet_last_frame_distill" in missing_metrics:
-        blockers.append("hi_nerv_train_time_dual_segnet_metric_missing_telemetry")
-    if "hi_nerv_posenet_yuv6_pair_distill" in missing_metrics:
-        blockers.append("hi_nerv_train_time_dual_posenet_metric_missing_telemetry")
-    if "hi_nerv_segnet_last_frame_distill" in inactive_metrics:
-        blockers.append("hi_nerv_train_time_dual_segnet_lambda_inactive_telemetry")
-    if "hi_nerv_posenet_yuv6_pair_distill" in inactive_metrics:
-        blockers.append("hi_nerv_train_time_dual_posenet_lambda_inactive_telemetry")
+        blockers.append(f"{family_key}_train_time_dual_lambda_inactive_telemetry")
+    if f"{family_key}_segnet_last_frame_distill" in missing_metrics:
+        blockers.append(f"{family_key}_train_time_dual_segnet_metric_missing_telemetry")
+    if f"{family_key}_posenet_yuv6_pair_distill" in missing_metrics:
+        blockers.append(f"{family_key}_train_time_dual_posenet_metric_missing_telemetry")
+    if f"{family_key}_segnet_last_frame_distill" in inactive_metrics:
+        blockers.append(f"{family_key}_train_time_dual_segnet_lambda_inactive_telemetry")
+    if f"{family_key}_posenet_yuv6_pair_distill" in inactive_metrics:
+        blockers.append(f"{family_key}_train_time_dual_posenet_lambda_inactive_telemetry")
     if bool(section_health.get("section_rate_metric_observed")) and not bool(
         section_health.get("section_byte_dual_lambda_active_observed")
     ):
         blockers.append(
-            "hi_nerv_train_time_section_byte_dual_lambda_inactive_telemetry"
+            f"{family_key}_train_time_section_byte_dual_lambda_inactive_telemetry"
         )
+    if bool(section_health.get("section_rate_metric_observed")) and not bool(
+        section_health.get("archive_rate_metric_observed")
+    ):
+        blockers.append(f"{family_key}_train_time_archive_rate_metric_missing_telemetry")
+    if bool(section_health.get("archive_rate_metric_observed")) and not bool(
+        section_health.get("archive_byte_dual_lambda_active_observed")
+    ):
+        blockers.append(
+            f"{family_key}_train_time_archive_byte_dual_lambda_inactive_telemetry"
+        )
+    if (
+        bool(section_health.get("section_byte_dual_lambda_active_observed"))
+        and not bool(section_health.get("section_byte_dual_weight_applied_observed"))
+    ):
+        blockers.append(
+            f"{family_key}_train_time_section_byte_dual_weight_not_applied_telemetry"
+        )
+    if (
+        bool(section_health.get("archive_byte_dual_lambda_active_observed"))
+        and not bool(section_health.get("archive_byte_dual_weight_applied_observed"))
+    ):
+        blockers.append(
+            f"{family_key}_train_time_archive_byte_dual_weight_not_applied_telemetry"
+        )
+    if bool(section_health.get("section_byte_dual_zero_base_masked_observed")):
+        blockers.append(f"{family_key}_train_time_section_byte_dual_zero_base_masked")
+    family_slug = "hinerv" if family_key == "hi_nerv" else family_key
     recommended: list[str] = []
     if blockers:
         recommended.extend(
             [
-                "require_hinerv_scorer_and_section_dual_lambdas_before_long_training_reuse",
-                "relaunch_hinerv_with_live_byte_cap_dual_ascent_actuating_from_step_zero",
+                f"require_{family_slug}_scorer_and_section_dual_lambdas_before_long_training_reuse",
+                f"relaunch_{family_slug}_with_live_byte_cap_dual_ascent_actuating_from_step_zero",
             ]
         )
     return {
-        "schema": "hi_nerv_train_time_control_health.v1",
+        "schema": f"{family_key}_train_time_control_health.v1",
+        "family": family_key,
         "row_count": len(rows),
         "recent_window_epochs": _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS,
         "metric_health": metric_health,
@@ -3677,28 +3809,92 @@ def _hinerv_train_time_control_health(
     }
 
 
-def _hinerv_section_byte_control_health(
+def _nerv_section_byte_control_health(
     rows: Sequence[Mapping[str, Any]],
+    *,
+    family_key: str,
 ) -> dict[str, Any]:
+    family_key = _family_key(family_key)
     all_rate_flags: list[bool] = []
     all_lambda_flags: list[bool] = []
+    all_archive_rate_flags: list[bool] = []
+    all_archive_lambda_flags: list[bool] = []
+    all_archive_applied_flags: list[bool] = []
+    all_section_applied_flags: list[bool] = []
+    all_section_zero_base_masked_flags: list[bool] = []
     recent_rate_flags: list[bool] = []
     recent_lambda_flags: list[bool] = []
+    recent_archive_rate_flags: list[bool] = []
+    recent_archive_lambda_flags: list[bool] = []
+    recent_archive_applied_flags: list[bool] = []
+    recent_section_applied_flags: list[bool] = []
+    recent_section_zero_base_masked_flags: list[bool] = []
     recent_rows = list(rows)[-_TRAINING_CONTROL_RECENT_WINDOW_EPOCHS:]
     for row in rows:
-        rate_seen, lambda_active = _hinerv_section_byte_control_row_flags(row)
+        (
+            rate_seen,
+            lambda_active,
+            archive_rate_seen,
+            archive_lambda_active,
+            section_weight_applied,
+            archive_weight_applied,
+            section_zero_base_masked,
+        ) = _nerv_section_byte_control_row_flags(row, family_key=family_key)
         all_rate_flags.append(rate_seen)
         all_lambda_flags.append(lambda_active)
+        all_archive_rate_flags.append(archive_rate_seen)
+        all_archive_lambda_flags.append(archive_lambda_active)
+        all_section_applied_flags.append(section_weight_applied)
+        all_archive_applied_flags.append(archive_weight_applied)
+        all_section_zero_base_masked_flags.append(section_zero_base_masked)
     for row in recent_rows:
-        rate_seen, lambda_active = _hinerv_section_byte_control_row_flags(row)
+        (
+            rate_seen,
+            lambda_active,
+            archive_rate_seen,
+            archive_lambda_active,
+            section_weight_applied,
+            archive_weight_applied,
+            section_zero_base_masked,
+        ) = _nerv_section_byte_control_row_flags(row, family_key=family_key)
         recent_rate_flags.append(rate_seen)
         recent_lambda_flags.append(lambda_active)
+        recent_archive_rate_flags.append(archive_rate_seen)
+        recent_archive_lambda_flags.append(archive_lambda_active)
+        recent_section_applied_flags.append(section_weight_applied)
+        recent_archive_applied_flags.append(archive_weight_applied)
+        recent_section_zero_base_masked_flags.append(section_zero_base_masked)
     rate_observed = any(all_rate_flags)
     lambda_active_observed = any(all_lambda_flags)
+    archive_rate_observed = any(all_archive_rate_flags)
+    archive_lambda_active_observed = any(all_archive_lambda_flags)
+    archive_weight_applied_observed = any(all_archive_applied_flags)
+    section_weight_applied_observed = any(all_section_applied_flags)
+    section_zero_base_masked_observed = any(all_section_zero_base_masked_flags)
     recent_rate_observed = any(recent_rate_flags)
     recent_lambda_active_observed = any(recent_lambda_flags)
+    recent_archive_rate_observed = any(recent_archive_rate_flags)
+    recent_archive_lambda_active_observed = any(recent_archive_lambda_flags)
+    recent_archive_weight_applied_observed = any(recent_archive_applied_flags)
+    recent_section_weight_applied_observed = any(recent_section_applied_flags)
+    recent_section_zero_base_masked_observed = any(
+        recent_section_zero_base_masked_flags
+    )
     return {
-        "schema": "hi_nerv_section_byte_control_health.v1",
+        "schema": f"{family_key}_section_byte_control_health.v1",
+        "family": family_key,
+        "archive_rate_metric_observation_count": sum(
+            1 for flag in all_archive_rate_flags if flag
+        ),
+        "archive_rate_metric_recent_observation_count": sum(
+            1 for flag in recent_archive_rate_flags if flag
+        ),
+        "archive_lambda_observation_count": sum(
+            1 for flag in all_archive_lambda_flags if flag
+        ),
+        "archive_lambda_recent_observation_count": sum(
+            1 for flag in recent_archive_lambda_flags if flag
+        ),
         "rate_metric_observation_count": sum(1 for flag in all_rate_flags if flag),
         "rate_metric_recent_observation_count": sum(
             1 for flag in recent_rate_flags if flag
@@ -3707,20 +3903,64 @@ def _hinerv_section_byte_control_health(
         "lambda_recent_observation_count": sum(
             1 for flag in recent_lambda_flags if flag
         ),
+        "archive_rate_metric_observed": bool(archive_rate_observed),
+        "archive_rate_metric_recent_observed": bool(recent_archive_rate_observed),
+        "archive_byte_dual_lambda_active_observed": bool(
+            archive_lambda_active_observed
+        ),
+        "archive_byte_dual_lambda_recent_active_observed": bool(
+            recent_archive_lambda_active_observed
+        ),
+        "archive_byte_dual_weight_applied_observed": bool(
+            archive_weight_applied_observed
+        ),
+        "archive_byte_dual_weight_recent_applied_observed": bool(
+            recent_archive_weight_applied_observed
+        ),
         "section_rate_metric_observed": bool(rate_observed),
         "section_rate_metric_recent_observed": bool(recent_rate_observed),
         "section_byte_dual_lambda_active_observed": bool(lambda_active_observed),
         "section_byte_dual_lambda_recent_active_observed": bool(
             recent_lambda_active_observed
         ),
+        "section_byte_dual_weight_applied_observed": bool(
+            section_weight_applied_observed
+        ),
+        "section_byte_dual_weight_recent_applied_observed": bool(
+            recent_section_weight_applied_observed
+        ),
+        "section_byte_dual_zero_base_masked_observed": bool(
+            section_zero_base_masked_observed
+        ),
+        "section_byte_dual_zero_base_masked_recent_observed": bool(
+            recent_section_zero_base_masked_observed
+        ),
     }
 
 
-def _hinerv_section_byte_control_row_flags(row: Mapping[str, Any]) -> tuple[bool, bool]:
+def _nerv_section_byte_control_row_flags(
+    row: Mapping[str, Any],
+    *,
+    family_key: str,
+) -> tuple[bool, bool, bool, bool, bool, bool, bool]:
+    family_key = _family_key(family_key)
     loss_components = row.get("loss_components")
     sources = [row]
     if isinstance(loss_components, Mapping):
         sources.append(loss_components)
+    archive_rate_seen = any(
+        str(key) == "train_time_archive_rate_score"
+        and _float_or_none(value) is not None
+        for source in sources
+        for key, value in source.items()
+    )
+    archive_lambda_active = any(
+        str(key) == f"dual_ascent_lambda__{family_key}_archive_total_bytes"
+        and (value_float := _float_or_none(value)) is not None
+        and abs(float(value_float)) > _HINERV_TRAIN_TIME_CONTROL_LAMBDA_ACTIVE_EPS
+        for source in sources
+        for key, value in source.items()
+    )
     rate_seen = any(
         str(key).startswith("train_time_section_rate_score__")
         and _float_or_none(value) is not None
@@ -3728,14 +3968,197 @@ def _hinerv_section_byte_control_row_flags(row: Mapping[str, Any]) -> tuple[bool
         for key, value in source.items()
     )
     lambda_active = any(
-        str(key).startswith("dual_ascent_lambda__hi_nerv_")
+        str(key).startswith(f"dual_ascent_lambda__{family_key}_")
         and str(key).endswith("_section_bytes")
         and (value_float := _float_or_none(value)) is not None
         and abs(float(value_float)) > _HINERV_TRAIN_TIME_CONTROL_LAMBDA_ACTIVE_EPS
         for source in sources
         for key, value in source.items()
     )
-    return rate_seen, lambda_active
+    section_weight_applied = any(
+        (
+            str(key).startswith(f"dual_ascent_weight_applied__{family_key}_")
+            or str(key).startswith(
+                f"dual_ascent_effective_loss_weight__{family_key}_"
+            )
+        )
+        and str(key).endswith("_section_bytes")
+        and (value_float := _float_or_none(value)) is not None
+        and abs(float(value_float)) > _HINERV_TRAIN_TIME_CONTROL_LAMBDA_ACTIVE_EPS
+        for source in sources
+        for key, value in source.items()
+    )
+    archive_weight_applied = any(
+        str(key)
+        in {
+            f"dual_ascent_weight_applied__{family_key}_archive_total_bytes",
+            f"dual_ascent_effective_loss_weight__{family_key}_archive_total_bytes",
+        }
+        and (value_float := _float_or_none(value)) is not None
+        and abs(float(value_float)) > _HINERV_TRAIN_TIME_CONTROL_LAMBDA_ACTIVE_EPS
+        for source in sources
+        for key, value in source.items()
+    )
+    section_zero_base_masked = any(
+        str(key).startswith(f"dual_ascent_zero_base_masked__{family_key}_")
+        and str(key).endswith("_section_bytes")
+        and (value_float := _float_or_none(value)) is not None
+        and abs(float(value_float)) > _HINERV_TRAIN_TIME_CONTROL_LAMBDA_ACTIVE_EPS
+        for source in sources
+        for key, value in source.items()
+    )
+    return (
+        rate_seen,
+        lambda_active,
+        archive_rate_seen,
+        archive_lambda_active,
+        section_weight_applied,
+        archive_weight_applied,
+        section_zero_base_masked,
+    )
+
+
+def _gradient_multiplier_control_health(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    family_key: str,
+) -> dict[str, Any]:
+    all_requested: list[bool] = []
+    all_applied: list[bool] = []
+    all_missing: list[bool] = []
+    all_noop: list[bool] = []
+    recent_requested: list[bool] = []
+    recent_applied: list[bool] = []
+    recent_missing: list[bool] = []
+    recent_noop: list[bool] = []
+    recent_rows = list(rows)[-_TRAINING_CONTROL_RECENT_WINDOW_EPOCHS:]
+    for row in rows:
+        requested, applied, missing, noop = _gradient_multiplier_control_row_flags(row)
+        all_requested.append(requested)
+        all_applied.append(applied)
+        all_missing.append(missing)
+        all_noop.append(noop)
+    for row in recent_rows:
+        requested, applied, missing, noop = _gradient_multiplier_control_row_flags(row)
+        recent_requested.append(requested)
+        recent_applied.append(applied)
+        recent_missing.append(missing)
+        recent_noop.append(noop)
+    requested_observed = any(all_requested)
+    applied_observed = any(all_applied)
+    missing_observed = any(all_missing)
+    noop_observed = any(all_noop)
+    recent_requested_observed = any(recent_requested)
+    recent_applied_observed = any(recent_applied)
+    recent_missing_observed = any(recent_missing)
+    recent_noop_observed = any(recent_noop)
+    blockers: list[str] = []
+    if requested_observed and not applied_observed:
+        blockers.append(
+            f"{family_key}_train_time_gradient_multiplier_never_applied_telemetry"
+        )
+    if requested_observed and missing_observed:
+        blockers.append(
+            f"{family_key}_train_time_gradient_multiplier_missing_requested_leaf_telemetry"
+        )
+    if requested_observed and noop_observed:
+        blockers.append(
+            f"{family_key}_train_time_gradient_multiplier_requested_but_unapplied_telemetry"
+        )
+    if recent_requested_observed and not recent_applied_observed:
+        blockers.append(
+            f"{family_key}_train_time_gradient_multiplier_recent_never_applied_telemetry"
+        )
+    if recent_requested_observed and recent_missing_observed:
+        blockers.append(
+            f"{family_key}_train_time_gradient_multiplier_recent_missing_requested_leaf_telemetry"
+        )
+    if recent_requested_observed and recent_noop_observed:
+        blockers.append(
+            f"{family_key}_train_time_gradient_multiplier_recent_requested_but_unapplied_telemetry"
+        )
+    family_slug = "hi_nerv" if family_key == "hi_nerv" else family_key
+    recommended: list[str] = []
+    if blockers:
+        recommended.extend(
+            [
+                f"refresh_{family_slug}_gradient_multiplier_names_from_current_model_leaf_inventory",
+                f"relaunch_{family_slug}_with_verified_decoder_weight_waterfill_actuators",
+                f"treat_previous_{family_slug}_run_as_optimizer_actuator_wiring_failure_not_rate_negative",
+            ]
+        )
+    return {
+        "schema": "nerv_gradient_multiplier_control_health.v1",
+        "family": family_key,
+        "row_count": len(rows),
+        "recent_window_epochs": _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS,
+        "requested_observation_count": sum(1 for flag in all_requested if flag),
+        "requested_recent_observation_count": sum(
+            1 for flag in recent_requested if flag
+        ),
+        "applied_observation_count": sum(1 for flag in all_applied if flag),
+        "applied_recent_observation_count": sum(
+            1 for flag in recent_applied if flag
+        ),
+        "missing_requested_observation_count": sum(
+            1 for flag in all_missing if flag
+        ),
+        "missing_requested_recent_observation_count": sum(
+            1 for flag in recent_missing if flag
+        ),
+        "noop_observation_count": sum(1 for flag in all_noop if flag),
+        "noop_recent_observation_count": sum(1 for flag in recent_noop if flag),
+        "requested_observed": bool(requested_observed),
+        "requested_recent_observed": bool(recent_requested_observed),
+        "applied_observed": bool(applied_observed),
+        "applied_recent_observed": bool(recent_applied_observed),
+        "missing_requested_observed": bool(missing_observed),
+        "missing_requested_recent_observed": bool(recent_missing_observed),
+        "requested_but_unapplied_observed": bool(noop_observed),
+        "requested_but_unapplied_recent_observed": bool(recent_noop_observed),
+        "control_inert_risk_detected": bool(blockers),
+        "blockers": _dedupe_strings(blockers),
+        "recommended_launch_mutations": _dedupe_strings(recommended),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _gradient_multiplier_control_row_flags(
+    row: Mapping[str, Any],
+) -> tuple[bool, bool, bool, bool]:
+    loss_components = row.get("loss_components")
+    sources = [row]
+    if isinstance(loss_components, Mapping):
+        sources.append(loss_components)
+    requested = any(
+        str(key) == "gradient_multiplier_requested_control_count"
+        and (value_float := _float_or_none(value)) is not None
+        and float(value_float) > 0.0
+        for source in sources
+        for key, value in source.items()
+    )
+    applied = any(
+        str(key) == "gradient_multiplier_applied_leaf_count"
+        and (value_float := _float_or_none(value)) is not None
+        and float(value_float) > 0.0
+        for source in sources
+        for key, value in source.items()
+    )
+    missing = any(
+        str(key) == "gradient_multiplier_missing_requested_count"
+        and (value_float := _float_or_none(value)) is not None
+        and float(value_float) > 0.0
+        for source in sources
+        for key, value in source.items()
+    )
+    noop = any(
+        str(key) == "gradient_multiplier_requested_but_unapplied"
+        and (value_float := _float_or_none(value)) is not None
+        and float(value_float) > 0.0
+        for source in sources
+        for key, value in source.items()
+    )
+    return requested, applied, missing, noop
 
 
 def _is_midrun_feedback_snapshot(stop_reason: str | None) -> bool:
@@ -3772,6 +4195,15 @@ def _training_control_recommendation(
     elif bool(health.get("degenerate_renderer_risk_detected")):
         action = "checkpoint_then_block_degenerate_renderer_successor"
         reason = "snerv_scorer_domain_tether_missing_blocks_live_training"
+        should_stop = True
+        successor_required = True
+    elif bool(
+        (health.get("gradient_multiplier_control_health") or {}).get(
+            "control_inert_risk_detected"
+        )
+    ):
+        action = "checkpoint_then_supersede_with_verified_optimizer_actuators"
+        reason = "gradient_multiplier_waterfill_actuator_configured_but_not_applied"
         should_stop = True
         successor_required = True
     elif bool(health.get("pose_tail_burst_detected")):

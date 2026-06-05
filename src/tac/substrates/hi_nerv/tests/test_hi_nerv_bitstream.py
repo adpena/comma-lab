@@ -243,6 +243,43 @@ def test_train_time_section_byte_control_keeps_decoder_active_when_latent_qat_mi
     assert control["blockers"] == []
 
 
+def test_train_time_section_byte_control_blocks_when_no_sections_are_actuated() -> None:
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "profile_ready": True,
+        "archive_zip_bytes": 400,
+        "sections": [
+            {"name": "decoder_state", "role": "decoder", "bytes": 200},
+            {"name": "latents_coarse", "role": "latent", "bytes": 80},
+            {"name": "meta_json", "role": "metadata", "bytes": 20},
+        ],
+    }
+
+    control = build_hinerv_train_time_section_byte_control(
+        telemetry,
+        {
+            "coder_qat_c1a_entropy": 0.0,
+            "latent_qat_c1a_entropy": 0.0,
+        },
+        hard_byte_ceiling=100,
+        byte_price_score_per_byte=0.01,
+    )
+
+    assert control["active"] is False
+    assert control["section_byte_budgets"] == {}
+    assert control["section_byte_loss_weight_key_map"] == {}
+    assert control["controlled_section_count"] == 0
+    assert control["pending_section_count"] == 3
+    pending = {row["section_name"]: row for row in control["pending_section_rows"]}
+    assert pending["decoder_state"]["pending_reason"] == "active_qat_loss_key_missing"
+    assert pending["latents_coarse"]["pending_reason"] == "active_qat_loss_key_missing"
+    assert pending["meta_json"]["pending_reason"] == "non_differentiable_archive_section"
+    assert control["metrics_payload"]["train_time_section_rate_score__decoder_state"] == (
+        pytest.approx(2.0)
+    )
+    assert control["blockers"] == ["hinerv_train_time_section_byte_no_actuated_sections"]
+
+
 def test_hi_nerv_bitstream_preparation_applies_receiver_visible_transforms() -> None:
     base = _state()
 

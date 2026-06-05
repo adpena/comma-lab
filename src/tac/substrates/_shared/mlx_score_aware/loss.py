@@ -49,6 +49,11 @@ _CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
         "scorer_input_shape_tether",
         "shape_tether",
     ),
+    "posenet_temporal_signal_floor": (
+        "posenet_temporal_signal_floor",
+        "posenet_temporal_delta_floor",
+        "temporal_signal_floor",
+    ),
     "segnet_direct_live_distill": (
         "segnet_direct_live_distill",
         "segnet_direct_live",
@@ -832,6 +837,94 @@ def scorer_input_contrast_floor_loss(
     }
 
 
+def _mean_abs_floor_guard_parts(
+    candidate: Any,
+    reference: Any,
+    *,
+    min_ratio: float,
+) -> dict[str, Any]:
+    """One-sided hinge on mean absolute temporal signal magnitude."""
+
+    mx = require_mlx_for_harness()
+    ref = mx.stop_gradient(reference)
+    cand_mean_abs = mx.mean(mx.abs(candidate), axis=(1, 2))
+    ref_mean_abs = mx.stop_gradient(mx.mean(mx.abs(ref), axis=(1, 2)))
+    ratio = cand_mean_abs / mx.maximum(ref_mean_abs, 1.0e-6)
+    deficit = mx.maximum(float(min_ratio) - ratio, 0.0)
+    loss = mx.mean(deficit * deficit)
+    return {
+        "total": loss,
+        "mean_ratio": mx.mean(ratio),
+        "min_ratio": mx.min(ratio),
+        "target_min_ratio": mx.array(float(min_ratio), dtype=mx.float32),
+        "candidate_mean_abs": mx.mean(cand_mean_abs),
+        "reference_mean_abs": mx.mean(ref_mean_abs),
+    }
+
+
+def posenet_temporal_signal_floor_loss(
+    bundle: RendererBundle,
+    rgb_0: Any,
+    rgb_1: Any,
+    gt_0: Any,
+    gt_1: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Return a PoseNet-specific floor on YUV6 temporal motion signal.
+
+    Upstream PoseNet consumes both frames after RGB->YUV6.  A compact renderer can
+    have adequate two-frame YUV6 distribution while making adjacent decoded frames
+    almost identical, which destroys the ego-motion signal.  This one-sided floor
+    prices only the missing temporal delta magnitude, leaving dense shape fitting
+    to ``scorer_input_shape_tether``.
+    """
+
+    mx = require_mlx_for_harness()
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    yuv0 = rgb_to_yuv6_mlx(rgb_0 * 255.0) / 255.0
+    yuv1 = rgb_to_yuv6_mlx(rgb_1 * 255.0) / 255.0
+    ref_yuv0 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_0 * 255.0) / 255.0)
+    ref_yuv1 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_1 * 255.0) / 255.0)
+    delta = yuv1 - yuv0
+    ref_delta = ref_yuv1 - ref_yuv0
+    std_parts = _std_floor_guard_parts(
+        delta,
+        ref_delta,
+        min_ratio=float(bundle.posenet_temporal_signal_min_std_ratio),
+    )
+    mean_abs_parts = _mean_abs_floor_guard_parts(
+        delta,
+        ref_delta,
+        min_ratio=float(bundle.posenet_temporal_signal_min_mean_abs_ratio),
+    )
+    total = std_parts["total"] + mean_abs_parts["total"]
+    return total, {
+        "posenet_temporal_signal_floor": total,
+        "posenet_temporal_signal_floor_std": std_parts["total"],
+        "posenet_temporal_signal_floor_mean_abs": mean_abs_parts["total"],
+        "posenet_temporal_signal_floor_mean_std_ratio": std_parts["mean_ratio"],
+        "posenet_temporal_signal_floor_min_std_ratio": std_parts["min_ratio"],
+        "posenet_temporal_signal_floor_target_min_std_ratio": std_parts[
+            "target_min_ratio"
+        ],
+        "posenet_temporal_signal_floor_candidate_std": std_parts["candidate_std"],
+        "posenet_temporal_signal_floor_reference_std": std_parts["reference_std"],
+        "posenet_temporal_signal_floor_mean_abs_ratio": mean_abs_parts["mean_ratio"],
+        "posenet_temporal_signal_floor_min_mean_abs_ratio": mean_abs_parts[
+            "min_ratio"
+        ],
+        "posenet_temporal_signal_floor_target_min_mean_abs_ratio": mean_abs_parts[
+            "target_min_ratio"
+        ],
+        "posenet_temporal_signal_floor_candidate_mean_abs": mean_abs_parts[
+            "candidate_mean_abs"
+        ],
+        "posenet_temporal_signal_floor_reference_mean_abs": mean_abs_parts[
+            "reference_mean_abs"
+        ],
+    }
+
+
 def _centered_variance_normalized_fit_parts(
     candidate: Any,
     reference: Any,
@@ -1529,6 +1622,11 @@ def score_aware_loss(
         "scorer_input_shape_tether",
         default=scorer_input_guard_stage_weight,
     )
+    posenet_temporal_signal_floor_stage_weight = component_loss_weight(
+        loss_weights,
+        "posenet_temporal_signal_floor",
+        default=scorer_input_guard_stage_weight,
+    )
     segnet_direct_live_stage_weight = component_loss_weight(
         loss_weights,
         "segnet_direct_live_distill",
@@ -1627,6 +1725,25 @@ def score_aware_loss(
             * shape_tether
         )
         parts.update(shape_tether_parts)
+
+    if (
+        bundle.posenet_temporal_signal_floor_weight > 0.0
+        and posenet_temporal_signal_floor_stage_weight != 0.0
+    ):
+        temporal_floor, temporal_floor_parts = posenet_temporal_signal_floor_loss(
+            bundle,
+            rgb_0,
+            rgb_1,
+            gt_0,
+            gt_1,
+        )
+        total = (
+            total
+            + float(bundle.posenet_temporal_signal_floor_weight)
+            * posenet_temporal_signal_floor_stage_weight
+            * temporal_floor
+        )
+        parts.update(temporal_floor_parts)
 
     if bundle.distillation_weight > 0.0 and segnet_stage_weight != 0.0:
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
@@ -2011,6 +2128,7 @@ __all__ = [
     "component_loss_weight",
     "decode_frames_nhwc01",
     "pose_student_inputs_nhwc",
+    "posenet_temporal_signal_floor_loss",
     "score_aware_loss",
     "scorer_input_contrast_floor_loss",
     "scorer_input_distribution_guard_loss",

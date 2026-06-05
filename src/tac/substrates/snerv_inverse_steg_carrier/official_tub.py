@@ -11,6 +11,7 @@ for source-faithful TUB input preparation only:
 * build the two official temporal encoder inputs from DWT1D Haar lowpass / 2;
 * expose shape metadata for the temporal encoder and ``output_2`` fusion path;
 * execute the official ``output_2`` split/batch-concat/pixel-shuffle algebra.
+* execute the official LF denormalization plus HFR Haar-IDWT frame synthesis.
 
 The output is parser/training substrate evidence, not contest score authority.
 """
@@ -29,6 +30,9 @@ OFFICIAL_SNERV_T_SOURCE_SHA: Final[str] = "0844a08f9591eea9625f8b961ed91d08030e0
 OFFICIAL_SNERV_T_TUB_SCHEMA: Final[str] = "official_snerv_t_tub_numpy_graph_inputs.v1"
 OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT: Final[str] = (
     "official_snerv_t_lines_125_136_148_150_and_requirements_numpy_tub_input_contract"
+)
+OFFICIAL_SNERV_T_TUB_FRAME_RECONSTRUCTION_CONTRACT: Final[str] = (
+    "official_snerv_t_lines_166_173_low_frequency_denorm_hfr_idwt_numpy_frame_reconstruction_contract"
 )
 OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE: Final[str] = (
     "official_tub_graph_input_numeric_primitive_only"
@@ -135,6 +139,75 @@ class OfficialOutput2FusionResult:
                 "decoder_input": list(self.decoder_input.shape),
                 "decoder_output_raw": list(self.decoder_output_raw.shape),
                 "output2_fused": list(self.output2_fused.shape),
+            },
+        }
+
+
+@dataclass(frozen=True)
+class OfficialTubFrameReconstructionResult:
+    """Portable official SNeRV_T frame reconstruction result.
+
+    The caller supplies the learned LF head output and HFR detail heads at the
+    exact point where upstream ``snerv_t.py`` reaches lines 166-173.  This
+    primitive owns only the deterministic LF denormalization and one-level Haar
+    IDWT synthesis, so it must never become score or promotion authority.
+    """
+
+    source_contract: str
+    score_claim: bool
+    promotion_eligible: bool
+    img_yl: np.ndarray
+    yl_norm: tuple[float, float]
+    yl_out: np.ndarray
+    yh_out: np.ndarray
+    frame: np.ndarray
+    portable_frame_reconstruction_primitive_proven: bool = True
+    source_forward_parity_proven: bool = False
+    full_tub_source_forward_parity_proven: bool = False
+    source_forward_replay_authority: bool = False
+
+    def __post_init__(self) -> None:
+        truthy_authority = [
+            name
+            for name, value in (
+                ("score_claim", self.score_claim),
+                ("promotion_eligible", self.promotion_eligible),
+                ("source_forward_parity_proven", self.source_forward_parity_proven),
+                (
+                    "full_tub_source_forward_parity_proven",
+                    self.full_tub_source_forward_parity_proven,
+                ),
+                ("source_forward_replay_authority", self.source_forward_replay_authority),
+            )
+            if bool(value)
+        ]
+        if truthy_authority:
+            raise OfficialTubError(
+                "official TUB frame reconstruction primitive is not score "
+                "or full source-forward authority; refused truthy authority fields: "
+                + ", ".join(truthy_authority)
+            )
+
+    def as_jsonable_metadata(self) -> dict[str, object]:
+        return {
+            "source_contract": self.source_contract,
+            "portable_frame_reconstruction_primitive_proven": bool(
+                self.portable_frame_reconstruction_primitive_proven
+            ),
+            "source_forward_parity_proven": bool(self.source_forward_parity_proven),
+            "full_tub_source_forward_parity_proven": bool(
+                self.full_tub_source_forward_parity_proven
+            ),
+            "source_forward_replay_authority": bool(
+                self.source_forward_replay_authority
+            ),
+            **FALSE_AUTHORITY,
+            "yl_norm": [float(self.yl_norm[0]), float(self.yl_norm[1])],
+            "output_shapes": {
+                "img_yl": list(self.img_yl.shape),
+                "yl_out": list(self.yl_out.shape),
+                "yh_out": list(self.yh_out.shape),
+                "frame": list(self.frame.shape),
             },
         }
 
@@ -456,6 +529,41 @@ def official_output2_fusion_numpy(
     )
 
 
+def official_tub_frame_reconstruction_numpy(
+    img_yl: np.ndarray,
+    yh_out: np.ndarray,
+    *,
+    yl_norm: tuple[float, float] | list[float],
+) -> OfficialTubFrameReconstructionResult:
+    """Execute official SNeRV_T LF denormalization plus HFR Haar-IDWT synthesis.
+
+    ``img_yl`` is the normalized LF image emitted by upstream
+    ``OutImg(self.head_layer(pyr_out), self.out_bias)``. ``yh_out`` must use the
+    official ``torch.stack([lh_out, hl_out, hh_out], dim=2)`` layout:
+    ``(N, C, 3, H, W)``.
+    """
+
+    normalized_lf = _as_finite_nchw_array(img_yl, name="img_yl")
+    low, high = _validate_yl_norm(yl_norm)
+    details = _as_finite_hfr_array(
+        yh_out,
+        name="yh_out",
+        expected_lf_shape=tuple(int(v) for v in normalized_lf.shape),
+    )
+    yl_out = np.ascontiguousarray(normalized_lf * (high - low) + low, dtype=np.float64)
+    frame = _haar_idwt2_nchw(yl_out, details)
+    return OfficialTubFrameReconstructionResult(
+        source_contract=OFFICIAL_SNERV_T_TUB_FRAME_RECONSTRUCTION_CONTRACT,
+        score_claim=False,
+        promotion_eligible=False,
+        img_yl=np.ascontiguousarray(normalized_lf, dtype=np.float64),
+        yl_norm=(low, high),
+        yl_out=yl_out,
+        yh_out=np.ascontiguousarray(details, dtype=np.float64),
+        frame=frame,
+    )
+
+
 def official_output2_fusion_mlx(
     temporal_encoder_concat: Any,
     decoder_output: Any,
@@ -600,6 +708,52 @@ def _haar_dwt1d_pair(
     return lowpass.astype(np.float64), highpass.astype(np.float64)
 
 
+def _haar_idwt2_nchw(yl: np.ndarray, yh: np.ndarray) -> np.ndarray:
+    lh, hl, hh = yh[:, :, 0], yh[:, :, 1], yh[:, :, 2]
+    out = np.empty(
+        (yl.shape[0], yl.shape[1], yl.shape[2] * 2, yl.shape[3] * 2),
+        dtype=np.float64,
+    )
+    out[:, :, 0::2, 0::2] = (yl + lh + hl + hh) * 0.5
+    out[:, :, 0::2, 1::2] = (yl + lh - hl - hh) * 0.5
+    out[:, :, 1::2, 0::2] = (yl - lh + hl - hh) * 0.5
+    out[:, :, 1::2, 1::2] = (yl - lh - hl + hh) * 0.5
+    return np.ascontiguousarray(out, dtype=np.float64)
+
+
+def _validate_yl_norm(yl_norm: tuple[float, float] | list[float]) -> tuple[float, float]:
+    if len(yl_norm) != 2:
+        raise OfficialTubError("yl_norm must contain [min, max]")
+    low, high = (float(yl_norm[0]), float(yl_norm[1]))
+    if not np.isfinite(low) or not np.isfinite(high) or high <= low:
+        raise OfficialTubError("yl_norm must contain finite increasing [min, max]")
+    return low, high
+
+
+def _as_finite_hfr_array(
+    array: np.ndarray,
+    *,
+    name: str,
+    expected_lf_shape: tuple[int, int, int, int],
+) -> np.ndarray:
+    arr = np.asarray(array, dtype=np.float64)
+    if arr.ndim != 5:
+        raise OfficialTubError(f"{name} must be shaped (N,C,3,H,W); got {arr.shape}")
+    n, c, bands, h, w = (int(v) for v in arr.shape)
+    if min(n, c, bands, h, w) < 1:
+        raise OfficialTubError(f"{name} dims must be positive; got {arr.shape}")
+    if bands != 3:
+        raise OfficialTubError(f"{name} must contain exactly 3 HFR bands")
+    if (n, c, h, w) != expected_lf_shape:
+        raise OfficialTubError(
+            f"{name} spatial/channel shape {(n, c, h, w)} does not match "
+            f"img_yl shape {expected_lf_shape}"
+        )
+    if not np.all(np.isfinite(arr)):
+        raise OfficialTubError(f"{name} contains NaN or Inf")
+    return arr
+
+
 def _validate_even_hw(hw: tuple[int, int], *, name: str) -> None:
     h, w = _validate_hw(hw, name=name)
     if h % 2 or w % 2:
@@ -663,16 +817,19 @@ def _validate_finite_backend_nchw(
 __all__ = [
     "OFFICIAL_SNERV_T_SOURCE_SHA",
     "OFFICIAL_SNERV_T_TUB_EVIDENCE_SCOPE",
+    "OFFICIAL_SNERV_T_TUB_FRAME_RECONSTRUCTION_CONTRACT",
     "OFFICIAL_SNERV_T_TUB_SCHEMA",
     "OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT",
     "OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS",
     "OfficialOutput2FusionResult",
     "OfficialOutput2FusionShape",
     "OfficialTubError",
+    "OfficialTubFrameReconstructionResult",
     "OfficialTubGraphInputs",
     "OfficialTubShapeMetadata",
     "official_output2_fusion_mlx",
     "official_output2_fusion_numpy",
     "official_output2_fusion_shape",
+    "official_tub_frame_reconstruction_numpy",
     "prepare_official_tub_graph_inputs",
 ]

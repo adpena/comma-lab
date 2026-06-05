@@ -744,12 +744,21 @@ def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() 
     assert storage["storage_policy"] == "store_for_receiver_proof"
     assert storage["proof_only_elided_from_selected_runtime_packet"] is False
     assert storage["receiver_executes_output2_fusion_from_payload"] is True
-    assert storage["receiver_frame_decode_consumes_output2"] is True
+    assert storage["receiver_frame_decode_consumes_output2"] is False
+    assert storage["receiver_frame_decode_binding_status"] == (
+        "blocked_output2_fused_shape_mismatch"
+    )
+    assert storage["receiver_frame_shape"] == [1, 3, 16, 16]
+    assert storage["receiver_output2_frame_shape_match"] is False
+    assert storage["frame_decode_blockers"] == [
+        "snerv_tub_output2_receiver_frame_shape_mismatch"
+    ]
+    assert storage["scored_pixel_render_bound"] is False
     assert storage["score_lagrangian_admission"] == (
-        "receiver_frame_decode_bound_proof_only_false_authority"
+        "blocked_output2_fused_shape_mismatch_false_authority"
     )
     assert storage["score_lagrangian_action"] == (
-        "keep_only_for_receiver_proof_until_trained_source_forward_parity"
+        "fix_output2_shape_or_load_source_forward_tub_decoder"
     )
     assert storage["stored_raw_bytes"] == storage["source_raw_bytes"]
     assert storage["raw_byte_savings"] == 0
@@ -769,7 +778,70 @@ def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() 
         store_tub_output2_for_receiver_proof=True,
     )
     variant_decoded = decode_official_mfu_hfr_tub_decoder_payload(variant_payload)
-    assert not np.array_equal(decoded.decode_frames(), variant_decoded.decode_frames())
+    with pytest.raises(SnervArchiveError, match="shape must match receiver frames"):
+        decoded.decode_frames()
+    with pytest.raises(SnervArchiveError, match="shape must match receiver frames"):
+        decoded.decode_frame_planes()
+    with pytest.raises(SnervArchiveError, match="shape must match receiver frames"):
+        variant_decoded.decode_frames()
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_mfu_hfr_tub_payload_binds_source_shaped_output2_to_frames() -> None:
+    bundle = _official_payload_fixture()
+    bundle["low"] = np.concatenate(
+        [bundle["low"], np.asarray(bundle["low"]) + 0.125],
+        axis=0,
+    )
+    bundle["skip_mid"] = np.concatenate(
+        [bundle["skip_mid"], np.asarray(bundle["skip_mid"]) - 0.125],
+        axis=0,
+    )
+    bundle["skip_high"] = np.concatenate(
+        [bundle["skip_high"], np.asarray(bundle["skip_high"]) + 0.25],
+        axis=0,
+    )
+    bundle["temporal_encoder_output_shape"] = (1, 6, 8, 8)
+    bundle["output2_decoder_output_shape"] = (2, 12, 8, 8)
+    temporal = np.linspace(0.0, 1.0, 1 * 6 * 8 * 8, dtype=np.float64).reshape(
+        1,
+        6,
+        8,
+        8,
+    )
+    output2_raw = np.full((2, 12, 8, 8), 0.125, dtype=np.float64)
+    base_payload = encode_official_mfu_hfr_tub_decoder_payload(**bundle)
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    header = _read_subpacket_header(payload)
+    proof = execute_official_mfu_hfr_tub_decoder_payload(payload)
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+    base_decoded = decode_official_mfu_hfr_tub_decoder_payload(base_payload)
+
+    storage = header["tub_output2_storage"]
+    assert storage["stored"] is True
+    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["receiver_frame_decode_consumes_output2"] is True
+    assert storage["receiver_frame_decode_binding_status"] == "source_shape_matched"
+    assert storage["receiver_frame_shape"] == [2, 3, 16, 16]
+    assert storage["output2_fused_shape"] == [2, 3, 16, 16]
+    assert storage["receiver_output2_frame_shape_match"] is True
+    assert storage["frame_decode_blockers"] == []
+    assert storage["scored_pixel_render_bound"] is True
+    assert storage["score_lagrangian_admission"] == (
+        "receiver_frame_decode_bound_proof_only_false_authority"
+    )
+    rows = {row["name"]: row for row in proof["output_tensors"]}
+    assert rows["tub.output2_decoder_input"]["shape"] == [2, 3, 8, 8]
+    assert rows["tub.output2_fused"]["shape"] == [2, 3, 16, 16]
+    base_frames = base_decoded.decode_frames(clip_to_uint8_range=False)
+    frames = decoded.decode_frames(clip_to_uint8_range=False)
+    np.testing.assert_allclose(frames, base_frames + 0.125, atol=1.0e-6, rtol=0.0)
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
 

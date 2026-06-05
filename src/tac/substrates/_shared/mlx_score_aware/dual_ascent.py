@@ -66,6 +66,7 @@ class DualAscentConstraint:
     warmup_steps: int = 0
     update_every_steps: int = 1
     bootstrap_update: bool = False
+    activate_when_base_weight_zero: bool = False
 
     @classmethod
     def from_mapping(cls, raw: Mapping[str, Any], *, index: int) -> DualAscentConstraint:
@@ -144,6 +145,12 @@ class DualAscentConstraint:
                 constraint_id=cid,
             ),
             bootstrap_update=bool(raw.get("bootstrap_update", False)),
+            activate_when_base_weight_zero=bool(
+                raw.get(
+                    "activate_when_base_weight_zero",
+                    raw.get("allow_zero_base_weight_activation", False),
+                )
+            ),
         )
         out.validate()
         return out
@@ -214,6 +221,7 @@ class DualAscentConstraint:
             "warmup_steps": self.warmup_steps,
             "update_every_steps": self.update_every_steps,
             "bootstrap_update": self.bootstrap_update,
+            "activate_when_base_weight_zero": self.activate_when_base_weight_zero,
         }
 
 
@@ -225,6 +233,9 @@ class _DualState:
     last_metric: float | None = None
     last_violation: float | None = None
     last_weight_contribution: float = 0.0
+    last_effective_loss_weight: float = 0.0
+    last_weight_applied: float = 0.0
+    last_zero_base_masked: float = 0.0
     update_count: int = 0
     missing_metric_count: int = 0
 
@@ -305,15 +316,26 @@ class TrainTimeDualAscentController:
             state = self._states[constraint.constraint_id]
             contribution = float(state.lambda_value) * float(constraint.weight_scale)
             state.last_weight_contribution = contribution
-            if constraint.loss_weight_key in weights and (
-                float(weights[constraint.loss_weight_key]) == 0.0
-            ):
+            base_present = constraint.loss_weight_key in weights
+            base_weight = float(weights.get(constraint.loss_weight_key, 0.0))
+            zero_base_masked = (
+                base_present
+                and base_weight == 0.0
+                and not bool(constraint.activate_when_base_weight_zero)
+            )
+            state.last_zero_base_masked = float(zero_base_masked)
+            if zero_base_masked:
+                state.last_effective_loss_weight = base_weight
+                state.last_weight_applied = 0.0
                 continue
             if contribution:
                 weights[constraint.loss_weight_key] = (
-                    float(weights.get(constraint.loss_weight_key, 0.0))
-                    + contribution
+                    base_weight + contribution
                 )
+            state.last_effective_loss_weight = float(
+                weights.get(constraint.loss_weight_key, 0.0)
+            )
+            state.last_weight_applied = float(state.last_effective_loss_weight != 0.0)
         return weights
 
     def observe(self, metrics: Mapping[str, Any]) -> dict[str, float]:
@@ -334,6 +356,18 @@ class TrainTimeDualAscentController:
             if metric is None:
                 state.missing_metric_count += 1
                 telemetry[f"dual_ascent_lambda__{key}"] = state.lambda_value
+                telemetry[f"dual_ascent_weight_contribution__{key}"] = (
+                    state.last_weight_contribution
+                )
+                telemetry[f"dual_ascent_effective_loss_weight__{key}"] = (
+                    state.last_effective_loss_weight
+                )
+                telemetry[f"dual_ascent_weight_applied__{key}"] = (
+                    state.last_weight_applied
+                )
+                telemetry[f"dual_ascent_zero_base_masked__{key}"] = (
+                    state.last_zero_base_masked
+                )
                 continue
             metric *= constraint.metric_scale
             state.last_metric = metric
@@ -381,6 +415,15 @@ class TrainTimeDualAscentController:
             telemetry[f"dual_ascent_weight_contribution__{key}"] = (
                 state.last_weight_contribution
             )
+            telemetry[f"dual_ascent_effective_loss_weight__{key}"] = (
+                state.last_effective_loss_weight
+            )
+            telemetry[f"dual_ascent_weight_applied__{key}"] = (
+                state.last_weight_applied
+            )
+            telemetry[f"dual_ascent_zero_base_masked__{key}"] = (
+                state.last_zero_base_masked
+            )
         return telemetry
 
     def as_metadata(self) -> dict[str, Any]:
@@ -398,6 +441,9 @@ class TrainTimeDualAscentController:
                     "last_metric": state.last_metric,
                     "last_violation": state.last_violation,
                     "last_weight_contribution": state.last_weight_contribution,
+                    "last_effective_loss_weight": state.last_effective_loss_weight,
+                    "last_weight_applied": state.last_weight_applied,
+                    "last_zero_base_masked": state.last_zero_base_masked,
                     "update_count": state.update_count,
                     "missing_metric_count": state.missing_metric_count,
                 }
@@ -421,7 +467,11 @@ def build_default_nerv_train_time_dual_ascent_config(
     scorer_input_distribution_guard_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_shape_tether_weight: float = 0.0,
+    posenet_temporal_signal_floor_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
+    archive_byte_budget: int | float | None = None,
+    archive_byte_loss_weight_key: str = "coder_qat_c1a_entropy",
+    archive_byte_loss_weight_scale: float = 1.0,
     section_byte_budgets: Mapping[str, int | float] | None = None,
     section_byte_loss_weight_key_map: Mapping[str, str] | None = None,
     section_byte_loss_weight_scale_map: Mapping[str, float] | None = None,
@@ -462,6 +512,9 @@ def build_default_nerv_train_time_dual_ascent_config(
     )
     contrast_floor_weight = _nonnegative_weight(scorer_input_contrast_floor_weight)
     shape_tether_weight = _nonnegative_weight(scorer_input_shape_tether_weight)
+    temporal_signal_floor_weight = _nonnegative_weight(
+        posenet_temporal_signal_floor_weight
+    )
     byte_price = _positive_weight(contest_rate_score_per_byte)
     if seg_weight > 0.0:
         constraints.append(
@@ -487,7 +540,7 @@ def build_default_nerv_train_time_dual_ascent_config(
             _constraint_payload(
                 constraint_id=f"{family}_segnet_direct_live_distill",
                 metric_name="loss_part_segnet_direct_live_distill",
-                loss_weight_key="distill",
+                loss_weight_key="segnet_direct_live_distill",
                 base_weight=direct_live_seg_weight,
                 target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
                 dual_lr=0.2,
@@ -498,8 +551,9 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "Direct live SegNet logits price the same frame-1 scorer "
                     "axis as the student surrogate, but backpropagate through "
                     "the real candidate-frame SegNet response. The lambda is "
-                    "applied through the SegNet stage key so explicit zero "
-                    "curriculum masks cannot be bypassed."
+                    "applied through its own stage key so generic SegNet "
+                    "student warmup masks cannot accidentally disable direct-"
+                    "live collapse repair."
                 ),
             )
         )
@@ -508,7 +562,7 @@ def build_default_nerv_train_time_dual_ascent_config(
             _constraint_payload(
                 constraint_id=f"{family}_segnet_direct_live_class_histogram",
                 metric_name="loss_part_segnet_direct_live_class_histogram_loss",
-                loss_weight_key="distill",
+                loss_weight_key="segnet_direct_live_class_histogram",
                 base_weight=direct_live_hist_weight,
                 target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
                 dual_lr=0.2,
@@ -520,7 +574,8 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "last frame.  During collapse escape, direct-live hinge "
                     "can improve while the global class measure stays one-"
                     "class; this dual raises SegNet stage pressure when the "
-                    "target class-measure tether stalls."
+                    "target class-measure tether stalls without coupling that "
+                    "pressure to the generic student-distillation key."
                 ),
             )
         )
@@ -529,7 +584,7 @@ def build_default_nerv_train_time_dual_ascent_config(
             _constraint_payload(
                 constraint_id=f"{family}_segnet_direct_live_class_balanced_hinge",
                 metric_name="loss_part_segnet_direct_live_class_balanced_hinge_loss",
-                loss_weight_key="distill",
+                loss_weight_key="segnet_direct_live_class_balanced_hinge",
                 base_weight=direct_live_balanced_hinge_weight,
                 target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
                 dual_lr=0.2,
@@ -551,7 +606,7 @@ def build_default_nerv_train_time_dual_ascent_config(
             _constraint_payload(
                 constraint_id=f"{family}_segnet_direct_live_class_balanced_ce",
                 metric_name="loss_part_segnet_direct_live_class_balanced_ce_loss",
-                loss_weight_key="distill",
+                loss_weight_key="segnet_direct_live_class_balanced_ce",
                 base_weight=direct_live_balanced_ce_weight,
                 target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
                 dual_lr=0.2,
@@ -575,7 +630,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                 metric_name=(
                     "loss_part_segnet_direct_live_class_balanced_squared_hinge_loss"
                 ),
-                loss_weight_key="distill",
+                loss_weight_key="segnet_direct_live_class_balanced_squared_hinge",
                 base_weight=direct_live_balanced_squared_hinge_weight,
                 target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
                 dual_lr=0.25,
@@ -637,7 +692,7 @@ def build_default_nerv_train_time_dual_ascent_config(
             _constraint_payload(
                 constraint_id=f"{family}_scorer_input_contrast_floor",
                 metric_name="loss_part_scorer_input_contrast_floor",
-                loss_weight_key="scorer_input_guard",
+                loss_weight_key="scorer_input_contrast_floor",
                 base_weight=contrast_floor_weight,
                 target=0.0,
                 target_fraction=1.0,
@@ -659,7 +714,7 @@ def build_default_nerv_train_time_dual_ascent_config(
             _constraint_payload(
                 constraint_id=f"{family}_scorer_input_shape_tether",
                 metric_name="loss_part_scorer_input_shape_tether",
-                loss_weight_key="scorer_input_guard",
+                loss_weight_key="scorer_input_shape_tether",
                 base_weight=shape_tether_weight,
                 target_fraction=0.97,
                 dual_lr=0.3,
@@ -672,6 +727,28 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "reference-normalized residuals on SegNet frame-1 RGB and "
                     "PoseNet YUV6 pair/temporal-delta tensors so scorer-bound "
                     "losses cannot optimize a flat input manifold."
+                ),
+            )
+        )
+    if temporal_signal_floor_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_posenet_temporal_signal_floor",
+                metric_name="loss_part_posenet_temporal_signal_floor",
+                loss_weight_key="posenet_temporal_signal_floor",
+                base_weight=temporal_signal_floor_weight,
+                target=0.0,
+                target_fraction=1.0,
+                dual_lr=0.3,
+                max_lambda=8.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "PoseNet consumes the two-frame PR95/YUV6 tensor. Compact "
+                    "NeRV carriers can preserve broad pair statistics while "
+                    "collapsing frame_1-frame_0 motion toward zero, destroying "
+                    "ego-motion. This dual prices the dedicated temporal-signal "
+                    "floor against the exact upstream YUV6 temporal delta."
                 ),
             )
         )
@@ -708,6 +785,57 @@ def build_default_nerv_train_time_dual_ascent_config(
         str(key): _nonnegative_weight(value)
         for key, value in dict(section_byte_loss_weight_scale_map or {}).items()
     }
+    archive_budget: float | None = None
+    if archive_byte_budget is not None:
+        try:
+            archive_budget = float(archive_byte_budget)
+        except (TypeError, ValueError):
+            archive_budget = None
+        if archive_budget is not None and (
+            not math.isfinite(archive_budget) or archive_budget <= 0.0
+        ):
+            archive_budget = None
+    active_coder_keys = {
+        str(key)
+        for key, value in dict(coder_qat_loss_weight_map or {}).items()
+        if _nonnegative_weight(value) > 0.0
+    }
+    archive_loss_weight_key = str(archive_byte_loss_weight_key or "").strip()
+    if (
+        archive_loss_weight_key
+        and archive_loss_weight_key not in active_coder_keys
+        and archive_loss_weight_key == "coder_qat_c1a_entropy"
+    ):
+        if loss_key_by_section:
+            archive_loss_weight_key = sorted(set(loss_key_by_section.values()))[0]
+        elif active_coder_keys:
+            archive_loss_weight_key = _preferred_active_coder_key(active_coder_keys)
+    archive_loss_weight_scale = _nonnegative_weight(archive_byte_loss_weight_scale)
+    if archive_budget is not None and archive_loss_weight_key:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_archive_total_bytes",
+                metric_name="train_time_archive_rate_score",
+                loss_weight_key=archive_loss_weight_key,
+                base_weight=archive_loss_weight_scale or 1.0,
+                target=float(archive_budget) * byte_price,
+                target_fraction=1.0,
+                dual_lr=0.5,
+                max_lambda=4.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "Global archive-byte pressure catches coupled packet "
+                    "growth and container overhead that no single section "
+                    "constraint can own. It is priced in exact evaluate.py "
+                    "score units using 25/uncompressed_total, while section "
+                    "constraints still assign local gradients where the "
+                    "receiver-visible payload has a differentiable QAT hook."
+                ),
+                activate_when_base_weight_zero=True,
+            )
+        )
+
     for section_name, raw_budget in sorted(dict(section_byte_budgets or {}).items()):
         section = str(section_name)
         if not section:
@@ -721,7 +849,7 @@ def build_default_nerv_train_time_dual_ascent_config(
         safe_section = safe_dual_metric_key(section)
         loss_key = loss_key_by_section.get(section) or loss_key_by_section.get(
             safe_section,
-            "coder_qat_c1a_entropy",
+            _preferred_active_coder_key(active_coder_keys),
         )
         constraints.append(
             _constraint_payload(
@@ -745,6 +873,7 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "dual raises the selected coder/QAT loss when the section "
                     "exceeds its active byte cap."
                 ),
+                activate_when_base_weight_zero=True,
             )
         )
 
@@ -786,6 +915,7 @@ def _constraint_payload(
     update_every_steps: int,
     rationale: str,
     target: float | None = None,
+    activate_when_base_weight_zero: bool = False,
 ) -> dict[str, Any]:
     return {
         "schema": TRAIN_TIME_DUAL_ASCENT_CONSTRAINT_SCHEMA,
@@ -807,9 +937,24 @@ def _constraint_payload(
         "warmup_steps": int(warmup_steps),
         "update_every_steps": int(update_every_steps),
         "bootstrap_update": False,
+        "activate_when_base_weight_zero": bool(activate_when_base_weight_zero),
         "base_loss_weight": float(base_weight),
         "rationale": rationale,
     }
+
+
+def _preferred_active_coder_key(active_coder_keys: set[str]) -> str:
+    for key in (
+        "coder_qat_c1a_entropy",
+        "coder_qat_quant_residual",
+        "coder_qat_delta",
+        "coder_qat_magnitude",
+    ):
+        if key in active_coder_keys:
+            return key
+    if active_coder_keys:
+        return sorted(active_coder_keys)[0]
+    return "coder_qat_c1a_entropy"
 
 
 def _nonnegative_weight(value: Any) -> float:

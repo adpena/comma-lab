@@ -211,6 +211,25 @@ def test_qat_selection_includes_hinerv_official_decoder_controls() -> None:
 
 
 @mlx_only
+def test_qat_terms_build_c1a_entropy_even_when_static_weight_is_zero() -> None:
+    import mlx.core as mx
+
+    cfg = CoderAwareQATConfig(
+        enabled=True,
+        quant_bits=4,
+        c1a_entropy_weight=0.0,
+        c1a_sigma=0.75,
+        c1a_sample_size=8,
+    )
+    model = _TinyParamTree([0.0, 0.5, 1.0, -0.25])
+
+    terms = build_decoder_coder_qat_terms(model, cfg)
+    mx.eval(terms["coder_qat_c1a_entropy"])
+
+    assert float(terms["coder_qat_c1a_entropy"].item()) > 0.0
+
+
+@mlx_only
 def test_c1a_entropy_fails_closed_on_invalid_controls() -> None:
     cfg = CoderAwareQATConfig(enabled=True, quant_bits=4)
     model = _TinyParamTree([0.0, 0.5, 1.0])

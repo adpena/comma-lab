@@ -59,6 +59,7 @@ from tac.analysis.snerv_lf_hf_replacement_queue import (
 )
 from tac.analysis.snerv_lf_hf_replacement_queue import (
     build_snerv_lf_hf_replacement_queue,
+    summarize_snerv_lf_hf_source_forward_evidence,
 )
 from tac.analysis.snerv_lf_over_ceiling_reroute_queue import (
     DEFAULT_QUEUE_ID as DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
@@ -641,6 +642,13 @@ def build_nerv_long_training_campaign_plan(
     pr95_baseline_binding = _pr95_baseline_identity_binding(pr95_baseline_identity)
     pr95_distortion_source_inventory = build_pr95_distortion_source_inventory(_repo_root())
     snerv_scorer_tether_smoke_gate = _snerv_scorer_tether_smoke_gate(snerv_scorer_tether_smoke_report)
+    snerv_source_forward_evidence = (
+        summarize_snerv_lf_hf_source_forward_evidence(
+            snerv_official_source_forward_artifacts
+        )
+        if snerv_official_source_forward_artifacts
+        else None
+    )
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -713,6 +721,7 @@ def build_nerv_long_training_campaign_plan(
                 pr95_baseline_identity_binding=pr95_baseline_binding,
                 pr95_distortion_source_inventory=pr95_distortion_source_inventory,
                 snerv_scorer_tether_smoke_gate=snerv_scorer_tether_smoke_gate,
+                snerv_source_forward_evidence=snerv_source_forward_evidence,
                 planner_row_queue_artifact_path=planner_queue_artifact,
                 modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 snerv_lf_payload_recode_sources=snerv_lf_payload_recode_sources,
@@ -748,6 +757,7 @@ def build_nerv_long_training_campaign_plan(
         reroute_queues=(snerv_lf_over_ceiling_reroute_queue,),
         campaign_plans=({"campaign_rows": rows},),
         source_forward_artifacts=snerv_official_source_forward_artifacts,
+        candidate_feedback_rows=candidate_feedback_sources,
         output_root=Path(output_root) / "snerv_lf_hf_replacements",
         queue_id=DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
         allow_local_output=True,
@@ -844,6 +854,11 @@ def build_nerv_long_training_campaign_plan(
         "snerv_official_source_audit_attached": isinstance(snerv_official_source_audit, Mapping),
         "snerv_official_source_forward_artifact_count": len(
             snerv_official_source_forward_artifacts
+        ),
+        "snerv_official_source_forward_evidence": (
+            dict(snerv_source_forward_evidence)
+            if isinstance(snerv_source_forward_evidence, Mapping)
+            else None
         ),
         "source_parity_required_for_long_training_ready": bool(
             source_parity_contract.get("required_for_long_training_ready")
@@ -1450,6 +1465,7 @@ def _snerv_campaign_row(
     pr95_baseline_identity_binding: Mapping[str, Any] | None = None,
     pr95_distortion_source_inventory: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_gate: Mapping[str, Any] | None = None,
+    snerv_source_forward_evidence: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
@@ -1464,7 +1480,17 @@ def _snerv_campaign_row(
         family="snerv",
         source_parity_contract=source_parity_contract,
     )
+    source_parity = _snerv_source_parity_with_source_forward_evidence(
+        source_parity,
+        snerv_source_forward_evidence,
+    )
     official_runtime_authority_split = _snerv_official_runtime_authority_split(source_parity)
+    official_runtime_authority_split = (
+        _snerv_runtime_authority_split_with_source_forward_evidence(
+            official_runtime_authority_split,
+            snerv_source_forward_evidence,
+        )
+    )
     upstream_evaluate_binding = _row_upstream_evaluate_binding(
         family="snerv",
         contract=upstream_evaluate_priority_contract
@@ -1570,6 +1596,10 @@ def _snerv_campaign_row(
         required_nominal_payload_bytes_max=feedback.get("required_nominal_payload_bytes_max"),
         hard_byte_ceiling_measurement_bypass_enabled=feedback.get("hard_byte_ceiling_measurement_bypass_enabled"),
         hard_byte_ceiling_checked_after_export=feedback.get("hard_byte_ceiling_checked_after_export"),
+    )
+    curriculum = _snerv_curriculum_with_source_forward_evidence(
+        curriculum,
+        snerv_source_forward_evidence,
     )
     row_id = f"snerv::{runner_candidate_label}::native_rate_aware_training"
     native_mlx_decoder_train_steps = max(
@@ -1750,6 +1780,10 @@ def _snerv_campaign_row(
             *_snerv_lf_payload_recode_campaign_blockers(lf_recode_admission_plan),
         ]
     )
+    blockers = _without_closed_source_forward_blockers(
+        blockers,
+        snerv_source_forward_evidence,
+    )
     source_controls_ready = (
         not source_control_blockers
         and not candidate.get("_candidate_authority_blockers")
@@ -1838,6 +1872,11 @@ def _snerv_campaign_row(
             "source_bound_capacity_control_blockers": source_control_blockers,
             "source_parity": source_parity,
             "snerv_official_runtime_authority_split": (official_runtime_authority_split),
+            "snerv_official_source_forward_evidence": (
+                dict(snerv_source_forward_evidence)
+                if _snerv_source_forward_evidence_active(snerv_source_forward_evidence)
+                else None
+            ),
             "snerv_official_trained_checkpoint_mapping": feedback.get(
                 "snerv_official_trained_checkpoint_mapping_manifest"
             ),
@@ -2230,6 +2269,9 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
     }
     prefixes = (
         "snerv_source_bound_control_missing:",
+        "snerv_official_mfu_hfr_tub_",
+        "snerv_official_trained_checkpoint_",
+        "snerv_official_tub_",
         "source_parity:",
         "hi_nerv_pr95_distortion_",
         "snerv_pr95_distortion_",
@@ -2572,6 +2614,261 @@ def _snerv_official_runtime_authority_split(
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
+
+
+def _snerv_source_forward_evidence_active(
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> bool:
+    return bool(
+        isinstance(source_forward_evidence, Mapping)
+        and _positive_int_or_none(source_forward_evidence.get("artifact_count")) is not None
+    )
+
+
+def _snerv_source_forward_closed_blockers(
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> set[str]:
+    if not _snerv_source_forward_evidence_active(source_forward_evidence):
+        return set()
+    return {
+        str(blocker)
+        for blocker in source_forward_evidence.get("closed_campaign_blockers") or ()
+        if str(blocker)
+    }
+
+
+def _snerv_source_forward_queue_blockers(
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> list[str]:
+    if not _snerv_source_forward_evidence_active(source_forward_evidence):
+        return []
+    return _dedupe(
+        [
+            str(blocker)
+            for blocker in source_forward_evidence.get("queue_blockers") or ()
+            if str(blocker)
+        ]
+    )
+
+
+def _source_forward_blocker_token(blocker: Any) -> str:
+    return str(blocker).strip().removeprefix("source_parity:")
+
+
+def _without_closed_source_forward_blockers(
+    blockers: Sequence[Any],
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> list[str]:
+    closed = _snerv_source_forward_closed_blockers(source_forward_evidence)
+    if not closed:
+        return _dedupe([str(blocker) for blocker in blockers if str(blocker)])
+    return _dedupe(
+        [
+            str(blocker)
+            for blocker in blockers
+            if str(blocker) and _source_forward_blocker_token(blocker) not in closed
+        ]
+    )
+
+
+def _snerv_source_parity_with_source_forward_evidence(
+    source_parity: Mapping[str, Any],
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    out = dict(source_parity)
+    if not _snerv_source_forward_evidence_active(source_forward_evidence):
+        return out
+    out["required_blockers"] = _without_closed_source_forward_blockers(
+        out.get("required_blockers") or (),
+        source_forward_evidence,
+    )
+    out["nonblocking_gaps"] = _without_closed_source_forward_blockers(
+        out.get("nonblocking_gaps") or (),
+        source_forward_evidence,
+    )
+    out["snerv_official_source_forward_evidence_consumed"] = True
+    out["snerv_official_source_forward_evidence"] = dict(source_forward_evidence)
+    return out
+
+
+def _snerv_runtime_authority_split_with_source_forward_evidence(
+    split: Mapping[str, Any],
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    out = dict(split)
+    if not _snerv_source_forward_evidence_active(source_forward_evidence):
+        return out
+    queue_blockers = _snerv_source_forward_queue_blockers(source_forward_evidence)
+    blockers = _dedupe(
+        [
+            *_without_closed_source_forward_blockers(
+                out.get("blockers") or (),
+                source_forward_evidence,
+            ),
+            *queue_blockers,
+        ]
+    )
+    receiver_bound_export = bool(
+        source_forward_evidence.get("receiver_bound_export_proven")
+        or source_forward_evidence.get("receiver_payload_frame_replay_proven")
+    )
+    source_authority = bool(source_forward_evidence.get("source_forward_replay_authority"))
+    full_tub_parity = bool(source_forward_evidence.get("full_tub_source_forward_parity_proven"))
+    out.update(
+        {
+            "snerv_official_source_forward_evidence_consumed": True,
+            "snerv_official_source_forward_evidence": dict(source_forward_evidence),
+            "official_checkpoint_export_bound": bool(
+                source_forward_evidence.get("official_checkpoint_export_bound")
+            ),
+            "receiver_bound_export_proven": receiver_bound_export,
+            "receiver_payload_frame_replay_proven": bool(
+                source_forward_evidence.get("receiver_payload_frame_replay_proven")
+            ),
+            "receiver_frame_decode_consumes_output2": bool(
+                source_forward_evidence.get("receiver_frame_decode_consumes_output2")
+            ),
+            "full_tub_source_forward_parity_proven": full_tub_parity,
+            "source_forward_replay_authority": source_authority,
+            "receiver_bound_training_evidence_usable": bool(
+                out.get("receiver_bound_training_evidence_usable")
+                or receiver_bound_export
+            ),
+            "full_source_forward_authority_proven": bool(
+                source_authority and full_tub_parity and not blockers
+            ),
+            "blockers": blockers,
+        }
+    )
+    if out["full_source_forward_authority_proven"]:
+        out["launch_semantics"] = (
+            "official_source_forward_parity_available_false_authority_until_score_gate"
+        )
+    elif out["receiver_bound_training_evidence_usable"]:
+        out["launch_semantics"] = (
+            "receiver_bound_training_allowed_but_official_source_authority_false"
+        )
+    else:
+        out["launch_semantics"] = "receiver_bound_training_waits_on_required_primitive_rows"
+    return out
+
+
+def _snerv_curriculum_with_source_forward_evidence(
+    curriculum: Mapping[str, Any],
+    source_forward_evidence: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not _snerv_source_forward_evidence_active(source_forward_evidence):
+        return dict(curriculum)
+    out = dict(curriculum)
+    split = out.get("official_source_forward_authority_split")
+    if isinstance(split, Mapping):
+        updated_split = _snerv_source_forward_split_with_evidence(
+            split,
+            source_forward_evidence,
+        )
+        out["official_source_forward_authority_split"] = updated_split
+    else:
+        updated_split = None
+    blockers = _without_closed_source_forward_blockers(
+        out.get("blockers") or (),
+        source_forward_evidence,
+    )
+    if isinstance(updated_split, Mapping):
+        blockers = _dedupe([*blockers, *(updated_split.get("blockers") or ())])
+    out["blockers"] = blockers
+    out["snerv_official_source_forward_evidence_consumed"] = True
+    out["snerv_official_source_forward_evidence"] = dict(source_forward_evidence)
+    return out
+
+
+def _snerv_source_forward_split_with_evidence(
+    split: Mapping[str, Any],
+    source_forward_evidence: Mapping[str, Any],
+) -> dict[str, Any]:
+    out = dict(split)
+    queue_blockers = _snerv_source_forward_queue_blockers(source_forward_evidence)
+    blockers = _dedupe(
+        [
+            *_without_closed_source_forward_blockers(
+                out.get("blockers") or (),
+                source_forward_evidence,
+            ),
+            *queue_blockers,
+        ]
+    )
+    official_blockers = _dedupe(
+        [
+            *_without_closed_source_forward_blockers(
+                out.get("official_blockers") or (),
+                source_forward_evidence,
+            ),
+            *queue_blockers,
+        ]
+    )
+    export_bound = bool(
+        out.get("export_bound") or source_forward_evidence.get("official_checkpoint_export_bound")
+    )
+    receiver_payload_bound = bool(
+        out.get("receiver_payload_bound")
+        or source_forward_evidence.get("receiver_payload_frame_replay_proven")
+    )
+    frame_producing_export = bool(
+        out.get("frame_producing_export")
+        or source_forward_evidence.get("frame_producing_official_payload_replay_proven")
+    )
+    source_authority = bool(source_forward_evidence.get("source_forward_replay_authority"))
+    full_tub_parity = bool(source_forward_evidence.get("full_tub_source_forward_parity_proven"))
+    full_authority = bool(
+        source_authority
+        and full_tub_parity
+        and export_bound
+        and receiver_payload_bound
+        and frame_producing_export
+        and not blockers
+    )
+    if full_authority:
+        launch_semantics = (
+            "official_source_forward_parity_available_false_authority_until_score_gate"
+        )
+    elif receiver_payload_bound:
+        launch_semantics = (
+            "receiver_bound_training_allowed_but_official_source_authority_false"
+        )
+    else:
+        launch_semantics = "official_training_waits_on_receiver_payload_binding"
+    out.update(
+        {
+            "snerv_official_source_forward_evidence_consumed": True,
+            "snerv_official_source_forward_evidence": dict(source_forward_evidence),
+            "export_bound": export_bound,
+            "receiver_payload_bound": receiver_payload_bound,
+            "frame_producing_export": frame_producing_export,
+            "source_forward_replay_bound": bool(
+                out.get("source_forward_replay_bound") or source_authority
+            ),
+            "source_forward_replay_verified": bool(
+                out.get("source_forward_replay_verified") or full_tub_parity
+            ),
+            "source_forward_replay_authority": bool(
+                out.get("source_forward_replay_authority") or source_authority
+            ),
+            "source_faithful_stack": bool(
+                out.get("source_faithful_stack") or source_authority
+            ),
+            "export_bound_semantics": out.get("export_bound_semantics")
+            or (
+                "official_checkpoint_export_bound_not_source_forward_parity"
+                if export_bound
+                else None
+            ),
+            "receiver_bound_training_evidence_usable": bool(receiver_payload_bound),
+            "full_source_forward_authority_proven": full_authority,
+            "official_blockers": official_blockers,
+            "launch_semantics": launch_semantics,
+            "blockers": blockers,
+        }
+    )
+    return out
 
 
 def _snerv_official_audit_rows_from_source_parity(
@@ -4432,7 +4729,12 @@ def _augment_feedback_row(
             "snerv_official_mfu_hfr_tub_source_forward_replay_bound",
             "snerv_official_mfu_hfr_tub_source_forward_replay_authority",
             "snerv_official_trained_checkpoint_loaded",
+            "snerv_official_hfr_trained_checkpoint_weight_mapping_proven",
+            "snerv_official_mfu_trained_checkpoint_weight_mapping_proven",
             "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven",
+            "snerv_official_mfu_receiver_activation_payload_bound",
+            "snerv_official_tub_receiver_activation_payload_bound",
+            "snerv_official_native_receiver_state_mapping_proven",
             "snerv_official_tub_temporal_encoder_weight_mapping_proven",
             "snerv_official_trained_checkpoint_state_dict_mapping_verified",
             "snerv_trained_state_exportable",
@@ -4540,8 +4842,23 @@ def _snerv_native_artifact_evidence_from_feedback(
             "snerv_official_trained_checkpoint_mapping_manifest"
         ),
         "snerv_official_trained_checkpoint_loaded": feedback.get("snerv_official_trained_checkpoint_loaded"),
+        "snerv_official_hfr_trained_checkpoint_weight_mapping_proven": feedback.get(
+            "snerv_official_hfr_trained_checkpoint_weight_mapping_proven"
+        ),
+        "snerv_official_mfu_trained_checkpoint_weight_mapping_proven": feedback.get(
+            "snerv_official_mfu_trained_checkpoint_weight_mapping_proven"
+        ),
         "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven": feedback.get(
             "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
+        ),
+        "snerv_official_mfu_receiver_activation_payload_bound": feedback.get(
+            "snerv_official_mfu_receiver_activation_payload_bound"
+        ),
+        "snerv_official_tub_receiver_activation_payload_bound": feedback.get(
+            "snerv_official_tub_receiver_activation_payload_bound"
+        ),
+        "snerv_official_native_receiver_state_mapping_proven": feedback.get(
+            "snerv_official_native_receiver_state_mapping_proven"
         ),
         "snerv_official_tub_temporal_encoder_weight_mapping_proven": feedback.get(
             "snerv_official_tub_temporal_encoder_weight_mapping_proven"
@@ -6457,6 +6774,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "snerv_bounded_proof_epochs",
         "snerv_scorer_tether_smoke_gate",
         "snerv_renderer_nondegenerate_gate",
+        "snerv_pre_long_run_evidence_gate",
         "snerv_lf_payload_recode_admission_plan",
         "snerv_lf_payload_codec_from_admission_plan",
         "output_dir_reuse_policy",

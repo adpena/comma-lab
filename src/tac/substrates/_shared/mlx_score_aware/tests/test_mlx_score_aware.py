@@ -536,6 +536,41 @@ def test_score_aware_loss_applies_scorer_input_shape_tether() -> None:
     assert _scalar(total_guard) > _scalar(total_disabled)
 
 
+def test_score_aware_loss_applies_posenet_temporal_signal_floor() -> None:
+    target_0, target_1 = _targets()
+    flat = mx.ones_like(target_0) * 0.5
+    bundle = RendererBundle(
+        model=ReconstructPairModel(flat, flat),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        posenet_temporal_signal_floor_weight=3.0,
+        posenet_temporal_signal_min_std_ratio=0.4,
+        posenet_temporal_signal_min_mean_abs_ratio=0.4,
+    )
+    idx = mx.array([0, 1], dtype=mx.int32)
+
+    total_guard, parts_guard = score_aware_loss(bundle, idx)
+    total_disabled, parts_disabled = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={"posenet_temporal_signal_floor": 0.0},
+    )
+    mx.eval(total_guard, total_disabled)
+
+    assert "posenet_temporal_signal_floor" in parts_guard
+    assert "posenet_temporal_signal_floor" not in parts_disabled
+    assert _scalar(parts_guard["posenet_temporal_signal_floor"]) > 0.0
+    assert _scalar(
+        parts_guard["posenet_temporal_signal_floor_min_std_ratio"]
+    ) < 0.4
+    assert _scalar(
+        parts_guard["posenet_temporal_signal_floor_min_mean_abs_ratio"]
+    ) < 0.4
+    assert _scalar(total_guard) > _scalar(total_disabled)
+
+
 def test_score_aware_loss_rejects_negative_scorer_input_shape_tether_weight() -> None:
     target_0, target_1 = _targets()
     with pytest.raises(

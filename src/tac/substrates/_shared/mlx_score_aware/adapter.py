@@ -22,6 +22,7 @@ requires a combined value+grad+update step (the canonical helper prefers
 """
 from __future__ import annotations
 
+import hashlib
 import math
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -176,6 +177,10 @@ AURORA_LIKE_PP_ITERATIONS = 2
 AURORA_LIKE_PP_BETA = 0.5
 
 DECODER_GRADIENT_SALIENCY_SCHEMA = "mlx_decoder_weight_gradient_saliency.v1"
+GRADIENT_MULTIPLIER_LEAF_INVENTORY_SCHEMA = (
+    "mlx_score_aware_gradient_multiplier_leaf_inventory.v1"
+)
+GRADIENT_MULTIPLIER_LEAF_INVENTORY_NAME_LIMIT = 512
 _DECODER_SALIENCY_INCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "latent_embed",
     "blocks",
@@ -210,6 +215,24 @@ def _is_decoder_weight_saliency_group(name: str) -> bool:
     if any(token in lowered for token in _DECODER_SALIENCY_EXCLUDE_SUBSTRINGS):
         return False
     return any(token in lowered for token in _DECODER_SALIENCY_INCLUDE_SUBSTRINGS)
+
+
+def _bounded_name_inventory(
+    names: Sequence[str],
+    *,
+    limit: int = GRADIENT_MULTIPLIER_LEAF_INVENTORY_NAME_LIMIT,
+) -> dict[str, Any]:
+    """Return deterministic bounded leaf-name inventory plus full-list hash."""
+
+    ordered = sorted({str(name) for name in names if str(name)})
+    joined = "\n".join(ordered).encode("utf-8")
+    return {
+        "count": len(ordered),
+        "name_limit": int(limit),
+        "names": ordered[:limit],
+        "truncated": len(ordered) > int(limit),
+        "names_sha256": hashlib.sha256(joined).hexdigest(),
+    }
 
 
 def _nonnegative_float_or_none(value: Any) -> float | None:
@@ -933,6 +956,9 @@ class MlxScoreAwareAdapter:
                         "contrast_floor",
                         "scorer_input_shape_tether",
                         "shape_tether",
+                        "posenet_temporal_signal_floor",
+                        "posenet_temporal_delta_floor",
+                        "temporal_signal_floor",
                         "segnet_direct_live_distill",
                         "segnet_direct_live",
                         "direct_live_segnet",
@@ -954,6 +980,11 @@ class MlxScoreAwareAdapter:
         scorer_input_shape_tether_stage_weight = component_loss_weight(
             loss_weights,
             "scorer_input_shape_tether",
+            default=scorer_input_guard_stage_weight,
+        )
+        posenet_temporal_signal_floor_stage_weight = component_loss_weight(
+            loss_weights,
+            "posenet_temporal_signal_floor",
             default=scorer_input_guard_stage_weight,
         )
         segnet_direct_live_stage_weight = component_loss_weight(
@@ -1044,6 +1075,18 @@ class MlxScoreAwareAdapter:
                 out["loss_part_config_weight_scorer_input_shape_tether"] = (
                     float(self.bundle.scorer_input_shape_tether_weight)
                 )
+            elif name == "posenet_temporal_signal_floor":
+                out["loss_part_weighted_posenet_temporal_signal_floor"] = (
+                    float(self.bundle.posenet_temporal_signal_floor_weight)
+                    * posenet_temporal_signal_floor_stage_weight
+                    * scalar
+                )
+                out["loss_part_stage_weight_posenet_temporal_signal_floor"] = (
+                    posenet_temporal_signal_floor_stage_weight
+                )
+                out["loss_part_config_weight_posenet_temporal_signal_floor"] = (
+                    float(self.bundle.posenet_temporal_signal_floor_weight)
+                )
             elif name in weights:
                 out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
         escape_metric = _segnet_direct_live_escape_selection_metric(
@@ -1097,6 +1140,7 @@ class MlxScoreAwareAdapter:
             _weighted_recon,
             decode_frames_nhwc01,
             pose_student_inputs_nhwc,
+            posenet_temporal_signal_floor_loss,
             scorer_input_contrast_floor_loss,
             scorer_input_distribution_guard_loss,
             scorer_input_shape_tether_loss,
@@ -1216,6 +1260,7 @@ class MlxScoreAwareAdapter:
             model,
             batch,
             qat_active=bool(stage_verdict.qat_active),
+            loss_weights=loss_weights,
         )
         cat_entropy_term = None
         if float(stage_verdict.cat_lambda) > 0.0:
@@ -1286,6 +1331,11 @@ class MlxScoreAwareAdapter:
             "scorer_input_shape_tether",
             default=scorer_input_guard_stage_weight,
         )
+        posenet_temporal_signal_floor_stage_weight = component_loss_weight(
+            loss_weights,
+            "posenet_temporal_signal_floor",
+            default=scorer_input_guard_stage_weight,
+        )
         total = (
             float(effective_seg_weight) * seg_loss
             + float(effective_pose_weight) * pose_loss
@@ -1351,6 +1401,24 @@ class MlxScoreAwareAdapter:
                 * scorer_input_shape_tether_stage_weight
                 * shape_tether
             )
+        temporal_floor_parts: dict[str, Any] = {}
+        if (
+            self.bundle.posenet_temporal_signal_floor_weight > 0.0
+            and posenet_temporal_signal_floor_stage_weight != 0.0
+        ):
+            temporal_floor, temporal_floor_parts = posenet_temporal_signal_floor_loss(
+                self.bundle,
+                rgb_0,
+                rgb_1,
+                gt_0,
+                gt_1,
+            )
+            total = (
+                total
+                + float(self.bundle.posenet_temporal_signal_floor_weight)
+                * posenet_temporal_signal_floor_stage_weight
+                * temporal_floor
+            )
         if cat_entropy_term is not None and float(stage_verdict.cat_lambda) > 0.0:
             total = total + float(stage_verdict.cat_lambda) * cat_entropy_term
         if extra_qat_total is not None:
@@ -1402,6 +1470,9 @@ class MlxScoreAwareAdapter:
             "pr95_stage_scorer_input_shape_tether_weight": mx.array(
                 scorer_input_shape_tether_stage_weight, dtype=mx.float32
             ),
+            "pr95_stage_posenet_temporal_signal_floor_weight": mx.array(
+                posenet_temporal_signal_floor_stage_weight, dtype=mx.float32
+            ),
             "pr95_stage_segnet_direct_live_weight": mx.array(
                 direct_live_stage_weight, dtype=mx.float32
             ),
@@ -1411,6 +1482,8 @@ class MlxScoreAwareAdapter:
         for name, value in contrast_floor_parts.items():
             parts[f"pr95_stage_{name}"] = value
         for name, value in shape_tether_parts.items():
+            parts[f"pr95_stage_{name}"] = value
+        for name, value in temporal_floor_parts.items():
             parts[f"pr95_stage_{name}"] = value
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
@@ -1467,6 +1540,7 @@ class MlxScoreAwareAdapter:
         batch: Any,
         *,
         qat_active: bool = True,
+        loss_weights: Mapping[str, float] | None = None,
     ) -> tuple[Any | None, dict[str, Any]]:
         """Return configured bundle extra losses and their weighted sum.
 
@@ -1481,6 +1555,11 @@ class MlxScoreAwareAdapter:
         mx = self._mx
         extra = dict(self.bundle.extra_loss_terms(model, batch))
         weights = dict(self.bundle.extra_loss_weights)
+        if loss_weights:
+            for key in extra:
+                text_key = str(key)
+                if text_key in loss_weights:
+                    weights[text_key] = float(loss_weights[text_key])
         total = None
         parts: dict[str, Any] = {}
         for name, value in extra.items():
@@ -1595,6 +1674,24 @@ class MlxScoreAwareAdapter:
                 out[
                     "loss_part_config_weight_pr95_stage_scorer_input_distribution_guard"
                 ] = float(self.bundle.scorer_input_distribution_guard_weight)
+                if (
+                    float(self.bundle.scorer_input_distribution_guard_weight) > 0.0
+                    and guard_stage_weight > 0.0
+                ):
+                    out["loss_part_scorer_input_distribution_guard"] = scalar
+                    out[
+                        "loss_part_weighted_scorer_input_distribution_guard"
+                    ] = (
+                        float(self.bundle.scorer_input_distribution_guard_weight)
+                        * guard_stage_weight
+                        * scalar
+                    )
+                    out[
+                        "loss_part_stage_weight_scorer_input_distribution_guard"
+                    ] = guard_stage_weight
+                    out[
+                        "loss_part_config_weight_scorer_input_distribution_guard"
+                    ] = float(self.bundle.scorer_input_distribution_guard_weight)
             elif name == "pr95_stage_scorer_input_contrast_floor":
                 guard_stage_weight = component_loss_weight(
                     loss_weights,
@@ -1673,9 +1770,51 @@ class MlxScoreAwareAdapter:
                     1,
                 )
                 out[f"loss_part_{generic_name}"] = scalar
+            elif name == "pr95_stage_posenet_temporal_signal_floor":
+                guard_stage_weight = component_loss_weight(
+                    loss_weights,
+                    "posenet_temporal_signal_floor",
+                    default=component_loss_weight(loss_weights, "scorer_input_guard"),
+                )
+                weighted = (
+                    float(self.bundle.posenet_temporal_signal_floor_weight)
+                    * guard_stage_weight
+                    * scalar
+                )
+                out[
+                    "loss_part_weighted_pr95_stage_posenet_temporal_signal_floor"
+                ] = weighted
+                out[
+                    "loss_part_stage_weight_pr95_stage_posenet_temporal_signal_floor"
+                ] = guard_stage_weight
+                out[
+                    "loss_part_config_weight_pr95_stage_posenet_temporal_signal_floor"
+                ] = float(self.bundle.posenet_temporal_signal_floor_weight)
+                if (
+                    float(self.bundle.posenet_temporal_signal_floor_weight) > 0.0
+                    and guard_stage_weight > 0.0
+                ):
+                    out["loss_part_posenet_temporal_signal_floor"] = scalar
+                    out["loss_part_weighted_posenet_temporal_signal_floor"] = weighted
+                    out[
+                        "loss_part_stage_weight_posenet_temporal_signal_floor"
+                    ] = guard_stage_weight
+                    out[
+                        "loss_part_config_weight_posenet_temporal_signal_floor"
+                    ] = float(self.bundle.posenet_temporal_signal_floor_weight)
+            elif name.startswith("pr95_stage_posenet_temporal_signal_floor_"):
+                generic_name = name.replace(
+                    "pr95_stage_posenet_temporal_signal_floor_",
+                    "posenet_temporal_signal_floor_",
+                    1,
+                )
+                out[f"loss_part_{generic_name}"] = scalar
             elif name in self.bundle.extra_loss_weights:
+                effective_extra_weight = float(
+                    (loss_weights or {}).get(name, self.bundle.extra_loss_weights[name])
+                )
                 out[f"loss_part_weighted_{name}"] = (
-                    float(self.bundle.extra_loss_weights[name]) * scalar
+                    effective_extra_weight * scalar
                 )
         escape_metric = _segnet_direct_live_escape_selection_metric(
             candidate_occupied_class_fraction=out.get(
@@ -1947,6 +2086,9 @@ class MlxScoreAwareAdapter:
             metadata["substrate_supplied_score_aware_training"] = metadata.pop(
                 "score_aware_training"
             )
+        gradient_multiplier_leaf_inventory = (
+            self._gradient_multiplier_leaf_inventory()
+        )
         metadata["score_aware_training"] = {
             "schema": "mlx_score_aware_training_objective.v1",
             "segnet_distillation_objective": self.bundle.segnet_distillation_objective,
@@ -2085,6 +2227,44 @@ class MlxScoreAwareAdapter:
                 "canonical_authority_surface": (
                     "TrainingArtifact top-level false-authority fields"
                 ),
+            },
+            "gradient_multiplier_controls": {
+                "schema": "mlx_score_aware_gradient_multiplier_controls.v1",
+                "enabled": bool(
+                    self._explicit_gradient_multiplier_active_names
+                    or float(self._output_head_bias_gradient_multiplier) != 1.0
+                    or (
+                        self._bias_gradient_multiplier is not None
+                        and float(self._bias_gradient_multiplier) != 1.0
+                    )
+                ),
+                "exact_active_name_count": len(
+                    self._explicit_gradient_multiplier_active_names
+                ),
+                "exact_active_names": sorted(
+                    self._explicit_gradient_multiplier_active_names
+                ),
+                "output_head_bias_multiplier": float(
+                    self._output_head_bias_gradient_multiplier
+                ),
+                "bias_multiplier": (
+                    None
+                    if self._bias_gradient_multiplier is None
+                    else float(self._bias_gradient_multiplier)
+                ),
+                "applied_after": "finite_gradient_validation",
+                "applied_before": "clip_grad_norm_or_optimizer_update",
+                "purpose": (
+                    "train_time_decoder_weight_waterfill_ablation_and_"
+                    "anti_collapse_controls"
+                ),
+                "canonical_telemetry": [
+                    "gradient_multiplier_requested_control_count",
+                    "gradient_multiplier_applied_leaf_count",
+                    "gradient_multiplier_requested_but_unapplied",
+                ],
+                "leaf_inventory": gradient_multiplier_leaf_inventory,
+                "authority": "macos_mlx_training_lagrangian_false_authority",
             },
             "loss_part_telemetry": {
                 "schema": "mlx_score_aware_loss_part_telemetry.v1",
@@ -2415,6 +2595,47 @@ class MlxScoreAwareAdapter:
             )
         return parsed
 
+    def _gradient_multiplier_leaf_inventory(self) -> Mapping[str, Any]:
+        """Return deterministic model leaf names for actuator repair."""
+
+        from mlx.utils import tree_flatten
+
+        all_names: list[str] = []
+        bias_names: list[str] = []
+        output_head_bias_names: list[str] = []
+        decoder_candidate_names: list[str] = []
+        for raw_name, leaf in tree_flatten(self.model.parameters()):
+            if leaf is None:
+                continue
+            name = _tree_name_to_saliency_group(raw_name)
+            all_names.append(name)
+            if name.endswith(".bias"):
+                bias_names.append(name)
+            if name.endswith(".bias") and (
+                "rgb_1" in name
+                or "head_rgb_1" in name
+                or "output" in name.lower()
+                or "head" in name.lower()
+            ):
+                output_head_bias_names.append(name)
+            if _is_decoder_weight_saliency_group(name):
+                decoder_candidate_names.append(name)
+        return {
+            "schema": GRADIENT_MULTIPLIER_LEAF_INVENTORY_SCHEMA,
+            "all_leaf_names": _bounded_name_inventory(all_names),
+            "bias_leaf_names": _bounded_name_inventory(bias_names),
+            "output_head_bias_candidate_names": _bounded_name_inventory(
+                output_head_bias_names
+            ),
+            "decoder_weight_candidate_names": _bounded_name_inventory(
+                decoder_candidate_names
+            ),
+            "purpose": (
+                "successor_run_exact_gradient_multiplier_and_decoder_"
+                "waterfill_name_repair"
+            ),
+        }
+
     def _normalize_gradient_multipliers(
         self,
         gradient_multiplier_by_name: Mapping[str, float] | None,
@@ -2423,6 +2644,7 @@ class MlxScoreAwareAdapter:
         output_head_bias_gradient_multiplier: float,
     ) -> dict[str, float]:
         self._bias_gradient_multiplier: float | None = None
+        self._explicit_gradient_multiplier_active_names: set[str] = set()
         if bias_gradient_multiplier is not None:
             try:
                 parsed_bias_multiplier = float(bias_gradient_multiplier)
@@ -2449,6 +2671,7 @@ class MlxScoreAwareAdapter:
                 "output_head_bias_gradient_multiplier must be finite and >= 0; "
                 f"got {output_bias_multiplier!r}"
             )
+        self._output_head_bias_gradient_multiplier = output_bias_multiplier
         out: dict[str, float] = {
             "head_rgb_0.bias": output_bias_multiplier,
             "head_rgb_1.bias": output_bias_multiplier,
@@ -2475,6 +2698,8 @@ class MlxScoreAwareAdapter:
                         f"and >= 0; got {value!r}"
                     )
                 out[key] = value
+                if value != 1.0:
+                    self._explicit_gradient_multiplier_active_names.add(key)
         return out
 
     def _gradient_multiplier_for_name(self, name: str) -> float:
@@ -2492,11 +2717,30 @@ class MlxScoreAwareAdapter:
         flat: list[tuple[str, Any]] = []
         applied_count = 0
         zeroed_count = 0
+        exact_matched_names: set[str] = set()
+        output_bias_matched_names: set[str] = set()
+        bias_matched_count = 0
         min_multiplier: float | None = None
         max_multiplier: float | None = None
         sum_multiplier = 0.0
+        exact_requested_names = set(self._explicit_gradient_multiplier_active_names)
+        output_bias_requested_names = (
+            {"head_rgb_0.bias", "head_rgb_1.bias"}
+            if float(self._output_head_bias_gradient_multiplier) != 1.0
+            else set()
+        )
+        bias_requested = (
+            self._bias_gradient_multiplier is not None
+            and float(self._bias_gradient_multiplier) != 1.0
+        )
         for raw_name, leaf in tree_flatten(grads):
             name = _tree_name_to_saliency_group(raw_name)
+            if name in exact_requested_names:
+                exact_matched_names.add(name)
+            elif name in output_bias_requested_names:
+                output_bias_matched_names.add(name)
+            elif bias_requested and name.endswith(".bias"):
+                bias_matched_count += 1
             multiplier = self._gradient_multiplier_for_name(name)
             if multiplier != 1.0:
                 applied_count += 1
@@ -2515,10 +2759,41 @@ class MlxScoreAwareAdapter:
                 )
                 sum_multiplier += multiplier
             flat.append((raw_name, leaf))
+        missing_exact_count = len(exact_requested_names - exact_matched_names)
+        missing_output_bias_count = len(
+            output_bias_requested_names - output_bias_matched_names
+        )
+        missing_bias_group_count = 1 if bias_requested and bias_matched_count == 0 else 0
+        requested_control_count = (
+            len(exact_requested_names)
+            + len(output_bias_requested_names)
+            + (1 if bias_requested else 0)
+        )
+        missing_requested_count = (
+            missing_exact_count + missing_output_bias_count + missing_bias_group_count
+        )
         metrics = {
             "gradient_multiplier_active": float(applied_count > 0),
+            "gradient_multiplier_requested_control_count": float(
+                requested_control_count
+            ),
             "gradient_multiplier_applied_leaf_count": float(applied_count),
             "gradient_multiplier_zeroed_leaf_count": float(zeroed_count),
+            "gradient_multiplier_missing_requested_count": float(
+                missing_requested_count
+            ),
+            "gradient_multiplier_missing_exact_name_count": float(
+                missing_exact_count
+            ),
+            "gradient_multiplier_missing_output_head_bias_count": float(
+                missing_output_bias_count
+            ),
+            "gradient_multiplier_missing_bias_group_count": float(
+                missing_bias_group_count
+            ),
+            "gradient_multiplier_requested_but_unapplied": float(
+                requested_control_count > 0 and applied_count == 0
+            ),
             "gradient_multiplier_min": float(
                 1.0 if min_multiplier is None else min_multiplier
             ),
@@ -2531,10 +2806,16 @@ class MlxScoreAwareAdapter:
             "gradient_multiplier_output_head_bias": float(
                 self._gradient_multiplier_by_name.get("head_rgb_1.bias", 1.0)
             ),
+            "gradient_multiplier_output_head_bias_matched_count": float(
+                len(output_bias_matched_names)
+            ),
             "gradient_multiplier_bias": (
                 -1.0
                 if self._bias_gradient_multiplier is None
                 else float(self._bias_gradient_multiplier)
+            ),
+            "gradient_multiplier_bias_matched_leaf_count": float(
+                bias_matched_count
             ),
         }
         return tree_unflatten(flat), metrics

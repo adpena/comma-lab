@@ -61,6 +61,7 @@ DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE = 1.0e-2
 DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE = 0.25
 DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_STD_FOR_FIT_GATE = 0.25
 DEFAULT_MIN_POSENET_YUV6_TEMPORAL_SIGNAL_MEAN_ABS_FOR_FIT_GATE = 0.25
+MLX_GPU_DEVICE_ALIASES = {"gpu", "metal", "mps"}
 
 
 def write_hi_nerv_receiver_cache_quality_report(
@@ -766,6 +767,10 @@ def build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
             f"got {seg_threshold}"
         )
 
+    requested_device_type = str(device_type)
+    scorer_device_type = _normalize_mlx_scorer_response_device_type(
+        requested_device_type
+    )
     candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
     reference = Path(reference_cache_dir).expanduser().resolve(strict=False)
     out = Path(output_json).expanduser().resolve(strict=False)
@@ -790,9 +795,10 @@ def build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
         repo_root=Path(__file__).resolve().parents[4],
         upstream_dir=upstream_dir,
         batch_pairs=int(batch_pairs),
-        device_type=str(device_type),
+        device_type=scorer_device_type,
         components_dir=components,
         max_pairs=int(sample_pairs),
+        allow_gpu_research_signal=scorer_device_type == "gpu",
         allow_unaudited_candidate_cache_debug=True,
         response_family="hi_nerv_receiver_cache_quality",
     )
@@ -818,7 +824,9 @@ def build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
             if response_payload_fn is not None
             else "canonical_mlx_scorer_response"
         ),
-        "device_type": str(device_type),
+        "requested_device_type": requested_device_type,
+        "device_type": scorer_device_type,
+        "mlx_device_alias_normalized": requested_device_type != scorer_device_type,
         "sample_pairs": int(sample_pairs),
         "batch_pairs": int(batch_pairs),
         "avg_posenet_dist": pose_dist,
@@ -840,6 +848,18 @@ def build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
     report["report_path"] = out.as_posix()
     write_json(out, report)
     return report
+
+
+def _normalize_mlx_scorer_response_device_type(device_type: str) -> str:
+    normalized = str(device_type or "").strip().lower()
+    if normalized == "cpu":
+        return "cpu"
+    if normalized in MLX_GPU_DEVICE_ALIASES:
+        return "gpu"
+    raise ValueError(
+        "HiNeRV receiver-cache MLX scorer-response device must be one of "
+        f"['cpu', 'gpu', 'metal', 'mps'], got {device_type!r}"
+    )
 
 
 def write_hi_nerv_receiver_cache_segnet_argmax_probe(

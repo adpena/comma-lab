@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ FALSE_AUTHORITY = {
 }
 SEG_TETHER = "snerv_segnet_last_frame_distill"
 POSE_TETHER = "snerv_posenet_yuv6_pair_distill"
+GUARD_TETHER = "snerv_scorer_input_distribution_guard"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -91,13 +93,19 @@ def run_snerv_scorer_tether_smoke(*, steps: int = 2) -> dict[str, Any]:
         family="snerv",
         segnet_distillation_weight=1.0,
         pose_distillation_weight=1.0,
+        scorer_input_distribution_guard_weight=1.0,
     )
     for constraint in dual_config["constraints"]:
         if constraint["constraint_id"] in {
             f"{SEG_TETHER}",
             f"{POSE_TETHER}",
+            f"{GUARD_TETHER}",
         } or constraint["constraint_id"].endswith(
-            ("segnet_last_frame_distill", "posenet_yuv6_pair_distill")
+            (
+                "segnet_last_frame_distill",
+                "posenet_yuv6_pair_distill",
+                "scorer_input_distribution_guard",
+            )
         ):
             constraint["target"] = 0.0
             constraint.pop("target_fraction_of_initial", None)
@@ -115,11 +123,18 @@ def run_snerv_scorer_tether_smoke(*, steps: int = 2) -> dict[str, Any]:
         metrics = adapter.train_step(
             batch=batch,
             learning_rate=1.0e-3,
-            loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+            loss_weights={
+                "recon": 1.0,
+                "distill": 1.0,
+                "pose_distill": 1.0,
+                "scorer_input_guard": 1.0,
+            },
         )
         metrics_by_step.append({str(key): float(value) for key, value in metrics.items()})
     mx.eval(adapter.model.parameters())
     blockers = _smoke_blockers(metrics_by_step)
+    telemetry_contract = _telemetry_contract(metrics_by_step, blockers)
+    required_control_contract = _required_control_contract(telemetry_contract)
     return {
         "schema": SCHEMA,
         "created_utc": datetime.now(UTC).isoformat(),
@@ -128,10 +143,21 @@ def run_snerv_scorer_tether_smoke(*, steps: int = 2) -> dict[str, Any]:
         "passed": not blockers,
         "blockers": blockers,
         "metric_summary": _metric_summary(metrics_by_step),
+        "score_aware_long_training_telemetry_contract": telemetry_contract,
+        "score_aware_long_training_required_control_contract": (
+            required_control_contract
+        ),
+        "score_aware_long_training_scorer_input_distribution_guard_bound": True,
         "telemetry_contract": {
             "snerv_posenet_yuv6_pair_distill_missing_metric_must_be_zero": True,
             "snerv_segnet_last_frame_distill_missing_metric_must_be_zero": True,
+            "snerv_scorer_input_distribution_guard_missing_metric_must_be_zero": (
+                True
+            ),
             "scorer_tether_lambdas_must_activate_by_final_step": True,
+            "scorer_input_distribution_guard_lambda_must_activate_by_final_step": (
+                True
+            ),
         },
         "launch_gate": {
             "local_mlx_long_training_allowed_if_passed": not blockers,
@@ -177,6 +203,19 @@ def _smoke_blockers(metrics_by_step: list[dict[str, float]]) -> list[str]:
             blockers.append(f"{tether}_dual_metric_missing")
         if float(final.get(lambda_key, 0.0)) <= 0.0:
             blockers.append(f"{tether}_dual_lambda_inactive")
+    guard_missing_key = f"dual_ascent_missing_metric__{GUARD_TETHER}"
+    guard_metric_key = f"dual_ascent_metric__{GUARD_TETHER}"
+    guard_lambda_key = f"dual_ascent_lambda__{GUARD_TETHER}"
+    if float(first.get(guard_missing_key, 1.0)) != 0.0:
+        blockers.append(f"{GUARD_TETHER}_missing_on_first_smoke_step")
+    if float(final.get(guard_missing_key, 1.0)) != 0.0:
+        blockers.append(f"{GUARD_TETHER}_missing_on_final_smoke_step")
+    if "loss_part_scorer_input_distribution_guard" not in final:
+        blockers.append(f"{GUARD_TETHER}_loss_part_missing")
+    if guard_metric_key not in final:
+        blockers.append(f"{GUARD_TETHER}_dual_metric_missing")
+    if float(final.get(guard_lambda_key, 0.0)) <= 0.0:
+        blockers.append(f"{GUARD_TETHER}_dual_lambda_inactive")
     return _ordered_unique(blockers)
 
 
@@ -194,10 +233,93 @@ def _metric_summary(metrics_by_step: list[dict[str, float]]) -> dict[str, Any]:
         f"dual_ascent_missing_metric__{POSE_TETHER}",
         f"dual_ascent_lambda__{POSE_TETHER}",
         f"dual_ascent_metric__{POSE_TETHER}",
+        "loss_part_scorer_input_distribution_guard",
+        "loss_part_weighted_scorer_input_distribution_guard",
+        "loss_part_stage_weight_scorer_input_distribution_guard",
+        "loss_part_config_weight_scorer_input_distribution_guard",
+        f"dual_ascent_missing_metric__{GUARD_TETHER}",
+        f"dual_ascent_lambda__{GUARD_TETHER}",
+        f"dual_ascent_metric__{GUARD_TETHER}",
     ]
     return {
         "step_count": len(metrics_by_step),
         "final": {key: final.get(key) for key in keys},
+    }
+
+
+def _telemetry_contract(
+    metrics_by_step: list[dict[str, float]],
+    blockers: list[str],
+) -> dict[str, Any]:
+    final = metrics_by_step[-1] if metrics_by_step else {}
+    seg_lambda = float(final.get(f"dual_ascent_lambda__{SEG_TETHER}", 0.0))
+    pose_lambda = float(final.get(f"dual_ascent_lambda__{POSE_TETHER}", 0.0))
+    guard_lambda = float(final.get(f"dual_ascent_lambda__{GUARD_TETHER}", 0.0))
+    guard_loss_observed = "loss_part_scorer_input_distribution_guard" in final
+    guard_dual_observed = f"dual_ascent_metric__{GUARD_TETHER}" in final
+    return {
+        "schema": "compact_score_aware_training_telemetry_contract.v1",
+        "family": "snerv",
+        "source": SCHEMA,
+        "telemetry_exists": True,
+        "row_count": len(metrics_by_step),
+        "passed": not blockers,
+        "blockers": list(blockers),
+        "expected_segnet_dual": True,
+        "expected_posenet_dual": True,
+        "expected_segnet_dual_lambda": True,
+        "expected_posenet_dual_lambda": True,
+        "expected_scorer_input_guard_metric": True,
+        "segnet_loss_metric_observed": "loss_part_distill" in final,
+        "posenet_loss_metric_observed": "loss_part_pose_score_term" in final,
+        "posenet_score_term_metric_observed": "loss_part_pose_score_term" in final,
+        "segnet_dual_metric_observed": f"dual_ascent_metric__{SEG_TETHER}" in final,
+        "posenet_dual_metric_observed": f"dual_ascent_metric__{POSE_TETHER}" in final,
+        "segnet_dual_lambda_active_observed": seg_lambda > 0.0,
+        "posenet_dual_lambda_active_observed": pose_lambda > 0.0,
+        "scorer_input_guard_metric_observed": guard_loss_observed,
+        "scorer_input_guard_dual_metric_observed": guard_dual_observed,
+        "scorer_input_guard_dual_lambda_active_observed": guard_lambda > 0.0,
+        "authority": "macos_mlx_research_signal_false_authority",
+        **FALSE_AUTHORITY,
+    }
+
+
+def _required_control_contract(
+    telemetry_contract: Mapping[str, Any],
+) -> dict[str, Any]:
+    guard_passed = bool(
+        telemetry_contract.get("passed") is True
+        and telemetry_contract.get("expected_scorer_input_guard_metric") is True
+        and telemetry_contract.get("scorer_input_guard_metric_observed") is True
+        and telemetry_contract.get("scorer_input_guard_dual_metric_observed") is True
+    )
+    blockers: list[str] = []
+    if not guard_passed:
+        blockers.append("snerv_scorer_input_distribution_guard_smoke_not_passed")
+    return {
+        "schema": "snerv_score_aware_long_training_required_control_contract.v1",
+        "source": SCHEMA,
+        "passed": guard_passed,
+        "controls": {
+            "scorer_input_distribution_guard": {
+                "control_id": "scorer_input_distribution_guard",
+                "required": True,
+                "bound": True,
+                "telemetry_observed": bool(
+                    telemetry_contract.get("scorer_input_guard_metric_observed")
+                    is True
+                    and telemetry_contract.get(
+                        "scorer_input_guard_dual_metric_observed"
+                    )
+                    is True
+                ),
+                "passed": guard_passed,
+                "blockers": list(blockers),
+            }
+        },
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
     }
 
 
@@ -223,16 +345,16 @@ def _make_minimal_pr95_score_bundle() -> object:
         def reconstruct_pair(self, indices: Any) -> tuple[Any, Any]:
             bs = int(indices.shape[0])
             scale = mx.sum(self.decoder_weight) + mx.sum(self.decoder_bias)
-            base = mx.ones((bs, 3, 2, 2)) * 0.5 * (scale * 0.0 + 1.0)
+            base = mx.ones((bs, 3, 4, 4)) * 0.5 * (scale * 0.0 + 1.0)
             mod = mx.broadcast_to(
                 mx.reshape(self.decoder_weight[:1, :1] * 0.01, (1, 1, 1, 1)),
-                (bs, 3, 2, 2),
+                (bs, 3, 4, 4),
             )
             return base + mod, base + mod * 2.0
 
     num_pairs = 8
     num_classes = 5
-    labels = np.asarray(
+    base_labels = np.asarray(
         [
             [[0, 1], [2, 3]],
             [[4, 3], [2, 1]],
@@ -245,7 +367,8 @@ def _make_minimal_pr95_score_bundle() -> object:
         ],
         dtype=np.int32,
     )
-    logits = np.full((num_pairs, 2, 2, num_classes), -1.5, dtype=np.float32)
+    labels = np.tile(base_labels, (1, 2, 2))
+    logits = np.full((num_pairs, 4, 4, num_classes), -1.5, dtype=np.float32)
     for pair_index in range(num_pairs):
         for row in range(2):
             for col in range(2):
@@ -267,8 +390,8 @@ def _make_minimal_pr95_score_bundle() -> object:
     seg_head.bias = mx.array([4.0, 1.0, 0.0, -1.0, -2.0], dtype=mx.float32)
     return RendererBundle(
         model=TinyRenderer(),
-        target_rgb_0=mx.zeros((num_pairs, 2, 2, 3)),
-        target_rgb_1=mx.zeros((num_pairs, 2, 2, 3)),
+        target_rgb_0=mx.zeros((num_pairs, 4, 4, 3)),
+        target_rgb_1=mx.zeros((num_pairs, 4, 4, 3)),
         num_pairs=num_pairs,
         forward_convention="reconstruct_pair_nchw01",
         distillation_weight=1.0,
@@ -294,6 +417,7 @@ def _make_minimal_pr95_score_bundle() -> object:
             seed=29,
             init_scale=0.1,
         ),
+        scorer_input_distribution_guard_weight=1.0,
     )
 
 

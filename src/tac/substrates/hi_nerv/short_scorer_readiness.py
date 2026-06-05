@@ -50,22 +50,21 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         if blocker not in actionable_blockers:
             actionable_blockers.append(blocker)
 
+    direct_live_weight = _control_float(
+        train_time_controls,
+        "segnet_direct_live_distillation_weight",
+    )
+    direct_live_enabled = direct_live_weight > 0.0
     segnet_weight = _finite_float(segnet_distillation_weight)
     pose_weight = _finite_float(pose_distillation_weight)
     if bool(allow_mock_scorer_teacher):
         add_blocker("hi_nerv_short_smoke_mock_scorer_teacher_enabled")
     if bool(unscored_research_smoke_enabled):
         add_blocker("hi_nerv_short_smoke_unscored_research_smoke_enabled")
-    if segnet_weight is None or segnet_weight <= 0.0:
+    if (segnet_weight is None or segnet_weight <= 0.0) and not direct_live_enabled:
         add_blocker("hi_nerv_short_smoke_real_segnet_teacher_not_requested")
     if pose_weight is None or pose_weight <= 0.0:
         add_blocker("hi_nerv_short_smoke_real_posenet_teacher_not_requested")
-
-    direct_live_weight = _control_float(
-        train_time_controls,
-        "segnet_direct_live_distillation_weight",
-    )
-    direct_live_enabled = direct_live_weight > 0.0
     direct_live_keys = (
         "loss_part_segnet_direct_live_distill",
         "loss_part_segnet_direct_live_argmax_disagreement",

@@ -64,6 +64,17 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--official-replacement-authority-gate",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1 "
+            "JSON. Repeatable; used to admit or fail-close the official "
+            "TUB LF/HF decoder replacement row."
+        ),
+    )
+    parser.add_argument(
         "--candidate-feedback-row",
         action="append",
         default=[],
@@ -71,6 +82,16 @@ def main(argv: list[str] | None = None) -> int:
         help=(
             "Current nerv_candidate_feedback_row.v1 JSON. Repeatable; used to "
             "clear only proven scorer-domain tether guard blockers."
+        ),
+    )
+    parser.add_argument(
+        "--value-domain-xray",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_receiver_value_domain_xray.v1 JSON. Repeatable; used to "
+            "clear only proven LF-conditioned HF noncollapse blockers."
         ),
     )
     parser.add_argument("--output-root", type=Path)
@@ -100,8 +121,15 @@ def main(argv: list[str] | None = None) -> int:
     source_forward_artifacts = [
         load_json_with_source_identity(path) for path in args.source_forward_artifact
     ]
+    official_replacement_authority_gates = [
+        load_json_with_source_identity(path)
+        for path in args.official_replacement_authority_gate
+    ]
     candidate_feedback_rows = [
         load_json_with_source_identity(path) for path in args.candidate_feedback_row
+    ]
+    value_domain_xray_reports = [
+        load_json_with_source_identity(path) for path in args.value_domain_xray
     ]
 
     report = build_snerv_lf_hf_replacement_queue(
@@ -109,7 +137,9 @@ def main(argv: list[str] | None = None) -> int:
         reroute_queues=reroute_queues,
         campaign_plans=campaign_plans,
         source_forward_artifacts=source_forward_artifacts,
+        official_replacement_authority_gates=official_replacement_authority_gates,
         candidate_feedback_rows=candidate_feedback_rows,
+        value_domain_xray_reports=value_domain_xray_reports,
         output_root=output_root,
         lane_id=str(args.lane_id),
         queue_id=str(args.queue_id),

@@ -37,6 +37,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _decoder_weight_waterfill_plan_from_args,
     _direct_trainer_canonicalization_contract,
     _full_main,
+    _gradient_multiplier_by_name_from_args,
     _hard_byte_ceiling_from_args,
     _hard_byte_ceiling_from_modelsize_candidate,
     _hinerv_short_scorer_smoke_readiness_summary,
@@ -44,6 +45,8 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _metadata_safe,
     _modelsize_candidate_consumption_metadata,
     _modelsize_candidate_from_args,
+    _optimizer_control_metadata_from_args,
+    _pair_sampling_weights_from_args,
     _pose_student_input_channels,
     _pr95_full_control_contract,
     _prioritized_pair_indices_from_args,
@@ -419,6 +422,12 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
             "0.625",
             "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
             "0.75",
+            "--posenet-temporal-signal-floor-weight",
+            "1.25",
+            "--posenet-temporal-signal-min-std-ratio",
+            "0.35",
+            "--posenet-temporal-signal-min-mean-abs-ratio",
+            "0.45",
             "--train-time-decoder-pruning-ratio",
             "0.125",
             "--train-time-decoder-quant-noise-bits",
@@ -466,6 +475,12 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
     assert contrast_floor["segnet_last_rgb_min_std_ratio"] == pytest.approx(0.625)
     assert contrast_floor["posenet_yuv6_pair_min_std_ratio"] == pytest.approx(0.75)
     assert contrast_floor["human_visual_fidelity_objective"] is False
+    temporal_floor = metadata["posenet_temporal_signal_floor"]
+    assert temporal_floor["enabled"] is True
+    assert temporal_floor["weight"] == pytest.approx(1.25)
+    assert temporal_floor["min_std_ratio"] == pytest.approx(0.35)
+    assert temporal_floor["min_mean_abs_ratio"] == pytest.approx(0.45)
+    assert temporal_floor["human_visual_fidelity_objective"] is False
     assert metadata["decoder_fake_quant_forward_enabled"] is True
     assert metadata["decoder_fake_quant_bits"] == 4
     assert metadata["train_time_decoder_controls_enabled"] is True
@@ -876,6 +891,7 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "scorer_input_guard": 1.0,
         "scorer_input_contrast_floor": 1.0,
         "scorer_input_shape_tether": 1.0,
+        "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 0.0,
         "segnet_direct_live_base_loss": 1.0,
     }
@@ -886,6 +902,7 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "scorer_input_guard": 1.0,
         "scorer_input_contrast_floor": 1.0,
         "scorer_input_shape_tether": 1.0,
+        "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 1.0,
         "segnet_direct_live_base_loss": 1.0,
     }
@@ -896,6 +913,7 @@ def test_hinerv_mlx_trainer_builds_staged_scorer_curriculum() -> None:
         "scorer_input_guard": 1.0,
         "scorer_input_contrast_floor": 1.0,
         "scorer_input_shape_tether": 1.0,
+        "posenet_temporal_signal_floor": 1.0,
         "segnet_direct_live_distill": 1.0,
         "segnet_direct_live_base_loss": 1.0,
     }
@@ -1035,6 +1053,7 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_full_missing_direct_live_class_escape_pressure",
         "hinerv_full_missing_scorer_input_contrast_floor",
         "hinerv_full_missing_scorer_input_shape_tether",
+        "hinerv_full_missing_posenet_temporal_signal_floor",
     ):
         assert blocker in payload["blockers"]
     control = payload["pr95_full_control_contract"]
@@ -1057,6 +1076,7 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "1.0",
             "--eval-roundtrip-ste",
             "--pr95-faithful-curriculum",
+            "--pr95-stage-source-weight-amplification",
             "--coder-qat",
             "--coder-qat-c1a-entropy-weight",
             "0.0003",
@@ -1090,6 +1110,12 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "0.6",
             "--scorer-input-shape-tether-weight",
             "0.75",
+            "--posenet-temporal-signal-floor-weight",
+            "1.25",
+            "--posenet-temporal-signal-min-std-ratio",
+            "0.35",
+            "--posenet-temporal-signal-min-mean-abs-ratio",
+            "0.45",
         ]
     )
 
@@ -1107,6 +1133,7 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["optimizer_kind"] == DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
     assert controls["optimizer_surface"] == "pr95_faithful_stage_descriptors"
     assert controls["pr95_faithful_curriculum_enabled"] is True
+    assert controls["pr95_stage_source_weight_amplification_enabled"] is True
     assert controls["coder_qat_enabled"] is True
     assert controls["coder_qat_c1a_entropy_weight"] == pytest.approx(0.0003)
     assert controls["coder_qat_c1a_sigma"] == pytest.approx(0.35)
@@ -1114,6 +1141,10 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["train_time_dual_ascent_enabled"] is True
     assert controls["hard_byte_ceiling_attached"] is True
     assert controls["train_time_section_byte_metrics_enabled"] is True
+    assert controls["train_time_section_byte_control_measurement_phase"] == (
+        "pre_model_requested"
+    )
+    assert controls["train_time_section_byte_control_required_for_training"] is False
     assert controls["segnet_student_live_calibration_weight"] == pytest.approx(1.0)
     assert controls["segnet_student_live_calibration_active"] is True
     assert controls["segnet_distillation_objective"] == "boundary_argmax_hinge"
@@ -1172,6 +1203,16 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
         "posenet_yuv6_pair_centered_reference_variance_fit",
         "posenet_yuv6_temporal_delta_centered_reference_variance_fit",
     ]
+    assert controls["posenet_temporal_signal_floor_enabled"] is True
+    assert controls["posenet_temporal_signal_floor_weight"] == pytest.approx(1.25)
+    assert controls["posenet_temporal_signal_min_std_ratio"] == pytest.approx(0.35)
+    assert controls["posenet_temporal_signal_min_mean_abs_ratio"] == pytest.approx(
+        0.45
+    )
+    assert (
+        controls["posenet_temporal_signal_floor"]["human_visual_fidelity_objective"]
+        is False
+    )
     assert controls["output_head_target_bias_init_enabled"] is True
     assert controls["output_head_target_bias_init_epsilon"] == pytest.approx(
         1.0 / 1024.0
@@ -1197,6 +1238,7 @@ def test_hinerv_full_control_contract_requires_measured_section_byte_actuation()
             "--pose-student-input-preprocess",
             "pr95_yuv6",
             "--pr95-faithful-curriculum",
+            "--pr95-stage-source-weight-amplification",
             "--pr95-curriculum-total-epochs",
             "29650",
             "--coder-qat",
@@ -1222,6 +1264,8 @@ def test_hinerv_full_control_contract_requires_measured_section_byte_actuation()
             "0.5",
             "--scorer-input-shape-tether-weight",
             "0.75",
+            "--posenet-temporal-signal-floor-weight",
+            "1.25",
         ]
     )
 
@@ -1253,6 +1297,83 @@ def test_hinerv_full_control_contract_requires_measured_section_byte_actuation()
     assert ready["controls"]["measured_train_time_section_byte_control_active"] is True
 
 
+def test_hinerv_full_control_contract_blocks_post_model_unactuated_byte_cap() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--epochs",
+            "29650",
+            "--distillation-weight",
+            "1.0",
+            "--segnet-student-live-calibration-weight",
+            "1.0",
+            "--pose-distillation-weight",
+            "1.0",
+            "--eval-roundtrip-ste",
+            "--pose-student-input-preprocess",
+            "pr95_yuv6",
+            "--pr95-faithful-curriculum",
+            "--pr95-stage-source-weight-amplification",
+            "--pr95-curriculum-total-epochs",
+            "29650",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
+            "--hard-byte-ceiling",
+            "500000",
+            "--ema-archive-selection",
+            "--post-export-receiver-cache-quality-gate",
+            "--scorer-input-distribution-guard-weight",
+            "2.0",
+            "--segnet-distillation-objective",
+            "boundary_argmax_hinge",
+            "--segnet-direct-live-distillation-weight",
+            "0.25",
+            "--segnet-direct-live-class-balanced-squared-hinge-weight",
+            "0.75",
+            "--scorer-input-contrast-floor-weight",
+            "0.5",
+            "--scorer-input-shape-tether-weight",
+            "0.75",
+            "--posenet-temporal-signal-floor-weight",
+            "1.25",
+        ]
+    )
+
+    contract = _pr95_full_control_contract(
+        args,
+        train_time_section_byte_control={
+            "schema": "hi_nerv_train_time_section_byte_control.v1",
+            "active": False,
+            "controlled_section_count": 0,
+            "pending_section_count": 3,
+            "blockers": ["hinerv_train_time_section_byte_no_actuated_sections"],
+        },
+        require_measured_section_byte_control=True,
+    )
+
+    assert contract["production_full_control_ready"] is False
+    assert "hinerv_full_train_time_section_byte_control_not_active" in contract[
+        "blockers"
+    ]
+    controls = contract["controls"]
+    assert controls["train_time_section_byte_control_measurement_phase"] == (
+        "post_model_measured"
+    )
+    assert controls["train_time_section_byte_control_required_for_training"] is True
+    assert controls["measured_train_time_section_byte_control_attached"] is True
+    assert controls["measured_train_time_section_byte_control_active"] is False
+    assert controls["measured_train_time_section_byte_controlled_section_count"] == 0
+    assert controls["measured_train_time_section_byte_pending_section_count"] == 3
+    assert controls["measured_train_time_section_byte_control_blockers"] == [
+        "hinerv_train_time_section_byte_no_actuated_sections"
+    ]
+
+
 def test_hinerv_train_time_dual_ascent_config_prices_section_bytes() -> None:
     args = _build_parser().parse_args(
         [
@@ -1273,6 +1394,7 @@ def test_hinerv_train_time_dual_ascent_config_prices_section_bytes() -> None:
         train_time_controls=controls,
         coder_qat_loss_weight_map={"coder_qat_c1a_entropy": 0.0003},
         section_byte_control={
+            "hard_byte_ceiling": 500_000,
             "section_byte_budgets": {"decoder_state": 12345},
             "section_byte_loss_weight_key_map": {
                 "decoder_state": "coder_qat_c1a_entropy"
@@ -1282,8 +1404,13 @@ def test_hinerv_train_time_dual_ascent_config_prices_section_bytes() -> None:
     )
 
     constraints = {row["constraint_id"]: row for row in cfg["constraints"]}
+    archive = constraints["hi_nerv_archive_total_bytes"]
     decoder = constraints["hi_nerv_decoder_state_section_bytes"]
     assert cfg["enabled"] is True
+    assert archive["metric_name"] == "train_time_archive_rate_score"
+    assert archive["loss_weight_key"] == "coder_qat_c1a_entropy"
+    assert archive["target"] > decoder["target"]
+    assert "Global archive-byte pressure" in archive["rationale"]
     assert decoder["metric_name"] == "train_time_section_rate_score__decoder_state"
     assert decoder["loss_weight_key"] == "coder_qat_c1a_entropy"
     assert decoder["target"] > 0.0
@@ -1438,6 +1565,53 @@ def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:
         _build_parser().parse_args(["--full", "--optimizer-kind", "definitely_not_optimizer"])
 
 
+def test_hinerv_mlx_trainer_parses_optimizer_actuator_controls() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--pr95-stage-source-weight-amplification",
+            "--optimizer-warmup-steps-per-epoch",
+            "37",
+            "--pair-sampling-default-weight",
+            "0.25",
+            "--pair-sampling-weight",
+            "5=3.5",
+            "--pair-sampling-weight",
+            "17=0",
+            "--gradient-multiplier",
+            "decoder.blocks.0.weight=0.125",
+            "--gradient-multiplier",
+            "head_rgb_1.bias=0",
+            "--bias-gradient-multiplier",
+            "0.5",
+            "--output-head-bias-gradient-multiplier",
+            "0.25",
+        ]
+    )
+
+    optimizer_control = _optimizer_control_metadata_from_args(args)
+
+    assert optimizer_control["schema"] == "hi_nerv_direct_trainer_optimizer_control.v1"
+    assert optimizer_control["warmup_steps_per_epoch"] == 37
+    assert optimizer_control["pr95_stage_source_weight_amplification_enabled"] is True
+    assert optimizer_control["pair_sampling_default_weight"] == pytest.approx(0.25)
+    assert _pair_sampling_weights_from_args(args) == {5: 3.5, 17: 0.0}
+    assert optimizer_control["pair_sampling_weights"] == {5: 3.5, 17: 0.0}
+    assert _gradient_multiplier_by_name_from_args(args) == {
+        "decoder.blocks.0.weight": 0.125,
+        "head_rgb_1.bias": 0.0,
+    }
+    assert optimizer_control["gradient_multiplier_by_name"] == {
+        "decoder.blocks.0.weight": 0.125,
+        "head_rgb_1.bias": 0.0,
+    }
+    assert optimizer_control["bias_gradient_multiplier"] == pytest.approx(0.5)
+    assert optimizer_control["output_head_bias_gradient_multiplier"] == pytest.approx(
+        0.25
+    )
+    assert optimizer_control["score_claim"] is False
+
+
 def test_hinerv_mlx_trainer_parses_prioritized_pair_controls(
     tmp_path: Path,
 ) -> None:
@@ -1551,6 +1725,47 @@ def test_hinerv_mlx_trainer_forwards_prioritized_pairs_to_harness() -> None:
             for keyword in call.keywords
         )
         for call in run_calls
+    )
+
+
+def test_hinerv_mlx_trainer_forwards_optimizer_actuators_to_harness() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    run_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    required = {
+        "pr95_stage_source_weight_amplification_enabled",
+        "warmup_steps_per_epoch",
+        "pair_sampling_weights",
+        "pair_sampling_default_weight",
+        "gradient_multiplier_by_name",
+        "bias_gradient_multiplier",
+        "output_head_bias_gradient_multiplier",
+    }
+
+    assert run_calls
+    forwarded = {
+        str(keyword.arg)
+        for call in run_calls
+        for keyword in call.keywords
+        if keyword.arg
+    }
+    assert required.issubset(forwarded)
+    assert any(
+        keyword.arg == "warmup_steps_per_epoch"
+        and isinstance(keyword.value, ast.Call)
+        and isinstance(keyword.value.func, ast.Name)
+        and keyword.value.func.id == "int"
+        for call in run_calls
+        for keyword in call.keywords
     )
 
 
@@ -1850,6 +2065,7 @@ def test_hinerv_mlx_trainer_receiver_cache_quality_forwards_mlx_response_probe(
     assert report["quality_gate_passed"] is True
     assert captured["require_mlx_scorer_response_probe"] is True
     assert Path(captured["mlx_scorer_response_upstream_dir"]).name == "upstream"
+    assert Path(captured["segnet_argmax_probe_upstream_dir"]).name == "upstream"
     assert captured["mlx_scorer_response_device_type"] == "gpu"
     assert captured["mlx_scorer_response_batch_pairs"] == 5
     assert captured[
@@ -1858,6 +2074,45 @@ def test_hinerv_mlx_trainer_receiver_cache_quality_forwards_mlx_response_probe(
     assert captured[
         "max_mlx_scorer_response_segnet_dist_for_fit_gate"
     ] == pytest.approx(0.2)
+
+
+def test_hinerv_receiver_cache_quality_normalizes_metal_for_mlx_scorer_probe(
+    tmp_path: Path,
+) -> None:
+    from tac.substrates.hi_nerv.receiver_cache_quality import (
+        build_hi_nerv_receiver_cache_mlx_scorer_response_probe,
+    )
+
+    captured: dict[str, object] = {}
+
+    def fake_response_payload_fn(**kwargs):
+        captured.update(kwargs)
+        return {
+            "avg_posenet_dist": 0.001,
+            "avg_segnet_dist": 0.02,
+            "canonical_score": 0.03,
+            "score_rate_contribution": 0.001,
+            "archive_size_bytes": kwargs["archive_size_bytes"],
+            "n_samples": kwargs["max_pairs"],
+        }
+
+    report = build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
+        candidate_cache_dir=tmp_path / "candidate",
+        reference_cache_dir=tmp_path / "reference",
+        archive_size_bytes=123,
+        output_json=tmp_path / "probe.json",
+        upstream_dir=Path("upstream"),
+        device_type="metal",
+        sample_pairs=2,
+        response_payload_fn=fake_response_payload_fn,
+    )
+
+    assert captured["device_type"] == "gpu"
+    assert captured["allow_gpu_research_signal"] is True
+    assert report["requested_device_type"] == "metal"
+    assert report["device_type"] == "gpu"
+    assert report["mlx_device_alias_normalized"] is True
+    assert report["fit_gate_passed"] is True
 
 
 def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
@@ -2060,6 +2315,30 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> 
     assert summary is not None
     assert "score_claim" not in summary
     assert summary["short_scorer_teacher_smoke_ready"] is True
+
+
+def test_hinerv_short_scorer_smoke_readiness_accepts_direct_live_segnet_binding() -> None:
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert "hi_nerv_short_smoke_real_segnet_teacher_not_requested" not in report[
+        "actionable_blockers"
+    ]
+    assert report["ready_for_long_run"] is True
 
 
 def test_hinerv_short_scorer_smoke_readiness_blocks_failed_mlx_response() -> None:

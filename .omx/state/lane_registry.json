@@ -69126,6 +69126,252 @@
         }
       },
       "notes": "Narrow Codex pass: make PR95/evaluate.py distortion lessons block fake parity in NeRV long-run guard rows; no dispatch or score claim."
+    },
+    {
+      "id": "lane_snerv_tub_source_parity_executable_20260605",
+      "name": "SNeRV TUB source parity executable closure",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py tools/run_compact_renderer_mlx_spine_runner.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "uv run ruff check src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py tools/run_compact_renderer_mlx_spine_runner.py src/tac/tests/test_compact_renderer_mlx_spine_runner.py; uv run python tools/lane_maturity.py validate"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "uv run pytest src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py::test_official_long_training_keeps_trained_packet_with_nonrender_blocker src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py::test_official_primitives_full_video_long_training_defers_replay_gate src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py::test_official_primitives_long_training_exports_trained_official_payload src/tac/tests/test_compact_renderer_mlx_spine_runner.py::test_snerv_native_export_attachment_threads_mlx_prefilter_controls -q"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/codex_session_summary_20260605T131130Z_snerv_tub_source_parity_codex.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_snerv_lf_hf_replacement_queue_20260605",
+      "name": "SNeRV LF/HF replacement queue",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/snerv_lf_hf_replacement_queue.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "snerv_lf_hf_replacement_queue_source_forward_artifact_53pytest_ruff_pycompile_green_20260605"
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_snerv_tether_feedback_bridge_20260605",
+      "name": "SNeRV scorer tether feedback bridge",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/nerv_candidate_feedback.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "snerv_tether_feedback_bridge_ruff_pytest_campaign_checks_green_20260605"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "snerv_candidate_feedback_45_passed_campaign_tether_suppression_passed_20260605"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_snerv_source_forward_parent_row_authority_20260605",
+      "name": "SNeRV source-forward parent row authority split",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/nerv_long_training_campaign_plan.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_snerv_native_state_source_forward_mapping_harness_20260605",
+      "name": "SNeRV native trained state source-forward mapping harness",
+      "phase": 0.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/analysis/snerv_official_source_forward_harness.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_snerv_native_official_mapping_bridge_20260605",
+      "name": "SNeRV native official mapping bridge",
+      "phase": 0.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cpu": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ],
   "level_rules": {
@@ -69135,5 +69381,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-05T11:58:53Z"
+  "updated_at": "2026-06-05T14:59:04Z"
 }

@@ -931,6 +931,14 @@ def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
             "enabled": True,
             "constraints": [
                 {
+                    "constraint_id": "archive_total_bytes",
+                    "metric_name": "train_time_archive_rate_score",
+                    "loss_weight_key": "coder_qat_c1a_entropy",
+                    "target": 2_000 * CONTEST_RATE_SCORE_PER_BYTE,
+                    "dual_lr": 1.0,
+                    "max_lambda": 2.0,
+                },
+                {
                     "constraint_id": "decoder_payload_bytes",
                     "metric_name": (
                         "train_time_section_rate_score__decoder_payload"
@@ -981,9 +989,30 @@ def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
     assert metrics["dual_ascent_metric__decoder_payload_bytes"] == pytest.approx(
         2_000 * CONTEST_RATE_SCORE_PER_BYTE
     )
+    assert metrics["dual_ascent_metric__archive_total_bytes"] == pytest.approx(
+        10_000 * CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert metrics["dual_ascent_lambda__archive_total_bytes"] == pytest.approx(
+        8_000 * CONTEST_RATE_SCORE_PER_BYTE
+    )
     assert metrics["dual_ascent_lambda__decoder_payload_bytes"] == pytest.approx(
         1_000 * CONTEST_RATE_SCORE_PER_BYTE
     )
+    second_metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+    assert callback_calls[-1] == {
+        "model_is_bundle_model": True,
+        "batch_shape": (2,),
+        "loss_weight_keys": ["coder_qat_c1a_entropy"],
+    }
+    assert second_metrics[
+        "dual_ascent_weight_applied__archive_total_bytes"
+    ] == pytest.approx(1.0)
+    assert second_metrics[
+        "dual_ascent_effective_loss_weight__archive_total_bytes"
+    ] > 0.0
+    assert second_metrics[
+        "dual_ascent_weight_applied__decoder_payload_bytes"
+    ] == pytest.approx(1.0)
     metadata = adapter.artifact_metadata()["score_aware_training"][
         "train_time_section_byte_metrics"
     ]
@@ -992,6 +1021,72 @@ def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
     assert metadata["last_metrics"]["train_time_section_bytes__decoder_payload"] == (
         pytest.approx(2_000)
     )
+
+
+@mlx_only
+def test_adapter_gradient_multiplier_reports_real_exact_leaf_actuation() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        gradient_multiplier_by_name={"rgb_1.bias": 0.25},
+    )
+    batch = mx.array([0, 1], dtype=mx.int32)
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+    controls = adapter.artifact_metadata()["score_aware_training"][
+        "gradient_multiplier_controls"
+    ]
+
+    assert metrics["gradient_multiplier_requested_control_count"] == pytest.approx(1)
+    assert metrics["gradient_multiplier_applied_leaf_count"] >= 1
+    assert metrics["gradient_multiplier_missing_exact_name_count"] == pytest.approx(0)
+    assert metrics["gradient_multiplier_requested_but_unapplied"] == pytest.approx(0)
+    assert controls["enabled"] is True
+    assert controls["exact_active_name_count"] == 1
+    assert controls["exact_active_names"] == ["rgb_1.bias"]
+    leaf_inventory = controls["leaf_inventory"]
+    assert leaf_inventory["schema"] == (
+        "mlx_score_aware_gradient_multiplier_leaf_inventory.v1"
+    )
+    assert "rgb_1.bias" in leaf_inventory["all_leaf_names"]["names"]
+    assert "rgb_1.bias" in leaf_inventory["bias_leaf_names"]["names"]
+    assert "rgb_1.bias" in leaf_inventory["output_head_bias_candidate_names"]["names"]
+    assert leaf_inventory["all_leaf_names"]["count"] >= len(
+        leaf_inventory["all_leaf_names"]["names"]
+    )
+    assert len(leaf_inventory["all_leaf_names"]["names_sha256"]) == 64
+
+
+@mlx_only
+def test_adapter_gradient_multiplier_reports_stale_exact_leaf_noop() -> None:
+    import mlx.core as mx
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        gradient_multiplier_by_name={"missing.decoder.weight": 0.0},
+    )
+    batch = mx.array([0, 1], dtype=mx.int32)
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+    controls = adapter.artifact_metadata()["score_aware_training"][
+        "gradient_multiplier_controls"
+    ]
+
+    assert metrics["gradient_multiplier_requested_control_count"] == pytest.approx(1)
+    assert metrics["gradient_multiplier_applied_leaf_count"] == pytest.approx(0)
+    assert metrics["gradient_multiplier_missing_exact_name_count"] == pytest.approx(1)
+    assert metrics["gradient_multiplier_missing_requested_count"] == pytest.approx(1)
+    assert metrics["gradient_multiplier_requested_but_unapplied"] == pytest.approx(1)
+    assert controls["exact_active_names"] == ["missing.decoder.weight"]
+    assert "missing.decoder.weight" not in controls["leaf_inventory"]["all_leaf_names"][
+        "names"
+    ]
+    assert controls["leaf_inventory"]["all_leaf_names"]["count"] > 0
 
 
 @mlx_only

@@ -265,15 +265,11 @@ def build_decoder_coder_qat_terms(
         if magnitude_terms
         else zero,
         "coder_qat_delta": mx.mean(mx.stack(delta_terms)) if delta_terms else zero,
-        "coder_qat_c1a_entropy": (
-            build_decoder_c1a_entropy_term(
-                model,
-                c,
-                sigma=float(c.c1a_sigma),
-                sample_size=int(c.c1a_sample_size),
-            )
-            if float(c.c1a_entropy_weight) > 0.0
-            else zero
+        "coder_qat_c1a_entropy": build_decoder_c1a_entropy_term(
+            model,
+            c,
+            sigma=float(c.c1a_sigma),
+            sample_size=int(c.c1a_sample_size),
         ),
     }
 
