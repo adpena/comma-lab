@@ -634,6 +634,7 @@ def _full_main(args: argparse.Namespace) -> int:
     if projection_hook is not None:
         model.post_optimizer_projection = projection_hook
     coder_qat_cfg = _coder_qat_config_from_args(args)
+    coder_qat_loss_weight_map = coder_qat_loss_weights(coder_qat_cfg)
     extra_loss_terms = None
     if coder_qat_cfg.enabled:
 
@@ -654,6 +655,28 @@ def _full_main(args: argparse.Namespace) -> int:
         target_rgb_0=target_rgb_0,
         target_rgb_1=target_rgb_1,
         controls=train_time_controls,
+    )
+    (
+        train_time_section_byte_metrics,
+        train_time_section_byte_control,
+    ) = _build_hi_nerv_train_time_section_byte_metrics_callback(
+        args=args,
+        model=model,
+        decoder_codec=effective_decoder_codec,
+        controls=train_time_controls,
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        hard_byte_ceiling=modelsize_hard_byte_ceiling,
+        active_loss_weights=coder_qat_loss_weight_map,
+    )
+    train_time_dual_ascent_config = _train_time_dual_ascent_config_from_args(
+        args,
+        train_time_controls=train_time_controls,
+        coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+        section_byte_control=(
+            train_time_section_byte_control.get("initial_control")
+            if bool(train_time_section_byte_control.get("enabled"))
+            else None
+        ),
     )
 
     scorer_teacher = None
@@ -702,7 +725,7 @@ def _full_main(args: argparse.Namespace) -> int:
         num_pairs=effective_training_num_pairs,
         forward_convention="call_b2chw_255",
         extra_loss_terms=extra_loss_terms,
-        extra_loss_weights=coder_qat_loss_weights(coder_qat_cfg),
+        extra_loss_weights=coder_qat_loss_weight_map,
         distillation_weight=float(args.distillation_weight),
         scorer_teacher=scorer_teacher,
         learnable_student_head=learnable_student_head,
@@ -815,6 +838,12 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "coder_qat": coder_qat_metadata(coder_qat_cfg),
             "train_time_controls": _metadata_safe(train_time_controls.metadata()),
+            "train_time_section_byte_control": _metadata_safe(
+                train_time_section_byte_control
+            ),
+            "train_time_dual_ascent_config": _metadata_safe(
+                train_time_dual_ascent_config
+            ),
             "output_head_target_bias_init": _metadata_safe(
                 output_head_target_bias_init
             ),
@@ -847,6 +876,7 @@ def _full_main(args: argparse.Namespace) -> int:
         eval_roundtrip_ste_enabled=bool(args.eval_roundtrip_ste),
         pose_student_input_preprocess=str(args.pose_student_input_preprocess),
         source_pair_indices=source_pair_indices,
+        train_time_section_byte_metrics=train_time_section_byte_metrics,
     )
     write_json(
         output_dir / "hi_nerv_mlx_training_launch_preflight.json",
@@ -858,6 +888,12 @@ def _full_main(args: argparse.Namespace) -> int:
             "direct_trainer_canonicalization": canonicalization,
             "pr95_full_control_contract": pr95_full_control_contract,
             "train_time_controls": train_time_controls.metadata(),
+            "train_time_section_byte_control": _metadata_safe(
+                train_time_section_byte_control
+            ),
+            "train_time_dual_ascent_config": _metadata_safe(
+                train_time_dual_ascent_config
+            ),
             "output_head_target_bias_init": _metadata_safe(
                 output_head_target_bias_init
             ),
@@ -896,6 +932,7 @@ def _full_main(args: argparse.Namespace) -> int:
         cosine_decay_total_epochs=args.cosine_decay_total_epochs,
         cosine_decay_min_lr_ratio=float(args.cosine_decay_min_lr_ratio),
         ema_archive_selection_enabled=bool(args.ema_archive_selection),
+        train_time_dual_ascent_config=train_time_dual_ascent_config,
         prioritized_pair_indices=local_training_pair_indices,
         notes=(
             "HiNeRV MLX-local score-aware training through the canonical "
@@ -1276,6 +1313,16 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--coder-qat-c1a-entropy-weight", type=float, default=0.0)
     parser.add_argument("--coder-qat-c1a-sigma", type=float, default=0.2)
     parser.add_argument("--coder-qat-c1a-sample-size", type=int, default=512)
+    parser.add_argument("--disable-train-time-dual-ascent", action="store_true")
+    parser.add_argument(
+        "--disable-train-time-section-byte-metrics",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--train-time-section-byte-metrics-frequency-steps",
+        type=int,
+        default=25,
+    )
     parser.add_argument("--distillation-weight", type=float, default=0.0)
     parser.add_argument("--pose-distillation-weight", type=float, default=1.0)
     parser.add_argument(
@@ -1802,6 +1849,209 @@ def _coder_qat_config_from_args(args: argparse.Namespace) -> Any:
         c1a_sigma=float(getattr(args, "coder_qat_c1a_sigma", 0.2)),
         c1a_sample_size=int(getattr(args, "coder_qat_c1a_sample_size", 512)),
     ).validated()
+
+
+def _build_hi_nerv_train_time_section_byte_control_from_model(
+    *,
+    model: Any,
+    decoder_codec: str,
+    controls: HiNervTrainTimeControlConfig,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+    hard_byte_ceiling: int | None,
+    active_loss_weights: Mapping[str, float],
+) -> dict[str, Any]:
+    """Measure live HIV1 sections and turn them into train-time byte budgets."""
+
+    from tac.substrates.hi_nerv.archive import build_archive_section_telemetry
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+    from tac.substrates.hi_nerv.bitstream import (
+        build_hinerv_train_time_section_byte_control,
+    )
+
+    bin_bytes, bitstream_report = pack_archive_from_exported_state_dict(
+        exported_state_dict=model.export_state_dict(),
+        cfg=model.cfg,
+        decoder_codec=decoder_codec,
+        pruning_ratio=float(controls.export_decoder_pruning_ratio),
+        quant_noise_bits=controls.export_decoder_quant_noise_bits,
+        quant_noise_scale=float(controls.export_decoder_quant_noise_scale),
+        quant_noise_seed=int(controls.export_decoder_quant_noise_seed),
+        decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+        return_bitstream_report=True,
+    )
+    telemetry = build_archive_section_telemetry(bin_bytes)
+    control = build_hinerv_train_time_section_byte_control(
+        telemetry,
+        active_loss_weights,
+        hard_byte_ceiling=hard_byte_ceiling,
+    )
+    return {
+        **control,
+        "live_inner_payload_bytes": len(bin_bytes),
+        "decoder_codec": decoder_codec,
+        "measurement_source": "live_model_export_state_dict_to_hiv1_inner_payload",
+        "bitstream_preparation": _metadata_safe(bitstream_report),
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _build_hi_nerv_train_time_section_byte_metrics_callback(
+    *,
+    args: argparse.Namespace,
+    model: Any,
+    decoder_codec: str,
+    controls: HiNervTrainTimeControlConfig,
+    decoder_weight_waterfill_plan: Mapping[str, Any] | None,
+    hard_byte_ceiling: int | None,
+    active_loss_weights: Mapping[str, float],
+) -> tuple[Any | None, dict[str, Any]]:
+    """Attach live section-byte telemetry to the shared MLX trainer."""
+
+    enabled = bool(
+        not bool(getattr(args, "disable_train_time_section_byte_metrics", False))
+        and hard_byte_ceiling is not None
+        and bool(getattr(args, "coder_qat", False))
+    )
+    frequency_steps = int(
+        getattr(args, "train_time_section_byte_metrics_frequency_steps", 25)
+    )
+    if frequency_steps <= 0:
+        raise ValueError(
+            "train_time_section_byte_metrics_frequency_steps must be positive"
+        )
+    blockers: list[str] = []
+    if hard_byte_ceiling is None:
+        blockers.append("hinerv_train_time_section_byte_hard_ceiling_missing")
+    if not bool(getattr(args, "coder_qat", False)):
+        blockers.append("hinerv_train_time_section_byte_coder_qat_missing")
+    if bool(getattr(args, "disable_train_time_section_byte_metrics", False)):
+        blockers.append("hinerv_train_time_section_byte_metrics_disabled")
+    if not enabled:
+        return None, {
+            "schema": "hi_nerv_live_train_time_section_byte_metrics_callback.v1",
+            "enabled": False,
+            "frequency_steps": frequency_steps,
+            "initial_control": None,
+            "blockers": list(dict.fromkeys(blockers)),
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+
+    state: dict[str, Any] = {
+        "step": 0,
+        "last_control": _build_hi_nerv_train_time_section_byte_control_from_model(
+            model=model,
+            decoder_codec=decoder_codec,
+            controls=controls,
+            decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+            hard_byte_ceiling=hard_byte_ceiling,
+            active_loss_weights=active_loss_weights,
+        ),
+    }
+
+    def _callback(model_obj: Any, _batch: Any, _loss_weights: Mapping[str, float]) -> dict[str, Any]:
+        state["step"] = int(state["step"]) + 1
+        refreshed = state["step"] == 1 or state["step"] % frequency_steps == 0
+        if refreshed:
+            state["last_control"] = (
+                _build_hi_nerv_train_time_section_byte_control_from_model(
+                    model=model_obj,
+                    decoder_codec=decoder_codec,
+                    controls=controls,
+                    decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
+                    hard_byte_ceiling=hard_byte_ceiling,
+                    active_loss_weights=active_loss_weights,
+                )
+            )
+        control = dict(state["last_control"])
+        metrics = dict(control.get("metrics_payload") or {})
+        metrics["metadata"] = {
+            "schema": "hi_nerv_live_train_time_section_byte_metrics.v1",
+            "measurement_step": int(state["step"]),
+            "frequency_steps": frequency_steps,
+            "refreshed_this_step": bool(refreshed),
+            "section_byte_control_active": bool(control.get("active")),
+            "controlled_section_count": int(
+                control.get("controlled_section_count") or 0
+            ),
+            "pending_section_count": int(control.get("pending_section_count") or 0),
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+        return metrics
+
+    attachment = {
+        "schema": "hi_nerv_live_train_time_section_byte_metrics_callback.v1",
+        "enabled": True,
+        "frequency_steps": frequency_steps,
+        "initial_control": _metadata_safe(state["last_control"]),
+        "active": bool(state["last_control"].get("active")),
+        "blockers": list(dict.fromkeys(
+            [str(v) for v in state["last_control"].get("blockers", [])]
+        )),
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
+    return _callback, attachment
+
+
+def _train_time_dual_ascent_config_from_args(
+    args: argparse.Namespace,
+    *,
+    train_time_controls: HiNervTrainTimeControlConfig,
+    coder_qat_loss_weight_map: Mapping[str, float],
+    section_byte_control: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the shared train-time dual-ascent config consumed by the harness."""
+
+    from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+        build_default_nerv_train_time_dual_ascent_config,
+    )
+
+    section_control = dict(section_byte_control or {})
+    return build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        segnet_distillation_weight=float(getattr(args, "distillation_weight", 0.0)),
+        segnet_direct_live_distillation_weight=float(
+            train_time_controls.segnet_direct_live_distillation_weight
+        ),
+        segnet_direct_live_class_histogram_weight=float(
+            train_time_controls.segnet_direct_live_class_histogram_weight
+        ),
+        segnet_direct_live_class_balanced_hinge_weight=float(
+            train_time_controls.segnet_direct_live_class_balanced_hinge_weight
+        ),
+        segnet_direct_live_class_balanced_ce_weight=float(
+            train_time_controls.segnet_direct_live_class_balanced_ce_weight
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            train_time_controls.segnet_direct_live_class_balanced_squared_hinge_weight
+        ),
+        pose_distillation_weight=float(
+            getattr(args, "pose_distillation_weight", 0.0)
+        ),
+        scorer_input_distribution_guard_weight=float(
+            train_time_controls.scorer_input_distribution_guard_weight
+        ),
+        scorer_input_contrast_floor_weight=float(
+            train_time_controls.scorer_input_contrast_floor_weight
+        ),
+        scorer_input_shape_tether_weight=float(
+            train_time_controls.scorer_input_shape_tether_weight
+        ),
+        coder_qat_loss_weight_map=coder_qat_loss_weight_map,
+        section_byte_budgets=section_control.get("section_byte_budgets"),
+        section_byte_loss_weight_key_map=section_control.get(
+            "section_byte_loss_weight_key_map"
+        ),
+        section_byte_loss_weight_scale_map=section_control.get(
+            "section_byte_loss_weight_scale_map"
+        ),
+        enabled=not bool(getattr(args, "disable_train_time_dual_ascent", False)),
+    )
 
 
 def _train_time_control_config_from_args(
@@ -3124,6 +3374,18 @@ def _pr95_full_control_contract(
     c1a_entropy_weight = float(getattr(args, "coder_qat_c1a_entropy_weight", 0.0))
     c1a_sigma = float(getattr(args, "coder_qat_c1a_sigma", 0.0))
     c1a_sample_size = int(getattr(args, "coder_qat_c1a_sample_size", 0))
+    train_time_dual_ascent_enabled = not bool(
+        getattr(args, "disable_train_time_dual_ascent", False)
+    )
+    hard_byte_ceiling_attached = (
+        getattr(args, "hard_byte_ceiling", None) is not None
+        or getattr(args, "modelsize_candidate_json", None) is not None
+    )
+    train_time_section_byte_metrics_enabled = bool(
+        not bool(getattr(args, "disable_train_time_section_byte_metrics", False))
+        and hard_byte_ceiling_attached
+        and coder_qat
+    )
     ema_archive_selection = bool(getattr(args, "ema_archive_selection", False))
     archive_parse_back_selection = bool(getattr(args, "post_export_receiver_cache_quality_gate", False))
     scorer_input_guard_weight = float(
@@ -3176,6 +3438,12 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_invalid_c1a_sigma")
     if c1a_sample_size <= 0:
         blockers.append("hinerv_full_invalid_c1a_sample_size")
+    if not train_time_dual_ascent_enabled:
+        blockers.append("hinerv_full_missing_train_time_dual_ascent")
+    if not hard_byte_ceiling_attached:
+        blockers.append("hinerv_full_missing_train_time_hard_byte_ceiling")
+    if not train_time_section_byte_metrics_enabled:
+        blockers.append("hinerv_full_missing_train_time_section_byte_metrics")
     if not ema_archive_selection:
         blockers.append("hinerv_full_missing_ema_archive_selection")
     if not archive_parse_back_selection:
@@ -3222,6 +3490,11 @@ def _pr95_full_control_contract(
             "coder_qat_c1a_entropy_weight": c1a_entropy_weight,
             "coder_qat_c1a_sigma": c1a_sigma,
             "coder_qat_c1a_sample_size": c1a_sample_size,
+            "train_time_dual_ascent_enabled": train_time_dual_ascent_enabled,
+            "hard_byte_ceiling_attached": hard_byte_ceiling_attached,
+            "train_time_section_byte_metrics_enabled": (
+                train_time_section_byte_metrics_enabled
+            ),
             "decoder_fake_quant_forward_enabled": bool(
                 train_time_controls.decoder_fake_quant_forward_enabled
             ),

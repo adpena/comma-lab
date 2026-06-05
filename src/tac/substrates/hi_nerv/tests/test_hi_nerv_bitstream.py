@@ -196,6 +196,36 @@ def test_train_time_section_byte_control_prices_only_actuated_sections() -> None
     assert control["blockers"] == []
 
 
+def test_train_time_section_byte_control_keeps_decoder_active_when_latent_qat_missing() -> None:
+    telemetry = {
+        "schema": "hinerv_archive_section_telemetry.v1",
+        "profile_ready": True,
+        "archive_zip_bytes": 400,
+        "sections": [
+            {"name": "decoder_state", "role": "decoder", "bytes": 200},
+            {"name": "latents_coarse", "role": "latent", "bytes": 80},
+            {"name": "meta_json", "role": "metadata", "bytes": 20},
+        ],
+    }
+
+    control = build_hinerv_train_time_section_byte_control(
+        telemetry,
+        {"coder_qat_c1a_entropy": 0.001},
+        hard_byte_ceiling=100,
+        byte_price_score_per_byte=0.01,
+    )
+
+    assert control["active"] is True
+    assert control["section_byte_budgets"] == {"decoder_state": 50}
+    assert control["section_byte_loss_weight_key_map"] == {
+        "decoder_state": "coder_qat_c1a_entropy"
+    }
+    pending = {row["section_name"]: row for row in control["pending_section_rows"]}
+    assert pending["latents_coarse"]["pending_reason"] == "active_qat_loss_key_missing"
+    assert pending["meta_json"]["pending_reason"] == "non_differentiable_archive_section"
+    assert control["blockers"] == []
+
+
 def test_hi_nerv_bitstream_preparation_applies_receiver_visible_transforms() -> None:
     base = _state()
 
@@ -736,16 +766,21 @@ def test_hi_nerv_bitstream_waterfill_selector_admits_only_positive_value_per_byt
 
     assert selection["schema"] == HI_NERV_BITSTREAM_WATERFILL_SELECTION_SCHEMA
     assert selection["scorer_value_replay_attached"] is True
-    assert selection["byte_price_plan"]["decision_counts"]["cut"] == 1
-    assert selection["selected_row"]["decoder_codec_requested"] == "int8_scale_bundled"
+    assert selection["byte_price_plan"]["economic_decision_counts"]["cut"] == 1
+    assert selection["byte_price_plan"]["decision_counts"]["demote"] == 3
+    assert selection["selected_row"] is None
     assert selection["selected_economic_row"]["decoder_codec_requested"] == (
         "int8_scale_bundled"
     )
-    assert selection["selected_row"]["waterfill_admissible"] is True
-    assert selection["selected_row"]["canonical_decision"] == "cut"
+    assert selection["selected_economic_row"]["waterfill_economic_admissible"] is True
+    assert selection["selected_economic_row"]["canonical_economic_decision"] == "cut"
+    assert selection["selected_economic_row"]["canonical_decision"] == "demote"
+    assert "receiver_proof_path_missing" in selection["selected_economic_row"][
+        "canonical_blockers"
+    ]
     assert all(
         row["decoder_codec_requested"] != "int4_scale_bundled"
-        for row in selection["admissible_rows"]
+        for row in selection["economic_admissible_rows"]
     )
     assert "hi_nerv_bitstream_scorer_value_replay_missing" not in selection[
         "blockers"

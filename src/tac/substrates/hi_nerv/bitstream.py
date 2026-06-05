@@ -1041,10 +1041,6 @@ def build_hinerv_train_time_section_byte_control(
                     **FALSE_AUTHORITY,
                 }
             )
-            if role in {"decoder", "latent"}:
-                blockers.append(
-                    f"hinerv_train_time_section_byte_{name}_active_loss_key_missing"
-                )
             continue
         budgets[name] = budget
         loss_key_map[name] = loss_key

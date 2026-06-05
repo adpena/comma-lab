@@ -21,6 +21,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     TRAINER_SCHEMA,
     HiNervTrainTimeControlConfig,
     _apply_train_time_decoder_controls,
+    _build_hi_nerv_train_time_section_byte_metrics_callback,
     _build_hinerv_hard_byte_ceiling_control,
     _build_parser,
     _build_staged_scorer_curriculum,
@@ -49,6 +50,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _smoke_forward_statistics,
     _smoke_main,
     _train_time_control_config_from_args,
+    _train_time_dual_ascent_config_from_args,
 )
 from tac.analysis.nerv_modelsize_budget import analyze_hinerv_modelsize_candidate
 from tac.repo_io import sha256_file
@@ -970,6 +972,8 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_full_pr95_epoch_budget_below_29650",
         "hinerv_full_missing_coder_aware_qat",
         "hinerv_full_missing_c1a_entropy_control",
+        "hinerv_full_missing_train_time_hard_byte_ceiling",
+        "hinerv_full_missing_train_time_section_byte_metrics",
         "hinerv_full_missing_ema_archive_selection",
         "hinerv_full_missing_archive_parse_back_selection",
         "hinerv_full_missing_scorer_input_distribution_guard",
@@ -1007,6 +1011,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "0.35",
             "--coder-qat-c1a-sample-size",
             "64",
+            "--hard-byte-ceiling",
+            "500000",
             "--ema-archive-selection",
             "--post-export-receiver-cache-quality-gate",
             "--scorer-input-distribution-guard-weight",
@@ -1052,6 +1058,9 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["coder_qat_c1a_entropy_weight"] == pytest.approx(0.0003)
     assert controls["coder_qat_c1a_sigma"] == pytest.approx(0.35)
     assert controls["coder_qat_c1a_sample_size"] == 64
+    assert controls["train_time_dual_ascent_enabled"] is True
+    assert controls["hard_byte_ceiling_attached"] is True
+    assert controls["train_time_section_byte_metrics_enabled"] is True
     assert controls["segnet_student_live_calibration_weight"] == pytest.approx(1.0)
     assert controls["segnet_student_live_calibration_active"] is True
     assert controls["segnet_distillation_objective"] == "boundary_argmax_hinge"
@@ -1115,6 +1124,110 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert contract["score_claim"] is False
     assert contract["promotion_eligible"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_train_time_dual_ascent_config_prices_section_bytes() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--distillation-weight",
+            "1.0",
+            "--pose-distillation-weight",
+            "1.0",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+        ]
+    )
+    controls = _train_time_control_config_from_args(args)
+
+    cfg = _train_time_dual_ascent_config_from_args(
+        args,
+        train_time_controls=controls,
+        coder_qat_loss_weight_map={"coder_qat_c1a_entropy": 0.0003},
+        section_byte_control={
+            "section_byte_budgets": {"decoder_state": 12345},
+            "section_byte_loss_weight_key_map": {
+                "decoder_state": "coder_qat_c1a_entropy"
+            },
+            "section_byte_loss_weight_scale_map": {"decoder_state": 1.0},
+        },
+    )
+
+    constraints = {row["constraint_id"]: row for row in cfg["constraints"]}
+    decoder = constraints["hi_nerv_decoder_state_section_bytes"]
+    assert cfg["enabled"] is True
+    assert decoder["metric_name"] == "train_time_section_rate_score__decoder_state"
+    assert decoder["loss_weight_key"] == "coder_qat_c1a_entropy"
+    assert decoder["target"] > 0.0
+    assert "25/uncompressed_total" in decoder["rationale"]
+
+
+def test_hinerv_train_time_section_byte_metrics_callback_measures_live_payload() -> None:
+    pytest.importorskip("mlx.core")
+
+    from tac.substrates._shared.mlx_score_aware.coder_qat import (
+        coder_qat_loss_weights,
+    )
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--num-pairs",
+            "1",
+            "--output-height",
+            "96",
+            "--output-width",
+            "128",
+            "--decoder-channels",
+            "4,4,4,4,4,4,4",
+            "--latent-dim-coarse",
+            "2",
+            "--latent-dim-mid",
+            "2",
+            "--latent-dim-fine",
+            "2",
+            "--embed-dim",
+            "8",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--hard-byte-ceiling",
+            "500000",
+            "--train-time-section-byte-metrics-frequency-steps",
+            "2",
+        ]
+    )
+    controls = _train_time_control_config_from_args(args)
+    model = HinervSubstrateMLX(_config_from_args(args))
+    callback, attachment = _build_hi_nerv_train_time_section_byte_metrics_callback(
+        args=args,
+        model=model,
+        decoder_codec=_decoder_codec_from_args(args, modelsize_candidate=None),
+        controls=controls,
+        decoder_weight_waterfill_plan=None,
+        hard_byte_ceiling=500_000,
+        active_loss_weights=coder_qat_loss_weights(_coder_qat_config_from_args(args)),
+    )
+
+    assert callback is not None
+    assert attachment["enabled"] is True
+    assert attachment["active"] is True
+    initial = attachment["initial_control"]
+    assert initial["section_byte_budgets"]["decoder_state"] > 0
+    assert initial["section_byte_loss_weight_key_map"]["decoder_state"] == (
+        "coder_qat_c1a_entropy"
+    )
+
+    metrics = callback(model, None, {})
+
+    assert metrics["schema"] == "hi_nerv_train_time_section_byte_metrics.v1"
+    assert metrics["archive_bytes"] > 0
+    assert metrics["section_bytes"]["decoder_state"] > 0
+    assert metrics["metadata"]["section_byte_control_active"] is True
+    assert metrics["metadata"]["refreshed_this_step"] is True
+    assert metrics["metadata"]["score_claim"] is False
 
 
 def test_hinerv_full_control_contract_blocks_neutral_gray_head_init() -> None:
@@ -1335,6 +1448,48 @@ def test_hinerv_mlx_trainer_forwards_modelsize_hard_byte_ceiling_to_archive_expo
             for keyword in call.keywords
         )
         for call in export_calls
+    )
+
+
+def test_hinerv_mlx_trainer_forwards_section_byte_dual_controls_to_harness() -> None:
+    repo_root = Path(__file__).resolve().parents[3]
+    source = (repo_root / "experiments/train_substrate_hi_nerv_mlx_local.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    run_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "run_mlx_score_aware_full_main"
+    ]
+    bundle_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "RendererBundle"
+    ]
+
+    assert run_calls
+    assert any(
+        any(
+            keyword.arg == "train_time_dual_ascent_config"
+            and isinstance(keyword.value, ast.Name)
+            and keyword.value.id == "train_time_dual_ascent_config"
+            for keyword in call.keywords
+        )
+        for call in run_calls
+    )
+    assert any(
+        any(
+            keyword.arg == "train_time_section_byte_metrics"
+            and isinstance(keyword.value, ast.Name)
+            and keyword.value.id == "train_time_section_byte_metrics"
+            for keyword in call.keywords
+        )
+        for call in bundle_calls
     )
 
 

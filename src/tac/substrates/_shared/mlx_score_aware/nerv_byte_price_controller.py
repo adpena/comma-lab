@@ -368,6 +368,10 @@ def build_nerv_byte_price_plan(
         decision: sum(1 for row in decisions if row.decision == decision)
         for decision in (PROTECT, CUT, RETRAIN, DEMOTE, ADMIT)
     }
+    economic_counts = {
+        decision: sum(1 for row in decisions if row.economic_decision == decision)
+        for decision in (PROTECT, CUT, RETRAIN, DEMOTE, ADMIT)
+    }
     return {
         "schema": NERV_BYTE_PRICE_CONTROLLER_SCHEMA,
         "candidate_id": candidate_id or artifact_context.get("candidate_id"),
@@ -382,10 +386,28 @@ def build_nerv_byte_price_plan(
         ),
         "input_row_count": len(normalized),
         "decision_counts": counts,
+        "economic_decision_counts": economic_counts,
         "full_video_coverage": all(row.full_video_coverage for row in normalized)
         if normalized
         else False,
         "decision_rows": decision_rows,
+        "economically_admitted_section_ids": _ids_for_economic_decision(
+            decisions,
+            ADMIT,
+        ),
+        "economically_cut_section_ids": _ids_for_economic_decision(decisions, CUT),
+        "economically_protected_section_ids": _ids_for_economic_decision(
+            decisions,
+            PROTECT,
+        ),
+        "economically_retrain_section_ids": _ids_for_economic_decision(
+            decisions,
+            RETRAIN,
+        ),
+        "economically_demoted_section_ids": _ids_for_economic_decision(
+            decisions,
+            DEMOTE,
+        ),
         "admitted_section_ids": _ids_for_decision(decisions, ADMIT),
         "cut_section_ids": _ids_for_decision(decisions, CUT),
         "protected_section_ids": _ids_for_decision(decisions, PROTECT),
@@ -839,6 +861,13 @@ def _ids_for_decision(
     decision: str,
 ) -> list[str]:
     return [row.section_id for row in decisions if row.decision == decision]
+
+
+def _ids_for_economic_decision(
+    decisions: Sequence[SectionAdmissionDecision],
+    decision: str,
+) -> list[str]:
+    return [row.section_id for row in decisions if row.economic_decision == decision]
 
 
 def _first_present(mapping: Mapping[str, Any], keys: Sequence[str]) -> Any:
