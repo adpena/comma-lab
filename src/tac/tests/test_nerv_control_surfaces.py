@@ -342,6 +342,92 @@ def test_master_bridge_consumes_snerv_geometry_units_without_collapsing_runs() -
     } == {1, 4}
 
 
+def test_master_bridge_blocks_non_improving_snerv_geometry_units() -> None:
+    seam = {
+        "schema": "nerv_top_priority_stack_seam.v1",
+        "top_priority_carriers": ["snerv", "hi_nerv"],
+        "baseline_to_beat": "pr95_hnerv_muon",
+        "blockers": [],
+    }
+    control_inventory = {
+        "schema": "nerv_control_inventory.v1",
+        "control_rows": [],
+        "binding_gap_rows": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    implementation_sweep = {
+        "schema": "nerv_implementation_design_sweep.v1",
+        "stack_sweeps": [],
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    geometry = {
+        "schema": "snerv_scorer_loop_geometry.v1",
+        "label": "flat_geometry",
+        "best_descent_score_delta_linf": 0.0,
+        "lowest_local_score_linf": 0.8,
+        "blockers": [],
+        "allocator_units": [
+            {
+                "unit_type": "snerv_scorer_loop_qat_result",
+                "family": "snerv",
+                "unit_id": "snerv_scorer_loop_qat:flat",
+                "report_path": "flat.json",
+                "n_pairs": 4,
+                "score_delta_linf": 0.0,
+                "accepted_improvement": False,
+                "receiver_contract_satisfied": True,
+            },
+        ],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    bridge = build_nerv_master_consumer_bridge(
+        seam=seam,
+        control_inventory=control_inventory,
+        implementation_sweep=implementation_sweep,
+        snerv_scorer_loop_geometry=geometry,
+    )
+    unit = next(
+        row
+        for row in bridge["master_consumer_units"]
+        if row["unit_id"] == "snerv_scorer_loop_qat:flat"
+    )
+
+    assert unit["planner_action"] == (
+        "replace_snerv_scorer_loop_search_or_training_before_replay"
+    )
+    assert "snerv_scorer_loop_geometry_no_accepted_improvement" in unit["blockers"]
+
+    rate_bridge = build_nerv_rate_allocator_bridge(master_bridge=bridge)
+    assert [
+        row
+        for row in rate_bridge["rate_allocator_work_orders"]
+        if row["work_order_type"] == "snerv_scorer_loop_qat_full600_followup"
+    ] == []
+    repair_orders = [
+        row
+        for row in rate_bridge["rate_allocator_work_orders"]
+        if row["work_order_type"] == "snerv_scorer_loop_qat_training_repair"
+    ]
+    assert len(repair_orders) == 1
+    assert (
+        repair_orders[0]["planner_action"]
+        == "replace_snerv_scorer_loop_search_or_training_before_replay"
+    )
+    assert "training_dynamic_range_repair_required_before_replay" in repair_orders[0][
+        "blockers"
+    ]
+    assert repair_orders[0]["score_claim"] is False
+    assert repair_orders[0]["ready_for_exact_eval_dispatch"] is False
+
+
 def test_rate_allocator_bridge_routes_units_without_authority() -> None:
     rate_bridge = _synthetic_rate_bridge()
 

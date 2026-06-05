@@ -688,6 +688,74 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
         if unit_type == "snerv_scorer_loop_qat_result":
             source_unit_id = str(unit.get("unit_id") or "")
             run_token = _safe_work_order_token(source_unit_id or unit.get("report_path"))
+            accepted_improvement = unit.get("accepted_improvement") is True
+            score_delta = _float_or_none(unit.get("score_delta_linf"))
+            has_descent = accepted_improvement or (
+                score_delta is not None and score_delta < 0.0
+            )
+            if not has_descent:
+                orders.append(
+                    _work_order(
+                        work_order_id=(
+                            f"repair_{family}_{run_token}_scorer_loop_qat_before_full600"
+                        ),
+                        work_order_type="snerv_scorer_loop_qat_training_repair",
+                        target_consumers=[
+                            "final_rate_attack",
+                            "bit_allocator",
+                            "probe_disambiguator",
+                            "cathedral_autopilot",
+                            "continual_learning_posterior",
+                        ],
+                        planner_action=(
+                            "replace_snerv_scorer_loop_search_or_training_before_replay"
+                        ),
+                        source_unit_id=source_unit_id,
+                        priority=7,
+                        receiver_precision_modes=[
+                            "fp16_protected",
+                            "int8_protected",
+                            "int4",
+                            "int2",
+                            "zero",
+                            "rle_only",
+                        ],
+                        rationale=(
+                            "do not scale a scorer-loop/QAT smoke that accepted "
+                            "no score descent; repair decoder search or training "
+                            "before full600 receiver replay"
+                        ),
+                        payload={
+                            "family": family,
+                            "report_path": unit.get("report_path"),
+                            "axis_tag": unit.get("axis_tag"),
+                            "n_pairs": unit.get("n_pairs"),
+                            "levels": unit.get("levels"),
+                            "wavelet": unit.get("wavelet"),
+                            "qat_bits": unit.get("qat_bits"),
+                            "search_mode": unit.get("search_mode"),
+                            "scorer_loop_evaluations": unit.get(
+                                "scorer_loop_evaluations"
+                            ),
+                            "score_delta_linf": unit.get("score_delta_linf"),
+                            "accepted_improvement": unit.get("accepted_improvement"),
+                            "ready_for_pose_guard_gate": unit.get(
+                                "ready_for_pose_guard_gate"
+                            ),
+                            "receiver_contract_satisfied": unit.get(
+                                "receiver_contract_satisfied"
+                            ),
+                            "result_sha256": unit.get("result_sha256"),
+                        },
+                        blockers=[
+                            *blockers,
+                            "snerv_scorer_loop_qat_no_accepted_improvement",
+                            "training_dynamic_range_repair_required_before_replay",
+                            "paired_contest_cpu_cuda_auth_eval_missing",
+                        ],
+                    )
+                )
+                continue
             orders.append(
                 _work_order(
                     work_order_id=(
@@ -1025,6 +1093,13 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         return []
     return [str(item) for item in value if str(item)]
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _dedupe_strings(values: Sequence[str]) -> list[str]:

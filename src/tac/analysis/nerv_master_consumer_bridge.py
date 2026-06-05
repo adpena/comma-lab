@@ -374,7 +374,20 @@ def _snerv_scorer_loop_geometry_units(report: Mapping[str, Any]) -> list[dict[st
     units: list[dict[str, Any]] = []
     for index, unit in enumerate(_mapping_list(report.get("allocator_units"))):
         unit_id = str(unit.get("unit_id") or f"snerv_scorer_loop_geometry_{index:04d}")
-        blockers = _unique(report_blockers + _string_list(unit.get("blockers")))
+        accepted_improvement = unit.get("accepted_improvement") is True
+        score_delta = _float_or_none(unit.get("score_delta_linf"))
+        has_descent = accepted_improvement or (
+            score_delta is not None and score_delta < 0.0
+        )
+        blockers = _unique(
+            report_blockers
+            + _string_list(unit.get("blockers"))
+            + (
+                []
+                if has_descent
+                else ["snerv_scorer_loop_geometry_no_accepted_improvement"]
+            )
+        )
         units.append(
             {
                 **dict(unit),
@@ -398,7 +411,11 @@ def _snerv_scorer_loop_geometry_units(report: Mapping[str, Any]) -> list[dict[st
                     "cathedral_autopilot",
                     "continual_learning_posterior",
                 ],
-                "planner_action": "scale_snerv_geometry_run_to_full600_receiver_proof",
+                "planner_action": (
+                    "scale_snerv_geometry_run_to_full600_receiver_proof"
+                    if has_descent
+                    else "replace_snerv_scorer_loop_search_or_training_before_replay"
+                ),
                 "blockers": blockers,
                 "predicted_delta_adjustment": 0.0,
                 **FALSE_AUTHORITY,
@@ -1044,6 +1061,13 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
         return []
     return [str(item) for item in value]
+
+
+def _float_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _unique(values: Sequence[str]) -> list[str]:
