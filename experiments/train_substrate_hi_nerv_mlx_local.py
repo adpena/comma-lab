@@ -1420,6 +1420,11 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=64.0,
     )
+    parser.add_argument(
+        "--receiver-cache-quality-min-segnet-argmax-occupied-class-fraction-for-fit-gate",
+        type=float,
+        default=0.400001,
+    )
     return parser
 
 
@@ -3182,6 +3187,9 @@ def _maybe_write_post_export_receiver_cache_quality(
         min_segnet_dynamic_range=float(args.receiver_cache_quality_min_segnet_dynamic_range),
         max_segnet_mae_vs_reference_for_fit_gate=float(
             args.receiver_cache_quality_max_segnet_mae_vs_reference_for_fit_gate
+        ),
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
+            args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
         ),
     )
 

@@ -292,6 +292,80 @@ def test_hi_nerv_receiver_cache_segnet_argmax_probe_ignores_one_pixel_class_crum
     )
 
 
+def test_hi_nerv_receiver_cache_segnet_argmax_probe_uses_configured_class_gate(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    candidate.mkdir()
+    reference.mkdir()
+    cand = np.zeros((1, 3, 4, 4), dtype=np.float32)
+    ref = np.zeros((1, 3, 4, 4), dtype=np.float32)
+    ref[0, 0, :, :] = np.arange(16, dtype=np.float32).reshape(4, 4)
+    np.save(candidate / "segnet_last_rgb.npy", cand)
+    np.save(reference / "segnet_last_rgb.npy", ref)
+
+    def fake_segnet_logits(x_nchw: np.ndarray) -> np.ndarray:
+        b, _c, h, w = x_nchw.shape
+        logits = np.zeros((b, 5, h, w), dtype=np.float32)
+        cls = (x_nchw[:, 0, :, :].astype(np.int64) % 5).reshape(b, h, w)
+        for class_index in range(5):
+            logits[:, class_index, :, :] = np.where(cls == class_index, 2.0, 0.0)
+        return logits
+
+    report = build_hi_nerv_receiver_cache_segnet_argmax_probe(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        upstream_dir=None,
+        sample_pairs=1,
+        batch_frames=1,
+        max_segnet_argmax_disagreement_for_fit_gate=1.0,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.2,
+        segnet_logits_fn=fake_segnet_logits,
+    )
+
+    assert report["candidate_occupied_class_fraction"] == pytest.approx(0.2)
+    assert report["thresholds"]["min_candidate_occupied_class_fraction"] == (
+        pytest.approx(0.2)
+    )
+    assert report["fit_gate_passed"] is True
+    assert (
+        "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
+        not in report["blockers"]
+    )
+
+
+def test_hi_nerv_receiver_cache_segnet_argmax_probe_rejects_bad_class_gate(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    candidate.mkdir()
+    reference.mkdir()
+    np.save(
+        candidate / "segnet_last_rgb.npy",
+        np.zeros((1, 3, 2, 2), dtype=np.float32),
+    )
+    np.save(
+        reference / "segnet_last_rgb.npy",
+        np.zeros((1, 3, 2, 2), dtype=np.float32),
+    )
+
+    with pytest.raises(ValueError, match="occupied_class_fraction"):
+        build_hi_nerv_receiver_cache_segnet_argmax_probe(
+            candidate_cache_dir=candidate,
+            reference_cache_dir=reference,
+            upstream_dir=None,
+            sample_pairs=1,
+            batch_frames=1,
+            max_segnet_argmax_disagreement_for_fit_gate=1.0,
+            min_segnet_argmax_occupied_class_fraction_for_fit_gate=1.01,
+            segnet_logits_fn=lambda x: np.zeros(
+                (x.shape[0], 5, x.shape[2], x.shape[3]), dtype=np.float32
+            ),
+        )
+
+
 def _write_tiny_hiv1_archive(path: Path) -> Path:
     cfg = HinervConfig(
         latent_dim_coarse=2,

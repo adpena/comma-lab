@@ -1297,6 +1297,8 @@ def test_hinerv_mlx_trainer_parses_post_export_receiver_cache_quality_gate() -> 
             "8",
             "--receiver-cache-quality-reference-cache-dir",
             "/Volumes/VertigoDataTier/pact/ref_cache",
+            "--receiver-cache-quality-min-segnet-argmax-occupied-class-fraction-for-fit-gate",
+            "0.55",
         ]
     )
 
@@ -1305,6 +1307,10 @@ def test_hinerv_mlx_trainer_parses_post_export_receiver_cache_quality_gate() -> 
     assert args.receiver_cache_quality_batch_pairs == 2
     assert args.receiver_cache_quality_min_segnet_dynamic_range == pytest.approx(8.0)
     assert args.receiver_cache_quality_reference_cache_dir.as_posix().endswith("/ref_cache")
+    assert (
+        args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+        == pytest.approx(0.55)
+    )
 
 
 def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:

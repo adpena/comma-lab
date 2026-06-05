@@ -49,6 +49,7 @@ HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA = (
 HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA = NERV_DISTORTION_CRUX_SCHEMA
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION = 1.0e-3
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS = 2
+SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
 
 
 def write_hi_nerv_receiver_cache_quality_report(
@@ -70,6 +71,9 @@ def write_hi_nerv_receiver_cache_quality_report(
     segnet_argmax_probe_device: str = "cpu",
     segnet_argmax_probe_batch_frames: int = 4,
     max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+    min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
+        SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
     require_segnet_argmax_probe: bool = True,
     segnet_argmax_probe_logits_fn: Any | None = None,
     distortion_crux_probe: bool = True,
@@ -163,6 +167,9 @@ def write_hi_nerv_receiver_cache_quality_report(
                             max_segnet_argmax_disagreement_for_fit_gate=float(
                                 max_segnet_argmax_disagreement_for_fit_gate
                             ),
+                            min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
+                                min_segnet_argmax_occupied_class_fraction_for_fit_gate
+                            ),
                             segnet_logits_fn=segnet_argmax_probe_logits_fn,
                         )
                     )
@@ -182,6 +189,9 @@ def write_hi_nerv_receiver_cache_quality_report(
                             device=str(segnet_argmax_probe_device),
                             max_segnet_argmax_disagreement_for_fit_gate=float(
                                 max_segnet_argmax_disagreement_for_fit_gate
+                            ),
+                            min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
+                                min_segnet_argmax_occupied_class_fraction_for_fit_gate
                             ),
                         )
                     )
@@ -334,6 +344,9 @@ def write_hi_nerv_receiver_cache_segnet_argmax_probe(
     batch_frames: int = 4,
     device: str = "cpu",
     max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+    min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
+        SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
 ) -> dict[str, Any]:
     """Run real SegNet argmax disagreement on receiver-cache RGB tensors.
 
@@ -353,6 +366,9 @@ def write_hi_nerv_receiver_cache_segnet_argmax_probe(
         max_segnet_argmax_disagreement_for_fit_gate=(
             max_segnet_argmax_disagreement_for_fit_gate
         ),
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=(
+            min_segnet_argmax_occupied_class_fraction_for_fit_gate
+        ),
     )
     out = Path(output_json).expanduser().resolve(strict=False)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -370,6 +386,9 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     batch_frames: int = 4,
     device: str = "cpu",
     max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+    min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
+        SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
     segnet_logits_fn: Any | None = None,
 ) -> dict[str, Any]:
     """Build the SegNet argmax probe payload.
@@ -388,6 +407,14 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         raise ValueError(
             "max_segnet_argmax_disagreement_for_fit_gate must be in [0, 1], "
             f"got {threshold}"
+        )
+    min_candidate_occupied_class_fraction = float(
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate
+    )
+    if not 0.0 <= min_candidate_occupied_class_fraction <= 1.0:
+        raise ValueError(
+            "min_segnet_argmax_occupied_class_fraction_for_fit_gate must be "
+            f"in [0, 1], got {min_candidate_occupied_class_fraction}"
         )
 
     candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
@@ -462,7 +489,6 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     reference_occupied_class_fraction = reference_occupancy[
         "occupied_class_fraction"
     ]
-    min_candidate_occupied_class_fraction = 0.400001
     blockers = ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"]
     if disagreement > threshold:
         blockers.append("candidate_segnet_argmax_disagreement_too_high")
@@ -964,6 +990,7 @@ __all__ = [
     "HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA",
+    "SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE",
     "build_hi_nerv_receiver_cache_segnet_argmax_probe",
     "write_hi_nerv_direct_receiver_cache_from_payload",
     "write_hi_nerv_receiver_cache_quality_report",

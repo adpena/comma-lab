@@ -8858,6 +8858,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     receiver_cache_quality_segnet_argmax_probe: bool = True,
     receiver_cache_quality_segnet_argmax_batch_frames: int = 4,
     receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+    receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
+        0.400001
+    ),
     telemetry_flush_interval_epochs: int = 1,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
@@ -10113,6 +10116,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             max_segnet_argmax_disagreement_for_fit_gate=float(
                 receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
+            ),
+            min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
+                receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
             repo_root=root,
         )
@@ -15185,6 +15191,7 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
     segnet_argmax_probe: bool,
     segnet_argmax_batch_frames: int,
     max_segnet_argmax_disagreement_for_fit_gate: float,
+    min_segnet_argmax_occupied_class_fraction_for_fit_gate: float,
     repo_root: str | Path,
     pair_indices: Sequence[int] = (),
 ) -> dict[str, Any] | None:
@@ -15324,6 +15331,9 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             segnet_argmax_probe_batch_frames=int(segnet_argmax_batch_frames),
             max_segnet_argmax_disagreement_for_fit_gate=float(
                 max_segnet_argmax_disagreement_for_fit_gate
+            ),
+            min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
+                min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
         )
     except Exception as exc:
@@ -19985,6 +19995,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--receiver-cache-quality-min-segnet-argmax-occupied-class-fraction-for-fit-gate",
+        default=0.400001,
+        type=float,
+        help=(
+            "Minimum non-collapsed real SegNet occupied-class fraction accepted "
+            "by the HiNeRV post-export receiver-quality gate. This guards "
+            "against degenerate renderers that match scale but collapse the "
+            "scorer argmax surface."
+        ),
+    )
+    parser.add_argument(
         "--telemetry-flush-interval-epochs",
         default=1,
         type=int,
@@ -21407,6 +21428,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate=(
                 args.receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate
+            ),
+            receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate=(
+                args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,

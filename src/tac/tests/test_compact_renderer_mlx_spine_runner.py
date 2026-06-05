@@ -421,6 +421,7 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
         segnet_argmax_probe=True,
         segnet_argmax_batch_frames=3,
         max_segnet_argmax_disagreement_for_fit_gate=0.125,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.625,
         repo_root=REPO_ROOT,
     )
 
@@ -437,6 +438,9 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
     assert captured["max_segnet_argmax_disagreement_for_fit_gate"] == pytest.approx(
         0.125
     )
+    assert captured[
+        "min_segnet_argmax_occupied_class_fraction_for_fit_gate"
+    ] == pytest.approx(0.625)
     summary = runner_mod._hi_nerv_receiver_cache_quality_summary(report)
     assert summary["quality_gate_passed"] is True
     assert summary["candidate_posenet_yuv6_pair_stats"] == {"std": 3.0}
@@ -565,6 +569,7 @@ def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
         segnet_argmax_probe=False,
         segnet_argmax_batch_frames=4,
         max_segnet_argmax_disagreement_for_fit_gate=0.25,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.400001,
         repo_root=REPO_ROOT,
     )
 
@@ -694,6 +699,7 @@ def test_hinerv_runner_receiver_cache_quality_forwards_prioritized_pairs(
         segnet_argmax_probe=False,
         segnet_argmax_batch_frames=4,
         max_segnet_argmax_disagreement_for_fit_gate=0.25,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.400001,
         repo_root=REPO_ROOT,
     )
 
