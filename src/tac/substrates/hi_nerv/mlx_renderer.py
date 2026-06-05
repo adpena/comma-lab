@@ -830,6 +830,65 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
                 "bias": mx.zeros_like(head.bias),  # type: ignore[union-attr]
             })
 
+    def initialize_output_head_bias_from_targets(
+        self,
+        target_rgb_0: Any,
+        target_rgb_1: Any,
+        *,
+        epsilon: float = 1.0 / 1024.0,
+    ) -> dict[str, Any]:
+        """Initialize sigmoid RGB-head biases to the target per-channel means.
+
+        HiNeRV's sigmoid heads start at ``sigmoid(0) * 255 = 127.5`` when the
+        bias is zero.  The contest video's scorer-resolution frames are much
+        darker, so a zero-bias launch spends early optimization just moving the
+        output into the right value domain.  This deterministic compression-time
+        initialization solves the constant-color optimum in closed form while
+        charging the result as ordinary archive decoder bias bytes.
+        """
+
+        def _bias_for_target(target_rgb: Any) -> tuple[Any, Any]:
+            target = mx.array(target_rgb).astype(mx.float32)  # type: ignore[union-attr]
+            if target.ndim != 4 or int(target.shape[-1]) != 3:
+                raise ValueError(
+                    "target RGB tensors must be NHWC with 3 channels; got "
+                    f"shape={tuple(int(v) for v in target.shape)}"
+                )
+            eps = float(epsilon)
+            if not math.isfinite(eps) or eps <= 0.0 or eps >= 0.5:
+                raise ValueError(f"epsilon must be finite in (0, 0.5); got {epsilon}")
+            mean = mx.mean(mx.clip(target, eps, 1.0 - eps), axis=(0, 1, 2))  # type: ignore[union-attr]
+            bias = mx.log(mean / (1.0 - mean))  # type: ignore[union-attr]
+            return mean, bias
+
+        mean_0, bias_0 = _bias_for_target(target_rgb_0)
+        mean_1, bias_1 = _bias_for_target(target_rgb_1)
+        self.head_rgb_0.update({"bias": bias_0.astype(self.head_rgb_0.bias.dtype)})
+        self.head_rgb_1.update({"bias": bias_1.astype(self.head_rgb_1.bias.dtype)})
+        mx.eval(self.head_rgb_0.bias, self.head_rgb_1.bias)  # type: ignore[union-attr]
+        return {
+            "schema": "hi_nerv_output_head_target_bias_init.v1",
+            "enabled": True,
+            "epsilon": float(epsilon),
+            "target_rgb_0_mean": [
+                float(v) for v in np.asarray(mean_0, dtype=np.float32).reshape(-1)
+            ],
+            "target_rgb_1_mean": [
+                float(v) for v in np.asarray(mean_1, dtype=np.float32).reshape(-1)
+            ],
+            "head_rgb_0_bias": [
+                float(v) for v in np.asarray(self.head_rgb_0.bias, dtype=np.float32).reshape(-1)
+            ],
+            "head_rgb_1_bias": [
+                float(v) for v in np.asarray(self.head_rgb_1.bias, dtype=np.float32).reshape(-1)
+            ],
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [
+                "head_rgb_0.bias",
+                "head_rgb_1.bias",
+            ],
+        }
+
     def __call__(self, pair_indices: Any) -> Any:
         z_c = mx.take(self.latents_coarse, pair_indices, axis=0)  # type: ignore[union-attr]
         z_m = mx.take(self.latents_mid, pair_indices, axis=0)  # type: ignore[union-attr]

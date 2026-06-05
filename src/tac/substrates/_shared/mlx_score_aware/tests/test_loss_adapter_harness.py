@@ -152,10 +152,65 @@ def test_scorer_input_distribution_guard_includes_dynamic_range_term() -> None:
     mx.eval(
         parts["scorer_input_distribution_guard"],
         parts["scorer_input_distribution_guard_dynamic_range"],
+        parts["scorer_input_distribution_guard_segnet_frame1_mse"],
+        parts["scorer_input_distribution_guard_segnet_frame1_mae"],
+        parts["scorer_input_distribution_guard_yuv6_pair_dynamic_range"],
+        parts["scorer_input_distribution_guard_yuv6_pair_mse"],
+        parts["scorer_input_distribution_guard_yuv6_pair_mae"],
+        parts["scorer_input_distribution_guard_yuv6_temporal_delta"],
+        parts["scorer_input_distribution_guard_yuv6_temporal_delta_mse"],
+        parts["scorer_input_distribution_guard_yuv6_temporal_delta_mae"],
     )
 
     assert "scorer_input_distribution_guard_dynamic_range" in parts
+    assert "scorer_input_distribution_guard_segnet_frame1_mse" in parts
+    assert "scorer_input_distribution_guard_segnet_frame1_mae" in parts
+    assert "scorer_input_distribution_guard_yuv6_pair" in parts
+    assert "scorer_input_distribution_guard_yuv6_pair_dynamic_range" in parts
+    assert "scorer_input_distribution_guard_yuv6_pair_mse" in parts
+    assert "scorer_input_distribution_guard_yuv6_pair_mae" in parts
+    assert "scorer_input_distribution_guard_yuv6_temporal_delta" in parts
+    assert "scorer_input_distribution_guard_yuv6_temporal_delta_mse" in parts
+    assert "scorer_input_distribution_guard_yuv6_temporal_delta_mae" in parts
     assert float(parts["scorer_input_distribution_guard_dynamic_range"].item()) >= 0.0
+    assert (
+        float(parts["scorer_input_distribution_guard_segnet_frame1_mse"].item())
+        >= 0.0
+    )
+    assert (
+        float(parts["scorer_input_distribution_guard_segnet_frame1_mae"].item())
+        >= 0.0
+    )
+    assert (
+        float(
+            parts[
+                "scorer_input_distribution_guard_yuv6_pair_dynamic_range"
+            ].item()
+        )
+        >= 0.0
+    )
+    assert (
+        float(parts["scorer_input_distribution_guard_yuv6_temporal_delta"].item())
+        >= 0.0
+    )
+    assert (
+        float(parts["scorer_input_distribution_guard_yuv6_pair_mse"].item()) >= 0.0
+    )
+    assert (
+        float(parts["scorer_input_distribution_guard_yuv6_pair_mae"].item()) >= 0.0
+    )
+    assert (
+        float(
+            parts["scorer_input_distribution_guard_yuv6_temporal_delta_mse"].item()
+        )
+        >= 0.0
+    )
+    assert (
+        float(
+            parts["scorer_input_distribution_guard_yuv6_temporal_delta_mae"].item()
+        )
+        >= 0.0
+    )
 
 
 @mlx_only
@@ -566,6 +621,20 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
     assert "loss_part_weighted_pose_distill" in metrics
     assert "loss_part_scorer_input_distribution_guard" in metrics
     assert "loss_part_scorer_input_distribution_guard_dynamic_range" in metrics
+    assert "loss_part_scorer_input_distribution_guard_segnet_frame1_mse" in metrics
+    assert "loss_part_scorer_input_distribution_guard_segnet_frame1_mae" in metrics
+    assert "loss_part_scorer_input_distribution_guard_yuv6_pair" in metrics
+    assert "loss_part_scorer_input_distribution_guard_yuv6_pair_mse" in metrics
+    assert "loss_part_scorer_input_distribution_guard_yuv6_pair_mae" in metrics
+    assert "loss_part_scorer_input_distribution_guard_yuv6_temporal_delta" in metrics
+    assert (
+        "loss_part_scorer_input_distribution_guard_yuv6_temporal_delta_mse"
+        in metrics
+    )
+    assert (
+        "loss_part_scorer_input_distribution_guard_yuv6_temporal_delta_mae"
+        in metrics
+    )
     assert "loss_part_weighted_scorer_input_distribution_guard" in metrics
     assert metrics["loss_part_config_weight_scorer_input_distribution_guard"] == pytest.approx(2.0)
 

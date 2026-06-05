@@ -377,6 +377,7 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
     assert metadata["optimizer_surface"] == "pr95_faithful_stage_descriptors"
     assert metadata["coder_qat_enabled"] is True
     assert metadata["coder_qat_c1a_sigma"] == pytest.approx(0.35)
+    assert metadata["segnet_student_live_calibration_weight"] == pytest.approx(1.0)
     assert metadata["decoder_fake_quant_forward_enabled"] is True
     assert metadata["decoder_fake_quant_bits"] == 4
     assert metadata["train_time_decoder_controls_enabled"] is True
@@ -388,7 +389,22 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
     assert metadata["export_decoder_quant_noise_bits"] == 6
     guard = metadata["scorer_input_distribution_guard"]
     assert "rgb_dynamic_range" in guard["components"]
+    assert "segnet_frame1_mse" in guard["components"]
+    assert "segnet_frame1_mae" in guard["components"]
+    assert "posenet_yuv6_pair_dynamic_range" in guard["components"]
+    assert "posenet_yuv6_pair_mse" in guard["components"]
+    assert "posenet_yuv6_pair_mae" in guard["components"]
+    assert "posenet_yuv6_temporal_delta" in guard["components"]
+    assert "posenet_yuv6_temporal_delta_mse" in guard["components"]
+    assert "posenet_yuv6_temporal_delta_mae" in guard["components"]
     assert guard["dynamic_range_repair_before_replay"] is True
+    output_init = metadata["output_head_target_bias_init"]
+    assert output_init["enabled"] is True
+    assert output_init["runtime_sidecar_bytes"] == 0
+    assert output_init["archive_charged_decoder_tensors"] == [
+        "head_rgb_0.bias",
+        "head_rgb_1.bias",
+    ]
     assert metadata["score_claim"] is False
     assert metadata["ready_for_exact_eval_dispatch"] is False
 
@@ -419,6 +435,13 @@ def test_hinerv_train_time_control_config_rejects_ambiguous_or_fake_controls() -
         _train_time_control_config_from_args(
             _build_parser().parse_args(
                 ["--full", "--train-time-decoder-quant-noise-scale", "0.1"]
+            )
+        )
+
+    with pytest.raises(ValueError, match="output_head_target_bias_init_epsilon"):
+        _train_time_control_config_from_args(
+            _build_parser().parse_args(
+                ["--full", "--output-head-target-bias-init-epsilon", "0.75"]
             )
         )
 
@@ -546,6 +569,7 @@ def test_hinerv_train_time_decoder_controls_mutate_mlx_decoder_not_latents() -> 
         coder_qat_c1a_entropy_weight=0.0,
         coder_qat_c1a_sigma=0.2,
         coder_qat_c1a_sample_size=512,
+        segnet_student_live_calibration_weight=1.0,
         decoder_fake_quant_forward_enabled=False,
         decoder_fake_quant_bits=8,
         train_time_decoder_pruning_ratio=0.25,
@@ -841,6 +865,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["coder_qat_c1a_entropy_weight"] == pytest.approx(0.0003)
     assert controls["coder_qat_c1a_sigma"] == pytest.approx(0.35)
     assert controls["coder_qat_c1a_sample_size"] == 64
+    assert controls["segnet_student_live_calibration_weight"] == pytest.approx(1.0)
+    assert controls["segnet_student_live_calibration_active"] is True
     assert controls["train_time_decoder_controls_enabled"] is False
     assert controls["export_decoder_pruning_ratio"] == pytest.approx(0.0)
     assert controls["ema_archive_selection_enabled"] is True
@@ -850,10 +876,107 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert "rgb_dynamic_range" in controls[
         "scorer_input_distribution_guard_components"
     ]
+    assert "segnet_frame1_mse" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert "segnet_frame1_mae" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert "posenet_yuv6_pair_dynamic_range" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert "posenet_yuv6_pair_mse" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert "posenet_yuv6_pair_mae" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert "posenet_yuv6_temporal_delta" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert "posenet_yuv6_temporal_delta_mse" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert "posenet_yuv6_temporal_delta_mae" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
     assert controls["dynamic_range_repair_before_replay"] is True
+    assert controls["output_head_target_bias_init_enabled"] is True
+    assert controls["output_head_target_bias_init_epsilon"] == pytest.approx(
+        1.0 / 1024.0
+    )
     assert contract["score_claim"] is False
     assert contract["promotion_eligible"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_full_control_contract_blocks_neutral_gray_head_init() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--epochs",
+            "29650",
+            "--distillation-weight",
+            "1.0",
+            "--pose-distillation-weight",
+            "1.0",
+            "--eval-roundtrip-ste",
+            "--pr95-faithful-curriculum",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
+            "--ema-archive-selection",
+            "--post-export-receiver-cache-quality-gate",
+            "--scorer-input-distribution-guard-weight",
+            "2.0",
+            "--no-output-head-target-bias-init",
+        ]
+    )
+
+    contract = _pr95_full_control_contract(args)
+
+    assert contract["production_full_control_ready"] is False
+    assert "hinerv_full_missing_output_head_target_bias_init" in contract["blockers"]
+    assert contract["controls"]["output_head_target_bias_init_enabled"] is False
+
+
+def test_hinerv_full_control_contract_blocks_uncalibrated_segnet_student() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--epochs",
+            "29650",
+            "--distillation-weight",
+            "1.0",
+            "--pose-distillation-weight",
+            "1.0",
+            "--segnet-student-live-calibration-weight",
+            "0.0",
+            "--eval-roundtrip-ste",
+            "--pr95-faithful-curriculum",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
+            "--ema-archive-selection",
+            "--post-export-receiver-cache-quality-gate",
+            "--scorer-input-distribution-guard-weight",
+            "2.0",
+        ]
+    )
+
+    contract = _pr95_full_control_contract(args)
+
+    assert contract["production_full_control_ready"] is False
+    assert "hinerv_full_missing_segnet_student_live_calibration" in contract["blockers"]
+    assert contract["controls"]["segnet_student_live_calibration_active"] is False
 
 
 def test_hinerv_mlx_trainer_optimizer_choices_match_adapter() -> None:

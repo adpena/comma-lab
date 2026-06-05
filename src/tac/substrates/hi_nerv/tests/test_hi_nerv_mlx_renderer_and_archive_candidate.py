@@ -208,6 +208,40 @@ def test_mlx_renderer_forward_shape_b2chw_255() -> None:
 
 
 @skip_no_mlx
+def test_mlx_output_head_target_bias_init_is_archive_exported() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    target0 = mx.ones((cfg.num_pairs, cfg.output_height, cfg.output_width, 3)) * 0.1
+    target1 = mx.ones((cfg.num_pairs, cfg.output_height, cfg.output_width, 3)) * 0.2
+
+    payload = model.initialize_output_head_bias_from_targets(target0, target1)
+    exported = model.export_state_dict()
+
+    assert payload["runtime_sidecar_bytes"] == 0
+    assert payload["archive_charged_decoder_tensors"] == [
+        "head_rgb_0.bias",
+        "head_rgb_1.bias",
+    ]
+    np.testing.assert_allclose(
+        exported["head_rgb_0.bias"],
+        np.log(np.asarray([0.1, 0.1, 0.1], dtype=np.float32) / 0.9),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+    np.testing.assert_allclose(
+        exported["head_rgb_1.bias"],
+        np.log(np.asarray([0.2, 0.2, 0.2], dtype=np.float32) / 0.8),
+        rtol=1e-5,
+        atol=1e-5,
+    )
+
+
+@skip_no_mlx
 def test_mlx_renderer_generic_resize_path_matches_pytorch() -> None:
     import mlx.core as mx
     import numpy as np

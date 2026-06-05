@@ -347,9 +347,11 @@ class RendererBundle:
             against the observed compact-carrier value-domain collapse where a
             byte-closed receiver emits saturated/out-of-distribution RGB and
             then both SegNet/PoseNet collapse. The guard matches decoded RGB
-            per-channel mean, per-channel std, and a soft saturation mass to
-            the real-video target frames. It is a train-time Lagrangian term,
-            not a score authority claim.
+            per-channel mean/std/dynamic range plus soft saturation mass,
+            direct SegNet frame-1 RGB fit, and the PR95 PoseNet YUV6 pair
+            mean/std/dynamic range/direct fit plus temporal-delta distribution
+            and fit to the real-video targets. It is a train-time Lagrangian
+            term, not a score authority claim.
         scorer_input_distribution_guard_saturation_margin: byte-domain edge
             band in normalized RGB units. ``0.02`` means the soft saturation
             term tracks mass near ``<= 0.02`` or ``>= 0.98``.

@@ -126,6 +126,7 @@ class HiNervTrainTimeControlConfig:
     coder_qat_c1a_entropy_weight: float
     coder_qat_c1a_sigma: float
     coder_qat_c1a_sample_size: int
+    segnet_student_live_calibration_weight: float
     decoder_fake_quant_forward_enabled: bool
     decoder_fake_quant_bits: int
     train_time_decoder_pruning_ratio: float = 0.0
@@ -141,6 +142,8 @@ class HiNervTrainTimeControlConfig:
     scorer_input_distribution_guard_weight: float = 0.0
     scorer_input_distribution_guard_saturation_margin: float = 0.02
     scorer_input_distribution_guard_temperature: float = 0.01
+    output_head_target_bias_init_enabled: bool = True
+    output_head_target_bias_init_epsilon: float = 1.0 / 1024.0
 
     def validated(self) -> HiNervTrainTimeControlConfig:
         if self.stage_loss_schedule not in {
@@ -182,6 +185,10 @@ class HiNervTrainTimeControlConfig:
         _require_finite_positive(self.coder_qat_c1a_sigma, "coder_qat_c1a_sigma")
         if int(self.coder_qat_c1a_sample_size) <= 0:
             raise ValueError("coder_qat_c1a_sample_size must be positive")
+        _require_finite_nonnegative(
+            self.segnet_student_live_calibration_weight,
+            "segnet_student_live_calibration_weight",
+        )
         if int(self.decoder_fake_quant_bits) < 1 or int(self.decoder_fake_quant_bits) > 16:
             raise ValueError("decoder_fake_quant_bits must be in [1, 16]")
         _validate_ratio(
@@ -220,6 +227,10 @@ class HiNervTrainTimeControlConfig:
             self.scorer_input_distribution_guard_temperature,
             "scorer_input_distribution_guard_temperature",
         )
+        _validate_unit_open_interval(
+            self.output_head_target_bias_init_epsilon,
+            "output_head_target_bias_init_epsilon",
+        )
         return replace(
             self,
             optimizer_kind=str(self.optimizer_kind),
@@ -232,6 +243,9 @@ class HiNervTrainTimeControlConfig:
             coder_qat_c1a_entropy_weight=float(self.coder_qat_c1a_entropy_weight),
             coder_qat_c1a_sigma=float(self.coder_qat_c1a_sigma),
             coder_qat_c1a_sample_size=int(self.coder_qat_c1a_sample_size),
+            segnet_student_live_calibration_weight=float(
+                self.segnet_student_live_calibration_weight
+            ),
             decoder_fake_quant_bits=int(self.decoder_fake_quant_bits),
             train_time_decoder_pruning_ratio=float(self.train_time_decoder_pruning_ratio),
             train_time_decoder_quant_noise_bits=(
@@ -265,6 +279,12 @@ class HiNervTrainTimeControlConfig:
             ),
             scorer_input_distribution_guard_temperature=float(
                 self.scorer_input_distribution_guard_temperature
+            ),
+            output_head_target_bias_init_enabled=bool(
+                self.output_head_target_bias_init_enabled
+            ),
+            output_head_target_bias_init_epsilon=float(
+                self.output_head_target_bias_init_epsilon
             ),
         )
 
@@ -302,6 +322,9 @@ class HiNervTrainTimeControlConfig:
             ),
             "coder_qat_c1a_sigma": float(self.coder_qat_c1a_sigma),
             "coder_qat_c1a_sample_size": int(self.coder_qat_c1a_sample_size),
+            "segnet_student_live_calibration_weight": float(
+                self.segnet_student_live_calibration_weight
+            ),
             "decoder_fake_quant_forward_enabled": bool(
                 self.decoder_fake_quant_forward_enabled
             ),
@@ -348,6 +371,16 @@ class HiNervTrainTimeControlConfig:
                     "rgb_std",
                     "rgb_dynamic_range",
                     "soft_saturation_mass",
+                    "segnet_frame1_mse",
+                    "segnet_frame1_mae",
+                    "posenet_yuv6_pair_mean",
+                    "posenet_yuv6_pair_std",
+                    "posenet_yuv6_pair_dynamic_range",
+                    "posenet_yuv6_pair_mse",
+                    "posenet_yuv6_pair_mae",
+                    "posenet_yuv6_temporal_delta",
+                    "posenet_yuv6_temporal_delta_mse",
+                    "posenet_yuv6_temporal_delta_mae",
                 ],
                 "dynamic_range_repair_before_replay": True,
                 "saturation_margin": float(
@@ -356,6 +389,17 @@ class HiNervTrainTimeControlConfig:
                 "temperature": float(
                     self.scorer_input_distribution_guard_temperature
                 ),
+            },
+            "output_head_target_bias_init": {
+                "schema": "hi_nerv_output_head_target_bias_init_control.v1",
+                "enabled": bool(self.output_head_target_bias_init_enabled),
+                "epsilon": float(self.output_head_target_bias_init_epsilon),
+                "closed_form": "bias=logit(clamp(mean(target_rgb_channel),eps,1-eps))",
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [
+                    "head_rgb_0.bias",
+                    "head_rgb_1.bias",
+                ],
             },
             "authority": TRAINER_AUTHORITY,
             **FALSE_AUTHORITY,
@@ -455,6 +499,12 @@ def _full_main(args: argparse.Namespace) -> int:
         output_width=int(cfg.output_width),
         pair_indices=source_pair_indices,
     )
+    output_head_target_bias_init = _initialize_output_head_target_bias(
+        model=model,
+        target_rgb_0=target_rgb_0,
+        target_rgb_1=target_rgb_1,
+        controls=train_time_controls,
+    )
 
     scorer_teacher = None
     pose_scorer_teacher = None
@@ -510,6 +560,11 @@ def _full_main(args: argparse.Namespace) -> int:
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
+        segnet_student_live_calibration_weight=(
+            float(train_time_controls.segnet_student_live_calibration_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
         allow_segnet_only_research=bool(args.allow_segnet_only_research),
         scorer_input_distribution_guard_weight=(
@@ -565,6 +620,9 @@ def _full_main(args: argparse.Namespace) -> int:
             ),
             "coder_qat": coder_qat_metadata(coder_qat_cfg),
             "train_time_controls": _metadata_safe(train_time_controls.metadata()),
+            "output_head_target_bias_init": _metadata_safe(
+                output_head_target_bias_init
+            ),
             "eval_roundtrip_ste_enabled": bool(args.eval_roundtrip_ste),
             "pose_student_input_preprocess": str(args.pose_student_input_preprocess),
             "scorer_input_distribution_guard": _metadata_safe(
@@ -599,6 +657,9 @@ def _full_main(args: argparse.Namespace) -> int:
             "direct_trainer_canonicalization": canonicalization,
             "pr95_full_control_contract": pr95_full_control_contract,
             "train_time_controls": train_time_controls.metadata(),
+            "output_head_target_bias_init": _metadata_safe(
+                output_head_target_bias_init
+            ),
             "modelsize_candidate_consumption": modelsize_candidate_consumption,
             "prioritized_pair_training": _prioritized_pair_training_metadata(
                 prioritized_pair_indices,
@@ -682,6 +743,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
     except Exception as exc:  # pragma: no cover
         print(f"ERROR: MLX import failed: {exc!r}", file=sys.stderr)
         return 2
+    from tac.substrates._shared.mlx_score_aware import decode_mlx_targets
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
     from tac.substrates.hi_nerv.mlx_renderer import MLX_EVIDENCE_GRADE, HinervSubstrateMLX
 
@@ -714,8 +776,24 @@ def _smoke_main(args: argparse.Namespace) -> int:
         decoder_weight_waterfill_plan=decoder_weight_waterfill_plan,
     )
     idx = mx.array(list(range(min(2, int(cfg.num_pairs)))), dtype=mx.int32)
+    smoke_target_rgb_0, smoke_target_rgb_1 = decode_mlx_targets(
+        args.video_path,
+        num_pairs=int(idx.shape[0]),
+        output_height=int(cfg.output_height),
+        output_width=int(cfg.output_width),
+    )
+    output_head_target_bias_init = _initialize_output_head_target_bias(
+        model=model,
+        target_rgb_0=smoke_target_rgb_0,
+        target_rgb_1=smoke_target_rgb_1,
+        controls=train_time_controls,
+    )
     output = model(idx)
     mx.eval(output)
+    output_mean = float(mx.mean(output))
+    target_mean = float(
+        (mx.mean(smoke_target_rgb_0) + mx.mean(smoke_target_rgb_1)) * 0.5 * 255.0
+    )
     archive_path = archive_sha256 = None
     archive_bytes = None
     if args.smoke_export_archive:
@@ -764,8 +842,13 @@ def _smoke_main(args: argparse.Namespace) -> int:
             "output_shape": [int(v) for v in output.shape],
             "output_min": float(mx.min(output)),
             "output_max": float(mx.max(output)),
-            "output_mean": float(mx.mean(output)),
+            "output_mean": output_mean,
+            "output_std": float(mx.std(output)),
+            "target_pair_count_for_bias_init": int(idx.shape[0]),
+            "target_mean_255": target_mean,
+            "target_mean_abs_error_after_bias_init": abs(output_mean - target_mean),
         },
+        "output_head_target_bias_init": _metadata_safe(output_head_target_bias_init),
         "decoder_codec": effective_decoder_codec,
         "decoder_fake_quant_forward": decoder_fake_quant_forward,
         "decoder_weight_waterfill_plan": _decoder_weight_waterfill_plan_attachment_metadata(
@@ -904,6 +987,17 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--coder-qat-c1a-sample-size", type=int, default=512)
     parser.add_argument("--distillation-weight", type=float, default=0.0)
     parser.add_argument("--pose-distillation-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--segnet-student-live-calibration-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Sibling-head calibration pressure against live real "
+            "SegNet(candidate) logits. Direct HiNeRV full runs default it on "
+            "when a real SegNet teacher is bound; 0 is a production-control "
+            "blocker."
+        ),
+    )
     parser.add_argument("--allow-mock-scorer-teacher", action="store_true")
     parser.add_argument("--allow-segnet-only-research", action="store_true")
     parser.add_argument("--eval-roundtrip-ste", action="store_true")
@@ -921,13 +1015,36 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--staged-scorer-segnet-lr-scale", type=float, default=0.3)
     parser.add_argument("--staged-scorer-final-lr-scale", type=float, default=0.1)
     parser.add_argument(
+        "--no-output-head-target-bias-init",
+        action="store_false",
+        dest="output_head_target_bias_init",
+        help=(
+            "Disable the deterministic compression-time sigmoid-head bias "
+            "initialization from target RGB channel means. Production HiNeRV "
+            "control contracts treat this as a blocker because zero bias "
+            "starts at neutral gray."
+        ),
+    )
+    parser.set_defaults(output_head_target_bias_init=True)
+    parser.add_argument(
+        "--output-head-target-bias-init-epsilon",
+        type=float,
+        default=1.0 / 1024.0,
+        help=(
+            "Clamp epsilon for bias=logit(mean(target_channel)) in the "
+            "archive-charged HiNeRV output-head initialization."
+        ),
+    )
+    parser.add_argument(
         "--scorer-input-distribution-guard-weight",
         type=float,
         default=0.0,
         help=(
-            "Differentiable train-time guard that matches decoded RGB mean, "
-            "std, dynamic range, and soft saturation mass to the contest video "
-            "targets before SegNet/PoseNet scorer surrogates consume the "
+            "Differentiable train-time guard that matches decoded RGB and "
+            "upstream-evaluate scorer inputs: SegNet frame-1 direct fit and "
+            "PR95/YUV6 pair mean, std, dynamic range, direct fit, temporal "
+            "delta, temporal-delta fit, and soft saturation mass to the contest "
+            "video targets before SegNet/PoseNet scorer surrogates consume the "
             "frames."
         ),
     )
@@ -1378,6 +1495,9 @@ def _train_time_control_config_from_args(
         coder_qat_c1a_sample_size=int(
             getattr(args, "coder_qat_c1a_sample_size", 512)
         ),
+        segnet_student_live_calibration_weight=float(
+            getattr(args, "segnet_student_live_calibration_weight", 1.0)
+        ),
         decoder_fake_quant_forward_enabled=bool(
             getattr(args, "decoder_fake_quant_forward", False)
         ),
@@ -1433,6 +1553,12 @@ def _train_time_control_config_from_args(
                 0.01,
             )
         ),
+        output_head_target_bias_init_enabled=bool(
+            getattr(args, "output_head_target_bias_init", True)
+        ),
+        output_head_target_bias_init_epsilon=float(
+            getattr(args, "output_head_target_bias_init_epsilon", 1.0 / 1024.0)
+        ),
     ).validated()
 
 
@@ -1449,6 +1575,11 @@ def _require_finite_positive(value: float, field: str) -> None:
 def _validate_ratio(value: float, field: str) -> None:
     if not math.isfinite(float(value)) or float(value) < 0.0 or float(value) >= 1.0:
         raise ValueError(f"{field} must be finite and in [0, 1)")
+
+
+def _validate_unit_open_interval(value: float, field: str) -> None:
+    if not math.isfinite(float(value)) or not 0.0 < float(value) < 0.5:
+        raise ValueError(f"{field} must be finite and in (0, 0.5)")
 
 
 def _validate_quant_noise_controls(
@@ -1560,6 +1691,45 @@ def _configure_decoder_fake_quant_forward(
         "authority": TRAINER_AUTHORITY,
         **FALSE_AUTHORITY,
     }
+
+
+def _initialize_output_head_target_bias(
+    *,
+    model: Any,
+    target_rgb_0: Any,
+    target_rgb_1: Any,
+    controls: HiNervTrainTimeControlConfig,
+) -> dict[str, Any]:
+    control = controls.validated()
+    if not bool(control.output_head_target_bias_init_enabled):
+        return {
+            "schema": "hi_nerv_output_head_target_bias_init.v1",
+            "enabled": False,
+            "reason": "disabled_by_cli",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "blockers": ["hinerv_output_head_target_bias_init_disabled"],
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
+    initializer = getattr(model, "initialize_output_head_bias_from_targets", None)
+    if not callable(initializer):
+        raise RuntimeError(
+            "HiNeRV model lacks initialize_output_head_bias_from_targets; "
+            "refusing neutral-gray-prone long-run launch"
+        )
+    payload = dict(
+        initializer(
+            target_rgb_0,
+            target_rgb_1,
+            epsilon=float(control.output_head_target_bias_init_epsilon),
+        )
+    )
+    payload.update({
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    })
+    return payload
 
 
 def _decoder_weight_waterfill_plan_attachment_metadata(
@@ -2292,6 +2462,9 @@ def _pr95_full_control_contract(
         train_time_controls = _train_time_control_config_from_args(args)
     blockers: list[str] = []
     distillation_weight = float(getattr(args, "distillation_weight", 0.0))
+    segnet_live_calibration_weight = float(
+        train_time_controls.segnet_student_live_calibration_weight
+    )
     pose_distillation_weight = float(getattr(args, "pose_distillation_weight", 0.0))
     eval_roundtrip_ste = bool(getattr(args, "eval_roundtrip_ste", False))
     pose_preprocess = str(getattr(args, "pose_student_input_preprocess", ""))
@@ -2310,9 +2483,14 @@ def _pr95_full_control_contract(
     scorer_input_guard_metadata = train_time_controls.metadata()[
         "scorer_input_distribution_guard"
     ]
+    output_head_bias_metadata = train_time_controls.metadata()[
+        "output_head_target_bias_init"
+    ]
 
     if distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_segnet_distillation_loss")
+    elif segnet_live_calibration_weight <= 0.0:
+        blockers.append("hinerv_full_missing_segnet_student_live_calibration")
     if pose_distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_posenet_distillation_loss")
     if bool(getattr(args, "allow_mock_scorer_teacher", False)):
@@ -2343,6 +2521,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_archive_parse_back_selection")
     if scorer_input_guard_weight <= 0.0:
         blockers.append("hinerv_full_missing_scorer_input_distribution_guard")
+    if not bool(output_head_bias_metadata["enabled"]):
+        blockers.append("hinerv_full_missing_output_head_target_bias_init")
 
     return {
         "schema": PR95_FULL_CONTROL_CONTRACT_SCHEMA,
@@ -2354,6 +2534,10 @@ def _pr95_full_control_contract(
             "optimizer_kind": train_time_controls.optimizer_kind,
             "optimizer_surface": train_time_controls.metadata()["optimizer_surface"],
             "real_segnet_distillation_loss": distillation_weight > 0.0,
+            "segnet_student_live_calibration_weight": segnet_live_calibration_weight,
+            "segnet_student_live_calibration_active": bool(
+                distillation_weight > 0.0 and segnet_live_calibration_weight > 0.0
+            ),
             "real_posenet_distillation_loss": pose_distillation_weight > 0.0,
             "mock_scorer_teacher_allowed": bool(getattr(args, "allow_mock_scorer_teacher", False)),
             "segnet_only_research_allowed": bool(getattr(args, "allow_segnet_only_research", False)),
@@ -2417,6 +2601,12 @@ def _pr95_full_control_contract(
             ),
             "scorer_input_distribution_guard_temperature": float(
                 getattr(args, "scorer_input_distribution_guard_temperature", 0.01)
+            ),
+            "output_head_target_bias_init_enabled": bool(
+                output_head_bias_metadata["enabled"]
+            ),
+            "output_head_target_bias_init_epsilon": float(
+                output_head_bias_metadata["epsilon"]
             ),
         },
         "train_time_controls": _metadata_safe(train_time_controls.metadata()),

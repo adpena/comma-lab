@@ -2862,6 +2862,29 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         def configure_decoder_fake_quant_forward(self, **kwargs):
             self.fake_quant = dict(kwargs)
 
+        def initialize_output_head_bias_from_targets(
+            self,
+            target_rgb_0,
+            target_rgb_1,
+            *,
+            epsilon,
+        ):
+            captured["output_head_target_bias_init_call"] = {
+                "target0_shape": tuple(target_rgb_0.shape),
+                "target1_shape": tuple(target_rgb_1.shape),
+                "epsilon": float(epsilon),
+            }
+            return {
+                "schema": "hi_nerv_output_head_target_bias_init.v1",
+                "enabled": True,
+                "epsilon": float(epsilon),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [
+                    "head_rgb_0.bias",
+                    "head_rgb_1.bias",
+                ],
+            }
+
         def num_parameters(self):
             return 123
 
@@ -3047,6 +3070,18 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert guard["weight"] == pytest.approx(0.25)
     assert guard["saturation_margin"] == pytest.approx(0.03)
     assert guard["temperature"] == pytest.approx(0.02)
+    init_call = captured["output_head_target_bias_init_call"]
+    assert init_call["target0_shape"] == (10, 384, 512, 3)
+    assert init_call["target1_shape"] == (10, 384, 512, 3)
+    assert init_call["epsilon"] == pytest.approx(1.0 / 1024.0)
+    output_init = training["output_head_target_bias_init"]
+    assert output_init["enabled"] is True
+    assert output_init["bound_to_renderer_model"] is True
+    assert output_init["runtime_sidecar_bytes"] == 0
+    assert output_init["archive_charged_decoder_tensors"] == [
+        "head_rgb_0.bias",
+        "head_rgb_1.bias",
+    ]
 
 
 def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
@@ -3064,6 +3099,24 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
 
         def configure_decoder_fake_quant_forward(self, **_kwargs):
             return None
+
+        def initialize_output_head_bias_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            epsilon,
+        ):
+            return {
+                "schema": "hi_nerv_output_head_target_bias_init.v1",
+                "enabled": True,
+                "epsilon": float(epsilon),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [
+                    "head_rgb_0.bias",
+                    "head_rgb_1.bias",
+                ],
+            }
 
         def num_parameters(self):
             return 123
@@ -3235,7 +3288,15 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     assert consumption["consumed_by_decoder_codec"] is True
     assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is False
     assert consumption["archive_export_hard_byte_ceiling_measurement_bypass"] is True
-    assert consumption["hard_byte_ceiling_consumed_by_train_time_dual_ascent"] is True
+    assert consumption["hard_byte_ceiling_consumed_by_train_time_dual_ascent"] is False
+    assert consumption["train_time_section_byte_control_active"] is False
+    assert "hinerv_train_time_section_byte_telemetry_not_attached" in consumption[
+        "train_time_section_byte_control_blockers"
+    ]
+    assert (
+        "hinerv_hard_byte_ceiling_train_time_dual_ascent_section_controller_inactive"
+        in consumption["hard_byte_ceiling_train_time_dual_ascent_blockers"]
+    )
     assert consumption["hard_byte_ceiling"] == 178_000
     assert metadata["config"]["latent_dim_mid"] == 4
     assert metadata["config"]["embed_dim"] == 4
@@ -8690,6 +8751,24 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         def configure_decoder_fake_quant_forward(self, **kwargs):
             self.fake_quant = dict(kwargs)
 
+        def initialize_output_head_bias_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            epsilon,
+        ):
+            return {
+                "schema": "hi_nerv_output_head_target_bias_init.v1",
+                "enabled": True,
+                "epsilon": float(epsilon),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [
+                    "head_rgb_0.bias",
+                    "head_rgb_1.bias",
+                ],
+            }
+
         def num_parameters(self):
             return 65050
 
@@ -8882,6 +8961,24 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
 
         def configure_decoder_fake_quant_forward(self, **kwargs):
             self.fake_quant = dict(kwargs)
+
+        def initialize_output_head_bias_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            epsilon,
+        ):
+            return {
+                "schema": "hi_nerv_output_head_target_bias_init.v1",
+                "enabled": True,
+                "epsilon": float(epsilon),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [
+                    "head_rgb_0.bias",
+                    "head_rgb_1.bias",
+                ],
+            }
 
         def num_parameters(self):
             return 7
@@ -9107,6 +9204,11 @@ def test_hinerv_private_smoke_consumes_archive_section_scaled_qat_terms(
     assert metadata["archive_section_qat_weight_policy"]["active"] is True
     section_control = metadata["train_time_section_byte_control"]
     assert section_control["active"] is True
+    consumption = captured["metadata"]["modelsize_candidate_consumption"]
+    assert consumption["hard_byte_ceiling_consumed_by_train_time_dual_ascent"] is True
+    assert consumption["train_time_section_byte_control_active"] is True
+    assert consumption["train_time_section_byte_control_blockers"] == []
+    assert consumption["hard_byte_ceiling_train_time_dual_ascent_blockers"] == []
     assert section_control["section_byte_budgets"] == {
         "decoder_state": 89_000,
         "latents_coarse": 17_800,

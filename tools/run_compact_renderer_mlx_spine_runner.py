@@ -8032,6 +8032,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
     scorer_input_distribution_guard_saturation_margin: float = 0.02,
     scorer_input_distribution_guard_temperature: float = 0.01,
+    output_head_target_bias_init: bool = True,
+    output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
     distillation_device: str = "cpu",
     requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
@@ -8172,6 +8174,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     if float(scorer_input_distribution_guard_temperature) <= 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "scorer_input_distribution_guard_temperature must be > 0"
+        )
+    if not (
+        math.isfinite(float(output_head_target_bias_init_epsilon))
+        and 0.0 < float(output_head_target_bias_init_epsilon) < 0.5
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "output_head_target_bias_init_epsilon must be finite and in (0, 0.5)"
         )
     effective_mlx_prefilter_scorer_device = (
         _resolve_mlx_prefilter_scorer_device_alias(
@@ -8948,6 +8957,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             scorer_input_distribution_guard_temperature=float(
                 scorer_input_distribution_guard_temperature
+            ),
+            output_head_target_bias_init=bool(output_head_target_bias_init),
+            output_head_target_bias_init_epsilon=float(
+                output_head_target_bias_init_epsilon
             ),
             distillation_device=distillation_device,
             requested_distillation_device=effective_requested_distillation_device,
@@ -12618,6 +12631,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
     scorer_input_distribution_guard_saturation_margin: float = 0.02,
     scorer_input_distribution_guard_temperature: float = 0.01,
+    output_head_target_bias_init: bool = True,
+    output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
     distillation_device: str,
     requested_distillation_device: str | None,
     allow_segnet_only_research: bool,
@@ -12867,6 +12882,26 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
     )
     model = HinervSubstrateMLX(cfg)
+    if bool(output_head_target_bias_init):
+        output_head_target_bias_init_payload = dict(
+            model.initialize_output_head_bias_from_targets(
+                target_rgb_0,
+                target_rgb_1,
+                epsilon=float(output_head_target_bias_init_epsilon),
+            )
+        )
+    else:
+        output_head_target_bias_init_payload = {
+            "schema": "hi_nerv_output_head_target_bias_init.v1",
+            "enabled": False,
+            "reason": "disabled_by_runner",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "blockers": ["hi_nerv_output_head_target_bias_init_disabled"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
     optimizer_policy = dict(hi_nerv_optimizer_policy or {})
     optimizer_control = dict(optimizer_controls or {})
     pr95_curriculum_enabled = bool(
@@ -12949,6 +12984,20 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         coder_qat_loss_weight_map,
         hard_byte_ceiling=hard_byte_ceiling,
     )
+    train_time_section_byte_control_active = bool(
+        train_time_section_byte_control.get("active") is True
+    )
+    train_time_section_byte_control_blockers = [
+        str(value) for value in train_time_section_byte_control.get("blockers") or []
+    ]
+    hard_byte_ceiling_train_time_dual_ascent_blockers: list[str] = []
+    if hard_byte_ceiling is not None and not train_time_section_byte_control_active:
+        hard_byte_ceiling_train_time_dual_ascent_blockers = _dedupe(
+            [
+                *train_time_section_byte_control_blockers,
+                "hinerv_hard_byte_ceiling_train_time_dual_ascent_section_controller_inactive",
+            ]
+        )
     (
         live_train_time_section_byte_metrics,
         live_train_time_section_byte_metrics_metadata,
@@ -13013,7 +13062,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         # This long-training export is a false-authority measurement surface.
         # Preserve over-cap archive identity so receiver/cache/prefilter
         # diagnostics can find value-domain failures; byte caps still price
-        # training via train-time dual ascent and block promotion downstream.
+        # training only when section-byte control is active, and otherwise leave
+        # explicit blockers in metadata instead of pretending the cap was actuated.
         return export_hi_nerv_mlx_archive(
             model_obj,
             archive_output_dir,
@@ -13091,6 +13141,16 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             ),
             "hard_byte_ceiling_consumed_by_train_time_dual_ascent": bool(
                 hard_byte_ceiling is not None
+                and train_time_section_byte_control_active
+            ),
+            "train_time_section_byte_control_active": (
+                train_time_section_byte_control_active
+            ),
+            "train_time_section_byte_control_blockers": (
+                train_time_section_byte_control_blockers
+            ),
+            "hard_byte_ceiling_train_time_dual_ascent_blockers": (
+                hard_byte_ceiling_train_time_dual_ascent_blockers
             ),
             "modelsize_control_contract": strip_candidate_curriculum_authority_fields(
                 _modelsize_control_contract(candidate_for_config) or {}
@@ -13172,6 +13232,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "target_surface": (
                     "decoded_rgb01_vs_target_rgb01_mean_std_soft_saturation"
                 ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "output_head_target_bias_init": {
+                **strip_candidate_curriculum_authority_fields(
+                    output_head_target_bias_init_payload
+                ),
+                "bound_to_renderer_model": bool(output_head_target_bias_init),
+                "compression_time_only": True,
+                "runtime_sidecar_bytes": 0,
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "effective_weight_decay": effective_weight_decay,
@@ -17231,6 +17300,26 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--no-output-head-target-bias-init",
+        action="store_false",
+        dest="output_head_target_bias_init",
+        help=(
+            "Disable HiNeRV's deterministic target-mean sigmoid-head bias "
+            "initialization. This is for ablation only; long-run HiNeRV "
+            "defaults keep it on to avoid neutral-gray launch collapse."
+        ),
+    )
+    parser.set_defaults(output_head_target_bias_init=True)
+    parser.add_argument(
+        "--output-head-target-bias-init-epsilon",
+        default=1.0 / 1024.0,
+        type=float,
+        help=(
+            "Clamp epsilon for HiNeRV output-head bias=logit(mean(target_channel)). "
+            "The resulting values are ordinary decoder bias bytes, not a sidecar."
+        ),
+    )
+    parser.add_argument(
         "--recon-loss-stage-weight",
         default=1.0,
         type=float,
@@ -18689,6 +18778,10 @@ def main(argv: list[str] | None = None) -> int:
             ),
             scorer_input_distribution_guard_temperature=(
                 args.scorer_input_distribution_guard_temperature
+            ),
+            output_head_target_bias_init=bool(args.output_head_target_bias_init),
+            output_head_target_bias_init_epsilon=(
+                args.output_head_target_bias_init_epsilon
             ),
             distillation_device=args.distillation_device,
             requested_distillation_device=getattr(

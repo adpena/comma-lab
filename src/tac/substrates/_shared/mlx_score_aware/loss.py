@@ -345,8 +345,92 @@ def _pose_distillation_loss_and_raw_mse(
     return mx.mean(mx.where(abs_diff <= delta, quadratic, linear)), raw_mse
 
 
-def _frame_distribution_guard_parts(bundle: RendererBundle, rgb: Any, gt: Any) -> dict[str, Any]:
-    """Differentiable scorer-input value-domain guard for one frame.
+def _value_domain_distribution_guard_parts(
+    candidate: Any,
+    reference: Any,
+) -> dict[str, Any]:
+    """Match per-channel value-domain mean, std, and dynamic range.
+
+    ``candidate`` and ``reference`` are channels-last scorer-domain tensors
+    shaped ``(B,H,W,C)`` on the same numeric scale.  The reference path is
+    gradient-blocked; this is a distribution tether, not a hidden target
+    renderer.
+    """
+
+    mx = require_mlx_for_harness()
+
+    cand_mean = mx.mean(candidate, axis=(1, 2))
+    ref_mean = mx.stop_gradient(mx.mean(reference, axis=(1, 2)))
+    mean_loss = mx.mean((cand_mean - ref_mean) ** 2)
+
+    cand_centered = candidate - mx.mean(candidate, axis=(1, 2), keepdims=True)
+    ref_centered = reference - mx.mean(reference, axis=(1, 2), keepdims=True)
+    cand_std = mx.sqrt(mx.mean(cand_centered * cand_centered, axis=(1, 2)) + 1.0e-12)
+    ref_std = mx.stop_gradient(
+        mx.sqrt(mx.mean(ref_centered * ref_centered, axis=(1, 2)) + 1.0e-12)
+    )
+    std_loss = mx.mean((cand_std - ref_std) ** 2)
+
+    cand_range = mx.max(candidate, axis=(1, 2)) - mx.min(candidate, axis=(1, 2))
+    ref_range = mx.stop_gradient(
+        mx.max(reference, axis=(1, 2)) - mx.min(reference, axis=(1, 2))
+    )
+    dynamic_range_loss = mx.mean((cand_range - ref_range) ** 2)
+    total = mean_loss + std_loss + dynamic_range_loss
+    return {
+        "total": total,
+        "mean": mean_loss,
+        "std": std_loss,
+        "dynamic_range": dynamic_range_loss,
+    }
+
+
+def _soft_saturation_guard_parts(
+    bundle: RendererBundle,
+    candidate_rgb01: Any,
+    reference_rgb01: Any,
+) -> dict[str, Any]:
+    """Match near-0/near-1 RGB saturation mass on normalized RGB tensors."""
+
+    mx = require_mlx_for_harness()
+    margin = float(bundle.scorer_input_distribution_guard_saturation_margin)
+    temperature = float(bundle.scorer_input_distribution_guard_temperature)
+
+    cand_soft_sat = mx.mean(
+        mx.sigmoid((margin - candidate_rgb01) / temperature)
+        + mx.sigmoid((candidate_rgb01 - (1.0 - margin)) / temperature),
+        axis=(1, 2),
+    )
+    ref_soft_sat = mx.stop_gradient(
+        mx.mean(
+            mx.sigmoid((margin - reference_rgb01) / temperature)
+            + mx.sigmoid((reference_rgb01 - (1.0 - margin)) / temperature),
+            axis=(1, 2),
+        )
+    )
+    saturation_loss = mx.mean((cand_soft_sat - ref_soft_sat) ** 2)
+    return {"total": saturation_loss, "soft_saturation": saturation_loss}
+
+
+def _scorer_input_fit_guard_parts(
+    candidate: Any,
+    reference: Any,
+) -> dict[str, Any]:
+    """Direct scorer-input fit on the exact tensor consumed downstream."""
+
+    mx = require_mlx_for_harness()
+    diff = candidate - mx.stop_gradient(reference)
+    mse = mx.mean(diff * diff)
+    mae = mx.mean(mx.abs(diff))
+    return {"total": mse + mae, "mse": mse, "mae": mae}
+
+
+def _frame_distribution_guard_parts(
+    bundle: RendererBundle,
+    rgb: Any,
+    gt: Any,
+) -> dict[str, Any]:
+    """Differentiable scorer-input value-domain guard for one RGB frame.
 
     The contest scorers never consume human perceptual quality; they consume
     byte-realized RGB/YUV tensors after fixed preprocessing. A renderer that
@@ -356,46 +440,64 @@ def _frame_distribution_guard_parts(bundle: RendererBundle, rgb: Any, gt: Any) -
     surrogates try to learn finer decision boundaries.
     """
 
-    mx = require_mlx_for_harness()
-    margin = float(bundle.scorer_input_distribution_guard_saturation_margin)
-    temperature = float(bundle.scorer_input_distribution_guard_temperature)
-
-    cand_mean = mx.mean(rgb, axis=(1, 2))
-    ref_mean = mx.stop_gradient(mx.mean(gt, axis=(1, 2)))
-    mean_loss = mx.mean((cand_mean - ref_mean) ** 2)
-
-    cand_centered = rgb - mx.mean(rgb, axis=(1, 2), keepdims=True)
-    ref_centered = gt - mx.mean(gt, axis=(1, 2), keepdims=True)
-    cand_std = mx.sqrt(mx.mean(cand_centered * cand_centered, axis=(1, 2)) + 1.0e-12)
-    ref_std = mx.stop_gradient(
-        mx.sqrt(mx.mean(ref_centered * ref_centered, axis=(1, 2)) + 1.0e-12)
-    )
-    std_loss = mx.mean((cand_std - ref_std) ** 2)
-
-    cand_range = mx.max(rgb, axis=(1, 2)) - mx.min(rgb, axis=(1, 2))
-    ref_range = mx.stop_gradient(mx.max(gt, axis=(1, 2)) - mx.min(gt, axis=(1, 2)))
-    dynamic_range_loss = mx.mean((cand_range - ref_range) ** 2)
-
-    cand_soft_sat = mx.mean(
-        mx.sigmoid((margin - rgb) / temperature)
-        + mx.sigmoid((rgb - (1.0 - margin)) / temperature),
-        axis=(1, 2),
-    )
-    ref_soft_sat = mx.stop_gradient(
-        mx.mean(
-            mx.sigmoid((margin - gt) / temperature)
-            + mx.sigmoid((gt - (1.0 - margin)) / temperature),
-            axis=(1, 2),
-        )
-    )
-    saturation_loss = mx.mean((cand_soft_sat - ref_soft_sat) ** 2)
-    total = mean_loss + std_loss + dynamic_range_loss + saturation_loss
+    distribution = _value_domain_distribution_guard_parts(rgb, gt)
+    saturation = _soft_saturation_guard_parts(bundle, rgb, gt)
+    total = distribution["total"] + saturation["total"]
     return {
         "total": total,
-        "mean": mean_loss,
-        "std": std_loss,
-        "dynamic_range": dynamic_range_loss,
-        "soft_saturation": saturation_loss,
+        "mean": distribution["mean"],
+        "std": distribution["std"],
+        "dynamic_range": distribution["dynamic_range"],
+        "soft_saturation": saturation["soft_saturation"],
+    }
+
+
+def _posenet_yuv6_distribution_guard_parts(
+    rgb_0: Any,
+    rgb_1: Any,
+    gt_0: Any,
+    gt_1: Any,
+) -> dict[str, Any]:
+    """Match the PR95 PoseNet YUV6 pair value domain and temporal signal."""
+
+    mx = require_mlx_for_harness()
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    yuv0 = rgb_to_yuv6_mlx(rgb_0 * 255.0) / 255.0
+    yuv1 = rgb_to_yuv6_mlx(rgb_1 * 255.0) / 255.0
+    ref_yuv0 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_0 * 255.0) / 255.0)
+    ref_yuv1 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_1 * 255.0) / 255.0)
+    pair = mx.concatenate([yuv0, yuv1], axis=-1)
+    ref_pair = mx.concatenate([ref_yuv0, ref_yuv1], axis=-1)
+    temporal_delta = yuv1 - yuv0
+    ref_temporal_delta = ref_yuv1 - ref_yuv0
+
+    pair_parts = _value_domain_distribution_guard_parts(pair, ref_pair)
+    temporal_parts = _value_domain_distribution_guard_parts(
+        temporal_delta,
+        ref_temporal_delta,
+    )
+    pair_fit = _scorer_input_fit_guard_parts(pair, ref_pair)
+    temporal_delta_fit = _scorer_input_fit_guard_parts(
+        temporal_delta,
+        ref_temporal_delta,
+    )
+    total = pair_parts["total"] + temporal_parts["total"]
+    total = total + pair_fit["total"] + temporal_delta_fit["total"]
+    return {
+        "total": total,
+        "pair": pair_parts["total"],
+        "pair_mse": pair_fit["mse"],
+        "pair_mae": pair_fit["mae"],
+        "pair_mean": pair_parts["mean"],
+        "pair_std": pair_parts["std"],
+        "pair_dynamic_range": pair_parts["dynamic_range"],
+        "temporal_delta": temporal_parts["total"],
+        "temporal_delta_mse": temporal_delta_fit["mse"],
+        "temporal_delta_mae": temporal_delta_fit["mae"],
+        "temporal_delta_mean": temporal_parts["mean"],
+        "temporal_delta_std": temporal_parts["std"],
+        "temporal_delta_dynamic_range": temporal_parts["dynamic_range"],
     }
 
 
@@ -410,7 +512,10 @@ def scorer_input_distribution_guard_loss(
 
     parts_0 = _frame_distribution_guard_parts(bundle, rgb_0, gt_0)
     parts_1 = _frame_distribution_guard_parts(bundle, rgb_1, gt_1)
+    segnet_frame1_fit = _scorer_input_fit_guard_parts(rgb_1, gt_1)
+    yuv6_parts = _posenet_yuv6_distribution_guard_parts(rgb_0, rgb_1, gt_0, gt_1)
     total = parts_0["total"] + parts_1["total"]
+    total = total + segnet_frame1_fit["total"] + yuv6_parts["total"]
     return total, {
         "scorer_input_distribution_guard": total,
         "scorer_input_distribution_guard_mean": parts_0["mean"] + parts_1["mean"],
@@ -420,6 +525,38 @@ def scorer_input_distribution_guard_loss(
         ),
         "scorer_input_distribution_guard_soft_saturation": (
             parts_0["soft_saturation"] + parts_1["soft_saturation"]
+        ),
+        "scorer_input_distribution_guard_segnet_frame1_mse": segnet_frame1_fit[
+            "mse"
+        ],
+        "scorer_input_distribution_guard_segnet_frame1_mae": segnet_frame1_fit[
+            "mae"
+        ],
+        "scorer_input_distribution_guard_yuv6_pair": yuv6_parts["pair"],
+        "scorer_input_distribution_guard_yuv6_pair_mean": yuv6_parts["pair_mean"],
+        "scorer_input_distribution_guard_yuv6_pair_std": yuv6_parts["pair_std"],
+        "scorer_input_distribution_guard_yuv6_pair_dynamic_range": yuv6_parts[
+            "pair_dynamic_range"
+        ],
+        "scorer_input_distribution_guard_yuv6_pair_mse": yuv6_parts["pair_mse"],
+        "scorer_input_distribution_guard_yuv6_pair_mae": yuv6_parts["pair_mae"],
+        "scorer_input_distribution_guard_yuv6_temporal_delta": yuv6_parts[
+            "temporal_delta"
+        ],
+        "scorer_input_distribution_guard_yuv6_temporal_delta_mse": yuv6_parts[
+            "temporal_delta_mse"
+        ],
+        "scorer_input_distribution_guard_yuv6_temporal_delta_mae": yuv6_parts[
+            "temporal_delta_mae"
+        ],
+        "scorer_input_distribution_guard_yuv6_temporal_delta_mean": yuv6_parts[
+            "temporal_delta_mean"
+        ],
+        "scorer_input_distribution_guard_yuv6_temporal_delta_std": yuv6_parts[
+            "temporal_delta_std"
+        ],
+        "scorer_input_distribution_guard_yuv6_temporal_delta_dynamic_range": (
+            yuv6_parts["temporal_delta_dynamic_range"]
         ),
     }
 
