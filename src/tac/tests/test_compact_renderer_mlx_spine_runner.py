@@ -1673,7 +1673,13 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
         loss_weights=weights,
     )
 
-    assert weights == {"recon": 0.25, "distill": 2.0, "pose_distill": 1.5}
+    assert weights["recon"] == pytest.approx(0.25)
+    assert weights["distill"] == pytest.approx(2.0)
+    assert weights["pose_distill"] == pytest.approx(1.5)
+    assert weights["scorer_input_guard"] == pytest.approx(1.0)
+    assert weights["scorer_input_contrast_floor"] == pytest.approx(1.0)
+    assert weights["scorer_input_shape_tether"] == pytest.approx(1.0)
+    assert weights["segnet_direct_live_distill"] == pytest.approx(2.0)
     assert len(stages) == 1
     assert stages[0].start_epoch == 0
     assert stages[0].end_epoch == 9
@@ -1688,8 +1694,7 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
     assert warmup_stages[0].start_epoch == 0
     assert warmup_stages[0].end_epoch == 3
     assert dict(warmup_stages[0].loss_weights) == {
-        "recon": 0.25,
-        "distill": 2.0,
+        **weights,
         "pose_distill": 0.0,
     }
     assert warmup_stages[1].start_epoch == 3
@@ -1708,6 +1713,72 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
             loss_weights=weights,
             pose_distillation_warmup_epochs=3,
         )
+
+
+def test_compact_scoreaware_direct_live_escape_warmup_stages_base_only() -> None:
+    weights = runner_mod._compact_scoreaware_stage_loss_weights(
+        recon=0.25,
+        segnet=2.0,
+        pose=1.5,
+    )
+    stages = runner_mod._compact_scoreaware_curriculum_stages(
+        substrate_id="unit_hi_nerv",
+        epochs=8,
+        loss_weights=weights,
+        segnet_direct_live_escape_warmup_epochs=3,
+    )
+
+    assert len(stages) == 2
+    assert stages[0].start_epoch == 0
+    assert stages[0].end_epoch == 3
+    assert stages[0].loss_weights["segnet_direct_live_base_loss"] == pytest.approx(
+        0.0
+    )
+    assert stages[0].loss_weights["segnet_direct_live_distill"] == pytest.approx(2.0)
+    assert "segnet_direct_live_class_balanced_ce" not in stages[0].loss_weights
+    assert stages[1].start_epoch == 3
+    assert stages[1].end_epoch == 8
+    assert dict(stages[1].loss_weights) == weights
+
+
+def test_compact_scoreaware_shape_and_pose_warmups_compose() -> None:
+    weights = runner_mod._compact_scoreaware_stage_loss_weights(
+        recon=1.0,
+        segnet=2.0,
+        pose=3.0,
+        scorer_input_shape_tether=4.0,
+        segnet_direct_live=5.0,
+    )
+    weights["segnet_direct_live_base_loss"] = 6.0
+
+    stages = runner_mod._compact_scoreaware_curriculum_stages(
+        substrate_id="unit_hi_nerv",
+        epochs=8,
+        loss_weights=weights,
+        scorer_input_shape_warmup_epochs=3,
+        pose_distillation_warmup_epochs=5,
+        segnet_direct_live_escape_warmup_epochs=2,
+    )
+
+    assert [(stage.start_epoch, stage.end_epoch) for stage in stages] == [
+        (0, 2),
+        (2, 3),
+        (3, 5),
+        (5, 8),
+    ]
+    assert stages[0].loss_weights == {
+        **weights,
+        "pose_distill": 0.0,
+        "segnet_direct_live_distill": 0.0,
+        "segnet_direct_live_base_loss": 0.0,
+    }
+    assert stages[1].loss_weights == {
+        **weights,
+        "pose_distill": 0.0,
+        "segnet_direct_live_distill": 0.0,
+    }
+    assert stages[2].loss_weights == {**weights, "pose_distill": 0.0}
+    assert stages[3].loss_weights == weights
 
 
 def test_compact_family_interrupted_report_preserves_false_authority_evidence(
@@ -6227,7 +6298,12 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
     assert "build_hinerv_archive_section_qat_weight_policy" in target_source
     assert "joint_scorer_checkpoint_selection_active" in target_source
+    assert "direct_live_class_escape_checkpoint_selection_active" in target_source
+    assert "shape_tether_checkpoint_selection_active" in target_source
+    assert "not direct_live_class_escape_checkpoint_selection_active" in target_source
     assert "loss_part_joint_scorer_proxy_nonrate" in target_source
+    assert "loss_part_scorer_input_shape_tether" in target_source
+    assert "loss_part_segnet_direct_live_escape_selection" in target_source
     assert "loss_part_segnet_direct_live_argmax_disagreement" in target_source
     assert "checkpoint_selection_metric_required" in target_source
     assert "archive_section_qat_policy = " in target_source
@@ -6772,8 +6848,20 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "2.0",
             "--pose-loss-stage-weight",
             "1.5",
+            "--scorer-input-guard-stage-weight",
+            "0.75",
+            "--scorer-input-contrast-floor-stage-weight",
+            "1.25",
+            "--scorer-input-shape-tether-stage-weight",
+            "2.25",
+            "--segnet-direct-live-stage-weight",
+            "0.5",
             "--pose-distillation-warmup-epochs",
             "2",
+            "--scorer-input-shape-warmup-epochs",
+            "3",
+            "--segnet-direct-live-escape-warmup-epochs",
+            "1",
             "--scorer-input-distribution-guard-weight",
             "0.125",
             "--scorer-input-distribution-guard-saturation-margin",
@@ -6916,7 +7004,13 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.recon_loss_stage_weight == 0.25
     assert hi.segnet_loss_stage_weight == 2.0
     assert hi.pose_loss_stage_weight == 1.5
+    assert hi.scorer_input_guard_stage_weight == pytest.approx(0.75)
+    assert hi.scorer_input_contrast_floor_stage_weight == pytest.approx(1.25)
+    assert hi.scorer_input_shape_tether_stage_weight == pytest.approx(2.25)
+    assert hi.segnet_direct_live_stage_weight == pytest.approx(0.5)
     assert hi.pose_distillation_warmup_epochs == 2
+    assert hi.scorer_input_shape_warmup_epochs == 3
+    assert hi.segnet_direct_live_escape_warmup_epochs == 1
     assert hi.scorer_input_distribution_guard_weight == pytest.approx(0.125)
     assert hi.scorer_input_distribution_guard_saturation_margin == pytest.approx(
         0.03125
@@ -8741,11 +8835,19 @@ def test_hinerv_auto_joint_recon_weight_flows_to_training(
     assert captured["recon_loss_stage_weight"] == 0.25
     assert captured["segnet_loss_stage_weight"] == 2.0
     assert captured["pose_loss_stage_weight"] == 1.5
+    assert captured["scorer_input_guard_stage_weight"] == 1.0
+    assert captured["scorer_input_contrast_floor_stage_weight"] is None
+    assert captured["scorer_input_shape_tether_stage_weight"] is None
+    assert captured["segnet_direct_live_stage_weight"] is None
     assert captured["mlx_prefilter_scorer_device"] == "gpu"
     assert out["score_aware_training"]["stage_loss_weights"] == {
         "distill": 2.0,
         "pose_distill": 1.5,
         "recon": 0.25,
+        "scorer_input_contrast_floor": 1.0,
+        "scorer_input_guard": 1.0,
+        "scorer_input_shape_tether": 1.0,
+        "segnet_direct_live_distill": 2.0,
     }
     assert out["score_aware_training"]["recon_pixel_weight"]["source_kind"] == (
         "auto_discovered_joint_p18_p19_file"
@@ -10354,28 +10456,25 @@ def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
 
 
 def test_hinerv_pose_distillation_warmup_compiles_real_curriculum_stages() -> None:
+    weights = runner_mod._compact_scoreaware_stage_loss_weights(
+        recon=1.0,
+        segnet=2.0,
+        pose=3.0,
+    )
     stages = runner_mod._compact_scoreaware_curriculum_stages(
         substrate_id="compact_runner_hi_nerv_mlx",
         epochs=4,
-        loss_weights={"recon": 1.0, "distill": 2.0, "pose_distill": 3.0},
+        loss_weights=weights,
         pose_distillation_warmup_epochs=2,
     )
 
     assert len(stages) == 2
     assert stages[0].start_epoch == 0
     assert stages[0].end_epoch == 2
-    assert stages[0].loss_weights == {
-        "recon": 1.0,
-        "distill": 2.0,
-        "pose_distill": 0.0,
-    }
+    assert stages[0].loss_weights == {**weights, "pose_distill": 0.0}
     assert stages[1].start_epoch == 2
     assert stages[1].end_epoch == 4
-    assert stages[1].loss_weights == {
-        "recon": 1.0,
-        "distill": 2.0,
-        "pose_distill": 3.0,
-    }
+    assert stages[1].loss_weights == weights
 
     with pytest.raises(
         runner_mod.CompactRendererMlxSpineRunnerError,

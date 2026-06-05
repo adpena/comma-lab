@@ -907,6 +907,13 @@ class MlxScoreAwareAdapter:
                         "scorer_input_guard",
                         "scorer_input_distribution_guard",
                         "value_domain_guard",
+                        "scorer_input_contrast_floor",
+                        "contrast_floor",
+                        "scorer_input_shape_tether",
+                        "shape_tether",
+                        "segnet_direct_live_distill",
+                        "segnet_direct_live",
+                        "direct_live_segnet",
                     }
                 }
             )
@@ -916,6 +923,21 @@ class MlxScoreAwareAdapter:
         scorer_input_guard_stage_weight = component_loss_weight(
             loss_weights,
             "scorer_input_guard",
+        )
+        scorer_input_contrast_floor_stage_weight = component_loss_weight(
+            loss_weights,
+            "scorer_input_contrast_floor",
+            default=scorer_input_guard_stage_weight,
+        )
+        scorer_input_shape_tether_stage_weight = component_loss_weight(
+            loss_weights,
+            "scorer_input_shape_tether",
+            default=scorer_input_guard_stage_weight,
+        )
+        segnet_direct_live_stage_weight = component_loss_weight(
+            loss_weights,
+            "segnet_direct_live_distill",
+            default=segnet_stage_weight,
         )
         for name, value in parts.items():
             mx.eval(value)
@@ -931,11 +953,11 @@ class MlxScoreAwareAdapter:
             elif name == "segnet_direct_live_distill":
                 out["loss_part_weighted_segnet_direct_live_distill"] = (
                     float(self.bundle.segnet_direct_live_distillation_weight)
-                    * segnet_stage_weight
+                    * segnet_direct_live_stage_weight
                     * scalar
                 )
                 out["loss_part_stage_weight_segnet_direct_live_distill"] = (
-                    segnet_stage_weight
+                    segnet_direct_live_stage_weight
                 )
             elif name == "pose_distill":
                 out["loss_part_weighted_pose_distill"] = (
@@ -971,14 +993,26 @@ class MlxScoreAwareAdapter:
             elif name == "scorer_input_contrast_floor":
                 out["loss_part_weighted_scorer_input_contrast_floor"] = (
                     float(self.bundle.scorer_input_contrast_floor_weight)
-                    * scorer_input_guard_stage_weight
+                    * scorer_input_contrast_floor_stage_weight
                     * scalar
                 )
                 out["loss_part_stage_weight_scorer_input_contrast_floor"] = (
-                    scorer_input_guard_stage_weight
+                    scorer_input_contrast_floor_stage_weight
                 )
                 out["loss_part_config_weight_scorer_input_contrast_floor"] = (
                     float(self.bundle.scorer_input_contrast_floor_weight)
+                )
+            elif name == "scorer_input_shape_tether":
+                out["loss_part_weighted_scorer_input_shape_tether"] = (
+                    float(self.bundle.scorer_input_shape_tether_weight)
+                    * scorer_input_shape_tether_stage_weight
+                    * scalar
+                )
+                out["loss_part_stage_weight_scorer_input_shape_tether"] = (
+                    scorer_input_shape_tether_stage_weight
+                )
+                out["loss_part_config_weight_scorer_input_shape_tether"] = (
+                    float(self.bundle.scorer_input_shape_tether_weight)
                 )
             elif name in weights:
                 out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
@@ -1046,11 +1080,16 @@ class MlxScoreAwareAdapter:
         ) = self._pr95_stage_score_weight_controls(loss_weights=loss_weights)
         seg_stage_weight = component_loss_weight(loss_weights, "distill")
         pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
+        direct_live_stage_weight = component_loss_weight(
+            loss_weights,
+            "segnet_direct_live_distill",
+            default=seg_stage_weight,
+        )
         direct_live_weight = float(
             self.bundle.segnet_direct_live_distillation_weight
         )
         direct_live_active = bool(
-            direct_live_weight > 0.0 and seg_stage_weight != 0.0
+            direct_live_weight > 0.0 and direct_live_stage_weight != 0.0
         )
         seg_surrogate_active = bool(float(effective_seg_weight) != 0.0)
         pose_surrogate_active = bool(float(effective_pose_weight) != 0.0)
@@ -1183,6 +1222,7 @@ class MlxScoreAwareAdapter:
                 self.bundle,
                 seg_rgb,
                 batch,
+                loss_weights=loss_weights,
             )
         if pose_surrogate_active:
             per_dim_scale = getattr(
@@ -1205,6 +1245,16 @@ class MlxScoreAwareAdapter:
             loss_weights,
             "scorer_input_guard",
         )
+        scorer_input_contrast_floor_stage_weight = component_loss_weight(
+            loss_weights,
+            "scorer_input_contrast_floor",
+            default=scorer_input_guard_stage_weight,
+        )
+        scorer_input_shape_tether_stage_weight = component_loss_weight(
+            loss_weights,
+            "scorer_input_shape_tether",
+            default=scorer_input_guard_stage_weight,
+        )
         total = (
             float(effective_seg_weight) * seg_loss
             + float(effective_pose_weight) * pose_loss
@@ -1213,7 +1263,9 @@ class MlxScoreAwareAdapter:
         if direct_live_seg_loss is not None:
             total = (
                 total
-                + direct_live_weight * seg_stage_weight * direct_live_seg_loss
+                + direct_live_weight
+                * direct_live_stage_weight
+                * direct_live_seg_loss
             )
         guard_parts: dict[str, Any] = {}
         if (
@@ -1236,7 +1288,7 @@ class MlxScoreAwareAdapter:
         contrast_floor_parts: dict[str, Any] = {}
         if (
             self.bundle.scorer_input_contrast_floor_weight > 0.0
-            and scorer_input_guard_stage_weight != 0.0
+            and scorer_input_contrast_floor_stage_weight != 0.0
         ):
             contrast_floor, contrast_floor_parts = scorer_input_contrast_floor_loss(
                 self.bundle,
@@ -1248,13 +1300,13 @@ class MlxScoreAwareAdapter:
             total = (
                 total
                 + float(self.bundle.scorer_input_contrast_floor_weight)
-                * scorer_input_guard_stage_weight
+                * scorer_input_contrast_floor_stage_weight
                 * contrast_floor
             )
         shape_tether_parts: dict[str, Any] = {}
         if (
             self.bundle.scorer_input_shape_tether_weight > 0.0
-            and scorer_input_guard_stage_weight != 0.0
+            and scorer_input_shape_tether_stage_weight != 0.0
         ):
             shape_tether, shape_tether_parts = scorer_input_shape_tether_loss(
                 rgb_0,
@@ -1265,7 +1317,7 @@ class MlxScoreAwareAdapter:
             total = (
                 total
                 + float(self.bundle.scorer_input_shape_tether_weight)
-                * scorer_input_guard_stage_weight
+                * scorer_input_shape_tether_stage_weight
                 * shape_tether
             )
         if cat_entropy_term is not None and float(stage_verdict.cat_lambda) > 0.0:
@@ -1311,6 +1363,15 @@ class MlxScoreAwareAdapter:
             ),
             "pr95_stage_scorer_input_guard_weight": mx.array(
                 scorer_input_guard_stage_weight, dtype=mx.float32
+            ),
+            "pr95_stage_scorer_input_contrast_floor_weight": mx.array(
+                scorer_input_contrast_floor_stage_weight, dtype=mx.float32
+            ),
+            "pr95_stage_scorer_input_shape_tether_weight": mx.array(
+                scorer_input_shape_tether_stage_weight, dtype=mx.float32
+            ),
+            "pr95_stage_segnet_direct_live_weight": mx.array(
+                direct_live_stage_weight, dtype=mx.float32
             ),
         }
         for name, value in guard_parts.items():
@@ -1444,7 +1505,8 @@ class MlxScoreAwareAdapter:
             elif name == "pr95_stage_segnet_direct_live_distill":
                 direct_live_stage_weight = component_loss_weight(
                     loss_weights,
-                    "distill",
+                    "segnet_direct_live_distill",
+                    default=component_loss_weight(loss_weights, "distill"),
                 )
                 direct_live_config_weight = float(
                     self.bundle.segnet_direct_live_distillation_weight
@@ -1504,7 +1566,8 @@ class MlxScoreAwareAdapter:
             elif name == "pr95_stage_scorer_input_contrast_floor":
                 guard_stage_weight = component_loss_weight(
                     loss_weights,
-                    "scorer_input_guard",
+                    "scorer_input_contrast_floor",
+                    default=component_loss_weight(loss_weights, "scorer_input_guard"),
                 )
                 weighted = (
                     float(self.bundle.scorer_input_contrast_floor_weight)
@@ -1542,7 +1605,8 @@ class MlxScoreAwareAdapter:
             elif name == "pr95_stage_scorer_input_shape_tether":
                 guard_stage_weight = component_loss_weight(
                     loss_weights,
-                    "scorer_input_guard",
+                    "scorer_input_shape_tether",
+                    default=component_loss_weight(loss_weights, "scorer_input_guard"),
                 )
                 weighted = (
                     float(self.bundle.scorer_input_shape_tether_weight)

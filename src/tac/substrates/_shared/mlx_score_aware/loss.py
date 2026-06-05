@@ -40,6 +40,39 @@ _CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
         "scorer_input_distribution_guard",
         "value_domain_guard",
     ),
+    "scorer_input_contrast_floor": (
+        "scorer_input_contrast_floor",
+        "contrast_floor",
+    ),
+    "scorer_input_shape_tether": (
+        "scorer_input_shape_tether",
+        "shape_tether",
+    ),
+    "segnet_direct_live_distill": (
+        "segnet_direct_live_distill",
+        "segnet_direct_live",
+        "direct_live_segnet",
+    ),
+    "segnet_direct_live_base_loss": (
+        "segnet_direct_live_base_loss",
+        "segnet_direct_live_base",
+    ),
+    "segnet_direct_live_class_histogram": (
+        "segnet_direct_live_class_histogram",
+        "segnet_direct_live_histogram",
+    ),
+    "segnet_direct_live_class_balanced_hinge": (
+        "segnet_direct_live_class_balanced_hinge",
+        "segnet_direct_live_balanced_hinge",
+    ),
+    "segnet_direct_live_class_balanced_ce": (
+        "segnet_direct_live_class_balanced_ce",
+        "segnet_direct_live_balanced_ce",
+    ),
+    "segnet_direct_live_class_balanced_squared_hinge": (
+        "segnet_direct_live_class_balanced_squared_hinge",
+        "segnet_direct_live_balanced_squared_hinge",
+    ),
 }
 _CORE_LOSS_WEIGHT_KEYS = frozenset(
     key for aliases in _CORE_LOSS_WEIGHT_ALIASES.values() for key in aliases
@@ -1116,6 +1149,8 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
     bundle: RendererBundle,
     seg_rgb_nhwc01: Any,
     idx: Any,
+    *,
+    loss_weights: Mapping[str, float] | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """Score-facing direct SegNet VJP term plus class-surface telemetry.
 
@@ -1166,18 +1201,50 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
     else:
         loss = mx.mean((candidate_logits - target_logits) ** 2)
     base_loss = loss
-    base_loss_weight = float(bundle.segnet_direct_live_base_loss_weight)
+    base_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_base_loss",
+    )
+    base_loss_weight = (
+        float(bundle.segnet_direct_live_base_loss_weight) * base_stage_weight
+    )
     loss = base_loss_weight * base_loss
     metrics = _segnet_argmax_surface_metrics(
         candidate_logits=candidate_logits,
         target_logits=target_logits,
     )
     metrics["segnet_direct_live_base_loss"] = base_loss
+    metrics["segnet_direct_live_base_loss_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_base_loss_weight),
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_base_loss_stage_weight"] = mx.array(
+        base_stage_weight,
+        dtype=mx.float32,
+    )
     metrics["segnet_direct_live_base_loss_weight"] = mx.array(
         base_loss_weight,
         dtype=mx.float32,
     )
-    hist_weight = float(bundle.segnet_direct_live_class_histogram_weight)
+    hist_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_class_histogram",
+    )
+    hist_weight = (
+        float(bundle.segnet_direct_live_class_histogram_weight) * hist_stage_weight
+    )
+    metrics["segnet_direct_live_class_histogram_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_class_histogram_weight),
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_histogram_stage_weight"] = mx.array(
+        hist_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_histogram_weight"] = mx.array(
+        hist_weight,
+        dtype=mx.float32,
+    )
     if hist_weight > 0.0:
         hist_loss, hist_metrics = _segnet_class_histogram_loss_and_metrics(
             bundle=bundle,
@@ -1186,12 +1253,24 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
         loss = loss + hist_weight * hist_loss
         metrics.update(hist_metrics)
-        metrics["segnet_direct_live_class_histogram_weight"] = mx.array(
-            hist_weight,
-            dtype=mx.float32,
-        )
+    balanced_hinge_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_class_balanced_hinge",
+    )
     balanced_hinge_weight = float(
         bundle.segnet_direct_live_class_balanced_hinge_weight
+    ) * balanced_hinge_stage_weight
+    metrics["segnet_direct_live_class_balanced_hinge_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_class_balanced_hinge_weight),
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_balanced_hinge_stage_weight"] = mx.array(
+        balanced_hinge_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_balanced_hinge_weight"] = mx.array(
+        balanced_hinge_weight,
+        dtype=mx.float32,
     )
     if balanced_hinge_weight > 0.0:
         balanced_hinge, balanced_metrics = (
@@ -1203,11 +1282,26 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
         loss = loss + balanced_hinge_weight * balanced_hinge
         metrics.update(balanced_metrics)
-        metrics["segnet_direct_live_class_balanced_hinge_weight"] = mx.array(
-            balanced_hinge_weight,
-            dtype=mx.float32,
-        )
-    balanced_ce_weight = float(bundle.segnet_direct_live_class_balanced_ce_weight)
+    balanced_ce_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_class_balanced_ce",
+    )
+    balanced_ce_weight = (
+        float(bundle.segnet_direct_live_class_balanced_ce_weight)
+        * balanced_ce_stage_weight
+    )
+    metrics["segnet_direct_live_class_balanced_ce_config_weight"] = mx.array(
+        float(bundle.segnet_direct_live_class_balanced_ce_weight),
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_balanced_ce_stage_weight"] = mx.array(
+        balanced_ce_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_balanced_ce_weight"] = mx.array(
+        balanced_ce_weight,
+        dtype=mx.float32,
+    )
     if balanced_ce_weight > 0.0:
         balanced_ce, balanced_ce_metrics = (
             _segnet_class_balanced_ce_loss_and_metrics(
@@ -1217,12 +1311,28 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
         loss = loss + balanced_ce_weight * balanced_ce
         metrics.update(balanced_ce_metrics)
-        metrics["segnet_direct_live_class_balanced_ce_weight"] = mx.array(
-            balanced_ce_weight,
-            dtype=mx.float32,
-        )
+    squared_hinge_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_class_balanced_squared_hinge",
+    )
     squared_hinge_weight = float(
         bundle.segnet_direct_live_class_balanced_squared_hinge_weight
+    ) * squared_hinge_stage_weight
+    metrics[
+        "segnet_direct_live_class_balanced_squared_hinge_config_weight"
+    ] = mx.array(
+        float(bundle.segnet_direct_live_class_balanced_squared_hinge_weight),
+        dtype=mx.float32,
+    )
+    metrics[
+        "segnet_direct_live_class_balanced_squared_hinge_stage_weight"
+    ] = mx.array(
+        squared_hinge_stage_weight,
+        dtype=mx.float32,
+    )
+    metrics["segnet_direct_live_class_balanced_squared_hinge_weight"] = mx.array(
+        squared_hinge_weight,
+        dtype=mx.float32,
     )
     if squared_hinge_weight > 0.0:
         squared_hinge, squared_hinge_metrics = (
@@ -1234,10 +1344,6 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
         loss = loss + squared_hinge_weight * squared_hinge
         metrics.update(squared_hinge_metrics)
-        metrics["segnet_direct_live_class_balanced_squared_hinge_weight"] = mx.array(
-            squared_hinge_weight,
-            dtype=mx.float32,
-        )
     return loss, metrics
 
 
@@ -1296,6 +1402,21 @@ def score_aware_loss(
     scorer_input_guard_stage_weight = component_loss_weight(
         loss_weights,
         "scorer_input_guard",
+    )
+    scorer_input_contrast_floor_stage_weight = component_loss_weight(
+        loss_weights,
+        "scorer_input_contrast_floor",
+        default=scorer_input_guard_stage_weight,
+    )
+    scorer_input_shape_tether_stage_weight = component_loss_weight(
+        loss_weights,
+        "scorer_input_shape_tether",
+        default=scorer_input_guard_stage_weight,
+    )
+    segnet_direct_live_stage_weight = component_loss_weight(
+        loss_weights,
+        "segnet_direct_live_distill",
+        default=segnet_stage_weight,
     )
 
     rgb_0, rgb_1 = decode_frames_nhwc01(bundle, idx)
@@ -1356,7 +1477,7 @@ def score_aware_loss(
 
     if (
         bundle.scorer_input_contrast_floor_weight > 0.0
-        and scorer_input_guard_stage_weight != 0.0
+        and scorer_input_contrast_floor_stage_weight != 0.0
     ):
         contrast_floor, contrast_floor_parts = scorer_input_contrast_floor_loss(
             bundle,
@@ -1368,14 +1489,14 @@ def score_aware_loss(
         total = (
             total
             + float(bundle.scorer_input_contrast_floor_weight)
-            * scorer_input_guard_stage_weight
+            * scorer_input_contrast_floor_stage_weight
             * contrast_floor
         )
         parts.update(contrast_floor_parts)
 
     if (
         bundle.scorer_input_shape_tether_weight > 0.0
-        and scorer_input_guard_stage_weight != 0.0
+        and scorer_input_shape_tether_stage_weight != 0.0
     ):
         shape_tether, shape_tether_parts = scorer_input_shape_tether_loss(
             rgb_0,
@@ -1386,7 +1507,7 @@ def score_aware_loss(
         total = (
             total
             + float(bundle.scorer_input_shape_tether_weight)
-            * scorer_input_guard_stage_weight
+            * scorer_input_shape_tether_stage_weight
             * shape_tether
         )
         parts.update(shape_tether_parts)
@@ -1458,7 +1579,7 @@ def score_aware_loss(
         parts["distill"] = distill
 
     direct_live_weight = float(bundle.segnet_direct_live_distillation_weight)
-    if direct_live_weight > 0.0 and segnet_stage_weight != 0.0:
+    if direct_live_weight > 0.0 and segnet_direct_live_stage_weight != 0.0:
         seg_rgb = rgb_1 if bundle.segnet_teacher_frame_index == 1 else rgb_0
         (
             direct_live_distill,
@@ -1467,8 +1588,12 @@ def score_aware_loss(
             bundle,
             seg_rgb,
             idx,
+            loss_weights=loss_weights,
         )
-        total = total + direct_live_weight * segnet_stage_weight * direct_live_distill
+        total = (
+            total
+            + direct_live_weight * segnet_direct_live_stage_weight * direct_live_distill
+        )
         parts["segnet_direct_live_distill"] = direct_live_distill
         parts.update(direct_live_metrics)
 

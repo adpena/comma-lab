@@ -499,11 +499,19 @@ def test_component_loss_weight_supports_core_aliases() -> None:
         "reconstruction": 0.25,
         "segnet": 0.5,
         "posenet_distill": 0.125,
+        "contrast_floor": 0.75,
+        "shape_tether": 1.25,
+        "direct_live_segnet": 1.5,
+        "segnet_direct_live_balanced_ce": 0.0,
     }
 
     assert component_loss_weight(weights, "recon") == pytest.approx(0.25)
     assert component_loss_weight(weights, "distill") == pytest.approx(0.5)
     assert component_loss_weight(weights, "pose_distill") == pytest.approx(0.125)
+    assert component_loss_weight(weights, "scorer_input_contrast_floor") == pytest.approx(0.75)
+    assert component_loss_weight(weights, "scorer_input_shape_tether") == pytest.approx(1.25)
+    assert component_loss_weight(weights, "segnet_direct_live_distill") == pytest.approx(1.5)
+    assert component_loss_weight(weights, "segnet_direct_live_class_balanced_ce") == 0.0
     assert component_loss_weight(weights, "other", default=2.0) == pytest.approx(2.0)
 
 

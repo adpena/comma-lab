@@ -1080,6 +1080,83 @@ def test_direct_live_segnet_base_loss_weight_zero_keeps_ce_escape_active() -> No
     )
 
 
+def test_direct_live_segnet_subterm_weights_are_curriculum_stageable() -> None:
+    target_0, target_1 = _targets()
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            mx = pytest.importorskip("mlx.core")
+            n = int(idx.shape[0])
+            arr = np.zeros((n, target_0.shape[1], target_0.shape[2], 5), dtype=np.float32)
+            arr[..., 1] = 8.0
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            mx = pytest.importorskip("mlx.core")
+            shape = (*tuple(frames.shape[:-1]), 5)
+            arr = np.zeros(shape, dtype=np.float32)
+            arr[..., 2] = 8.0
+            arr[..., 0] = -4.0
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_base_loss_weight=1.0,
+        segnet_direct_live_class_balanced_ce_weight=1.0,
+        allow_segnet_only_research=True,
+        segnet_distillation_objective="argmax_hinge",
+        segnet_hinge_margin=0.5,
+    )
+
+    idx = pytest.importorskip("mlx.core").array([0, 1])
+    _full_total, full_parts = score_aware_loss(bundle, idx)
+    _escape_total, escape_parts = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={
+            "segnet_direct_live_base_loss": 0.0,
+            "segnet_direct_live_class_balanced_ce": 1.0,
+        },
+    )
+    _fit_total, fit_parts = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={
+            "segnet_direct_live_base_loss": 1.0,
+            "segnet_direct_live_class_balanced_ce": 0.0,
+        },
+    )
+
+    assert _scalar(
+        escape_parts["segnet_direct_live_base_loss_stage_weight"]
+    ) == pytest.approx(0.0)
+    assert _scalar(
+        escape_parts["segnet_direct_live_class_balanced_ce_stage_weight"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        fit_parts["segnet_direct_live_base_loss_stage_weight"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        fit_parts["segnet_direct_live_class_balanced_ce_stage_weight"]
+    ) == pytest.approx(0.0)
+    assert _scalar(escape_parts["segnet_direct_live_distill"]) == pytest.approx(
+        _scalar(full_parts["segnet_direct_live_distill"])
+        - _scalar(full_parts["segnet_direct_live_base_loss"])
+    )
+    assert _scalar(fit_parts["segnet_direct_live_distill"]) == pytest.approx(
+        _scalar(full_parts["segnet_direct_live_distill"])
+        - _scalar(full_parts["segnet_direct_live_class_balanced_ce_loss"])
+    )
+
+
 def test_pose_distill_composes_real_pose_teacher_and_head() -> None:
     target_0, target_1 = _targets()
 

@@ -24,6 +24,7 @@ import sys
 import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
+from itertools import pairwise
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -1379,13 +1380,31 @@ def _compact_scoreaware_stage_loss_weights(
     recon: float = 1.0,
     segnet: float = 1.0,
     pose: float = 1.0,
+    scorer_input_guard: float = 1.0,
+    scorer_input_contrast_floor: float | None = None,
+    scorer_input_shape_tether: float | None = None,
+    segnet_direct_live: float | None = None,
 ) -> dict[str, float]:
     """Canonical runner-level weights for shared MLX score-aware components."""
 
+    guard = float(scorer_input_guard)
+    contrast = guard if scorer_input_contrast_floor is None else float(
+        scorer_input_contrast_floor
+    )
+    shape = guard if scorer_input_shape_tether is None else float(
+        scorer_input_shape_tether
+    )
+    direct_live = float(segnet) if segnet_direct_live is None else float(
+        segnet_direct_live
+    )
     values = {
         "recon": float(recon),
         "distill": float(segnet),
         "pose_distill": float(pose),
+        "scorer_input_guard": guard,
+        "scorer_input_contrast_floor": contrast,
+        "scorer_input_shape_tether": shape,
+        "segnet_direct_live_distill": direct_live,
     }
     bad = [
         name
@@ -1401,6 +1420,10 @@ def _compact_scoreaware_stage_loss_weights(
         values["recon"] == 0.0
         and values["distill"] == 0.0
         and values["pose_distill"] == 0.0
+        and values["scorer_input_guard"] == 0.0
+        and values["scorer_input_contrast_floor"] == 0.0
+        and values["scorer_input_shape_tether"] == 0.0
+        and values["segnet_direct_live_distill"] == 0.0
     ):
         raise CompactRendererMlxSpineRunnerError(
             "at least one score-aware stage loss weight must be positive"
@@ -1414,6 +1437,8 @@ def _compact_scoreaware_curriculum_stages(
     epochs: int,
     loss_weights: Mapping[str, float],
     pose_distillation_warmup_epochs: int = 0,
+    scorer_input_shape_warmup_epochs: int = 0,
+    segnet_direct_live_escape_warmup_epochs: int = 0,
 ) -> tuple[Any, ...]:
     """Build explicit score-aware loss-weight stages consumed by MLX."""
 
@@ -1421,44 +1446,82 @@ def _compact_scoreaware_curriculum_stages(
 
     total_epochs = int(epochs)
     pose_warmup = int(pose_distillation_warmup_epochs)
+    shape_warmup = int(scorer_input_shape_warmup_epochs)
+    escape_warmup = int(segnet_direct_live_escape_warmup_epochs)
     if pose_warmup < 0:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_warmup_epochs must be >= 0"
         )
-    if pose_warmup > 0:
+    if shape_warmup < 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_input_shape_warmup_epochs must be >= 0"
+        )
+    if escape_warmup < 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "segnet_direct_live_escape_warmup_epochs must be >= 0"
+        )
+    warmup_fields = {
+        "pose_distillation_warmup_epochs": pose_warmup,
+        "scorer_input_shape_warmup_epochs": shape_warmup,
+        "segnet_direct_live_escape_warmup_epochs": escape_warmup,
+    }
+    for field, warmup_epochs in warmup_fields.items():
+        if warmup_epochs <= 0:
+            continue
         if total_epochs <= 1:
             raise CompactRendererMlxSpineRunnerError(
-                "pose_distillation_warmup_epochs requires epochs > 1"
+                f"{field} requires epochs > 1"
             )
-        if pose_warmup >= total_epochs:
+        if warmup_epochs >= total_epochs:
             raise CompactRendererMlxSpineRunnerError(
-                "pose_distillation_warmup_epochs must be smaller than epochs"
+                f"{field} must be smaller than epochs"
             )
-        warmup_weights = dict(loss_weights)
-        warmup_weights["pose_distill"] = 0.0
-        return (
-            CurriculumStage(
-                name=f"{substrate_id}_mlx_score_aware_segnet_input_warmup",
-                start_epoch=0,
-                end_epoch=pose_warmup,
-                loss_weights=warmup_weights,
-                notes=(
-                    "SegNet/input-distribution warmup before PoseNet pressure. "
-                    "This is an actual CurriculumStage.loss_weights change, "
-                    "not metadata-only."
-                ),
-            ),
-            CurriculumStage(
-                name=f"{substrate_id}_mlx_score_aware_joint_full",
-                start_epoch=pose_warmup,
-                end_epoch=total_epochs,
-                loss_weights=dict(loss_weights),
-                notes=(
-                    "Joint scorer stage after PoseNet warmup; frontier claims "
-                    "still require full receiver proof and exact scorer replay."
-                ),
-            ),
+    if pose_warmup > 0 or shape_warmup > 0 or escape_warmup > 0:
+        boundaries = sorted(
+            {
+                0,
+                total_epochs,
+                *({pose_warmup} if pose_warmup > 0 else set()),
+                *({shape_warmup} if shape_warmup > 0 else set()),
+                *({escape_warmup} if escape_warmup > 0 else set()),
+            }
         )
+        stages = []
+        for start_epoch, end_epoch in pairwise(boundaries):
+            if start_epoch == end_epoch:
+                continue
+            stage_weights = dict(loss_weights)
+            suppressed: list[str] = []
+            if pose_warmup > 0 and start_epoch < pose_warmup:
+                stage_weights["pose_distill"] = 0.0
+                suppressed.append("pose")
+            if shape_warmup > 0 and start_epoch < shape_warmup:
+                stage_weights["segnet_direct_live_distill"] = 0.0
+                suppressed.append("direct_live")
+            if escape_warmup > 0 and start_epoch < escape_warmup:
+                stage_weights["segnet_direct_live_base_loss"] = 0.0
+                suppressed.append("direct_live_base")
+            suffix = "full" if not suppressed else "warmup_" + "_".join(suppressed)
+            stages.append(
+                CurriculumStage(
+                    name=f"{substrate_id}_mlx_score_aware_{suffix}",
+                    start_epoch=start_epoch,
+                    end_epoch=end_epoch,
+                    loss_weights=stage_weights,
+                    notes=(
+                        "Explicit compact-runner scorer curriculum. Shape warmup "
+                        "suppresses direct-live SegNet pressure so scorer-input "
+                        "geometry can stabilize before class-escape pressure; "
+                        "direct-live escape warmup suppresses only the base "
+                        "logit-matching term while preserving class-balanced "
+                        "escape terms; Pose warmup independently suppresses "
+                        "PoseNet pressure. "
+                        "This changes CurriculumStage.loss_weights consumed by "
+                        "the MLX train step."
+                    ),
+                )
+            )
+        return tuple(stages)
     return (
         CurriculumStage(
             name=f"{substrate_id}_mlx_score_aware_weighted_full",
@@ -8473,7 +8536,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     recon_loss_stage_weight: float = 1.0,
     segnet_loss_stage_weight: float = 1.0,
     pose_loss_stage_weight: float = 1.0,
+    scorer_input_guard_stage_weight: float = 1.0,
+    scorer_input_contrast_floor_stage_weight: float | None = None,
+    scorer_input_shape_tether_stage_weight: float | None = None,
+    segnet_direct_live_stage_weight: float | None = None,
     pose_distillation_warmup_epochs: int = 0,
+    scorer_input_shape_warmup_epochs: int = 0,
+    segnet_direct_live_escape_warmup_epochs: int = 0,
     prioritized_pair_indices: tuple[int, ...] = (),
     scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
     scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
@@ -8799,6 +8868,22 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         recon=float(recon_loss_stage_weight),
         segnet=float(segnet_loss_stage_weight),
         pose=float(pose_loss_stage_weight),
+        scorer_input_guard=float(scorer_input_guard_stage_weight),
+        scorer_input_contrast_floor=(
+            None
+            if scorer_input_contrast_floor_stage_weight is None
+            else float(scorer_input_contrast_floor_stage_weight)
+        ),
+        scorer_input_shape_tether=(
+            None
+            if scorer_input_shape_tether_stage_weight is None
+            else float(scorer_input_shape_tether_stage_weight)
+        ),
+        segnet_direct_live=(
+            None
+            if segnet_direct_live_stage_weight is None
+            else float(segnet_direct_live_stage_weight)
+        ),
     )
     candidate_supplied = bool(candidate)
     launch_latent_dim = int(candidate.get("latent_dim", latent_dim))
@@ -9469,6 +9554,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             requested_distillation_device=effective_requested_distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
             pose_distillation_warmup_epochs=int(pose_distillation_warmup_epochs),
+            scorer_input_shape_warmup_epochs=int(scorer_input_shape_warmup_epochs),
+            segnet_direct_live_escape_warmup_epochs=int(
+                segnet_direct_live_escape_warmup_epochs
+            ),
             coder_aware_qat=effective_coder_aware_qat,
             coder_qat_quant_bits=effective_coder_qat_quant_bits,
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
@@ -9510,6 +9599,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             recon_loss_stage_weight=float(recon_loss_stage_weight),
             segnet_loss_stage_weight=float(segnet_loss_stage_weight),
             pose_loss_stage_weight=float(pose_loss_stage_weight),
+            scorer_input_guard_stage_weight=float(scorer_input_guard_stage_weight),
+            scorer_input_contrast_floor_stage_weight=(
+                scorer_input_contrast_floor_stage_weight
+            ),
+            scorer_input_shape_tether_stage_weight=(
+                scorer_input_shape_tether_stage_weight
+            ),
+            segnet_direct_live_stage_weight=segnet_direct_live_stage_weight,
             prioritized_pair_indices=prioritized_pair_indices,
             scorer_error_pair_sampling_weights=(
                 scorer_error_pair_sampling_weights
@@ -13285,7 +13382,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     recon_loss_stage_weight: float,
     segnet_loss_stage_weight: float,
     pose_loss_stage_weight: float,
+    scorer_input_guard_stage_weight: float,
+    scorer_input_contrast_floor_stage_weight: float | None,
+    scorer_input_shape_tether_stage_weight: float | None,
+    segnet_direct_live_stage_weight: float | None,
     pose_distillation_warmup_epochs: int = 0,
+    scorer_input_shape_warmup_epochs: int = 0,
+    segnet_direct_live_escape_warmup_epochs: int = 0,
     prioritized_pair_indices: tuple[int, ...],
     scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
     scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
@@ -13471,6 +13574,22 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         recon=float(recon_loss_stage_weight),
         segnet=float(segnet_loss_stage_weight),
         pose=float(pose_loss_stage_weight),
+        scorer_input_guard=float(scorer_input_guard_stage_weight),
+        scorer_input_contrast_floor=(
+            None
+            if scorer_input_contrast_floor_stage_weight is None
+            else float(scorer_input_contrast_floor_stage_weight)
+        ),
+        scorer_input_shape_tether=(
+            None
+            if scorer_input_shape_tether_stage_weight is None
+            else float(scorer_input_shape_tether_stage_weight)
+        ),
+        segnet_direct_live=(
+            None
+            if segnet_direct_live_stage_weight is None
+            else float(segnet_direct_live_stage_weight)
+        ),
     )
     checkpoint_interval = _resolve_checkpoint_interval_epochs(
         checkpoint_interval_epochs,
@@ -13773,6 +13892,52 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     direct_live_checkpoint_selection_active = bool(
         float(segnet_direct_live_distillation_weight) > 0.0
     )
+    direct_live_class_escape_checkpoint_selection_active = bool(
+        direct_live_checkpoint_selection_active
+        and (
+            float(segnet_direct_live_class_histogram_weight) > 0.0
+            or float(segnet_direct_live_class_balanced_hinge_weight) > 0.0
+            or float(segnet_direct_live_class_balanced_ce_weight) > 0.0
+            or float(segnet_direct_live_class_balanced_squared_hinge_weight) > 0.0
+            or int(segnet_direct_live_escape_warmup_epochs) > 0
+        )
+    )
+    shape_tether_checkpoint_selection_active = bool(
+        direct_live_checkpoint_selection_active
+        and not direct_live_class_escape_checkpoint_selection_active
+        and not joint_scorer_checkpoint_selection_active
+        and float(scorer_input_shape_tether_weight) > 0.0
+    )
+    checkpoint_selection_metric_key = (
+        "loss_part_joint_scorer_proxy_nonrate"
+        if joint_scorer_checkpoint_selection_active
+        else "loss_part_segnet_direct_live_escape_selection"
+        if direct_live_class_escape_checkpoint_selection_active
+        else "loss_part_scorer_input_shape_tether"
+        if shape_tether_checkpoint_selection_active
+        else "loss_part_segnet_direct_live_escape_selection"
+        if direct_live_checkpoint_selection_active
+        else "total"
+    )
+    checkpoint_selection_required = bool(
+        direct_live_checkpoint_selection_active
+        or shape_tether_checkpoint_selection_active
+    )
+    checkpoint_tie_break_metric_key = (
+        "loss_part_segnet_direct_live_escape_selection"
+        if shape_tether_checkpoint_selection_active
+        else "loss_part_scorer_input_shape_tether"
+        if (
+            direct_live_class_escape_checkpoint_selection_active
+            and float(scorer_input_shape_tether_weight) > 0.0
+        )
+        else "loss_part_segnet_direct_live_argmax_disagreement"
+        if direct_live_checkpoint_selection_active
+        else ""
+    )
+    checkpoint_tie_break_required = bool(
+        checkpoint_tie_break_metric_key and not shape_tether_checkpoint_selection_active
+    )
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
         terms = dict(build_decoder_coder_qat_terms(model_obj, coder_qat_cfg))
@@ -13975,6 +14140,12 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             },
             "stage_loss_weights": stage_weights,
             "pose_distillation_warmup_epochs": int(pose_distillation_warmup_epochs),
+            "scorer_input_shape_warmup_epochs": int(
+                scorer_input_shape_warmup_epochs
+            ),
+            "segnet_direct_live_escape_warmup_epochs": int(
+                segnet_direct_live_escape_warmup_epochs
+            ),
             "scorer_input_distribution_guard": {
                 "schema": "compact_hi_nerv_scorer_input_distribution_guard.v1",
                 "enabled": bool(float(scorer_input_distribution_guard_weight) > 0.0),
@@ -14384,6 +14555,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             epochs=int(epochs),
             loss_weights=stage_weights,
             pose_distillation_warmup_epochs=int(pose_distillation_warmup_epochs),
+            scorer_input_shape_warmup_epochs=int(scorer_input_shape_warmup_epochs),
+            segnet_direct_live_escape_warmup_epochs=int(
+                segnet_direct_live_escape_warmup_epochs
+            ),
         ),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=resolved_pr95_curriculum_total_epochs,
@@ -14420,26 +14595,15 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             output_head_bias_gradient_multiplier
         ),
         on_epoch_end=pose_instability_monitor,
-        checkpoint_selection_metric_key=(
-            "loss_part_joint_scorer_proxy_nonrate"
-            if joint_scorer_checkpoint_selection_active
-            else
-            "loss_part_segnet_direct_live_escape_selection"
-            if direct_live_checkpoint_selection_active
-            else "total"
-        ),
+        checkpoint_selection_metric_key=checkpoint_selection_metric_key,
         checkpoint_selection_metric_mode="min",
-        checkpoint_selection_metric_required=(
-            direct_live_checkpoint_selection_active
-        ),
+        checkpoint_selection_metric_required=checkpoint_selection_required,
         checkpoint_selection_tie_break_metric_key=(
-            "loss_part_segnet_direct_live_argmax_disagreement"
-            if direct_live_checkpoint_selection_active
-            else ""
+            checkpoint_tie_break_metric_key
         ),
         checkpoint_selection_tie_break_metric_mode="min",
         checkpoint_selection_tie_break_metric_required=(
-            direct_live_checkpoint_selection_active
+            checkpoint_tie_break_required
         ),
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
@@ -17412,6 +17576,24 @@ def _planner_row_command_control_blockers(
             "--scorer-input-shape-tether-weight",
             "scorer_input_shape_tether_weight",
         ),
+        ("--scorer-input-guard-stage-weight", "scorer_input_guard_stage_weight"),
+        (
+            "--scorer-input-contrast-floor-stage-weight",
+            "scorer_input_contrast_floor_stage_weight",
+        ),
+        (
+            "--scorer-input-shape-tether-stage-weight",
+            "scorer_input_shape_tether_stage_weight",
+        ),
+        ("--segnet-direct-live-stage-weight", "segnet_direct_live_stage_weight"),
+        (
+            "--scorer-input-shape-warmup-epochs",
+            "scorer_input_shape_warmup_epochs",
+        ),
+        (
+            "--segnet-direct-live-escape-warmup-epochs",
+            "segnet_direct_live_escape_warmup_epochs",
+        ),
         ("--decoder-weight-waterfill-plan-json", "decoder_weight_waterfill_plan_json"),
         ("--archive-section-telemetry-json", "archive_section_telemetry_json"),
         ("--recon-pixel-weight-path", "recon_pixel_weight_path"),
@@ -18998,6 +19180,42 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--scorer-input-guard-stage-weight",
+        default=1.0,
+        type=float,
+        help=(
+            "Shared MLX score-aware stage weight for RGB/YUV value-domain guard. "
+            "Feeds CurriculumStage.loss_weights['scorer_input_guard'] directly."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-contrast-floor-stage-weight",
+        default=None,
+        type=float,
+        help=(
+            "Optional independent stage weight for the scorer-input contrast "
+            "floor. Defaults to --scorer-input-guard-stage-weight."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-shape-tether-stage-weight",
+        default=None,
+        type=float,
+        help=(
+            "Optional independent stage weight for the scorer-input shape "
+            "tether. Defaults to --scorer-input-guard-stage-weight."
+        ),
+    )
+    parser.add_argument(
+        "--segnet-direct-live-stage-weight",
+        default=None,
+        type=float,
+        help=(
+            "Optional independent stage weight for direct-live SegNet VJP "
+            "distillation. Defaults to --segnet-loss-stage-weight."
+        ),
+    )
+    parser.add_argument(
         "--pose-distillation-warmup-epochs",
         default=0,
         type=int,
@@ -19007,6 +19225,30 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "CurriculumStage.loss_weights['pose_distill']=0, then restore the "
             "requested PoseNet stage weight for the remaining joint scorer "
             "stage. This is a real training control, not metadata-only."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-shape-warmup-epochs",
+        default=0,
+        type=int,
+        help=(
+            "HiNeRV-only score-aware curriculum control. The first N epochs keep "
+            "recon, SegNet surrogate, guard, contrast, and shape tether active "
+            "while setting CurriculumStage.loss_weights['segnet_direct_live_distill'] "
+            "to 0, then restore direct-live pressure. This prevents class-escape "
+            "pressure from overwhelming scorer-input geometry at launch."
+        ),
+    )
+    parser.add_argument(
+        "--segnet-direct-live-escape-warmup-epochs",
+        default=0,
+        type=int,
+        help=(
+            "HiNeRV/SNeRV direct-live SegNet curriculum control. The first N "
+            "epochs set CurriculumStage.loss_weights['segnet_direct_live_base_loss'] "
+            "to 0 while preserving class-balanced CE/hinge escape terms, then "
+            "restore base logit-matching pressure. This makes escape-then-fit "
+            "training executable through the same MLX long-training stage path."
         ),
     )
     parser.add_argument(
@@ -20664,7 +20906,19 @@ def main(argv: list[str] | None = None) -> int:
             recon_loss_stage_weight=args.recon_loss_stage_weight,
             segnet_loss_stage_weight=args.segnet_loss_stage_weight,
             pose_loss_stage_weight=args.pose_loss_stage_weight,
+            scorer_input_guard_stage_weight=args.scorer_input_guard_stage_weight,
+            scorer_input_contrast_floor_stage_weight=(
+                args.scorer_input_contrast_floor_stage_weight
+            ),
+            scorer_input_shape_tether_stage_weight=(
+                args.scorer_input_shape_tether_stage_weight
+            ),
+            segnet_direct_live_stage_weight=args.segnet_direct_live_stage_weight,
             pose_distillation_warmup_epochs=args.pose_distillation_warmup_epochs,
+            scorer_input_shape_warmup_epochs=args.scorer_input_shape_warmup_epochs,
+            segnet_direct_live_escape_warmup_epochs=(
+                args.segnet_direct_live_escape_warmup_epochs
+            ),
             prioritized_pair_indices=prioritized_pair_indices,
             scorer_error_pair_sampling_weights=(
                 scorer_error_pair_sampling_weights
