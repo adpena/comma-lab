@@ -647,7 +647,52 @@ def test_archive_candidate_int8_decoder_packet_roundtrip() -> None:
         exportable.cfg.latent_dim_coarse,
     )
     assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
+    assert "_hi_nerv_bitstream_preparation" not in arc.meta
     assert "latents_coarse" not in arc.decoder_state_dict
+
+
+def test_archive_candidate_keeps_bitstream_proof_out_of_charged_hiv1_meta() -> None:
+    from tac.substrates.hi_nerv.archive import (
+        build_archive_section_telemetry,
+        pack_archive,
+        parse_archive,
+    )
+    from tac.substrates.hi_nerv.archive_candidate import (
+        pack_archive_from_exported_state_dict,
+    )
+
+    exportable = _exportable_torch_model()
+    blob, bitstream_report = pack_archive_from_exported_state_dict(
+        exported_state_dict=exportable.export_state_dict(),
+        cfg=exportable.cfg,
+        decoder_codec="fp16_enveloped",
+        return_bitstream_report=True,
+    )
+    arc = parse_archive(blob)
+    old_style_blob = pack_archive(
+        arc.decoder_state_dict,
+        arc.latents_coarse,
+        arc.latents_mid,
+        arc.latents_fine,
+        {
+            **arc.meta,
+            "_hi_nerv_bitstream_preparation": bitstream_report,
+        },
+        decoder_codec="fp16_enveloped",
+    )
+
+    current_rows = {
+        row["name"]: row for row in build_archive_section_telemetry(blob)["sections"]
+    }
+    old_rows = {
+        row["name"]: row
+        for row in build_archive_section_telemetry(old_style_blob)["sections"]
+    }
+    assert "_hi_nerv_bitstream_preparation" not in arc.meta
+    assert (
+        old_rows["meta_json"]["bytes"] - current_rows["meta_json"]["bytes"]
+        > 100
+    )
 
 
 def test_archive_candidate_pixel_proof_samples_full_video_span() -> None:
@@ -672,7 +717,7 @@ def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> N
     )
 
     exportable = _exportable_torch_model()
-    blob = pack_archive_from_exported_state_dict(
+    blob, bitstream_report = pack_archive_from_exported_state_dict(
         exported_state_dict=exportable.export_state_dict(),
         cfg=exportable.cfg,
         decoder_codec="fp16_enveloped",
@@ -704,13 +749,13 @@ def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> N
             ],
             "blockers": ["contest_cpu_cuda_exact_eval_not_executed"],
         },
+        return_bitstream_report=True,
     )
     arc = parse_archive(blob)
 
     assert torch.count_nonzero(arc.decoder_state_dict["head_rgb_1.weight"]).item() == 0
-    waterfill = arc.meta["_hi_nerv_bitstream_preparation"][
-        "decoder_weight_waterfill"
-    ]
+    assert "_hi_nerv_bitstream_preparation" not in arc.meta
+    waterfill = bitstream_report["decoder_weight_waterfill"]
     assert waterfill["plan_attached"] is True
     assert waterfill["method"] == "decoder_weight_waterfill_selected_actions"
     assert waterfill["changed_tensor_count"] == 1
@@ -722,9 +767,7 @@ def test_archive_candidate_applies_decoder_waterfill_plan_to_packed_state() -> N
     assert "contest_cpu_cuda_exact_eval_not_executed" in waterfill["blockers"]
     assert waterfill["score_claim"] is False
     proof = waterfill["rendered_pixel_proof"]
-    assert proof == arc.meta["_hi_nerv_bitstream_preparation"][
-        "decoder_rendered_pixel_proof"
-    ]
+    assert proof == bitstream_report["decoder_rendered_pixel_proof"]
     assert waterfill["rendered_pixel_proof_status"] == (
         "sampled_rendered_pixels_changed"
     )
@@ -784,7 +827,7 @@ def test_archive_candidate_refuses_unsafe_decoder_waterfill_plan() -> None:
     )
 
     exportable = _exportable_torch_model()
-    blob = pack_archive_from_exported_state_dict(
+    blob, bitstream_report = pack_archive_from_exported_state_dict(
         exported_state_dict=exportable.export_state_dict(),
         cfg=exportable.cfg,
         decoder_codec="fp16_enveloped",
@@ -803,13 +846,13 @@ def test_archive_candidate_refuses_unsafe_decoder_waterfill_plan() -> None:
                 "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin"
             ],
         },
+        return_bitstream_report=True,
     )
     arc = parse_archive(blob)
 
     assert torch.count_nonzero(arc.decoder_state_dict["head_rgb_1.weight"]).item() > 0
-    waterfill = arc.meta["_hi_nerv_bitstream_preparation"][
-        "decoder_weight_waterfill"
-    ]
+    assert "_hi_nerv_bitstream_preparation" not in arc.meta
+    waterfill = bitstream_report["decoder_weight_waterfill"]
     assert waterfill["method"] == "decoder_weight_waterfill_blocked"
     assert waterfill["changed_tensor_count"] == 0
     assert waterfill["applied_rows"] == []

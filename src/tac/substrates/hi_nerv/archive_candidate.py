@@ -626,10 +626,7 @@ def pack_archive_from_exported_state_dict(
         latents_coarse,
         latents_mid,
         latents_fine,
-        {
-            **hi_nerv_meta_from_config(cfg),
-            "_hi_nerv_bitstream_preparation": bitstream_report,
-        },
+        hi_nerv_meta_from_config(cfg),
         decoder_codec=decoder_codec,
         latent_codec=latent_codec,
     )
