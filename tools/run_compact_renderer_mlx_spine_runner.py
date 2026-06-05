@@ -2194,27 +2194,39 @@ def _resolve_execute_modelsize_candidate(
             if snerv_model_size_adapter
             else DEFAULT_SNERV_MODEL_SIZE_ADAPTER
         )
-        if (
+        near_cap_over_ratio = (
+            (float(predicted_archive_bytes) / float(hard_byte_ceiling))
+            if predicted_archive_bytes is not None and hard_byte_ceiling > 0
+            else None
+        )
+        snerv_spectra_near_cap = bool(
             family == "snerv"
             and snerv_targets
             and normalized_snerv_adapter == SNERV_SPECTRA_PRESERVING_ADAPTER
-            and predicted_archive_bytes is not None
-            and hard_byte_ceiling > 0
-            and float(predicted_archive_bytes) <= float(hard_byte_ceiling) * 1.10
-        ):
+            and near_cap_over_ratio is not None
+            and near_cap_over_ratio <= 1.10
+        )
+        generic_measured_feedback_near_cap = bool(
+            family in {"hi_nerv", "snerv"}
+            and near_cap_over_ratio is not None
+            and 1.0 < near_cap_over_ratio <= 1.01
+        )
+        if snerv_spectra_near_cap or generic_measured_feedback_near_cap:
             near_cap = dict(best_uncalibrated)
             near_cap[
                 "modelsize_auto_selection_requires_measured_archive_feedback"
             ] = True
             near_cap["modelsize_auto_selection_warning"] = (
                 "snerv_spectra_adapter_uncalibrated_near_cap_candidate"
+                if snerv_spectra_near_cap
+                else f"{family}_uncalibrated_near_cap_candidate_requires_archive_measurement"
             )
             near_cap["modelsize_auto_selection_predicted_archive_bytes"] = int(
                 predicted_archive_bytes
             )
             near_cap["modelsize_auto_selection_hard_byte_ceiling"] = hard_byte_ceiling
             near_cap["modelsize_auto_selection_over_cap_ratio"] = (
-                float(predicted_archive_bytes) / float(hard_byte_ceiling)
+                near_cap_over_ratio
             )
             near_cap["promotion_eligible"] = False
             near_cap["ready_for_exact_eval_dispatch"] = False

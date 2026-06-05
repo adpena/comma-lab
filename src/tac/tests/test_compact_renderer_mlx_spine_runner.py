@@ -4264,15 +4264,20 @@ def test_byte_cap_controller_ignores_unproven_feedback_rows() -> None:
 
 
 def test_execute_modelsize_auto_uses_byte_cap_feedback_to_avoid_overcap() -> None:
-    with pytest.raises(
-        runner_mod.CompactRendererMlxSpineRunnerError,
-        match="hi_nerv_modelsize_auto_no_candidate_under_hard_byte_ceiling",
-    ):
-        _resolve_execute_modelsize_candidate(
-            family="hi_nerv",
-            candidate_id="auto",
-            hard_byte_ceilings=(178_000,),
-        )
+    near_cap = _resolve_execute_modelsize_candidate(
+        family="hi_nerv",
+        candidate_id="auto",
+        hard_byte_ceilings=(178_000,),
+    )
+    assert near_cap is not None
+    assert near_cap["modelsize_auto_selection_requires_measured_archive_feedback"] is True
+    assert near_cap["modelsize_auto_selection_warning"] == (
+        "hi_nerv_uncalibrated_near_cap_candidate_requires_archive_measurement"
+    )
+    assert near_cap["modelsize_auto_selection_predicted_archive_bytes"] == 178_223
+    assert near_cap["modelsize_auto_selection_hard_byte_ceiling"] == 178_000
+    assert near_cap["score_claim"] is False
+    assert near_cap["ready_for_exact_eval_dispatch"] is False
 
     nominal = _resolve_execute_modelsize_candidate(
         family="hi_nerv",
