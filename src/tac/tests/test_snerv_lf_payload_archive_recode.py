@@ -138,6 +138,9 @@ def test_snerv_lf_payload_recode_admission_consumes_real_snar_recode() -> None:
         mode="spatial_delta_zigzag_leb128_lzma",
         frame_proof_max_output_bytes=1,
     )
+    report["report_path"] = (
+        "/Volumes/VertigoDataTier/pact/reports/snerv-real-snar-fixture-recode.json"
+    )
     hard_ceiling = int(report["source_packet"]["bytes"]) - 100
 
     plan = build_snerv_lf_payload_recode_admission_plan(
@@ -218,6 +221,10 @@ def test_snerv_lf_payload_recode_admission_prices_receiver_backed_savings() -> N
         "/Volumes/VertigoDataTier/pact/reports/zero_run.json"
     )
     assert len(plan["selected_row"]["source_report_sha256"]) == 64
+    assert plan["selected_row"]["receiver_proof_path"] == (
+        "/Volumes/VertigoDataTier/pact/reports/zero_run.json"
+    )
+    assert len(plan["selected_row"]["receiver_proof_sha256"]) == 64
     assert plan["selected_row"]["source_report_producer"] == (
         "tools/recode_snerv_lf_payload_archive.py"
     )
@@ -237,6 +244,10 @@ def test_snerv_lf_payload_recode_admission_prices_receiver_backed_savings() -> N
     assert section_rows["zero_run_varint"]["byte_delta"] == -40_000
     assert section_rows["zero_run_varint"]["delta_nonrate_score"] == 0.0
     assert section_rows["zero_run_varint"]["full_video_coverage"] is True
+    assert section_rows["zero_run_varint"]["receiver_proof_path"] == (
+        "/Volumes/VertigoDataTier/pact/reports/zero_run.json"
+    )
+    assert len(section_rows["zero_run_varint"]["receiver_proof_sha256"]) == 64
     byte_price_plan = plan["byte_price_plan"]
     assert byte_price_plan["schema"] == "compact_nerv_byte_price_controller.v1"
     assert byte_price_plan["source_schema"] == plan["schema"]
@@ -251,6 +262,7 @@ def test_snerv_lf_payload_recode_admission_routes_header_dominated_overrun() -> 
         "schema": "snerv_lf_payload_archive_recode.v1",
         "candidate_id": "snerv-header-dominated",
         "mode": "zero_run_varint",
+        "report_path": "/Volumes/VertigoDataTier/pact/reports/header-dominated.json",
         "source_packet": {"bytes": 240_000, "sha256": "source-sha"},
         "candidate_packet": {
             "bytes": 181_000,
@@ -386,6 +398,48 @@ def test_snerv_lf_payload_recode_admission_blocks_source_value_domain_and_tether
         "blockers"
     ]
     assert plan["byte_price_plan"]["decision_counts"]["demote"] == 1
+
+
+def test_snerv_lf_payload_recode_admission_requires_durable_receiver_proof_identity() -> None:
+    report = {
+        "schema": "snerv_lf_payload_archive_recode.v1",
+        "candidate_id": "snerv-in-memory",
+        "mode": "zero_run_varint",
+        "source_packet": {"bytes": 220_000, "sha256": "a" * 64},
+        "candidate_packet": {"bytes": 150_000, "sha256": "b" * 64},
+        "packet_byte_delta": -70_000,
+        "lf_payload": {
+            "source_bytes": 160_000,
+            "candidate_bytes": 90_000,
+            "byte_delta": -70_000,
+        },
+        "receiver_contract_satisfied": True,
+        "receiver_frame_equality_proof": {"status": "proven_exact"},
+        "blockers": [
+            "not_packaged_as_contest_archive_zip",
+            "paired_contest_cpu_cuda_auth_eval_missing",
+        ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [report],
+        hard_byte_ceiling=178_000,
+        candidate_id="snerv-in-memory",
+        full_video_coverage=True,
+    )
+
+    row = plan["admission_rows"][0]
+    section_row = plan["section_value_rows"][0]
+    decision = plan["byte_price_plan"]["decision_rows"][0]
+    assert plan["selected_mode"] is None
+    assert row["local_planner_admitted"] is False
+    assert "snerv_lf_recode_receiver_proof_path_missing" in row[
+        "local_admission_blockers"
+    ]
+    assert section_row["receiver_proof_path"] is None
+    assert "receiver_proof_path_missing" in decision["blockers"]
 
 
 def test_snerv_lf_payload_recode_admission_blocks_invalid_and_non_saving_rows() -> None:

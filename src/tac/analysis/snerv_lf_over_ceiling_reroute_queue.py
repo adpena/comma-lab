@@ -1318,6 +1318,11 @@ def _recode_evidence(
         "packet_path": source_packet.get("path"),
         "candidate_packet_path": candidate_packet.get("path"),
         "packet_sha256": source_packet.get("sha256"),
+        "receiver_proof_path": source_path or payload.get("report_path"),
+        "receiver_proof_sha256": (
+            _file_sha256_if_readable(source_path)
+            or _canonical_payload_sha256(payload)
+        ),
         "receiver_contract_satisfied": payload.get("receiver_contract_satisfied") is True,
         "blockers": list(payload.get("blockers") or ()),
         **FALSE_AUTHORITY,
@@ -1468,6 +1473,26 @@ def _none_or_str(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _canonical_payload_sha256(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=repr,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _file_sha256_if_readable(path: str | None) -> str | None:
+    if not path:
+        return None
+    try:
+        data = Path(path).read_bytes()
+    except OSError:
+        return None
+    return hashlib.sha256(data).hexdigest()
 
 
 __all__ = [

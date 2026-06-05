@@ -6472,6 +6472,10 @@ def _snerv_lf_recode_report(
     return {
         "schema": "snerv_lf_payload_archive_recode.v1",
         "mode": mode,
+        "report_path": (
+            "/Volumes/VertigoDataTier/pact/reports/"
+            f"snerv_lf_recode_{mode}.json"
+        ),
         "source_packet": {"bytes": source_packet_bytes, "sha256": "a" * 64},
         "candidate_packet": {
             "bytes": candidate_packet_bytes,

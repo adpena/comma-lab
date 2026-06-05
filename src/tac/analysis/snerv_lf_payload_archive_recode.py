@@ -426,6 +426,12 @@ def _admission_row(
         None if candidate_headroom is None else max(-int(candidate_headroom), 0)
     )
     receiver_contract = bool(report.get("receiver_contract_satisfied") is True)
+    source_report_path = _source_report_path(report)
+    source_report_sha256 = _source_report_sha256(report)
+    receiver_proof_path = _receiver_proof_path(report) or source_report_path
+    receiver_proof_sha256 = (
+        _receiver_proof_sha256(report) or source_report_sha256
+    )
     source_report_blockers = [str(blocker) for blocker in report.get("blockers") or ()]
     source_local_blockers = _source_report_local_admission_blockers(
         source_report_blockers
@@ -433,6 +439,10 @@ def _admission_row(
     local_blockers = []
     if not receiver_contract:
         local_blockers.append("snerv_lf_recode_receiver_contract_not_satisfied")
+    if not receiver_proof_path:
+        local_blockers.append("snerv_lf_recode_receiver_proof_path_missing")
+    if not _is_sha256_hex(receiver_proof_sha256):
+        local_blockers.append("snerv_lf_recode_receiver_proof_sha256_missing")
     local_blockers.extend(source_local_blockers)
     if (
         target_candidate_id is not None
@@ -485,9 +495,11 @@ def _admission_row(
         "candidate_id": target_candidate_id or source_report_candidate_id,
         "source_report_candidate_id": source_report_candidate_id,
         "source_report_schema": str(report.get("schema") or ""),
-        "source_report_path": _source_report_path(report),
-        "source_report_sha256": _source_report_sha256(report),
+        "source_report_path": source_report_path,
+        "source_report_sha256": source_report_sha256,
         "source_report_producer": _source_report_producer(report),
+        "receiver_proof_path": receiver_proof_path,
+        "receiver_proof_sha256": receiver_proof_sha256,
         "mode": mode,
         "source_packet_path": source_packet.get("path"),
         "candidate_packet_path": candidate_packet.get("path"),
@@ -558,6 +570,8 @@ def _invalid_admission_row(
         "source_report_path": _source_report_path(report),
         "source_report_sha256": _source_report_sha256(report),
         "source_report_producer": _source_report_producer(report),
+        "receiver_proof_path": _receiver_proof_path(report),
+        "receiver_proof_sha256": _receiver_proof_sha256(report),
         "mode": str(report.get("mode") or "unknown"),
         "source_packet_bytes": None,
         "candidate_packet_bytes": None,
@@ -625,6 +639,8 @@ def _admission_section_value_row(
         "source_report_path": row.get("source_report_path"),
         "source_report_sha256": row.get("source_report_sha256"),
         "source_report_producer": row.get("source_report_producer"),
+        "receiver_proof_path": row.get("receiver_proof_path"),
+        "receiver_proof_sha256": row.get("receiver_proof_sha256"),
         "axis_tag": ADMISSION_AXIS_TAG,
         "receiver_proof_status": (
             "runtime_consumption_proof_ready"
@@ -767,6 +783,52 @@ def _source_report_sha256(report: Mapping[str, Any]) -> str:
         separators=(",", ":"),
     ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
+
+
+def _receiver_proof_path(report: Mapping[str, Any]) -> str | None:
+    for key in (
+        "receiver_proof_path",
+        "receiver_proof_report_path",
+        "runtime_consumption_proof_path",
+    ):
+        value = report.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    for key in ("receiver_proof", "runtime_consumption_proof"):
+        proof = report.get(key)
+        if isinstance(proof, Mapping):
+            value = _receiver_proof_path(proof)
+            if value:
+                return value
+    return None
+
+
+def _receiver_proof_sha256(report: Mapping[str, Any]) -> str | None:
+    for key in (
+        "receiver_proof_sha256",
+        "receiver_proof_report_sha256",
+        "runtime_consumption_proof_sha256",
+    ):
+        value = report.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    for key in ("receiver_proof", "runtime_consumption_proof"):
+        proof = report.get(key)
+        if isinstance(proof, Mapping):
+            value = _receiver_proof_sha256(proof)
+            if value:
+                return value
+    return None
+
+
+def _is_sha256_hex(value: Any) -> bool:
+    if not isinstance(value, str) or len(value) != 64:
+        return False
+    try:
+        int(value, 16)
+    except ValueError:
+        return False
+    return True
 
 
 def _jsonable_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
