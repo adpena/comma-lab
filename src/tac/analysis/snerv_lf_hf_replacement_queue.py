@@ -87,6 +87,14 @@ _SKIP_HIGH_BLOCKERS = (
 )
 _VALUE_DOMAIN_CLOSED_BLOCKERS = _SKIP_HIGH_BLOCKERS
 _LF_CONDITIONED_HF_FAMILY = "lf_conditioned_hf_residual_generator"
+_HF_RESIDUAL_PAYLOAD_CLOSED_BLOCKERS = (
+    "snerv_hf_residual_generator_receiver_payload_not_implemented",
+)
+_JOINT_CODEBOOK_CLOSED_BLOCKERS = (
+    "snerv_joint_lf_hf_factorized_codebook_not_implemented",
+    "snerv_joint_lf_hf_codebook_numpy_receiver_missing",
+    "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
+)
 
 
 class SnervLfHfReplacementQueueError(ValueError):
@@ -102,6 +110,8 @@ def build_snerv_lf_hf_replacement_queue(
     official_replacement_authority_gates: Sequence[Mapping[str, Any]] = (),
     candidate_feedback_rows: Sequence[Mapping[str, Any]] = (),
     value_domain_xray_reports: Sequence[Mapping[str, Any]] = (),
+    hf_residual_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    joint_codebook_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
     output_root: str | Path,
     lane_id: str = DEFAULT_LANE_ID,
     queue_id: str = DEFAULT_QUEUE_ID,
@@ -140,6 +150,12 @@ def build_snerv_lf_hf_replacement_queue(
     )
     scorer_domain_state = _scorer_domain_state(candidate_feedback_rows)
     value_domain_state = _value_domain_state(value_domain_xray_reports)
+    hf_residual_payload_state = _hf_residual_payload_state(
+        hf_residual_receiver_payload_proofs
+    )
+    joint_codebook_state = _joint_codebook_state(
+        joint_codebook_receiver_payload_proofs
+    )
     current_state = _current_state(
         campaign_rows=campaign_rows,
         reroute_state=reroute_state,
@@ -148,6 +164,8 @@ def build_snerv_lf_hf_replacement_queue(
         official_replacement_authority_state=official_replacement_authority_state,
         scorer_domain_state=scorer_domain_state,
         value_domain_state=value_domain_state,
+        hf_residual_payload_state=hf_residual_payload_state,
+        joint_codebook_state=joint_codebook_state,
     )
     selected_evidence = _selected_lf_evidence(evidence_rows)
     input_source_paths = {
@@ -160,6 +178,12 @@ def build_snerv_lf_hf_replacement_queue(
         ),
         "candidate_feedback_rows": _source_paths(candidate_feedback_rows),
         "value_domain_xray_reports": _source_paths(value_domain_xray_reports),
+        "hf_residual_receiver_payload_proofs": _source_paths(
+            hf_residual_receiver_payload_proofs
+        ),
+        "joint_codebook_receiver_payload_proofs": _source_paths(
+            joint_codebook_receiver_payload_proofs
+        ),
     }
     rebuild_command = _queue_rebuild_command(
         output_root=root,
@@ -221,6 +245,8 @@ def build_snerv_lf_hf_replacement_queue(
         "official_replacement_authority_evidence": official_replacement_authority_state,
         "scorer_domain_evidence": scorer_domain_state,
         "value_domain_evidence": value_domain_state,
+        "hf_residual_payload_evidence": hf_residual_payload_state,
+        "joint_codebook_evidence": joint_codebook_state,
         "lf_payload_evidence_rows": evidence_rows,
         "lf_payload_evidence_row_count": len(evidence_rows),
         "selected_lf_payload_evidence": selected_evidence,
@@ -656,6 +682,20 @@ def _candidate_row(
         _nested(current_state, ("value_domain_evidence", "closed_campaign_blockers"))
         or ()
     )
+    hf_residual_payload_closed = set(
+        _nested(
+            current_state,
+            ("hf_residual_payload_evidence", "closed_campaign_blockers"),
+        )
+        or ()
+    )
+    joint_codebook_closed = set(
+        _nested(
+            current_state,
+            ("joint_codebook_evidence", "closed_campaign_blockers"),
+        )
+        or ()
+    )
     official_replacement_closed = set(
         _nested(
             current_state,
@@ -696,23 +736,56 @@ def _candidate_row(
             )
             if blocker
         ]
+    hf_residual_payload_extra_blockers: list[str] = []
+    if solution_family == _LF_CONDITIONED_HF_FAMILY:
+        hf_residual_payload_extra_blockers = [
+            str(blocker)
+            for blocker in (
+                _nested(
+                    current_state,
+                    ("hf_residual_payload_evidence", "queue_blockers"),
+                )
+                or ()
+            )
+            if blocker
+        ]
+    effective_static_blockers = [
+        str(blocker)
+        for blocker in static_blockers
+        if str(blocker) not in hf_residual_payload_closed
+        and str(blocker) not in joint_codebook_closed
+    ]
+    joint_codebook_extra_blockers: list[str] = []
+    if solution_family == "joint_lf_hf_factorized_codebook":
+        joint_codebook_extra_blockers = [
+            str(blocker)
+            for blocker in (
+                _nested(current_state, ("joint_codebook_evidence", "queue_blockers"))
+                or ()
+            )
+            if blocker
+        ]
     campaign_blockers = [
         blocker
         for blocker in campaign_blockers
         if blocker not in source_forward_closed
         and blocker not in scorer_domain_closed
         and blocker not in value_domain_closed
+        and blocker not in hf_residual_payload_closed
+        and blocker not in joint_codebook_closed
         and blocker not in official_replacement_closed
     ]
     blockers = _dedupe(
         [
-            *static_blockers,
+            *effective_static_blockers,
             *evidence_blockers,
             *current_blockers,
             *campaign_blockers,
             *source_forward_extra_blockers,
             *official_replacement_extra_blockers,
             *value_domain_extra_blockers,
+            *hf_residual_payload_extra_blockers,
+            *joint_codebook_extra_blockers,
         ]
     )
     if (
@@ -800,6 +873,10 @@ def _candidate_row(
         ),
         "scorer_domain_evidence": current_state.get("scorer_domain_evidence"),
         "value_domain_evidence": current_state.get("value_domain_evidence"),
+        "hf_residual_payload_evidence": current_state.get(
+            "hf_residual_payload_evidence"
+        ),
+        "joint_codebook_evidence": current_state.get("joint_codebook_evidence"),
         "target_consumers": [
             "nerv_long_training_campaign_plan",
             "snerv_lf_over_ceiling_reroute_queue",
@@ -946,6 +1023,37 @@ def _lf_evidence_row(report: Mapping[str, Any], source_index: int) -> dict[str, 
             "post_recode_over_waterline_bytes": _positive_int(
                 selected.get("post_recode_over_waterline_bytes")
             ),
+            "blockers": _dedupe(report.get("blockers") or ()),
+        }
+    if schema == "snerv_checkpoint_archive_export.v1":
+        codec_report = report.get("lf_payload_codec_selection_report")
+        codec_report = codec_report if isinstance(codec_report, Mapping) else {}
+        packet_section_bytes = report.get("packet_section_bytes")
+        packet_section_bytes = (
+            packet_section_bytes if isinstance(packet_section_bytes, Mapping) else {}
+        )
+        return {
+            **base,
+            "evidence_kind": "checkpoint_export_lf_payload_section",
+            "packet_path": report.get("packet_path"),
+            "packet_bytes": _positive_int(report.get("packet_bytes")),
+            "packet_sha256": report.get("packet_sha256"),
+            "raw_lf_bytes": _positive_int(
+                codec_report.get("canonical_int64_raw_bytes")
+                or codec_report.get("raw_bytes")
+            ),
+            "lf_payload_bytes": _positive_int(
+                report.get("lf_payload_section_bytes")
+                or packet_section_bytes.get("lf_payload")
+                or codec_report.get("section_bytes")
+                or codec_report.get("payload_bytes")
+            ),
+            "selected_mode": report.get("lf_payload_codec_selected")
+            or report.get("lf_payload_codec"),
+            "receiver_contract_satisfied": (
+                report.get("receiver_contract_satisfied") is True
+            ),
+            "lf_payload_report_status": report.get("lf_payload_report_status"),
             "blockers": _dedupe(report.get("blockers") or ()),
         }
     if schema == "snerv_official_dummy_lf_payload_codec_sweep.v1":
@@ -1192,13 +1300,28 @@ def _scorer_domain_state(
             "blockers": ["snerv_lf_hf_scorer_domain_candidate_feedback_missing"],
             **QUEUE_FALSE_AUTHORITY,
         }
-    selected = max(
-        rows,
-        key=lambda row: (
+    def _guard_rank(row: Mapping[str, Any]) -> tuple[int, int, int, str, str]:
+        health = row.get("snerv_scorer_domain_tether_health")
+        health = health if isinstance(health, Mapping) else {}
+        metric_health = health.get("metric_health")
+        metric_health = metric_health if isinstance(metric_health, Mapping) else {}
+        metrics_present = all(
+            isinstance(metric_health.get(metric), Mapping)
+            and metric_health[metric].get("metric_observed") is True
+            and metric_health[metric].get("lambda_active_observed") is True
+            for metric in _SCORER_DOMAIN_REQUIRED_METRICS
+        )
+        guard = row.get("snerv_scorer_input_distribution_guard_proof")
+        guard = guard if isinstance(guard, Mapping) else {}
+        return (
+            1 if row.get("snerv_scorer_input_distribution_guard_proof_passed") is True else 0,
+            1 if row.get("snerv_scorer_domain_tether_passed") is True else 0,
+            1 if health.get("passed") is True and metrics_present else 0,
             str(row.get("created_utc") or row.get("generated_utc") or ""),
             str(row.get("_source_path") or row.get("source_report_path") or ""),
-        ),
-    )
+        )
+
+    selected = max(rows, key=_guard_rank)
     health = selected.get("snerv_scorer_domain_tether_health")
     health = health if isinstance(health, Mapping) else {}
     metric_health = health.get("metric_health")
@@ -1349,6 +1472,178 @@ def _value_domain_state(
     }
 
 
+def _hf_residual_payload_state(
+    hf_residual_receiver_payload_proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in hf_residual_receiver_payload_proofs
+        if isinstance(row, Mapping)
+        and row.get("schema")
+        == "snerv_lf_conditioned_hf_residual_receiver_proof.v1"
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_lf_conditioned_hf_residual_payload_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "receiver_payload_implemented": False,
+            "receiver_decode_proven": False,
+            "section_native_byte_telemetry_present": False,
+            "closed_campaign_blockers": [],
+            "queue_blockers": [
+                "snerv_hf_residual_generator_receiver_payload_not_implemented"
+            ],
+            "blockers": [
+                "snerv_hf_residual_generator_receiver_payload_not_implemented"
+            ],
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("report_path") or ""),
+        ),
+    )
+    implemented = selected.get("receiver_payload_implemented") is True
+    decoded = selected.get("receiver_decode_proven") is True
+    telemetry = selected.get("section_native_byte_telemetry_present") is True
+    proof_passed = implemented and decoded and telemetry
+    selected_blockers = [
+        str(blocker)
+        for blocker in selected.get("blockers") or ()
+        if str(blocker)
+        and str(blocker)
+        != "snerv_lf_conditioned_hf_residual_payload_false_authority"
+    ]
+    closed = [
+        blocker
+        for blocker in selected.get("closed_campaign_blockers") or ()
+        if blocker in _HF_RESIDUAL_PAYLOAD_CLOSED_BLOCKERS
+    ]
+    queue_blockers: list[str] = []
+    if not proof_passed:
+        queue_blockers.append(
+            "snerv_hf_residual_generator_receiver_payload_not_implemented"
+        )
+    queue_blockers.extend(selected_blockers)
+    return {
+        "schema": "snerv_lf_conditioned_hf_residual_payload_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path") or selected.get("report_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "packet_path": selected.get("packet_path"),
+        "source_packet_sha256": selected.get("source_packet_sha256"),
+        "payload_path": selected.get("payload_path"),
+        "payload_bytes": _positive_int(selected.get("payload_bytes")),
+        "payload_sha256": selected.get("payload_sha256"),
+        "lf_anchor_bytes": _positive_int(selected.get("lf_anchor_bytes")),
+        "hf_residual_bytes": _positive_int(selected.get("hf_residual_bytes")),
+        "compressed_payload_bytes": _positive_int(
+            selected.get("compressed_payload_bytes")
+        ),
+        "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
+        "receiver_payload_implemented": implemented,
+        "receiver_decode_proven": decoded,
+        "section_native_byte_telemetry_present": telemetry,
+        "closed_campaign_blockers": _dedupe(closed) if proof_passed else [],
+        "queue_blockers": _dedupe(queue_blockers),
+        "blockers": _dedupe([*selected_blockers, *queue_blockers]),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
+def _joint_codebook_state(
+    joint_codebook_receiver_payload_proofs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in joint_codebook_receiver_payload_proofs
+        if isinstance(row, Mapping)
+        and row.get("schema")
+        == "snerv_joint_lf_hf_factorized_codebook_receiver_proof.v1"
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_joint_lf_hf_factorized_codebook_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "receiver_payload_implemented": False,
+            "receiver_decode_proven": False,
+            "numpy_receiver_decode": False,
+            "section_native_byte_telemetry_present": False,
+            "closed_campaign_blockers": [],
+            "queue_blockers": list(_JOINT_CODEBOOK_CLOSED_BLOCKERS),
+            "blockers": list(_JOINT_CODEBOOK_CLOSED_BLOCKERS),
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("report_path") or ""),
+        ),
+    )
+    implemented = selected.get("receiver_payload_implemented") is True
+    decoded = selected.get("receiver_decode_proven") is True
+    numpy_decode = selected.get("numpy_receiver_decode") is True
+    telemetry = selected.get("section_native_byte_telemetry_present") is True
+    proof_passed = implemented and decoded and numpy_decode and telemetry
+    selected_blockers = [
+        str(blocker)
+        for blocker in selected.get("blockers") or ()
+        if str(blocker)
+        and str(blocker) != "snerv_joint_lf_hf_factorized_codebook_false_authority"
+    ]
+    closed = [
+        blocker
+        for blocker in selected.get("closed_campaign_blockers") or ()
+        if blocker in _JOINT_CODEBOOK_CLOSED_BLOCKERS
+    ]
+    queue_blockers: list[str] = []
+    if not proof_passed:
+        queue_blockers.extend(_JOINT_CODEBOOK_CLOSED_BLOCKERS)
+    queue_blockers.extend(selected_blockers)
+    return {
+        "schema": "snerv_joint_lf_hf_factorized_codebook_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path") or selected.get("report_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "packet_path": selected.get("packet_path"),
+        "source_packet_sha256": selected.get("source_packet_sha256"),
+        "payload_path": selected.get("payload_path"),
+        "payload_bytes": _positive_int(selected.get("payload_bytes")),
+        "payload_sha256": selected.get("payload_sha256"),
+        "codebook_raw_bytes": _positive_int(selected.get("codebook_raw_bytes")),
+        "index_raw_bytes": _positive_int(selected.get("index_raw_bytes")),
+        "compressed_payload_bytes": _positive_int(
+            selected.get("compressed_payload_bytes")
+        ),
+        "codebook_entry_count": _positive_int(selected.get("codebook_entry_count")),
+        "block_count": _positive_int(selected.get("block_count")),
+        "sample_shape_b2chw": selected.get("sample_shape_b2chw"),
+        "receiver_payload_implemented": implemented,
+        "receiver_decode_proven": decoded,
+        "numpy_receiver_decode": numpy_decode,
+        "section_native_byte_telemetry_present": telemetry,
+        "closed_campaign_blockers": _dedupe(closed) if proof_passed else [],
+        "queue_blockers": _dedupe(queue_blockers),
+        "blockers": _dedupe([*selected_blockers, *queue_blockers]),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
 def _snerv_campaign_rows(campaign_plans: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for plan in campaign_plans:
@@ -1405,6 +1700,8 @@ def _current_state(
     official_replacement_authority_state: Mapping[str, Any],
     scorer_domain_state: Mapping[str, Any],
     value_domain_state: Mapping[str, Any],
+    hf_residual_payload_state: Mapping[str, Any],
+    joint_codebook_state: Mapping[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     demoted_blockers: list[str] = []
@@ -1437,6 +1734,8 @@ def _current_state(
         ),
         "scorer_domain_evidence": dict(scorer_domain_state),
         "value_domain_evidence": dict(value_domain_state),
+        "hf_residual_payload_evidence": dict(hf_residual_payload_state),
+        "joint_codebook_evidence": dict(joint_codebook_state),
         "blockers": _dedupe(blockers),
     }
 
@@ -1480,6 +1779,12 @@ def _queue_rebuild_command(
         "official_replacement_authority_gates": "--official-replacement-authority-gate",
         "candidate_feedback_rows": "--candidate-feedback-row",
         "value_domain_xray_reports": "--value-domain-xray",
+        "hf_residual_receiver_payload_proofs": (
+            "--hf-residual-receiver-payload-proof"
+        ),
+        "joint_codebook_receiver_payload_proofs": (
+            "--joint-codebook-receiver-payload-proof"
+        ),
     }
     for key, flag in flag_by_key.items():
         for path in input_source_paths.get(key) or ():

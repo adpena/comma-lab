@@ -142,6 +142,63 @@ def test_lf_hf_replacement_queue_embeds_rebuild_command_with_source_paths(
     assert report["next_unblock_command_argv"] == ["uv", "run", "python", "next.py"]
 
 
+def test_lf_hf_queue_accepts_checkpoint_export_as_lf_payload_evidence(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_checkpoint_export_lf_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    assert report["lf_payload_evidence_row_count"] == 1
+    row = report["lf_payload_evidence_rows"][0]
+    assert row["evidence_kind"] == "checkpoint_export_lf_payload_section"
+    assert row["lf_payload_bytes"] == 388
+    assert row["raw_lf_bytes"] == 4096
+    assert row["packet_bytes"] == 87344
+    assert report["selected_lf_payload_evidence"]["lf_payload_bytes"] == 388
+    assert "snerv_lf_hf_measured_lf_payload_report_missing" not in report["blockers"]
+
+
+def test_lf_hf_queue_prefers_passing_scorer_guard_feedback(
+    tmp_path: Path,
+) -> None:
+    stale_pass = {
+        **_candidate_feedback_row(guard_proof_passed=True),
+        "created_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/ssd/passing_guard.json",
+    }
+    newer_fail = {
+        **_candidate_feedback_row(guard_proof_passed=False),
+        "created_utc": "2026-06-05T01:00:00+00:00",
+        "_source_path": "/ssd/newer_failing_guard.json",
+    }
+
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        candidate_feedback_rows=[newer_fail, stale_pass],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    scorer = report["scorer_domain_evidence"]
+    assert scorer["artifact_count"] == 2
+    assert scorer["source_path"] == "/ssd/passing_guard.json"
+    assert scorer["scorer_domain_tether_proof_passed"] is True
+    assert scorer["scorer_input_distribution_guard_proof_passed"] is True
+    assert scorer["queue_blockers"] == []
+    assert "snerv_scorer_input_distribution_guard_missing" not in report["blockers"]
+
+
 def test_lf_hf_replacement_queue_blocks_current_snar2_no_lf_overrun_state(
     tmp_path: Path,
 ) -> None:
@@ -383,6 +440,84 @@ def test_lf_hf_queue_consumes_value_domain_noncollapse_for_lf_conditioned_hf(
     assert row["command_argv"] == []
 
 
+def test_lf_hf_queue_consumes_hf_residual_receiver_payload_proof(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        value_domain_xray_reports=[_value_domain_xray(noncollapse=True)],
+        hf_residual_receiver_payload_proofs=[_hf_residual_receiver_payload_proof()],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "lf_conditioned_hf_residual_generator"
+    )
+    blockers = set(row["blockers"])
+    evidence = row["hf_residual_payload_evidence"]
+    assert evidence["receiver_payload_implemented"] is True
+    assert evidence["receiver_decode_proven"] is True
+    assert evidence["section_native_byte_telemetry_present"] is True
+    assert "snerv_hf_residual_generator_receiver_payload_not_implemented" not in (
+        blockers
+    )
+    assert report["hf_residual_payload_evidence"]["closed_campaign_blockers"] == [
+        "snerv_hf_residual_generator_receiver_payload_not_implemented"
+    ]
+    assert "--hf-residual-receiver-payload-proof" in report[
+        "runnable_rebuild_command_argv"
+    ]
+    assert row["blocked"] is False
+
+
+def test_lf_hf_queue_consumes_joint_codebook_receiver_payload_proof(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[_campaign_plan(blockers=())],
+        joint_codebook_receiver_payload_proofs=[
+            _joint_codebook_receiver_payload_proof()
+        ],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    row = next(
+        item
+        for item in report["queue_rows"]
+        if item["solution_family"] == "joint_lf_hf_factorized_codebook"
+    )
+    blockers = set(row["blockers"])
+    evidence = row["joint_codebook_evidence"]
+    assert evidence["receiver_payload_implemented"] is True
+    assert evidence["receiver_decode_proven"] is True
+    assert evidence["numpy_receiver_decode"] is True
+    assert evidence["section_native_byte_telemetry_present"] is True
+    assert "snerv_joint_lf_hf_factorized_codebook_not_implemented" not in blockers
+    assert "snerv_joint_lf_hf_codebook_numpy_receiver_missing" not in blockers
+    assert "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing" not in blockers
+    assert report["joint_codebook_evidence"]["closed_campaign_blockers"] == [
+        "snerv_joint_lf_hf_factorized_codebook_not_implemented",
+        "snerv_joint_lf_hf_codebook_numpy_receiver_missing",
+        "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
+    ]
+    assert "--joint-codebook-receiver-payload-proof" in report[
+        "runnable_rebuild_command_argv"
+    ]
+    assert row["blocked"] is False
+
+
 def test_lf_hf_queue_keeps_distribution_guard_blocker_for_tether_only_proof(
     tmp_path: Path,
 ) -> None:
@@ -491,6 +626,8 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     campaign_path = tmp_path / "campaign.json"
     source_forward_path = tmp_path / "source_forward.json"
     feedback_path = tmp_path / "candidate_feedback.json"
+    residual_payload_path = tmp_path / "hf_residual_payload.json"
+    joint_codebook_path = tmp_path / "joint_codebook_payload.json"
     output_root = tmp_path / "out"
     output_json = output_root / "queue.json"
     output_md = output_root / "queue.md"
@@ -502,6 +639,14 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     )
     source_forward_path.write_text(json.dumps(_source_forward_artifact()), encoding="utf-8")
     feedback_path.write_text(json.dumps(_candidate_feedback_row()), encoding="utf-8")
+    residual_payload_path.write_text(
+        json.dumps(_hf_residual_receiver_payload_proof()),
+        encoding="utf-8",
+    )
+    joint_codebook_path.write_text(
+        json.dumps(_joint_codebook_receiver_payload_proof()),
+        encoding="utf-8",
+    )
 
     rc = cli_main(
         [
@@ -515,6 +660,10 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
             source_forward_path.as_posix(),
             "--candidate-feedback-row",
             feedback_path.as_posix(),
+            "--hf-residual-receiver-payload-proof",
+            residual_payload_path.as_posix(),
+            "--joint-codebook-receiver-payload-proof",
+            joint_codebook_path.as_posix(),
             "--output-root",
             output_root.as_posix(),
             "--output-json",
@@ -536,6 +685,14 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     assert payload["source_forward_evidence"]["receiver_payload_frame_replay_proven"] is True
     assert payload["scorer_domain_evidence"]["source_path"] == feedback_path.as_posix()
     assert payload["scorer_domain_evidence"]["scorer_domain_tether_proof_passed"] is True
+    assert payload["hf_residual_payload_evidence"]["source_path"] == (
+        residual_payload_path.as_posix()
+    )
+    assert payload["hf_residual_payload_evidence"]["receiver_decode_proven"] is True
+    assert payload["joint_codebook_evidence"]["source_path"] == (
+        joint_codebook_path.as_posix()
+    )
+    assert payload["joint_codebook_evidence"]["numpy_receiver_decode"] is True
     assert len(payload["selected_lf_payload_evidence"]["source_sha256"]) == 64
     assert "SNeRV LF/HF Replacement Queue" in markdown
     assert "receiver payload frame replay proven" in markdown
@@ -561,6 +718,39 @@ def _lf_sweep_report() -> dict[str, object]:
             "snerv_lf_payload_codec_sweep_false_authority_no_scorer_replay",
             "contest_cpu_cuda_exact_eval_not_executed",
         ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _checkpoint_export_lf_report() -> dict[str, object]:
+    return {
+        "schema": "snerv_checkpoint_archive_export.v1",
+        "report_path": "/ssd/snerv_checkpoint_archive_export.json",
+        "_source_path": "/ssd/snerv_checkpoint_archive_export.json",
+        "_source_sha256": "0" * 64,
+        "packet_path": "/ssd/snerv_checkpoint_packet.bin",
+        "packet_bytes": 87344,
+        "packet_sha256": "1" * 64,
+        "lf_payload_codec": "spatial_delta_zigzag_leb128_lzma",
+        "lf_payload_codec_selected": "spatial_delta_zigzag_leb128_lzma",
+        "lf_payload_report_status": "receiver_visible_lf_payload_accounting_verified",
+        "lf_payload_section_bytes": 388,
+        "lf_payload_codec_selection_report": {
+            "schema": "snerv_lf_payload_codec_selection.v1",
+            "raw_bytes": 4096,
+            "canonical_int64_raw_bytes": 4096,
+            "payload_bytes": 384,
+            "section_bytes": 388,
+        },
+        "packet_section_bytes": {
+            "metadata_payload": 4,
+            "lf_payload": 388,
+            "decoder_payload": 76093,
+            "step_map_packet": 499,
+        },
+        "receiver_contract_satisfied": False,
+        "blockers": ["receiver_proof_not_requested"],
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -884,6 +1074,65 @@ def _value_domain_xray(*, noncollapse: bool) -> dict[str, object]:
                 "snerv_receiver_decode_clipped_output_saturated",
             ]
         ),
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _hf_residual_receiver_payload_proof() -> dict[str, object]:
+    return {
+        "schema": "snerv_lf_conditioned_hf_residual_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/ssd/snerv_lf_conditioned_hf_residual_receiver_proof.json",
+        "_source_sha256": "0" * 64,
+        "packet_path": "/ssd/candidate.snar",
+        "source_packet_sha256": "1" * 64,
+        "payload_path": "/ssd/lf_conditioned_hf_residual.slhr",
+        "payload_bytes": 456,
+        "payload_sha256": "2" * 64,
+        "sample_shape_b2chw": [1, 2, 3, 16, 24],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "section_native_byte_telemetry_present": True,
+        "lf_anchor_bytes": 144,
+        "hf_residual_bytes": 2304,
+        "compressed_payload_bytes": 300,
+        "closed_campaign_blockers": [
+            "snerv_hf_residual_generator_receiver_payload_not_implemented"
+        ],
+        "blockers": ["snerv_lf_conditioned_hf_residual_payload_false_authority"],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _joint_codebook_receiver_payload_proof() -> dict[str, object]:
+    return {
+        "schema": "snerv_joint_lf_hf_factorized_codebook_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/ssd/snerv_joint_lf_hf_factorized_codebook_receiver_proof.json",
+        "_source_sha256": "3" * 64,
+        "packet_path": "/ssd/candidate.snar",
+        "source_packet_sha256": "4" * 64,
+        "payload_path": "/ssd/joint_lf_hf_factorized_codebook.sjlc",
+        "payload_bytes": 512,
+        "payload_sha256": "5" * 64,
+        "sample_shape_b2chw": [1, 2, 3, 16, 24],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "numpy_receiver_decode": True,
+        "section_native_byte_telemetry_present": True,
+        "codebook_raw_bytes": 384,
+        "index_raw_bytes": 768,
+        "compressed_payload_bytes": 320,
+        "codebook_entry_count": 16,
+        "block_count": 192,
+        "closed_campaign_blockers": [
+            "snerv_joint_lf_hf_factorized_codebook_not_implemented",
+            "snerv_joint_lf_hf_codebook_numpy_receiver_missing",
+            "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
+        ],
+        "blockers": ["snerv_joint_lf_hf_factorized_codebook_false_authority"],
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }

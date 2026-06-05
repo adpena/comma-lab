@@ -198,6 +198,24 @@ _DECODER_SALIENCY_EXCLUDE_SUBSTRINGS: tuple[str, ...] = (
     "teacher",
     "student",
 )
+_DYNAMICS_TRACE_GROUPS: tuple[str, ...] = (
+    "output_head",
+    "latents",
+    "feature_grids",
+    "convnext",
+    "decoder_blocks",
+    "latent_embed",
+    "injectors",
+    "other",
+)
+_DIRECT_LIVE_TRACE_COMPONENTS: tuple[str, ...] = (
+    "segnet_direct_live_distill",
+    "segnet_direct_live_base_loss",
+    "segnet_direct_live_class_histogram",
+    "segnet_direct_live_class_balanced_hinge",
+    "segnet_direct_live_class_balanced_ce",
+    "segnet_direct_live_class_balanced_squared_hinge",
+)
 
 
 def _tree_name_to_saliency_group(raw_name: Any) -> str:
@@ -215,6 +233,27 @@ def _is_decoder_weight_saliency_group(name: str) -> bool:
     if any(token in lowered for token in _DECODER_SALIENCY_EXCLUDE_SUBSTRINGS):
         return False
     return any(token in lowered for token in _DECODER_SALIENCY_INCLUDE_SUBSTRINGS)
+
+
+def _dynamics_trace_group(name: str) -> str:
+    """Bucket MLX parameter leaves into scorer-collapse debugging groups."""
+
+    lowered = str(name).lower()
+    if "head_rgb_0" in lowered or "head_rgb_1" in lowered:
+        return "output_head"
+    if "latents" in lowered:
+        return "latents"
+    if "feature_grids" in lowered or "feature_grid" in lowered:
+        return "feature_grids"
+    if "convnext" in lowered:
+        return "convnext"
+    if "blocks" in lowered:
+        return "decoder_blocks"
+    if "latent_embed" in lowered:
+        return "latent_embed"
+    if "injector" in lowered:
+        return "injectors"
+    return "other"
 
 
 def _bounded_name_inventory(
@@ -908,6 +947,165 @@ class MlxScoreAwareAdapter:
                 except (TypeError, ValueError):
                     continue
         return eval_targets, metrics
+
+    def _flatten_trace_leaves(self, tree: Any) -> list[tuple[str, Any]]:
+        """Return named non-null leaves for low-level dynamics telemetry."""
+
+        from mlx.utils import tree_flatten
+
+        return [
+            (_tree_name_to_saliency_group(raw_name), leaf)
+            for raw_name, leaf in tree_flatten(tree)
+            if leaf is not None
+        ]
+
+    def _capture_parameter_trace_leaves(self) -> dict[str, Any]:
+        """Snapshot model leaves before an optimizer update.
+
+        MLX arrays are immutable values; keeping the pre-update arrays lets the
+        post-update trace compute exact per-group parameter deltas without
+        introducing any receiver sidecar or training-state mutation.
+        """
+
+        return {
+            name: self._mx.array(leaf)
+            for name, leaf in self._flatten_trace_leaves(self.model.parameters())
+        }
+
+    def _group_norm_trace_metrics(
+        self,
+        flat_leaves: Sequence[tuple[str, Any]],
+        *,
+        prefix: str,
+    ) -> dict[str, float]:
+        """Aggregate tensor L2/max/mean-abs telemetry by scorer-relevant group."""
+
+        mx = self._mx
+        grouped: dict[str, dict[str, Any]] = {
+            group: {
+                "count": 0,
+                "numel": 0,
+                "sum_sq": None,
+                "sum_abs": None,
+                "max_abs": None,
+            }
+            for group in _DYNAMICS_TRACE_GROUPS
+        }
+        grouped["all"] = {
+            "count": 0,
+            "numel": 0,
+            "sum_sq": None,
+            "sum_abs": None,
+            "max_abs": None,
+        }
+        for name, leaf in flat_leaves:
+            if leaf is None:
+                continue
+            group = _dynamics_trace_group(name)
+            abs_leaf = mx.abs(leaf)
+            leaf_sum_sq = mx.sum(leaf * leaf)
+            leaf_sum_abs = mx.sum(abs_leaf)
+            leaf_max_abs = mx.max(abs_leaf)
+            numel = int(math.prod(int(v) for v in tuple(leaf.shape)))
+            for group_name in ("all", group):
+                bucket = grouped[group_name]
+                bucket["count"] += 1
+                bucket["numel"] += numel
+                bucket["sum_sq"] = (
+                    leaf_sum_sq
+                    if bucket["sum_sq"] is None
+                    else bucket["sum_sq"] + leaf_sum_sq
+                )
+                bucket["sum_abs"] = (
+                    leaf_sum_abs
+                    if bucket["sum_abs"] is None
+                    else bucket["sum_abs"] + leaf_sum_abs
+                )
+                bucket["max_abs"] = (
+                    leaf_max_abs
+                    if bucket["max_abs"] is None
+                    else mx.maximum(bucket["max_abs"], leaf_max_abs)
+                )
+
+        eval_targets: list[Any] = []
+        for bucket in grouped.values():
+            if bucket["sum_sq"] is not None:
+                eval_targets.extend([bucket["sum_sq"], bucket["sum_abs"], bucket["max_abs"]])
+        if eval_targets:
+            mx.eval(*eval_targets)
+
+        metrics: dict[str, float] = {}
+        for group_name, bucket in sorted(grouped.items()):
+            count = int(bucket["count"])
+            numel = int(bucket["numel"])
+            metrics[f"{prefix}_{group_name}_leaf_count"] = float(count)
+            metrics[f"{prefix}_{group_name}_numel"] = float(numel)
+            if count == 0 or numel == 0:
+                metrics[f"{prefix}_{group_name}_l2"] = 0.0
+                metrics[f"{prefix}_{group_name}_mean_abs"] = 0.0
+                metrics[f"{prefix}_{group_name}_max_abs"] = 0.0
+                continue
+            sum_sq = float(bucket["sum_sq"].item())
+            sum_abs = float(bucket["sum_abs"].item())
+            max_abs = float(bucket["max_abs"].item())
+            metrics[f"{prefix}_{group_name}_l2"] = math.sqrt(max(sum_sq, 0.0))
+            metrics[f"{prefix}_{group_name}_mean_abs"] = sum_abs / float(numel)
+            metrics[f"{prefix}_{group_name}_max_abs"] = max_abs
+        return metrics
+
+    def _parameter_delta_trace_metrics(
+        self,
+        before: Mapping[str, Any],
+        *,
+        prefix: str = "dynamics_param_delta",
+    ) -> dict[str, float]:
+        """Return exact grouped post-update parameter movement telemetry."""
+
+        after = dict(self._flatten_trace_leaves(self.model.parameters()))
+        deltas: list[tuple[str, Any]] = []
+        missing_after = 0
+        for name, before_leaf in before.items():
+            after_leaf = after.get(name)
+            if after_leaf is None:
+                missing_after += 1
+                continue
+            deltas.append((name, after_leaf - before_leaf))
+        metrics = self._group_norm_trace_metrics(deltas, prefix=prefix)
+        metrics[f"{prefix}_missing_after_leaf_count"] = float(missing_after)
+        return metrics
+
+    def _direct_live_effective_weight_trace_metrics(
+        self,
+        loss_weights: Mapping[str, float] | None,
+    ) -> dict[str, float]:
+        """Expose effective stage weights for every direct-live SegNet actuator."""
+
+        out: dict[str, float] = {}
+        segnet_stage_weight = component_loss_weight(loss_weights, "distill")
+        for component in _DIRECT_LIVE_TRACE_COMPONENTS:
+            out[f"dynamics_effective_weight_{component}"] = component_loss_weight(
+                loss_weights,
+                component,
+                default=segnet_stage_weight,
+            )
+        return out
+
+    def _prefixed_score_aware_loss_part_metrics(
+        self,
+        batch: Any,
+        *,
+        loss_weights: Mapping[str, float] | None,
+        prefix: str,
+    ) -> dict[str, float]:
+        """Snapshot scorer-loss parts before/after a parameter update."""
+
+        return {
+            f"{prefix}_{key}": value
+            for key, value in self._score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+            ).items()
+        }
 
     def _score_aware_loss_part_metrics(
         self,
@@ -3554,6 +3752,19 @@ class MlxScoreAwareAdapter:
             context=f"{self.substrate_id}_mlx_score_aware_train_step",
         )
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
+        pre_update_param_trace = self._capture_parameter_trace_leaves()
+        pre_update_loss_part_metrics = self._prefixed_score_aware_loss_part_metrics(
+            batch,
+            loss_weights=effective_loss_weights,
+            prefix="dynamics_pre_update",
+        )
+        dynamics_gradient_metrics = self._group_norm_trace_metrics(
+            self._flatten_trace_leaves(grads),
+            prefix="dynamics_gradient",
+        )
+        dynamics_weight_metrics = self._direct_live_effective_weight_trace_metrics(
+            effective_loss_weights
+        )
         self._accumulate_decoder_weight_gradient_saliency(grads)
         # Wave N+11 stabilizer: apply mlx.optimizers.clip_grad_norm BEFORE
         # optimizer.update so the NaN-at-ep-16-18 gradient-explosion signature
@@ -3578,6 +3789,9 @@ class MlxScoreAwareAdapter:
         )
         self._wave_n11_step_count += 1
         self._optimizer.update(self.model, grads)
+        dynamics_delta_metrics = self._parameter_delta_trace_metrics(
+            pre_update_param_trace
+        )
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
             batch
         )
@@ -3660,6 +3874,10 @@ class MlxScoreAwareAdapter:
                 **finite_guard_metrics,
                 **gradient_multiplier_metrics,
                 **clip_metrics,
+                **pre_update_loss_part_metrics,
+                **dynamics_gradient_metrics,
+                **dynamics_delta_metrics,
+                **dynamics_weight_metrics,
                 **native_optimizer_metrics,
                 **post_update_metrics,
             }
@@ -3709,6 +3927,19 @@ class MlxScoreAwareAdapter:
             context=f"{self.substrate_id}_pact_muon_adamw_train_step",
         )
         grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
+        pre_update_param_trace = self._capture_parameter_trace_leaves()
+        pre_update_loss_part_metrics = self._prefixed_score_aware_loss_part_metrics(
+            batch,
+            loss_weights=loss_weights,
+            prefix="dynamics_pre_update",
+        )
+        dynamics_gradient_metrics = self._group_norm_trace_metrics(
+            self._flatten_trace_leaves(grads),
+            prefix="dynamics_gradient",
+        )
+        dynamics_weight_metrics = self._direct_live_effective_weight_trace_metrics(
+            loss_weights
+        )
         self._accumulate_decoder_weight_gradient_saliency(grads)
         grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
         if self._wave_n11_grad_clip_max_norm is not None:
@@ -3757,6 +3988,9 @@ class MlxScoreAwareAdapter:
             self._pact_muon_adamw_optimizer_state,
             config,
         )
+        dynamics_delta_metrics = self._parameter_delta_trace_metrics(
+            pre_update_param_trace
+        )
         self._pact_muon_adamw_last_step_summary = dict(step_summary)
         self._wave_n11_step_count += 1
         post_update_eval_targets, post_update_metrics = self._post_train_step_update(
@@ -3797,6 +4031,10 @@ class MlxScoreAwareAdapter:
             "pact_adamw_learning_rate": float(config.adamw_lr),
             "pact_muon_learning_rate": float(config.muon_lr),
             "pact_muon_lr_multiplier": float(PACT_MUON_ADAMW_MUON_LR_MULTIPLIER),
+            **pre_update_loss_part_metrics,
+            **dynamics_gradient_metrics,
+            **dynamics_delta_metrics,
+            **dynamics_weight_metrics,
             **post_update_metrics,
         }
 

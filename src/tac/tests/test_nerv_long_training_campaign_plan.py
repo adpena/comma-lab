@@ -786,6 +786,10 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
         full_tub_parity=False,
         trained_checkpoint_loaded=True,
     )
+    authority_gate = _snerv_official_replacement_authority_gate(ready=False)
+    value_domain_xray = _snerv_value_domain_xray(noncollapse=True)
+    residual_proof = _snerv_hf_residual_receiver_payload_proof()
+    joint_codebook_proof = _snerv_joint_codebook_receiver_payload_proof()
 
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -798,6 +802,10 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
         max_candidates_per_family=1,
         snerv_official_source_forward_artifacts=(source_forward,),
+        snerv_official_replacement_authority_gates=(authority_gate,),
+        snerv_value_domain_xray_reports=(value_domain_xray,),
+        snerv_hf_residual_receiver_payload_proofs=(residual_proof,),
+        snerv_joint_codebook_receiver_payload_proofs=(joint_codebook_proof,),
     )
 
     queue = report["snerv_lf_hf_replacement_queue"]
@@ -861,6 +869,23 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     assert scorer_state["artifact_count"] == 1
     assert scorer_state["scorer_domain_tether_proof_passed"] is True
     assert scorer_state["scorer_input_distribution_guard_proof_passed"] is True
+    authority_state = queue["official_replacement_authority_evidence"]
+    assert authority_state["artifact_count"] == 1
+    assert (
+        authority_state["official_tub_lf_hf_decoder_replacement_ready"] is False
+    )
+    value_domain_state = queue["value_domain_evidence"]
+    assert value_domain_state["artifact_count"] == 1
+    assert value_domain_state["value_domain_noncollapse_proof_passed"] is True
+    residual_state = queue["hf_residual_payload_evidence"]
+    assert residual_state["artifact_count"] == 1
+    assert residual_state["receiver_payload_implemented"] is True
+    assert residual_state["receiver_decode_proven"] is True
+    joint_state = queue["joint_codebook_evidence"]
+    assert joint_state["artifact_count"] == 1
+    assert joint_state["receiver_payload_implemented"] is True
+    assert joint_state["receiver_decode_proven"] is True
+    assert joint_state["numpy_receiver_decode"] is True
     assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in queue["blockers"]
     assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in queue["blockers"]
     assert "snerv_official_mfu_hfr_tub_export_not_bound" not in queue["blockers"]
@@ -875,12 +900,53 @@ def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_
     assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in official["blockers"]
     assert "snerv_official_mfu_hfr_tub_export_not_bound" not in official["blockers"]
     assert "snerv_scorer_input_distribution_guard_missing" not in official["blockers"]
+    assert official["official_replacement_authority_evidence"]["artifact_count"] == 1
     assert (
         "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
         in official["blockers"]
     )
+    residual_row = next(
+        row
+        for row in queue["queue_rows"]
+        if row["solution_family"] == "lf_conditioned_hf_residual_generator"
+    )
+    assert "snerv_hf_residual_generator_receiver_payload_not_implemented" not in (
+        residual_row["blockers"]
+    )
+    assert (
+        "snerv_lf_conditioned_hf_value_domain_noncollapse_proof_missing"
+        not in residual_row["blockers"]
+    )
+    joint_row = next(
+        row
+        for row in queue["queue_rows"]
+        if row["solution_family"] == "joint_lf_hf_factorized_codebook"
+    )
+    assert "snerv_joint_lf_hf_factorized_codebook_not_implemented" not in (
+        joint_row["blockers"]
+    )
+    assert "snerv_joint_lf_hf_codebook_numpy_receiver_missing" not in (
+        joint_row["blockers"]
+    )
+    assert "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing" not in (
+        joint_row["blockers"]
+    )
     assert queue["score_claim"] is False
     assert queue["ready_for_exact_eval_dispatch"] is False
+
+
+def test_campaign_plan_auto_discovers_candidate_byte_feedback_guard_split(
+    tmp_path: Path,
+) -> None:
+    feedback = tmp_path / "nerv_candidate_byte_feedback_row.guard_split.json"
+    feedback.write_text(
+        json.dumps(_snerv_scorer_input_distribution_guard_feedback_row()),
+        encoding="utf-8",
+    )
+
+    discovered = cli._discover_candidate_feedback_paths([tmp_path], limit=4)
+
+    assert discovered == [feedback.resolve(strict=False)]
 
 
 def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> None:
@@ -3229,6 +3295,26 @@ def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
     assert ignored.resolve(strict=False) not in discovered
 
 
+def test_long_training_campaign_cli_default_candidate_feedback_roots(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ssd = tmp_path / "ssd"
+    feedback_root = ssd / "experiments" / "results"
+    feedback_root.mkdir(parents=True)
+    long_training_root = ssd / "nerv_long_training_campaigns"
+    long_training_root.mkdir(parents=True)
+    top_level_feedback = ssd / "snerv_scorer_guard_feedback_smoke"
+    top_level_feedback.mkdir()
+    monkeypatch.setattr(cli, "DEFAULT_SSD_ROOTS", (ssd,))
+
+    assert cli._default_candidate_feedback_roots() == [
+        feedback_root,
+        long_training_root,
+        top_level_feedback,
+    ]
+
+
 def test_long_training_campaign_plan_rejects_partial_snerv_binary_profile_byte_feedback(
     tmp_path: Path,
 ) -> None:
@@ -5357,6 +5443,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     waterfill_bundle = tmp_path / "hinerv_archive_ladder_waterfill.json"
     archive_section_telemetry = tmp_path / "hi_nerv_archive_section_telemetry.json"
     snerv_tether_smoke = tmp_path / "snerv_scorer_tether_smoke.json"
+    snerv_hf_residual_proof = tmp_path / "snerv_hf_residual_proof.json"
+    snerv_joint_codebook_proof = tmp_path / "snerv_joint_codebook_proof.json"
     proof_path = _receiver_proof(tmp_path, archive_sha="a" * 64)
     cache_quality_path = _receiver_cache_quality_report(tmp_path, passed=True)
     hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
@@ -5423,6 +5511,14 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
         ),
         encoding="utf-8",
     )
+    snerv_hf_residual_proof.write_text(
+        json.dumps(_snerv_hf_residual_receiver_payload_proof(), sort_keys=True),
+        encoding="utf-8",
+    )
+    snerv_joint_codebook_proof.write_text(
+        json.dumps(_snerv_joint_codebook_receiver_payload_proof(), sort_keys=True),
+        encoding="utf-8",
+    )
 
     rc = cli.main(
         [
@@ -5442,6 +5538,10 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(archive_section_telemetry),
             "--snerv-scorer-tether-smoke-report",
             str(snerv_tether_smoke),
+            "--snerv-hf-residual-receiver-payload-proof",
+            str(snerv_hf_residual_proof),
+            "--snerv-joint-codebook-receiver-payload-proof",
+            str(snerv_joint_codebook_proof),
             "--epochs",
             "16",
             "--output-json",
@@ -5486,6 +5586,12 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert payload["snerv_lf_over_ceiling_reroute_queue"]["schema"] == ("snerv_lf_over_ceiling_reroute_queue.v1")
     assert payload["snerv_lf_hf_replacement_queue"]["schema"] == ("snerv_lf_hf_replacement_queue.v1")
+    assert payload["snerv_lf_hf_replacement_queue"]["hf_residual_payload_evidence"][
+        "source_path"
+    ] == snerv_hf_residual_proof.resolve(strict=False).as_posix()
+    assert payload["snerv_lf_hf_replacement_queue"]["joint_codebook_evidence"][
+        "source_path"
+    ] == snerv_joint_codebook_proof.resolve(strict=False).as_posix()
     assert payload["snerv_lf_hf_replacement_queue_row_count"] > 0
     assert payload["experiment_queue_id"] == (f"nerv_long_training_campaign_{out_json.stem}.v1")
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
@@ -6455,6 +6561,138 @@ def _snerv_source_forward_artifact(
             "payload_sha256": "c" * 64,
         },
         "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_official_replacement_authority_gate(*, ready: bool) -> dict:
+    blockers = (
+        []
+        if ready
+        else [
+            "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+            "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+            "snerv_official_trained_checkpoint_state_dict_mapping_missing",
+        ]
+    )
+    return {
+        "schema": "snerv_official_tub_lf_hf_decoder_replacement_authority_gate.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/Volumes/VertigoDataTier/pact/snerv_official_gate.json",
+        "_source_sha256": "e" * 64,
+        "official_tub_lf_hf_decoder_replacement_ready": bool(ready),
+        "official_checkpoint_export_binding_ready": True,
+        "receiver_output2_frame_replay_ready": True,
+        "trained_checkpoint_state_dict_mapping_ready": False,
+        "tub_temporal_output2_weight_mapping_ready": False,
+        "full_tub_source_forward_replay_ready": False,
+        "closed_campaign_blockers": [
+            "snerv_official_mfu_hfr_tub_export_not_bound",
+            "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",
+            "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
+            "snerv_official_tub_output2_receiver_frame_decode_not_bound",
+        ],
+        "queue_blockers": blockers,
+        "blockers": blockers,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_value_domain_xray(*, noncollapse: bool) -> dict:
+    return {
+        "schema": "snerv_receiver_value_domain_xray.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/Volumes/VertigoDataTier/pact/snerv_value_domain_xray.json",
+        "_source_sha256": "f" * 64,
+        "packet_path": "/Volumes/VertigoDataTier/pact/snerv_packet.bin",
+        "packet_bytes": 87344,
+        "packet_sha256": "1" * 64,
+        "sample_shape_b2chw": [2, 2, 3, 16, 24],
+        "value_domain_sample_status": "selected_pair_decode_completed",
+        "receiver_payload_decode_sample_proven": True,
+        "value_domain_noncollapse_proof_passed": bool(noncollapse),
+        "verdict": (
+            "receiver_value_domain_sample_within_limits"
+            if noncollapse
+            else "receiver_value_domain_sample_collapsed"
+        ),
+        "closed_campaign_blockers": (
+            [
+                "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse",
+                "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
+                "snerv_renderer_nondegenerate_target_value_domain_not_passed",
+            ]
+            if noncollapse
+            else []
+        ),
+        "blockers": ["snerv_receiver_value_domain_xray_false_authority"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_hf_residual_receiver_payload_proof() -> dict:
+    return {
+        "schema": "snerv_lf_conditioned_hf_residual_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/Volumes/VertigoDataTier/pact/snerv_hf_residual_proof.json",
+        "_source_sha256": "2" * 64,
+        "packet_path": "/Volumes/VertigoDataTier/pact/snerv_packet.bin",
+        "source_packet_sha256": "1" * 64,
+        "payload_path": "/Volumes/VertigoDataTier/pact/snerv_lf_hf_residual.slhr",
+        "payload_bytes": 4096,
+        "payload_sha256": "3" * 64,
+        "lf_anchor_bytes": 1536,
+        "hf_residual_bytes": 18432,
+        "compressed_payload_bytes": 2048,
+        "sample_shape_b2chw": [2, 2, 3, 16, 24],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "section_native_byte_telemetry_present": True,
+        "closed_campaign_blockers": [
+            "snerv_hf_residual_generator_receiver_payload_not_implemented"
+        ],
+        "blockers": ["snerv_lf_conditioned_hf_residual_payload_false_authority"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_joint_codebook_receiver_payload_proof() -> dict:
+    return {
+        "schema": "snerv_joint_lf_hf_factorized_codebook_receiver_proof.v1",
+        "generated_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": (
+            "/Volumes/VertigoDataTier/pact/snerv_joint_codebook_proof.json"
+        ),
+        "_source_sha256": "4" * 64,
+        "packet_path": "/Volumes/VertigoDataTier/pact/snerv_packet.bin",
+        "source_packet_sha256": "1" * 64,
+        "payload_path": "/Volumes/VertigoDataTier/pact/snerv_joint_codebook.sjlc",
+        "payload_bytes": 3072,
+        "payload_sha256": "5" * 64,
+        "codebook_raw_bytes": 1024,
+        "index_raw_bytes": 6144,
+        "compressed_payload_bytes": 1536,
+        "codebook_entry_count": 64,
+        "block_count": 768,
+        "sample_shape_b2chw": [2, 2, 3, 16, 24],
+        "receiver_payload_implemented": True,
+        "receiver_decode_proven": True,
+        "numpy_receiver_decode": True,
+        "section_native_byte_telemetry_present": True,
+        "closed_campaign_blockers": [
+            "snerv_joint_lf_hf_factorized_codebook_not_implemented",
+            "snerv_joint_lf_hf_codebook_numpy_receiver_missing",
+            "snerv_joint_lf_hf_codebook_section_byte_telemetry_missing",
+        ],
+        "blockers": ["snerv_joint_lf_hf_factorized_codebook_false_authority"],
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

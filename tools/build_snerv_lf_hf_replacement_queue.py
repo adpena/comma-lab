@@ -94,6 +94,28 @@ def main(argv: list[str] | None = None) -> int:
             "clear only proven LF-conditioned HF noncollapse blockers."
         ),
     )
+    parser.add_argument(
+        "--hf-residual-receiver-payload-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_lf_conditioned_hf_residual_receiver_proof.v1 JSON. "
+            "Repeatable; used to clear only the HF residual receiver payload "
+            "implementation blocker."
+        ),
+    )
+    parser.add_argument(
+        "--joint-codebook-receiver-payload-proof",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_joint_lf_hf_factorized_codebook_receiver_proof.v1 JSON. "
+            "Repeatable; used to clear only joint codebook implementation, "
+            "NumPy receiver, and section-byte telemetry blockers."
+        ),
+    )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--output-md", type=Path)
@@ -131,6 +153,14 @@ def main(argv: list[str] | None = None) -> int:
     value_domain_xray_reports = [
         load_json_with_source_identity(path) for path in args.value_domain_xray
     ]
+    hf_residual_receiver_payload_proofs = [
+        load_json_with_source_identity(path)
+        for path in args.hf_residual_receiver_payload_proof
+    ]
+    joint_codebook_receiver_payload_proofs = [
+        load_json_with_source_identity(path)
+        for path in args.joint_codebook_receiver_payload_proof
+    ]
 
     report = build_snerv_lf_hf_replacement_queue(
         lf_payload_reports=lf_reports,
@@ -140,6 +170,8 @@ def main(argv: list[str] | None = None) -> int:
         official_replacement_authority_gates=official_replacement_authority_gates,
         candidate_feedback_rows=candidate_feedback_rows,
         value_domain_xray_reports=value_domain_xray_reports,
+        hf_residual_receiver_payload_proofs=hf_residual_receiver_payload_proofs,
+        joint_codebook_receiver_payload_proofs=joint_codebook_receiver_payload_proofs,
         output_root=output_root,
         lane_id=str(args.lane_id),
         queue_id=str(args.queue_id),

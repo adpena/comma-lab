@@ -595,6 +595,10 @@ def build_nerv_long_training_campaign_plan(
     snerv_snar_header_minimization_report_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
     snerv_official_source_forward_artifacts: Sequence[Mapping[str, Any]] = (),
+    snerv_official_replacement_authority_gates: Sequence[Mapping[str, Any]] = (),
+    snerv_value_domain_xray_reports: Sequence[Mapping[str, Any]] = (),
+    snerv_hf_residual_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    snerv_joint_codebook_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
     pr95_baseline_identity: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_report: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
@@ -757,7 +761,17 @@ def build_nerv_long_training_campaign_plan(
         reroute_queues=(snerv_lf_over_ceiling_reroute_queue,),
         campaign_plans=({"campaign_rows": rows},),
         source_forward_artifacts=snerv_official_source_forward_artifacts,
+        official_replacement_authority_gates=(
+            snerv_official_replacement_authority_gates
+        ),
         candidate_feedback_rows=candidate_feedback_sources,
+        value_domain_xray_reports=snerv_value_domain_xray_reports,
+        hf_residual_receiver_payload_proofs=(
+            snerv_hf_residual_receiver_payload_proofs
+        ),
+        joint_codebook_receiver_payload_proofs=(
+            snerv_joint_codebook_receiver_payload_proofs
+        ),
         output_root=Path(output_root) / "snerv_lf_hf_replacements",
         queue_id=DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
         allow_local_output=True,

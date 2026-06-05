@@ -129,6 +129,55 @@ def test_output_head_bias_gradient_multiplier_zeroes_exact_bias_updates() -> Non
     ) == pytest.approx(0.0)
 
 
+def test_adapter_train_step_emits_low_level_distortion_dynamics_trace() -> None:
+    import mlx.nn as nn
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class TinyHeadRenderer(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.head_rgb_0 = nn.Linear(1, 3)
+            self.head_rgb_1 = nn.Linear(1, 3)
+
+        def reconstruct_pair(self, idx):
+            batch_size = int(idx.shape[0])
+            z = mx.ones((batch_size, 2, 2, 1), dtype=mx.float32)
+            rgb0 = mx.sigmoid(self.head_rgb_0(z))
+            rgb1 = mx.sigmoid(self.head_rgb_1(z))
+            return (
+                mx.transpose(rgb0, (0, 3, 1, 2)),
+                mx.transpose(rgb1, (0, 3, 1, 2)),
+            )
+
+    model = TinyHeadRenderer()
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=mx.zeros((2, 2, 2, 3), dtype=mx.float32),
+        target_rgb_1=mx.ones((2, 2, 2, 3), dtype=mx.float32),
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+    adapter = MlxScoreAwareAdapter(bundle, substrate_id="trace_probe")
+
+    metrics = adapter.train_step(
+        batch=mx.array([0, 1], dtype=mx.int32),
+        learning_rate=1e-2,
+        loss_weights={
+            "recon": 1.0,
+            "segnet_direct_live_class_balanced_ce": 3.0,
+        },
+    )
+
+    assert metrics["dynamics_gradient_output_head_leaf_count"] == pytest.approx(4.0)
+    assert metrics["dynamics_gradient_output_head_l2"] > 0.0
+    assert metrics["dynamics_param_delta_output_head_l2"] > 0.0
+    assert metrics[
+        "dynamics_effective_weight_segnet_direct_live_class_balanced_ce"
+    ] == pytest.approx(3.0)
+    assert "dynamics_pre_update_loss_part_recon" in metrics
+
+
 def test_bias_gradient_multiplier_zeroes_non_head_bias_but_keeps_weights_live() -> None:
     import mlx.nn as nn
 
