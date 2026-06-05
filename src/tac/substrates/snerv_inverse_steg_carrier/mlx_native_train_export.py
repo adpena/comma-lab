@@ -1879,10 +1879,7 @@ def train_export_snerv_mlx_native(
     trained_pairs_candidate = score_aware_long_training.get("_trained_pairs_nchw255")
     trained_state_exportable = bool(
         isinstance(trained_pairs_candidate, np.ndarray)
-        and (
-            score_aware_long_training.get("trained_state_exportable") is True
-            or score_aware_long_training.get("executed") is True
-        )
+        and score_aware_long_training.get("trained_state_exportable") is True
     )
     pairs_for_packet = (
         np.asarray(trained_pairs_candidate, dtype=np.float32)
@@ -2214,6 +2211,16 @@ def train_export_snerv_mlx_native(
         for blocker in profile.get("blockers") or ()
         if str(blocker)
     )
+    official_skip_high_value_domain = _snerv_official_skip_high_value_domain_gate(
+        selected_archive_metadata,
+        receiver_target_profile=receiver_target_profile,
+        receiver_export_profile=receiver_export_profile,
+    )
+    blockers.extend(
+        str(blocker)
+        for blocker in official_skip_high_value_domain.get("blockers") or ()
+        if str(blocker)
+    )
     byte_cap_control = _build_snerv_mlx_native_byte_cap_control(
         candidate=candidate,
         hard_byte_ceiling=hard_byte_ceiling,
@@ -2373,6 +2380,7 @@ def train_export_snerv_mlx_native(
     payload = artifact.as_jsonable()
     payload["hard_byte_ceiling"] = hard_byte_ceiling
     payload["byte_cap_control"] = byte_cap_control
+    payload["official_skip_high_value_domain_gate"] = official_skip_high_value_domain
     payload["local_mlx_prefilter_profile"] = mlx_prefilter_profile
     payload["local_mlx_prefilter_profile_path"] = mlx_prefilter_profile.get(
         "profile_path"
@@ -2390,6 +2398,12 @@ def train_export_snerv_mlx_native(
     payload["score_aware_long_training"] = score_aware_long_training_public
     payload["score_aware_long_training_executed"] = bool(
         selected_archive_metadata.get("score_aware_long_training_executed") is True
+    )
+    payload["score_aware_long_training_trained_state_exportable"] = bool(
+        selected_archive_metadata.get(
+            "score_aware_long_training_trained_state_exportable"
+        )
+        is True
     )
     payload["score_aware_long_training_real_teachers_bound"] = (
         long_training_joint_real_teachers_bound
@@ -6776,6 +6790,62 @@ def _snerv_receiver_frame_reconstruction_profile(
         }
     )
     return profile
+
+
+def _snerv_official_skip_high_value_domain_gate(
+    metadata: Mapping[str, Any],
+    *,
+    receiver_target_profile: Mapping[str, Any],
+    receiver_export_profile: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Fail closed when compact official skip-high storage breaks pixels.
+
+    Compact skip-high modes are byte attractive, but they are only useful for a
+    long run when the receiver-decoded frames remain in the scorer's value
+    domain.  This gate binds that decision to decoded-pixel evidence instead of
+    letting a tiny scalar/channel/shared mean payload masquerade as progress.
+    """
+
+    mode = str(metadata.get("official_skip_high_mode") or "none")
+    compact = mode in {"shared_mean", "channel_mean", "scalar_mean"}
+    blockers: list[str] = []
+    target_gate = (
+        receiver_target_profile.get("receiver_value_domain_gate")
+        if isinstance(receiver_target_profile, Mapping)
+        else None
+    )
+    export_gate = (
+        receiver_export_profile.get("receiver_value_domain_gate")
+        if isinstance(receiver_export_profile, Mapping)
+        else None
+    )
+    target_passed = isinstance(target_gate, Mapping) and target_gate.get("passed") is True
+    export_passed = isinstance(export_gate, Mapping) and export_gate.get("passed") is True
+    if compact:
+        if not target_passed:
+            blockers.append(
+                "snerv_official_compact_skip_high_target_value_domain_not_passed"
+            )
+        if not export_passed:
+            blockers.append(
+                "snerv_official_compact_skip_high_export_value_domain_not_passed"
+            )
+        if mode == "scalar_mean" and blockers:
+            blockers.append("snerv_official_scalar_mean_skip_high_collapse_risk")
+        elif mode == "channel_mean" and blockers:
+            blockers.append("snerv_official_channel_mean_skip_high_collapse_risk")
+        elif mode == "shared_mean" and blockers:
+            blockers.append("snerv_official_shared_mean_skip_high_collapse_risk")
+    return {
+        "schema": "snerv_official_skip_high_value_domain_gate.v1",
+        "official_skip_high_mode": mode,
+        "compact_skip_high_mode": compact,
+        "receiver_target_value_domain_passed": target_passed,
+        "receiver_export_value_domain_passed": export_passed,
+        "passed": not blockers,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _official_primitives_packet_metadata(

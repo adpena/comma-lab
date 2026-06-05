@@ -41,6 +41,7 @@ from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     SnervMlxNativeExportError,
     _build_snerv_mlx_native_byte_cap_control,
     _model_size_from_candidate,
+    _snerv_official_skip_high_value_domain_gate,
     _snerv_receiver_frame_reconstruction_profile,
     _target_pairs_to_nchw255,
     build_snerv_mlx_native_packet_from_numpy_pairs,
@@ -1604,6 +1605,67 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
     assert np.isfinite(frames).all()
 
 
+def test_train_export_does_not_infer_exportable_state_from_executed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    def fake_decode_mlx_targets(*_args, **_kwargs):
+        return target0, target1
+
+    def fake_long_training(*_args, **_kwargs):
+        return {
+            "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
+            "executed": True,
+            "training_completed": True,
+            "training_kind": "unit_executed_not_exportable",
+            "optimizer_kind": "pact_muon_adamw",
+            "blockers": [],
+            "_trained_pairs_nchw255": pairs + 33.0,
+        }
+
+    monkeypatch.setattr(mod, "decode_mlx_targets", fake_decode_mlx_targets)
+    monkeypatch.setattr(
+        mod,
+        "_run_score_aware_long_training_attachment",
+        fake_long_training,
+    )
+
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "executed_not_exportable",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "score_aware_long_training_epochs": 1,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    assert report["score_aware_long_training_executed"] is True
+    assert report["score_aware_long_training_trained_state_exportable"] is False
+    assert report["native_mlx_training_executed"] is False
+    decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
+    assert decoded.metadata["score_aware_long_training_executed"] is True
+    assert decoded.metadata["score_aware_long_training_trained_state_exportable"] is False
+    assert "trained_state_exportable" not in decoded.metadata[
+        "score_aware_long_training"
+    ]
+
+
 def test_train_export_long_training_binds_real_scorer_teachers(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -2676,6 +2738,7 @@ def test_official_long_training_keeps_trained_packet_with_nonrender_blocker(
     )
 
     assert report["score_aware_long_training_executed"] is False
+    assert report["score_aware_long_training_trained_state_exportable"] is True
     assert "unit_nonrender_telemetry_blocker" in report["blockers"]
     assert report["packet_source"] == "official_mfu_hfr_tub_mlx_trained_payload_atoms"
     long_training = report["score_aware_long_training"]
@@ -2746,6 +2809,11 @@ def test_official_primitives_long_training_compact_skip_high_exports_full_shape(
 
     assert report["score_aware_long_training_executed"] is True
     assert report["score_aware_long_training"]["executed"] is True
+    gate = report["official_skip_high_value_domain_gate"]
+    assert gate["official_skip_high_mode"] == mode
+    assert gate["compact_skip_high_mode"] is True
+    assert gate["passed"] is True
+    assert gate["blockers"] == []
     replay = report["score_aware_long_training"][
         "official_mfu_hfr_tub_source_forward_replay"
     ]
@@ -2766,6 +2834,36 @@ def test_official_primitives_long_training_compact_skip_high_exports_full_shape(
     assert official_payload.tensors["inputs.mfu.skip_high"].shape == (4, 3, 8, 8)
     frames = decode_snerv_archive_frames(Path(report["packet_path"]).read_bytes())
     assert frames.shape == (2, 2, 3, 16, 16)
+
+
+@pytest.mark.parametrize("mode", ["shared_mean", "channel_mean", "scalar_mean"])
+def test_official_compact_skip_high_gate_blocks_collapsed_value_domain(
+    mode: str,
+) -> None:
+    failed_profile = {
+        "receiver_value_domain_gate": {
+            "passed": False,
+            "blockers": [
+                "snerv_receiver_frame_reconstruction_decoded_std_collapsed"
+            ],
+        }
+    }
+
+    gate = _snerv_official_skip_high_value_domain_gate(
+        {"official_skip_high_mode": mode},
+        receiver_target_profile=failed_profile,
+        receiver_export_profile=failed_profile,
+    )
+
+    assert gate["compact_skip_high_mode"] is True
+    assert gate["passed"] is False
+    assert "snerv_official_compact_skip_high_target_value_domain_not_passed" in gate[
+        "blockers"
+    ]
+    assert "snerv_official_compact_skip_high_export_value_domain_not_passed" in gate[
+        "blockers"
+    ]
+    assert f"snerv_official_{mode}_skip_high_collapse_risk" in gate["blockers"]
 
 
 def test_official_primitives_full_video_long_training_defers_replay_gate(
