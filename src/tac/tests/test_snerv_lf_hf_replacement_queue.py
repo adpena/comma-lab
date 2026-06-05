@@ -81,7 +81,14 @@ def test_lf_hf_replacement_queue_blocks_current_snar2_no_lf_overrun_state(
     )
 
     assert report["current_state"]["freshest_queue_has_no_lf_over_ceiling_rows"] is True
-    assert "snerv_lf_hf_current_snar2_queue_has_no_lf_over_ceiling_rows" in report["blockers"]
+    assert report["current_state"]["lf_dominance_launch_signal_active"] is False
+    assert report["current_state"]["lf_dominance_signal_demoted"] is True
+    assert "snerv_lf_hf_current_snar2_queue_has_no_lf_over_ceiling_rows" in report[
+        "current_state"
+    ]["demoted_blockers"]
+    assert "snerv_lf_hf_current_snar2_queue_has_no_lf_over_ceiling_rows" not in report[
+        "blockers"
+    ]
     assert report["local_executable_command_row_count"] == 0
     assert all(row["blocked"] is True for row in report["queue_rows"])
     official = next(
