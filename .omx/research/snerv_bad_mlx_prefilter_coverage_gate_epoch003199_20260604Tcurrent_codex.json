@@ -1,0 +1,46 @@
+{
+  "best_full_video_mlx_score": 90.86453145613247,
+  "blockers": [
+    "scorer_input_segnet_last_rgb_mean_absdiff_gt_50",
+    "scorer_input_posenet_yuv6_pair_mean_absdiff_gt_50",
+    "scorer_input_segnet_last_rgb_std_ratio_gt_4",
+    "scorer_input_segnet_last_rgb_saturation_delta_gt_0_15",
+    "scorer_input_posenet_yuv6_pair_saturation_delta_gt_0_15"
+  ],
+  "full_video_profile_paths": [
+    "/Volumes/VertigoDataTier/pact/experiments/results/snerv_scalarmean_hardpair_successor_fix2_epoch003199_ema_archive_export_prefilter_20260604T172056Z_codex/local_mlx_prefilter/local_mlx_prefilter_profile.json"
+  ],
+  "has_full_video_mlx_prefilter": true,
+  "local_replay_mlx_prefilter_passed": false,
+  "local_replay_profile_paths": [],
+  "max_mlx_score_for_local_replay": 0.5,
+  "profile_count": 1,
+  "profile_records": [
+    {
+      "batch_pairs": 1,
+      "blockers": [
+        "scorer_input_segnet_last_rgb_mean_absdiff_gt_50",
+        "scorer_input_posenet_yuv6_pair_mean_absdiff_gt_50",
+        "scorer_input_segnet_last_rgb_std_ratio_gt_4",
+        "scorer_input_segnet_last_rgb_saturation_delta_gt_0_15",
+        "scorer_input_posenet_yuv6_pair_saturation_delta_gt_0_15"
+      ],
+      "bytes": 5775,
+      "exists": true,
+      "full_video_prefilter": true,
+      "full_video_scope": "executed",
+      "local_replay_prefilter": false,
+      "mlx_score_estimate": 90.86453145613247,
+      "pair_count": 600,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_scalarmean_hardpair_successor_fix2_epoch003199_ema_archive_export_prefilter_20260604T172056Z_codex/local_mlx_prefilter/local_mlx_prefilter_profile.json",
+      "promotion_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "required_pairs": 600,
+      "schema_name": "hprc_mlx_component_neutralization_profile.v1",
+      "score_claim": false,
+      "sha256": "3a373d6dcde027ebee796ffae77d24e627536b582a2bd82e16e76fbed03ac64d"
+    }
+  ],
+  "required_pairs": 600,
+  "schema": "hprc_mlx_prefilter_coverage.v1"
+}

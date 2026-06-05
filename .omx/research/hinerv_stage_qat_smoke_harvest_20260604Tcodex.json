@@ -1,0 +1,87 @@
+{
+  "schema": "hinerv_stage_qat_smoke_harvest.v1",
+  "generated_utc": "2026-06-04T21:18:00Z",
+  "axis_tag": "[macOS-CPU/MLX local:false-authority]",
+  "lane_id": "hinerv_stage_qat_runner_smoke_20260604_codex",
+  "instance_job_id": "hinerv_stage_qat_runner_smoke_20260604T211059Z_codex",
+  "output_dir": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_stage_qat_runner_smoke_20260604T2111Z_codex",
+  "source_artifacts": {
+    "runner_report": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_stage_qat_runner_smoke_20260604T2111Z_codex/compact_renderer_mlx_spine_runner_report.json",
+      "sha256": "da206a672a8b315abe6309beb51a6682632768e724588a6b7a506dcbad16b091"
+    },
+    "training_artifact": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_stage_qat_runner_smoke_20260604T2111Z_codex/hi_nerv_mlx_training/training_artifact.json",
+      "sha256": "643621a25eacb579637cc229fbeb6a2134261692023ab6ca50d12ae0c17f7e9a"
+    },
+    "local_mlx_prefilter_profile": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_stage_qat_runner_smoke_20260604T2111Z_codex/hi_nerv_mlx_training/local_mlx_prefilter_profile.json",
+      "sha256": "1c6e89fc280fed96a3e90d4022de79f184b1a243238737dffd9c0ab46132d8cc"
+    },
+    "receiver_cache_quality_report": {
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_stage_qat_runner_smoke_20260604T2111Z_codex/hi_nerv_mlx_training/post_export_receiver_cache_quality/hi_nerv_receiver_cache_quality_report.json",
+      "sha256": "8ae41a9345a28807e7fb4708bd6e2983949d0609927db231835a0606f5fa1bb5"
+    }
+  },
+  "archive": {
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/hinerv_stage_qat_runner_smoke_20260604T2111Z_codex/hi_nerv_mlx_training/ema_archive_selection/ema/archive.zip",
+    "bytes": 106351,
+    "sha256": "85c1c44936560f87d0cf300392bdb8cba2cfe16abad47f7a9ba239960ca80890",
+    "under_178000_byte_ceiling": true
+  },
+  "local_mlx_prefilter": {
+    "scope_full_video": "sampled_prefix_requires_full_video_rerun",
+    "max_pairs": 2,
+    "scorer_batch_pairs": 1,
+    "canonical_score": 94.93991807867756,
+    "seg_term": 50.74869692325592,
+    "pose_term": 44.12040638989815,
+    "rate_term": 0.07081476552349604,
+    "scorer_input_verdict": "SCORER_INPUT_OUT_OF_DISTRIBUTION",
+    "scorer_input_out_of_distribution": true,
+    "local_replay_admissible": false
+  },
+  "receiver_cache_quality": {
+    "quality_gate_passed": false,
+    "quality_gate_verdict": "FUNDAMENTAL_RENDERER_OUTPUT_DEGENERATE",
+    "candidate_segnet_last_rgb": {
+      "std": 0.517579197883606,
+      "dynamic_range": 4.9344635009765625,
+      "mean": 127.33867645263672
+    },
+    "candidate_posenet_yuv6_pair": {
+      "std": 0.43814340233802795,
+      "dynamic_range": 3.3023681640625,
+      "mean": 127.57453155517578
+    },
+    "distance_to_reference": {
+      "segnet_last_rgb_mae": 101.44928741455078,
+      "posenet_yuv6_pair_mae": 69.05482482910156
+    }
+  },
+  "verdict": "BYTE_ATTRACTIVE_BUT_RENDERER_DEGENERATE_NOT_A_FRONTIER_CANDIDATE",
+  "blockers": [
+    "contest_cpu_cuda_exact_eval_not_executed",
+    "hi_nerv_receiver_proof_missing_or_not_passed",
+    "hi_nerv_post_export_receiver_cache_quality_gate_failed",
+    "candidate_segnet_last_rgb_degenerate_constant_or_flat",
+    "candidate_segnet_last_rgb_dynamic_range_too_low",
+    "candidate_segnet_last_rgb_far_from_reference_fit_gate",
+    "candidate_posenet_yuv6_pair_degenerate_constant_or_flat",
+    "candidate_posenet_yuv6_pair_dynamic_range_too_low",
+    "candidate_posenet_yuv6_pair_far_from_reference_fit_gate",
+    "full_video_mlx_scorer_replay_not_attached",
+    "sampled_mlx_prefilter_requires_full_video_rerun",
+    "mlx_renderer_prefilter_scorer_input_out_of_distribution"
+  ],
+  "next_actions": [
+    "do_not_modal_dispatch_this_archive",
+    "repair_hinerv_renderer_dynamic_range_before_full_video_replay",
+    "run_next_hinerv_smoke_with_cache_quality_gate_as_stop_condition",
+    "keep_archive_byte_success_as_capacity_signal_only_until_cache_quality_passes"
+  ],
+  "score_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false
+}

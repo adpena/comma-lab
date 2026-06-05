@@ -1,0 +1,51 @@
+{
+  "activation_policy": {
+    "dispatch_allowed": false,
+    "exact_or_full_video_cuda_allowed": false,
+    "local_mlx_long_training_allowed": false,
+    "local_packet_recode_probe_allowed": true,
+    "planner_rows_may_be_ranked": true,
+    "requires_before_any_long_training_row_can_be_reenabled": [
+      "measured_lf_payload_bytes",
+      "receiver_visible_representation_change",
+      "byte_charged_candidate_packet",
+      "receiver_replay_proof",
+      "full_video_local_prefilter_or_explicit_side_smoke_label"
+    ]
+  },
+  "allowed_use": "local SNeRV LF packet recode, representation-change prototype selection, and blocker routing",
+  "axis_tag": "[planning/control:false-authority]",
+  "blocked_queue_row_count": 0,
+  "blockers": [
+    "snerv_lf_over_ceiling_reroute_queue_false_authority",
+    "long_training_reenable_requires_receiver_visible_byte_savings"
+  ],
+  "blocking_queue_row_ids": [],
+  "dispatch_allowed": false,
+  "dispatch_attempted": false,
+  "exact_or_full_video_cuda_allowed": false,
+  "forbidden_use": "long-training launch, score claim, rank/kill decision, promotion, exact eval dispatch, or public frontier authority",
+  "frontier_score_claim": false,
+  "generated_utc": "2026-06-04T22:16:06.779003+00:00",
+  "gpu_launched": false,
+  "local_executable_command_row_count": 0,
+  "local_mlx_long_training_allowed": false,
+  "local_recode_command_row_count": 0,
+  "measured_lf_payload_source_count": 0,
+  "production_hardened_claim": false,
+  "promotable": false,
+  "promotion_eligible": false,
+  "queue_id": "snerv_lf_over_ceiling_reroute_queue.v1",
+  "queue_kind": "planner_queue_not_training_queue",
+  "queue_row_count": 0,
+  "queue_rows": [],
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "representation_candidate_row_count": 0,
+  "schema": "snerv_lf_over_ceiling_reroute_queue.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "snar_header_grammar_profile_count": 0,
+  "snar_header_minimization_report_count": 0,
+  "source_campaign_row_count": 12
+}

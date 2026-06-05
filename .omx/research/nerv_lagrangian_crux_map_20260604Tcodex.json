@@ -1,0 +1,140 @@
+{
+  "axis_tag": "[planning/control:false-authority]",
+  "generated_utc": "2026-06-04T19:02:55.607584+00:00",
+  "hinerv": {
+    "crux_order": [
+      "startup_probe_section_report_replaced_by_epoch7749_byte_closed_exports",
+      "generic_section_coder_saturated_for_both_latent_codecs",
+      "high_byte_arithmetic_latent_codec_saves_856_archive_bytes",
+      "fit_scale_gate_and_exact_eval_blockers_dominate_next_authority_step"
+    ],
+    "measured_bytes": {
+      "brotli_generic_section_saved_bytes": 0,
+      "brotli_inner_payload_bytes": 99913,
+      "brotli_selected_isolated_section_bytes": 96392,
+      "epoch7749_brotli_int16_archive_bytes": 124481,
+      "epoch7749_hi_ac_archive_bytes": 123625,
+      "hi_ac_archive_delta_bytes_vs_brotli_int16": -856,
+      "hi_ac_generic_section_saved_bytes": 0,
+      "hi_ac_inner_payload_bytes": 99058,
+      "hi_ac_selected_isolated_section_bytes": 95536
+    },
+    "next_blockers": [
+      "candidate_decoder_codec_not_export_authority",
+      "contest_cpu_cuda_exact_eval_not_executed",
+      "full_video_scorer_replay_not_executed",
+      "hinerv_checkpoint_fit_scale_gate_failed",
+      "hinerv_checkpoint_mlx_prefilter_not_requested",
+      "macos_mlx_checkpoint_export_false_authority"
+    ],
+    "proofs": {
+      "brotli_receiver_proof_ready": true,
+      "hi_ac_receiver_proof_ready": true
+    }
+  },
+  "oss_context": {
+    "local_decision_authority": "measured byte-closed artifacts above; OSS only informs architecture priors",
+    "sources": [
+      "https://github.com/hmkx/HiNeRV",
+      "https://arxiv.org/abs/2306.09818",
+      "https://openreview.net/forum?id=ZqN4bnXSSY"
+    ]
+  },
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "nerv_lagrangian_crux_map.v1",
+  "score_claim": false,
+  "snerv": {
+    "crux_order": [
+      "outer_snar2_header_prune_already_proven",
+      "inner_step_map_packet_snsA2_binary_header_now_proven",
+      "generic_section_coder_saturated_after_snsA2",
+      "upstream_evaluate_charges_archive_zip_only_data_only_bundle_saves_90440_bytes",
+      "runtime_static_closure_audit_points_to_branch_specialization_not_file_drop",
+      "runtime_closure_bytes_are_now_larger_than_payload_delta_but_contest_risky",
+      "lf_representation_changes_remain_blocked_behind_packet_cruxes"
+    ],
+    "executable_queue_handoff": {
+      "blocked": false,
+      "command_argv": [
+        "uv",
+        "run",
+        "python",
+        "tools/materialize_snerv_step_map_compaction.py",
+        "--packet",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns/snerv_lf_over_ceiling_reroutes/snerv__auto_bytecap__native_rate_aware_training_snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000_los_cea32eaf4988/snar2_header_minimized_fullvideo/candidate.snar2",
+        "--candidate-id",
+        "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000",
+        "--wire-format",
+        "snar2",
+        "--output-packet",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns_stepmap_queue_alias_20260604Tcodex/snerv_lf_over_ceiling_reroutes/snerv__snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000__native_rate_aware_training_snerv_np600_haar_e674fd79439b/candidate.stepmap.snar2",
+        "--output-archive-zip",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns_stepmap_queue_alias_20260604Tcodex/snerv_lf_over_ceiling_reroutes/snerv__snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000__native_rate_aware_training_snerv_np600_haar_e674fd79439b/archive.zip",
+        "--output-package-dir",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns_stepmap_queue_alias_20260604Tcodex/snerv_lf_over_ceiling_reroutes/snerv__snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000__native_rate_aware_training_snerv_np600_haar_e674fd79439b/runtime_package",
+        "--output-json",
+        "/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns_stepmap_queue_alias_20260604Tcodex/snerv_lf_over_ceiling_reroutes/snerv__snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc9e0_p1_mfu1-2-4_hfr0_t1_adbase_int2_symmetric_ceil178000__native_rate_aware_training_snerv_np600_haar_e674fd79439b/snerv_step_map_compaction.json",
+        "--full-video-receiver-proof",
+        "--hard-byte-ceiling",
+        "178000"
+      ],
+      "queue_path": ".omx/research/snerv_lf_over_ceiling_reroute_queue_20260604Tstepmap_queue_alias_codex.json",
+      "work_order_type": "snar_step_map_packet_compaction_materialization"
+    },
+    "measured_bytes": {
+      "candidate_0bin_member_bytes": 53596,
+      "candidate_0bin_member_deflate_bytes": 51586,
+      "candidate_archive_zip_bytes": 142134,
+      "header_minimized_source_packet_bytes": 139123,
+      "packet_delta_bytes": -85527,
+      "post_snsa2_generic_section_saved_bytes": 0,
+      "post_snsa2_selected_isolated_section_bytes": 50744,
+      "runtime_audit_archive_member_compressed_bytes": 138950,
+      "runtime_audit_payload_member_compressed_bytes": 51586,
+      "runtime_audit_runtime_member_compressed_bytes": 87364,
+      "runtime_audit_runtime_python_compressed_bytes": 87038,
+      "runtime_audit_unused_runtime_member_compressed_bytes": 0,
+      "runtime_source_ast_minified_estimated_saved_zip_bytes": 20222,
+      "runtime_zip_overhead_bytes": 90548,
+      "snsa2_candidate_packet_bytes": 53596,
+      "snsa2_step_map_packet_bytes": 20064,
+      "source_step_map_packet_bytes": 105591,
+      "step_map_delta_bytes": -85527,
+      "upstream_data_only_archive_bytes": 51694,
+      "upstream_data_only_delta_bytes_vs_self_contained_archive": -90440,
+      "upstream_external_runtime_source_bytes": 392080,
+      "upstream_internal_rule_faithful_archive_plus_runtime_source_bytes": 443774
+    },
+    "next_blockers": [
+      "upstream_evaluate_replay_missing_for_data_only_bundle",
+      "runtime_source_minification_not_materialized",
+      "identifier_renaming_not_implemented",
+      "minified_runtime_receiver_replay_missing",
+      "full_video_scorer_replay_missing",
+      "paired_contest_cpu_cuda_auth_eval_missing"
+    ],
+    "proofs": {
+      "decoded_step_maps_exact_equal": true,
+      "runtime_consumption_proof_passed": true,
+      "runtime_import_smoke_passed": true,
+      "step_map_packet_magic": "SNSA2",
+      "upstream_data_only_receiver_output_sha256": "5b3b136caf05678e61620773d622523908fd547d090241808614f2684a278970",
+      "upstream_data_only_receiver_proof_passed": true
+    }
+  },
+  "source_artifacts": {
+    "hinerv_brotli_export": "/Volumes/VertigoDataTier/pact/hinerv_epoch7749_reexport_section_telemetry_20260604Tcodex/hinerv_checkpoint_archive_export.json",
+    "hinerv_brotli_section_optimizer": "/Volumes/VertigoDataTier/pact/hinerv_epoch7749_reexport_section_telemetry_20260604Tcodex/hinerv_epoch7749_section_payload_grammar_optimizer.json",
+    "hinerv_hi_ac_export": "/Volumes/VertigoDataTier/pact/hinerv_epoch7749_hi_ac_latent_codec_20260604Tcodex/hinerv_checkpoint_archive_export.json",
+    "hinerv_hi_ac_section_optimizer": "/Volumes/VertigoDataTier/pact/hinerv_epoch7749_hi_ac_latent_codec_20260604Tcodex/hinerv_epoch7749_hi_ac_section_payload_grammar_optimizer.json",
+    "nerv_plan": ".omx/research/nerv_long_training_campaign_plan_20260604Tstepmap_queue_alias_codex.json",
+    "snerv_post_snsa2_section_optimizer": "/Volumes/VertigoDataTier/pact/snerv_step_map_snsa2_materialized_20260604Tcodex/snerv_post_snsa2_section_payload_grammar_optimizer.json",
+    "snerv_reroute_queue": ".omx/research/snerv_lf_over_ceiling_reroute_queue_20260604Tstepmap_queue_alias_codex.json",
+    "snerv_runtime_closure_audit": "/Volumes/VertigoDataTier/pact/snerv_step_map_snsa2_materialized_20260604Tcodex/snerv_runtime_closure_audit.json",
+    "snerv_step_map_compaction": "/Volumes/VertigoDataTier/pact/snerv_step_map_snsa2_materialized_20260604Tcodex/snerv_step_map_compaction.json",
+    "snerv_upstream_submission_bundle": "/Volumes/VertigoDataTier/pact/snerv_step_map_snsa2_upstream_submission_20260604Tcodex/snerv_upstream_submission_bundle.json",
+    "snerv_upstream_submission_runtime_audit": "/Volumes/VertigoDataTier/pact/snerv_step_map_snsa2_upstream_submission_20260604Tcodex/snerv_upstream_submission_runtime_audit.json"
+  }
+}

@@ -776,9 +776,9 @@ def test_official_mfu_hfr_tub_archive_frames_ignore_dummy_lf_sections() -> None:
     archive_zero = pack_with_dummy_lf(0)
     archive_nonzero = pack_with_dummy_lf(7)
     decoded = unpack_snerv_archive(archive_zero.packet)
-    direct_planes = decode_official_mfu_hfr_tub_decoder_payload(
-        official_payload
-    ).decode_frame_planes()
+    direct_payload = decode_official_mfu_hfr_tub_decoder_payload(official_payload)
+    direct_planes = direct_payload.decode_frame_planes()
+    direct_frames = direct_payload.decode_frames()
     frames_zero = decode_snerv_archive_frames(archive_zero.packet)
     frames_nonzero = decode_snerv_archive_frames(archive_nonzero.packet)
 
@@ -788,8 +788,10 @@ def test_official_mfu_hfr_tub_archive_frames_ignore_dummy_lf_sections() -> None:
     assert archive_zero.section_bytes["metadata_payload"] == 4
     assert archive_zero.section_bytes["lf_payload"] < 1_000
     assert archive_zero.section_bytes["step_map_packet"] < 1_000
+    assert direct_frames.shape == (1, 3, 16, 16)
     assert frames_zero.shape == (1, 1, 3, 16, 16)
     np.testing.assert_array_equal(frames_zero, frames_nonzero)
+    np.testing.assert_array_equal(frames_zero[0, 0], direct_frames[0])
     np.testing.assert_array_equal(
         frames_zero.reshape(3, 16, 16),
         np.stack(direct_planes),
@@ -829,9 +831,14 @@ def test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames() -> None:
     )
 
     frames = decode_snerv_archive_frames(archive.packet)
+    direct_frames = decode_official_mfu_hfr_tub_decoder_payload(
+        official_payload
+    ).decode_frames()
 
+    assert direct_frames.shape == (2, 3, 16, 16)
     assert frames.shape == (1, 2, 3, 16, 16)
     assert np.isfinite(frames).all()
+    np.testing.assert_array_equal(frames.reshape(2, 3, 16, 16), direct_frames)
     assert not np.allclose(frames[0, 0], frames[0, 1])
 
 

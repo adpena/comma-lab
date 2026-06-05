@@ -526,15 +526,38 @@ class OfficialMfuHfrTubReceiverPayload:
         return planes
 
     def decode_frames(self, *, clip_to_uint8_range: bool = True) -> np.ndarray:
-        """Render official MFU/HFR payload as ``(1, 1, C, H, W)`` frames."""
+        """Render official MFU/HFR payload as flat ``(frames, C, H, W)`` frames.
 
-        planes = self.decode_frame_planes(clip_to_uint8_range=clip_to_uint8_range)
+        The official decoder payload does not carry archive-level pair grouping;
+        only SNAR metadata can authoritatively reshape into
+        ``(n_pairs, frames_per_pair, C, H, W)``. Keeping the direct payload API
+        flat prevents callers from accidentally treating receiver self-consistency
+        replay as contest frame-pair authority.
+        """
+
+        low, skip_mid, skip_high = self.mfu_inputs()
+        mfu_out = self.build_mfu().forward(low, skip_mid, skip_high)
+        hfr_out = self.build_hfr_heads().forward(mfu_out.pyr_out)
+        planes = _official_mfu_hfr_frame_planes(
+            mfu_out.pyr_out,
+            hfr_out.yh_out,
+            clip_to_uint8_range=clip_to_uint8_range,
+        )
         if not planes:
             raise SnervArchiveError("official payload produced no frame planes")
         shape = planes[0].shape
         if any(plane.shape != shape for plane in planes):
             raise SnervArchiveError("official payload produced ragged frame planes")
-        return np.stack(planes, axis=0)[np.newaxis, np.newaxis, :, :, :].astype(
+        frame_count = int(mfu_out.pyr_out.shape[0])
+        channels = int(hfr_out.yh_out.shape[1])
+        expected = frame_count * channels
+        if len(planes) != expected:
+            raise SnervArchiveError(
+                f"official payload produced {len(planes)} planes, expected {expected} "
+                f"from frames={frame_count}, channels={channels}"
+            )
+        h, w = (int(v) for v in shape)
+        return np.stack(planes, axis=0).reshape(frame_count, channels, h, w).astype(
             np.float32
         )
 

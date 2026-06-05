@@ -1,0 +1,179 @@
+{
+  "blockers": [
+    "snerv_receiver_value_domain_xray_false_authority",
+    "snerv_official_payload_selected_pair_value_xray_unavailable",
+    "snerv_official_skip_high_not_lossless_relative_to_source",
+    "snerv_official_skip_high_receiver_expands_compact_state",
+    "snerv_official_skip_high_scalar_mean_receiver_expand_collapse_risk",
+    "snerv_profile_segnet_last_frame_saturated",
+    "snerv_profile_posenet_yuv6_pair_saturated",
+    "snerv_profile_segnet_last_frame_mean_absdiff_gt_50",
+    "snerv_profile_posenet_yuv6_pair_mean_absdiff_gt_50"
+  ],
+  "decode_failure": "SnervArchiveError('selected-frame decode is not supported for official MFU/HFR/TUB proof payloads')",
+  "decoder_payload_header": {
+    "schema": "snerv_decoder_payload.official_mfu_hfr_tub.v1",
+    "skip_high_storage": {
+      "codec": "scalar_mean_float64",
+      "effective_shape": [
+        1200,
+        3,
+        192,
+        256
+      ],
+      "encoder_consumed_compact_train_state": true,
+      "lossless_relative_to_source_skip_high": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "raw_byte_savings": 1415577592,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_expands_skip_high": true,
+      "schema": "snerv_official_skip_high_storage.v1",
+      "score_claim": false,
+      "source_raw_bytes": 1415577600,
+      "source_shape": [
+        1200,
+        3,
+        192,
+        256
+      ],
+      "stored_raw_bytes": 8,
+      "stored_shape": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "train_time_tied_state_required_for_exact_compact_export": true
+    },
+    "tub_input_storage": {
+      "codec": "unused_synthetic_float64",
+      "contest_scorer_authority": false,
+      "lossless_relative_to_source_tub_inputs": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "raw_byte_savings": 14155728,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_expands_tub_inputs": true,
+      "receiver_frame_synthesis_uses_tub_inputs": false,
+      "schema": "snerv_official_tub_input_storage.v1",
+      "score_claim": false,
+      "source_forward_replay_authority": false,
+      "source_raw_bytes": 14155776,
+      "source_shapes": {
+        "current": [
+          3,
+          384,
+          512
+        ],
+        "next_frame": [
+          3,
+          384,
+          512
+        ],
+        "previous": [
+          3,
+          384,
+          512
+        ]
+      },
+      "stored_raw_bytes": 48,
+      "stored_shapes": {
+        "current": [
+          2
+        ],
+        "next_frame": [
+          2
+        ],
+        "previous": [
+          2
+        ]
+      }
+    }
+  },
+  "generated_utc": "2026-06-04T18:40:17.483800+00:00",
+  "packet_bytes": 81983,
+  "packet_metadata": {
+    "channels": 3,
+    "frames_per_pair": 2,
+    "levels": 1,
+    "lf_payload_codec": "official_payload_unused_dummy_zero",
+    "n_pairs": 600,
+    "wavelet": "haar"
+  },
+  "packet_path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_scalarmean_hardpair_successor_fix2_epoch003199_ema_archive_export_prefilter_20260604T172056Z_codex/snerv_checkpoint_packet.bin",
+  "packet_section_bytes": {
+    "decoder_payload": 74520,
+    "lf_payload": 388,
+    "metadata_payload": 4,
+    "step_map_packet": 499
+  },
+  "packet_sha256": "4629d0054fac137fa67882668f74eea96cea04a63871e70c8ea5782c25543c93",
+  "pair_indices": [
+    0,
+    1,
+    2,
+    599
+  ],
+  "profile_scorer_input_diagnosis": null,
+  "profile_scorer_input_summary": {
+    "candidate_posenet_yuv6_pair": {
+      "count": 353894400,
+      "max": 255.0,
+      "mean": 84.99201472245836,
+      "min": 0.0,
+      "saturation_fraction": 0.6636284722222222,
+      "std": 94.84938707494726
+    },
+    "candidate_segnet_last_rgb": {
+      "count": 353894400,
+      "max": 255.0,
+      "mean": 63.49424693021613,
+      "min": 0.0,
+      "saturation_fraction": 0.9946950276692709,
+      "std": 110.0374255483533
+    },
+    "posenet_yuv6_pair_absdiff": {
+      "count": 353894400,
+      "max_abs": 255.0,
+      "mean_abs": 50.582402202924584
+    },
+    "reference_posenet_yuv6_pair": {
+      "count": 353894400,
+      "max": 255.0,
+      "mean": 57.16175437492771,
+      "min": 0.0,
+      "saturation_fraction": 0.0011306197554976853,
+      "std": 54.028899426231575
+    },
+    "reference_segnet_last_rgb": {
+      "count": 353894400,
+      "max": 255.0,
+      "mean": 21.469721278437863,
+      "min": 0.0,
+      "saturation_fraction": 0.036072325529875576,
+      "std": 21.082304655788548
+    },
+    "segnet_last_rgb_absdiff": {
+      "count": 353894400,
+      "max_abs": 255.0,
+      "mean_abs": 74.23506497900513
+    }
+  },
+  "promotable": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "recommended_next_actions": [
+    "rerun_snerv_local_export_with_full_or_shared_skip_high_before_exact_eval",
+    "compare_scalar_mean_channel_mean_shared_mean_value_domain_locally",
+    "repair_last_frame_receiver_dynamic_range_before_segnet_spend",
+    "keep_exact_eval_dispatch_blocked_until_value_domain_xray_clears"
+  ],
+  "sample_shape_b2chw": null,
+  "schema": "snerv_receiver_value_domain_xray.v1",
+  "score_claim": false,
+  "score_claim_valid": false,
+  "value_domain_sample_status": "selected_pair_decode_unavailable_for_official_payload",
+  "verdict": "OFFICIAL_SKIP_HIGH_SCALAR_MEAN_COLLAPSE_RISK"
+}

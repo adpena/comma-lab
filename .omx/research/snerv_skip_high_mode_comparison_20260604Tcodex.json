@@ -1,0 +1,156 @@
+{
+  "best_non_scalar_skip_high_row": {
+    "archive_bytes": 436084,
+    "label": "shared_mean",
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_full600_sharedmean_binary_profile_20260604T040835Z_codex/snerv_binary_profile.json",
+    "skip_high_codec": "shared_mean_float64"
+  },
+  "best_rate_row": {
+    "archive_bytes": 91445,
+    "label": "scalar_mean",
+    "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_full600_scalarmean_binary_profile_20260604T041315Z_codex/snerv_binary_profile.json",
+    "skip_high_codec": "scalar_mean_float64"
+  },
+  "binary_profile_rows": [
+    {
+      "archive_bytes": 91445,
+      "blockers": [
+        "snerv_binary_profile_is_rate_only_not_score_authority",
+        "full_video_scorer_component_profile_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing"
+      ],
+      "bytes_over_hard_ceiling": -86555,
+      "decoder_payload_bytes": 74923,
+      "label": "scalar_mean",
+      "largest_section": "decoder_payload",
+      "lossless_relative_to_source_skip_high": false,
+      "packet_bytes": 87418,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_full600_scalarmean_binary_profile_20260604T041315Z_codex/snerv_binary_profile.json",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_expands_skip_high": true,
+      "scalar_collapse_risk": true,
+      "schema": "snerv_binary_profile.v1",
+      "score_claim": false,
+      "sha256": "0e9ba47df7109181048d780cb9cb324e814170ccdcecfc5b05f32322610bceba",
+      "skip_high_codec": "scalar_mean_float64",
+      "skip_high_raw_byte_savings": 1415577592,
+      "skip_high_source_raw_bytes": 1415577600,
+      "skip_high_source_shape": [
+        1200,
+        3,
+        192,
+        256
+      ],
+      "skip_high_stored_raw_bytes": 8,
+      "skip_high_stored_shape": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "under_hard_byte_ceiling": true,
+      "verdict": "snerv_binary_rate_profile_not_lf_dominant"
+    },
+    {
+      "archive_bytes": 436084,
+      "blockers": [
+        "snerv_binary_profile_is_rate_only_not_score_authority",
+        "full_video_scorer_component_profile_missing",
+        "paired_contest_cpu_cuda_auth_eval_missing",
+        "snerv_archive_rate_exceeds_frontier"
+      ],
+      "bytes_over_hard_ceiling": 258084,
+      "decoder_payload_bytes": 418424,
+      "label": "shared_mean",
+      "largest_section": "decoder_payload",
+      "lossless_relative_to_source_skip_high": false,
+      "packet_bytes": 430945,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_full600_sharedmean_binary_profile_20260604T040835Z_codex/snerv_binary_profile.json",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_expands_skip_high": true,
+      "scalar_collapse_risk": false,
+      "schema": "snerv_binary_profile.v1",
+      "score_claim": false,
+      "sha256": "177b65d2c897799bf0972bb868560cfbdb673e8e1ce248ee3f75ae389ddfa672",
+      "skip_high_codec": "shared_mean_float64",
+      "skip_high_raw_byte_savings": 1414397952,
+      "skip_high_source_raw_bytes": 1415577600,
+      "skip_high_source_shape": [
+        1200,
+        3,
+        192,
+        256
+      ],
+      "skip_high_stored_raw_bytes": 1179648,
+      "skip_high_stored_shape": [
+        1,
+        3,
+        192,
+        256
+      ],
+      "under_hard_byte_ceiling": false,
+      "verdict": "current_snerv_artifact_rate_blocked"
+    }
+  ],
+  "blockers": [
+    "snerv_skip_high_mode_comparison_false_authority",
+    "no_skip_high_mode_with_both_byte_cap_and_non_scalar_storage",
+    "skip_high_prefilter_scorer_input_out_of_distribution",
+    "no_skip_high_prefilter_profile_admissible_for_local_replay"
+  ],
+  "crux": [
+    "rate-admissible scalar skip-high is cheap (91445 bytes) but collapses stored skip-high to 8 raw bytes.",
+    "non-scalar skip-high preserves more value-domain structure but the best attached profile is 436084 bytes (258084 vs hard ceiling).",
+    "attached scorer prefilter evidence is out of distribution; do not promote or exact-dispatch from these local scores."
+  ],
+  "generated_utc": "2026-06-04T21:18:59.897365+00:00",
+  "hard_byte_ceiling": 178000,
+  "next_actions": [
+    "block Modal/exact auth eval until a byte-closed candidate also passes local scorer-input and cache-quality gates",
+    "run the next SNeRV local skip-high smoke on a non-scalar storage mode only after current MLX claims clear",
+    "record frame-1 SegNet, two-frame PoseNet, archive bytes, and skip-high storage shape for every mode",
+    "do not use scalar_mean as the promotion path unless a receiver value-domain xray disproves the collapse mechanism",
+    "treat current local prefilter rows as acquisition/falsification evidence only"
+  ],
+  "prefilter_profile_rows": [
+    {
+      "archive_bytes": 93620,
+      "blockers": [
+        "mlx_local_replay_not_contest_auth_axis",
+        "scorer_input_segnet_last_rgb_mean_absdiff_gt_50",
+        "scorer_input_posenet_yuv6_pair_mean_absdiff_gt_50",
+        "scorer_input_segnet_last_rgb_std_ratio_gt_4",
+        "scorer_input_segnet_last_rgb_saturation_delta_gt_0_15",
+        "scorer_input_posenet_yuv6_pair_saturation_delta_gt_0_15"
+      ],
+      "canonical_score": 90.86453145613247,
+      "label": "scalar_epoch003199",
+      "local_replay_admissible": false,
+      "path": "/Volumes/VertigoDataTier/pact/experiments/results/snerv_scalarmean_hardpair_successor_fix2_epoch003199_ema_archive_export_prefilter_20260604T172056Z_codex/local_mlx_prefilter/local_mlx_prefilter_profile.json",
+      "pose_term": 40.31973371400145,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "rate_term": 0.06233771519129768,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "hprc_mlx_component_neutralization_profile.v1",
+      "scope_full_video": "executed",
+      "score_claim": false,
+      "scorer_batch_pairs": 1,
+      "scorer_input_out_of_distribution": true,
+      "scorer_input_verdict": null,
+      "seg_term": 50.48246002693971,
+      "sha256": "3a373d6dcde027ebee796ffae77d24e627536b582a2bd82e16e76fbed03ac64d",
+      "under_hard_byte_ceiling": true
+    }
+  ],
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "schema": "snerv_skip_high_mode_comparison.v1",
+  "score_claim": false,
+  "verdict": "NO_CURRENT_SKIP_HIGH_MODE_READY_FOR_EXACT_EVAL"
+}
