@@ -3548,6 +3548,27 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert report["snerv_official_mfu_hfr_tub_export_bound"] is True
     assert report["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
     assert report["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert report["snerv_official_tub_source_fixture_replay_bound"] is True
+    assert report["snerv_official_tub_source_fixture_replay_passed"] is True
+    assert report["snerv_official_tub_source_forward_fixture_bound"] is True
+    tub_fixture_binding = report["snerv_official_tub_source_fixture_binding"]
+    assert tub_fixture_binding["source_fixture_replay_bound"] is True
+    assert tub_fixture_binding[
+        "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+    ] is True
+    assert tub_fixture_binding["full_tub_source_forward_parity_proven"] is False
+    assert (
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+        in tub_fixture_binding["preserved_source_parity_blockers"]
+    )
+    assert (
+        "snerv_official_tub_batched_temporal_context_source_forward_replay_missing"
+        not in report["official_source_parity_blockers"]
+    )
+    assert (
+        "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing"
+        in report["official_source_parity_blockers"]
+    )
     assert report["snerv_official_mfu_hfr_tub_frame_producing_export"] is True
     assert (
         "snerv_score_aware_long_training_official_mfu_hfr_tub_differentiable_mlx_renderer_missing"
@@ -3632,6 +3653,12 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert train_export["official_tub_output2_payload_source_raw_bytes"] > 0
     assert train_export["official_tub_output2_receiver_executed"] is False
     assert train_export["official_tub_output2_receiver_output_tensor_count"] == 0
+    assert train_export["snerv_official_tub_source_fixture_replay_bound"] is True
+    assert train_export["snerv_official_tub_source_fixture_replay_passed"] is True
+    assert (
+        "snerv_official_tub_batched_temporal_context_source_forward_replay_missing"
+        not in train_export["official_source_parity_blockers"]
+    )
     assert train_export["source_forward_replay_authority"] is False
     assert old_blocker not in long_training["blockers"]
     replay = long_training["official_mfu_hfr_tub_source_forward_replay"]
@@ -3714,6 +3741,20 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
     assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
     assert decoded.metadata["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
+    assert decoded.metadata["snerv_official_tub_source_fixture_replay_bound"] is True
+    assert decoded.metadata["snerv_official_tub_source_fixture_replay_passed"] is True
+    assert decoded.metadata["snerv_official_tub_source_forward_fixture_bound"] is True
+    decoded_tub_binding = decoded.metadata["snerv_official_tub_source_fixture_binding"]
+    assert decoded_tub_binding["source_fixture_replay_bound"] is True
+    assert decoded_tub_binding["source_forward_replay_authority"] is False
+    assert (
+        "snerv_official_tub_batched_temporal_context_source_forward_replay_missing"
+        not in decoded.metadata["official_source_parity_blockers"]
+    )
+    assert (
+        "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing"
+        in decoded.metadata["official_source_parity_blockers"]
+    )
     assert decoded.metadata["official_tub_output2_payload_export_bound"] is False
     assert decoded.metadata["official_tub_output2_payload_source_available"] is True
     assert decoded.metadata["official_tub_output2_payload_proof_only_elided"] is True
@@ -4484,6 +4525,13 @@ def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
         "official_tub_output2_payload": 200,
     }
     assert cap["official_decoder_payload_proof_only_component_total_bytes"] == 200
+    assert cap["official_decoder_payload_non_score_causal_component_bytes"] == {
+        "official_tub_output2_payload": 200,
+    }
+    assert cap["official_decoder_payload_non_score_causal_component_total_bytes"] == 200
+    assert cap["official_decoder_payload_non_score_causal_byte_cap_action"] == (
+        "elide_or_implement_source_faithful_receiver_frame_decode_before_score_candidate"
+    )
     assert cap["largest_pressure_scope"] == "snar_archive_section"
     assert cap["largest_pressure_name"] == "decoder_payload"
     assert cap["largest_pressure_bytes"] == 500
@@ -4523,11 +4571,23 @@ def test_byte_cap_control_exposes_official_component_pressure_rows() -> None:
         component_rows["official_tub_output2_payload"][
             "waterfill_admission_class"
         ]
-        == "proof_only_rate_liability"
+        == "receiver_activation_not_frame_decode_bound_rate_liability"
     )
     assert (
         component_rows["official_tub_output2_payload"]["byte_cap_action"]
-        == "zero_or_elide_until_receiver_frame_decode_bound"
+        == "elide_unless_receiver_frame_decode_bound_or_scored_delta_positive"
+    )
+    assert (
+        component_rows["official_tub_output2_payload"][
+            "receiver_activation_payload_bound"
+        ]
+        is True
+    )
+    assert (
+        component_rows["official_tub_output2_payload"][
+            "receiver_activation_payload_score_causal"
+        ]
+        is False
     )
     assert "snerv_decoder_payload_is_largest_section_on_over_ceiling_export" in cap[
         "blockers"

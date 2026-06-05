@@ -15,8 +15,10 @@ from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hi_nerv.receiver_cache_quality import (
     HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA,
+    HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA,
     HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA,
     HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
+    build_hi_nerv_receiver_cache_mlx_scorer_response_probe,
     build_hi_nerv_receiver_cache_segnet_argmax_probe,
     write_hi_nerv_receiver_cache_quality_report,
 )
@@ -158,6 +160,7 @@ def test_hi_nerv_receiver_cache_quality_requires_argmax_probe_for_reference_gate
         min_posenet_yuv6_std=0.0,
         min_posenet_yuv6_dynamic_range=0.0,
         max_posenet_yuv6_mae_vs_reference_for_fit_gate=1.0,
+        require_mlx_scorer_response_probe=False,
     )
 
     assert report["quality_gate"] is not None
@@ -208,6 +211,7 @@ def test_hi_nerv_receiver_cache_quality_passes_with_argmax_probe(
         min_posenet_yuv6_dynamic_range=0.0,
         max_posenet_yuv6_mae_vs_reference_for_fit_gate=1.0,
         segnet_argmax_probe_logits_fn=fake_segnet_logits,
+        require_mlx_scorer_response_probe=False,
     )
 
     assert report["quality_gate_passed"] is True
@@ -216,6 +220,124 @@ def test_hi_nerv_receiver_cache_quality_passes_with_argmax_probe(
     assert report["segnet_argmax_probe"]["segnet_argmax_disagreement_rate"] == 0.0
     assert "candidate_segnet_argmax_disagreement_too_high" not in report["blockers"]
     assert Path(report["segnet_argmax_probe_path"]).is_file()
+
+
+def test_hi_nerv_receiver_cache_quality_requires_mlx_scorer_response_probe(
+    tmp_path: Path,
+) -> None:
+    archive = _write_tiny_hiv1_archive(tmp_path / "archive.zip")
+    reference_report = write_hi_nerv_receiver_cache_quality_report(
+        archive_zip_path=archive,
+        output_dir=tmp_path / "reference",
+        max_pairs=1,
+        batch_pairs=1,
+    )
+
+    def fake_segnet_logits(x_nchw: np.ndarray) -> np.ndarray:
+        b, _c, h, w = x_nchw.shape
+        logits = np.zeros((b, 5, h, w), dtype=np.float32)
+        logits[:, 0, :, :] = 1.0
+        return logits
+
+    def fake_response_payload(**kwargs):
+        return {
+            "schema": "mlx_scorer_response.v1",
+            "score_axis": "[macOS-MLX research-signal]",
+            "hardware_substrate": "MLX cpu",
+            "archive_size_bytes": kwargs["archive_size_bytes"],
+            "archive_sha256": "a" * 64,
+            "avg_posenet_dist": 0.0025,
+            "avg_segnet_dist": 0.0,
+            "canonical_score": 0.2,
+            "score_rate_contribution": 0.001,
+            "n_samples": 1,
+            "cache_identity": {
+                "candidate": {
+                    "candidate_cache_identity_mode": "unaudited_debug_override"
+                }
+            },
+            "components": {},
+            "blockers": ["mlx_scorer_response_is_false_authority"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    report = write_hi_nerv_receiver_cache_quality_report(
+        archive_zip_path=archive,
+        output_dir=tmp_path / "candidate",
+        reference_cache_dir=Path(reference_report["candidate_cache_dir"]),
+        max_pairs=1,
+        batch_pairs=1,
+        min_segnet_std=0.0,
+        min_segnet_dynamic_range=0.0,
+        max_segnet_mae_vs_reference_for_fit_gate=1.0,
+        min_posenet_yuv6_std=0.0,
+        min_posenet_yuv6_dynamic_range=0.0,
+        max_posenet_yuv6_mae_vs_reference_for_fit_gate=1.0,
+        segnet_argmax_probe_logits_fn=fake_segnet_logits,
+        require_mlx_scorer_response_probe=True,
+        mlx_scorer_response_payload_fn=fake_response_payload,
+    )
+
+    assert report["quality_gate_passed"] is True
+    assert Path(report["reference_cache_dir"]) == Path(
+        reference_report["candidate_cache_dir"]
+    )
+    probe = report["mlx_scorer_response_probe"]
+    assert probe["schema"] == HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA
+    assert probe["scorer_backend"] == "injected_mlx_scorer_response_payload_fn"
+    assert probe["fit_gate_passed"] is True
+    assert probe["avg_posenet_dist"] == pytest.approx(0.0025)
+    assert Path(report["mlx_scorer_response_probe_path"]).is_file()
+
+
+def test_hi_nerv_receiver_cache_mlx_scorer_response_probe_blocks_pose_mse(
+    tmp_path: Path,
+) -> None:
+    candidate = tmp_path / "candidate_cache"
+    reference = tmp_path / "reference_cache"
+    candidate.mkdir()
+    reference.mkdir()
+
+    def fake_response_payload(**kwargs):
+        return {
+            "schema": "mlx_scorer_response.v1",
+            "score_axis": "[macOS-MLX research-signal]",
+            "hardware_substrate": "MLX cpu",
+            "archive_size_bytes": kwargs["archive_size_bytes"],
+            "avg_posenet_dist": 0.25,
+            "avg_segnet_dist": 0.01,
+            "canonical_score": 1.59,
+            "score_rate_contribution": 0.001,
+            "n_samples": kwargs["max_pairs"],
+            "cache_identity": {
+                "candidate": {
+                    "candidate_cache_identity_mode": "unaudited_debug_override"
+                }
+            },
+            "components": {},
+            "blockers": ["mlx_scorer_response_is_false_authority"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    report = build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
+        candidate_cache_dir=candidate,
+        reference_cache_dir=reference,
+        archive_size_bytes=123,
+        output_json=tmp_path / "response_probe.json",
+        sample_pairs=2,
+        max_posenet_dist_for_fit_gate=0.01,
+        max_segnet_dist_for_fit_gate=0.25,
+        response_payload_fn=fake_response_payload,
+    )
+
+    assert report["fit_gate_passed"] is False
+    assert "hi_nerv_receiver_cache_posenet_response_too_high" in report["blockers"]
+    assert "hi_nerv_receiver_cache_segnet_response_too_high" not in report["blockers"]
+    assert Path(report["report_path"]).is_file()
 
 
 def test_hi_nerv_receiver_cache_segnet_argmax_probe_prices_real_flip_surface(

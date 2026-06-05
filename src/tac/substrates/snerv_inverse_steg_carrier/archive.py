@@ -2314,6 +2314,8 @@ def _official_tub_output2_storage_plan(
                 "receiver_frame_decode_consumes_output2": False,
                 "train_time_loss_coupled": False,
                 "scored_pixel_render_bound": False,
+                "score_lagrangian_admission": "not_present",
+                "score_lagrangian_action": "none",
                 "source_raw_bytes": 0,
                 "stored_raw_bytes": 0,
                 "raw_byte_savings": 0,
@@ -2379,6 +2381,14 @@ def _official_tub_output2_storage_plan(
             "receiver_frame_decode_consumes_output2": False,
             "train_time_loss_coupled": False,
             "scored_pixel_render_bound": False,
+            "score_lagrangian_admission": (
+                "proof_only_reject_rate_until_frame_decode_bound"
+                if should_store
+                else "elided_non_score_causal_payload"
+            ),
+            "score_lagrangian_action": (
+                "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
+            ),
             "tensor_names": [
                 "tub.temporal_encoder_concat",
                 "tub.output2_raw",

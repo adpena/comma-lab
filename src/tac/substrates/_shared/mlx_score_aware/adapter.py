@@ -982,12 +982,20 @@ class MlxScoreAwareAdapter:
                     segnet_direct_live_stage_weight
                 )
             elif name == "pose_distill":
-                out["loss_part_weighted_pose_distill"] = (
+                raw_weighted = (
                     float(self.bundle.pose_distillation_weight)
                     * pose_stage_weight
                     * scalar
                 )
+                out["loss_part_weighted_pose_raw_mse"] = raw_weighted
+                out["loss_part_weighted_pose_distill"] = raw_weighted
                 out["loss_part_stage_weight_pose_distill"] = pose_stage_weight
+            elif name == "pose_distill_train_loss":
+                out["loss_part_weighted_pose_distill_train_loss"] = (
+                    float(self.bundle.pose_distillation_weight)
+                    * pose_stage_weight
+                    * scalar
+                )
             elif name == "pose_score_term":
                 weighted = (
                     float(self.bundle.pose_distillation_weight)
@@ -1252,15 +1260,16 @@ class MlxScoreAwareAdapter:
                 "per_dim_scale",
                 None,
             )
-            pose_distill, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
+            pose_train_loss, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
                 self.bundle,
                 student_pose=pose_pred[:, :6],
                 teacher_pose=pose_target[:, :6],
                 per_dim_scale=per_dim_scale,
             )
-            pose_loss = mx.sqrt(10.0 * pose_distill + 1.0e-12)
+            pose_loss = mx.sqrt(10.0 * pose_distill_raw_mse + 1.0e-12)
         else:
             pose_loss = mx.array(0.0, dtype=mx.float32)
+            pose_train_loss = mx.array(0.0, dtype=mx.float32)
             pose_distill_raw_mse = mx.array(0.0, dtype=mx.float32)
         recon_stage_weight = component_loss_weight(loss_weights, "recon")
         scorer_input_guard_stage_weight = component_loss_weight(
@@ -1356,6 +1365,7 @@ class MlxScoreAwareAdapter:
             "pr95_stage_scorer_surrogate": total,
             "pr95_stage_seg_surrogate": seg_loss,
             "pr95_stage_pose_surrogate": pose_loss,
+            "pr95_stage_pose_train_loss": pose_train_loss,
             "pr95_stage_pose_raw_mse": pose_distill_raw_mse,
             "pr95_stage_recon": recon,
             "pr95_stage_loss_family_index": mx.array(
@@ -1895,7 +1905,7 @@ class MlxScoreAwareAdapter:
                 teacher_pose = mx.stop_gradient(
                     self.bundle.pose_scorer_teacher.teacher_pose_for_indices(batch)
                 )
-                pose_distill, _raw_mse = _pose_distillation_loss_and_raw_mse(
+                _pose_train_loss, pose_raw_mse = _pose_distillation_loss_and_raw_mse(
                     self.bundle,
                     student_pose=student_pose,
                     teacher_pose=teacher_pose,
@@ -1905,7 +1915,7 @@ class MlxScoreAwareAdapter:
                         None,
                     ),
                 )
-                pose_score_term = mx.sqrt(10.0 * pose_distill + 1.0e-12)
+                pose_score_term = mx.sqrt(10.0 * pose_raw_mse + 1.0e-12)
                 return (
                     float(self.bundle.pose_distillation_weight)
                     * pose_stage_weight

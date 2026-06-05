@@ -167,6 +167,7 @@ class SnervModelSizeConfig:
     temporal_mode: str = "delta"
     adapter: str = SNERV_BASE_MODEL_SIZE_ADAPTER
     official_skip_high_mode: str = "full"
+    official_tub_output2_store_for_receiver_proof: bool = False
     fc_dim_source: str = "constructor"
 
     def __post_init__(self) -> None:
@@ -185,6 +186,11 @@ class SnervModelSizeConfig:
             self,
             "official_skip_high_mode",
             str(self.official_skip_high_mode).strip().lower(),
+        )
+        object.__setattr__(
+            self,
+            "official_tub_output2_store_for_receiver_proof",
+            bool(self.official_tub_output2_store_for_receiver_proof),
         )
         object.__setattr__(self, "fc_dim_source", str(self.fc_dim_source).strip())
         object.__setattr__(
@@ -234,6 +240,9 @@ class SnervModelSizeConfig:
             "temporal_context": int(self.temporal_context),
             "temporal_mode": self.temporal_mode,
             "official_skip_high_mode": self.official_skip_high_mode,
+            "official_tub_output2_store_for_receiver_proof": bool(
+                self.official_tub_output2_store_for_receiver_proof
+            ),
             "fc_dim_source": self.fc_dim_source,
             "feature_count": int(self.feature_count),
             "adapter": self.adapter,

@@ -94,6 +94,42 @@ def _segnet_occupancy_min_fraction(pixel_count: int) -> tuple[float, int]:
     return float(count / pixel_count), count
 
 
+def _segnet_target_argmax_from_logits_or_exact(
+    target_logits: Any,
+    *,
+    target_argmax: Any | None,
+) -> Any:
+    """Return exact d_seg target labels when the teacher preserved them."""
+
+    mx = require_mlx_for_harness()
+    if target_argmax is None:
+        return mx.argmax(target_logits, axis=-1)
+    if tuple(target_argmax.shape) != tuple(target_logits.shape[:-1]):
+        raise ValueError(
+            "target_argmax must match target logits without the class axis; "
+            f"target_argmax={tuple(target_argmax.shape)} "
+            f"target_logits={tuple(target_logits.shape)}"
+        )
+    return target_argmax.astype(mx.int32)
+
+
+def _exact_segnet_target_argmax_for_indices(
+    scorer_teacher: Any,
+    idx: Any,
+    target_logits: Any,
+) -> Any:
+    """Use provider-preserved hard labels, falling back to logits argmax."""
+
+    mx = require_mlx_for_harness()
+    fn = getattr(scorer_teacher, "teacher_argmax_for_indices", None)
+    if not callable(fn):
+        return mx.argmax(target_logits, axis=-1)
+    return _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=mx.stop_gradient(fn(idx)),
+    )
+
+
 def component_loss_weight(
     loss_weights: Mapping[str, float] | None,
     component: str,
@@ -372,20 +408,28 @@ def _pose_distillation_loss_and_raw_mse(
 ) -> tuple[Any, Any]:
     """Return the train-time pose loss plus exact raw MSE telemetry.
 
-    ``pose_distillation_loss == "mse"`` preserves the legacy canonical
-    PoseNet-teacher objective exactly. ``"huber"`` uses an MSE-matched Huber:
+    ``pose_distillation_loss == "mse"`` returns the configured train loss:
+    Mahalanobis/std-scaled when ``per_dim_scale`` is supplied, raw otherwise.
+    ``"huber"`` uses an MSE-matched Huber on that same train-space diff:
     ``diff**2`` inside the delta and ``2*delta*abs(diff)-delta**2`` outside,
     so small-error curvature matches MSE while large-error gradients are
-    bounded. The raw MSE is always computed from the same scaled diff for
-    diagnostics and admission gates.
+    bounded.
+
+    The second returned value is always the unscaled upstream-contest
+    ``d_pose`` proxy: raw MSE over the scored pose dims. Do not use the scaled
+    train loss as ``sqrt(10*d_pose)``; that confuses optimizer conditioning with
+    the contest Lagrangian and can overdrive the pose branch by orders of
+    magnitude.
     """
     mx = require_mlx_for_harness()
-    diff = student_pose - teacher_pose
+    raw_diff = student_pose - teacher_pose
+    raw_mse = mx.mean(raw_diff * raw_diff)
+    diff = raw_diff
     if per_dim_scale is not None:
         diff = diff / mx.maximum(per_dim_scale, 1.0e-12)
-    raw_mse = mx.mean(diff * diff)
+    train_mse = mx.mean(diff * diff)
     if bundle.pose_distillation_loss == "mse":
-        return raw_mse, raw_mse
+        return train_mse, raw_mse
     delta = float(bundle.pose_distillation_huber_delta)
     abs_diff = mx.abs(diff)
     quadratic = diff * diff
@@ -901,6 +945,7 @@ def _segnet_argmax_surface_metrics(
     *,
     candidate_logits: Any,
     target_logits: Any,
+    target_argmax: Any | None = None,
 ) -> dict[str, Any]:
     """Return scorer-class telemetry for a live SegNet surface.
 
@@ -914,7 +959,10 @@ def _segnet_argmax_surface_metrics(
     pixel_count = int(candidate_logits.size // max(class_count, 1))
     min_class_fraction, min_class_pixels = _segnet_occupancy_min_fraction(pixel_count)
     cand_argmax = mx.argmax(candidate_logits, axis=-1)
-    target_argmax = mx.argmax(target_logits, axis=-1)
+    target_argmax = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
     cand_argmax_f = cand_argmax.astype(mx.float32)
     target_argmax_f = target_argmax.astype(mx.float32)
     disagreement = mx.mean((cand_argmax != target_argmax).astype(mx.float32))
@@ -984,6 +1032,7 @@ def _segnet_class_histogram_loss_and_metrics(
     bundle: RendererBundle,
     candidate_logits: Any,
     target_logits: Any,
+    target_argmax: Any | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """Match candidate class measure to the real SegNet target measure.
 
@@ -1009,7 +1058,10 @@ def _segnet_class_histogram_loss_and_metrics(
     class_count = int(candidate_logits.shape[-1])
     if class_count < 1:
         raise ValueError("SegNet class histogram loss requires >=1 class")
-    target_idx = mx.argmax(target_logits, axis=-1)
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
     eye = mx.eye(class_count, dtype=mx.float32)
     target_one_hot = mx.take(eye, target_idx.reshape(-1), axis=0)
     target_hist = mx.stop_gradient(mx.mean(target_one_hot, axis=0))
@@ -1049,6 +1101,7 @@ def _segnet_class_balanced_hinge_loss_and_metrics(
     bundle: RendererBundle,
     candidate_logits: Any,
     target_logits: Any,
+    target_argmax: Any | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """Class-balanced bootstrap hinge for direct-live SegNet collapse escape."""
 
@@ -1058,11 +1111,15 @@ def _segnet_class_balanced_hinge_loss_and_metrics(
     )
 
     class_count = int(candidate_logits.shape[-1])
-    target_idx = mx.argmax(target_logits, axis=-1)
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
     hinge = _argmax_hinge_per_pixel(
         candidate_logits,
         target_logits,
         margin=float(bundle.segnet_hinge_margin),
+        teacher_argmax=target_idx,
     )
     total = mx.array(0.0, dtype=mx.float32)
     occupied = mx.array(0.0, dtype=mx.float32)
@@ -1091,6 +1148,7 @@ def _segnet_class_balanced_squared_hinge_loss_and_metrics(
     bundle: RendererBundle,
     candidate_logits: Any,
     target_logits: Any,
+    target_argmax: Any | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """Class-balanced squared margin for far-from-boundary collapse escape.
 
@@ -1109,11 +1167,15 @@ def _segnet_class_balanced_squared_hinge_loss_and_metrics(
     )
 
     class_count = int(candidate_logits.shape[-1])
-    target_idx = mx.argmax(target_logits, axis=-1)
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
     hinge = _argmax_hinge_per_pixel(
         candidate_logits,
         target_logits,
         margin=float(bundle.segnet_hinge_margin),
+        teacher_argmax=target_idx,
     )
     squared = hinge * hinge
     total = mx.array(0.0, dtype=mx.float32)
@@ -1142,6 +1204,7 @@ def _segnet_class_balanced_ce_loss_and_metrics(
     *,
     candidate_logits: Any,
     target_logits: Any,
+    target_argmax: Any | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """Class-balanced hard-target CE for direct-live SegNet collapse escape.
 
@@ -1157,7 +1220,10 @@ def _segnet_class_balanced_ce_loss_and_metrics(
     class_count = int(candidate_logits.shape[-1])
     if class_count < 1:
         raise ValueError("SegNet class-balanced CE requires >=1 class")
-    target_idx = mx.argmax(target_logits, axis=-1)
+    target_idx = _segnet_target_argmax_from_logits_or_exact(
+        target_logits,
+        target_argmax=target_argmax,
+    )
     logits = candidate_logits - mx.max(candidate_logits, axis=-1, keepdims=True)
     log_probs = logits - mx.log(mx.sum(mx.exp(logits), axis=-1, keepdims=True))
     target_log_prob = mx.squeeze(
@@ -1216,32 +1282,35 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
     candidate_logits = live_fn(seg_rgb_nhwc01)
     target_logits = mx.stop_gradient(bundle.scorer_teacher.teacher_logits_for_indices(idx))
+    target_argmax = _exact_segnet_target_argmax_for_indices(
+        bundle.scorer_teacher,
+        idx,
+        target_logits,
+    )
     if tuple(candidate_logits.shape) != tuple(target_logits.shape):
         raise ValueError(
             "direct live SegNet candidate/target logits shape mismatch: "
             f"candidate={tuple(candidate_logits.shape)} "
             f"target={tuple(target_logits.shape)}"
         )
-    if bundle.segnet_distillation_objective != "kl_t2":
-        from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
-            HintonMlxCustomLossFnConfig,
-            score_teacher_distillation_loss,
-        )
+    from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
+        HintonMlxCustomLossFnConfig,
+        score_teacher_distillation_loss,
+    )
 
-        loss_cfg = HintonMlxCustomLossFnConfig(
-            temperature=bundle.distillation_temperature,
-            distillation_objective=bundle.segnet_distillation_objective,
-            tau_boundary=bundle.segnet_tau_boundary,
-            hinge_margin=bundle.segnet_hinge_margin,
-            student_head_out_channels=bundle.distillation_num_classes,
-        )
-        loss = score_teacher_distillation_loss(
-            student_logits=candidate_logits,
-            teacher_logits=target_logits,
-            config=loss_cfg,
-        )
-    else:
-        loss = mx.mean((candidate_logits - target_logits) ** 2)
+    loss_cfg = HintonMlxCustomLossFnConfig(
+        temperature=bundle.distillation_temperature,
+        distillation_objective=bundle.segnet_distillation_objective,
+        tau_boundary=bundle.segnet_tau_boundary,
+        hinge_margin=bundle.segnet_hinge_margin,
+        student_head_out_channels=bundle.distillation_num_classes,
+    )
+    loss = score_teacher_distillation_loss(
+        student_logits=candidate_logits,
+        teacher_logits=target_logits,
+        config=loss_cfg,
+        teacher_argmax=target_argmax,
+    )
     base_loss = loss
     base_stage_weight = component_loss_weight(
         loss_weights,
@@ -1254,6 +1323,7 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
     metrics = _segnet_argmax_surface_metrics(
         candidate_logits=candidate_logits,
         target_logits=target_logits,
+        target_argmax=target_argmax,
     )
     metrics["segnet_direct_live_base_loss"] = base_loss
     metrics["segnet_direct_live_base_loss_config_weight"] = mx.array(
@@ -1292,6 +1362,7 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
             bundle=bundle,
             candidate_logits=candidate_logits,
             target_logits=target_logits,
+            target_argmax=target_argmax,
         )
         loss = loss + hist_weight * hist_loss
         metrics.update(hist_metrics)
@@ -1320,6 +1391,7 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
                 bundle=bundle,
                 candidate_logits=candidate_logits,
                 target_logits=target_logits,
+                target_argmax=target_argmax,
             )
         )
         loss = loss + balanced_hinge_weight * balanced_hinge
@@ -1349,6 +1421,7 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
             _segnet_class_balanced_ce_loss_and_metrics(
                 candidate_logits=candidate_logits,
                 target_logits=target_logits,
+                target_argmax=target_argmax,
             )
         )
         loss = loss + balanced_ce_weight * balanced_ce
@@ -1382,6 +1455,7 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
                 bundle=bundle,
                 candidate_logits=candidate_logits,
                 target_logits=target_logits,
+                target_argmax=target_argmax,
             )
         )
         loss = loss + squared_hinge_weight * squared_hinge
@@ -1591,10 +1665,16 @@ def score_aware_loss(
             seg_rgb = rgb_1 if bundle.segnet_teacher_frame_index == 1 else rgb_0
             student_logits = head(seg_rgb)
             teacher_logits = mx.stop_gradient(bundle.scorer_teacher.teacher_logits_for_indices(idx))
+            teacher_argmax = _exact_segnet_target_argmax_for_indices(
+                bundle.scorer_teacher,
+                idx,
+                teacher_logits,
+            )
             distill = score_teacher_distillation_loss(
                 student_logits=student_logits,
                 teacher_logits=teacher_logits,
                 config=loss_cfg,
+                teacher_argmax=teacher_argmax,
             )
         else:
             # SCORER-BLIND mock fallback — reachable ONLY when
@@ -1664,23 +1744,23 @@ def score_aware_loss(
         # Standardize per-dim by the teacher's per-dim std (canonical scale-
         # stable pose objective) when the teacher cache supplies it.
         per_dim_scale = getattr(bundle.pose_scorer_teacher, "per_dim_scale", None)
-        pose_distill, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
+        pose_train_loss, pose_distill_raw_mse = _pose_distillation_loss_and_raw_mse(
             bundle,
             student_pose=student_pose,
             teacher_pose=teacher_pose,
             per_dim_scale=per_dim_scale,
         )
-        pose_score_term = mx.sqrt(10.0 * pose_distill + 1.0e-12)
+        pose_score_term = mx.sqrt(10.0 * pose_distill_raw_mse + 1.0e-12)
         total = (
             total
             + bundle.pose_distillation_weight
             * pose_stage_weight
             * pose_score_term
         )
-        parts["pose_distill"] = pose_distill
+        parts["pose_distill"] = pose_distill_raw_mse
+        parts["pose_distill_train_loss"] = pose_train_loss
+        parts["pose_distill_raw_mse"] = pose_distill_raw_mse
         parts["pose_score_term"] = pose_score_term
-        if bundle.pose_distillation_loss != "mse":
-            parts["pose_distill_raw_mse"] = pose_distill_raw_mse
 
     if bundle.extra_loss_terms is not None:
         extra = bundle.extra_loss_terms(bundle.model, idx)
@@ -1735,6 +1815,9 @@ def build_mlx_segnet_pair_teacher(
     Raises:
         MlxScoreAwareHarnessError: targets are not at SegNet's ``(384, 512)``.
     """
+    import hashlib
+    from pathlib import Path
+
     import numpy as np
 
     from tac.local_acceleration.mlx_scorer_adapters import MLXSegNetAdapter
@@ -1755,7 +1838,14 @@ def build_mlx_segnet_pair_teacher(
             f"(384, 512) for student/teacher shape alignment; got ({h}, {w}). "
             "Decode the harness targets at the canonical contest eval size."
         )
-    segnet = load_default_segnet(str(upstream_dir), device=device)
+    upstream_path = Path(upstream_dir)
+    segnet_path = upstream_path / "models" / "segnet.safetensors"
+    segnet_sha = (
+        hashlib.sha256(segnet_path.read_bytes()).hexdigest()
+        if segnet_path.is_file()
+        else None
+    )
+    segnet = load_default_segnet(str(upstream_path), device=device)
     segnet.eval()
     mlx_segnet = MLXSegNetAdapter(segnet)
     # One gradient-free SegNet forward per pair target SegNet frame, chunked to
@@ -1766,19 +1856,25 @@ def build_mlx_segnet_pair_teacher(
     # upstream cache builder convention), so scale the [0,1] target up.
     chunk = 16
     logits_chunks = []
+    argmax_chunks = []
     for start in range(0, n_pairs, chunk):
         end = min(start + chunk, n_pairs)
         x = tgt[start:end] * 255.0  # (b, 384, 512, 3) MLX
         out = mx.stop_gradient(mlx_segnet(x))  # (b, 384, 512, K) MLX
         mx.eval(out)
-        logits_chunks.append(np.array(out).astype(np.float16))
+        logits_fp32 = np.array(out).astype(np.float32)
+        argmax_chunks.append(np.argmax(logits_fp32, axis=-1).astype(np.uint8))
+        logits_chunks.append(logits_fp32.astype(np.float16))
     logits_np = np.concatenate(logits_chunks, axis=0)  # (n_pairs, 384, 512, K)
+    argmax_np = np.concatenate(argmax_chunks, axis=0)  # (n_pairs, 384, 512)
     return RealSegNetTeacherLogitsCache(
         teacher_logits_thwk=mx.array(logits_np).astype(mx.float16),
+        teacher_argmax_thw=mx.array(argmax_np, dtype=mx.uint8),
         frame_count=int(logits_np.shape[0]),
         height=int(logits_np.shape[1]),
         width=int(logits_np.shape[2]),
         num_classes=int(logits_np.shape[3]),
+        upstream_segnet_safetensors_sha256=segnet_sha,
         live_segnet_adapter=mlx_segnet,
     )
 

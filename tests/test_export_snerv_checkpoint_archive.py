@@ -303,6 +303,7 @@ def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -
     model_size = tool.SnervModelSizeConfig(
         adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
         official_skip_high_mode="scalar_mean",
+        official_tub_output2_store_for_receiver_proof=True,
     )
     state = _official_checkpoint_state()
     state["tub.temporal_encoder_concat"] = np.arange(
@@ -338,6 +339,83 @@ def test_official_checkpoint_packet_preserves_tub_output2_payload_from_state() -
     assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
     assert decoded.metadata["source_faithful_stack"] is False
     assert decoded.metadata["score_claim"] is False
+
+
+def test_official_checkpoint_export_report_binds_tub_output2_activation_payload(
+    tmp_path: Path,
+) -> None:
+    tool = _load_tool()
+    state = _official_checkpoint_state_with_tub_output2_payload()
+    state_path = tmp_path / "official_state_with_tub_output2.npsd"
+    state_path.write_bytes(pack_state_dict_numpy(state))
+    checkpoint_meta = tmp_path / "checkpoint.meta.json"
+    checkpoint_meta.write_text(
+        json.dumps(
+            {
+                "global_epoch": 31,
+                "ema_shadow_state_path": state_path.as_posix(),
+                "live_state_path": state_path.as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    startup = tmp_path / "startup.json"
+    startup.write_text(
+        json.dumps(
+            {
+                "schema": "compact_carrier_startup_marker.v1",
+                "modelsize_candidate": {
+                    "candidate_id": "official_checkpoint_tub_output2_unit",
+                    "snerv_model_size_adapter": (
+                        "snerv_official_mfu_hfr_tub_numeric_primitives_v1"
+                    ),
+                    "official_skip_high_mode": "scalar_mean",
+                    "official_tub_output2_store_for_receiver_proof": True,
+                },
+                "hard_byte_ceilings": [100_000],
+                "command_args": {"num_pairs": 1},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = tool.export_snerv_checkpoint_archive(
+        startup_json=startup,
+        checkpoint_meta=checkpoint_meta,
+        output_dir=tmp_path / "export",
+        state_kind="ema",
+        repo_root=tmp_path,
+    )
+
+    binding = report["official_checkpoint_export_binding"]
+    assert binding["official_tub_temporal_encoder_weight_mapping_proven"] is False
+    assert binding["official_tub_output2_activation_payload_bound"] is True
+    assert binding["official_tub_receiver_activation_mapping_proven"] is True
+    assert binding["official_tub_output2_receiver_executed"] is True
+    assert binding["official_tub_output2_storage"]["stored"] is True
+    assert binding["official_tub_output2_storage"][
+        "receiver_executes_output2_fusion_from_payload"
+    ] is True
+    assert binding["official_tensor_category_counts"][
+        "official_tub_output2_payload"
+    ] == 2
+    assert binding["official_tub_receiver_activation_mapping_semantics"] == (
+        "receiver_executes_stored_temporal_encoder_concat_and_output2_raw_payload"
+    )
+    assert binding["official_tub_output2_score_causal_receiver_frame_bound"] is False
+    assert binding["official_tub_output2_byte_cap_admission"] == (
+        "elide_until_receiver_frame_decode_consumes_output2_or_scored_delta_positive"
+    )
+    assert binding["source_forward_replay_authority"] is False
+    assert "snerv_official_tub_output2_non_score_causal_bytes_present" in report[
+        "blockers"
+    ]
+    assert (
+        "snerv_official_tub_output2_elide_or_bind_source_faithful_frame_decode"
+        in report["blockers"]
+    )
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_official_checkpoint_packet_fails_closed_on_incomplete_tub_output2_pair() -> None:
@@ -390,6 +468,18 @@ def _official_checkpoint_state() -> dict[str, np.ndarray]:
         state[f"hfr_{name}_conv1_bias"] = np.zeros((3,), dtype=np.float32)
         state[f"hfr_{name}_conv2_weight"] = np.zeros((3, 3, 3, 3), dtype=np.float32)
         state[f"hfr_{name}_conv2_bias"] = np.zeros((3,), dtype=np.float32)
+    return state
+
+
+def _official_checkpoint_state_with_tub_output2_payload() -> dict[str, np.ndarray]:
+    state = _official_checkpoint_state()
+    state["tub.temporal_encoder_concat"] = np.arange(
+        1 * 4 * 4 * 4,
+        dtype=np.float32,
+    ).reshape(1, 4, 4, 4)
+    state["tub.output2_raw"] = (
+        np.arange(2 * 8 * 4 * 4, dtype=np.float32).reshape(2, 8, 4, 4) / 31.0
+    )
     return state
 
 

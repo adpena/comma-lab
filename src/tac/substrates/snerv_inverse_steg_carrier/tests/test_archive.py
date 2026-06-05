@@ -686,6 +686,10 @@ def test_official_mfu_hfr_tub_payload_elides_output2_from_runtime_by_default() -
     assert storage["receiver_frame_decode_consumes_output2"] is False
     assert storage["train_time_loss_coupled"] is False
     assert storage["scored_pixel_render_bound"] is False
+    assert storage["score_lagrangian_admission"] == "elided_non_score_causal_payload"
+    assert storage["score_lagrangian_action"] == (
+        "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
+    )
     assert storage["tensor_names"] == [
         "tub.temporal_encoder_concat",
         "tub.output2_raw",
@@ -739,6 +743,12 @@ def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() 
     assert storage["proof_only_elided_from_selected_runtime_packet"] is False
     assert storage["receiver_executes_output2_fusion_from_payload"] is True
     assert storage["receiver_frame_decode_consumes_output2"] is False
+    assert storage["score_lagrangian_admission"] == (
+        "proof_only_reject_rate_until_frame_decode_bound"
+    )
+    assert storage["score_lagrangian_action"] == (
+        "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
+    )
     assert storage["stored_raw_bytes"] == storage["source_raw_bytes"]
     assert storage["raw_byte_savings"] == 0
     assert proof["executed_components"]["official_tub_output2_fusion"] is True

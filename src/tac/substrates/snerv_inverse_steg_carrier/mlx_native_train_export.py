@@ -156,6 +156,17 @@ SNERV_OFFICIAL_TRAINED_CHECKPOINT_STATE_DICT_MAPPING_BLOCKER = (
 SNERV_OFFICIAL_TRAINED_CHECKPOINT_SOURCE_FORWARD_BLOCKER = (
     "snerv_official_trained_checkpoint_source_forward_replay_missing"
 )
+SNERV_OFFICIAL_TUB_BATCHED_TEMPORAL_CONTEXT_SOURCE_BLOCKER = (
+    "snerv_official_tub_batched_temporal_context_source_forward_replay_missing"
+)
+SNERV_OFFICIAL_TUB_SOURCE_FIXTURE_REPLAY_MISSING_BLOCKER = (
+    "snerv_official_tub_source_fixture_replay_missing"
+)
+SNERV_OFFICIAL_PACKET_SOURCE_PARITY_BLOCKERS = (
+    "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high",
+    "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing",
+    SNERV_OFFICIAL_TUB_BATCHED_TEMPORAL_CONTEXT_SOURCE_BLOCKER,
+)
 SNERV_SCORE_AWARE_CHECKPOINT_SELECTION_SCHEMA = (
     "snerv_score_aware_checkpoint_selection_policy.v1"
 )
@@ -2736,11 +2747,17 @@ def train_export_snerv_mlx_native(
     long_training_official_replay = score_aware_long_training_public.get(
         "official_mfu_hfr_tub_source_forward_replay"
     )
+    official_tub_source_fixture_binding = (
+        _official_tub_source_fixture_binding(long_training_official_replay)
+        if isinstance(long_training_official_replay, Mapping)
+        else _official_tub_source_fixture_binding(None)
+    )
     if isinstance(long_training_official_replay, Mapping):
-        if _official_tub_fixture_replay_passed(
-            long_training_official_replay.get(
-                "official_tub_source_forward_fixture_replay"
+        if (
+            official_tub_source_fixture_binding.get(
+                "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
             )
+            is True
         ):
             blockers = [
                 str(blocker)
@@ -3092,6 +3109,11 @@ def train_export_snerv_mlx_native(
             **FALSE_AUTHORITY,
         }
     if official_binding is not None:
+        selected_tub_source_fixture_binding = (
+            _official_tub_source_fixture_binding_from_metadata(
+                selected_archive_metadata
+            )
+        )
         payload["official_primitive_binding"] = _receiver_bound_official_primitives_export_binding(
             official_binding,
             packet_path=packet_path,
@@ -3131,6 +3153,35 @@ def train_export_snerv_mlx_native(
             )
             is True
         )
+        payload["snerv_official_tub_source_fixture_binding"] = (
+            selected_tub_source_fixture_binding
+        )
+        payload["snerv_official_tub_source_fixture_replay_bound"] = bool(
+            _official_tub_source_fixture_replay_bound(
+                selected_tub_source_fixture_binding
+            )
+        )
+        payload["snerv_official_tub_source_fixture_replay_passed"] = bool(
+            selected_tub_source_fixture_binding.get(
+                "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+            )
+            is True
+        )
+        payload["snerv_official_tub_source_forward_fixture_bound"] = bool(
+            selected_archive_metadata.get(
+                "snerv_official_tub_source_forward_fixture_bound"
+            )
+            is True
+        )
+        payload["official_source_parity_blockers"] = [
+            str(blocker)
+            for blocker in selected_archive_metadata.get(
+                "official_source_parity_blockers"
+            )
+            or _official_packet_source_parity_blockers(
+                selected_tub_source_fixture_binding
+            )
+        ]
         payload["snerv_official_mfu_hfr_tub_receiver_bound_surrogate_export"] = not bool(
             payload["snerv_official_mfu_hfr_tub_export_bound"]
         )
@@ -5247,19 +5298,35 @@ def _run_score_aware_long_training_attachment(
                     "score_aware_long_training_optimizer": str(optimizer_kind),
                     "native_mlx_training_executed": True,
                     "native_mlx_training_kind": training_kind,
+                    **(
+                        {
+                            "official_mfu_hfr_tub_source_forward_replay": (
+                                official_source_forward_replay
+                            ),
+                            "snerv_official_tub_source_fixture_binding": (
+                                _official_tub_source_fixture_binding(
+                                    official_source_forward_replay
+                                )
+                            ),
+                        }
+                        if official_source_forward_replay is not None
+                        else {}
+                    ),
                     "official_mfu_hfr_tub_train_export": trained_official_train_export,
                 },
             )
-            official_packet_output2_metadata = {
+            official_packet_export_metadata = {
                 str(key): value
                 for key, value in official_packet.metadata.items()
                 if str(key).startswith("official_tub_output2_")
+                or str(key).startswith("snerv_official_tub_source_")
+                or str(key) == "official_source_parity_blockers"
             }
             payload["official_mfu_hfr_tub_train_export"] = {
                 **trained_official_train_export,
                 "trained_packet_bytes": int(official_packet.total_bytes),
                 "trained_packet_sha256": _sha256_bytes(official_packet.packet),
-                **official_packet_output2_metadata,
+                **official_packet_export_metadata,
             }
         write_json(report_path, payload)
         result = {
@@ -5704,6 +5771,132 @@ def _official_source_forward_blockers_from_tub_fixture(
         blockers.extend(_official_tub_fixture_preserved_blockers(replay))
     else:
         blockers.append("snerv_official_mfu_hfr_tub_source_forward_replay_missing")
+    return _ordered_unique(blockers)
+
+
+def _official_tub_fixture_replay_from_contract(
+    replay: Mapping[str, Any] | None,
+) -> Mapping[str, Any] | None:
+    if not isinstance(replay, Mapping):
+        return None
+    fixture = replay.get("official_tub_source_forward_fixture_replay")
+    if isinstance(fixture, Mapping):
+        return fixture
+    if str(replay.get("schema") or "") == "snerv_official_tub_source_forward_replay.v1":
+        return replay
+    return None
+
+
+def _official_tub_source_fixture_binding(
+    replay: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    fixture = _official_tub_fixture_replay_from_contract(replay)
+    fixture_passed = _official_tub_fixture_replay_passed(fixture)
+    replay_mapping = dict(replay or {}) if isinstance(replay, Mapping) else {}
+    renderer_bound = bool(
+        replay_mapping.get("score_aware_long_training_renderer_bound") is True
+    )
+    train_renderer_bound = bool(replay_mapping.get("train_renderer_bound") is True)
+    trained_receiver_state_bound = bool(
+        replay_mapping.get("trained_receiver_state_bound") is True
+    )
+    receiver_payload_replay_passed = bool(
+        replay_mapping.get("receiver_official_payload_forward_replay_passed") is True
+    )
+    source_fixture_bound = bool(
+        fixture_passed
+        and renderer_bound
+        and train_renderer_bound
+        and trained_receiver_state_bound
+        and receiver_payload_replay_passed
+    )
+    closed_blockers = (
+        [
+            str(blocker)
+            for blocker in (fixture or {}).get("closed_blockers") or ()
+            if str(blocker)
+        ]
+        if fixture_passed
+        else []
+    )
+    preserved_blockers = (
+        _official_tub_fixture_preserved_blockers(fixture) if fixture_passed else []
+    )
+    blockers = (
+        list(preserved_blockers)
+        if source_fixture_bound
+        else [SNERV_OFFICIAL_TUB_SOURCE_FIXTURE_REPLAY_MISSING_BLOCKER]
+    )
+    return {
+        "schema": "snerv_official_tub_source_fixture_binding.v1",
+        "component_id": "tub",
+        "source_fixture_replay_bound": source_fixture_bound,
+        "source_fixture_replay_bound_semantics": (
+            "official_snerv_t_output2_fixture_plus_mlx_receiver_state_binding_"
+            "not_full_trained_checkpoint_source_forward_parity"
+        ),
+        "official_tub_temporal_encoder_output2_source_fixture_replay_passed": (
+            fixture_passed
+        ),
+        "official_tub_fixture_source_forward_replay_proven": fixture_passed,
+        "score_aware_long_training_renderer_bound": renderer_bound,
+        "train_renderer_bound": train_renderer_bound,
+        "trained_receiver_state_bound": trained_receiver_state_bound,
+        "receiver_official_payload_forward_replay_passed": receiver_payload_replay_passed,
+        "closed_source_parity_blockers": _ordered_unique(closed_blockers),
+        "preserved_source_parity_blockers": _ordered_unique(preserved_blockers),
+        "full_tub_source_forward_parity_proven": False,
+        "source_forward_parity_proven": False,
+        "source_forward_replay_authority": False,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _official_tub_source_fixture_binding_from_metadata(
+    metadata: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if isinstance(metadata, Mapping):
+        direct = metadata.get("snerv_official_tub_source_fixture_binding")
+        if isinstance(direct, Mapping):
+            return dict(direct)
+        legacy_direct = metadata.get("official_tub_source_fixture_binding")
+        if isinstance(legacy_direct, Mapping):
+            return dict(legacy_direct)
+        replay = metadata.get("official_mfu_hfr_tub_source_forward_replay")
+        if isinstance(replay, Mapping):
+            return _official_tub_source_fixture_binding(replay)
+        long_training = metadata.get("score_aware_long_training")
+        if isinstance(long_training, Mapping):
+            replay = long_training.get("official_mfu_hfr_tub_source_forward_replay")
+            if isinstance(replay, Mapping):
+                return _official_tub_source_fixture_binding(replay)
+    return _official_tub_source_fixture_binding(None)
+
+
+def _official_tub_source_fixture_replay_bound(
+    binding: Mapping[str, Any] | None,
+) -> bool:
+    return bool(
+        isinstance(binding, Mapping)
+        and binding.get("source_fixture_replay_bound") is True
+        and binding.get(
+            "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+        )
+        is True
+    )
+
+
+def _official_packet_source_parity_blockers(
+    binding: Mapping[str, Any] | None,
+) -> list[str]:
+    blockers = list(SNERV_OFFICIAL_PACKET_SOURCE_PARITY_BLOCKERS)
+    if _official_tub_source_fixture_replay_bound(binding):
+        blockers = [
+            blocker
+            for blocker in blockers
+            if blocker != SNERV_OFFICIAL_TUB_BATCHED_TEMPORAL_CONTEXT_SOURCE_BLOCKER
+        ]
     return _ordered_unique(blockers)
 
 
@@ -6750,12 +6943,22 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         tub_output2_raw=(
             None if tub_output2_raw is None else np.asarray(tub_output2_raw, dtype=np.float64)
         ),
+        store_tub_output2_for_receiver_proof=bool(
+            model_size.official_tub_output2_store_for_receiver_proof
+        ),
     )
     official_payload_proof = execute_official_mfu_hfr_tub_decoder_payload(official_payload)
     official_payload_header = decode_official_mfu_hfr_tub_decoder_payload(official_payload).header
     official_tub_output2_metadata = _official_tub_output2_packet_metadata(
         payload_header=official_payload_header,
         payload_proof=official_payload_proof,
+    )
+    metadata_extra_payload = dict(metadata_extra or {})
+    tub_source_fixture_binding = _official_tub_source_fixture_binding_from_metadata(
+        metadata_extra_payload
+    )
+    official_source_parity_blockers = _official_packet_source_parity_blockers(
+        tub_source_fixture_binding
     )
     step_packet = encode_step_maps_waterfill(
         [np.ones((1, 1), dtype=np.float32)],
@@ -6813,8 +7016,27 @@ def _build_official_mfu_hfr_tub_packet_from_components(
             else {}
         ),
         "decoder_payload_codec": DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
-        **dict(metadata_extra or {}),
+        **metadata_extra_payload,
         **official_tub_output2_metadata,
+        "snerv_official_tub_source_fixture_binding": tub_source_fixture_binding,
+        "snerv_official_tub_source_fixture_replay_bound": (
+            _official_tub_source_fixture_replay_bound(tub_source_fixture_binding)
+        ),
+        "snerv_official_tub_source_fixture_replay_passed": bool(
+            tub_source_fixture_binding.get(
+                "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+            )
+            is True
+        ),
+        "snerv_official_tub_source_fixture_closed_blockers": list(
+            tub_source_fixture_binding.get("closed_source_parity_blockers") or []
+        ),
+        "snerv_official_tub_source_fixture_preserved_blockers": list(
+            tub_source_fixture_binding.get("preserved_source_parity_blockers") or []
+        ),
+        "snerv_official_tub_source_forward_fixture_bound": (
+            _official_tub_source_fixture_replay_bound(tub_source_fixture_binding)
+        ),
         "snerv_model_size_adapter": model_size.adapter,
         "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
         "snerv_official_mfu_hfr_tub_export_bound": True,
@@ -6826,11 +7048,7 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         "snerv_official_mfu_hfr_tub_source_forward_replay_authority": False,
         "snerv_official_mfu_hfr_tub_frame_producing_export": True,
         "source_faithful_stack": False,
-        "official_source_parity_blockers": [
-            "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high",
-            "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing",
-            "snerv_official_tub_batched_temporal_context_source_forward_replay_missing",
-        ],
+        "official_source_parity_blockers": official_source_parity_blockers,
         **FALSE_AUTHORITY,
     }
     archive = pack_snerv_archive(
@@ -8265,6 +8483,9 @@ def _receiver_bound_official_primitives_export_binding(
     blockers = [str(blocker) for blocker in official_binding.get("blockers") or []]
     selected_authority = _selected_packet_official_payload_authority(selected_packet)
     tensor_map = _official_receiver_tensor_map_from_packet(selected_packet)
+    tub_source_fixture_binding = _official_tub_source_fixture_binding_from_metadata(
+        selected_archive_metadata
+    )
     receiver_contract_proven = bool(
         dict(official_binding.get("official_receiver_runtime_decode_contract") or {}).get(
             "receiver_runtime_decode_proven"
@@ -8311,6 +8532,27 @@ def _receiver_bound_official_primitives_export_binding(
     )
     out["official_source_forward_replay_bound"] = False
     out["source_forward_replay_bound_by_export"] = False
+    out["official_tub_source_fixture_binding"] = tub_source_fixture_binding
+    out["official_tub_source_fixture_replay_bound"] = bool(
+        _official_tub_source_fixture_replay_bound(tub_source_fixture_binding)
+    )
+    out["official_tub_source_fixture_replay_passed"] = bool(
+        tub_source_fixture_binding.get(
+            "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+        )
+        is True
+    )
+    out["official_tub_source_forward_fixture_bound"] = bool(
+        selected_archive_metadata.get(
+            "snerv_official_tub_source_forward_fixture_bound"
+        )
+        is True
+    )
+    out["official_source_parity_blockers"] = [
+        str(blocker)
+        for blocker in selected_archive_metadata.get("official_source_parity_blockers")
+        or _official_packet_source_parity_blockers(tub_source_fixture_binding)
+    ]
     out["surrogate_receiver_payload_contract_emitted"] = not bool(
         selected_authority["frame_producing_official_export"]
     )
@@ -8940,6 +9182,12 @@ def _model_size_from_candidate(candidate: Mapping[str, Any]) -> SnervModelSizeCo
                 candidate.get("snerv_official_skip_high_mode", "full"),
             )
         ),
+        official_tub_output2_store_for_receiver_proof=bool(
+            candidate.get(
+                "official_tub_output2_store_for_receiver_proof",
+                candidate.get("snerv_official_tub_output2_store_for_receiver_proof", False),
+            )
+        ),
         adapter=adapter,
     )
 
@@ -9011,6 +9259,12 @@ def _build_snerv_mlx_native_byte_cap_control(
         for row in official_component_rows
         if row.get("receiver_frame_decode_bound") is False
     ]
+    non_score_causal_component_rows = [
+        row
+        for row in official_component_rows
+        if row.get("train_time_loss_coupled") is False
+        or row.get("receiver_frame_decode_bound") is False
+    ]
     largest_pressure_row = max(
         section_pressure_rows + official_component_rows,
         key=lambda row: int(row.get("bytes", 0)),
@@ -9040,6 +9294,18 @@ def _build_snerv_mlx_native_byte_cap_control(
         },
         "official_decoder_payload_proof_only_component_total_bytes": int(
             sum(int(row["bytes"]) for row in proof_only_component_rows)
+        ),
+        "official_decoder_payload_non_score_causal_component_bytes": {
+            str(row["name"]): int(row["bytes"])
+            for row in non_score_causal_component_rows
+        },
+        "official_decoder_payload_non_score_causal_component_total_bytes": int(
+            sum(int(row["bytes"]) for row in non_score_causal_component_rows)
+        ),
+        "official_decoder_payload_non_score_causal_byte_cap_action": (
+            "elide_or_implement_source_faithful_receiver_frame_decode_before_score_candidate"
+            if non_score_causal_component_rows
+            else "none"
         ),
         "official_decoder_payload_component_pressure_bound": bool(
             official_component_rows
@@ -9311,6 +9577,7 @@ def _snerv_official_decoder_component_render_binding(name: str) -> dict[str, Any
         "official_hfr_weight_payload",
         "official_mfu_input_payload",
     }
+    receiver_activation_not_frame_bound = category == "official_tub_output2_payload"
     proof_only = category in {
         "official_tub_input_payload",
         "official_tub_output2_payload",
@@ -9320,8 +9587,16 @@ def _snerv_official_decoder_component_render_binding(name: str) -> dict[str, Any
         action = "protect_quantize_or_waterfill_by_scorer_gradient"
         admission_class = "score_causal_receiver_frame_decode_atom"
     elif proof_only:
-        action = "zero_or_elide_until_receiver_frame_decode_bound"
-        admission_class = "proof_only_rate_liability"
+        action = (
+            "elide_unless_receiver_frame_decode_bound_or_scored_delta_positive"
+            if receiver_activation_not_frame_bound
+            else "zero_or_elide_until_receiver_frame_decode_bound"
+        )
+        admission_class = (
+            "receiver_activation_not_frame_decode_bound_rate_liability"
+            if receiver_activation_not_frame_bound
+            else "proof_only_rate_liability"
+        )
     else:
         action = "inspect_before_protecting_under_byte_cap"
         admission_class = "unknown_or_graph_topology_atom"
@@ -9329,6 +9604,8 @@ def _snerv_official_decoder_component_render_binding(name: str) -> dict[str, Any
         "receiver_frame_decode_bound": bool(render_bound),
         "train_time_loss_coupled": bool(render_bound),
         "score_causal_without_source_forward_tub": bool(render_bound),
+        "receiver_activation_payload_bound": bool(receiver_activation_not_frame_bound),
+        "receiver_activation_payload_score_causal": False,
         "proof_only_receiver_payload": bool(proof_only),
         "byte_cap_action": action,
         "waterfill_admission_class": admission_class,

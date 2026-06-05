@@ -43,6 +43,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _metadata_safe,
     _modelsize_candidate_consumption_metadata,
     _modelsize_candidate_from_args,
+    _maybe_write_post_export_receiver_cache_quality,
     _pose_student_input_channels,
     _pr95_full_control_contract,
     _prioritized_pair_indices_from_args,
@@ -1682,6 +1683,14 @@ def test_hinerv_mlx_trainer_parses_post_export_receiver_cache_quality_gate() -> 
             "/Volumes/VertigoDataTier/pact/ref_cache",
             "--receiver-cache-quality-min-segnet-argmax-occupied-class-fraction-for-fit-gate",
             "0.55",
+            "--receiver-cache-quality-mlx-scorer-response-device-type",
+            "metal",
+            "--receiver-cache-quality-mlx-scorer-response-batch-pairs",
+            "3",
+            "--receiver-cache-quality-max-mlx-scorer-response-posenet-dist-for-fit-gate",
+            "0.004",
+            "--receiver-cache-quality-max-mlx-scorer-response-segnet-dist-for-fit-gate",
+            "0.125",
         ]
     )
 
@@ -1694,6 +1703,89 @@ def test_hinerv_mlx_trainer_parses_post_export_receiver_cache_quality_gate() -> 
         args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
         == pytest.approx(0.55)
     )
+    assert args.receiver_cache_quality_mlx_scorer_response_probe is True
+    assert args.receiver_cache_quality_mlx_scorer_response_device_type == "metal"
+    assert args.receiver_cache_quality_mlx_scorer_response_batch_pairs == 3
+    assert (
+        args.receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
+        == pytest.approx(0.004)
+    )
+    assert (
+        args.receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate
+        == pytest.approx(0.125)
+    )
+
+
+def test_hinerv_mlx_trainer_receiver_cache_quality_forwards_mlx_response_probe(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive bytes")
+    reference = tmp_path / "reference_cache"
+    reference.mkdir()
+    captured: dict[str, object] = {}
+
+    from tac.substrates.hi_nerv import receiver_cache_quality
+
+    def fake_write_hi_nerv_receiver_cache_quality_report(**kwargs):
+        captured.update(kwargs)
+        return {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": (tmp_path / "report.json").as_posix(),
+            "archive_path": Path(kwargs["archive_zip_path"]).as_posix(),
+            "archive_sha256": "c" * 64,
+            "reference_cache_dir": Path(kwargs["reference_cache_dir"]).as_posix(),
+            "quality_gate_passed": True,
+            "quality_gate": {"verdict": "CACHE_QUALITY_GATE_PASSED"},
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_probe": {
+                "fit_gate_passed": True,
+                "avg_posenet_dist": 0.003,
+                "avg_segnet_dist": 0.04,
+            },
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+        }
+
+    monkeypatch.setattr(
+        receiver_cache_quality,
+        "write_hi_nerv_receiver_cache_quality_report",
+        fake_write_hi_nerv_receiver_cache_quality_report,
+    )
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--post-export-receiver-cache-quality-gate",
+            "--receiver-cache-quality-reference-cache-dir",
+            reference.as_posix(),
+            "--receiver-cache-quality-mlx-scorer-response-device-type",
+            "gpu",
+            "--receiver-cache-quality-mlx-scorer-response-batch-pairs",
+            "5",
+            "--receiver-cache-quality-max-mlx-scorer-response-posenet-dist-for-fit-gate",
+            "0.007",
+            "--receiver-cache-quality-max-mlx-scorer-response-segnet-dist-for-fit-gate",
+            "0.2",
+        ]
+    )
+
+    report = _maybe_write_post_export_receiver_cache_quality(
+        args=args,
+        output_dir=tmp_path / "training",
+        archive_path=archive,
+    )
+
+    assert report["quality_gate_passed"] is True
+    assert captured["require_mlx_scorer_response_probe"] is True
+    assert Path(captured["mlx_scorer_response_upstream_dir"]).name == "upstream"
+    assert captured["mlx_scorer_response_device_type"] == "gpu"
+    assert captured["mlx_scorer_response_batch_pairs"] == 5
+    assert captured[
+        "max_mlx_scorer_response_posenet_dist_for_fit_gate"
+    ] == pytest.approx(0.007)
+    assert captured[
+        "max_mlx_scorer_response_segnet_dist_for_fit_gate"
+    ] == pytest.approx(0.2)
 
 
 def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
@@ -1706,6 +1798,9 @@ def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
             "quality_gate_path": "/Volumes/VertigoDataTier/pact/run/gate.json",
             "segnet_argmax_probe_path": (
                 "/Volumes/VertigoDataTier/pact/run/segnet_argmax_probe.json"
+            ),
+            "mlx_scorer_response_probe_path": (
+                "/Volumes/VertigoDataTier/pact/run/mlx_scorer_response_probe.json"
             ),
             "quality_gate_passed": False,
             "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
@@ -1729,6 +1824,16 @@ def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
                 "blockers": ["hi_nerv_receiver_cache_segnet_argmax_class_collapse"],
                 "score_claim": False,
             },
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_probe": {
+                "fit_gate_passed": False,
+                "avg_posenet_dist": 0.25,
+                "avg_segnet_dist": 0.17,
+                "blockers": [
+                    "hi_nerv_receiver_cache_posenet_response_too_high"
+                ],
+                "score_claim": False,
+            },
         }
     )
 
@@ -1745,6 +1850,9 @@ def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
     assert summary["segnet_argmax_probe_blockers"] == [
         "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
     ]
+    assert summary["mlx_scorer_response_probe_required"] is True
+    assert summary["mlx_scorer_response_probe_passed"] is False
+    assert summary["mlx_scorer_response_avg_posenet_dist"] == pytest.approx(0.25)
 
 
 def _short_scorer_smoke_controls() -> HiNervTrainTimeControlConfig:
@@ -1789,6 +1897,18 @@ def _passing_short_scorer_receiver_quality() -> dict[str, object]:
             "candidate_occupied_class_fraction": 0.8,
             "reference_occupied_class_fraction": 0.9,
             "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
+        },
+        "mlx_scorer_response_probe_path": (
+            "/Volumes/VertigoDataTier/pact/run/mlx_scorer_response_probe.json"
+        ),
+        "mlx_scorer_response_probe_required": True,
+        "mlx_scorer_response_probe": {
+            "fit_gate_passed": True,
+            "avg_posenet_dist": 0.0025,
+            "avg_segnet_dist": 0.02,
+            "blockers": [
+                "hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"
+            ],
         },
         "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
     }
@@ -1849,6 +1969,42 @@ def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> 
     assert summary is not None
     assert "score_claim" not in summary
     assert summary["short_scorer_teacher_smoke_ready"] is True
+
+
+def test_hinerv_short_scorer_smoke_readiness_blocks_failed_mlx_response() -> None:
+    quality = _passing_short_scorer_receiver_quality()
+    quality["quality_gate_passed"] = False
+    quality["mlx_scorer_response_probe"] = {
+        "fit_gate_passed": False,
+        "avg_posenet_dist": 0.2,
+        "avg_segnet_dist": 0.01,
+        "blockers": ["hi_nerv_receiver_cache_posenet_response_too_high"],
+    }
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+        },
+        post_export_quality=quality,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["short_scorer_teacher_smoke_ready"] is False
+    assert "hi_nerv_short_smoke_receiver_cache_quality_failed" in report[
+        "actionable_blockers"
+    ]
+    assert (
+        "hi_nerv_short_smoke_receiver_cache_mlx_scorer_response_probe_failed"
+        in report["actionable_blockers"]
+    )
 
 
 def test_hinerv_short_scorer_smoke_readiness_blocks_collapsed_receiver_occupancy() -> None:

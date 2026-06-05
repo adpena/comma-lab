@@ -56,6 +56,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
     inspect_lf_quant_payload_header,
     pack_snerv_archive,
     resolve_decoder_payload_codec,
+    unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     _DETAIL_KEYS,
@@ -413,6 +414,7 @@ def export_snerv_checkpoint_archive(
             receiver_proof=receiver_proof,
             receiver_proof_requested=bool(emit_receiver_proof),
             mlx_prefilter_profile=mlx_prefilter_profile,
+            official_checkpoint_export_binding=official_checkpoint_export_binding,
             hard_byte_ceiling_measurement_bypass_enabled=bool(
                 allow_over_hard_byte_ceiling_for_measurement
             ),
@@ -1449,6 +1451,7 @@ def _blockers(
     receiver_proof: dict[str, Any],
     receiver_proof_requested: bool,
     mlx_prefilter_profile: dict[str, Any],
+    official_checkpoint_export_binding: dict[str, Any] | None = None,
     hard_byte_ceiling_measurement_bypass_enabled: bool = False,
 ) -> list[str]:
     blockers = [
@@ -1482,6 +1485,22 @@ def _blockers(
         blockers.append("archive_bytes_exceed_tightest_hard_ceiling")
         if hard_byte_ceiling_measurement_bypass_enabled:
             blockers.append("hard_byte_ceiling_export_bypassed_for_measurement")
+    official_binding = (
+        official_checkpoint_export_binding
+        if isinstance(official_checkpoint_export_binding, dict)
+        else {}
+    )
+    if (
+        official_binding.get("official_tub_output2_activation_payload_bound") is True
+        and official_binding.get("official_tub_output2_score_causal_receiver_frame_bound")
+        is not True
+    ):
+        blockers.append(
+            "snerv_official_tub_output2_non_score_causal_bytes_present"
+        )
+        blockers.append(
+            "snerv_official_tub_output2_elide_or_bind_source_faithful_frame_decode"
+        )
     return list(dict.fromkeys(blockers))
 
 
@@ -1624,6 +1643,31 @@ def _official_checkpoint_export_binding(
     requested = bool(model_size.official_mfu_hfr_tub_numeric_primitives_requested)
     selected_authority = _selected_packet_official_payload_authority(packet.packet)
     receiver_tensor_map = _official_receiver_tensor_map_from_packet(packet.packet)
+    packet_metadata = _packet_metadata_from_snerv_packet(packet.packet)
+    tensor_category_counts = dict(receiver_tensor_map.get("category_counts") or {})
+    tensor_names = {
+        str(row.get("name") or "")
+        for row in receiver_tensor_map.get("rows") or ()
+        if isinstance(row, dict)
+    }
+    tub_output2_storage = packet_metadata.get("official_tub_output2_storage")
+    if not isinstance(tub_output2_storage, dict):
+        tub_output2_storage = {}
+    tub_output2_activation_payload_bound = bool(
+        selected_authority.get("official_decoder_payload_selected") is True
+        and receiver_tensor_map.get("receiver_tensor_map_verified") is True
+        and tensor_category_counts.get("official_tub_output2_payload", 0) >= 2
+        and {"tub.temporal_encoder_concat", "tub.output2_raw"}.issubset(tensor_names)
+        and tub_output2_storage.get("stored") is True
+        and tub_output2_storage.get("receiver_executes_output2_fusion_from_payload")
+        is True
+        and packet_metadata.get("official_tub_output2_receiver_executed") is True
+    )
+    tub_output2_score_causal_frame_bound = bool(
+        tub_output2_activation_payload_bound
+        and tub_output2_storage.get("receiver_frame_decode_consumes_output2") is True
+        and tub_output2_storage.get("scored_pixel_render_bound") is True
+    )
     native_checkpoint_export_bound = bool(
         requested
         and selected_authority.get("frame_producing_official_export") is True
@@ -1694,7 +1738,34 @@ def _official_checkpoint_export_binding(
             receiver_tensor_map.get("category_bytes") or {}
         ),
         "official_tensor_category_counts": dict(
-            receiver_tensor_map.get("category_counts") or {}
+            tensor_category_counts
+        ),
+        "official_tub_output2_storage": tub_output2_storage,
+        "official_tub_output2_receiver_executed": bool(
+            packet_metadata.get("official_tub_output2_receiver_executed") is True
+        ),
+        "official_tub_output2_activation_payload_bound": (
+            tub_output2_activation_payload_bound
+        ),
+        "official_tub_receiver_activation_mapping_proven": (
+            tub_output2_activation_payload_bound
+        ),
+        "official_tub_receiver_activation_mapping_semantics": (
+            "receiver_executes_stored_temporal_encoder_concat_and_output2_raw_payload"
+            if tub_output2_activation_payload_bound
+            else "requires_tub_temporal_encoder_concat_and_output2_raw_receiver_payload"
+        ),
+        "official_tub_output2_score_causal_receiver_frame_bound": (
+            tub_output2_score_causal_frame_bound
+        ),
+        "official_tub_output2_byte_cap_admission": (
+            "admit_as_score_causal_tub_activation"
+            if tub_output2_score_causal_frame_bound
+            else (
+                "elide_until_receiver_frame_decode_consumes_output2_or_scored_delta_positive"
+                if tub_output2_activation_payload_bound
+                else "not_present"
+            )
         ),
         "official_trained_checkpoint_mapping_manifest": official_state_manifest,
         "trained_state_exportable": bool(native_checkpoint_export_bound),
@@ -1734,6 +1805,15 @@ def _official_checkpoint_export_binding(
         ),
         **FALSE_AUTHORITY,
     }
+
+
+def _packet_metadata_from_snerv_packet(packet: bytes) -> dict[str, Any]:
+    try:
+        decoded = unpack_snerv_archive(packet)
+    except Exception:
+        return {}
+    metadata = decoded.metadata
+    return dict(metadata) if isinstance(metadata, dict) else {}
 
 
 def _official_state_dict_slice_for_mapping(

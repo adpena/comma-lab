@@ -462,6 +462,30 @@ def _hi_nerv_receiver_cache_feedback_control(
             ]
         )
     gate_failed = bool(summary and summary.get("quality_gate_passed") is not True)
+    mlx_response_required = bool(summary.get("mlx_scorer_response_probe_required"))
+    mlx_response_passed = summary.get("mlx_scorer_response_probe_passed")
+    mlx_response_avg_posenet = _float_or_none(
+        summary.get("mlx_scorer_response_avg_posenet_dist")
+    )
+    mlx_response_avg_segnet = _float_or_none(
+        summary.get("mlx_scorer_response_avg_segnet_dist")
+    )
+    posenet_response_too_high = any(
+        "hi_nerv_receiver_cache_posenet_response_too_high" in blocker
+        for blocker in direct_blockers
+    )
+    segnet_response_too_high = any(
+        "hi_nerv_receiver_cache_segnet_response_too_high" in blocker
+        for blocker in direct_blockers
+    )
+    mlx_response_failed = bool(
+        mlx_response_required
+        and (
+            mlx_response_passed is not True
+            or posenet_response_too_high
+            or segnet_response_too_high
+        )
+    )
     mutations: list[str] = []
     if collapse_detected:
         mutations.extend(
@@ -470,6 +494,12 @@ def _hi_nerv_receiver_cache_feedback_control(
                 "disable_hi_nerv_byte_feedback_learning_from_receiver_collapsed_export",
             ]
         )
+    if posenet_response_too_high:
+        mutations.append("increase_hi_nerv_posenet_response_pressure")
+    if segnet_response_too_high:
+        mutations.append("increase_hi_nerv_segnet_response_pressure")
+    if mlx_response_failed:
+        mutations.append("rerun_hi_nerv_short_probe_with_mlx_scorer_response_gate")
     elif gate_failed:
         mutations.append("rerun_hi_nerv_short_probe_with_receiver_cache_quality_gate")
     return {
@@ -491,6 +521,13 @@ def _hi_nerv_receiver_cache_feedback_control(
         "segnet_argmax_disagreement_rate": summary.get(
             "segnet_argmax_disagreement_rate"
         ),
+        "mlx_scorer_response_probe_required": mlx_response_required,
+        "mlx_scorer_response_probe_passed": mlx_response_passed,
+        "mlx_scorer_response_avg_posenet_dist": mlx_response_avg_posenet,
+        "mlx_scorer_response_avg_segnet_dist": mlx_response_avg_segnet,
+        "mlx_scorer_response_failed": mlx_response_failed,
+        "posenet_response_too_high": posenet_response_too_high,
+        "segnet_response_too_high": segnet_response_too_high,
         "byte_oracle_feedback_ready": byte_feedback.get("byte_oracle_feedback_ready"),
         "byte_oracle_post_export_receiver_cache_quality_feedback_ready": (
             byte_feedback.get(
@@ -503,7 +540,9 @@ def _hi_nerv_receiver_cache_feedback_control(
         "gate_failed": gate_failed,
         "direct_feedback_blockers": direct_blockers,
         "recommended_launch_mutations": _dedupe_strings(mutations),
-        "launch_control_feedback_ready": bool(collapse_detected or gate_failed),
+        "launch_control_feedback_ready": bool(
+            collapse_detected or gate_failed or mlx_response_failed
+        ),
         **FALSE_AUTHORITY,
     }
 
@@ -745,6 +784,36 @@ def build_nerv_candidate_feedback_row(
             hi_nerv_receiver_cache_control.get("collapse_detected")
             if hi_nerv_receiver_cache_control
             else False
+        ),
+        "post_export_receiver_mlx_scorer_response_probe_required": (
+            hi_nerv_receiver_cache_control.get("mlx_scorer_response_probe_required")
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_mlx_scorer_response_probe_passed": (
+            hi_nerv_receiver_cache_control.get("mlx_scorer_response_probe_passed")
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_mlx_scorer_response_avg_posenet_dist": (
+            hi_nerv_receiver_cache_control.get("mlx_scorer_response_avg_posenet_dist")
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_mlx_scorer_response_avg_segnet_dist": (
+            hi_nerv_receiver_cache_control.get("mlx_scorer_response_avg_segnet_dist")
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_posenet_response_too_high": (
+            hi_nerv_receiver_cache_control.get("posenet_response_too_high")
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_segnet_response_too_high": (
+            hi_nerv_receiver_cache_control.get("segnet_response_too_high")
+            if hi_nerv_receiver_cache_control
+            else None
         ),
         "recommended_launch_mutations": recommended_launch_mutations,
         "launch_control_feedback_ready": bool(

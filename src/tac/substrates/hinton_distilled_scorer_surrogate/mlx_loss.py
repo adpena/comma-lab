@@ -490,13 +490,25 @@ def _argmax_hinge_per_pixel(
     teacher_logits: Any,
     *,
     margin: float = 1.0,
+    teacher_argmax: Any | None = None,
 ) -> Any:
     _require_mlx()
     if margin <= 0.0:
         raise ValueError(f"margin must be > 0 (Crammer-Singer unit margin); got {margin}")
     num_classes = student_logits.shape[-1]
     # teacher's argmax = the d_seg reference class t at each pixel.
-    target_idx = mx.argmax(teacher_logits, axis=-1, keepdims=True)  # (..., 1)
+    if teacher_argmax is None:
+        target_idx = mx.argmax(teacher_logits, axis=-1, keepdims=True)  # (..., 1)
+    else:
+        target_idx = teacher_argmax
+        if len(target_idx.shape) == len(student_logits.shape) - 1:
+            target_idx = target_idx[..., None]
+        if tuple(target_idx.shape) != (*tuple(student_logits.shape[:-1]), 1):
+            raise ValueError(
+                "teacher_argmax must match student logits without the class axis; "
+                f"got teacher_argmax={tuple(teacher_argmax.shape)} "
+                f"student_logits={tuple(student_logits.shape)}"
+            )
     student_logit_t = mx.take_along_axis(student_logits, target_idx, axis=-1)  # (..., 1)
     # mask out the target position, then max over impostors j != t (ALL of them).
     eye = mx.eye(num_classes, dtype=student_logits.dtype)  # (K, K)
@@ -513,6 +525,7 @@ def argmax_hinge_loss(
     teacher_logits: Any,
     *,
     margin: float = 1.0,
+    teacher_argmax: Any | None = None,
 ) -> Any:
     """All-pixel Crammer-Singer hinge, a bootstrap-faithful d_seg surrogate.
 
@@ -530,6 +543,7 @@ def argmax_hinge_loss(
             student_logits,
             teacher_logits,
             margin=margin,
+            teacher_argmax=teacher_argmax,
         )
     )
 
@@ -540,6 +554,7 @@ def boundary_argmax_hinge_loss(
     *,
     margin: float = 1.0,
     tau_boundary: float = 1.0,
+    teacher_argmax: Any | None = None,
 ) -> Any:
     """Impostor-complete boundary argmax-hinge loss (the d_seg-FAITHFUL seg teacher).
 
@@ -600,6 +615,7 @@ def boundary_argmax_hinge_loss(
         student_logits,
         teacher_logits,
         margin=margin,
+        teacher_argmax=teacher_argmax,
     )
     # boundary-band weight (fixed reweighting -> stop gradient).
     w = mx.stop_gradient(
@@ -938,6 +954,7 @@ class RealSegNetTeacherLogitsCache:
     height: int
     width: int
     num_classes: int
+    teacher_argmax_thw: Any | None = None  # MLX uint8/int32 exact hard labels (T, H, W)
     upstream_segnet_safetensors_sha256: str | None = None
     cache_build_seconds: float | None = None
     live_segnet_adapter: Any | None = None
@@ -954,6 +971,16 @@ class RealSegNetTeacherLogitsCache:
             raise ValueError(
                 f"num_classes must be >= 2 for KL distillation; got {self.num_classes}"
             )
+        if self.teacher_argmax_thw is not None and tuple(self.teacher_argmax_thw.shape) != (
+            self.frame_count,
+            self.height,
+            self.width,
+        ):
+            raise ValueError(
+                "teacher_argmax_thw must have shape "
+                f"({self.frame_count}, {self.height}, {self.width}); got "
+                f"{tuple(self.teacher_argmax_thw.shape)}"
+            )
 
     def teacher_logits_for_indices(self, indices: Any) -> Any:
         """Look up real SegNet teacher logits via MLX integer indexing.
@@ -968,6 +995,21 @@ class RealSegNetTeacherLogitsCache:
         import mlx.core as mx
 
         return self.teacher_logits_thwk[indices].astype(mx.float32)
+
+    def teacher_argmax_for_indices(self, indices: Any) -> Any:
+        """Look up exact upstream SegNet hard labels for ``evaluate.py`` d_seg.
+
+        The logits cache may be stored as fp16 to keep full-video MLX training
+        memory bounded.  Hard SegNet labels are the contest receiver surface, so
+        when exact labels were preserved at cache-build time use them instead of
+        recomputing ``argmax`` from quantized logits.
+        """
+        _require_mlx()
+        import mlx.core as mx
+
+        if self.teacher_argmax_thw is None:
+            return mx.argmax(self.teacher_logits_for_indices(indices), axis=-1).astype(mx.int32)
+        return self.teacher_argmax_thw[indices].astype(mx.int32)
 
     def teacher_logits_for_frames_nhwc01(self, frames_bhwc01: Any) -> Any:
         """Run the live MLX SegNet teacher on decoded candidate RGB frames.
@@ -1029,6 +1071,7 @@ def build_real_segnet_teacher_cache(
     """
     _require_mlx()
     import time as _time
+    from pathlib import Path
 
     import numpy as np  # type: ignore[import-not-found]
     import torch  # type: ignore[import-not-found]
@@ -1046,7 +1089,12 @@ def build_real_segnet_teacher_cache(
         )
 
     t0 = _time.time()
-    _, segnet = load_default_scorers(upstream_dir, device=device)
+    upstream_path = Path(upstream_dir)
+    if segnet_safetensors_sha256 is None:
+        segnet_path = upstream_path / "models" / "segnet.safetensors"
+        if segnet_path.is_file():
+            segnet_safetensors_sha256 = hashlib.sha256(segnet_path.read_bytes()).hexdigest()
+    _, segnet = load_default_scorers(str(upstream_path), device=device)
     segnet.eval()
     # Build (T, 2, 3, H, W) float32 tensor in the same 0..255 RGB scale used
     # by upstream DistortionNet.preprocess_input. SegNet has no internal
@@ -1078,11 +1126,13 @@ def build_real_segnet_teacher_cache(
             logits_np = logits.detach().cpu().numpy()
             teacher_logits_chunks.append(np.transpose(logits_np, (0, 2, 3, 1)))
     teacher_logits_np = np.concatenate(teacher_logits_chunks, axis=0)  # (T, 384, 512, 5)
+    teacher_argmax_np = np.argmax(teacher_logits_np, axis=-1).astype(np.uint8)
     cache_dt = cache_dtype if cache_dtype is not None else mx.float32
     teacher_logits_mx = mx.array(teacher_logits_np, dtype=cache_dt)
     cache_seconds = _time.time() - t0
     return RealSegNetTeacherLogitsCache(
         teacher_logits_thwk=teacher_logits_mx,
+        teacher_argmax_thw=mx.array(teacher_argmax_np, dtype=mx.uint8),
         frame_count=int(teacher_logits_np.shape[0]),
         height=int(teacher_logits_np.shape[1]),
         width=int(teacher_logits_np.shape[2]),
@@ -1688,6 +1738,7 @@ def score_teacher_distillation_loss(
     student_logits: Any,
     teacher_logits: Any,
     config: HintonMlxCustomLossFnConfig,
+    teacher_argmax: Any | None = None,
 ) -> Any:
     """Evaluate the configured scorer-teacher objective.
 
@@ -1724,12 +1775,14 @@ def score_teacher_distillation_loss(
             teacher_logits=teacher_logits,
             margin=config.hinge_margin,
             tau_boundary=config.tau_boundary,
+            teacher_argmax=teacher_argmax,
         )
     if config.distillation_objective == DISTILLATION_OBJECTIVE_ARGMAX_HINGE:
         return argmax_hinge_loss(
             student_logits=student_logits,
             teacher_logits=teacher_logits,
             margin=config.hinge_margin,
+            teacher_argmax=teacher_argmax,
         )
     raise ValueError(
         f"unsupported distillation_objective: {config.distillation_objective!r}"

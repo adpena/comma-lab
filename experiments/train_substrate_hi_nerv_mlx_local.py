@@ -62,6 +62,10 @@ from tac.substrates._shared.mlx_score_aware.adapter import (
 from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
     FALSE_AUTHORITY,
 )
+from tac.substrates.hi_nerv.receiver_cache_quality import (
+    DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE,
+    DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE,
+)
 from tac.substrates.hi_nerv.short_scorer_readiness import (
     HI_NERV_SHORT_SCORER_SMOKE_DEFAULT_MIN_SEGNET_OCCUPIED_CLASS_FRACTION,
     HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
@@ -1550,6 +1554,32 @@ def _build_parser() -> argparse.ArgumentParser:
         "--receiver-cache-quality-min-segnet-argmax-occupied-class-fraction-for-fit-gate",
         type=float,
         default=0.400001,
+    )
+    parser.add_argument(
+        "--skip-receiver-cache-quality-mlx-scorer-response-probe",
+        dest="receiver_cache_quality_mlx_scorer_response_probe",
+        action="store_false",
+        default=True,
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-mlx-scorer-response-device-type",
+        choices=("cpu", "gpu", "metal", "mps"),
+        default="cpu",
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-mlx-scorer-response-batch-pairs",
+        type=int,
+        default=1,
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-mlx-scorer-response-posenet-dist-for-fit-gate",
+        type=float,
+        default=DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE,
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-mlx-scorer-response-segnet-dist-for-fit-gate",
+        type=float,
+        default=DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE,
     )
     return parser
 
@@ -3927,6 +3957,22 @@ def _maybe_write_post_export_receiver_cache_quality(
         ),
         min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
             args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+        ),
+        require_mlx_scorer_response_probe=bool(
+            args.receiver_cache_quality_mlx_scorer_response_probe
+        ),
+        mlx_scorer_response_upstream_dir=REPO_ROOT / "upstream",
+        mlx_scorer_response_device_type=str(
+            args.receiver_cache_quality_mlx_scorer_response_device_type
+        ),
+        mlx_scorer_response_batch_pairs=int(
+            args.receiver_cache_quality_mlx_scorer_response_batch_pairs
+        ),
+        max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
+            args.receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
+        ),
+        max_mlx_scorer_response_segnet_dist_for_fit_gate=float(
+            args.receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate
         ),
     )
 

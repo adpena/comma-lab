@@ -192,6 +192,39 @@ def test_real_segnet_teacher_cache_live_candidate_path_uses_rgb255_domain() -> N
     assert tuple(logits.shape) == (1, 2, 2, 5)
 
 
+def test_real_segnet_teacher_cache_preserves_exact_hard_labels() -> None:
+    cache = RealSegNetTeacherLogitsCache(
+        # Compact logits are tied after fp16 storage, so argmax(logits) would
+        # choose class 0.  The preserved hard label is the scorer receiver
+        # surface and must remain class 1.
+        teacher_logits_thwk=mx.array(
+            [[[[1.0, 1.0, 0.0, 0.0, 0.0]]]],
+            dtype=mx.float16,
+        ),
+        teacher_argmax_thw=mx.array([[[1]]], dtype=mx.uint8),
+        frame_count=1,
+        height=1,
+        width=1,
+        num_classes=5,
+    )
+
+    idx = mx.array([0], dtype=mx.int32)
+    assert int(mx.argmax(cache.teacher_logits_for_indices(idx), axis=-1)[0, 0, 0]) == 0
+    assert int(cache.teacher_argmax_for_indices(idx)[0, 0, 0]) == 1
+
+
+def test_real_segnet_teacher_cache_rejects_hard_label_shape_mismatch() -> None:
+    with pytest.raises(ValueError, match="teacher_argmax_thw must have shape"):
+        RealSegNetTeacherLogitsCache(
+            teacher_logits_thwk=mx.zeros((1, 2, 2, 5), dtype=mx.float16),
+            teacher_argmax_thw=mx.zeros((1, 2), dtype=mx.uint8),
+            frame_count=1,
+            height=2,
+            width=2,
+            num_classes=5,
+        )
+
+
 def test_real_posenet_teacher_cache_rejects_shape_mismatch() -> None:
     with pytest.raises(ValueError, match="teacher_pose_np must have shape"):
         RealPoseNetTeacherCache(

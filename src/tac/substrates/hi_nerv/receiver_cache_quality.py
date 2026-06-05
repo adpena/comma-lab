@@ -47,10 +47,15 @@ HI_NERV_DIRECT_RECEIVER_CACHE_REPORT_SCHEMA = (
 HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA = (
     "hi_nerv_receiver_cache_segnet_argmax_probe.v1"
 )
+HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA = (
+    "hi_nerv_receiver_cache_mlx_scorer_response_probe.v1"
+)
 HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA = NERV_DISTORTION_CRUX_SCHEMA
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION = 1.0e-3
 SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS = 2
 SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
+DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE = 1.0e-2
+DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE = 0.25
 
 
 def write_hi_nerv_receiver_cache_quality_report(
@@ -81,6 +86,17 @@ def write_hi_nerv_receiver_cache_quality_report(
     distortion_crux_top_k: int = DEFAULT_DISTORTION_CRUX_TOP_K,
     distortion_crux_min_routable_pairs: int = DEFAULT_DISTORTION_CRUX_MIN_ROUTABLE_PAIRS,
     max_posenet_temporal_delta_mae_for_fit_gate: float = 64.0,
+    require_mlx_scorer_response_probe: bool = True,
+    mlx_scorer_response_upstream_dir: str | Path | None = None,
+    mlx_scorer_response_device_type: str = "cpu",
+    mlx_scorer_response_batch_pairs: int = 1,
+    max_mlx_scorer_response_posenet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE
+    ),
+    max_mlx_scorer_response_segnet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE
+    ),
+    mlx_scorer_response_payload_fn: Any | None = None,
 ) -> dict[str, Any]:
     """Render a small HiNeRV receiver cache and optionally run a quality gate.
 
@@ -266,6 +282,65 @@ def write_hi_nerv_receiver_cache_quality_report(
             distortion_crux["report_path"] = distortion_crux_path.as_posix()
             write_json(distortion_crux_path, distortion_crux)
 
+    mlx_scorer_response_probe: dict[str, Any] | None = None
+    mlx_scorer_response_probe_path: Path | None = None
+    if reference_cache_dir is not None and (
+        bool(require_mlx_scorer_response_probe)
+        or mlx_scorer_response_upstream_dir is not None
+        or mlx_scorer_response_payload_fn is not None
+    ):
+        mlx_scorer_response_probe_path = out / "mlx_scorer_response_probe.json"
+        try:
+            mlx_scorer_response_probe = (
+                build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
+                    candidate_cache_dir=cache_dir,
+                    reference_cache_dir=reference_cache_dir,
+                    archive_size_bytes=int(archive_path.stat().st_size),
+                    output_json=mlx_scorer_response_probe_path,
+                    components_dir=out / "mlx_scorer_response_components",
+                    upstream_dir=mlx_scorer_response_upstream_dir,
+                    device_type=str(mlx_scorer_response_device_type),
+                    batch_pairs=int(mlx_scorer_response_batch_pairs),
+                    sample_pairs=int(sample_pairs or max_pairs),
+                    max_posenet_dist_for_fit_gate=float(
+                        max_mlx_scorer_response_posenet_dist_for_fit_gate
+                    ),
+                    max_segnet_dist_for_fit_gate=float(
+                        max_mlx_scorer_response_segnet_dist_for_fit_gate
+                    ),
+                    response_payload_fn=mlx_scorer_response_payload_fn,
+                )
+            )
+        except Exception as exc:  # pragma: no cover - runner refusal path
+            upstream_value = (
+                Path(mlx_scorer_response_upstream_dir)
+                .expanduser()
+                .resolve(strict=False)
+                .as_posix()
+                if mlx_scorer_response_upstream_dir is not None
+                else None
+            )
+            mlx_scorer_response_probe = {
+                "schema": HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA,
+                "candidate_cache_dir": cache_dir.as_posix(),
+                "reference_cache_dir": Path(reference_cache_dir)
+                .expanduser()
+                .resolve(strict=False)
+                .as_posix(),
+                "upstream_dir": upstream_value,
+                "fit_gate_passed": False,
+                "failure": repr(exc),
+                "blockers": [
+                    "hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority",
+                    "hi_nerv_receiver_cache_mlx_scorer_response_probe_failed",
+                ],
+                **FALSE_AUTHORITY,
+            }
+            mlx_scorer_response_probe["report_path"] = (
+                mlx_scorer_response_probe_path.as_posix()
+            )
+            write_json(mlx_scorer_response_probe_path, mlx_scorer_response_probe)
+
     blockers = ["hi_nerv_receiver_cache_quality_is_false_authority"]
     if quality_gate is None:
         blockers.append("hi_nerv_receiver_cache_quality_reference_gate_not_run")
@@ -275,6 +350,10 @@ def write_hi_nerv_receiver_cache_quality_report(
         blockers.extend(str(v) for v in segnet_argmax_probe.get("blockers") or [])
     if distortion_crux is not None:
         blockers.extend(str(v) for v in distortion_crux.get("blockers") or [])
+    if mlx_scorer_response_probe is not None:
+        blockers.extend(
+            str(v) for v in mlx_scorer_response_probe.get("blockers") or []
+        )
 
     quality_gate_passed = (
         bool(quality_gate.get("fit_gate_passed")) if quality_gate else False
@@ -287,6 +366,10 @@ def write_hi_nerv_receiver_cache_quality_report(
         quality_gate_passed = quality_gate_passed and bool(
             distortion_crux.get("fit_gate_passed")
         )
+    if mlx_scorer_response_probe is not None:
+        quality_gate_passed = quality_gate_passed and bool(
+            mlx_scorer_response_probe.get("fit_gate_passed")
+        )
 
     report = {
         "schema": HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA,
@@ -296,6 +379,11 @@ def write_hi_nerv_receiver_cache_quality_report(
         "zip_member": member_name,
         "output_dir": out.as_posix(),
         "candidate_cache_dir": cache_dir.as_posix(),
+        "reference_cache_dir": (
+            Path(reference_cache_dir).expanduser().resolve(strict=False).as_posix()
+            if reference_cache_dir is not None
+            else None
+        ),
         "candidate_cache_manifest_path": (cache_dir / "manifest.json").as_posix(),
         "candidate_cache_manifest_sha256": sha256_file(cache_dir / "manifest.json"),
         "direct_receiver_cache_report": direct_report,
@@ -321,6 +409,15 @@ def write_hi_nerv_receiver_cache_quality_report(
             else None
         ),
         "distortion_crux_probe": distortion_crux,
+        "mlx_scorer_response_probe_path": (
+            mlx_scorer_response_probe_path.as_posix()
+            if mlx_scorer_response_probe_path is not None
+            else None
+        ),
+        "mlx_scorer_response_probe": mlx_scorer_response_probe,
+        "mlx_scorer_response_probe_required": bool(
+            require_mlx_scorer_response_probe
+        ),
         "hard_pair_coverage": (
             distortion_crux.get("hard_pair_coverage")
             if isinstance(distortion_crux, dict)
@@ -333,6 +430,131 @@ def write_hi_nerv_receiver_cache_quality_report(
     report_path = out / "hi_nerv_receiver_cache_quality_report.json"
     report["report_path"] = report_path.as_posix()
     write_json(report_path, report)
+    return report
+
+
+def build_hi_nerv_receiver_cache_mlx_scorer_response_probe(
+    *,
+    candidate_cache_dir: str | Path,
+    reference_cache_dir: str | Path,
+    archive_size_bytes: int,
+    output_json: str | Path,
+    components_dir: str | Path | None = None,
+    upstream_dir: str | Path | None = None,
+    device_type: str = "cpu",
+    batch_pairs: int = 1,
+    sample_pairs: int = 16,
+    max_posenet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE
+    ),
+    max_segnet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE
+    ),
+    response_payload_fn: Any | None = None,
+) -> dict[str, Any]:
+    """Run the real component-response gate on receiver-cache tensors.
+
+    This composes the canonical MLX scorer-response path into the HiNeRV
+    post-export gate.  The cache-quality gate proves the candidate is not flat;
+    the SegNet probe proves class argmax behavior; this probe asks the missing
+    upstream-score question for both axes, especially PoseNet's continuous
+    first-6-dim pair MSE.
+    """
+
+    if int(archive_size_bytes) < 0:
+        raise ValueError(
+            f"archive_size_bytes must be non-negative, got {archive_size_bytes}"
+        )
+    if int(sample_pairs) < 1:
+        raise ValueError(f"sample_pairs must be >= 1, got {sample_pairs}")
+    if int(batch_pairs) < 1:
+        raise ValueError(f"batch_pairs must be >= 1, got {batch_pairs}")
+    pose_threshold = float(max_posenet_dist_for_fit_gate)
+    seg_threshold = float(max_segnet_dist_for_fit_gate)
+    if not math.isfinite(pose_threshold) or pose_threshold < 0.0:
+        raise ValueError(
+            "max_posenet_dist_for_fit_gate must be finite and non-negative; "
+            f"got {pose_threshold}"
+        )
+    if not math.isfinite(seg_threshold) or not 0.0 <= seg_threshold <= 1.0:
+        raise ValueError(
+            "max_segnet_dist_for_fit_gate must be finite and in [0,1]; "
+            f"got {seg_threshold}"
+        )
+
+    candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
+    reference = Path(reference_cache_dir).expanduser().resolve(strict=False)
+    out = Path(output_json).expanduser().resolve(strict=False)
+    components = (
+        None
+        if components_dir is None
+        else Path(components_dir).expanduser().resolve(strict=False)
+    )
+    payload_fn = response_payload_fn
+    if payload_fn is None:
+        from tac.local_acceleration.mlx_scorer_response import (
+            build_mlx_scorer_response_payload,
+        )
+
+        def payload_fn(**kwargs: Any) -> dict[str, Any]:
+            return build_mlx_scorer_response_payload(**kwargs)
+
+    payload = payload_fn(
+        reference_cache_dir=reference,
+        candidate_cache_dir=candidate,
+        archive_size_bytes=int(archive_size_bytes),
+        repo_root=Path(__file__).resolve().parents[4],
+        upstream_dir=upstream_dir,
+        batch_pairs=int(batch_pairs),
+        device_type=str(device_type),
+        components_dir=components,
+        max_pairs=int(sample_pairs),
+        allow_unaudited_candidate_cache_debug=True,
+        response_family="hi_nerv_receiver_cache_quality",
+    )
+    pose_dist = _finite_probe_float(payload.get("avg_posenet_dist"), "avg_posenet_dist")
+    seg_dist = _finite_probe_float(payload.get("avg_segnet_dist"), "avg_segnet_dist")
+    score = _finite_probe_float(payload.get("canonical_score"), "canonical_score")
+
+    blockers = [
+        "hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"
+    ]
+    if pose_dist > pose_threshold:
+        blockers.append("hi_nerv_receiver_cache_posenet_response_too_high")
+    if seg_dist > seg_threshold:
+        blockers.append("hi_nerv_receiver_cache_segnet_response_too_high")
+    fit_gate_passed = len(blockers) == 1
+    report = {
+        "schema": HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA,
+        "candidate_cache_dir": candidate.as_posix(),
+        "reference_cache_dir": reference.as_posix(),
+        "upstream_dir": None if upstream_dir is None else str(upstream_dir),
+        "scorer_backend": (
+            "injected_mlx_scorer_response_payload_fn"
+            if response_payload_fn is not None
+            else "canonical_mlx_scorer_response"
+        ),
+        "device_type": str(device_type),
+        "sample_pairs": int(sample_pairs),
+        "batch_pairs": int(batch_pairs),
+        "avg_posenet_dist": pose_dist,
+        "avg_segnet_dist": seg_dist,
+        "canonical_score": score,
+        "score_rate_contribution": payload.get("score_rate_contribution"),
+        "archive_size_bytes": int(payload.get("archive_size_bytes", archive_size_bytes)),
+        "n_samples": int(payload.get("n_samples", sample_pairs)),
+        "thresholds": {
+            "max_posenet_dist_for_fit_gate": pose_threshold,
+            "max_segnet_dist_for_fit_gate": seg_threshold,
+        },
+        "response_payload": _summarize_mlx_scorer_response_payload(payload),
+        "fit_gate_passed": fit_gate_passed,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    report["report_path"] = out.as_posix()
+    write_json(out, report)
     return report
 
 
@@ -586,6 +808,40 @@ def _build_segnet_argmax_probe_not_run_report(
             "hi_nerv_receiver_cache_segnet_argmax_probe_not_run",
         ],
         **FALSE_AUTHORITY,
+    }
+
+
+def _finite_probe_float(value: Any, label: str) -> float:
+    try:
+        out = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a finite float, got {value!r}") from exc
+    if not math.isfinite(out):
+        raise ValueError(f"{label} must be finite, got {out!r}")
+    return out
+
+
+def _summarize_mlx_scorer_response_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": payload.get("schema"),
+        "score_axis": payload.get("score_axis"),
+        "hardware_substrate": payload.get("hardware_substrate"),
+        "archive_size_bytes": payload.get("archive_size_bytes"),
+        "archive_sha256": payload.get("archive_sha256"),
+        "candidate_cache_identity_mode": (
+            payload.get("cache_identity", {})
+            .get("candidate", {})
+            .get("candidate_cache_identity_mode")
+            if isinstance(payload.get("cache_identity"), dict)
+            else None
+        ),
+        "components": payload.get("components"),
+        "blockers": payload.get("blockers"),
+        "score_claim": bool(payload.get("score_claim")),
+        "promotion_eligible": bool(payload.get("promotion_eligible")),
+        "ready_for_exact_eval_dispatch": bool(
+            payload.get("ready_for_exact_eval_dispatch")
+        ),
     }
 
 
@@ -993,9 +1249,11 @@ __all__ = [
     "HI_NERV_DIRECT_RECEIVER_CACHE_AUDIT_SCHEMA",
     "HI_NERV_DIRECT_RECEIVER_CACHE_REPORT_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA",
+    "HI_NERV_RECEIVER_CACHE_MLX_SCORER_RESPONSE_PROBE_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_QUALITY_REPORT_SCHEMA",
     "HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA",
     "SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE",
+    "build_hi_nerv_receiver_cache_mlx_scorer_response_probe",
     "build_hi_nerv_receiver_cache_segnet_argmax_probe",
     "write_hi_nerv_direct_receiver_cache_from_payload",
     "write_hi_nerv_receiver_cache_quality_report",

@@ -340,6 +340,102 @@ def test_decode_mlx_targets_honors_explicit_source_pair_indices(
 
 
 @mlx_only
+def test_decode_mlx_targets_uses_official_scorer_surface_at_eval_size(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.data as data
+    from tac.substrates._shared.mlx_score_aware.targets import decode_mlx_targets
+
+    class _Frame:
+        def __init__(self, value: int, h: int, w: int) -> None:
+            self._value = int(value)
+            self._h = int(h)
+            self._w = int(w)
+
+        def numpy(self) -> np.ndarray:
+            return np.full((self._h, self._w, 3), self._value, dtype=np.uint8)
+
+    seen: dict[str, int] = {}
+
+    def _fake_decode_video(*_args, **kwargs):
+        seen["target_h"] = int(kwargs["target_h"])
+        seen["target_w"] = int(kwargs["target_w"])
+        seen["max_frames"] = int(kwargs["max_frames"])
+        return [
+            _Frame(i, seen["target_h"], seen["target_w"])
+            for i in range(seen["max_frames"])
+        ]
+
+    monkeypatch.setattr(data, "decode_video", _fake_decode_video)
+
+    target0, target1 = decode_mlx_targets(
+        "unit.mkv",
+        num_pairs=1,
+        output_height=384,
+        output_width=512,
+    )
+
+    assert seen == {"target_h": 874, "target_w": 1164, "max_frames": 2}
+    assert tuple(target0.shape) == (1, 384, 512, 3)
+    assert tuple(target1.shape) == (1, 384, 512, 3)
+    np.testing.assert_allclose(np.asarray(target0)[0, 0, 0, 0], 0.0)
+    np.testing.assert_allclose(np.asarray(target1)[0, 0, 0, 0], 1.0 / 255.0)
+
+
+@mlx_only
+def test_decode_mlx_targets_chunked_official_surface_decodes_only_selected_frames(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from tac.substrates._shared.mlx_score_aware import targets as targets_mod
+
+    captured: dict[str, object] = {}
+
+    def _fail_decode_video(*_args, **_kwargs):
+        raise AssertionError("chunked official scorer hydration must not use prefix decode")
+
+    def _fake_decode_selected_full_camera_frames(_video_path, *, frame_indices):
+        captured["frame_indices"] = tuple(int(idx) for idx in frame_indices)
+        return [
+            np.full((874, 1164, 3), int(idx), dtype=np.uint8)
+            for idx in frame_indices
+        ]
+
+    monkeypatch.setattr(
+        targets_mod,
+        "decode_video",
+        _fail_decode_video,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        targets_mod,
+        "_decode_selected_full_camera_frames",
+        _fake_decode_selected_full_camera_frames,
+    )
+
+    target0, target1 = targets_mod.decode_mlx_targets(
+        "unit.mkv",
+        num_pairs=2,
+        output_height=384,
+        output_width=512,
+        pair_indices=(3, 1),
+        target_hydration_strategy="chunked",
+        official_scorer_surface_chunk_frames=1,
+    )
+
+    assert captured["frame_indices"] == (6, 7, 2, 3)
+    assert tuple(target0.shape) == (2, 384, 512, 3)
+    assert tuple(target1.shape) == (2, 384, 512, 3)
+    np.testing.assert_allclose(
+        np.asarray(target0)[:, 0, 0, 0],
+        np.array([6.0 / 255.0, 2.0 / 255.0], dtype=np.float32),
+    )
+    np.testing.assert_allclose(
+        np.asarray(target1)[:, 0, 0, 0],
+        np.array([7.0 / 255.0, 3.0 / 255.0], dtype=np.float32),
+    )
+
+
+@mlx_only
 def test_score_aware_loss_uses_source_pairs_for_model_and_local_rows_for_targets() -> None:
     import mlx.core as mx
 
@@ -652,7 +748,11 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
     assert "loss_part_distill" in metrics
     assert "loss_part_weighted_distill" in metrics
     assert "loss_part_pose_distill" in metrics
+    assert "loss_part_pose_distill_raw_mse" in metrics
+    assert "loss_part_pose_distill_train_loss" in metrics
     assert "loss_part_pose_score_term" in metrics
+    assert "loss_part_weighted_pose_raw_mse" in metrics
+    assert "loss_part_weighted_pose_distill_train_loss" in metrics
     assert "loss_part_weighted_pose_score_term" in metrics
     assert "loss_part_weighted_pose_distill" in metrics
     assert "loss_part_scorer_input_distribution_guard" in metrics

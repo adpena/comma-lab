@@ -131,6 +131,10 @@ from tac.substrates._shared.mlx_score_aware.curriculum import (  # noqa: E402
 from tac.substrates._shared.mlx_score_aware.dual_ascent import (  # noqa: E402
     build_default_nerv_train_time_dual_ascent_config,
 )
+from tac.substrates.hi_nerv.receiver_cache_quality import (  # noqa: E402
+    DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE,
+    DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE,
+)
 from tac.substrates.hi_nerv.short_scorer_readiness import (  # noqa: E402
     build_hinerv_short_scorer_smoke_readiness_report,
     hinerv_short_scorer_smoke_readiness_summary,
@@ -4141,6 +4145,37 @@ def _run_snerv_native_mlx_export_attachment(
             artifact.get("score_aware_long_training_has_real_posenet_teacher")
             or snerv_score_aware_long_training.get("has_real_posenet_teacher") is True
         )
+        snerv_official_tub_source_fixture_binding = artifact.get(
+            "snerv_official_tub_source_fixture_binding"
+        )
+        if not isinstance(snerv_official_tub_source_fixture_binding, Mapping):
+            official_primitive_binding = artifact.get("official_primitive_binding")
+            if isinstance(official_primitive_binding, Mapping):
+                snerv_official_tub_source_fixture_binding = (
+                    official_primitive_binding.get(
+                        "official_tub_source_fixture_binding"
+                    )
+                )
+        snerv_official_tub_source_fixture_bound = bool(
+            artifact.get("snerv_official_tub_source_fixture_replay_bound") is True
+            or (
+                isinstance(snerv_official_tub_source_fixture_binding, Mapping)
+                and snerv_official_tub_source_fixture_binding.get(
+                    "source_fixture_replay_bound"
+                )
+                is True
+            )
+        )
+        snerv_official_tub_source_fixture_passed = bool(
+            artifact.get("snerv_official_tub_source_fixture_replay_passed") is True
+            or (
+                isinstance(snerv_official_tub_source_fixture_binding, Mapping)
+                and snerv_official_tub_source_fixture_binding.get(
+                    "official_tub_temporal_encoder_output2_source_fixture_replay_passed"
+                )
+                is True
+            )
+        )
         snerv_required_control_contract = (
             _snerv_score_aware_long_training_required_control_contract(
                 executed=snerv_score_aware_long_training_executed,
@@ -4277,6 +4312,24 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             "official_skip_high_value_domain_gate": artifact.get(
                 "official_skip_high_value_domain_gate"
+            ),
+            "snerv_official_tub_source_fixture_binding": (
+                dict(snerv_official_tub_source_fixture_binding)
+                if isinstance(snerv_official_tub_source_fixture_binding, Mapping)
+                else None
+            ),
+            "snerv_official_tub_source_fixture_replay_bound": (
+                snerv_official_tub_source_fixture_bound
+            ),
+            "snerv_official_tub_source_fixture_replay_passed": (
+                snerv_official_tub_source_fixture_passed
+            ),
+            "snerv_official_tub_source_forward_fixture_bound": bool(
+                artifact.get("snerv_official_tub_source_forward_fixture_bound")
+                is True
+            ),
+            "official_source_parity_blockers": list(
+                artifact.get("official_source_parity_blockers") or []
             ),
             "receiver_target_reconstruction_profile": receiver_reconstruction[
                 "target_profile"
@@ -8941,6 +8994,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
         HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
     ),
+    receiver_cache_quality_mlx_scorer_response_probe: bool = True,
+    receiver_cache_quality_mlx_scorer_response_device_type: str = "cpu",
+    receiver_cache_quality_mlx_scorer_response_batch_pairs: int = 1,
+    receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE
+    ),
+    receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE
+    ),
     telemetry_flush_interval_epochs: int = 1,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
@@ -10202,6 +10264,22 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
                 receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+            ),
+            mlx_scorer_response_probe=bool(
+                receiver_cache_quality_mlx_scorer_response_probe
+            ),
+            mlx_scorer_response_upstream_dir=scorer_upstream,
+            mlx_scorer_response_device_type=str(
+                receiver_cache_quality_mlx_scorer_response_device_type
+            ),
+            mlx_scorer_response_batch_pairs=int(
+                receiver_cache_quality_mlx_scorer_response_batch_pairs
+            ),
+            max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
+                receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
+            ),
+            max_mlx_scorer_response_segnet_dist_for_fit_gate=float(
+                receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate
             ),
             repo_root=root,
         )
@@ -15472,6 +15550,16 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
     min_segnet_argmax_occupied_class_fraction_for_fit_gate: float,
     repo_root: str | Path,
     pair_indices: Sequence[int] = (),
+    mlx_scorer_response_probe: bool = True,
+    mlx_scorer_response_upstream_dir: str | Path | None = None,
+    mlx_scorer_response_device_type: str = "cpu",
+    mlx_scorer_response_batch_pairs: int = 1,
+    max_mlx_scorer_response_posenet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE
+    ),
+    max_mlx_scorer_response_segnet_dist_for_fit_gate: float = (
+        DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE
+    ),
 ) -> dict[str, Any] | None:
     """Run the HiNeRV receiver-render scorer-domain fit gate from the runner.
 
@@ -15503,6 +15591,17 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             if reference_cache_dir is not None
             else None,
         )
+    if bool(mlx_scorer_response_probe) and int(mlx_scorer_response_batch_pairs) < 1:
+        return _write_hi_nerv_runner_receiver_cache_quality_refusal(
+            output_dir=out,
+            blockers=[
+                "hi_nerv_receiver_cache_quality_mlx_scorer_response_batch_pairs_invalid"
+            ],
+            archive_path=Path(archive_zip_path) if archive_zip_path else None,
+            reference_cache_dir=Path(reference_cache_dir)
+            if reference_cache_dir is not None
+            else None,
+        )
     if archive_zip_path is None:
         return _write_hi_nerv_runner_receiver_cache_quality_refusal(
             output_dir=out,
@@ -15521,6 +15620,20 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             blockers=["hi_nerv_archive_export_path_missing_for_receiver_cache_quality"],
             archive_path=archive,
         )
+
+    scorer_response_upstream: Path | None = None
+    if bool(mlx_scorer_response_probe):
+        if mlx_scorer_response_upstream_dir is None:
+            scorer_response_upstream = root / "upstream"
+        else:
+            scorer_response_upstream = Path(
+                mlx_scorer_response_upstream_dir
+            ).expanduser()
+            scorer_response_upstream = (
+                (root / scorer_response_upstream).resolve(strict=False)
+                if not scorer_response_upstream.is_absolute()
+                else scorer_response_upstream.resolve(strict=False)
+            )
 
     selected_pair_indices = tuple(int(value) for value in pair_indices)
     quality_pair_indices = selected_pair_indices[: int(max_pairs)]
@@ -15613,6 +15726,16 @@ def _write_hi_nerv_runner_post_export_receiver_cache_quality(
             min_segnet_argmax_occupied_class_fraction_for_fit_gate=float(
                 min_segnet_argmax_occupied_class_fraction_for_fit_gate
             ),
+            require_mlx_scorer_response_probe=bool(mlx_scorer_response_probe),
+            mlx_scorer_response_upstream_dir=scorer_response_upstream,
+            mlx_scorer_response_device_type=str(mlx_scorer_response_device_type),
+            mlx_scorer_response_batch_pairs=int(mlx_scorer_response_batch_pairs),
+            max_mlx_scorer_response_posenet_dist_for_fit_gate=float(
+                max_mlx_scorer_response_posenet_dist_for_fit_gate
+            ),
+            max_mlx_scorer_response_segnet_dist_for_fit_gate=float(
+                max_mlx_scorer_response_segnet_dist_for_fit_gate
+            ),
         )
     except Exception as exc:
         return _write_hi_nerv_runner_receiver_cache_quality_refusal(
@@ -15671,6 +15794,11 @@ def _hi_nerv_receiver_cache_quality_summary(
     )
     crux_probe = (
         report.get("distortion_crux_probe") if isinstance(report, Mapping) else None
+    )
+    mlx_scorer_response_probe = (
+        report.get("mlx_scorer_response_probe")
+        if isinstance(report, Mapping)
+        else None
     )
     crux_aggregate = (
         crux_probe.get("aggregate")
@@ -15782,6 +15910,32 @@ def _hi_nerv_receiver_cache_quality_summary(
         ),
         "distortion_crux_aggregate": (
             dict(crux_aggregate) if isinstance(crux_aggregate, Mapping) else None
+        ),
+        "mlx_scorer_response_probe_path": report.get(
+            "mlx_scorer_response_probe_path"
+        ),
+        "mlx_scorer_response_probe_required": bool(
+            report.get("mlx_scorer_response_probe_required")
+        ),
+        "mlx_scorer_response_probe_passed": (
+            bool(mlx_scorer_response_probe.get("fit_gate_passed"))
+            if isinstance(mlx_scorer_response_probe, Mapping)
+            else None
+        ),
+        "mlx_scorer_response_avg_posenet_dist": (
+            mlx_scorer_response_probe.get("avg_posenet_dist")
+            if isinstance(mlx_scorer_response_probe, Mapping)
+            else None
+        ),
+        "mlx_scorer_response_avg_segnet_dist": (
+            mlx_scorer_response_probe.get("avg_segnet_dist")
+            if isinstance(mlx_scorer_response_probe, Mapping)
+            else None
+        ),
+        "mlx_scorer_response_blockers": (
+            [str(blocker) for blocker in mlx_scorer_response_probe.get("blockers") or []]
+            if isinstance(mlx_scorer_response_probe, Mapping)
+            else None
         ),
         "hard_pair_coverage": (
             dict(crux_probe.get("hard_pair_coverage"))
@@ -20417,6 +20571,55 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--skip-receiver-cache-quality-mlx-scorer-response-probe",
+        dest="receiver_cache_quality_mlx_scorer_response_probe",
+        action="store_false",
+        default=True,
+        help=(
+            "HiNeRV only: skip the local MLX scorer-response probe inside the "
+            "post-export receiver-quality gate. Default runs it so exported "
+            "receiver pixels must move SegNet/PoseNet in the scorer's own "
+            "response space before long-run readiness can pass."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-mlx-scorer-response-device-type",
+        default="cpu",
+        choices=("cpu", "gpu", "metal", "mps"),
+        help=(
+            "Device alias for the local MLX scorer-response probe. This is "
+            "false-authority local evidence; exact CPU/CUDA remains the "
+            "promotion surface."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-mlx-scorer-response-batch-pairs",
+        default=1,
+        type=int,
+        help=(
+            "Pair batch size for the HiNeRV receiver-cache MLX scorer-response "
+            "probe. Default 1 for low-memory launch gating."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-mlx-scorer-response-posenet-dist-for-fit-gate",
+        default=DEFAULT_MAX_MLX_SCORER_RESPONSE_POSENET_DIST_FOR_FIT_GATE,
+        type=float,
+        help=(
+            "Maximum average PoseNet response distance accepted by the HiNeRV "
+            "receiver-cache MLX scorer-response fit gate."
+        ),
+    )
+    parser.add_argument(
+        "--receiver-cache-quality-max-mlx-scorer-response-segnet-dist-for-fit-gate",
+        default=DEFAULT_MAX_MLX_SCORER_RESPONSE_SEGNET_DIST_FOR_FIT_GATE,
+        type=float,
+        help=(
+            "Maximum average SegNet response distance accepted by the HiNeRV "
+            "receiver-cache MLX scorer-response fit gate."
+        ),
+    )
+    parser.add_argument(
         "--telemetry-flush-interval-epochs",
         default=1,
         type=int,
@@ -21842,6 +22045,21 @@ def main(argv: list[str] | None = None) -> int:
             ),
             receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate=(
                 args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+            ),
+            receiver_cache_quality_mlx_scorer_response_probe=(
+                args.receiver_cache_quality_mlx_scorer_response_probe
+            ),
+            receiver_cache_quality_mlx_scorer_response_device_type=(
+                args.receiver_cache_quality_mlx_scorer_response_device_type
+            ),
+            receiver_cache_quality_mlx_scorer_response_batch_pairs=(
+                args.receiver_cache_quality_mlx_scorer_response_batch_pairs
+            ),
+            receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate=(
+                args.receiver_cache_quality_max_mlx_scorer_response_posenet_dist_for_fit_gate
+            ),
+            receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate=(
+                args.receiver_cache_quality_max_mlx_scorer_response_segnet_dist_for_fit_gate
             ),
             telemetry_flush_interval_epochs=args.telemetry_flush_interval_epochs,
             checkpoint_interval_epochs=args.checkpoint_interval_epochs,

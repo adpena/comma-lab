@@ -398,6 +398,19 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
                     "hard_pair_count": 2,
                 },
             },
+            "mlx_scorer_response_probe_path": (
+                tmp_path / "mlx_scorer_response_probe.json"
+            ).as_posix(),
+            "mlx_scorer_response_probe_required": True,
+            "mlx_scorer_response_probe": {
+                "schema": "hi_nerv_receiver_cache_mlx_scorer_response_probe.v1",
+                "fit_gate_passed": True,
+                "avg_posenet_dist": 0.001,
+                "avg_segnet_dist": 0.02,
+                "blockers": [
+                    "hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"
+                ],
+            },
             "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
         }
 
@@ -441,11 +454,25 @@ def test_hinerv_runner_receiver_cache_quality_uses_explicit_reference_cache(
     assert captured[
         "min_segnet_argmax_occupied_class_fraction_for_fit_gate"
     ] == pytest.approx(0.625)
+    assert captured["require_mlx_scorer_response_probe"] is True
+    assert Path(captured["mlx_scorer_response_upstream_dir"]) == REPO_ROOT / "upstream"
+    assert captured["mlx_scorer_response_device_type"] == "cpu"
+    assert captured["mlx_scorer_response_batch_pairs"] == 1
+    assert captured[
+        "max_mlx_scorer_response_posenet_dist_for_fit_gate"
+    ] == pytest.approx(0.01)
+    assert captured[
+        "max_mlx_scorer_response_segnet_dist_for_fit_gate"
+    ] == pytest.approx(0.25)
     summary = runner_mod._hi_nerv_receiver_cache_quality_summary(report)
     assert summary["quality_gate_passed"] is True
     assert summary["candidate_posenet_yuv6_pair_stats"] == {"std": 3.0}
     assert summary["distortion_crux_probe_passed"] is True
     assert summary["distortion_crux_dominant_domain"] == "posenet_yuv6_pair"
+    assert summary["mlx_scorer_response_probe_required"] is True
+    assert summary["mlx_scorer_response_probe_passed"] is True
+    assert summary["mlx_scorer_response_avg_posenet_dist"] == pytest.approx(0.001)
+    assert summary["mlx_scorer_response_avg_segnet_dist"] == pytest.approx(0.02)
     assert summary["hard_pair_coverage"]["prioritized_pair_indices"] == [2, 0]
     assert (
         runner_mod._hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
@@ -483,6 +510,40 @@ def test_hinerv_runner_receiver_cache_quality_exposes_routable_crux_pairs() -> N
     assert coverage is not None
     assert coverage["prioritized_pair_indices"] == [17, 4, 17]
     assert coverage["score_claim"] is False
+
+
+def test_hinerv_runner_receiver_cache_quality_blocks_invalid_mlx_response_batch(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"unit archive bytes")
+    reference = tmp_path / "reference_cache"
+    reference.mkdir()
+
+    report = runner_mod._write_hi_nerv_runner_post_export_receiver_cache_quality(
+        requested=True,
+        archive_zip_path=archive,
+        source_video_path=tmp_path / "unused_source.mkv",
+        output_dir=tmp_path / "training",
+        reference_cache_dir=reference,
+        max_pairs=1,
+        batch_pairs=1,
+        min_segnet_std=1.0,
+        min_segnet_dynamic_range=16.0,
+        max_segnet_mae_vs_reference_for_fit_gate=64.0,
+        segnet_argmax_probe=True,
+        segnet_argmax_batch_frames=4,
+        max_segnet_argmax_disagreement_for_fit_gate=0.25,
+        min_segnet_argmax_occupied_class_fraction_for_fit_gate=0.400001,
+        repo_root=REPO_ROOT,
+        mlx_scorer_response_batch_pairs=0,
+    )
+
+    assert report["quality_gate_passed"] is False
+    assert (
+        "hi_nerv_receiver_cache_quality_mlx_scorer_response_batch_pairs_invalid"
+        in report["blockers"]
+    )
 
 
 def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
@@ -585,6 +646,11 @@ def test_hinerv_runner_receiver_cache_quality_builds_source_reference_cache(
     assert captured_reference["batch_pairs"] == 2
     assert Path(captured_quality["reference_cache_dir"]) == reference_dir
     assert captured_quality["segnet_argmax_probe_upstream_dir"] is None
+    assert captured_quality["require_mlx_scorer_response_probe"] is True
+    assert Path(captured_quality["mlx_scorer_response_upstream_dir"]) == (
+        REPO_ROOT / "upstream"
+    )
+    assert captured_quality["mlx_scorer_response_batch_pairs"] == 1
     assert report["quality_gate_passed"] is False
     assert "candidate_posenet_yuv6_pair_low_dynamic_range" in report["blockers"]
 
@@ -694,6 +760,19 @@ def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifac
             "candidate_occupied_class_fraction": 0.8,
             "reference_occupied_class_fraction": 0.9,
             "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
+        },
+        "mlx_scorer_response_probe_path": (
+            tmp_path / "mlx_scorer_response_probe.json"
+        ).as_posix(),
+        "mlx_scorer_response_probe_required": True,
+        "mlx_scorer_response_probe": {
+            "schema": "hi_nerv_receiver_cache_mlx_scorer_response_probe.v1",
+            "fit_gate_passed": True,
+            "avg_posenet_dist": 0.002,
+            "avg_segnet_dist": 0.03,
+            "blockers": [
+                "hi_nerv_receiver_cache_mlx_scorer_response_probe_is_false_authority"
+            ],
         },
         "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
     }
@@ -1338,6 +1417,30 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
             "receiver_contract_satisfied": True,
+            "snerv_official_tub_source_fixture_binding": {
+                "schema": "snerv_official_tub_source_fixture_binding.v1",
+                "component_id": "tub",
+                "source_fixture_replay_bound": True,
+                "official_tub_temporal_encoder_output2_source_fixture_replay_passed": True,
+                "full_tub_source_forward_parity_proven": False,
+                "source_forward_replay_authority": False,
+                "preserved_source_parity_blockers": [
+                    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+                ],
+                "blockers": [
+                    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "snerv_official_tub_source_fixture_replay_bound": True,
+            "snerv_official_tub_source_fixture_replay_passed": True,
+            "snerv_official_tub_source_forward_fixture_bound": True,
+            "official_source_parity_blockers": [
+                "snerv_official_bootstrap_stores_haar_ll_as_mfu_skip_high",
+                "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing",
+            ],
             "receiver_target_reconstruction_profile": (
                 _fake_snerv_receiver_reconstruction_profile(
                     profile_id="selected_packet_vs_source_targets",
@@ -1585,6 +1688,20 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     ] is True
     assert out["scorer_error_pair_curriculum"]["weighted_pair_count"] == 1
     assert out["receiver_reconstruction_verified"] is True
+    assert out["snerv_official_tub_source_fixture_replay_bound"] is True
+    assert out["snerv_official_tub_source_fixture_replay_passed"] is True
+    assert out["snerv_official_tub_source_forward_fixture_bound"] is True
+    assert out["snerv_official_tub_source_fixture_binding"][
+        "source_fixture_replay_bound"
+    ] is True
+    assert (
+        "snerv_official_tub_batched_temporal_context_source_forward_replay_missing"
+        not in out["official_source_parity_blockers"]
+    )
+    assert (
+        "snerv_official_encoder_mfu_skip_hierarchy_source_forward_replay_missing"
+        in out["official_source_parity_blockers"]
+    )
     assert out["receiver_reconstruction"]["target_mse_nchw255"] == pytest.approx(0.75)
     assert out["receiver_reconstruction"]["export_mse_nchw255"] == pytest.approx(0.0)
     assert out["snerv_scorer_tether_smoke_gate"]["required"] is True

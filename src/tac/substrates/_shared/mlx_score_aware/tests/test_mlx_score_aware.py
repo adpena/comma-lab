@@ -707,6 +707,99 @@ def test_direct_live_segnet_routes_argmax_hinge_objective() -> None:
     ) == pytest.approx(1.0)
 
 
+def test_direct_live_segnet_kl_t2_uses_canonical_kl_not_logit_mse() -> None:
+    target_0 = mx.zeros((1, 2, 2, 3))
+    target_1 = mx.ones((1, 2, 2, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 2, 2, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 2.0
+            arr[..., 1] = 0.5
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 0] = 1.0
+            arr[..., 1] = 0.25
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        allow_segnet_only_research=True,
+        segnet_distillation_objective="kl_t2",
+    )
+
+    _total, parts = score_aware_loss(bundle, mx.array([0]))
+    student = bundle.scorer_teacher.teacher_logits_for_frames_nhwc01(target_1)
+    teacher = bundle.scorer_teacher.teacher_logits_for_indices(mx.array([0]))
+    raw_mse = mx.mean((student - teacher) ** 2)
+
+    assert _scalar(parts["segnet_direct_live_base_loss"]) != pytest.approx(_scalar(raw_mse))
+    assert _scalar(parts["segnet_direct_live_base_loss"]) < _scalar(raw_mse)
+
+
+def test_direct_live_segnet_uses_exact_teacher_argmax_over_quantized_logits() -> None:
+    target_0 = mx.zeros((1, 2, 2, 3))
+    target_1 = mx.ones((1, 2, 2, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 2, 2, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 1.0
+            arr[..., 1] = 1.0
+            return mx.array(arr)
+
+        def teacher_argmax_for_indices(self, idx):
+            return mx.ones((idx.shape[0], 2, 2), dtype=mx.uint8)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 1] = 4.0
+            arr[..., 0] = 1.0
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_class_balanced_ce_weight=1.0,
+        allow_segnet_only_research=True,
+        segnet_distillation_objective="argmax_hinge",
+        segnet_hinge_margin=0.5,
+    )
+
+    _total, parts = score_aware_loss(bundle, mx.array([0]))
+
+    assert _scalar(parts["segnet_direct_live_argmax_disagreement"]) == pytest.approx(0.0)
+    assert _scalar(parts["segnet_direct_live_target_class_0_fraction"]) == pytest.approx(0.0)
+    assert _scalar(parts["segnet_direct_live_target_class_1_fraction"]) == pytest.approx(1.0)
+    assert _scalar(
+        parts["segnet_direct_live_class_balanced_ce_target_occupied_class_fraction"]
+    ) == pytest.approx(0.2)
+    assert _scalar(parts["segnet_direct_live_class_balanced_ce_class_1"]) < 0.1
+
+
 def test_direct_live_segnet_routes_all_pixel_argmax_hinge_objective() -> None:
     target_0 = mx.zeros((2, 4, 4, 3))
     target_1 = mx.ones((2, 4, 4, 3))
@@ -1269,9 +1362,43 @@ def test_pose_distill_huber_keeps_raw_mse_telemetry() -> None:
 
     assert _scalar(parts["recon"]) < 1e-10
     assert _scalar(parts["pose_distill_raw_mse"]) == pytest.approx(100.0)
-    assert _scalar(parts["pose_distill"]) == pytest.approx(19.0)
-    assert _scalar(parts["pose_score_term"]) == pytest.approx((10.0 * 19.0) ** 0.5)
-    assert _scalar(total) == pytest.approx((10.0 * 19.0) ** 0.5)
+    assert _scalar(parts["pose_distill"]) == pytest.approx(100.0)
+    assert _scalar(parts["pose_distill_train_loss"]) == pytest.approx(19.0)
+    assert _scalar(parts["pose_score_term"]) == pytest.approx((10.0 * 100.0) ** 0.5)
+    assert _scalar(total) == pytest.approx((10.0 * 100.0) ** 0.5)
+
+
+def test_pose_score_term_uses_raw_mse_not_per_dim_scaled_train_loss() -> None:
+    target_0, target_1 = _targets()
+
+    class _PoseTeacher:
+        pose_dims = 6
+        per_dim_scale = mx.full((6,), 0.1)
+
+        def teacher_pose_for_indices(self, idx):
+            return mx.zeros((idx.shape[0], self.pose_dims))
+
+    class _PoseHead:
+        def __call__(self, rgb_0, rgb_1):
+            return mx.ones((rgb_0.shape[0], 6))
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        pose_distillation_weight=1.0,
+        pose_scorer_teacher=_PoseTeacher(),
+        learnable_pose_student_head=_PoseHead(),
+    )
+    total, parts = score_aware_loss(bundle, mx.array([0, 1]))
+
+    assert _scalar(parts["pose_distill"]) == pytest.approx(1.0)
+    assert _scalar(parts["pose_distill_raw_mse"]) == pytest.approx(1.0)
+    assert _scalar(parts["pose_distill_train_loss"]) == pytest.approx(100.0)
+    assert _scalar(parts["pose_score_term"]) == pytest.approx(10.0**0.5)
+    assert _scalar(total) == pytest.approx(10.0**0.5)
 
 
 def test_build_mlx_posenet_pair_teacher_uses_upstream_pair_scale(

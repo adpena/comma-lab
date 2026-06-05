@@ -54,6 +54,12 @@ from tac.analysis.pr95_distortion_practices_guard import (
     build_pr95_distortion_source_inventory,
     build_pr95_evaluate_scorer_domain_telemetry_contract,
 )
+from tac.analysis.snerv_lf_hf_replacement_queue import (
+    DEFAULT_QUEUE_ID as DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
+)
+from tac.analysis.snerv_lf_hf_replacement_queue import (
+    build_snerv_lf_hf_replacement_queue,
+)
 from tac.analysis.snerv_lf_over_ceiling_reroute_queue import (
     DEFAULT_QUEUE_ID as DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
 )
@@ -658,6 +664,17 @@ def build_nerv_long_training_campaign_plan(
         output_root=Path(output_root) / "snerv_lf_over_ceiling_reroutes",
         queue_id=DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
     )
+    snerv_lf_hf_replacement_queue = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=(
+            *tuple(snerv_lf_payload_recode_sources),
+            *tuple(snerv_lf_payload_byte_report_sources),
+        ),
+        reroute_queues=(snerv_lf_over_ceiling_reroute_queue,),
+        campaign_plans=({"campaign_rows": rows},),
+        output_root=Path(output_root) / "snerv_lf_hf_replacements",
+        queue_id=DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
+        allow_local_output=True,
+    )
     decoder_weight_waterfill_unattached_sources = _decoder_weight_waterfill_unattached_sources(
         index=decoder_weight_waterfill_index,
         campaign_rows=rows,
@@ -743,6 +760,9 @@ def build_nerv_long_training_campaign_plan(
         "snerv_lf_over_ceiling_reroute_queue": snerv_lf_over_ceiling_reroute_queue,
         "snerv_lf_over_ceiling_reroute_queue_schema": snerv_lf_over_ceiling_reroute_queue["schema"],
         "snerv_lf_over_ceiling_reroute_queue_row_count": snerv_lf_over_ceiling_reroute_queue["queue_row_count"],
+        "snerv_lf_hf_replacement_queue": snerv_lf_hf_replacement_queue,
+        "snerv_lf_hf_replacement_queue_schema": snerv_lf_hf_replacement_queue["schema"],
+        "snerv_lf_hf_replacement_queue_row_count": snerv_lf_hf_replacement_queue["queue_row_count"],
         "source_parity_contract": source_parity_contract,
         "snerv_official_source_audit_attached": isinstance(snerv_official_source_audit, Mapping),
         "source_parity_required_for_long_training_ready": bool(

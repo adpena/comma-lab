@@ -767,7 +767,15 @@ def test_candidate_feedback_routes_hinerv_receiver_class_collapse_to_mutations(
         "segnet_candidate_occupied_class_fraction": 0.4,
         "segnet_reference_occupied_class_fraction": 1.0,
         "segnet_argmax_disagreement_rate": 0.517,
-        "blockers": ["hi_nerv_receiver_cache_segnet_argmax_class_collapse"],
+        "mlx_scorer_response_probe_required": True,
+        "mlx_scorer_response_probe_passed": False,
+        "mlx_scorer_response_avg_posenet_dist": 167.4,
+        "mlx_scorer_response_avg_segnet_dist": 0.507,
+        "blockers": [
+            "hi_nerv_receiver_cache_segnet_argmax_class_collapse",
+            "hi_nerv_receiver_cache_posenet_response_too_high",
+            "hi_nerv_receiver_cache_segnet_response_too_high",
+        ],
     }
     report["train_receiver_class_escape_contract"] = {
         "schema": "hi_nerv_train_receiver_class_escape_contract.v1",
@@ -792,8 +800,27 @@ def test_candidate_feedback_routes_hinerv_receiver_class_collapse_to_mutations(
         "disable_hi_nerv_byte_feedback_learning_from_receiver_collapsed_export"
         in row["recommended_launch_mutations"]
     )
+    assert (
+        "increase_hi_nerv_posenet_response_pressure"
+        in row["recommended_launch_mutations"]
+    )
+    assert (
+        "increase_hi_nerv_segnet_response_pressure"
+        in row["recommended_launch_mutations"]
+    )
+    assert (
+        "rerun_hi_nerv_short_probe_with_mlx_scorer_response_gate"
+        in row["recommended_launch_mutations"]
+    )
+    assert row["post_export_receiver_mlx_scorer_response_probe_passed"] is False
+    assert row["post_export_receiver_mlx_scorer_response_avg_posenet_dist"] == pytest.approx(
+        167.4
+    )
+    assert row["post_export_receiver_posenet_response_too_high"] is True
+    assert row["post_export_receiver_segnet_response_too_high"] is True
     control = row["hi_nerv_receiver_cache_feedback_control"]
     assert control["collapse_detected"] is True
+    assert control["mlx_scorer_response_failed"] is True
     assert control["byte_oracle_feedback_ready"] is False
     assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False

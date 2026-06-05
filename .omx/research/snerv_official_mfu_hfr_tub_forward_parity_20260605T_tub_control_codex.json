@@ -1,0 +1,1562 @@
+{
+  "authority": "false_authority_source_forward_harness_no_score_claim",
+  "blockers": [
+    "snerv_official_trained_checkpoint_state_dict_not_loaded",
+    "snerv_official_tub_encoder_decoder_weights_not_loaded",
+    "snerv_official_snerv_t_full_tub_source_forward_replay_missing",
+    "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+    "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+    "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+    "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+  ],
+  "component_rows": [
+    {
+      "backend": "official_snerv_torch_decoder_slice_vs_portable_numpy_mfu",
+      "blockers": [],
+      "classification": "official_source_fixture_mfu_state_dict_mapping_proven",
+      "component_id": "mfu",
+      "full_stack_source_forward_parity_proven": false,
+      "input_sha256": "79781ac1e259f5c27d403767fb6bf554aa80284a29a1aa0b46f211128b50d13a",
+      "max_abs_error": 0.0,
+      "official_output_sha256": "8151992f8d03cc4e3e4740a5f87c17a8af9f9cc6669055527bd93f420e259758",
+      "official_output_shape": [
+        1,
+        3,
+        8,
+        12
+      ],
+      "official_weight_keys": [
+        "decoder.10.main.0.bias",
+        "decoder.10.main.0.weight",
+        "decoder.10.main.1.0.conv1.bias",
+        "decoder.10.main.1.0.conv1.weight",
+        "decoder.10.main.1.0.conv2.bias",
+        "decoder.10.main.1.0.conv2.weight",
+        "decoder.7.bias",
+        "decoder.7.weight",
+        "decoder.8.main.0.bias",
+        "decoder.8.main.0.weight",
+        "decoder.8.main.1.0.conv1.bias",
+        "decoder.8.main.1.0.conv1.weight",
+        "decoder.8.main.1.0.conv2.bias",
+        "decoder.8.main.1.0.conv2.weight",
+        "decoder.9.bias",
+        "decoder.9.weight"
+      ],
+      "official_weight_sha256": "0e6cb20b8c4f86ae8037bf946334dad5ca4741f67d40864a4d08fddfbeb70f16",
+      "output_hashes_bit_identical": true,
+      "portable_output_sha256": "8151992f8d03cc4e3e4740a5f87c17a8af9f9cc6669055527bd93f420e259758",
+      "portable_output_shape": [
+        1,
+        3,
+        8,
+        12
+      ],
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_official_source_forward_component_replay.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": false,
+      "source_forward_parity_proven": true,
+      "tolerance": 0.0
+    },
+    {
+      "backend": "official_snerv_torch_decoder_slice_vs_portable_numpy_hfr",
+      "blockers": [],
+      "classification": "official_source_fixture_hfr_state_dict_mapping_proven",
+      "component_id": "hfr",
+      "full_stack_source_forward_parity_proven": false,
+      "input_sha256": "2f0330db9c4a60292608707b2a6a2472e302820c7cc34c5d70750a557451d5ec",
+      "max_abs_error": 0.0,
+      "official_output_sha256": "9ced1711c99b119bdd213d5b3fe5d6b4545f1e6b071514f03bf2245149bf1481",
+      "official_output_shape": [
+        1,
+        3,
+        3,
+        8,
+        12
+      ],
+      "official_weight_keys": [
+        "decoder.4.conv1.bias",
+        "decoder.4.conv1.weight",
+        "decoder.4.conv2.bias",
+        "decoder.4.conv2.weight",
+        "decoder.5.conv1.bias",
+        "decoder.5.conv1.weight",
+        "decoder.5.conv2.bias",
+        "decoder.5.conv2.weight",
+        "decoder.6.conv1.bias",
+        "decoder.6.conv1.weight",
+        "decoder.6.conv2.bias",
+        "decoder.6.conv2.weight"
+      ],
+      "official_weight_sha256": "32ba062ef81401904d74758e3284b6b7b9ce897951c2e1c24aea5d5ac5610266",
+      "output_hashes_bit_identical": true,
+      "portable_output_sha256": "9ced1711c99b119bdd213d5b3fe5d6b4545f1e6b071514f03bf2245149bf1481",
+      "portable_output_shape": [
+        1,
+        3,
+        3,
+        8,
+        12
+      ],
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_official_source_forward_component_replay.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": false,
+      "source_forward_parity_proven": true,
+      "tolerance": 0.0
+    },
+    {
+      "backend": "official_torch_vs_portable",
+      "blockers": [
+        "snerv_official_pytorch_wavelets_runtime_dependency_missing",
+        "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing",
+        "snerv_official_tub_portable_output2_decoder_weight_mapping_missing",
+        "snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing"
+      ],
+      "classification": "official_tub_graph_input_and_output2_fusion_source_fixture_proven_full_tub_blocked",
+      "closed_blockers": [
+        "snerv_official_snerv_t_output2_fusion_source_forward_replay_missing",
+        "snerv_official_tub_portable_output2_fusion_receiver_mapping_missing"
+      ],
+      "component_id": "tub",
+      "full_stack_source_forward_parity_proven": false,
+      "full_tub_source_forward_parity_proven": false,
+      "graph_input_max_abs_error": 0.0,
+      "input_sha256": "2e4709d542506cc5eac4c66293f8f28029458ed4734b0776ae1380923b6a91a9",
+      "max_abs_error": 0.0,
+      "official_output_sha256": "a92a093ed44a61f0b83de00f85fe94dc4a0d6bc19788e822532cbda477ed2f1b",
+      "official_source_contract": "model/snerv_t.py lines 125-150",
+      "official_weight_keys": [
+        "weightless_source_lines:model/snerv_t.py:125-136",
+        "weightless_source_lines:model/snerv_t.py:142-150",
+        "unmapped_temporal_encoder:self.encoder[1]",
+        "unmapped_temporal_encoder:self.encoder[2]",
+        "unmapped_output2_decoder:self.decoder[self.decoder_len-1]"
+      ],
+      "output2_fusion_max_abs_error": 0.0,
+      "output_hashes_bit_identical": true,
+      "output_shapes": {
+        "lf_triplet": [
+          3,
+          3,
+          2,
+          2
+        ],
+        "next_lowpass_over_2": [
+          1,
+          3,
+          2,
+          2
+        ],
+        "normalized_lf": [
+          3,
+          3,
+          2,
+          2
+        ],
+        "output2_decoder_input": [
+          2,
+          6,
+          2,
+          3
+        ],
+        "output2_shuffled": [
+          2,
+          3,
+          4,
+          9
+        ],
+        "prev_lowpass_over_2": [
+          1,
+          3,
+          2,
+          2
+        ]
+      },
+      "portable_output2_fusion_receiver_mapping_proven": true,
+      "portable_output_sha256": "a92a093ed44a61f0b83de00f85fe94dc4a0d6bc19788e822532cbda477ed2f1b",
+      "primitive_source_forward_parity_proven": true,
+      "production_hardened_claim": false,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "schema": "snerv_official_source_forward_component_replay.v1",
+      "score_claim": false,
+      "source_faithful_stack_claim": false,
+      "source_forward_parity_falsified": false,
+      "source_forward_parity_proven": false,
+      "tolerance": 0.0
+    }
+  ],
+  "family": "snerv",
+  "full_tub_source_forward_parity_proven": false,
+  "generated_utc": "20260605T131323Z",
+  "local_receiver_adapter_source_gap": {
+    "blockers": [
+      "local_receiver_safe_adapter_is_not_official_snerv_source_graph"
+    ],
+    "classification": "receiver_safe_adapter_not_official_source_forward_semantics",
+    "official_source_forward_markers_present": false,
+    "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/carrier.py",
+    "production_hardened_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_safe_adapter_present": true,
+    "schema": "snerv_local_receiver_adapter_source_gap.v1",
+    "score_claim": false,
+    "sha256": "5dcc46ba4e2e4ebb609000f810fcfc955dc91b169c616b54b5c9f7f02f7d9986",
+    "source_faithful_stack_claim": false,
+    "source_forward_parity_proven": false
+  },
+  "local_repo_root": "/Users/adpena/Projects/pact",
+  "official_mfu_hfr_source_fixture_forward_parity_passed": true,
+  "official_mfu_hfr_tub_forward_parity_falsified": false,
+  "official_mfu_hfr_tub_forward_parity_passed": false,
+  "official_mfu_hfr_tub_primitive_replay_binding": {
+    "all_primitive_numeric_graph_replay_proven": true,
+    "all_primitive_numeric_source_fixture_replay_proven": true,
+    "all_primitive_source_replay_proven": false,
+    "all_receiver_primitive_replay_proven": true,
+    "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+    "blockers": [
+      "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+    ],
+    "component_rows": [
+      {
+        "authority": "false_authority_primitive_replay_not_full_receiver_export",
+        "component_id": "mfu",
+        "feature_id": "official_multi_resolution_fusion_blocks",
+        "frontier_score_claim": false,
+        "full_stack_source_forward_replay_proven": false,
+        "missing_source_markers": [],
+        "missing_test_markers": [],
+        "numeric_source_replay_test_present": true,
+        "primitive_numeric_graph_replay_proven": true,
+        "primitive_numeric_source_fixture_replay_proven": true,
+        "primitive_source_forward_replay_proven": false,
+        "primitive_source_replay_proven": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_primitive_replay_proven": true,
+        "receiver_runtime_decode_row": {
+          "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+          "blockers": [],
+          "component_id": "mfu",
+          "feature_id": "official_multi_resolution_fusion_blocks",
+          "forbidden_receiver_import_markers": [
+            "import torch",
+            "from torch",
+            "load_score_exact_scorers",
+            "tac.scorer",
+            "segmentation_models_pytorch"
+          ],
+          "frontier_score_claim": false,
+          "missing_receiver_archive_runtime_markers": [],
+          "missing_receiver_archive_test_markers": [],
+          "missing_runtime_entrypoint_markers": [],
+          "native_mlx_export_bound": false,
+          "numeric_source_replay_test_present": true,
+          "numeric_test_bytes": 20033,
+          "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_mfu.py",
+          "numeric_test_sha256": "8b94eb7dc3980112c3f744106b8916731a26586655c89985b847eaca095e2f85",
+          "present_forbidden_receiver_import_markers": [],
+          "present_receiver_archive_forbidden_import_markers": [],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_archive_payload_bound": true,
+          "receiver_archive_payload_decode_present": true,
+          "receiver_archive_runtime_bytes": 136395,
+          "receiver_archive_runtime_markers": [
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+            "encode_official_mfu_hfr_tub_decoder_payload",
+            "decode_official_mfu_hfr_tub_decoder_payload",
+            "execute_official_mfu_hfr_tub_decoder_payload",
+            "class OfficialMfuHfrTubReceiverPayload",
+            "def build_mfu",
+            "receiver_self_consistency_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_receiver_self_consistency_reference",
+            "OfficialSnervMfu",
+            "\"mfu.upsample_mid.weight\"",
+            "\"inputs.mfu.low\""
+          ],
+          "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+          "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+          "receiver_archive_test_bytes": 61491,
+          "receiver_archive_test_markers": [
+            "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+            "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames",
+            "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+            "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+          ],
+          "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+          "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+          "receiver_export_bound": true,
+          "receiver_export_self_consistency_verified": true,
+          "receiver_runtime_decode_proven": true,
+          "receiver_source_forward_replay_bound": false,
+          "runtime_entrypoint_markers": [
+            "class OfficialSnervMfu",
+            "def forward_mlx",
+            "low: np.ndarray",
+            "class OfficialConvTranspose2dNchw"
+          ],
+          "runtime_entrypoints_present": true,
+          "runtime_module_bytes": 45548,
+          "runtime_module_import_safe": true,
+          "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
+          "runtime_module_sha256": "a4b00cd9e57076046330b5ae47f5e24ad7444b1d5d6a094e0ded239725904412",
+          "schema": "snerv_official_receiver_runtime_decode_component.v1",
+          "score_claim": false,
+          "status": "receiver_runtime_decode_proven_source_forward_missing"
+        },
+        "schema": "snerv_official_primitive_source_replay_status.v1",
+        "score_claim": false,
+        "source_bytes": 45548,
+        "source_markers": [
+          "OfficialSnervMfu",
+          "OfficialConvTranspose2dNchw",
+          "OfficialResidualBlocksWithInputConv",
+          "conv_transpose2d_nchw",
+          "conv_transpose2d_nchw_mlx",
+          "SNERV_OFFICIAL_MFU_TORCH_NUMPY_MLX_PARITY_PROOF"
+        ],
+        "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
+        "source_present": true,
+        "source_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
+        "source_sha256": "a4b00cd9e57076046330b5ae47f5e24ad7444b1d5d6a094e0ded239725904412",
+        "status": "primitive_numeric_source_fixture_replay_proven_full_stack_missing",
+        "test_bytes": 20033,
+        "test_markers": [
+          "test_official_mfu_full_numpy_forward_matches_torch_graph",
+          "test_conv_transpose2d_mlx_modes_match_numpy_reference",
+          "test_official_mfu_mlx_forward_modes_match_numpy_reference",
+          "torch.nn.functional.conv_transpose2d",
+          "np.testing.assert_allclose"
+        ],
+        "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_mfu.py",
+        "test_present": true,
+        "test_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_mfu.py",
+        "test_sha256": "8b94eb7dc3980112c3f744106b8916731a26586655c89985b847eaca095e2f85"
+      },
+      {
+        "authority": "false_authority_primitive_replay_not_full_receiver_export",
+        "component_id": "hfr",
+        "feature_id": "official_high_frequency_restoration_heads",
+        "frontier_score_claim": false,
+        "full_stack_source_forward_replay_proven": false,
+        "missing_source_markers": [],
+        "missing_test_markers": [],
+        "numeric_source_replay_test_present": true,
+        "primitive_numeric_graph_replay_proven": true,
+        "primitive_numeric_source_fixture_replay_proven": true,
+        "primitive_source_forward_replay_proven": false,
+        "primitive_source_replay_proven": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_primitive_replay_proven": true,
+        "receiver_runtime_decode_row": {
+          "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+          "blockers": [],
+          "component_id": "hfr",
+          "feature_id": "official_high_frequency_restoration_heads",
+          "forbidden_receiver_import_markers": [
+            "import torch",
+            "from torch",
+            "load_score_exact_scorers",
+            "tac.scorer",
+            "segmentation_models_pytorch"
+          ],
+          "frontier_score_claim": false,
+          "missing_receiver_archive_runtime_markers": [],
+          "missing_receiver_archive_test_markers": [],
+          "missing_runtime_entrypoint_markers": [],
+          "native_mlx_export_bound": false,
+          "numeric_source_replay_test_present": true,
+          "numeric_test_bytes": 11122,
+          "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_hfr.py",
+          "numeric_test_sha256": "6408a427fc7af48d186c0412752cda0dc60d61e68242f3bc5c09a556f55892c0",
+          "present_forbidden_receiver_import_markers": [],
+          "present_receiver_archive_forbidden_import_markers": [],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_archive_payload_bound": true,
+          "receiver_archive_payload_decode_present": true,
+          "receiver_archive_runtime_bytes": 136395,
+          "receiver_archive_runtime_markers": [
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+            "encode_official_mfu_hfr_tub_decoder_payload",
+            "decode_official_mfu_hfr_tub_decoder_payload",
+            "execute_official_mfu_hfr_tub_decoder_payload",
+            "class OfficialMfuHfrTubReceiverPayload",
+            "def build_hfr_heads",
+            "receiver_self_consistency_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_receiver_self_consistency_reference",
+            "OfficialHfrHeads",
+            "\"hfr.lh.conv1.weight\"",
+            "\"hfr.hh.conv2.bias\""
+          ],
+          "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+          "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+          "receiver_archive_test_bytes": 61491,
+          "receiver_archive_test_markers": [
+            "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+            "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+            "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+          ],
+          "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+          "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+          "receiver_export_bound": true,
+          "receiver_export_self_consistency_verified": true,
+          "receiver_runtime_decode_proven": true,
+          "receiver_source_forward_replay_bound": false,
+          "runtime_entrypoint_markers": [
+            "class OfficialHfrHeads",
+            "def forward(self, pyr_out",
+            "class OfficialHfrConvBlock"
+          ],
+          "runtime_entrypoints_present": true,
+          "runtime_module_bytes": 12605,
+          "runtime_module_import_safe": true,
+          "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
+          "runtime_module_sha256": "7e28130c6c3987144c797ba2d591e5be33f1f51da9b927ce1d802bb11fa16b3f",
+          "schema": "snerv_official_receiver_runtime_decode_component.v1",
+          "score_claim": false,
+          "status": "receiver_runtime_decode_proven_source_forward_missing"
+        },
+        "schema": "snerv_official_primitive_source_replay_status.v1",
+        "score_claim": false,
+        "source_bytes": 12605,
+        "source_markers": [
+          "OfficialHfrHeads",
+          "OfficialHfrConvBlock",
+          "conv2d_nchw_mlx",
+          "SNERV_OFFICIAL_HFR_CONVBLOCK_NUMPY_PROOF"
+        ],
+        "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
+        "source_present": true,
+        "source_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
+        "source_sha256": "7e28130c6c3987144c797ba2d591e5be33f1f51da9b927ce1d802bb11fa16b3f",
+        "status": "primitive_numeric_source_fixture_replay_proven_full_stack_missing",
+        "test_bytes": 11122,
+        "test_markers": [
+          "test_official_hfr_numpy_matches_torch_convblock",
+          "torch.nn.Conv2d",
+          "test_official_hfr_mlx_default_is_fixed_reference_and_repeatable"
+        ],
+        "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_hfr.py",
+        "test_present": true,
+        "test_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_hfr.py",
+        "test_sha256": "6408a427fc7af48d186c0412752cda0dc60d61e68242f3bc5c09a556f55892c0"
+      },
+      {
+        "authority": "false_authority_primitive_replay_not_full_receiver_export",
+        "component_id": "tub",
+        "feature_id": "official_temporal_extension_snerv_t",
+        "frontier_score_claim": false,
+        "full_stack_source_forward_replay_proven": false,
+        "missing_source_markers": [],
+        "missing_test_markers": [],
+        "numeric_source_replay_test_present": true,
+        "primitive_numeric_graph_replay_proven": true,
+        "primitive_numeric_source_fixture_replay_proven": true,
+        "primitive_source_forward_replay_proven": false,
+        "primitive_source_replay_proven": false,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_primitive_replay_proven": true,
+        "receiver_runtime_decode_row": {
+          "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+          "blockers": [],
+          "component_id": "tub",
+          "feature_id": "official_temporal_extension_snerv_t",
+          "forbidden_receiver_import_markers": [
+            "import torch",
+            "from torch",
+            "load_score_exact_scorers",
+            "tac.scorer",
+            "segmentation_models_pytorch"
+          ],
+          "frontier_score_claim": false,
+          "missing_receiver_archive_runtime_markers": [],
+          "missing_receiver_archive_test_markers": [],
+          "missing_runtime_entrypoint_markers": [],
+          "native_mlx_export_bound": false,
+          "numeric_source_replay_test_present": true,
+          "numeric_test_bytes": 16495,
+          "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_tub.py",
+          "numeric_test_sha256": "d17909b1c20bb6a05dd72136299a3bf98f55d1886f346fdec982bb8c1ea3d1cc",
+          "present_forbidden_receiver_import_markers": [],
+          "present_receiver_archive_forbidden_import_markers": [],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_archive_payload_bound": true,
+          "receiver_archive_payload_decode_present": true,
+          "receiver_archive_runtime_bytes": 136395,
+          "receiver_archive_runtime_markers": [
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+            "encode_official_mfu_hfr_tub_decoder_payload",
+            "decode_official_mfu_hfr_tub_decoder_payload",
+            "execute_official_mfu_hfr_tub_decoder_payload",
+            "class OfficialMfuHfrTubReceiverPayload",
+            "prepare_official_tub_graph_inputs",
+            "def tub_inputs",
+            "receiver_self_consistency_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_receiver_self_consistency_reference",
+            "\"inputs.tub.current\"",
+            "\"inputs.tub.next_frame\""
+          ],
+          "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+          "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+          "receiver_archive_test_bytes": 61491,
+          "receiver_archive_test_markers": [
+            "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+            "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+            "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+          ],
+          "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+          "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+          "receiver_export_bound": true,
+          "receiver_export_self_consistency_verified": true,
+          "receiver_runtime_decode_proven": true,
+          "receiver_source_forward_replay_bound": false,
+          "runtime_entrypoint_markers": [
+            "def prepare_official_tub_graph_inputs",
+            "def official_output2_fusion_shape",
+            "class OfficialTubGraphInputs"
+          ],
+          "runtime_entrypoints_present": true,
+          "runtime_module_bytes": 25440,
+          "runtime_module_import_safe": true,
+          "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+          "runtime_module_sha256": "4273b7305389f46f146bb0aa6936749f5f98b3482448be610edb0e7403601514",
+          "schema": "snerv_official_receiver_runtime_decode_component.v1",
+          "score_claim": false,
+          "status": "receiver_runtime_decode_proven_source_forward_missing"
+        },
+        "schema": "snerv_official_primitive_source_replay_status.v1",
+        "score_claim": false,
+        "source_bytes": 25440,
+        "source_markers": [
+          "prepare_official_tub_graph_inputs",
+          "official_output2_fusion_shape",
+          "OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT"
+        ],
+        "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+        "source_present": true,
+        "source_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+        "source_sha256": "4273b7305389f46f146bb0aa6936749f5f98b3482448be610edb0e7403601514",
+        "status": "primitive_numeric_source_fixture_replay_proven_full_stack_missing",
+        "test_bytes": 16495,
+        "test_markers": [
+          "test_official_snerv_t_tub_source_contract_is_pinned",
+          "test_official_tub_graph_inputs_match_haar_lowpass_contract",
+          "test_dwt1d_pair_reconstructs_current_and_previous_normalized_lf"
+        ],
+        "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_tub.py",
+        "test_present": true,
+        "test_rel_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_tub.py",
+        "test_sha256": "d17909b1c20bb6a05dd72136299a3bf98f55d1886f346fdec982bb8c1ea3d1cc"
+      }
+    ],
+    "frontier_score_claim": false,
+    "full_stack_source_forward_replay_proven": false,
+    "native_mlx_export_bound": true,
+    "native_mlx_train_export_contract": {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "missing_renderer_markers": [],
+      "missing_source_markers": [],
+      "missing_test_markers": [],
+      "native_mlx_export_bound": true,
+      "native_mlx_train_renderer_bound": true,
+      "positive_train_export_test_bound": true,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "renderer_file": {
+        "bytes": 47123,
+        "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/mlx_renderer.py",
+        "sha256": "2734a5df9771cb22fa6aea89815166bb229f3aa3d852192b98dee325de087a4b"
+      },
+      "renderer_path": "src/tac/substrates/snerv_inverse_steg_carrier/mlx_renderer.py",
+      "schema": "snerv_official_mfu_hfr_tub_native_mlx_train_export_contract.v1",
+      "score_claim": false,
+      "source_file": {
+        "bytes": 417610,
+        "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+        "sha256": "d0b6f367edc3de1c3a5ca251faed798e107d4d27683fd6e90286e67c60ffa973"
+      },
+      "source_forward_replay_authority": false,
+      "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+      "test_file": {
+        "bytes": 242522,
+        "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py",
+        "sha256": "973f187f3f07d13484ec44cfa27e44b68797b554c17959d734cec979ac69eccb"
+      },
+      "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py",
+      "trained_receiver_payload_export_bound": true
+    },
+    "official_export_bound": false,
+    "official_export_bound_semantics": "requires_receiver_export_native_mlx_export_and_source_forward_replay",
+    "official_receiver_runtime_decode_contract": {
+      "all_numeric_graph_replay_tests_hashed": true,
+      "all_numeric_source_replay_tests_hashed": true,
+      "all_runtime_modules_import_safe": true,
+      "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+      "blockers": [
+        "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+      ],
+      "component_rows": [
+        {
+          "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+          "blockers": [],
+          "component_id": "mfu",
+          "feature_id": "official_multi_resolution_fusion_blocks",
+          "forbidden_receiver_import_markers": [
+            "import torch",
+            "from torch",
+            "load_score_exact_scorers",
+            "tac.scorer",
+            "segmentation_models_pytorch"
+          ],
+          "frontier_score_claim": false,
+          "missing_receiver_archive_runtime_markers": [],
+          "missing_receiver_archive_test_markers": [],
+          "missing_runtime_entrypoint_markers": [],
+          "native_mlx_export_bound": false,
+          "numeric_source_replay_test_present": true,
+          "numeric_test_bytes": 20033,
+          "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_mfu.py",
+          "numeric_test_sha256": "8b94eb7dc3980112c3f744106b8916731a26586655c89985b847eaca095e2f85",
+          "present_forbidden_receiver_import_markers": [],
+          "present_receiver_archive_forbidden_import_markers": [],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_archive_payload_bound": true,
+          "receiver_archive_payload_decode_present": true,
+          "receiver_archive_runtime_bytes": 136395,
+          "receiver_archive_runtime_markers": [
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+            "encode_official_mfu_hfr_tub_decoder_payload",
+            "decode_official_mfu_hfr_tub_decoder_payload",
+            "execute_official_mfu_hfr_tub_decoder_payload",
+            "class OfficialMfuHfrTubReceiverPayload",
+            "def build_mfu",
+            "receiver_self_consistency_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_receiver_self_consistency_reference",
+            "OfficialSnervMfu",
+            "\"mfu.upsample_mid.weight\"",
+            "\"inputs.mfu.low\""
+          ],
+          "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+          "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+          "receiver_archive_test_bytes": 61491,
+          "receiver_archive_test_markers": [
+            "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+            "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames",
+            "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+            "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+          ],
+          "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+          "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+          "receiver_export_bound": true,
+          "receiver_export_self_consistency_verified": true,
+          "receiver_runtime_decode_proven": true,
+          "receiver_source_forward_replay_bound": false,
+          "runtime_entrypoint_markers": [
+            "class OfficialSnervMfu",
+            "def forward_mlx",
+            "low: np.ndarray",
+            "class OfficialConvTranspose2dNchw"
+          ],
+          "runtime_entrypoints_present": true,
+          "runtime_module_bytes": 45548,
+          "runtime_module_import_safe": true,
+          "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
+          "runtime_module_sha256": "a4b00cd9e57076046330b5ae47f5e24ad7444b1d5d6a094e0ded239725904412",
+          "schema": "snerv_official_receiver_runtime_decode_component.v1",
+          "score_claim": false,
+          "status": "receiver_runtime_decode_proven_source_forward_missing"
+        },
+        {
+          "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+          "blockers": [],
+          "component_id": "hfr",
+          "feature_id": "official_high_frequency_restoration_heads",
+          "forbidden_receiver_import_markers": [
+            "import torch",
+            "from torch",
+            "load_score_exact_scorers",
+            "tac.scorer",
+            "segmentation_models_pytorch"
+          ],
+          "frontier_score_claim": false,
+          "missing_receiver_archive_runtime_markers": [],
+          "missing_receiver_archive_test_markers": [],
+          "missing_runtime_entrypoint_markers": [],
+          "native_mlx_export_bound": false,
+          "numeric_source_replay_test_present": true,
+          "numeric_test_bytes": 11122,
+          "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_hfr.py",
+          "numeric_test_sha256": "6408a427fc7af48d186c0412752cda0dc60d61e68242f3bc5c09a556f55892c0",
+          "present_forbidden_receiver_import_markers": [],
+          "present_receiver_archive_forbidden_import_markers": [],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_archive_payload_bound": true,
+          "receiver_archive_payload_decode_present": true,
+          "receiver_archive_runtime_bytes": 136395,
+          "receiver_archive_runtime_markers": [
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+            "encode_official_mfu_hfr_tub_decoder_payload",
+            "decode_official_mfu_hfr_tub_decoder_payload",
+            "execute_official_mfu_hfr_tub_decoder_payload",
+            "class OfficialMfuHfrTubReceiverPayload",
+            "def build_hfr_heads",
+            "receiver_self_consistency_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_receiver_self_consistency_reference",
+            "OfficialHfrHeads",
+            "\"hfr.lh.conv1.weight\"",
+            "\"hfr.hh.conv2.bias\""
+          ],
+          "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+          "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+          "receiver_archive_test_bytes": 61491,
+          "receiver_archive_test_markers": [
+            "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+            "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+            "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+          ],
+          "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+          "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+          "receiver_export_bound": true,
+          "receiver_export_self_consistency_verified": true,
+          "receiver_runtime_decode_proven": true,
+          "receiver_source_forward_replay_bound": false,
+          "runtime_entrypoint_markers": [
+            "class OfficialHfrHeads",
+            "def forward(self, pyr_out",
+            "class OfficialHfrConvBlock"
+          ],
+          "runtime_entrypoints_present": true,
+          "runtime_module_bytes": 12605,
+          "runtime_module_import_safe": true,
+          "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
+          "runtime_module_sha256": "7e28130c6c3987144c797ba2d591e5be33f1f51da9b927ce1d802bb11fa16b3f",
+          "schema": "snerv_official_receiver_runtime_decode_component.v1",
+          "score_claim": false,
+          "status": "receiver_runtime_decode_proven_source_forward_missing"
+        },
+        {
+          "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+          "blockers": [],
+          "component_id": "tub",
+          "feature_id": "official_temporal_extension_snerv_t",
+          "forbidden_receiver_import_markers": [
+            "import torch",
+            "from torch",
+            "load_score_exact_scorers",
+            "tac.scorer",
+            "segmentation_models_pytorch"
+          ],
+          "frontier_score_claim": false,
+          "missing_receiver_archive_runtime_markers": [],
+          "missing_receiver_archive_test_markers": [],
+          "missing_runtime_entrypoint_markers": [],
+          "native_mlx_export_bound": false,
+          "numeric_source_replay_test_present": true,
+          "numeric_test_bytes": 16495,
+          "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_tub.py",
+          "numeric_test_sha256": "d17909b1c20bb6a05dd72136299a3bf98f55d1886f346fdec982bb8c1ea3d1cc",
+          "present_forbidden_receiver_import_markers": [],
+          "present_receiver_archive_forbidden_import_markers": [],
+          "promotion_eligible": false,
+          "rank_or_kill_eligible": false,
+          "ready_for_exact_eval_dispatch": false,
+          "receiver_archive_payload_bound": true,
+          "receiver_archive_payload_decode_present": true,
+          "receiver_archive_runtime_bytes": 136395,
+          "receiver_archive_runtime_markers": [
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+            "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+            "encode_official_mfu_hfr_tub_decoder_payload",
+            "decode_official_mfu_hfr_tub_decoder_payload",
+            "execute_official_mfu_hfr_tub_decoder_payload",
+            "class OfficialMfuHfrTubReceiverPayload",
+            "prepare_official_tub_graph_inputs",
+            "def tub_inputs",
+            "receiver_self_consistency_reference",
+            "source_forward_replay_bound_by_export",
+            "_validate_official_receiver_self_consistency_reference",
+            "\"inputs.tub.current\"",
+            "\"inputs.tub.next_frame\""
+          ],
+          "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+          "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+          "receiver_archive_test_bytes": 61491,
+          "receiver_archive_test_markers": [
+            "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+            "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+            "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+            "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+          ],
+          "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+          "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+          "receiver_export_bound": true,
+          "receiver_export_self_consistency_verified": true,
+          "receiver_runtime_decode_proven": true,
+          "receiver_source_forward_replay_bound": false,
+          "runtime_entrypoint_markers": [
+            "def prepare_official_tub_graph_inputs",
+            "def official_output2_fusion_shape",
+            "class OfficialTubGraphInputs"
+          ],
+          "runtime_entrypoints_present": true,
+          "runtime_module_bytes": 25440,
+          "runtime_module_import_safe": true,
+          "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+          "runtime_module_sha256": "4273b7305389f46f146bb0aa6936749f5f98b3482448be610edb0e7403601514",
+          "schema": "snerv_official_receiver_runtime_decode_component.v1",
+          "score_claim": false,
+          "status": "receiver_runtime_decode_proven_source_forward_missing"
+        }
+      ],
+      "frontier_score_claim": false,
+      "native_mlx_export_bound": true,
+      "native_mlx_train_export_contract": {
+        "blockers": [],
+        "frontier_score_claim": false,
+        "missing_renderer_markers": [],
+        "missing_source_markers": [],
+        "missing_test_markers": [],
+        "native_mlx_export_bound": true,
+        "native_mlx_train_renderer_bound": true,
+        "positive_train_export_test_bound": true,
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "renderer_file": {
+          "bytes": 47123,
+          "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/mlx_renderer.py",
+          "sha256": "2734a5df9771cb22fa6aea89815166bb229f3aa3d852192b98dee325de087a4b"
+        },
+        "renderer_path": "src/tac/substrates/snerv_inverse_steg_carrier/mlx_renderer.py",
+        "schema": "snerv_official_mfu_hfr_tub_native_mlx_train_export_contract.v1",
+        "score_claim": false,
+        "source_file": {
+          "bytes": 417610,
+          "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+          "sha256": "d0b6f367edc3de1c3a5ca251faed798e107d4d27683fd6e90286e67c60ffa973"
+        },
+        "source_forward_replay_authority": false,
+        "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+        "test_file": {
+          "bytes": 242522,
+          "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py",
+          "sha256": "973f187f3f07d13484ec44cfa27e44b68797b554c17959d734cec979ac69eccb"
+        },
+        "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py",
+        "trained_receiver_payload_export_bound": true
+      },
+      "official_export_bound": false,
+      "official_export_bound_semantics": "requires_receiver_export_native_mlx_export_and_source_forward_replay",
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "receiver_archive_payload_bound": true,
+      "receiver_export_bound": true,
+      "receiver_export_self_consistency_verified": true,
+      "receiver_native_export_bound": true,
+      "receiver_runtime_decode_proven": true,
+      "receiver_source_forward_replay_bound": false,
+      "schema": "snerv_official_mfu_hfr_tub_receiver_runtime_decode_contract.v1",
+      "score_claim": false
+    },
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_archive_payload_bound": true,
+    "receiver_export_bound": true,
+    "receiver_export_self_consistency_verified": true,
+    "receiver_native_export_bound": true,
+    "receiver_source_forward_replay_bound": false,
+    "schema": "snerv_official_mfu_hfr_tub_primitive_replay_binding.v1",
+    "score_claim": false
+  },
+  "official_mfu_hfr_weight_mapping_source_fixture_proven": true,
+  "official_repo": {
+    "expected_head_sha": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+    "head_sha": "0844a08f9591eea9625f8b961ed91d08030e06d1",
+    "repo_url": "https://github.com/qwertja/SNeRV",
+    "repo_url_git": "https://github.com/qwertja/SNeRV.git",
+    "root": "/Volumes/VertigoDataTier/pact/experiments/results/oss_nerv_source_audit_20260602T113720Z/repos/SNeRV"
+  },
+  "official_trained_checkpoint_loaded": false,
+  "official_weight_manifest": {
+    "blockers": [
+      "snerv_official_trained_checkpoint_state_dict_not_loaded",
+      "snerv_official_tub_encoder_decoder_weights_not_loaded"
+    ],
+    "official_mfu_hfr_source_fixture_weight_mapping_proven": true,
+    "official_trained_checkpoint_loaded": false,
+    "official_tub_temporal_encoder_weight_mapping_proven": false,
+    "schema": "snerv_official_state_dict_mapping_manifest.v1",
+    "state_dict_key_count": 28,
+    "state_dict_kind": "synthetic_dyadic_source_fixture_not_official_checkpoint",
+    "state_dict_sha256": "530f7ab3c84efbc26e32c586858f46d05e53f04f4e3ea248d46aa1d8ac594b78",
+    "weight_entries": [
+      {
+        "dtype": "float64",
+        "key": "decoder.10.main.0.bias",
+        "receiver_key": "mfu.rb_high.input_conv.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.10.main.0.weight",
+        "receiver_key": "mfu.rb_high.input_conv.weight",
+        "sha256": "c193f661ae9ce140933ce3f1cd53f817ee57ead5259f47158051c3ec9a9abfd5",
+        "shape": [
+          3,
+          7,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.10.main.1.0.conv1.bias",
+        "receiver_key": "mfu.rb_high.residual_blocks.0.conv1.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.10.main.1.0.conv1.weight",
+        "receiver_key": "mfu.rb_high.residual_blocks.0.conv1.weight",
+        "sha256": "7e71fdd5fe649488941a07c6d0a9458b28cdf4def988eed5cf1f59c63703da47",
+        "shape": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.10.main.1.0.conv2.bias",
+        "receiver_key": "mfu.rb_high.residual_blocks.0.conv2.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.10.main.1.0.conv2.weight",
+        "receiver_key": "mfu.rb_high.residual_blocks.0.conv2.weight",
+        "sha256": "7e71fdd5fe649488941a07c6d0a9458b28cdf4def988eed5cf1f59c63703da47",
+        "shape": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.4.conv1.bias",
+        "receiver_key": "hfr.lh.conv1.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.4.conv1.weight",
+        "receiver_key": "hfr.lh.conv1.weight",
+        "sha256": "1332df685c45a61a0ac008a6a653295b8c5655361c1d34b6304b22ec40235fb8",
+        "shape": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.4.conv2.bias",
+        "receiver_key": "hfr.lh.conv2.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.4.conv2.weight",
+        "receiver_key": "hfr.lh.conv2.weight",
+        "sha256": "7e71fdd5fe649488941a07c6d0a9458b28cdf4def988eed5cf1f59c63703da47",
+        "shape": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.5.conv1.bias",
+        "receiver_key": "hfr.hl.conv1.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.5.conv1.weight",
+        "receiver_key": "hfr.hl.conv1.weight",
+        "sha256": "1332df685c45a61a0ac008a6a653295b8c5655361c1d34b6304b22ec40235fb8",
+        "shape": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.5.conv2.bias",
+        "receiver_key": "hfr.hl.conv2.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.5.conv2.weight",
+        "receiver_key": "hfr.hl.conv2.weight",
+        "sha256": "7d4f1aeb19618fa5318d7b784ea951e2defb64d6e91c790a7bab0fce60a55efc",
+        "shape": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.6.conv1.bias",
+        "receiver_key": "hfr.hh.conv1.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.6.conv1.weight",
+        "receiver_key": "hfr.hh.conv1.weight",
+        "sha256": "1332df685c45a61a0ac008a6a653295b8c5655361c1d34b6304b22ec40235fb8",
+        "shape": [
+          3,
+          3,
+          1,
+          1
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.6.conv2.bias",
+        "receiver_key": "hfr.hh.conv2.bias",
+        "sha256": "9d908ecfb6b256def8b49a7c504e6c889c4b0e41fe6ce3e01863dd7b61a20aa0",
+        "shape": [
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.6.conv2.weight",
+        "receiver_key": "hfr.hh.conv2.weight",
+        "sha256": "6b71cf9ba7f9e1fba78dbff296e884c05e82a09e1e5797282eef844940896afb",
+        "shape": [
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.7.bias",
+        "receiver_key": "mfu.upsample_mid.bias",
+        "sha256": "17b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1",
+        "shape": [
+          6
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.7.weight",
+        "receiver_key": "mfu.upsample_mid.weight",
+        "sha256": "e023e7efa600d895ac34a4837ec671dcec6759479e23baf2ef4ba6825e44cb8b",
+        "shape": [
+          6,
+          6,
+          2,
+          2
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.8.main.0.bias",
+        "receiver_key": "mfu.rb_mid.input_conv.bias",
+        "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "shape": [
+          4
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.8.main.0.weight",
+        "receiver_key": "mfu.rb_mid.input_conv.weight",
+        "sha256": "8d59ede698f59ce80841a9fd6ca656b7558a4f2d1d2d05c2e9602bafd5af15dc",
+        "shape": [
+          4,
+          10,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.8.main.1.0.conv1.bias",
+        "receiver_key": "mfu.rb_mid.residual_blocks.0.conv1.bias",
+        "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "shape": [
+          4
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.8.main.1.0.conv1.weight",
+        "receiver_key": "mfu.rb_mid.residual_blocks.0.conv1.weight",
+        "sha256": "4c94b8975a839d1a839bde8304771f1ea6613cf55649b60181736e20f4aa4484",
+        "shape": [
+          4,
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.8.main.1.0.conv2.bias",
+        "receiver_key": "mfu.rb_mid.residual_blocks.0.conv2.bias",
+        "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "shape": [
+          4
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.8.main.1.0.conv2.weight",
+        "receiver_key": "mfu.rb_mid.residual_blocks.0.conv2.weight",
+        "sha256": "4c94b8975a839d1a839bde8304771f1ea6613cf55649b60181736e20f4aa4484",
+        "shape": [
+          4,
+          4,
+          3,
+          3
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.9.bias",
+        "receiver_key": "mfu.upsample_high.bias",
+        "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925",
+        "shape": [
+          4
+        ]
+      },
+      {
+        "dtype": "float64",
+        "key": "decoder.9.weight",
+        "receiver_key": "mfu.upsample_high.weight",
+        "sha256": "024a9e28f021a52fa064464f4adc5d30b1f3926d0de48e0277ca122f66adbe85",
+        "shape": [
+          4,
+          4,
+          2,
+          2
+        ]
+      }
+    ],
+    "weight_key_count": 28
+  },
+  "production_hardened_claim": false,
+  "promotion_eligible": false,
+  "rank_or_kill_eligible": false,
+  "ready_for_exact_eval_dispatch": false,
+  "receiver_runtime_decode": {
+    "all_numeric_graph_replay_tests_hashed": true,
+    "all_numeric_source_replay_tests_hashed": true,
+    "all_runtime_modules_import_safe": true,
+    "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+    "blockers": [
+      "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
+    ],
+    "component_rows": [
+      {
+        "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+        "blockers": [],
+        "component_id": "mfu",
+        "feature_id": "official_multi_resolution_fusion_blocks",
+        "forbidden_receiver_import_markers": [
+          "import torch",
+          "from torch",
+          "load_score_exact_scorers",
+          "tac.scorer",
+          "segmentation_models_pytorch"
+        ],
+        "frontier_score_claim": false,
+        "missing_receiver_archive_runtime_markers": [],
+        "missing_receiver_archive_test_markers": [],
+        "missing_runtime_entrypoint_markers": [],
+        "native_mlx_export_bound": false,
+        "numeric_source_replay_test_present": true,
+        "numeric_test_bytes": 20033,
+        "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_mfu.py",
+        "numeric_test_sha256": "8b94eb7dc3980112c3f744106b8916731a26586655c89985b847eaca095e2f85",
+        "present_forbidden_receiver_import_markers": [],
+        "present_receiver_archive_forbidden_import_markers": [],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_archive_payload_bound": true,
+        "receiver_archive_payload_decode_present": true,
+        "receiver_archive_runtime_bytes": 136395,
+        "receiver_archive_runtime_markers": [
+          "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+          "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+          "encode_official_mfu_hfr_tub_decoder_payload",
+          "decode_official_mfu_hfr_tub_decoder_payload",
+          "execute_official_mfu_hfr_tub_decoder_payload",
+          "class OfficialMfuHfrTubReceiverPayload",
+          "def build_mfu",
+          "receiver_self_consistency_reference",
+          "source_forward_replay_bound_by_export",
+          "_validate_official_receiver_self_consistency_reference",
+          "OfficialSnervMfu",
+          "\"mfu.upsample_mid.weight\"",
+          "\"inputs.mfu.low\""
+        ],
+        "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+        "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+        "receiver_archive_test_bytes": 61491,
+        "receiver_archive_test_markers": [
+          "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+          "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+          "test_official_mfu_hfr_tub_receiver_payload_decodes_batched_frames",
+          "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+          "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+        ],
+        "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+        "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+        "receiver_export_bound": true,
+        "receiver_export_self_consistency_verified": true,
+        "receiver_runtime_decode_proven": true,
+        "receiver_source_forward_replay_bound": false,
+        "runtime_entrypoint_markers": [
+          "class OfficialSnervMfu",
+          "def forward_mlx",
+          "low: np.ndarray",
+          "class OfficialConvTranspose2dNchw"
+        ],
+        "runtime_entrypoints_present": true,
+        "runtime_module_bytes": 45548,
+        "runtime_module_import_safe": true,
+        "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_mfu.py",
+        "runtime_module_sha256": "a4b00cd9e57076046330b5ae47f5e24ad7444b1d5d6a094e0ded239725904412",
+        "schema": "snerv_official_receiver_runtime_decode_component.v1",
+        "score_claim": false,
+        "status": "receiver_runtime_decode_proven_source_forward_missing"
+      },
+      {
+        "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+        "blockers": [],
+        "component_id": "hfr",
+        "feature_id": "official_high_frequency_restoration_heads",
+        "forbidden_receiver_import_markers": [
+          "import torch",
+          "from torch",
+          "load_score_exact_scorers",
+          "tac.scorer",
+          "segmentation_models_pytorch"
+        ],
+        "frontier_score_claim": false,
+        "missing_receiver_archive_runtime_markers": [],
+        "missing_receiver_archive_test_markers": [],
+        "missing_runtime_entrypoint_markers": [],
+        "native_mlx_export_bound": false,
+        "numeric_source_replay_test_present": true,
+        "numeric_test_bytes": 11122,
+        "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_hfr.py",
+        "numeric_test_sha256": "6408a427fc7af48d186c0412752cda0dc60d61e68242f3bc5c09a556f55892c0",
+        "present_forbidden_receiver_import_markers": [],
+        "present_receiver_archive_forbidden_import_markers": [],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_archive_payload_bound": true,
+        "receiver_archive_payload_decode_present": true,
+        "receiver_archive_runtime_bytes": 136395,
+        "receiver_archive_runtime_markers": [
+          "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+          "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+          "encode_official_mfu_hfr_tub_decoder_payload",
+          "decode_official_mfu_hfr_tub_decoder_payload",
+          "execute_official_mfu_hfr_tub_decoder_payload",
+          "class OfficialMfuHfrTubReceiverPayload",
+          "def build_hfr_heads",
+          "receiver_self_consistency_reference",
+          "source_forward_replay_bound_by_export",
+          "_validate_official_receiver_self_consistency_reference",
+          "OfficialHfrHeads",
+          "\"hfr.lh.conv1.weight\"",
+          "\"hfr.hh.conv2.bias\""
+        ],
+        "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+        "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+        "receiver_archive_test_bytes": 61491,
+        "receiver_archive_test_markers": [
+          "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+          "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+          "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+          "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+        ],
+        "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+        "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+        "receiver_export_bound": true,
+        "receiver_export_self_consistency_verified": true,
+        "receiver_runtime_decode_proven": true,
+        "receiver_source_forward_replay_bound": false,
+        "runtime_entrypoint_markers": [
+          "class OfficialHfrHeads",
+          "def forward(self, pyr_out",
+          "class OfficialHfrConvBlock"
+        ],
+        "runtime_entrypoints_present": true,
+        "runtime_module_bytes": 12605,
+        "runtime_module_import_safe": true,
+        "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_hfr.py",
+        "runtime_module_sha256": "7e28130c6c3987144c797ba2d591e5be33f1f51da9b927ce1d802bb11fa16b3f",
+        "schema": "snerv_official_receiver_runtime_decode_component.v1",
+        "score_claim": false,
+        "status": "receiver_runtime_decode_proven_source_forward_missing"
+      },
+      {
+        "authority": "false_authority_source_forward_replay_not_native_mlx_or_scorer",
+        "blockers": [],
+        "component_id": "tub",
+        "feature_id": "official_temporal_extension_snerv_t",
+        "forbidden_receiver_import_markers": [
+          "import torch",
+          "from torch",
+          "load_score_exact_scorers",
+          "tac.scorer",
+          "segmentation_models_pytorch"
+        ],
+        "frontier_score_claim": false,
+        "missing_receiver_archive_runtime_markers": [],
+        "missing_receiver_archive_test_markers": [],
+        "missing_runtime_entrypoint_markers": [],
+        "native_mlx_export_bound": false,
+        "numeric_source_replay_test_present": true,
+        "numeric_test_bytes": 16495,
+        "numeric_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_official_tub.py",
+        "numeric_test_sha256": "d17909b1c20bb6a05dd72136299a3bf98f55d1886f346fdec982bb8c1ea3d1cc",
+        "present_forbidden_receiver_import_markers": [],
+        "present_receiver_archive_forbidden_import_markers": [],
+        "promotion_eligible": false,
+        "rank_or_kill_eligible": false,
+        "ready_for_exact_eval_dispatch": false,
+        "receiver_archive_payload_bound": true,
+        "receiver_archive_payload_decode_present": true,
+        "receiver_archive_runtime_bytes": 136395,
+        "receiver_archive_runtime_markers": [
+          "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA",
+          "DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SELF_CONSISTENCY_SCHEMA",
+          "encode_official_mfu_hfr_tub_decoder_payload",
+          "decode_official_mfu_hfr_tub_decoder_payload",
+          "execute_official_mfu_hfr_tub_decoder_payload",
+          "class OfficialMfuHfrTubReceiverPayload",
+          "prepare_official_tub_graph_inputs",
+          "def tub_inputs",
+          "receiver_self_consistency_reference",
+          "source_forward_replay_bound_by_export",
+          "_validate_official_receiver_self_consistency_reference",
+          "\"inputs.tub.current\"",
+          "\"inputs.tub.next_frame\""
+        ],
+        "receiver_archive_runtime_path": "src/tac/substrates/snerv_inverse_steg_carrier/archive.py",
+        "receiver_archive_runtime_sha256": "217f15617803b259f19d8c55de533eaff8fb425e2172dd1e14e42dbea8720d0a",
+        "receiver_archive_test_bytes": 61491,
+        "receiver_archive_test_markers": [
+          "test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives",
+          "test_archive_can_carry_official_mfu_hfr_tub_receiver_payload",
+          "test_official_mfu_hfr_tub_self_consistency_reference_is_fail_closed",
+          "test_official_mfu_hfr_tub_payload_bytes_change_receiver_output"
+        ],
+        "receiver_archive_test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_archive.py",
+        "receiver_archive_test_sha256": "d242fc804e10fb226d9dce0d1214d646f58752dc0f71f23e82ee1e29db213dec",
+        "receiver_export_bound": true,
+        "receiver_export_self_consistency_verified": true,
+        "receiver_runtime_decode_proven": true,
+        "receiver_source_forward_replay_bound": false,
+        "runtime_entrypoint_markers": [
+          "def prepare_official_tub_graph_inputs",
+          "def official_output2_fusion_shape",
+          "class OfficialTubGraphInputs"
+        ],
+        "runtime_entrypoints_present": true,
+        "runtime_module_bytes": 25440,
+        "runtime_module_import_safe": true,
+        "runtime_module_path": "src/tac/substrates/snerv_inverse_steg_carrier/official_tub.py",
+        "runtime_module_sha256": "4273b7305389f46f146bb0aa6936749f5f98b3482448be610edb0e7403601514",
+        "schema": "snerv_official_receiver_runtime_decode_component.v1",
+        "score_claim": false,
+        "status": "receiver_runtime_decode_proven_source_forward_missing"
+      }
+    ],
+    "frontier_score_claim": false,
+    "native_mlx_export_bound": true,
+    "native_mlx_train_export_contract": {
+      "blockers": [],
+      "frontier_score_claim": false,
+      "missing_renderer_markers": [],
+      "missing_source_markers": [],
+      "missing_test_markers": [],
+      "native_mlx_export_bound": true,
+      "native_mlx_train_renderer_bound": true,
+      "positive_train_export_test_bound": true,
+      "promotion_eligible": false,
+      "rank_or_kill_eligible": false,
+      "ready_for_exact_eval_dispatch": false,
+      "renderer_file": {
+        "bytes": 47123,
+        "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/mlx_renderer.py",
+        "sha256": "2734a5df9771cb22fa6aea89815166bb229f3aa3d852192b98dee325de087a4b"
+      },
+      "renderer_path": "src/tac/substrates/snerv_inverse_steg_carrier/mlx_renderer.py",
+      "schema": "snerv_official_mfu_hfr_tub_native_mlx_train_export_contract.v1",
+      "score_claim": false,
+      "source_file": {
+        "bytes": 417610,
+        "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+        "sha256": "d0b6f367edc3de1c3a5ca251faed798e107d4d27683fd6e90286e67c60ffa973"
+      },
+      "source_forward_replay_authority": false,
+      "source_path": "src/tac/substrates/snerv_inverse_steg_carrier/mlx_native_train_export.py",
+      "test_file": {
+        "bytes": 242522,
+        "path": "/Users/adpena/Projects/pact/src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py",
+        "sha256": "973f187f3f07d13484ec44cfa27e44b68797b554c17959d734cec979ac69eccb"
+      },
+      "test_path": "src/tac/substrates/snerv_inverse_steg_carrier/tests/test_mlx_native_train_export.py",
+      "trained_receiver_payload_export_bound": true
+    },
+    "official_export_bound": false,
+    "official_export_bound_semantics": "requires_receiver_export_native_mlx_export_and_source_forward_replay",
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "receiver_archive_payload_bound": true,
+    "receiver_export_bound": true,
+    "receiver_export_self_consistency_verified": true,
+    "receiver_native_export_bound": true,
+    "receiver_runtime_decode_proven": true,
+    "receiver_source_forward_replay_bound": false,
+    "schema": "snerv_official_mfu_hfr_tub_receiver_runtime_decode_contract.v1",
+    "score_claim": false
+  },
+  "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+  "score_claim": false,
+  "source_faithful_stack_claim": false,
+  "source_forward_replay": {
+    "backend": "official_torch_vs_portable",
+    "blockers": [
+      "snerv_official_trained_checkpoint_state_dict_not_loaded",
+      "snerv_official_snerv_t_full_tub_source_forward_replay_missing"
+    ],
+    "full_stack_source_forward_parity_proven": false,
+    "input_bundle_sha256": "429cdc5902af190aa02afed2d34498ec55bf4987d5b3fa057c0cfd19b32b3de0",
+    "max_abs_error": 0.0,
+    "mfu_hfr_source_fixture_forward_parity_proven": true,
+    "official_output_sha256": "d05b58c1d65996179a2533d6d03f0e9ae0f9bb8195b6d7c0a018e75af1475382",
+    "official_output_shape": [
+      1,
+      3,
+      3,
+      8,
+      12
+    ],
+    "portable_output_sha256": "d05b58c1d65996179a2533d6d03f0e9ae0f9bb8195b6d7c0a018e75af1475382",
+    "portable_output_shape": [
+      1,
+      3,
+      3,
+      8,
+      12
+    ],
+    "production_hardened_claim": false,
+    "promotion_eligible": false,
+    "rank_or_kill_eligible": false,
+    "ready_for_exact_eval_dispatch": false,
+    "replay_ran": true,
+    "schema": "snerv_official_mfu_hfr_tub_source_forward_harness.v1",
+    "score_claim": false,
+    "source_faithful_stack_claim": false
+  }
+}

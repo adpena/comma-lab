@@ -140,6 +140,11 @@ def build_hinerv_short_scorer_smoke_readiness_report(
         if isinstance(post_export_quality, Mapping)
         else None
     )
+    mlx_scorer_response_probe = (
+        post_export_quality.get("mlx_scorer_response_probe")
+        if isinstance(post_export_quality, Mapping)
+        else None
+    )
     if post_export_quality is None:
         add_blocker("hi_nerv_short_smoke_receiver_cache_quality_gate_not_run")
     else:
@@ -160,6 +165,15 @@ def build_hinerv_short_scorer_smoke_readiness_report(
             elif receiver_candidate_occupied < min_occupied:
                 add_blocker(
                     "hi_nerv_short_smoke_receiver_cache_segnet_argmax_class_occupancy_collapsed"
+                )
+        if bool(post_export_quality.get("mlx_scorer_response_probe_required")):
+            if not isinstance(mlx_scorer_response_probe, Mapping):
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_mlx_scorer_response_probe_missing"
+                )
+            elif not bool(mlx_scorer_response_probe.get("fit_gate_passed")):
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_mlx_scorer_response_probe_failed"
                 )
 
     ready = not actionable_blockers
@@ -262,6 +276,27 @@ def receiver_cache_quality_manifest_summary(
         "quality_gate_path": report.get("quality_gate_path"),
         "quality_gate_verdict": gate.get("verdict") if isinstance(gate, Mapping) else None,
         "quality_gate_passed": bool(report.get("quality_gate_passed")),
+        "mlx_scorer_response_probe_path": report.get(
+            "mlx_scorer_response_probe_path"
+        ),
+        "mlx_scorer_response_probe_required": bool(
+            report.get("mlx_scorer_response_probe_required")
+        ),
+        "mlx_scorer_response_probe_passed": (
+            bool(report.get("mlx_scorer_response_probe", {}).get("fit_gate_passed"))
+            if isinstance(report.get("mlx_scorer_response_probe"), Mapping)
+            else None
+        ),
+        "mlx_scorer_response_avg_posenet_dist": (
+            report.get("mlx_scorer_response_probe", {}).get("avg_posenet_dist")
+            if isinstance(report.get("mlx_scorer_response_probe"), Mapping)
+            else None
+        ),
+        "mlx_scorer_response_avg_segnet_dist": (
+            report.get("mlx_scorer_response_probe", {}).get("avg_segnet_dist")
+            if isinstance(report.get("mlx_scorer_response_probe"), Mapping)
+            else None
+        ),
         "candidate_segnet_last_rgb_stats": (
             gate_stats.get("candidate_segnet_last_rgb")
             if isinstance(gate_stats, Mapping)

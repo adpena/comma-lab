@@ -51,6 +51,14 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["launchable_local_row_count"] == 2
     assert report["snerv_lf_over_ceiling_reroute_queue"]["schema"] == ("snerv_lf_over_ceiling_reroute_queue.v1")
     assert report["snerv_lf_over_ceiling_reroute_queue_row_count"] == 1
+    assert report["snerv_lf_hf_replacement_queue"]["schema"] == ("snerv_lf_hf_replacement_queue.v1")
+    assert report["snerv_lf_hf_replacement_queue_row_count"] > 0
+    assert report["snerv_lf_hf_replacement_queue"]["score_claim"] is False
+    assert report["snerv_lf_hf_replacement_queue"]["ready_for_exact_eval_dispatch"] is False
+    assert (
+        "snerv_lf_hf_measured_lf_payload_report_missing"
+        in report["snerv_lf_hf_replacement_queue"]["blockers"]
+    )
     reroute_row = report["snerv_lf_over_ceiling_reroute_queue"]["queue_rows"][0]
     assert reroute_row["work_order_type"] == "lf_reroute_blocker"
     assert "snerv_measured_lf_payload_report_missing" in reroute_row["blockers"]
@@ -5007,6 +5015,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     out_md = tmp_path / "campaign.md"
     out_queue = tmp_path / "campaign_queue.json"
     out_snerv_lf_reroute_queue = tmp_path / "snerv_lf_reroute_queue.json"
+    out_snerv_lf_hf_replacement_queue = tmp_path / "snerv_lf_hf_replacement_queue.json"
     feedback_jsonl = tmp_path / "feedback.jsonl"
     waterfill_bundle = tmp_path / "hinerv_archive_ladder_waterfill.json"
     archive_section_telemetry = tmp_path / "hi_nerv_archive_section_telemetry.json"
@@ -5106,6 +5115,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(out_queue),
             "--output-snerv-lf-reroute-queue",
             str(out_snerv_lf_reroute_queue),
+            "--output-snerv-lf-hf-replacement-queue",
+            str(out_snerv_lf_hf_replacement_queue),
         ]
     )
 
@@ -5137,12 +5148,17 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert "partial_pair_byte_feedback_only" in snerv_row["blockers"]
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert payload["snerv_lf_over_ceiling_reroute_queue"]["schema"] == ("snerv_lf_over_ceiling_reroute_queue.v1")
+    assert payload["snerv_lf_hf_replacement_queue"]["schema"] == ("snerv_lf_hf_replacement_queue.v1")
+    assert payload["snerv_lf_hf_replacement_queue_row_count"] > 0
     assert payload["experiment_queue_id"] == (f"nerv_long_training_campaign_{out_json.stem}.v1")
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue == payload["experiment_queue"]
     reroute_queue = json.loads(out_snerv_lf_reroute_queue.read_text(encoding="utf-8"))
     assert reroute_queue == payload["snerv_lf_over_ceiling_reroute_queue"]
     assert reroute_queue["queue_kind"] == "planner_queue_not_training_queue"
+    lf_hf_queue = json.loads(out_snerv_lf_hf_replacement_queue.read_text(encoding="utf-8"))
+    assert lf_hf_queue == payload["snerv_lf_hf_replacement_queue"]
+    assert lf_hf_queue["queue_kind"] == "planner_queue_not_training_queue"
     assert queue["experiments"][0]["steps"][0]["command"] == payload["campaign_rows"][0]["command_argv"]
     assert queue["queue_id"] == f"nerv_long_training_campaign_{out_json.stem}.v1"
     assert queue["experiments"][0]["steps"][0]["postconditions"]
@@ -5190,6 +5206,10 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(out_snerv_lf_reroute_queue),
             "--expected-output-snerv-lf-reroute-queue-sha256",
             _sha256(out_snerv_lf_reroute_queue),
+            "--output-snerv-lf-hf-replacement-queue",
+            str(out_snerv_lf_hf_replacement_queue),
+            "--expected-output-snerv-lf-hf-replacement-queue-sha256",
+            _sha256(out_snerv_lf_hf_replacement_queue),
         ]
     )
 

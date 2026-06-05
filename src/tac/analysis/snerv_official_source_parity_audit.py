@@ -968,24 +968,46 @@ def _component_state_rows(
         local_source_forward_markers_present = bool(
             local_source_forward_scan["all_markers_present"]
         )
+        artifact_component = artifact_component_rows.get(component_id, {})
+        artifact_component_present = bool(artifact_component)
+        artifact_component_proven = bool(
+            artifact_component.get("source_forward_parity_proven") is True
+        )
+        artifact_component_falsified = bool(
+            artifact_component.get("source_forward_parity_falsified") is True
+        )
+        artifact_component_blockers = [
+            str(blocker) for blocker in artifact_component.get("blockers") or ()
+        ]
         source_forward = bool(
             official_source_markers_present
             and receiver_safe
-            and local_source_forward_markers_present
-            and parity_marker_present
-            and artifact_passed
+            and (
+                artifact_component_proven
+                or (
+                    local_source_forward_markers_present
+                    and parity_marker_present
+                    and artifact_passed
+                )
+            )
         )
-        artifact_component = artifact_component_rows.get(component_id, {})
         source_forward_falsified = bool(
-            artifact_component.get("source_forward_parity_falsified")
+            artifact_component_falsified
             or (
+                not artifact_component_present
+                and
                 official_source_markers_present
                 and receiver_safe
                 and not local_source_forward_markers_present
             )
         )
         if source_forward:
-            classification = "official_source_forward_parity_proven"
+            classification = str(
+                artifact_component.get("classification")
+                or "official_source_forward_parity_proven"
+            )
+        elif artifact_component_present and artifact_component.get("classification"):
+            classification = str(artifact_component.get("classification"))
         elif source_forward_falsified:
             classification = str(spec["classification"])
         elif receiver_safe:
@@ -993,7 +1015,9 @@ def _component_state_rows(
         else:
             classification = "missing_or_partial"
         artifact_blocker = ""
-        if not artifact_passed:
+        if artifact_component_present and artifact_component_proven:
+            artifact_blocker = ""
+        elif not artifact_component_present and not artifact_passed:
             artifact_blocker = (
                 "snerv_official_forward_parity_artifact_falsifies_parity"
                 if artifact_falsified
@@ -1018,12 +1042,15 @@ def _component_state_rows(
                 ),
                 (
                     f"snerv_{component_id}_local_source_forward_markers_missing"
-                    if not local_source_forward_markers_present
+                    if (
+                        not local_source_forward_markers_present
+                        and not artifact_component_proven
+                    )
                     else ""
                 ),
                 (
                     "snerv_official_mfu_hfr_tub_parity_marker_missing"
-                    if not parity_marker_present
+                    if not parity_marker_present and not artifact_component_proven
                     else ""
                 ),
                 (
@@ -1032,6 +1059,7 @@ def _component_state_rows(
                     else ""
                 ),
                 "" if (source_forward or not source_forward_falsified) else str(spec["blocker"]),
+                *artifact_component_blockers,
             ]
         )
         rows.append(
@@ -1053,6 +1081,14 @@ def _component_state_rows(
             "primitive_parity_marker_rows": primitive_parity_scan["marker_rows"],
             "local_parity_marker_present": parity_marker_present,
             "forward_parity_artifact_passed": artifact_passed,
+            "forward_parity_artifact_component_present": artifact_component_present,
+            "forward_parity_artifact_component_proven": artifact_component_proven,
+            "forward_parity_artifact_component_falsified": artifact_component_falsified,
+            "forward_parity_artifact_component_max_abs_error": (
+                artifact_component.get("max_abs_error")
+                if artifact_component_present
+                else None
+            ),
             "source_forward_parity_proven": source_forward,
             "source_forward_parity_falsified": source_forward_falsified,
             "classification": classification,

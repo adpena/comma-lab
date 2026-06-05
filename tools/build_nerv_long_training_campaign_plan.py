@@ -44,6 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output-md", type=Path)
     parser.add_argument("--output-queue", type=Path)
     parser.add_argument("--output-snerv-lf-reroute-queue", type=Path)
+    parser.add_argument("--output-snerv-lf-hf-replacement-queue", type=Path)
     parser.add_argument(
         "--experiment-queue-id",
         help=(
@@ -56,6 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-output-md-sha256")
     parser.add_argument("--expected-output-queue-sha256")
     parser.add_argument("--expected-output-snerv-lf-reroute-queue-sha256")
+    parser.add_argument("--expected-output-snerv-lf-hf-replacement-queue-sha256")
     parser.add_argument("--optimizer-kind", action="append", default=None)
     parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
     parser.add_argument("--batch-pairs", type=int, default=DEFAULT_BATCH_PAIRS)
@@ -355,6 +357,18 @@ def main(argv: list[str] | None = None) -> int:
             allow_overwrite=args.expected_output_snerv_lf_reroute_queue_sha256 is not None,
             expected_existing_sha256=args.expected_output_snerv_lf_reroute_queue_sha256,
         )
+    if args.output_snerv_lf_hf_replacement_queue:
+        write_json_artifact(
+            args.output_snerv_lf_hf_replacement_queue,
+            report["snerv_lf_hf_replacement_queue"],
+            allow_overwrite=(
+                args.expected_output_snerv_lf_hf_replacement_queue_sha256
+                is not None
+            ),
+            expected_existing_sha256=(
+                args.expected_output_snerv_lf_hf_replacement_queue_sha256
+            ),
+        )
     if args.output_md:
         write_text_artifact(
             args.output_md,
@@ -379,6 +393,9 @@ def main(argv: list[str] | None = None) -> int:
                 "snerv_lf_over_ceiling_reroute_queue_row_count": report[
                     "snerv_lf_over_ceiling_reroute_queue_row_count"
                 ],
+                "snerv_lf_hf_replacement_queue_row_count": report[
+                    "snerv_lf_hf_replacement_queue_row_count"
+                ],
                 "snerv_snar_header_grammar_profile_source_count": report[
                     "snerv_snar_header_grammar_profile_source_count"
                 ],
@@ -393,6 +410,11 @@ def main(argv: list[str] | None = None) -> int:
                     None
                     if args.output_snerv_lf_reroute_queue is None
                     else args.output_snerv_lf_reroute_queue.as_posix()
+                ),
+                "output_snerv_lf_hf_replacement_queue": (
+                    None
+                    if args.output_snerv_lf_hf_replacement_queue is None
+                    else args.output_snerv_lf_hf_replacement_queue.as_posix()
                 ),
                 "experiment_queue_id": report["experiment_queue_id"],
             },
