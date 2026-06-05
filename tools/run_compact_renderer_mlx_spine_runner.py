@@ -4103,6 +4103,7 @@ def _bind_hi_nerv_modelsize_launch_pressure(
     modelsize_candidate: Mapping[str, Any] | None,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    allow_segnet_only_research: bool,
     allow_unscored_research_smoke: bool,
 ) -> dict[str, Any]:
     """Return effective scorer weights for a modelsize-conditioned launch."""
@@ -4111,6 +4112,9 @@ def _bind_hi_nerv_modelsize_launch_pressure(
     effective_seg = float(segnet_distillation_weight)
     effective_pose = float(pose_distillation_weight)
     mutations: list[dict[str, Any]] = []
+    segnet_only_research = bool(
+        allow_segnet_only_research and effective_seg > 0.0 and effective_pose == 0.0
+    )
     if candidate_selected and not bool(allow_unscored_research_smoke):
         if effective_seg == 0.0:
             effective_seg = HI_NERV_MODELSIZE_DEFAULT_SEGNET_DISTILLATION_WEIGHT
@@ -4126,7 +4130,7 @@ def _bind_hi_nerv_modelsize_launch_pressure(
                     ),
                 }
             )
-        if effective_pose == 0.0:
+        if effective_pose == 0.0 and not segnet_only_research:
             effective_pose = HI_NERV_MODELSIZE_DEFAULT_POSE_DISTILLATION_WEIGHT
             mutations.append(
                 {
@@ -4143,11 +4147,14 @@ def _bind_hi_nerv_modelsize_launch_pressure(
     source = "caller_supplied"
     if mutations:
         source = "modelsize_candidate_minimum_joint_scorer_pressure"
+    elif segnet_only_research:
+        source = "caller_supplied_segnet_only_research_modelsize_pressure"
     elif candidate_selected and not bool(allow_unscored_research_smoke):
         source = "caller_supplied_modelsize_frontier_pressure"
     return {
         "schema": "compact_hi_nerv_modelsize_launch_pressure.v1",
         "candidate_conditioned": candidate_selected,
+        "allow_segnet_only_research": bool(allow_segnet_only_research),
         "allow_unscored_research_smoke": bool(allow_unscored_research_smoke),
         "segnet_distillation_weight": effective_seg,
         "pose_distillation_weight": effective_pose,
@@ -8469,6 +8476,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         modelsize_candidate=candidate or None,
         segnet_distillation_weight=segnet_distillation_weight,
         pose_distillation_weight=pose_distillation_weight,
+        allow_segnet_only_research=allow_segnet_only_research,
         allow_unscored_research_smoke=allow_unscored_research_smoke,
     )
     effective_segnet_distillation_weight = float(
@@ -12096,6 +12104,8 @@ class _PoseInstabilityEpochMonitor:
             "min_local_epochs": int(self.min_epoch),
             "consecutive_bad_epochs": int(self.consecutive_bad_epochs),
             "pose_loss_threshold": float(self.pose_loss_threshold),
+            "pose_loss_metric_name": "loss_part_pose_score_term",
+            "pose_raw_loss_metric_name": "loss_part_pose_distill",
             "pose_axis_threshold": float(self.pose_axis_threshold),
             "hard_pair_sampling_active": bool(self.hard_pair_sampling_active),
             "hard_pair_axis_stop_enabled": not bool(self.hard_pair_sampling_active),
@@ -12110,7 +12120,17 @@ class _PoseInstabilityEpochMonitor:
             return
         loss_components = getattr(metrics, "loss_components", None)
         per_axis = getattr(metrics, "per_axis_decomposition", None)
-        pose_loss = _metric_mapping_float(loss_components, "loss_part_pose_distill")
+        pose_score_term = _metric_mapping_float(
+            loss_components,
+            "loss_part_pose_score_term",
+        )
+        pose_raw_loss = _metric_mapping_float(loss_components, "loss_part_pose_distill")
+        pose_loss = pose_score_term if pose_score_term is not None else pose_raw_loss
+        pose_loss_metric_name = (
+            "loss_part_pose_score_term"
+            if pose_score_term is not None
+            else "loss_part_pose_distill"
+        )
         pose_axis = _metric_mapping_float(per_axis, "pose")
         bad_loss = (
             pose_loss is not None and pose_loss >= self.pose_loss_threshold
@@ -12123,7 +12143,11 @@ class _PoseInstabilityEpochMonitor:
             self.last_reason = (
                 f"hi_nerv_pose_instability_epoch_{epoch}:"
                 f"local_epoch={local_epoch}:"
-                f"pose_loss={pose_loss}:pose_axis={pose_axis}:"
+                f"pose_loss_metric={pose_loss_metric_name}:"
+                f"pose_loss={pose_loss}:"
+                f"pose_score_term={pose_score_term}:"
+                f"pose_raw_mse={pose_raw_loss}:"
+                f"pose_axis={pose_axis}:"
                 f"bad_epochs={self.bad_epoch_count}"
             )
         else:
@@ -12247,11 +12271,19 @@ def _validate_hi_nerv_frontier_training_config(
     if allow_segnet_only_research and segnet_attached and not posenet_attached:
         blockers.append("hi_nerv_segnet_only_research_not_frontier_targeting")
     unscored_smoke = bool(allow_unscored_research_smoke)
-    launch_allowed = (segnet_attached and posenet_attached) or unscored_smoke
+    segnet_only_research_allowed = bool(
+        allow_segnet_only_research and segnet_attached and not posenet_attached
+    )
+    launch_allowed = (
+        (segnet_attached and posenet_attached)
+        or segnet_only_research_allowed
+        or unscored_smoke
+    )
     return {
         "schema": "compact_hi_nerv_score_aware_training_config_gate.v1",
         "launch_allowed": launch_allowed,
         "frontier_targeting": segnet_attached and posenet_attached,
+        "segnet_only_research_allowed": segnet_only_research_allowed,
         "allow_segnet_only_research": bool(allow_segnet_only_research),
         "allow_unscored_research_smoke": unscored_smoke,
         "real_segnet_teacher_attached": segnet_attached,

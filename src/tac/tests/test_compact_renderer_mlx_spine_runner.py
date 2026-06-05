@@ -5241,6 +5241,28 @@ def test_pose_instability_epoch_monitor_requires_sustained_bad_pose() -> None:
         monitor(bad_b)
 
 
+def test_pose_instability_epoch_monitor_prefers_pose_score_term_units() -> None:
+    monitor = runner_mod._PoseInstabilityEpochMonitor(
+        min_epoch=0,
+        consecutive_bad_epochs=1,
+        pose_loss_threshold=100.0,
+        pose_axis_threshold=100.0,
+    )
+    raw_mse_only_would_be_bad = SimpleNamespace(
+        epoch=2,
+        loss_components={
+            "loss_part_pose_distill": 10_000.0,
+            "loss_part_pose_score_term": 99.0,
+        },
+        per_axis_decomposition={"pose": 99.0},
+    )
+
+    monitor(raw_mse_only_would_be_bad)
+
+    assert monitor.bad_epoch_count == 0
+    assert monitor.as_dict()["pose_loss_metric_name"] == "loss_part_pose_score_term"
+
+
 def test_pose_instability_epoch_monitor_uses_resume_local_epoch_window() -> None:
     monitor = runner_mod._PoseInstabilityEpochMonitor(
         start_epoch=9_000,
@@ -9678,6 +9700,81 @@ def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(
     assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in out[
         "blockers"
     ]
+
+
+def test_hinerv_modelsize_launch_preserves_explicit_segnet_only_research(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    captured_train_kwargs: dict[str, object] = {}
+
+    def fake_train(**kwargs):
+        captured_train_kwargs.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        archive = out / "archive.zip"
+        _write_synthetic_pr95_archive(archive, pairs=2)
+        return {
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": runner_mod._sha256_file(archive),
+        }
+
+    monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+
+    out = execute_hi_nerv_mlx_scoreaware_and_adapt(
+        output_dir=tmp_path / "hinerv_segnet_only_modelsize_probe",
+        num_pairs=2,
+        epochs=1,
+        batch_pair_indices_per_step=1,
+        learning_rate=1e-3,
+        source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
+        hard_byte_ceilings=(178_000,),
+        latent_dim=4,
+        embed_dim=4,
+        decoder_channel=4,
+        modelsize_candidate={
+            "schema": "hinerv_modelsize_candidate.v1",
+            "family": "hi_nerv",
+            "candidate_id": "hinerv-segnet-only-research",
+            "latent_dim": 12,
+            "embed_dim": 16,
+            "decoder_channel": 6,
+            "mid_injection_block_index": 2,
+            "fine_injection_block_index": 5,
+            "decoder_codec": "int4_mixed",
+            "num_pairs": 600,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 160_000,
+            "nominal_under_ceiling": True,
+            "use_hierarchical_feature_grid": True,
+            "use_convnext_blocks": True,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=0.0,
+        allow_segnet_only_research=True,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        repo_root=REPO_ROOT,
+    )
+
+    assert captured_train_kwargs["segnet_distillation_weight"] == 1.0
+    assert captured_train_kwargs["pose_distillation_weight"] == 0.0
+    assert captured_train_kwargs["allow_segnet_only_research"] is True
+    binding = out["hi_nerv_modelsize_launch_pressure"]
+    assert binding["source"] == "caller_supplied_segnet_only_research_modelsize_pressure"
+    assert binding["mutations"] == []
+    assert binding["allow_segnet_only_research"] is True
+    assert out["score_aware_training"]["requested_pose_distillation_weight"] == 0.0
+    assert out["score_aware_training"]["pose_distillation_weight"] == 0.0
+    assert out["score_aware_training_config_gate"]["launch_allowed"] is True
+    assert out["score_aware_training_config_gate"]["frontier_targeting"] is False
+    assert out["score_aware_training_config_gate"]["segnet_only_research_allowed"] is True
+    assert "hi_nerv_segnet_only_research_not_frontier_targeting" in out["blockers"]
+    assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" in out["blockers"]
 
 
 def test_hinerv_optimizer_policy_refuses_pr95_curriculum_swallowing_non_adamw() -> None:
