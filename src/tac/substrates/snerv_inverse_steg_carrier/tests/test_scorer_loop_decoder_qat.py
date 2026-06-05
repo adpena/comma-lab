@@ -1120,6 +1120,109 @@ def test_nes_pair_robust_direction_labels_are_deterministic() -> None:
     assert labels == ("nes_probe_001", "nes_probe_002", "nes_probe_003")
 
 
+def test_nes_pair_robust_admits_safe_probe_candidate(monkeypatch) -> None:
+    """A strict receiver-priced NES probe must not be discarded as telemetry."""
+
+    prepared = _PreparedState(
+        pairs=torch.zeros((2, 2, 3, 4, 4), dtype=torch.float32),
+        codes=(),
+        lf_quant_planes=tuple(np.zeros((2, 2), dtype=np.int64) for _ in range(12)),
+        lf_zero_points=tuple(0.0 for _ in range(12)),
+        step_maps=tuple(np.ones((2, 2), dtype=np.float32) for _ in range(12)),
+        step_map_packet=b"SNSA1unit",
+        baseline_decoder=_decoder(),
+        model_size=_decoder().model_size,
+        levels=1,
+        wavelet="haar",
+        orig_hw=(4, 4),
+        source_pair_indices=(0, 1),
+    )
+
+    monkeypatch.setattr(qat_mod, "load_score_exact_scorers", lambda **_kwargs: (object(), object()))
+    monkeypatch.setattr(qat_mod, "_prepare_state", lambda **_kwargs: prepared)
+    monkeypatch.setattr(
+        qat_mod,
+        "_pack_receiver_archive",
+        lambda *_args, **_kwargs: SimpleNamespace(packet=b"nes-probe-best-packet"),
+    )
+
+    def fake_evaluate_decoder(_decoder, *, label: str, **_kwargs) -> SnervDecoderEval:
+        if label == "least_squares_qat_baseline":
+            return _eval(
+                label=label,
+                score=10.0,
+                d_pose=0.40,
+                d_seg=0.020,
+                replay=True,
+                archive_bytes=1000,
+                per_pair=(
+                    SnervPairEval(0, 0.020, 0.40, 5.0),
+                    SnervPairEval(1, 0.020, 0.30, 5.0),
+                ),
+            )
+        if label.endswith("_plus_probe"):
+            return _eval(
+                label=label,
+                score=9.0,
+                d_pose=0.35,
+                d_seg=0.019,
+                replay=True,
+                archive_bytes=999,
+                per_pair=(
+                    SnervPairEval(0, 0.019, 0.39, 4.5),
+                    SnervPairEval(1, 0.019, 0.29, 4.7),
+                ),
+            )
+        if label.endswith("_minus_probe"):
+            return _eval(
+                label=label,
+                score=11.0,
+                d_pose=0.45,
+                d_seg=0.021,
+                replay=True,
+                archive_bytes=999,
+                per_pair=(
+                    SnervPairEval(0, 0.021, 0.41, 5.2),
+                    SnervPairEval(1, 0.021, 0.31, 5.1),
+                ),
+            )
+        if label == "nes_pair_robust_update":
+            return _eval(
+                label=label,
+                score=8.5,
+                d_pose=0.34,
+                d_seg=0.022,
+                replay=True,
+                archive_bytes=999,
+                per_pair=(
+                    SnervPairEval(0, 0.022, 0.38, 4.4),
+                    SnervPairEval(1, 0.022, 0.28, 4.6),
+                ),
+            )
+        raise AssertionError(f"unexpected eval label {label}")
+
+    monkeypatch.setattr(qat_mod, "_evaluate_decoder", fake_evaluate_decoder)
+
+    result = run_snerv_scorer_loop_decoder_qat_smoke(
+        n_pairs=2,
+        search_mode="nes_pair_robust",
+        max_trials=1,
+        component_guard_mode="pose_seg_hard",
+        pair_guard_min_score_improved_fraction=1.0,
+        pair_guard_max_pose_worsened_fraction=0.0,
+        section_value_pressure_multiplier=0.0,
+    )
+
+    assert result.accepted_improvement is True
+    assert result.best.label == "nes_probe_001_plus_probe"
+    assert result.best.accepted is True
+    assert result.best_pair_deltas[0].score_linf_without_rate_delta < 0.0
+    assert result.best_pair_deltas[1].score_linf_without_rate_delta < 0.0
+    assert result.pair_robust_admission.passed is True
+    assert result.ready_for_pose_guard_gate is True
+    assert "no_quantized_decoder_trial_improved_score_under_component_guard" not in result.blockers
+
+
 def test_nes_pair_robust_objective_penalizes_pair_pose_damage() -> None:
     current = _eval(
         label="baseline",

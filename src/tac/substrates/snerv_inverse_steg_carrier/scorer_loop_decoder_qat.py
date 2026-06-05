@@ -371,8 +371,9 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     coordinate`` probes the largest-magnitude decoder atoms one at a time;
     ``learned_random_subspace`` runs a non-coordinate scorer-loop hill climb in
     smooth random affine subspace directions. ``nes_pair_robust`` evaluates
-    symmetric probes, estimates a pair-robust objective gradient, and tests one
-    synthesized update. A candidate is accepted only if it improves advisory
+    symmetric probes, admits any probe that already satisfies the pair-robust
+    receiver-priced guard, estimates a pair-robust objective gradient, and tests
+    one synthesized update. A candidate is accepted only if it improves advisory
     score, satisfies the explicitly selected component guard mode, and passes
     receiver replay. ``score_primary`` is the scorer-faithful default: the
     contest Lagrangian decides aggregate SegNet/PoseNet/rate tradeoffs while
@@ -567,10 +568,13 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     )
     if search_mode == "nes_pair_robust":
         current_vec = _decoder_to_vector(best_decoder)[0]
+        current_anchor_eval = best_eval
         gradient = np.zeros_like(current_vec)
         for trial, (direction_label, direction) in enumerate(directions, start=1):
+            plus_decoder = _vector_to_decoder(current_vec + scale * direction, layout)
+            minus_decoder = _vector_to_decoder(current_vec - scale * direction, layout)
             plus_row = _evaluate_decoder(
-                _vector_to_decoder(current_vec + scale * direction, layout),
+                plus_decoder,
                 prepared=prepared,
                 posenet=posenet,
                 segnet=segnet,
@@ -584,7 +588,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 section_value_pressure_multiplier=section_value_pressure_multiplier,
             )
             minus_row = _evaluate_decoder(
-                _vector_to_decoder(current_vec - scale * direction, layout),
+                minus_decoder,
                 prepared=prepared,
                 posenet=posenet,
                 segnet=segnet,
@@ -599,7 +603,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             )
             plus_objective = _nes_pair_robust_objective(
                 plus_row,
-                best_eval,
+                current_anchor_eval,
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
                 byte_pressure_multiplier=byte_pressure_multiplier,
@@ -615,7 +619,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             )
             minus_objective = _nes_pair_robust_objective(
                 minus_row,
-                best_eval,
+                current_anchor_eval,
                 pose_slack=pose_slack,
                 seg_slack=seg_slack,
                 byte_pressure_multiplier=byte_pressure_multiplier,
@@ -630,41 +634,69 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
                 ),
             )
             gradient += (plus_objective - minus_objective) * direction
-            for row in (plus_row, minus_row):
-                progress_row = _replace_eval_acceptance(
+            for row, decoder in ((plus_row, plus_decoder), (minus_row, minus_decoder)):
+                accepted = decoder_trial_passes_pose_guard(
                     row,
-                    accepted=False,
-                    blockers=tuple(
-                        dict.fromkeys(
-                            (
-                                "nes_probe_only_not_candidate",
-                                *_trial_blockers(
-                                    row,
-                                    best_eval,
-                                    pose_slack=pose_slack,
-                                    seg_slack=seg_slack,
-                                    byte_pressure_multiplier=(
-                                        byte_pressure_multiplier
-                                    ),
-                                    section_value_pressure_multiplier=(
-                                        section_value_pressure_multiplier
-                                    ),
-                                    max_archive_byte_growth=(
-                                        max_archive_byte_growth
-                                    ),
-                                    byte_growth_admission_mode=byte_growth_mode,
-                                    pair_guard_min_score_improved_fraction=(
-                                        pair_guard_min_score_improved_fraction
-                                    ),
-                                    pair_guard_max_pose_worsened_fraction=(
-                                        pair_guard_max_pose_worsened_fraction
-                                    ),
-                                    component_guard_mode=component_mode,
-                                ),
-                            )
-                        )
+                    best_eval,
+                    pose_slack=pose_slack,
+                    seg_slack=seg_slack,
+                    byte_pressure_multiplier=byte_pressure_multiplier,
+                    section_value_pressure_multiplier=(
+                        section_value_pressure_multiplier
                     ),
+                    max_archive_byte_growth=max_archive_byte_growth,
+                    byte_growth_admission_mode=byte_growth_mode,
+                    pair_guard_min_score_improved_fraction=(
+                        pair_guard_min_score_improved_fraction
+                    ),
+                    pair_guard_max_pose_worsened_fraction=(
+                        pair_guard_max_pose_worsened_fraction
+                    ),
+                    component_guard_mode=component_mode,
                 )
+                if accepted:
+                    progress_row = _replace_eval_acceptance(
+                        row,
+                        accepted=True,
+                        blockers=(),
+                    )
+                    best_decoder = decoder
+                    best_eval = progress_row
+                else:
+                    progress_row = _replace_eval_acceptance(
+                        row,
+                        accepted=False,
+                        blockers=tuple(
+                            dict.fromkeys(
+                                (
+                                    "nes_probe_candidate_not_accepted",
+                                    *_trial_blockers(
+                                        row,
+                                        best_eval,
+                                        pose_slack=pose_slack,
+                                        seg_slack=seg_slack,
+                                        byte_pressure_multiplier=(
+                                            byte_pressure_multiplier
+                                        ),
+                                        section_value_pressure_multiplier=(
+                                            section_value_pressure_multiplier
+                                        ),
+                                        max_archive_byte_growth=(
+                                            max_archive_byte_growth
+                                        ),
+                                        byte_growth_admission_mode=byte_growth_mode,
+                                        pair_guard_min_score_improved_fraction=(
+                                            pair_guard_min_score_improved_fraction
+                                        ),
+                                        pair_guard_max_pose_worsened_fraction=(
+                                            pair_guard_max_pose_worsened_fraction
+                                        ),
+                                        component_guard_mode=component_mode,
+                                    ),
+                                )
+                            )
+                        ),
+                    )
                 rows.append(progress_row)
                 _emit_progress(progress_callback, progress_row)
         gradient_rms = float(np.sqrt(np.mean(gradient * gradient)))
