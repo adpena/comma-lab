@@ -732,8 +732,13 @@ def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
         3564,
         50568,
     ]
-    assert summary["segnet_candidate_occupied_class_fraction"] == pytest.approx(0.4)
+    assert summary["segnet_candidate_occupied_class_fraction"] == pytest.approx(0.2)
+    assert summary["segnet_candidate_any_occupied_class_fraction"] == pytest.approx(0.4)
+    assert summary["segnet_argmax_occupancy_min_class_pixel_count"] == pytest.approx(
+        197.0
+    )
     assert summary["segnet_reference_occupied_class_fraction"] == pytest.approx(1.0)
+    assert summary["segnet_reference_any_occupied_class_fraction"] == pytest.approx(1.0)
 
 
 def test_hinerv_train_receiver_class_escape_contract_blocks_lost_escape() -> None:

@@ -15086,11 +15086,19 @@ def _hi_nerv_receiver_cache_quality_summary(
         if isinstance(argmax_probe, Mapping)
         else None
     )
-    candidate_occupied_fraction = _argmax_histogram_occupied_fraction(
-        candidate_histogram
+    candidate_occupancy = _argmax_histogram_occupancy(candidate_histogram)
+    reference_occupancy = _argmax_histogram_occupancy(reference_histogram)
+    candidate_occupied_fraction = _first_finite_float(
+        argmax_probe.get("candidate_occupied_class_fraction")
+        if isinstance(argmax_probe, Mapping)
+        else None,
+        candidate_occupancy.get("occupied_class_fraction"),
     )
-    reference_occupied_fraction = _argmax_histogram_occupied_fraction(
-        reference_histogram
+    reference_occupied_fraction = _first_finite_float(
+        argmax_probe.get("reference_occupied_class_fraction")
+        if isinstance(argmax_probe, Mapping)
+        else None,
+        reference_occupancy.get("occupied_class_fraction"),
     )
     return {
         "schema": "hi_nerv_receiver_cache_quality_summary.v1",
@@ -15142,7 +15150,23 @@ def _hi_nerv_receiver_cache_quality_summary(
             else None
         ),
         "segnet_candidate_occupied_class_fraction": candidate_occupied_fraction,
+        "segnet_candidate_any_occupied_class_fraction": _first_finite_float(
+            argmax_probe.get("candidate_any_occupied_class_fraction")
+            if isinstance(argmax_probe, Mapping)
+            else None,
+            candidate_occupancy.get("any_occupied_class_fraction"),
+        ),
         "segnet_reference_occupied_class_fraction": reference_occupied_fraction,
+        "segnet_reference_any_occupied_class_fraction": _first_finite_float(
+            argmax_probe.get("reference_any_occupied_class_fraction")
+            if isinstance(argmax_probe, Mapping)
+            else None,
+            reference_occupancy.get("any_occupied_class_fraction"),
+        ),
+        "segnet_argmax_occupancy_min_class_pixel_count": _first_finite_float(
+            candidate_occupancy.get("min_class_pixel_count"),
+            reference_occupancy.get("min_class_pixel_count"),
+        ),
         "distortion_crux_probe_path": report.get("distortion_crux_probe_path"),
         "distortion_crux_probe_passed": (
             bool(crux_probe.get("fit_gate_passed"))
@@ -15168,13 +15192,48 @@ def _hi_nerv_receiver_cache_quality_summary(
 
 
 def _argmax_histogram_occupied_fraction(histogram: Any) -> float | None:
+    return _argmax_histogram_occupancy(histogram).get("occupied_class_fraction")
+
+
+def _argmax_histogram_occupancy(histogram: Any) -> dict[str, float | None]:
     if not isinstance(histogram, list) or not histogram:
-        return None
+        return {
+            "occupied_class_fraction": None,
+            "any_occupied_class_fraction": None,
+            "min_class_pixel_count": None,
+        }
     try:
         values = [int(value) for value in histogram]
     except (TypeError, ValueError):
-        return None
-    return float(sum(1 for value in values if value > 0) / max(len(values), 1))
+        return {
+            "occupied_class_fraction": None,
+            "any_occupied_class_fraction": None,
+            "min_class_pixel_count": None,
+        }
+    total = sum(max(0, value) for value in values)
+    if total <= 0:
+        return {
+            "occupied_class_fraction": 0.0,
+            "any_occupied_class_fraction": 0.0,
+            "min_class_pixel_count": 2.0,
+        }
+    min_count = max(2, math.ceil(total * 1.0e-3))
+    return {
+        "occupied_class_fraction": float(
+            sum(1 for value in values if value >= min_count) / max(len(values), 1)
+        ),
+        "any_occupied_class_fraction": float(
+            sum(1 for value in values if value > 0) / max(len(values), 1)
+        ),
+        "min_class_pixel_count": float(min_count),
+    }
+
+
+def _first_finite_float(*values: Any) -> float | None:
+    for value in values:
+        if _finite_json_number(value):
+            return float(value)
+    return None
 
 
 def _hi_nerv_train_receiver_class_escape_contract(
