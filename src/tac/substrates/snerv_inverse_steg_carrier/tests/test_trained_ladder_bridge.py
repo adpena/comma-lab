@@ -40,7 +40,9 @@ def test_bridge_emits_strict_false_authority_row_from_real_packet(
     assert row["fc_dim"] == 12
     assert row["official_controls"]["fc_dim"] == 12
     assert row["official_controls"]["emb_size"] == 4
-    assert row["lf_payload_codec"] == "portfolio_auto"
+    assert row["lf_payload_codec"] == "v2:signed_int2_bitpack:none"
+    assert row["lf_payload_codec_requested"] == "portfolio_auto"
+    assert row["lf_payload_codec_selected"] == "v2:signed_int2_bitpack:none"
     assert row["receiver_archive_replay_verified"] is True
     assert row["receiver_proof_identity_bound"] is False
     assert row["byte_closed_receiver_proof"] is False
@@ -690,8 +692,23 @@ def _advisory(packet: bytes, **overrides: object) -> SimpleNamespace:
         "snerv_mfu_scales": (),
         "snerv_hfr_gain": 0.0,
         "snerv_temporal_context": 0,
-        "lf_payload_codec": "portfolio_auto",
+        "lf_payload_codec": "v2:signed_int2_bitpack:none",
+        "lf_payload_codec_requested": "portfolio_auto",
+        "lf_payload_codec_selected": "v2:signed_int2_bitpack:none",
+        "lf_payload_codec_selection_report": {
+            "schema": "snerv_lf_quant_payload.v2",
+            "mode_histogram": {"signed_int2_bitpack": 1},
+            "wrapper_histogram": {"none": 1},
+            "section_bytes": len(packet),
+        },
     }
+    if "lf_payload_codec" in overrides:
+        if "lf_payload_codec_requested" not in overrides:
+            values["lf_payload_codec_requested"] = overrides["lf_payload_codec"]
+        if "lf_payload_codec_selected" not in overrides:
+            values.pop("lf_payload_codec_selected", None)
+        if "lf_payload_codec_selection_report" not in overrides:
+            values.pop("lf_payload_codec_selection_report", None)
     values.update(overrides)
     return SimpleNamespace(
         n_pairs=2,

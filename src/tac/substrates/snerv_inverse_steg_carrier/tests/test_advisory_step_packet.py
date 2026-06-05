@@ -120,6 +120,16 @@ def test_advisory_charges_l2_with_separate_receiver_packet(monkeypatch) -> None:
     expected_l2 = 25.0 + np.sqrt(0.4) + result.rate_term_l2
     assert result.receiver_archive_replay_verified is True
     assert result.receiver_archive_l2_replay_verified is True
+    assert result.lf_payload_codec_requested == "portfolio_auto"
+    assert result.lf_payload_codec == result.lf_payload_codec_selected
+    assert result.lf_payload_codec.startswith("v2:")
+    assert result.lf_payload_codec_selection_report["section_bytes"] == (
+        result.lf_payload_bytes
+    )
+    assert result.l2_lf_payload_codec_selected.startswith("v2:")
+    assert result.l2_lf_payload_codec_selection_report["section_bytes"] == (
+        result.l2_lf_payload_bytes
+    )
     assert result.archive_bytes_total_l2 == result.receiver_archive_l2_packet_bytes
     assert result.rate_term_l2 == pytest.approx(
         CONTEST_BYTE_PRICE * result.archive_bytes_total_l2

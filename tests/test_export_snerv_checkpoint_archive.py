@@ -56,7 +56,12 @@ def test_checkpoint_packet_resolves_portfolio_decoder_codec() -> None:
 
     assert packet.metadata["decoder_payload_codec"] == "mixed_magnitude_symmetric"
     assert packet.metadata["decoder_payload_codec_requested"] == "portfolio_auto"
-    assert packet.metadata["lf_payload_codec"] == "portfolio_auto"
+    assert packet.metadata["lf_payload_codec"] == "v2:signed_int2_bitpack:none"
+    assert packet.metadata["lf_payload_codec_requested"] == "portfolio_auto"
+    assert packet.metadata["lf_payload_codec_selected"] == "v2:signed_int2_bitpack:none"
+    assert packet.metadata["lf_payload_codec_selection_report"]["section_bytes"] == (
+        packet.section_bytes["lf_payload"]
+    )
     assert packet.section_bytes["decoder_payload"] > 0
     assert packet.section_bytes["lf_payload"] > 0
 

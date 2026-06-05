@@ -4679,6 +4679,10 @@ def _run_scorer_loop_qat_attachment(
         best_packet_materialized = False
         best_packet_path_str: str | None = None
         best_packet_path_sha256: str | None = None
+        best_packet_lf_payload_codec: str | None = None
+        best_packet_lf_payload_codec_requested: str | None = None
+        best_packet_lf_payload_codec_selected: str | None = None
+        best_packet_lf_payload_codec_selection_report: dict[str, Any] | None = None
         if best_packet:
             write_bytes_artifact(
                 best_packet_path,
@@ -4691,6 +4695,33 @@ def _run_scorer_loop_qat_attachment(
             best_packet_materialized = True
             best_packet_path_str = best_packet_path.as_posix()
             best_packet_path_sha256 = sha256_file(best_packet_path)
+            try:
+                best_archive = unpack_snerv_archive(best_packet)
+                best_metadata = best_archive.metadata
+                best_packet_lf_payload_codec_selected = str(
+                    best_metadata.get("lf_payload_codec_selected")
+                    or best_metadata.get("lf_payload_codec")
+                    or ""
+                ) or None
+                best_packet_lf_payload_codec_requested = str(
+                    best_metadata.get("lf_payload_codec_requested")
+                    or result_payload.get("lf_payload_codec_requested")
+                    or lf_payload_codec
+                )
+                best_packet_lf_payload_codec = str(
+                    best_packet_lf_payload_codec_selected
+                    or result_payload.get("lf_payload_codec")
+                    or lf_payload_codec
+                )
+                if isinstance(
+                    best_metadata.get("lf_payload_codec_selection_report"),
+                    Mapping,
+                ):
+                    best_packet_lf_payload_codec_selection_report = dict(
+                        best_metadata["lf_payload_codec_selection_report"]
+                    )
+            except Exception:
+                best_packet_lf_payload_codec = None
         blockers = [str(blocker) for blocker in result_payload.get("blockers") or [] if blocker]
         if bool(result_payload.get("receiver_contract_satisfied")) and not (
             best_packet_materialized and best_packet_path_sha256 == result_payload.get("best_packet_sha256")
@@ -4725,7 +4756,27 @@ def _run_scorer_loop_qat_attachment(
             "best_packet_path_sha256": best_packet_path_sha256,
             "best_packet_materialized": best_packet_materialized,
             "decoder_payload_codec": str(result_payload.get("decoder_payload_codec") or decoder_payload_codec),
-            "lf_payload_codec": str(result_payload.get("lf_payload_codec") or lf_payload_codec),
+            "lf_payload_codec": str(
+                best_packet_lf_payload_codec
+                or result_payload.get("lf_payload_codec_selected")
+                or result_payload.get("lf_payload_codec")
+                or lf_payload_codec
+            ),
+            "lf_payload_codec_requested": str(
+                best_packet_lf_payload_codec_requested
+                or result_payload.get("lf_payload_codec_requested")
+                or lf_payload_codec
+            ),
+            "lf_payload_codec_selected": str(
+                best_packet_lf_payload_codec_selected
+                or result_payload.get("lf_payload_codec_selected")
+                or result_payload.get("lf_payload_codec")
+                or lf_payload_codec
+            ),
+            "lf_payload_codec_selection_report": (
+                best_packet_lf_payload_codec_selection_report
+                or result_payload.get("lf_payload_codec_selection_report")
+            ),
             "component_guard_mode": str(result_payload.get("component_guard_mode") or component_guard_mode),
             "pair_robust_admission": result_payload.get("pair_robust_admission"),
             "accepted_improvement": bool(result_payload.get("accepted_improvement")),
@@ -5060,7 +5111,7 @@ def build_snerv_mlx_native_packet_from_numpy_pairs(
         "lf_coeff_count_total": int(sum(int(p.lf.size) for p in pyramids)),
         "lf_zero_dtype": "float32_le",
         "lf_scale_mode": "implicit_per_element_steps_scale_1",
-        "lf_payload_codec": lf_payload_codec_requested,
+        "lf_payload_codec": lf_payload_codec_selected,
         "lf_payload_codec_requested": lf_payload_codec_requested,
         "lf_payload_codec_selected": lf_payload_codec_selected,
         "lf_payload_codec_selection_report": lf_payload_codec_report,

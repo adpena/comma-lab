@@ -53,6 +53,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (  # noqa: E402
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
+    inspect_lf_quant_payload_header,
     pack_snerv_archive,
     resolve_decoder_payload_codec,
 )
@@ -61,6 +62,9 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (  # noqa: E402
     HfGenerationDecoder,
     SnervModelSizeConfig,
     quantize_lf,
+)
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (  # noqa: E402
+    selected_lf_payload_codec_label,
 )
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (  # noqa: E402
     SCORER_HW,
@@ -332,7 +336,14 @@ def export_snerv_checkpoint_archive(
         ),
         "decoder_codec": resolved_decoder_codec,
         "decoder_codec_requested": requested_decoder_codec,
-        "lf_payload_codec": resolved_lf_codec,
+        "lf_payload_codec": packet.metadata.get("lf_payload_codec"),
+        "lf_payload_codec_requested": (
+            packet.metadata.get("lf_payload_codec_requested") or resolved_lf_codec
+        ),
+        "lf_payload_codec_selected": packet.metadata.get("lf_payload_codec_selected"),
+        "lf_payload_codec_selection_report": packet.metadata.get(
+            "lf_payload_codec_selection_report"
+        ),
         "target_bits_per_coeff": float(target_bits_per_coeff),
         "step_map_bits_per_coeff": float(step_map_bits_per_coeff),
         "model_size": model_size.as_jsonable(),
@@ -431,6 +442,16 @@ def build_snerv_checkpoint_packet(
         map_importance=np.ones((len(step_maps),), dtype=np.float64),
         target_bits_per_coeff=float(step_map_bits_per_coeff),
     )
+    lf_payload_codec_requested = str(lf_payload_codec)
+    lf_payload = encode_lf_quant_payload(
+        lf_quant_planes,
+        codec=lf_payload_codec_requested,
+    )
+    lf_payload_codec_report = inspect_lf_quant_payload_header(lf_payload)
+    lf_payload_codec_selected = selected_lf_payload_codec_label(
+        lf_payload_codec_report,
+        requested_codec=lf_payload_codec_requested,
+    )
     metadata = {
         "n_pairs": n_pairs,
         "frames_per_pair": frames_per_pair,
@@ -446,7 +467,10 @@ def build_snerv_checkpoint_packet(
         "lf_coeff_count_total": int(sum(int(plane.size) for plane in lf_quant_planes)),
         "lf_zero_dtype": "float32_le",
         "lf_scale_mode": "implicit_per_element_steps_scale_1",
-        "lf_payload_codec": str(lf_payload_codec),
+        "lf_payload_codec": lf_payload_codec_selected,
+        "lf_payload_codec_requested": lf_payload_codec_requested,
+        "lf_payload_codec_selected": lf_payload_codec_selected,
+        "lf_payload_codec_selection_report": lf_payload_codec_report,
         "step_map_packet_schema": step_packet.schema,
         "step_map_coder_mode": "checkpoint_uniform_step_map_waterfill",
         "step_map_coder_groups": [dict(group) for group in step_packet.groups],
@@ -492,7 +516,7 @@ def build_snerv_checkpoint_packet(
     }
     archive = pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(lf_zero_points=lf_zero_points),
-        lf_payload=encode_lf_quant_payload(lf_quant_planes, codec=lf_payload_codec),
+        lf_payload=lf_payload,
         decoder_payload=encode_decoder_payload(
             decoder,
             codec=resolve_decoder_payload_codec(decoder_payload_codec),
@@ -1753,6 +1777,10 @@ def _packet_metadata_summary(packet: SnervArchivePacket) -> dict[str, Any]:
         "checkpoint_packetization_mode",
         "allocation_mode",
         "hf_decoder_fit_mode",
+        "lf_payload_codec",
+        "lf_payload_codec_requested",
+        "lf_payload_codec_selected",
+        "lf_payload_codec_selection_report",
         "snerv_model_size_adapter",
         "snerv_official_mfu_hfr_tub_numeric_primitives_requested",
         "snerv_official_mfu_hfr_tub_export_bound",

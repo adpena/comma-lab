@@ -144,7 +144,10 @@ def test_advisory_cli_writes_real_packet_and_runtime_package(
     assert captured_kwargs["decoder_payload_codec"] == "mixed_magnitude_symmetric"
     assert captured_kwargs["decoder_payload_mixed_modes"] == ("fp16", "int4", "int4")
     assert captured_kwargs["lf_payload_codec"] == "portfolio_auto"
-    assert payload["lf_payload_codec"] == "portfolio_auto"
+    assert payload["lf_payload_codec"] == "v2:signed_int2_bitpack:none"
+    assert payload["lf_payload_codec_requested"] == "portfolio_auto"
+    assert payload["lf_payload_codec_selected"] == "v2:signed_int2_bitpack:none"
+    assert payload["lf_payload_codec_selection_report"]["section_bytes"] == 100
     assert captured_kwargs["snerv_model_size_adapter"] == (
         SNERV_SPECTRA_PRESERVING_ADAPTER
     )
@@ -302,7 +305,15 @@ def _fake_advisory_result(
             "sha256": "fake",
             "redacted": True,
         },
-        "lf_payload_codec": "portfolio_auto",
+        "lf_payload_codec": "v2:signed_int2_bitpack:none",
+        "lf_payload_codec_requested": "portfolio_auto",
+        "lf_payload_codec_selected": "v2:signed_int2_bitpack:none",
+        "lf_payload_codec_selection_report": {
+            "schema": "snerv_lf_quant_payload.v2",
+            "mode_histogram": {"signed_int2_bitpack": 1},
+            "wrapper_histogram": {"none": 1},
+            "section_bytes": 100,
+        },
         "archive_byte_closure_blockers": [
             "full_600_pair_receiver_replay_missing",
             "paired_contest_cpu_cuda_auth_eval_missing",
@@ -318,7 +329,15 @@ def _fake_advisory_result(
         wavelet="db2",
         adjoint_rel_residual=0.0,
         lf_coeff_count_total=384,
-        lf_payload_codec="portfolio_auto",
+        lf_payload_codec="v2:signed_int2_bitpack:none",
+        lf_payload_codec_requested="portfolio_auto",
+        lf_payload_codec_selected="v2:signed_int2_bitpack:none",
+        lf_payload_codec_selection_report={
+            "schema": "snerv_lf_quant_payload.v2",
+            "mode_histogram": {"signed_int2_bitpack": 1},
+            "wrapper_histogram": {"none": 1},
+            "section_bytes": 100,
+        },
         lf_payload_bytes=100,
         linf_steps_payload_bytes=80,
         linf_steps_payload_codec="snerv_step_map_coder.v1",

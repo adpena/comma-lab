@@ -75,6 +75,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     inspect_decoder_payload_header,
+    inspect_lf_quant_payload_header,
     pack_snerv_archive,
     resolve_decoder_payload_codec,
     unpack_snerv_archive,
@@ -97,6 +98,9 @@ from tac.substrates.snerv_inverse_steg_carrier.carrier import (
 from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     WaveletPyramid,
     dwt2_native_synthesis_adjoint,
+)
+from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
+    selected_lf_payload_codec_label,
 )
 
 __all__ = [
@@ -180,6 +184,9 @@ class SnervAdvisoryResult:
     receiver_archive_replay_verified: bool
     receiver_archive_replay_error: str
     lf_payload_codec: str
+    lf_payload_codec_requested: str
+    lf_payload_codec_selected: str
+    lf_payload_codec_selection_report: dict[str, Any]
     lf_payload_bytes: int  # entropy-coded quantized LF
     linf_steps_payload_bytes: int
     linf_steps_payload_codec: str
@@ -202,6 +209,8 @@ class SnervAdvisoryResult:
     receiver_archive_l2_sha256: str
     receiver_archive_l2_replay_verified: bool
     receiver_archive_l2_replay_error: str
+    l2_lf_payload_codec_selected: str
+    l2_lf_payload_codec_selection_report: dict[str, Any]
     archive_bytes_total_l2: int
     rate_term_l2: float
     # distortion (advisory, bit-exact mirror)
@@ -806,6 +815,25 @@ def run_snerv_advisory(
     )
 
     # ---- 6. Charge the receiver-visible packet (the rate numerator) ----
+    lf_payload_codec_requested = str(lf_payload_codec)
+    lf_payload = encode_lf_quant_payload(
+        lf_quant_linf,
+        codec=lf_payload_codec_requested,
+    )
+    lf_payload_codec_report = inspect_lf_quant_payload_header(lf_payload)
+    lf_payload_codec_selected = selected_lf_payload_codec_label(
+        lf_payload_codec_report,
+        requested_codec=lf_payload_codec_requested,
+    )
+    l2_lf_payload = encode_lf_quant_payload(
+        lf_quant_l2,
+        codec=lf_payload_codec_requested,
+    )
+    l2_lf_payload_codec_report = inspect_lf_quant_payload_header(l2_lf_payload)
+    l2_lf_payload_codec_selected = selected_lf_payload_codec_label(
+        l2_lf_payload_codec_report,
+        requested_codec=lf_payload_codec_requested,
+    )
     common_archive_metadata = {
         "n_pairs": n_pairs,
         "frames_per_pair": 2,
@@ -842,9 +870,8 @@ def run_snerv_advisory(
             if decoder_payload_mixed_modes is not None
             else None
         ),
-        "lf_payload_codec": lf_payload_codec,
+        "lf_payload_codec_requested": lf_payload_codec_requested,
     }
-    lf_payload = encode_lf_quant_payload(lf_quant_linf, codec=lf_payload_codec)
     metadata_payload = encode_lf_metadata_payload(
         lf_zero_points=lf_zero_points_linf,
     )
@@ -856,6 +883,9 @@ def run_snerv_advisory(
         metadata={
             **common_archive_metadata,
             "allocation_mode": "linf_score_saliency",
+            "lf_payload_codec": lf_payload_codec_selected,
+            "lf_payload_codec_selected": lf_payload_codec_selected,
+            "lf_payload_codec_selection_report": lf_payload_codec_report,
             "lf_plane_count": len(lf_zero_points_linf),
             "step_map_packet_schema": steps_packet.schema,
             "step_map_coder_mode": step_map_coder_mode,
@@ -864,7 +894,6 @@ def run_snerv_advisory(
             "step_map_waterfill_bits_per_coeff": step_map_waterfill_bits_per_coeff,
         },
     )
-    l2_lf_payload = encode_lf_quant_payload(lf_quant_l2, codec=lf_payload_codec)
     l2_metadata_payload = encode_lf_metadata_payload(
         lf_zero_points=lf_zero_points_l2,
     )
@@ -876,6 +905,9 @@ def run_snerv_advisory(
         metadata={
             **common_archive_metadata,
             "allocation_mode": "l2_uniform",
+            "lf_payload_codec": l2_lf_payload_codec_selected,
+            "lf_payload_codec_selected": l2_lf_payload_codec_selected,
+            "lf_payload_codec_selection_report": l2_lf_payload_codec_report,
             "lf_plane_count": len(lf_zero_points_l2),
             "step_map_packet_schema": l2_steps_packet.schema,
             "step_map_coder_mode": "uniform",
@@ -1032,7 +1064,10 @@ def run_snerv_advisory(
         receiver_archive_packet=receiver_archive.packet,
         receiver_archive_replay_verified=receiver_archive_replay_verified,
         receiver_archive_replay_error=receiver_archive_replay_error,
-        lf_payload_codec=lf_payload_codec,
+        lf_payload_codec=lf_payload_codec_selected,
+        lf_payload_codec_requested=lf_payload_codec_requested,
+        lf_payload_codec_selected=lf_payload_codec_selected,
+        lf_payload_codec_selection_report=dict(lf_payload_codec_report),
         lf_payload_bytes=len(lf_payload),
         linf_steps_payload_bytes=steps_packet.total_bytes,
         linf_steps_payload_codec=steps_packet.schema,
@@ -1057,6 +1092,8 @@ def run_snerv_advisory(
         ],
         receiver_archive_l2_replay_verified=receiver_archive_l2_replay_verified,
         receiver_archive_l2_replay_error=receiver_archive_l2_replay_error,
+        l2_lf_payload_codec_selected=l2_lf_payload_codec_selected,
+        l2_lf_payload_codec_selection_report=dict(l2_lf_payload_codec_report),
         archive_bytes_total_l2=archive_bytes_l2,
         rate_term_l2=rate_term_l2,
         d_seg_mean_linf=d_seg_linf,

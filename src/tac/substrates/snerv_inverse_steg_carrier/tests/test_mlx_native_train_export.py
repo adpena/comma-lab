@@ -794,8 +794,10 @@ def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     assert decoded.metadata["score_aware_long_training_executed"] is False
     assert decoded.metadata["step_map_waterfill_bits_per_coeff"] == pytest.approx(0.5)
     assert decoded.metadata["step_map_coder_groups"]
-    assert decoded.metadata["lf_payload_codec"] == "auto"
     assert decoded.metadata["lf_payload_codec_requested"] == "auto"
+    assert decoded.metadata["lf_payload_codec"] == decoded.metadata[
+        "lf_payload_codec_selected"
+    ]
     assert decoded.metadata["lf_payload_codec_selected"] != "auto"
     assert decoded.metadata["lf_payload_codec_selection_report"]["section_bytes"] == (
         packet.section_bytes["lf_payload"]
@@ -896,8 +898,10 @@ def test_packet_builder_defaults_to_portfolio_lf_payload_codec() -> None:
 
     decoded = unpack_snerv_archive(packet.packet)
 
-    assert decoded.metadata["lf_payload_codec"] == "portfolio_auto"
     assert decoded.metadata["lf_payload_codec_requested"] == "portfolio_auto"
+    assert decoded.metadata["lf_payload_codec"] == decoded.metadata[
+        "lf_payload_codec_selected"
+    ]
     assert decoded.metadata["lf_payload_codec_selected"].startswith("v2:")
     assert packet.section_bytes["lf_payload"] > 0
 
@@ -1183,8 +1187,10 @@ def test_train_export_hydrates_mlx_targets_and_writes_packet(
     assert report["step_map_coder_mode"] == ("waterfill_mlx_native_uniform_importance_bridge")
     assert report["step_map_coder_groups"]
     decoded = unpack_snerv_archive(packet_path.read_bytes())
-    assert decoded.metadata["lf_payload_codec"] == "portfolio_auto"
     assert decoded.metadata["lf_payload_codec_requested"] == "portfolio_auto"
+    assert decoded.metadata["lf_payload_codec"] == decoded.metadata[
+        "lf_payload_codec_selected"
+    ]
     assert report["lf_payload_codec"] == decoded.metadata["lf_payload_codec_selected"]
     assert report["receiver_proof_passed"] is False
     assert "snerv_mlx_score_aware_long_training_not_executed" in report["blockers"]
@@ -3170,7 +3176,7 @@ def test_byte_cap_control_reports_lf_pressure_without_under_ceiling_blocker() ->
         packet_sha256="b" * 64,
         packet_bytes=300,
         decoder_payload_codec="int8_symmetric",
-        lf_payload_codec="portfolio_auto",
+        lf_payload_codec="v2:signed_int2_bitpack:none",
         section_bytes={
             "metadata_payload": 12,
             "lf_payload": 190,
@@ -3191,7 +3197,7 @@ def test_byte_cap_control_reports_lf_pressure_without_under_ceiling_blocker() ->
     assert cap["packet_source"] == "unit_selected_packet"
     assert cap["packet_sha256"] == "b" * 64
     assert cap["decoder_payload_codec"] == "int8_symmetric"
-    assert cap["lf_payload_codec"] == "portfolio_auto"
+    assert cap["lf_payload_codec"] == "v2:signed_int2_bitpack:none"
     assert cap["under_hard_byte_ceiling"] is True
     assert cap["delta_bytes_vs_hard_byte_ceiling"] == -152
     assert cap["lf_payload_bytes"] == 190
@@ -3778,6 +3784,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
         decoder_payload_codec="int8_symmetric",
         lf_payload_codec="auto",
     ).packet
+    best_packet_metadata = unpack_snerv_archive(best_packet).metadata
     best_packet_sha256 = hashlib.sha256(best_packet).hexdigest()
 
     class FakeQatResult:
@@ -3790,7 +3797,15 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
                 "axis_tag": "[macOS-CPU advisory]",
                 "n_pairs": 1,
                 "decoder_payload_codec": "int8_symmetric",
-                "lf_payload_codec": "portfolio_auto",
+                "lf_payload_codec": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_requested": "portfolio_auto",
+                "lf_payload_codec_selected": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_selection_report": {
+                    "schema": "snerv_lf_quant_payload.v2",
+                    "mode_histogram": {"signed_int2_bitpack": 1},
+                    "wrapper_histogram": {"none": 1},
+                    "section_bytes": 42,
+                },
                 "scorer_loop_evaluations": 2,
                 "accepted_improvement": True,
                 "receiver_contract_satisfied": True,
@@ -3882,7 +3897,9 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["requested"] is True
     assert scorer_loop["executed"] is True
     assert scorer_loop["component_guard_mode"] == "pose_seg_hard"
-    assert scorer_loop["lf_payload_codec"] == "portfolio_auto"
+    assert scorer_loop["lf_payload_codec"] == best_packet_metadata[
+        "lf_payload_codec_selected"
+    ]
     assert scorer_loop["receiver_contract_satisfied"] is True
     assert scorer_loop["accepted_improvement"] is True
     assert scorer_loop["pair_robust_admission"]["passed"] is True
@@ -3945,7 +3962,15 @@ def test_train_export_rejects_qat_packet_with_mismatched_source_pair_indices(
                 "n_pairs": 2,
                 "source_pair_indices": [7, 2],
                 "decoder_payload_codec": "int8_symmetric",
-                "lf_payload_codec": "portfolio_auto",
+                "lf_payload_codec": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_requested": "portfolio_auto",
+                "lf_payload_codec_selected": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_selection_report": {
+                    "schema": "snerv_lf_quant_payload.v2",
+                    "mode_histogram": {"signed_int2_bitpack": 1},
+                    "wrapper_histogram": {"none": 1},
+                    "section_bytes": 42,
+                },
                 "scorer_loop_evaluations": 1,
                 "accepted_improvement": True,
                 "receiver_contract_satisfied": True,
@@ -4052,7 +4077,15 @@ def test_train_export_rejects_unweighted_qat_packet_when_recon_weight_bound(
                 "axis_tag": "[macOS-CPU advisory]",
                 "n_pairs": 1,
                 "decoder_payload_codec": "int8_symmetric",
-                "lf_payload_codec": "portfolio_auto",
+                "lf_payload_codec": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_requested": "portfolio_auto",
+                "lf_payload_codec_selected": "v2:signed_int2_bitpack:none",
+                "lf_payload_codec_selection_report": {
+                    "schema": "snerv_lf_quant_payload.v2",
+                    "mode_histogram": {"signed_int2_bitpack": 1},
+                    "wrapper_histogram": {"none": 1},
+                    "section_bytes": 42,
+                },
                 "scorer_loop_evaluations": 2,
                 "accepted_improvement": True,
                 "receiver_contract_satisfied": True,
