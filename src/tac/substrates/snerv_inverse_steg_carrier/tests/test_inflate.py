@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import io
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ from tac.substrates.snerv_inverse_steg_carrier.inflate import (
     _read_archive_bytes,
     inflate_one_video,
     snerv_frames_to_raw_bytes,
+    write_snerv_frames_to_raw,
 )
 from tac.substrates.snerv_inverse_steg_carrier.receiver_proof import (
     build_snerv_receiver_archive_proof,
@@ -45,6 +47,40 @@ def test_inflate_one_video_writes_camera_raw_from_full_frame_packet(tmp_path: Pa
 def test_snerv_frames_to_raw_rejects_bad_shape() -> None:
     with pytest.raises(SnervInflateError, match="expected frames"):
         snerv_frames_to_raw_bytes(np.zeros((2, 3, 16, 24), dtype=np.float32))
+
+
+def test_write_snerv_frames_to_raw_chunks_resize_without_byte_drift(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.inflate as inflate_mod
+
+    frames = np.arange(5 * 2 * 3 * 4 * 5, dtype=np.float32).reshape(5, 2, 3, 4, 5)
+    max_resize_batch = 0
+    original_resize = inflate_mod._resize_nchw_bilinear
+
+    def wrapped_resize(arr: np.ndarray, *, out_hw: tuple[int, int]) -> np.ndarray:
+        nonlocal max_resize_batch
+        max_resize_batch = max(max_resize_batch, int(arr.shape[0]))
+        return original_resize(arr, out_hw=out_hw)
+
+    monkeypatch.setattr(inflate_mod, "CAMERA_HW", (4, 5))
+    monkeypatch.setattr(inflate_mod, "_resize_nchw_bilinear", wrapped_resize)
+    expected = inflate_mod.snerv_frames_to_raw_bytes(frames, pair_chunk_count=99)
+    max_resize_batch = 0
+    out = io.BytesIO()
+
+    frame_count = write_snerv_frames_to_raw(out, frames, pair_chunk_count=2)
+
+    assert frame_count == 10
+    assert out.getvalue() == expected
+    assert max_resize_batch <= 4
+
+
+def test_write_snerv_frames_to_raw_rejects_invalid_chunk_count() -> None:
+    frames = np.zeros((1, 2, 3, 4, 5), dtype=np.float32)
+
+    with pytest.raises(SnervInflateError, match="pair_chunk_count"):
+        write_snerv_frames_to_raw(io.BytesIO(), frames, pair_chunk_count=0)
 
 
 def test_inflate_cli_rejects_unsafe_file_list(tmp_path: Path) -> None:

@@ -18,21 +18,33 @@ import numpy as np
 from tac.substrates.snerv_inverse_steg_carrier.archive import decode_snerv_archive_frames
 
 CAMERA_HW: tuple[int, int] = (874, 1164)
+RAW_WRITE_PAIR_CHUNK_COUNT: int = 8
 
 
 class SnervInflateError(ValueError):
     """Raised when SNeRV inflate input/output contracts are violated."""
 
 
-def snerv_frames_to_raw_bytes(frames: np.ndarray) -> bytes:
+def snerv_frames_to_raw_bytes(
+    frames: np.ndarray,
+    *,
+    pair_chunk_count: int = RAW_WRITE_PAIR_CHUNK_COUNT,
+) -> bytes:
     """Return contest raw bytes for ``(pairs, 2, 3, H, W)`` byte-scale frames."""
 
     arr = np.asarray(frames, dtype=np.float32)
-    if arr.ndim != 5 or arr.shape[1] != 2 or arr.shape[2] != 3:
-        raise SnervInflateError(
-            "expected frames shaped (n_pairs, 2, 3, H, W); "
-            f"got {tuple(arr.shape)}"
-        )
+    _validate_pair_frames(arr)
+    return b"".join(
+        _snerv_frame_chunk_to_raw_bytes(chunk)
+        for chunk in _iter_pair_frame_chunks(arr, pair_chunk_count=pair_chunk_count)
+    )
+
+
+def _snerv_frame_chunk_to_raw_bytes(frames: np.ndarray) -> bytes:
+    """Return contest raw bytes for one ``(pairs, 2, 3, H, W)`` chunk."""
+
+    arr = np.asarray(frames, dtype=np.float32)
+    _validate_pair_frames(arr)
     flat = arr.reshape(-1, 3, int(arr.shape[-2]), int(arr.shape[-1]))
     resized = _resize_nchw_bilinear(flat, out_hw=CAMERA_HW)
     u8 = (
@@ -43,12 +55,43 @@ def snerv_frames_to_raw_bytes(frames: np.ndarray) -> bytes:
     return u8.tobytes(order="C")
 
 
-def write_snerv_frames_to_raw(fh: BinaryIO, frames: np.ndarray) -> int:
+def write_snerv_frames_to_raw(
+    fh: BinaryIO,
+    frames: np.ndarray,
+    *,
+    pair_chunk_count: int = RAW_WRITE_PAIR_CHUNK_COUNT,
+) -> int:
     """Append SNeRV frames to an open contest raw file and return frame count."""
 
     arr = np.asarray(frames)
-    fh.write(snerv_frames_to_raw_bytes(arr))
+    _validate_pair_frames(arr)
+    for chunk in _iter_pair_frame_chunks(arr, pair_chunk_count=pair_chunk_count):
+        fh.write(_snerv_frame_chunk_to_raw_bytes(chunk))
     return int(arr.shape[0]) * 2
+
+
+def _validate_pair_frames(frames: np.ndarray) -> None:
+    if frames.ndim != 5 or frames.shape[1] != 2 or frames.shape[2] != 3:
+        raise SnervInflateError(
+            "expected frames shaped (n_pairs, 2, 3, H, W); "
+            f"got {tuple(frames.shape)}"
+        )
+
+
+def _iter_pair_frame_chunks(
+    frames: np.ndarray,
+    *,
+    pair_chunk_count: int,
+) -> list[np.ndarray]:
+    chunk_pairs = int(pair_chunk_count)
+    if chunk_pairs < 1:
+        raise SnervInflateError(
+            f"pair_chunk_count must be >= 1; got {pair_chunk_count}"
+        )
+    return [
+        frames[start : min(int(frames.shape[0]), start + chunk_pairs)]
+        for start in range(0, int(frames.shape[0]), chunk_pairs)
+    ]
 
 
 def inflate_one_video(
@@ -167,6 +210,7 @@ def _raw_output_path(output_dir: Path, video_name: str) -> Path:
 
 
 __all__ = [
+    "RAW_WRITE_PAIR_CHUNK_COUNT",
     "SnervInflateError",
     "_read_archive_bytes",
     "inflate_one_video",
