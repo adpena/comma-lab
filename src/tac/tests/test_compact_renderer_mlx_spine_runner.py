@@ -639,6 +639,98 @@ def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
     ] is False
 
 
+def test_hinerv_runner_short_scorer_smoke_readiness_attaches_to_training_artifact(
+    tmp_path: Path,
+) -> None:
+    training_dir = tmp_path / "training"
+    training_dir.mkdir()
+    artifact_path = training_dir / "training_artifact.json"
+    artifact_path.write_text(
+        json.dumps(
+            {
+                "substrate_artifact_metadata": {
+                    "score_aware_training": {"schema": "unit"}
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    artifact_dict = {
+        "per_epoch_metrics": [
+            {
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 0.12,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+                    "loss_part_scorer_input_contrast_floor": 0.01,
+                    "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+                    "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+                }
+            }
+        ],
+        "substrate_artifact_metadata": {
+            "score_aware_training": {"schema": "unit"}
+        },
+    }
+    post_export_quality = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "report_path": (tmp_path / "quality.json").as_posix(),
+        "archive_path": (tmp_path / "archive.zip").as_posix(),
+        "archive_sha256": "a" * 64,
+        "candidate_cache_dir": (tmp_path / "cache").as_posix(),
+        "quality_gate_path": (tmp_path / "gate.json").as_posix(),
+        "quality_gate_passed": True,
+        "quality_gate": {
+            "verdict": "CACHE_QUALITY_GATE_PASSED",
+            "stats": {
+                "candidate_segnet_last_rgb": {"std": 12.0},
+                "candidate_posenet_yuv6_pair": {"std": 3.0},
+            },
+        },
+        "segnet_argmax_probe_path": (tmp_path / "argmax.json").as_posix(),
+        "segnet_argmax_probe": {
+            "fit_gate_passed": True,
+            "segnet_argmax_disagreement_rate": 0.02,
+            "candidate_occupied_class_fraction": 0.8,
+            "reference_occupied_class_fraction": 0.9,
+            "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
+        },
+        "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+    }
+
+    report = runner_mod._write_hi_nerv_runner_short_scorer_smoke_readiness(
+        output_dir=training_dir,
+        artifact_dict=artifact_dict,
+        train_time_controls={
+            "segnet_direct_live_distillation_weight": 0.4,
+            "scorer_input_contrast_floor_weight": 0.5,
+            "scorer_input_contrast_floor_segnet_min_std_ratio": 0.6,
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": 0.6,
+        },
+        post_export_quality=post_export_quality,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_unscored_research_smoke=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["short_scorer_teacher_smoke_ready"] is True
+    assert report["ready_for_long_run"] is True
+    assert report["actionable_blockers"] == []
+    assert Path(report["report_path"]).is_file()
+    metadata = artifact_dict["substrate_artifact_metadata"]
+    summary = metadata["short_scorer_teacher_smoke_readiness"]
+    assert summary["ready_for_long_run"] is True
+    assert metadata["score_aware_training"][
+        "short_scorer_teacher_smoke_readiness"
+    ]["short_scorer_teacher_smoke_ready"] is True
+    persisted = json.loads(artifact_path.read_text(encoding="utf-8"))
+    persisted_summary = persisted["substrate_artifact_metadata"][
+        "short_scorer_teacher_smoke_readiness"
+    ]
+    assert persisted_summary["ready_for_long_run"] is True
+
+
 def test_hinerv_runner_receiver_cache_quality_forwards_prioritized_pairs(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -11517,6 +11609,13 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
     assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" in out[
         "blockers"
     ]
+    readiness = out["short_scorer_teacher_smoke_readiness"]
+    assert Path(readiness["report_path"]).is_file()
+    assert readiness["ready_for_long_run"] is False
+    assert "hi_nerv_short_smoke_unscored_research_smoke_enabled" in readiness[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_scorer_smoke_not_ready_for_long_run" in out["blockers"]
     assert out["score_aware_training"]["optimizer_kind"] == "pact_muon_adamw"
     assert out["score_aware_training"]["optimizer_policy"]["resolved_policy"] == (
         "native_optimizer"

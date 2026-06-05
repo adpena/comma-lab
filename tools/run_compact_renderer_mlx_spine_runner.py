@@ -131,6 +131,10 @@ from tac.substrates._shared.mlx_score_aware.curriculum import (  # noqa: E402
 from tac.substrates._shared.mlx_score_aware.dual_ascent import (  # noqa: E402
     build_default_nerv_train_time_dual_ascent_config,
 )
+from tac.substrates.hi_nerv.short_scorer_readiness import (  # noqa: E402
+    build_hinerv_short_scorer_smoke_readiness_report,
+    hinerv_short_scorer_smoke_readiness_summary,
+)
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY  # noqa: E402
 from tac.substrates.hprc.mlx_prefilter_coverage import (  # noqa: E402
     summarize_mlx_prefilter_coverage,
@@ -10266,6 +10270,36 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     post_export_receiver_cache_quality_summary = _hi_nerv_receiver_cache_quality_summary(
         post_export_receiver_cache_quality
     )
+    short_scorer_smoke_readiness = (
+        _write_hi_nerv_runner_short_scorer_smoke_readiness(
+            output_dir=training_dir,
+            artifact_dict=artifact_dict,
+            train_time_controls={
+                "segnet_direct_live_distillation_weight": float(
+                    segnet_direct_live_distillation_weight
+                ),
+                "scorer_input_contrast_floor_weight": float(
+                    scorer_input_contrast_floor_weight
+                ),
+                "scorer_input_contrast_floor_segnet_min_std_ratio": float(
+                    scorer_input_contrast_floor_segnet_min_std_ratio
+                ),
+                "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": float(
+                    scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+                ),
+            },
+            post_export_quality=post_export_receiver_cache_quality,
+            segnet_distillation_weight=effective_segnet_distillation_weight,
+            pose_distillation_weight=effective_pose_distillation_weight,
+            allow_unscored_research_smoke=bool(allow_unscored_research_smoke),
+            min_segnet_occupied_class_fraction_for_fit_gate=float(
+                receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+            ),
+        )
+    )
+    short_scorer_smoke_readiness_summary = (
+        hinerv_short_scorer_smoke_readiness_summary(short_scorer_smoke_readiness)
+    )
     trained_archive_byte_oracle = _write_hi_nerv_trained_archive_byte_oracle(
         output_dir=out,
         artifact_dict=artifact_dict,
@@ -10376,6 +10410,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     blockers.extend(score_aware_training_plan.get("blockers") or [])
     blockers.extend(candidate_curriculum_plan.get("blockers") or [])
     blockers.extend(trained_archive_byte_oracle.get("blockers") or [])
+    blockers.extend(short_scorer_smoke_readiness.get("actionable_blockers") or [])
+    if not bool(short_scorer_smoke_readiness.get("ready_for_long_run")):
+        blockers.append("hi_nerv_short_scorer_smoke_not_ready_for_long_run")
     if isinstance(training_telemetry_contract, Mapping):
         blockers.extend(training_telemetry_contract.get("blockers") or [])
         if not bool(training_telemetry_contract.get("passed")):
@@ -10543,6 +10580,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             "training_artifact": artifact_dict,
             "trained_archive_byte_oracle": trained_archive_byte_oracle,
+            "short_scorer_teacher_smoke_readiness": (
+                short_scorer_smoke_readiness_summary
+            ),
             "receiver_closed_modelsize_ladder_path": (
                 trained_archive_byte_oracle[
                     "receiver_closed_modelsize_ladder_path"
@@ -10684,6 +10724,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 },
                 "post_export_receiver_cache_quality": (
                     post_export_receiver_cache_quality_summary
+                ),
+                "short_scorer_teacher_smoke_readiness": (
+                    short_scorer_smoke_readiness_summary
                 ),
                 "train_receiver_class_escape_contract": (
                     train_receiver_class_escape_contract
@@ -16457,6 +16500,123 @@ def _attach_hi_nerv_post_export_receiver_cache_quality(
         json.dumps(artifact, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+
+def _write_hi_nerv_runner_short_scorer_smoke_readiness(
+    *,
+    output_dir: str | Path,
+    artifact_dict: Mapping[str, Any],
+    train_time_controls: Mapping[str, Any],
+    post_export_quality: Mapping[str, Any] | None,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    allow_unscored_research_smoke: bool,
+    min_segnet_occupied_class_fraction_for_fit_gate: float,
+) -> dict[str, Any]:
+    output_path = Path(output_dir).expanduser().resolve(strict=False)
+    report = build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=train_time_controls,
+        final_loss_components=_final_loss_components_from_training_artifact_dict(
+            artifact_dict
+        ),
+        post_export_quality=post_export_quality,
+        segnet_distillation_weight=float(segnet_distillation_weight),
+        pose_distillation_weight=float(pose_distillation_weight),
+        allow_mock_scorer_teacher=False,
+        unscored_research_smoke_enabled=bool(allow_unscored_research_smoke),
+        min_segnet_occupied_class_fraction_for_fit_gate=(
+            min_segnet_occupied_class_fraction_for_fit_gate
+        ),
+    )
+    path = output_path / "hi_nerv_short_scorer_smoke_readiness.json"
+    report["report_path"] = path.as_posix()
+    _write_json(path, report)
+    _attach_hi_nerv_short_scorer_smoke_readiness(
+        artifact_dict=artifact_dict,
+        output_dir=output_path,
+        report=report,
+    )
+    return report
+
+
+def _attach_hi_nerv_short_scorer_smoke_readiness(
+    *,
+    artifact_dict: Mapping[str, Any],
+    output_dir: str | Path,
+    report: Mapping[str, Any],
+) -> None:
+    summary = hinerv_short_scorer_smoke_readiness_summary(report)
+    metadata = artifact_dict.get("substrate_artifact_metadata")
+    if isinstance(metadata, dict):
+        metadata["short_scorer_teacher_smoke_readiness"] = summary
+        score_training = metadata.get("score_aware_training")
+        if isinstance(score_training, dict):
+            score_training["short_scorer_teacher_smoke_readiness"] = summary
+    artifact_path = Path(output_dir).expanduser().resolve(strict=False) / (
+        "training_artifact.json"
+    )
+    if not artifact_path.is_file():
+        return
+    try:
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    artifact_metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+    artifact_metadata["short_scorer_teacher_smoke_readiness"] = summary
+    score_training = artifact_metadata.get("score_aware_training")
+    if isinstance(score_training, dict):
+        score_training["short_scorer_teacher_smoke_readiness"] = summary
+    artifact["substrate_artifact_metadata"] = artifact_metadata
+    artifact_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _final_loss_components_from_training_artifact_dict(
+    artifact_dict: Mapping[str, Any],
+) -> dict[str, float]:
+    row = _final_metric_row_from_training_artifact_dict(artifact_dict)
+    if not isinstance(row, Mapping):
+        return {}
+    loss_components = row.get("loss_components")
+    if not isinstance(loss_components, Mapping):
+        return {}
+    out: dict[str, float] = {}
+    for key, value in loss_components.items():
+        finite = _optional_float(value)
+        if finite is not None:
+            out[str(key)] = finite
+    return out
+
+
+def _final_metric_row_from_training_artifact_dict(
+    artifact_dict: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    per_epoch = artifact_dict.get("per_epoch_metrics")
+    if isinstance(per_epoch, Sequence) and per_epoch:
+        row = per_epoch[-1]
+        if isinstance(row, Mapping):
+            return row
+    telemetry_path = artifact_dict.get("telemetry_path")
+    if telemetry_path is None:
+        return None
+    path = Path(str(telemetry_path)).expanduser().resolve(strict=False)
+    if not path.is_file():
+        return None
+    last_row: Mapping[str, Any] | None = None
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            text = line.strip()
+            if not text:
+                continue
+            try:
+                row = json.loads(text)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(row, Mapping):
+                last_row = row
+    return last_row
 
 
 def _run_pact_nerv_vq_mlx_smoke(
