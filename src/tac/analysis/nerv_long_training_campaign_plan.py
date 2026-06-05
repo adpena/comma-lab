@@ -52,6 +52,7 @@ from tac.analysis.nerv_source_parity_contract import build_nerv_source_parity_co
 from tac.analysis.pr95_distortion_practices_guard import (
     build_pr95_distortion_practices_row_guard,
     build_pr95_distortion_source_inventory,
+    build_pr95_evaluate_scorer_domain_telemetry_contract,
 )
 from tac.analysis.snerv_lf_over_ceiling_reroute_queue import (
     DEFAULT_QUEUE_ID as DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
@@ -165,9 +166,7 @@ _OPTIMIZER_KIND_ALIASES = {
 }
 TIMING_SMOKE_OPTIMIZER_KINDS = (AURORA_LIKE_OPTIMIZER_KIND,)
 _TIMING_SMOKE_OPTIMIZER_LAUNCH_BLOCKERS: dict[str, tuple[str, ...]] = {
-    AURORA_LIKE_OPTIMIZER_KIND: (
-        "aurora_requires_local_timing_convergence_smoke",
-    )
+    AURORA_LIKE_OPTIMIZER_KIND: ("aurora_requires_local_timing_convergence_smoke",)
 }
 FIRST_PASS_OPTIMIZER_KINDS = frozenset(("pact_muon_adamw", "adamw", "muon", "lion", "adamax"))
 OPTIMIZER_CONTROL_SCHEMA = "nerv_optimizer_control_surface.v1"
@@ -232,15 +231,9 @@ def _upstream_evaluate_priority_contract() -> dict[str, Any]:
             "segnet_frame1_direct_weight": 1.0,
             "posenet_frame0_direct_weight": 1.0,
             "posenet_frame1_direct_weight": 1.0,
-            "pose_marginal_formula": score_allocation["posenet"][
-                "derivative_wrt_d_pose"
-            ],
-            "rate_price_per_archive_byte": score_allocation["rate"][
-                "rate_price_per_archive_byte"
-            ],
-            "canonical_rate_denominator_bytes": score_allocation["rate"][
-                "canonical_denominator_bytes"
-            ],
+            "pose_marginal_formula": score_allocation["posenet"]["derivative_wrt_d_pose"],
+            "rate_price_per_archive_byte": score_allocation["rate"]["rate_price_per_archive_byte"],
+            "canonical_rate_denominator_bytes": score_allocation["rate"]["canonical_denominator_bytes"],
         },
         "row_binding_required": True,
         "promotion_boundary": "archive.zip plus deterministic inflate runtime through upstream evaluate.py",
@@ -267,53 +260,35 @@ def _row_upstream_evaluate_binding(
         "optimizer_target_terms": list(contract.get("optimizer_target_terms") or ()),
         "rate": {
             "archive_authority": score_allocation["rate"]["archive_authority"],
-            "canonical_denominator_bytes": score_allocation["rate"][
-                "canonical_denominator_bytes"
+            "canonical_denominator_bytes": score_allocation["rate"]["canonical_denominator_bytes"],
+            "rate_price_per_archive_byte": score_allocation["rate"]["rate_price_per_archive_byte"],
+            "raw_output_shape_bytes_are_not_rate_denominator": score_allocation["rate"][
+                "raw_output_shape_bytes_are_not_rate_denominator"
             ],
-            "rate_price_per_archive_byte": score_allocation["rate"][
-                "rate_price_per_archive_byte"
-            ],
-            "raw_output_shape_bytes_are_not_rate_denominator": score_allocation[
-                "rate"
-            ]["raw_output_shape_bytes_are_not_rate_denominator"],
         },
         "pair_geometry": {
             "seq_len": score_allocation["pair_geometry"]["seq_len"],
-            "public_test_pair_count": score_allocation["pair_geometry"][
-                "public_test_pair_count"
-            ],
+            "public_test_pair_count": score_allocation["pair_geometry"]["public_test_pair_count"],
             "camera_size_wh": list(score_allocation["pair_geometry"]["camera_size_wh"]),
-            "candidate_raw_shape": list(
-                score_allocation["pair_geometry"]["candidate_raw_shape"]
-            ),
+            "candidate_raw_shape": list(score_allocation["pair_geometry"]["candidate_raw_shape"]),
         },
         "segnet": {
             "coefficient": score_allocation["segnet"]["coefficient"],
             "frame_scope": score_allocation["segnet"]["frame_scope"],
-            "scored_frame_index_within_pair": score_allocation["segnet"][
-                "scored_frame_index_within_pair"
-            ],
-            "unscored_frame_index_within_pair": score_allocation["segnet"][
-                "unscored_frame_index_within_pair"
-            ],
+            "scored_frame_index_within_pair": score_allocation["segnet"]["scored_frame_index_within_pair"],
+            "unscored_frame_index_within_pair": score_allocation["segnet"]["unscored_frame_index_within_pair"],
             "distortion": score_allocation["segnet"]["distortion"],
         },
         "posenet": {
             "frame_scope": score_allocation["posenet"]["frame_scope"],
-            "scored_frame_indices_within_pair": list(
-                score_allocation["posenet"]["scored_frame_indices_within_pair"]
-            ),
+            "scored_frame_indices_within_pair": list(score_allocation["posenet"]["scored_frame_indices_within_pair"]),
             "input_domain": score_allocation["posenet"]["input_domain"],
             "distortion": score_allocation["posenet"]["distortion"],
-            "derivative_wrt_d_pose": score_allocation["posenet"][
-                "derivative_wrt_d_pose"
-            ],
+            "derivative_wrt_d_pose": score_allocation["posenet"]["derivative_wrt_d_pose"],
         },
         "authority": {
             "row_is_optimizer_guidance_only": True,
-            "score_authority_requires": score_allocation["authority"][
-                "score_authority_requires"
-            ],
+            "score_authority_requires": score_allocation["authority"]["score_authority_requires"],
             "receiver_contract": score_allocation["authority"]["receiver_contract"],
         },
         **FALSE_AUTHORITY,
@@ -339,9 +314,7 @@ def _tilde_oss_leverage_policy() -> dict[str, Any]:
         },
         "wall_attention": {
             "official_tilde_surface": True,
-            "allowed_use": (
-                "concept_only_pact_native_snerv_lf_tub_temporal_gate_with_receiver_bytes"
-            ),
+            "allowed_use": ("concept_only_pact_native_snerv_lf_tub_temporal_gate_with_receiver_bytes"),
             "direct_kernel_import_allowed": False,
             "byte_charged_receiver_replay_required": True,
             "score_claim": False,
@@ -359,9 +332,7 @@ def _tilde_oss_leverage_policy() -> dict[str, Any]:
         },
         "nitrobrew": {
             "official_tilde_surface": True,
-            "allowed_use": (
-                "concept_only_streaming_accumulation_for_local_scorer_memory_reduction"
-            ),
+            "allowed_use": ("concept_only_streaming_accumulation_for_local_scorer_memory_reduction"),
             "codec_or_submission_claim_allowed": False,
         },
         "direct_import_policy": {
@@ -420,9 +391,7 @@ def _pr95_baseline_identity_binding(
     local_work_order = source.get("local_cpu_mlx_work_order")
     modal_policy = source.get("modal_dispatch_policy")
     work_order = source.get("paired_exact_eval_work_order")
-    source_blockers = [
-        str(blocker) for blocker in source.get("blockers") or () if blocker
-    ]
+    source_blockers = [str(blocker) for blocker in source.get("blockers") or () if blocker]
     structural_blockers = []
     if source.get("schema") != "pr95_baseline_identity.v1":
         structural_blockers.append("pr95_baseline_identity_schema_mismatch")
@@ -442,21 +411,11 @@ def _pr95_baseline_identity_binding(
         "attached": not structural_blockers and isinstance(selected_archive, Mapping),
         "baseline_id": source.get("baseline_id"),
         "baseline_identity_reusable": bool(source.get("baseline_identity_reusable")),
-        "selected_archive": (
-            dict(selected_archive) if isinstance(selected_archive, Mapping) else None
-        ),
-        "exact_axis_status": (
-            dict(exact_axis_status) if isinstance(exact_axis_status, Mapping) else None
-        ),
-        "local_cpu_mlx_work_order": (
-            dict(local_work_order) if isinstance(local_work_order, Mapping) else None
-        ),
-        "modal_dispatch_policy": (
-            dict(modal_policy) if isinstance(modal_policy, Mapping) else None
-        ),
-        "paired_exact_eval_work_order": (
-            dict(work_order) if isinstance(work_order, Mapping) else None
-        ),
+        "selected_archive": (dict(selected_archive) if isinstance(selected_archive, Mapping) else None),
+        "exact_axis_status": (dict(exact_axis_status) if isinstance(exact_axis_status, Mapping) else None),
+        "local_cpu_mlx_work_order": (dict(local_work_order) if isinstance(local_work_order, Mapping) else None),
+        "modal_dispatch_policy": (dict(modal_policy) if isinstance(modal_policy, Mapping) else None),
+        "paired_exact_eval_work_order": (dict(work_order) if isinstance(work_order, Mapping) else None),
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -515,14 +474,9 @@ def _snerv_renderer_nondegenerate_gate(
             blockers.append("snerv_renderer_nondegenerate_smoke_missing")
         elif proof.get("passed") is not True:
             blockers.append("snerv_renderer_nondegenerate_smoke_failed")
-        if (
-            measured_pairs is None
-            or int(measured_pairs) < SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT
-        ):
+        if measured_pairs is None or int(measured_pairs) < SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT:
             blockers.append("snerv_renderer_nondegenerate_smoke_min16_pairs_missing")
-        blockers.extend(
-            str(blocker) for blocker in proof.get("blockers") or () if blocker
-        )
+        blockers.extend(str(blocker) for blocker in proof.get("blockers") or () if blocker)
     blockers = _dedupe(blockers)
     return {
         "schema": SNERV_RENDERER_NONDEGENERATE_GATE_SCHEMA,
@@ -590,16 +544,10 @@ def build_nerv_long_training_campaign_plan(
     joint_recon_weight_artifacts = _load_verified_joint_recon_weight_artifacts(joint_recon_weight_manifest_paths)
     candidate_feedback_index = _candidate_feedback_index(candidate_feedback_sources)
     decoder_weight_waterfill_index = _decoder_weight_waterfill_index(decoder_weight_waterfill_sources)
-    archive_section_telemetry_index = _archive_section_telemetry_index(
-        archive_section_telemetry_sources
-    )
-    byte_cap_feedback_paths = tuple(
-        Path(path).as_posix() for path in modelsize_byte_cap_feedback_paths
-    )
+    archive_section_telemetry_index = _archive_section_telemetry_index(archive_section_telemetry_sources)
+    byte_cap_feedback_paths = tuple(Path(path).as_posix() for path in modelsize_byte_cap_feedback_paths)
     planner_queue_artifact = (
-        None
-        if planner_row_queue_artifact_path is None
-        else Path(planner_row_queue_artifact_path).as_posix()
+        None if planner_row_queue_artifact_path is None else Path(planner_row_queue_artifact_path).as_posix()
     )
     source_parity_contract = build_nerv_source_parity_contract(
         repo_root=_repo_root(),
@@ -609,12 +557,8 @@ def build_nerv_long_training_campaign_plan(
     upstream_evaluate_priority_contract = _upstream_evaluate_priority_contract()
     tilde_oss_leverage_policy = _tilde_oss_leverage_policy()
     pr95_baseline_binding = _pr95_baseline_identity_binding(pr95_baseline_identity)
-    pr95_distortion_source_inventory = build_pr95_distortion_source_inventory(
-        _repo_root()
-    )
-    snerv_scorer_tether_smoke_gate = _snerv_scorer_tether_smoke_gate(
-        snerv_scorer_tether_smoke_report
-    )
+    pr95_distortion_source_inventory = build_pr95_distortion_source_inventory(_repo_root())
+    snerv_scorer_tether_smoke_gate = _snerv_scorer_tether_smoke_gate(snerv_scorer_tether_smoke_report)
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -661,14 +605,10 @@ def build_nerv_long_training_campaign_plan(
                     decoder_weight_waterfill_index=decoder_weight_waterfill_index,
                     archive_section_telemetry_index=archive_section_telemetry_index,
                     source_parity_contract=source_parity_contract,
-                    upstream_evaluate_priority_contract=(
-                        upstream_evaluate_priority_contract
-                    ),
+                    upstream_evaluate_priority_contract=(upstream_evaluate_priority_contract),
                     tilde_oss_leverage_policy=tilde_oss_leverage_policy,
                     pr95_baseline_identity_binding=pr95_baseline_binding,
-                    pr95_distortion_source_inventory=(
-                        pr95_distortion_source_inventory
-                    ),
+                    pr95_distortion_source_inventory=(pr95_distortion_source_inventory),
                     planner_row_queue_artifact_path=planner_queue_artifact,
                     modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 )
@@ -686,9 +626,7 @@ def build_nerv_long_training_campaign_plan(
                 bounded_proof_only=bool(snerv_bounded_proof_only),
                 bounded_proof_epochs=int(snerv_bounded_proof_epochs),
                 source_parity_contract=source_parity_contract,
-                upstream_evaluate_priority_contract=(
-                    upstream_evaluate_priority_contract
-                ),
+                upstream_evaluate_priority_contract=(upstream_evaluate_priority_contract),
                 tilde_oss_leverage_policy=tilde_oss_leverage_policy,
                 pr95_baseline_identity_binding=pr95_baseline_binding,
                 pr95_distortion_source_inventory=pr95_distortion_source_inventory,
@@ -716,9 +654,7 @@ def build_nerv_long_training_campaign_plan(
         ),
         measured_lf_payload_paths=byte_cap_feedback_paths,
         snar_header_grammar_profiles=snerv_snar_header_grammar_profile_sources,
-        snar_header_minimization_reports=(
-            snerv_snar_header_minimization_report_sources
-        ),
+        snar_header_minimization_reports=(snerv_snar_header_minimization_report_sources),
         output_root=Path(output_root) / "snerv_lf_over_ceiling_reroutes",
         queue_id=DEFAULT_SNERV_LF_REROUTE_QUEUE_ID,
     )
@@ -755,8 +691,7 @@ def build_nerv_long_training_campaign_plan(
             "native_mlx_optimizer_kinds": [
                 kind
                 for kind in optimizers
-                if kind in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS
-                and kind != "pact_muon_adamw"
+                if kind in SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS and kind != "pact_muon_adamw"
             ],
             "pact_partitioned_optimizer_kinds": [kind for kind in optimizers if kind == "pact_muon_adamw"],
             "selected_plan_only_optimizer_kinds": [],
@@ -764,9 +699,7 @@ def build_nerv_long_training_campaign_plan(
             "selected_timing_smoke_optimizer_kinds": [
                 kind for kind in optimizers if _is_timing_smoke_optimizer_kind(kind)
             ],
-            "available_timing_smoke_optimizer_kinds": list(
-                TIMING_SMOKE_OPTIMIZER_KINDS
-            ),
+            "available_timing_smoke_optimizer_kinds": list(TIMING_SMOKE_OPTIMIZER_KINDS),
             "first_pass_optimizer_kinds": sorted(FIRST_PASS_OPTIMIZER_KINDS),
             "default_optimizer_kind": "pact_muon_adamw",
             "default_optimizer_backend": "tac.local_acceleration.pr95_hnerv_mlx",
@@ -797,23 +730,15 @@ def build_nerv_long_training_campaign_plan(
         "candidate_feedback_row_count": _unique_index_row_count(candidate_feedback_index),
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
         "archive_section_telemetry_source_count": len(archive_section_telemetry_sources),
-        "archive_section_telemetry_row_count": _unique_index_row_count(
-            archive_section_telemetry_index
-        ),
+        "archive_section_telemetry_row_count": _unique_index_row_count(archive_section_telemetry_index),
         "snerv_lf_payload_recode_source_count": len(snerv_lf_payload_recode_sources),
         "snerv_lf_payload_byte_report_source_count": len(snerv_lf_payload_byte_report_sources),
-        "snerv_snar_header_grammar_profile_source_count": len(
-            snerv_snar_header_grammar_profile_sources
-        ),
-        "snerv_snar_header_minimization_report_source_count": len(
-            snerv_snar_header_minimization_report_sources
-        ),
+        "snerv_snar_header_grammar_profile_source_count": len(snerv_snar_header_grammar_profile_sources),
+        "snerv_snar_header_minimization_report_source_count": len(snerv_snar_header_minimization_report_sources),
         "decoder_weight_waterfill_row_count": _unique_index_row_count(decoder_weight_waterfill_index),
         "decoder_weight_waterfill_unattached_source_count": len(decoder_weight_waterfill_unattached_sources),
         "decoder_weight_waterfill_unattached_sources": (decoder_weight_waterfill_unattached_sources),
-        "archive_section_telemetry_unattached_source_count": len(
-            archive_section_telemetry_unattached_sources
-        ),
+        "archive_section_telemetry_unattached_source_count": len(archive_section_telemetry_unattached_sources),
         "archive_section_telemetry_unattached_sources": archive_section_telemetry_unattached_sources,
         "snerv_lf_over_ceiling_reroute_queue": snerv_lf_over_ceiling_reroute_queue,
         "snerv_lf_over_ceiling_reroute_queue_schema": snerv_lf_over_ceiling_reroute_queue["schema"],
@@ -824,31 +749,23 @@ def build_nerv_long_training_campaign_plan(
             source_parity_contract.get("required_for_long_training_ready")
         ),
         "source_parity_blockers": list(source_parity_contract.get("blockers") or ()),
-        "source_parity_nonblocking_gaps": list(
-            source_parity_contract.get("nonblocking_gaps") or ()
-        ),
+        "source_parity_nonblocking_gaps": list(source_parity_contract.get("nonblocking_gaps") or ()),
         "upstream_evaluate_priority_contract": upstream_evaluate_priority_contract,
         "upstream_evaluate_contract_consumed_by_rows": all(
-            isinstance(row.get("upstream_evaluate_score_binding"), Mapping)
-            for row in rows
+            isinstance(row.get("upstream_evaluate_score_binding"), Mapping) for row in rows
         ),
         "tilde_oss_leverage_policy": tilde_oss_leverage_policy,
         "tilde_oss_policy_consumed_by_rows": all(
-            isinstance(row.get("tilde_oss_leverage_binding"), Mapping)
-            for row in rows
+            isinstance(row.get("tilde_oss_leverage_binding"), Mapping) for row in rows
         ),
         "pr95_baseline_identity_binding": pr95_baseline_binding,
         "pr95_baseline_identity_consumed_by_rows": all(
-            isinstance(row.get("pr95_baseline_identity_binding"), Mapping)
-            for row in rows
+            isinstance(row.get("pr95_baseline_identity_binding"), Mapping) for row in rows
         ),
         "pr95_distortion_source_inventory": pr95_distortion_source_inventory,
-        "pr95_distortion_source_ready": bool(
-            pr95_distortion_source_inventory.get("source_ready")
-        ),
+        "pr95_distortion_source_ready": bool(pr95_distortion_source_inventory.get("source_ready")),
         "pr95_distortion_practices_consumed_by_rows": all(
-            isinstance(row.get("pr95_distortion_practices_guard"), Mapping)
-            for row in rows
+            isinstance(row.get("pr95_distortion_practices_guard"), Mapping) for row in rows
         ),
         "pr95_distortion_practices_blockers": _dedupe(
             [
@@ -868,9 +785,7 @@ def build_nerv_long_training_campaign_plan(
             ]
         ),
         "snerv_scorer_tether_smoke_gate": snerv_scorer_tether_smoke_gate,
-        "snerv_scorer_tether_smoke_report_attached": bool(
-            snerv_scorer_tether_smoke_gate.get("attached")
-        ),
+        "snerv_scorer_tether_smoke_report_attached": bool(snerv_scorer_tether_smoke_gate.get("attached")),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
         "experiment_queue": experiment_queue,
@@ -942,8 +857,7 @@ def render_nerv_long_training_campaign_plan_markdown(report: Mapping[str, Any]) 
             [
                 f"- upstream_evaluate: `{upstream_contract.get('source')}`",
                 f"  baseline_to_beat: `{upstream_contract.get('baseline_to_beat')}`",
-                "  canonical_rate_denominator_bytes: "
-                f"`{crux.get('canonical_rate_denominator_bytes')}`",
+                f"  canonical_rate_denominator_bytes: `{crux.get('canonical_rate_denominator_bytes')}`",
                 f"  pose_marginal_formula: `{crux.get('pose_marginal_formula')}`",
             ]
         )
@@ -956,10 +870,8 @@ def render_nerv_long_training_campaign_plan_markdown(report: Mapping[str, Any]) 
         lines.extend(
             [
                 f"- tilde_oss_policy: `{tilde_policy.get('schema')}`",
-                "  parallax_official_tilde_surface: "
-                f"`{parallax.get('official_tilde_surface')}`",
-                "  parallax_direct_runtime_import_allowed: "
-                f"`{parallax.get('direct_runtime_import_allowed')}`",
+                f"  parallax_official_tilde_surface: `{parallax.get('official_tilde_surface')}`",
+                f"  parallax_direct_runtime_import_allowed: `{parallax.get('direct_runtime_import_allowed')}`",
                 "  wall_attention_direct_kernel_import_allowed: "
                 f"`{wall_attention.get('direct_kernel_import_allowed')}`",
             ]
@@ -967,19 +879,13 @@ def render_nerv_long_training_campaign_plan_markdown(report: Mapping[str, Any]) 
     pr95_binding = report.get("pr95_baseline_identity_binding")
     if isinstance(pr95_binding, Mapping):
         selected_archive = pr95_binding.get("selected_archive")
-        selected_archive = (
-            selected_archive if isinstance(selected_archive, Mapping) else {}
-        )
+        selected_archive = selected_archive if isinstance(selected_archive, Mapping) else {}
         local_work_order = pr95_binding.get("local_cpu_mlx_work_order")
-        local_work_order = (
-            local_work_order if isinstance(local_work_order, Mapping) else {}
-        )
+        local_work_order = local_work_order if isinstance(local_work_order, Mapping) else {}
         modal_policy = pr95_binding.get("modal_dispatch_policy")
         modal_policy = modal_policy if isinstance(modal_policy, Mapping) else {}
         paired_work_order = pr95_binding.get("paired_exact_eval_work_order")
-        paired_work_order = (
-            paired_work_order if isinstance(paired_work_order, Mapping) else {}
-        )
+        paired_work_order = paired_work_order if isinstance(paired_work_order, Mapping) else {}
         lines.extend(
             [
                 f"- pr95_baseline_identity_attached: `{pr95_binding.get('attached')}`",
@@ -991,8 +897,7 @@ def render_nerv_long_training_campaign_plan_markdown(report: Mapping[str, Any]) 
                 f"  mlx_axis: `{local_work_order.get('mlx_axis_tag')}`",
                 f"  modal_dispatch_allowed: `{modal_policy.get('modal_dispatch_allowed')}`",
                 f"  paired_exact_eval_ready: `{paired_work_order.get('ready')}`",
-                "  exact_axis_blockers: "
-                f"`{', '.join(str(b) for b in pr95_binding.get('blockers') or ())}`",
+                f"  exact_axis_blockers: `{', '.join(str(b) for b in pr95_binding.get('blockers') or ())}`",
             ]
         )
     lines.extend(["", "## Rows", ""])
@@ -1013,10 +918,8 @@ def render_nerv_long_training_campaign_plan_markdown(report: Mapping[str, Any]) 
             lines.extend(
                 [
                     f"  snerv_runtime_authority: `{split.get('launch_semantics')}`",
-                    "  snerv_receiver_training_evidence: "
-                    f"`{split.get('receiver_bound_training_evidence_usable')}`",
-                    "  snerv_full_source_forward_authority: "
-                    f"`{split.get('full_source_forward_authority_proven')}`",
+                    f"  snerv_receiver_training_evidence: `{split.get('receiver_bound_training_evidence_usable')}`",
+                    f"  snerv_full_source_forward_authority: `{split.get('full_source_forward_authority_proven')}`",
                 ]
             )
     lines.extend(["", "## Blockers", ""])
@@ -1052,9 +955,7 @@ def _hinerv_campaign_row(
     candidate_id = str(candidate.get("candidate_id") or "hinerv_candidate")
     runner_candidate_id = "auto" if modelsize_byte_cap_feedback_paths else candidate_id
     runner_candidate_label = (
-        _auto_bytecap_candidate_label(candidate_id)
-        if modelsize_byte_cap_feedback_paths
-        else candidate_id
+        _auto_bytecap_candidate_label(candidate_id) if modelsize_byte_cap_feedback_paths else candidate_id
     )
     quant_bits = min(8, decoder_codec_nominal_bits(str(candidate.get("decoder_codec"))))
     num_pairs = int(candidate.get("num_pairs") or 600)
@@ -1086,9 +987,7 @@ def _hinerv_campaign_row(
         family="hi_nerv",
         feedback_paths=modelsize_byte_cap_feedback_paths,
     )
-    modelsize_byte_cap_blockers = list(
-        modelsize_byte_cap_preflight.get("blockers") or []
-    )
+    modelsize_byte_cap_blockers = list(modelsize_byte_cap_preflight.get("blockers") or [])
     launch_feedback_adjustment = _hinerv_feedback_launch_adjustment(
         feedback=feedback,
         learning_rate=float(learning_rate),
@@ -1147,18 +1046,10 @@ def _hinerv_campaign_row(
         measured_num_pairs=feedback.get("measured_num_pairs"),
         archive_minus_nominal_bytes=feedback.get("archive_minus_nominal_bytes"),
         archive_to_nominal_ratio=feedback.get("archive_to_nominal_ratio"),
-        calibrated_archive_overrun_bytes=feedback.get(
-            "calibrated_archive_overrun_bytes"
-        ),
-        required_nominal_payload_bytes_max=feedback.get(
-            "required_nominal_payload_bytes_max"
-        ),
-        hard_byte_ceiling_measurement_bypass_enabled=feedback.get(
-            "hard_byte_ceiling_measurement_bypass_enabled"
-        ),
-        hard_byte_ceiling_checked_after_export=feedback.get(
-            "hard_byte_ceiling_checked_after_export"
-        ),
+        calibrated_archive_overrun_bytes=feedback.get("calibrated_archive_overrun_bytes"),
+        required_nominal_payload_bytes_max=feedback.get("required_nominal_payload_bytes_max"),
+        hard_byte_ceiling_measurement_bypass_enabled=feedback.get("hard_byte_ceiling_measurement_bypass_enabled"),
+        hard_byte_ceiling_checked_after_export=feedback.get("hard_byte_ceiling_checked_after_export"),
     )
     row_id = f"hi_nerv::{runner_candidate_label}::{optimizer_kind}"
     optimizer_policy = _hinerv_optimizer_policy_for_kind(optimizer_kind)
@@ -1226,13 +1117,9 @@ def _hinerv_campaign_row(
         "--scorer-input-contrast-floor-weight",
         _float_token(DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_WEIGHT),
         "--scorer-input-contrast-floor-segnet-min-std-ratio",
-        _float_token(
-            DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO
-        ),
+        _float_token(DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO),
         "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
-        _float_token(
-            DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO
-        ),
+        _float_token(DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO),
         "--run-post-export-materializers",
         "--output-dir",
         (output_root / output_dir_basename).as_posix(),
@@ -1277,12 +1164,9 @@ def _hinerv_campaign_row(
                 str(archive_section_telemetry_metadata["path"]),
             ]
         )
-    archive_section_telemetry_runner_admitted = (
-        archive_section_telemetry_metadata.get("runner_admitted") is True
-    )
+    archive_section_telemetry_runner_admitted = archive_section_telemetry_metadata.get("runner_admitted") is True
     archive_section_telemetry_gate_ready = (
-        not archive_section_telemetry_metadata.get("attached")
-        or archive_section_telemetry_runner_admitted
+        not archive_section_telemetry_metadata.get("attached") or archive_section_telemetry_runner_admitted
     )
     if launch_feedback_adjustment.get("pose_protected_pathway_applied") is True:
         command.extend(
@@ -1293,27 +1177,25 @@ def _hinerv_campaign_row(
                 _float_token(float(launch_feedback_adjustment["pose_distillation_huber_delta"])),
             ]
         )
+    pr95_telemetry_contract = build_pr95_evaluate_scorer_domain_telemetry_contract("hi_nerv")
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
             "id": row_id,
             "family": "hi_nerv",
             "command_argv": command,
+            "hard_byte_ceiling": int(candidate.get("hard_byte_ceiling") or 0),
+            "upstream_evaluate_score_binding": upstream_evaluate_binding,
+            "pr95_evaluate_scorer_domain_telemetry_contract": pr95_telemetry_contract,
             "curriculum_plan": curriculum,
-            "pr95_staged_curriculum": bool(
-                (curriculum.get("pr95_stage_plan") or {}).get("enabled")
-            ),
+            "pr95_staged_curriculum": bool((curriculum.get("pr95_stage_plan") or {}).get("enabled")),
             "eval_roundtrip_ste_attached": bool(
-                (curriculum.get("scorer_pressure") or {}).get(
-                    "eval_roundtrip_ste_attached"
-                )
+                (curriculum.get("scorer_pressure") or {}).get("eval_roundtrip_ste_attached")
             ),
         },
         repo_root=_repo_root(),
         source_inventory=pr95_distortion_source_inventory,
     )
-    pr95_distortion_blockers = list(
-        pr95_distortion_guard.get("blockers") or []
-    )
+    pr95_distortion_blockers = list(pr95_distortion_guard.get("blockers") or [])
     candidate_authority_blockers = list(candidate.get("_candidate_authority_blockers") or [])
     blockers = [
         ("" if joint_recon_weight else "requires_verified_joint_p18_p19_recon_pixel_weight_artifact"),
@@ -1325,8 +1207,7 @@ def _hinerv_campaign_row(
         ),
         (
             ""
-            if not archive_section_telemetry_metadata.get("attached")
-            or archive_section_telemetry_runner_admitted
+            if not archive_section_telemetry_metadata.get("attached") or archive_section_telemetry_runner_admitted
             else "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted"
         ),
         "requires_full_video_mlx_prefilter_before_local_cpu_replay_unlock",
@@ -1346,10 +1227,7 @@ def _hinerv_campaign_row(
         blockers.append("hinerv_pose_instability_feedback_unapplied")
     if feedback.get("seg_stagnation_detected") is True and not launch_feedback_adjustment.get("segnet_weight_applied"):
         blockers.append("hinerv_segnet_stagnation_feedback_unapplied")
-    if (
-        feedback.get("pose_tail_burst_detected") is True
-        and not prioritized_pair_indices
-    ):
+    if feedback.get("pose_tail_burst_detected") is True and not prioritized_pair_indices:
         blockers.append("hinerv_pose_tail_burst_requires_prioritized_pair_indices")
     if launch_feedback_adjustment.get(
         "repeated_low_lr_pose_instability"
@@ -1412,14 +1290,13 @@ def _hinerv_campaign_row(
                 if modelsize_byte_cap_feedback_paths
                 else "explicit_budget_candidate"
             ),
-            "modelsize_byte_cap_feedback_paths": list(
-                modelsize_byte_cap_feedback_paths
-            ),
+            "modelsize_byte_cap_feedback_paths": list(modelsize_byte_cap_feedback_paths),
             "modelsize_byte_cap_preflight": modelsize_byte_cap_preflight,
             "optimizer_control": _optimizer_control(optimizer_kind),
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
+            "pr95_evaluate_scorer_domain_telemetry_contract": (pr95_telemetry_contract),
             "pr95_distortion_practices_guard": pr95_distortion_guard,
             "optimizer_policy": _hinerv_optimizer_policy_control(
                 optimizer_kind=optimizer_kind,
@@ -1441,9 +1318,7 @@ def _hinerv_campaign_row(
             "archive_section_telemetry": archive_section_telemetry_metadata,
             "feedback_launch_adjustment": launch_feedback_adjustment,
             "candidate_feedback": feedback or None,
-            "prioritized_pair_training": _prioritized_pair_training_plan(
-                prioritized_pair_indices
-            ),
+            "prioritized_pair_training": _prioritized_pair_training_plan(prioritized_pair_indices),
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
             "family_training_telemetry_context": family_training_telemetry_context or None,
             "source_faithfulness_controls": source_faithfulness_controls,
@@ -1482,18 +1357,14 @@ def _snerv_campaign_row(
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
     runner_candidate_id = "auto" if modelsize_byte_cap_feedback_paths else candidate_id
     runner_candidate_label = (
-        _auto_bytecap_candidate_label(candidate_id)
-        if modelsize_byte_cap_feedback_paths
-        else candidate_id
+        _auto_bytecap_candidate_label(candidate_id) if modelsize_byte_cap_feedback_paths else candidate_id
     )
     source_control_blockers = _snerv_source_bound_control_blockers(candidate)
     source_parity = _source_parity_family_report(
         family="snerv",
         source_parity_contract=source_parity_contract,
     )
-    official_runtime_authority_split = _snerv_official_runtime_authority_split(
-        source_parity
-    )
+    official_runtime_authority_split = _snerv_official_runtime_authority_split(source_parity)
     upstream_evaluate_binding = _row_upstream_evaluate_binding(
         family="snerv",
         contract=upstream_evaluate_priority_contract
@@ -1526,9 +1397,7 @@ def _snerv_campaign_row(
         family="snerv",
         feedback_paths=modelsize_byte_cap_feedback_paths,
     )
-    modelsize_byte_cap_blockers = list(
-        modelsize_byte_cap_preflight.get("blockers") or []
-    )
+    modelsize_byte_cap_blockers = list(modelsize_byte_cap_preflight.get("blockers") or [])
     feedback = _snerv_feedback_with_modelsize_byte_cap_evidence(
         feedback=feedback,
         candidate=candidate,
@@ -1583,9 +1452,7 @@ def _snerv_campaign_row(
         native_mlx_eval_roundtrip_ste_bound=eval_roundtrip_bound,
         native_mlx_differentiable_pose_preprocess_bound=joint_teacher_bound,
         native_mlx_coder_qat_bound=coder_qat_bound,
-        native_mlx_muon_adamw_partition_bound=(
-            str(optimizer_kind) == "pact_muon_adamw"
-        ),
+        native_mlx_muon_adamw_partition_bound=(str(optimizer_kind) == "pact_muon_adamw"),
         native_mlx_artifact_evidence=_snerv_native_artifact_evidence_from_feedback(feedback),
         receiver_proof_attached=bool(feedback.get("receiver_proof_attached")),
         full_video_local_prefilter_attached=bool(feedback.get("full_video_local_prefilter_attached")),
@@ -1595,18 +1462,10 @@ def _snerv_campaign_row(
         measured_num_pairs=feedback.get("measured_num_pairs"),
         archive_minus_nominal_bytes=feedback.get("archive_minus_nominal_bytes"),
         archive_to_nominal_ratio=feedback.get("archive_to_nominal_ratio"),
-        calibrated_archive_overrun_bytes=feedback.get(
-            "calibrated_archive_overrun_bytes"
-        ),
-        required_nominal_payload_bytes_max=feedback.get(
-            "required_nominal_payload_bytes_max"
-        ),
-        hard_byte_ceiling_measurement_bypass_enabled=feedback.get(
-            "hard_byte_ceiling_measurement_bypass_enabled"
-        ),
-        hard_byte_ceiling_checked_after_export=feedback.get(
-            "hard_byte_ceiling_checked_after_export"
-        ),
+        calibrated_archive_overrun_bytes=feedback.get("calibrated_archive_overrun_bytes"),
+        required_nominal_payload_bytes_max=feedback.get("required_nominal_payload_bytes_max"),
+        hard_byte_ceiling_measurement_bypass_enabled=feedback.get("hard_byte_ceiling_measurement_bypass_enabled"),
+        hard_byte_ceiling_checked_after_export=feedback.get("hard_byte_ceiling_checked_after_export"),
     )
     row_id = f"snerv::{runner_candidate_label}::native_rate_aware_training"
     native_mlx_decoder_train_steps = max(
@@ -1728,9 +1587,7 @@ def _snerv_campaign_row(
         candidate_id=candidate_id,
         full_video_coverage=bool(feedback.get("full_video_local_prefilter_attached")),
     )
-    lf_recode_selected_mode = _snerv_lf_recode_selected_mode(
-        lf_recode_admission_plan
-    )
+    lf_recode_selected_mode = _snerv_lf_recode_selected_mode(lf_recode_admission_plan)
     if lf_recode_selected_mode:
         command.extend(
             [
@@ -1738,11 +1595,15 @@ def _snerv_campaign_row(
                 lf_recode_selected_mode,
             ]
         )
+    pr95_telemetry_contract = build_pr95_evaluate_scorer_domain_telemetry_contract("snerv")
     pr95_distortion_guard = build_pr95_distortion_practices_row_guard(
         {
             "id": row_id,
             "family": "snerv",
             "command_argv": command,
+            "hard_byte_ceiling": int(candidate.get("hard_byte_ceiling") or 0),
+            "upstream_evaluate_score_binding": upstream_evaluate_binding,
+            "pr95_evaluate_scorer_domain_telemetry_contract": pr95_telemetry_contract,
             "curriculum_plan": curriculum,
             "pr95_faithful_curriculum_enabled": bool(pr95_curriculum_bound),
             "eval_roundtrip_ste_attached": bool(eval_roundtrip_bound),
@@ -1750,16 +1611,12 @@ def _snerv_campaign_row(
         repo_root=_repo_root(),
         source_inventory=pr95_distortion_source_inventory,
     )
-    pr95_distortion_blockers = list(
-        pr95_distortion_guard.get("blockers") or []
-    )
+    pr95_distortion_blockers = list(pr95_distortion_guard.get("blockers") or [])
     curriculum_blockers = [str(v) for v in curriculum.get("blockers") or () if v]
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
-    hard_byte_ceiling_satisfied_for_long_training = (
-        _snerv_hard_byte_ceiling_satisfied_for_long_training(
-            candidate,
-            lf_recode_admission_plan=lf_recode_admission_plan,
-        )
+    hard_byte_ceiling_satisfied_for_long_training = _snerv_hard_byte_ceiling_satisfied_for_long_training(
+        candidate,
+        lf_recode_admission_plan=lf_recode_admission_plan,
     )
     blockers = _dedupe(
         [
@@ -1774,8 +1631,7 @@ def _snerv_campaign_row(
             if candidate.get("nominal_under_ceiling") is not True
             else "",
             "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
-            if not bounded_proof_only
-            and not hard_byte_ceiling_satisfied_for_long_training
+            if not bounded_proof_only and not hard_byte_ceiling_satisfied_for_long_training
             else "",
             *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
@@ -1786,9 +1642,7 @@ def _snerv_campaign_row(
             *list(source_parity["required_blockers"]),
             *curriculum_blockers,
             *feedback_evidence_blockers,
-            *_snerv_lf_payload_recode_campaign_blockers(
-                lf_recode_admission_plan
-            ),
+            *_snerv_lf_payload_recode_campaign_blockers(lf_recode_admission_plan),
         ]
     )
     source_controls_ready = (
@@ -1801,9 +1655,7 @@ def _snerv_campaign_row(
     curriculum_ready = not curriculum_blockers
     scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
     renderer_nondegenerate_ready = not renderer_nondegenerate_gate.get("blockers")
-    prelaunch_proof_ready = bool(
-        scorer_tether_smoke_ready and renderer_nondegenerate_ready
-    )
+    prelaunch_proof_ready = bool(scorer_tether_smoke_ready and renderer_nondegenerate_ready)
     launch_ready = bool(
         source_controls_ready
         and curriculum_ready
@@ -1811,10 +1663,7 @@ def _snerv_campaign_row(
         and (
             True
             if bounded_proof_only
-            else bool(
-                rate_plausible_for_long_training
-                and hard_byte_ceiling_satisfied_for_long_training
-            )
+            else bool(rate_plausible_for_long_training and hard_byte_ceiling_satisfied_for_long_training)
         )
     )
     return _row(
@@ -1841,10 +1690,7 @@ def _snerv_campaign_row(
                 if bounded_proof_only
                 else (
                     "native_rate_aware_long_training_queue_ready"
-                    if (
-                        rate_plausible_for_long_training
-                        and hard_byte_ceiling_satisfied_for_long_training
-                    )
+                    if (rate_plausible_for_long_training and hard_byte_ceiling_satisfied_for_long_training)
                     else "native_rate_aware_long_training_rate_blocked"
                 )
             )
@@ -1859,14 +1705,13 @@ def _snerv_campaign_row(
                 if modelsize_byte_cap_feedback_paths
                 else "explicit_budget_candidate"
             ),
-            "modelsize_byte_cap_feedback_paths": list(
-                modelsize_byte_cap_feedback_paths
-            ),
+            "modelsize_byte_cap_feedback_paths": list(modelsize_byte_cap_feedback_paths),
             "modelsize_byte_cap_preflight": modelsize_byte_cap_preflight,
             "optimizer_control": optimizer_control,
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
+            "pr95_evaluate_scorer_domain_telemetry_contract": (pr95_telemetry_contract),
             "pr95_distortion_practices_guard": pr95_distortion_guard,
             "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
             "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
@@ -1879,26 +1724,18 @@ def _snerv_campaign_row(
             "source_bound_capacity_controls": _snerv_source_bound_controls(candidate),
             "source_bound_capacity_control_blockers": source_control_blockers,
             "source_parity": source_parity,
-            "snerv_official_runtime_authority_split": (
-                official_runtime_authority_split
-            ),
+            "snerv_official_runtime_authority_split": (official_runtime_authority_split),
             "snerv_official_trained_checkpoint_mapping": feedback.get(
                 "snerv_official_trained_checkpoint_mapping_manifest"
             ),
             "candidate_feedback": feedback or None,
-            "candidate_feedback_evidence_blockers_before_tether_smoke": (
-                raw_feedback_evidence_blockers
-            ),
+            "candidate_feedback_evidence_blockers_before_tether_smoke": (raw_feedback_evidence_blockers),
             "candidate_feedback_evidence_blockers": feedback_evidence_blockers,
-            "snerv_scorer_tether_smoke_suppressed_feedback_blockers": (
-                smoke_suppressed_feedback_blockers
-            ),
+            "snerv_scorer_tether_smoke_suppressed_feedback_blockers": (smoke_suppressed_feedback_blockers),
             "prioritized_pair_training": prioritized_pair_training,
             "snerv_lf_payload_recode_admission_plan": lf_recode_admission_plan,
             "snerv_lf_payload_codec_from_admission_plan": lf_recode_selected_mode,
-            "hard_byte_ceiling_satisfied_for_long_training": (
-                hard_byte_ceiling_satisfied_for_long_training
-            ),
+            "hard_byte_ceiling_satisfied_for_long_training": (hard_byte_ceiling_satisfied_for_long_training),
             "native_mlx_decoder_training_plan": {
                 "schema": "snerv_native_mlx_decoder_training_plan.v1",
                 "candidate_conditioned": True,
@@ -1920,9 +1757,7 @@ def _snerv_campaign_row(
                 "coder_aware_qat_bound": coder_qat_bound,
                 "pr95_faithful_curriculum_bound": pr95_curriculum_bound,
                 "eval_roundtrip_ste_bound": eval_roundtrip_bound,
-                "muon_adamw_partition_bound": (
-                    str(optimizer_kind) == "pact_muon_adamw"
-                ),
+                "muon_adamw_partition_bound": (str(optimizer_kind) == "pact_muon_adamw"),
                 "upstream_evaluate_score_binding": upstream_evaluate_binding,
                 "tilde_oss_leverage_binding": tilde_oss_binding,
                 "pr95_baseline_identity_binding": pr95_baseline_binding,
@@ -2102,16 +1937,11 @@ def _experiment_for_row(
     upstream_evaluate_binding = metadata.get("upstream_evaluate_score_binding")
     tilde_oss_binding = metadata.get("tilde_oss_leverage_binding")
     pr95_baseline_binding = metadata.get("pr95_baseline_identity_binding")
+    pr95_telemetry_contract = metadata.get("pr95_evaluate_scorer_domain_telemetry_contract")
     pr95_distortion_guard = metadata.get("pr95_distortion_practices_guard")
-    snerv_runtime_authority_split = metadata.get(
-        "snerv_official_runtime_authority_split"
-    )
-    snerv_renderer_nondegenerate_gate = metadata.get(
-        "snerv_renderer_nondegenerate_gate"
-    )
-    current_command_is_bounded_proof = bool(
-        metadata.get("current_command_is_bounded_proof_not_long_training")
-    )
+    snerv_runtime_authority_split = metadata.get("snerv_official_runtime_authority_split")
+    snerv_renderer_nondegenerate_gate = metadata.get("snerv_renderer_nondegenerate_gate")
+    current_command_is_bounded_proof = bool(metadata.get("current_command_is_bounded_proof_not_long_training"))
     return {
         "id": _safe_path_token(row_id),
         "family": str(family),
@@ -2139,6 +1969,10 @@ def _experiment_for_row(
                 pr95_baseline_binding,
                 Mapping,
             ),
+            "pr95_evaluate_scorer_domain_telemetry_contract_consumed": isinstance(
+                pr95_telemetry_contract,
+                Mapping,
+            ),
             "pr95_distortion_practices_consumed": isinstance(
                 pr95_distortion_guard,
                 Mapping,
@@ -2147,49 +1981,32 @@ def _experiment_for_row(
                 source_controls,
                 Mapping,
             ),
-            "source_bound_capacity_control_blockers": list(
-                source_control_blockers or ()
-            ),
-            "current_command_is_bounded_proof_not_long_training": (
-                current_command_is_bounded_proof
-            ),
+            "source_bound_capacity_control_blockers": list(source_control_blockers or ()),
+            "current_command_is_bounded_proof_not_long_training": (current_command_is_bounded_proof),
             "receiver_proof_required": bool(score_lowering_gate.get("receiver_proof_required")),
             "cpu_replay_ready": bool(score_lowering_gate["cpu_replay_ready"]),
             "exact_gate_ready": bool(score_lowering_gate["exact_gate_ready"]),
             "source_parity": source_parity if isinstance(source_parity, Mapping) else None,
             "upstream_evaluate_score_binding": (
-                upstream_evaluate_binding
-                if isinstance(upstream_evaluate_binding, Mapping)
-                else None
+                upstream_evaluate_binding if isinstance(upstream_evaluate_binding, Mapping) else None
             ),
-            "tilde_oss_leverage_binding": (
-                tilde_oss_binding
-                if isinstance(tilde_oss_binding, Mapping)
-                else None
-            ),
+            "tilde_oss_leverage_binding": (tilde_oss_binding if isinstance(tilde_oss_binding, Mapping) else None),
             "pr95_baseline_identity_binding": (
-                pr95_baseline_binding
-                if isinstance(pr95_baseline_binding, Mapping)
-                else None
+                pr95_baseline_binding if isinstance(pr95_baseline_binding, Mapping) else None
+            ),
+            "pr95_evaluate_scorer_domain_telemetry_contract": (
+                pr95_telemetry_contract if isinstance(pr95_telemetry_contract, Mapping) else None
             ),
             "pr95_distortion_practices_guard": (
-                pr95_distortion_guard
-                if isinstance(pr95_distortion_guard, Mapping)
-                else None
+                pr95_distortion_guard if isinstance(pr95_distortion_guard, Mapping) else None
             ),
             "snerv_official_runtime_authority_split": (
-                snerv_runtime_authority_split
-                if isinstance(snerv_runtime_authority_split, Mapping)
-                else None
+                snerv_runtime_authority_split if isinstance(snerv_runtime_authority_split, Mapping) else None
             ),
             "snerv_renderer_nondegenerate_gate": (
-                snerv_renderer_nondegenerate_gate
-                if isinstance(snerv_renderer_nondegenerate_gate, Mapping)
-                else None
+                snerv_renderer_nondegenerate_gate if isinstance(snerv_renderer_nondegenerate_gate, Mapping) else None
             ),
-            "source_bound_capacity_controls": (
-                source_controls if isinstance(source_controls, Mapping) else None
-            ),
+            "source_bound_capacity_controls": (source_controls if isinstance(source_controls, Mapping) else None),
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -2303,33 +2120,16 @@ def _candidate_feedback_evidence_blockers(
 
     if not feedback:
         return []
-    blockers = [
-        str(blocker)
-        for blocker in feedback.get("sample_generalization_blockers") or []
-        if blocker
-    ]
+    blockers = [str(blocker) for blocker in feedback.get("sample_generalization_blockers") or [] if blocker]
     gate = feedback.get("sample_generalization_gate")
     if isinstance(gate, Mapping):
         blockers.extend(str(blocker) for blocker in gate.get("blockers") or [])
     blockers.extend(_feedback_prioritized_pair_index_blockers(feedback))
+    blockers.extend(str(blocker) for blocker in feedback.get("direct_feedback_blockers") or [] if blocker)
     blockers.extend(
-        str(blocker)
-        for blocker in feedback.get("direct_feedback_blockers") or []
-        if blocker
+        str(blocker) for blocker in feedback.get("snerv_official_trained_checkpoint_mapping_blockers") or [] if blocker
     )
-    blockers.extend(
-        str(blocker)
-        for blocker in feedback.get(
-            "snerv_official_trained_checkpoint_mapping_blockers"
-        )
-        or []
-        if blocker
-    )
-    blockers.extend(
-        str(blocker)
-        for blocker in feedback.get("snerv_renderer_nondegenerate_blockers") or []
-        if blocker
-    )
+    blockers.extend(str(blocker) for blocker in feedback.get("snerv_renderer_nondegenerate_blockers") or [] if blocker)
     return _dedupe(blockers)
 
 
@@ -2393,10 +2193,7 @@ def _feedback_prioritized_pair_indices_routable(feedback: Mapping[str, Any]) -> 
             and int(feedback.get("measured_num_pairs") or 0) >= 600
             and (
                 "launch_hard_pair_prioritized_sampler_successor"
-                in {
-                    str(value)
-                    for value in feedback.get("recommended_launch_mutations") or ()
-                }
+                in {str(value) for value in feedback.get("recommended_launch_mutations") or ()}
             )
         )
     return False
@@ -2567,24 +2364,19 @@ def _snerv_official_runtime_authority_split(
         }
     audit_rows = _snerv_official_audit_rows_from_source_parity(source_parity)
     receiver_primitive_replay_proven = any(
-        row.get("official_mfu_hfr_tub_receiver_primitives_proven") is True
-        for row in audit_rows
+        row.get("official_mfu_hfr_tub_receiver_primitives_proven") is True for row in audit_rows
     )
     numeric_graph_replay_proven = any(
-        row.get("official_mfu_hfr_tub_numeric_graph_replay_proven") is True
-        for row in audit_rows
+        row.get("official_mfu_hfr_tub_numeric_graph_replay_proven") is True for row in audit_rows
     )
     receiver_runtime_decode_proven = any(
-        row.get("official_receiver_runtime_decode_proven") is True
-        for row in audit_rows
+        row.get("official_receiver_runtime_decode_proven") is True for row in audit_rows
     )
     receiver_source_forward_replay_bound = any(
-        row.get("official_receiver_source_forward_replay_bound") is True
-        for row in audit_rows
+        row.get("official_receiver_source_forward_replay_bound") is True for row in audit_rows
     )
     full_stack_source_forward_replay_proven = any(
-        row.get("full_stack_source_forward_replay_proven") is True
-        for row in audit_rows
+        row.get("full_stack_source_forward_replay_proven") is True for row in audit_rows
     )
     official_mfu_hfr_tub_parity_proven = any(
         row.get("official_mfu_hfr_tub_parity_proven") is True for row in audit_rows
@@ -2608,9 +2400,7 @@ def _snerv_official_runtime_authority_split(
         ]
     )
     receiver_bound_training_evidence_usable = bool(
-        receiver_primitive_replay_proven
-        and numeric_graph_replay_proven
-        and receiver_runtime_decode_proven
+        receiver_primitive_replay_proven and numeric_graph_replay_proven and receiver_runtime_decode_proven
     )
     full_source_forward_authority_proven = bool(
         official_mfu_hfr_tub_parity_proven
@@ -2625,17 +2415,11 @@ def _snerv_official_runtime_authority_split(
     if not receiver_runtime_decode_proven:
         blockers.append("snerv_official_receiver_runtime_decode_missing")
     if not full_source_forward_authority_proven:
-        blockers.append(
-            "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing"
-        )
+        blockers.append("snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing")
     if full_source_forward_authority_proven:
-        launch_semantics = (
-            "official_source_forward_parity_available_false_authority_until_score_gate"
-        )
+        launch_semantics = "official_source_forward_parity_available_false_authority_until_score_gate"
     elif receiver_bound_training_evidence_usable:
-        launch_semantics = (
-            "receiver_bound_training_allowed_but_official_source_authority_false"
-        )
+        launch_semantics = "receiver_bound_training_allowed_but_official_source_authority_false"
     else:
         launch_semantics = "receiver_bound_training_waits_on_required_primitive_rows"
     return {
@@ -2647,16 +2431,10 @@ def _snerv_official_runtime_authority_split(
         "numeric_graph_replay_proven": numeric_graph_replay_proven,
         "receiver_runtime_decode_proven": receiver_runtime_decode_proven,
         "receiver_source_forward_replay_bound": receiver_source_forward_replay_bound,
-        "full_stack_source_forward_replay_proven": (
-            full_stack_source_forward_replay_proven
-        ),
+        "full_stack_source_forward_replay_proven": (full_stack_source_forward_replay_proven),
         "official_mfu_hfr_tub_parity_proven": official_mfu_hfr_tub_parity_proven,
-        "receiver_bound_training_evidence_usable": (
-            receiver_bound_training_evidence_usable
-        ),
-        "full_source_forward_authority_proven": (
-            full_source_forward_authority_proven
-        ),
+        "receiver_bound_training_evidence_usable": (receiver_bound_training_evidence_usable),
+        "full_source_forward_authority_proven": (full_source_forward_authority_proven),
         "runtime_decode_blockers": runtime_decode_blockers,
         "source_gap_blockers": source_gap_blockers,
         "launch_semantics": launch_semantics,
@@ -2866,13 +2644,10 @@ def _merge_modelsize_byte_cap_feedback_candidates(
             and hard_byte_ceiling is not None
             and int(observed_archive_bytes) > int(hard_byte_ceiling)
         ):
-            over_ceiling = (
-                _first_present_int(
-                    observation,
-                    ("calibrated_archive_overrun_bytes",),
-                )
-                or int(observed_archive_bytes) - int(hard_byte_ceiling)
-            )
+            over_ceiling = _first_present_int(
+                observation,
+                ("calibrated_archive_overrun_bytes",),
+            ) or int(observed_archive_bytes) - int(hard_byte_ceiling)
             clean["_candidate_authority_blockers"] = _dedupe(
                 [
                     *list(clean.get("_candidate_authority_blockers") or []),
@@ -2880,32 +2655,22 @@ def _merge_modelsize_byte_cap_feedback_candidates(
                 ]
             )
             clean["_modelsize_feedback_demote_only"] = True
-            clean["_modelsize_feedback_observed_archive_bytes"] = int(
-                observed_archive_bytes
-            )
-            clean["_modelsize_feedback_archive_over_hard_byte_ceiling_bytes"] = int(
-                over_ceiling
-            )
+            clean["_modelsize_feedback_observed_archive_bytes"] = int(observed_archive_bytes)
+            clean["_modelsize_feedback_archive_over_hard_byte_ceiling_bytes"] = int(over_ceiling)
             required_nominal_max = _first_present_int(
                 observation,
                 ("required_nominal_payload_bytes_max",),
             )
             if required_nominal_max is not None:
-                clean["_modelsize_feedback_required_nominal_payload_bytes_max"] = int(
-                    required_nominal_max
-                )
+                clean["_modelsize_feedback_required_nominal_payload_bytes_max"] = int(required_nominal_max)
             if observation.get("hard_byte_ceiling_measurement_bypass_enabled") is not None:
                 clean["_modelsize_feedback_measurement_bypass_enabled"] = bool(
                     observation.get("hard_byte_ceiling_measurement_bypass_enabled")
                 )
         feedback_candidates.append(clean)
     all_candidates = [*all_candidates, *feedback_candidates]
-    selected_by_id = {
-        str(row.get("candidate_id") or ""): dict(row) for row in selected_candidates
-    }
-    merged: dict[str, dict[str, Any]] = {
-        str(row.get("candidate_id") or ""): dict(row) for row in selected_candidates
-    }
+    selected_by_id = {str(row.get("candidate_id") or ""): dict(row) for row in selected_candidates}
+    merged: dict[str, dict[str, Any]] = {str(row.get("candidate_id") or ""): dict(row) for row in selected_candidates}
     for candidate in all_candidates:
         candidate_id = str(candidate.get("candidate_id") or "")
         if not candidate_id:
@@ -2949,8 +2714,7 @@ def _merge_modelsize_byte_cap_feedback_candidates(
     demotion_rows = [
         row
         for row in rows[max(1, int(limit)) :]
-        if row.get("_modelsize_feedback_demote_only") is True
-        and str(row.get("candidate_id") or "") not in limited_ids
+        if row.get("_modelsize_feedback_demote_only") is True and str(row.get("candidate_id") or "") not in limited_ids
     ]
     return [*limited, *demotion_rows]
 
@@ -3014,9 +2778,7 @@ def _hinerv_waterfill_source_candidates(
             clean.setdefault("family", "hi_nerv")
             clean["_candidate_source"] = "decoder_weight_waterfill_modelsize_candidate"
             clean["_candidate_source_waterfill_path"] = source.get("path")
-            clean["_candidate_source_waterfill_receiver_proof_ready"] = bool(
-                source.get("receiver_proof_ready")
-            )
+            clean["_candidate_source_waterfill_receiver_proof_ready"] = bool(source.get("receiver_proof_ready"))
             clean["_candidate_source_waterfill_runner_admitted"] = bool(
                 _decoder_weight_waterfill_runner_admitted(source)
             )
@@ -3035,9 +2797,7 @@ def _hinerv_waterfill_candidate_sort_key(
         index=index,
     )
     has_waterfill = bool(waterfill)
-    waterfill_admitted = bool(
-        waterfill and _decoder_weight_waterfill_runner_admitted(waterfill)
-    )
+    waterfill_admitted = bool(waterfill and _decoder_weight_waterfill_runner_admitted(waterfill))
     waterfill_receiver_ready = bool(waterfill and waterfill.get("receiver_proof_ready") is True)
     return (
         0 if waterfill_admitted else 1,
@@ -3049,10 +2809,7 @@ def _hinerv_waterfill_candidate_sort_key(
 
 def _candidate_authority_blockers(candidate: Mapping[str, Any]) -> list[str]:
     return _dedupe(
-        [
-            f"selected_candidate_authority_flag_true:{path}"
-            for path in _iter_truthy_authority_paths(candidate)
-        ]
+        [f"selected_candidate_authority_flag_true:{path}" for path in _iter_truthy_authority_paths(candidate)]
     )
 
 
@@ -3128,8 +2885,7 @@ def _snerv_hard_byte_ceiling_satisfied_for_long_training(
         return False
     return bool(
         lf_recode_admission_plan.get("local_planner_admitted") is True
-        and lf_recode_admission_plan.get("waterline_satisfied_after_selected_recode")
-        is True
+        and lf_recode_admission_plan.get("waterline_satisfied_after_selected_recode") is True
     )
 
 
@@ -3200,9 +2956,7 @@ def _modelsize_byte_cap_preflight(
     predicted: int | None = nominal
     prediction_rule = "nominal_payload_bytes_no_feedback"
     missing_matching_feedback_is_blocking = bool(
-        feedback_paths
-        and not matching
-        and not _observations_are_demote_only_byte_feedback(observations)
+        feedback_paths and not matching and not _observations_are_demote_only_byte_feedback(observations)
     )
     if missing_matching_feedback_is_blocking:
         blockers.append(f"{family}_modelsize_byte_cap_feedback_observation_missing")
@@ -3217,9 +2971,7 @@ def _modelsize_byte_cap_preflight(
             int(float(nominal) * max_ratio + 0.999999),
             int(nominal) + int(max_delta),
         )
-        prediction_rule = (
-            "max_observed_archive_to_nominal_ratio_or_additive_overhead"
-        )
+        prediction_rule = "max_observed_archive_to_nominal_ratio_or_additive_overhead"
     required_nominal_values = [
         int(value)
         for row in matching
@@ -3238,9 +2990,7 @@ def _modelsize_byte_cap_preflight(
         headroom = int(ceiling) - int(predicted)
         predicted_under = headroom >= 0
         if not predicted_under and matching:
-            blockers.append(
-                f"{family}_modelsize_auto_calibrated_byte_cap_over_ceiling"
-            )
+            blockers.append(f"{family}_modelsize_auto_calibrated_byte_cap_over_ceiling")
     return {
         "schema": "nerv_long_training_modelsize_byte_cap_preflight.v1",
         "family": str(family),
@@ -3258,12 +3008,9 @@ def _modelsize_byte_cap_preflight(
         "matching_required_nominal_payload_bytes_max": (
             min(required_nominal_values) if required_nominal_values else None
         ),
-        "matching_calibrated_archive_overrun_bytes_max": (
-            max(overrun_values) if overrun_values else None
-        ),
+        "matching_calibrated_archive_overrun_bytes_max": (max(overrun_values) if overrun_values else None),
         "matching_measurement_bypass_observed": any(
-            bool(row.get("hard_byte_ceiling_measurement_bypass_enabled"))
-            for row in matching
+            bool(row.get("hard_byte_ceiling_measurement_bypass_enabled")) for row in matching
         ),
         "missing_matching_feedback_is_blocking": missing_matching_feedback_is_blocking,
         "matching_observations": matching,
@@ -3292,11 +3039,7 @@ def _observation_is_over_own_hard_byte_ceiling(row: Mapping[str, Any]) -> bool:
         candidate_mapping,
         ("hard_byte_ceiling",),
     )
-    return bool(
-        archive_bytes is not None
-        and ceiling is not None
-        and int(archive_bytes) > int(ceiling)
-    )
+    return bool(archive_bytes is not None and ceiling is not None and int(archive_bytes) > int(ceiling))
 
 
 def _modelsize_byte_cap_feedback_observations(
@@ -3396,9 +3139,7 @@ def _modelsize_byte_cap_feedback_observations(
                     "family": row_family,
                     "codec": _modelsize_byte_cap_codec(row),
                     "measured_archive_bytes": int(measured),
-                    "measured_payload_bytes": (
-                        None if payload_bytes is None else int(payload_bytes)
-                    ),
+                    "measured_payload_bytes": (None if payload_bytes is None else int(payload_bytes)),
                     "measured_num_pairs": measured_pairs,
                     "nominal_payload_bytes": int(nominal),
                     "archive_minus_nominal_bytes": int(measured) - int(nominal),
@@ -3428,29 +3169,16 @@ def _modelsize_byte_cap_feedback_observations(
                     "receiver_proof_path": receiver_closed.get("proof_path"),
                     "receiver_contract_satisfied": True,
                     "archive_path": archive_path.as_posix() if archive_path else None,
-                    "archive_sha256": row.get("input_sha256")
-                    or row.get("archive_sha256"),
+                    "archive_sha256": row.get("input_sha256") or row.get("archive_sha256"),
                     "packet_path": packet_path.as_posix() if packet_path else None,
-                    "packet_sha256": row.get("snar1_packet_sha256")
-                    or row.get("packet_sha256"),
-                    "artifact_report_path": (
-                        report_path.as_posix() if report_path else None
-                    ),
-                    "candidate_id": (
-                        row.get("candidate_id")
-                        or candidate_mapping.get("candidate_id")
-                    ),
+                    "packet_sha256": row.get("snar1_packet_sha256") or row.get("packet_sha256"),
+                    "artifact_report_path": (report_path.as_posix() if report_path else None),
+                    "candidate_id": (row.get("candidate_id") or candidate_mapping.get("candidate_id")),
                     "source_bound_controls": (
-                        _modelsize_byte_cap_candidate_match_controls(
-                            candidate_mapping
-                        )
-                        if candidate_mapping
-                        else {}
+                        _modelsize_byte_cap_candidate_match_controls(candidate_mapping) if candidate_mapping else {}
                     ),
                     "modelsize_candidate": (
-                        _scrub_candidate_authority_flags(candidate_mapping)
-                        if candidate_mapping
-                        else None
+                        _scrub_candidate_authority_flags(candidate_mapping) if candidate_mapping else None
                     ),
                 }
             )
@@ -3472,9 +3200,7 @@ def _modelsize_byte_cap_scope_matches_candidate(
         measured_pairs = _first_present_int(metadata, ("n_pairs", "num_pairs"))
     candidate_pairs = _first_present_int(candidate, ("num_pairs",))
     return not (
-        measured_pairs is not None
-        and candidate_pairs is not None
-        and int(measured_pairs) != int(candidate_pairs)
+        measured_pairs is not None and candidate_pairs is not None and int(measured_pairs) != int(candidate_pairs)
     )
 
 
@@ -3558,9 +3284,7 @@ def _modelsize_byte_cap_report_path(
     if archive_path is not None:
         for candidate in (
             archive_path.parent / "archive_bound_candidate_adapter_package.json",
-            archive_path.parent.parent
-            / "snerv_score_aware_long_training"
-            / "snerv_score_aware_long_training.json",
+            archive_path.parent.parent / "snerv_score_aware_long_training" / "snerv_score_aware_long_training.json",
         ):
             if candidate.is_file():
                 return candidate.resolve(strict=False)
@@ -3601,16 +3325,19 @@ def _iter_modelsize_byte_cap_feedback_rows(node: Any) -> list[Mapping[str, Any]]
 
     def visit(value: Any) -> None:
         if isinstance(value, Mapping):
-            if _first_present_int(
-                value,
-                (
-                    "charged_archive_bytes",
-                    "measured_archive_bytes",
-                    "archive_bytes",
-                    "archive_zip_bytes",
-                    "candidate_archive_bytes",
-                ),
-            ) is not None:
+            if (
+                _first_present_int(
+                    value,
+                    (
+                        "charged_archive_bytes",
+                        "measured_archive_bytes",
+                        "archive_bytes",
+                        "archive_zip_bytes",
+                        "candidate_archive_bytes",
+                    ),
+                )
+                is not None
+            ):
                 rows.append(value)
             for key in (
                 "row",
@@ -3670,9 +3397,7 @@ def _modelsize_byte_cap_row_receiver_closed(
         if not (runtime_ready and proof.get("receiver_contract_satisfied") is True):
             continue
         proof_archive_sha = str(proof.get("archive_sha256") or "").strip().lower()
-        row_archive_sha = str(
-            row.get("input_sha256") or row.get("archive_sha256") or ""
-        ).strip().lower()
+        row_archive_sha = str(row.get("input_sha256") or row.get("archive_sha256") or "").strip().lower()
         if proof_archive_sha and row_archive_sha and proof_archive_sha != row_archive_sha:
             continue
         proof_archive_bytes = _first_present_int(
@@ -3774,9 +3499,7 @@ def _modelsize_byte_cap_matching_observations(
     rows = [dict(row) for row in observations]
     candidate_id = str(candidate.get("candidate_id") or "")
     if candidate_id:
-        exact_id = [
-            row for row in rows if str(row.get("candidate_id") or "") == candidate_id
-        ]
+        exact_id = [row for row in rows if str(row.get("candidate_id") or "") == candidate_id]
         if exact_id:
             return exact_id
     target_controls = _modelsize_byte_cap_candidate_match_controls(candidate)
@@ -3794,9 +3517,7 @@ def _modelsize_byte_cap_matching_observations(
         row
         for row in rows
         if row.get("candidate_id")
-        or _modelsize_byte_cap_controls_are_candidate_scoped(
-            row.get("source_bound_controls")
-        )
+        or _modelsize_byte_cap_controls_are_candidate_scoped(row.get("source_bound_controls"))
     ]
     if scoped_rows:
         return []
@@ -4019,24 +3740,12 @@ def _snerv_lf_payload_recode_campaign_blockers(
     selected = plan.get("selected_row")
     if not isinstance(selected, Mapping):
         return ["snerv_lf_payload_recode_no_receiver_proven_byte_saving_mode"]
-    blockers: list[str] = [
-        str(blocker)
-        for blocker in plan.get("blockers") or ()
-        if str(blocker)
-    ]
+    blockers: list[str] = [str(blocker) for blocker in plan.get("blockers") or () if str(blocker)]
     over_waterline = selected.get("post_recode_over_waterline_bytes")
     if over_waterline is not None and int(over_waterline) > 0:
         blockers.append("snerv_lf_payload_recode_still_over_hard_byte_ceiling")
-    blockers.extend(
-        str(blocker)
-        for blocker in selected.get("local_admission_blockers") or ()
-        if str(blocker)
-    )
-    blockers.extend(
-        str(blocker)
-        for blocker in selected.get("promotion_blockers") or ()
-        if str(blocker)
-    )
+    blockers.extend(str(blocker) for blocker in selected.get("local_admission_blockers") or () if str(blocker))
+    blockers.extend(str(blocker) for blocker in selected.get("promotion_blockers") or () if str(blocker))
     return _dedupe(blockers)
 
 
@@ -4122,9 +3831,7 @@ def _optimizer_launch_blockers(optimizer_kind: str) -> tuple[str, ...]:
 
 def _optimizer_tuple(values: Sequence[str]) -> tuple[str, ...]:
     out: list[str] = []
-    supported = set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS) | set(
-        TIMING_SMOKE_OPTIMIZER_KINDS
-    )
+    supported = set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS) | set(TIMING_SMOKE_OPTIMIZER_KINDS)
     for value in values:
         text = _normalize_optimizer_kind(value)
         if not text:
@@ -4167,9 +3874,7 @@ def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
             "first_pass_priority": False,
             "borrowed_from_pr95": False,
             "original_pact_contest_adaptation": False,
-            "implementation_status": (
-                "mlx_score_aware_optimizer_contract_landed_timing_smoke_required"
-            ),
+            "implementation_status": ("mlx_score_aware_optimizer_contract_landed_timing_smoke_required"),
             "launch_blockers": list(_optimizer_launch_blockers(kind)),
             "authority_blockers": ["aurora_not_pr95_source_authority"],
             "blocked_until": "aurora_like_local_timing_convergence_smoke",
@@ -4209,9 +3914,7 @@ def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
             else "Direct native MLX optimizer control row."
         ),
         "default_hinerv_optimizer_policy": _hinerv_optimizer_policy_for_kind(kind),
-        "pr95_curriculum_optimizer_swallow_guard": (
-            kind not in {"adamw", "pact_muon_adamw"}
-        ),
+        "pr95_curriculum_optimizer_swallow_guard": (kind not in {"adamw", "pact_muon_adamw"}),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -4221,11 +3924,7 @@ def _hinerv_optimizer_policy_for_kind(optimizer_kind: str) -> str:
     """Return the runner policy that makes this row's optimizer semantics real."""
 
     kind = _normalize_optimizer_kind(optimizer_kind)
-    return (
-        "pr95_curriculum"
-        if kind in {"adamw", "pact_muon_adamw"}
-        else "native_optimizer"
-    )
+    return "pr95_curriculum" if kind in {"adamw", "pact_muon_adamw"} else "native_optimizer"
 
 
 def _hinerv_optimizer_policy_control(
@@ -4241,19 +3940,13 @@ def _hinerv_optimizer_policy_control(
         "optimizer_kind": kind,
         "requested_policy": policy,
         "classification": (
-            "runnable_false_authority_timing_smoke_candidate"
-            if timing_smoke_only
-            else "runner_optimizer_policy"
+            "runnable_false_authority_timing_smoke_candidate" if timing_smoke_only else "runner_optimizer_policy"
         ),
         "is_plan_only_optimizer_control": False,
         "is_timing_smoke_optimizer_control": timing_smoke_only,
-        "pr95_faithful_curriculum_expected": (
-            policy == "pr95_curriculum" and not timing_smoke_only
-        ),
+        "pr95_faithful_curriculum_expected": (policy == "pr95_curriculum" and not timing_smoke_only),
         "native_mlx_optimizer_expected": policy == "native_optimizer",
-        "effective_optimizer_label": (
-            "pr95_8stage_muon_adamw" if policy == "pr95_curriculum" else kind
-        ),
+        "effective_optimizer_label": ("pr95_8stage_muon_adamw" if policy == "pr95_curriculum" else kind),
         "runner_policy_if_implemented": policy,
         "launch_blockers": list(_optimizer_launch_blockers(kind)),
         "why": (
@@ -4317,10 +4010,7 @@ def _candidate_feedback_sort_key(
 def _normalize_candidate_feedback_source(source: Mapping[str, Any]) -> dict[str, Any]:
     if source.get("schema") == NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA:
         row = _sanitize_direct_candidate_feedback_row(source)
-    elif (
-        source.get("schema") == FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA
-        and isinstance(source.get("row"), Mapping)
-    ):
+    elif source.get("schema") == FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA and isinstance(source.get("row"), Mapping):
         row = _sanitize_direct_candidate_feedback_row(source["row"])
     elif source.get("schema") == "hinerv_training_telemetry_feedback.v1":
         row = _normalize_hinerv_training_telemetry_feedback(source)
@@ -4578,21 +4268,14 @@ def _augment_feedback_row(
         out.setdefault(
             "snerv_mlx_native_training_export_guard_passed",
             (
-                dict(native.get("native_mlx_training_export_guard") or {}).get(
-                    "export_guard_passed"
-                )
+                dict(native.get("native_mlx_training_export_guard") or {}).get("export_guard_passed")
                 if isinstance(native.get("native_mlx_training_export_guard"), Mapping)
                 else None
             ),
         )
         out.setdefault(
             "snerv_mlx_native_training_export_guard_blockers",
-            list(
-                dict(native.get("native_mlx_training_export_guard") or {}).get(
-                    "blockers"
-                )
-                or []
-            )
+            list(dict(native.get("native_mlx_training_export_guard") or {}).get("blockers") or [])
             if isinstance(native.get("native_mlx_training_export_guard"), Mapping)
             else [],
         )
@@ -4648,9 +4331,7 @@ def _augment_feedback_row(
                     else None
                 )
                 or (
-                    native_file_evidence.get(
-                        "snerv_official_mfu_hfr_tub_export_blockers"
-                    )
+                    native_file_evidence.get("snerv_official_mfu_hfr_tub_export_blockers")
                     if isinstance(native_file_evidence, Mapping)
                     else None
                 )
@@ -4708,9 +4389,7 @@ def _snerv_native_artifact_evidence_from_feedback(
         "snerv_official_mfu_hfr_tub_numeric_primitives_requested": feedback.get(
             "snerv_official_mfu_hfr_tub_numeric_primitives_requested"
         ),
-        "snerv_official_mfu_hfr_tub_export_bound": feedback.get(
-            "snerv_official_mfu_hfr_tub_export_bound"
-        ),
+        "snerv_official_mfu_hfr_tub_export_bound": feedback.get("snerv_official_mfu_hfr_tub_export_bound"),
         "snerv_official_mfu_hfr_tub_export_bound_semantics": feedback.get(
             "snerv_official_mfu_hfr_tub_export_bound_semantics"
         ),
@@ -4729,9 +4408,7 @@ def _snerv_native_artifact_evidence_from_feedback(
         "snerv_official_trained_checkpoint_mapping_manifest": feedback.get(
             "snerv_official_trained_checkpoint_mapping_manifest"
         ),
-        "snerv_official_trained_checkpoint_loaded": feedback.get(
-            "snerv_official_trained_checkpoint_loaded"
-        ),
+        "snerv_official_trained_checkpoint_loaded": feedback.get("snerv_official_trained_checkpoint_loaded"),
         "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven": feedback.get(
             "snerv_official_mfu_hfr_trained_checkpoint_weight_mapping_proven"
         ),
@@ -4745,14 +4422,10 @@ def _snerv_native_artifact_evidence_from_feedback(
             "snerv_official_trained_checkpoint_mapping_blockers"
         ),
         "source_faithful_stack": feedback.get("source_faithful_stack"),
-        "official_source_parity_blockers": feedback.get(
-            "official_source_parity_blockers"
-        ),
+        "official_source_parity_blockers": feedback.get("official_source_parity_blockers"),
         "native_mlx_training_executed": feedback.get("snerv_mlx_native_training_executed"),
         "native_mlx_hf_decoder_training": feedback.get("snerv_mlx_native_hf_decoder_training"),
-        "native_mlx_training_export_guard": feedback.get(
-            "snerv_mlx_native_training_export_guard"
-        ),
+        "native_mlx_training_export_guard": feedback.get("snerv_mlx_native_training_export_guard"),
         "scorer_loop_qat": {
             "executed": feedback.get("native_mlx_scorer_loop_qat_attached"),
             "receiver_contract_satisfied": feedback.get("native_mlx_scorer_loop_qat_receiver_contract_satisfied"),
@@ -4809,9 +4482,7 @@ def _snerv_feedback_with_modelsize_byte_cap_evidence(
     if _family_key(str(candidate.get("family") or "")) != "snerv":
         return dict(feedback)
     matching = [
-        row
-        for row in modelsize_byte_cap_preflight.get("matching_observations") or ()
-        if isinstance(row, Mapping)
+        row for row in modelsize_byte_cap_preflight.get("matching_observations") or () if isinstance(row, Mapping)
     ]
     if not matching:
         return dict(feedback)
@@ -4855,9 +4526,7 @@ def _snerv_feedback_with_modelsize_byte_cap_evidence(
         "schema": NERV_CANDIDATE_FEEDBACK_ROW_SCHEMA,
         "feedback_kind": "modelsize_byte_cap_receiver_proof",
         "feedback_scope": (
-            "full600_native_file_backed_snar1_export"
-            if file_backed
-            else "modelsize_byte_cap_receiver_proof_bytes_only"
+            "full600_native_file_backed_snar1_export" if file_backed else "modelsize_byte_cap_receiver_proof_bytes_only"
         ),
         "byte_feedback_source": "modelsize_byte_cap_receiver_proof",
         "family": "snerv",
@@ -4895,20 +4564,12 @@ def _snerv_feedback_with_modelsize_byte_cap_evidence(
         "native_mlx_receiver_proof_passed": receiver_closed,
         "native_mlx_full600_campaign_ready": file_backed,
         "snerv_mlx_native_export_executed": file_backed,
-        "snerv_mlx_native_export_artifact_report_path": (
-            report_path.as_posix() if report_path else None
-        ),
-        "snerv_mlx_native_export_packet_path": (
-            packet_path.as_posix() if packet_path else None
-        ),
+        "snerv_mlx_native_export_artifact_report_path": (report_path.as_posix() if report_path else None),
+        "snerv_mlx_native_export_packet_path": (packet_path.as_posix() if packet_path else None),
         "snerv_mlx_native_export_packet_sha256": packet_sha or None,
-        "snerv_mlx_native_export_archive_path": (
-            archive_path.as_posix() if archive_path else None
-        ),
+        "snerv_mlx_native_export_archive_path": (archive_path.as_posix() if archive_path else None),
         "snerv_mlx_native_export_archive_sha256": archive_sha or None,
-        "snerv_mlx_native_export_receiver_proof_path": (
-            proof_path.as_posix() if proof_path else None
-        ),
+        "snerv_mlx_native_export_receiver_proof_path": (proof_path.as_posix() if proof_path else None),
         "snerv_mlx_native_export_receiver_proof_sha256": proof_sha,
         "snerv_mlx_native_export_receiver_proof_passed": receiver_closed,
         "snerv_mlx_native_export_receiver_contract_satisfied": receiver_closed,
@@ -5039,9 +4700,7 @@ def _sanitize_family_training_telemetry_context(
     out["measured_payload_bytes"] = None
     out["launch_control_feedback_ready"] = False
     out["context_only"] = True
-    out["feedback_reuse_policy"] = (
-        "telemetry_context_only_no_launch_mutation_no_archive_receiver_or_replay_authority"
-    )
+    out["feedback_reuse_policy"] = "telemetry_context_only_no_launch_mutation_no_archive_receiver_or_replay_authority"
     out.update(FALSE_AUTHORITY)
     return out
 
@@ -5060,19 +4719,14 @@ def _family_level_candidate_feedback_applicable(
         if feedback_kind == "upstream_eval_gate":
             target_candidate_id = str(candidate.get("candidate_id") or "").strip()
             source_candidate_id = str(row.get("candidate_id") or "").strip()
-            if (
-                not target_candidate_id
-                or not source_candidate_id
-                or source_candidate_id == target_candidate_id
-            ):
+            if not target_candidate_id or not source_candidate_id or source_candidate_id == target_candidate_id:
                 return False
             measured_num_pairs = int(row.get("measured_num_pairs") or 0)
             target_num_pairs = int(candidate.get("num_pairs") or 0)
             return bool(
                 target_num_pairs > 0
                 and measured_num_pairs == target_num_pairs
-                and str(row.get("feedback_scope") or "")
-                in {"full600_upstream_cpu_eval", "full600_upstream_eval_gate"}
+                and str(row.get("feedback_scope") or "") in {"full600_upstream_cpu_eval", "full600_upstream_eval_gate"}
                 and any(
                     str(blocker).startswith("snerv_upstream_eval_gate_")
                     for blocker in row.get("direct_feedback_blockers") or ()
@@ -5081,19 +4735,14 @@ def _family_level_candidate_feedback_applicable(
         if feedback_kind == "training_telemetry":
             target_candidate_id = str(candidate.get("candidate_id") or "").strip()
             source_candidate_id = str(row.get("candidate_id") or "").strip()
-            if (
-                not target_candidate_id
-                or not source_candidate_id
-                or source_candidate_id == target_candidate_id
-            ):
+            if not target_candidate_id or not source_candidate_id or source_candidate_id == target_candidate_id:
                 return False
             measured_num_pairs = int(row.get("measured_num_pairs") or 0)
             target_num_pairs = int(candidate.get("num_pairs") or 0)
             return bool(
                 target_num_pairs > 0
                 and measured_num_pairs == target_num_pairs
-                and str(row.get("feedback_scope") or "")
-                == "full600_training_telemetry"
+                and str(row.get("feedback_scope") or "") == "full600_training_telemetry"
                 and row.get("degenerate_renderer_risk_detected") is True
                 and "snerv_scorer_domain_tether_missing_telemetry"
                 in {str(blocker) for blocker in row.get("direct_feedback_blockers") or ()}
@@ -5320,11 +4969,11 @@ def _decoder_weight_waterfill_receiver_proof_binding(
 
     status = str(source.get("receiver_proof_status") or "").strip().lower()
     archive_sha = str(source.get("archive_sha256") or "").strip().lower()
-    source_archive_sha = str(
-        source.get("_archive_size_ladder_archive_sha256")
-        or source.get("_archive_ladder_archive_sha256")
-        or ""
-    ).strip().lower()
+    source_archive_sha = (
+        str(source.get("_archive_size_ladder_archive_sha256") or source.get("_archive_ladder_archive_sha256") or "")
+        .strip()
+        .lower()
+    )
     proof_path_raw = str(
         source.get("receiver_proof_path")
         or source.get("receiver_proof_report_path")
@@ -5332,12 +4981,16 @@ def _decoder_weight_waterfill_receiver_proof_binding(
         or source.get("_archive_ladder_receiver_proof_path")
         or ""
     ).strip()
-    expected_proof_sha = str(
-        source.get("receiver_proof_sha256")
-        or source.get("_archive_size_ladder_receiver_proof_sha256")
-        or source.get("_archive_ladder_receiver_proof_sha256")
-        or ""
-    ).strip().lower()
+    expected_proof_sha = (
+        str(
+            source.get("receiver_proof_sha256")
+            or source.get("_archive_size_ladder_receiver_proof_sha256")
+            or source.get("_archive_ladder_receiver_proof_sha256")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
     blockers: list[str] = []
     proof_payload: Mapping[str, Any] = {}
     proof_sha: str | None = None
@@ -5349,9 +5002,7 @@ def _decoder_weight_waterfill_receiver_proof_binding(
         blockers.append("receiver_proof_not_satisfied")
     if not _is_sha256_hex(archive_sha):
         blockers.append("archive_sha256_missing_or_invalid")
-    if source_archive_sha and (
-        not _is_sha256_hex(source_archive_sha) or source_archive_sha != archive_sha
-    ):
+    if source_archive_sha and (not _is_sha256_hex(source_archive_sha) or source_archive_sha != archive_sha):
         blockers.append("decoder_weight_waterfill_archive_sha256_mismatch_with_source_ladder")
     if not proof_path_raw:
         blockers.append("decoder_weight_waterfill_receiver_proof_path_missing")
@@ -5369,9 +5020,7 @@ def _decoder_weight_waterfill_receiver_proof_binding(
             try:
                 payload = json.loads(proof_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError) as exc:
-                blockers.append(
-                    f"decoder_weight_waterfill_receiver_proof_unreadable:{type(exc).__name__}"
-                )
+                blockers.append(f"decoder_weight_waterfill_receiver_proof_unreadable:{type(exc).__name__}")
             else:
                 if isinstance(payload, Mapping):
                     proof_payload = payload
@@ -5394,17 +5043,11 @@ def _decoder_weight_waterfill_receiver_proof_binding(
                         )
                     )
                     if proof_archive_sha != archive_sha:
-                        blockers.append(
-                            "decoder_weight_waterfill_receiver_proof_archive_sha256_mismatch"
-                        )
+                        blockers.append("decoder_weight_waterfill_receiver_proof_archive_sha256_mismatch")
                     if not proof_runtime_ready:
-                        blockers.append(
-                            "decoder_weight_waterfill_receiver_proof_runtime_consumption_not_ready"
-                        )
+                        blockers.append("decoder_weight_waterfill_receiver_proof_runtime_consumption_not_ready")
                 else:
-                    blockers.append(
-                        "decoder_weight_waterfill_receiver_proof_payload_not_object"
-                    )
+                    blockers.append("decoder_weight_waterfill_receiver_proof_payload_not_object")
 
     blockers = _dedupe(blockers)
     return {
@@ -5718,9 +5361,7 @@ def _decoder_weight_waterfill_saliency_replay_work_order(
                 "--decoder-weight-waterfill-source",
             ]
         ),
-        "campaign_rebuild_decoder_weight_waterfill_source": (
-            waterfill_json if not blockers else None
-        ),
+        "campaign_rebuild_decoder_weight_waterfill_source": (waterfill_json if not blockers else None),
         "expected_output_saliency_json": saliency_json if not blockers else None,
         "expected_output_waterfill_json": waterfill_json if not blockers else None,
         "blockers": blockers,
@@ -5736,11 +5377,7 @@ def _decoder_weight_waterfill_allocator_basin_recovery_work_order(
     """Route unfit HiNeRV rows back to training before allocator mutation."""
 
     blockers = {str(blocker) for blocker in row.get("blockers") or () if str(blocker)}
-    refusal_reasons = {
-        str(reason)
-        for reason in runner_admission.get("refusal_reasons") or ()
-        if str(reason)
-    }
+    refusal_reasons = {str(reason) for reason in runner_admission.get("refusal_reasons") or () if str(reason)}
     outside_basin = "score_loss_proxy_outside_allocator_linearization_basin" in blockers
     unfit_waterfill = "decoder_weight_waterfill_not_admissible_from_unfit_scorer_basin" in blockers
     if not (outside_basin or unfit_waterfill):
@@ -5803,10 +5440,7 @@ def _decoder_weight_waterfill_runner_admitted(row: Mapping[str, Any]) -> bool:
 
 
 def _safe_id(value: str) -> str:
-    out = "".join(
-        ch if ch.isalnum() or ch in {"-", "_"} else "_"
-        for ch in str(value)
-    ).strip("_")
+    out = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in str(value)).strip("_")
     return out or "row"
 
 
@@ -5936,11 +5570,7 @@ def _archive_section_telemetry_index(
                 int(row.get("receiver_cache_quality_gate_passed") is True),
                 int(row.get("archive_under_hard_byte_ceiling") is True),
                 int(row.get("num_pairs") or 0),
-                -int(
-                    row.get("archive_zip_bytes")
-                    or row.get("inner_payload_bytes")
-                    or 0
-                ),
+                -int(row.get("archive_zip_bytes") or row.get("inner_payload_bytes") or 0),
             ),
             reverse=True,
         )
@@ -5978,9 +5608,7 @@ def _normalize_archive_section_telemetry_source(
         if telemetry_path.is_file():
             out["_archive_section_telemetry_sha256"] = _sha256_file(telemetry_path)
     archive_zip_bytes = _positive_int_or_none(
-        out.get("archive_zip_bytes")
-        or out.get("measured_archive_bytes")
-        or out.get("archive_bytes")
+        out.get("archive_zip_bytes") or out.get("measured_archive_bytes") or out.get("archive_bytes")
     )
     if archive_zip_bytes is not None:
         out["archive_zip_bytes"] = archive_zip_bytes
@@ -5991,31 +5619,17 @@ def _normalize_archive_section_telemetry_source(
     if section_payload_bytes is not None:
         out["section_payload_bytes"] = section_payload_bytes
     out["section_bytes"] = _archive_section_telemetry_section_bytes(out)
-    if out.get("runtime_consumption_proof_ready") is True and not str(
-        out.get("receiver_proof_status") or ""
-    ).strip():
+    if out.get("runtime_consumption_proof_ready") is True and not str(out.get("receiver_proof_status") or "").strip():
         out["receiver_proof_status"] = "runtime_consumption_proof_ready"
-    if (
-        out.get("quality_gate_passed") is not None
-        and out.get("receiver_cache_quality_gate_passed") is None
-    ):
+    if out.get("quality_gate_passed") is not None and out.get("receiver_cache_quality_gate_passed") is None:
         out["receiver_cache_quality_gate_passed"] = bool(out.get("quality_gate_passed"))
-    if (
-        out.get("quality_gate_verdict")
-        and out.get("receiver_cache_quality_gate_verdict") is None
-    ):
+    if out.get("quality_gate_verdict") and out.get("receiver_cache_quality_gate_verdict") is None:
         out["receiver_cache_quality_gate_verdict"] = out.get("quality_gate_verdict")
     if out.get("report_path") and out.get("receiver_cache_quality_report_path") is None:
         out["receiver_cache_quality_report_path"] = out.get("report_path")
-    out["receiver_proof_binding"] = _archive_section_telemetry_receiver_proof_binding(
-        out
-    )
-    out["receiver_cache_quality_binding"] = (
-        _archive_section_telemetry_cache_quality_binding(out)
-    )
-    out["archive_under_hard_byte_ceiling"] = _archive_section_telemetry_under_ceiling(
-        out
-    )
+    out["receiver_proof_binding"] = _archive_section_telemetry_receiver_proof_binding(out)
+    out["receiver_cache_quality_binding"] = _archive_section_telemetry_cache_quality_binding(out)
+    out["archive_under_hard_byte_ceiling"] = _archive_section_telemetry_under_ceiling(out)
     blockers = [
         *(str(blocker) for blocker in source.get("blockers") or () if str(blocker)),
         *_archive_section_telemetry_static_blockers(out),
@@ -6048,9 +5662,7 @@ def _archive_section_telemetry_static_blockers(
         blockers.append("hinerv_archive_section_telemetry_full600_missing")
     for key in _AUTHORITY_TRUE_KEYS:
         if row.get(key) is True:
-            blockers.append(
-                f"hinerv_archive_section_telemetry_authority_flag_true:{key}"
-            )
+            blockers.append(f"hinerv_archive_section_telemetry_authority_flag_true:{key}")
     return blockers
 
 
@@ -6082,11 +5694,7 @@ def _archive_section_telemetry_receiver_proof_binding(
 ) -> dict[str, Any]:
     status = str(source.get("receiver_proof_status") or "").strip().lower()
     archive_sha = str(source.get("archive_sha256") or "").strip().lower()
-    proof_path_raw = str(
-        source.get("receiver_proof_path")
-        or source.get("receiver_proof_report_path")
-        or ""
-    ).strip()
+    proof_path_raw = str(source.get("receiver_proof_path") or source.get("receiver_proof_report_path") or "").strip()
     expected_proof_sha = str(source.get("receiver_proof_sha256") or "").strip().lower()
     blockers: list[str] = []
     proof_path: Path | None = None
@@ -6097,9 +5705,7 @@ def _archive_section_telemetry_receiver_proof_binding(
     if status not in TRUSTED_RECEIVER_PROOF_STATUSES:
         blockers.append("hinerv_archive_section_telemetry_receiver_proof_not_satisfied")
     if not _is_sha256_hex(archive_sha):
-        blockers.append(
-            "hinerv_archive_section_telemetry_archive_sha256_missing_or_invalid"
-        )
+        blockers.append("hinerv_archive_section_telemetry_archive_sha256_missing_or_invalid")
     if not proof_path_raw:
         blockers.append("hinerv_archive_section_telemetry_receiver_proof_path_missing")
     else:
@@ -6108,27 +5714,18 @@ def _archive_section_telemetry_receiver_proof_binding(
             source=source,
         )
         if not proof_path.is_file():
-            blockers.append(
-                "hinerv_archive_section_telemetry_receiver_proof_path_not_file"
-            )
+            blockers.append("hinerv_archive_section_telemetry_receiver_proof_path_not_file")
         else:
             proof_sha = _sha256_file(proof_path)
             if expected_proof_sha and expected_proof_sha != proof_sha:
-                blockers.append(
-                    "hinerv_archive_section_telemetry_receiver_proof_sha256_mismatch"
-                )
+                blockers.append("hinerv_archive_section_telemetry_receiver_proof_sha256_mismatch")
             try:
                 payload = json.loads(proof_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError) as exc:
-                blockers.append(
-                    "hinerv_archive_section_telemetry_receiver_proof_unreadable:"
-                    f"{type(exc).__name__}"
-                )
+                blockers.append(f"hinerv_archive_section_telemetry_receiver_proof_unreadable:{type(exc).__name__}")
             else:
                 if not isinstance(payload, Mapping):
-                    blockers.append(
-                        "hinerv_archive_section_telemetry_receiver_proof_payload_not_object"
-                    )
+                    blockers.append("hinerv_archive_section_telemetry_receiver_proof_payload_not_object")
                 else:
                     proof_archive_sha = _first_sha_value(
                         payload,
@@ -6148,13 +5745,9 @@ def _archive_section_telemetry_receiver_proof_binding(
                         )
                     )
                     if proof_archive_sha != archive_sha:
-                        blockers.append(
-                            "hinerv_archive_section_telemetry_receiver_proof_archive_sha256_mismatch"
-                        )
+                        blockers.append("hinerv_archive_section_telemetry_receiver_proof_archive_sha256_mismatch")
                     if not proof_runtime_ready:
-                        blockers.append(
-                            "hinerv_archive_section_telemetry_receiver_proof_runtime_consumption_not_ready"
-                        )
+                        blockers.append("hinerv_archive_section_telemetry_receiver_proof_runtime_consumption_not_ready")
     blockers = _dedupe(blockers)
     return {
         "schema": "hinerv_archive_section_telemetry_receiver_proof_binding.v1",
@@ -6175,33 +5768,23 @@ def _archive_section_telemetry_cache_quality_binding(
     source: Mapping[str, Any],
 ) -> dict[str, Any]:
     path_raw = str(source.get("receiver_cache_quality_report_path") or "").strip()
-    expected_sha = str(
-        source.get("receiver_cache_quality_report_sha256") or ""
-    ).strip().lower()
+    expected_sha = str(source.get("receiver_cache_quality_report_sha256") or "").strip().lower()
     blockers: list[str] = []
     path: Path | None = None
     actual_sha: str | None = None
     gate_passed = bool(source.get("receiver_cache_quality_gate_passed") is True)
     if not gate_passed:
-        blockers.append(
-            "hinerv_archive_section_telemetry_receiver_cache_quality_gate_not_passed"
-        )
+        blockers.append("hinerv_archive_section_telemetry_receiver_cache_quality_gate_not_passed")
     if not path_raw:
-        blockers.append(
-            "hinerv_archive_section_telemetry_receiver_cache_quality_report_path_missing"
-        )
+        blockers.append("hinerv_archive_section_telemetry_receiver_cache_quality_report_path_missing")
     else:
         path = _archive_section_telemetry_resolve_path(path_raw, source=source)
         if not path.is_file():
-            blockers.append(
-                "hinerv_archive_section_telemetry_receiver_cache_quality_report_path_not_file"
-            )
+            blockers.append("hinerv_archive_section_telemetry_receiver_cache_quality_report_path_not_file")
         else:
             actual_sha = _sha256_file(path)
             if expected_sha and expected_sha != actual_sha:
-                blockers.append(
-                    "hinerv_archive_section_telemetry_receiver_cache_quality_report_sha256_mismatch"
-                )
+                blockers.append("hinerv_archive_section_telemetry_receiver_cache_quality_report_sha256_mismatch")
     blockers = _dedupe(blockers)
     return {
         "schema": "hinerv_archive_section_telemetry_receiver_cache_quality_binding.v1",
@@ -6224,14 +5807,8 @@ def _archive_section_telemetry_resolve_path(
     path = Path(value).expanduser()
     if path.is_absolute():
         return path.resolve(strict=False)
-    base_raw = source.get("_archive_section_telemetry_source_path") or source.get(
-        "path"
-    )
-    base = (
-        Path(str(base_raw)).expanduser().resolve(strict=False).parent
-        if base_raw
-        else Path.cwd()
-    )
+    base_raw = source.get("_archive_section_telemetry_source_path") or source.get("path")
+    base = Path(str(base_raw)).expanduser().resolve(strict=False).parent if base_raw else Path.cwd()
     return (base / path).resolve(strict=False)
 
 
@@ -6259,11 +5836,7 @@ def _archive_section_telemetry_for(
                 mismatch_row = dict(candidate_row)
                 mismatch_row["blockers"] = _dedupe(
                     [
-                        *(
-                            str(v)
-                            for v in mismatch_row.get("blockers") or ()
-                            if str(v)
-                        ),
+                        *(str(v) for v in mismatch_row.get("blockers") or () if str(v)),
                         *(
                             blocker.replace(
                                 "decoder_weight_waterfill",
@@ -6313,8 +5886,7 @@ def _archive_section_telemetry_row_metadata(row: Mapping[str, Any]) -> dict[str,
         "section_bytes": dict(row.get("section_bytes") or {}),
         "section_count": len(row.get("section_bytes") or {}),
         "section_names": list((row.get("section_bytes") or {}).keys()),
-        "decoder_state_section_present": "decoder_state"
-        in dict(row.get("section_bytes") or {}),
+        "decoder_state_section_present": "decoder_state" in dict(row.get("section_bytes") or {}),
         "decoder_codec": row.get("decoder_codec"),
         "latent_codec": row.get("latent_codec"),
         "profile_ready": bool(row.get("profile_ready")),
@@ -6360,9 +5932,7 @@ def _archive_section_telemetry_runner_admission(
     if not row.get("section_bytes"):
         refusal_reasons.append("hinerv_archive_section_telemetry_sections_missing")
     if row.get("archive_under_hard_byte_ceiling") is not True:
-        refusal_reasons.append(
-            "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling"
-        )
+        refusal_reasons.append("hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling")
     receiver_binding = row.get("receiver_proof_binding")
     if not isinstance(receiver_binding, Mapping) or receiver_binding.get("bound") is not True:
         refusal_reasons.append("hinerv_archive_section_telemetry_receiver_proof_not_bound")
@@ -6370,9 +5940,7 @@ def _archive_section_telemetry_runner_admission(
         refusal_reasons.extend(str(v) for v in receiver_binding.get("blockers") or ())
     cache_binding = row.get("receiver_cache_quality_binding")
     if not isinstance(cache_binding, Mapping) or cache_binding.get("bound") is not True:
-        refusal_reasons.append(
-            "hinerv_archive_section_telemetry_receiver_cache_quality_not_bound"
-        )
+        refusal_reasons.append("hinerv_archive_section_telemetry_receiver_cache_quality_not_bound")
     if isinstance(cache_binding, Mapping):
         refusal_reasons.extend(str(v) for v in cache_binding.get("blockers") or ())
     refusal_reasons.extend(sorted(blockers))
@@ -6380,11 +5948,7 @@ def _archive_section_telemetry_runner_admission(
     return {
         "schema": "hinerv_archive_section_telemetry_runner_admission.v1",
         "admitted": not refusal_reasons,
-        "mode": (
-            "runner_train_time_section_qat_pressure"
-            if not refusal_reasons
-            else "advisory_byte_profile_only"
-        ),
+        "mode": ("runner_train_time_section_qat_pressure" if not refusal_reasons else "advisory_byte_profile_only"),
         "refusal_reasons": refusal_reasons,
         **FALSE_AUTHORITY,
     }
@@ -6398,8 +5962,7 @@ def _archive_section_telemetry_unattached_sources(
     attached_paths = {
         str(plan.get("path") or "")
         for row in campaign_rows
-        if isinstance((plan := row.get("archive_section_telemetry")), Mapping)
-        and plan.get("attached") is True
+        if isinstance((plan := row.get("archive_section_telemetry")), Mapping) and plan.get("attached") is True
     }
     target_candidates_by_family: dict[str, list[str]] = {}
     for row in campaign_rows:
@@ -6416,9 +5979,7 @@ def _archive_section_telemetry_unattached_sources(
                 continue
             family_key = _family_key(str(source.get("family") or family))
             by_path[path] = {
-                "schema": (
-                    "nerv_long_training_unattached_archive_section_telemetry_source.v1"
-                ),
+                "schema": ("nerv_long_training_unattached_archive_section_telemetry_source.v1"),
                 "attached": False,
                 "reason": "no_matching_campaign_candidate_id",
                 "path": path,
@@ -6427,18 +5988,10 @@ def _archive_section_telemetry_unattached_sources(
                 "family": family_key,
                 "source_candidate_id": source.get("candidate_id"),
                 "candidate_keys": list(_candidate_index_keys(source)),
-                "target_candidate_ids": sorted(
-                    _dedupe(target_candidates_by_family.get(family_key, []))
-                ),
-                "archive_zip_bytes": _positive_int_or_none(
-                    source.get("archive_zip_bytes")
-                ),
-                "archive_under_hard_byte_ceiling": source.get(
-                    "archive_under_hard_byte_ceiling"
-                ),
-                "receiver_cache_quality_gate_passed": bool(
-                    source.get("receiver_cache_quality_gate_passed")
-                ),
+                "target_candidate_ids": sorted(_dedupe(target_candidates_by_family.get(family_key, []))),
+                "archive_zip_bytes": _positive_int_or_none(source.get("archive_zip_bytes")),
+                "archive_under_hard_byte_ceiling": source.get("archive_under_hard_byte_ceiling"),
+                "receiver_cache_quality_gate_passed": bool(source.get("receiver_cache_quality_gate_passed")),
                 "blockers": list(source.get("blockers") or []),
                 **FALSE_AUTHORITY,
             }
@@ -6510,7 +6063,9 @@ def _hinerv_feedback_launch_adjustment(
     recommended_seg_weight = _float_or_none(feedback.get("recommended_segnet_distillation_weight"))
     recommended_pose_weight = _float_or_none(feedback.get("recommended_pose_distillation_weight"))
     segnet_weight_applied = bool(seg_stagnation and recommended_seg_weight is not None and recommended_seg_weight > 1.0)
-    pose_weight_applied = bool(pose_tail_burst and recommended_pose_weight is not None and recommended_pose_weight > 1.0)
+    pose_weight_applied = bool(
+        pose_tail_burst and recommended_pose_weight is not None and recommended_pose_weight > 1.0
+    )
     if segnet_weight_applied:
         launch_mutations.extend(
             mutation
@@ -6572,9 +6127,7 @@ def _hinerv_feedback_launch_adjustment(
                                     else (
                                         "pose_tail_burst_requires_prioritized_pair_indices"
                                         if pose_tail_burst
-                                        else (
-                                            "feedback_does_not_request_launch_adjustment"
-                                        )
+                                        else ("feedback_does_not_request_launch_adjustment")
                                     )
                                 )
                             )
@@ -6628,11 +6181,7 @@ def _feedback_launch_control_ready(feedback: Mapping[str, Any]) -> bool:
             and recommended_seg_weight > 1.0
         )
         tail_ready = feedback.get("pose_tail_burst_detected") is True
-        pose_weight_ready = (
-            tail_ready
-            and recommended_pose_weight is not None
-            and recommended_pose_weight > 1.0
-        )
+        pose_weight_ready = tail_ready and recommended_pose_weight is not None and recommended_pose_weight > 1.0
         return bool(pose_ready or seg_ready or tail_ready or pose_weight_ready)
     if feedback.get("feedback_ready") is False:
         return False
@@ -6707,6 +6256,7 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "upstream_evaluate_score_binding",
         "tilde_oss_leverage_binding",
         "pr95_baseline_identity_binding",
+        "pr95_evaluate_scorer_domain_telemetry_contract",
         "pr95_distortion_practices_guard",
         "source_faithfulness_controls",
         "source_bound_capacity_controls",

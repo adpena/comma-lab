@@ -49,9 +49,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["experiment_queue_id"] == "nerv_long_training_campaign_queue.v1"
     assert report["experiment_queue_experiment_count"] == 3
     assert report["launchable_local_row_count"] == 2
-    assert report["snerv_lf_over_ceiling_reroute_queue"]["schema"] == (
-        "snerv_lf_over_ceiling_reroute_queue.v1"
-    )
+    assert report["snerv_lf_over_ceiling_reroute_queue"]["schema"] == ("snerv_lf_over_ceiling_reroute_queue.v1")
     assert report["snerv_lf_over_ceiling_reroute_queue_row_count"] == 1
     reroute_row = report["snerv_lf_over_ceiling_reroute_queue"]["queue_rows"][0]
     assert reroute_row["work_order_type"] == "lf_reroute_blocker"
@@ -64,15 +62,9 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert report["pr95_distortion_source_ready"] is True
     assert report["pr95_distortion_practices_consumed_by_rows"] is True
     assert report["pr95_distortion_practices_blockers"] == []
+    assert all(row["pr95_distortion_practices_guard"]["launch_allowed"] is True for row in report["campaign_rows"])
     assert all(
-        row["pr95_distortion_practices_guard"]["launch_allowed"] is True
-        for row in report["campaign_rows"]
-    )
-    assert all(
-        row["experiment_queue_entry"]["launch_authority_contract"][
-            "pr95_distortion_practices_consumed"
-        ]
-        is True
+        row["experiment_queue_entry"]["launch_authority_contract"]["pr95_distortion_practices_consumed"] is True
         for row in report["campaign_rows"]
     )
 
@@ -106,32 +98,27 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     )
     assert all("--segnet-distillation-objective" in row["command_argv"] for row in hi_rows)
     assert all(
-        row["command_argv"][row["command_argv"].index("--segnet-distillation-objective") + 1]
-        == "boundary_argmax_hinge"
+        row["command_argv"][row["command_argv"].index("--segnet-distillation-objective") + 1] == "boundary_argmax_hinge"
         for row in hi_rows
     )
     assert all("--segnet-direct-live-distillation-weight" in row["command_argv"] for row in hi_rows)
     assert all(
-        row["command_argv"][row["command_argv"].index("--segnet-direct-live-distillation-weight") + 1]
-        == "0.25"
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-distillation-weight") + 1] == "0.25"
         for row in hi_rows
     )
     assert all("--segnet-direct-live-class-histogram-weight" in row["command_argv"] for row in hi_rows)
     assert all(
-        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-histogram-weight") + 1]
-        == "0.25"
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-histogram-weight") + 1] == "0.25"
         for row in hi_rows
     )
     assert all("--segnet-direct-live-class-balanced-hinge-weight" in row["command_argv"] for row in hi_rows)
     assert all(
-        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-hinge-weight") + 1]
-        == "0.5"
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-hinge-weight") + 1] == "0.5"
         for row in hi_rows
     )
     assert all("--segnet-direct-live-class-balanced-ce-weight" in row["command_argv"] for row in hi_rows)
     assert all(
-        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-ce-weight") + 1]
-        == "0.25"
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-ce-weight") + 1] == "0.25"
         for row in hi_rows
     )
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
@@ -154,7 +141,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in snerv["blockers"]
     assert "--snerv-score-aware-long-training-epochs" in snerv["command_argv"]
     assert snerv["command_argv"][snerv["command_argv"].index("--snerv-score-aware-long-training-epochs") + 1] == "29650"
-    assert snerv["command_argv"][snerv["command_argv"].index("--snerv-score-aware-long-training-optimizer") + 1] == "pact_muon_adamw"
+    assert (
+        snerv["command_argv"][snerv["command_argv"].index("--snerv-score-aware-long-training-optimizer") + 1]
+        == "pact_muon_adamw"
+    )
     assert snerv["command_argv"][snerv["command_argv"].index("--segnet-distillation-weight") + 1] == "1.0"
     assert snerv["command_argv"][snerv["command_argv"].index("--pose-distillation-weight") + 1] == "1.0"
     assert "--snerv-score-aware-long-training-eval-roundtrip-ste" in snerv["command_argv"]
@@ -220,16 +210,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all("hi_nerv_byte_closed_archive_export_missing" in row["promotion_blockers"] for row in hi_rows)
     assert all(row["experiment_queue_entry"]["status"] == "queued" for row in hi_rows)
     assert all(
-        row["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_launch_blockers"
-        ]
-        == []
-        for row in hi_rows
+        row["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"] == [] for row in hi_rows
     )
     assert all(
-        row["experiment_queue_entry"]["launch_authority_contract"][
-            "pr95_distortion_practices_guard"
-        ]
+        row["experiment_queue_entry"]["launch_authority_contract"]["pr95_distortion_practices_guard"]
         == row["pr95_distortion_practices_guard"]
         for row in hi_rows
     )
@@ -272,10 +256,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert snerv_row["score_lowering_gate"]["local_mlx_executable"] is False
     assert snerv_row["score_lowering_gate"]["prelaunch_allowed"] is False
     assert snerv_row["score_lowering_gate"]["promotion_prelaunch_allowed"] is False
-    assert (
-        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
-        in snerv_row["blockers"]
-    )
+    assert "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in snerv_row["blockers"]
     assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
     assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
     assert (
@@ -283,7 +264,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         not in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
     )
     assert "snerv_pr95_staged_curriculum_missing" not in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
-    assert "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in snerv_row["score_lowering_gate"]["launch_blockers"]
+    assert (
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
+        not in snerv_row["score_lowering_gate"]["launch_blockers"]
+    )
     assert snerv_row["cpu_replay_ready"] is False
     assert snerv_row["exact_gate_ready"] is False
     assert snerv_row["experiment_queue_entry"]["status"] == "disabled"
@@ -293,20 +277,18 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert launch_contract["queue_status_is_local_mlx_plan"] is False
     assert launch_contract["queue_status_is_runnable_plan"] is False
     assert (
-        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training"
-        in launch_contract["queue_launch_blockers"]
+        "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in launch_contract["queue_launch_blockers"]
     )
     assert (
-        "snerv_optimizer_control_requires_learned_scoreaware_training_loop" not in launch_contract["queue_launch_blockers"]
+        "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
+        not in launch_contract["queue_launch_blockers"]
     )
     assert launch_contract["queue_status_is_receiver_proof"] is False
     assert launch_contract["queue_status_is_cpu_replay_proof"] is False
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
     assert launch_contract["cpu_replay_ready"] is False
     assert launch_contract["exact_gate_ready"] is False
-    assert launch_contract["pr95_distortion_practices_guard"] == (
-        snerv_row["pr95_distortion_practices_guard"]
-    )
+    assert launch_contract["pr95_distortion_practices_guard"] == (snerv_row["pr95_distortion_practices_guard"])
     assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" not in snerv_row["blockers"]
     assert snerv_row["execution_epochs"] == 29_650
     assert snerv_row["current_command_is_bounded_proof_not_long_training"] is False
@@ -381,25 +363,17 @@ def test_long_training_campaign_plan_binds_upstream_evaluate_contract() -> None:
     contract = report["upstream_evaluate_priority_contract"]
     assert contract["schema"] == "nerv_upstream_evaluate_priority_contract.v1"
     assert contract["source"] == "upstream/evaluate.py"
-    assert contract["baseline_to_beat"] == (
-        "full_pr95_fidelity_or_better_on_exact_upstream_evaluate_axes"
-    )
+    assert contract["baseline_to_beat"] == ("full_pr95_fidelity_or_better_on_exact_upstream_evaluate_axes")
     assert contract["score_claim"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
     assert contract["crux"]["segnet_frame0_direct_weight"] == 0.0
     assert contract["crux"]["segnet_frame1_direct_weight"] == 1.0
     assert contract["crux"]["pose_marginal_formula"] == "5/sqrt(10*d_pose)"
     assert contract["crux"]["canonical_rate_denominator_bytes"] == 37_545_489
-    assert contract["crux"]["rate_price_per_archive_byte"] == pytest.approx(
-        25 / 37_545_489
-    )
+    assert contract["crux"]["rate_price_per_archive_byte"] == pytest.approx(25 / 37_545_489)
     score_allocation = contract["score_allocation_contract"]
-    assert score_allocation["rate"]["archive_authority"] == (
-        "submission_dir/archive.zip.stat().st_size"
-    )
-    assert score_allocation["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (
-        1200 * 874 * 1164 * 3
-    )
+    assert score_allocation["rate"]["archive_authority"] == ("submission_dir/archive.zip.stat().st_size")
+    assert score_allocation["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (1200 * 874 * 1164 * 3)
     assert report["upstream_evaluate_contract_consumed_by_rows"] is True
 
     for row in report["campaign_rows"]:
@@ -408,12 +382,8 @@ def test_long_training_campaign_plan_binds_upstream_evaluate_contract() -> None:
         assert binding["contract_schema"] == contract["schema"]
         assert binding["baseline_to_beat"] == contract["baseline_to_beat"]
         assert binding["rate"]["canonical_denominator_bytes"] == 37_545_489
-        assert binding["rate"]["rate_price_per_archive_byte"] == pytest.approx(
-            25 / 37_545_489
-        )
-        assert binding["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (
-            1200 * 874 * 1164 * 3
-        )
+        assert binding["rate"]["rate_price_per_archive_byte"] == pytest.approx(25 / 37_545_489)
+        assert binding["rate"]["raw_output_shape_bytes_are_not_rate_denominator"] == (1200 * 874 * 1164 * 3)
         assert binding["pair_geometry"]["seq_len"] == 2
         assert binding["pair_geometry"]["public_test_pair_count"] == 600
         assert binding["pair_geometry"]["camera_size_wh"] == [1164, 874]
@@ -433,13 +403,23 @@ def test_long_training_campaign_plan_binds_upstream_evaluate_contract() -> None:
         assert binding["promotion_eligible"] is False
         queue_entry = row["experiment_queue_entry"]
         assert queue_entry["metadata"]["upstream_evaluate_score_binding"] == binding
+        telemetry_contract = row["pr95_evaluate_scorer_domain_telemetry_contract"]
+        assert telemetry_contract["schema"] == ("pr95_evaluate_scorer_domain_telemetry_contract.v1")
+        assert telemetry_contract["segnet_scored_frame_index"] == 1
+        assert telemetry_contract["posenet_scored_frame_indices"] == [0, 1]
+        assert telemetry_contract["argmax_occupancy_gate_required"] is True
+        assert telemetry_contract["fail_closed_on_missing_metrics"] is True
+        assert queue_entry["metadata"]["pr95_evaluate_scorer_domain_telemetry_contract"] == telemetry_contract
         launch_contract = queue_entry["launch_authority_contract"]
         assert launch_contract["upstream_evaluate_score_contract_consumed"] is True
         assert launch_contract["upstream_evaluate_score_binding"] == binding
+        assert launch_contract["pr95_evaluate_scorer_domain_telemetry_contract_consumed"] is True
+        assert launch_contract["pr95_evaluate_scorer_domain_telemetry_contract"] == telemetry_contract
 
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert snerv["score_aware_long_training_plan"]["upstream_evaluate_score_binding"] == (
-        snerv["upstream_evaluate_score_binding"]
+    assert (
+        snerv["score_aware_long_training_plan"]["upstream_evaluate_score_binding"]
+        == (snerv["upstream_evaluate_score_binding"])
     )
 
 
@@ -465,9 +445,7 @@ def test_long_training_campaign_plan_binds_tilde_oss_leverage_policy() -> None:
     assert policy["wall_attention"]["byte_charged_receiver_replay_required"] is True
     assert policy["parallax"]["official_tilde_surface"] is False
     assert policy["parallax"]["direct_runtime_import_allowed"] is False
-    assert policy["parallax"]["classification"] == (
-        "llm_local_linear_attention_not_video_parallax_geometry"
-    )
+    assert policy["parallax"]["classification"] == ("llm_local_linear_attention_not_video_parallax_geometry")
     assert policy["direct_import_policy"]["forbidden_repos"] == [
         "Yifei-Zuo/Parallax",
         "tilde-research/wall-attention-release",
@@ -489,16 +467,12 @@ def test_long_training_campaign_plan_binds_tilde_oss_leverage_policy() -> None:
         assert launch_contract["tilde_oss_leverage_policy_consumed"] is True
         assert launch_contract["tilde_oss_leverage_binding"] == binding
 
-    aurora_rows = [
-        row for row in report["campaign_rows"] if row["optimizer_kind"] == "aurora_like"
-    ]
+    aurora_rows = [row for row in report["campaign_rows"] if row["optimizer_kind"] == "aurora_like"]
     assert len(aurora_rows) == 1
     assert aurora_rows[0]["experiment_queue_entry"]["status"] == "disabled"
     assert (
         "aurora_requires_local_timing_convergence_smoke"
-        in aurora_rows[0]["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_launch_blockers"
-        ]
+        in aurora_rows[0]["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"]
     )
 
 
@@ -522,17 +496,11 @@ def test_long_training_campaign_plan_binds_pr95_baseline_identity() -> None:
     assert binding["baseline_id"] == "pr95_public_hnerv_muon_control_arm"
     assert binding["selected_archive"]["sha256"] == "a" * 64
     assert binding["local_cpu_mlx_work_order"]["ready"] is True
-    assert binding["local_cpu_mlx_work_order"]["local_cpu_axis_tag"] == (
-        "[macOS-CPU advisory]"
-    )
-    assert binding["local_cpu_mlx_work_order"]["mlx_axis_tag"] == (
-        "[macOS-MLX research-signal]"
-    )
+    assert binding["local_cpu_mlx_work_order"]["local_cpu_axis_tag"] == ("[macOS-CPU advisory]")
+    assert binding["local_cpu_mlx_work_order"]["mlx_axis_tag"] == ("[macOS-MLX research-signal]")
     assert binding["modal_dispatch_policy"]["modal_dispatch_allowed"] is False
     assert binding["paired_exact_eval_work_order"]["ready"] is False
-    assert "modal_reserved_for_frontier_candidates" in binding[
-        "paired_exact_eval_work_order"
-    ]["blockers"]
+    assert "modal_reserved_for_frontier_candidates" in binding["paired_exact_eval_work_order"]["blockers"]
     assert "pr95_contest_cpu_exact_eval_missing" in binding["blockers"]
     assert report["pr95_baseline_identity_consumed_by_rows"] is True
     assert report["score_claim"] is False
@@ -560,10 +528,7 @@ def test_long_training_campaign_plan_pr95_distortion_guard_blocks_queue_launch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     assert (
-        plan_module._experiment_launch_blockers(
-            ["requires_verified_joint_p18_p19_recon_pixel_weight_artifact"]
-        )
-        == []
+        plan_module._experiment_launch_blockers(["requires_verified_joint_p18_p19_recon_pixel_weight_artifact"]) == []
     )
 
     def fake_source_inventory(_: object) -> dict:
@@ -583,10 +548,7 @@ def test_long_training_campaign_plan_pr95_distortion_guard_blocks_queue_launch(
         source_inventory: dict | None = None,
     ) -> dict:
         family = str(row["family"])
-        blocker = (
-            f"{family}_pr95_distortion_"
-            "scorer_preprocess_eval_roundtrip_yuv6_missing"
-        )
+        blocker = f"{family}_pr95_distortion_scorer_preprocess_eval_roundtrip_yuv6_missing"
         return {
             "schema": "pr95_distortion_practices_guard.v1",
             "family": family,
@@ -723,9 +685,7 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
             "official_receiver_runtime_decode_contract": {
                 "receiver_runtime_decode_proven": True,
                 "receiver_source_forward_replay_bound": False,
-                "blockers": [
-                    "snerv_official_mfu_hfr_tub_source_forward_replay_missing"
-                ],
+                "blockers": ["snerv_official_mfu_hfr_tub_source_forward_replay_missing"],
             },
         },
         "official_receiver_runtime_decode_contract": {
@@ -769,12 +729,8 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
     assert split["numeric_graph_replay_proven"] is True
     assert split["receiver_runtime_decode_proven"] is True
     assert split["receiver_source_forward_replay_bound"] is False
-    assert split["launch_semantics"] == (
-        "receiver_bound_training_allowed_but_official_source_authority_false"
-    )
-    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in (
-        split["blockers"]
-    )
+    assert split["launch_semantics"] == ("receiver_bound_training_allowed_but_official_source_authority_false")
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in (split["blockers"])
     official_feature = next(
         row
         for row in snerv_row["source_parity"]["feature_status_rows"]
@@ -784,32 +740,21 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
     assert "source_parity:snerv_official_mfu_hfr_tub_parity_missing" in snerv_row["source_parity"]["nonblocking_gaps"]
     assert snerv_row["source_parity"]["score_claim"] is False
     queue_entry = snerv_row["experiment_queue_entry"]
-    assert queue_entry["metadata"]["source_parity"]["source_audit_rows"][0][
-        "official_head_sha"
-    ] == "0844a08f"
+    assert queue_entry["metadata"]["source_parity"]["source_audit_rows"][0]["official_head_sha"] == "0844a08f"
     assert queue_entry["metadata"]["source_bound_capacity_controls"]["schema"] == (
         "snerv_source_bound_capacity_controls.v1"
     )
     launch_contract = queue_entry["launch_authority_contract"]
     assert launch_contract["source_parity_contract_consumed"] is True
     assert launch_contract["source_bound_capacity_controls_consumed"] is True
-    assert launch_contract["source_parity"]["source_audit_rows"][0][
-        "official_source_markers_present"
-    ] is True
-    assert launch_contract["snerv_official_runtime_authority_split"][
-        "receiver_bound_training_evidence_usable"
-    ] is True
-    assert launch_contract["snerv_official_runtime_authority_split"][
-        "full_source_forward_authority_proven"
-    ] is False
-    assert launch_contract["source_bound_capacity_controls"]["schema"] == (
-        "snerv_source_bound_capacity_controls.v1"
-    )
+    assert launch_contract["source_parity"]["source_audit_rows"][0]["official_source_markers_present"] is True
+    assert launch_contract["snerv_official_runtime_authority_split"]["receiver_bound_training_evidence_usable"] is True
+    assert launch_contract["snerv_official_runtime_authority_split"]["full_source_forward_authority_proven"] is False
+    assert launch_contract["source_bound_capacity_controls"]["schema"] == ("snerv_source_bound_capacity_controls.v1")
     assert launch_contract["score_claim"] is False
     markdown = render_nerv_long_training_campaign_plan_markdown(report)
     assert (
-        "snerv_runtime_authority: "
-        "`receiver_bound_training_allowed_but_official_source_authority_false`"
+        "snerv_runtime_authority: `receiver_bound_training_allowed_but_official_source_authority_false`"
     ) in markdown
     assert "snerv_full_source_forward_authority: `False`" in markdown
 
@@ -870,20 +815,12 @@ def test_long_training_campaign_plan_scrubs_nested_candidate_authority_flags() -
     )
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert "selected_candidate_authority_flag_true:score_claim" in snerv_row[
+    assert "selected_candidate_authority_flag_true:score_claim" in snerv_row["blockers"]
+    assert "selected_candidate_authority_flag_true:metadata.score_claim" in snerv_row["blockers"]
+    assert ("selected_candidate_authority_flag_true:metadata.nested.ready_for_exact_eval_dispatch") in snerv_row[
         "blockers"
     ]
-    assert "selected_candidate_authority_flag_true:metadata.score_claim" in snerv_row[
-        "blockers"
-    ]
-    assert (
-        "selected_candidate_authority_flag_true:"
-        "metadata.nested.ready_for_exact_eval_dispatch"
-    ) in snerv_row["blockers"]
-    assert (
-        "selected_candidate_authority_flag_true:section_rows[0].promotion_eligible"
-        in snerv_row["blockers"]
-    )
+    assert "selected_candidate_authority_flag_true:section_rows[0].promotion_eligible" in snerv_row["blockers"]
     emitted = snerv_row["candidate"]
     assert emitted["score_claim"] is False
     assert emitted["metadata"]["score_claim"] is False
@@ -899,8 +836,7 @@ def test_long_training_campaign_plan_executes_snerv_official_temporal_mode() -> 
     candidate["temporal_context"] = 2
     candidate["temporal_mode"] = "official_haar_dwt1d_lowpass"
     candidate["candidate_id"] = (
-        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_"
-        "p1_mfu1-2-4_hfr0_t2_tmhaar1_adbase_int4_symmetric_ceil178000"
+        "snerv_np600_haar_lv2_lfb1p5_stepb0p5_fc11e2_p1_mfu1-2-4_hfr0_t2_tmhaar1_adbase_int4_symmetric_ceil178000"
     )
     snerv_budget["selected_candidates"] = [candidate]
 
@@ -967,15 +903,11 @@ def test_long_training_campaign_plan_executes_snerv_official_mfu_hfr_tub_adapter
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     argv = snerv_row["command_argv"]
     assert "--snerv-spectra-preserving-adapter" not in argv
-    assert argv[argv.index("--snerv-model-size-adapter") + 1] == (
-        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
-    )
+    assert argv[argv.index("--snerv-model-size-adapter") + 1] == (SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER)
     assert argv[argv.index("--modelsize-candidate-id") + 1] == candidate["candidate_id"]
     assert snerv_row["source_bound_capacity_controls"]["levels"] == 1
     assert snerv_row["source_bound_capacity_controls"]["emb_size"] == 0
-    assert snerv_row["source_bound_capacity_controls"][
-        "candidate_id_matches_source_controls"
-    ] is True
+    assert snerv_row["source_bound_capacity_controls"]["candidate_id_matches_source_controls"] is True
 
 
 def test_long_training_campaign_plan_blocks_snerv_id_control_mismatch() -> None:
@@ -1032,15 +964,9 @@ def test_long_training_campaign_plan_binds_snerv_official_skip_high_mode_id() ->
     )
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert "snerv_candidate_id_source_bound_controls_mismatch" not in snerv_row[
-        "blockers"
-    ]
-    assert snerv_row["source_bound_capacity_controls"][
-        "candidate_id_matches_source_controls"
-    ] is True
-    assert snerv_row["source_bound_capacity_controls"]["official_skip_high_mode"] == (
-        "channel_mean"
-    )
+    assert "snerv_candidate_id_source_bound_controls_mismatch" not in snerv_row["blockers"]
+    assert snerv_row["source_bound_capacity_controls"]["candidate_id_matches_source_controls"] is True
+    assert snerv_row["source_bound_capacity_controls"]["official_skip_high_mode"] == ("channel_mean")
     argv = snerv_row["command_argv"]
     assert argv[argv.index("--snerv-official-skip-high-mode") + 1] == "channel_mean"
 
@@ -1128,9 +1054,7 @@ def test_long_training_campaign_plan_blocks_partial_hinerv_official_controls(
         epochs=29_650,
         output_root=tmp_path / "campaigns",
         max_candidates_per_family=1,
-        joint_recon_weight_manifest_paths=(
-            _joint_recon_weight_manifest(tmp_path, num_pairs=600),
-        ),
+        joint_recon_weight_manifest_paths=(_joint_recon_weight_manifest(tmp_path, num_pairs=600),),
         decoder_weight_waterfill_sources=(waterfill,),
     )
 
@@ -1138,16 +1062,13 @@ def test_long_training_campaign_plan_blocks_partial_hinerv_official_controls(
     assert hi["candidate_id"] == "hinerv_partial_hfg_only"
     assert hi["local_mlx_launch_command_ready"] is False
     assert hi["implementation_status"] == "hinerv_official_controls_required_for_launch"
-    assert "hinerv_official_control_required_for_top_priority_launch" in hi[
-        "blockers"
-    ]
+    assert "hinerv_official_control_required_for_top_priority_launch" in hi["blockers"]
     assert "hinerv_official_convnext_blocks_not_enabled" in hi["blockers"]
-    assert "hinerv_official_convnext_blocks_not_enabled" in hi[
-        "source_faithfulness_controls"
-    ]["target_official_control_blockers"]
     assert (
-        hi["experiment_queue_entry"]["status"] == "disabled"
+        "hinerv_official_convnext_blocks_not_enabled"
+        in hi["source_faithfulness_controls"]["target_official_control_blockers"]
     )
+    assert hi["experiment_queue_entry"]["status"] == "disabled"
     assert hi["score_claim"] is False
     assert hi["ready_for_exact_eval_dispatch"] is False
 
@@ -1289,19 +1210,11 @@ def test_long_training_campaign_plan_requires_and_accepts_snerv_nondegenerate_pr
     assert snerv["local_mlx_launch_command_ready"] is False
     assert snerv["implementation_status"] == "snerv_scoreaware_curriculum_blocked"
     assert "snerv_scorer_loop_qat_pose_guard_not_ready" in snerv["blockers"]
-    assert "snerv_native_scorer_loop_best_packet_not_materialized" in snerv[
-        "blockers"
-    ]
+    assert "snerv_native_scorer_loop_best_packet_not_materialized" in snerv["blockers"]
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
-    assert "snerv_scorer_tether_smoke_report_missing" not in (
-        queue_contract["queue_launch_blockers"]
-    )
-    assert "snerv_renderer_nondegenerate_smoke_missing" not in (
-        queue_contract["queue_launch_blockers"]
-    )
-    assert "snerv_scorer_loop_qat_pose_guard_not_ready" in (
-        queue_contract["queue_launch_blockers"]
-    )
+    assert "snerv_scorer_tether_smoke_report_missing" not in (queue_contract["queue_launch_blockers"])
+    assert "snerv_renderer_nondegenerate_smoke_missing" not in (queue_contract["queue_launch_blockers"])
+    assert "snerv_scorer_loop_qat_pose_guard_not_ready" in (queue_contract["queue_launch_blockers"])
     assert queue_contract["snerv_renderer_nondegenerate_gate"]["passed"] is True
     assert snerv["score_claim"] is False
 
@@ -1341,9 +1254,9 @@ def test_long_training_campaign_plan_consumes_snerv_lf_recode_admission() -> Non
     assert "snerv_lf_recode_admission_plan_false_authority" in snerv["blockers"]
     assert "not_packaged_as_contest_archive_zip" in snerv["blockers"]
     assert "full_video_scorer_replay_missing" in snerv["blockers"]
-    assert queue_metadata["snerv_lf_payload_recode_admission_plan"][
-        "selected_mode"
-    ] == "spatial_delta_zigzag_leb128_lzma"
+    assert (
+        queue_metadata["snerv_lf_payload_recode_admission_plan"]["selected_mode"] == "spatial_delta_zigzag_leb128_lzma"
+    )
     assert queue_metadata["snerv_lf_payload_codec_from_admission_plan"] is None
     assert launch_contract["queue_status_is_exact_eval_authority"] is False
     assert snerv["score_claim"] is False
@@ -1388,9 +1301,7 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     assert reroute_queue["queue_row_count"] == 4
     assert (
         "snerv_lf_recode_selected_mode_still_over_byte_waterline"
-        in snerv["experiment_queue_entry"]["launch_authority_contract"][
-            "queue_launch_blockers"
-        ]
+        in snerv["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"]
     )
 
     rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
@@ -1401,28 +1312,17 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
     assert recode_result["candidate_packet_header_bytes"] == 1_346_233
     assert recode_result["snar_header_grammar_profile_attached"] is True
     assert recode_result["snar_header_grammar_profile"]["header_bytes"] == 1_346_233
-    assert recode_result["snar_header_grammar_profile"]["top_metadata_contributors"][1][
-        "path"
-    ] == "$.metadata.lf_step_allocation_rows"
+    assert (
+        recode_result["snar_header_grammar_profile"]["top_metadata_contributors"][1]["path"]
+        == "$.metadata.lf_step_allocation_rows"
+    )
     assert recode_result["post_recode_over_waterline_bytes"] == expected_overrun
     assert recode_result["required_lf_savings_bytes"] == expected_overrun
     assert recode_result["lf_payload_can_cover_required_savings"] is False
-    assert (
-        "snerv_post_recode_packet_still_over_hard_byte_ceiling"
-        in recode_result["blockers"]
-    )
-    assert (
-        "snerv_post_recode_overrun_exceeds_remaining_lf_payload_bytes"
-        in recode_result["blockers"]
-    )
-    assert (
-        "snerv_post_recode_overrun_dominated_by_packet_header_bytes"
-        in recode_result["blockers"]
-    )
-    assert (
-        "snerv_snar_packet_header_grammar_rewrite_required"
-        in recode_result["blockers"]
-    )
+    assert "snerv_post_recode_packet_still_over_hard_byte_ceiling" in recode_result["blockers"]
+    assert "snerv_post_recode_overrun_exceeds_remaining_lf_payload_bytes" in recode_result["blockers"]
+    assert "snerv_post_recode_overrun_dominated_by_packet_header_bytes" in recode_result["blockers"]
+    assert "snerv_snar_packet_header_grammar_rewrite_required" in recode_result["blockers"]
     assert snerv["snerv_lf_payload_recode_admission_plan"]["verdict"] == (
         "ADMIT_LF_RECODE__POST_RECODE_PACKET_HEADER_GRAMMAR_DOMINATES"
     )
@@ -1440,59 +1340,50 @@ def test_long_training_campaign_plan_reroutes_post_recode_packet_overrun() -> No
         "tools/minimize_snerv_snar_header.py",
     ]
     assert "--packet" in header_rewrite["command_argv"]
-    assert header_rewrite["command_argv"][
-        header_rewrite["command_argv"].index("--packet") + 1
-    ] == "/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar"
+    assert (
+        header_rewrite["command_argv"][header_rewrite["command_argv"].index("--packet") + 1]
+        == "/Volumes/VertigoDataTier/pact/snerv_test/candidate.snar"
+    )
     assert "--candidate-id" in header_rewrite["command_argv"]
-    assert header_rewrite["command_argv"][
-        header_rewrite["command_argv"].index("--candidate-id") + 1
-    ] == snerv["candidate_id"]
+    assert (
+        header_rewrite["command_argv"][header_rewrite["command_argv"].index("--candidate-id") + 1]
+        == snerv["candidate_id"]
+    )
     assert "--wire-format" in header_rewrite["command_argv"]
-    assert header_rewrite["command_argv"][
-        header_rewrite["command_argv"].index("--wire-format") + 1
-    ] == "snar2"
+    assert header_rewrite["command_argv"][header_rewrite["command_argv"].index("--wire-format") + 1] == "snar2"
     assert "--output-packet" in header_rewrite["command_argv"]
     assert "--output-archive-zip" in header_rewrite["command_argv"]
-    assert header_rewrite["command_argv"][
-        header_rewrite["command_argv"].index("--output-archive-zip") + 1
-    ].endswith("/archive.zip")
+    assert header_rewrite["command_argv"][header_rewrite["command_argv"].index("--output-archive-zip") + 1].endswith(
+        "/archive.zip"
+    )
     assert "--output-package-dir" in header_rewrite["command_argv"]
-    assert header_rewrite["command_argv"][
-        header_rewrite["command_argv"].index("--output-package-dir") + 1
-    ].endswith("/runtime_package")
+    assert header_rewrite["command_argv"][header_rewrite["command_argv"].index("--output-package-dir") + 1].endswith(
+        "/runtime_package"
+    )
     assert "--full-video-receiver-proof" in header_rewrite["command_argv"]
     assert "--hard-byte-ceiling" in header_rewrite["command_argv"]
-    assert int(
-        header_rewrite["command_argv"][
-            header_rewrite["command_argv"].index("--hard-byte-ceiling") + 1
-        ]
-    ) == snerv["hard_byte_ceiling"]
+    assert (
+        int(header_rewrite["command_argv"][header_rewrite["command_argv"].index("--hard-byte-ceiling") + 1])
+        == snerv["hard_byte_ceiling"]
+    )
     assert header_rewrite["dispatch_allowed"] is False
     assert header_rewrite["local_mlx_long_training_allowed"] is False
     assert (
-        header_rewrite["planner_action"]
-        == "run_receiver_proven_snar2_binary_header_prune_then_rerun_recode_admission"
+        header_rewrite["planner_action"] == "run_receiver_proven_snar2_binary_header_prune_then_rerun_recode_admission"
     )
     assert header_rewrite["blockers"] == []
 
     representation_rows = [
-        row
-        for row in reroute_queue["queue_rows"]
-        if row["work_order_type"] == "lf_representation_change_candidate"
+        row for row in reroute_queue["queue_rows"] if row["work_order_type"] == "lf_representation_change_candidate"
     ]
     assert len(representation_rows) == 2
     assert all(row["measured_lf_payload_bytes"] == 17_779 for row in representation_rows)
+    assert all(row["lf_payload_can_cover_required_savings"] is False for row in representation_rows)
     assert all(
-        row["lf_payload_can_cover_required_savings"] is False
-        for row in representation_rows
+        "snerv_required_savings_exceeds_measured_lf_payload_bytes" in row["blockers"] for row in representation_rows
     )
     assert all(
-        "snerv_required_savings_exceeds_measured_lf_payload_bytes" in row["blockers"]
-        for row in representation_rows
-    )
-    assert all(
-        "snerv_snar_header_grammar_rewrite_precedes_lf_representation_change"
-        in row["blockers"]
+        "snerv_snar_header_grammar_rewrite_precedes_lf_representation_change" in row["blockers"]
         for row in representation_rows
     )
 
@@ -1541,27 +1432,16 @@ def test_long_training_campaign_plan_consumes_snerv_header_minimization_result()
     assert result["command_argv"] == []
     assert result["snar_header_minimization_report_attached"] is True
     assert result["snar_header_minimization_report"]["candidate_packet_bytes"] == 139_855
-    assert result["snar_header_minimization_report"][
-        "candidate_archive_zip_bytes"
-    ] == 139_963
+    assert result["snar_header_minimization_report"]["candidate_archive_zip_bytes"] == 139_963
     assert result["snar_header_minimization_report"]["receiver_contract_satisfied"] is True
-    assert (
-        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
-        in result["blockers"]
-    )
-    assert (
-        "snerv_snar_header_minimized_packet_full_video_replay_missing"
-        in result["blockers"]
-    )
+    assert "snerv_snar_header_minimized_packet_candidate_id_binding_missing" in result["blockers"]
+    assert "snerv_snar_header_minimized_packet_full_video_replay_missing" in result["blockers"]
     assert result["score_claim"] is False
     representation_rows = [
-        row
-        for row in reroute_queue["queue_rows"]
-        if row["work_order_type"] == "lf_representation_change_candidate"
+        row for row in reroute_queue["queue_rows"] if row["work_order_type"] == "lf_representation_change_candidate"
     ]
     assert all(
-        "snerv_snar_header_minimization_result_precedes_lf_representation_change"
-        in row["blockers"]
+        "snerv_snar_header_minimization_result_precedes_lf_representation_change" in row["blockers"]
         for row in representation_rows
     )
 
@@ -1597,17 +1477,9 @@ def test_long_training_campaign_plan_accepts_full_video_header_minimization_proo
     reroute_queue = report["snerv_lf_over_ceiling_reroute_queue"]
     rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
     result = rows_by_type["snar_header_minimization_result"]
-    assert result["snar_header_minimization_report"][
-        "full_video_receiver_contract_satisfied"
-    ] is True
-    assert (
-        "snerv_snar_header_minimized_packet_full_video_replay_missing"
-        not in result["blockers"]
-    )
-    assert (
-        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
-        not in result["blockers"]
-    )
+    assert result["snar_header_minimization_report"]["full_video_receiver_contract_satisfied"] is True
+    assert "snerv_snar_header_minimized_packet_full_video_replay_missing" not in result["blockers"]
+    assert "snerv_snar_header_minimized_packet_candidate_id_binding_missing" not in result["blockers"]
     assert "paired_contest_cpu_cuda_auth_eval_missing" in result["blockers"]
     assert result["score_claim"] is False
 
@@ -1645,27 +1517,22 @@ def test_long_training_campaign_plan_queues_step_map_compaction_after_snar2_proo
     step_map = rows_by_type["snar_step_map_packet_compaction_materialization"]
     assert reroute_queue["local_executable_command_row_count"] == 1
     assert step_map["blocked"] is False
-    assert step_map["planner_action"] == (
-        "run_receiver_proven_step_map_constant_shape_partition_compaction"
-    )
+    assert step_map["planner_action"] == ("run_receiver_proven_step_map_constant_shape_partition_compaction")
     assert step_map["command_argv"][:4] == [
         "uv",
         "run",
         "python",
         "tools/materialize_snerv_step_map_compaction.py",
     ]
-    assert step_map["command_argv"][
-        step_map["command_argv"].index("--packet") + 1
-    ] == "/Volumes/VertigoDataTier/pact/snerv_test/candidate.minimized.snar"
-    assert step_map["command_argv"][
-        step_map["command_argv"].index("--candidate-id") + 1
-    ] == _snerv_candidate_id()
-    assert step_map["command_argv"][
-        step_map["command_argv"].index("--wire-format") + 1
-    ] == "snar2"
-    assert step_map["command_argv"][
-        step_map["command_argv"].index("--output-packet") + 1
-    ].endswith("/candidate.stepmap.snar2")
+    assert (
+        step_map["command_argv"][step_map["command_argv"].index("--packet") + 1]
+        == "/Volumes/VertigoDataTier/pact/snerv_test/candidate.minimized.snar"
+    )
+    assert step_map["command_argv"][step_map["command_argv"].index("--candidate-id") + 1] == _snerv_candidate_id()
+    assert step_map["command_argv"][step_map["command_argv"].index("--wire-format") + 1] == "snar2"
+    assert step_map["command_argv"][step_map["command_argv"].index("--output-packet") + 1].endswith(
+        "/candidate.stepmap.snar2"
+    )
     assert "--output-package-dir" in step_map["command_argv"]
     assert "--full-video-receiver-proof" in step_map["command_argv"]
     assert "--hard-byte-ceiling" in step_map["command_argv"]
@@ -1673,13 +1540,10 @@ def test_long_training_campaign_plan_queues_step_map_compaction_after_snar2_proo
     assert step_map["local_mlx_long_training_allowed"] is False
     assert step_map["score_claim"] is False
     representation_rows = [
-        row
-        for row in reroute_queue["queue_rows"]
-        if row["work_order_type"] == "lf_representation_change_candidate"
+        row for row in reroute_queue["queue_rows"] if row["work_order_type"] == "lf_representation_change_candidate"
     ]
     assert all(
-        "snerv_step_map_packet_compaction_precedes_lf_representation_change"
-        in row["blockers"]
+        "snerv_step_map_packet_compaction_precedes_lf_representation_change" in row["blockers"]
         for row in representation_rows
     )
 
@@ -1717,21 +1581,11 @@ def test_long_training_campaign_plan_accepts_header_minimization_candidate_alias
     rows_by_type = {row["work_order_type"]: row for row in reroute_queue["queue_rows"]}
     result = rows_by_type["snar_header_minimization_result"]
     step_map = rows_by_type["snar_step_map_packet_compaction_materialization"]
-    assert result["snar_header_minimization_report"]["candidate_binding"][
-        "candidate_id"
-    ] == alias_candidate_id
-    assert (
-        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
-        not in result["blockers"]
-    )
+    assert result["snar_header_minimization_report"]["candidate_binding"]["candidate_id"] == alias_candidate_id
+    assert "snerv_snar_header_minimized_packet_candidate_id_binding_missing" not in result["blockers"]
     assert step_map["blocked"] is False
-    assert (
-        "snerv_step_map_compaction_candidate_id_binding_missing"
-        not in step_map["blockers"]
-    )
-    assert step_map["command_argv"][
-        step_map["command_argv"].index("--candidate-id") + 1
-    ] == _snerv_candidate_id()
+    assert "snerv_step_map_compaction_candidate_id_binding_missing" not in step_map["blockers"]
+    assert step_map["command_argv"][step_map["command_argv"].index("--candidate-id") + 1] == _snerv_candidate_id()
 
 
 def test_long_training_campaign_plan_prefers_candidate_bound_header_minimization() -> None:
@@ -1767,19 +1621,11 @@ def test_long_training_campaign_plan_prefers_candidate_bound_header_minimization
         ),
     )
 
-    rows_by_type = {
-        row["work_order_type"]: row
-        for row in report["snerv_lf_over_ceiling_reroute_queue"]["queue_rows"]
-    }
+    rows_by_type = {row["work_order_type"]: row for row in report["snerv_lf_over_ceiling_reroute_queue"]["queue_rows"]}
     result = rows_by_type["snar_header_minimization_result"]
     assert result["snar_header_minimization_report"]["candidate_packet_bytes"] == 139_855
-    assert result["snar_header_minimization_report"]["candidate_binding"][
-        "candidate_id"
-    ] == _snerv_candidate_id()
-    assert (
-        "snerv_snar_header_minimized_packet_candidate_id_binding_missing"
-        not in result["blockers"]
-    )
+    assert result["snar_header_minimization_report"]["candidate_binding"]["candidate_id"] == _snerv_candidate_id()
+    assert "snerv_snar_header_minimized_packet_candidate_id_binding_missing" not in result["blockers"]
 
 
 def test_long_training_campaign_plan_dedupes_snerv_candidate_ids() -> None:
@@ -2026,13 +1872,11 @@ def test_long_training_campaign_plan_attaches_hinerv_archive_section_telemetry_f
     assert attachment["sha256"] == _sha256(telemetry_path)
     assert attachment["candidate_keys"] == ["hinerv_tiny"]
     assert attachment["section_names"] == ["decoder_state", "latents"]
-    assert "hinerv_archive_section_telemetry_receiver_proof_path_missing" in (
-        attachment["runner_admission"]["refusal_reasons"]
-    )
     assert (
-        "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted"
-        in hi["blockers"]
+        "hinerv_archive_section_telemetry_receiver_proof_path_missing"
+        in (attachment["runner_admission"]["refusal_reasons"])
     )
+    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi["blockers"]
     assert report["archive_section_telemetry_source_count"] == 1
     assert report["archive_section_telemetry_row_count"] == 1
     assert report["archive_section_telemetry_attached_row_count"] == 1
@@ -2067,9 +1911,7 @@ def test_long_training_campaign_plan_rejects_status_only_receiver_proof(
     assert attachment["receiver_proof_ready"] is False
     assert attachment["runner_admitted"] is False
     assert "--decoder-weight-waterfill-plan-json" not in hi["command_argv"]
-    assert "decoder_weight_waterfill_receiver_proof_path_missing" in attachment[
-        "runner_admission"
-    ]["refusal_reasons"]
+    assert "decoder_weight_waterfill_receiver_proof_path_missing" in attachment["runner_admission"]["refusal_reasons"]
     assert attachment["receiver_proof_binding"]["bound"] is False
     assert "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted" in hi["blockers"]
 
@@ -2138,9 +1980,7 @@ def test_long_training_campaign_plan_attaches_hinerv_archive_section_telemetry(
     hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
     argv = hi["command_argv"]
     assert "--archive-section-telemetry-json" in argv
-    assert argv[argv.index("--archive-section-telemetry-json") + 1] == (
-        telemetry_path.as_posix()
-    )
+    assert argv[argv.index("--archive-section-telemetry-json") + 1] == (telemetry_path.as_posix())
     attachment = hi["archive_section_telemetry"]
     assert attachment["attached"] is True
     assert attachment["runner_admitted"] is True
@@ -2160,9 +2000,7 @@ def test_long_training_campaign_plan_attaches_hinerv_archive_section_telemetry(
     assert report["archive_section_telemetry_row_count"] == 1
     assert report["archive_section_telemetry_attached_row_count"] == 1
     assert report["archive_section_telemetry_unattached_source_count"] == 0
-    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" not in hi[
-        "blockers"
-    ]
+    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" not in hi["blockers"]
     assert hi["score_claim"] is False
 
 
@@ -2200,31 +2038,26 @@ def test_long_training_campaign_plan_blocks_bad_hinerv_archive_section_telemetry
     assert attachment["attached"] is True
     assert attachment["runner_admitted"] is False
     assert "--archive-section-telemetry-json" not in hi["command_argv"]
-    assert "hinerv_archive_section_telemetry_not_profile_ready" in attachment[
-        "blockers"
-    ]
-    assert "hinerv_archive_section_telemetry_decoder_state_missing" in attachment[
-        "blockers"
-    ]
-    assert "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling" in (
-        attachment["runner_admission"]["refusal_reasons"]
+    assert "hinerv_archive_section_telemetry_not_profile_ready" in attachment["blockers"]
+    assert "hinerv_archive_section_telemetry_decoder_state_missing" in attachment["blockers"]
+    assert (
+        "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling"
+        in (attachment["runner_admission"]["refusal_reasons"])
     )
     assert (
         "hinerv_archive_section_telemetry_receiver_cache_quality_gate_not_passed"
         in attachment["runner_admission"]["refusal_reasons"]
     )
-    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi[
-        "blockers"
-    ]
-    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi[
-        "score_lowering_gate"
-    ]["launch_blockers"]
-    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi[
-        "experiment_queue_entry"
-    ]["launch_authority_contract"]["queue_launch_blockers"]
-    assert hi["experiment_queue_entry"]["launch_authority_contract"][
-        "queue_status_is_runnable_plan"
-    ] is False
+    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi["blockers"]
+    assert (
+        "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted"
+        in hi["score_lowering_gate"]["launch_blockers"]
+    )
+    assert (
+        "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted"
+        in hi["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"]
+    )
+    assert hi["experiment_queue_entry"]["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
     assert hi["experiment_queue_entry"]["status"] == "disabled"
     assert hi["local_mlx_launch_command_ready"] is False
 
@@ -2268,24 +2101,17 @@ def test_long_training_campaign_plan_routes_hinerv_hard_pair_feedback(
         epochs=29_650,
         output_root=tmp_path / "campaigns",
         max_candidates_per_family=1,
-        joint_recon_weight_manifest_paths=(
-            _joint_recon_weight_manifest(tmp_path, num_pairs=600),
-        ),
+        joint_recon_weight_manifest_paths=(_joint_recon_weight_manifest(tmp_path, num_pairs=600),),
         decoder_weight_waterfill_sources=(waterfill,),
         candidate_feedback_sources=(feedback,),
     )
 
     hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
-    assert hi["prioritized_pair_training"]["schema"] == (
-        "nerv_prioritized_pair_training_plan.v1"
-    )
+    assert hi["prioritized_pair_training"]["schema"] == ("nerv_prioritized_pair_training_plan.v1")
     assert hi["prioritized_pair_training"]["enabled"] is True
     assert hi["prioritized_pair_training"]["pair_indices"] == [17, 4, 0]
     assert "--prioritized-pair-indices" in hi["command_argv"]
-    assert (
-        hi["command_argv"][hi["command_argv"].index("--prioritized-pair-indices") + 1]
-        == "17,4,0"
-    )
+    assert hi["command_argv"][hi["command_argv"].index("--prioritized-pair-indices") + 1] == "17,4,0"
     queue = hi["experiment_queue_entry"]
     assert queue["metadata"]["prioritized_pair_training"]["pair_indices"] == [
         17,
@@ -2293,9 +2119,9 @@ def test_long_training_campaign_plan_routes_hinerv_hard_pair_feedback(
         0,
     ]
     assert queue["steps"][0]["command"] == hi["command_argv"]
-    assert queue["steps"][0]["command"][
-        queue["steps"][0]["command"].index("--prioritized-pair-indices") + 1
-    ] == "17,4,0"
+    assert (
+        queue["steps"][0]["command"][queue["steps"][0]["command"].index("--prioritized-pair-indices") + 1] == "17,4,0"
+    )
 
 
 def test_long_training_campaign_plan_blocks_invalid_hard_pair_feedback() -> None:
@@ -2333,12 +2159,8 @@ def test_long_training_campaign_plan_blocks_invalid_hard_pair_feedback() -> None
     assert hi["prioritized_pair_training"]["enabled"] is False
     assert hi["prioritized_pair_training"]["pair_indices"] == []
     assert "--prioritized-pair-indices" not in hi["command_argv"]
-    assert "candidate_feedback_prioritized_pair_indices_parse_failed" in hi[
-        "candidate_feedback_evidence_blockers"
-    ]
-    assert "candidate_feedback_prioritized_pair_indices_parse_failed" in hi[
-        "blockers"
-    ]
+    assert "candidate_feedback_prioritized_pair_indices_parse_failed" in hi["candidate_feedback_evidence_blockers"]
+    assert "candidate_feedback_prioritized_pair_indices_parse_failed" in hi["blockers"]
     assert hi["score_claim"] is False
     assert hi["ready_for_exact_eval_dispatch"] is False
 
@@ -2370,12 +2192,11 @@ def test_long_training_campaign_plan_blocks_bare_snerv_hard_pair_feedback() -> N
     assert snerv["prioritized_pair_training"]["enabled"] is False
     assert snerv["prioritized_pair_training"]["pair_indices"] == []
     assert "--prioritized-pair-indices" not in snerv["command_argv"]
-    assert "candidate_feedback_prioritized_pair_indices_not_launch_routable" in snerv[
-        "candidate_feedback_evidence_blockers"
-    ]
-    assert "candidate_feedback_prioritized_pair_indices_not_launch_routable" in snerv[
-        "blockers"
-    ]
+    assert (
+        "candidate_feedback_prioritized_pair_indices_not_launch_routable"
+        in snerv["candidate_feedback_evidence_blockers"]
+    )
+    assert "candidate_feedback_prioritized_pair_indices_not_launch_routable" in snerv["blockers"]
     assert snerv["score_claim"] is False
     assert snerv["ready_for_exact_eval_dispatch"] is False
 
@@ -2412,9 +2233,7 @@ def test_long_training_campaign_plan_blocks_snerv_representative_hard_pair_comma
     )
 
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
-    assert snerv["prioritized_pair_training"]["schema"] == (
-        "nerv_prioritized_pair_training_plan.v1"
-    )
+    assert snerv["prioritized_pair_training"]["schema"] == ("nerv_prioritized_pair_training_plan.v1")
     assert snerv["prioritized_pair_training"]["enabled"] is False
     assert snerv["prioritized_pair_training"]["requested"] is True
     assert snerv["prioritized_pair_training"]["command_routed"] is False
@@ -2425,12 +2244,11 @@ def test_long_training_campaign_plan_blocks_snerv_representative_hard_pair_comma
     assert snerv["prioritized_pair_training"]["required_successor"] == (
         "snerv_full_video_scoreaware_trainer_with_sampler_emphasis"
     )
-    assert "snerv_hardpair_indices_only_hydrated_subset_not_full_training" in snerv[
-        "prioritized_pair_training"
-    ]["blockers"]
-    assert "snerv_hardpair_indices_only_hydrated_subset_not_full_training" in snerv[
-        "blockers"
-    ]
+    assert (
+        "snerv_hardpair_indices_only_hydrated_subset_not_full_training"
+        in snerv["prioritized_pair_training"]["blockers"]
+    )
+    assert "snerv_hardpair_indices_only_hydrated_subset_not_full_training" in snerv["blockers"]
     assert "--prioritized-pair-indices" not in snerv["command_argv"]
     queue = snerv["experiment_queue_entry"]
     assert queue["metadata"]["prioritized_pair_training"]["requested_pair_indices"] == [
@@ -2438,9 +2256,10 @@ def test_long_training_campaign_plan_blocks_snerv_representative_hard_pair_comma
         22,
     ]
     assert queue["metadata"]["prioritized_pair_training"]["command_routed"] is False
-    assert "snerv_hardpair_indices_only_hydrated_subset_not_full_training" in queue[
-        "metadata"
-    ]["prioritized_pair_training"]["blockers"]
+    assert (
+        "snerv_hardpair_indices_only_hydrated_subset_not_full_training"
+        in queue["metadata"]["prioritized_pair_training"]["blockers"]
+    )
     assert queue["steps"][0]["command"] == snerv["command_argv"]
     assert "--prioritized-pair-indices" not in queue["steps"][0]["command"]
     assert snerv["score_claim"] is False
@@ -2522,10 +2341,7 @@ def test_long_training_campaign_plan_routes_pose_tail_burst_pair_indices() -> No
     assert hi["prioritized_pair_training"]["enabled"] is True
     assert hi["prioritized_pair_training"]["pair_indices"] == [42, 3]
     assert "--prioritized-pair-indices" in hi["command_argv"]
-    assert (
-        hi["command_argv"][hi["command_argv"].index("--prioritized-pair-indices") + 1]
-        == "42,3"
-    )
+    assert hi["command_argv"][hi["command_argv"].index("--prioritized-pair-indices") + 1] == "42,3"
     assert "hinerv_pose_tail_burst_requires_prioritized_pair_indices" not in hi["blockers"]
 
 
@@ -2674,22 +2490,12 @@ def test_long_training_campaign_plan_threads_modelsize_byte_cap_feedback_paths()
     for row in report["campaign_rows"]:
         argv = row["command_argv"]
         assert row["runner_modelsize_candidate_id"] == "auto"
-        assert row["modelsize_candidate_selection_mode"] == (
-            "calibrated_auto_from_modelsize_byte_cap_feedback"
-        )
+        assert row["modelsize_candidate_selection_mode"] == ("calibrated_auto_from_modelsize_byte_cap_feedback")
         assert argv[argv.index("--modelsize-candidate-id") + 1] == "auto"
-        assert argv[argv.index("--hard-byte-ceiling") + 1] == str(
-            row["candidate"]["hard_byte_ceiling"]
-        )
-        indices = [
-            index
-            for index, value in enumerate(argv)
-            if value == "--modelsize-byte-cap-feedback-json"
-        ]
+        assert argv[argv.index("--hard-byte-ceiling") + 1] == str(row["candidate"]["hard_byte_ceiling"])
+        indices = [index for index, value in enumerate(argv) if value == "--modelsize-byte-cap-feedback-json"]
         assert len(indices) == 2
-        assert [argv[index + 1] for index in indices] == report[
-            "modelsize_byte_cap_feedback_paths"
-        ]
+        assert [argv[index + 1] for index in indices] == report["modelsize_byte_cap_feedback_paths"]
 
 
 def test_long_training_campaign_plan_auto_bytecap_queue_ids_stay_unique(
@@ -2710,9 +2516,7 @@ def test_long_training_campaign_plan_auto_bytecap_queue_ids_stay_unique(
         epochs=29_650,
         output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
         max_candidates_per_family=2,
-        modelsize_byte_cap_feedback_paths=(
-            "/Volumes/VertigoDataTier/pact/exports/snerv_feedback.json",
-        ),
+        modelsize_byte_cap_feedback_paths=("/Volumes/VertigoDataTier/pact/exports/snerv_feedback.json",),
     )
 
     snerv_rows = [row for row in report["campaign_rows"] if row["family"] == "snerv"]
@@ -2774,10 +2578,7 @@ def test_long_training_campaign_plan_blocks_snerv_auto_when_calibrated_byte_cap_
 
     assert snerv["local_mlx_launch_command_ready"] is False
     assert snerv["experiment_queue_entry"]["status"] == "disabled"
-    assert (
-        "snerv_modelsize_auto_calibrated_byte_cap_over_ceiling"
-        in snerv["blockers"]
-    )
+    assert "snerv_modelsize_auto_calibrated_byte_cap_over_ceiling" in snerv["blockers"]
     preflight = snerv["modelsize_byte_cap_preflight"]
     assert preflight["matching_observation_count"] == 1
     assert preflight["predicted_under_hard_byte_ceiling"] is False
@@ -2839,9 +2640,7 @@ def test_long_training_campaign_plan_byte_cap_preflight_reads_startup_candidate_
 
     hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
 
-    assert "hi_nerv_modelsize_byte_cap_feedback_observation_missing" not in hi[
-        "blockers"
-    ]
+    assert "hi_nerv_modelsize_byte_cap_feedback_observation_missing" not in hi["blockers"]
     preflight = hi["modelsize_byte_cap_preflight"]
     assert preflight["matching_observation_count"] == 1
     assert preflight["predicted_under_hard_byte_ceiling"] is True
@@ -2892,13 +2691,8 @@ def test_long_training_campaign_plan_promotes_hinerv_candidate_with_byte_feedbac
     assert hi["candidate"]["candidate_id"] == calibrated["candidate_id"]
     assert hi["budget_candidate_id"] == calibrated["candidate_id"]
     assert hi["runner_modelsize_candidate_id"] == "auto"
-    assert hi["modelsize_candidate_selection_mode"] == (
-        "calibrated_auto_from_modelsize_byte_cap_feedback"
-    )
-    assert (
-        "hi_nerv_modelsize_byte_cap_feedback_observation_missing"
-        not in hi["blockers"]
-    )
+    assert hi["modelsize_candidate_selection_mode"] == ("calibrated_auto_from_modelsize_byte_cap_feedback")
+    assert "hi_nerv_modelsize_byte_cap_feedback_observation_missing" not in hi["blockers"]
     preflight = hi["modelsize_byte_cap_preflight"]
     assert preflight["matching_observation_count"] == 1
     assert preflight["predicted_archive_bytes"] == 101_000
@@ -2930,17 +2724,13 @@ def test_long_training_campaign_plan_consumes_snerv_binary_profile_receiver_proo
 
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
 
-    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in snerv[
-        "blockers"
-    ]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in snerv["blockers"]
     preflight = snerv["modelsize_byte_cap_preflight"]
     assert preflight["observation_count"] == 1
     assert preflight["matching_observation_count"] == 1
     assert preflight["predicted_archive_bytes"] == 91_445
     assert preflight["predicted_under_hard_byte_ceiling"] is True
-    assert preflight["matching_observations"][0]["candidate_id"] == scalar[
-        "candidate_id"
-    ]
+    assert preflight["matching_observations"][0]["candidate_id"] == scalar["candidate_id"]
     assert preflight["matching_observations"][0]["receiver_closed"] is True
     assert preflight["score_claim"] is False
     feedback = snerv["candidate_feedback"]
@@ -2953,12 +2743,8 @@ def test_long_training_campaign_plan_consumes_snerv_binary_profile_receiver_proo
     assert training_plan["native_mlx_train_export_verified"] is True
     assert training_plan["native_mlx_file_backed_export_proof_passed"] is True
     assert "snerv_snar1_byte_feedback_missing" not in snerv["blockers"]
-    assert "snerv_mlx_native_receiver_proof_missing_or_failed" not in snerv[
-        "blockers"
-    ]
-    assert "snerv_mlx_native_file_backed_export_proof_missing_or_failed" not in snerv[
-        "blockers"
-    ]
+    assert "snerv_mlx_native_receiver_proof_missing_or_failed" not in snerv["blockers"]
+    assert "snerv_mlx_native_file_backed_export_proof_missing_or_failed" not in snerv["blockers"]
     assert "snerv_mlx_native_full600_campaign_not_ready" not in snerv["blockers"]
 
 
@@ -3022,29 +2808,16 @@ def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_de
     assert selected["candidate"].get("_modelsize_feedback_demote_only") is not True
     selected_preflight = selected["modelsize_byte_cap_preflight"]
     assert selected_preflight["missing_matching_feedback_is_blocking"] is False
-    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in selected[
-        "blockers"
-    ]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in selected["blockers"]
     assert demoted["candidate"]["candidate_id"] == observed["candidate_id"]
     assert demoted["local_mlx_launch_command_ready"] is False
     assert demoted["candidate"]["_modelsize_feedback_demote_only"] is True
     assert demoted["candidate"]["_modelsize_feedback_observed_archive_bytes"] == 444_828
-    assert (
-        demoted["candidate"]["_modelsize_feedback_archive_over_hard_byte_ceiling_bytes"]
-        == 228_828
-    )
-    assert (
-        demoted["candidate"]["_modelsize_feedback_required_nominal_payload_bytes_max"]
-        == 91_703
-    )
+    assert demoted["candidate"]["_modelsize_feedback_archive_over_hard_byte_ceiling_bytes"] == 228_828
+    assert demoted["candidate"]["_modelsize_feedback_required_nominal_payload_bytes_max"] == 91_703
     assert demoted["candidate"]["_modelsize_feedback_measurement_bypass_enabled"] is True
-    assert (
-        "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only"
-        in demoted["blockers"]
-    )
-    assert "snerv_receiver_proven_archive_over_hard_byte_ceiling" in demoted[
-        "blockers"
-    ]
+    assert "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only" in demoted["blockers"]
+    assert "snerv_receiver_proven_archive_over_hard_byte_ceiling" in demoted["blockers"]
     launch_contract = demoted["experiment_queue_entry"]["launch_authority_contract"]
     assert (
         "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only"
@@ -3073,10 +2846,7 @@ def test_long_training_campaign_plan_preserves_over_ceiling_snerv_feedback_as_de
     assert temporal_gate["work_order_type"] == "lf_representation_change_candidate"
     assert temporal_gate["blocked"] is True
     assert temporal_gate["lf_payload_can_cover_required_savings"] is True
-    assert (
-        "snerv_lf_tub_temporal_gate_not_implemented"
-        in temporal_gate["blockers"]
-    )
+    assert "snerv_lf_tub_temporal_gate_not_implemented" in temporal_gate["blockers"]
     feedback = demoted["curriculum_plan"]["byte_oracle_logging"]
     assert feedback["archive_under_hard_byte_ceiling"] is False
     assert feedback["archive_over_hard_byte_ceiling_bytes"] == 228_828
@@ -3096,11 +2866,7 @@ def test_long_training_campaign_plan_rejects_snerv_byte_feedback_failed_receiver
         archive_sha256="a" * 64,
     )
     payload = json.loads(profile.read_text(encoding="utf-8"))
-    proof_path = (
-        Path(payload["input_path"]).parent
-        / "receiver_proof"
-        / "snerv_inverse_steg_receiver_proof.json"
-    )
+    proof_path = Path(payload["input_path"]).parent / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
     proof = json.loads(proof_path.read_text(encoding="utf-8"))
     proof["receiver_contract_satisfied"] = False
     proof["blockers"] = ["synthetic_receiver_contract_failed"]
@@ -3119,9 +2885,7 @@ def test_long_training_campaign_plan_rejects_snerv_byte_feedback_failed_receiver
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
 
     assert snerv["modelsize_byte_cap_preflight"]["observation_count"] == 0
-    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
-        "blockers"
-    ]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv["blockers"]
     assert "snerv_mlx_native_full600_campaign_not_ready" in snerv["blockers"]
 
 
@@ -3158,9 +2922,7 @@ def test_long_training_campaign_plan_rejects_contract_only_snerv_byte_feedback(
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
 
     assert snerv["modelsize_byte_cap_preflight"]["observation_count"] == 0
-    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
-        "blockers"
-    ]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv["blockers"]
 
 
 def test_long_training_campaign_plan_refuses_snerv_byte_feedback_from_wrong_skip_mode(
@@ -3188,13 +2950,10 @@ def test_long_training_campaign_plan_refuses_snerv_byte_feedback_from_wrong_skip
     snerv = next(
         row
         for row in report["campaign_rows"]
-        if row["family"] == "snerv"
-        and row["candidate"]["candidate_id"] == full["candidate_id"]
+        if row["family"] == "snerv" and row["candidate"]["candidate_id"] == full["candidate_id"]
     )
 
-    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
-        "blockers"
-    ]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv["blockers"]
     preflight = snerv["modelsize_byte_cap_preflight"]
     assert preflight["observation_count"] == 1
     assert preflight["matching_observation_count"] == 0
@@ -3225,9 +2984,7 @@ def test_long_training_campaign_plan_promotes_snerv_candidate_with_byte_feedback
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
 
     assert snerv["candidate"]["candidate_id"] == scalar["candidate_id"]
-    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in snerv[
-        "blockers"
-    ]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" not in snerv["blockers"]
     assert snerv["modelsize_byte_cap_preflight"]["matching_observation_count"] == 1
 
 
@@ -3273,11 +3030,7 @@ def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
         ),
         encoding="utf-8",
     )
-    telemetry_feedback = (
-        tmp_path
-        / "telemetry"
-        / "nerv_candidate_training_telemetry_feedback_row.json"
-    )
+    telemetry_feedback = tmp_path / "telemetry" / "nerv_candidate_training_telemetry_feedback_row.json"
     telemetry_feedback.parent.mkdir()
     telemetry_feedback.write_text(
         json.dumps(
@@ -3289,9 +3042,7 @@ def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
                 "candidate_id": "snerv_scalarmean_hardpair_successor_fix2",
                 "measured_num_pairs": 600,
                 "degenerate_renderer_risk_detected": True,
-                "direct_feedback_blockers": [
-                    "snerv_scorer_domain_tether_missing_telemetry"
-                ],
+                "direct_feedback_blockers": ["snerv_scorer_domain_tether_missing_telemetry"],
                 "score_claim": False,
                 "promotion_eligible": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -3300,11 +3051,7 @@ def test_long_training_campaign_cli_discovers_candidate_feedback_rows(
         ),
         encoding="utf-8",
     )
-    hinerv_refresh = (
-        tmp_path
-        / "hinerv_smoke"
-        / "hinerv_smoke_comparison_candidate_feedback_refresh.json"
-    )
+    hinerv_refresh = tmp_path / "hinerv_smoke" / "hinerv_smoke_comparison_candidate_feedback_refresh.json"
     hinerv_refresh.parent.mkdir()
     hinerv_refresh.write_text(
         json.dumps(
@@ -3379,9 +3126,7 @@ def test_long_training_campaign_plan_rejects_partial_snerv_binary_profile_byte_f
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
 
     assert snerv["modelsize_byte_cap_preflight"]["observation_count"] == 0
-    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv[
-        "blockers"
-    ]
+    assert "snerv_modelsize_byte_cap_feedback_observation_missing" in snerv["blockers"]
 
 
 def test_long_training_campaign_plan_consumes_passing_snerv_tether_smoke() -> None:
@@ -3415,12 +3160,7 @@ def test_long_training_campaign_plan_consumes_passing_snerv_tether_smoke() -> No
     assert report["snerv_scorer_tether_smoke_report_attached"] is True
     assert report["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
-    assert (
-        snerv["score_aware_long_training_plan"]["snerv_scorer_tether_smoke_gate"][
-            "passed"
-        ]
-        is True
-    )
+    assert snerv["score_aware_long_training_plan"]["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert "snerv_scorer_tether_smoke_failed" not in snerv["blockers"]
 
 
@@ -3452,9 +3192,10 @@ def test_long_training_campaign_plan_blocks_failed_snerv_tether_smoke() -> None:
     assert "snerv_scorer_tether_smoke_lambda_inactive" in snerv["blockers"]
     assert snerv["experiment_queue_entry"]["status"] == "disabled"
     assert snerv["experiment_queue_entry"]["blocked"] is True
-    assert "snerv_scorer_tether_smoke_failed" in snerv[
-        "experiment_queue_entry"
-    ]["launch_authority_contract"]["queue_launch_blockers"]
+    assert (
+        "snerv_scorer_tether_smoke_failed"
+        in snerv["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"]
+    )
 
 
 def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> None:
@@ -3831,9 +3572,7 @@ def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
             {
                 "schema": "nerv_candidate_feedback_row.v1",
                 "feedback_kind": "full_video_mlx_scorer_response",
-                "full_video_mlx_feedback_schema": (
-                    "nerv_full_video_mlx_scorer_feedback.v1"
-                ),
+                "full_video_mlx_feedback_schema": ("nerv_full_video_mlx_scorer_feedback.v1"),
                 "family": "hi_nerv",
                 "candidate_id": "hinerv_tiny",
                 "candidate_num_pairs": 600,
@@ -3901,12 +3640,8 @@ def test_long_training_campaign_plan_applies_full_video_mlx_response_feedback(
     assert adjustment["pose_distillation_weight"] == 8.0
     assert argv[argv.index("--segnet-distillation-weight") + 1] == "4"
     assert argv[argv.index("--pose-distillation-weight") + 1] == "8"
-    assert "increase_segnet_distillation_weight_from_full_video_mlx_response" in (
-        adjustment["launch_mutations"]
-    )
-    assert "increase_pose_distillation_weight_from_full_video_mlx_response" in (
-        adjustment["launch_mutations"]
-    )
+    assert "increase_segnet_distillation_weight_from_full_video_mlx_response" in (adjustment["launch_mutations"])
+    assert "increase_pose_distillation_weight_from_full_video_mlx_response" in (adjustment["launch_mutations"])
     assert "hinerv_segnet_stagnation_feedback_unapplied" not in hi["blockers"]
     assert hi["score_claim"] is False
 
@@ -3938,9 +3673,7 @@ def test_long_training_campaign_plan_reuses_snerv_full_video_rate_failure_as_con
             {
                 "schema": "nerv_candidate_feedback_row.v1",
                 "feedback_kind": "full_video_mlx_scorer_response",
-                "full_video_mlx_feedback_schema": (
-                    "nerv_full_video_mlx_scorer_feedback.v1"
-                ),
+                "full_video_mlx_feedback_schema": ("nerv_full_video_mlx_scorer_feedback.v1"),
                 "family": "snerv",
                 "candidate_id": (
                     "snerv_np600_haar_lv5_lfb1p5_stepb0p5_fc36e0_p1_mfu1-2-4_hfr0_t1_adbase_oms0p285_int8_symmetric_ceil216000"
@@ -3965,9 +3698,7 @@ def test_long_training_campaign_plan_reuses_snerv_full_video_rate_failure_as_con
                     "treat_previous_snerv_run_as_rate_failure_not_distortion_negative",
                     "switch_snerv_representation_before_more_same_modelsize_training",
                 ],
-                "direct_feedback_blockers": [
-                    "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling"
-                ],
+                "direct_feedback_blockers": ["snerv_full_video_mlx_response_archive_over_hard_byte_ceiling"],
                 "full_video_mlx_scorer_response": {
                     "score_recomputed_from_components": 108.61,
                     "avg_segnet_dist": 0.68,
@@ -3995,19 +3726,19 @@ def test_long_training_campaign_plan_reuses_snerv_full_video_rate_failure_as_con
     assert feedback["measured_archive_bytes"] is None
     assert feedback["measured_payload_bytes"] is None
     assert feedback["feedback_ready"] is False
-    assert feedback["direct_feedback_blockers"] == [
-        "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling"
-    ]
+    assert feedback["direct_feedback_blockers"] == ["snerv_full_video_mlx_response_archive_over_hard_byte_ceiling"]
     assert feedback["score_claim"] is False
     assert (
         feedback["feedback_reuse_policy"]
         == "family_full_video_context_only_no_archive_receiver_replay_or_launch_authority"
     )
-    assert "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling" in (
-        snerv["candidate_feedback_evidence_blockers"]
+    assert (
+        "snerv_full_video_mlx_response_archive_over_hard_byte_ceiling"
+        in (snerv["candidate_feedback_evidence_blockers"])
     )
-    assert "treat_previous_snerv_run_as_rate_failure_not_distortion_negative" in (
-        snerv["candidate_feedback"]["recommended_launch_mutations"]
+    assert (
+        "treat_previous_snerv_run_as_rate_failure_not_distortion_negative"
+        in (snerv["candidate_feedback"]["recommended_launch_mutations"])
     )
     assert snerv["score_claim"] is False
 
@@ -4076,11 +3807,10 @@ def test_long_training_campaign_plan_reuses_snerv_upstream_eval_gate_as_context_
         feedback["feedback_reuse_policy"]
         == "family_upstream_eval_context_only_no_archive_receiver_replay_or_launch_authority"
     )
-    assert "snerv_upstream_eval_gate_score_bad" in (
-        snerv["candidate_feedback_evidence_blockers"]
-    )
-    assert "require_snerv_representation_change_before_more_same_long_training" in (
-        snerv["candidate_feedback"]["recommended_launch_mutations"]
+    assert "snerv_upstream_eval_gate_score_bad" in (snerv["candidate_feedback_evidence_blockers"])
+    assert (
+        "require_snerv_representation_change_before_more_same_long_training"
+        in (snerv["candidate_feedback"]["recommended_launch_mutations"])
     )
     assert snerv["score_claim"] is False
     assert snerv["experiment_queue_entry"]["status"] == "disabled"
@@ -4140,9 +3870,7 @@ def test_long_training_campaign_plan_blocks_snerv_degenerate_renderer_context() 
 
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     feedback = snerv["candidate_feedback"]
-    assert feedback["feedback_match_scope"] == (
-        "family_snerv_degenerate_renderer_training_telemetry_context"
-    )
+    assert feedback["feedback_match_scope"] == ("family_snerv_degenerate_renderer_training_telemetry_context")
     assert feedback["candidate_id_match"] is False
     assert feedback["source_candidate_id"] == "snerv_scalarmean_hardpair_successor_fix2"
     assert feedback["target_candidate_id"] == snerv["candidate_id"]
@@ -4157,20 +3885,14 @@ def test_long_training_campaign_plan_blocks_snerv_degenerate_renderer_context() 
         feedback["feedback_reuse_policy"]
         == "family_snerv_degenerate_renderer_context_only_no_archive_receiver_replay_or_launch_authority"
     )
-    assert "snerv_scorer_domain_tether_missing_telemetry" in (
-        snerv["candidate_feedback_evidence_blockers"]
-    )
+    assert "snerv_scorer_domain_tether_missing_telemetry" in (snerv["candidate_feedback_evidence_blockers"])
     assert "snerv_scorer_domain_tether_missing_telemetry" in snerv["blockers"]
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
-    assert "snerv_scorer_domain_tether_missing_telemetry" in (
-        queue_contract["queue_launch_blockers"]
+    assert "snerv_scorer_domain_tether_missing_telemetry" in (queue_contract["queue_launch_blockers"])
+    assert (
+        "snerv_score_aware_long_training_dual_segnet_lambda_never_active" in (queue_contract["queue_launch_blockers"])
     )
-    assert "snerv_score_aware_long_training_dual_segnet_lambda_never_active" in (
-        queue_contract["queue_launch_blockers"]
-    )
-    assert "snerv_score_aware_long_training_telemetry_contract_failed" in (
-        queue_contract["queue_launch_blockers"]
-    )
+    assert "snerv_score_aware_long_training_telemetry_contract_failed" in (queue_contract["queue_launch_blockers"])
     assert snerv["experiment_queue_entry"]["status"] == "disabled"
     assert snerv["score_claim"] is False
 
@@ -4236,22 +3958,18 @@ def test_long_training_campaign_plan_tether_smoke_clears_stale_tether_blockers()
 
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
-    assert "snerv_scorer_domain_tether_missing_telemetry" in (
-        snerv["candidate_feedback_evidence_blockers_before_tether_smoke"]
+    assert (
+        "snerv_scorer_domain_tether_missing_telemetry"
+        in (snerv["candidate_feedback_evidence_blockers_before_tether_smoke"])
     )
-    assert "snerv_scorer_domain_tether_missing_telemetry" in (
-        snerv["snerv_scorer_tether_smoke_suppressed_feedback_blockers"]
+    assert (
+        "snerv_scorer_domain_tether_missing_telemetry"
+        in (snerv["snerv_scorer_tether_smoke_suppressed_feedback_blockers"])
     )
-    assert "snerv_scorer_domain_tether_missing_telemetry" not in (
-        snerv["candidate_feedback_evidence_blockers"]
-    )
+    assert "snerv_scorer_domain_tether_missing_telemetry" not in (snerv["candidate_feedback_evidence_blockers"])
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
-    assert "snerv_scorer_domain_tether_missing_telemetry" not in (
-        queue_contract["queue_launch_blockers"]
-    )
-    assert "snerv_scorer_domain_tether_lambda_inactive_telemetry" not in (
-        queue_contract["queue_launch_blockers"]
-    )
+    assert "snerv_scorer_domain_tether_missing_telemetry" not in (queue_contract["queue_launch_blockers"])
+    assert "snerv_scorer_domain_tether_lambda_inactive_telemetry" not in (queue_contract["queue_launch_blockers"])
     assert snerv["score_claim"] is False
 
 
@@ -4277,9 +3995,7 @@ def test_long_training_campaign_plan_requires_snerv_renderer_nondegenerate_proof
     assert "snerv_renderer_nondegenerate_smoke_min16_pairs_missing" in gate["blockers"]
     assert "snerv_renderer_nondegenerate_smoke_missing" in snerv["blockers"]
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
-    assert "snerv_renderer_nondegenerate_smoke_missing" in (
-        queue_contract["queue_launch_blockers"]
-    )
+    assert "snerv_renderer_nondegenerate_smoke_missing" in (queue_contract["queue_launch_blockers"])
     assert snerv["score_claim"] is False
 
 
@@ -4346,9 +4062,7 @@ def test_long_training_campaign_plan_consumes_passing_snerv_renderer_proof() -> 
     assert "snerv_renderer_nondegenerate_smoke_missing" not in snerv["blockers"]
     assert "snerv_renderer_nondegenerate_smoke_failed" not in snerv["blockers"]
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
-    assert "snerv_renderer_nondegenerate_smoke_missing" not in (
-        queue_contract["queue_launch_blockers"]
-    )
+    assert "snerv_renderer_nondegenerate_smoke_missing" not in (queue_contract["queue_launch_blockers"])
     assert snerv["score_claim"] is False
 
 
@@ -4529,15 +4243,10 @@ def test_long_training_campaign_plan_applies_hinerv_receiver_class_survival_feed
                 "post_export_receiver_class_collapse_detected": True,
                 "post_export_receiver_cache_quality_gate_passed": False,
                 "post_export_receiver_segnet_candidate_occupied_class_fraction": 0.4,
-                "direct_feedback_blockers": [
-                    "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
-                ],
+                "direct_feedback_blockers": ["hi_nerv_receiver_cache_segnet_argmax_class_collapse"],
                 "recommended_launch_mutations": [
                     "increase_hi_nerv_receiver_class_survival_pressure",
-                    (
-                        "disable_hi_nerv_byte_feedback_learning_from_"
-                        "receiver_collapsed_export"
-                    ),
+                    ("disable_hi_nerv_byte_feedback_learning_from_receiver_collapsed_export"),
                 ],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -4551,13 +4260,8 @@ def test_long_training_campaign_plan_applies_hinerv_receiver_class_survival_feed
     assert adjustment["applied"] is True
     assert adjustment["receiver_class_survival_applied"] is True
     assert adjustment["reason"] == "receiver_class_survival_probe_mutation_applied"
-    assert "increase_hi_nerv_receiver_class_survival_pressure" in adjustment[
-        "launch_mutations"
-    ]
-    assert (
-        "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
-        in hi["candidate_feedback_evidence_blockers"]
-    )
+    assert "increase_hi_nerv_receiver_class_survival_pressure" in adjustment["launch_mutations"]
+    assert "hi_nerv_receiver_cache_segnet_argmax_class_collapse" in hi["candidate_feedback_evidence_blockers"]
     assert hi["score_claim"] is False
 
 
@@ -4872,9 +4576,7 @@ def test_long_training_campaign_plan_consumes_partial_snerv_runner_feedback() ->
     assert feedback["measured_num_pairs"] == 2
     assert feedback["scope_matches_candidate"] is False
     assert feedback["sample_generalization_small_pair_smoke_only"] is True
-    assert "small_pair_distortion_smoke_only_not_representative" in snerv[
-        "candidate_feedback_evidence_blockers"
-    ]
+    assert "small_pair_distortion_smoke_only_not_representative" in snerv["candidate_feedback_evidence_blockers"]
     assert "partial_pair_byte_feedback_only" in snerv["blockers"]
     assert "full600_or_hardpair_distortion_replay_required" in snerv["blockers"]
     assert "snerv_archive_in_loop_byte_oracle_missing" in snerv["blockers"]
@@ -4958,9 +4660,7 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
             "schema": "snerv_checkpoint_packet_metadata_summary.v1",
             "snerv_official_mfu_hfr_tub_numeric_primitives_requested": True,
             "snerv_official_mfu_hfr_tub_export_bound": True,
-            "snerv_official_mfu_hfr_tub_export_bound_semantics": (
-                "receiver_payload_bound_not_source_forward_parity"
-            ),
+            "snerv_official_mfu_hfr_tub_export_bound_semantics": ("receiver_payload_bound_not_source_forward_parity"),
             "snerv_official_mfu_hfr_tub_receiver_payload_bound": True,
             "snerv_official_mfu_hfr_tub_frame_producing_export": True,
             "snerv_official_mfu_hfr_tub_source_forward_replay_bound": False,
@@ -4977,9 +4677,7 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
             "trained_state_exportable": True,
             "official_trained_state_exportable": True,
             "official_trained_checkpoint_mapping_manifest": {
-                "schema": (
-                    "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
-                ),
+                "schema": ("snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"),
                 "official_trained_checkpoint_loaded": False,
                 "official_mfu_hfr_trained_checkpoint_weight_mapping_proven": False,
                 "official_tub_temporal_encoder_weight_mapping_proven": False,
@@ -5009,47 +4707,32 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     feedback = snerv["candidate_feedback"]
     assert feedback["byte_feedback_source"] == "snerv_mlx_native_file_backed_export"
     assert feedback["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
-    assert (
-        feedback["snerv_official_mfu_hfr_tub_source_forward_replay_authority"]
-        is False
-    )
+    assert feedback["snerv_official_mfu_hfr_tub_source_forward_replay_authority"] is False
     assert feedback["snerv_official_trained_checkpoint_loaded"] is False
-    assert (
-        feedback["snerv_official_trained_checkpoint_state_dict_mapping_verified"]
-        is False
-    )
+    assert feedback["snerv_official_trained_checkpoint_state_dict_mapping_verified"] is False
     assert feedback["snerv_trained_state_exportable"] is True
     assert feedback["snerv_checkpoint_trained_state_exportable"] is True
     assert feedback["snerv_score_aware_long_training_trained_state_exportable"] is True
     assert feedback["checkpoint_trained_state_exportable"] is True
     assert feedback["score_aware_long_training_trained_state_exportable"] is True
-    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in feedback[
-        "snerv_official_trained_checkpoint_mapping_blockers"
-    ]
+    assert (
+        "snerv_official_trained_checkpoint_state_dict_not_loaded"
+        in feedback["snerv_official_trained_checkpoint_mapping_blockers"]
+    )
     assert feedback["feedback_scope"] == "full600_native_file_backed_snar1_export"
     assert feedback["feedback_ready"] is True
     assert feedback["scope_matches_candidate"] is True
     assert feedback["measured_num_pairs"] == 600
     assert feedback["measured_payload_bytes"] == packet_path.stat().st_size
     assert feedback["measured_archive_bytes"] == archive_path.stat().st_size
-    assert (
-        feedback["sample_generalization_verdict"]
-        == "representative_distortion_evidence_missing"
-    )
-    assert "representative_distortion_evidence_missing" in snerv[
-        "candidate_feedback_evidence_blockers"
-    ]
+    assert feedback["sample_generalization_verdict"] == "representative_distortion_evidence_missing"
+    assert "representative_distortion_evidence_missing" in snerv["candidate_feedback_evidence_blockers"]
     training_plan = snerv["curriculum_plan"]["training_plan"]
-    official_split = snerv["curriculum_plan"][
-        "official_source_forward_authority_split"
-    ]
+    official_split = snerv["curriculum_plan"]["official_source_forward_authority_split"]
     assert official_split["receiver_payload_bound"] is True
     assert official_split["receiver_bound_training_evidence_usable"] is True
     assert official_split["full_source_forward_authority_proven"] is False
-    assert (
-        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
-        in official_split["blockers"]
-    )
+    assert "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing" in official_split["blockers"]
     checkpoint_mapping = snerv["snerv_official_trained_checkpoint_mapping"]
     assert checkpoint_mapping["official_trained_checkpoint_loaded"] is False
     assert training_plan["native_mlx_train_export_planned"] is True
@@ -5062,17 +4745,9 @@ def test_long_training_campaign_plan_consumes_full600_snerv_native_file_backed_b
     assert "snerv_mlx_native_file_backed_export_proof_missing_or_failed" not in snerv["blockers"]
     assert "snerv_mlx_native_packet_file_missing" not in snerv["blockers"]
     assert "snerv_mlx_native_full600_campaign_not_ready" not in snerv["blockers"]
-    assert (
-        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
-        in snerv["blockers"]
-    )
-    assert (
-        "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing"
-        in snerv["blockers"]
-    )
-    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in snerv[
-        "blockers"
-    ]
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in snerv["blockers"]
+    assert "snerv_official_mfu_hfr_tub_trained_weight_mapping_to_long_training_missing" in snerv["blockers"]
+    assert "snerv_official_trained_checkpoint_state_dict_not_loaded" in snerv["blockers"]
     assert "snerv_full_video_local_prefilter_missing" in snerv["blockers"]
     assert "snerv_local_cpu_replay_gate_missing" in snerv["blockers"]
     assert snerv["score_claim"] is False
@@ -5168,9 +4843,10 @@ def test_long_training_campaign_plan_blocks_loss_worsened_snerv_native_export(
     assert feedback["byte_feedback_source"] is None
     assert feedback["feedback_ready"] is False
     assert feedback["snerv_mlx_native_training_export_guard_passed"] is False
-    assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in feedback[
-        "snerv_mlx_native_training_export_guard_blockers"
-    ]
+    assert (
+        "snerv_native_mlx_decoder_loss_worsened_export_blocked"
+        in feedback["snerv_mlx_native_training_export_guard_blockers"]
+    )
     assert "snerv_native_mlx_decoder_loss_worsened_export_blocked" in snerv["blockers"]
     training_plan = snerv["curriculum_plan"]["training_plan"]
     assert training_plan["native_mlx_train_export_verified"] is False
@@ -5191,12 +4867,8 @@ def test_long_training_campaign_plan_rejects_unknown_optimizer() -> None:
 
 def test_default_optimizer_kinds_cover_native_mlx_optimizer_surface() -> None:
     explicit_timing_smoke_only = {"aurora_like"}
-    assert set(DEFAULT_OPTIMIZER_KINDS) == (
-        set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS) - explicit_timing_smoke_only
-    )
-    assert explicit_timing_smoke_only.issubset(
-        set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS)
-    )
+    assert set(DEFAULT_OPTIMIZER_KINDS) == (set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS) - explicit_timing_smoke_only)
+    assert explicit_timing_smoke_only.issubset(set(SUPPORTED_MLX_SCORE_AWARE_OPTIMIZER_KINDS))
     assert DEFAULT_OPTIMIZER_KINDS[:5] == (
         "pact_muon_adamw",
         "adamw",
@@ -5218,9 +4890,7 @@ def test_aurora_like_optimizer_row_is_native_mlx_timing_smoke_and_fail_closed() 
 
     hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
     assert hi["optimizer_kind"] == "aurora_like"
-    assert hi["implementation_status"] == (
-        "optimizer_timing_smoke_required_before_campaign_launch"
-    )
+    assert hi["implementation_status"] == ("optimizer_timing_smoke_required_before_campaign_launch")
     assert hi["local_mlx_launch_command_ready"] is False
     assert hi["local_mlx_executable"] is False
     assert hi["score_claim"] is False
@@ -5230,9 +4900,7 @@ def test_aurora_like_optimizer_row_is_native_mlx_timing_smoke_and_fail_closed() 
 
     expected_launch_blockers = {"aurora_requires_local_timing_convergence_smoke"}
     assert expected_launch_blockers.issubset(set(hi["blockers"]))
-    assert "aurora_not_integrated_with_mlx_score_aware_optimizer_contract" not in set(
-        hi["blockers"]
-    )
+    assert "aurora_not_integrated_with_mlx_score_aware_optimizer_contract" not in set(hi["blockers"])
     assert expected_launch_blockers.issubset(
         set(hi["experiment_queue_entry"]["launch_authority_contract"]["queue_launch_blockers"])
     )
@@ -5241,17 +4909,11 @@ def test_aurora_like_optimizer_row_is_native_mlx_timing_smoke_and_fail_closed() 
     assert hi["experiment_queue_entry"]["launch_authority_contract"]["queue_status_is_runnable_plan"] is False
     assert hi["score_lowering_gate"]["command_materialized"] is False
     assert hi["score_lowering_gate"]["local_mlx_executable"] is False
-    assert expected_launch_blockers.issubset(
-        set(hi["score_lowering_gate"]["launch_blockers"])
-    )
+    assert expected_launch_blockers.issubset(set(hi["score_lowering_gate"]["launch_blockers"]))
 
     control = hi["optimizer_control"]
-    assert control["classification"] == (
-        "runnable_false_authority_timing_smoke_candidate"
-    )
-    assert control["backend"] == (
-        "tac.substrates._shared.mlx_score_aware.adapter.AuroraLikeMlxOptimizer"
-    )
+    assert control["classification"] == ("runnable_false_authority_timing_smoke_candidate")
+    assert control["backend"] == ("tac.substrates._shared.mlx_score_aware.adapter.AuroraLikeMlxOptimizer")
     assert control["native_mlx_on_apple_silicon"] is True
     assert control["native_mlx_optimizer_object"] is True
     assert control["score_claim"] is False
@@ -5259,9 +4921,7 @@ def test_aurora_like_optimizer_row_is_native_mlx_timing_smoke_and_fail_closed() 
     assert "aurora_not_pr95_source_authority" in set(control["authority_blockers"])
 
     policy = hi["optimizer_policy"]
-    assert policy["classification"] == (
-        "runnable_false_authority_timing_smoke_candidate"
-    )
+    assert policy["classification"] == ("runnable_false_authority_timing_smoke_candidate")
     assert policy["is_plan_only_optimizer_control"] is False
     assert policy["is_timing_smoke_optimizer_control"] is True
     assert policy["native_mlx_optimizer_expected"] is True
@@ -5333,9 +4993,7 @@ def test_pact_muon_adamw_hinerv_row_is_default_first_priority() -> None:
     assert hi_rows[0]["optimizer_policy"]["pr95_faithful_curriculum_expected"] is True
     assert hi_rows[0]["optimizer_policy"]["native_mlx_optimizer_expected"] is False
     assert (
-        hi_rows[0]["command_argv"][
-            hi_rows[0]["command_argv"].index("--hi-nerv-optimizer-policy") + 1
-        ]
+        hi_rows[0]["command_argv"][hi_rows[0]["command_argv"].index("--hi-nerv-optimizer-policy") + 1]
         == "pr95_curriculum"
     )
     assert report["optimizer_control_policy"]["default_optimizer_kind"] == ("pact_muon_adamw")
@@ -5478,9 +5136,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert snerv_row["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert "partial_pair_byte_feedback_only" in snerv_row["blockers"]
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
-    assert payload["snerv_lf_over_ceiling_reroute_queue"]["schema"] == (
-        "snerv_lf_over_ceiling_reroute_queue.v1"
-    )
+    assert payload["snerv_lf_over_ceiling_reroute_queue"]["schema"] == ("snerv_lf_over_ceiling_reroute_queue.v1")
     assert payload["experiment_queue_id"] == (f"nerv_long_training_campaign_{out_json.stem}.v1")
     queue = json.loads(out_queue.read_text(encoding="utf-8"))
     assert queue == payload["experiment_queue"]
@@ -5492,9 +5148,10 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert queue["experiments"][0]["steps"][0]["postconditions"]
     snerv_exp = next(exp for exp in queue["experiments"] if exp["family"] == "snerv")
     assert "--planner-row-queue-artifact" in snerv_exp["steps"][0]["command"]
-    assert snerv_exp["steps"][0]["command"][
-        snerv_exp["steps"][0]["command"].index("--planner-row-queue-artifact") + 1
-    ] == out_queue.as_posix()
+    assert (
+        snerv_exp["steps"][0]["command"][snerv_exp["steps"][0]["command"].index("--planner-row-queue-artifact") + 1]
+        == out_queue.as_posix()
+    )
     assert snerv_exp["status"] == "disabled"
     assert snerv_exp["blocked"] is True
     assert "--snerv-score-aware-long-training-epochs" in snerv_exp["steps"][0]["command"]
@@ -5600,12 +5257,11 @@ def test_build_long_training_campaign_plan_cli_extracts_waterfill_from_archive_l
     assert hi["decoder_weight_waterfill_plan"]["attached"] is True
     assert hi["decoder_weight_waterfill_plan"]["path"] == waterfill_plan.as_posix()
     assert hi["decoder_weight_waterfill_plan"]["receiver_proof_ready"] is False
-    assert hi["decoder_weight_waterfill_plan"][
-        "_archive_size_ladder_runtime_consumption_proof_ready"
-    ] is True
-    assert "decoder_weight_waterfill_receiver_proof_not_ready" in hi[
-        "decoder_weight_waterfill_plan"
-    ]["runner_admission"]["refusal_reasons"]
+    assert hi["decoder_weight_waterfill_plan"]["_archive_size_ladder_runtime_consumption_proof_ready"] is True
+    assert (
+        "decoder_weight_waterfill_receiver_proof_not_ready"
+        in hi["decoder_weight_waterfill_plan"]["runner_admission"]["refusal_reasons"]
+    )
 
 
 def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
@@ -5625,9 +5281,7 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
     snerv_candidate = dict(_snerv_budget()["selected_candidates"][0])
     export_report = export_dir / "export_report.json"
     snerv_export_report = snerv_export_dir / "snerv_checkpoint_archive_export.json"
-    contract_only_report = (
-        contract_only_dir / "snerv_checkpoint_archive_export.json"
-    )
+    contract_only_report = contract_only_dir / "snerv_checkpoint_archive_export.json"
     export_report.write_text(
         json.dumps(
             {
@@ -5713,16 +5367,11 @@ def test_build_long_training_campaign_plan_cli_auto_discovers_bytecap_exports(
         export_report.resolve(strict=False).as_posix(),
         snerv_export_report.resolve(strict=False).as_posix(),
     }
-    assert contract_only_report.resolve(strict=False).as_posix() not in payload[
-        "modelsize_byte_cap_feedback_paths"
-    ]
+    assert contract_only_report.resolve(strict=False).as_posix() not in payload["modelsize_byte_cap_feedback_paths"]
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert hi["runner_modelsize_candidate_id"] == "auto"
     assert hi["local_mlx_launch_command_ready"] is False
-    assert (
-        "hi_nerv_modelsize_auto_calibrated_byte_cap_over_ceiling"
-        in hi["blockers"]
-    )
+    assert "hi_nerv_modelsize_auto_calibrated_byte_cap_over_ceiling" in hi["blockers"]
     preflight = hi["modelsize_byte_cap_preflight"]
     assert preflight["matching_observation_count"] == 1
     assert preflight["matching_observations"][0]["measured_archive_bytes"] == 214_497
@@ -5800,14 +5449,10 @@ def test_build_long_training_campaign_plan_cli_selects_archive_ladder_waterfill_
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert hi["candidate_id"] == "hinerv_ladder_receiver_backed"
-    assert hi["candidate"]["_candidate_source"] == (
-        "decoder_weight_waterfill_modelsize_candidate"
-    )
+    assert hi["candidate"]["_candidate_source"] == ("decoder_weight_waterfill_modelsize_candidate")
     assert hi["decoder_weight_waterfill_plan"]["attached"] is True
     assert hi["decoder_weight_waterfill_plan"]["runner_admitted"] is True
-    assert hi["decoder_weight_waterfill_plan"]["receiver_proof_binding"][
-        "proof_path"
-    ] == proof_path.as_posix()
+    assert hi["decoder_weight_waterfill_plan"]["receiver_proof_binding"]["proof_path"] == proof_path.as_posix()
     assert "hinerv_decoder_weight_waterfill_plan_missing" not in hi["blockers"]
     assert payload["decoder_weight_waterfill_unattached_source_count"] == 0
     assert hi["score_claim"] is False
@@ -5985,8 +5630,9 @@ def test_build_long_training_campaign_plan_cli_rejects_stale_ladder_receiver_pro
     attachment = hi["decoder_weight_waterfill_plan"]
     assert attachment["runner_admitted"] is False
     assert attachment["receiver_proof_binding"]["bound"] is False
-    assert "decoder_weight_waterfill_receiver_proof_archive_sha256_mismatch" in (
-        attachment["runner_admission"]["refusal_reasons"]
+    assert (
+        "decoder_weight_waterfill_receiver_proof_archive_sha256_mismatch"
+        in (attachment["runner_admission"]["refusal_reasons"])
     )
     assert "--decoder-weight-waterfill-plan-json" not in hi["command_argv"]
 
@@ -6057,9 +5703,7 @@ def test_build_long_training_campaign_plan_keeps_current_budget_over_stale_water
     assert attachment["attached"] is True
     assert attachment["runner_admitted"] is False
     assert "decoder_weight_waterfill_modelsize_mismatch:decoder_codec" in attachment["blockers"]
-    assert "decoder_weight_waterfill_receiver_proof_not_ready" in attachment[
-        "runner_admission"
-    ]["refusal_reasons"]
+    assert "decoder_weight_waterfill_receiver_proof_not_ready" in attachment["runner_admission"]["refusal_reasons"]
     assert "--decoder-weight-waterfill-plan-json" not in hi["command_argv"]
 
 
@@ -6137,18 +5781,14 @@ def test_build_long_training_campaign_plan_cli_emits_ladder_saliency_replay_work
     assert work_order["required"] is True
     assert work_order["coverage_required"] == "full600_start0_stride1"
     assert work_order["blockers"] == []
-    assert "tools/build_hinerv_decoder_weight_saliency_replay.py" in work_order[
-        "saliency_replay_command_argv"
-    ]
+    assert "tools/build_hinerv_decoder_weight_saliency_replay.py" in work_order["saliency_replay_command_argv"]
     assert "--max-pairs" in work_order["saliency_replay_command_argv"]
     assert "600" in work_order["saliency_replay_command_argv"]
-    assert "tools/build_hinerv_archive_ladder_waterfill.py" in work_order[
-        "waterfill_rebuild_command_argv"
-    ]
+    assert "tools/build_hinerv_archive_ladder_waterfill.py" in work_order["waterfill_rebuild_command_argv"]
     assert work_order["campaign_rebuild_hint_argv"] == []
-    assert work_order["campaign_rebuild_decoder_weight_waterfill_source"] == work_order[
-        "expected_output_waterfill_json"
-    ]
+    assert (
+        work_order["campaign_rebuild_decoder_weight_waterfill_source"] == work_order["expected_output_waterfill_json"]
+    )
     assert "--hinerv-modelsize-budget" in work_order["campaign_rebuild_required_inputs"]
     for argv in (
         work_order["saliency_replay_command_argv"],
@@ -6260,9 +5900,10 @@ def test_archive_ladder_waterfill_reingest_preserves_replay_source_and_refuses_u
     assert recovery_work_order["required"] is True
     assert recovery_work_order["candidate_id"] == "hinerv_ladder_unfit"
     assert recovery_work_order["blockers"] == []
-    assert recovery_work_order["source_decoder_weight_waterfill_report_path"] == archive_ladder.resolve(
-        strict=False
-    ).as_posix()
+    assert (
+        recovery_work_order["source_decoder_weight_waterfill_report_path"]
+        == archive_ladder.resolve(strict=False).as_posix()
+    )
     assert "--execute-family" in recovery_work_order["command_argv"]
     assert "hi_nerv" in recovery_work_order["command_argv"]
     assert "--hi-nerv-optimizer-policy" in recovery_work_order["command_argv"]
@@ -6400,12 +6041,7 @@ def _write_snerv_binary_profile_receiver_feedback(
     archive_sha256: str,
 ) -> Path:
     run_root = tmp_path / "snerv_run"
-    package = (
-        run_root
-        / "snerv_mlx_native_export"
-        / "native_train_export"
-        / "snerv_mlx_native_archive_bound_package"
-    )
+    package = run_root / "snerv_mlx_native_export" / "native_train_export" / "snerv_mlx_native_archive_bound_package"
     archive = package / "archive.zip"
     packet = package.parent / "snerv_mlx_native_packet.snar"
     proof = package / "receiver_proof" / "snerv_inverse_steg_receiver_proof.json"
@@ -6490,20 +6126,13 @@ def _snerv_lf_recode_report(
     return {
         "schema": "snerv_lf_payload_archive_recode.v1",
         "mode": mode,
-        "report_path": (
-            "/Volumes/VertigoDataTier/pact/reports/"
-            f"snerv_lf_recode_{mode}.json"
-        ),
+        "report_path": (f"/Volumes/VertigoDataTier/pact/reports/snerv_lf_recode_{mode}.json"),
         "source_packet": {"bytes": source_packet_bytes, "sha256": "a" * 64},
         "candidate_packet": {
             "bytes": candidate_packet_bytes,
             "sha256": "b" * 64,
             **({} if candidate_packet_path is None else {"path": candidate_packet_path}),
-            **(
-                {}
-                if candidate_packet_header_bytes is None
-                else {"header_bytes": candidate_packet_header_bytes}
-            ),
+            **({} if candidate_packet_header_bytes is None else {"header_bytes": candidate_packet_header_bytes}),
         },
         "packet_byte_delta": int(candidate_packet_bytes - source_packet_bytes),
         "lf_payload": {
@@ -6596,9 +6225,7 @@ def _snerv_snar_header_grammar_profile(
                 "sections_alone_under_ceiling": True,
             }
         ],
-        "next_actions": [
-            "build_receiver_visible_snar_header_minimization_candidate"
-        ],
+        "next_actions": ["build_receiver_visible_snar_header_minimization_candidate"],
         "blockers": ["snerv_snar_packet_header_grammar_rewrite_required"],
         "score_claim": False,
         "promotion_eligible": False,
@@ -6637,16 +6264,10 @@ def _snerv_snar_header_minimization_report(
         "packet_byte_delta": -1_345_430,
         "header_byte_delta": -1_345_430,
         "receiver_contract_satisfied": True,
-        "full_video_receiver_contract_satisfied": (
-            bool(full_video_receiver_contract_satisfied)
-        ),
+        "full_video_receiver_contract_satisfied": (bool(full_video_receiver_contract_satisfied)),
         "receiver_pair_frame_equality_proof": {
             "status": "proven_exact",
-            "scope": (
-                "full_video_streaming"
-                if full_video_receiver_contract_satisfied
-                else "sampled_pairs"
-            ),
+            "scope": ("full_video_streaming" if full_video_receiver_contract_satisfied else "sampled_pairs"),
             "exact_equal": True,
         },
         "hard_byte_ceiling_rows": [
@@ -6753,24 +6374,14 @@ def _archive_section_telemetry(
         ],
         "num_pairs": 600,
         "hard_byte_ceiling": 178_000,
-        "receiver_proof_status": (
-            "runtime_consumption_proof_ready"
-            if receiver_proof_path is not None
-            else "missing"
-        ),
-        "receiver_proof_path": (
-            receiver_proof_path.as_posix() if receiver_proof_path is not None else None
-        ),
+        "receiver_proof_status": ("runtime_consumption_proof_ready" if receiver_proof_path is not None else "missing"),
+        "receiver_proof_path": (receiver_proof_path.as_posix() if receiver_proof_path is not None else None),
         "receiver_cache_quality_report_path": (
-            cache_quality_report_path.as_posix()
-            if cache_quality_report_path is not None
-            else None
+            cache_quality_report_path.as_posix() if cache_quality_report_path is not None else None
         ),
         "receiver_cache_quality_gate_passed": bool(cache_quality_passed),
         "receiver_cache_quality_gate_verdict": (
-            "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
-            if cache_quality_passed
-            else "FIT_OR_SCALE_FAILURE"
+            "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY" if cache_quality_passed else "FIT_OR_SCALE_FAILURE"
         ),
         "blockers": [],
         "score_claim": False,
@@ -6789,11 +6400,7 @@ def _receiver_cache_quality_report(root: Path, *, passed: bool) -> Path:
                 "quality_gate": {
                     "schema": "mlx_cache_quality_gate.v1",
                     "fit_gate_passed": bool(passed),
-                    "verdict": (
-                        "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
-                        if passed
-                        else "FIT_OR_SCALE_FAILURE"
-                    ),
+                    "verdict": ("CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY" if passed else "FIT_OR_SCALE_FAILURE"),
                 },
                 "score_claim": False,
                 "promotion_eligible": False,

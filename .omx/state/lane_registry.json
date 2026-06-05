@@ -69008,11 +69008,11 @@
       "id": "lane_hinerv_distortion_nondegenerate_guard_codex_20260605",
       "name": "HiNeRV distortion nondegenerate renderer guard",
       "phase": 0.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "c658ca8dc experiments/train_substrate_hi_nerv_mlx_local.py src/tac/tests/test_train_substrate_hi_nerv_mlx_local.py"
         },
         "real_archive_empirical": {
           "status": false,
@@ -69135,5 +69135,5 @@
     "3": "ALL 8 gates satisfied \u2014 FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
   },
   "schema_version": 1,
-  "updated_at": "2026-06-05T11:55:03Z"
+  "updated_at": "2026-06-05T11:58:53Z"
 }

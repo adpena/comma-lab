@@ -20,10 +20,10 @@ SCHEMA = "pr95_distortion_practices_guard.v1"
 SOURCE_INVENTORY_SCHEMA = "pr95_distortion_source_inventory.v1"
 PRACTICE_ROW_SCHEMA = "pr95_distortion_practice_row.v1"
 PAYLOAD_GUARD_SCHEMA = "pr95_distortion_practices_payload_guard.v1"
+TELEMETRY_CONTRACT_SCHEMA = "pr95_evaluate_scorer_domain_telemetry_contract.v1"
 
 PR95_SOURCE_REL = Path(
-    "experiments/results/public_pr_archive_release_view/"
-    "public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
+    "experiments/results/public_pr_archive_release_view/public_pr95_intake_20260505_auto/source/submissions/hnerv_muon"
 )
 UPSTREAM_REL = Path("upstream")
 RUNNER_REL = Path("tools/run_compact_renderer_mlx_spine_runner.py")
@@ -82,6 +82,31 @@ PRACTICES: tuple[Practice, ...] = (
         ),
     ),
     Practice(
+        practice_id="official_evaluate_archive_byte_price",
+        title="official evaluate.py archive.zip byte price",
+        why_it_matters=(
+            "PR95 optimization prices bytes through archive.zip size over the "
+            "source-video denominator; nominal modelsize or inflated raw bytes "
+            "are not acceptable substitutes for the charged packet."
+        ),
+        source_check_ids=("upstream_evaluate_archive_byte_price",),
+    ),
+    Practice(
+        practice_id="scorer_domain_telemetry_contract",
+        title="SegNet argmax/occupancy and PoseNet YUV6 telemetry contract",
+        why_it_matters=(
+            "A row can carry PR95-looking weights and curriculum flags while "
+            "still missing the telemetry that proves scorer-domain controls "
+            "actuate. Long runs must fail closed if SegNet frame-1 argmax/"
+            "occupancy or PoseNet YUV6-pair metrics disappear."
+        ),
+        source_check_ids=(
+            "upstream_segnet_last_frame",
+            "upstream_segnet_argmax_distortion",
+            "upstream_posenet_uses_yuv6_pair",
+        ),
+    ),
+    Practice(
         practice_id="pr95_staged_qat_coder_curriculum",
         title="PR95 staged curriculum with QAT and coder pressure",
         why_it_matters=(
@@ -96,6 +121,53 @@ PRACTICES: tuple[Practice, ...] = (
         ),
     ),
 )
+
+
+def build_pr95_evaluate_scorer_domain_telemetry_contract(
+    family: str,
+) -> dict[str, Any]:
+    """Return the launch-row telemetry contract for PR95 distortion readiness."""
+
+    family_key = str(family).strip().lower().replace("-", "_") or "unknown"
+    if family_key == "hinerv":
+        family_key = "hi_nerv"
+    return {
+        "schema": TELEMETRY_CONTRACT_SCHEMA,
+        "family": family_key,
+        "source": "upstream/evaluate.py+modules.py+frame_utils.py",
+        "segnet_scored_frame_index": 1,
+        "segnet_frame_scope": "last_frame_only",
+        "segnet_distortion": "mean(argmax(gt_logits)!=argmax(candidate_logits))",
+        "segnet_last_frame_argmax_metric_names": [
+            f"dual_ascent_metric__{family_key}_segnet_last_frame_distill",
+            "loss_part_segnet_direct_live_argmax_disagreement",
+            "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement",
+        ],
+        "segnet_argmax_occupancy_metric_names": [
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+            "loss_part_segnet_direct_live_candidate_any_occupied_class_fraction",
+            ("loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction"),
+            "selection_health_segnet_direct_live_candidate_occupied_class_fraction",
+            "post_export_receiver_segnet_candidate_occupied_class_fraction",
+        ],
+        "argmax_occupancy_gate_required": True,
+        "posenet_scored_frame_indices": [0, 1],
+        "posenet_input_domain": "two RGB frames -> resize -> YUV6 pair",
+        "posenet_yuv6_pair_metric_names": [
+            f"dual_ascent_metric__{family_key}_posenet_yuv6_pair_distill",
+            ("loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_min_std_ratio"),
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_pair_mse",
+            "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta_mse",
+        ],
+        "pose_geometry_gate_required": True,
+        "required_metric_groups": [
+            "segnet_last_frame_argmax",
+            "segnet_argmax_occupancy",
+            "posenet_yuv6_pair",
+        ],
+        "fail_closed_on_missing_metrics": True,
+        **FALSE_AUTHORITY,
+    }
 
 
 class PR95DistortionPracticesGuardError(ValueError):
@@ -154,6 +226,16 @@ def build_pr95_distortion_source_inventory(
             "TensorVideoDataset",
             "[seq_len, camera_size[1], camera_size[0], 3]",
             "DistortionNet().eval()",
+        ),
+    )
+    add_record(
+        rel_path=UPSTREAM_REL / "evaluate.py",
+        check_id="upstream_evaluate_archive_byte_price",
+        required_tokens=(
+            "compressed_size = (args.submission_dir / 'archive.zip').stat().st_size",
+            "uncompressed_size = sum(file.stat().st_size",
+            "rate = compressed_size / uncompressed_size",
+            "score = 100 * segnet_dist +  math.sqrt(posenet_dist * 10)  + 25 * rate",
         ),
     )
     add_record(
@@ -249,16 +331,10 @@ def build_pr95_distortion_source_inventory(
         }
     )
 
-    check_passed = {
-        str(record.get("check_id")): bool(record.get("passed")) for record in records
-    }
+    check_passed = {str(record.get("check_id")): bool(record.get("passed")) for record in records}
     practice_source_rows = []
     for practice in PRACTICES:
-        missing = [
-            check_id
-            for check_id in practice.source_check_ids
-            if check_passed.get(check_id) is not True
-        ]
+        missing = [check_id for check_id in practice.source_check_ids if check_passed.get(check_id) is not True]
         practice_source_rows.append(
             {
                 "schema": "pr95_distortion_practice_source_row.v1",
@@ -306,8 +382,7 @@ def build_pr95_distortion_practices_row_guard(
     row_id = str(row.get("id") or row.get("row_id") or row.get("candidate_id") or "")
     required = family in {"hi_nerv", "snerv"}
     source_by_practice = {
-        str(item.get("practice_id")): item
-        for item in _mapping_list(inventory.get("practice_source_rows"))
+        str(item.get("practice_id")): item for item in _mapping_list(inventory.get("practice_source_rows"))
     }
 
     practice_rows: list[dict[str, Any]] = []
@@ -385,11 +460,7 @@ def build_pr95_distortion_practices_payload_guard(
         )
         for row in rows
     ]
-    blockers = [
-        blocker
-        for guard in row_guards
-        for blocker in _string_list(guard.get("blockers"))
-    ]
+    blockers = [blocker for guard in row_guards for blocker in _string_list(guard.get("blockers"))]
     if not rows:
         blockers.append("pr95_distortion_guard_no_candidate_rows_found")
     if inventory.get("source_ready") is not True:
@@ -426,20 +497,13 @@ def render_pr95_distortion_practices_markdown(payload: Mapping[str, Any]) -> str
     for guard in row_guards:
         lines.append(f"### `{guard.get('row_id') or guard.get('family')}`")
         for row in _mapping_list(guard.get("practice_rows")):
-            lines.append(
-                f"- `{row.get('practice_id')}` passed=`{row.get('passed')}` "
-                f"observed=`{row.get('observed')}`"
-            )
+            lines.append(f"- `{row.get('practice_id')}` passed=`{row.get('passed')}` observed=`{row.get('observed')}`")
         lines.append("")
     lines.append("## Blockers")
     lines.append("")
     blockers = _string_list(payload.get("blockers"))
     if not blockers and row_guards:
-        blockers = [
-            blocker
-            for guard in row_guards
-            for blocker in _string_list(guard.get("blockers"))
-        ]
+        blockers = [blocker for guard in row_guards for blocker in _string_list(guard.get("blockers"))]
     if blockers:
         lines.extend(f"- `{blocker}`" for blocker in _dedupe(blockers))
     else:
@@ -473,14 +537,10 @@ def _observe_practice(
         pose_weight = _positive_float_arg(command, "--pose-distillation-weight")
         if pose_weight:
             evidence.append(f"pose_distillation_weight={pose_weight:g}")
-        explicit_snerv = _has_flag(
-            command, "--snerv-score-aware-long-training-eval-roundtrip-ste"
-        )
+        explicit_snerv = _has_flag(command, "--snerv-score-aware-long-training-eval-roundtrip-ste")
         if explicit_snerv:
             evidence.append("snerv_eval_roundtrip_ste_flag")
-        hinerv_runner_support = _source_check_passed(
-            source_inventory, "runner_hinerv_eval_roundtrip_metadata"
-        )
+        hinerv_runner_support = _source_check_passed(source_inventory, "runner_hinerv_eval_roundtrip_metadata")
         if family == "hi_nerv" and hinerv_runner_support:
             evidence.append("hinerv_runner_eval_roundtrip_metadata_source_verified")
         payload_declares = _deep_truthy(
@@ -513,12 +573,88 @@ def _observe_practice(
             evidence.append(f"distillation_device={device}")
         return bool(seg_weight and pose_weight and device), evidence
 
+    if practice_id == "official_evaluate_archive_byte_price":
+        binding = _first_mapping(row, ("upstream_evaluate_score_binding",))
+        rate = binding.get("rate") if isinstance(binding, Mapping) else None
+        rate = rate if isinstance(rate, Mapping) else {}
+        price = _positive_float_value(rate.get("rate_price_per_archive_byte"))
+        denominator = _positive_int_value(rate.get("canonical_denominator_bytes"))
+        raw_not_denominator = _positive_int_value(rate.get("raw_output_shape_bytes_are_not_rate_denominator"))
+        archive_authority = str(rate.get("archive_authority") or "")
+        hard_byte_ceiling = _positive_int_arg(command, "--hard-byte-ceiling") or (
+            _positive_int_value(row.get("hard_byte_ceiling"))
+        )
+        archive_bound = "archive.zip" in archive_authority and ".stat()" in archive_authority
+        evidence = []
+        if price:
+            evidence.append(f"rate_price_per_archive_byte={price:.12g}")
+        if denominator:
+            evidence.append(f"canonical_denominator_bytes={denominator}")
+        if raw_not_denominator:
+            evidence.append(f"raw_output_shape_bytes_are_not_rate_denominator={raw_not_denominator}")
+        if archive_authority:
+            evidence.append(f"archive_authority={archive_authority}")
+        if hard_byte_ceiling:
+            evidence.append(f"command_hard_byte_ceiling={hard_byte_ceiling}")
+        return bool(
+            binding and price and denominator and raw_not_denominator and archive_bound and hard_byte_ceiling
+        ), evidence
+
+    if practice_id == "scorer_domain_telemetry_contract":
+        contract = _first_mapping(
+            row,
+            (
+                "pr95_evaluate_scorer_domain_telemetry_contract",
+                "scorer_domain_telemetry_contract",
+            ),
+        )
+        evidence = []
+        schema_ok = contract.get("schema") == TELEMETRY_CONTRACT_SCHEMA
+        if contract.get("schema"):
+            evidence.append(f"telemetry_contract_schema={contract.get('schema')}")
+        fail_closed = contract.get("fail_closed_on_missing_metrics") is True
+        if fail_closed:
+            evidence.append("fail_closed_on_missing_metrics")
+        segnet_frame_ok = _int_value(contract.get("segnet_scored_frame_index")) == 1
+        if segnet_frame_ok:
+            evidence.append("segnet_scored_frame_index=1")
+        posenet_frames_ok = _int_sequence(contract.get("posenet_scored_frame_indices")) == [0, 1]
+        if posenet_frames_ok:
+            evidence.append("posenet_scored_frame_indices=[0,1]")
+        segnet_argmax_metrics = _string_list(contract.get("segnet_last_frame_argmax_metric_names"))
+        segnet_occupancy_metrics = _string_list(contract.get("segnet_argmax_occupancy_metric_names"))
+        posenet_metrics = _string_list(contract.get("posenet_yuv6_pair_metric_names"))
+        has_segnet_argmax = _contains_any_substring(
+            segnet_argmax_metrics,
+            ("argmax", "segnet_last_frame_distill"),
+        )
+        has_segnet_occupancy = contract.get("argmax_occupancy_gate_required") is True and _contains_any_substring(
+            segnet_occupancy_metrics,
+            ("occupied_class_fraction", "occupancy"),
+        )
+        has_posenet_yuv6 = contract.get("pose_geometry_gate_required") is True and _contains_any_substring(
+            posenet_metrics, ("posenet_yuv6", "yuv6_pair")
+        )
+        if has_segnet_argmax:
+            evidence.append("segnet_argmax_metrics=" + ",".join(sorted(segnet_argmax_metrics)[:4]))
+        if has_segnet_occupancy:
+            evidence.append("segnet_occupancy_metrics=" + ",".join(sorted(segnet_occupancy_metrics)[:4]))
+        if has_posenet_yuv6:
+            evidence.append("posenet_yuv6_metrics=" + ",".join(sorted(posenet_metrics)[:4]))
+        return bool(
+            schema_ok
+            and fail_closed
+            and segnet_frame_ok
+            and posenet_frames_ok
+            and has_segnet_argmax
+            and has_segnet_occupancy
+            and has_posenet_yuv6
+        ), evidence
+
     if practice_id == "pr95_staged_qat_coder_curriculum":
         evidence = []
         hinerv_policy = _arg_value(command, "--hi-nerv-optimizer-policy")
-        snerv_curriculum = _has_flag(
-            command, "--snerv-score-aware-long-training-pr95-faithful-curriculum"
-        )
+        snerv_curriculum = _has_flag(command, "--snerv-score-aware-long-training-pr95-faithful-curriculum")
         coder_qat = _has_flag(command, "--coder-aware-qat")
         c1a_weight = _positive_float_arg(command, "--coder-qat-c1a-entropy-weight")
         optimizer = _arg_value(command, "--optimizer-kind") or _arg_value(
@@ -630,6 +766,53 @@ def _positive_float_arg(command: Sequence[str], flag: str) -> float | None:
     return parsed if parsed > 0.0 else None
 
 
+def _positive_float_value(value: Any) -> float | None:
+    try:
+        parsed = float(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0.0 else None
+
+
+def _positive_int_value(value: Any) -> int | None:
+    try:
+        parsed = int(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _int_value(value: Any) -> int | None:
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _int_sequence(value: Any) -> list[int]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return []
+    out = []
+    for item in value:
+        parsed = _int_value(item)
+        if parsed is None:
+            return []
+        out.append(parsed)
+    return out
+
+
+def _first_mapping(value: Mapping[str, Any], keys: Sequence[str]) -> Mapping[str, Any]:
+    for key in keys:
+        item = value.get(key)
+        if isinstance(item, Mapping):
+            return item
+    return {}
+
+
+def _contains_any_substring(values: Sequence[str], needles: Sequence[str]) -> bool:
+    return any(needle in value for value in values for needle in needles)
+
+
 def _source_check_passed(inventory: Mapping[str, Any], check_id: str) -> bool:
     for record in _mapping_list(inventory.get("source_records")):
         if record.get("check_id") == check_id:
@@ -699,9 +882,11 @@ __all__ = [
     "PRACTICE_ROW_SCHEMA",
     "SCHEMA",
     "SOURCE_INVENTORY_SCHEMA",
+    "TELEMETRY_CONTRACT_SCHEMA",
     "PR95DistortionPracticesGuardError",
     "build_pr95_distortion_practices_payload_guard",
     "build_pr95_distortion_practices_row_guard",
     "build_pr95_distortion_source_inventory",
+    "build_pr95_evaluate_scorer_domain_telemetry_contract",
     "render_pr95_distortion_practices_markdown",
 ]

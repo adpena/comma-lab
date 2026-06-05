@@ -8,9 +8,11 @@ from tac.analysis.pr95_distortion_practices_guard import (
     PRACTICES,
     SCHEMA,
     SOURCE_INVENTORY_SCHEMA,
+    TELEMETRY_CONTRACT_SCHEMA,
     build_pr95_distortion_practices_payload_guard,
     build_pr95_distortion_practices_row_guard,
     build_pr95_distortion_source_inventory,
+    build_pr95_evaluate_scorer_domain_telemetry_contract,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -43,6 +45,8 @@ def test_pr95_distortion_guard_accepts_hinerv_pr95_curriculum_row() -> None:
     rows = {row["practice_id"]: row for row in guard["practice_rows"]}
     assert rows["scorer_preprocess_eval_roundtrip_yuv6"]["observed"] is True
     assert rows["dual_component_real_scorer_pressure"]["observed"] is True
+    assert rows["official_evaluate_archive_byte_price"]["observed"] is True
+    assert rows["scorer_domain_telemetry_contract"]["observed"] is True
     assert rows["pr95_staged_qat_coder_curriculum"]["observed"] is True
     assert guard["score_claim"] is False
     assert guard["ready_for_exact_eval_dispatch"] is False
@@ -56,12 +60,47 @@ def test_pr95_distortion_guard_blocks_snerv_without_eval_roundtrip() -> None:
     guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
 
     assert guard["launch_allowed"] is False
-    assert (
-        "snerv_pr95_distortion_scorer_preprocess_eval_roundtrip_yuv6_missing"
-        in guard["blockers"]
-    )
+    assert "snerv_pr95_distortion_scorer_preprocess_eval_roundtrip_yuv6_missing" in guard["blockers"]
     rows = {row["practice_id"]: row for row in guard["practice_rows"]}
     assert rows["scorer_preprocess_eval_roundtrip_yuv6"]["observed"] is False
+
+
+def test_pr95_distortion_guard_blocks_fake_parity_without_byte_binding() -> None:
+    row = _hinerv_row()
+    del row["upstream_evaluate_score_binding"]
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert "hi_nerv_pr95_distortion_official_evaluate_archive_byte_price_missing" in guard["blockers"]
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    assert rows["official_evaluate_archive_byte_price"]["observed"] is False
+
+
+def test_pr95_distortion_guard_blocks_fake_parity_without_scorer_telemetry_contract() -> None:
+    row = _hinerv_row()
+    del row["pr95_evaluate_scorer_domain_telemetry_contract"]
+
+    guard = build_pr95_distortion_practices_row_guard(row, repo_root=REPO_ROOT)
+
+    assert guard["launch_allowed"] is False
+    assert "hi_nerv_pr95_distortion_scorer_domain_telemetry_contract_missing" in guard["blockers"]
+    rows = {row["practice_id"]: row for row in guard["practice_rows"]}
+    assert rows["scorer_domain_telemetry_contract"]["observed"] is False
+
+
+def test_pr95_distortion_telemetry_contract_names_evaluate_domains() -> None:
+    contract = build_pr95_evaluate_scorer_domain_telemetry_contract("snerv")
+
+    assert contract["schema"] == TELEMETRY_CONTRACT_SCHEMA
+    assert contract["segnet_scored_frame_index"] == 1
+    assert contract["posenet_scored_frame_indices"] == [0, 1]
+    assert contract["argmax_occupancy_gate_required"] is True
+    assert contract["fail_closed_on_missing_metrics"] is True
+    assert any("snerv_segnet_last_frame_distill" in name for name in contract["segnet_last_frame_argmax_metric_names"])
+    assert any("occupied_class_fraction" in name for name in contract["segnet_argmax_occupancy_metric_names"])
+    assert any("posenet_yuv6_pair" in name for name in contract["posenet_yuv6_pair_metric_names"])
+    assert contract["score_claim"] is False
 
 
 def test_pr95_distortion_payload_guard_extracts_verdict_rows() -> None:
@@ -87,6 +126,8 @@ def _base_command(family: str) -> list[str]:
         "600",
         "--epochs",
         "16",
+        "--hard-byte-ceiling",
+        "3980000",
         "--distillation-device",
         "gpu",
         "--segnet-distillation-weight",
@@ -119,6 +160,11 @@ def _hinerv_row() -> dict:
         "id": "hi_row",
         "family": "hi_nerv",
         "command": command,
+        "hard_byte_ceiling": 3_980_000,
+        "upstream_evaluate_score_binding": _upstream_evaluate_score_binding("hi_nerv"),
+        "pr95_evaluate_scorer_domain_telemetry_contract": (
+            build_pr95_evaluate_scorer_domain_telemetry_contract("hi_nerv")
+        ),
         "score_lowering_gate": {
             "schema": "nerv_long_training_score_lowering_gate.v1",
             "local_mlx_executable": True,
@@ -142,8 +188,26 @@ def _snerv_row() -> dict:
         "id": "snerv_row",
         "family": "snerv",
         "command": command,
+        "hard_byte_ceiling": 3_980_000,
+        "upstream_evaluate_score_binding": _upstream_evaluate_score_binding("snerv"),
+        "pr95_evaluate_scorer_domain_telemetry_contract": (
+            build_pr95_evaluate_scorer_domain_telemetry_contract("snerv")
+        ),
         "score_lowering_gate": {
             "schema": "nerv_long_training_score_lowering_gate.v1",
             "local_mlx_executable": True,
+        },
+    }
+
+
+def _upstream_evaluate_score_binding(family: str) -> dict:
+    return {
+        "schema": "nerv_row_upstream_evaluate_binding.v1",
+        "family": family,
+        "rate": {
+            "archive_authority": "submission_dir/archive.zip.stat().st_size",
+            "canonical_denominator_bytes": 37_545_489,
+            "rate_price_per_archive_byte": 25 / 37_545_489,
+            "raw_output_shape_bytes_are_not_rate_denominator": (1200 * 874 * 1164 * 3),
         },
     }
