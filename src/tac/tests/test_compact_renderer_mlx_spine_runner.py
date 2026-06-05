@@ -1418,11 +1418,35 @@ def test_compact_scoreaware_stage_loss_weights_feed_curriculum() -> None:
     assert stages[0].start_epoch == 0
     assert stages[0].end_epoch == 9
     assert dict(stages[0].loss_weights) == weights
+    warmup_stages = runner_mod._compact_scoreaware_curriculum_stages(
+        substrate_id="unit_hi_nerv",
+        epochs=9,
+        loss_weights=weights,
+        pose_distillation_warmup_epochs=3,
+    )
+    assert len(warmup_stages) == 2
+    assert warmup_stages[0].start_epoch == 0
+    assert warmup_stages[0].end_epoch == 3
+    assert dict(warmup_stages[0].loss_weights) == {
+        "recon": 0.25,
+        "distill": 2.0,
+        "pose_distill": 0.0,
+    }
+    assert warmup_stages[1].start_epoch == 3
+    assert warmup_stages[1].end_epoch == 9
+    assert dict(warmup_stages[1].loss_weights) == weights
     with pytest.raises(CompactRendererMlxSpineRunnerError, match="finite"):
         runner_mod._compact_scoreaware_stage_loss_weights(
             recon=-0.1,
             segnet=1.0,
             pose=1.0,
+        )
+    with pytest.raises(CompactRendererMlxSpineRunnerError, match="smaller than epochs"):
+        runner_mod._compact_scoreaware_curriculum_stages(
+            substrate_id="unit_hi_nerv",
+            epochs=3,
+            loss_weights=weights,
+            pose_distillation_warmup_epochs=3,
         )
 
 
@@ -1605,8 +1629,9 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                 "loss_components": {
                     "loss_part_distill": 1.25,
                     "loss_part_pose_distill": 2.5,
+                    "loss_part_pose_score_term": 5.0,
                     "loss_part_pr95_stage_seg_surrogate": 1.25,
-                    "loss_part_pr95_stage_pose_surrogate": 2.5,
+                    "loss_part_pr95_stage_pose_surrogate": 5.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.125,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.0625,
@@ -5988,6 +6013,8 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
             "huber",
             "--pose-distillation-huber-delta",
             "2.5",
+            "--pose-distillation-warmup-epochs",
+            "7",
             "--segnet-distillation-objective",
             "boundary_argmax_hinge",
             "--distillation-temperature",
@@ -6027,6 +6054,7 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.pose_distillation_weight == 0.75
     assert args.pose_distillation_loss == "huber"
     assert args.pose_distillation_huber_delta == 2.5
+    assert args.pose_distillation_warmup_epochs == 7
     assert args.segnet_distillation_objective == "boundary_argmax_hinge"
     assert args.distillation_temperature == 1.5
     assert args.segnet_student_live_calibration_weight == pytest.approx(0.625)
@@ -6145,6 +6173,8 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
             "2.0",
             "--pose-loss-stage-weight",
             "1.5",
+            "--pose-distillation-warmup-epochs",
+            "2",
             "--scorer-input-distribution-guard-weight",
             "0.125",
             "--scorer-input-distribution-guard-saturation-margin",
@@ -6275,6 +6305,7 @@ def test_hinerv_snerv_execute_parser_accepts_planner_gated_families() -> None:
     assert hi.recon_loss_stage_weight == 0.25
     assert hi.segnet_loss_stage_weight == 2.0
     assert hi.pose_loss_stage_weight == 1.5
+    assert hi.pose_distillation_warmup_epochs == 2
     assert hi.scorer_input_distribution_guard_weight == pytest.approx(0.125)
     assert hi.scorer_input_distribution_guard_saturation_margin == pytest.approx(
         0.03125
@@ -9583,6 +9614,42 @@ def test_hinerv_waterfill_plan_compiles_train_time_fake_quant_bits() -> None:
         match="selected_bits",
     ):
         runner_mod._decoder_weight_waterfill_fake_quant_bits_by_name(invalid)
+
+
+def test_hinerv_pose_distillation_warmup_compiles_real_curriculum_stages() -> None:
+    stages = runner_mod._compact_scoreaware_curriculum_stages(
+        substrate_id="compact_runner_hi_nerv_mlx",
+        epochs=4,
+        loss_weights={"recon": 1.0, "distill": 2.0, "pose_distill": 3.0},
+        pose_distillation_warmup_epochs=2,
+    )
+
+    assert len(stages) == 2
+    assert stages[0].start_epoch == 0
+    assert stages[0].end_epoch == 2
+    assert stages[0].loss_weights == {
+        "recon": 1.0,
+        "distill": 2.0,
+        "pose_distill": 0.0,
+    }
+    assert stages[1].start_epoch == 2
+    assert stages[1].end_epoch == 4
+    assert stages[1].loss_weights == {
+        "recon": 1.0,
+        "distill": 2.0,
+        "pose_distill": 3.0,
+    }
+
+    with pytest.raises(
+        runner_mod.CompactRendererMlxSpineRunnerError,
+        match="smaller than epochs",
+    ):
+        runner_mod._compact_scoreaware_curriculum_stages(
+            substrate_id="compact_runner_hi_nerv_mlx",
+            epochs=2,
+            loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 1.0},
+            pose_distillation_warmup_epochs=2,
+        )
 
 
 def test_hinerv_modelsize_launch_auto_binds_joint_scorer_pressure(

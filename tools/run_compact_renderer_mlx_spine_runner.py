@@ -1413,16 +1413,57 @@ def _compact_scoreaware_curriculum_stages(
     substrate_id: str,
     epochs: int,
     loss_weights: Mapping[str, float],
+    pose_distillation_warmup_epochs: int = 0,
 ) -> tuple[Any, ...]:
-    """Build the one-stage explicit-loss-weight curriculum consumed by MLX."""
+    """Build explicit score-aware loss-weight stages consumed by MLX."""
 
     from tac.training.long_training_canonical import CurriculumStage
 
+    total_epochs = int(epochs)
+    pose_warmup = int(pose_distillation_warmup_epochs)
+    if pose_warmup < 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_distillation_warmup_epochs must be >= 0"
+        )
+    if pose_warmup > 0:
+        if total_epochs <= 1:
+            raise CompactRendererMlxSpineRunnerError(
+                "pose_distillation_warmup_epochs requires epochs > 1"
+            )
+        if pose_warmup >= total_epochs:
+            raise CompactRendererMlxSpineRunnerError(
+                "pose_distillation_warmup_epochs must be smaller than epochs"
+            )
+        warmup_weights = dict(loss_weights)
+        warmup_weights["pose_distill"] = 0.0
+        return (
+            CurriculumStage(
+                name=f"{substrate_id}_mlx_score_aware_segnet_input_warmup",
+                start_epoch=0,
+                end_epoch=pose_warmup,
+                loss_weights=warmup_weights,
+                notes=(
+                    "SegNet/input-distribution warmup before PoseNet pressure. "
+                    "This is an actual CurriculumStage.loss_weights change, "
+                    "not metadata-only."
+                ),
+            ),
+            CurriculumStage(
+                name=f"{substrate_id}_mlx_score_aware_joint_full",
+                start_epoch=pose_warmup,
+                end_epoch=total_epochs,
+                loss_weights=dict(loss_weights),
+                notes=(
+                    "Joint scorer stage after PoseNet warmup; frontier claims "
+                    "still require full receiver proof and exact scorer replay."
+                ),
+            ),
+        )
     return (
         CurriculumStage(
             name=f"{substrate_id}_mlx_score_aware_weighted_full",
             start_epoch=0,
-            end_epoch=int(epochs),
+            end_epoch=total_epochs,
             loss_weights=dict(loss_weights),
             notes=(
                 "Explicit compact-runner score-aware component weights. "
@@ -8216,6 +8257,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     recon_loss_stage_weight: float = 1.0,
     segnet_loss_stage_weight: float = 1.0,
     pose_loss_stage_weight: float = 1.0,
+    pose_distillation_warmup_epochs: int = 0,
     prioritized_pair_indices: tuple[int, ...] = (),
     scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
     scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
@@ -9093,6 +9135,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             distillation_device=distillation_device,
             requested_distillation_device=effective_requested_distillation_device,
             allow_segnet_only_research=allow_segnet_only_research,
+            pose_distillation_warmup_epochs=int(pose_distillation_warmup_epochs),
             coder_aware_qat=effective_coder_aware_qat,
             coder_qat_quant_bits=effective_coder_qat_quant_bits,
             coder_qat_quant_residual_weight=coder_qat_quant_residual_weight,
@@ -12819,6 +12862,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     recon_loss_stage_weight: float,
     segnet_loss_stage_weight: float,
     pose_loss_stage_weight: float,
+    pose_distillation_warmup_epochs: int = 0,
     prioritized_pair_indices: tuple[int, ...],
     scorer_error_pair_sampling_weights: Mapping[int, float] | None = None,
     scorer_error_pair_curriculum: Mapping[str, Any] | None = None,
@@ -13370,6 +13414,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 optimizer_control
             ),
             "stage_loss_weights": stage_weights,
+            "pose_distillation_warmup_epochs": int(pose_distillation_warmup_epochs),
             "scorer_input_distribution_guard": {
                 "schema": "compact_hi_nerv_scorer_input_distribution_guard.v1",
                 "enabled": bool(float(scorer_input_distribution_guard_weight) > 0.0),
@@ -13685,6 +13730,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             substrate_id="compact_runner_hi_nerv_mlx",
             epochs=int(epochs),
             loss_weights=stage_weights,
+            pose_distillation_warmup_epochs=int(pose_distillation_warmup_epochs),
         ),
         pr95_faithful_curriculum_enabled=pr95_curriculum_enabled,
         pr95_curriculum_total_epochs=resolved_pr95_curriculum_total_epochs,
@@ -17517,6 +17563,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--pose-distillation-warmup-epochs",
+        default=0,
+        type=int,
+        help=(
+            "HiNeRV-only score-aware curriculum control. The first N epochs "
+            "keep the requested recon/SegNet/input-distribution losses but set "
+            "CurriculumStage.loss_weights['pose_distill']=0, then restore the "
+            "requested PoseNet stage weight for the remaining joint scorer "
+            "stage. This is a real training control, not metadata-only."
+        ),
+    )
+    parser.add_argument(
         "--distillation-device",
         default="cpu",
         help="Device used to build real scorer teacher caches; default CPU.",
@@ -19051,6 +19109,7 @@ def main(argv: list[str] | None = None) -> int:
             recon_loss_stage_weight=args.recon_loss_stage_weight,
             segnet_loss_stage_weight=args.segnet_loss_stage_weight,
             pose_loss_stage_weight=args.pose_loss_stage_weight,
+            pose_distillation_warmup_epochs=args.pose_distillation_warmup_epochs,
             prioritized_pair_indices=prioritized_pair_indices,
             scorer_error_pair_sampling_weights=(
                 scorer_error_pair_sampling_weights
