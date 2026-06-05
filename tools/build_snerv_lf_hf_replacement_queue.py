@@ -63,6 +63,16 @@ def main(argv: list[str] | None = None) -> int:
             "Repeatable; used to clear only proven receiver-frame replay blockers."
         ),
     )
+    parser.add_argument(
+        "--candidate-feedback-row",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Current nerv_candidate_feedback_row.v1 JSON. Repeatable; used to "
+            "clear only proven scorer-domain tether guard blockers."
+        ),
+    )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--output-md", type=Path)
@@ -90,12 +100,16 @@ def main(argv: list[str] | None = None) -> int:
     source_forward_artifacts = [
         load_json_with_source_identity(path) for path in args.source_forward_artifact
     ]
+    candidate_feedback_rows = [
+        load_json_with_source_identity(path) for path in args.candidate_feedback_row
+    ]
 
     report = build_snerv_lf_hf_replacement_queue(
         lf_payload_reports=lf_reports,
         reroute_queues=reroute_queues,
         campaign_plans=campaign_plans,
         source_forward_artifacts=source_forward_artifacts,
+        candidate_feedback_rows=candidate_feedback_rows,
         output_root=output_root,
         lane_id=str(args.lane_id),
         queue_id=str(args.queue_id),

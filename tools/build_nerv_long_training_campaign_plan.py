@@ -222,6 +222,18 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-official-source-forward-artifact",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "snerv_official_mfu_hfr_tub_forward_parity.v1 JSON to feed "
+            "receiver/frame source-forward evidence into the SNeRV LF/HF "
+            "replacement queue. Repeatable; still false-authority until full "
+            "score gates pass."
+        ),
+    )
+    parser.add_argument(
         "--pr95-baseline-identity",
         type=Path,
         help=(
@@ -323,6 +335,9 @@ def main(argv: list[str] | None = None) -> int:
         ),
         snerv_official_source_audit=(
             None if args.snerv_official_source_audit is None else _load(args.snerv_official_source_audit)
+        ),
+        snerv_official_source_forward_artifacts=tuple(
+            _load(path) for path in args.snerv_official_source_forward_artifact
         ),
         pr95_baseline_identity=(
             None if args.pr95_baseline_identity is None else _load(args.pr95_baseline_identity)

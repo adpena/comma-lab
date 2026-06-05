@@ -593,6 +593,7 @@ def build_nerv_long_training_campaign_plan(
     snerv_snar_header_grammar_profile_sources: Sequence[Mapping[str, Any]] = (),
     snerv_snar_header_minimization_report_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
+    snerv_official_source_forward_artifacts: Sequence[Mapping[str, Any]] = (),
     pr95_baseline_identity: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_report: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
@@ -746,6 +747,7 @@ def build_nerv_long_training_campaign_plan(
         ),
         reroute_queues=(snerv_lf_over_ceiling_reroute_queue,),
         campaign_plans=({"campaign_rows": rows},),
+        source_forward_artifacts=snerv_official_source_forward_artifacts,
         output_root=Path(output_root) / "snerv_lf_hf_replacements",
         queue_id=DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
         allow_local_output=True,
@@ -840,6 +842,9 @@ def build_nerv_long_training_campaign_plan(
         "snerv_lf_hf_replacement_queue_row_count": snerv_lf_hf_replacement_queue["queue_row_count"],
         "source_parity_contract": source_parity_contract,
         "snerv_official_source_audit_attached": isinstance(snerv_official_source_audit, Mapping),
+        "snerv_official_source_forward_artifact_count": len(
+            snerv_official_source_forward_artifacts
+        ),
         "source_parity_required_for_long_training_ready": bool(
             source_parity_contract.get("required_for_long_training_ready")
         ),

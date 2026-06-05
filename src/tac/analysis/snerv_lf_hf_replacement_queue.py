@@ -69,6 +69,13 @@ _RENDERER_BLOCKERS = (
     "snerv_renderer_nondegenerate_receiver_reconstruction_not_verified",
     "snerv_scorer_input_distribution_guard_missing",
 )
+_SCORER_DOMAIN_CLOSED_BLOCKERS = (
+    "snerv_scorer_input_distribution_guard_missing",
+)
+_SCORER_DOMAIN_REQUIRED_METRICS = (
+    "snerv_posenet_yuv6_pair_distill",
+    "snerv_segnet_last_frame_distill",
+)
 _SKIP_HIGH_BLOCKERS = (
     "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse",
     "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
@@ -86,6 +93,7 @@ def build_snerv_lf_hf_replacement_queue(
     reroute_queues: Sequence[Mapping[str, Any]] = (),
     campaign_plans: Sequence[Mapping[str, Any]] = (),
     source_forward_artifacts: Sequence[Mapping[str, Any]] = (),
+    candidate_feedback_rows: Sequence[Mapping[str, Any]] = (),
     output_root: str | Path,
     lane_id: str = DEFAULT_LANE_ID,
     queue_id: str = DEFAULT_QUEUE_ID,
@@ -117,11 +125,13 @@ def build_snerv_lf_hf_replacement_queue(
     campaign_rows = _snerv_campaign_rows(campaign_plans)
     reroute_state = _reroute_state(reroute_queues)
     source_forward_state = _source_forward_state(source_forward_artifacts)
+    scorer_domain_state = _scorer_domain_state(candidate_feedback_rows)
     current_state = _current_state(
         campaign_rows=campaign_rows,
         reroute_state=reroute_state,
         evidence_rows=evidence_rows,
         source_forward_state=source_forward_state,
+        scorer_domain_state=scorer_domain_state,
     )
     selected_evidence = _selected_lf_evidence(evidence_rows)
     rows = _candidate_rows(
@@ -165,6 +175,7 @@ def build_snerv_lf_hf_replacement_queue(
         "storage_preflight": storage_preflight,
         "current_state": current_state,
         "source_forward_evidence": source_forward_state,
+        "scorer_domain_evidence": scorer_domain_state,
         "lf_payload_evidence_rows": evidence_rows,
         "lf_payload_evidence_row_count": len(evidence_rows),
         "selected_lf_payload_evidence": selected_evidence,
@@ -198,8 +209,11 @@ def render_snerv_lf_hf_replacement_queue_markdown(report: Mapping[str, Any]) -> 
         f"- runnable local rows: `{report.get('local_executable_command_row_count')}`",
         f"- current reroute rows: `{current.get('freshest_reroute_queue_row_count')}`",
         f"- current SNAR2 no-LF-overrun: `{current.get('freshest_queue_has_no_lf_over_ceiling_rows')}`",
+        f"- LF dominance launch signal active: `{current.get('lf_dominance_launch_signal_active')}`",
         "- receiver payload frame replay proven: "
         f"`{_nested(current, ('source_forward_evidence', 'receiver_payload_frame_replay_proven'))}`",
+        "- scorer domain tether proof passed: "
+        f"`{_nested(current, ('scorer_domain_evidence', 'scorer_domain_tether_proof_passed'))}`",
         f"- selected LF evidence bytes: `{selected.get('lf_payload_bytes')}`",
         "",
         "## Candidate Rows",
@@ -421,6 +435,10 @@ def _candidate_row(
         _nested(current_state, ("source_forward_evidence", "closed_campaign_blockers"))
         or ()
     )
+    scorer_domain_closed = set(
+        _nested(current_state, ("scorer_domain_evidence", "closed_campaign_blockers"))
+        or ()
+    )
     source_forward_extra_blockers: list[str] = []
     if solution_family in _SOURCE_FORWARD_QUEUE_FAMILIES:
         source_forward_extra_blockers = [
@@ -432,7 +450,9 @@ def _candidate_row(
             if blocker
         ]
     campaign_blockers = [
-        blocker for blocker in campaign_blockers if blocker not in source_forward_closed
+        blocker
+        for blocker in campaign_blockers
+        if blocker not in source_forward_closed and blocker not in scorer_domain_closed
     ]
     blockers = _dedupe(
         [
@@ -496,8 +516,16 @@ def _candidate_row(
             "snar_header_minimization_report_count": current_state.get(
                 "snar_header_minimization_report_count"
             ),
+            "lf_dominance_launch_signal_active": current_state.get(
+                "lf_dominance_launch_signal_active"
+            ),
+            "lf_dominance_signal_demoted": current_state.get(
+                "lf_dominance_signal_demoted"
+            ),
+            "demoted_blockers": list(current_state.get("demoted_blockers") or ()),
         },
         "source_forward_evidence": current_state.get("source_forward_evidence"),
+        "scorer_domain_evidence": current_state.get("scorer_domain_evidence"),
         "target_consumers": [
             "nerv_long_training_campaign_plan",
             "snerv_lf_over_ceiling_reroute_queue",
@@ -748,6 +776,96 @@ def _source_forward_state(
     }
 
 
+def _scorer_domain_state(
+    candidate_feedback_rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    rows = [
+        row
+        for row in candidate_feedback_rows
+        if isinstance(row, Mapping) and row.get("schema") == "nerv_candidate_feedback_row.v1"
+    ]
+    if not rows:
+        return {
+            "schema": "snerv_lf_hf_scorer_domain_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_created_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "scorer_domain_tether_proof_passed": False,
+            "required_metrics": list(_SCORER_DOMAIN_REQUIRED_METRICS),
+            "metric_health": {},
+            "missing_metrics": list(_SCORER_DOMAIN_REQUIRED_METRICS),
+            "lambda_inactive_metrics": list(_SCORER_DOMAIN_REQUIRED_METRICS),
+            "closed_campaign_blockers": [],
+            "queue_blockers": ["snerv_scorer_input_distribution_guard_missing"],
+            "blockers": ["snerv_lf_hf_scorer_domain_candidate_feedback_missing"],
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        rows,
+        key=lambda row: (
+            str(row.get("created_utc") or row.get("generated_utc") or ""),
+            str(row.get("_source_path") or row.get("source_report_path") or ""),
+        ),
+    )
+    health = selected.get("snerv_scorer_domain_tether_health")
+    health = health if isinstance(health, Mapping) else {}
+    metric_health = health.get("metric_health")
+    metric_health = metric_health if isinstance(metric_health, Mapping) else {}
+    missing_metrics: list[str] = []
+    lambda_inactive_metrics: list[str] = []
+    for metric in _SCORER_DOMAIN_REQUIRED_METRICS:
+        metric_row = metric_health.get(metric)
+        metric_row = metric_row if isinstance(metric_row, Mapping) else {}
+        if metric_row.get("metric_observed") is not True:
+            missing_metrics.append(metric)
+        if metric_row.get("lambda_active_observed") is not True:
+            lambda_inactive_metrics.append(metric)
+    explicit_blockers = _dedupe(
+        [
+            *(selected.get("snerv_scorer_domain_tether_blockers") or ()),
+            *(health.get("blockers") or ()),
+        ]
+    )
+    proof_passed = bool(
+        selected.get("snerv_scorer_domain_tether_passed") is True
+        and health.get("passed") is True
+        and not missing_metrics
+        and not lambda_inactive_metrics
+        and not explicit_blockers
+    )
+    blockers: list[str] = []
+    if not proof_passed:
+        blockers.append("snerv_scorer_input_distribution_guard_missing")
+    if missing_metrics:
+        blockers.append("snerv_scorer_domain_tether_missing_telemetry")
+    if lambda_inactive_metrics:
+        blockers.append("snerv_scorer_domain_tether_lambda_inactive_telemetry")
+    blockers.extend(explicit_blockers)
+    return {
+        "schema": "snerv_lf_hf_scorer_domain_evidence.v1",
+        "artifact_count": len(rows),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_created_utc": selected.get("created_utc"),
+        "source_path": selected.get("_source_path") or selected.get("source_report_path"),
+        "source_sha256": selected.get("_source_sha256") or selected.get("source_report_sha256"),
+        "candidate_id": selected.get("candidate_id"),
+        "family": selected.get("family"),
+        "scorer_domain_tether_proof_passed": proof_passed,
+        "required_metrics": list(_SCORER_DOMAIN_REQUIRED_METRICS),
+        "metric_health": {str(k): v for k, v in metric_health.items()},
+        "missing_metrics": missing_metrics,
+        "lambda_inactive_metrics": lambda_inactive_metrics,
+        "closed_campaign_blockers": (
+            list(_SCORER_DOMAIN_CLOSED_BLOCKERS) if proof_passed else []
+        ),
+        "queue_blockers": [] if proof_passed else ["snerv_scorer_input_distribution_guard_missing"],
+        "blockers": _dedupe(blockers),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
 def _snerv_campaign_rows(campaign_plans: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for plan in campaign_plans:
@@ -801,6 +919,7 @@ def _current_state(
     reroute_state: Mapping[str, Any],
     evidence_rows: Sequence[Mapping[str, Any]],
     source_forward_state: Mapping[str, Any],
+    scorer_domain_state: Mapping[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     if not evidence_rows:
@@ -820,6 +939,7 @@ def _current_state(
         "snerv_local_mlx_launch_command_ready_row_count": len(ready_rows),
         "lf_payload_evidence_row_count": len(evidence_rows),
         "source_forward_evidence": dict(source_forward_state),
+        "scorer_domain_evidence": dict(scorer_domain_state),
         "blockers": _dedupe(blockers),
     }
 

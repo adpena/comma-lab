@@ -142,6 +142,51 @@ def test_lf_hf_queue_consumes_partial_source_forward_frame_replay(
     assert official["ready_for_exact_eval_dispatch"] is False
 
 
+def test_lf_hf_queue_consumes_scorer_domain_tether_proof(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[
+            _campaign_plan(
+                blockers=(
+                    "snerv_official_mfu_hfr_tub_export_not_bound",
+                    "snerv_scorer_input_distribution_guard_missing",
+                )
+            )
+        ],
+        source_forward_artifacts=[
+            _source_forward_artifact(
+                receiver_consumes_output2=True,
+                source_authority=True,
+                full_tub_parity=True,
+            )
+        ],
+        candidate_feedback_rows=[_candidate_feedback_row()],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    official = next(
+        row
+        for row in report["queue_rows"]
+        if row["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    blockers = set(official["blockers"])
+    assert "snerv_scorer_input_distribution_guard_missing" not in blockers
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" in blockers
+    assert official["scorer_domain_evidence"]["scorer_domain_tether_proof_passed"] is True
+    assert official["scorer_domain_evidence"]["closed_campaign_blockers"] == [
+        "snerv_scorer_input_distribution_guard_missing"
+    ]
+    assert official["scorer_domain_evidence"]["missing_metrics"] == []
+    assert official["scorer_domain_evidence"]["lambda_inactive_metrics"] == []
+    assert official["score_claim"] is False
+
+
 def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     tmp_path: Path,
 ) -> None:
@@ -149,6 +194,7 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     reroute_path = tmp_path / "reroute.json"
     campaign_path = tmp_path / "campaign.json"
     source_forward_path = tmp_path / "source_forward.json"
+    feedback_path = tmp_path / "candidate_feedback.json"
     output_root = tmp_path / "out"
     output_json = output_root / "queue.json"
     output_md = output_root / "queue.md"
@@ -159,6 +205,7 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
         encoding="utf-8",
     )
     source_forward_path.write_text(json.dumps(_source_forward_artifact()), encoding="utf-8")
+    feedback_path.write_text(json.dumps(_candidate_feedback_row()), encoding="utf-8")
 
     rc = cli_main(
         [
@@ -170,6 +217,8 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
             campaign_path.as_posix(),
             "--source-forward-artifact",
             source_forward_path.as_posix(),
+            "--candidate-feedback-row",
+            feedback_path.as_posix(),
             "--output-root",
             output_root.as_posix(),
             "--output-json",
@@ -189,9 +238,12 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     assert payload["selected_lf_payload_evidence"]["source_path"] == lf_path.as_posix()
     assert payload["source_forward_evidence"]["source_path"] == source_forward_path.as_posix()
     assert payload["source_forward_evidence"]["receiver_payload_frame_replay_proven"] is True
+    assert payload["scorer_domain_evidence"]["source_path"] == feedback_path.as_posix()
+    assert payload["scorer_domain_evidence"]["scorer_domain_tether_proof_passed"] is True
     assert len(payload["selected_lf_payload_evidence"]["source_sha256"]) == 64
     assert "SNeRV LF/HF Replacement Queue" in markdown
     assert "receiver payload frame replay proven" in markdown
+    assert "scorer domain tether proof passed" in markdown
     assert payload["score_claim"] is False
 
 
@@ -309,6 +361,62 @@ def _source_forward_artifact(
             "payload_sha256": "c" * 64,
         },
         "blockers": blockers,
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _candidate_feedback_row(
+    *,
+    posenet_observed: bool = True,
+    posenet_lambda_active: bool = True,
+    segnet_observed: bool = True,
+    segnet_lambda_active: bool = True,
+) -> dict[str, object]:
+    metric_health = {
+        "snerv_posenet_yuv6_pair_distill": {
+            "metric_observed": posenet_observed,
+            "lambda_active_observed": posenet_lambda_active,
+            "missing_metric_value": 0.0 if posenet_observed else 1.0,
+            "lambda_value": 0.5 if posenet_lambda_active else 0.0,
+        },
+        "snerv_segnet_last_frame_distill": {
+            "metric_observed": segnet_observed,
+            "lambda_active_observed": segnet_lambda_active,
+            "missing_metric_value": 0.0 if segnet_observed else 1.0,
+            "lambda_value": 0.75 if segnet_lambda_active else 0.0,
+        },
+    }
+    passed = all(
+        (
+            posenet_observed,
+            posenet_lambda_active,
+            segnet_observed,
+            segnet_lambda_active,
+        )
+    )
+    return {
+        "schema": "nerv_candidate_feedback_row.v1",
+        "created_utc": "2026-06-05T00:00:00+00:00",
+        "_source_path": "/ssd/nerv_candidate_byte_feedback_row.json",
+        "_source_sha256": "d" * 64,
+        "family": "snerv",
+        "snerv_scorer_domain_tether_passed": passed,
+        "snerv_scorer_domain_tether_blockers": (
+            [] if passed else ["snerv_scorer_domain_tether_missing_telemetry"]
+        ),
+        "snerv_scorer_domain_tether_health": {
+            "schema": "snerv_scorer_domain_tether_smoke_health.v1",
+            "passed": passed,
+            "metric_health": metric_health,
+            "missing_metrics": [],
+            "lambda_inactive_metrics": [],
+            "blockers": (
+                [] if passed else ["snerv_scorer_domain_tether_missing_telemetry"]
+            ),
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }

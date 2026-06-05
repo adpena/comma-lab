@@ -772,6 +772,47 @@ def test_long_training_campaign_plan_embeds_snerv_official_source_audit() -> Non
     assert "snerv_full_source_forward_authority: `False`" in markdown
 
 
+def test_long_training_campaign_plan_threads_source_forward_artifact_into_lf_hf_queue() -> None:
+    source_forward = _snerv_source_forward_artifact(
+        receiver_consumes_output2=True,
+        source_authority=False,
+        full_tub_parity=False,
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_official_source_forward_artifacts=(source_forward,),
+    )
+
+    queue = report["snerv_lf_hf_replacement_queue"]
+    state = queue["source_forward_evidence"]
+    assert report["snerv_official_source_forward_artifact_count"] == 1
+    assert state["receiver_payload_frame_replay_proven"] is True
+    assert state["receiver_frame_decode_consumes_output2"] is True
+    assert state["source_forward_replay_authority"] is False
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in queue["blockers"]
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in queue["blockers"]
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority" in queue["blockers"]
+    official = next(
+        row
+        for row in queue["queue_rows"]
+        if row["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in official["blockers"]
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in official["blockers"]
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in official["blockers"]
+    )
+    assert queue["score_claim"] is False
+    assert queue["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_blocks_legacy_snerv_ids_for_long_runs() -> None:
     snerv_budget = _snerv_budget()
     legacy = dict(snerv_budget["selected_candidates"][0])
@@ -6252,6 +6293,46 @@ def _passing_snerv_tether_smoke_report() -> dict:
             },
             "step_count": 2,
         },
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _snerv_source_forward_artifact(
+    *,
+    receiver_consumes_output2: bool,
+    source_authority: bool,
+    full_tub_parity: bool,
+) -> dict:
+    blockers = []
+    if not receiver_consumes_output2:
+        blockers.append("snerv_official_tub_output2_receiver_frame_decode_not_bound")
+    if not source_authority:
+        blockers.extend(
+            [
+                "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+                "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+            ]
+        )
+    return {
+        "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+        "generated_utc": "20260605T000000Z",
+        "_source_path": "/Volumes/VertigoDataTier/pact/snerv_forward_harness.json",
+        "_source_sha256": "a" * 64,
+        "full_tub_source_forward_parity_proven": bool(full_tub_parity),
+        "receiver_payload_frame_replay": {
+            "schema": "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay.v1",
+            "receiver_runtime_decode_proven": True,
+            "frame_producing_official_payload_replay_proven": True,
+            "receiver_frame_decode_consumes_output2": bool(receiver_consumes_output2),
+            "source_forward_replay_authority": bool(source_authority),
+            "decoded_frames_shape": [2, 3, 16, 24],
+            "decoded_frames_sha256": "b" * 64,
+            "payload_bytes": 13052,
+            "payload_sha256": "c" * 64,
+        },
+        "blockers": blockers,
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

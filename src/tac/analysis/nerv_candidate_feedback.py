@@ -32,6 +32,9 @@ HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA = "hinerv_archive_ladder_candidate_feedbac
 FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA = "nerv_full_video_mlx_scorer_feedback.v1"
 SNERV_RENDERER_NONDEGENERATE_PROOF_SCHEMA = "snerv_renderer_nondegenerate_proof.v1"
 SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT = 16
+SNERV_SCORER_TETHER_SMOKE_HEALTH_SCHEMA = (
+    "snerv_scorer_domain_tether_smoke_health.v1"
+)
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -266,15 +269,224 @@ def _snerv_trained_state_exportability(*sources: Any) -> bool | None:
 def _snerv_score_aware_training_telemetry_contract(
     native_export: Mapping[str, Any],
 ) -> dict[str, Any]:
-    direct = native_export.get("score_aware_long_training_telemetry_contract")
-    if isinstance(direct, Mapping):
-        return dict(direct)
-    training = native_export.get("score_aware_long_training")
-    if isinstance(training, Mapping):
-        contract = training.get("training_telemetry_contract")
-        if isinstance(contract, Mapping):
-            return dict(contract)
+    return _snerv_score_aware_training_telemetry_contract_from_sources(native_export)
+
+
+def _snerv_score_aware_training_telemetry_contract_from_sources(
+    *sources: Any,
+) -> dict[str, Any]:
+    for source in sources:
+        contract = _snerv_score_aware_training_telemetry_contract_from_source(
+            source,
+            seen=set(),
+        )
+        if contract:
+            return contract
     return {}
+
+
+def _snerv_score_aware_training_telemetry_contract_from_source(
+    source: Any,
+    *,
+    seen: set[int],
+) -> dict[str, Any]:
+    if not isinstance(source, Mapping):
+        return {}
+    identity = id(source)
+    if identity in seen:
+        return {}
+    seen.add(identity)
+    for key in (
+        "score_aware_long_training_telemetry_contract",
+        "training_telemetry_contract",
+        "snerv_score_aware_long_training_telemetry_contract",
+    ):
+        direct = source.get(key)
+        if isinstance(direct, Mapping):
+            return dict(direct)
+    training = source.get("score_aware_long_training")
+    if isinstance(training, Mapping):
+        contract = _snerv_score_aware_training_telemetry_contract_from_source(
+            training,
+            seen=seen,
+        )
+        if contract:
+            return contract
+    for key in ("score_aware_training", "snerv_mlx_native_export", "mlx_native_export"):
+        nested = source.get(key)
+        if isinstance(nested, Mapping):
+            contract = _snerv_score_aware_training_telemetry_contract_from_source(
+                nested,
+                seen=seen,
+            )
+            if contract:
+                return contract
+    return {}
+
+
+def _snerv_scorer_tether_smoke_gate_from_sources(*sources: Any) -> dict[str, Any]:
+    for source in sources:
+        gate = _snerv_scorer_tether_smoke_gate_from_source(source, seen=set())
+        if gate:
+            return gate
+    return {}
+
+
+def _snerv_scorer_tether_smoke_gate_from_source(
+    source: Any,
+    *,
+    seen: set[int],
+) -> dict[str, Any]:
+    if not isinstance(source, Mapping):
+        return {}
+    identity = id(source)
+    if identity in seen:
+        return {}
+    seen.add(identity)
+    for key in ("snerv_scorer_tether_smoke_gate", "scorer_tether_smoke_gate"):
+        gate = source.get(key)
+        if isinstance(gate, Mapping):
+            return dict(gate)
+    for key in (
+        "score_aware_training",
+        "score_aware_long_training",
+        "snerv_mlx_native_export",
+        "mlx_native_export",
+    ):
+        nested = source.get(key)
+        if isinstance(nested, Mapping):
+            gate = _snerv_scorer_tether_smoke_gate_from_source(nested, seen=seen)
+            if gate:
+                return gate
+    return {}
+
+
+def _snerv_metric_contract_keys(metric: str) -> tuple[str, str]:
+    if "segnet" in metric:
+        return "segnet_dual_metric_observed", "segnet_dual_lambda_active_observed"
+    return "posenet_dual_metric_observed", "posenet_dual_lambda_active_observed"
+
+
+def _snerv_scorer_tether_smoke_health(
+    *,
+    scorer_tether_gate: Mapping[str, Any],
+    telemetry_contract: Mapping[str, Any],
+    evidence_expected: bool,
+) -> dict[str, Any]:
+    if not evidence_expected and not scorer_tether_gate and not telemetry_contract:
+        return {}
+    blockers: list[str] = []
+    if not scorer_tether_gate:
+        blockers.extend(
+            [
+                "snerv_scorer_tether_smoke_report_missing",
+                "snerv_scorer_domain_tether_missing_telemetry",
+            ]
+        )
+    elif scorer_tether_gate.get("passed") is not True:
+        blockers.append("snerv_scorer_tether_smoke_failed")
+        blockers.extend(
+            str(blocker)
+            for blocker in scorer_tether_gate.get("blockers") or []
+            if str(blocker)
+        )
+    if telemetry_contract:
+        if telemetry_contract.get("passed") is not True:
+            blockers.append("snerv_score_aware_long_training_telemetry_contract_failed")
+            blockers.extend(
+                str(blocker)
+                for blocker in telemetry_contract.get("blockers") or []
+                if str(blocker)
+            )
+    elif evidence_expected:
+        blockers.append("snerv_score_aware_long_training_telemetry_contract_missing")
+
+    final_metrics: Mapping[str, Any] = {}
+    smoke_report = scorer_tether_gate.get("smoke_report")
+    if isinstance(smoke_report, Mapping):
+        metric_summary = smoke_report.get("metric_summary")
+        if isinstance(metric_summary, Mapping):
+            final = metric_summary.get("final")
+            if isinstance(final, Mapping):
+                final_metrics = final
+
+    gate_passed = bool(
+        scorer_tether_gate and scorer_tether_gate.get("passed") is True
+    )
+    contract_passed = bool(
+        telemetry_contract and telemetry_contract.get("passed") is True
+    )
+    metric_health: dict[str, Any] = {}
+    missing_metrics: list[str] = []
+    lambda_inactive_metrics: list[str] = []
+    for metric in _SNERV_SCORER_TETHER_METRICS:
+        missing_value = _float_or_none(
+            final_metrics.get(f"dual_ascent_missing_metric__{metric}")
+        )
+        lambda_value = _float_or_none(
+            final_metrics.get(f"dual_ascent_lambda__{metric}")
+        )
+        metric_key, lambda_key = _snerv_metric_contract_keys(metric)
+        metric_observed = (
+            missing_value is not None and float(missing_value) < 0.5
+        ) or bool(telemetry_contract.get(metric_key)) or bool(
+            gate_passed and contract_passed
+        )
+        lambda_active = (
+            lambda_value is not None
+            and abs(float(lambda_value)) > _SNERV_SCORER_TETHER_LAMBDA_ACTIVE_EPS
+        ) or bool(telemetry_contract.get(lambda_key)) or bool(
+            gate_passed and contract_passed
+        )
+        if not metric_observed:
+            missing_metrics.append(metric)
+        if not lambda_active:
+            lambda_inactive_metrics.append(metric)
+        metric_health[metric] = {
+            "missing_metric_value": missing_value,
+            "lambda_value": lambda_value,
+            "metric_observed": bool(metric_observed),
+            "lambda_active_observed": bool(lambda_active),
+        }
+
+    if missing_metrics:
+        blockers.append("snerv_scorer_domain_tether_missing_telemetry")
+    if "snerv_posenet_yuv6_pair_distill" in missing_metrics:
+        blockers.append("snerv_posenet_yuv6_pair_distill_metric_missing_telemetry")
+    if "snerv_segnet_last_frame_distill" in missing_metrics:
+        blockers.append("snerv_segnet_last_frame_distill_metric_missing_telemetry")
+    if lambda_inactive_metrics:
+        blockers.append("snerv_scorer_domain_tether_lambda_inactive_telemetry")
+    if "snerv_segnet_last_frame_distill" in lambda_inactive_metrics:
+        blockers.append(
+            "snerv_score_aware_long_training_dual_segnet_lambda_never_active"
+        )
+    if "snerv_posenet_yuv6_pair_distill" in lambda_inactive_metrics:
+        blockers.append(
+            "snerv_score_aware_long_training_dual_posenet_lambda_never_active"
+        )
+
+    blockers = _dedupe_strings(blockers)
+    return {
+        "schema": SNERV_SCORER_TETHER_SMOKE_HEALTH_SCHEMA,
+        "source": "snerv_score_aware_training_scorer_tether_smoke_gate",
+        "evidence_expected": bool(evidence_expected),
+        "scorer_tether_gate_attached": bool(scorer_tether_gate),
+        "scorer_tether_gate_passed": (
+            scorer_tether_gate.get("passed") is True if scorer_tether_gate else None
+        ),
+        "telemetry_contract_attached": bool(telemetry_contract),
+        "telemetry_contract_passed": (
+            telemetry_contract.get("passed") is True if telemetry_contract else None
+        ),
+        "metric_health": metric_health,
+        "missing_metrics": missing_metrics,
+        "lambda_inactive_metrics": lambda_inactive_metrics,
+        "passed": not blockers,
+        "degenerate_renderer_risk_detected": bool(blockers),
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
 
 
 def _snerv_receiver_value_domain_passed(profile: Any) -> bool | None:
@@ -625,8 +837,45 @@ def build_nerv_candidate_feedback_row(
         snerv_native_export.get("receiver_reconstruction")
         or score_aware_training.get("mlx_native_receiver_reconstruction")
     )
+    snerv_scorer_tether_gate = _snerv_scorer_tether_smoke_gate_from_sources(
+        snerv_native_export,
+        score_aware_training,
+        runner_report,
+    )
+    snerv_score_aware_training_telemetry_contract = (
+        _snerv_score_aware_training_telemetry_contract_from_sources(
+            snerv_native_export,
+            score_aware_training,
+            runner_report,
+        )
+    )
+    snerv_native_export_for_proof = dict(snerv_native_export)
+    if (
+        snerv_scorer_tether_gate
+        and "snerv_scorer_tether_smoke_gate" not in snerv_native_export_for_proof
+    ):
+        snerv_native_export_for_proof["snerv_scorer_tether_smoke_gate"] = (
+            snerv_scorer_tether_gate
+        )
+    if (
+        snerv_score_aware_training_telemetry_contract
+        and "score_aware_long_training_telemetry_contract"
+        not in snerv_native_export_for_proof
+    ):
+        snerv_native_export_for_proof[
+            "score_aware_long_training_telemetry_contract"
+        ] = snerv_score_aware_training_telemetry_contract
+    snerv_family_key = _family_key(str(runner_report.get("execute_family") or ""))
+    snerv_tether_evidence_expected = bool(
+        snerv_family_key == "snerv" and (snerv_native_export or score_aware_training)
+    )
+    snerv_scorer_tether_health = _snerv_scorer_tether_smoke_health(
+        scorer_tether_gate=snerv_scorer_tether_gate,
+        telemetry_contract=snerv_score_aware_training_telemetry_contract,
+        evidence_expected=snerv_tether_evidence_expected,
+    )
     snerv_renderer_nondegenerate_proof = _snerv_renderer_nondegenerate_proof(
-        snerv_native_export
+        snerv_native_export_for_proof
     )
     native_byte_feedback = _snerv_native_file_backed_byte_feedback(
         family=runner_report.get("execute_family"),
@@ -696,6 +945,10 @@ def build_nerv_candidate_feedback_row(
             ],
             *[
                 str(blocker)
+                for blocker in snerv_scorer_tether_health.get("blockers") or []
+            ],
+            *[
+                str(blocker)
                 for blocker in snerv_official_checkpoint_mapping.get("blockers")
                 or []
             ],
@@ -712,7 +965,10 @@ def build_nerv_candidate_feedback_row(
         ]
     )
     direct_feedback_blockers = _dedupe_strings(
-        hi_nerv_receiver_cache_control.get("direct_feedback_blockers") or []
+        [
+            *list(hi_nerv_receiver_cache_control.get("direct_feedback_blockers") or []),
+            *list(snerv_scorer_tether_health.get("blockers") or []),
+        ]
     )
     recommended_launch_mutations = _dedupe_strings(
         hi_nerv_receiver_cache_control.get("recommended_launch_mutations") or []
@@ -997,6 +1253,21 @@ def build_nerv_candidate_feedback_row(
         ),
         "snerv_mlx_native_receiver_reconstruction": (
             snerv_native_receiver_reconstruction or None
+        ),
+        "snerv_scorer_tether_smoke_gate": snerv_scorer_tether_gate or None,
+        "snerv_score_aware_long_training_telemetry_contract": (
+            snerv_score_aware_training_telemetry_contract or None
+        ),
+        "snerv_scorer_domain_tether_health": (
+            snerv_scorer_tether_health or None
+        ),
+        "snerv_scorer_domain_tether_passed": (
+            snerv_scorer_tether_health.get("passed")
+            if snerv_scorer_tether_health
+            else None
+        ),
+        "snerv_scorer_domain_tether_blockers": list(
+            snerv_scorer_tether_health.get("blockers") or []
         ),
         "snerv_renderer_nondegenerate_proof": (
             snerv_renderer_nondegenerate_proof or None

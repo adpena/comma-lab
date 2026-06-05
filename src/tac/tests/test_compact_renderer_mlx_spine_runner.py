@@ -2356,6 +2356,9 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
                     "dual_ascent_missing_metric__hi_nerv_scorer_input_distribution_guard": 0.0,
+                    "dual_ascent_lambda__hi_nerv_segnet_last_frame_distill": 0.125,
+                    "dual_ascent_lambda__hi_nerv_posenet_yuv6_pair_distill": 0.25,
+                    "dual_ascent_lambda__hi_nerv_decoder_payload_section_bytes": 0.5,
                 },
             },
             sort_keys=True,
@@ -2382,8 +2385,11 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["blockers"] == []
     assert contract["segnet_dual_metric_observed"] is True
     assert contract["posenet_dual_metric_observed"] is True
+    assert contract["segnet_dual_lambda_active_observed"] is True
+    assert contract["posenet_dual_lambda_active_observed"] is True
     assert contract["scorer_input_guard_dual_metric_observed"] is True
     assert contract["section_rate_metric_observed"] is True
+    assert contract["section_byte_dual_lambda_active_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["expected_scorer_input_shape_tether_metric"] is True
     assert contract["scorer_input_shape_tether_metric_observed"] is True
@@ -2399,6 +2405,45 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract[
         "segnet_direct_live_max_candidate_occupied_class_fraction"
     ] == pytest.approx(0.6)
+
+
+def test_hinerv_training_telemetry_contract_rejects_section_rate_without_section_lambda(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "train_time_section_rate_score__decoder_payload": 0.002,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["section_rate_metric_observed"] is True
+    assert contract["section_byte_dual_lambda_active_observed"] is False
+    assert (
+        "hi_nerv_score_aware_training_section_byte_dual_lambda_never_active"
+        in contract["blockers"]
+    )
 
 
 def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_metrics(

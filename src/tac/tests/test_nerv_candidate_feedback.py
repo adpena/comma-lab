@@ -1193,6 +1193,10 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert row["snerv_renderer_nondegenerate_proof_passed"] is True
     assert row["snerv_renderer_nondegenerate_proof"]["measured_num_pairs"] == 600
     assert row["snerv_renderer_nondegenerate_blockers"] == []
+    assert row["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert row["snerv_score_aware_long_training_telemetry_contract"]["passed"] is True
+    assert row["snerv_scorer_domain_tether_passed"] is True
+    assert row["snerv_scorer_domain_tether_blockers"] == []
     assert row["snerv_trained_state_exportable"] is True
     assert row["snerv_checkpoint_trained_state_exportable"] is True
     assert row["snerv_score_aware_long_training_trained_state_exportable"] is True
@@ -1216,6 +1220,78 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert native_feedback["score_claim"] is False
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_candidate_feedback_harvests_runner_level_tether_evidence(
+    tmp_path: Path,
+) -> None:
+    report = _snerv_native_runner_report(
+        tmp_path,
+        required_pair_proof=True,
+        native_num_pairs=600,
+    )
+    native = report["snerv_mlx_native_export"]
+    gate = native.pop("snerv_scorer_tether_smoke_gate")
+    contract = native.pop("score_aware_long_training_telemetry_contract")
+    native["score_aware_long_training"].pop("training_telemetry_contract")
+    report["score_aware_training"] = {
+        "schema": "compact_snerv_native_mlx_long_training_direct.v1",
+        "scorer_tether_smoke_gate": gate,
+        "training_telemetry_contract": contract,
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert row["snerv_score_aware_long_training_telemetry_contract"]["passed"] is True
+    assert row["snerv_scorer_domain_tether_health"]["schema"] == (
+        "snerv_scorer_domain_tether_smoke_health.v1"
+    )
+    assert row["snerv_scorer_domain_tether_passed"] is True
+    assert row["snerv_scorer_domain_tether_blockers"] == []
+    assert "snerv_scorer_domain_tether_missing_telemetry" not in row[
+        "direct_feedback_blockers"
+    ]
+    assert row["snerv_renderer_nondegenerate_proof_passed"] is True
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_candidate_feedback_fails_closed_without_tether_evidence(
+    tmp_path: Path,
+) -> None:
+    report = _snerv_native_runner_report(
+        tmp_path,
+        required_pair_proof=True,
+        native_num_pairs=600,
+    )
+    native = report["snerv_mlx_native_export"]
+    native.pop("snerv_scorer_tether_smoke_gate")
+    native.pop("score_aware_long_training_telemetry_contract")
+    native["score_aware_long_training"].pop("training_telemetry_contract")
+    report["score_aware_training"] = {
+        "schema": "compact_snerv_native_mlx_long_training_direct.v1",
+        "status": "score_aware_training_attached_without_tether_evidence",
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["snerv_scorer_domain_tether_passed"] is False
+    assert "snerv_scorer_tether_smoke_report_missing" in row[
+        "snerv_scorer_domain_tether_blockers"
+    ]
+    assert "snerv_scorer_domain_tether_missing_telemetry" in row[
+        "direct_feedback_blockers"
+    ]
+    assert "snerv_score_aware_long_training_telemetry_contract_missing" in row[
+        "direct_feedback_blockers"
+    ]
+    assert row["snerv_renderer_nondegenerate_proof_passed"] is False
+    assert "snerv_renderer_nondegenerate_tether_gate_missing_or_failed" in row[
+        "blockers"
+    ]
+    assert row["score_claim"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
