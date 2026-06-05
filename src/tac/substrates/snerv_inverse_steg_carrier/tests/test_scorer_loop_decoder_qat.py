@@ -12,7 +12,13 @@ import pytest
 import torch
 
 import tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat as qat_mod
-from tac.analysis.snerv_step_map_coder import encode_step_maps
+from tac.analysis.snerv_step_map_coder import (
+    ADAPTIVE_SCHEMA as SNERV_ADAPTIVE_STEP_MAP_SCHEMA,
+)
+from tac.analysis.snerv_step_map_coder import (
+    encode_step_maps,
+    encode_step_maps_waterfill,
+)
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
     SNERV_SPECTRA_PRESERVING_ADAPTER,
     HfGenerationDecoder,
@@ -237,6 +243,11 @@ def test_prepare_state_projects_pair_saliency_once_per_pair(monkeypatch) -> None
 
     assert calls == [((4, 4), 1), ((4, 4), 1)]
     assert len(state.step_maps) == 12
+    assert state.step_map_packet.startswith(b"SNSA1")
+    assert state.step_map_packet_schema == SNERV_ADAPTIVE_STEP_MAP_SCHEMA
+    assert state.step_map_coder_mode == "scorer_loop_qat_lf_step_map_waterfill"
+    assert state.step_map_waterfill_bits_per_coeff == pytest.approx(2.0)
+    assert state.step_map_coder_groups
 
 
 def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
@@ -389,18 +400,27 @@ def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
         adapter=SNERV_SPECTRA_PRESERVING_ADAPTER,
     )
     step_maps = tuple(np.ones((2, 2), dtype=np.float32) for _ in range(6))
+    step_packet = encode_step_maps_waterfill(
+        list(step_maps),
+        map_importance=np.ones(len(step_maps), dtype=np.float64),
+        target_bits_per_coeff=2.0,
+    )
     prepared = _PreparedState(
         pairs=torch.zeros((1, 2, 3, 4, 4), dtype=torch.float32),
         codes=(),
         lf_quant_planes=tuple(np.zeros((2, 2), dtype=np.int64) for _ in range(6)),
         lf_zero_points=tuple(0.0 for _ in range(6)),
         step_maps=step_maps,
-        step_map_packet=encode_step_maps(list(step_maps), bins=4).packet,
+        step_map_packet=step_packet.packet,
         baseline_decoder=HfGenerationDecoder.zeros(1, model_size=cfg),
         model_size=cfg,
         levels=1,
         wavelet="haar",
         orig_hw=(4, 4),
+        step_map_packet_schema=SNERV_ADAPTIVE_STEP_MAP_SCHEMA,
+        step_map_coder_mode="scorer_loop_qat_lf_step_map_waterfill",
+        step_map_waterfill_bits_per_coeff=2.0,
+        step_map_coder_groups=tuple(dict(group) for group in step_packet.groups),
     )
 
     archive = _pack_receiver_archive(
@@ -421,6 +441,14 @@ def test_pack_receiver_archive_records_scorer_loop_adapter_config() -> None:
     assert archive.metadata["lf_payload_codec_selection_report"]["section_bytes"] == (
         archive.section_bytes["lf_payload"]
     )
+    assert archive.metadata["step_map_packet_schema"] == (
+        SNERV_ADAPTIVE_STEP_MAP_SCHEMA
+    )
+    assert archive.metadata["step_map_coder_mode"] == (
+        "scorer_loop_qat_lf_step_map_waterfill"
+    )
+    assert archive.metadata["step_map_waterfill_bits_per_coeff"] == pytest.approx(2.0)
+    assert archive.metadata["step_map_coder_groups"]
     assert archive.section_bytes["lf_payload"] > 0
     assert archive.metadata["decoder_feature_count"] == cfg.feature_count
 

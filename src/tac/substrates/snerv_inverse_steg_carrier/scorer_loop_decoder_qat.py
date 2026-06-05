@@ -28,7 +28,13 @@ from tac.analysis.score_exact_saliency import (
     decode_real_pairs,
     load_score_exact_scorers,
 )
-from tac.analysis.snerv_step_map_coder import decode_step_maps, encode_step_maps
+from tac.analysis.snerv_step_map_coder import (
+    ADAPTIVE_SCHEMA as SNERV_ADAPTIVE_STEP_MAP_SCHEMA,
+)
+from tac.analysis.snerv_step_map_coder import (
+    decode_step_maps,
+    encode_step_maps_waterfill,
+)
 from tac.substrates.snerv_inverse_steg_carrier.advisory import CONTEST_BYTE_PRICE
 from tac.substrates.snerv_inverse_steg_carrier.allocation import (
     allocate_lf_linf,
@@ -310,6 +316,10 @@ class _PreparedState:
     orig_hw: tuple[int, int]
     source_pair_indices: tuple[int, ...] = ()
     step_map_bins: int = 16
+    step_map_packet_schema: str = "snerv_step_map_coder.v1"
+    step_map_coder_mode: str = "legacy_standard_log_quantized_step_maps"
+    step_map_waterfill_bits_per_coeff: float | None = None
+    step_map_coder_groups: tuple[dict[str, Any], ...] = ()
 
 
 def run_snerv_scorer_loop_decoder_qat_smoke(
@@ -1635,6 +1645,7 @@ def _prepare_state(
     )
 
     raw_step_maps: list[np.ndarray] = []
+    step_map_importance: list[float] = []
     for pair_idx in range(n_pairs):
         seg = compute_s_seg_flip_risk(segnet, pairs[pair_idx], diagnostics=False)
         pose = compute_s_pose_fisher(posenet, pairs[pair_idx], diagnostics=False)
@@ -1647,14 +1658,25 @@ def _prepare_state(
             levels=levels,
             wavelet=wavelet,
         )
+        saliency_arr = np.asarray(
+            getattr(lf_saliency, "lf_saliency", lf_saliency),
+            dtype=np.float64,
+        )
+        map_importance = max(float(np.mean(np.abs(saliency_arr))), 1.0e-12)
         for rec_pair, _frame_idx, _channel_idx, pyr in records:
             if rec_pair != pair_idx:
                 continue
             target_bits = float(pyr.lf.size) * float(target_bits_per_coeff)
             alloc = allocate_lf_linf(lf_saliency, target_bits=target_bits, min_step=0.5)
             raw_step_maps.append(alloc.steps.reshape(pyr.lf.shape))
+            step_map_importance.append(map_importance)
 
-    step_packet = encode_step_maps(raw_step_maps, bins=step_map_bins)
+    step_map_waterfill_bits = float(np.log2(max(int(step_map_bins), 2)))
+    step_packet = encode_step_maps_waterfill(
+        raw_step_maps,
+        map_importance=np.asarray(step_map_importance, dtype=np.float64),
+        target_bits_per_coeff=step_map_waterfill_bits,
+    )
     receiver_step_maps = decode_step_maps(step_packet.packet)
     if len(receiver_step_maps) != len(records):
         raise SnervScorerLoopDecoderQatError("decoded step-map count mismatch")
@@ -1702,6 +1724,10 @@ def _prepare_state(
         wavelet=wavelet,
         orig_hw=(h, w),
         step_map_bins=int(step_map_bins),
+        step_map_packet_schema=SNERV_ADAPTIVE_STEP_MAP_SCHEMA,
+        step_map_coder_mode="scorer_loop_qat_lf_step_map_waterfill",
+        step_map_waterfill_bits_per_coeff=step_map_waterfill_bits,
+        step_map_coder_groups=tuple(dict(group) for group in step_packet.groups),
     )
 
 
@@ -1987,6 +2013,15 @@ def _pack_receiver_archive(
             "lf_payload_codec_requested": lf_payload_codec_requested,
             "lf_payload_codec_selected": lf_payload_codec_selected,
             "lf_payload_codec_selection_report": lf_payload_codec_report,
+            "step_map_packet_schema": prepared.step_map_packet_schema,
+            "step_map_coder_mode": prepared.step_map_coder_mode,
+            "step_map_coder_bins": prepared.step_map_bins,
+            "step_map_waterfill_bits_per_coeff": (
+                prepared.step_map_waterfill_bits_per_coeff
+            ),
+            "step_map_coder_groups": [
+                dict(group) for group in prepared.step_map_coder_groups
+            ],
             "snerv_model_size_adapter": prepared.model_size.adapter,
             "snerv_spectra_preserving_adapter_enabled": (
                 prepared.model_size.adapter == SNERV_SPECTRA_PRESERVING_ADAPTER

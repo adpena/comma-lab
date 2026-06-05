@@ -1716,6 +1716,7 @@ class SnervMlxNativeArtifact:
     step_map_bits_per_coeff: float
     step_map_packet_schema: str
     step_map_coder_mode: str
+    step_map_waterfill_bits_per_coeff: float | None
     step_map_coder_groups: tuple[dict[str, Any], ...]
     decoder_payload_codec: str
     lf_payload_codec: str
@@ -2938,6 +2939,12 @@ def train_export_snerv_mlx_native(
         step_map_bits_per_coeff=step_map_bits_per_coeff,
         step_map_packet_schema=str(selected_archive_metadata.get("step_map_packet_schema") or ""),
         step_map_coder_mode=str(selected_archive_metadata.get("step_map_coder_mode") or ""),
+        step_map_waterfill_bits_per_coeff=(
+            float(selected_archive_metadata["step_map_waterfill_bits_per_coeff"])
+            if selected_archive_metadata.get("step_map_waterfill_bits_per_coeff")
+            is not None
+            else None
+        ),
         step_map_coder_groups=tuple(
             dict(group) for group in selected_archive_metadata.get("step_map_coder_groups") or ()
         ),
