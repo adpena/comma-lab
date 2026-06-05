@@ -42,6 +42,7 @@ def _patch_receiver_package(
     monkeypatch: pytest.MonkeyPatch,
     *,
     archive_size: int,
+    captured: dict[str, object] | None = None,
 ) -> None:
     def fake_storage_preflight(**_kwargs):
         return {
@@ -52,7 +53,9 @@ def _patch_receiver_package(
             "blockers": [],
         }
 
-    def fake_export_package(*, output_dir, **_kwargs):
+    def fake_export_package(*, output_dir, **kwargs):
+        if captured is not None:
+            captured.update(kwargs)
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
         archive = out / "archive.zip"
@@ -76,6 +79,33 @@ def _patch_receiver_package(
 
     monkeypatch.setattr(mod, "build_snerv_mlx_native_storage_preflight", fake_storage_preflight)
     monkeypatch.setattr(mod, "export_snerv_archive_bound_candidate_package", fake_export_package)
+
+
+def test_export_snerv_mlx_archive_repackages_verbose_packet_to_snar2(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    packet = _tiny_checkpoint_packet(hard_byte_ceiling=100_000)
+    captured: dict[str, object] = {}
+    _patch_receiver_package(monkeypatch, archive_size=64, captured=captured)
+
+    package = mod.export_snerv_mlx_archive(
+        {"packet": packet.packet},
+        tmp_path / "compact_export",
+        repo_root=tmp_path,
+    )
+
+    exported_packet = captured["packet"]
+    assert isinstance(exported_packet, bytes)
+    assert exported_packet.startswith(b"SNAR2")
+    assert len(exported_packet) < len(packet.packet)
+    repack = package["snerv_submission_archive_repack"]
+    assert repack["repacked"] is True
+    assert repack["input_packet_schema"] == "snerv_inverse_steg_archive.v1"
+    assert repack["output_packet_schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert repack["bytes_saved"] == len(packet.packet) - len(exported_packet)
+    assert repack["lossless_receiver_section_transform"] is True
+    assert package["receiver_proof"]["runtime_consumption_proof_passed"] is True
 
 
 def _patch_package_missing_archive_bytes(monkeypatch: pytest.MonkeyPatch) -> None:

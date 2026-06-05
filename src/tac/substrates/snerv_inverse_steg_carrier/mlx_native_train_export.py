@@ -60,6 +60,7 @@ from tac.substrates.snerv_inverse_steg_carrier.allocation import (
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA,
     OFFICIAL_MFU_HFR_TUB_REQUIRED_TENSOR_KEYS,
+    SECTION_ORDER,
     SnervArchivePacket,
     decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frames,
@@ -71,6 +72,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     inspect_decoder_payload_header,
     inspect_lf_quant_payload_header,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
     resolve_decoder_payload_codec,
     unpack_snerv_archive,
 )
@@ -3306,20 +3308,31 @@ def export_snerv_mlx_archive(
     receiver_proof_timeout_seconds: int = 1800,
     hard_byte_ceiling: int | None = None,
     allow_over_hard_byte_ceiling_for_measurement: bool = False,
+    submission_archive_format: str = "snar2",
 ) -> dict[str, Any]:
-    """Export SNAR1 packet bytes through the canonical archive-bound package."""
+    """Export receiver packet bytes through the canonical archive-bound package.
+
+    Training packets keep rich JSON metadata for analysis.  Submission packets
+    default to SNAR2 so fixed receiver grammar and non-signal labels are paid in
+    ``inflate.py`` code instead of ``archive.zip`` bytes.
+    """
 
     root = _repo_root(repo_root)
     out = Path(output_dir).expanduser().resolve(strict=False)
-    packet = _packet_bytes_from_artifact(model_or_artifact)
-    decoded = unpack_snerv_archive(packet)
+    input_packet = _packet_bytes_from_artifact(model_or_artifact)
+    decoded = unpack_snerv_archive(input_packet)
     export_hard_byte_ceiling = _snerv_export_hard_byte_ceiling(
         explicit=hard_byte_ceiling,
         metadata=decoded.metadata,
     )
+    packet, submission_repack = _snerv_submission_packet_for_export(
+        input_packet,
+        submission_archive_format=submission_archive_format,
+    )
+    export_decoded = unpack_snerv_archive(packet)
     storage = build_snerv_mlx_native_storage_preflight(
         output_dir=out,
-        n_pairs=int(decoded.metadata.get("n_pairs", 0)),
+        n_pairs=int(export_decoded.metadata.get("n_pairs", decoded.metadata.get("n_pairs", 0))),
         packet_bytes=len(packet),
     )
     if storage["preflight_passed"] is not True:
@@ -3335,6 +3348,7 @@ def export_snerv_mlx_archive(
         receiver_proof_timeout_seconds=receiver_proof_timeout_seconds,
     )
     package["snerv_mlx_native_storage_preflight"] = storage
+    package["snerv_submission_archive_repack"] = submission_repack
     _enforce_snerv_mlx_archive_hard_byte_ceiling(
         package,
         output_dir=out,
@@ -3344,6 +3358,70 @@ def export_snerv_mlx_archive(
         ),
     )
     return package
+
+
+def _snerv_submission_packet_for_export(
+    packet: bytes,
+    *,
+    submission_archive_format: str,
+) -> tuple[bytes, dict[str, Any]]:
+    """Return receiver packet bytes for archive-bound export.
+
+    ``snar2`` is a lossless container transform: the four receiver sections are
+    byte-identical, but the outer self-describing JSON header is replaced by a
+    fixed binary header whose constants live in receiver code.
+    """
+
+    requested = str(submission_archive_format or "snar2").strip().lower()
+    decoded = unpack_snerv_archive(packet)
+    base = {
+        "schema": "snerv_submission_archive_repack.v1",
+        "requested_archive_format": requested,
+        "input_packet_schema": decoded.schema,
+        "input_packet_bytes": len(packet),
+        "input_packet_sha256": _sha256_bytes(packet),
+        "section_sha256": {
+            name: _sha256_bytes(decoded.sections[name]) for name in SECTION_ORDER
+        },
+        "lossless_receiver_section_transform": True,
+        **FALSE_AUTHORITY,
+    }
+    if requested in {"none", "input", "preserve", "snar1"}:
+        return bytes(packet), {
+            **base,
+            "output_packet_schema": decoded.schema,
+            "output_packet_bytes": len(packet),
+            "output_packet_sha256": _sha256_bytes(packet),
+            "repacked": False,
+            "bytes_saved": 0,
+            "blockers": [],
+        }
+    if requested not in {"snar2", "compact", "fixed_header"}:
+        raise SnervMlxNativeExportError(
+            f"unsupported SNeRV submission archive format: {submission_archive_format!r}"
+        )
+    compact = pack_snerv_archive_snar2(
+        metadata_payload=decoded.sections["metadata_payload"],
+        lf_payload=decoded.sections["lf_payload"],
+        decoder_payload=decoded.sections["decoder_payload"],
+        step_map_packet=decoded.sections["step_map_packet"],
+        metadata=decoded.metadata,
+    ).packet
+    compact_decoded = unpack_snerv_archive(compact)
+    for name in SECTION_ORDER:
+        if compact_decoded.sections[name] != decoded.sections[name]:
+            raise SnervMlxNativeExportError(
+                f"SNAR2 repack mutated receiver section {name!r}"
+            )
+    return compact, {
+        **base,
+        "output_packet_schema": compact_decoded.schema,
+        "output_packet_bytes": len(compact),
+        "output_packet_sha256": _sha256_bytes(compact),
+        "repacked": compact != packet,
+        "bytes_saved": len(packet) - len(compact),
+        "blockers": [],
+    }
 
 
 def _snerv_export_hard_byte_ceiling(

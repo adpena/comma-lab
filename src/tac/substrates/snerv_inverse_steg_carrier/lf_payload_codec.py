@@ -39,6 +39,10 @@ SNERV_LF_PAYLOAD_INTN_CODEC_PROOF = (
     "snerv_lf_quant_payload.v2_receiver_visible_exact_intn_codec"
 )
 _HEADER = struct.Struct("<4sBI")
+_JSON_HEADER_VERSION = 1
+_BINARY_HEADER_VERSION = 2
+_BINARY_HEADER_MAGIC = b"SQB2"
+_SHA256_DIGEST_BYTES = 32
 _SUPPORTED_MODES = (
     "raw_i64",
     "sparse_signed_varint",
@@ -58,6 +62,8 @@ _SUPPORTED_MODES = (
     "signed_int4_escape_varint",
     "signed_int8_escape_varint",
 )
+_MODE_TO_CODE = {mode: idx for idx, mode in enumerate(_SUPPORTED_MODES)}
+_CODE_TO_MODE = {idx: mode for mode, idx in _MODE_TO_CODE.items()}
 SNERV_LF_BROTLI_AUTO_Q11_MAX_INPUT_BYTES = 1_048_576
 SNERV_LF_LZMA_AUTO_EXTREME_MAX_INPUT_BYTES = 1_048_576
 _PORTFOLIO_AUTO_WRAPPERS = ("none", "brotli_auto", "lzma_auto")
@@ -72,6 +78,8 @@ _SUPPORTED_WRAPPERS = (
     "lzma_auto",
     "lzma_extreme",
 )
+_WRAPPER_TO_CODE = {wrapper: idx for idx, wrapper in enumerate(_SUPPORTED_WRAPPERS)}
+_CODE_TO_WRAPPER = {idx: wrapper for wrapper, idx in _WRAPPER_TO_CODE.items()}
 _ESCAPE_HEADER = struct.Struct("<I")
 
 
@@ -105,6 +113,8 @@ class LfPayloadCodecReport:
     packet_bytes: int
     raw_i64_bytes: int
     payload_bytes: int
+    header_format: str
+    header_bytes: int
     mode_histogram: dict[str, int]
     wrapper_histogram: dict[str, int]
     plane_rows: tuple[LfPlaneCodecRow, ...]
@@ -123,6 +133,7 @@ def encode_lf_quant_payload_v2(
     *,
     mode: str = "portfolio_auto",
     wrapper: str = "portfolio_auto",
+    header_format: str = "binary",
 ) -> bytes:
     """Encode signed LF planes losslessly with a measured integer portfolio."""
 
@@ -130,6 +141,7 @@ def encode_lf_quant_payload_v2(
         lf_quant_planes,
         mode=mode,
         wrapper=wrapper,
+        header_format=header_format,
     )
     return packet
 
@@ -139,6 +151,7 @@ def encode_lf_quant_payload_v2_with_report(
     *,
     mode: str = "portfolio_auto",
     wrapper: str = "portfolio_auto",
+    header_format: str = "binary",
 ) -> tuple[bytes, LfPayloadCodecReport]:
     """Encode and return packet plus byte-accounting report."""
 
@@ -203,11 +216,7 @@ def encode_lf_quant_payload_v2_with_report(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
-    header_bytes = json.dumps(header, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    packet = _HEADER.pack(SNERV_LF_QUANT_V2_MAGIC, 1, len(header_bytes))
-    packet += header_bytes + bytes(payload)
+    packet = _pack_packet(header, bytes(payload), header_format=header_format)
     report = _build_report(packet, plane_rows, payload_bytes=len(payload))
     return packet, report
 
@@ -513,18 +522,89 @@ def _decode_plane_payload(
     return _decode_plane_unwrapped(raw, mode=mode, count=count)
 
 
+def _pack_packet(
+    header: Mapping[str, Any],
+    payload: bytes,
+    *,
+    header_format: str,
+) -> bytes:
+    normalized = str(header_format).strip().lower()
+    if normalized in {"auto", "binary", "compact", "v2_binary", "binary_v2"}:
+        header_bytes = _encode_binary_header(header)
+        version = _BINARY_HEADER_VERSION
+    elif normalized in {"json", "legacy_json", "v1_json", "json_v1"}:
+        header_bytes = json.dumps(
+            header,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        version = _JSON_HEADER_VERSION
+    else:
+        raise SnervLfPayloadCodecError(
+            f"unsupported LF v2 header_format: {header_format!r}"
+        )
+    return (
+        _HEADER.pack(SNERV_LF_QUANT_V2_MAGIC, version, len(header_bytes))
+        + header_bytes
+        + bytes(payload)
+    )
+
+
+def _encode_binary_header(header: Mapping[str, Any]) -> bytes:
+    planes = list(header.get("planes") or ())
+    if not planes:
+        raise SnervLfPayloadCodecError("LF binary header needs at least one plane")
+    out = bytearray(_BINARY_HEADER_MAGIC)
+    out.extend(encode_varint(len(planes)))
+    out.extend(encode_varint(int(header["payload_bytes"])))
+    out.extend(_sha256_hex_to_bytes(str(header["payload_sha256"])))
+    for plane in planes:
+        shape = tuple(int(v) for v in plane["shape"])
+        if len(shape) != 2 or shape[0] <= 0 or shape[1] <= 0:
+            raise SnervLfPayloadCodecError(
+                f"LF binary header only supports positive 2-D planes; got {shape}"
+            )
+        mode = str(plane["mode"])
+        wrapper = str(plane["wrapper"])
+        try:
+            mode_code = _MODE_TO_CODE[mode]
+            wrapper_code = _WRAPPER_TO_CODE[wrapper]
+        except KeyError as exc:
+            raise SnervLfPayloadCodecError(
+                f"unsupported LF binary header codec field: {exc.args[0]!r}"
+            ) from exc
+        payload_bytes = int(plane["payload_bytes"])
+        if payload_bytes <= 0:
+            raise SnervLfPayloadCodecError("LF binary plane payload must be non-empty")
+        out.extend(encode_varint(shape[0]))
+        out.extend(encode_varint(shape[1]))
+        out.append(mode_code)
+        out.append(wrapper_code)
+        out.extend(encode_varint(payload_bytes))
+        out.extend(_sha256_hex_to_bytes(str(plane["decoded_sha256"])))
+    return bytes(out)
+
+
 def _read_packet(packet: bytes) -> tuple[dict[str, Any], bytes]:
     blob = bytes(packet)
     if len(blob) < _HEADER.size:
         raise SnervLfPayloadCodecError("LF v2 payload too short")
     magic, version, header_len = _HEADER.unpack(blob[: _HEADER.size])
-    if magic != SNERV_LF_QUANT_V2_MAGIC or version != 1:
+    if magic != SNERV_LF_QUANT_V2_MAGIC:
         raise SnervLfPayloadCodecError("unsupported LF v2 payload envelope")
     header_start = _HEADER.size
     header_end = header_start + int(header_len)
     if header_end > len(blob):
         raise SnervLfPayloadCodecError("LF v2 header exceeds packet")
-    header = json.loads(blob[header_start:header_end].decode("utf-8"))
+    header_blob = blob[header_start:header_end]
+    if version == _JSON_HEADER_VERSION:
+        header = json.loads(header_blob.decode("utf-8"))
+        header_format = "json"
+    elif version == _BINARY_HEADER_VERSION:
+        header = _decode_binary_header(header_blob)
+        header_format = "binary"
+    else:
+        raise SnervLfPayloadCodecError("unsupported LF v2 payload envelope")
     if header.get("schema") != SNERV_LF_QUANT_V2_SCHEMA:
         raise SnervLfPayloadCodecError("unsupported LF v2 schema")
     body = blob[header_end:]
@@ -532,7 +612,105 @@ def _read_packet(packet: bytes) -> tuple[dict[str, Any], bytes]:
         raise SnervLfPayloadCodecError("LF v2 payload byte count mismatch")
     if _sha256(body) != str(header.get("payload_sha256")):
         raise SnervLfPayloadCodecError("LF v2 payload sha256 mismatch")
+    header["header_format"] = header_format
+    header["header_bytes"] = int(header_len)
     return header, body
+
+
+def _decode_binary_header(blob: bytes) -> dict[str, Any]:
+    if not blob.startswith(_BINARY_HEADER_MAGIC):
+        raise SnervLfPayloadCodecError("unsupported LF v2 binary header magic")
+    pos = len(_BINARY_HEADER_MAGIC)
+    plane_count, pos = _read_binary_varint(blob, pos, field="plane_count")
+    if plane_count <= 0:
+        raise SnervLfPayloadCodecError("LF binary header plane_count must be positive")
+    payload_bytes, pos = _read_binary_varint(blob, pos, field="payload_bytes")
+    payload_sha, pos = _read_binary_bytes(
+        blob,
+        pos,
+        _SHA256_DIGEST_BYTES,
+        field="payload_sha256",
+    )
+    planes: list[dict[str, Any]] = []
+    payload_offset = 0
+    for plane_idx in range(int(plane_count)):
+        height, pos = _read_binary_varint(blob, pos, field="plane_height")
+        width, pos = _read_binary_varint(blob, pos, field="plane_width")
+        if height <= 0 or width <= 0:
+            raise SnervLfPayloadCodecError("LF binary plane shape must be positive")
+        codes, pos = _read_binary_bytes(blob, pos, 2, field="plane_codec_codes")
+        mode = _CODE_TO_MODE.get(int(codes[0]))
+        wrapper = _CODE_TO_WRAPPER.get(int(codes[1]))
+        if mode is None:
+            raise SnervLfPayloadCodecError(
+                f"unsupported LF binary mode code for plane {plane_idx}: {codes[0]}"
+            )
+        if wrapper is None:
+            raise SnervLfPayloadCodecError(
+                f"unsupported LF binary wrapper code for plane {plane_idx}: {codes[1]}"
+            )
+        plane_payload_bytes, pos = _read_binary_varint(
+            blob,
+            pos,
+            field="plane_payload_bytes",
+        )
+        if plane_payload_bytes <= 0:
+            raise SnervLfPayloadCodecError("LF binary plane payload must be non-empty")
+        decoded_sha, pos = _read_binary_bytes(
+            blob,
+            pos,
+            _SHA256_DIGEST_BYTES,
+            field="decoded_sha256",
+        )
+        raw_i64_bytes = int(height) * int(width) * np.dtype("<i8").itemsize
+        planes.append(
+            {
+                "shape": [int(height), int(width)],
+                "mode": mode,
+                "wrapper": wrapper,
+                "payload_offset": int(payload_offset),
+                "payload_bytes": int(plane_payload_bytes),
+                "raw_i64_bytes": raw_i64_bytes,
+                "decoded_sha256": decoded_sha.hex(),
+            }
+        )
+        payload_offset += int(plane_payload_bytes)
+    if pos != len(blob):
+        raise SnervLfPayloadCodecError("LF binary header has trailing bytes")
+    if payload_offset != int(payload_bytes):
+        raise SnervLfPayloadCodecError("LF binary plane payload byte counts mismatch")
+    return {
+        "schema": SNERV_LF_QUANT_V2_SCHEMA,
+        "proof": SNERV_LF_PAYLOAD_INTN_CODEC_PROOF,
+        "plane_count": int(plane_count),
+        "dtype": "int64_logical",
+        "planes": planes,
+        "payload_bytes": int(payload_bytes),
+        "payload_sha256": payload_sha.hex(),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _read_binary_varint(blob: bytes, pos: int, *, field: str) -> tuple[int, int]:
+    try:
+        return decode_varint(blob, pos)
+    except ValueError as exc:
+        raise SnervLfPayloadCodecError(f"LF binary header {field} invalid") from exc
+
+
+def _read_binary_bytes(
+    blob: bytes,
+    pos: int,
+    size: int,
+    *,
+    field: str,
+) -> tuple[bytes, int]:
+    end = int(pos) + int(size)
+    if end > len(blob):
+        raise SnervLfPayloadCodecError(f"LF binary header {field} truncated")
+    return blob[pos:end], end
 
 
 def _build_report(
@@ -549,6 +727,8 @@ def _build_report(
         packet_bytes=len(packet),
         raw_i64_bytes=sum(row.raw_i64_bytes for row in rows),
         payload_bytes=int(payload_bytes),
+        header_format=_packet_header_format(packet),
+        header_bytes=_packet_header_bytes(packet),
         mode_histogram=mode_histogram,
         wrapper_histogram=wrapper_histogram,
         plane_rows=tuple(rows),
@@ -893,6 +1073,40 @@ def _zigzag_decode(value: int) -> int:
 
 def _sha256(blob: bytes) -> str:
     return hashlib.sha256(blob).hexdigest()
+
+
+def _packet_header_format(packet: bytes) -> str:
+    blob = bytes(packet)
+    if len(blob) < _HEADER.size:
+        return "unknown"
+    magic, version, _header_len = _HEADER.unpack(blob[: _HEADER.size])
+    if magic != SNERV_LF_QUANT_V2_MAGIC:
+        return "unknown"
+    if version == _JSON_HEADER_VERSION:
+        return "json"
+    if version == _BINARY_HEADER_VERSION:
+        return "binary"
+    return "unknown"
+
+
+def _packet_header_bytes(packet: bytes) -> int:
+    blob = bytes(packet)
+    if len(blob) < _HEADER.size:
+        return 0
+    magic, _version, header_len = _HEADER.unpack(blob[: _HEADER.size])
+    if magic != SNERV_LF_QUANT_V2_MAGIC:
+        return 0
+    return _HEADER.size + int(header_len)
+
+
+def _sha256_hex_to_bytes(value: str) -> bytes:
+    try:
+        digest = bytes.fromhex(str(value))
+    except ValueError as exc:
+        raise SnervLfPayloadCodecError("LF binary header sha256 is not hex") from exc
+    if len(digest) != _SHA256_DIGEST_BYTES:
+        raise SnervLfPayloadCodecError("LF binary header sha256 length invalid")
+    return digest
 
 
 __all__ = [

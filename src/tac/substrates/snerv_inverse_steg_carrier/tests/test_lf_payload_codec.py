@@ -329,6 +329,103 @@ def test_lf_payload_v2_metadata_is_deterministic_and_inspectable() -> None:
     assert inspected.ready_for_exact_eval_dispatch is False
 
 
+def test_lf_payload_v2_binary_header_replaces_json_header_without_signal_loss() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec as mod
+
+    planes = [
+        (np.arange(48, dtype=np.int64).reshape(6, 8) % 4) - 2,
+        np.zeros((6, 8), dtype=np.int64),
+    ]
+    binary_packet, binary_report = encode_lf_quant_payload_v2_with_report(
+        planes,
+        mode="portfolio_auto",
+        wrapper="none",
+        header_format="binary",
+    )
+    json_packet, json_report = encode_lf_quant_payload_v2_with_report(
+        planes,
+        mode="portfolio_auto",
+        wrapper="none",
+        header_format="json",
+    )
+
+    assert binary_packet.startswith(SNERV_LF_QUANT_V2_MAGIC)
+    assert json_packet.startswith(SNERV_LF_QUANT_V2_MAGIC)
+    assert binary_packet[len(SNERV_LF_QUANT_V2_MAGIC)] == mod._BINARY_HEADER_VERSION
+    assert json_packet[len(SNERV_LF_QUANT_V2_MAGIC)] == mod._JSON_HEADER_VERSION
+    assert binary_report.header_format == "binary"
+    assert json_report.header_format == "json"
+    assert binary_report.header_bytes < json_report.header_bytes
+    assert binary_report.packet_bytes < json_report.packet_bytes
+    assert binary_report.mode_histogram == json_report.mode_histogram
+    assert binary_report.wrapper_histogram == json_report.wrapper_histogram
+
+    for ref, got in zip(planes, decode_lf_quant_payload_v2(binary_packet), strict=True):
+        np.testing.assert_array_equal(got, ref)
+    for ref, got in zip(planes, decode_lf_quant_payload_v2(json_packet), strict=True):
+        np.testing.assert_array_equal(got, ref)
+    inspected = inspect_lf_quant_payload_v2(binary_packet)
+    assert inspected.header_format == "binary"
+    assert inspected.header_bytes == binary_report.header_bytes
+
+
+def test_lf_payload_v2_legacy_json_header_remains_decodable() -> None:
+    planes = [
+        np.array([[-2, -1], [0, 1]], dtype=np.int64),
+        np.array([[1, 0], [-1, -2]], dtype=np.int64),
+    ]
+
+    packet, report = encode_lf_quant_payload_v2_with_report(
+        planes,
+        mode="int2",
+        wrapper="none",
+        header_format="json",
+    )
+    decoded = decode_lf_quant_payload_v2(packet)
+    inspected = inspect_lf_quant_payload_v2(packet)
+
+    assert packet.startswith(SNERV_LF_QUANT_V2_MAGIC)
+    assert packet[len(SNERV_LF_QUANT_V2_MAGIC)] == 1
+    assert inspected.packet_bytes == report.packet_bytes
+    assert inspected.plane_count == len(planes)
+    for ref, got in zip(planes, decoded, strict=True):
+        np.testing.assert_array_equal(got, ref)
+
+
+def test_lf_payload_v2_binary_header_cuts_many_tiny_plane_json_overhead() -> None:
+    values = np.array([-2, -1, 0, 1], dtype=np.int64)
+    planes = [
+        np.array([[values[idx % values.size]]], dtype=np.int64)
+        for idx in range(128)
+    ]
+
+    binary_packet, binary_report = encode_lf_quant_payload_v2_with_report(
+        planes,
+        mode="int2",
+        wrapper="none",
+    )
+    json_packet, json_report = encode_lf_quant_payload_v2_with_report(
+        planes,
+        mode="int2",
+        wrapper="none",
+        header_format="json",
+    )
+    decoded = decode_lf_quant_payload_v2(binary_packet)
+    inspected = inspect_lf_quant_payload_v2(binary_packet)
+
+    assert binary_packet[len(SNERV_LF_QUANT_V2_MAGIC)] == 2
+    assert binary_report.payload_bytes == json_report.payload_bytes
+    binary_overhead = binary_report.packet_bytes - binary_report.payload_bytes
+    json_overhead = json_report.packet_bytes - json_report.payload_bytes
+    assert binary_overhead < json_overhead
+    assert binary_overhead < json_overhead // 4
+    assert json_report.packet_bytes - binary_report.packet_bytes > 15_000
+    assert inspected.packet_bytes == binary_report.packet_bytes
+    assert inspected.plane_count == len(planes)
+    for ref, got in zip(planes, decoded, strict=True):
+        np.testing.assert_array_equal(got, ref)
+
+
 def test_lf_payload_portfolio_auto_uses_bounded_wrappers_by_default() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec as mod
 
@@ -364,8 +461,10 @@ def test_archive_lf_payload_codec_v2_is_receiver_decoded() -> None:
 
     payload = encode_lf_quant_payload(planes, codec="portfolio_auto")
     decoded = decode_lf_quant_payload(payload)
+    report = inspect_lf_quant_payload_header(payload)
 
     assert payload.startswith(SNERV_LF_QUANT_V2_MAGIC)
+    assert report["header_format"] == "binary"
     for ref, got in zip(planes, decoded, strict=True):
         np.testing.assert_array_equal(got, ref)
 
