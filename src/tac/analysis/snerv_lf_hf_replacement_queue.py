@@ -922,12 +922,15 @@ def _current_state(
     scorer_domain_state: Mapping[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
+    demoted_blockers: list[str] = []
     if not evidence_rows:
         blockers.append("snerv_lf_hf_measured_lf_payload_report_missing")
     if not campaign_rows:
         blockers.append("snerv_lf_hf_current_campaign_plan_missing")
     if reroute_state.get("freshest_queue_has_no_lf_over_ceiling_rows") is True:
-        blockers.append("snerv_lf_hf_current_snar2_queue_has_no_lf_over_ceiling_rows")
+        demoted_blockers.append(
+            "snerv_lf_hf_current_snar2_queue_has_no_lf_over_ceiling_rows"
+        )
     if reroute_state.get("reroute_queue_count") == 0:
         blockers.append("snerv_lf_hf_reroute_queue_missing")
     ready_rows = [
@@ -938,6 +941,11 @@ def _current_state(
         "snerv_campaign_row_count": len(campaign_rows),
         "snerv_local_mlx_launch_command_ready_row_count": len(ready_rows),
         "lf_payload_evidence_row_count": len(evidence_rows),
+        "lf_dominance_launch_signal_active": (
+            reroute_state.get("freshest_queue_has_no_lf_over_ceiling_rows") is False
+        ),
+        "lf_dominance_signal_demoted": bool(demoted_blockers),
+        "demoted_blockers": _dedupe(demoted_blockers),
         "source_forward_evidence": dict(source_forward_state),
         "scorer_domain_evidence": dict(scorer_domain_state),
         "blockers": _dedupe(blockers),
