@@ -9,12 +9,21 @@ from tac.analysis.snerv_lf_payload_codec_sweep import (
     build_snerv_lf_payload_codec_sweep,
     build_snerv_official_dummy_lf_payload_codec_sweep,
 )
+from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
     CUT,
     DEMOTE,
     NERV_BYTE_PRICE_CONTROLLER_SCHEMA,
     PROTECT,
 )
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    encode_decoder_payload,
+    encode_lf_metadata_payload,
+    encode_lf_quant_payload,
+    pack_snerv_archive_snar2,
+)
+from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
+from tools.build_snerv_lf_payload_codec_sweep import _load_planes
 
 
 def test_snerv_lf_payload_codec_sweep_is_rate_only_and_scorer_only() -> None:
@@ -111,6 +120,42 @@ def test_snerv_lf_payload_codec_sweep_never_selects_failed_zero_byte_mode() -> N
     assert "snerv_lf_payload_codec_mode_failed" not in by_mode["int64_lzma"][
         "blockers"
     ]
+
+
+def test_lf_payload_codec_sweep_loader_labels_raw_snar2_packet(tmp_path) -> None:
+    lf_planes = [
+        np.arange(4, dtype=np.int64).reshape(2, 2),
+        -np.arange(4, dtype=np.int64).reshape(2, 2),
+    ]
+    step_packet = encode_step_maps(
+        [np.ones((2, 2), dtype=np.float32), np.full((2, 2), 2.0, dtype=np.float32)],
+        bins=16,
+    )
+    archive = pack_snerv_archive_snar2(
+        metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0, 1.0]),
+        lf_payload=encode_lf_quant_payload(lf_planes),
+        decoder_payload=encode_decoder_payload(HfGenerationDecoder.zeros(levels=1)),
+        step_map_packet=step_packet.packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 3,
+            "lf_plane_count": 2,
+            "levels": 1,
+            "wavelet": "haar",
+            "carrier_hw": [4, 4],
+        },
+    )
+    packet_path = tmp_path / "candidate.snar2"
+    packet_path.write_bytes(archive.packet)
+
+    loaded_planes, source = _load_planes(packet_path, None)
+
+    assert source["kind"] == "raw_snar2_packet"
+    assert source["bytes"] == len(archive.packet)
+    assert source["packet_sha256"] == source["sha256"]
+    for expected, actual in zip(lf_planes, loaded_planes, strict=True):
+        np.testing.assert_array_equal(actual, expected)
 
 
 def test_snerv_official_dummy_lf_payload_codec_sweep_prices_receiver_sections() -> None:

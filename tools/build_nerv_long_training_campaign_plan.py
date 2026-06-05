@@ -226,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help=(
             "snerv_snar_header_minimization.v1 JSON to attach materialized "
-            "SNAR1 header-prune packet/archive bytes to the over-ceiling "
+            "SNAR fixed-header packet/archive bytes to the over-ceiling "
             "reroute queue. Repeatable."
         ),
     )

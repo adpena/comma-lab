@@ -24,11 +24,14 @@ from tac.substrates._shared.mlx_score_aware.nerv_byte_price_controller import (
 )
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    SNERV_ARCHIVE_MAGIC,
+    SNERV_ARCHIVE_MAGIC_V2,
     DecodedSnervArchive,
     SnervArchiveError,
     encode_lf_quant_payload,
     inspect_lf_quant_payload_header,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
@@ -67,10 +70,11 @@ def build_snerv_lf_payload_archive_recode(
     *,
     mode: str,
     source_packet_path: str | None = None,
+    wire_format: str = "preserve",
     frame_proof_max_output_bytes: int = DEFAULT_FRAME_PROOF_MAX_OUTPUT_BYTES,
     force_frame_proof: bool = False,
 ) -> tuple[dict[str, Any], bytes]:
-    """Return a losslessly recoded SNAR1 packet plus proof report.
+    """Return a losslessly recoded receiver packet plus proof report.
 
     The candidate packet is not a score or promotion surface.  It is a
     receiver-custody artifact that proves the selected LF codec can live inside
@@ -84,9 +88,19 @@ def build_snerv_lf_payload_archive_recode(
         raise SnervLfPayloadArchiveRecodeError("mode must be non-empty")
 
     source = unpack_snerv_archive(source_blob)
+    source_wire_format = _wire_format_from_packet(source_blob)
+    candidate_wire_format = _resolve_candidate_wire_format(
+        wire_format,
+        source_wire_format=source_wire_format,
+    )
     source_lf_planes = source.decode_lf_quant_planes()
     candidate_lf_payload = encode_lf_quant_payload(source_lf_planes, codec=mode)
-    candidate_packet = pack_snerv_archive(
+    packer = (
+        pack_snerv_archive_snar2
+        if candidate_wire_format == "snar2"
+        else pack_snerv_archive
+    )
+    candidate_packet = packer(
         metadata_payload=source.sections["metadata_payload"],
         lf_payload=candidate_lf_payload,
         decoder_payload=source.sections["decoder_payload"],
@@ -130,15 +144,22 @@ def build_snerv_lf_payload_archive_recode(
         "schema": SCHEMA,
         "axis_tag": AXIS_TAG,
         "family": "snerv",
-        "operation": "lossless_lf_payload_recode_inside_snar1_packet",
+        "operation": f"lossless_lf_payload_recode_inside_{candidate_wire_format}_packet",
         "mode": str(mode),
+        "requested_wire_format": str(wire_format),
+        "source_wire_format": source_wire_format,
+        "candidate_wire_format": candidate_wire_format,
         "source_packet": {
             "path": source_packet_path,
+            "schema": source.schema,
+            "wire_format": source_wire_format,
             "bytes": len(source_blob),
             "sha256": _sha256(source_blob),
             "decoded_packet_sha256": source.packet_sha256,
         },
         "candidate_packet": {
+            "schema": candidate_packet.schema,
+            "wire_format": candidate_wire_format,
             "bytes": candidate_packet.total_bytes,
             "sha256": _sha256(candidate_packet.packet),
             "decoded_packet_sha256": candidate.packet_sha256,
@@ -184,6 +205,29 @@ def build_snerv_lf_payload_archive_recode(
         **FALSE_AUTHORITY,
     }
     return report, candidate_packet.packet
+
+
+def _wire_format_from_packet(packet: bytes) -> str:
+    if packet.startswith(SNERV_ARCHIVE_MAGIC_V2):
+        return "snar2"
+    if packet.startswith(SNERV_ARCHIVE_MAGIC):
+        return "snar1"
+    raise SnervLfPayloadArchiveRecodeError("source_packet is not SNAR1/SNAR2")
+
+
+def _resolve_candidate_wire_format(
+    requested: str,
+    *,
+    source_wire_format: str,
+) -> str:
+    normalized = str(requested or "preserve").strip().lower()
+    if normalized in {"preserve", "input", "source"}:
+        normalized = source_wire_format
+    if normalized in {"snar1", "snar2"}:
+        return normalized
+    raise SnervLfPayloadArchiveRecodeError(
+        f"unsupported SNeRV LF recode wire_format: {requested!r}"
+    )
 
 
 def render_snerv_lf_payload_archive_recode_markdown(

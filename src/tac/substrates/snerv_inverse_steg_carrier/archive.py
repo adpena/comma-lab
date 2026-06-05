@@ -1259,7 +1259,7 @@ def decode_snerv_archive_frames(
     *,
     clip_to_uint8_range: bool = True,
 ) -> np.ndarray:
-    """Decode a full ``(n_pairs, 2, 3, H, W)`` receiver tensor from SNAR1 bytes."""
+    """Decode a full ``(n_pairs, 2, 3, H, W)`` receiver tensor from SNAR1/SNAR2 bytes."""
 
     return unpack_snerv_archive(packet).decode_frames(
         clip_to_uint8_range=clip_to_uint8_range,

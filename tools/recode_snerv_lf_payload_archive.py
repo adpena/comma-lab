@@ -46,6 +46,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--packet", type=Path, default=None)
     parser.add_argument("--mode", default=None)
+    parser.add_argument(
+        "--wire-format",
+        choices=("preserve", "snar1", "snar2"),
+        default="preserve",
+        help=(
+            "Candidate packet grammar. preserve keeps SNAR1/SNAR2 input shape; "
+            "snar2 is the contest-facing fixed-header packet."
+        ),
+    )
     parser.add_argument("--output-packet", type=Path, required=True)
     parser.add_argument("--output-json", type=Path, default=None)
     parser.add_argument("--output-md", type=Path, default=None)
@@ -93,6 +102,7 @@ def main(argv: list[str] | None = None) -> int:
         source_bytes,
         mode=mode,
         source_packet_path=packet_path.as_posix(),
+        wire_format=str(args.wire_format),
         frame_proof_max_output_bytes=int(args.frame_proof_max_output_bytes),
         force_frame_proof=bool(args.force_frame_proof),
     )
@@ -141,9 +151,17 @@ def _resolve_packet_path(path: Path | None, sweep: dict[str, Any]) -> Path:
     if path is not None:
         return path.expanduser().resolve(strict=False)
     source = sweep.get("source") if isinstance(sweep.get("source"), dict) else {}
-    if source.get("kind") != "snar1_packet" or not source.get("path"):
+    source_kind = str(source.get("kind") or "")
+    accepted_source_kinds = {
+        "raw_snar1_packet",
+        "raw_snar2_packet",
+        # Deterministic replay of older dated sweep artifacts only. New sweep
+        # outputs use the explicit raw_snar1/raw_snar2 names.
+        "snar1_packet",
+    }
+    if source_kind not in accepted_source_kinds or not source.get("path"):
         raise SystemExit(
-            "--packet is required unless --sweep-json came from a SNAR1 packet"
+            "--packet is required unless --sweep-json came from a raw SNAR1/SNAR2 packet"
         )
     return Path(str(source["path"])).expanduser().resolve(strict=False)
 
@@ -191,6 +209,7 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         "report_path": report.get("report_path"),
         "candidate_packet_path": report.get("candidate_packet", {}).get("path"),
         "mode": report.get("mode"),
+        "candidate_wire_format": report.get("candidate_wire_format"),
         "source_packet_bytes": report.get("source_packet", {}).get("bytes"),
         "candidate_packet_bytes": report.get("candidate_packet", {}).get("bytes"),
         "packet_byte_delta": report.get("packet_byte_delta"),

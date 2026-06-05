@@ -16,24 +16,43 @@ from tac.analysis.snerv_lf_payload_archive_recode import (
 )
 from tac.analysis.snerv_step_map_coder import encode_step_maps
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    SNERV_ARCHIVE_MAGIC_V2,
     encode_decoder_payload,
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
-from tools.recode_snerv_lf_payload_archive import main as recode_main
+from tools.recode_snerv_lf_payload_archive import (
+    _resolve_packet_path,
+)
+from tools.recode_snerv_lf_payload_archive import (
+    main as recode_main,
+)
 
 
-def _packet(*, lf_codec: str = "int64_lzma") -> bytes:
+def _packet(
+    *,
+    lf_codec: str = "int64_lzma",
+    lf_shape: tuple[int, int] = (4, 6),
+    lf_pattern: str = "random",
+) -> bytes:
     rng = np.random.default_rng(1591)
-    lf_planes = [
-        rng.integers(-8, 9, size=(4, 6), dtype=np.int64),
-        rng.integers(-3, 4, size=(4, 6), dtype=np.int64),
-    ]
+    if lf_pattern == "smooth":
+        yy, xx = np.mgrid[: lf_shape[0], : lf_shape[1]]
+        lf_planes = [
+            (xx + yy).astype(np.int64),
+            (xx - yy).astype(np.int64),
+        ]
+    else:
+        lf_planes = [
+            rng.integers(-8, 9, size=lf_shape, dtype=np.int64),
+            rng.integers(-3, 4, size=lf_shape, dtype=np.int64),
+        ]
     step_maps = [
-        np.full((4, 6), 1.0 + 0.125 * idx, dtype=np.float32)
+        np.full(lf_shape, 1.0 + 0.125 * idx, dtype=np.float32)
         for idx in range(len(lf_planes))
     ]
     return pack_snerv_archive(
@@ -47,12 +66,41 @@ def _packet(*, lf_codec: str = "int64_lzma") -> bytes:
             "n_pairs": 1,
             "frames_per_pair": 2,
             "channels": 1,
-            "height": 8,
-            "width": 12,
-            "orig_hw": [8, 12],
+            "height": int(lf_shape[0] * 2),
+            "width": int(lf_shape[1] * 2),
+            "orig_hw": [int(lf_shape[0] * 2), int(lf_shape[1] * 2)],
             "lf_plane_count": len(lf_planes),
             "levels": 1,
             "wavelet": "haar",
+        },
+    ).packet
+
+
+def _packet_snar2(*, lf_codec: str = "int64_lzma") -> bytes:
+    rng = np.random.default_rng(1591)
+    lf_planes = [
+        rng.integers(-8, 9, size=(4, 6), dtype=np.int64),
+        rng.integers(-3, 4, size=(4, 6), dtype=np.int64),
+    ]
+    step_maps = [
+        np.full((4, 6), 1.0 + 0.125 * idx, dtype=np.float32)
+        for idx in range(len(lf_planes))
+    ]
+    return pack_snerv_archive_snar2(
+        metadata_payload=encode_lf_metadata_payload(
+            lf_zero_points=[0.0 for _ in lf_planes],
+        ),
+        lf_payload=encode_lf_quant_payload(lf_planes, codec=lf_codec),
+        decoder_payload=encode_decoder_payload(HfGenerationDecoder.zeros(levels=1)),
+        step_map_packet=encode_step_maps(step_maps, bins=4).packet,
+        metadata={
+            "n_pairs": 1,
+            "frames_per_pair": 2,
+            "channels": 1,
+            "lf_plane_count": len(lf_planes),
+            "levels": 1,
+            "wavelet": "haar",
+            "carrier_hw": [8, 12],
         },
     ).packet
 
@@ -85,6 +133,25 @@ def test_snerv_lf_payload_recode_preserves_receiver_lf_and_sections() -> None:
         strict=True,
     ):
         np.testing.assert_array_equal(source_plane, candidate_plane)
+
+
+def test_snerv_lf_payload_recode_preserves_snar2_wire_format() -> None:
+    source = _packet_snar2(lf_codec="int64_lzma")
+
+    report, candidate = build_snerv_lf_payload_archive_recode(
+        source,
+        mode="spatial_delta_zigzag_leb128_lzma",
+        wire_format="preserve",
+        source_packet_path="/tmp/source.snar2",
+        frame_proof_max_output_bytes=1,
+    )
+
+    assert candidate.startswith(SNERV_ARCHIVE_MAGIC_V2)
+    assert report["source_wire_format"] == "snar2"
+    assert report["candidate_wire_format"] == "snar2"
+    assert report["candidate_packet"]["wire_format"] == "snar2"
+    assert report["candidate_packet"]["schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert report["receiver_contract_satisfied"] is True
 
 
 def test_recode_snerv_lf_payload_archive_cli_writes_matching_report(
@@ -131,8 +198,66 @@ def test_recode_snerv_lf_payload_archive_cli_writes_matching_report(
     )
 
 
+def test_recode_cli_from_raw_snar2_sweep_preserves_snar2_packet(tmp_path: Path) -> None:
+    packet_path = tmp_path / "source.snar2"
+    output_packet = tmp_path / "candidate.snar2"
+    output_json = tmp_path / "report.json"
+    sweep_json = tmp_path / "sweep.json"
+    packet_path.write_bytes(_packet_snar2(lf_codec="int64_lzma"))
+    sweep_json.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_lf_payload_codec_sweep.v1",
+                "source": {
+                    "kind": "raw_snar2_packet",
+                    "path": packet_path.as_posix(),
+                },
+                "selected_rate_only_row": {
+                    "mode": "spatial_delta_zigzag_leb128_lzma",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    rc = recode_main(
+        [
+            "--sweep-json",
+            sweep_json.as_posix(),
+            "--output-packet",
+            output_packet.as_posix(),
+            "--output-json",
+            output_json.as_posix(),
+            "--frame-proof-max-output-bytes",
+            "1",
+        ]
+    )
+
+    report = json.loads(output_json.read_text(encoding="utf-8"))
+    assert rc == 0
+    assert output_packet.read_bytes().startswith(SNERV_ARCHIVE_MAGIC_V2)
+    assert report["candidate_wire_format"] == "snar2"
+    assert report["candidate_packet"]["wire_format"] == "snar2"
+
+
+def test_recode_cli_resolves_packet_from_raw_snar2_sweep_metadata(tmp_path: Path) -> None:
+    packet_path = tmp_path / "source.snar2"
+    packet_path.write_bytes(b"SNAR2-demo")
+    sweep = {
+        "schema": "snerv_lf_payload_codec_sweep.v1",
+        "source": {
+            "kind": "raw_snar2_packet",
+            "path": packet_path.as_posix(),
+        },
+    }
+
+    resolved = _resolve_packet_path(None, sweep)
+
+    assert resolved == packet_path.resolve(strict=False)
+
+
 def test_snerv_lf_payload_recode_admission_consumes_real_snar_recode() -> None:
-    source = _packet(lf_codec="raw_i64")
+    source = _packet(lf_codec="raw_i64", lf_shape=(64, 64), lf_pattern="smooth")
     report, _candidate = build_snerv_lf_payload_archive_recode(
         source,
         mode="spatial_delta_zigzag_leb128_lzma",

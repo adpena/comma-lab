@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     source.add_argument(
         "--packet",
         type=Path,
-        help="SNAR1 receiver packet whose LF planes should be decoded and swept.",
+        help="Raw SNAR1/SNAR2 receiver packet whose LF planes should be decoded and swept.",
     )
     source.add_argument(
         "--lf-planes-npz",
@@ -87,8 +87,14 @@ def _load_planes(
         path = packet_path.expanduser().resolve(strict=False)
         packet = path.read_bytes()
         decoded = unpack_snerv_archive(packet)
+        if packet.startswith(b"SNAR1"):
+            source_kind = "raw_snar1_packet"
+        elif packet.startswith(b"SNAR2"):
+            source_kind = "raw_snar2_packet"
+        else:
+            source_kind = "raw_snerv_packet"
         return decoded.decode_lf_quant_planes(), {
-            "kind": "snar1_packet",
+            "kind": source_kind,
             "path": path.as_posix(),
             "bytes": len(packet),
             "sha256": hashlib.sha256(packet).hexdigest(),
