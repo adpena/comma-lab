@@ -616,7 +616,10 @@ def _full_main(args: argparse.Namespace) -> int:
     local_training_pair_indices = (
         tuple(range(effective_training_num_pairs)) if source_pair_indices is not None else prioritized_pair_indices
     )
-    decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(args)
+    decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(
+        args,
+        modelsize_candidate=modelsize_candidate,
+    )
     model = HinervSubstrateMLX(cfg)
     decoder_fake_quant_forward = _configure_decoder_fake_quant_forward(
         model=model,
@@ -966,7 +969,10 @@ def _smoke_main(args: argparse.Namespace) -> int:
     )
     train_time_controls = _train_time_control_config_from_args(args)
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
-    decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(args)
+    decoder_weight_waterfill_plan = _decoder_weight_waterfill_plan_from_args(
+        args,
+        modelsize_candidate=modelsize_candidate,
+    )
     model = HinervSubstrateMLX(cfg)
     decoder_fake_quant_forward = _configure_decoder_fake_quant_forward(
         model=model,
@@ -1986,8 +1992,256 @@ def _resolve_decoder_weight_waterfill_plan_path(args: argparse.Namespace) -> Pat
     return resolved.resolve(strict=False)
 
 
+def _unique_waterfill_aliases(values: list[str]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(value for value in values if value))
+
+
+def _decoder_weight_waterfill_candidate_aliases(value: Any) -> tuple[str, ...]:
+    text = str(value or "").strip()
+    if not text:
+        return ()
+    aliases = [text]
+    has_double_colon = "::" in text
+    if has_double_colon:
+        parts = [part.strip() for part in text.split("::") if part.strip()]
+        if len(parts) >= 3 and parts[0] in {"hi_nerv", "hinerv", "snerv"}:
+            aliases.append(parts[1])
+        elif parts:
+            aliases.append(parts[-1])
+    for marker in (
+        ":hi_nerv_decoder_weight_waterfill:",
+        ":hinerv_decoder_weight_waterfill:",
+        ":snerv_decoder_weight_waterfill:",
+    ):
+        if marker in text:
+            aliases.append(text.split(marker, 1)[0])
+    if ":" in text and not has_double_colon:
+        aliases.append(text.rsplit(":", 1)[-1])
+        aliases.append(text.split(":", 1)[0])
+    return _unique_waterfill_aliases(aliases)
+
+
+def _decoder_weight_waterfill_launch_candidate_keys(
+    args: argparse.Namespace,
+    *,
+    modelsize_candidate: Mapping[str, Any] | None = None,
+) -> tuple[str, ...]:
+    keys: list[str] = []
+    if modelsize_candidate:
+        for field in ("candidate_id", "row_id", "planner_row_id", "_modelsize_row_id"):
+            keys.extend(
+                _decoder_weight_waterfill_candidate_aliases(
+                    modelsize_candidate.get(field)
+                )
+            )
+        return _unique_waterfill_aliases(keys)
+    keys.extend(
+        _decoder_weight_waterfill_candidate_aliases(
+            getattr(args, "modelsize_row", None)
+        )
+    )
+    return _unique_waterfill_aliases(keys)
+
+
+def _shape_tuple_from_waterfill_row(value: Any) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple)):
+        raise ValueError("decoder_weight_waterfill row shape must be a sequence")
+    out: list[int] = []
+    for dim in value:
+        try:
+            parsed = int(dim)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"decoder_weight_waterfill row shape dim is not an integer: {dim!r}"
+            ) from exc
+        if parsed < 0:
+            raise ValueError(
+                f"decoder_weight_waterfill row shape dim must be non-negative: {parsed}"
+            )
+        out.append(parsed)
+    return tuple(out)
+
+
+def _declared_waterfill_row_shape(row: Mapping[str, Any]) -> tuple[int, ...] | None:
+    for field in ("shape", "tensor_shape", "expected_shape", "state_shape"):
+        if field in row:
+            return _shape_tuple_from_waterfill_row(row.get(field))
+    return None
+
+
+def _declared_waterfill_row_numel(row: Mapping[str, Any]) -> int | None:
+    for field in ("numel", "tensor_numel", "group_numel", "expected_numel"):
+        if field not in row:
+            continue
+        value = row.get(field)
+        if value is None:
+            return None
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"decoder_weight_waterfill row numel field {field} is not an integer"
+            ) from exc
+        if parsed < 0:
+            raise ValueError(
+                f"decoder_weight_waterfill row numel field {field} must be non-negative"
+            )
+        return parsed
+    return None
+
+
+def _validate_decoder_weight_waterfill_plan_for_launch(
+    payload: dict[str, Any],
+    *,
+    args: argparse.Namespace,
+    modelsize_candidate: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    blockers: list[str] = []
+    family = payload.get("family")
+    if family not in (None, "", "hi_nerv"):
+        blockers.append(f"decoder_weight_waterfill_family_mismatch:{family}")
+
+    plan_candidate_id = str(payload.get("candidate_id") or "").strip()
+    plan_candidate_keys = _decoder_weight_waterfill_candidate_aliases(
+        plan_candidate_id
+    )
+    launch_candidate_keys = _decoder_weight_waterfill_launch_candidate_keys(
+        args,
+        modelsize_candidate=modelsize_candidate,
+    )
+    if not plan_candidate_keys:
+        blockers.append("decoder_weight_waterfill_plan_candidate_id_missing")
+    if not launch_candidate_keys:
+        blockers.append("decoder_weight_waterfill_launch_candidate_missing")
+    elif plan_candidate_keys and not set(plan_candidate_keys) & set(launch_candidate_keys):
+        blockers.append(
+            "decoder_weight_waterfill_candidate_id_mismatch:"
+            f"{plan_candidate_id}"
+        )
+
+    raw_rows = payload.get("rows")
+    if not isinstance(raw_rows, list):
+        blockers.append("decoder_weight_waterfill_rows_not_list")
+        rows = []
+    else:
+        rows = raw_rows
+    if not rows:
+        blockers.append("decoder_weight_waterfill_rows_empty")
+
+    expected_shapes: dict[str, tuple[int, ...]] = {}
+    try:
+        from tac.substrates.hi_nerv.architecture import expected_decoder_state_shapes
+
+        cfg = _config_from_args(args, modelsize_candidate=modelsize_candidate)
+        expected_shapes = expected_decoder_state_shapes(cfg)
+    except Exception as exc:  # pragma: no cover - defensive prelaunch metadata path
+        blockers.append(
+            "decoder_weight_waterfill_expected_shape_resolution_failed:"
+            f"{type(exc).__name__}"
+        )
+
+    validated_rows: list[dict[str, Any]] = []
+    for idx, row_obj in enumerate(rows):
+        if not isinstance(row_obj, Mapping):
+            blockers.append(f"decoder_weight_waterfill_row_not_mapping:{idx}")
+            continue
+        group_name = row_obj.get("group_name")
+        if not isinstance(group_name, str) or not group_name:
+            blockers.append(f"decoder_weight_waterfill_row_missing_group_name:{idx}")
+            continue
+        expected_shape = expected_shapes.get(group_name)
+        if expected_shape is None:
+            blockers.append(f"decoder_weight_waterfill_group_missing:{group_name}")
+            continue
+        try:
+            declared_shape = _declared_waterfill_row_shape(row_obj)
+            declared_numel = _declared_waterfill_row_numel(row_obj)
+        except ValueError as exc:
+            blockers.append(
+                f"decoder_weight_waterfill_row_metadata_invalid:{group_name}:{exc}"
+            )
+            continue
+        row_validation = {
+            "group_name": group_name,
+            "expected_shape": [int(dim) for dim in expected_shape],
+            "expected_numel": int(math.prod(expected_shape)),
+            "shape_checked": declared_shape is not None,
+            "numel_checked": declared_numel is not None,
+        }
+        if declared_shape is not None and declared_shape != expected_shape:
+            blockers.append(f"decoder_weight_waterfill_shape_mismatch:{group_name}")
+            row_validation["declared_shape"] = [int(dim) for dim in declared_shape]
+        expected_numel = int(math.prod(expected_shape))
+        if declared_numel is not None and declared_numel != expected_numel:
+            blockers.append(f"decoder_weight_waterfill_numel_mismatch:{group_name}")
+            row_validation["declared_numel"] = int(declared_numel)
+        validated_rows.append(row_validation)
+
+    fake_quant_targeted_tensor_count: int | None = None
+    fake_quant_per_tensor_bits: dict[str, int] = {}
+    try:
+        from tac.substrates.hi_nerv.bitstream import (
+            build_decoder_waterfill_fake_quant_forward_plan,
+        )
+
+        fake_quant_plan = build_decoder_waterfill_fake_quant_forward_plan(payload)
+        fake_quant_targeted_tensor_count = int(
+            fake_quant_plan.get("targeted_tensor_count") or 0
+        )
+        per_tensor_bits = fake_quant_plan.get("per_tensor_bits")
+        if isinstance(per_tensor_bits, Mapping):
+            fake_quant_per_tensor_bits = {
+                str(name): int(bits) for name, bits in per_tensor_bits.items()
+            }
+        actuation_blockers = [
+            str(blocker) for blocker in fake_quant_plan.get("actuation_blockers") or []
+        ]
+        if actuation_blockers:
+            blockers.extend(
+                f"decoder_weight_waterfill_fake_quant_actuation_blocker:{blocker}"
+                for blocker in actuation_blockers
+            )
+        if not fake_quant_plan.get("per_tensor_bits"):
+            blockers.append("decoder_weight_waterfill_fake_quant_no_targets")
+    except Exception as exc:
+        blockers.append(
+            "decoder_weight_waterfill_fake_quant_bits_invalid:"
+            f"{type(exc).__name__}:{exc}"
+        )
+
+    if blockers:
+        raise ValueError(
+            "invalid decoder_weight_waterfill_plan_json for HiNeRV launch: "
+            + ", ".join(dict.fromkeys(blockers))
+        )
+    return {
+        "schema": "hi_nerv_trainer_decoder_weight_waterfill_launch_validation.v1",
+        "validated": True,
+        "family": payload.get("family"),
+        "candidate_id": payload.get("candidate_id"),
+        "plan_candidate_keys": list(plan_candidate_keys),
+        "launch_candidate_keys": list(launch_candidate_keys),
+        "matched_candidate_keys": sorted(
+            str(key) for key in set(plan_candidate_keys) & set(launch_candidate_keys)
+        ),
+        "row_count": len(rows),
+        "expected_decoder_group_count": len(expected_shapes),
+        "validated_row_count": len(validated_rows),
+        "validated_rows": validated_rows,
+        "fake_quant_targeted_tensor_count": fake_quant_targeted_tensor_count,
+        "fake_quant_per_tensor_bits": dict(sorted(fake_quant_per_tensor_bits.items())),
+        "blockers": [],
+        "authority": TRAINER_AUTHORITY,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _decoder_weight_waterfill_plan_from_args(
     args: argparse.Namespace,
+    *,
+    modelsize_candidate: Mapping[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     path = _resolve_decoder_weight_waterfill_plan_path(args)
     if path is None:
@@ -2008,6 +2262,11 @@ def _decoder_weight_waterfill_plan_from_args(
     rows = payload.get("rows")
     if not isinstance(rows, list):
         raise ValueError("decoder_weight_waterfill_plan_json rows must be a list")
+    payload["_trainer_launch_validation"] = _validate_decoder_weight_waterfill_plan_for_launch(
+        payload,
+        args=args,
+        modelsize_candidate=modelsize_candidate,
+    )
     return payload
 
 
@@ -2141,6 +2400,9 @@ def _decoder_weight_waterfill_plan_attachment_metadata(
         "plan_schema": plan.get("schema"),
         "family": plan.get("family"),
         "candidate_id": plan.get("candidate_id"),
+        "trainer_launch_validation": _metadata_safe(
+            plan.get("_trainer_launch_validation")
+        ),
         "row_count": len(rows),
         "train_time_fake_quant_bound": bool(
             isinstance(fake_quant_forward, dict) and fake_quant_forward.get("enabled")

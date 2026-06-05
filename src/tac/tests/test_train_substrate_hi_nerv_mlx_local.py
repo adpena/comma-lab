@@ -507,7 +507,7 @@ def test_hinerv_mlx_trainer_binds_decoder_weight_waterfill_plan(
             {
                 "schema": "nerv_decoder_weight_waterfill.v1",
                 "family": "hi_nerv",
-                "candidate_id": "unit",
+                "candidate_id": "hi_nerv_local_tiny",
                 "rows": [
                     {
                         "group_name": "head_rgb_0.weight",
@@ -581,8 +581,118 @@ def test_hinerv_mlx_trainer_binds_decoder_weight_waterfill_plan(
     assert attachment["row_count"] == 1
     assert attachment["train_time_fake_quant_bound"] is True
     assert attachment["export_bound"] is True
+    assert attachment["trainer_launch_validation"]["validated"] is True
+    assert attachment["trainer_launch_validation"]["matched_candidate_keys"] == [
+        "hi_nerv_local_tiny"
+    ]
+    assert (
+        attachment["trainer_launch_validation"]["fake_quant_per_tensor_bits"]
+        == {"head_rgb_0.weight": 4}
+    )
     assert attachment["fake_quant_forward"]["targeted_tensor_count"] == 1
     assert attachment["score_claim"] is False
+
+
+def test_hinerv_mlx_trainer_rejects_mismatched_decoder_weight_waterfill_plan(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "waterfill_mismatch.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_decoder_weight_waterfill.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hi_nerv_local_small",
+                "rows": [
+                    {
+                        "group_name": "head_rgb_0.weight",
+                        "selected_bits": 4,
+                        "selected_action": "int4",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--modelsize-row",
+            "hi_nerv_local_tiny",
+            "--decoder-weight-waterfill-plan-json",
+            plan_path.as_posix(),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="candidate_id_mismatch"):
+        _decoder_weight_waterfill_plan_from_args(args)
+
+
+def test_hinerv_mlx_trainer_rejects_bad_decoder_weight_waterfill_bits(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "waterfill_bad_bits.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_decoder_weight_waterfill.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hi_nerv_local_tiny",
+                "rows": [
+                    {
+                        "group_name": "head_rgb_0.weight",
+                        "selected_bits": 3,
+                        "selected_action": "int3",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--decoder-weight-waterfill-plan-json",
+            plan_path.as_posix(),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="fake_quant_bits_invalid"):
+        _decoder_weight_waterfill_plan_from_args(args)
+
+
+def test_hinerv_mlx_trainer_rejects_stale_decoder_weight_waterfill_shape(
+    tmp_path: Path,
+) -> None:
+    plan_path = tmp_path / "waterfill_stale_shape.json"
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schema": "nerv_decoder_weight_waterfill.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hi_nerv_local_tiny",
+                "rows": [
+                    {
+                        "group_name": "head_rgb_0.weight",
+                        "shape": [999, 999, 1, 1],
+                        "selected_bits": 4,
+                        "selected_action": "int4",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--decoder-weight-waterfill-plan-json",
+            plan_path.as_posix(),
+        ]
+    )
+
+    with pytest.raises(ValueError, match="shape_mismatch"):
+        _decoder_weight_waterfill_plan_from_args(args)
 
 
 def test_hinerv_train_time_decoder_controls_mutate_mlx_decoder_not_latents() -> None:
