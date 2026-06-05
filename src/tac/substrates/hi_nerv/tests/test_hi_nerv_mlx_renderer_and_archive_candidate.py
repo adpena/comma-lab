@@ -866,6 +866,11 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     bitstream_report_path = (
         tmp_path / "hi_nerv_export" / "hi_nerv_bitstream_preparation.json"
     )
+    live_receiver_export_parity_path = (
+        tmp_path
+        / "hi_nerv_export"
+        / "hi_nerv_mlx_live_receiver_export_parity.json"
+    )
     archive_section_telemetry_path = (
         tmp_path / "hi_nerv_export" / "hi_nerv_archive_section_telemetry.json"
     )
@@ -880,6 +885,7 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert npz_path.is_file()
     assert npz_manifest_path.is_file()
     assert bitstream_report_path.is_file()
+    assert live_receiver_export_parity_path.is_file()
     assert archive_section_telemetry_path.is_file()
     assert proof_path.is_file()
 
@@ -888,6 +894,9 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     package = json.loads(package_path.read_text(encoding="utf-8"))
     npz_manifest = json.loads(npz_manifest_path.read_text(encoding="utf-8"))
     bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
+    live_receiver_export_parity = json.loads(
+        live_receiver_export_parity_path.read_text(encoding="utf-8")
+    )
     archive_section_telemetry = json.loads(
         archive_section_telemetry_path.read_text(encoding="utf-8")
     )
@@ -904,6 +913,30 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         npz_manifest["artifact_sha256"]
     )
     assert spine_extra["hi_nerv_bitstream_preparation"] == bitstream_report
+    assert (
+        spine_extra["hi_nerv_mlx_live_receiver_export_parity_path"]
+        == live_receiver_export_parity_path.as_posix()
+    )
+    assert (
+        spine_extra["hi_nerv_mlx_live_receiver_export_parity"]
+        == live_receiver_export_parity
+    )
+    assert live_receiver_export_parity["schema"] == (
+        "hi_nerv_mlx_live_receiver_export_parity_proof.v1"
+    )
+    assert (
+        live_receiver_export_parity["proof_status"]
+        == "not_applicable_non_mlx_source_backend"
+    )
+    assert live_receiver_export_parity["source_backend"] == "pytorch_test_export"
+    assert live_receiver_export_parity["sampled_pair_count"] > 0
+    assert "sampled_live_receiver_export_parity_not_full_video" in (
+        live_receiver_export_parity["blockers"]
+    )
+    assert (
+        "hi_nerv_mlx_live_receiver_export_parity_not_applicable_non_mlx_source_backend"
+        in live_receiver_export_parity["blockers"]
+    )
     assert (
         spine_extra["archive_section_telemetry_path"]
         == archive_section_telemetry_path.as_posix()
@@ -928,6 +961,12 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
     assert runtime_manifest["hi_nerv_bitstream_preparation"] == bitstream_report
     assert runtime_manifest["hi_nerv_bitstream_preparation_path"] == (
         bitstream_report_path.as_posix()
+    )
+    assert runtime_manifest["hi_nerv_mlx_live_receiver_export_parity"] == (
+        live_receiver_export_parity
+    )
+    assert runtime_manifest["hi_nerv_mlx_live_receiver_export_parity_path"] == (
+        live_receiver_export_parity_path.as_posix()
     )
     assert runtime_manifest["archive_section_telemetry"] == archive_section_telemetry
     assert runtime_manifest["archive_section_telemetry_path"] == (

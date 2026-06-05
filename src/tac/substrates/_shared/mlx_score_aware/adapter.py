@@ -294,6 +294,28 @@ def _mlx_gradient_global_norm(mx: Any, grads: Any) -> float | None:
     return float(norm.item())
 
 
+def _mlx_clip_gradient_tree(
+    mx: Any,
+    grads: Any,
+    max_norm: float,
+) -> tuple[Any, float | None]:
+    """Clip an MLX gradient tree deterministically and return its preclip norm."""
+
+    from mlx.utils import tree_flatten, tree_unflatten
+
+    pre_clip_norm = _mlx_gradient_global_norm(mx, grads)
+    if pre_clip_norm is None:
+        return grads, None
+    scale = min(1.0, float(max_norm) / (float(pre_clip_norm) + 1.0e-6))
+    if scale >= 1.0:
+        return grads, pre_clip_norm
+    clipped = [
+        (raw_name, None if leaf is None else leaf * scale)
+        for raw_name, leaf in tree_flatten(grads)
+    ]
+    return tree_unflatten(clipped), pre_clip_norm
+
+
 def _gradient_clip_metrics_from_norm(
     *,
     pre_clip_norm: float | None,
@@ -3367,6 +3389,11 @@ class MlxScoreAwareAdapter:
         self._accumulate_decoder_weight_gradient_saliency(grads)
         grad_norm_pre_clip = _mlx_gradient_global_norm(mx, grads)
         if self._wave_n11_grad_clip_max_norm is not None:
+            grads, grad_norm_pre_clip = _mlx_clip_gradient_tree(
+                mx,
+                grads,
+                self._wave_n11_grad_clip_max_norm,
+            )
             self._wave_n11_grad_norm_history.append(
                 0.0 if grad_norm_pre_clip is None else grad_norm_pre_clip
             )
@@ -3378,7 +3405,9 @@ class MlxScoreAwareAdapter:
         clip_metrics = _gradient_clip_metrics_from_norm(
             pre_clip_norm=grad_norm_pre_clip,
             max_norm=self._wave_n11_grad_clip_max_norm,
-            actual_application_count=0,
+            actual_application_count=(
+                1 if self._wave_n11_grad_clip_max_norm is not None else 0
+            ),
             delegated_to_pr95_partition_helper=(
                 self._wave_n11_grad_clip_max_norm is not None
             ),

@@ -43,6 +43,7 @@ from tac.substrates.hi_nerv.architecture import (
 from tac.substrates.hi_nerv.archive import (
     build_archive_section_telemetry,
     pack_archive,
+    parse_archive,
 )
 from tac.substrates.hi_nerv.bitstream import (
     prepare_hi_nerv_decoder_bitstream_state,
@@ -66,12 +67,16 @@ HI_NERV_MLX_ARCHIVE_TRANSFORM_KIND = "hi_nerv_mlx_archive"
 HI_NERV_DECODER_RENDERED_PIXEL_PROOF_SCHEMA = (
     "hi_nerv_decoder_preparation_rendered_pixel_proof.v1"
 )
+HI_NERV_MLX_LIVE_RECEIVER_EXPORT_PARITY_PROOF_SCHEMA = (
+    "hi_nerv_mlx_live_receiver_export_parity_proof.v1"
+)
 
 _LATENT_KEYS = ("latents_coarse", "latents_mid", "latents_fine")
 _STATE_NPZ_NAME = "hi_nerv_mlx_exported_state.npz"
 _STATE_NPZ_MANIFEST_NAME = "hi_nerv_mlx_exported_state_npz_manifest.json"
 _BITSTREAM_PREPARATION_REPORT_NAME = "hi_nerv_bitstream_preparation.json"
 _ARCHIVE_SECTION_TELEMETRY_NAME = "hi_nerv_archive_section_telemetry.json"
+_LIVE_RECEIVER_EXPORT_PARITY_NAME = "hi_nerv_mlx_live_receiver_export_parity.json"
 
 
 def hi_nerv_mlx_numpy_portability_contract(
@@ -279,6 +284,146 @@ def _sample_pair_indices_for_pixel_proof(
             for index in range(pair_count)
         ]
     return torch.tensor(values, dtype=torch.long)
+
+
+def _render_mlx_live_pixels_unit(model: Any, pair_indices: torch.Tensor) -> np.ndarray:
+    """Render the live MLX model as ``B,2,3,H,W`` unit RGB for export parity."""
+
+    import mlx.core as mx
+
+    idx = mx.array(np.asarray(pair_indices.tolist(), dtype=np.int32), dtype=mx.int32)
+    live = model(idx)
+    mx.eval(live)
+    return (np.asarray(live, dtype=np.float32) / 255.0).copy()
+
+
+def _build_mlx_live_receiver_export_parity_proof(
+    *,
+    model: Any,
+    archive_bytes: bytes,
+    cfg: HinervConfig,
+    source_backend: str,
+    max_pair_samples: int = 4,
+    max_mean_abs_delta: float = 1.0e-3,
+    max_max_abs_delta: float = 5.0e-3,
+) -> dict[str, Any]:
+    """Compare live MLX pixels to parsed HIV1 receiver pixels after export."""
+
+    pair_indices = _sample_pair_indices_for_pixel_proof(
+        num_pairs=int(cfg.num_pairs),
+        max_pair_samples=int(max_pair_samples),
+    )
+    proof: dict[str, Any] = {
+        "schema": HI_NERV_MLX_LIVE_RECEIVER_EXPORT_PARITY_PROOF_SCHEMA,
+        "proof_kind": "sampled_live_mlx_vs_parsed_hiv1_receiver_pixels",
+        "pair_indices": [int(value) for value in pair_indices.tolist()],
+        "sampled_pair_count": int(pair_indices.numel()),
+        "max_mean_abs_delta": float(max_mean_abs_delta),
+        "max_max_abs_delta": float(max_max_abs_delta),
+        "blockers": [
+            "sampled_live_receiver_export_parity_not_full_video",
+            "contest_cpu_cuda_exact_eval_not_executed",
+            "scorer_replay_not_executed",
+        ],
+        **FALSE_AUTHORITY,
+    }
+    if source_backend != "mlx":
+        proof.update(
+            {
+                "passed": False,
+                "proof_status": "not_applicable_non_mlx_source_backend",
+                "source_backend": source_backend,
+                "blockers": [
+                    *proof["blockers"],
+                    "hi_nerv_mlx_live_receiver_export_parity_not_applicable_non_mlx_source_backend",
+                ],
+            }
+        )
+        return proof
+    try:
+        live_pixels = _render_mlx_live_pixels_unit(model, pair_indices)
+        arc = parse_archive(archive_bytes)
+        receiver_model = _load_receiver_model_for_pixel_proof(
+            cfg=cfg,
+            decoder_state=arc.decoder_state_dict,
+            latents_coarse=arc.latents_coarse,
+            latents_mid=arc.latents_mid,
+            latents_fine=arc.latents_fine,
+        )
+        with torch.no_grad():
+            receiver_pixels = _render_receiver_pixels(receiver_model, pair_indices)
+        receiver_np = receiver_pixels.detach().cpu().numpy().astype(np.float32)
+        if tuple(live_pixels.shape) != tuple(receiver_np.shape):
+            proof.update(
+                {
+                    "passed": False,
+                    "proof_status": "live_receiver_shape_mismatch",
+                    "live_tensor_shape": [int(value) for value in live_pixels.shape],
+                    "receiver_tensor_shape": [
+                        int(value) for value in receiver_np.shape
+                    ],
+                    "blockers": [
+                        *proof["blockers"],
+                        "hi_nerv_mlx_live_receiver_export_shape_mismatch",
+                    ],
+                }
+            )
+            return proof
+        delta = np.abs(live_pixels - receiver_np)
+        max_abs_delta = float(delta.max()) if delta.size else 0.0
+        mean_abs_delta = float(delta.mean()) if delta.size else 0.0
+        passed = bool(
+            mean_abs_delta <= float(max_mean_abs_delta)
+            and max_abs_delta <= float(max_max_abs_delta)
+        )
+        proof.update(
+            {
+                "passed": passed,
+                "proof_status": (
+                    "sampled_live_receiver_export_parity_passed"
+                    if passed
+                    else "sampled_live_receiver_export_parity_failed"
+                ),
+                "live_tensor_shape": [int(value) for value in live_pixels.shape],
+                "receiver_tensor_shape": [int(value) for value in receiver_np.shape],
+                "max_abs_delta": max_abs_delta,
+                "mean_abs_delta": mean_abs_delta,
+                "changed_element_count": int(np.count_nonzero(delta > 0.0)),
+                "live_tensor_sha256": _sha256_numpy_array(live_pixels),
+                "receiver_tensor_sha256": _sha256_numpy_array(receiver_np),
+                "blockers": [
+                    *proof["blockers"],
+                    *(
+                        []
+                        if passed
+                        else ["hi_nerv_mlx_live_receiver_export_parity_failed"]
+                    ),
+                ],
+            }
+        )
+        return proof
+    except Exception as exc:
+        proof.update(
+            {
+                "passed": False,
+                "proof_status": "sampled_live_receiver_export_parity_error",
+                "failure": repr(exc),
+                "blockers": [
+                    *proof["blockers"],
+                    "hi_nerv_mlx_live_receiver_export_parity_error",
+                ],
+            }
+        )
+        return proof
+
+
+def _sha256_numpy_array(array: np.ndarray) -> str:
+    arr = np.asarray(array)
+    h = hashlib.sha256()
+    h.update(str(arr.dtype).encode("utf-8"))
+    h.update(np.asarray(arr.shape, dtype="<i8").tobytes())
+    h.update(np.ascontiguousarray(arr).tobytes(order="C"))
+    return h.hexdigest()
 
 
 def _build_decoder_rendered_pixel_proof(
@@ -531,11 +676,22 @@ def export_hi_nerv_mlx_archive(
         latent_codec=latent_codec,
         return_bitstream_report=True,
     )
+    live_receiver_export_parity = _build_mlx_live_receiver_export_parity_proof(
+        model=model,
+        archive_bytes=bin_bytes,
+        cfg=cfg,
+        source_backend=source_backend,
+    )
     bin_path = out_dir / "0.bin"
     bin_path.write_bytes(bin_bytes)
     bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
     bitstream_report_path.write_text(
         json.dumps(bitstream_report, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    live_receiver_export_parity_path = out_dir / _LIVE_RECEIVER_EXPORT_PARITY_NAME
+    live_receiver_export_parity_path.write_text(
+        json.dumps(live_receiver_export_parity, indent=2, sort_keys=True),
         encoding="utf-8",
     )
 
@@ -596,6 +752,12 @@ def export_hi_nerv_mlx_archive(
                 "hi_nerv_bitstream_preparation_path": (
                     bitstream_report_path.as_posix()
                 ),
+                "hi_nerv_mlx_live_receiver_export_parity": (
+                    live_receiver_export_parity
+                ),
+                "hi_nerv_mlx_live_receiver_export_parity_path": (
+                    live_receiver_export_parity_path.as_posix()
+                ),
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge": {
                     "artifact_path": npz_bridge_manifest["artifact_path"],
@@ -639,6 +801,12 @@ def export_hi_nerv_mlx_archive(
                 "hi_nerv_bitstream_preparation": bitstream_report,
                 "hi_nerv_bitstream_preparation_path": (
                     bitstream_report_path.as_posix()
+                ),
+                "hi_nerv_mlx_live_receiver_export_parity": (
+                    live_receiver_export_parity
+                ),
+                "hi_nerv_mlx_live_receiver_export_parity_path": (
+                    live_receiver_export_parity_path.as_posix()
                 ),
                 "num_pairs": int(cfg.num_pairs),
                 "state_npz_bridge_manifest": npz_bridge_manifest,
@@ -705,6 +873,10 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
     )
     bitstream_report_path = out_dir / _BITSTREAM_PREPARATION_REPORT_NAME
     bitstream_report = json.loads(bitstream_report_path.read_text(encoding="utf-8"))
+    live_receiver_export_parity_path = out_dir / _LIVE_RECEIVER_EXPORT_PARITY_NAME
+    live_receiver_export_parity = json.loads(
+        live_receiver_export_parity_path.read_text(encoding="utf-8")
+    )
     archive_section_telemetry_path = out_dir / _ARCHIVE_SECTION_TELEMETRY_NAME
     archive_section_telemetry = json.loads(
         archive_section_telemetry_path.read_text(encoding="utf-8")
@@ -736,6 +908,10 @@ def export_hi_nerv_mlx_archive_bound_candidate_package(
             "archive_section_telemetry_path": archive_section_telemetry_path.as_posix(),
             "hi_nerv_bitstream_preparation": bitstream_report,
             "hi_nerv_bitstream_preparation_path": bitstream_report_path.as_posix(),
+            "hi_nerv_mlx_live_receiver_export_parity": live_receiver_export_parity,
+            "hi_nerv_mlx_live_receiver_export_parity_path": (
+                live_receiver_export_parity_path.as_posix()
+            ),
             "num_pairs": int(cfg.num_pairs),
             "state_npz_bridge_manifest": npz_bridge_manifest,
             "mlx_numpy_portability_contract": (

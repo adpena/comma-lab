@@ -229,7 +229,7 @@ def test_native_optimizer_reports_single_global_clip_application() -> None:
     assert 0.0 < metrics["gradient_clip_scale"] < 1.0
 
 
-def test_pact_muon_reports_delegated_partition_clip_without_double_global_clip() -> None:
+def test_pact_muon_preclips_and_keeps_partition_clip_cap() -> None:
     import mlx.nn as nn
 
     from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
@@ -269,7 +269,7 @@ def test_pact_muon_reports_delegated_partition_clip_without_double_global_clip()
     )
 
     assert metrics["gradient_clip_enabled"] == pytest.approx(1.0)
-    assert metrics["gradient_clip_actual_application_count"] == pytest.approx(0.0)
+    assert metrics["gradient_clip_actual_application_count"] == pytest.approx(1.0)
     assert metrics["gradient_clip_delegated_to_pr95_partition_helper"] == pytest.approx(
         1.0
     )
