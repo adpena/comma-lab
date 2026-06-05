@@ -88,11 +88,11 @@ import os
 import subprocess
 import sys
 import time
-import zipfile
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+from tac.submission_archive import write_minimal_single_member_archive
 from tac.substrate_registry import SubstrateContract, register_substrate
 from tac.substrates._shared.smoke_auth_eval_gate import (
     gate_auth_eval_call as _canon_gate_auth_eval_call,
@@ -529,7 +529,7 @@ def _write_runtime(submission_dir: Path) -> None:
         "#!/usr/bin/env python\n"
         "\"\"\"hi_nerv contest-compliant inflate runtime.\n"
         "\n"
-        "Reads archive_dir/0.bin via the packaged substrate parser, then for\n"
+        "Reads archive_dir/x or archive_dir/0.bin via the packaged substrate parser, then for\n"
         "each base in file_list writes per-frame .png under output_dir/<base>/.\n"
         "No scorer-network imports (strict-scorer-rule contract).\n"
         "\"\"\"\n"
@@ -548,7 +548,10 @@ def _write_runtime(submission_dir: Path) -> None:
         "    archive_dir = Path(sys.argv[1])\n"
         "    output_dir = Path(sys.argv[2])\n"
         "    file_list_path = Path(sys.argv[3])\n"
-        "    archive_bytes = (archive_dir / '0.bin').read_bytes()\n"
+        "    present = [p for p in (archive_dir / 'x', archive_dir / '0.bin') if p.is_file()]\n"
+        "    if len(present) != 1:\n"
+        "        raise FileNotFoundError('expected exactly one payload member named x or 0.bin')\n"
+        "    archive_bytes = present[0].read_bytes()\n"
         "    for line in file_list_path.read_text(encoding='utf-8').splitlines():\n"
         "        line = line.strip()\n"
         "        if not line:\n"
@@ -569,24 +572,16 @@ def _build_archive_zip(
     bin_bytes: bytes,
     submission_dir: Path,
 ) -> None:
-    """Deterministic archive.zip containing 0.bin + inflate.sh + inflate.py.
+    """Deterministic payload-only archive.zip with runtime outside the ZIP.
 
-    Per Catalog #19 ``check_archive_builders_use_deterministic_zip``: use
-    ZipInfo + writestr with fixed timestamp + DEFLATE.
+    Upstream ``evaluate.sh`` unzips ``archive.zip`` into ``archive_dir`` and
+    executes ``submission_dir/inflate.sh`` from the source tree.  Runtime files
+    are not receiver payload, so do not charge them in ``archive.zip``.
     """
-    archive_zip_path.parent.mkdir(parents=True, exist_ok=True)
-    fixed_ts = (2026, 1, 1, 0, 0, 0)
-    with zipfile.ZipFile(archive_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        zi = zipfile.ZipInfo("0.bin", date_time=fixed_ts)
-        zi.compress_type = zipfile.ZIP_DEFLATED
-        zf.writestr(zi, bin_bytes)
-        for name in ("inflate.sh", "inflate.py"):
-            src = submission_dir / name
-            if not src.is_file():
-                continue
-            zi = zipfile.ZipInfo(name, date_time=fixed_ts)
-            zi.compress_type = zipfile.ZIP_DEFLATED
-            zf.writestr(zi, src.read_bytes())
+    for name in ("inflate.sh", "inflate.py"):
+        if not (submission_dir / name).is_file():
+            raise FileNotFoundError(f"missing HiNeRV runtime file: {submission_dir / name}")
+    write_minimal_single_member_archive(archive_zip_path, bin_bytes)
 
 
 # ---------------------------------------------------------------------------
