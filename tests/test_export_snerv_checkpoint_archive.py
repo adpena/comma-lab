@@ -161,6 +161,8 @@ def test_official_checkpoint_export_report_classifies_receiver_payload(
     assert binding["native_checkpoint_export_bound_to_official_payload"] is True
     assert binding["official_receiver_payload_bound"] is True
     assert binding["official_receiver_tensor_map_verified"] is True
+    assert binding["trained_state_exportable"] is True
+    assert binding["official_trained_state_exportable"] is True
     assert binding["selected_packet_status"] == "frame_producing_official_export"
     assert binding["selected_packet_decoded_frame_shape"] == [1, 2, 3, 16, 16]
     manifest = binding["official_trained_checkpoint_mapping_manifest"]
@@ -189,6 +191,18 @@ def test_official_checkpoint_export_report_classifies_receiver_payload(
         binding["preserved_blockers"]
     )
     assert binding["official_tensor_category_bytes"]
+    assert report["checkpoint_state_key_count"] > 0
+    assert report["checkpoint_trained_state_exportable"] is True
+    assert report["score_aware_long_training_executed"] is True
+    assert report["score_aware_long_training_trained_state_exportable"] is True
+    assert report["score_aware_long_training"]["trained_state_exportable"] is True
+    assert report["packet_metadata_summary"]["checkpoint_trained_state_exportable"] is True
+    assert (
+        report["packet_metadata_summary"][
+            "score_aware_long_training_trained_state_exportable"
+        ]
+        is True
+    )
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 
@@ -241,6 +255,8 @@ def test_official_checkpoint_export_report_consumes_upstream_decoder_keys(
 
     binding = report["official_checkpoint_export_binding"]
     manifest = binding["official_trained_checkpoint_mapping_manifest"]
+    assert binding["trained_state_exportable"] is True
+    assert binding["official_trained_state_exportable"] is True
     assert manifest["official_trained_checkpoint_loaded"] is True
     assert manifest["decoder_len"] == 8
     assert manifest["decoder_len_source"] == "inferred_from_decoder_prefixes"
@@ -275,6 +291,9 @@ def test_official_checkpoint_export_report_consumes_upstream_decoder_keys(
     assert "snerv_official_tub_portable_temporal_encoder_weight_mapping_missing" in (
         binding["preserved_blockers"]
     )
+    assert report["checkpoint_trained_state_exportable"] is True
+    assert report["score_aware_long_training_trained_state_exportable"] is True
+    assert report["packet_metadata_summary"]["checkpoint_trained_state_exportable"] is True
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 

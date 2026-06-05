@@ -196,6 +196,8 @@ def export_snerv_checkpoint_archive(
     checkpoint_state_sha256 = sha256_file(state_path)
     startup_json_sha256 = sha256_file(startup_path)
     state = unpack_state_dict_numpy(state_path.read_bytes())
+    checkpoint_state_key_count = len(state)
+    checkpoint_trained_state_exportable = checkpoint_state_key_count > 0
     hard_byte_ceiling = _export_hard_byte_ceiling(
         candidate=candidate,
         hard_byte_ceilings=startup.get("hard_byte_ceilings") or [],
@@ -235,9 +237,23 @@ def export_snerv_checkpoint_archive(
         "checkpoint_epoch": meta.get("global_epoch"),
         "checkpoint_state_kind": state_kind,
         "checkpoint_state_sha256": checkpoint_state_sha256,
+        "checkpoint_state_key_count": checkpoint_state_key_count,
+        "checkpoint_trained_state_exportable": checkpoint_trained_state_exportable,
         "startup_json_sha256": startup_json_sha256,
         "native_mlx_training_executed": True,
         "score_aware_long_training_executed": True,
+        "score_aware_long_training_trained_state_exportable": (
+            checkpoint_trained_state_exportable
+        ),
+        "score_aware_long_training": {
+            "schema": "snerv_checkpoint_export_score_aware_long_training.v1",
+            "executed": True,
+            "trained_state_exportable": checkpoint_trained_state_exportable,
+            "training_kind": "checkpoint_harvest_interrupted_run",
+            "checkpoint_state_kind": state_kind,
+            "checkpoint_state_key_count": checkpoint_state_key_count,
+            **FALSE_AUTHORITY,
+        },
         "score_aware_long_training_kind": "checkpoint_harvest_interrupted_run",
         **FALSE_AUTHORITY,
     }
@@ -310,7 +326,19 @@ def export_snerv_checkpoint_archive(
         "checkpoint_state_kind": state_kind,
         "checkpoint_state_path": state_path.as_posix(),
         "checkpoint_state_sha256": checkpoint_state_sha256,
+        "checkpoint_state_key_count": checkpoint_state_key_count,
         "checkpoint_state_present_at_report_write": state_path.is_file(),
+        "checkpoint_trained_state_exportable": checkpoint_trained_state_exportable,
+        "score_aware_long_training_executed": (
+            packet.metadata.get("score_aware_long_training_executed") is True
+        ),
+        "score_aware_long_training_trained_state_exportable": (
+            packet.metadata.get("score_aware_long_training_trained_state_exportable")
+            is True
+        ),
+        "score_aware_long_training": dict(
+            packet.metadata.get("score_aware_long_training") or {}
+        ),
         "modelsize_candidate": candidate,
         "startup_json_path": startup_path.as_posix(),
         "startup_json_sha256": startup_json_sha256,
@@ -1664,6 +1692,8 @@ def _official_checkpoint_export_binding(
             receiver_tensor_map.get("category_counts") or {}
         ),
         "official_trained_checkpoint_mapping_manifest": official_state_manifest,
+        "trained_state_exportable": bool(native_checkpoint_export_bound),
+        "official_trained_state_exportable": bool(native_checkpoint_export_bound),
         "official_trained_checkpoint_state_dict_slice_present": bool(
             official_mapping_state
         ),
@@ -1735,6 +1765,15 @@ def _summary(report: dict[str, Any]) -> dict[str, Any]:
         ),
         "receiver_proof_passed": report.get("receiver_proof_passed"),
         "receiver_contract_satisfied": report.get("receiver_contract_satisfied"),
+        "checkpoint_trained_state_exportable": report.get(
+            "checkpoint_trained_state_exportable"
+        ),
+        "score_aware_long_training_executed": report.get(
+            "score_aware_long_training_executed"
+        ),
+        "score_aware_long_training_trained_state_exportable": report.get(
+            "score_aware_long_training_trained_state_exportable"
+        ),
         "local_mlx_prefilter_written": report.get("local_mlx_prefilter_written"),
         "local_mlx_prefilter_profile_path": report.get("local_mlx_prefilter_profile_path"),
         "lf_payload_report_status": lf_summary.get("report_status"),
@@ -1793,8 +1832,13 @@ def _packet_metadata_summary(packet: SnervArchivePacket) -> dict[str, Any]:
         "official_skip_high_full_shape",
         "official_skip_high_export_storage_shape",
         "official_skip_high_export_is_compact_train_state",
+        "checkpoint_state_key_count",
+        "checkpoint_trained_state_exportable",
         "source_faithful_stack",
         "official_source_parity_blockers",
+        "score_aware_long_training",
+        "score_aware_long_training_executed",
+        "score_aware_long_training_trained_state_exportable",
         "native_mlx_training_kind",
         "score_aware_long_training_kind",
         "checkpoint_export_schema",
