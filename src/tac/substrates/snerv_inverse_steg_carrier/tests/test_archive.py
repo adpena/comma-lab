@@ -649,7 +649,7 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
         decode_decoder_payload(payload)
 
 
-def test_official_mfu_hfr_tub_payload_executes_output2_fusion_from_bytes() -> None:
+def test_official_mfu_hfr_tub_payload_elides_output2_from_runtime_by_default() -> None:
     bundle = _official_payload_fixture()
     temporal = np.arange(1 * 4 * 4 * 4, dtype=np.float64).reshape(1, 4, 4, 4)
     output2_raw = (
@@ -663,10 +663,21 @@ def test_official_mfu_hfr_tub_payload_executes_output2_fusion_from_bytes() -> No
     header = _read_subpacket_header(payload)
     decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
     proof = decoded.execute()
+    variant_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal + 11.0,
+        tub_output2_raw=output2_raw - 3.0,
+    )
+    variant_decoded = decode_official_mfu_hfr_tub_decoder_payload(variant_payload)
+    variant_proof = variant_decoded.execute()
 
     storage = header["tub_output2_storage"]
-    assert storage["stored"] is True
-    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["stored"] is False
+    assert storage["source_payload_present"] is True
+    assert storage["proof_only_elided_from_selected_runtime_packet"] is True
+    assert storage["proof_only_false_authority_metadata"] is True
+    assert storage["storage_policy"] == "elide_until_receiver_frame_decode_bound"
+    assert storage["receiver_executes_output2_fusion_from_payload"] is False
     assert storage["receiver_frame_decode_consumes_output2"] is False
     assert storage["train_time_loss_coupled"] is False
     assert storage["scored_pixel_render_bound"] is False
@@ -682,6 +693,49 @@ def test_official_mfu_hfr_tub_payload_executes_output2_fusion_from_bytes() -> No
     assert storage["output2_raw_sha256"] == hashlib.sha256(
         np.asarray(output2_raw, dtype="<f8").tobytes()
     ).hexdigest()
+    assert storage["source_raw_bytes"] > 0
+    assert storage["stored_raw_bytes"] == 0
+    assert storage["raw_byte_savings"] == storage["source_raw_bytes"]
+    tensor_names = {row["name"] for row in header["tensor_manifest"]}
+    assert "tub.temporal_encoder_concat" not in tensor_names
+    assert "tub.output2_raw" not in tensor_names
+    assert decoded.tub_output2_inputs() is None
+    assert proof["executed_components"]["official_tub_output2_fusion"] is False
+    rows = {row["name"]: row for row in proof["output_tensors"]}
+    assert "tub.output2_decoder_input" not in rows
+    assert "tub.output2_fused" not in rows
+    assert proof["output_bundle_sha256"] == header["receiver_self_consistency_reference"][
+        "output_bundle_sha256"
+    ]
+    assert proof["output_bundle_sha256"] == variant_proof["output_bundle_sha256"]
+    np.testing.assert_array_equal(decoded.decode_frames(), variant_decoded.decode_frames())
+    assert proof["score_claim"] is False
+    assert proof["ready_for_exact_eval_dispatch"] is False
+
+
+def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() -> None:
+    bundle = _official_payload_fixture()
+    temporal = np.arange(1 * 4 * 4 * 4, dtype=np.float64).reshape(1, 4, 4, 4)
+    output2_raw = (
+        np.arange(2 * 8 * 4 * 4, dtype=np.float64).reshape(2, 8, 4, 4) / 17.0
+    )
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal,
+        tub_output2_raw=output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    header = _read_subpacket_header(payload)
+    proof = execute_official_mfu_hfr_tub_decoder_payload(payload)
+
+    storage = header["tub_output2_storage"]
+    assert storage["stored"] is True
+    assert storage["storage_policy"] == "store_for_receiver_proof"
+    assert storage["proof_only_elided_from_selected_runtime_packet"] is False
+    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["receiver_frame_decode_consumes_output2"] is False
+    assert storage["stored_raw_bytes"] == storage["source_raw_bytes"]
+    assert storage["raw_byte_savings"] == 0
     assert proof["executed_components"]["official_tub_output2_fusion"] is True
     rows = {row["name"]: row for row in proof["output_tensors"]}
     assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
@@ -690,9 +744,6 @@ def test_official_mfu_hfr_tub_payload_executes_output2_fusion_from_bytes() -> No
         "tub.output2_decoder_input"
     ]["sha256"]
     assert storage["output2_fused_sha256"] == rows["tub.output2_fused"]["sha256"]
-    assert proof["output_bundle_sha256"] == header["receiver_self_consistency_reference"][
-        "output_bundle_sha256"
-    ]
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
 

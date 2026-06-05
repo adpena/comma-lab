@@ -400,6 +400,8 @@ def _snerv_score_aware_long_training_telemetry_contract(
     live_calibration_loss_observed = False
     pr95_seg_loss_observed = False
     pr95_pose_loss_observed = False
+    seg_dual_lambda_active_observed = False
+    pose_dual_lambda_active_observed = False
     if not path.is_file():
         blockers = (
             ["snerv_score_aware_long_training_telemetry_missing"]
@@ -484,6 +486,20 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill",
                 0.0,
             )
+            seg_dual_lambda_active_observed = (
+                seg_dual_lambda_active_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill",
+                )
+            )
+            pose_dual_lambda_active_observed = (
+                pose_dual_lambda_active_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill",
+                )
+            )
     if row_count <= 0:
         blockers.append("snerv_score_aware_long_training_telemetry_empty")
     if malformed_rows:
@@ -496,6 +512,10 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append("snerv_score_aware_long_training_dual_segnet_metric_never_observed")
     if expected_pose and not pose_dual_observed:
         blockers.append("snerv_score_aware_long_training_dual_posenet_metric_never_observed")
+    if expected_seg and not seg_dual_lambda_active_observed:
+        blockers.append("snerv_score_aware_long_training_dual_segnet_lambda_never_active")
+    if expected_pose and not pose_dual_lambda_active_observed:
+        blockers.append("snerv_score_aware_long_training_dual_posenet_lambda_never_active")
     if expected_section and not section_rate_observed:
         blockers.append("snerv_score_aware_long_training_section_rate_metric_missing")
     if expected_guard and not guard_loss_observed:
@@ -528,6 +548,8 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
         "posenet_dual_metric_observed": bool(pose_dual_observed),
+        "segnet_dual_lambda_active_observed": bool(seg_dual_lambda_active_observed),
+        "posenet_dual_lambda_active_observed": bool(pose_dual_lambda_active_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
         "segnet_live_calibration_active_observed": bool(
@@ -584,6 +606,18 @@ def _row_float_equals(row: Mapping[str, Any], key: str, expected: float) -> bool
     if not _finite_number(value):
         return False
     return float(value) == float(expected)
+
+
+def _row_nonzero_finite_number(
+    row: Mapping[str, Any],
+    key: str,
+    *,
+    epsilon: float = 1.0e-12,
+) -> bool:
+    value = _telemetry_row_value(row, key)
+    if not _finite_number(value):
+        return False
+    return bool(abs(float(value)) > float(epsilon))
 
 
 def _build_snerv_pretraining_archive_section_qat_weight_policy(
@@ -5415,6 +5449,21 @@ def _official_tub_output2_packet_metadata(
         "official_tub_output2_storage": storage,
         "official_tub_output2_payload_export_bound": bool(
             storage.get("stored") is True
+        ),
+        "official_tub_output2_payload_source_available": bool(
+            storage.get("source_payload_present") is True
+        ),
+        "official_tub_output2_payload_proof_only_elided": bool(
+            storage.get("proof_only_elided_from_selected_runtime_packet") is True
+        ),
+        "official_tub_output2_payload_false_authority_metadata_bound": bool(
+            storage.get("proof_only_false_authority_metadata") is True
+        ),
+        "official_tub_output2_payload_selected_runtime_bytes": int(
+            storage.get("stored_raw_bytes") or 0
+        ),
+        "official_tub_output2_payload_source_raw_bytes": int(
+            storage.get("source_raw_bytes") or 0
         ),
         "official_tub_output2_receiver_executed": bool(
             executed_components.get("official_tub_output2_fusion") is True

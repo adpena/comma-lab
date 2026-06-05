@@ -1566,6 +1566,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
     output2_decoder_output_shape: tuple[int, int, int, int] | None = None,
     tub_temporal_encoder_concat: np.ndarray | None = None,
     tub_output2_raw: np.ndarray | None = None,
+    store_tub_output2_for_receiver_proof: bool = False,
     skip_high_codec: str | None = None,
     skip_high_source_shape: tuple[int, int, int, int] | None = None,
     tub_input_codec: str | None = None,
@@ -1595,6 +1596,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         fc_hw=fc_hw,
         temporal_encoder_output_shape=temporal_encoder_output_shape,
         output2_decoder_output_shape=output2_decoder_output_shape,
+        store_for_receiver_proof=bool(store_tub_output2_for_receiver_proof),
     )
     tensors = _official_payload_tensor_dict(
         mfu=mfu,
@@ -2224,6 +2226,7 @@ def _official_tub_output2_storage_plan(
     fc_hw: tuple[int, int] | None,
     temporal_encoder_output_shape: tuple[int, int, int, int] | None,
     output2_decoder_output_shape: tuple[int, int, int, int] | None,
+    store_for_receiver_proof: bool,
 ) -> dict[str, Any]:
     if (temporal_encoder_concat is None) != (output2_raw is None):
         raise SnervArchiveError(
@@ -2239,6 +2242,9 @@ def _official_tub_output2_storage_plan(
             "metadata": {
                 "schema": "snerv_official_tub_output2_storage.v1",
                 "stored": False,
+                "source_payload_present": False,
+                "proof_only_elided_from_selected_runtime_packet": False,
+                "proof_only_false_authority_metadata": False,
                 "receiver_executes_output2_fusion_from_payload": False,
                 "receiver_frame_decode_consumes_output2": False,
                 "train_time_loss_coupled": False,
@@ -2277,21 +2283,34 @@ def _official_tub_output2_storage_plan(
     # Validate the exact receiver algebra at export time before bytes are stored.
     fusion = official_output2_fusion_numpy(temporal, raw, fc_hw=fc_hw)
     source_raw_bytes = int(temporal.size + raw.size) * np.dtype("<f8").itemsize
+    should_store = bool(store_for_receiver_proof)
+    stored = (
+        {
+            "temporal_encoder_concat": temporal,
+            "output2_raw": raw,
+        }
+        if should_store
+        else {}
+    )
+    effective = dict(stored)
+    stored_raw_bytes = source_raw_bytes if should_store else 0
     return {
-        "stored": {
-            "temporal_encoder_concat": temporal,
-            "output2_raw": raw,
-        },
-        "effective": {
-            "temporal_encoder_concat": temporal,
-            "output2_raw": raw,
-        },
+        "stored": stored,
+        "effective": effective,
         "temporal_encoder_output_shape": temporal_shape,
         "output2_decoder_output_shape": raw_shape,
         "metadata": {
             "schema": "snerv_official_tub_output2_storage.v1",
-            "stored": True,
-            "receiver_executes_output2_fusion_from_payload": True,
+            "stored": should_store,
+            "source_payload_present": True,
+            "proof_only_elided_from_selected_runtime_packet": not should_store,
+            "proof_only_false_authority_metadata": not should_store,
+            "storage_policy": (
+                "store_for_receiver_proof"
+                if should_store
+                else "elide_until_receiver_frame_decode_bound"
+            ),
+            "receiver_executes_output2_fusion_from_payload": should_store,
             "receiver_frame_decode_consumes_output2": False,
             "train_time_loss_coupled": False,
             "scored_pixel_render_bound": False,
@@ -2315,8 +2334,8 @@ def _official_tub_output2_storage_plan(
                 np.asarray(fusion.output2_fused, dtype="<f8").tobytes()
             ),
             "source_raw_bytes": source_raw_bytes,
-            "stored_raw_bytes": source_raw_bytes,
-            "raw_byte_savings": 0,
+            "stored_raw_bytes": stored_raw_bytes,
+            "raw_byte_savings": source_raw_bytes - stored_raw_bytes,
             "source_forward_replay_authority": False,
             "contest_scorer_authority": False,
             **FALSE_AUTHORITY,

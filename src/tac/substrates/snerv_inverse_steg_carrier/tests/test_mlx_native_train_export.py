@@ -260,6 +260,8 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "train_time_section_rate_score__decoder_payload": 0.01,
                     "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
                 },
             },
             sort_keys=True,
@@ -283,10 +285,78 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["blockers"] == []
     assert contract["segnet_dual_metric_observed"] is True
     assert contract["posenet_dual_metric_observed"] is True
+    assert contract["segnet_dual_lambda_active_observed"] is True
+    assert contract["posenet_dual_lambda_active_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
+
+
+def test_score_aware_telemetry_contract_rejects_inactive_scorer_tether_lambdas(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        "\n".join(
+            json.dumps(row, sort_keys=True)
+            for row in (
+                {
+                    "epoch": 0,
+                    "loss_part_distill": 1.0,
+                    "loss_part_pose_distill": 2.0,
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.0,
+                },
+                {
+                    "epoch": 1,
+                    "loss_part_distill": 1.1,
+                    "loss_part_pose_distill": 2.1,
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.0,
+                },
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["segnet_dual_metric_observed"] is True
+    assert contract["posenet_dual_metric_observed"] is True
+    assert contract["segnet_dual_lambda_active_observed"] is False
+    assert contract["posenet_dual_lambda_active_observed"] is False
+    assert (
+        "snerv_score_aware_long_training_dual_segnet_metric_never_observed"
+        not in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_dual_posenet_metric_never_observed"
+        not in contract["blockers"]
+    )
+    assert "snerv_score_aware_long_training_dual_segnet_lambda_never_active" in (
+        contract["blockers"]
+    )
+    assert "snerv_score_aware_long_training_dual_posenet_lambda_never_active" in (
+        contract["blockers"]
+    )
 
 
 def test_score_aware_telemetry_contract_rejects_stale_pr95_alias_failure(
@@ -330,6 +400,12 @@ def test_score_aware_telemetry_contract_rejects_stale_pr95_alias_failure(
     assert (
         "snerv_score_aware_long_training_dual_segnet_metric_never_observed"
         in contract["blockers"]
+    )
+    assert "snerv_score_aware_long_training_dual_segnet_lambda_never_active" in (
+        contract["blockers"]
+    )
+    assert "snerv_score_aware_long_training_dual_posenet_lambda_never_active" in (
+        contract["blockers"]
     )
     assert (
         "snerv_score_aware_long_training_section_rate_metric_missing"
@@ -2233,7 +2309,7 @@ def test_train_export_official_primitives_shared_skip_high_is_receiver_closed(
     assert official_payload.score_claim is False
 
 
-def test_official_mfu_hfr_tub_packet_carries_output2_payload_from_components() -> None:
+def test_official_mfu_hfr_tub_packet_elides_output2_payload_from_components() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
 
     pairs = _tiny_pairs(pairs=2)
@@ -2275,51 +2351,69 @@ def test_official_mfu_hfr_tub_packet_carries_output2_payload_from_components() -
     proof = official_payload.execute()
 
     storage = decoded.metadata["official_tub_output2_storage"]
-    assert storage["stored"] is True
-    assert storage["receiver_executes_output2_fusion_from_payload"] is True
+    assert storage["stored"] is False
+    assert storage["source_payload_present"] is True
+    assert storage["proof_only_elided_from_selected_runtime_packet"] is True
+    assert storage["proof_only_false_authority_metadata"] is True
+    assert storage["storage_policy"] == "elide_until_receiver_frame_decode_bound"
+    assert storage["receiver_executes_output2_fusion_from_payload"] is False
+    assert storage["receiver_frame_decode_consumes_output2"] is False
+    assert storage["stored_raw_bytes"] == 0
+    assert storage["source_raw_bytes"] > 0
+    assert storage["raw_byte_savings"] == storage["source_raw_bytes"]
     assert storage["tensor_names"] == [
         "tub.temporal_encoder_concat",
         "tub.output2_raw",
     ]
-    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
-    assert decoded.metadata["official_tub_output2_payload_export_bound"] is True
+    assert decoded.metadata["official_tub_output2_receiver_executed"] is False
+    assert decoded.metadata["official_tub_output2_payload_export_bound"] is False
+    assert decoded.metadata["official_tub_output2_payload_source_available"] is True
+    assert decoded.metadata["official_tub_output2_payload_proof_only_elided"] is True
+    assert (
+        decoded.metadata[
+            "official_tub_output2_payload_false_authority_metadata_bound"
+        ]
+        is True
+    )
     assert decoded.metadata["official_tub_output2_receiver_frame_bound"] is False
     assert decoded.metadata["official_tub_output2_payload_loss_coupled"] is False
-    assert decoded.metadata["official_tub_output2_payload_tensor_names"] == [
-        "tub.output2_raw",
-        "tub.temporal_encoder_concat",
-    ]
-    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 2
+    assert decoded.metadata["official_tub_output2_payload_tensor_names"] == []
+    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 0
+    assert decoded.metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
+    assert decoded.metadata["official_tub_output2_payload_source_raw_bytes"] > 0
     manifest = {
         row["name"]: row
         for row in decoded.metadata["official_tub_output2_payload_tensor_manifest"]
     }
-    assert manifest["tub.temporal_encoder_concat"]["shape"] == [1, 4, 4, 4]
-    assert manifest["tub.output2_raw"]["shape"] == [2, 8, 4, 4]
+    assert manifest == {}
     assert (
         decoded.metadata["official_tub_output2_payload_tensor_manifest_sha256"]
-        == hashlib.sha256(
-            json.dumps(
-                decoded.metadata["official_tub_output2_payload_tensor_manifest"],
-                separators=(",", ":"),
-                sort_keys=True,
-            ).encode("utf-8")
-        ).hexdigest()
+        is None
     )
-    assert proof["executed_components"]["official_tub_output2_fusion"] is True
+    assert proof["executed_components"]["official_tub_output2_fusion"] is False
     rows = {row["name"]: row for row in proof["output_tensors"]}
-    assert rows["tub.output2_decoder_input"]["shape"] == [2, 2, 4, 4]
-    assert rows["tub.output2_fused"]["shape"] == [2, 2, 8, 8]
-    assert decoded.metadata["official_tub_output2_receiver_output_tensor_names"] == [
-        "tub.output2_decoder_input",
-        "tub.output2_fused",
-    ]
-    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 2
+    assert "tub.output2_decoder_input" not in rows
+    assert "tub.output2_fused" not in rows
+    assert decoded.metadata["official_tub_output2_receiver_output_tensor_names"] == []
+    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 0
+    frames = decode_snerv_archive_frames(packet.packet, clip_to_uint8_range=False)
+    components["tub_output2_raw"] = np.asarray(components["tub_output2_raw"]) + 7.0
+    mutated_packet = mod._build_official_mfu_hfr_tub_packet_from_components(
+        components,
+        source_pair_indices=[4, 5],
+        model_size=model_size,
+        metadata_extra={"allocation_mode": "unit_output2_payload_mutated"},
+    )
+    mutated_frames = decode_snerv_archive_frames(
+        mutated_packet.packet,
+        clip_to_uint8_range=False,
+    )
+    np.testing.assert_array_equal(frames, mutated_frames)
     assert decoded.metadata["source_faithful_stack"] is False
     assert decoded.metadata["score_claim"] is False
 
 
-def test_official_renderer_exports_output2_payload_into_receiver_packet() -> None:
+def test_official_renderer_elides_output2_from_selected_receiver_packet() -> None:
     pytest.importorskip("mlx.core")
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
     from tac.substrates.snerv_inverse_steg_carrier.mlx_renderer import (
@@ -2382,7 +2476,25 @@ def test_official_renderer_exports_output2_payload_into_receiver_packet() -> Non
     assert metadata["official_tub_output2_payload_export_bound"] is True
     assert metadata["official_tub_output2_receiver_frame_bound"] is False
     assert metadata["official_tub_output2_payload_loss_coupled"] is False
-    assert decoded.metadata["official_tub_output2_storage"]["stored"] is True
+    assert decoded.metadata["official_tub_output2_storage"]["stored"] is False
+    assert (
+        decoded.metadata["official_tub_output2_storage"][
+            "source_payload_present"
+        ]
+        is True
+    )
+    assert (
+        decoded.metadata["official_tub_output2_storage"][
+            "proof_only_elided_from_selected_runtime_packet"
+        ]
+        is True
+    )
+    assert (
+        decoded.metadata["official_tub_output2_storage"][
+            "proof_only_false_authority_metadata"
+        ]
+        is True
+    )
     assert (
         decoded.metadata["official_tub_output2_storage"][
             "receiver_frame_decode_consumes_output2"
@@ -2393,8 +2505,23 @@ def test_official_renderer_exports_output2_payload_into_receiver_packet() -> Non
         decoded.metadata["official_tub_output2_storage"]["train_time_loss_coupled"]
         is False
     )
-    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
-    assert proof["executed_components"]["official_tub_output2_fusion"] is True
+    assert decoded.metadata["official_tub_output2_payload_export_bound"] is False
+    assert decoded.metadata["official_tub_output2_payload_source_available"] is True
+    assert decoded.metadata["official_tub_output2_payload_proof_only_elided"] is True
+    assert (
+        decoded.metadata[
+            "official_tub_output2_payload_false_authority_metadata_bound"
+        ]
+        is True
+    )
+    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 0
+    assert decoded.metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
+    assert decoded.metadata["official_tub_output2_payload_source_raw_bytes"] > 0
+    assert decoded.metadata["official_tub_output2_receiver_executed"] is False
+    assert proof["executed_components"]["official_tub_output2_fusion"] is False
+    packet_tensor_names = {row["name"] for row in official_payload.header["tensor_manifest"]}
+    assert "tub.temporal_encoder_concat" not in packet_tensor_names
+    assert "tub.output2_raw" not in packet_tensor_names
     pixel_drift = np.abs(mlx_frames - receiver_frames)
     assert float(pixel_drift.max()) < 0.02
     assert float(pixel_drift.mean()) < 0.005
@@ -2550,14 +2677,19 @@ def test_official_primitives_long_training_exports_trained_official_payload(
         "authority_blockers"
     ]
     assert len(train_export["trained_packet_sha256"]) == 64
-    assert train_export["official_tub_output2_payload_export_bound"] is True
-    assert train_export["official_tub_output2_receiver_executed"] is True
-    assert train_export["official_tub_output2_payload_tensor_names"] == [
-        "tub.output2_raw",
-        "tub.temporal_encoder_concat",
-    ]
-    assert train_export["official_tub_output2_payload_tensor_count"] == 2
-    assert train_export["official_tub_output2_receiver_output_tensor_count"] == 2
+    assert train_export["official_tub_output2_payload_export_bound"] is False
+    assert train_export["official_tub_output2_payload_source_available"] is True
+    assert train_export["official_tub_output2_payload_proof_only_elided"] is True
+    assert (
+        train_export["official_tub_output2_payload_false_authority_metadata_bound"]
+        is True
+    )
+    assert train_export["official_tub_output2_payload_tensor_names"] == []
+    assert train_export["official_tub_output2_payload_tensor_count"] == 0
+    assert train_export["official_tub_output2_payload_selected_runtime_bytes"] == 0
+    assert train_export["official_tub_output2_payload_source_raw_bytes"] > 0
+    assert train_export["official_tub_output2_receiver_executed"] is False
+    assert train_export["official_tub_output2_receiver_output_tensor_count"] == 0
     assert train_export["source_forward_replay_authority"] is False
     assert old_blocker not in long_training["blockers"]
     replay = long_training["official_mfu_hfr_tub_source_forward_replay"]
@@ -2640,22 +2772,46 @@ def test_official_primitives_long_training_exports_trained_official_payload(
     assert decoded.metadata["snerv_official_mfu_hfr_tub_export_bound"] is True
     assert decoded.metadata["snerv_official_mfu_hfr_tub_receiver_payload_bound"] is True
     assert decoded.metadata["snerv_official_mfu_hfr_tub_source_forward_replay_bound"] is False
-    assert decoded.metadata["official_tub_output2_payload_export_bound"] is True
-    assert decoded.metadata["official_tub_output2_receiver_executed"] is True
-    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 2
-    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 2
+    assert decoded.metadata["official_tub_output2_payload_export_bound"] is False
+    assert decoded.metadata["official_tub_output2_payload_source_available"] is True
+    assert decoded.metadata["official_tub_output2_payload_proof_only_elided"] is True
+    assert (
+        decoded.metadata[
+            "official_tub_output2_payload_false_authority_metadata_bound"
+        ]
+        is True
+    )
+    assert decoded.metadata["official_tub_output2_payload_tensor_count"] == 0
+    assert decoded.metadata["official_tub_output2_payload_selected_runtime_bytes"] == 0
+    assert decoded.metadata["official_tub_output2_payload_source_raw_bytes"] > 0
+    assert decoded.metadata["official_tub_output2_receiver_executed"] is False
+    assert decoded.metadata["official_tub_output2_receiver_output_tensor_count"] == 0
     packet_manifest = {
         row["name"]: row
         for row in decoded.metadata["official_tub_output2_payload_tensor_manifest"]
     }
-    assert packet_manifest["tub.temporal_encoder_concat"]["shape"] == [1, 4, 4, 4]
-    assert packet_manifest["tub.output2_raw"]["shape"] == [2, 8, 4, 4]
+    assert packet_manifest == {}
+    assert decoded.metadata["official_tub_output2_storage"][
+        "source_payload_present"
+    ] is True
+    assert decoded.metadata["official_tub_output2_storage"][
+        "proof_only_elided_from_selected_runtime_packet"
+    ] is True
+    assert decoded.metadata["official_tub_output2_storage"][
+        "stored_raw_bytes"
+    ] == 0
     official_payload = decode_official_mfu_hfr_tub_decoder_payload(
         decoded.sections["decoder_payload"]
     )
     assert official_payload.execute()["executed_components"][
         "official_tub_output2_fusion"
-    ] is True
+    ] is False
+    assert "tub.temporal_encoder_concat" not in {
+        row["name"] for row in official_payload.header["tensor_manifest"]
+    }
+    assert "tub.output2_raw" not in {
+        row["name"] for row in official_payload.header["tensor_manifest"]
+    }
     assert decoded.metadata["score_aware_long_training_executed"] is True
     assert decoded.metadata["score_aware_long_training"]["executed"] is True
     assert decoded.metadata["score_aware_long_training"]["official_mfu_hfr_tub_train_export"][
