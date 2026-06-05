@@ -615,6 +615,63 @@ def test_hinerv_runner_receiver_cache_quality_attaches_to_training_artifact(
     ] is False
 
 
+def test_hinerv_receiver_cache_summary_preserves_segnet_class_occupancy(
+    tmp_path: Path,
+) -> None:
+    report = {
+        "schema": "hi_nerv_receiver_cache_quality_report.v1",
+        "report_path": (tmp_path / "report.json").as_posix(),
+        "archive_path": (tmp_path / "archive.zip").as_posix(),
+        "quality_gate_passed": False,
+        "quality_gate": {"verdict": "CACHE_QUALITY_GATE_FAILED", "stats": {}},
+        "segnet_argmax_probe": {
+            "fit_gate_passed": False,
+            "segnet_argmax_disagreement_rate": 0.5,
+            "boundary_argmax_disagreement_rate": 0.9,
+            "candidate_argmax_histogram": [0, 0, 196536, 0, 72],
+            "reference_argmax_histogram": [44132, 1401, 96943, 3564, 50568],
+        },
+        "blockers": ["candidate_segnet_argmax_disagreement_too_high"],
+    }
+
+    summary = runner_mod._hi_nerv_receiver_cache_quality_summary(report)
+
+    assert summary["segnet_candidate_argmax_histogram"] == [0, 0, 196536, 0, 72]
+    assert summary["segnet_reference_argmax_histogram"] == [
+        44132,
+        1401,
+        96943,
+        3564,
+        50568,
+    ]
+    assert summary["segnet_candidate_occupied_class_fraction"] == pytest.approx(0.4)
+    assert summary["segnet_reference_occupied_class_fraction"] == pytest.approx(1.0)
+
+
+def test_hinerv_train_receiver_class_escape_contract_blocks_lost_escape() -> None:
+    contract = runner_mod._hi_nerv_train_receiver_class_escape_contract(
+        training_telemetry_contract={
+            "segnet_direct_live_max_candidate_occupied_class_fraction": 0.8,
+        },
+        receiver_cache_quality_summary={
+            "segnet_candidate_occupied_class_fraction": 0.2,
+            "segnet_reference_occupied_class_fraction": 1.0,
+        },
+    )
+
+    assert contract["passed"] is False
+    assert contract["train_direct_live_max_candidate_occupied_class_fraction"] == 0.8
+    assert contract["receiver_candidate_occupied_class_fraction"] == 0.2
+    assert (
+        "hi_nerv_train_time_class_escape_not_receiver_export_preserved"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_receiver_export_segnet_argmax_class_collapse"
+        in contract["blockers"]
+    )
+
+
 def _snerv_official_skip_candidate(mode: str) -> dict:
     rows = enumerate_snerv_modelsize_candidates(
         hard_byte_ceilings=(178_000,),

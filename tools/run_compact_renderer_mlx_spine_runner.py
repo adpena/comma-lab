@@ -9892,6 +9892,20 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             post_export_receiver_cache_quality
         )
     )
+    post_export_receiver_cache_quality_summary = _hi_nerv_receiver_cache_quality_summary(
+        post_export_receiver_cache_quality
+    )
+    train_receiver_class_escape_contract = (
+        _hi_nerv_train_receiver_class_escape_contract(
+            training_telemetry_contract=(
+                training_telemetry_contract
+                if isinstance(training_telemetry_contract, Mapping)
+                else None
+            ),
+            receiver_cache_quality_summary=post_export_receiver_cache_quality_summary,
+        )
+    )
+    blockers.extend(train_receiver_class_escape_contract.get("blockers") or [])
 
     final = _base_report(
         output_dir=out,
@@ -10082,9 +10096,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                     "authority": "macos_mlx_research_signal_false_authority",
                 },
                 "post_export_receiver_cache_quality": (
-                    _hi_nerv_receiver_cache_quality_summary(
-                        post_export_receiver_cache_quality
-                    )
+                    post_export_receiver_cache_quality_summary
+                ),
+                "train_receiver_class_escape_contract": (
+                    train_receiver_class_escape_contract
                 ),
                 "pose_instability_monitor": (
                     _pose_instability_monitor_report_metadata(artifact_dict)
@@ -10133,9 +10148,10 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             "mlx_prefilter_coverage": mlx_prefilter_coverage,
             "mlx_prefilter_error_anatomy": auto_xray_attachment,
             "post_export_receiver_cache_quality": (
-                _hi_nerv_receiver_cache_quality_summary(
-                    post_export_receiver_cache_quality
-                )
+                post_export_receiver_cache_quality_summary
+            ),
+            "train_receiver_class_escape_contract": (
+                train_receiver_class_escape_contract
             ),
             "hard_pair_coverage": post_export_hard_pair_coverage,
             "auto_mlx_prefilter_profile_path": (
@@ -14603,6 +14619,22 @@ def _hi_nerv_receiver_cache_quality_summary(
         and isinstance(crux_probe.get("aggregate"), Mapping)
         else None
     )
+    candidate_histogram = (
+        argmax_probe.get("candidate_argmax_histogram")
+        if isinstance(argmax_probe, Mapping)
+        else None
+    )
+    reference_histogram = (
+        argmax_probe.get("reference_argmax_histogram")
+        if isinstance(argmax_probe, Mapping)
+        else None
+    )
+    candidate_occupied_fraction = _argmax_histogram_occupied_fraction(
+        candidate_histogram
+    )
+    reference_occupied_fraction = _argmax_histogram_occupied_fraction(
+        reference_histogram
+    )
     return {
         "schema": "hi_nerv_receiver_cache_quality_summary.v1",
         "report_path": report.get("report_path"),
@@ -14642,6 +14674,18 @@ def _hi_nerv_receiver_cache_quality_summary(
             if isinstance(argmax_probe, Mapping)
             else None
         ),
+        "segnet_candidate_argmax_histogram": (
+            [int(v) for v in candidate_histogram]
+            if isinstance(candidate_histogram, list)
+            else None
+        ),
+        "segnet_reference_argmax_histogram": (
+            [int(v) for v in reference_histogram]
+            if isinstance(reference_histogram, list)
+            else None
+        ),
+        "segnet_candidate_occupied_class_fraction": candidate_occupied_fraction,
+        "segnet_reference_occupied_class_fraction": reference_occupied_fraction,
         "distortion_crux_probe_path": report.get("distortion_crux_probe_path"),
         "distortion_crux_probe_passed": (
             bool(crux_probe.get("fit_gate_passed"))
@@ -14663,6 +14707,82 @@ def _hi_nerv_receiver_cache_quality_summary(
             else None
         ),
         "blockers": [str(blocker) for blocker in report.get("blockers") or []],
+    }
+
+
+def _argmax_histogram_occupied_fraction(histogram: Any) -> float | None:
+    if not isinstance(histogram, list) or not histogram:
+        return None
+    try:
+        values = [int(value) for value in histogram]
+    except (TypeError, ValueError):
+        return None
+    return float(sum(1 for value in values if value > 0) / max(len(values), 1))
+
+
+def _hi_nerv_train_receiver_class_escape_contract(
+    *,
+    training_telemetry_contract: Mapping[str, Any] | None,
+    receiver_cache_quality_summary: Mapping[str, Any] | None,
+    min_surviving_fraction: float = 0.400001,
+    min_escape_delta: float = 0.199999,
+) -> dict[str, Any]:
+    """Name the crux when class escape is learned but not receiver-preserved."""
+
+    train_fraction: float | None = None
+    receiver_fraction: float | None = None
+    target_fraction: float | None = None
+    if isinstance(training_telemetry_contract, Mapping):
+        value = training_telemetry_contract.get(
+            "segnet_direct_live_max_candidate_occupied_class_fraction"
+        )
+        if _finite_json_number(value):
+            train_fraction = float(value)
+    if isinstance(receiver_cache_quality_summary, Mapping):
+        value = receiver_cache_quality_summary.get(
+            "segnet_candidate_occupied_class_fraction"
+        )
+        if _finite_json_number(value):
+            receiver_fraction = float(value)
+        value = receiver_cache_quality_summary.get(
+            "segnet_reference_occupied_class_fraction"
+        )
+        if _finite_json_number(value):
+            target_fraction = float(value)
+
+    blockers: list[str] = []
+    if train_fraction is None:
+        blockers.append("hi_nerv_train_receiver_class_escape_train_fraction_missing")
+    if receiver_fraction is None:
+        blockers.append("hi_nerv_train_receiver_class_escape_receiver_fraction_missing")
+    if (
+        train_fraction is not None
+        and receiver_fraction is not None
+        and train_fraction >= min_surviving_fraction
+        and receiver_fraction < min_surviving_fraction
+        and (train_fraction - receiver_fraction) >= min_escape_delta
+    ):
+        blockers.append("hi_nerv_train_time_class_escape_not_receiver_export_preserved")
+    if (
+        target_fraction is not None
+        and receiver_fraction is not None
+        and target_fraction >= min_surviving_fraction
+        and receiver_fraction < min_surviving_fraction
+    ):
+        blockers.append("hi_nerv_receiver_export_segnet_argmax_class_collapse")
+    return {
+        "schema": "hi_nerv_train_receiver_class_escape_contract.v1",
+        "train_direct_live_max_candidate_occupied_class_fraction": train_fraction,
+        "receiver_candidate_occupied_class_fraction": receiver_fraction,
+        "receiver_reference_occupied_class_fraction": target_fraction,
+        "min_surviving_fraction": float(min_surviving_fraction),
+        "min_escape_delta": float(min_escape_delta),
+        "passed": not blockers,
+        "blockers": blockers,
+        "authority": "macos_mlx_research_signal_false_authority",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
     }
 
 
