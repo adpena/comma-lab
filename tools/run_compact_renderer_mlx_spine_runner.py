@@ -36,6 +36,8 @@ except ModuleNotFoundError:  # pragma: no cover
 REPO_ROOT = repo_root_from_tool(__file__)
 ensure_repo_imports(REPO_ROOT)
 
+HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
+
 from comma_lab.local_submission_replay import (  # noqa: E402
     run_local_submission_replay,
     stage_local_replay_submission,
@@ -8859,7 +8861,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     receiver_cache_quality_segnet_argmax_batch_frames: int = 4,
     receiver_cache_quality_max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
     receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate: float = (
-        0.400001
+        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
     ),
     telemetry_flush_interval_epochs: int = 1,
     checkpoint_interval_epochs: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS,
@@ -9957,6 +9959,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 scorer_input_shape_tether_stage_weight
             ),
             segnet_direct_live_stage_weight=segnet_direct_live_stage_weight,
+            min_segnet_direct_live_occupied_class_fraction_for_fit_gate=float(
+                receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+            ),
             prioritized_pair_indices=prioritized_pair_indices,
             scorer_error_pair_sampling_weights=(
                 scorer_error_pair_sampling_weights
@@ -12773,7 +12778,9 @@ def _write_hi_nerv_trained_archive_byte_oracle(
 def _hi_nerv_receiver_cache_quality_numeric_class_collapse(
     summary: Mapping[str, Any],
     *,
-    min_material_occupied_fraction: float = 0.400001,
+    min_material_occupied_fraction: float = (
+        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
 ) -> bool:
     candidate_fraction = _compact_finite_float_from_keys(
         summary,
@@ -13826,6 +13833,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_input_contrast_floor_stage_weight: float | None,
     scorer_input_shape_tether_stage_weight: float | None,
     segnet_direct_live_stage_weight: float | None,
+    min_segnet_direct_live_occupied_class_fraction_for_fit_gate: float = (
+        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
     pose_distillation_warmup_epochs: int = 0,
     scorer_input_shape_warmup_epochs: int = 0,
     segnet_direct_live_escape_warmup_epochs: int = 0,
@@ -15079,6 +15089,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
         scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
+        min_segnet_direct_live_occupied_class_fraction_for_fit_gate=float(
+            min_segnet_direct_live_occupied_class_fraction_for_fit_gate
+        ),
     )
     _attach_hi_nerv_training_telemetry_contract(
         artifact=artifact,
@@ -15564,7 +15577,9 @@ def _hi_nerv_train_receiver_class_escape_contract(
     *,
     training_telemetry_contract: Mapping[str, Any] | None,
     receiver_cache_quality_summary: Mapping[str, Any] | None,
-    min_surviving_fraction: float = 0.400001,
+    min_surviving_fraction: float = (
+        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
     min_escape_delta: float = 0.199999,
 ) -> dict[str, Any]:
     """Name the crux when class escape is learned but not receiver-preserved."""
@@ -15660,6 +15675,9 @@ def _compact_score_aware_training_telemetry_contract(
     scorer_input_distribution_guard_weight: float,
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_shape_tether_weight: float = 0.0,
+    min_segnet_direct_live_occupied_class_fraction_for_fit_gate: float = (
+        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
 ) -> dict[str, Any]:
     """Validate that a compact long run actually actuated score controls."""
 
@@ -15675,6 +15693,14 @@ def _compact_score_aware_training_telemetry_contract(
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
     expected_contrast_floor = float(scorer_input_contrast_floor_weight) > 0.0
     expected_shape_tether = float(scorer_input_shape_tether_weight) > 0.0
+    min_direct_live_occupied_fraction = float(
+        min_segnet_direct_live_occupied_class_fraction_for_fit_gate
+    )
+    if not 0.0 <= min_direct_live_occupied_fraction <= 1.0:
+        raise ValueError(
+            "min_segnet_direct_live_occupied_class_fraction_for_fit_gate must "
+            f"be in [0, 1], got {min_direct_live_occupied_fraction}"
+        )
     expected_any = bool(
         expected_seg
         or expected_pose
@@ -15993,7 +16019,7 @@ def _compact_score_aware_training_telemetry_contract(
         expected_direct_live
         and direct_live_class_occupancy_observed
         and float(direct_live_max_candidate_occupied_class_fraction or 0.0)
-        < 0.400001
+        < min_direct_live_occupied_fraction
     ):
         blockers.append(
             f"{family_key}_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
@@ -16026,6 +16052,9 @@ def _compact_score_aware_training_telemetry_contract(
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "expected_scorer_input_contrast_floor_metric": bool(expected_contrast_floor),
         "expected_scorer_input_shape_tether_metric": bool(expected_shape_tether),
+        "min_segnet_direct_live_occupied_class_fraction_for_fit_gate": (
+            min_direct_live_occupied_fraction
+        ),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "posenet_raw_loss_metric_observed": bool(pose_raw_loss_observed),
@@ -19996,7 +20025,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--receiver-cache-quality-min-segnet-argmax-occupied-class-fraction-for-fit-gate",
-        default=0.400001,
+        default=HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE,
         type=float,
         help=(
             "Minimum non-collapsed real SegNet occupied-class fraction accepted "

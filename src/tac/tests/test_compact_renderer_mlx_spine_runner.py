@@ -2284,6 +2284,50 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
     )
 
 
+def test_hinerv_training_telemetry_contract_uses_configured_class_floor(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 2.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+        min_segnet_direct_live_occupied_class_fraction_for_fit_gate=0.4,
+    )
+
+    assert contract["passed"] is True
+    assert contract[
+        "min_segnet_direct_live_occupied_class_fraction_for_fit_gate"
+    ] == pytest.approx(0.4)
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
+        not in contract["blockers"]
+    )
+
+
 def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
     tmp_path: Path,
 ) -> None:

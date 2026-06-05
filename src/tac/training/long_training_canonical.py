@@ -125,6 +125,7 @@ from typing import Any, Protocol, runtime_checkable
 __all__ = [
     "CANONICAL_EMA_DECAY",
     "CANONICAL_NON_PROMOTABLE_MARKERS",
+    "CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE",
     "DEFAULT_CHECKPOINT_INTERVAL_EPOCHS",
     "DEFAULT_CHECKPOINT_RETENTION_KEEP_BEST_N",
     "DEFAULT_CHECKPOINT_RETENTION_KEEP_LAST_N",
@@ -186,6 +187,7 @@ DEFAULT_EARLY_STOPPING_PATIENCE: int = 200
 DEFAULT_TELEMETRY_FLUSH_INTERVAL_EPOCHS: int = 10
 EMA_ACCUMULATION_MODES: frozenset[str] = frozenset({"kahan", "naive"})
 CONTEST_RATE_SCORE_PER_BYTE: float = 25.0 / 37_545_489.0
+CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE = 0.400001
 
 # Canonical schema version for TrainingArtifact JSON emission.
 TRAINING_ARTIFACT_SCHEMA_VERSION: str = "long_training_canonical_artifact.v1"
@@ -3001,7 +3003,10 @@ def _archive_selection_health_sort_key(row: Mapping[str, Any]) -> tuple[int, flo
         return (0, 0.0)
     # Match the receiver/export SegNet argmax survival gate: two occupied
     # classes out of five is still a collapse for scorer-faithful HiNeRV.
-    collapsed = occupied < 0.400001
+    collapsed = (
+        occupied
+        < CANONICAL_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    )
     return (1 if collapsed else 0, -occupied)
 
 
