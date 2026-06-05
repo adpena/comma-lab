@@ -20,6 +20,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     SnervArchivePacket,
     decode_official_mfu_hfr_tub_decoder_payload,
     decode_snerv_archive_frames,
+    pack_snerv_archive,
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import (
@@ -4937,7 +4938,7 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     def fake_decode_mlx_targets(*_args, **_kwargs):
         return target0, target1
 
-    best_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+    raw_best_packet = build_snerv_mlx_native_packet_from_numpy_pairs(
         pairs + 1.0,
         levels=1,
         wavelet="haar",
@@ -4945,8 +4946,22 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
         decoder_payload_codec="int8_symmetric",
         lf_payload_codec="auto",
     ).packet
+    raw_best_archive = unpack_snerv_archive(raw_best_packet)
+    stripped_best_metadata = {
+        key: value
+        for key, value in raw_best_archive.metadata.items()
+        if not key.startswith("step_map_")
+    }
+    best_packet = pack_snerv_archive(
+        metadata_payload=raw_best_archive.sections["metadata_payload"],
+        lf_payload=raw_best_archive.sections["lf_payload"],
+        decoder_payload=raw_best_archive.sections["decoder_payload"],
+        step_map_packet=raw_best_archive.sections["step_map_packet"],
+        metadata=stripped_best_metadata,
+    ).packet
     best_packet_metadata = unpack_snerv_archive(best_packet).metadata
     best_packet_sha256 = hashlib.sha256(best_packet).hexdigest()
+    assert "step_map_coder_mode" not in best_packet_metadata
 
     class FakeQatResult:
         def __init__(self) -> None:
@@ -5071,17 +5086,44 @@ def test_train_export_attaches_real_scorer_loop_qat_without_overclaiming(
     assert scorer_loop["best_packet_path_sha256"] == best_packet_sha256
     assert Path(scorer_loop["best_packet_path"]).read_bytes() == best_packet
     assert scorer_loop["emitted_packet_uses_scorer_loop_best_decoder"] is True
-    assert scorer_loop["emitted_packet_sha256"] == best_packet_sha256
+    assert scorer_loop["emitted_packet_sha256"] == report["packet_sha256"]
+    assert scorer_loop["emitted_packet_sha256"] != best_packet_sha256
+    continuity = scorer_loop["selected_packet_metadata_continuity"]
+    assert continuity["metadata_only_repack"] is True
+    assert continuity["input_selected_packet_sha256"] == best_packet_sha256
+    assert continuity["output_selected_packet_sha256"] == report["packet_sha256"]
+    assert {
+        row["field"] for row in continuity["inherited_fields"]
+    } >= {
+        "step_map_packet_schema",
+        "step_map_coder_mode",
+        "step_map_waterfill_bits_per_coeff",
+        "step_map_coder_groups",
+    }
     assert scorer_loop["blockers"] == ["snerv_scorer_loop_qat_auxiliary_warning"]
     assert report["packet_source"] == "scorer_loop_qat_best_receiver_packet"
-    assert report["packet_sha256"] == best_packet_sha256
+    assert report["packet_sha256"] != best_packet_sha256
     assert report["byte_cap_control"]["packet_source"] == report["packet_source"]
-    assert report["byte_cap_control"]["packet_sha256"] == best_packet_sha256
+    assert report["byte_cap_control"]["packet_sha256"] == report["packet_sha256"]
     assert report["byte_cap_control"]["decoder_payload_codec"] == (
         report["decoder_payload_codec"]
     )
     assert report["byte_cap_control"]["lf_payload_codec"] == report["lf_payload_codec"]
-    assert Path(report["packet_path"]).read_bytes() == best_packet
+    emitted_packet = Path(report["packet_path"]).read_bytes()
+    assert emitted_packet != best_packet
+    emitted_archive = unpack_snerv_archive(emitted_packet)
+    assert emitted_archive.sections == raw_best_archive.sections
+    assert emitted_archive.metadata["step_map_coder_mode"] == (
+        "waterfill_mlx_native_uniform_importance_bridge"
+    )
+    assert emitted_archive.metadata["step_map_packet_schema"] == (
+        "snerv_step_map_coder.adaptive.v1"
+    )
+    assert report["step_map_coder_mode"] == (
+        "waterfill_mlx_native_uniform_importance_bridge"
+    )
+    assert report["step_map_packet_schema"] == "snerv_step_map_coder.adaptive.v1"
+    assert report["step_map_coder_groups"]
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
     assert "snerv_scorer_loop_qat_best_packet_not_materialized_into_native_export" not in report["blockers"]
     assert "snerv_scorer_loop_qat_not_full_video" in report["blockers"]

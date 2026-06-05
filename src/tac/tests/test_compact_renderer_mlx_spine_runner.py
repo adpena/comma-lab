@@ -11602,6 +11602,16 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
             "archive_bytes": archive.stat().st_size,
             "archive_sha256": runner_mod._sha256_file(archive),
             "byte_cap_control": byte_cap_control,
+            "step_map_packet_schema": "snerv_step_map_coder.adaptive.v1",
+            "step_map_coder_mode": "waterfill_mlx_native_uniform_importance_bridge",
+            "step_map_waterfill_bits_per_coeff": 0.5,
+            "step_map_coder_groups": [
+                {
+                    "group_name": "unit_step_maps",
+                    "bits_per_coeff": 0.5,
+                    "coeff_count": 64,
+                }
+            ],
             "runtime_submission_dir": (out / "submission").as_posix(),
             "receiver_proof_path": proof.as_posix(),
             "receiver_proof_passed": True,
@@ -12134,6 +12144,11 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["byte_cap_control"]["hard_byte_ceiling"] == 178_000
     assert native["byte_cap_control"]["archive_bytes"] == native["archive_bytes"]
     assert native["byte_cap_control"]["under_hard_byte_ceiling"] is True
+    assert native["step_map_packet_schema"] == "snerv_step_map_coder.adaptive.v1"
+    assert native["step_map_coder_mode"] == (
+        "waterfill_mlx_native_uniform_importance_bridge"
+    )
+    assert native["step_map_coder_groups"]
     assert native["native_mlx_training_executed"] is True
     assert native["native_mlx_training_kind"] == (
         "snerv_mlx_score_aware_haar_renderer"
@@ -12213,11 +12228,15 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         is True
     )
     assert plan["training_plan"]["native_mlx_long_training_bound"] is True
+    assert plan["receiver_grammar_controls"]["step_map_coder_mode"] == "waterfill"
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
     assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
     assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
     assert "snerv_qat_forward_missing" not in plan["blockers"]
     assert "snerv_coder_aware_regularizer_missing" not in plan["blockers"]
+    assert "snerv_candidate_curriculum_requires_waterfill_step_maps" not in plan[
+        "blockers"
+    ]
     assert plan["pr95_stack_binding"]["complete"] is False
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in plan[
         "blockers"

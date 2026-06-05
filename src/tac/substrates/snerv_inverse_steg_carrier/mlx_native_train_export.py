@@ -2622,6 +2622,46 @@ def train_export_snerv_mlx_native(
             _payload_for_disk = {key: value for key, value in scorer_loop_qat_public.items() if key != "report_path"}
             write_json(report, _payload_for_disk)
 
+    selected_metadata_continuity: dict[str, Any] = {
+        "schema": "snerv_selected_packet_metadata_continuity.v1",
+        "selected_packet_source": str(selected_packet_source),
+        "inherited_field_count": 0,
+        "inherited_fields": [],
+        "metadata_only_repack": False,
+        **FALSE_AUTHORITY,
+    }
+    selected_metadata_continuity_blockers: list[str] = []
+    if selected_packet_source == "scorer_loop_qat_best_receiver_packet":
+        try:
+            (
+                selected_packet,
+                _selected_packet_continuity_metadata,
+                selected_metadata_continuity,
+            ) = _repack_selected_packet_with_section_metadata_continuity(
+                selected_packet,
+                base_packet=closed_form_archive.packet,
+                selected_packet_source=selected_packet_source,
+            )
+        except Exception as exc:
+            selected_metadata_continuity = {
+                **selected_metadata_continuity,
+                "failure": f"{type(exc).__name__}: {exc}",
+                "blockers": [
+                    "snerv_selected_packet_metadata_continuity_failed"
+                ],
+                **FALSE_AUTHORITY,
+            }
+            selected_metadata_continuity_blockers.append(
+                "snerv_selected_packet_metadata_continuity_failed"
+            )
+        scorer_loop_qat_public["selected_packet_metadata_continuity"] = (
+            selected_metadata_continuity
+        )
+        scorer_loop_qat_public["emitted_packet_bytes"] = len(selected_packet)
+        scorer_loop_qat_public["emitted_packet_sha256"] = _sha256_bytes(
+            selected_packet
+        )
+
     packet_path = out / SNERV_MLX_NATIVE_PACKET_FILENAME
     write_bytes_artifact(
         packet_path,
@@ -2640,6 +2680,7 @@ def train_export_snerv_mlx_native(
         "snerv_mlx_score_aware_long_training_not_executed",
         "contest_cpu_cuda_exact_eval_not_executed",
     ]
+    blockers.extend(selected_metadata_continuity_blockers)
     if official_primitives_requested:
         blockers.extend(official_primitives_blockers)
     if scorer_custody.get("contract_valid") is not True:
@@ -7172,6 +7213,85 @@ def _packet_source_from_snerv_native_metadata(metadata: Mapping[str, Any]) -> st
     if metadata.get("recon_pixel_weight_consumed") is True:
         return "mlx_target_hydration_numpy_joint_p18_p19_dwt_adjoint_saliency_weighted_decoder_fit"
     return "mlx_target_hydration_numpy_closed_form_decoder_fit"
+
+
+_SNERV_SELECTED_PACKET_SECTION_METADATA_CONTINUITY_FIELDS = {
+    "lf_payload": (
+        "lf_payload_codec",
+        "lf_payload_codec_requested",
+        "lf_payload_codec_selected",
+        "lf_payload_codec_selection_report",
+        "allocation_mode",
+        "lf_step_allocation_mode",
+        "lf_step_allocation_rows",
+        "contest_scorer_distortion_objective",
+        "recon_pixel_weight_consumed",
+        "recon_pixel_weight_metadata",
+    ),
+    "step_map_packet": (
+        "step_map_packet_schema",
+        "step_map_coder_mode",
+        "step_map_coder_bins",
+        "step_map_waterfill_bits_per_coeff",
+        "step_map_coder_groups",
+    ),
+}
+
+
+def _snerv_metadata_value_present(value: Any) -> bool:
+    return value is not None and value != "" and value != [] and value != {}
+
+
+def _repack_selected_packet_with_section_metadata_continuity(
+    selected_packet: bytes,
+    *,
+    base_packet: bytes,
+    selected_packet_source: str,
+) -> tuple[bytes, dict[str, Any], dict[str, Any]]:
+    """Preserve receiver-grammar metadata when QAT swaps only payload sections."""
+
+    selected_archive = unpack_snerv_archive(selected_packet)
+    base_archive = unpack_snerv_archive(base_packet)
+    selected_metadata = dict(selected_archive.metadata)
+    inherited: list[dict[str, Any]] = []
+    for section_name, fields in (
+        _SNERV_SELECTED_PACKET_SECTION_METADATA_CONTINUITY_FIELDS.items()
+    ):
+        if selected_archive.sections.get(section_name) != base_archive.sections.get(
+            section_name
+        ):
+            continue
+        for field in fields:
+            if _snerv_metadata_value_present(selected_metadata.get(field)):
+                continue
+            base_value = base_archive.metadata.get(field)
+            if not _snerv_metadata_value_present(base_value):
+                continue
+            selected_metadata[field] = base_value
+            inherited.append({"section_name": section_name, "field": field})
+    continuity = {
+        "schema": "snerv_selected_packet_metadata_continuity.v1",
+        "selected_packet_source": str(selected_packet_source),
+        "base_packet_sha256": _sha256_bytes(base_packet),
+        "input_selected_packet_sha256": _sha256_bytes(selected_packet),
+        "inherited_field_count": len(inherited),
+        "inherited_fields": inherited,
+        "metadata_only_repack": bool(inherited),
+        **FALSE_AUTHORITY,
+    }
+    if not inherited:
+        return bytes(selected_packet), selected_metadata, continuity
+    selected_metadata["selected_packet_metadata_continuity"] = continuity
+    repacked = pack_snerv_archive(
+        metadata_payload=selected_archive.sections["metadata_payload"],
+        lf_payload=selected_archive.sections["lf_payload"],
+        decoder_payload=selected_archive.sections["decoder_payload"],
+        step_map_packet=selected_archive.sections["step_map_packet"],
+        metadata=selected_metadata,
+    ).packet
+    continuity["output_selected_packet_sha256"] = _sha256_bytes(repacked)
+    selected_metadata["selected_packet_metadata_continuity"] = continuity
+    return repacked, selected_metadata, continuity
 
 
 def _flat_temporal_group_for_native_export(

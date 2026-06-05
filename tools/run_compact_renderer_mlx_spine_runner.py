@@ -3981,6 +3981,12 @@ def _run_snerv_native_mlx_export_attachment(
             "archive_bytes": artifact.get("archive_bytes"),
             "archive_sha256": artifact.get("archive_sha256"),
             "byte_cap_control": artifact.get("byte_cap_control"),
+            "step_map_packet_schema": artifact.get("step_map_packet_schema"),
+            "step_map_coder_mode": artifact.get("step_map_coder_mode"),
+            "step_map_waterfill_bits_per_coeff": artifact.get(
+                "step_map_waterfill_bits_per_coeff"
+            ),
+            "step_map_coder_groups": artifact.get("step_map_coder_groups") or [],
             "runtime_submission_dir": (
                 (Path(str(artifact.get("archive_path"))).parent / "submission").as_posix()
                 if artifact.get("archive_path")
@@ -6432,11 +6438,19 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         and snerv_mlx_native_export.get("receiver_proof_passed") is True
         and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
     )
+    snerv_native_receiver_step_map_coder_mode = str(
+        snerv_mlx_native_export.get("step_map_coder_mode") or ""
+    )
+    snerv_curriculum_step_map_coder_mode = (
+        "waterfill"
+        if "waterfill" in snerv_native_receiver_step_map_coder_mode
+        else str(resolved_step_map_coder_mode)
+    )
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
         requested_epochs=int(epochs),
         num_pairs=int(num_pairs),
-        step_map_coder_mode=str(resolved_step_map_coder_mode),
+        step_map_coder_mode=str(snerv_curriculum_step_map_coder_mode),
         measured_packet_bytes=advisory_archive_bytes_total,
         measured_archive_bytes=(
             int(row["candidate_archive_bytes"])
