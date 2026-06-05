@@ -437,10 +437,30 @@ def _hi_nerv_receiver_cache_feedback_control(
             ],
         ]
     )
-    collapse_detected = any(
+    candidate_occupied_fraction = _float_or_none(
+        summary.get("segnet_candidate_occupied_class_fraction")
+    )
+    reference_occupied_fraction = _float_or_none(
+        summary.get("segnet_reference_occupied_class_fraction")
+    )
+    numeric_collapse_detected = bool(
+        candidate_occupied_fraction is not None
+        and reference_occupied_fraction is not None
+        and reference_occupied_fraction >= 0.400001
+        and candidate_occupied_fraction < 0.400001
+    )
+    blocker_collapse_detected = any(
         any(fragment in blocker for fragment in _HINERV_RECEIVER_CACHE_COLLAPSE_BLOCKER_FRAGMENTS)
         for blocker in direct_blockers
     )
+    collapse_detected = bool(blocker_collapse_detected or numeric_collapse_detected)
+    if numeric_collapse_detected and not blocker_collapse_detected:
+        direct_blockers = _dedupe_strings(
+            [
+                *direct_blockers,
+                "hi_nerv_receiver_cache_segnet_argmax_class_collapse_numeric",
+            ]
+        )
     gate_failed = bool(summary and summary.get("quality_gate_passed") is not True)
     mutations: list[str] = []
     if collapse_detected:
@@ -457,11 +477,16 @@ def _hi_nerv_receiver_cache_feedback_control(
         "quality_gate_passed": (
             summary.get("quality_gate_passed") if summary else None
         ),
-        "segnet_candidate_occupied_class_fraction": summary.get(
-            "segnet_candidate_occupied_class_fraction"
+        "segnet_candidate_occupied_class_fraction": candidate_occupied_fraction,
+        "segnet_candidate_any_occupied_class_fraction": summary.get(
+            "segnet_candidate_any_occupied_class_fraction"
         ),
-        "segnet_reference_occupied_class_fraction": summary.get(
-            "segnet_reference_occupied_class_fraction"
+        "segnet_reference_occupied_class_fraction": reference_occupied_fraction,
+        "segnet_reference_any_occupied_class_fraction": summary.get(
+            "segnet_reference_any_occupied_class_fraction"
+        ),
+        "segnet_argmax_occupancy_min_class_pixel_count": summary.get(
+            "segnet_argmax_occupancy_min_class_pixel_count"
         ),
         "segnet_argmax_disagreement_rate": summary.get(
             "segnet_argmax_disagreement_rate"
@@ -473,6 +498,8 @@ def _hi_nerv_receiver_cache_feedback_control(
             )
         ),
         "collapse_detected": collapse_detected,
+        "numeric_collapse_detected": numeric_collapse_detected,
+        "blocker_collapse_detected": blocker_collapse_detected,
         "gate_failed": gate_failed,
         "direct_feedback_blockers": direct_blockers,
         "recommended_launch_mutations": _dedupe_strings(mutations),
@@ -686,9 +713,30 @@ def build_nerv_candidate_feedback_row(
             if hi_nerv_receiver_cache_control
             else None
         ),
+        "post_export_receiver_segnet_candidate_any_occupied_class_fraction": (
+            hi_nerv_receiver_cache_control.get(
+                "segnet_candidate_any_occupied_class_fraction"
+            )
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
         "post_export_receiver_segnet_reference_occupied_class_fraction": (
             hi_nerv_receiver_cache_control.get(
                 "segnet_reference_occupied_class_fraction"
+            )
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_segnet_reference_any_occupied_class_fraction": (
+            hi_nerv_receiver_cache_control.get(
+                "segnet_reference_any_occupied_class_fraction"
+            )
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_segnet_occupancy_min_class_pixel_count": (
+            hi_nerv_receiver_cache_control.get(
+                "segnet_argmax_occupancy_min_class_pixel_count"
             )
             if hi_nerv_receiver_cache_control
             else None

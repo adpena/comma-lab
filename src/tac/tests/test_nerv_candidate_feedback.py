@@ -799,6 +799,57 @@ def test_candidate_feedback_routes_hinerv_receiver_class_collapse_to_mutations(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_candidate_feedback_detects_hinerv_numeric_class_collapse_without_blocker(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    report["candidate_curriculum_plan"]["byte_oracle_logging"].update(
+        {
+            "measured_num_pairs": 600,
+            "feedback_scope": "candidate_full_scope",
+            "scope_matches_candidate": True,
+            "feedback_ready": False,
+            "byte_oracle_feedback_ready": False,
+            "byte_oracle_measured_archive_bytes": 215_661,
+            "byte_oracle_post_export_receiver_cache_quality_feedback_ready": False,
+            "byte_oracle_blockers": [],
+        }
+    )
+    report["post_export_receiver_cache_quality"] = {
+        "schema": "hi_nerv_receiver_cache_quality_summary.v1",
+        "quality_gate_passed": False,
+        "segnet_candidate_occupied_class_fraction": 0.2,
+        "segnet_candidate_any_occupied_class_fraction": 0.4,
+        "segnet_reference_occupied_class_fraction": 1.0,
+        "segnet_reference_any_occupied_class_fraction": 1.0,
+        "segnet_argmax_occupancy_min_class_pixel_count": 197.0,
+        "segnet_argmax_disagreement_rate": 0.517,
+        "blockers": ["candidate_segnet_argmax_disagreement_too_high"],
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    control = row["hi_nerv_receiver_cache_feedback_control"]
+    assert control["collapse_detected"] is True
+    assert control["numeric_collapse_detected"] is True
+    assert control["blocker_collapse_detected"] is False
+    assert (
+        "hi_nerv_receiver_cache_segnet_argmax_class_collapse_numeric"
+        in row["direct_feedback_blockers"]
+    )
+    assert (
+        "increase_hi_nerv_receiver_class_survival_pressure"
+        in row["recommended_launch_mutations"]
+    )
+    assert (
+        row["post_export_receiver_segnet_candidate_occupied_class_fraction"] == 0.2
+    )
+    assert (
+        row["post_export_receiver_segnet_candidate_any_occupied_class_fraction"]
+        == 0.4
+    )
+
+
 def test_candidate_feedback_does_not_count_candidate_pairs_as_replay_coverage(
     tmp_path: Path,
 ) -> None:
