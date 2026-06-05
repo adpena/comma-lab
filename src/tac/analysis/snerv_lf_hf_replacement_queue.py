@@ -53,6 +53,14 @@ _SOURCE_FORWARD_BLOCKERS = (
     "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
     "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
 )
+_SOURCE_FORWARD_FRAME_REPLAY_CLOSED_BLOCKERS = (
+    "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",
+    "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
+)
+_SOURCE_FORWARD_QUEUE_FAMILIES = (
+    "official_tub_lf_hf_decoder_replacement",
+    "temporal_lf_predictor_gate",
+)
 _RENDERER_BLOCKERS = (
     "snerv_renderer_nondegenerate_smoke_missing",
     "snerv_renderer_nondegenerate_smoke_failed",
@@ -77,6 +85,7 @@ def build_snerv_lf_hf_replacement_queue(
     lf_payload_reports: Sequence[Mapping[str, Any]] = (),
     reroute_queues: Sequence[Mapping[str, Any]] = (),
     campaign_plans: Sequence[Mapping[str, Any]] = (),
+    source_forward_artifacts: Sequence[Mapping[str, Any]] = (),
     output_root: str | Path,
     lane_id: str = DEFAULT_LANE_ID,
     queue_id: str = DEFAULT_QUEUE_ID,
@@ -107,10 +116,12 @@ def build_snerv_lf_hf_replacement_queue(
     evidence_rows = [row for row in evidence_rows if row is not None]
     campaign_rows = _snerv_campaign_rows(campaign_plans)
     reroute_state = _reroute_state(reroute_queues)
+    source_forward_state = _source_forward_state(source_forward_artifacts)
     current_state = _current_state(
         campaign_rows=campaign_rows,
         reroute_state=reroute_state,
         evidence_rows=evidence_rows,
+        source_forward_state=source_forward_state,
     )
     selected_evidence = _selected_lf_evidence(evidence_rows)
     rows = _candidate_rows(
@@ -153,6 +164,7 @@ def build_snerv_lf_hf_replacement_queue(
         ),
         "storage_preflight": storage_preflight,
         "current_state": current_state,
+        "source_forward_evidence": source_forward_state,
         "lf_payload_evidence_rows": evidence_rows,
         "lf_payload_evidence_row_count": len(evidence_rows),
         "selected_lf_payload_evidence": selected_evidence,
@@ -186,6 +198,8 @@ def render_snerv_lf_hf_replacement_queue_markdown(report: Mapping[str, Any]) -> 
         f"- runnable local rows: `{report.get('local_executable_command_row_count')}`",
         f"- current reroute rows: `{current.get('freshest_reroute_queue_row_count')}`",
         f"- current SNAR2 no-LF-overrun: `{current.get('freshest_queue_has_no_lf_over_ceiling_rows')}`",
+        "- receiver payload frame replay proven: "
+        f"`{_nested(current, ('source_forward_evidence', 'receiver_payload_frame_replay_proven'))}`",
         f"- selected LF evidence bytes: `{selected.get('lf_payload_bytes')}`",
         "",
         "## Candidate Rows",
@@ -403,7 +417,32 @@ def _candidate_row(
         if str(blocker)
     ]
     campaign_blockers = _campaign_blockers(campaign_row, campaign_blocker_prefixes)
-    blockers = _dedupe([*static_blockers, *evidence_blockers, *current_blockers, *campaign_blockers])
+    source_forward_closed = set(
+        _nested(current_state, ("source_forward_evidence", "closed_campaign_blockers"))
+        or ()
+    )
+    source_forward_extra_blockers: list[str] = []
+    if solution_family in _SOURCE_FORWARD_QUEUE_FAMILIES:
+        source_forward_extra_blockers = [
+            str(blocker)
+            for blocker in (
+                _nested(current_state, ("source_forward_evidence", "queue_blockers"))
+                or ()
+            )
+            if blocker
+        ]
+    campaign_blockers = [
+        blocker for blocker in campaign_blockers if blocker not in source_forward_closed
+    ]
+    blockers = _dedupe(
+        [
+            *static_blockers,
+            *evidence_blockers,
+            *current_blockers,
+            *campaign_blockers,
+            *source_forward_extra_blockers,
+        ]
+    )
     command: list[str] = []
     if (
         command_kind == "bounded_snerv_training_smoke"
@@ -458,6 +497,7 @@ def _candidate_row(
                 "snar_header_minimization_report_count"
             ),
         },
+        "source_forward_evidence": current_state.get("source_forward_evidence"),
         "target_consumers": [
             "nerv_long_training_campaign_plan",
             "snerv_lf_over_ceiling_reroute_queue",
@@ -627,6 +667,87 @@ def _selected_lf_evidence(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any] |
     return dict(selected)
 
 
+def _source_forward_state(
+    source_forward_artifacts: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    artifacts = [
+        artifact
+        for artifact in source_forward_artifacts
+        if isinstance(artifact, Mapping)
+        and artifact.get("schema") == "snerv_official_mfu_hfr_tub_forward_parity.v1"
+    ]
+    if not artifacts:
+        return {
+            "schema": "snerv_lf_hf_source_forward_evidence.v1",
+            "artifact_count": 0,
+            "selected_artifact_schema": None,
+            "selected_artifact_generated_utc": None,
+            "source_path": None,
+            "source_sha256": None,
+            "receiver_payload_frame_replay_proven": False,
+            "receiver_runtime_decode_proven": False,
+            "frame_producing_official_payload_replay_proven": False,
+            "receiver_frame_decode_consumes_output2": False,
+            "full_tub_source_forward_parity_proven": False,
+            "closed_campaign_blockers": [],
+            "queue_blockers": ["snerv_lf_hf_source_forward_artifact_missing"],
+            "blockers": ["snerv_lf_hf_source_forward_artifact_missing"],
+            **QUEUE_FALSE_AUTHORITY,
+        }
+    selected = max(
+        artifacts,
+        key=lambda artifact: (
+            str(artifact.get("generated_utc") or ""),
+            str(artifact.get("_source_path") or ""),
+        ),
+    )
+    replay = selected.get("receiver_payload_frame_replay")
+    replay = replay if isinstance(replay, Mapping) else {}
+    receiver_runtime_decode = replay.get("receiver_runtime_decode_proven") is True
+    frame_payload_replay = (
+        replay.get("frame_producing_official_payload_replay_proven") is True
+    )
+    frame_replay_proven = receiver_runtime_decode and frame_payload_replay
+    receiver_consumes_output2 = replay.get("receiver_frame_decode_consumes_output2") is True
+    full_tub_parity = selected.get("full_tub_source_forward_parity_proven") is True
+    source_authority = replay.get("source_forward_replay_authority") is True and full_tub_parity
+    closed = list(_SOURCE_FORWARD_FRAME_REPLAY_CLOSED_BLOCKERS) if frame_replay_proven else []
+    queue_blockers: list[str] = []
+    if not frame_replay_proven:
+        queue_blockers.extend(_SOURCE_FORWARD_FRAME_REPLAY_CLOSED_BLOCKERS)
+    if not receiver_consumes_output2:
+        queue_blockers.append("snerv_official_tub_output2_receiver_frame_decode_not_bound")
+    if not source_authority:
+        queue_blockers.extend(
+            [
+                "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+                "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+            ]
+        )
+    return {
+        "schema": "snerv_lf_hf_source_forward_evidence.v1",
+        "artifact_count": len(artifacts),
+        "selected_artifact_schema": selected.get("schema"),
+        "selected_artifact_generated_utc": selected.get("generated_utc"),
+        "source_path": selected.get("_source_path"),
+        "source_sha256": selected.get("_source_sha256"),
+        "receiver_payload_frame_replay_proven": frame_replay_proven,
+        "receiver_runtime_decode_proven": receiver_runtime_decode,
+        "frame_producing_official_payload_replay_proven": frame_payload_replay,
+        "receiver_frame_decode_consumes_output2": receiver_consumes_output2,
+        "full_tub_source_forward_parity_proven": full_tub_parity,
+        "source_forward_replay_authority": source_authority,
+        "decoded_frames_shape": replay.get("decoded_frames_shape"),
+        "decoded_frames_sha256": replay.get("decoded_frames_sha256"),
+        "payload_bytes": _positive_int(replay.get("payload_bytes")),
+        "payload_sha256": replay.get("payload_sha256"),
+        "closed_campaign_blockers": closed,
+        "queue_blockers": _dedupe(queue_blockers),
+        "blockers": _dedupe([*(selected.get("blockers") or ()), *queue_blockers]),
+        **QUEUE_FALSE_AUTHORITY,
+    }
+
+
 def _snerv_campaign_rows(campaign_plans: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for plan in campaign_plans:
@@ -679,6 +800,7 @@ def _current_state(
     campaign_rows: Sequence[Mapping[str, Any]],
     reroute_state: Mapping[str, Any],
     evidence_rows: Sequence[Mapping[str, Any]],
+    source_forward_state: Mapping[str, Any],
 ) -> dict[str, Any]:
     blockers: list[str] = []
     if not evidence_rows:
@@ -697,6 +819,7 @@ def _current_state(
         "snerv_campaign_row_count": len(campaign_rows),
         "snerv_local_mlx_launch_command_ready_row_count": len(ready_rows),
         "lf_payload_evidence_row_count": len(evidence_rows),
+        "source_forward_evidence": dict(source_forward_state),
         "blockers": _dedupe(blockers),
     }
 

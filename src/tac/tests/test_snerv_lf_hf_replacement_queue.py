@@ -18,6 +18,13 @@ def test_lf_hf_replacement_queue_emits_bounded_smoke_when_unblocked(
         lf_payload_reports=[_lf_sweep_report()],
         reroute_queues=[_reroute_queue(row_count=1)],
         campaign_plans=[_campaign_plan(blockers=())],
+        source_forward_artifacts=[
+            _source_forward_artifact(
+                receiver_consumes_output2=True,
+                source_authority=True,
+                full_tub_parity=True,
+            )
+        ],
         output_root=tmp_path / "queue",
         min_free_bytes=0,
         allow_local_output=True,
@@ -87,12 +94,61 @@ def test_lf_hf_replacement_queue_blocks_current_snar2_no_lf_overrun_state(
     assert official["command_argv"] == []
 
 
+def test_lf_hf_queue_consumes_partial_source_forward_frame_replay(
+    tmp_path: Path,
+) -> None:
+    report = build_snerv_lf_hf_replacement_queue(
+        lf_payload_reports=[_lf_sweep_report()],
+        reroute_queues=[_reroute_queue(row_count=1)],
+        campaign_plans=[
+            _campaign_plan(
+                blockers=(
+                    "snerv_official_mfu_hfr_tub_export_not_bound",
+                    "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",
+                    "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
+                    "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority",
+                    "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing",
+                )
+            )
+        ],
+        source_forward_artifacts=[_source_forward_artifact()],
+        output_root=tmp_path / "queue",
+        min_free_bytes=0,
+        allow_local_output=True,
+        generated_utc="2026-06-05T00:00:00+00:00",
+    )
+
+    official = next(
+        row
+        for row in report["queue_rows"]
+        if row["solution_family"] == "official_tub_lf_hf_decoder_replacement"
+    )
+    blockers = set(official["blockers"])
+    assert "snerv_official_mfu_hfr_tub_receiver_payload_not_bound" not in blockers
+    assert "snerv_official_mfu_hfr_tub_frame_producing_export_missing" not in blockers
+    assert "snerv_official_mfu_hfr_tub_export_not_bound" in blockers
+    assert (
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_source_forward_authority"
+        in blockers
+    )
+    assert "snerv_official_mfu_hfr_tub_full_stack_source_forward_replay_missing" in blockers
+    assert "snerv_official_tub_output2_receiver_frame_decode_not_bound" in blockers
+    assert official["source_forward_evidence"]["receiver_payload_frame_replay_proven"] is True
+    assert official["source_forward_evidence"]["closed_campaign_blockers"] == [
+        "snerv_official_mfu_hfr_tub_receiver_payload_not_bound",
+        "snerv_official_mfu_hfr_tub_frame_producing_export_missing",
+    ]
+    assert official["score_claim"] is False
+    assert official["ready_for_exact_eval_dispatch"] is False
+
+
 def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     tmp_path: Path,
 ) -> None:
     lf_path = tmp_path / "lf.json"
     reroute_path = tmp_path / "reroute.json"
     campaign_path = tmp_path / "campaign.json"
+    source_forward_path = tmp_path / "source_forward.json"
     output_root = tmp_path / "out"
     output_json = output_root / "queue.json"
     output_md = output_root / "queue.md"
@@ -102,6 +158,7 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
         json.dumps(_campaign_plan(blockers=("snerv_official_mfu_hfr_tub_export_not_bound",))),
         encoding="utf-8",
     )
+    source_forward_path.write_text(json.dumps(_source_forward_artifact()), encoding="utf-8")
 
     rc = cli_main(
         [
@@ -111,6 +168,8 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
             reroute_path.as_posix(),
             "--campaign-plan",
             campaign_path.as_posix(),
+            "--source-forward-artifact",
+            source_forward_path.as_posix(),
             "--output-root",
             output_root.as_posix(),
             "--output-json",
@@ -128,8 +187,11 @@ def test_lf_hf_replacement_queue_cli_writes_ssd_handoff_artifacts(
     assert rc == 0
     assert payload["schema"] == SCHEMA
     assert payload["selected_lf_payload_evidence"]["source_path"] == lf_path.as_posix()
+    assert payload["source_forward_evidence"]["source_path"] == source_forward_path.as_posix()
+    assert payload["source_forward_evidence"]["receiver_payload_frame_replay_proven"] is True
     assert len(payload["selected_lf_payload_evidence"]["source_sha256"]) == 64
     assert "SNeRV LF/HF Replacement Queue" in markdown
+    assert "receiver payload frame replay proven" in markdown
     assert payload["score_claim"] is False
 
 
@@ -213,6 +275,40 @@ def _campaign_plan(*, blockers: tuple[str, ...]) -> dict[str, object]:
                 ],
             }
         ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _source_forward_artifact(
+    *,
+    receiver_consumes_output2: bool = False,
+    source_authority: bool = False,
+    full_tub_parity: bool = False,
+) -> dict[str, object]:
+    blockers = []
+    if not receiver_consumes_output2:
+        blockers.append("snerv_official_tub_output2_receiver_frame_decode_not_bound")
+    if not full_tub_parity:
+        blockers.append("snerv_official_snerv_t_trained_full_tub_source_forward_parity_missing")
+    return {
+        "schema": "snerv_official_mfu_hfr_tub_forward_parity.v1",
+        "generated_utc": "20260605T000000Z",
+        "_source_path": "/ssd/snerv_official_mfu_hfr_tub_forward_parity.json",
+        "_source_sha256": "a" * 64,
+        "full_tub_source_forward_parity_proven": full_tub_parity,
+        "receiver_payload_frame_replay": {
+            "schema": "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay.v1",
+            "receiver_runtime_decode_proven": True,
+            "frame_producing_official_payload_replay_proven": True,
+            "receiver_frame_decode_consumes_output2": receiver_consumes_output2,
+            "source_forward_replay_authority": source_authority,
+            "decoded_frames_shape": [2, 3, 16, 24],
+            "decoded_frames_sha256": "b" * 64,
+            "payload_bytes": 13052,
+            "payload_sha256": "c" * 64,
+        },
+        "blockers": blockers,
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }

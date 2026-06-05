@@ -53,6 +53,16 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         help="Current nerv_long_training_campaign_plan.v1 JSON. Repeatable.",
     )
+    parser.add_argument(
+        "--source-forward-artifact",
+        action="append",
+        default=[],
+        type=Path,
+        help=(
+            "Current snerv_official_mfu_hfr_tub_forward_parity.v1 JSON. "
+            "Repeatable; used to clear only proven receiver-frame replay blockers."
+        ),
+    )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--output-json", type=Path)
     parser.add_argument("--output-md", type=Path)
@@ -77,11 +87,15 @@ def main(argv: list[str] | None = None) -> int:
     lf_reports = [load_json_with_source_identity(path) for path in args.lf_payload_report]
     reroute_queues = [load_json_with_source_identity(path) for path in args.reroute_queue]
     campaign_plans = [load_json_with_source_identity(path) for path in args.campaign_plan]
+    source_forward_artifacts = [
+        load_json_with_source_identity(path) for path in args.source_forward_artifact
+    ]
 
     report = build_snerv_lf_hf_replacement_queue(
         lf_payload_reports=lf_reports,
         reroute_queues=reroute_queues,
         campaign_plans=campaign_plans,
+        source_forward_artifacts=source_forward_artifacts,
         output_root=output_root,
         lane_id=str(args.lane_id),
         queue_id=str(args.queue_id),
