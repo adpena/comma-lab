@@ -15,6 +15,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA,
     HI_NERV_HARD_BYTE_CEILING_CONTROL_SCHEMA,
     HI_NERV_MODELSIZE_CANDIDATE_CONSUMPTION_SCHEMA,
+    HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
     HI_NERV_TRAIN_TIME_CONTROL_SCHEMA,
     HI_NERV_TRAIN_TIME_DECODER_MUTATION_IDENTITY_SCHEMA,
     PR95_FULL_CONTROL_CONTRACT_SCHEMA,
@@ -23,6 +24,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _apply_train_time_decoder_controls,
     _build_hi_nerv_train_time_section_byte_metrics_callback,
     _build_hinerv_hard_byte_ceiling_control,
+    _build_hinerv_short_scorer_smoke_readiness_report,
     _build_parser,
     _build_staged_scorer_curriculum,
     _build_train_time_decoder_mutation_identity,
@@ -37,6 +39,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _full_main,
     _hard_byte_ceiling_from_args,
     _hard_byte_ceiling_from_modelsize_candidate,
+    _hinerv_short_scorer_smoke_readiness_summary,
     _metadata_safe,
     _modelsize_candidate_consumption_metadata,
     _modelsize_candidate_from_args,
@@ -1701,6 +1704,9 @@ def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
             "archive_sha256": "a" * 64,
             "candidate_cache_dir": "/Volumes/VertigoDataTier/pact/run/cache",
             "quality_gate_path": "/Volumes/VertigoDataTier/pact/run/gate.json",
+            "segnet_argmax_probe_path": (
+                "/Volumes/VertigoDataTier/pact/run/segnet_argmax_probe.json"
+            ),
             "quality_gate_passed": False,
             "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
             "score_claim": False,
@@ -1715,6 +1721,14 @@ def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
                 },
                 "score_claim": False,
             },
+            "segnet_argmax_probe": {
+                "fit_gate_passed": False,
+                "segnet_argmax_disagreement_rate": 0.17,
+                "candidate_occupied_class_fraction": 0.25,
+                "reference_occupied_class_fraction": 0.75,
+                "blockers": ["hi_nerv_receiver_cache_segnet_argmax_class_collapse"],
+                "score_claim": False,
+            },
         }
     )
 
@@ -1724,3 +1738,154 @@ def test_hinerv_receiver_cache_quality_summary_drops_authority_keys() -> None:
     assert summary["quality_gate_verdict"] == "RENDER_OUTPUT_DYNAMIC_RANGE_TOO_LOW"
     assert "score_claim" not in summary
     assert summary["candidate_segnet_last_rgb_stats"]["dynamic_range"] == pytest.approx(4.0)
+    assert summary["segnet_argmax_probe_passed"] is False
+    assert summary["candidate_argmax_occupied_class_fraction"] == pytest.approx(0.25)
+    assert summary["reference_argmax_occupied_class_fraction"] == pytest.approx(0.75)
+    assert summary["segnet_argmax_disagreement_rate"] == pytest.approx(0.17)
+    assert summary["segnet_argmax_probe_blockers"] == [
+        "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
+    ]
+
+
+def _short_scorer_smoke_controls() -> HiNervTrainTimeControlConfig:
+    return _train_time_control_config_from_args(
+        _build_parser().parse_args(
+            [
+                "--full",
+                "--segnet-direct-live-distillation-weight",
+                "0.4",
+                "--segnet-direct-live-class-balanced-hinge-weight",
+                "0.5",
+                "--scorer-input-contrast-floor-weight",
+                "0.5",
+                "--scorer-input-contrast-floor-segnet-min-std-ratio",
+                "0.6",
+                "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+                "0.6",
+            ]
+        )
+    )
+
+
+def _passing_short_scorer_receiver_quality() -> dict[str, object]:
+    return {
+        "report_path": "/Volumes/VertigoDataTier/pact/run/quality.json",
+        "archive_path": "/Volumes/VertigoDataTier/pact/run/archive.zip",
+        "archive_sha256": "b" * 64,
+        "candidate_cache_dir": "/Volumes/VertigoDataTier/pact/run/cache",
+        "quality_gate_path": "/Volumes/VertigoDataTier/pact/run/gate.json",
+        "quality_gate_passed": True,
+        "quality_gate": {
+            "fit_gate_passed": True,
+            "verdict": "PASS",
+            "stats": {},
+        },
+        "segnet_argmax_probe_path": (
+            "/Volumes/VertigoDataTier/pact/run/segnet_argmax_probe.json"
+        ),
+        "segnet_argmax_probe": {
+            "fit_gate_passed": True,
+            "segnet_argmax_disagreement_rate": 0.02,
+            "candidate_occupied_class_fraction": 0.8,
+            "reference_occupied_class_fraction": 0.9,
+            "blockers": ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"],
+        },
+        "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+    }
+
+
+def test_hinerv_short_scorer_smoke_readiness_requires_live_telemetry() -> None:
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={},
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["schema"] == HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA
+    assert report["short_scorer_teacher_smoke_ready"] is False
+    assert report["ready_for_long_run"] is False
+    assert "score_claim" in report and report["score_claim"] is False
+    assert "hi_nerv_short_smoke_missing_direct_live_segnet_telemetry" in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_missing_scorer_input_contrast_floor_telemetry" in report[
+        "actionable_blockers"
+    ]
+
+
+def test_hinerv_short_scorer_smoke_readiness_accepts_nondegenerate_metrics() -> None:
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+        },
+        post_export_quality=_passing_short_scorer_receiver_quality(),
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["short_scorer_teacher_smoke_ready"] is True
+    assert report["ready_for_long_run"] is True
+    assert report["actionable_blockers"] == []
+    assert report["blockers"] == ["hi_nerv_short_scorer_smoke_is_false_authority"]
+    assert report["direct_live_segnet_gate"]["metrics"][
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.8)
+    assert report["scorer_input_contrast_floor_gate"]["metrics"][
+        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio"
+    ] == pytest.approx(0.8)
+    summary = _hinerv_short_scorer_smoke_readiness_summary(report)
+    assert summary is not None
+    assert "score_claim" not in summary
+    assert summary["short_scorer_teacher_smoke_ready"] is True
+
+
+def test_hinerv_short_scorer_smoke_readiness_blocks_collapsed_receiver_occupancy() -> None:
+    quality = _passing_short_scorer_receiver_quality()
+    quality["quality_gate_passed"] = False
+    quality["segnet_argmax_probe"] = {
+        "fit_gate_passed": False,
+        "segnet_argmax_disagreement_rate": 0.04,
+        "candidate_occupied_class_fraction": 0.2,
+        "reference_occupied_class_fraction": 0.9,
+        "blockers": ["hi_nerv_receiver_cache_segnet_argmax_class_collapse"],
+    }
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=_short_scorer_smoke_controls(),
+        final_loss_components={
+            "loss_part_segnet_direct_live_distill": 0.12,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.03,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.8,
+            "loss_part_scorer_input_contrast_floor": 0.01,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.75,
+            "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.8,
+        },
+        post_export_quality=quality,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        allow_mock_scorer_teacher=False,
+        min_segnet_occupied_class_fraction_for_fit_gate=0.55,
+    )
+
+    assert report["short_scorer_teacher_smoke_ready"] is False
+    assert "hi_nerv_short_smoke_receiver_cache_quality_failed" in report[
+        "actionable_blockers"
+    ]
+    assert "hi_nerv_short_smoke_receiver_cache_segnet_argmax_probe_failed" in report[
+        "actionable_blockers"
+    ]
+    assert (
+        "hi_nerv_short_smoke_receiver_cache_segnet_argmax_class_occupancy_collapsed"
+        in report["actionable_blockers"]
+    )

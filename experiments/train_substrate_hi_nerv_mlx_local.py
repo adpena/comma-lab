@@ -65,6 +65,7 @@ from tac.substrates._shared.mlx_score_aware.modelsize_budget_plan import (
 
 TRAINER_SCHEMA = "hi_nerv_mlx_score_aware_trainer.v1"
 TRAINER_AUTHORITY = "false_authority_macos_mlx_training_no_contest_score_claim"
+TRAINER_AXIS_TAG = "[macOS-MLX research-signal]"
 PR95_FULL_CONTROL_CONTRACT_SCHEMA = "hi_nerv_pr95_full_control_contract.v1"
 CANONICAL_PR95_FULL_EPOCHS = 29_650
 HI_NERV_TRAIN_TIME_CONTROL_SCHEMA = "hi_nerv_train_time_controls.v1"
@@ -79,6 +80,8 @@ HI_NERV_HARD_BYTE_CEILING_CONTROL_SCHEMA = "hi_nerv_hard_byte_ceiling_control.v1
 DIRECT_TRAINER_CANONICALIZATION_SCHEMA = "hi_nerv_direct_trainer_canonicalization_contract.v1"
 DIRECT_TRAINER_LAUNCH_REFUSAL_SCHEMA = "hi_nerv_direct_trainer_launch_refusal.v1"
 DIRECT_TRAINER_CANONICAL_RUNNER_ENTRYPOINT = "tools/run_compact_renderer_mlx_spine_runner.py --execute-family hi_nerv"
+HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA = "hi_nerv_short_scorer_smoke_readiness.v1"
+HI_NERV_SHORT_SCORER_SMOKE_DEFAULT_MIN_SEGNET_OCCUPIED_CLASS_FRACTION = 0.400001
 DIRECT_TRAINER_CANONICALIZATION_BLOCKERS = (
     "direct_hinerv_trainer_launch_not_compact_runner_owned",
     "hinerv_direct_trainer_missing_planner_row_id",
@@ -974,6 +977,22 @@ def _full_main(args: argparse.Namespace) -> int:
             output_dir=output_dir,
             report=post_export_quality,
         )
+    short_scorer_smoke_readiness = _write_hinerv_short_scorer_smoke_readiness(
+        output_dir=output_dir,
+        train_time_controls=train_time_controls,
+        final_loss_components=_final_loss_components_from_training_artifact(artifact),
+        post_export_quality=post_export_quality,
+        segnet_distillation_weight=float(args.distillation_weight),
+        pose_distillation_weight=float(args.pose_distillation_weight),
+        allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
+        min_segnet_occupied_class_fraction_for_fit_gate=float(
+            args.receiver_cache_quality_min_segnet_argmax_occupied_class_fraction_for_fit_gate
+        ),
+    )
+    _attach_hinerv_short_scorer_smoke_readiness_to_training_artifact(
+        output_dir=output_dir,
+        report=short_scorer_smoke_readiness,
+    )
     print(
         json.dumps(
             {
@@ -986,6 +1005,15 @@ def _full_main(args: argparse.Namespace) -> int:
                 ),
                 "post_export_receiver_cache_quality_passed": (
                     bool(post_export_quality.get("quality_gate_passed")) if post_export_quality is not None else False
+                ),
+                "short_scorer_teacher_smoke_readiness_report": (
+                    short_scorer_smoke_readiness.get("report_path")
+                ),
+                "short_scorer_teacher_smoke_ready": bool(
+                    short_scorer_smoke_readiness.get("short_scorer_teacher_smoke_ready")
+                ),
+                "short_scorer_teacher_smoke_actionable_blockers": list(
+                    short_scorer_smoke_readiness.get("actionable_blockers") or []
                 ),
                 "score_claim": False,
                 "ready_for_exact_eval_dispatch": False,
@@ -3728,6 +3756,283 @@ def _metadata_safe(value: Any) -> Any:
     return value
 
 
+def _finite_float(value: Any) -> float | None:
+    try:
+        out = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(out):
+        return None
+    return out
+
+
+def _finite_mapping_value(mapping: Mapping[str, Any] | None, key: str) -> float | None:
+    if not isinstance(mapping, Mapping) or key not in mapping:
+        return None
+    return _finite_float(mapping.get(key))
+
+
+def _final_loss_components_from_training_artifact(artifact: Any) -> dict[str, float]:
+    per_epoch_metrics = getattr(artifact, "per_epoch_metrics", None)
+    if not per_epoch_metrics:
+        return {}
+    final_metrics = per_epoch_metrics[-1]
+    loss_components = getattr(final_metrics, "loss_components", None)
+    if not isinstance(loss_components, Mapping):
+        return {}
+    out: dict[str, float] = {}
+    for key, value in loss_components.items():
+        finite = _finite_float(value)
+        if finite is not None:
+            out[str(key)] = finite
+    return out
+
+
+def _build_hinerv_short_scorer_smoke_readiness_report(
+    *,
+    train_time_controls: HiNervTrainTimeControlConfig,
+    final_loss_components: Mapping[str, Any] | None,
+    post_export_quality: dict[str, Any] | None,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    allow_mock_scorer_teacher: bool,
+    min_segnet_occupied_class_fraction_for_fit_gate: float = (
+        HI_NERV_SHORT_SCORER_SMOKE_DEFAULT_MIN_SEGNET_OCCUPIED_CLASS_FRACTION
+    ),
+) -> dict[str, Any]:
+    min_occupied = _finite_float(min_segnet_occupied_class_fraction_for_fit_gate)
+    if min_occupied is None or not 0.0 <= min_occupied <= 1.0:
+        min_occupied = HI_NERV_SHORT_SCORER_SMOKE_DEFAULT_MIN_SEGNET_OCCUPIED_CLASS_FRACTION
+    final_components = {
+        str(key): finite
+        for key, value in (final_loss_components or {}).items()
+        if (finite := _finite_float(value)) is not None
+    }
+    actionable_blockers: list[str] = []
+
+    def add_blocker(blocker: str) -> None:
+        if blocker not in actionable_blockers:
+            actionable_blockers.append(blocker)
+
+    segnet_weight = _finite_float(segnet_distillation_weight)
+    pose_weight = _finite_float(pose_distillation_weight)
+    if bool(allow_mock_scorer_teacher):
+        add_blocker("hi_nerv_short_smoke_mock_scorer_teacher_enabled")
+    if segnet_weight is None or segnet_weight <= 0.0:
+        add_blocker("hi_nerv_short_smoke_real_segnet_teacher_not_requested")
+    if pose_weight is None or pose_weight <= 0.0:
+        add_blocker("hi_nerv_short_smoke_real_posenet_teacher_not_requested")
+
+    direct_live_weight = float(train_time_controls.segnet_direct_live_distillation_weight)
+    direct_live_enabled = direct_live_weight > 0.0
+    direct_live_keys = (
+        "loss_part_segnet_direct_live_distill",
+        "loss_part_segnet_direct_live_argmax_disagreement",
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+    )
+    direct_live_metrics = {
+        key: _finite_mapping_value(final_components, key) for key in direct_live_keys
+    }
+    if not direct_live_enabled:
+        add_blocker("hi_nerv_short_smoke_direct_live_segnet_distillation_disabled")
+    else:
+        missing_direct_live = [
+            key for key, value in direct_live_metrics.items() if value is None
+        ]
+        if missing_direct_live:
+            add_blocker("hi_nerv_short_smoke_missing_direct_live_segnet_telemetry")
+        candidate_occupied = direct_live_metrics[
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
+        ]
+        if candidate_occupied is not None and candidate_occupied < min_occupied:
+            add_blocker("hi_nerv_short_smoke_direct_live_class_occupancy_collapsed")
+
+    contrast_floor_weight = float(train_time_controls.scorer_input_contrast_floor_weight)
+    contrast_floor_enabled = contrast_floor_weight > 0.0
+    contrast_floor_keys = (
+        "loss_part_scorer_input_contrast_floor",
+        "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+    )
+    contrast_floor_metrics = {
+        key: _finite_mapping_value(final_components, key) for key in contrast_floor_keys
+    }
+    segnet_ratio = contrast_floor_metrics[
+        "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio"
+    ]
+    posenet_yuv6_ratio = contrast_floor_metrics[
+        "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio"
+    ]
+    if not contrast_floor_enabled:
+        add_blocker("hi_nerv_short_smoke_scorer_input_contrast_floor_disabled")
+    else:
+        missing_contrast = [
+            key for key, value in contrast_floor_metrics.items() if value is None
+        ]
+        if missing_contrast:
+            add_blocker("hi_nerv_short_smoke_missing_scorer_input_contrast_floor_telemetry")
+        if (
+            segnet_ratio is not None
+            and segnet_ratio
+            < float(train_time_controls.scorer_input_contrast_floor_segnet_min_std_ratio)
+        ):
+            add_blocker("hi_nerv_short_smoke_segnet_contrast_floor_ratio_below_threshold")
+        if (
+            posenet_yuv6_ratio is not None
+            and posenet_yuv6_ratio
+            < float(train_time_controls.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio)
+        ):
+            add_blocker("hi_nerv_short_smoke_posenet_yuv6_contrast_floor_ratio_below_threshold")
+
+    receiver_cache_summary = _receiver_cache_quality_manifest_summary(post_export_quality)
+    segnet_argmax_probe = (
+        post_export_quality.get("segnet_argmax_probe")
+        if isinstance(post_export_quality, dict)
+        else None
+    )
+    if post_export_quality is None:
+        add_blocker("hi_nerv_short_smoke_receiver_cache_quality_gate_not_run")
+    else:
+        if not bool(post_export_quality.get("quality_gate_passed")):
+            add_blocker("hi_nerv_short_smoke_receiver_cache_quality_failed")
+        if not isinstance(segnet_argmax_probe, dict):
+            add_blocker("hi_nerv_short_smoke_receiver_cache_segnet_argmax_probe_missing")
+        else:
+            if not bool(segnet_argmax_probe.get("fit_gate_passed")):
+                add_blocker("hi_nerv_short_smoke_receiver_cache_segnet_argmax_probe_failed")
+            receiver_candidate_occupied = _finite_float(
+                segnet_argmax_probe.get("candidate_occupied_class_fraction")
+            )
+            if receiver_candidate_occupied is None:
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_segnet_argmax_occupancy_missing"
+                )
+            elif receiver_candidate_occupied < min_occupied:
+                add_blocker(
+                    "hi_nerv_short_smoke_receiver_cache_segnet_argmax_class_occupancy_collapsed"
+                )
+
+    ready = not actionable_blockers
+    return {
+        "schema": HI_NERV_SHORT_SCORER_SMOKE_READINESS_SCHEMA,
+        "authority": TRAINER_AUTHORITY,
+        "axis_tag": TRAINER_AXIS_TAG,
+        "scope": "local_mlx_false_authority_short_scorer_teacher_smoke_gate",
+        "short_scorer_teacher_smoke_ready": ready,
+        "ready_for_long_run": ready,
+        "teacher_gate": {
+            "real_segnet_teacher_requested": bool(segnet_weight is not None and segnet_weight > 0.0),
+            "real_posenet_teacher_requested": bool(pose_weight is not None and pose_weight > 0.0),
+            "mock_scorer_teacher_allowed": bool(allow_mock_scorer_teacher),
+            "segnet_distillation_weight": segnet_weight,
+            "pose_distillation_weight": pose_weight,
+        },
+        "direct_live_segnet_gate": {
+            "enabled": direct_live_enabled,
+            "weight": direct_live_weight,
+            "min_candidate_occupied_class_fraction_for_fit_gate": min_occupied,
+            "metrics": direct_live_metrics,
+        },
+        "scorer_input_contrast_floor_gate": {
+            "enabled": contrast_floor_enabled,
+            "weight": contrast_floor_weight,
+            "segnet_last_rgb_min_std_ratio": float(
+                train_time_controls.scorer_input_contrast_floor_segnet_min_std_ratio
+            ),
+            "posenet_yuv6_pair_min_std_ratio": float(
+                train_time_controls.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+            ),
+            "metrics": contrast_floor_metrics,
+        },
+        "receiver_cache_quality": receiver_cache_summary,
+        "final_loss_components_present": bool(final_components),
+        "actionable_blockers": actionable_blockers,
+        "blockers": [
+            "hi_nerv_short_scorer_smoke_is_false_authority",
+            *actionable_blockers,
+        ],
+        **FALSE_AUTHORITY,
+    }
+
+
+def _write_hinerv_short_scorer_smoke_readiness(
+    *,
+    output_dir: Path,
+    train_time_controls: HiNervTrainTimeControlConfig,
+    final_loss_components: Mapping[str, Any] | None,
+    post_export_quality: dict[str, Any] | None,
+    segnet_distillation_weight: float,
+    pose_distillation_weight: float,
+    allow_mock_scorer_teacher: bool,
+    min_segnet_occupied_class_fraction_for_fit_gate: float,
+) -> dict[str, Any]:
+    report = _build_hinerv_short_scorer_smoke_readiness_report(
+        train_time_controls=train_time_controls,
+        final_loss_components=final_loss_components,
+        post_export_quality=post_export_quality,
+        segnet_distillation_weight=segnet_distillation_weight,
+        pose_distillation_weight=pose_distillation_weight,
+        allow_mock_scorer_teacher=allow_mock_scorer_teacher,
+        min_segnet_occupied_class_fraction_for_fit_gate=(
+            min_segnet_occupied_class_fraction_for_fit_gate
+        ),
+    )
+    path = output_dir / "hi_nerv_short_scorer_smoke_readiness.json"
+    report["report_path"] = path.as_posix()
+    write_json(path, report)
+    return report
+
+
+def _hinerv_short_scorer_smoke_readiness_summary(
+    report: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    return _metadata_safe(
+        {
+            "schema": report.get("schema"),
+            "report_path": report.get("report_path"),
+            "authority": report.get("authority"),
+            "axis_tag": report.get("axis_tag"),
+            "scope": report.get("scope"),
+            "short_scorer_teacher_smoke_ready": bool(
+                report.get("short_scorer_teacher_smoke_ready")
+            ),
+            "ready_for_long_run": bool(report.get("ready_for_long_run")),
+            "teacher_gate": report.get("teacher_gate"),
+            "direct_live_segnet_gate": report.get("direct_live_segnet_gate"),
+            "scorer_input_contrast_floor_gate": report.get(
+                "scorer_input_contrast_floor_gate"
+            ),
+            "receiver_cache_quality": report.get("receiver_cache_quality"),
+            "actionable_blockers": [
+                str(blocker) for blocker in report.get("actionable_blockers") or []
+            ],
+            "blockers": [str(blocker) for blocker in report.get("blockers") or []],
+        }
+    )
+
+
+def _attach_hinerv_short_scorer_smoke_readiness_to_training_artifact(
+    *,
+    output_dir: Path,
+    report: dict[str, Any],
+) -> None:
+    artifact_path = output_dir / "training_artifact.json"
+    if not artifact_path.is_file():
+        return
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    metadata = dict(artifact.get("substrate_artifact_metadata") or {})
+    metadata["short_scorer_teacher_smoke_readiness"] = (
+        _hinerv_short_scorer_smoke_readiness_summary(report)
+    )
+    artifact["substrate_artifact_metadata"] = metadata
+    artifact_path.write_text(
+        json.dumps(artifact, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def _maybe_write_post_export_receiver_cache_quality(
     *,
     args: argparse.Namespace,
@@ -3835,6 +4140,7 @@ def _receiver_cache_quality_manifest_summary(
     gate = report.get("quality_gate") if isinstance(report, dict) else None
     gate_stats = gate.get("stats") if isinstance(gate, dict) else None
     crux = report.get("distortion_crux_probe") if isinstance(report, dict) else None
+    argmax_probe = report.get("segnet_argmax_probe") if isinstance(report, dict) else None
     return {
         "schema": "hi_nerv_receiver_cache_quality_summary.v1",
         "report_path": report.get("report_path"),
@@ -3854,6 +4160,30 @@ def _receiver_cache_quality_manifest_summary(
         "distortion_crux_probe_path": report.get("distortion_crux_probe_path"),
         "distortion_crux_probe_passed": (
             bool(crux.get("fit_gate_passed")) if isinstance(crux, dict) else None
+        ),
+        "segnet_argmax_probe_path": report.get("segnet_argmax_probe_path"),
+        "segnet_argmax_probe_passed": (
+            bool(argmax_probe.get("fit_gate_passed")) if isinstance(argmax_probe, dict) else None
+        ),
+        "segnet_argmax_disagreement_rate": (
+            argmax_probe.get("segnet_argmax_disagreement_rate")
+            if isinstance(argmax_probe, dict)
+            else None
+        ),
+        "candidate_argmax_occupied_class_fraction": (
+            argmax_probe.get("candidate_occupied_class_fraction")
+            if isinstance(argmax_probe, dict)
+            else None
+        ),
+        "reference_argmax_occupied_class_fraction": (
+            argmax_probe.get("reference_occupied_class_fraction")
+            if isinstance(argmax_probe, dict)
+            else None
+        ),
+        "segnet_argmax_probe_blockers": (
+            [str(blocker) for blocker in argmax_probe.get("blockers") or []]
+            if isinstance(argmax_probe, dict)
+            else None
         ),
         "distortion_crux_dominant_domain": (
             crux.get("aggregate", {}).get("dominant_domain_top_k")
