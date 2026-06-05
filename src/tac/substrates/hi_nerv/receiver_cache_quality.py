@@ -30,6 +30,7 @@ from tac.local_acceleration.mlx_preprocess import (
     write_scorer_input_cache_from_pair_batches,
 )
 from tac.repo_io import sha256_file, write_json
+from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates._shared.inflate_runtime import CAMERA_HW, rgb_pair_to_uint8_frames
 from tac.substrates.hi_nerv.inflate import build_model_from_archive
 from tac.substrates.hprc.archive_candidate import FALSE_AUTHORITY
@@ -83,7 +84,8 @@ def write_hi_nerv_receiver_cache_quality_report(
 ) -> dict[str, Any]:
     """Render a small HiNeRV receiver cache and optionally run a quality gate.
 
-    ``archive_zip_path`` must contain a root ``0.bin`` HIV1 payload.  The
+    ``archive_zip_path`` must contain the receiver-consumed HIV1 payload as
+    either the current minimal member ``x`` or the legacy root ``0.bin``.  The
     receiver render path is the exact ``build_model_from_archive`` +
     ``rgb_pair_to_uint8_frames`` lowering used by the packaged inflate runtime,
     but the result is still false-authority local evidence.
@@ -854,12 +856,15 @@ def _pair_index_ranges(indices: Sequence[int]) -> list[list[int]]:
 def _read_hiv1_payload_from_archive_zip(archive_zip_path: Path) -> tuple[str, bytes]:
     with zipfile.ZipFile(archive_zip_path, "r") as zf:
         names = [info.filename for info in zf.infolist() if not info.is_dir()]
-        member_name = "0.bin" if "0.bin" in names else None
-        if member_name is None:
+        allowed_members = (MINIMAL_SINGLE_MEMBER_NAME, "0.bin")
+        payload_members = [name for name in names if name in allowed_members]
+        if len(payload_members) != 1:
             raise ValueError(
-                "HiNeRV archive.zip missing root 0.bin member; found "
-                f"{names[:10]}"
+                "HiNeRV archive.zip must contain exactly one receiver payload "
+                f"member named {allowed_members!r}; found payload members "
+                f"{payload_members[:10]!r} among archive members {names[:10]!r}"
             )
+        member_name = payload_members[0]
         payload = zf.read(member_name)
     if not payload.startswith(b"HIV1"):
         digest = hashlib.sha256(payload).hexdigest()

@@ -1099,6 +1099,55 @@ def test_scorer_error_pair_curriculum_rejects_quality_blocked_direct_vjp_bundle(
         runner_mod._load_scorer_error_pair_rows(bundle)
 
 
+def test_scorer_coupled_rd_metadata_prices_cooperative_receiver_axes() -> None:
+    metadata = runner_mod._scorer_coupled_rd_metadata()
+
+    assert metadata["schema"] == "contest_scorer_coupled_rd_allocation_facts.v2"
+    assert metadata["authority"] == "planning_metadata_only_not_score_authority"
+    assert metadata["reference_uncompressed_total_bytes"] == 37_545_489
+    assert metadata["fixed_marginal_byte_price"] == "25/uncompressed_total"
+    assert metadata["fixed_marginal_byte_price_score_per_byte"] == pytest.approx(
+        25.0 / 37_545_489
+    )
+    assert (
+        metadata["cooperative_receiver"]["human_visual_fidelity_objective"]
+        is False
+    )
+    assert metadata["cooperative_receiver"]["projection_domains"] == [
+        "segnet_last_frame_rgb_384x512_argmax5",
+        "posenet_pair_yuv6_384x512_pose6",
+        "archive_zip_bytes",
+    ]
+    assert metadata["segnet_domain"]["output_math"] == (
+        "five_class_argmax_disagreement_rate"
+    )
+    assert metadata["segnet_domain"]["score_derivative"] == pytest.approx(100.0)
+    assert metadata["segnet_domain"]["frame_score_weights"] == {
+        "frame_0": 0.0,
+        "frame_1": 100.0,
+    }
+    assert metadata["posenet_domain"]["score_derivative_formula"] == (
+        "5/sqrt(10*d_pose)"
+    )
+    assert (
+        metadata["posenet_domain"]["score_derivative_operating_point_dependent"]
+        is True
+    )
+    assert (
+        metadata["frame_pair_asymmetry"]["frame_0"]["segnet_score_weight"]
+        == 0.0
+    )
+    assert metadata["frame_pair_asymmetry"]["frame_1"]["segnet_score_weight"] == (
+        pytest.approx(100.0)
+    )
+    assert metadata["atom_admission_rule"]["delta_convention"] == (
+        "candidate_minus_current"
+    )
+    assert metadata["atom_admission_rule"]["admit_when"] == (
+        "linearized_score_delta < 0"
+    )
+
+
 def _synthetic_snerv_packet(*, pairs: int = 2) -> bytes:
     plane_count = int(pairs) * 2 * 3
     lf_planes = [
@@ -4179,12 +4228,12 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
         distillation_device="cpu",
         requested_distillation_device=None,
         allow_segnet_only_research=False,
-        coder_aware_qat=False,
+        coder_aware_qat=True,
         coder_qat_quant_bits=8,
-        coder_qat_quant_residual_weight=0.0,
+        coder_qat_quant_residual_weight=0.001,
         coder_qat_magnitude_weight=0.0,
         coder_qat_delta_weight=0.0,
-        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_entropy_weight=0.0001,
         coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
         coder_qat_c1a_sample_size=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE,
         recon_pixel_weight_path=None,
@@ -4245,6 +4294,14 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
         },
+        archive_section_telemetry={
+            "schema": "hinerv_archive_section_telemetry.v1",
+            "profile_ready": True,
+            "archive_zip_bytes": 333,
+            "sections": [
+                {"name": "decoder_state", "role": "decoder", "bytes": 210},
+            ],
+        },
     )
 
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
@@ -4256,15 +4313,10 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     assert consumption["consumed_by_decoder_codec"] is True
     assert consumption["consumed_by_archive_export_hard_byte_ceiling"] is False
     assert consumption["archive_export_hard_byte_ceiling_measurement_bypass"] is True
-    assert consumption["hard_byte_ceiling_consumed_by_train_time_dual_ascent"] is False
-    assert consumption["train_time_section_byte_control_active"] is False
-    assert "hinerv_train_time_section_byte_telemetry_not_attached" in consumption[
-        "train_time_section_byte_control_blockers"
-    ]
-    assert (
-        "hinerv_hard_byte_ceiling_train_time_dual_ascent_section_controller_inactive"
-        in consumption["hard_byte_ceiling_train_time_dual_ascent_blockers"]
-    )
+    assert consumption["hard_byte_ceiling_consumed_by_train_time_dual_ascent"] is True
+    assert consumption["train_time_section_byte_control_active"] is True
+    assert consumption["train_time_section_byte_control_blockers"] == []
+    assert consumption["hard_byte_ceiling_train_time_dual_ascent_blockers"] == []
     assert consumption["hard_byte_ceiling"] == 178_000
     assert metadata["config"]["latent_dim_mid"] == 4
     assert metadata["config"]["embed_dim"] == 4
@@ -4274,6 +4326,151 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
     assert training["pr95_faithful_curriculum_enabled"] is True
     assert training["pr95_curriculum_total_epochs"] == 29_650
     assert training["pr95_curriculum_total_epochs_consumed"] is True
+
+
+def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from tac.substrates._shared import mlx_score_aware as mlx_score_aware_pkg
+    from tac.substrates.hi_nerv import mlx_renderer as hinerv_mlx_renderer
+
+    train_called = False
+
+    class FakeHinervModel:
+        def __init__(self, cfg):
+            self.cfg = cfg
+
+        def configure_decoder_fake_quant_forward(self, **_kwargs):
+            return None
+
+        def initialize_output_head_bias_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            epsilon,
+        ):
+            return {
+                "schema": "hi_nerv_output_head_target_bias_init.v1",
+                "enabled": True,
+                "epsilon": float(epsilon),
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [],
+            }
+
+        def num_parameters(self):
+            return 123
+
+    def fake_decode_mlx_targets(
+        _video_path,
+        *,
+        num_pairs,
+        output_height,
+        output_width,
+        pair_indices=None,
+    ):
+        shape = (int(num_pairs), int(output_height), int(output_width), 3)
+        return np.zeros(shape, dtype=np.float32), np.zeros(shape, dtype=np.float32)
+
+    def fail_train(**_kwargs):
+        nonlocal train_called
+        train_called = True
+        raise AssertionError("inactive hard-byte ceiling must refuse before training")
+
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "decode_mlx_targets",
+        fake_decode_mlx_targets,
+    )
+    monkeypatch.setattr(
+        mlx_score_aware_pkg,
+        "run_mlx_score_aware_full_main",
+        fail_train,
+    )
+    monkeypatch.setattr(
+        hinerv_mlx_renderer,
+        "HinervSubstrateMLX",
+        FakeHinervModel,
+    )
+
+    with pytest.raises(
+        CompactRendererMlxSpineRunnerError,
+        match="train-time section byte controller is inactive",
+    ):
+        runner_mod._run_hi_nerv_mlx_scoreaware_smoke(
+            output_dir=tmp_path / "private_smoke_inert_byte_cap",
+            num_pairs=2,
+            epochs=3,
+            batch_pair_indices_per_step=1,
+            learning_rate=1e-3,
+            source_video_path=tmp_path / "not_read_by_fake_decoder.mkv",
+            latent_dim=4,
+            embed_dim=4,
+            decoder_channel=4,
+            use_hierarchical_feature_grid=True,
+            use_convnext_blocks=True,
+            local_grid_levels=2,
+            local_grid_channels=4,
+            convnext_mlp_ratio=2,
+            convnext_kernel_size=7,
+            mid_injection_block_index=1,
+            fine_injection_block_index=4,
+            decoder_codec="portfolio_auto",
+            hi_nerv_latent_codec="int16_brotli_q11",
+            hard_byte_ceiling=178_000,
+            ema_decay=0.9,
+            segnet_distillation_weight=0.0,
+            pose_distillation_weight=0.0,
+            pose_distillation_loss="mse",
+            pose_distillation_huber_delta=1.0,
+            recon_loss_stage_weight=1.0,
+            segnet_loss_stage_weight=1.0,
+            pose_loss_stage_weight=1.0,
+            scorer_input_guard_stage_weight=1.0,
+            scorer_input_contrast_floor_stage_weight=None,
+            scorer_input_shape_tether_stage_weight=None,
+            segnet_direct_live_stage_weight=None,
+            segnet_distillation_objective="kl_t2",
+            distillation_temperature=2.0,
+            segnet_tau_boundary=1.0,
+            segnet_hinge_margin=1.0,
+            distillation_device="cpu",
+            requested_distillation_device=None,
+            allow_segnet_only_research=False,
+            coder_aware_qat=False,
+            coder_qat_quant_bits=8,
+            coder_qat_quant_residual_weight=0.0,
+            coder_qat_magnitude_weight=0.0,
+            coder_qat_delta_weight=0.0,
+            coder_qat_c1a_entropy_weight=0.0,
+            coder_qat_c1a_sigma=runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SIGMA,
+            coder_qat_c1a_sample_size=(
+                runner_mod.DEFAULT_PACT_CODER_QAT_C1A_SAMPLE_SIZE
+            ),
+            recon_pixel_weight_path=None,
+            decoder_weight_waterfill_plan=None,
+            recon_pixel_weight_auto_discovery=None,
+            auto_segnet_boundary_recon_weight=False,
+            recon_pixel_weight_tau=1.0,
+            recon_pixel_weight_normalize="mean",
+            mlx_prefilter_scorer_device=None,
+            mlx_prefilter_scorer_batch_pairs=1,
+            mlx_prefilter_progress_every=50,
+            telemetry_flush_interval_epochs=1,
+            checkpoint_interval_epochs=1,
+            checkpoint_dir=None,
+            resume_from_checkpoint=None,
+            optimizer_kind="adamw",
+            hi_nerv_optimizer_policy={},
+            optimizer_controls={},
+            prioritized_pair_indices=(),
+            random_seed=0,
+            scorer_upstream_dir=REPO_ROOT / "upstream",
+            repo_root=REPO_ROOT,
+        )
+
+    assert train_called is False
 
 
 def test_hinerv_private_smoke_rejects_out_of_range_prioritized_pairs(
@@ -4307,6 +4504,10 @@ def test_hinerv_private_smoke_rejects_out_of_range_prioritized_pairs(
             recon_loss_stage_weight=1.0,
             segnet_loss_stage_weight=1.0,
             pose_loss_stage_weight=1.0,
+            scorer_input_guard_stage_weight=1.0,
+            scorer_input_contrast_floor_stage_weight=None,
+            scorer_input_shape_tether_stage_weight=None,
+            segnet_direct_live_stage_weight=None,
             segnet_distillation_objective="kl_t2",
             distillation_temperature=2.0,
             segnet_tau_boundary=1.0,
@@ -8633,9 +8834,6 @@ def test_hinerv_refuses_unscored_launch_but_consumes_modelsize_ladder(
     assert "modelsize_budget:modelsize_control_contract_missing_or_invalid" in plan[
         "dispatch_blockers"
     ]
-    assert "receiver_closed_modelsize_budget_ladder_not_source_bound" in plan[
-        "dispatch_blockers"
-    ]
     assert plan["evidence_summary"]["receiver_closed_selected_modelsize_archive_bytes"] == 80_000
     assert out["score_aware_training_config_gate"]["launch_allowed"] is False
     assert out["score_claim"] is False
@@ -9826,7 +10024,6 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert feedback["feedback_scope"] == "partial_pair_advisory"
     assert feedback["scope_matches_candidate"] is False
     assert feedback["feedback_ready"] is False
-    assert "partial_pair_byte_feedback_only" in out["blockers"]
     candidate_feedback = out["candidate_feedback"]
     assert Path(candidate_feedback["row_path"]).is_file()
     assert Path(candidate_feedback["ledger_path"]).is_file()
@@ -9834,6 +10031,13 @@ def test_hinerv_execute_threads_coder_qat_and_reads_verified_waterfill_metadata(
     assert candidate_feedback["row"]["candidate_num_pairs"] == 600
     assert candidate_feedback["row"]["measured_num_pairs"] == 2
     assert candidate_feedback["row"]["feedback_ready"] is False
+    assert candidate_feedback["row"]["feedback_scope"] == "partial_pair_advisory"
+    assert "hinerv_trained_archive_byte_oracle_feedback_missing" in (
+        candidate_feedback["row"]["blockers"]
+    )
+    assert "hi_nerv_trained_archive_byte_oracle_partial_pair_scope" in (
+        feedback["byte_oracle_blockers"]
+    )
     assert candidate_feedback["score_claim"] is False
     assert out["score_aware_training"]["recon_pixel_weight"][
         "source_kind"
@@ -10340,6 +10544,16 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
         repo_root=REPO_ROOT,
         pr95_curriculum_total_epochs=80,
         modelsize_candidate=_hinerv_waterfill_modelsize_candidate(),
+        archive_section_telemetry={
+            "schema": "hinerv_archive_section_telemetry.v1",
+            "profile_ready": True,
+            "archive_zip_bytes": 4096,
+            "sections": [
+                {"name": "decoder_state", "role": "decoder", "bytes": 3072},
+                {"name": "latents_coarse", "role": "latent", "bytes": 128},
+                {"name": "latents_mid", "role": "latent", "bytes": 256},
+            ],
+        },
     )
 
     assert artifact.as_dict()["substrate_artifact_metadata"] == captured["metadata"]
@@ -10733,7 +10947,7 @@ def _execute_hinerv_waterfill_validation_probe(
         batch_pair_indices_per_step=1,
         learning_rate=1e-3,
         source_video_path=REPO_ROOT / "upstream/videos/0.mkv",
-        hard_byte_ceilings=(178_000,),
+        hard_byte_ceilings=(),
         latent_dim=4,
         embed_dim=4,
         decoder_channel=4,
@@ -11276,6 +11490,10 @@ def test_hinerv_execute_runs_training_archive_and_receiver_proof(
         embed_dim=4,
         decoder_channel=4,
         allow_unscored_research_smoke=True,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.001,
+        coder_qat_c1a_entropy_weight=0.0001,
         repo_root=REPO_ROOT,
     )
 

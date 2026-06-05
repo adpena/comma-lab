@@ -10,6 +10,7 @@ import pytest
 import torch
 
 from tac.repo_io import sha256_file
+from tac.submission_archive import MINIMAL_SINGLE_MEMBER_NAME
 from tac.substrates.hi_nerv.architecture import HinervConfig, HinervSubstrate
 from tac.substrates.hi_nerv.archive import pack_archive
 from tac.substrates.hi_nerv.receiver_cache_quality import (
@@ -55,6 +56,55 @@ def test_hi_nerv_receiver_cache_quality_writes_direct_cache_from_archive(
     assert audit["source"]["archive_magic"] == "HIV1"
     assert audit["cache"]["raw_sha256"] == manifest["raw_sha256"]
     assert audit["score_claim"] is False
+
+
+def test_hi_nerv_receiver_cache_quality_consumes_minimal_x_member(
+    tmp_path: Path,
+) -> None:
+    archive = _write_tiny_hiv1_archive(
+        tmp_path / "archive.zip",
+        member_name=MINIMAL_SINGLE_MEMBER_NAME,
+    )
+
+    report = write_hi_nerv_receiver_cache_quality_report(
+        archive_zip_path=archive,
+        output_dir=tmp_path / "quality",
+        max_pairs=1,
+        batch_pairs=1,
+    )
+
+    assert report["zip_member"] == MINIMAL_SINGLE_MEMBER_NAME
+    assert report["direct_receiver_cache_report"]["zip_member"] == (
+        MINIMAL_SINGLE_MEMBER_NAME
+    )
+    audit = json.loads(
+        (
+            Path(report["candidate_cache_dir"])
+            / "hi_nerv_direct_receiver_render_cache_identity_audit.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert audit["source"]["zip_member"] == MINIMAL_SINGLE_MEMBER_NAME
+    assert Path(report["candidate_cache_manifest_path"]).is_file()
+
+
+def test_hi_nerv_receiver_cache_quality_rejects_ambiguous_payload_members(
+    tmp_path: Path,
+) -> None:
+    legacy = _write_tiny_hiv1_archive(tmp_path / "legacy.zip")
+    with zipfile.ZipFile(legacy, "r") as zf:
+        packet = zf.read("0.bin")
+    archive = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_STORED) as zf:
+        zf.writestr("0.bin", packet)
+        zf.writestr(MINIMAL_SINGLE_MEMBER_NAME, packet)
+
+    with pytest.raises(ValueError, match="exactly one receiver payload member"):
+        write_hi_nerv_receiver_cache_quality_report(
+            archive_zip_path=archive,
+            output_dir=tmp_path / "quality",
+            max_pairs=1,
+            batch_pairs=1,
+        )
 
 
 def test_hi_nerv_receiver_cache_quality_uses_explicit_source_pair_indices(
@@ -366,7 +416,7 @@ def test_hi_nerv_receiver_cache_segnet_argmax_probe_rejects_bad_class_gate(
         )
 
 
-def _write_tiny_hiv1_archive(path: Path) -> Path:
+def _write_tiny_hiv1_archive(path: Path, *, member_name: str = "0.bin") -> Path:
     cfg = HinervConfig(
         latent_dim_coarse=2,
         latent_dim_mid=2,
@@ -409,5 +459,5 @@ def _write_tiny_hiv1_archive(path: Path) -> Path:
         },
     )
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as zf:
-        zf.writestr("0.bin", packet)
+        zf.writestr(member_name, packet)
     return path

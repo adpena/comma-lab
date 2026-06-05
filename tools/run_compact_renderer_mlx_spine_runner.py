@@ -110,6 +110,12 @@ from tac.local_acceleration.pr95_hnerv_mlx_contract import (  # noqa: E402
     PR95_SEGNET_POSENET_LOSS_UNWIRED_BLOCKER,
     PR95_SOURCE_VIDEO_RGB_YUV6_NOT_FULL_SCORER_BLOCKER,
 )
+from tac.score_geometry import (  # noqa: E402
+    CONTEST_REFERENCE_BYTES,
+    POSE_COEFFICIENT_INSIDE_SQRT,
+    RATE_COEFFICIENT,
+    SEG_COEFFICIENT,
+)
 from tac.substrates._shared.mlx_score_aware.adapter import (  # noqa: E402
     DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND,
     MLX_SCORE_AWARE_WEIGHT_DECAY_OPTIMIZER_KINDS,
@@ -1261,16 +1267,47 @@ def _execute_carrier_post_export_materializer_plan(
 def _scorer_coupled_rd_metadata() -> dict[str, Any]:
     """Return durable scorer-domain facts for advisory compact-run metadata."""
 
+    byte_price = RATE_COEFFICIENT / float(CONTEST_REFERENCE_BYTES)
+    pose_marginal_formula = "5/sqrt(10*d_pose)"
     return {
-        "schema": "contest_scorer_coupled_rd_allocation_facts.v1",
+        "schema": "contest_scorer_coupled_rd_allocation_facts.v2",
         "score_formula": (
             "100*d_seg + sqrt(10*d_pose) + "
             "25*(archive_zip_bytes/uncompressed_total)"
         ),
+        "score_formula_terms": {
+            "segnet": "100*d_seg",
+            "posenet": "sqrt(10*d_pose)",
+            "rate": "25*(archive_zip_bytes/uncompressed_total)",
+        },
+        "reference_uncompressed_total_bytes": CONTEST_REFERENCE_BYTES,
+        "segnet_score_coefficient": SEG_COEFFICIENT,
+        "posenet_sqrt_inside_coefficient": POSE_COEFFICIENT_INSIDE_SQRT,
+        "rate_score_coefficient": RATE_COEFFICIENT,
         "fixed_marginal_byte_price": "25/uncompressed_total",
+        "fixed_marginal_byte_price_score_per_byte": byte_price,
+        "cooperative_receiver": {
+            "description": (
+                "The contest receiver projects the inflated video through two "
+                "scorer-domain maps plus the charged archive byte count; "
+                "only these projections have authority."
+            ),
+            "projection_domains": [
+                "segnet_last_frame_rgb_384x512_argmax5",
+                "posenet_pair_yuv6_384x512_pose6",
+                "archive_zip_bytes",
+            ],
+            "human_visual_fidelity_objective": False,
+        },
         "segnet_domain": {
             "pair_frame": 1,
             "domain": "last_frame_only",
+            "output_math": "five_class_argmax_disagreement_rate",
+            "score_derivative": SEG_COEFFICIENT,
+            "frame_score_weights": {
+                "frame_0": 0.0,
+                "frame_1": SEG_COEFFICIENT,
+            },
             "num_classes": 5,
             "input_size": [384, 512],
         },
@@ -1278,12 +1315,49 @@ def _scorer_coupled_rd_metadata() -> dict[str, Any]:
             "pair_frames": [0, 1],
             "pose_dims_scored": 6,
             "input_kind": "yuv6_pair",
+            "output_math": "six_dim_pose_mse_under_score_sqrt",
+            "score_derivative_formula": pose_marginal_formula,
+            "score_derivative_operating_point_dependent": True,
+            "frame_score_weights": {
+                "frame_0": "pose_marginal_only",
+                "frame_1": (
+                    "pose_marginal_plus_segnet_marginal_when_segnet_sensitive"
+                ),
+            },
             "input_size": [384, 512],
+        },
+        "frame_pair_asymmetry": {
+            "frame_0": {
+                "segnet_score_weight": 0.0,
+                "posenet_score_weight": pose_marginal_formula,
+            },
+            "frame_1": {
+                "segnet_score_weight": SEG_COEFFICIENT,
+                "posenet_score_weight": pose_marginal_formula,
+            },
+            "allocator_implication": (
+                "Frame-1 atoms can buy SegNet and PoseNet distortion; frame-0 "
+                "atoms can buy PoseNet distortion only."
+            ),
         },
         "gradient_note": (
             "Pose Jacobian probes must use differentiable rgb_to_yuv6 "
             "roundtrip; upstream clamp is scorer-forward authority only."
         ),
+        "atom_admission_rule": {
+            "delta_convention": "candidate_minus_current",
+            "linearized_score_delta": (
+                "100*delta_d_seg + pose_marginal*delta_d_pose + "
+                "fixed_marginal_byte_price_score_per_byte*delta_archive_bytes"
+            ),
+            "pose_marginal": pose_marginal_formula,
+            "admit_when": "linearized_score_delta < 0",
+            "equivalent_value_rule": (
+                "protect_or_spend iff "
+                "-100*delta_d_seg - pose_marginal*delta_d_pose > "
+                "fixed_marginal_byte_price_score_per_byte*delta_archive_bytes"
+            ),
+        },
         "allocation_rule": (
             "spend a charged bit only when measured scorer-value-per-bit "
             "exceeds fixed_marginal_byte_price"
@@ -14417,6 +14491,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 *train_time_section_byte_control_blockers,
                 "hinerv_hard_byte_ceiling_train_time_dual_ascent_section_controller_inactive",
             ]
+        )
+        raise CompactRendererMlxSpineRunnerError(
+            "HiNeRV hard_byte_ceiling was configured, but the train-time "
+            "section byte controller is inactive. Enable coder-aware QAT or "
+            "attach usable archive-section telemetry so the byte cap actuates "
+            "inside training. blockers="
+            f"{hard_byte_ceiling_train_time_dual_ascent_blockers}"
         )
     (
         live_train_time_section_byte_metrics,
