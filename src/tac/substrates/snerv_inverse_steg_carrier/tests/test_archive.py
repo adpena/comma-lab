@@ -619,6 +619,11 @@ def test_official_mfu_hfr_tub_decoder_payload_executes_receiver_primitives() -> 
     assert header["receiver_self_consistency_reference"]["schema"] == (
         "snerv_decoder_payload.official_mfu_hfr_tub.receiver_self_consistency.v1"
     )
+    assert header["source_forward_blockers"]
+    assert (
+        header["receiver_self_consistency_reference"]["source_forward_blockers"]
+        == header["source_forward_blockers"]
+    )
     assert decoded.schema == header["schema"]
     assert proof["schema"].endswith("receiver_runtime_proof.v1")
     assert proof["receiver_export_bound"] is True
@@ -934,6 +939,15 @@ def test_official_mfu_hfr_tub_shared_skip_high_payload_expands_receiver_state() 
         decoded.tensors["inputs.mfu.skip_high"][0],
         decoded.tensors["inputs.mfu.skip_high"][1],
     )
+    assert "snerv_compact_skip_high_train_state_not_bound" in shared_header[
+        "skip_high_storage"
+    ]["source_forward_blockers"]
+    assert "snerv_compact_skip_high_train_state_not_bound" in shared_header[
+        "source_forward_blockers"
+    ]
+    assert "snerv_compact_skip_high_train_state_not_bound" in proof[
+        "source_forward_blockers"
+    ]
     assert not np.array_equal(
         decoded.tensors["inputs.mfu.skip_high"],
         bundle["skip_high"],
@@ -983,6 +997,12 @@ def test_official_mfu_hfr_tub_compact_skip_high_payload_expands_receiver_state(
     assert compact_header["skip_high_storage"][
         "lossless_relative_to_source_skip_high"
     ] is False
+    assert "snerv_compact_skip_high_train_state_not_bound" in compact_header[
+        "skip_high_storage"
+    ]["source_forward_blockers"]
+    assert "snerv_compact_skip_high_train_state_not_bound" in compact_header[
+        "source_forward_blockers"
+    ]
     assert compact_header["skip_high_storage"][
         "train_time_tied_state_required_for_exact_compact_export"
     ] is True
@@ -1033,6 +1053,11 @@ def test_official_mfu_hfr_tub_compact_skip_high_encoder_avoids_reexpansion(
     assert header["skip_high_storage"]["stored_shape"] == stored_shape
     assert header["skip_high_storage"]["encoder_consumed_compact_train_state"] is True
     assert header["skip_high_storage"]["lossless_relative_to_source_skip_high"] is False
+    assert header["skip_high_storage"]["source_forward_blockers"] == []
+    assert (
+        "snerv_compact_skip_high_train_state_not_bound"
+        not in header["source_forward_blockers"]
+    )
     assert header["skip_high_storage"][
         "train_time_tied_state_required_for_exact_compact_export"
     ] is True
@@ -1067,6 +1092,13 @@ def test_official_mfu_hfr_tub_unused_tub_inputs_compact_without_score_authority(
         "lossless_relative_to_source_tub_inputs"
     ] is False
     assert compact_header["tub_input_storage"]["source_forward_replay_authority"] is False
+    assert compact_header["tub_input_storage"]["source_forward_blockers"] == [
+        "snerv_unused_tub_inputs_synthetic_not_source_forward_replay"
+    ]
+    assert (
+        "snerv_unused_tub_inputs_synthetic_not_source_forward_replay"
+        in compact_header["source_forward_blockers"]
+    )
     assert compact_header["tub_input_storage"]["contest_scorer_authority"] is False
     assert compact_header["source_forward_replay_authority"] is False
     assert len(compact_payload) < len(full_payload)

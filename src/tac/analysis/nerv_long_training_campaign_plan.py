@@ -2233,6 +2233,14 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
 
     exact_names = {
         "aurora_requires_local_timing_convergence_smoke",
+        "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted",
+        "hinerv_archive_section_telemetry_archive_not_under_hard_byte_ceiling",
+        "hinerv_archive_section_telemetry_receiver_cache_quality_gate_not_passed",
+        "hinerv_archive_section_telemetry_receiver_cache_quality_not_bound",
+        "hinerv_archive_section_telemetry_receiver_cache_quality_report_path_missing",
+        "hinerv_archive_section_telemetry_receiver_cache_quality_report_path_not_file",
+        "hinerv_archive_section_telemetry_receiver_cache_quality_report_sha256_mismatch",
+        "hinerv_archive_section_telemetry_receiver_proof_not_bound",
         "hinerv_decoder_weight_waterfill_plan_advisory_only_not_runner_admitted",
         "snerv_candidate_id_source_bound_controls_mismatch",
         "snerv_candidate_id_source_bound_controls_unparseable",

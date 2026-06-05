@@ -2216,6 +2216,17 @@ def test_long_training_campaign_plan_blocks_bad_hinerv_archive_section_telemetry
     assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi[
         "blockers"
     ]
+    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi[
+        "score_lowering_gate"
+    ]["launch_blockers"]
+    assert "hinerv_archive_section_telemetry_advisory_only_not_runner_admitted" in hi[
+        "experiment_queue_entry"
+    ]["launch_authority_contract"]["queue_launch_blockers"]
+    assert hi["experiment_queue_entry"]["launch_authority_contract"][
+        "queue_status_is_runnable_plan"
+    ] is False
+    assert hi["experiment_queue_entry"]["status"] == "disabled"
+    assert hi["local_mlx_launch_command_ready"] is False
 
 
 def test_long_training_campaign_plan_routes_hinerv_hard_pair_feedback(

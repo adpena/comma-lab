@@ -64,6 +64,7 @@ from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OfficialHfrHeads,
 )
 from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
+    OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS,
     OFFICIAL_SNERV_MFU_SOURCE,
     OFFICIAL_SNERV_T_MFU_SOURCE,
     OfficialConvTranspose2dNchw,
@@ -75,6 +76,7 @@ from tac.substrates.snerv_inverse_steg_carrier.official_mfu import (
 from tac.substrates.snerv_inverse_steg_carrier.official_tub import (
     OFFICIAL_SNERV_T_SOURCE_SHA,
     OFFICIAL_SNERV_T_TUB_SOURCE_CONTRACT,
+    OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS,
     official_output2_fusion_numpy,
     prepare_official_tub_graph_inputs,
 )
@@ -130,6 +132,12 @@ OFFICIAL_SKIP_HIGH_CODEC_CHANNEL_MEAN = "channel_mean_float64"
 OFFICIAL_SKIP_HIGH_CODEC_SCALAR_MEAN = "scalar_mean_float64"
 OFFICIAL_TUB_INPUT_CODEC_FULL = "full_float64"
 OFFICIAL_TUB_INPUT_CODEC_UNUSED_SYNTHETIC = "unused_synthetic_float64"
+OFFICIAL_MFU_HFR_TUB_BASE_SOURCE_FORWARD_BLOCKERS: tuple[str, ...] = (
+    *OFFICIAL_SNERV_MFU_NUMERIC_PARITY_BLOCKERS,
+    "official_hfr_weight_tensor_mapping_not_loaded",
+    "full_official_hfr_forward_artifact_not_emitted",
+    *OFFICIAL_SNERV_T_TUB_SOURCE_FORWARD_BLOCKERS,
+)
 OFFICIAL_SKIP_HIGH_MODE_TO_CODEC = {
     "full": OFFICIAL_SKIP_HIGH_CODEC_FULL,
     "full_float64": OFFICIAL_SKIP_HIGH_CODEC_FULL,
@@ -503,6 +511,9 @@ class OfficialMfuHfrTubReceiverPayload:
             "source_forward_replay_bound": False,
             "source_forward_replay_verified": False,
             "source_forward_replay_authority": False,
+            "source_forward_blockers": list(
+                self.header.get("source_forward_blockers") or ()
+            ),
             "contest_scorer_authority": False,
             **FALSE_AUTHORITY,
         }
@@ -695,6 +706,7 @@ def _build_official_receiver_self_consistency_reference(
     tub_previous: np.ndarray,
     tub_next_frame: np.ndarray,
     tub_config: Mapping[str, Any],
+    source_forward_blockers: Sequence[str],
     tub_temporal_encoder_concat: np.ndarray | None = None,
     tub_output2_raw: np.ndarray | None = None,
 ) -> dict[str, Any]:
@@ -720,6 +732,7 @@ def _build_official_receiver_self_consistency_reference(
         "receiver_export_payload_bound": True,
         "receiver_export_self_consistency_verified": True,
         "source_forward_replay_verified_by_export": False,
+        "source_forward_blockers": list(source_forward_blockers),
         "output_tensors": output_rows,
         "output_bundle_sha256": output_bundle_sha256,
         "score_claim": False,
@@ -1621,6 +1634,11 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         output2_decoder_output_shape=output2_decoder_output_shape,
         store_for_receiver_proof=bool(store_tub_output2_for_receiver_proof),
     )
+    source_forward_blockers = _official_mfu_hfr_tub_source_forward_blockers(
+        skip_high_plan["metadata"],
+        tub_input_plan["metadata"],
+        output2_plan["metadata"],
+    )
     tensors = _official_payload_tensor_dict(
         mfu=mfu,
         hfr_heads=hfr_heads,
@@ -1665,6 +1683,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         tub_previous=tub_input_plan["effective"]["previous"],
         tub_next_frame=tub_input_plan["effective"]["next_frame"],
         tub_config=tub_config,
+        source_forward_blockers=source_forward_blockers,
         tub_temporal_encoder_concat=output2_plan["effective"].get(
             "temporal_encoder_concat"
         ),
@@ -1710,6 +1729,7 @@ def encode_official_mfu_hfr_tub_decoder_payload(
         "receiver_export_payload_bound": True,
         "receiver_export_self_consistency_verified": True,
         "source_forward_replay_bound_by_export": False,
+        "source_forward_blockers": list(source_forward_blockers),
         "receiver_runtime_decode_proven_by_payload": False,
         "source_forward_replay_authority": False,
         **FALSE_AUTHORITY,
@@ -2104,6 +2124,10 @@ def _official_skip_high_storage_plan(
     effective = _canonical_float64_tensor(effective, name="inputs.mfu.skip_high.expanded")
     full_raw_bytes = int(np.prod(source_shape_tuple)) * np.dtype("<f8").itemsize
     stored_raw_bytes = int(stored.size) * np.dtype("<f8").itemsize
+    blockers = _official_skip_high_source_forward_blockers(
+        codec=normalized,
+        compact_payload=compact_payload,
+    )
     return {
         "stored": stored,
         "effective": effective,
@@ -2123,9 +2147,22 @@ def _official_skip_high_storage_plan(
             == OFFICIAL_SKIP_HIGH_CODEC_FULL,
             "train_time_tied_state_required_for_exact_compact_export": normalized
             != OFFICIAL_SKIP_HIGH_CODEC_FULL,
+            "source_forward_blockers": blockers,
             **FALSE_AUTHORITY,
         },
     }
+
+
+def _official_skip_high_source_forward_blockers(
+    *,
+    codec: str,
+    compact_payload: bool,
+) -> list[str]:
+    if codec == OFFICIAL_SKIP_HIGH_CODEC_FULL:
+        return []
+    if compact_payload:
+        return []
+    return ["snerv_compact_skip_high_train_state_not_bound"]
 
 
 def _expand_official_skip_high_storage(
@@ -2237,6 +2274,11 @@ def _official_tub_input_storage_plan(
             ),
             "source_forward_replay_authority": False,
             "contest_scorer_authority": False,
+            "source_forward_blockers": (
+                []
+                if normalized == OFFICIAL_TUB_INPUT_CODEC_FULL
+                else ["snerv_unused_tub_inputs_synthetic_not_source_forward_replay"]
+            ),
             **FALSE_AUTHORITY,
         },
     }
@@ -2361,9 +2403,28 @@ def _official_tub_output2_storage_plan(
             "raw_byte_savings": source_raw_bytes - stored_raw_bytes,
             "source_forward_replay_authority": False,
             "contest_scorer_authority": False,
+            "source_forward_blockers": (
+                []
+                if should_store or not bool(temporal_encoder_concat is not None)
+                else ["snerv_tub_output2_source_payload_elided_from_runtime_packet"]
+            ),
             **FALSE_AUTHORITY,
         },
     }
+
+
+def _official_mfu_hfr_tub_source_forward_blockers(
+    skip_high_storage: Mapping[str, Any],
+    tub_input_storage: Mapping[str, Any],
+    tub_output2_storage: Mapping[str, Any],
+) -> tuple[str, ...]:
+    blockers: list[str] = list(OFFICIAL_MFU_HFR_TUB_BASE_SOURCE_FORWARD_BLOCKERS)
+    for storage in (skip_high_storage, tub_input_storage, tub_output2_storage):
+        raw = storage.get("source_forward_blockers") or ()
+        if isinstance(raw, (str, bytes)) or not isinstance(raw, Sequence):
+            raise SnervArchiveError("official source-forward blockers must be a list")
+        blockers.extend(str(value) for value in raw)
+    return tuple(dict.fromkeys(blockers))
 
 
 def _expand_official_tub_input_storage(
@@ -2957,6 +3018,16 @@ def _official_receiver_self_consistency_reference_from_header(
         raise SnervArchiveError(
             "official primitive payload receiver self-consistency must not claim source-forward replay"
         )
+    blockers = reference.get("source_forward_blockers")
+    if blockers is not None:
+        if isinstance(blockers, (str, bytes)) or not isinstance(blockers, Sequence):
+            raise SnervArchiveError(
+                "official primitive payload source-forward blockers must be a list"
+            )
+        if not blockers:
+            raise SnervArchiveError(
+                "official primitive payload must preserve source-forward blockers"
+            )
     if not _looks_like_sha256(reference.get("output_bundle_sha256")):
         raise SnervArchiveError(
             "official primitive payload receiver self-consistency output sha256 missing"
