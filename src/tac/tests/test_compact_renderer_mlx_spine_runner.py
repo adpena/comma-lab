@@ -11738,9 +11738,35 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 "scorer_input_distribution_guard_bound": (
                     scorer_input_distribution_guard_bound
                 ),
+                "scorer_input_contrast_floor_bound": bool(
+                    float(
+                        kwargs.get(
+                            "score_aware_long_training_scorer_input_contrast_floor_weight"
+                        )
+                        or 0.0
+                    )
+                    > 0.0
+                ),
                 "training_telemetry_contract": {
                     "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
                     "passed": long_training_executed,
+                    "expected_scorer_input_guard_metric": long_training_executed,
+                    "scorer_input_guard_metric_observed": long_training_executed,
+                    "scorer_input_guard_dual_metric_observed": (
+                        long_training_executed
+                    ),
+                    "expected_scorer_input_contrast_floor_metric": (
+                        long_training_executed
+                    ),
+                    "scorer_input_contrast_floor_metric_observed": (
+                        long_training_executed
+                    ),
+                    "scorer_input_contrast_floor_segnet_ratio_metric_observed": (
+                        long_training_executed
+                    ),
+                    "scorer_input_contrast_floor_posenet_ratio_metric_observed": (
+                        long_training_executed
+                    ),
                     "blockers": (
                         []
                         if long_training_executed
