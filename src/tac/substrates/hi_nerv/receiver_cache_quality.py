@@ -67,6 +67,8 @@ def write_hi_nerv_receiver_cache_quality_report(
     segnet_argmax_probe_device: str = "cpu",
     segnet_argmax_probe_batch_frames: int = 4,
     max_segnet_argmax_disagreement_for_fit_gate: float = 0.25,
+    require_segnet_argmax_probe: bool = True,
+    segnet_argmax_probe_logits_fn: Any | None = None,
     distortion_crux_probe: bool = True,
     distortion_crux_top_k: int = DEFAULT_DISTORTION_CRUX_TOP_K,
     distortion_crux_min_routable_pairs: int = DEFAULT_DISTORTION_CRUX_MIN_ROUTABLE_PAIRS,
@@ -127,43 +129,86 @@ def write_hi_nerv_receiver_cache_quality_report(
 
     segnet_argmax_probe: dict[str, Any] | None = None
     segnet_argmax_probe_path: Path | None = None
-    if reference_cache_dir is not None and segnet_argmax_probe_upstream_dir is not None:
+    if reference_cache_dir is not None and (
+        bool(require_segnet_argmax_probe)
+        or segnet_argmax_probe_upstream_dir is not None
+        or segnet_argmax_probe_logits_fn is not None
+    ):
         segnet_argmax_probe_path = out / "segnet_argmax_probe.json"
-        try:
-            segnet_argmax_probe = write_hi_nerv_receiver_cache_segnet_argmax_probe(
-                output_json=segnet_argmax_probe_path,
+        if (
+            segnet_argmax_probe_upstream_dir is None
+            and segnet_argmax_probe_logits_fn is None
+        ):
+            segnet_argmax_probe = _build_segnet_argmax_probe_not_run_report(
                 candidate_cache_dir=cache_dir,
                 reference_cache_dir=reference_cache_dir,
-                upstream_dir=segnet_argmax_probe_upstream_dir,
-                sample_pairs=int(sample_pairs or max_pairs),
-                batch_frames=int(segnet_argmax_probe_batch_frames),
-                device=str(segnet_argmax_probe_device),
-                max_segnet_argmax_disagreement_for_fit_gate=float(
-                    max_segnet_argmax_disagreement_for_fit_gate
-                ),
+                report_path=segnet_argmax_probe_path,
+                reason="segnet_argmax_probe_upstream_dir_not_supplied",
             )
-        except Exception as exc:  # pragma: no cover - exercised by runner refusal path
-            segnet_argmax_probe = {
-                "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
-                "candidate_cache_dir": cache_dir.as_posix(),
-                "reference_cache_dir": Path(reference_cache_dir)
-                .expanduser()
-                .resolve(strict=False)
-                .as_posix(),
-                "upstream_dir": Path(segnet_argmax_probe_upstream_dir)
-                .expanduser()
-                .resolve(strict=False)
-                .as_posix(),
-                "fit_gate_passed": False,
-                "failure": repr(exc),
-                "blockers": [
-                    "hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority",
-                    "hi_nerv_receiver_cache_segnet_argmax_probe_failed",
-                ],
-                **FALSE_AUTHORITY,
-            }
-            segnet_argmax_probe["report_path"] = segnet_argmax_probe_path.as_posix()
             write_json(segnet_argmax_probe_path, segnet_argmax_probe)
+        else:
+            try:
+                if segnet_argmax_probe_logits_fn is not None:
+                    segnet_argmax_probe = (
+                        build_hi_nerv_receiver_cache_segnet_argmax_probe(
+                            candidate_cache_dir=cache_dir,
+                            reference_cache_dir=reference_cache_dir,
+                            upstream_dir=segnet_argmax_probe_upstream_dir,
+                            sample_pairs=int(sample_pairs or max_pairs),
+                            batch_frames=int(segnet_argmax_probe_batch_frames),
+                            device=str(segnet_argmax_probe_device),
+                            max_segnet_argmax_disagreement_for_fit_gate=float(
+                                max_segnet_argmax_disagreement_for_fit_gate
+                            ),
+                            segnet_logits_fn=segnet_argmax_probe_logits_fn,
+                        )
+                    )
+                    segnet_argmax_probe["report_path"] = (
+                        segnet_argmax_probe_path.as_posix()
+                    )
+                    write_json(segnet_argmax_probe_path, segnet_argmax_probe)
+                else:
+                    segnet_argmax_probe = (
+                        write_hi_nerv_receiver_cache_segnet_argmax_probe(
+                            output_json=segnet_argmax_probe_path,
+                            candidate_cache_dir=cache_dir,
+                            reference_cache_dir=reference_cache_dir,
+                            upstream_dir=segnet_argmax_probe_upstream_dir,
+                            sample_pairs=int(sample_pairs or max_pairs),
+                            batch_frames=int(segnet_argmax_probe_batch_frames),
+                            device=str(segnet_argmax_probe_device),
+                            max_segnet_argmax_disagreement_for_fit_gate=float(
+                                max_segnet_argmax_disagreement_for_fit_gate
+                            ),
+                        )
+                    )
+            except Exception as exc:  # pragma: no cover - exercised by runner refusal path
+                upstream_value = (
+                    Path(segnet_argmax_probe_upstream_dir)
+                    .expanduser()
+                    .resolve(strict=False)
+                    .as_posix()
+                    if segnet_argmax_probe_upstream_dir is not None
+                    else None
+                )
+                segnet_argmax_probe = {
+                    "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
+                    "candidate_cache_dir": cache_dir.as_posix(),
+                    "reference_cache_dir": Path(reference_cache_dir)
+                    .expanduser()
+                    .resolve(strict=False)
+                    .as_posix(),
+                    "upstream_dir": upstream_value,
+                    "fit_gate_passed": False,
+                    "failure": repr(exc),
+                    "blockers": [
+                        "hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority",
+                        "hi_nerv_receiver_cache_segnet_argmax_probe_failed",
+                    ],
+                    **FALSE_AUTHORITY,
+                }
+                segnet_argmax_probe["report_path"] = segnet_argmax_probe_path.as_posix()
+                write_json(segnet_argmax_probe_path, segnet_argmax_probe)
 
     distortion_crux: dict[str, Any] | None = None
     distortion_crux_path: Path | None = None
@@ -317,7 +362,7 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     *,
     candidate_cache_dir: str | Path,
     reference_cache_dir: str | Path,
-    upstream_dir: str | Path,
+    upstream_dir: str | Path | None,
     sample_pairs: int = 16,
     batch_frames: int = 4,
     device: str = "cpu",
@@ -344,7 +389,11 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
 
     candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
     reference = Path(reference_cache_dir).expanduser().resolve(strict=False)
-    upstream = Path(upstream_dir).expanduser().resolve(strict=False)
+    upstream = (
+        Path(upstream_dir).expanduser().resolve(strict=False)
+        if upstream_dir is not None
+        else None
+    )
     cand_seg = _load_cache_array(candidate, "segnet_last_rgb.npy")
     ref_seg = _load_cache_array(reference, "segnet_last_rgb.npy")
     n = _sample_count(cand_seg, ref_seg, sample_pairs)
@@ -358,10 +407,17 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
             f"{cand_sample.shape} vs {ref_sample.shape}"
         )
 
-    logits_fn = segnet_logits_fn or _build_real_mlx_segnet_logits_fn(
-        upstream_dir=upstream,
-        device=device,
-    )
+    if segnet_logits_fn is None:
+        if upstream is None:
+            raise ValueError(
+                "upstream_dir is required when segnet_logits_fn is not injected"
+            )
+        logits_fn = _build_real_mlx_segnet_logits_fn(
+            upstream_dir=upstream,
+            device=device,
+        )
+    else:
+        logits_fn = segnet_logits_fn
     cand_argmax, cand_margin = _run_segnet_argmax_batches(
         cand_sample,
         logits_fn=logits_fn,
@@ -397,9 +453,11 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
         "candidate_cache_dir": candidate.as_posix(),
         "reference_cache_dir": reference.as_posix(),
-        "upstream_dir": upstream.as_posix(),
+        "upstream_dir": upstream.as_posix() if upstream is not None else None,
         "scorer_backend": (
-            "injected_segnet_logits_fn" if segnet_logits_fn is not None else "mlx_segnet_adapter"
+            "injected_segnet_logits_fn"
+            if segnet_logits_fn is not None
+            else "mlx_segnet_adapter"
         ),
         "device": str(device),
         "sample_pairs": int(n),
@@ -435,6 +493,33 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         },
         "fit_gate_passed": disagreement <= threshold,
         "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _build_segnet_argmax_probe_not_run_report(
+    *,
+    candidate_cache_dir: str | Path,
+    reference_cache_dir: str | Path,
+    report_path: str | Path,
+    reason: str,
+) -> dict[str, Any]:
+    candidate = Path(candidate_cache_dir).expanduser().resolve(strict=False)
+    reference = Path(reference_cache_dir).expanduser().resolve(strict=False)
+    out = Path(report_path).expanduser().resolve(strict=False)
+    return {
+        "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
+        "candidate_cache_dir": candidate.as_posix(),
+        "reference_cache_dir": reference.as_posix(),
+        "upstream_dir": None,
+        "scorer_backend": None,
+        "fit_gate_passed": False,
+        "reason": str(reason),
+        "report_path": out.as_posix(),
+        "blockers": [
+            "hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority",
+            "hi_nerv_receiver_cache_segnet_argmax_probe_not_run",
+        ],
         **FALSE_AUTHORITY,
     }
 

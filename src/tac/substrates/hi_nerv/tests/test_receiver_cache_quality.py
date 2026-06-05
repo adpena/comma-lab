@@ -85,7 +85,7 @@ def test_hi_nerv_receiver_cache_quality_uses_explicit_source_pair_indices(
     assert audit["direct_render"]["selected_pair_indices"] == [1]
 
 
-def test_hi_nerv_receiver_cache_quality_attaches_gate_against_reference(
+def test_hi_nerv_receiver_cache_quality_requires_argmax_probe_for_reference_gate(
     tmp_path: Path,
 ) -> None:
     archive = _write_tiny_hiv1_archive(tmp_path / "archive.zip")
@@ -113,16 +113,59 @@ def test_hi_nerv_receiver_cache_quality_attaches_gate_against_reference(
     assert report["quality_gate"] is not None
     assert report["quality_gate"]["schema"] == "mlx_cache_quality_gate.v1"
     assert report["quality_gate"]["verdict"] == "CACHE_INPUTS_NONDEGENERATE_LOCAL_ONLY"
-    assert report["quality_gate_passed"] is True
+    assert report["quality_gate_passed"] is False
+    assert report["segnet_argmax_probe"]["fit_gate_passed"] is False
+    assert "hi_nerv_receiver_cache_segnet_argmax_probe_not_run" in report["blockers"]
     assert report["distortion_crux_probe"]["schema"] == (
         HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA
     )
     assert report["distortion_crux_probe"]["fit_gate_passed"] is True
     assert report["distortion_crux_probe"]["hard_pair_rows"][0]["pair_index"] == 0
     assert report["hard_pair_coverage"]["score_axis_hard_pair_coverage"] is False
+    assert Path(report["segnet_argmax_probe_path"]).is_file()
     assert Path(report["distortion_crux_probe_path"]).is_file()
     assert report["score_claim"] is False
     assert Path(report["quality_gate_path"]).is_file()
+
+
+def test_hi_nerv_receiver_cache_quality_passes_with_argmax_probe(
+    tmp_path: Path,
+) -> None:
+    archive = _write_tiny_hiv1_archive(tmp_path / "archive.zip")
+    reference_report = write_hi_nerv_receiver_cache_quality_report(
+        archive_zip_path=archive,
+        output_dir=tmp_path / "reference",
+        max_pairs=1,
+        batch_pairs=1,
+    )
+
+    def fake_segnet_logits(x_nchw: np.ndarray) -> np.ndarray:
+        b, _c, h, w = x_nchw.shape
+        logits = np.zeros((b, 5, h, w), dtype=np.float32)
+        logits[:, 0, :, :] = 1.0
+        return logits
+
+    report = write_hi_nerv_receiver_cache_quality_report(
+        archive_zip_path=archive,
+        output_dir=tmp_path / "candidate",
+        reference_cache_dir=Path(reference_report["candidate_cache_dir"]),
+        max_pairs=1,
+        batch_pairs=1,
+        min_segnet_std=0.0,
+        min_segnet_dynamic_range=0.0,
+        max_segnet_mae_vs_reference_for_fit_gate=1.0,
+        min_posenet_yuv6_std=0.0,
+        min_posenet_yuv6_dynamic_range=0.0,
+        max_posenet_yuv6_mae_vs_reference_for_fit_gate=1.0,
+        segnet_argmax_probe_logits_fn=fake_segnet_logits,
+    )
+
+    assert report["quality_gate_passed"] is True
+    assert report["segnet_argmax_probe"]["scorer_backend"] == "injected_segnet_logits_fn"
+    assert report["segnet_argmax_probe"]["fit_gate_passed"] is True
+    assert report["segnet_argmax_probe"]["segnet_argmax_disagreement_rate"] == 0.0
+    assert "candidate_segnet_argmax_disagreement_too_high" not in report["blockers"]
+    assert Path(report["segnet_argmax_probe_path"]).is_file()
 
 
 def test_hi_nerv_receiver_cache_segnet_argmax_probe_prices_real_flip_surface(

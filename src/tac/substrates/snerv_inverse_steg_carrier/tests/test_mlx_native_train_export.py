@@ -3122,6 +3122,22 @@ def test_official_mfu_hfr_tub_packet_elides_output2_payload_from_components() ->
     proof = official_payload.execute()
 
     storage = decoded.metadata["official_tub_output2_storage"]
+    assert decoded.metadata["lf_payload_codec"] == "spatial_delta_zigzag_leb128_lzma"
+    assert (
+        decoded.metadata["lf_payload_codec_requested"]
+        == "spatial_delta_zigzag_leb128_lzma"
+    )
+    assert (
+        decoded.metadata["lf_payload_codec_selected"]
+        == "spatial_delta_zigzag_leb128_lzma"
+    )
+    assert decoded.metadata["lf_payload_receiver_usage"] == (
+        "unused_dummy_zero_official_payload_frame_decode_uses_decoder_payload"
+    )
+    assert (
+        decoded.metadata["lf_payload_codec_selection_report"]["section_bytes"]
+        == packet.section_bytes["lf_payload"]
+    )
     assert storage["stored"] is False
     assert storage["source_payload_present"] is True
     assert storage["proof_only_elided_from_selected_runtime_packet"] is True

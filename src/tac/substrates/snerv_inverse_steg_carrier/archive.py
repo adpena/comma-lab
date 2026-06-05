@@ -1350,11 +1350,34 @@ def encode_lf_quant_payload(
             encode_lf_quant_payload_v2(arrays, mode="portfolio_auto"),
         )
         return min(candidates, key=len)
+    if normalized.startswith("v2:"):
+        mode, wrapper = _parse_lf_payload_v2_codec_label(normalized)
+        try:
+            return encode_lf_quant_payload_v2(arrays, mode=mode, wrapper=wrapper)
+        except SnervLfPayloadCodecError as exc:
+            raise SnervArchiveError(str(exc)) from exc
     try:
         return encode_lf_quant_payload_v2(arrays, mode=normalized)
     except SnervLfPayloadCodecError as exc:
         raise SnervArchiveError(str(exc)) from exc
     raise SnervArchiveError(f"unsupported LF quant payload codec: {codec!r}")
+
+
+def _parse_lf_payload_v2_codec_label(codec: str) -> tuple[str, str]:
+    """Parse receiver-selected LF labels back into v2 encoder controls."""
+
+    parts = str(codec).strip().lower().split(":")
+    if len(parts) == 3 and parts[0] == "v2":
+        _prefix, mode, wrapper = parts
+    elif len(parts) == 4 and parts[:2] == ["v2", "portfolio"]:
+        _prefix, _portfolio, mode, wrapper = parts
+    else:
+        raise SnervArchiveError(f"unsupported LF v2 selected codec label: {codec!r}")
+    if mode.startswith("unknown") or wrapper.startswith("unknown"):
+        raise SnervArchiveError(
+            f"LF v2 selected codec label is not reproducible: {codec!r}"
+        )
+    return mode, wrapper
 
 
 def _encode_lf_quant_payload_int64_lzma(arrays: list[np.ndarray]) -> bytes:

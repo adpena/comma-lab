@@ -9,6 +9,7 @@ import pytest
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     decode_lf_quant_payload,
     encode_lf_quant_payload,
+    inspect_lf_quant_payload_header,
 )
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     SNERV_LF_QUANT_V2_MAGIC,
@@ -390,6 +391,47 @@ def test_archive_lf_payload_auto_considers_v2_integer_portfolio() -> None:
         len(spatial_payload),
     )
     assert len(auto_payload) < len(legacy_payload)
+
+
+def test_archive_lf_payload_selected_label_is_reusable_codec_control() -> None:
+    plane = np.array([[-2, -1, 0, 1], [1, 0, -1, -2]], dtype=np.int64)
+
+    payload = encode_lf_quant_payload(
+        [plane],
+        codec="v2:signed_int2_bitpack:none",
+    )
+    report = inspect_lf_quant_payload_v2(payload)
+
+    np.testing.assert_array_equal(decode_lf_quant_payload(payload)[0], plane)
+    assert report.mode_histogram == {"signed_int2_bitpack": 1}
+    assert report.wrapper_histogram == {"none": 1}
+    assert (
+        selected_lf_payload_codec_label(
+            report.as_jsonable(),
+            requested_codec="v2:signed_int2_bitpack:none",
+        )
+        == "v2:signed_int2_bitpack:none"
+    )
+
+
+def test_spatial_delta_lf_payload_reports_actual_codec_not_unknown_v2() -> None:
+    plane = np.arange(16, dtype=np.int64).reshape(4, 4)
+
+    payload = encode_lf_quant_payload(
+        [plane],
+        codec="spatial_delta_zigzag_leb128_lzma",
+    )
+    report = inspect_lf_quant_payload_header(payload)
+
+    np.testing.assert_array_equal(decode_lf_quant_payload(payload)[0], plane)
+    assert report["codec"] == "spatial_delta_zigzag_leb128_lzma"
+    assert (
+        selected_lf_payload_codec_label(
+            report,
+            requested_codec="spatial_delta_zigzag_leb128_lzma",
+        )
+        == "spatial_delta_zigzag_leb128_lzma"
+    )
 
 
 def test_archive_lf_payload_codec_v1_default_stays_legacy() -> None:

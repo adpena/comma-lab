@@ -6457,6 +6457,18 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         map_importance=np.ones((1,), dtype=np.float64),
         target_bits_per_coeff=1.0,
     )
+    official_lf_payload_codec_requested = "spatial_delta_zigzag_leb128_lzma"
+    official_lf_payload = encode_lf_quant_payload(
+        [np.zeros((1, 1), dtype=np.int64)],
+        codec=official_lf_payload_codec_requested,
+    )
+    official_lf_payload_codec_report = inspect_lf_quant_payload_header(
+        official_lf_payload
+    )
+    official_lf_payload_codec_selected = selected_lf_payload_codec_label(
+        official_lf_payload_codec_report,
+        requested_codec=official_lf_payload_codec_requested,
+    )
     metadata = {
         "n_pairs": n_pairs,
         "frames_per_pair": frames_per_pair,
@@ -6469,7 +6481,13 @@ def _build_official_mfu_hfr_tub_packet_from_components(
         "source_pair_indices_preserved": True,
         "pair_index_alignment_mode": "official_batched_requested_pairs",
         "lf_plane_count": 1,
-        "lf_payload_codec": "official_payload_unused_dummy_zero",
+        "lf_payload_codec": official_lf_payload_codec_selected,
+        "lf_payload_codec_requested": official_lf_payload_codec_requested,
+        "lf_payload_codec_selected": official_lf_payload_codec_selected,
+        "lf_payload_codec_selection_report": official_lf_payload_codec_report,
+        "lf_payload_receiver_usage": (
+            "unused_dummy_zero_official_payload_frame_decode_uses_decoder_payload"
+        ),
         "step_map_packet_schema": step_packet.schema,
         "step_map_coder_mode": "official_payload_unused_dummy_step",
         "step_map_coder_groups": [dict(group) for group in step_packet.groups],
@@ -6512,10 +6530,7 @@ def _build_official_mfu_hfr_tub_packet_from_components(
     }
     archive = pack_snerv_archive(
         metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0]),
-        lf_payload=encode_lf_quant_payload(
-            [np.zeros((1, 1), dtype=np.int64)],
-            codec="spatial_delta_zigzag_leb128_lzma",
-        ),
+        lf_payload=official_lf_payload,
         decoder_payload=official_payload,
         step_map_packet=step_packet.packet,
         metadata=metadata,

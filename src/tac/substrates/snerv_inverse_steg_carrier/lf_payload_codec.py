@@ -277,8 +277,11 @@ def selected_lf_payload_codec_label(
         return str(requested_codec) if requested_codec is not None else None
     schema = str(report.get("schema") or "")
     if schema == SNERV_LF_QUANT_V2_SCHEMA:
+        codec = report.get("codec")
         modes = _sorted_nonzero_histogram_keys(report.get("mode_histogram"))
         wrappers = _sorted_nonzero_histogram_keys(report.get("wrapper_histogram"))
+        if codec and not modes and not wrappers:
+            return str(codec)
         if len(modes) == 1 and len(wrappers) == 1:
             return f"v2:{modes[0]}:{wrappers[0]}"
         if modes or wrappers:
@@ -620,6 +623,8 @@ def _normalize_mode(mode: str) -> tuple[str, ...]:
         "signed_int4_escape": "signed_int4_escape_varint",
         "signed_int8_escape": "signed_int8_escape_varint",
     }
+    if "+" in normalized:
+        return tuple(_normalize_mode(part)[0] for part in normalized.split("+"))
     normalized = aliases.get(normalized, normalized)
     if normalized not in _SUPPORTED_MODES:
         raise SnervLfPayloadCodecError(f"unsupported LF mode: {mode!r}")
@@ -642,6 +647,12 @@ def _normalize_wrapper(wrapper: str) -> tuple[str, ...]:
         if brotli is None:
             return ("none", "lzma_auto")
         return _PORTFOLIO_AUTO_WRAPPERS
+    if "+" in normalized:
+        return tuple(
+            resolved
+            for part in normalized.split("+")
+            for resolved in _normalize_wrapper(part)
+        )
     if normalized not in _SUPPORTED_WRAPPERS:
         raise SnervLfPayloadCodecError(f"unsupported LF wrapper: {wrapper!r}")
     if normalized == "brotli" and brotli is None:
