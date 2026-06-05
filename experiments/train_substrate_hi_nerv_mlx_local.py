@@ -408,8 +408,9 @@ def _full_main(args: argparse.Namespace) -> int:
         args,
         modelsize_candidate=modelsize_candidate,
     )
-    modelsize_hard_byte_ceiling = _hard_byte_ceiling_from_modelsize_candidate(
-        modelsize_candidate
+    modelsize_hard_byte_ceiling = _hard_byte_ceiling_from_args(
+        args,
+        modelsize_candidate=modelsize_candidate,
     )
     prioritized_pair_indices = _prioritized_pair_indices_from_args(args)
     source_pair_indices = prioritized_pair_indices or None
@@ -688,8 +689,9 @@ def _smoke_main(args: argparse.Namespace) -> int:
         args,
         modelsize_candidate=modelsize_candidate,
     )
-    modelsize_hard_byte_ceiling = _hard_byte_ceiling_from_modelsize_candidate(
-        modelsize_candidate
+    modelsize_hard_byte_ceiling = _hard_byte_ceiling_from_args(
+        args,
+        modelsize_candidate=modelsize_candidate,
     )
     canonicalization = _direct_trainer_canonicalization_contract(
         mode="smoke",
@@ -840,6 +842,17 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--checkpoint-interval-epochs", type=int, default=25)
     parser.add_argument("--decoder-codec", default=DEFAULT_DECODER_CODEC)
+    parser.add_argument(
+        "--hard-byte-ceiling",
+        type=int,
+        default=None,
+        help=(
+            "Hard archive.zip byte ceiling for HiNeRV export. This is a real "
+            "export gate, not a nominal modelsize hint; archive export raises "
+            "if measured bytes exceed the ceiling. When a modelsize candidate "
+            "is attached, the explicit value must match the candidate ceiling."
+        ),
+    )
     parser.add_argument(
         "--modelsize-candidate-json",
         type=Path,
@@ -1179,6 +1192,31 @@ def _hard_byte_ceiling_from_modelsize_candidate(
     if ceiling <= 0:
         raise ValueError("HiNeRV modelsize candidate hard_byte_ceiling must be positive")
     return ceiling
+
+
+def _hard_byte_ceiling_from_args(
+    args: argparse.Namespace,
+    *,
+    modelsize_candidate: Mapping[str, Any] | None = None,
+) -> int | None:
+    """Resolve the real archive export ceiling from candidate or CLI controls."""
+
+    candidate_ceiling = _hard_byte_ceiling_from_modelsize_candidate(
+        modelsize_candidate
+    )
+    requested = getattr(args, "hard_byte_ceiling", None)
+    if requested is None:
+        return candidate_ceiling
+    requested_ceiling = int(requested)
+    if requested_ceiling <= 0:
+        raise ValueError("--hard-byte-ceiling must be positive")
+    if candidate_ceiling is not None and requested_ceiling != int(candidate_ceiling):
+        raise ValueError(
+            "HiNeRV --hard-byte-ceiling conflicts with modelsize candidate "
+            f"hard_byte_ceiling: cli={requested_ceiling} "
+            f"candidate={int(candidate_ceiling)}"
+        )
+    return requested_ceiling
 
 
 def _build_hinerv_hard_byte_ceiling_control(
@@ -2610,6 +2648,7 @@ __all__ = [
     "_decoder_codec_from_args",
     "_decoder_weight_waterfill_plan_attachment_metadata",
     "_decoder_weight_waterfill_plan_from_args",
+    "_hard_byte_ceiling_from_args",
     "_hard_byte_ceiling_from_modelsize_candidate",
     "_metadata_safe",
     "_modelsize_candidate_consumption_metadata",

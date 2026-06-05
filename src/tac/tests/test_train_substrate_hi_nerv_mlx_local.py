@@ -33,6 +33,7 @@ from experiments.train_substrate_hi_nerv_mlx_local import (
     _decoder_weight_waterfill_plan_from_args,
     _direct_trainer_canonicalization_contract,
     _full_main,
+    _hard_byte_ceiling_from_args,
     _hard_byte_ceiling_from_modelsize_candidate,
     _metadata_safe,
     _modelsize_candidate_consumption_metadata,
@@ -188,6 +189,68 @@ def test_hinerv_mlx_trainer_rejects_over_cap_modelsize_candidate(
 
     with pytest.raises(ValueError, match="nominally_over_hard_byte_ceiling"):
         _modelsize_candidate_from_args(args)
+
+
+def test_hinerv_mlx_trainer_accepts_explicit_hard_byte_ceiling_without_candidate() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--modelsize-row",
+            "hi_nerv_local_tiny",
+            "--hard-byte-ceiling",
+            "178000",
+        ]
+    )
+
+    assert _hard_byte_ceiling_from_args(args, modelsize_candidate=None) == 178_000
+    control = _build_hinerv_hard_byte_ceiling_control(
+        candidate=None,
+        hard_byte_ceiling=_hard_byte_ceiling_from_args(args, modelsize_candidate=None),
+        archive_path="/Volumes/VertigoDataTier/pact/hinerv/archive.zip",
+        archive_sha256="b" * 64,
+        archive_bytes=177_999,
+        archive_export_requested=True,
+    )
+
+    assert control["attached"] is True
+    assert control["enforced"] is True
+    assert control["hard_byte_ceiling"] == 178_000
+    assert control["archive_bytes"] == 177_999
+    assert control["under_hard_byte_ceiling"] is True
+    assert control["blockers"] == []
+    assert control["score_claim"] is False
+
+
+def test_hinerv_mlx_trainer_rejects_conflicting_candidate_and_cli_byte_ceiling(
+    tmp_path: Path,
+) -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=7,
+        latent_dim=10,
+        embed_dim=16,
+        decoder_channel=8,
+        decoder_codec="int4_mixed",
+        use_hierarchical_feature_grid=True,
+        use_convnext_blocks=True,
+    ).as_dict()
+    candidate_path = tmp_path / "hinerv_candidate.json"
+    candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+    args = _build_parser().parse_args(
+        [
+            "--smoke",
+            "--num-pairs",
+            "7",
+            "--modelsize-candidate-json",
+            candidate_path.as_posix(),
+            "--hard-byte-ceiling",
+            "178000",
+        ]
+    )
+    loaded = _modelsize_candidate_from_args(args)
+
+    with pytest.raises(ValueError, match="conflicts with modelsize candidate"):
+        _hard_byte_ceiling_from_args(args, modelsize_candidate=loaded)
 
 
 def test_hinerv_mlx_trainer_byte_cap_control_records_measured_archive_delta() -> None:
