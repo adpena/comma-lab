@@ -350,10 +350,10 @@ def _frame_distribution_guard_parts(bundle: RendererBundle, rgb: Any, gt: Any) -
 
     The contest scorers never consume human perceptual quality; they consume
     byte-realized RGB/YUV tensors after fixed preprocessing. A renderer that
-    saturates or shifts those tensors can have excellent byte rate and terrible
-    SegNet/PoseNet distortion. This guard keeps the decoded RGB distribution on
-    the same local manifold as the target before scorer surrogates try to learn
-    finer decision boundaries.
+    saturates, range-collapses, or shifts those tensors can have excellent byte
+    rate and terrible SegNet/PoseNet distortion. This guard keeps the decoded
+    RGB distribution on the same local manifold as the target before scorer
+    surrogates try to learn finer decision boundaries.
     """
 
     mx = require_mlx_for_harness()
@@ -372,6 +372,10 @@ def _frame_distribution_guard_parts(bundle: RendererBundle, rgb: Any, gt: Any) -
     )
     std_loss = mx.mean((cand_std - ref_std) ** 2)
 
+    cand_range = mx.max(rgb, axis=(1, 2)) - mx.min(rgb, axis=(1, 2))
+    ref_range = mx.stop_gradient(mx.max(gt, axis=(1, 2)) - mx.min(gt, axis=(1, 2)))
+    dynamic_range_loss = mx.mean((cand_range - ref_range) ** 2)
+
     cand_soft_sat = mx.mean(
         mx.sigmoid((margin - rgb) / temperature)
         + mx.sigmoid((rgb - (1.0 - margin)) / temperature),
@@ -385,11 +389,12 @@ def _frame_distribution_guard_parts(bundle: RendererBundle, rgb: Any, gt: Any) -
         )
     )
     saturation_loss = mx.mean((cand_soft_sat - ref_soft_sat) ** 2)
-    total = mean_loss + std_loss + saturation_loss
+    total = mean_loss + std_loss + dynamic_range_loss + saturation_loss
     return {
         "total": total,
         "mean": mean_loss,
         "std": std_loss,
+        "dynamic_range": dynamic_range_loss,
         "soft_saturation": saturation_loss,
     }
 
@@ -410,6 +415,9 @@ def scorer_input_distribution_guard_loss(
         "scorer_input_distribution_guard": total,
         "scorer_input_distribution_guard_mean": parts_0["mean"] + parts_1["mean"],
         "scorer_input_distribution_guard_std": parts_0["std"] + parts_1["std"],
+        "scorer_input_distribution_guard_dynamic_range": (
+            parts_0["dynamic_range"] + parts_1["dynamic_range"]
+        ),
         "scorer_input_distribution_guard_soft_saturation": (
             parts_0["soft_saturation"] + parts_1["soft_saturation"]
         ),

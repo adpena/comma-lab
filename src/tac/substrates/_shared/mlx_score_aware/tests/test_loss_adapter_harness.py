@@ -134,6 +134,31 @@ def test_score_aware_loss_no_distill_when_weight_zero() -> None:
 
 
 @mlx_only
+def test_scorer_input_distribution_guard_includes_dynamic_range_term() -> None:
+    import mlx.core as mx
+
+    base = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    bundle = RendererBundle(
+        model=base.model,
+        target_rgb_0=base.target_rgb_0,
+        target_rgb_1=base.target_rgb_1,
+        num_pairs=base.num_pairs,
+        forward_convention=base.forward_convention,
+        scorer_input_distribution_guard_weight=1.0,
+    )
+    idx = mx.array([0, 1], dtype=mx.int32)
+
+    _total, parts = score_aware_loss(bundle, idx)
+    mx.eval(
+        parts["scorer_input_distribution_guard"],
+        parts["scorer_input_distribution_guard_dynamic_range"],
+    )
+
+    assert "scorer_input_distribution_guard_dynamic_range" in parts
+    assert float(parts["scorer_input_distribution_guard_dynamic_range"].item()) >= 0.0
+
+
+@mlx_only
 def test_score_aware_loss_applies_pr95_eval_roundtrip_before_recon() -> None:
     import mlx.core as mx
 
@@ -540,6 +565,7 @@ def test_adapter_train_step_emits_active_score_loss_parts() -> None:
     assert "loss_part_pose_distill" in metrics
     assert "loss_part_weighted_pose_distill" in metrics
     assert "loss_part_scorer_input_distribution_guard" in metrics
+    assert "loss_part_scorer_input_distribution_guard_dynamic_range" in metrics
     assert "loss_part_weighted_scorer_input_distribution_guard" in metrics
     assert metrics["loss_part_config_weight_scorer_input_distribution_guard"] == pytest.approx(2.0)
 

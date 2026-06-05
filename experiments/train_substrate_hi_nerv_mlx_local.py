@@ -343,6 +343,13 @@ class HiNervTrainTimeControlConfig:
                 "schema": "hi_nerv_train_time_scorer_input_distribution_guard.v1",
                 "enabled": float(self.scorer_input_distribution_guard_weight) > 0.0,
                 "weight": float(self.scorer_input_distribution_guard_weight),
+                "components": [
+                    "rgb_mean",
+                    "rgb_std",
+                    "rgb_dynamic_range",
+                    "soft_saturation_mass",
+                ],
+                "dynamic_range_repair_before_replay": True,
                 "saturation_margin": float(
                     self.scorer_input_distribution_guard_saturation_margin
                 ),
@@ -919,8 +926,9 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help=(
             "Differentiable train-time guard that matches decoded RGB mean, "
-            "std, and soft saturation mass to the contest video targets before "
-            "SegNet/PoseNet scorer surrogates consume the frames."
+            "std, dynamic range, and soft saturation mass to the contest video "
+            "targets before SegNet/PoseNet scorer surrogates consume the "
+            "frames."
         ),
     )
     parser.add_argument(
@@ -2299,6 +2307,9 @@ def _pr95_full_control_contract(
     scorer_input_guard_weight = float(
         getattr(args, "scorer_input_distribution_guard_weight", 0.0)
     )
+    scorer_input_guard_metadata = train_time_controls.metadata()[
+        "scorer_input_distribution_guard"
+    ]
 
     if distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_segnet_distillation_loss")
@@ -2391,6 +2402,12 @@ def _pr95_full_control_contract(
                 scorer_input_guard_weight > 0.0
             ),
             "scorer_input_distribution_guard_weight": scorer_input_guard_weight,
+            "scorer_input_distribution_guard_components": (
+                scorer_input_guard_metadata["components"]
+            ),
+            "dynamic_range_repair_before_replay": bool(
+                scorer_input_guard_metadata["dynamic_range_repair_before_replay"]
+            ),
             "scorer_input_distribution_guard_saturation_margin": float(
                 getattr(
                     args,

@@ -386,6 +386,9 @@ def test_hinerv_train_time_control_config_is_explicit_and_false_authority() -> N
     assert metadata["train_time_decoder_control_frequency_epochs"] == 3
     assert metadata["export_decoder_pruning_ratio"] == pytest.approx(0.0625)
     assert metadata["export_decoder_quant_noise_bits"] == 6
+    guard = metadata["scorer_input_distribution_guard"]
+    assert "rgb_dynamic_range" in guard["components"]
+    assert guard["dynamic_range_repair_before_replay"] is True
     assert metadata["score_claim"] is False
     assert metadata["ready_for_exact_eval_dispatch"] is False
 
@@ -844,6 +847,10 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["archive_parse_back_selection_enabled"] is True
     assert controls["scorer_input_distribution_guard_enabled"] is True
     assert controls["scorer_input_distribution_guard_weight"] == pytest.approx(2.0)
+    assert "rgb_dynamic_range" in controls[
+        "scorer_input_distribution_guard_components"
+    ]
+    assert controls["dynamic_range_repair_before_replay"] is True
     assert contract["score_claim"] is False
     assert contract["promotion_eligible"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
