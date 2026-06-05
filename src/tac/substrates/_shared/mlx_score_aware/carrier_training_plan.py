@@ -248,12 +248,21 @@ def build_score_aware_carrier_training_plan(
     if fit_status == "locally_plausible" and not missing_stack and modelsize_budget_ready:
         route = "run_byte_closed_local_replay_gate_before_exact_auth"
     modelsize_budget_readiness_blockers: list[str] = []
+    hard_byte_ceiling_missing = modelsize_budget_plan.get("hard_byte_ceiling") is None
+    if hard_byte_ceiling_missing:
+        modelsize_budget_readiness_blockers.append(
+            "hard_byte_ceiling_required_for_score_aware_long_training"
+        )
+        modelsize_budget_ready = False
     if not modelsize_budget_ready:
-        if modelsize_budget_plan.get("status") == _RECEIVER_CLOSED_MODELSIZE_STATUS:
+        if (
+            modelsize_budget_plan.get("status") == _RECEIVER_CLOSED_MODELSIZE_STATUS
+            and not hard_byte_ceiling_missing
+        ):
             modelsize_budget_readiness_blockers.append(
                 "receiver_closed_modelsize_budget_ladder_not_source_bound"
             )
-        else:
+        elif modelsize_budget_plan.get("status") != _RECEIVER_CLOSED_MODELSIZE_STATUS:
             modelsize_budget_readiness_blockers.append(
                 "receiver_closed_modelsize_budget_ladder_missing"
             )
@@ -382,6 +391,7 @@ def _receiver_closed_modelsize_budget_ready(plan: Mapping[str, Any]) -> bool:
     return (
         plan.get("status") == _RECEIVER_CLOSED_MODELSIZE_STATUS
         and plan.get("receiver_closed_selected_archive_bytes") is not None
+        and plan.get("hard_byte_ceiling") is not None
         and not (blockers & fake_or_unbound_control_blockers)
         and plan.get("selected_under_hard_byte_ceiling") is not False
     )

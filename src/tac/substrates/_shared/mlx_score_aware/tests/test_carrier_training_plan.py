@@ -57,6 +57,7 @@ def _receiver_closed_modelsize_rows() -> list[dict[str, object]]:
             "nonrate_score": 0.240,
             "modelsize_mparams": 0.02,
             "fc_dim": 8,
+            "hard_byte_ceiling": 100_000,
             "receiver_closed": True,
             "receiver_proof_passed": True,
             "receiver_proof_path": "proofs/tiny.json",
@@ -72,6 +73,7 @@ def _receiver_closed_modelsize_rows() -> list[dict[str, object]]:
             "nonrate_score": 0.205,
             "modelsize_mparams": 0.04,
             "fc_dim": 16,
+            "hard_byte_ceiling": 100_000,
             "receiver_closed": True,
             "receiver_proof_passed": True,
             "receiver_proof_path": "proofs/small.json",
@@ -87,6 +89,7 @@ def _receiver_closed_modelsize_rows() -> list[dict[str, object]]:
             "nonrate_score": 0.200,
             "modelsize_mparams": 0.08,
             "fc_dim": 32,
+            "hard_byte_ceiling": 100_000,
             "receiver_closed": True,
             "receiver_proof_passed": True,
             "receiver_proof_path": "proofs/medium.json",
@@ -105,6 +108,13 @@ def _unbound_receiver_closed_modelsize_rows() -> list[dict[str, object]]:
             for key, value in row.items()
             if key != "modelsize_control_contract"
         }
+        for row in _receiver_closed_modelsize_rows()
+    ]
+
+
+def _uncapped_receiver_closed_modelsize_rows() -> list[dict[str, object]]:
+    return [
+        {key: value for key, value in row.items() if key != "hard_byte_ceiling"}
         for row in _receiver_closed_modelsize_rows()
     ]
 
@@ -319,6 +329,38 @@ def test_advisory_modelsize_budget_blocks_training_ready() -> None:
         is None
     )
     assert "receiver_closed_modelsize_budget_ladder_missing" in row["dispatch_blockers"]
+
+
+def test_missing_hard_byte_ceiling_blocks_long_training_readiness() -> None:
+    row = build_score_aware_carrier_training_plan(
+        {
+            "d_seg": 0.025,
+            "advisory_score": 0.19,
+            "g3_adjoint_exact": True,
+            "latent_jvp_norm_max": 2.0e-3,
+            "modelsize_knob_present": True,
+            "modelsize_budget_rows": _uncapped_receiver_closed_modelsize_rows(),
+            **_all_stack_ready(),
+        },
+        carrier_id="hi_nerv",
+    )
+
+    assert (
+        row["modelsize_budget_plan_status"]
+        == "receiver_closed_modelsize_budget_selected"
+    )
+    assert row["modelsize_budget_receiver_closed_ready"] is False
+    assert row["score_aware_training_ready"] is False
+    assert (
+        row["planner_action"]
+        == "run_receiver_closed_modelsize_ladder_before_score_aware_training"
+    )
+    assert "hard_byte_ceiling_required_for_score_aware_long_training" in row[
+        "dispatch_blockers"
+    ]
+    assert "receiver_closed_modelsize_budget_ladder_not_source_bound" not in row[
+        "dispatch_blockers"
+    ]
 
 
 def test_unbound_modelsize_controls_block_long_training_readiness() -> None:
