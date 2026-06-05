@@ -246,6 +246,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
     segnet_direct_live_distillation_weight: float = 0.0,
     scorer_input_distribution_guard_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
+    scorer_input_shape_tether_weight: float = 0.0,
     has_real_segnet_teacher: bool,
     has_real_posenet_teacher: bool,
     coder_aware_qat_bound: bool,
@@ -267,6 +268,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
     pose_weight = float(pose_distillation_weight)
     guard_weight = float(scorer_input_distribution_guard_weight)
     contrast_floor_weight = float(scorer_input_contrast_floor_weight)
+    shape_tether_weight = float(scorer_input_shape_tether_weight)
     weighted_qat_terms = {
         str(name): float(weight)
         for name, weight in dict(coder_qat_loss_weight_map or {}).items()
@@ -302,6 +304,9 @@ def _snerv_score_aware_checkpoint_selection_policy(
     if contrast_floor_weight > 0.0:
         active_surfaces.append("scorer_input_contrast_floor")
         required_loss_parts.append("scorer_input_contrast_floor")
+    if shape_tether_weight > 0.0:
+        active_surfaces.append("scorer_input_shape_tether")
+        required_loss_parts.append("scorer_input_shape_tether")
     if bool(coder_aware_qat_bound):
         active_surfaces.append("coder_aware_qat")
         if not weighted_qat_terms:
@@ -341,6 +346,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
         ),
         "scorer_input_distribution_guard_weight": guard_weight,
         "scorer_input_contrast_floor_weight": contrast_floor_weight,
+        "scorer_input_shape_tether_weight": shape_tether_weight,
         "weighted_coder_qat_terms": weighted_qat_terms,
         "fail_closed_on_missing_parts": uses_score_aware,
         "full_reduction": (
@@ -390,6 +396,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
     train_time_section_byte_control_bound: bool,
     scorer_input_distribution_guard_weight: float,
     scorer_input_contrast_floor_weight: float = 0.0,
+    scorer_input_shape_tether_weight: float = 0.0,
 ) -> dict[str, Any]:
     """Validate that a SNeRV long run actually drove score-aware controls."""
 
@@ -404,6 +411,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
     expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
     expected_contrast_floor = float(scorer_input_contrast_floor_weight) > 0.0
+    expected_shape_tether = float(scorer_input_shape_tether_weight) > 0.0
     expected_any = bool(
         expected_seg
         or expected_pose
@@ -412,6 +420,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
         or expected_section
         or expected_guard
         or expected_contrast_floor
+        or expected_shape_tether
     )
     row_count = 0
     malformed_rows = 0
@@ -424,6 +433,10 @@ def _snerv_score_aware_long_training_telemetry_contract(
     contrast_floor_loss_observed = False
     contrast_floor_segnet_ratio_observed = False
     contrast_floor_posenet_ratio_observed = False
+    shape_tether_loss_observed = False
+    shape_tether_segnet_observed = False
+    shape_tether_posenet_pair_observed = False
+    shape_tether_posenet_delta_observed = False
     live_calibration_active_observed = False
     live_calibration_loss_observed = False
     direct_live_loss_observed = False
@@ -535,6 +548,43 @@ def _snerv_score_aware_long_training_telemetry_contract(
                     for key in (
                         "loss_part_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
                         "loss_part_pr95_stage_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio",
+                    )
+                )
+            )
+            shape_tether_loss_observed = shape_tether_loss_observed or any(
+                _finite_number_in_row(row, key)
+                for key in (
+                    "loss_part_scorer_input_shape_tether",
+                    "loss_part_pr95_stage_scorer_input_shape_tether",
+                )
+            )
+            shape_tether_segnet_observed = (
+                shape_tether_segnet_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_scorer_input_shape_tether_segnet_last_rgb",
+                        "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb",
+                    )
+                )
+            )
+            shape_tether_posenet_pair_observed = (
+                shape_tether_posenet_pair_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_scorer_input_shape_tether_posenet_yuv6_pair",
+                        "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair",
+                    )
+                )
+            )
+            shape_tether_posenet_delta_observed = (
+                shape_tether_posenet_delta_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
+                        "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
                     )
                 )
             )
@@ -652,6 +702,22 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append(
             "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_ratio_metric_missing"
         )
+    if expected_shape_tether and not shape_tether_loss_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_scorer_input_shape_tether_metric_missing"
+        )
+    if expected_shape_tether and not shape_tether_segnet_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_scorer_input_shape_tether_segnet_metric_missing"
+        )
+    if expected_shape_tether and not shape_tether_posenet_pair_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_scorer_input_shape_tether_posenet_pair_metric_missing"
+        )
+    if expected_shape_tether and not shape_tether_posenet_delta_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_scorer_input_shape_tether_posenet_delta_metric_missing"
+        )
     if expected_live_calibration and not live_calibration_active_observed:
         blockers.append(
             "snerv_score_aware_long_training_live_segnet_calibration_never_active"
@@ -709,6 +775,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "expected_scorer_input_contrast_floor_metric": bool(
             expected_contrast_floor
         ),
+        "expected_scorer_input_shape_tether_metric": bool(expected_shape_tether),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
@@ -725,6 +792,18 @@ def _snerv_score_aware_long_training_telemetry_contract(
         ),
         "scorer_input_contrast_floor_posenet_ratio_metric_observed": bool(
             contrast_floor_posenet_ratio_observed
+        ),
+        "scorer_input_shape_tether_metric_observed": bool(
+            shape_tether_loss_observed
+        ),
+        "scorer_input_shape_tether_segnet_metric_observed": bool(
+            shape_tether_segnet_observed
+        ),
+        "scorer_input_shape_tether_posenet_pair_metric_observed": bool(
+            shape_tether_posenet_pair_observed
+        ),
+        "scorer_input_shape_tether_posenet_delta_metric_observed": bool(
+            shape_tether_posenet_delta_observed
         ),
         "segnet_live_calibration_active_observed": bool(
             live_calibration_active_observed
@@ -1645,6 +1724,7 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_scorer_input_contrast_floor_weight: float = 0.0,
     score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
+    score_aware_long_training_scorer_input_shape_tether_weight: float = 0.0,
     score_aware_long_training_checkpoint_retention_keep_last_n: int | None = (
         SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
     ),
@@ -1999,6 +2079,15 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
                     score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio,
+                ),
+            )
+        ),
+        scorer_input_shape_tether_weight=float(
+            candidate.get(
+                "score_aware_long_training_scorer_input_shape_tether_weight",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_shape_tether_weight",
+                    score_aware_long_training_scorer_input_shape_tether_weight,
                 ),
             )
         ),
@@ -3273,6 +3362,7 @@ def _run_score_aware_long_training_attachment(
     scorer_input_contrast_floor_weight: float,
     scorer_input_contrast_floor_segnet_min_std_ratio: float,
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float,
+    scorer_input_shape_tether_weight: float = 0.0,
     checkpoint_retention_keep_last_n: int | None,
     checkpoint_retention_keep_best_n: int,
     checkpoint_retention_keep_every_n_epochs: int | None,
@@ -3331,6 +3421,7 @@ def _run_score_aware_long_training_attachment(
     contrast_floor_posenet_ratio = float(
         scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
     )
+    shape_tether_weight = float(scorer_input_shape_tether_weight)
     live_calibration_weight = float(segnet_student_live_calibration_weight)
     direct_live_weight = float(segnet_direct_live_distillation_weight)
     direct_live_base_loss_weight = float(segnet_direct_live_base_loss_weight)
@@ -3431,6 +3522,22 @@ def _run_score_aware_long_training_attachment(
             "ready_for_exact_eval_dispatch": False,
         },
         "scorer_input_contrast_floor_bound": False,
+        "scorer_input_shape_tether": {
+            "schema": "snerv_mlx_score_aware_scorer_input_shape_tether.v1",
+            "requested": shape_tether_weight > 0.0,
+            "enabled": shape_tether_weight > 0.0,
+            "bound_to_renderer_bundle": False,
+            "weight": shape_tether_weight,
+            "target_surface": (
+                "segnet_last_frame_rgb_plus_posenet_yuv6_pair_and_temporal_delta_"
+                "centered_reference_variance_normalized_fit"
+            ),
+            "human_visual_fidelity_objective": False,
+            "score_authority": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "scorer_input_shape_tether_bound": False,
         "prioritized_pair_training": {
             "schema": "snerv_mlx_score_aware_long_training_priority_pairs.v1",
             "enabled": bool(prioritized_pair_indices),
@@ -3597,6 +3704,10 @@ def _run_score_aware_long_training_attachment(
     if not np.isfinite(contrast_floor_posenet_ratio) or contrast_floor_posenet_ratio <= 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_ratio_invalid"
+        )
+    if not np.isfinite(shape_tether_weight) or shape_tether_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_scorer_input_shape_tether_weight_invalid"
         )
     if pose_loss not in {"mse", "huber"}:
         validation_blockers.append(
@@ -3948,6 +4059,7 @@ def _run_score_aware_long_training_attachment(
                 ),
                 pose_distillation_weight=pose_weight,
                 scorer_input_contrast_floor_weight=contrast_floor_weight,
+                scorer_input_shape_tether_weight=shape_tether_weight,
                 coder_qat_loss_weight_map=coder_qat_loss_weight_map,
                 section_byte_budgets=train_time_section_byte_control.get(
                     "section_byte_budgets"
@@ -4192,6 +4304,7 @@ def _run_score_aware_long_training_attachment(
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
                 contrast_floor_posenet_ratio
             ),
+            scorer_input_shape_tether_weight=shape_tether_weight,
         )
         selection_policy = _snerv_score_aware_checkpoint_selection_policy(
             segnet_distillation_weight=seg_weight,
@@ -4199,6 +4312,7 @@ def _run_score_aware_long_training_attachment(
             pose_distillation_weight=pose_weight,
             scorer_input_distribution_guard_weight=guard_weight,
             scorer_input_contrast_floor_weight=contrast_floor_weight,
+            scorer_input_shape_tether_weight=shape_tether_weight,
             has_real_segnet_teacher=scorer_teacher is not None,
             has_real_posenet_teacher=pose_scorer_teacher is not None,
             coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
@@ -4316,6 +4430,12 @@ def _run_score_aware_long_training_attachment(
                     * raw_parts["scorer_input_contrast_floor"]
                 )
                 total += weighted_parts["scorer_input_contrast_floor"]
+            if "scorer_input_shape_tether" in raw_parts:
+                weighted_parts["scorer_input_shape_tether"] = (
+                    float(bundle.scorer_input_shape_tether_weight)
+                    * raw_parts["scorer_input_shape_tether"]
+                )
+                total += weighted_parts["scorer_input_shape_tether"]
             for name, weight in coder_terms.items():
                 if name in raw_parts:
                     weighted_parts[name] = float(weight) * raw_parts[name]
@@ -4542,6 +4662,7 @@ def _run_score_aware_long_training_attachment(
             ),
             scorer_input_distribution_guard_weight=guard_weight,
             scorer_input_contrast_floor_weight=contrast_floor_weight,
+            scorer_input_shape_tether_weight=shape_tether_weight,
         )
         )
         blockers.extend(training_telemetry_contract.get("blockers") or ())
@@ -4640,6 +4761,11 @@ def _run_score_aware_long_training_attachment(
                 "bound_to_renderer_bundle": contrast_floor_weight > 0.0,
             },
             "scorer_input_contrast_floor_bound": contrast_floor_weight > 0.0,
+            "scorer_input_shape_tether": {
+                **dict(base_payload["scorer_input_shape_tether"]),
+                "bound_to_renderer_bundle": shape_tether_weight > 0.0,
+            },
+            "scorer_input_shape_tether_bound": shape_tether_weight > 0.0,
             "pr95_faithful_curriculum_enabled": bool(
                 pr95_faithful_curriculum_enabled
             ),

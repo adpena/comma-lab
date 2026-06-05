@@ -419,6 +419,7 @@ def build_default_nerv_train_time_dual_ascent_config(
     segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
+    scorer_input_shape_tether_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
     section_byte_budgets: Mapping[str, int | float] | None = None,
     section_byte_loss_weight_key_map: Mapping[str, str] | None = None,
@@ -456,6 +457,7 @@ def build_default_nerv_train_time_dual_ascent_config(
     )
     pose_weight = _nonnegative_weight(pose_distillation_weight)
     contrast_floor_weight = _nonnegative_weight(scorer_input_contrast_floor_weight)
+    shape_tether_weight = _nonnegative_weight(scorer_input_shape_tether_weight)
     byte_price = _positive_weight(contest_rate_score_per_byte)
     if seg_weight > 0.0:
         constraints.append(
@@ -623,6 +625,27 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "SegNet frame-1 RGB and PoseNet YUV6-pair inputs only when "
                     "the one-sided hinge is nonzero, so the upstream "
                     "evaluate.py scorer losses remain trainable."
+                ),
+            )
+        )
+    if shape_tether_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_scorer_input_shape_tether",
+                metric_name="loss_part_scorer_input_shape_tether",
+                loss_weight_key="scorer_input_guard",
+                base_weight=shape_tether_weight,
+                target_fraction=0.97,
+                dual_lr=0.3,
+                max_lambda=8.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "The shape tether is the dense-gradient feasibility "
+                    "constraint for low-rank NeRV outputs: it prices centered "
+                    "reference-normalized residuals on SegNet frame-1 RGB and "
+                    "PoseNet YUV6 pair/temporal-delta tensors so scorer-bound "
+                    "losses cannot optimize a flat input manifold."
                 ),
             )
         )

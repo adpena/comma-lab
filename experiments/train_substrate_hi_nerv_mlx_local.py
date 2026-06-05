@@ -154,6 +154,7 @@ class HiNervTrainTimeControlConfig:
     scorer_input_contrast_floor_weight: float = 0.0
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5
+    scorer_input_shape_tether_weight: float = 0.0
     output_head_target_bias_init_enabled: bool = True
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0
 
@@ -285,6 +286,10 @@ class HiNervTrainTimeControlConfig:
             self.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio,
             "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
         )
+        _require_finite_nonnegative(
+            self.scorer_input_shape_tether_weight,
+            "scorer_input_shape_tether_weight",
+        )
         _validate_unit_open_interval(
             self.output_head_target_bias_init_epsilon,
             "output_head_target_bias_init_epsilon",
@@ -365,6 +370,9 @@ class HiNervTrainTimeControlConfig:
             ),
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
                 self.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+            ),
+            scorer_input_shape_tether_weight=float(
+                self.scorer_input_shape_tether_weight
             ),
             output_head_target_bias_init_enabled=bool(
                 self.output_head_target_bias_init_enabled
@@ -511,6 +519,21 @@ class HiNervTrainTimeControlConfig:
                 ),
                 "target_surface": (
                     "segnet_last_frame_rgb_and_posenet_two_frame_yuv6_std_ratio"
+                ),
+                "human_visual_fidelity_objective": False,
+            },
+            "scorer_input_shape_tether": {
+                "schema": "hi_nerv_train_time_scorer_input_shape_tether.v1",
+                "enabled": float(self.scorer_input_shape_tether_weight) > 0.0,
+                "weight": float(self.scorer_input_shape_tether_weight),
+                "components": [
+                    "segnet_last_frame_rgb_centered_reference_variance_fit",
+                    "posenet_yuv6_pair_centered_reference_variance_fit",
+                    "posenet_yuv6_temporal_delta_centered_reference_variance_fit",
+                ],
+                "target_surface": (
+                    "exact_upstream_scorer_inputs_centered_and_normalized_by_"
+                    "reference_channel_variance"
                 ),
                 "human_visual_fidelity_objective": False,
             },
@@ -741,6 +764,9 @@ def _full_main(args: argparse.Namespace) -> int:
         ),
         scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
             train_time_controls.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+        ),
+        scorer_input_shape_tether_weight=(
+            train_time_controls.scorer_input_shape_tether_weight
         ),
         export_archive_fn=lambda model_obj, out_dir: export_hi_nerv_mlx_archive(
             model_obj,
@@ -1351,6 +1377,17 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.5,
     )
+    parser.add_argument(
+        "--scorer-input-shape-tether-weight",
+        type=float,
+        default=0.0,
+        help=(
+            "Dense train-time scorer-input shape tether on exact evaluate.py "
+            "domains: SegNet last-frame RGB plus PoseNet two-frame YUV6 and "
+            "YUV6 temporal delta, centered and normalized by reference channel "
+            "variance. False-authority MLX pressure only."
+        ),
+    )
     parser.add_argument("--grad-clip-max-norm", type=float, default=None)
     parser.add_argument("--warmup-epochs", type=int, default=0)
     parser.add_argument("--weight-decay", type=float, default=None)
@@ -1883,6 +1920,9 @@ def _train_time_control_config_from_args(
                 "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
                 0.5,
             )
+        ),
+        scorer_input_shape_tether_weight=float(
+            getattr(args, "scorer_input_shape_tether_weight", 0.0)
         ),
         output_head_target_bias_init_enabled=bool(
             getattr(args, "output_head_target_bias_init", True)
@@ -2828,6 +2868,9 @@ def _pr95_full_control_contract(
     scorer_input_contrast_metadata = train_time_controls.metadata()[
         "scorer_input_contrast_floor"
     ]
+    scorer_input_shape_metadata = train_time_controls.metadata()[
+        "scorer_input_shape_tether"
+    ]
     output_head_bias_metadata = train_time_controls.metadata()[
         "output_head_target_bias_init"
     ]
@@ -2874,6 +2917,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_scorer_input_distribution_guard")
     if float(train_time_controls.scorer_input_contrast_floor_weight) <= 0.0:
         blockers.append("hinerv_full_missing_scorer_input_contrast_floor")
+    if float(train_time_controls.scorer_input_shape_tether_weight) <= 0.0:
+        blockers.append("hinerv_full_missing_scorer_input_shape_tether")
     if not bool(output_head_bias_metadata["enabled"]):
         blockers.append("hinerv_full_missing_output_head_target_bias_init")
 
@@ -2972,6 +3017,15 @@ def _pr95_full_control_contract(
             ),
             "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": float(
                 train_time_controls.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+            ),
+            "scorer_input_shape_tether_enabled": bool(
+                scorer_input_shape_metadata["enabled"]
+            ),
+            "scorer_input_shape_tether_weight": float(
+                train_time_controls.scorer_input_shape_tether_weight
+            ),
+            "scorer_input_shape_tether_components": (
+                scorer_input_shape_metadata["components"]
             ),
             "output_head_target_bias_init_enabled": bool(
                 output_head_bias_metadata["enabled"]

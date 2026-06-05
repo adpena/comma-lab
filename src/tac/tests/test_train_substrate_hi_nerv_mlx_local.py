@@ -867,6 +867,7 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_full_missing_direct_live_segnet_distillation",
         "hinerv_full_missing_direct_live_class_escape_pressure",
         "hinerv_full_missing_scorer_input_contrast_floor",
+        "hinerv_full_missing_scorer_input_shape_tether",
     ):
         assert blocker in payload["blockers"]
     control = payload["pr95_full_control_contract"]
@@ -918,6 +919,8 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "0.6",
             "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
             "0.6",
+            "--scorer-input-shape-tether-weight",
+            "0.75",
         ]
     )
 
@@ -988,6 +991,13 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["scorer_input_contrast_floor_weight"] == pytest.approx(0.5)
     assert controls["scorer_input_contrast_floor_segnet_min_std_ratio"] == pytest.approx(0.6)
     assert controls["scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"] == pytest.approx(0.6)
+    assert controls["scorer_input_shape_tether_enabled"] is True
+    assert controls["scorer_input_shape_tether_weight"] == pytest.approx(0.75)
+    assert controls["scorer_input_shape_tether_components"] == [
+        "segnet_last_frame_rgb_centered_reference_variance_fit",
+        "posenet_yuv6_pair_centered_reference_variance_fit",
+        "posenet_yuv6_temporal_delta_centered_reference_variance_fit",
+    ]
     assert controls["output_head_target_bias_init_enabled"] is True
     assert controls["output_head_target_bias_init_epsilon"] == pytest.approx(
         1.0 / 1024.0

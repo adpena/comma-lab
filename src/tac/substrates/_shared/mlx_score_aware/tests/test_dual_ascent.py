@@ -270,6 +270,22 @@ def test_default_nerv_dual_ascent_config_prices_contrast_floor_guard() -> None:
     assert "evaluate.py" in floor["rationale"]
 
 
+def test_default_nerv_dual_ascent_config_prices_shape_tether_guard() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        scorer_input_shape_tether_weight=1.5,
+    )
+
+    assert config["enabled"] is True
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    tether = constraints["hi_nerv_scorer_input_shape_tether"]
+    assert tether["metric_name"] == "loss_part_scorer_input_shape_tether"
+    assert tether["loss_weight_key"] == "scorer_input_guard"
+    assert tether["target_fraction_of_initial"] == pytest.approx(0.97)
+    assert tether["weight_scale"] == pytest.approx(1.5)
+    assert "PoseNet YUV6" in tether["rationale"]
+
+
 def test_default_nerv_dual_ascent_config_prices_section_byte_budgets() -> None:
     config = build_default_nerv_train_time_dual_ascent_config(
         family="snerv",

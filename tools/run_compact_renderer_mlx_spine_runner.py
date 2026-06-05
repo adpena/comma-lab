@@ -3603,6 +3603,7 @@ def _run_snerv_native_mlx_export_attachment(
     score_aware_long_training_scorer_input_contrast_floor_weight: float = 0.0,
     score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
+    score_aware_long_training_scorer_input_shape_tether_weight: float = 0.0,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
     checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
     checkpoint_retention_keep_every_n_epochs: int | None = None,
@@ -3780,6 +3781,9 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
                 score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+            ),
+            score_aware_long_training_scorer_input_shape_tether_weight=float(
+                score_aware_long_training_scorer_input_shape_tether_weight
             ),
             score_aware_long_training_checkpoint_retention_keep_last_n=(
                 checkpoint_retention_keep_last_n
@@ -4667,6 +4671,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
+    scorer_input_shape_tether_weight: float = 0.0,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
     checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
     checkpoint_retention_keep_every_n_epochs: int | None = None,
@@ -5109,6 +5114,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": (
             float(scorer_input_contrast_floor_posenet_yuv6_min_std_ratio)
         ),
+        "snerv_score_aware_long_training_scorer_input_shape_tether_weight": (
+            float(scorer_input_shape_tether_weight)
+        ),
         "snerv_segnet_distillation_weight": float(segnet_distillation_weight),
         "snerv_pose_distillation_weight": float(pose_distillation_weight),
         "snerv_pose_distillation_loss": str(pose_distillation_loss),
@@ -5244,6 +5252,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             ),
             score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
                 scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+            ),
+            score_aware_long_training_scorer_input_shape_tether_weight=float(
+                scorer_input_shape_tether_weight
             ),
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
@@ -6206,6 +6217,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+        ),
+        score_aware_long_training_scorer_input_shape_tether_weight=float(
+            scorer_input_shape_tether_weight
         ),
         checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
         checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
@@ -8395,6 +8409,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
+    scorer_input_shape_tether_weight: float = 0.0,
     output_head_target_bias_init: bool = True,
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
@@ -8536,8 +8551,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_input_contrast_floor_enabled = (
         float(scorer_input_contrast_floor_weight) > 0.0
     )
+    scorer_input_shape_tether_enabled = (
+        float(scorer_input_shape_tether_weight) > 0.0
+    )
     scorer_input_guard_attached = bool(
-        scorer_input_distribution_guard_enabled or scorer_input_contrast_floor_enabled
+        scorer_input_distribution_guard_enabled
+        or scorer_input_contrast_floor_enabled
+        or scorer_input_shape_tether_enabled
     )
     if float(scorer_input_distribution_guard_weight) < 0.0:
         raise CompactRendererMlxSpineRunnerError(
@@ -8584,6 +8604,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         raise CompactRendererMlxSpineRunnerError(
             "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be "
             "finite and > 0"
+        )
+    if (
+        not math.isfinite(float(scorer_input_shape_tether_weight))
+        or float(scorer_input_shape_tether_weight) < 0.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_input_shape_tether_weight must be finite and >= 0"
         )
     if not (
         math.isfinite(float(output_head_target_bias_init_epsilon))
@@ -9045,6 +9072,23 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         segnet_direct_live_distillation_weight=float(
             segnet_direct_live_distillation_weight
         ),
+        segnet_direct_live_class_histogram_weight=float(
+            segnet_direct_live_class_histogram_weight
+        ),
+        segnet_direct_live_class_balanced_hinge_weight=float(
+            segnet_direct_live_class_balanced_hinge_weight
+        ),
+        segnet_direct_live_class_balanced_ce_weight=float(
+            segnet_direct_live_class_balanced_ce_weight
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            segnet_direct_live_class_balanced_squared_hinge_weight
+        ),
+        scorer_input_distribution_guard_weight=float(
+            scorer_input_distribution_guard_weight
+        ),
+        scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
+        scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
         pose_distillation_weight=effective_pose_distillation_weight,
         allow_segnet_only_research=allow_segnet_only_research,
         allow_unscored_research_smoke=allow_unscored_research_smoke,
@@ -9407,6 +9451,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
                 scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
+            scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
             output_head_target_bias_init=bool(output_head_target_bias_init),
             output_head_target_bias_init_epsilon=float(
                 output_head_target_bias_init_epsilon
@@ -12623,6 +12668,13 @@ def _validate_hi_nerv_frontier_training_config(
     *,
     segnet_distillation_weight: float,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_class_histogram_weight: float = 0.0,
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
+    scorer_input_distribution_guard_weight: float = 0.0,
+    scorer_input_contrast_floor_weight: float = 0.0,
+    scorer_input_shape_tether_weight: float = 0.0,
     pose_distillation_weight: float,
     allow_segnet_only_research: bool,
     allow_unscored_research_smoke: bool,
@@ -12634,24 +12686,48 @@ def _validate_hi_nerv_frontier_training_config(
         or float(segnet_direct_live_distillation_weight) > 0.0
     )
     posenet_attached = float(pose_distillation_weight) > 0.0
+    direct_live_attached = float(segnet_direct_live_distillation_weight) > 0.0
+    direct_live_escape_controls = {
+        "class_histogram": float(segnet_direct_live_class_histogram_weight),
+        "class_balanced_hinge": float(segnet_direct_live_class_balanced_hinge_weight),
+        "class_balanced_ce": float(segnet_direct_live_class_balanced_ce_weight),
+        "class_balanced_squared_hinge": float(
+            segnet_direct_live_class_balanced_squared_hinge_weight
+        ),
+        "contrast_floor": float(scorer_input_contrast_floor_weight),
+        "shape_tether": float(scorer_input_shape_tether_weight),
+    }
+    direct_live_supporting_controls = {
+        "distribution_guard": float(scorer_input_distribution_guard_weight),
+    }
+    direct_live_escape_controls_attached = any(
+        value > 0.0 for value in direct_live_escape_controls.values()
+    )
     if not segnet_attached:
         blockers.append("hi_nerv_real_segnet_teacher_missing")
     if not posenet_attached:
         blockers.append("hi_nerv_real_posenet_teacher_missing")
+    if direct_live_attached and not direct_live_escape_controls_attached:
+        blockers.append("hi_nerv_direct_live_escape_controls_missing")
     if allow_segnet_only_research and segnet_attached and not posenet_attached:
         blockers.append("hi_nerv_segnet_only_research_not_frontier_targeting")
     unscored_smoke = bool(allow_unscored_research_smoke)
     segnet_only_research_allowed = bool(
         allow_segnet_only_research and segnet_attached and not posenet_attached
     )
-    launch_allowed = (
+    base_launch_allowed = (
         (segnet_attached and posenet_attached)
         or segnet_only_research_allowed
         or unscored_smoke
     )
+    launch_allowed = bool(
+        base_launch_allowed
+        and not (direct_live_attached and not direct_live_escape_controls_attached)
+    )
     return {
         "schema": "compact_hi_nerv_score_aware_training_config_gate.v1",
         "launch_allowed": launch_allowed,
+        "base_launch_allowed": base_launch_allowed,
         "frontier_targeting": segnet_attached and posenet_attached,
         "segnet_only_research_allowed": segnet_only_research_allowed,
         "allow_segnet_only_research": bool(allow_segnet_only_research),
@@ -12661,6 +12737,9 @@ def _validate_hi_nerv_frontier_training_config(
         "segnet_direct_live_distillation_weight": float(
             segnet_direct_live_distillation_weight
         ),
+        "direct_live_escape_controls_attached": direct_live_escape_controls_attached,
+        "direct_live_escape_controls": direct_live_escape_controls,
+        "direct_live_supporting_controls": direct_live_supporting_controls,
         "real_posenet_teacher_attached": posenet_attached,
         "modelsize_budget_receiver_closed_ready": bool(
             score_aware_training_plan.get("modelsize_budget_receiver_closed_ready")
@@ -13166,6 +13245,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
+    scorer_input_shape_tether_weight: float = 0.0,
     output_head_target_bias_init: bool = True,
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
@@ -13352,6 +13432,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio must be "
             "finite and > 0"
+        )
+    if (
+        not math.isfinite(float(scorer_input_shape_tether_weight))
+        or float(scorer_input_shape_tether_weight) < 0.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_input_shape_tether_weight must be finite and >= 0"
         )
     if (
         bias_gradient_multiplier is not None
@@ -13652,6 +13739,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         pose_distillation_weight=float(pose_distillation_weight),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
+        scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
         coder_qat_loss_weight_map=coder_qat_loss_weight_map,
         section_byte_budgets=train_time_section_byte_control.get(
             "section_byte_budgets"
@@ -13925,6 +14013,24 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "one_sided_reference_relative_std_floor_on_exact_"
                     "upstream_scorer_input_domains"
                 ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
+            "scorer_input_shape_tether": {
+                "schema": "compact_hi_nerv_scorer_input_shape_tether.v1",
+                "enabled": bool(float(scorer_input_shape_tether_weight) > 0.0),
+                "bound_to_renderer_bundle": bool(
+                    float(scorer_input_shape_tether_weight) > 0.0
+                ),
+                "weight": float(scorer_input_shape_tether_weight),
+                "domains": {
+                    "segnet": "last_frame_rgb_after_eval_roundtrip",
+                    "posenet": "two_frame_pr95_yuv6_and_temporal_delta_after_eval_roundtrip",
+                },
+                "target_surface": (
+                    "centered_reference_variance_normalized_residual_on_exact_"
+                    "upstream_scorer_input_domains"
+                ),
+                "human_visual_fidelity_objective": False,
                 "authority": "macos_mlx_research_signal_false_authority",
             },
             "output_head_target_bias_init": {
@@ -14253,6 +14359,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
         ),
+        scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
     )
     artifact = run_mlx_score_aware_full_main(
         bundle=bundle,
@@ -14317,7 +14424,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "loss_part_joint_scorer_proxy_nonrate"
             if joint_scorer_checkpoint_selection_active
             else
-            "loss_part_segnet_direct_live_argmax_disagreement"
+            "loss_part_segnet_direct_live_escape_selection"
             if direct_live_checkpoint_selection_active
             else "total"
         ),
@@ -14326,7 +14433,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             direct_live_checkpoint_selection_active
         ),
         checkpoint_selection_tie_break_metric_key=(
-            "loss_part_segnet_direct_live_distill"
+            "loss_part_segnet_direct_live_argmax_disagreement"
             if direct_live_checkpoint_selection_active
             else ""
         ),
@@ -14364,6 +14471,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             scorer_input_distribution_guard_weight
         ),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
+        scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
     )
     _attach_hi_nerv_training_telemetry_contract(
         artifact=artifact,
@@ -14881,6 +14989,7 @@ def _compact_score_aware_training_telemetry_contract(
     train_time_section_byte_control_bound: bool,
     scorer_input_distribution_guard_weight: float,
     scorer_input_contrast_floor_weight: float = 0.0,
+    scorer_input_shape_tether_weight: float = 0.0,
 ) -> dict[str, Any]:
     """Validate that a compact long run actually actuated score controls."""
 
@@ -14895,6 +15004,7 @@ def _compact_score_aware_training_telemetry_contract(
     expected_section = bool(coder_aware_qat_bound and train_time_section_byte_control_bound)
     expected_guard = float(scorer_input_distribution_guard_weight) > 0.0
     expected_contrast_floor = float(scorer_input_contrast_floor_weight) > 0.0
+    expected_shape_tether = float(scorer_input_shape_tether_weight) > 0.0
     expected_any = bool(
         expected_seg
         or expected_pose
@@ -14903,6 +15013,7 @@ def _compact_score_aware_training_telemetry_contract(
         or expected_section
         or expected_guard
         or expected_contrast_floor
+        or expected_shape_tether
     )
     blockers: list[str] = []
     row_count = 0
@@ -14917,6 +15028,10 @@ def _compact_score_aware_training_telemetry_contract(
     contrast_floor_loss_observed = False
     contrast_floor_segnet_ratio_observed = False
     contrast_floor_posenet_ratio_observed = False
+    shape_tether_loss_observed = False
+    shape_tether_segnet_observed = False
+    shape_tether_posenet_pair_observed = False
+    shape_tether_posenet_delta_observed = False
     live_calibration_active_observed = False
     live_calibration_loss_observed = False
     direct_live_loss_observed = False
@@ -15024,6 +15139,40 @@ def _compact_score_aware_training_telemetry_contract(
                     )
                 )
             )
+            shape_tether_loss_observed = shape_tether_loss_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_scorer_input_shape_tether",
+                    "loss_part_pr95_stage_scorer_input_shape_tether",
+                )
+            )
+            shape_tether_segnet_observed = shape_tether_segnet_observed or any(
+                _telemetry_finite(row, key)
+                for key in (
+                    "loss_part_scorer_input_shape_tether_segnet_last_rgb",
+                    "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb",
+                )
+            )
+            shape_tether_posenet_pair_observed = (
+                shape_tether_posenet_pair_observed
+                or any(
+                    _telemetry_finite(row, key)
+                    for key in (
+                        "loss_part_scorer_input_shape_tether_posenet_yuv6_pair",
+                        "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair",
+                    )
+                )
+            )
+            shape_tether_posenet_delta_observed = (
+                shape_tether_posenet_delta_observed
+                or any(
+                    _telemetry_finite(row, key)
+                    for key in (
+                        "loss_part_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
+                        "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta",
+                    )
+                )
+            )
             live_calibration_active_observed = (
                 live_calibration_active_observed
                 or _telemetry_float_equals(
@@ -15124,6 +15273,22 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(
             f"{family_key}_score_aware_training_scorer_input_contrast_floor_posenet_ratio_metric_missing"
         )
+    if expected_shape_tether and not shape_tether_loss_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_scorer_input_shape_tether_metric_missing"
+        )
+    if expected_shape_tether and not shape_tether_segnet_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_scorer_input_shape_tether_segnet_metric_missing"
+        )
+    if expected_shape_tether and not shape_tether_posenet_pair_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_scorer_input_shape_tether_posenet_pair_metric_missing"
+        )
+    if expected_shape_tether and not shape_tether_posenet_delta_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_scorer_input_shape_tether_posenet_delta_metric_missing"
+        )
     if expected_live_calibration and not live_calibration_active_observed:
         blockers.append(
             f"{family_key}_score_aware_training_live_segnet_calibration_never_active"
@@ -15180,6 +15345,7 @@ def _compact_score_aware_training_telemetry_contract(
         "expected_section_rate_metrics": bool(expected_section),
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "expected_scorer_input_contrast_floor_metric": bool(expected_contrast_floor),
+        "expected_scorer_input_shape_tether_metric": bool(expected_shape_tether),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "posenet_raw_loss_metric_observed": bool(pose_raw_loss_observed),
@@ -15196,6 +15362,18 @@ def _compact_score_aware_training_telemetry_contract(
         ),
         "scorer_input_contrast_floor_posenet_ratio_metric_observed": bool(
             contrast_floor_posenet_ratio_observed
+        ),
+        "scorer_input_shape_tether_metric_observed": bool(
+            shape_tether_loss_observed
+        ),
+        "scorer_input_shape_tether_segnet_metric_observed": bool(
+            shape_tether_segnet_observed
+        ),
+        "scorer_input_shape_tether_posenet_pair_metric_observed": bool(
+            shape_tether_posenet_pair_observed
+        ),
+        "scorer_input_shape_tether_posenet_delta_metric_observed": bool(
+            shape_tether_posenet_delta_observed
         ),
         "segnet_live_calibration_active_observed": bool(
             live_calibration_active_observed
@@ -17230,6 +17408,10 @@ def _planner_row_command_control_blockers(
             "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
             "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
         ),
+        (
+            "--scorer-input-shape-tether-weight",
+            "scorer_input_shape_tether_weight",
+        ),
         ("--decoder-weight-waterfill-plan-json", "decoder_weight_waterfill_plan_json"),
         ("--archive-section-telemetry-json", "archive_section_telemetry_json"),
         ("--recon-pixel-weight-path", "recon_pixel_weight_path"),
@@ -17274,6 +17456,7 @@ def _planner_row_flag_values_match(flag: str, *, actual: str, expected: str) -> 
         "--scorer-input-contrast-floor-weight",
         "--scorer-input-contrast-floor-segnet-min-std-ratio",
         "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+        "--scorer-input-shape-tether-weight",
     }
     if flag not in numeric_scalar_flags:
         return False
@@ -18715,6 +18898,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Minimum candidate/reference std ratio for the contrast floor on "
             "PoseNet's concatenated two-frame YUV6 scorer input. Must be >0."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-input-shape-tether-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "HiNeRV/SNeRV train-time dense scorer-input shape tether. When >0, "
+            "adds centered reference-variance-normalized residual pressure on "
+            "SegNet last-frame RGB plus PoseNet YUV6 pair and temporal-delta "
+            "domains. False-authority MLX training pressure only."
         ),
     )
     parser.add_argument(
@@ -20202,6 +20396,7 @@ def main(argv: list[str] | None = None) -> int:
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
                 args.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
+            scorer_input_shape_tether_weight=args.scorer_input_shape_tether_weight,
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
             checkpoint_retention_keep_every_n_epochs=(
@@ -20360,6 +20555,7 @@ def main(argv: list[str] | None = None) -> int:
             scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
                 args.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
+            scorer_input_shape_tether_weight=args.scorer_input_shape_tether_weight,
             output_head_target_bias_init=bool(args.output_head_target_bias_init),
             output_head_target_bias_init_epsilon=(
                 args.output_head_target_bias_init_epsilon

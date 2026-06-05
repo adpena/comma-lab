@@ -116,6 +116,10 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
         in public_sig.parameters
     )
     assert (
+        "score_aware_long_training_scorer_input_shape_tether_weight"
+        in public_sig.parameters
+    )
+    assert (
         "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio"
         in public_sig.parameters
     )
@@ -139,6 +143,7 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     assert "pr95_muon_policy" in attachment_sig.parameters
     assert "scorer_input_distribution_guard_weight" in attachment_sig.parameters
     assert "scorer_input_contrast_floor_weight" in attachment_sig.parameters
+    assert "scorer_input_shape_tether_weight" in attachment_sig.parameters
     assert (
         "scorer_input_contrast_floor_segnet_min_std_ratio"
         in attachment_sig.parameters
@@ -169,6 +174,11 @@ def test_pr95_muon_policy_is_bound_to_native_train_export_surfaces() -> None:
     )
     assert any(
         "scorer_input_contrast_floor_weight"
+        in {kw.arg for kw in call.keywords if kw.arg}
+        for call in attachment_calls
+    )
+    assert any(
+        "scorer_input_shape_tether_weight"
         in {kw.arg for kw in call.keywords if kw.arg}
         for call in attachment_calls
     )
@@ -309,6 +319,28 @@ def test_score_aware_checkpoint_selection_policy_prices_contrast_floor() -> None
     assert "scorer_input_contrast_floor" in policy["active_score_surfaces"]
     assert "scorer_input_contrast_floor" in policy["required_loss_parts"]
     assert policy["scorer_input_contrast_floor_weight"] == pytest.approx(0.875)
+    assert policy["blockers"] == []
+
+
+def test_score_aware_checkpoint_selection_policy_prices_shape_tether() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._snerv_score_aware_checkpoint_selection_policy(
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        scorer_input_shape_tether_weight=0.625,
+        has_real_segnet_teacher=False,
+        has_real_posenet_teacher=False,
+        coder_aware_qat_bound=False,
+        coder_qat_loss_weight_map={},
+        pr95_faithful_curriculum_enabled=False,
+    )
+
+    assert policy["uses_score_aware_composite"] is True
+    assert policy["mse_fallback"] is False
+    assert "scorer_input_shape_tether" in policy["active_score_surfaces"]
+    assert "scorer_input_shape_tether" in policy["required_loss_parts"]
+    assert policy["scorer_input_shape_tether_weight"] == pytest.approx(0.625)
     assert policy["blockers"] == []
 
 
@@ -518,6 +550,10 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "loss_part_pr95_stage_scorer_input_contrast_floor": 0.125,
                     "loss_part_pr95_stage_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 0.7,
                     "loss_part_pr95_stage_scorer_input_contrast_floor_posenet_yuv6_pair_mean_std_ratio": 0.6,
+                    "loss_part_pr95_stage_scorer_input_shape_tether": 0.25,
+                    "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb": 0.0625,
+                    "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair": 0.09375,
+                    "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.09375,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.0625,
                     "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.5,
                     "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
@@ -549,6 +585,7 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
         train_time_section_byte_control_bound=True,
         scorer_input_distribution_guard_weight=2.0,
         scorer_input_contrast_floor_weight=0.875,
+        scorer_input_shape_tether_weight=0.625,
     )
 
     assert contract["passed"] is True
@@ -569,6 +606,11 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
         contract["scorer_input_contrast_floor_posenet_ratio_metric_observed"]
         is True
     )
+    assert contract["expected_scorer_input_shape_tether_metric"] is True
+    assert contract["scorer_input_shape_tether_metric_observed"] is True
+    assert contract["scorer_input_shape_tether_segnet_metric_observed"] is True
+    assert contract["scorer_input_shape_tether_posenet_pair_metric_observed"] is True
+    assert contract["scorer_input_shape_tether_posenet_delta_metric_observed"] is True
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
@@ -673,6 +715,55 @@ def test_score_aware_telemetry_contract_rejects_missing_contrast_floor_ratios(
     )
     assert (
         "snerv_score_aware_long_training_scorer_input_contrast_floor_posenet_ratio_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_rejects_missing_shape_tether_submetrics(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_scorer_input_shape_tether": 0.25,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+        scorer_input_shape_tether_weight=0.625,
+    )
+
+    assert contract["passed"] is False
+    assert contract["scorer_input_shape_tether_metric_observed"] is True
+    assert (
+        "snerv_score_aware_long_training_scorer_input_shape_tether_segnet_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_scorer_input_shape_tether_posenet_pair_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_scorer_input_shape_tether_posenet_delta_metric_missing"
         in contract["blockers"]
     )
 
@@ -2267,6 +2358,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
             "score_aware_long_training_scorer_input_contrast_floor_weight": 0.875,
             "score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio": 0.55,
             "score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": 0.45,
+            "score_aware_long_training_scorer_input_shape_tether_weight": 0.625,
         },
         scorer_upstream_dir=fake_upstream,
         output_height=16,
@@ -2386,6 +2478,22 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,
     }
+    assert long_training["scorer_input_shape_tether_bound"] is True
+    assert long_training["scorer_input_shape_tether"] == {
+        "schema": "snerv_mlx_score_aware_scorer_input_shape_tether.v1",
+        "requested": True,
+        "enabled": True,
+        "bound_to_renderer_bundle": True,
+        "weight": 0.625,
+        "target_surface": (
+            "segnet_last_frame_rgb_plus_posenet_yuv6_pair_and_temporal_delta_"
+            "centered_reference_variance_normalized_fit"
+        ),
+        "human_visual_fidelity_objective": False,
+        "score_authority": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
     assert long_training["pr95_faithful_curriculum_enabled"] is True
     assert long_training["muon_adamw_partition_bound"] is True
     assert long_training["teacher_binding"]["pose_distillation_loss"] == "huber"
@@ -2440,10 +2548,16 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert "scorer_input_contrast_floor" in long_training[
         "checkpoint_selection_policy"
     ]["active_score_surfaces"]
+    assert "scorer_input_shape_tether" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
     assert "scorer_input_distribution_guard" in long_training[
         "checkpoint_selection_policy"
     ]["required_loss_parts"]
     assert "scorer_input_contrast_floor" in long_training[
+        "checkpoint_selection_policy"
+    ]["required_loss_parts"]
+    assert "scorer_input_shape_tether" in long_training[
         "checkpoint_selection_policy"
     ]["required_loss_parts"]
     assert "segnet_direct_live_distill" in long_training[
@@ -2465,6 +2579,12 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         ]
         == 0.875
     )
+    assert (
+        long_training["checkpoint_selection_policy"][
+            "scorer_input_shape_tether_weight"
+        ]
+        == 0.625
+    )
     assert long_training["best_checkpoint_selection"]["selection_metric"] == (
         "score_aware_composite_full_video_surrogate"
     )
@@ -2485,6 +2605,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         "weighted_scorer_input_distribution_guard"
         in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
     )
+    assert (
+        "weighted_scorer_input_shape_tether"
+        in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
+    )
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
     assert (
         decoded.metadata[
@@ -2494,6 +2618,9 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     )
     assert decoded.metadata["score_aware_long_training"][
         "scorer_input_distribution_guard_bound"
+    ] is True
+    assert decoded.metadata["score_aware_long_training"][
+        "scorer_input_shape_tether_bound"
     ] is True
     assert decoded.metadata["score_aware_long_training"]["teacher_binding"][
         "has_real_segnet_teacher"

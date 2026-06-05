@@ -147,6 +147,25 @@ _MLX_OPTIMIZER_PROVENANCE_BY_KIND: dict[str, dict[str, Any]] = {
         ),
     },
 }
+
+
+def _segnet_direct_live_escape_selection_metric(
+    *,
+    candidate_occupied_class_fraction: float | None,
+    argmax_disagreement: float | None,
+) -> float | None:
+    """Archive-selection scalar that prices class escape before local fit."""
+
+    if candidate_occupied_class_fraction is None or argmax_disagreement is None:
+        return None
+    try:
+        class_fraction = float(candidate_occupied_class_fraction)
+        disagreement = float(argmax_disagreement)
+    except (TypeError, ValueError):
+        return None
+    if not (math.isfinite(class_fraction) and math.isfinite(disagreement)):
+        return None
+    return 10.0 * max(0.0, 1.0 - class_fraction) + disagreement
 PACT_MUON_ADAMW_MUON_LR_MULTIPLIER = 2.0e-4 / 3.0e-5
 PACT_MUON_ADAMW_LATENT_LR_MULTIPLIER = 10.0
 PR95_STAGE_BASE_SEG_WEIGHT = 100.0
@@ -963,6 +982,16 @@ class MlxScoreAwareAdapter:
                 )
             elif name in weights:
                 out[f"loss_part_weighted_{name}"] = float(weights[name]) * scalar
+        escape_metric = _segnet_direct_live_escape_selection_metric(
+            candidate_occupied_class_fraction=out.get(
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
+            ),
+            argmax_disagreement=out.get(
+                "loss_part_segnet_direct_live_argmax_disagreement"
+            ),
+        )
+        if escape_metric is not None:
+            out["loss_part_segnet_direct_live_escape_selection"] = escape_metric
         out["score_aware_loss_parts_active"] = float(
             ("distill" in parts)
             or ("segnet_direct_live_distill" in parts)
@@ -1006,6 +1035,7 @@ class MlxScoreAwareAdapter:
             pose_student_inputs_nhwc,
             scorer_input_contrast_floor_loss,
             scorer_input_distribution_guard_loss,
+            scorer_input_shape_tether_loss,
         )
 
         (
@@ -1221,6 +1251,23 @@ class MlxScoreAwareAdapter:
                 * scorer_input_guard_stage_weight
                 * contrast_floor
             )
+        shape_tether_parts: dict[str, Any] = {}
+        if (
+            self.bundle.scorer_input_shape_tether_weight > 0.0
+            and scorer_input_guard_stage_weight != 0.0
+        ):
+            shape_tether, shape_tether_parts = scorer_input_shape_tether_loss(
+                rgb_0,
+                rgb_1,
+                gt_0,
+                gt_1,
+            )
+            total = (
+                total
+                + float(self.bundle.scorer_input_shape_tether_weight)
+                * scorer_input_guard_stage_weight
+                * shape_tether
+            )
         if cat_entropy_term is not None and float(stage_verdict.cat_lambda) > 0.0:
             total = total + float(stage_verdict.cat_lambda) * cat_entropy_term
         if extra_qat_total is not None:
@@ -1269,6 +1316,8 @@ class MlxScoreAwareAdapter:
         for name, value in guard_parts.items():
             parts[f"pr95_stage_{name}"] = value
         for name, value in contrast_floor_parts.items():
+            parts[f"pr95_stage_{name}"] = value
+        for name, value in shape_tether_parts.items():
             parts[f"pr95_stage_{name}"] = value
         if cat_entropy_term is not None:
             parts["pr95_c1a_entropy"] = cat_entropy_term
@@ -1490,10 +1539,58 @@ class MlxScoreAwareAdapter:
                     1,
                 )
                 out[f"loss_part_{generic_name}"] = scalar
+            elif name == "pr95_stage_scorer_input_shape_tether":
+                guard_stage_weight = component_loss_weight(
+                    loss_weights,
+                    "scorer_input_guard",
+                )
+                weighted = (
+                    float(self.bundle.scorer_input_shape_tether_weight)
+                    * guard_stage_weight
+                    * scalar
+                )
+                out[
+                    "loss_part_weighted_pr95_stage_scorer_input_shape_tether"
+                ] = weighted
+                out[
+                    "loss_part_stage_weight_pr95_stage_scorer_input_shape_tether"
+                ] = guard_stage_weight
+                out[
+                    "loss_part_config_weight_pr95_stage_scorer_input_shape_tether"
+                ] = float(self.bundle.scorer_input_shape_tether_weight)
+                if (
+                    float(self.bundle.scorer_input_shape_tether_weight) > 0.0
+                    and guard_stage_weight > 0.0
+                ):
+                    out["loss_part_scorer_input_shape_tether"] = scalar
+                    out["loss_part_weighted_scorer_input_shape_tether"] = weighted
+                    out[
+                        "loss_part_stage_weight_scorer_input_shape_tether"
+                    ] = guard_stage_weight
+                    out[
+                        "loss_part_config_weight_scorer_input_shape_tether"
+                    ] = float(self.bundle.scorer_input_shape_tether_weight)
+            elif name.startswith("pr95_stage_scorer_input_shape_tether_"):
+                generic_name = name.replace(
+                    "pr95_stage_scorer_input_shape_tether_",
+                    "scorer_input_shape_tether_",
+                    1,
+                )
+                out[f"loss_part_{generic_name}"] = scalar
             elif name in self.bundle.extra_loss_weights:
                 out[f"loss_part_weighted_{name}"] = (
                     float(self.bundle.extra_loss_weights[name]) * scalar
                 )
+        escape_metric = _segnet_direct_live_escape_selection_metric(
+            candidate_occupied_class_fraction=out.get(
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
+            ),
+            argmax_disagreement=out.get(
+                "loss_part_segnet_direct_live_argmax_disagreement"
+            ),
+        )
+        if escape_metric is not None:
+            out["loss_part_segnet_direct_live_escape_selection"] = escape_metric
         out["pr95_stage_loss_parts_active"] = 1.0
         out["pr95_stage_seg_control_multiplier"] = seg_control_multiplier
         out["pr95_stage_pose_control_multiplier"] = pose_control_multiplier

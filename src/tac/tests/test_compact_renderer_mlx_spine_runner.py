@@ -95,6 +95,7 @@ def test_hi_nerv_frontier_gate_counts_direct_live_segnet_as_real_teacher() -> No
     gate = _validate_hi_nerv_frontier_training_config(
         segnet_distillation_weight=0.0,
         segnet_direct_live_distillation_weight=0.25,
+        segnet_direct_live_class_balanced_ce_weight=1.0,
         pose_distillation_weight=0.0,
         allow_segnet_only_research=True,
         allow_unscored_research_smoke=False,
@@ -104,9 +105,27 @@ def test_hi_nerv_frontier_gate_counts_direct_live_segnet_as_real_teacher() -> No
     assert gate["launch_allowed"] is True
     assert gate["real_segnet_teacher_attached"] is True
     assert gate["real_posenet_teacher_attached"] is False
+    assert gate["direct_live_escape_controls_attached"] is True
     assert gate["segnet_only_research_allowed"] is True
     assert "hi_nerv_real_segnet_teacher_missing" not in gate["blockers"]
     assert "hi_nerv_real_posenet_teacher_missing" in gate["blockers"]
+    assert "hi_nerv_direct_live_escape_controls_missing" not in gate["blockers"]
+
+
+def test_hi_nerv_frontier_gate_rejects_direct_live_without_escape_controls() -> None:
+    gate = _validate_hi_nerv_frontier_training_config(
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pose_distillation_weight=1.0,
+        allow_segnet_only_research=False,
+        allow_unscored_research_smoke=False,
+        score_aware_training_plan={},
+    )
+
+    assert gate["base_launch_allowed"] is True
+    assert gate["launch_allowed"] is False
+    assert gate["direct_live_escape_controls_attached"] is False
+    assert "hi_nerv_direct_live_escape_controls_missing" in gate["blockers"]
 
 
 def test_hi_nerv_pr95_prelaunch_allows_explicit_segnet_only_research_probe() -> None:
@@ -1874,6 +1893,10 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "loss_part_pr95_stage_seg_surrogate": 1.25,
                     "loss_part_pr95_stage_pose_surrogate": 5.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.125,
+                    "loss_part_pr95_stage_scorer_input_shape_tether": 0.25,
+                    "loss_part_pr95_stage_scorer_input_shape_tether_segnet_last_rgb": 0.0625,
+                    "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_pair": 0.09375,
+                    "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.09375,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.03125,
                     "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.75,
                     "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
@@ -1903,6 +1926,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
         coder_aware_qat_bound=True,
         train_time_section_byte_control_bound=True,
         scorer_input_distribution_guard_weight=2.0,
+        scorer_input_shape_tether_weight=1.0,
     )
 
     assert contract["passed"] is True
@@ -1911,6 +1935,11 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["posenet_dual_metric_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
+    assert contract["expected_scorer_input_shape_tether_metric"] is True
+    assert contract["scorer_input_shape_tether_metric_observed"] is True
+    assert contract["scorer_input_shape_tether_segnet_metric_observed"] is True
+    assert contract["scorer_input_shape_tether_posenet_pair_metric_observed"] is True
+    assert contract["scorer_input_shape_tether_posenet_delta_metric_observed"] is True
     assert contract["segnet_live_calibration_active_observed"] is True
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
@@ -1968,6 +1997,54 @@ def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_metrics(
     )
     assert (
         "hi_nerv_score_aware_training_direct_live_segnet_class_occupancy_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_hinerv_training_telemetry_contract_rejects_missing_shape_tether_metrics(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_scorer_input_shape_tether": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+        scorer_input_shape_tether_weight=1.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["scorer_input_shape_tether_metric_observed"] is True
+    assert (
+        "hi_nerv_score_aware_training_scorer_input_shape_tether_segnet_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_score_aware_training_scorer_input_shape_tether_posenet_pair_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_score_aware_training_scorer_input_shape_tether_posenet_delta_metric_missing"
         in contract["blockers"]
     )
 
@@ -10467,6 +10544,7 @@ def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
         pose_distillation_weight=0.01,
         pose_distillation_loss="huber",
         pose_distillation_huber_delta=0.05,
+        scorer_input_shape_tether_weight=0.25,
         coder_aware_qat=False,
         coder_qat_quant_bits=8,
         repo_root=REPO_ROOT,
@@ -10480,6 +10558,8 @@ def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
     assert gate["frontier_targeting"] is True
     assert gate["real_segnet_teacher_attached"] is True
     assert gate["real_posenet_teacher_attached"] is True
+    assert gate["direct_live_escape_controls_attached"] is True
+    assert gate["direct_live_escape_controls"]["shape_tether"] == pytest.approx(0.25)
     assert "hi_nerv_real_segnet_posenet_teachers_not_both_attached" not in out[
         "blockers"
     ]

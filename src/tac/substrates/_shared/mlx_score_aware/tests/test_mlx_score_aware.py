@@ -500,6 +500,58 @@ def test_score_aware_loss_applies_scorer_input_contrast_floor() -> None:
     assert _scalar(total_guard) > _scalar(total_disabled)
 
 
+def test_score_aware_loss_applies_scorer_input_shape_tether() -> None:
+    target_0, target_1 = _targets()
+    flat = mx.ones_like(target_0) * 0.5
+    bundle = RendererBundle(
+        model=ReconstructPairModel(flat, flat),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_input_shape_tether_weight=2.0,
+    )
+    idx = mx.array([0, 1], dtype=mx.int32)
+
+    total_guard, parts_guard = score_aware_loss(bundle, idx)
+    total_disabled, parts_disabled = score_aware_loss(
+        bundle,
+        idx,
+        loss_weights={"scorer_input_guard": 0.0},
+    )
+    mx.eval(total_guard, total_disabled)
+
+    assert "scorer_input_shape_tether" in parts_guard
+    assert "scorer_input_shape_tether" not in parts_disabled
+    assert _scalar(parts_guard["scorer_input_shape_tether"]) > 0.0
+    assert _scalar(
+        parts_guard[
+            "scorer_input_shape_tether_segnet_last_rgb_candidate_centered_std"
+        ]
+    ) < _scalar(
+        parts_guard[
+            "scorer_input_shape_tether_segnet_last_rgb_reference_centered_std"
+        ]
+    )
+    assert _scalar(total_guard) > _scalar(total_disabled)
+
+
+def test_score_aware_loss_rejects_negative_scorer_input_shape_tether_weight() -> None:
+    target_0, target_1 = _targets()
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="scorer_input_shape_tether_weight must be >= 0",
+    ):
+        RendererBundle(
+            model=ReconstructPairModel(target_0, target_1),
+            target_rgb_0=target_0,
+            target_rgb_1=target_1,
+            num_pairs=2,
+            forward_convention="reconstruct_pair_nchw01",
+            scorer_input_shape_tether_weight=-0.125,
+        )
+
+
 def test_real_scorer_distill_selects_contest_segnet_frame_by_default() -> None:
     target_0 = mx.zeros((2, 4, 4, 3))
     target_1 = mx.ones((2, 4, 4, 3))

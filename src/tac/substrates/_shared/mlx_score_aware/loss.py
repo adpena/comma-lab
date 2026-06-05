@@ -740,6 +740,115 @@ def scorer_input_contrast_floor_loss(
     }
 
 
+def _centered_variance_normalized_fit_parts(
+    candidate: Any,
+    reference: Any,
+) -> dict[str, Any]:
+    """Dense scorer-input shape fit, normalized by reference variance."""
+
+    mx = require_mlx_for_harness()
+    ref = mx.stop_gradient(reference)
+    cand_centered = candidate - mx.mean(candidate, axis=(1, 2), keepdims=True)
+    ref_centered = ref - mx.mean(ref, axis=(1, 2), keepdims=True)
+    ref_std = mx.stop_gradient(
+        mx.sqrt(
+            mx.mean(ref_centered * ref_centered, axis=(1, 2), keepdims=True)
+            + 1.0e-12
+        )
+    )
+    normalized_residual = (cand_centered - ref_centered) / mx.maximum(
+        ref_std,
+        1.0e-6,
+    )
+    mse = mx.mean(normalized_residual * normalized_residual)
+    mae = mx.mean(mx.abs(normalized_residual))
+    cand_std = mx.sqrt(
+        mx.mean(cand_centered * cand_centered, axis=(1, 2)) + 1.0e-12
+    )
+    reference_std = mx.sqrt(
+        mx.mean(ref_centered * ref_centered, axis=(1, 2)) + 1.0e-12
+    )
+    return {
+        "total": mse + mae,
+        "mse": mse,
+        "mae": mae,
+        "candidate_centered_std": mx.mean(cand_std),
+        "reference_centered_std": mx.mean(reference_std),
+    }
+
+
+def scorer_input_shape_tether_loss(
+    rgb_0: Any,
+    rgb_1: Any,
+    gt_0: Any,
+    gt_1: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Return dense shape tether on exact upstream scorer-input domains.
+
+    SegNet uses only pair frame 1 RGB. PoseNet uses both frames through the
+    PR95 YUV6 pair and is also sensitive to temporal motion. The loss is
+    centered and normalized by the reference variance, so flat renderers get
+    dense gradients toward scorer-causal local structure without adding a human
+    perceptual objective.
+    """
+
+    mx = require_mlx_for_harness()
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    segnet_parts = _centered_variance_normalized_fit_parts(rgb_1, gt_1)
+    yuv0 = rgb_to_yuv6_mlx(rgb_0 * 255.0) / 255.0
+    yuv1 = rgb_to_yuv6_mlx(rgb_1 * 255.0) / 255.0
+    ref_yuv0 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_0 * 255.0) / 255.0)
+    ref_yuv1 = mx.stop_gradient(rgb_to_yuv6_mlx(gt_1 * 255.0) / 255.0)
+    pose_pair = mx.concatenate([yuv0, yuv1], axis=-1)
+    ref_pose_pair = mx.concatenate([ref_yuv0, ref_yuv1], axis=-1)
+    pose_pair_parts = _centered_variance_normalized_fit_parts(
+        pose_pair,
+        ref_pose_pair,
+    )
+    temporal_parts = _centered_variance_normalized_fit_parts(
+        yuv1 - yuv0,
+        ref_yuv1 - ref_yuv0,
+    )
+    total = segnet_parts["total"] + pose_pair_parts["total"] + temporal_parts["total"]
+    return total, {
+        "scorer_input_shape_tether": total,
+        "scorer_input_shape_tether_segnet_last_rgb": segnet_parts["total"],
+        "scorer_input_shape_tether_segnet_last_rgb_mse": segnet_parts["mse"],
+        "scorer_input_shape_tether_segnet_last_rgb_mae": segnet_parts["mae"],
+        "scorer_input_shape_tether_segnet_last_rgb_candidate_centered_std": (
+            segnet_parts["candidate_centered_std"]
+        ),
+        "scorer_input_shape_tether_segnet_last_rgb_reference_centered_std": (
+            segnet_parts["reference_centered_std"]
+        ),
+        "scorer_input_shape_tether_posenet_yuv6_pair": pose_pair_parts["total"],
+        "scorer_input_shape_tether_posenet_yuv6_pair_mse": pose_pair_parts["mse"],
+        "scorer_input_shape_tether_posenet_yuv6_pair_mae": pose_pair_parts["mae"],
+        "scorer_input_shape_tether_posenet_yuv6_pair_candidate_centered_std": (
+            pose_pair_parts["candidate_centered_std"]
+        ),
+        "scorer_input_shape_tether_posenet_yuv6_pair_reference_centered_std": (
+            pose_pair_parts["reference_centered_std"]
+        ),
+        "scorer_input_shape_tether_posenet_yuv6_temporal_delta": (
+            temporal_parts["total"]
+        ),
+        "scorer_input_shape_tether_posenet_yuv6_temporal_delta_mse": (
+            temporal_parts["mse"]
+        ),
+        "scorer_input_shape_tether_posenet_yuv6_temporal_delta_mae": (
+            temporal_parts["mae"]
+        ),
+        "scorer_input_shape_tether_posenet_yuv6_temporal_delta_candidate_centered_std": (
+            temporal_parts["candidate_centered_std"]
+        ),
+        "scorer_input_shape_tether_posenet_yuv6_temporal_delta_reference_centered_std": (
+            temporal_parts["reference_centered_std"]
+        ),
+    }
+
+
 def _segnet_argmax_surface_metrics(
     *,
     candidate_logits: Any,
@@ -1264,6 +1373,24 @@ def score_aware_loss(
         )
         parts.update(contrast_floor_parts)
 
+    if (
+        bundle.scorer_input_shape_tether_weight > 0.0
+        and scorer_input_guard_stage_weight != 0.0
+    ):
+        shape_tether, shape_tether_parts = scorer_input_shape_tether_loss(
+            rgb_0,
+            rgb_1,
+            gt_0,
+            gt_1,
+        )
+        total = (
+            total
+            + float(bundle.scorer_input_shape_tether_weight)
+            * scorer_input_guard_stage_weight
+            * shape_tether
+        )
+        parts.update(shape_tether_parts)
+
     if bundle.distillation_weight > 0.0 and segnet_stage_weight != 0.0:
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
             HintonMlxCustomLossFnConfig,
@@ -1622,7 +1749,9 @@ __all__ = [
     "decode_frames_nhwc01",
     "pose_student_inputs_nhwc",
     "score_aware_loss",
+    "scorer_input_contrast_floor_loss",
     "scorer_input_distribution_guard_loss",
+    "scorer_input_shape_tether_loss",
     "source_pair_indices_for_local_batch",
 ]
 
