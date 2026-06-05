@@ -392,6 +392,48 @@ def test_modelsize_budget_plan_rejects_bare_receiver_proof_boolean_as_advisory()
     assert "receiver_proof_full_sample_count_missing" in plan["blockers"]
 
 
+def test_modelsize_budget_plan_keeps_receiver_closed_duplicate_byte_rows() -> None:
+    rows = [
+        {
+            "row_id": "tiny_receiver_closed",
+            "archive_bytes": 20_000,
+            "nonrate_score": 0.240,
+            "modelsize_mparams": 0.04,
+            "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
+            **_receiver_proof_fields("tiny_receiver_closed"),
+        },
+        {
+            "row_id": "tiny_advisory_prettier_same_bytes",
+            "archive_bytes": 20_000,
+            "nonrate_score": 0.010,
+            "modelsize_mparams": 0.04,
+            "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
+        },
+        {
+            "row_id": "small_receiver_closed",
+            "archive_bytes": 40_000,
+            "nonrate_score": 0.205,
+            "modelsize_mparams": 0.08,
+            "modelsize_control_contract": _source_bound_modelsize_contract("snerv"),
+            **_receiver_proof_fields("small_receiver_closed"),
+        },
+    ]
+
+    plan = build_modelsize_budget_plan(rows, carrier_id="snerv")
+
+    assert plan["status"] == "receiver_closed_modelsize_budget_selected"
+    assert plan["decision_basis"] == "receiver_closed_rows"
+    assert [point["row_id"] for point in plan["points"]] == [
+        "tiny_receiver_closed",
+        "small_receiver_closed",
+    ]
+    assert [point["row_id"] for point in plan["receiver_closed_points"]] == [
+        "tiny_receiver_closed",
+        "small_receiver_closed",
+    ]
+    assert plan["point_count_by_evidence"] == {"receiver_closed_measured_bytes": 2}
+
+
 def test_modelsize_budget_plan_hard_ceiling_selects_best_under_cap() -> None:
     rows = [
         {

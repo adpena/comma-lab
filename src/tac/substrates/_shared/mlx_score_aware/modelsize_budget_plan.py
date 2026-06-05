@@ -358,7 +358,13 @@ def _parse_points(rows: Sequence[Mapping[str, Any]]) -> list[ModelSizeBudgetPoin
                 source=dict(row),
             )
         )
-    points.sort(key=lambda point: (point.archive_bytes, point.nonrate_score))
+    points.sort(
+        key=lambda point: (
+            point.archive_bytes,
+            _point_evidence_priority(point),
+            point.nonrate_score,
+        )
+    )
     deduped = []
     seen: set[int] = set()
     for point in points:
@@ -367,6 +373,14 @@ def _parse_points(rows: Sequence[Mapping[str, Any]]) -> list[ModelSizeBudgetPoin
         seen.add(point.archive_bytes)
         deduped.append(point)
     return deduped
+
+
+def _point_evidence_priority(point: ModelSizeBudgetPoint) -> int:
+    if point.receiver_closed_bytes:
+        return 0
+    if point.evidence_kind == "advisory_measured_bytes_without_receiver_proof":
+        return 1
+    return 2
 
 
 def _resolve_hard_byte_ceiling(
