@@ -2650,6 +2650,17 @@ def test_receiver_frame_reconstruction_profile_projects_to_scorer_geometry() -> 
         "blockers"
     ]
     assert np.isfinite(float(profile["mse_nchw255"]))
+    assert np.isfinite(float(profile["segnet_frame1_rgb_mse_nchw255"]))
+    assert np.isfinite(float(profile["posenet_yuv6_pair_mse"]))
+    assert np.isfinite(float(profile["posenet_yuv6_temporal_delta_mse"]))
+    anatomy = profile["scorer_domain_distortion_anatomy"]
+    assert anatomy["schema"] == "snerv_scorer_domain_distortion_anatomy.v1"
+    assert anatomy["scorer_geometry"]["segnet"].startswith("last_frame_rgb")
+    assert anatomy["scorer_geometry"]["posenet"] == (
+        "two_frame_upstream_rgb_to_yuv6_pair"
+    )
+    assert anatomy["human_visual_fidelity_objective"] is False
+    assert anatomy["worst_pairs_by_segnet_frame1_mse"][0]["source_pair_idx"] == 7
     assert profile["worst_pairs_by_mse"][0]["source_pair_idx"] == 7
 
 
@@ -3002,6 +3013,16 @@ def test_train_export_runs_score_aware_long_training_before_packet_build(
         mod.SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
     )
     assert long_training["selection_history_tail"]
+    best = long_training["best_checkpoint_selection"]
+    assert np.isfinite(float(best["segnet_frame1_rgb_mse_nchw255"]))
+    assert np.isfinite(float(best["posenet_yuv6_pair_mse"]))
+    assert np.isfinite(float(best["posenet_yuv6_temporal_delta_mse"]))
+    assert best["scorer_domain_distortion_anatomy"]["schema"] == (
+        "snerv_scorer_domain_distortion_anatomy.v1"
+    )
+    assert best["scorer_domain_distortion_anatomy"]["scorer_geometry"][
+        "human_visual_fidelity_objective"
+    ] is False
     assert Path(long_training["report_path"]).is_file()
     assert Path(long_training["training_artifact"]["telemetry_path"]).is_file()
     packet = Path(report["packet_path"]).read_bytes()

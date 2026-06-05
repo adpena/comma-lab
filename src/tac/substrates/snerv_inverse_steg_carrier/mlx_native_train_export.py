@@ -5443,12 +5443,27 @@ def _run_score_aware_long_training_attachment(
         ) -> dict[str, Any]:
             rendered = model.render_pairs_nchw255(batch_size=max(1, int(batch_pairs)))
             recon_mse = float(np.mean((rendered - pairs) ** 2))
+            scorer_distortion = _snerv_scorer_domain_distortion_anatomy(
+                rendered,
+                pairs,
+                source_pair_indices=source_pair_indices,
+                worst_pair_count=0,
+                comparison_domain="train_renderer_native_geometry",
+            )
             row: dict[str, Any] = {
                 "epoch": int(epoch),
                 "state_source": str(state_source),
                 "selection_metric": selection_policy["selection_metric"],
                 "selection_metric_value_key": metric_value_key,
                 "recon_mse_nchw255": recon_mse,
+                "segnet_frame1_rgb_mse_nchw255": scorer_distortion[
+                    "segnet_frame1_rgb_mse_nchw255"
+                ],
+                "posenet_yuv6_pair_mse": scorer_distortion["posenet_yuv6_pair_mse"],
+                "posenet_yuv6_temporal_delta_mse": scorer_distortion[
+                    "posenet_yuv6_temporal_delta_mse"
+                ],
+                "scorer_domain_distortion_anatomy": scorer_distortion,
                 "training_loss": (
                     None if training_loss is None else float(training_loss)
                 ),
@@ -8901,6 +8916,13 @@ def _snerv_receiver_frame_reconstruction_profile(
     decoded = comparison_decoded
     diff = decoded - reference
     abs_diff = np.abs(diff)
+    scorer_distortion = _snerv_scorer_domain_distortion_anatomy(
+        decoded,
+        reference,
+        source_pair_indices=source_pair_indices,
+        worst_pair_count=worst_pair_count,
+        comparison_domain=comparison_domain,
+    )
     mse = float(np.mean(diff * diff))
     mae = float(np.mean(abs_diff))
     max_abs = float(np.max(abs_diff)) if abs_diff.size else 0.0
@@ -8971,6 +8993,14 @@ def _snerv_receiver_frame_reconstruction_profile(
             "mae_nchw255": mae,
             "max_abs_nchw255": max_abs,
             "rmse_nchw255": rmse,
+            "segnet_frame1_rgb_mse_nchw255": scorer_distortion[
+                "segnet_frame1_rgb_mse_nchw255"
+            ],
+            "posenet_yuv6_pair_mse": scorer_distortion["posenet_yuv6_pair_mse"],
+            "posenet_yuv6_temporal_delta_mse": scorer_distortion[
+                "posenet_yuv6_temporal_delta_mse"
+            ],
+            "scorer_domain_distortion_anatomy": scorer_distortion,
             "receiver_value_domain_gate": {
                 "schema": "snerv_receiver_frame_reconstruction_value_domain_gate.v1",
                 "decoded_std": decoded_std,
@@ -8997,6 +9027,155 @@ def _snerv_receiver_frame_reconstruction_profile(
         }
     )
     return profile
+
+
+def _snerv_scorer_domain_distortion_anatomy(
+    decoded_pairs_nchw255: np.ndarray,
+    reference_pairs_nchw255: np.ndarray,
+    *,
+    source_pair_indices: Sequence[int] = (),
+    worst_pair_count: int = 0,
+    comparison_domain: str,
+) -> dict[str, Any]:
+    """Split receiver-pixel error by the actual upstream scorer domains."""
+
+    decoded = np.asarray(decoded_pairs_nchw255, dtype=np.float32)
+    reference = np.asarray(reference_pairs_nchw255, dtype=np.float32)
+    if (
+        decoded.shape != reference.shape
+        or decoded.ndim != 5
+        or int(decoded.shape[1]) != 2
+        or int(decoded.shape[2]) != 3
+    ):
+        raise ValueError(
+            "SNeRV scorer-domain distortion anatomy expects matching "
+            f"(pairs,2,3,H,W) tensors, got decoded={decoded.shape} "
+            f"reference={reference.shape}"
+        )
+    diff = decoded - reference
+    pair_rgb_mse = float(np.mean(diff * diff))
+    frame0_mse = float(np.mean(diff[:, 0] * diff[:, 0]))
+    frame1_mse = float(np.mean(diff[:, 1] * diff[:, 1]))
+    decoded_yuv6 = _snerv_rgb_nchw255_to_yuv6_numpy(
+        decoded.reshape(-1, 3, int(decoded.shape[-2]), int(decoded.shape[-1]))
+    ).reshape(
+        int(decoded.shape[0]),
+        2,
+        6,
+        int(decoded.shape[-2]) // 2,
+        int(decoded.shape[-1]) // 2,
+    )
+    reference_yuv6 = _snerv_rgb_nchw255_to_yuv6_numpy(
+        reference.reshape(
+            -1,
+            3,
+            int(reference.shape[-2]),
+            int(reference.shape[-1]),
+        )
+    ).reshape(
+        int(reference.shape[0]),
+        2,
+        6,
+        int(reference.shape[-2]) // 2,
+        int(reference.shape[-1]) // 2,
+    )
+    yuv6_diff = decoded_yuv6 - reference_yuv6
+    yuv6_pair_mse = float(np.mean(yuv6_diff * yuv6_diff))
+    temporal_delta_diff = (
+        decoded_yuv6[:, 1] - decoded_yuv6[:, 0]
+    ) - (
+        reference_yuv6[:, 1] - reference_yuv6[:, 0]
+    )
+    temporal_delta_mse = float(np.mean(temporal_delta_diff * temporal_delta_diff))
+    source_indices = [int(value) for value in source_pair_indices]
+    worst_rows: list[dict[str, Any]] = []
+    if worst_pair_count > 0:
+        per_pair_frame1 = np.mean(diff[:, 1] * diff[:, 1], axis=(1, 2, 3))
+        per_pair_yuv6 = np.mean(yuv6_diff * yuv6_diff, axis=(1, 2, 3, 4))
+        per_pair_temporal = np.mean(
+            temporal_delta_diff * temporal_delta_diff,
+            axis=(1, 2, 3),
+        )
+        order = np.argsort(-per_pair_frame1, kind="stable")
+        for rank, pair_idx_np in enumerate(order[: max(0, int(worst_pair_count))]):
+            pair_idx = int(pair_idx_np)
+            source_pair_idx = (
+                source_indices[pair_idx] if pair_idx < len(source_indices) else pair_idx
+            )
+            worst_rows.append(
+                {
+                    "rank": int(rank),
+                    "pair_idx": pair_idx,
+                    "source_pair_idx": int(source_pair_idx),
+                    "segnet_frame1_rgb_mse_nchw255": float(
+                        per_pair_frame1[pair_idx]
+                    ),
+                    "posenet_yuv6_pair_mse": float(per_pair_yuv6[pair_idx]),
+                    "posenet_yuv6_temporal_delta_mse": float(
+                        per_pair_temporal[pair_idx]
+                    ),
+                }
+            )
+    return {
+        "schema": "snerv_scorer_domain_distortion_anatomy.v1",
+        "comparison_domain": str(comparison_domain),
+        "scorer_geometry": {
+            "segnet": "last_frame_rgb_before_segnet_resize_or_after_profile_resize",
+            "posenet": "two_frame_upstream_rgb_to_yuv6_pair",
+            "human_visual_fidelity_objective": False,
+        },
+        "human_visual_fidelity_objective": False,
+        "pair_rgb_mse_nchw255": pair_rgb_mse,
+        "frame0_rgb_mse_nchw255": frame0_mse,
+        "segnet_frame1_rgb_mse_nchw255": frame1_mse,
+        "segnet_frame1_to_pair_rgb_mse_ratio": frame1_mse
+        / max(pair_rgb_mse, 1.0e-12),
+        "posenet_yuv6_pair_mse": yuv6_pair_mse,
+        "posenet_yuv6_temporal_delta_mse": temporal_delta_mse,
+        "posenet_temporal_to_pair_yuv6_mse_ratio": temporal_delta_mse
+        / max(yuv6_pair_mse, 1.0e-12),
+        "worst_pairs_by_segnet_frame1_mse": worst_rows,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_rgb_nchw255_to_yuv6_numpy(rgb_nchw255: np.ndarray) -> np.ndarray:
+    """NumPy equivalent of upstream frame_utils.rgb_to_yuv6."""
+
+    rgb = np.asarray(rgb_nchw255, dtype=np.float32)
+    if rgb.ndim != 4 or int(rgb.shape[1]) != 3:
+        raise ValueError(f"rgb_nchw255 must be NCHW with 3 channels, got {rgb.shape}")
+    h2 = int(rgb.shape[-2]) // 2
+    w2 = int(rgb.shape[-1]) // 2
+    if h2 <= 0 or w2 <= 0:
+        raise ValueError(f"rgb_nchw255 spatial dims must be at least 2x2, got {rgb.shape}")
+    rgb = rgb[:, :, : 2 * h2, : 2 * w2]
+    red = rgb[:, 0]
+    green = rgb[:, 1]
+    blue = rgb[:, 2]
+    y = np.clip(0.299 * red + 0.587 * green + 0.114 * blue, 0.0, 255.0)
+    u = np.clip((blue - y) / 1.772 + 128.0, 0.0, 255.0)
+    v = np.clip((red - y) / 1.402 + 128.0, 0.0, 255.0)
+    u_sub = (
+        u[:, 0::2, 0::2]
+        + u[:, 1::2, 0::2]
+        + u[:, 0::2, 1::2]
+        + u[:, 1::2, 1::2]
+    ) * 0.25
+    v_sub = (
+        v[:, 0::2, 0::2]
+        + v[:, 1::2, 0::2]
+        + v[:, 0::2, 1::2]
+        + v[:, 1::2, 1::2]
+    ) * 0.25
+    y00 = y[:, 0::2, 0::2]
+    y10 = y[:, 1::2, 0::2]
+    y01 = y[:, 0::2, 1::2]
+    y11 = y[:, 1::2, 1::2]
+    return np.stack([y00, y10, y01, y11, u_sub, v_sub], axis=1).astype(
+        np.float32,
+        copy=False,
+    )
 
 
 def _snerv_official_skip_high_value_domain_gate(
