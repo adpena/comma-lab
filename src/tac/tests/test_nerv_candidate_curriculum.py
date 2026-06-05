@@ -653,6 +653,90 @@ def test_snerv_candidate_curriculum_blocks_bad_scorer_input_and_scalar_skip_high
     assert plan["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_candidate_curriculum_blocks_channel_mean_spatial_collapse() -> None:
+    candidate = analyze_snerv_modelsize_candidate(
+        hard_byte_ceiling=178_000,
+        num_pairs=600,
+        levels=1,
+        bits_per_coeff=1.0,
+        step_map_bits_per_coeff=1.0,
+        decoder_payload_codec="int8_symmetric",
+        snerv_model_size_adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="channel_mean",
+    ).as_dict()
+
+    plan = build_snerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=29_650,
+        num_pairs=600,
+        step_map_coder_mode="waterfill",
+        measured_packet_bytes=115_510,
+        measured_archive_bytes=13_432,
+        native_mlx_train_export_attached=True,
+        native_mlx_long_training_bound=True,
+        native_mlx_receiver_proof_passed=True,
+        native_mlx_full600_campaign_ready=True,
+        native_mlx_scorer_loop_qat_attached=True,
+        native_mlx_scorer_loop_qat_receiver_contract_satisfied=True,
+        native_mlx_scorer_loop_qat_ready_for_pose_guard_gate=True,
+        native_mlx_scorer_loop_qat_accepted_improvement=True,
+        native_mlx_scorer_loop_qat_best_materialized=True,
+        native_mlx_real_segnet_teacher_bound=True,
+        native_mlx_real_posenet_teacher_bound=True,
+        native_mlx_pr95_curriculum_bound=True,
+        native_mlx_eval_roundtrip_ste_bound=True,
+        native_mlx_scorer_input_distribution_guard_bound=True,
+        native_mlx_differentiable_pose_preprocess_bound=True,
+        native_mlx_coder_qat_bound=True,
+        native_mlx_muon_adamw_partition_bound=True,
+        receiver_proof_attached=True,
+        full_video_local_prefilter_attached=True,
+        local_cpu_replay_gate_attached=True,
+        native_mlx_artifact_evidence={
+            "local_mlx_prefilter_profile_path": "/ssd/local_mlx_prefilter_profile.json",
+            "local_mlx_prefilter_profile": {
+                "schema": "mlx_renderer_prefilter_profile.v1",
+                "blockers": ["mlx_local_replay_not_contest_auth_axis"],
+                "scorer_input_distribution": {
+                    "schema": "mlx_renderer_prefilter_scorer_input_distribution.v1",
+                    "candidate_segnet_last_rgb": {"saturation_fraction": 0.01},
+                    "candidate_posenet_yuv6_pair": {"saturation_fraction": 0.01},
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            "receiver_value_domain_xray": {
+                "schema": "snerv_receiver_value_domain_xray.v1",
+                "decoder_payload_header": {
+                    "skip_high_storage": {
+                        "schema": "snerv_official_skip_high_storage.v1",
+                        "codec": "channel_mean_float64",
+                        "source_shape": [1200, 3, 192, 256],
+                        "stored_shape": [1, 3, 1, 1],
+                        "stored_raw_bytes": 24,
+                        "receiver_expands_skip_high": True,
+                        "lossless_relative_to_source_skip_high": False,
+                    },
+                },
+                "blockers": [],
+            },
+        },
+    )
+
+    skip_gate = plan["skip_high_export_admission_gate"]
+    assert skip_gate["official_skip_high_mode"] == "channel_mean"
+    assert skip_gate["scalar_collapse_risk"] is False
+    assert skip_gate["spatial_collapse_risk"] is True
+    assert skip_gate["skip_high_source_shape"] == [1200, 3, 192, 256]
+    assert skip_gate["exact_eval_admissible"] is False
+    assert (
+        "snerv_official_skip_high_spatial_receiver_expand_collapse_risk"
+        in plan["blockers"]
+    )
+    assert plan["ready_for_exact_eval_dispatch"] is False
+
+
 def test_snerv_candidate_curriculum_consumes_scorer_loop_qat_evidence() -> None:
     candidate = analyze_snerv_modelsize_candidate(
         hard_byte_ceiling=216_000,

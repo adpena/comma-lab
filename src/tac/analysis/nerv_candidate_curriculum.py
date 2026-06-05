@@ -199,6 +199,19 @@ def _nested_mapping(root: Mapping[str, Any], *keys: str) -> Mapping[str, Any]:
     return current if isinstance(current, Mapping) else {}
 
 
+def _skip_high_spatial_collapse_risk(
+    *,
+    stored_shape: list[int],
+    source_shape: list[int],
+    receiver_expands: bool,
+) -> bool:
+    if not receiver_expands or len(stored_shape) < 4 or len(source_shape) < 4:
+        return False
+    source_h, source_w = int(source_shape[-2]), int(source_shape[-1])
+    stored_h, stored_w = int(stored_shape[-2]), int(stored_shape[-1])
+    return (source_h > 1 or source_w > 1) and stored_h <= 1 and stored_w <= 1
+
+
 def _build_nerv_local_scorer_input_health_gate(
     artifact_evidence: Mapping[str, Any] | None,
     *,
@@ -278,6 +291,7 @@ def _build_snerv_skip_high_export_admission_gate(
         if storage:
             break
     stored_shape = [int(v) for v in storage.get("stored_shape") or []]
+    source_shape = [int(v) for v in storage.get("source_shape") or []]
     codec = str(storage.get("codec") or "").strip().lower()
     blocker_prefixes = (
         "snerv_official_skip_high_",
@@ -293,6 +307,12 @@ def _build_snerv_skip_high_export_admission_gate(
         "scalar_mean_receiver_expand_collapse_risk" in blocker
         for blocker in blockers
     )
+    spatial_collapse_blocker_present = any(
+        "spatial_receiver_expand_collapse_risk" in blocker
+        or "candidate_spatial_collapse" in blocker
+        or "no_skip_high_mode_with_byte_cap_and_spatial_storage" in blocker
+        for blocker in blockers
+    )
     if scalar_mode:
         blockers.append(
             "snerv_official_skip_high_scalar_mean_requires_value_domain_xray_noncollapse"
@@ -304,15 +324,29 @@ def _build_snerv_skip_high_export_admission_gate(
     scalar_collapse_risk = bool(
         scalar_mode or scalar_storage or collapse_blocker_present
     )
+    spatial_collapse_risk = bool(
+        _skip_high_spatial_collapse_risk(
+            stored_shape=stored_shape,
+            source_shape=source_shape,
+            receiver_expands=bool(storage.get("receiver_expands_skip_high")),
+        )
+        or spatial_collapse_blocker_present
+    )
+    if spatial_collapse_risk:
+        blockers.append("snerv_official_skip_high_spatial_receiver_expand_collapse_risk")
     return {
         "schema": SNERV_SKIP_HIGH_EXPORT_ADMISSION_GATE_SCHEMA,
         "official_skip_high_mode": mode or None,
         "skip_high_storage_present": bool(storage),
         "skip_high_storage_codec": storage.get("codec"),
         "skip_high_storage_shape": stored_shape,
+        "skip_high_source_shape": source_shape,
         "scalar_collapse_risk": scalar_collapse_risk,
+        "spatial_collapse_risk": spatial_collapse_risk,
         "local_training_allowed": True,
-        "exact_eval_admissible": bool(not scalar_collapse_risk and not blockers),
+        "exact_eval_admissible": bool(
+            not scalar_collapse_risk and not spatial_collapse_risk and not blockers
+        ),
         "blockers": _dedupe(blockers),
         **FALSE_AUTHORITY,
     }
