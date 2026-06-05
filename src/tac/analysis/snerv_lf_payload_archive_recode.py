@@ -43,6 +43,19 @@ AXIS_TAG = "[receiver-proof:false-authority]"
 ADMISSION_AXIS_TAG = "[planning/control:false-authority]"
 DEFAULT_FRAME_PROOF_MAX_OUTPUT_BYTES = 256 * 1024 * 1024
 UNCHANGED_SECTIONS = ("metadata_payload", "decoder_payload", "step_map_packet")
+LOCAL_ADMISSION_SOURCE_BLOCKER_SUBSTRINGS = (
+    "collapse",
+    "degenerate",
+    "loss_part_distill",
+    "loss_part_pose",
+    "metadata_stale",
+    "receiver_degenerate",
+    "saturated",
+    "scorer_input",
+    "scorer_tether",
+    "stale_metadata",
+    "value_domain",
+)
 
 
 class SnervLfPayloadArchiveRecodeError(ValueError):
@@ -413,9 +426,14 @@ def _admission_row(
         None if candidate_headroom is None else max(-int(candidate_headroom), 0)
     )
     receiver_contract = bool(report.get("receiver_contract_satisfied") is True)
+    source_report_blockers = [str(blocker) for blocker in report.get("blockers") or ()]
+    source_local_blockers = _source_report_local_admission_blockers(
+        source_report_blockers
+    )
     local_blockers = []
     if not receiver_contract:
         local_blockers.append("snerv_lf_recode_receiver_contract_not_satisfied")
+    local_blockers.extend(source_local_blockers)
     if (
         target_candidate_id is not None
         and source_report_candidate_id is not None
@@ -514,7 +532,7 @@ def _admission_row(
         "source_packet_sha256": source_packet.get("sha256"),
         "candidate_packet_sha256": candidate_packet.get("sha256"),
         "source_report_blockers": [
-            str(blocker) for blocker in report.get("blockers") or ()
+            str(blocker) for blocker in source_report_blockers
         ],
         **FALSE_AUTHORITY,
     }
@@ -560,6 +578,21 @@ def _invalid_admission_row(
         ],
         **FALSE_AUTHORITY,
     }
+
+
+def _source_report_local_admission_blockers(blockers: Sequence[str]) -> list[str]:
+    local_blockers: list[str] = []
+    for blocker in blockers:
+        blocker_text = str(blocker)
+        blocker_key = blocker_text.lower()
+        if any(
+            token in blocker_key
+            for token in LOCAL_ADMISSION_SOURCE_BLOCKER_SUBSTRINGS
+        ):
+            local_blockers.append(
+                f"snerv_lf_recode_source_report_local_blocker:{blocker_text}"
+            )
+    return _ordered_unique(local_blockers)
 
 
 def _admission_section_value_row(

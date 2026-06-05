@@ -14028,6 +14028,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        scorer_input_distribution_guard_weight=float(
+            scorer_input_distribution_guard_weight
+        ),
         scorer_input_contrast_floor_weight=float(scorer_input_contrast_floor_weight),
         scorer_input_shape_tether_weight=float(scorer_input_shape_tether_weight),
         coder_qat_loss_weight_map=coder_qat_loss_weight_map,

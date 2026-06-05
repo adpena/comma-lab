@@ -4242,6 +4242,7 @@ def _run_score_aware_long_training_attachment(
                     direct_live_balanced_squared_hinge_weight
                 ),
                 pose_distillation_weight=pose_weight,
+                scorer_input_distribution_guard_weight=guard_weight,
                 scorer_input_contrast_floor_weight=contrast_floor_weight,
                 scorer_input_shape_tether_weight=shape_tether_weight,
                 coder_qat_loss_weight_map=coder_qat_loss_weight_map,

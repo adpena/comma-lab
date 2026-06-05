@@ -333,6 +333,61 @@ def test_snerv_lf_payload_recode_admission_blocks_cross_candidate_rebinding() ->
     ]
 
 
+def test_snerv_lf_payload_recode_admission_blocks_source_value_domain_and_tether_failures() -> None:
+    report = {
+        "schema": "snerv_lf_payload_archive_recode.v1",
+        "candidate_id": "snerv-degenerate-receiver",
+        "mode": "zero_run_varint",
+        "source_packet": {"bytes": 220_000, "sha256": "source-sha"},
+        "candidate_packet": {"bytes": 150_000, "sha256": "candidate-sha"},
+        "packet_byte_delta": -70_000,
+        "lf_payload": {
+            "source_bytes": 160_000,
+            "candidate_bytes": 90_000,
+            "byte_delta": -70_000,
+        },
+        "receiver_contract_satisfied": True,
+        "receiver_frame_equality_proof": {"status": "proven_exact"},
+        "blockers": [
+            "snerv_receiver_decode_last_frame_saturated_for_segnet",
+            "snerv_scorer_tether_smoke_mlx_unavailable",
+            "not_packaged_as_contest_archive_zip",
+        ],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    plan = build_snerv_lf_payload_recode_admission_plan(
+        [report],
+        hard_byte_ceiling=178_000,
+        candidate_id="snerv-degenerate-receiver",
+        full_video_coverage=True,
+    )
+
+    row = plan["admission_rows"][0]
+    assert plan["local_planner_admitted"] is False
+    assert plan["selected_mode"] is None
+    assert row["local_planner_admitted"] is False
+    assert row["admission_decision"] == "block_lf_recode_admission"
+    assert row["source_report_blockers"] == report["blockers"]
+    assert (
+        "snerv_lf_recode_source_report_local_blocker:"
+        "snerv_receiver_decode_last_frame_saturated_for_segnet"
+    ) in row["local_admission_blockers"]
+    assert (
+        "snerv_lf_recode_source_report_local_blocker:"
+        "snerv_scorer_tether_smoke_mlx_unavailable"
+    ) in row["local_admission_blockers"]
+    assert not any(
+        blocker.endswith("not_packaged_as_contest_archive_zip")
+        for blocker in row["local_admission_blockers"]
+    )
+    assert "snerv_lf_recode_no_receiver_proven_byte_saving_mode" in plan[
+        "blockers"
+    ]
+    assert plan["byte_price_plan"]["decision_counts"]["demote"] == 1
+
+
 def test_snerv_lf_payload_recode_admission_blocks_invalid_and_non_saving_rows() -> None:
     non_saving = {
         "schema": "snerv_lf_payload_archive_recode.v1",

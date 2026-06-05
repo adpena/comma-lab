@@ -418,6 +418,7 @@ def build_default_nerv_train_time_dual_ascent_config(
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
     segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    scorer_input_distribution_guard_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_shape_tether_weight: float = 0.0,
     coder_qat_loss_weight_map: Mapping[str, float] | None = None,
@@ -456,6 +457,9 @@ def build_default_nerv_train_time_dual_ascent_config(
         segnet_direct_live_class_balanced_squared_hinge_weight
     )
     pose_weight = _nonnegative_weight(pose_distillation_weight)
+    distribution_guard_weight = _nonnegative_weight(
+        scorer_input_distribution_guard_weight
+    )
     contrast_floor_weight = _nonnegative_weight(scorer_input_contrast_floor_weight)
     shape_tether_weight = _nonnegative_weight(scorer_input_shape_tether_weight)
     byte_price = _positive_weight(contest_rate_score_per_byte)
@@ -603,6 +607,28 @@ def build_default_nerv_train_time_dual_ascent_config(
                     "PoseNet scores the pair through PR95/YUV6 preprocessing; "
                     "this dual prices pair-level pose loss separately from "
                     "SegNet boundary loss."
+                ),
+            )
+        )
+    if distribution_guard_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_scorer_input_distribution_guard",
+                metric_name="loss_part_scorer_input_distribution_guard",
+                loss_weight_key="scorer_input_guard",
+                base_weight=distribution_guard_weight,
+                target_fraction=0.97,
+                dual_lr=0.3,
+                max_lambda=8.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=(
+                    "The scorer-input distribution guard binds the upstream "
+                    "evaluate.py value domain directly: SegNet last-frame RGB "
+                    "and PoseNet YUV6 pair/temporal-delta dynamic range, "
+                    "spatial gradient, MSE, and MAE must remain trainable. "
+                    "The dual raises this shared guard when low-byte NeRV "
+                    "outputs enter a flat or class-collapsed scorer basin."
                 ),
             )
         )

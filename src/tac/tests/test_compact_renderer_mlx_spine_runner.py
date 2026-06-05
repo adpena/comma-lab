@@ -3744,6 +3744,10 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         captured["run_pr95_curriculum_total_epochs"] = int(
             kwargs["pr95_curriculum_total_epochs"]
         )
+        dual_config = kwargs["train_time_dual_ascent_config"]
+        captured["dual_ascent_constraints"] = {
+            row["constraint_id"]: dict(row) for row in dual_config["constraints"]
+        }
         archive = tmp_path / "fake_hinerv_sparse_hydration_archive.zip"
         _write_synthetic_pr95_archive(archive, pairs=10)
         return FakeArtifact(
@@ -3853,6 +3857,12 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert captured["bundle_scorer_input_distribution_guard_weight"] == pytest.approx(
         0.25
     )
+    guard_dual = captured["dual_ascent_constraints"][
+        "hi_nerv_scorer_input_distribution_guard"
+    ]
+    assert guard_dual["metric_name"] == "loss_part_scorer_input_distribution_guard"
+    assert guard_dual["loss_weight_key"] == "scorer_input_guard"
+    assert guard_dual["weight_scale"] == pytest.approx(0.25)
     assert captured[
         "bundle_scorer_input_distribution_guard_saturation_margin"
     ] == pytest.approx(0.03)
@@ -6392,6 +6402,7 @@ def test_snerv_native_attachment_forwards_train_time_dual_ascent_to_shared_harne
     assert "train_time_dual_ascent_config" in kw_names
     target_source = ast.get_source_segment(source, target_fn) or ""
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
+    assert "scorer_input_distribution_guard_weight=guard_weight" in target_source
     assert '"train_time_dual_ascent": (' in target_source
 
 
