@@ -13604,6 +13604,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         start_epoch=_resume_start_epoch_for_pose_monitor(resume_from_checkpoint),
         hard_pair_sampling_active=bool(prioritized_pair_indices),
     )
+    joint_scorer_checkpoint_selection_active = bool(
+        float(segnet_direct_live_distillation_weight) > 0.0
+        and float(pose_distillation_weight) > 0.0
+    )
+    direct_live_checkpoint_selection_active = bool(
+        float(segnet_direct_live_distillation_weight) > 0.0
+    )
 
     def _extra_loss_terms(model_obj: Any, _idx: Any) -> dict[str, Any]:
         terms = dict(build_decoder_coder_qat_terms(model_obj, coder_qat_cfg))
@@ -14224,22 +14231,25 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         on_epoch_end=pose_instability_monitor,
         checkpoint_selection_metric_key=(
+            "loss_part_joint_scorer_proxy_nonrate"
+            if joint_scorer_checkpoint_selection_active
+            else
             "loss_part_segnet_direct_live_argmax_disagreement"
-            if float(segnet_direct_live_distillation_weight) > 0.0
+            if direct_live_checkpoint_selection_active
             else "total"
         ),
         checkpoint_selection_metric_mode="min",
         checkpoint_selection_metric_required=(
-            float(segnet_direct_live_distillation_weight) > 0.0
+            direct_live_checkpoint_selection_active
         ),
         checkpoint_selection_tie_break_metric_key=(
             "loss_part_segnet_direct_live_distill"
-            if float(segnet_direct_live_distillation_weight) > 0.0
+            if direct_live_checkpoint_selection_active
             else ""
         ),
         checkpoint_selection_tie_break_metric_mode="min",
         checkpoint_selection_tie_break_metric_required=(
-            float(segnet_direct_live_distillation_weight) > 0.0
+            direct_live_checkpoint_selection_active
         ),
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "

@@ -5935,6 +5935,8 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "segnet_direct_live_class_balanced_hinge_weight" in target_source
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
     assert "build_hinerv_archive_section_qat_weight_policy" in target_source
+    assert "joint_scorer_checkpoint_selection_active" in target_source
+    assert "loss_part_joint_scorer_proxy_nonrate" in target_source
     assert "loss_part_segnet_direct_live_argmax_disagreement" in target_source
     assert "checkpoint_selection_metric_required" in target_source
     assert "archive_section_qat_policy = " in target_source

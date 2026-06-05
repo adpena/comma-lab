@@ -2748,6 +2748,24 @@ class MlxScoreAwareAdapter:
             metrics["loss_part_segnet_direct_live_distill"] = metrics[
                 "loss_part_pr95_stage_segnet_direct_live_distill"
             ]
+        if (
+            "loss_part_segnet_direct_live_argmax_disagreement" not in metrics
+            and "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement"
+            in metrics
+        ):
+            metrics["loss_part_segnet_direct_live_argmax_disagreement"] = metrics[
+                "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement"
+            ]
+        seg_argmax = metrics.get("loss_part_segnet_direct_live_argmax_disagreement")
+        pose_score = metrics.get("loss_part_pose_score_term")
+        if (
+            "loss_part_joint_scorer_proxy_nonrate" not in metrics
+            and seg_argmax is not None
+            and pose_score is not None
+        ):
+            metrics["loss_part_joint_scorer_proxy_nonrate"] = (
+                100.0 * float(seg_argmax) + float(pose_score)
+            )
 
     def _train_time_section_byte_metrics(
         self,
