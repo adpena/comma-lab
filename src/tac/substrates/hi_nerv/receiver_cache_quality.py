@@ -11,6 +11,7 @@ section-value, waterfill, or exact-dispatch queues unnoticed.
 from __future__ import annotations
 
 import hashlib
+import math
 import zipfile
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -46,6 +47,8 @@ HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA = (
     "hi_nerv_receiver_cache_segnet_argmax_probe.v1"
 )
 HI_NERV_RECEIVER_CACHE_DISTORTION_CRUX_SCHEMA = NERV_DISTORTION_CRUX_SCHEMA
+SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION = 1.0e-3
+SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS = 2
 
 
 def write_hi_nerv_receiver_cache_quality_report(
@@ -451,20 +454,23 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     reference_histogram = [
         int(v) for v in np.bincount(ref_argmax.reshape(-1), minlength=class_count)
     ]
-    candidate_occupied_class_fraction = _argmax_histogram_occupied_fraction(
-        candidate_histogram
-    )
-    reference_occupied_class_fraction = _argmax_histogram_occupied_fraction(
-        reference_histogram
-    )
+    candidate_occupancy = _argmax_histogram_occupancy(candidate_histogram)
+    reference_occupancy = _argmax_histogram_occupancy(reference_histogram)
+    candidate_occupied_class_fraction = candidate_occupancy[
+        "occupied_class_fraction"
+    ]
+    reference_occupied_class_fraction = reference_occupancy[
+        "occupied_class_fraction"
+    ]
     min_candidate_occupied_class_fraction = 0.400001
     blockers = ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"]
     if disagreement > threshold:
         blockers.append("candidate_segnet_argmax_disagreement_too_high")
-    if (
+    class_collapse = (
         reference_occupied_class_fraction >= min_candidate_occupied_class_fraction
         and candidate_occupied_class_fraction < min_candidate_occupied_class_fraction
-    ):
+    )
+    if class_collapse:
         blockers.append("hi_nerv_receiver_cache_segnet_argmax_class_collapse")
 
     return {
@@ -501,7 +507,13 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
         "candidate_argmax_histogram": candidate_histogram,
         "reference_argmax_histogram": reference_histogram,
         "candidate_occupied_class_fraction": candidate_occupied_class_fraction,
+        "candidate_any_occupied_class_fraction": candidate_occupancy[
+            "any_occupied_class_fraction"
+        ],
         "reference_occupied_class_fraction": reference_occupied_class_fraction,
+        "reference_any_occupied_class_fraction": reference_occupancy[
+            "any_occupied_class_fraction"
+        ],
         "candidate_top2_margin": _margin_stats(cand_margin),
         "reference_top2_margin": _margin_stats(ref_margin),
         "thresholds": {
@@ -509,8 +521,14 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
             "min_candidate_occupied_class_fraction": (
                 min_candidate_occupied_class_fraction
             ),
+            "min_class_pixel_fraction_for_occupancy": (
+                SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION
+            ),
+            "min_class_pixel_count_for_occupancy": candidate_occupancy[
+                "min_class_pixel_count"
+            ],
         },
-        "fit_gate_passed": disagreement <= threshold,
+        "fit_gate_passed": disagreement <= threshold and not class_collapse,
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -544,9 +562,36 @@ def _build_segnet_argmax_probe_not_run_report(
 
 
 def _argmax_histogram_occupied_fraction(values: list[int]) -> float:
+    return _argmax_histogram_occupancy(values)["occupied_class_fraction"]
+
+
+def _argmax_histogram_occupancy(values: list[int]) -> dict[str, Any]:
     if not values:
-        return 0.0
-    return float(sum(1 for value in values if int(value) > 0) / len(values))
+        return {
+            "occupied_class_fraction": 0.0,
+            "any_occupied_class_fraction": 0.0,
+            "min_class_pixel_count": SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS,
+            "min_class_pixel_fraction": 1.0,
+        }
+    total = sum(max(0, int(value)) for value in values)
+    min_count = max(
+        SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_PIXELS,
+        math.ceil(total * SEGNET_ARGMAX_OCCUPANCY_MIN_CLASS_FRACTION),
+    )
+    if total <= 0:
+        min_fraction = 1.0
+        occupied = 0
+        any_occupied = 0
+    else:
+        min_fraction = float(min_count / total)
+        occupied = sum(1 for value in values if int(value) >= min_count)
+        any_occupied = sum(1 for value in values if int(value) > 0)
+    return {
+        "occupied_class_fraction": float(occupied / len(values)),
+        "any_occupied_class_fraction": float(any_occupied / len(values)),
+        "min_class_pixel_count": int(min_count),
+        "min_class_pixel_fraction": min_fraction,
+    }
 
 
 def write_hi_nerv_direct_receiver_cache_from_payload(

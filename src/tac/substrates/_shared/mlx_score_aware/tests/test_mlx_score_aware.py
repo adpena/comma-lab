@@ -751,6 +751,51 @@ def test_direct_live_segnet_routes_all_pixel_argmax_hinge_objective() -> None:
     ) == pytest.approx(1.0)
 
 
+def test_direct_live_segnet_material_occupancy_ignores_one_pixel_crumb() -> None:
+    target_0 = mx.zeros((1, 4, 4, 3))
+    target_1 = mx.ones((1, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 4.0
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 0] = 4.0
+            arr[:, 0, 0, 1] = 5.0
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=1,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        allow_segnet_only_research=True,
+    )
+
+    _total, parts = score_aware_loss(bundle, mx.array([0]))
+
+    assert _scalar(
+        parts["segnet_direct_live_candidate_any_occupied_class_fraction"]
+    ) == pytest.approx(0.4)
+    assert _scalar(
+        parts["segnet_direct_live_candidate_occupied_class_fraction"]
+    ) == pytest.approx(0.2)
+    assert _scalar(
+        parts["segnet_direct_live_occupancy_min_class_pixel_count"]
+    ) == pytest.approx(2.0)
+
+
 def test_direct_live_segnet_class_histogram_tether_penalizes_collapse() -> None:
     target_0 = mx.zeros((2, 4, 4, 3))
     target_1 = mx.ones((2, 4, 4, 3))

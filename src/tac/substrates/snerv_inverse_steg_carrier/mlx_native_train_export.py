@@ -103,6 +103,7 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     dwt2_native_synthesis_adjoint,
     idwt2_multilevel,
 )
+from tac.substrates.snerv_inverse_steg_carrier.inflate import _resize_nchw_bilinear
 from tac.substrates.snerv_inverse_steg_carrier.lf_payload_codec import (
     selected_lf_payload_codec_label,
 )
@@ -172,6 +173,15 @@ SNERV_RECEIVER_RECON_MAX_STD_RATIO = 20.0
 SNERV_RECEIVER_RECON_MAX_SATURATION_DELTA = 0.35
 SNERV_RECEIVER_RECON_MAX_RMSE_NCHW255 = 96.0
 SNERV_RECEIVER_RECON_MAX_MAE_NCHW255 = 64.0
+SNERV_LIVE_SECTION_BYTE_OFFICIAL_COMPONENTS_MISSING_BLOCKER = (
+    "snerv_live_section_byte_official_components_current_state_missing"
+)
+SNERV_LIVE_SECTION_BYTE_OFFICIAL_FALLBACK_BLOCKER = (
+    "snerv_live_section_byte_official_metrics_fallback_used"
+)
+SNERV_LIVE_SECTION_BYTE_OFFICIAL_NEVER_REFRESHED_BLOCKER = (
+    "snerv_live_section_byte_official_metrics_never_refreshed_current_components"
+)
 OFFICIAL_TUB_OUTPUT2_PAYLOAD_TENSOR_NAMES = (
     "tub.temporal_encoder_concat",
     "tub.output2_raw",
@@ -1362,6 +1372,9 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
         dict(static_payload_obj) if isinstance(static_payload_obj, Mapping) else None
     )
     refresh_every = max(1, int(refresh_every_steps or 25))
+    official_metrics_require_current_components = bool(
+        model_size.official_mfu_hfr_tub_numeric_primitives_requested
+    )
     metadata: dict[str, Any] = {
         "schema": "snerv_live_train_time_section_byte_metrics_callback.v1",
         "attached": static_payload is not None,
@@ -1371,11 +1384,14 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
         "cache_hits": 0,
         "fallback_count": 0,
         "uses_current_renderer_state": True,
+        "requires_current_official_components": (
+            official_metrics_require_current_components
+        ),
         "writes_artifacts": False,
         "authority_class": "macos_mlx_research_signal_false_authority",
         "packet_builder_scope": (
             "official_mfu_hfr_tub_current_component_packet"
-            if model_size.official_mfu_hfr_tub_numeric_primitives_requested
+            if official_metrics_require_current_components
             else "rendered_pairs_numpy_portable_snar1_rebuild"
         ),
         "blockers": [],
@@ -1391,6 +1407,20 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
     def _fallback_payload(reason: str) -> Mapping[str, Any] | None:
         metadata["fallback_count"] = int(metadata.get("fallback_count", 0)) + 1
         metadata["last_fallback_reason"] = str(reason)
+        fallback_blockers = [str(reason)]
+        if official_metrics_require_current_components:
+            fallback_blockers.extend(
+                (
+                    SNERV_LIVE_SECTION_BYTE_OFFICIAL_COMPONENTS_MISSING_BLOCKER,
+                    SNERV_LIVE_SECTION_BYTE_OFFICIAL_FALLBACK_BLOCKER,
+                )
+            )
+        metadata["blockers"] = _ordered_unique(
+            [
+                *(str(blocker) for blocker in metadata.get("blockers", ()) if str(blocker)),
+                *fallback_blockers,
+            ]
+        )
         payload = dict(static_payload)
         payload["schema"] = "snerv_train_time_section_byte_metrics_fallback.v1"
         payload["live_profile"] = {
@@ -1405,7 +1435,7 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
                     for blocker in payload.get("blockers", ())
                     if str(blocker)
                 ),
-                str(reason),
+                *fallback_blockers,
             ]
         )
         return payload
@@ -1500,6 +1530,30 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
             )
 
     return _callback, metadata
+
+
+def _snerv_live_section_byte_metrics_blockers(
+    metadata: Mapping[str, Any],
+    *,
+    train_time_section_byte_control_bound: bool,
+) -> list[str]:
+    """Return blockers that make live section-byte pressure untrustworthy."""
+
+    if not train_time_section_byte_control_bound:
+        return []
+    blockers = [
+        str(blocker)
+        for blocker in metadata.get("blockers") or ()
+        if str(blocker)
+    ]
+    if metadata.get("requires_current_official_components") is True:
+        if int(metadata.get("fallback_count") or 0) > 0:
+            blockers.append(SNERV_LIVE_SECTION_BYTE_OFFICIAL_FALLBACK_BLOCKER)
+        if metadata.get("active") is not True:
+            blockers.append(
+                SNERV_LIVE_SECTION_BYTE_OFFICIAL_NEVER_REFRESHED_BLOCKER
+            )
+    return _ordered_unique(blockers)
 
 
 def _positive_int_or_none(value: Any) -> int | None:
@@ -4811,6 +4865,14 @@ def _run_score_aware_long_training_attachment(
         )
         )
         blockers.extend(training_telemetry_contract.get("blockers") or ())
+        blockers.extend(
+            _snerv_live_section_byte_metrics_blockers(
+                live_train_time_section_byte_metrics_metadata,
+                train_time_section_byte_control_bound=bool(
+                    train_time_section_byte_control.get("active") is True
+                ),
+            )
+        )
         if not np.isfinite(final_mse):
             blockers.append("snerv_score_aware_long_training_selected_mse_nonfinite")
         if selection_policy["uses_score_aware_composite"]:
@@ -7627,9 +7689,31 @@ def _snerv_receiver_frame_reconstruction_profile(
         }
 
     decoded_shape = tuple(int(v) for v in decoded.shape)
-    shape_matches = decoded_shape == reference_shape
+    raw_shape_matches = decoded_shape == reference_shape
+    comparison_decoded = decoded
+    comparison_domain = "receiver_native_geometry"
+    scorer_geometry_resize_applied = False
+    shape_matches = raw_shape_matches
     receiver_finite = bool(np.isfinite(decoded).all())
     blockers: list[str] = []
+    if (
+        not raw_shape_matches
+        and len(decoded_shape) == 5
+        and len(reference_shape) == 5
+        and decoded_shape[:3] == reference_shape[:3]
+        and reference_shape[-2:] == SCORER_HW
+    ):
+        flat_decoded = decoded.reshape(
+            int(np.prod(decoded_shape[:2])),
+            int(decoded_shape[2]),
+            int(decoded_shape[3]),
+            int(decoded_shape[4]),
+        )
+        comparison_decoded = _resize_nchw_bilinear(flat_decoded, out_hw=SCORER_HW)
+        comparison_decoded = comparison_decoded.reshape(reference_shape)
+        comparison_domain = "upstream_scorer_geometry_bilinear"
+        scorer_geometry_resize_applied = True
+        shape_matches = True
     if not shape_matches:
         blockers.append("snerv_receiver_frame_reconstruction_shape_mismatch")
     if len(decoded_shape) != 5:
@@ -7644,8 +7728,15 @@ def _snerv_receiver_frame_reconstruction_profile(
     profile.update(
         {
             "decoded_shape": [int(value) for value in decoded.shape],
+            "raw_decoded_shape": [int(value) for value in decoded.shape],
             "reference_shape": [int(value) for value in reference.shape],
+            "comparison_decoded_shape": [
+                int(value) for value in comparison_decoded.shape
+            ],
+            "comparison_domain": comparison_domain,
+            "raw_shape_matches": raw_shape_matches,
             "shape_matches": shape_matches,
+            "scorer_geometry_resize_applied": scorer_geometry_resize_applied,
             "receiver_frames_finite": receiver_finite,
             "blockers": blockers,
         }
@@ -7653,6 +7744,7 @@ def _snerv_receiver_frame_reconstruction_profile(
     if blockers:
         return profile
 
+    decoded = comparison_decoded
     diff = decoded - reference
     abs_diff = np.abs(diff)
     mse = float(np.mean(diff * diff))

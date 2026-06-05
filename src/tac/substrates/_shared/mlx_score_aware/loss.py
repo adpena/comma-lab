@@ -20,6 +20,7 @@ scorer-blind smoke tests.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
@@ -77,6 +78,20 @@ _CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
 _CORE_LOSS_WEIGHT_KEYS = frozenset(
     key for aliases in _CORE_LOSS_WEIGHT_ALIASES.values() for key in aliases
 )
+_SEGNET_OCCUPANCY_MIN_CLASS_FRACTION = 1.0e-3
+_SEGNET_OCCUPANCY_MIN_CLASS_PIXELS = 2
+
+
+def _segnet_occupancy_min_fraction(pixel_count: int) -> tuple[float, int]:
+    """Return the class-mass floor for nondegenerate SegNet occupancy."""
+
+    count = max(
+        _SEGNET_OCCUPANCY_MIN_CLASS_PIXELS,
+        math.ceil(max(int(pixel_count), 0) * _SEGNET_OCCUPANCY_MIN_CLASS_FRACTION),
+    )
+    if pixel_count <= 0:
+        return 1.0, count
+    return float(count / pixel_count), count
 
 
 def component_loss_weight(
@@ -896,6 +911,8 @@ def _segnet_argmax_surface_metrics(
 
     mx = require_mlx_for_harness()
     class_count = int(candidate_logits.shape[-1])
+    pixel_count = int(candidate_logits.size // max(class_count, 1))
+    min_class_fraction, min_class_pixels = _segnet_occupancy_min_fraction(pixel_count)
     cand_argmax = mx.argmax(candidate_logits, axis=-1)
     target_argmax = mx.argmax(target_logits, axis=-1)
     cand_argmax_f = cand_argmax.astype(mx.float32)
@@ -916,7 +933,10 @@ def _segnet_argmax_surface_metrics(
             mx.mean((target_logits - target_mean) ** 2)
         ),
     }
+    any_occupied = mx.array(0.0, dtype=mx.float32)
     occupied = mx.array(0.0, dtype=mx.float32)
+    target_any_occupied = mx.array(0.0, dtype=mx.float32)
+    target_occupied = mx.array(0.0, dtype=mx.float32)
     for class_index in range(class_count):
         cand_fraction = mx.mean(
             (cand_argmax == class_index).astype(mx.float32)
@@ -930,9 +950,31 @@ def _segnet_argmax_surface_metrics(
         metrics[
             f"segnet_direct_live_target_class_{class_index}_fraction"
         ] = target_fraction
-        occupied = occupied + (cand_fraction > 0.0).astype(mx.float32)
+        any_occupied = any_occupied + (cand_fraction > 0.0).astype(mx.float32)
+        occupied = occupied + (cand_fraction >= min_class_fraction).astype(mx.float32)
+        target_any_occupied = target_any_occupied + (
+            target_fraction > 0.0
+        ).astype(mx.float32)
+        target_occupied = target_occupied + (
+            target_fraction >= min_class_fraction
+        ).astype(mx.float32)
+    metrics["segnet_direct_live_candidate_any_occupied_class_fraction"] = (
+        any_occupied / float(max(class_count, 1))
+    )
     metrics["segnet_direct_live_candidate_occupied_class_fraction"] = (
         occupied / float(max(class_count, 1))
+    )
+    metrics["segnet_direct_live_target_any_occupied_class_fraction"] = (
+        target_any_occupied / float(max(class_count, 1))
+    )
+    metrics["segnet_direct_live_target_occupied_class_fraction"] = (
+        target_occupied / float(max(class_count, 1))
+    )
+    metrics["segnet_direct_live_occupancy_min_class_fraction"] = mx.array(
+        min_class_fraction, dtype=mx.float32
+    )
+    metrics["segnet_direct_live_occupancy_min_class_pixel_count"] = mx.array(
+        float(min_class_pixels), dtype=mx.float32
     )
     return metrics
 

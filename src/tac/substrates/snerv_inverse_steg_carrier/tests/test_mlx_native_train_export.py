@@ -34,6 +34,7 @@ from tac.substrates.snerv_inverse_steg_carrier.dwt import (
     dwt2_multilevel,
     idwt2_multilevel,
 )
+from tac.substrates.snerv_inverse_steg_carrier.inflate import _resize_nchw_bilinear
 from tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export import (
     DEFAULT_SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
     SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE,
@@ -1226,11 +1227,91 @@ def test_snerv_live_section_byte_metrics_callback_uses_official_components(
     assert metadata["packet_builder_scope"] == (
         "official_mfu_hfr_tub_current_component_packet"
     )
+    assert metadata["requires_current_official_components"] is True
+    assert mod._snerv_live_section_byte_metrics_blockers(
+        metadata,
+        train_time_section_byte_control_bound=True,
+    ) == []
     assert captured["export_official_components_called"] is True
     assert captured["source_pair_indices"] == (3,)
     assert (
         captured["model_size_adapter"]
         == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+
+
+def test_snerv_live_section_byte_metrics_callback_blocks_official_static_fallback() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    official_model_size = SnervModelSizeConfig(
+        fc_dim=4,
+        adapter=SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+    )
+
+    class FakePartialOfficialModel:
+        def render_pairs_nchw255(self, *, batch_size: int) -> np.ndarray:
+            raise AssertionError(
+                "official live byte metrics must not refit rendered pairs"
+            )
+
+    callback, metadata = mod._build_snerv_live_train_time_section_byte_metrics_callback(
+        model_size=official_model_size,
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(3,),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        train_time_section_byte_control={
+            "metrics_payload": {
+                "schema": "snerv_train_time_section_byte_metrics.v1",
+                "archive_bytes": 10,
+                "section_bytes": {"decoder_payload": 5},
+            }
+        },
+        batch_size=1,
+        refresh_every_steps=1,
+    )
+
+    assert callback is not None
+    payload = dict(callback(FakePartialOfficialModel(), None, {}))
+
+    assert payload["schema"] == "snerv_train_time_section_byte_metrics_fallback.v1"
+    assert payload["archive_bytes"] == 10
+    assert metadata["active"] is False
+    assert metadata["fallback_count"] == 1
+    assert metadata["last_fallback_reason"] == (
+        "snerv_official_live_section_byte_export_components_missing"
+    )
+    assert (
+        mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_COMPONENTS_MISSING_BLOCKER
+        in payload["blockers"]
+    )
+    assert (
+        mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_FALLBACK_BLOCKER
+        in payload["blockers"]
+    )
+
+    blockers = mod._snerv_live_section_byte_metrics_blockers(
+        metadata,
+        train_time_section_byte_control_bound=True,
+    )
+    assert (
+        "snerv_official_live_section_byte_export_components_missing"
+        in blockers
+    )
+    assert (
+        mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_COMPONENTS_MISSING_BLOCKER
+        in blockers
+    )
+    assert mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_FALLBACK_BLOCKER in blockers
+    assert (
+        mod.SNERV_LIVE_SECTION_BYTE_OFFICIAL_NEVER_REFRESHED_BLOCKER
+        in blockers
     )
 
 
@@ -1949,6 +2030,43 @@ def test_receiver_frame_reconstruction_profile_rejects_wrong_reference_layout() 
     assert profile["blockers"] == [
         "snerv_receiver_frame_reconstruction_reference_not_nchw_pair_tensor"
     ]
+
+
+def test_receiver_frame_reconstruction_profile_projects_to_scorer_geometry() -> None:
+    pairs = _tiny_pairs(pairs=1)
+    packet = build_snerv_mlx_native_packet_from_numpy_pairs(
+        pairs,
+        levels=1,
+        wavelet="haar",
+        target_bits_per_coeff=8.0,
+        step_map_bits_per_coeff=4.0,
+        decoder_payload_codec="float32_lzma",
+        source_pair_indices=(7,),
+    )
+    scorer_reference = _resize_nchw_bilinear(
+        pairs.reshape(2, 3, 16, 16),
+        out_hw=(384, 512),
+    ).reshape(1, 2, 3, 384, 512)
+
+    profile = _snerv_receiver_frame_reconstruction_profile(
+        packet.packet,
+        reference_pairs_nchw255=scorer_reference,
+        source_pair_indices=(7,),
+        profile_id="unit_receiver_to_scorer_geometry",
+        reference_kind="source_targets_nchw255",
+        packet_source="unit",
+    )
+
+    assert profile["raw_shape_matches"] is False
+    assert profile["shape_matches"] is True
+    assert profile["scorer_geometry_resize_applied"] is True
+    assert profile["comparison_domain"] == "upstream_scorer_geometry_bilinear"
+    assert profile["comparison_decoded_shape"] == [1, 2, 3, 384, 512]
+    assert "snerv_receiver_frame_reconstruction_shape_mismatch" not in profile[
+        "blockers"
+    ]
+    assert np.isfinite(float(profile["mse_nchw255"]))
+    assert profile["worst_pairs_by_mse"][0]["source_pair_idx"] == 7
 
 
 def test_target_pairs_to_nchw255_rejects_byte_scale_targets() -> None:
