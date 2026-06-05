@@ -23,6 +23,7 @@ mx = pytest.importorskip("mlx.core")
 import mlx.optimizers as optim  # noqa: E402
 
 from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (  # noqa: E402
+    argmax_hinge_loss,
     boundary_argmax_hinge_loss,
     boundary_decision_tckd_loss,
     boundary_weighted_tckd_loss,
@@ -466,6 +467,29 @@ def test_argmax_hinge_nonzero_for_top2_flip():
     student = mx.array([[3.0, 0.0, 5.0, 0.0, 0.0]])  # argmax flips to teacher's top2 (=2)
     assert int(mx.argmax(student, axis=-1)[0]) == 2
     assert float(boundary_argmax_hinge_loss(student, teacher, margin=1.0)) > 0.0
+
+
+def test_all_pixel_argmax_hinge_penalizes_class_collapse():
+    """Bootstrap loss for the observed HiNeRV all-class-2 collapse."""
+
+    teacher = mx.zeros((4, 5))
+    teacher = teacher + mx.array(
+        [
+            [4.0, 0.0, 1.0, 0.0, 0.0],
+            [0.0, 4.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 4.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0, 4.0],
+        ]
+    )
+    collapsed = mx.zeros((4, 5))
+    collapsed = collapsed + mx.array([0.0, 0.0, 5.0, 0.0, 0.0])
+    corrected = teacher + mx.array([2.0, 2.0, 2.0, 2.0, 2.0])
+
+    collapse_loss = float(argmax_hinge_loss(collapsed, teacher, margin=1.0))
+    corrected_loss = float(argmax_hinge_loss(corrected, teacher, margin=1.0))
+
+    assert collapse_loss > 1.0
+    assert corrected_loss < collapse_loss
 
 
 def test_argmax_hinge_gradient_flows():

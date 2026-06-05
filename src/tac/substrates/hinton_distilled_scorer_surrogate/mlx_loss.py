@@ -77,11 +77,13 @@ DISTILLATION_OBJECTIVE_KL_T2 = "kl_t2"
 DISTILLATION_OBJECTIVE_BOUNDARY_TCKD = "boundary_tckd"
 DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD = "boundary_decision_tckd"
 DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE = "boundary_argmax_hinge"
+DISTILLATION_OBJECTIVE_ARGMAX_HINGE = "argmax_hinge"
 VALID_DISTILLATION_OBJECTIVES = (
     DISTILLATION_OBJECTIVE_KL_T2,
     DISTILLATION_OBJECTIVE_BOUNDARY_TCKD,
     DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD,
     DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
+    DISTILLATION_OBJECTIVE_ARGMAX_HINGE,
 )
 # Tiny numerical floor for log + division stability in KL across MLX float32.
 _NUMERIC_FLOOR: float = 1.0e-12
@@ -483,6 +485,55 @@ def boundary_decision_tckd_loss(
     return (temperature * temperature) * mx.sum(w * decision_kl) / denom
 
 
+def _argmax_hinge_per_pixel(
+    student_logits: Any,
+    teacher_logits: Any,
+    *,
+    margin: float = 1.0,
+) -> Any:
+    _require_mlx()
+    if margin <= 0.0:
+        raise ValueError(f"margin must be > 0 (Crammer-Singer unit margin); got {margin}")
+    num_classes = student_logits.shape[-1]
+    # teacher's argmax = the d_seg reference class t at each pixel.
+    target_idx = mx.argmax(teacher_logits, axis=-1, keepdims=True)  # (..., 1)
+    student_logit_t = mx.take_along_axis(student_logits, target_idx, axis=-1)  # (..., 1)
+    # mask out the target position, then max over impostors j != t (ALL of them).
+    eye = mx.eye(num_classes, dtype=student_logits.dtype)  # (K, K)
+    target_oh = mx.take(eye, mx.squeeze(target_idx, axis=-1), axis=0)  # (..., K) one-hot at t
+    masked = student_logits - target_oh * 1.0e30  # push target position to ~ -inf
+    max_impostor = mx.max(masked, axis=-1, keepdims=True)  # (..., 1) = max_{j!=t} student_j
+    # Crammer-Singer hinge: 0 IFF student_logit_t >= max_impostor + margin.
+    hinge = mx.maximum(max_impostor - student_logit_t + margin, 0.0)  # (..., 1)
+    return mx.squeeze(hinge, axis=-1)  # (...)
+
+
+def argmax_hinge_loss(
+    student_logits: Any,
+    teacher_logits: Any,
+    *,
+    margin: float = 1.0,
+) -> Any:
+    """All-pixel Crammer-Singer hinge, a bootstrap-faithful d_seg surrogate.
+
+    ``boundary_argmax_hinge`` is the right near-frontier fine-tuning objective:
+    once most interiors are correct, boundary pixels are where the score moves.
+    A collapsed renderer is different. If the candidate predicts one class
+    everywhere, boundary-only weighting can be too sparse to bootstrap the
+    missing classes. This all-pixel variant directly prices every upstream
+    ``d_seg`` argmax mismatch and is therefore the safer first-stage control
+    before switching to the boundary-focused objective.
+    """
+
+    return mx.mean(
+        _argmax_hinge_per_pixel(
+            student_logits,
+            teacher_logits,
+            margin=margin,
+        )
+    )
+
+
 def boundary_argmax_hinge_loss(
     student_logits: Any,
     teacher_logits: Any,
@@ -543,22 +594,13 @@ def boundary_argmax_hinge_loss(
         Scalar MLX array (the boundary-weighted argmax-hinge loss).
     """
     _require_mlx()
-    if margin <= 0.0:
-        raise ValueError(f"margin must be > 0 (Crammer-Singer unit margin); got {margin}")
     if tau_boundary <= 0.0:
         raise ValueError(f"tau_boundary must be > 0; got {tau_boundary}")
-    num_classes = student_logits.shape[-1]
-    # teacher's argmax = the d_seg reference class t at each pixel.
-    target_idx = mx.argmax(teacher_logits, axis=-1, keepdims=True)  # (..., 1)
-    student_logit_t = mx.take_along_axis(student_logits, target_idx, axis=-1)  # (..., 1)
-    # mask out the target position, then max over impostors j != t (ALL of them).
-    eye = mx.eye(num_classes, dtype=student_logits.dtype)  # (K, K)
-    target_oh = mx.take(eye, mx.squeeze(target_idx, axis=-1), axis=0)  # (..., K) one-hot at t
-    masked = student_logits - target_oh * 1.0e30  # push target position to ~ -inf
-    max_impostor = mx.max(masked, axis=-1, keepdims=True)  # (..., 1) = max_{j!=t} student_j
-    # Crammer-Singer hinge: 0 IFF student_logit_t >= max_impostor + margin.
-    hinge = mx.maximum(max_impostor - student_logit_t + margin, 0.0)  # (..., 1)
-    hinge = mx.squeeze(hinge, axis=-1)  # (...)
+    hinge = _argmax_hinge_per_pixel(
+        student_logits,
+        teacher_logits,
+        margin=margin,
+    )
     # boundary-band weight (fixed reweighting -> stop gradient).
     w = mx.stop_gradient(
         segnet_boundary_band_weights_mlx(teacher_logits, tau_boundary=tau_boundary)
@@ -1090,8 +1132,10 @@ class HintonMlxCustomLossFnConfig:
         distillation_objective: Which scorer-teacher functional to optimize.
             ``kl_t2`` is the original Hinton KL. ``boundary_tckd`` and
             ``boundary_decision_tckd`` are soft diagnostic objectives that can
-            still inherit teacher-softness failure modes. ``boundary_argmax_hinge``
-            is the d_seg-faithful raw-logit hinge with an explicit margin buffer.
+            still inherit teacher-softness failure modes. ``argmax_hinge`` is
+            the all-pixel bootstrap hinge for class-collapse recovery, while
+            ``boundary_argmax_hinge`` is the d_seg-faithful boundary-weighted
+            raw-logit hinge with an explicit margin buffer.
         tau_boundary: Boundary-band temperature for the two boundary objectives.
         hinge_margin: Crammer-Singer margin for ``boundary_argmax_hinge``.
         student_head_out_channels: Number of student-side classes the
@@ -1156,7 +1200,7 @@ class HintonMlxCustomLossFnConfig:
             )
         if self.hinge_margin <= 0.0:
             raise ValueError(
-                f"hinge_margin must be > 0 for boundary_argmax_hinge; got {self.hinge_margin}"
+                f"hinge_margin must be > 0 for argmax_hinge objectives; got {self.hinge_margin}"
             )
         if self.student_head_out_channels < 2:
             raise ValueError(
@@ -1680,6 +1724,12 @@ def score_teacher_distillation_loss(
             teacher_logits=teacher_logits,
             margin=config.hinge_margin,
             tau_boundary=config.tau_boundary,
+        )
+    if config.distillation_objective == DISTILLATION_OBJECTIVE_ARGMAX_HINGE:
+        return argmax_hinge_loss(
+            student_logits=student_logits,
+            teacher_logits=teacher_logits,
+            margin=config.hinge_margin,
         )
     raise ValueError(
         f"unsupported distillation_objective: {config.distillation_objective!r}"

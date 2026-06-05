@@ -412,10 +412,17 @@ def _snerv_score_aware_long_training_telemetry_contract(
     live_calibration_active_observed = False
     live_calibration_loss_observed = False
     direct_live_loss_observed = False
+    direct_live_argmax_observed = False
+    direct_live_class_occupancy_observed = False
+    direct_live_max_candidate_occupied_class_fraction: float | None = None
     pr95_seg_loss_observed = False
     pr95_pose_loss_observed = False
     seg_dual_lambda_active_observed = False
     pose_dual_lambda_active_observed = False
+    pr95_seg_effective_weight_seen = False
+    pr95_seg_effective_weight_active = False
+    pr95_pose_effective_weight_seen = False
+    pr95_pose_effective_weight_active = False
     if not path.is_file():
         blockers = (
             ["snerv_score_aware_long_training_telemetry_missing"]
@@ -460,6 +467,28 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 row,
                 "loss_part_pr95_stage_pose_surrogate",
             )
+            pr95_seg_effective_weight_seen = (
+                pr95_seg_effective_weight_seen
+                or _finite_number_in_row(row, "loss_part_pr95_stage_effective_seg_weight")
+            )
+            pr95_seg_effective_weight_active = (
+                pr95_seg_effective_weight_active
+                or _row_nonzero_finite_number(
+                    row,
+                    "loss_part_pr95_stage_effective_seg_weight",
+                )
+            )
+            pr95_pose_effective_weight_seen = (
+                pr95_pose_effective_weight_seen
+                or _finite_number_in_row(row, "loss_part_pr95_stage_effective_pose_weight")
+            )
+            pr95_pose_effective_weight_active = (
+                pr95_pose_effective_weight_active
+                or _row_nonzero_finite_number(
+                    row,
+                    "loss_part_pr95_stage_effective_pose_weight",
+                )
+            )
             guard_loss_observed = guard_loss_observed or any(
                 _finite_number_in_row(row, key)
                 for key in (
@@ -496,6 +525,30 @@ def _snerv_score_aware_long_training_telemetry_contract(
                     )
                 )
             )
+            direct_live_argmax_observed = (
+                direct_live_argmax_observed
+                or any(
+                    _finite_number_in_row(row, key)
+                    for key in (
+                        "loss_part_segnet_direct_live_argmax_disagreement",
+                        "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement",
+                    )
+                )
+            )
+            for key in (
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+                "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction",
+            ):
+                value = _telemetry_row_value(row, key)
+                if _finite_number(value):
+                    direct_live_class_occupancy_observed = True
+                    fraction = float(value)
+                    if (
+                        direct_live_max_candidate_occupied_class_fraction is None
+                        or fraction
+                        > direct_live_max_candidate_occupied_class_fraction
+                    ):
+                        direct_live_max_candidate_occupied_class_fraction = fraction
             section_rate_observed = section_rate_observed or any(
                 str(key).startswith("train_time_section_rate_score__")
                 and _finite_number(value)
@@ -557,9 +610,34 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append(
             "snerv_score_aware_long_training_direct_live_segnet_loss_missing"
         )
-    if pr95_faithful_curriculum_enabled and pr95_seg_loss_observed and not seg_loss_observed:
+    if expected_direct_live and not direct_live_argmax_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_direct_live_segnet_argmax_metric_missing"
+        )
+    if expected_direct_live and not direct_live_class_occupancy_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_direct_live_segnet_class_occupancy_metric_missing"
+        )
+    if (
+        expected_direct_live
+        and direct_live_class_occupancy_observed
+        and float(direct_live_max_candidate_occupied_class_fraction or 0.0)
+        <= 0.200001
+    ):
+        blockers.append(
+            "snerv_score_aware_long_training_direct_live_segnet_candidate_argmax_collapsed"
+        )
+    pr95_seg_alias_required = bool(
+        pr95_seg_loss_observed
+        and (pr95_seg_effective_weight_active or not pr95_seg_effective_weight_seen)
+    )
+    pr95_pose_alias_required = bool(
+        pr95_pose_loss_observed
+        and (pr95_pose_effective_weight_active or not pr95_pose_effective_weight_seen)
+    )
+    if pr95_faithful_curriculum_enabled and pr95_seg_alias_required and not seg_loss_observed:
         blockers.append("snerv_score_aware_long_training_pr95_seg_alias_missing")
-    if pr95_faithful_curriculum_enabled and pr95_pose_loss_observed and not pose_loss_observed:
+    if pr95_faithful_curriculum_enabled and pr95_pose_alias_required and not pose_loss_observed:
         blockers.append("snerv_score_aware_long_training_pr95_pose_alias_missing")
     blockers = _ordered_unique(blockers)
     return {
@@ -591,8 +669,23 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "segnet_direct_live_distillation_loss_observed": bool(
             direct_live_loss_observed
         ),
+        "segnet_direct_live_argmax_metric_observed": bool(
+            direct_live_argmax_observed
+        ),
+        "segnet_direct_live_class_occupancy_metric_observed": bool(
+            direct_live_class_occupancy_observed
+        ),
+        "segnet_direct_live_max_candidate_occupied_class_fraction": (
+            direct_live_max_candidate_occupied_class_fraction
+        ),
         "pr95_stage_seg_loss_observed": bool(pr95_seg_loss_observed),
         "pr95_stage_pose_loss_observed": bool(pr95_pose_loss_observed),
+        "pr95_stage_seg_effective_weight_active_observed": bool(
+            pr95_seg_effective_weight_active
+        ),
+        "pr95_stage_pose_effective_weight_active_observed": bool(
+            pr95_pose_effective_weight_active
+        ),
         "passed": not blockers,
         "blockers": blockers,
     }

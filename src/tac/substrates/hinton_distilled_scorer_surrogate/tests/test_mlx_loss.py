@@ -28,6 +28,7 @@ from tac.substrates.hinton_distilled_scorer_surrogate import (  # noqa: E402
     DEFAULT_POSE_INPUT_CHANNELS,
     DEFAULT_POSE_POOL_GRID,
     DEFAULT_SEGNET_CLASSES,
+    DISTILLATION_OBJECTIVE_ARGMAX_HINGE,
     DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
     DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD,
     DISTILLATION_OBJECTIVE_BOUNDARY_TCKD,
@@ -438,6 +439,7 @@ def test_make_hinton_custom_loss_fn_returns_scalar_loss() -> None:
         DISTILLATION_OBJECTIVE_BOUNDARY_TCKD,
         DISTILLATION_OBJECTIVE_BOUNDARY_DECISION_TCKD,
         DISTILLATION_OBJECTIVE_BOUNDARY_ARGMAX_HINGE,
+        DISTILLATION_OBJECTIVE_ARGMAX_HINGE,
     ],
 )
 def test_make_hinton_custom_loss_fn_supports_all_distillation_objectives(

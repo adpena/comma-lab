@@ -1646,6 +1646,8 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "loss_part_pr95_stage_pose_surrogate": 5.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.125,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.03125,
+                    "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.75,
+                    "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
                     "loss_part_weighted_pr95_stage_segnet_direct_live_distill": 0.015625,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.0625,
@@ -1684,9 +1686,14 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
     assert contract["segnet_direct_live_distillation_loss_observed"] is True
+    assert contract["segnet_direct_live_argmax_metric_observed"] is True
+    assert contract["segnet_direct_live_class_occupancy_metric_observed"] is True
+    assert contract[
+        "segnet_direct_live_max_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.4)
 
 
-def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_loss(
+def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_metrics(
     tmp_path: Path,
 ) -> None:
     telemetry = tmp_path / "telemetry.jsonl"
@@ -1724,6 +1731,57 @@ def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_loss(
     assert contract["passed"] is False
     assert (
         "hi_nerv_score_aware_training_direct_live_segnet_loss_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_argmax_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_class_occupancy_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 2.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.2,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = runner_mod._compact_score_aware_training_telemetry_contract(
+        telemetry,
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract[
+        "segnet_direct_live_max_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.2)
+    assert (
+        "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
         in contract["blockers"]
     )
 
@@ -6135,7 +6193,20 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.allow_segnet_only_research is False
 
 
-def test_real_scorer_distillation_requires_complete_upstream_snapshot(
+def test_execute_parser_accepts_all_pixel_argmax_hinge_bootstrap_objective() -> None:
+    args = _parse_args(
+        [
+            "--execute-family",
+            "hi_nerv",
+            "--segnet-distillation-objective",
+            "argmax_hinge",
+        ]
+    )
+
+    assert args.segnet_distillation_objective == "argmax_hinge"
+
+
+def test_real_scorer_distillation_requires_active_teacher_upstream_files(
     tmp_path: Path,
 ) -> None:
     incomplete = tmp_path / "upstream"
@@ -6151,8 +6222,20 @@ def test_real_scorer_distillation_requires_complete_upstream_snapshot(
 
     msg = str(exc.value)
     assert "--upstream-dir" in msg
-    assert "posenet.safetensors" in msg
     assert "segnet.safetensors" in msg
+    assert "posenet.safetensors" not in msg
+
+    (incomplete / "models" / "segnet.safetensors").write_bytes(b"seg")
+    with pytest.raises(runner_mod.CompactRendererMlxSpineRunnerError) as exc:
+        _require_scorer_upstream_dir_for_distillation(
+            upstream_dir=incomplete,
+            segnet_distillation_weight=0.0,
+            pose_distillation_weight=0.1,
+        )
+
+    msg = str(exc.value)
+    assert "posenet.safetensors" in msg
+    assert "segnet.safetensors" not in msg
 
 
 def test_selector_v4_execute_parser_exposes_real_family_controls() -> None:
@@ -6526,6 +6609,62 @@ def test_main_from_snerv_advisory_forwards_cleanup_scratch_flag(
         == 0
     )
     assert calls[-1]["cleanup_failed_local_replay_scratch"] is False
+
+
+def test_main_execute_snerv_forwards_direct_live_segnet_weight(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    source_video = tmp_path / "0.mkv"
+    source_video.write_bytes(b"video")
+    captured: dict[str, object] = {}
+
+    def fake_execute_snerv_inverse_steg_advisory_and_adapt(**kwargs):
+        captured.update(kwargs)
+        out = Path(kwargs["output_dir"])
+        out.mkdir(parents=True, exist_ok=True)
+        report_path = out / "compact_renderer_mlx_spine_runner_report.json"
+        report = {
+            "schema": COMPACT_RENDERER_MLX_SPINE_RUNNER_SCHEMA,
+            "mode": "unit_snerv_execute",
+            "report_path": report_path.as_posix(),
+            "blockers": ["unit_false_authority"],
+            "score_claim": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+        report_path.write_text(json.dumps(report, sort_keys=True), encoding="utf-8")
+        return report
+
+    monkeypatch.setattr(runner_mod, "_acquire_active_campaign_lock", lambda **_: None)
+    monkeypatch.setattr(
+        runner_mod,
+        "execute_snerv_inverse_steg_advisory_and_adapt",
+        fake_execute_snerv_inverse_steg_advisory_and_adapt,
+    )
+
+    rc = runner_mod.main(
+        [
+            "--execute-family",
+            "snerv",
+            "--output-dir",
+            (tmp_path / "snerv_direct_live").as_posix(),
+            "--source-video-path",
+            source_video.as_posix(),
+            "--repo-root",
+            tmp_path.as_posix(),
+            "--modelsize-candidate-id",
+            "manual",
+            "--allow-manual-compact-family-launch",
+            "--segnet-direct-live-distillation-weight",
+            "0.25",
+            "--allow-segnet-only-research",
+        ]
+    )
+
+    assert rc == 0
+    assert captured["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
+    assert json.loads(capsys.readouterr().out)["ready_for_exact_eval_dispatch"] is False
 
 
 def test_post_export_materializer_executor_runs_output_scoped_queue(

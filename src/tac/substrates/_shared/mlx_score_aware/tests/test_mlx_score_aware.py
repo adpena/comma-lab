@@ -378,6 +378,58 @@ def test_direct_live_segnet_routes_argmax_hinge_objective() -> None:
         _scalar(hinge_parts["segnet_direct_live_distill"])
     )
     assert _scalar(hinge_parts["segnet_direct_live_distill"]) > 0.0
+    assert _scalar(
+        hinge_parts["segnet_direct_live_argmax_disagreement"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        hinge_parts["segnet_direct_live_candidate_class_1_fraction"]
+    ) == pytest.approx(1.0)
+    assert _scalar(
+        hinge_parts["segnet_direct_live_target_class_0_fraction"]
+    ) == pytest.approx(1.0)
+
+
+def test_direct_live_segnet_routes_all_pixel_argmax_hinge_objective() -> None:
+    target_0 = mx.zeros((2, 4, 4, 3))
+    target_1 = mx.ones((2, 4, 4, 3))
+
+    class _LiveTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            arr = np.zeros((idx.shape[0], 4, 4, self.num_classes), dtype=np.float32)
+            arr[..., 0] = 4.0
+            arr[..., 1] = 3.5
+            return mx.array(arr)
+
+        def teacher_logits_for_frames_nhwc01(self, frames):
+            arr = np.zeros(
+                (frames.shape[0], frames.shape[1], frames.shape[2], self.num_classes),
+                dtype=np.float32,
+            )
+            arr[..., 1] = 4.0
+            arr[..., 0] = 3.0
+            return mx.array(arr)
+
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        scorer_teacher=_LiveTeacher(),
+        segnet_direct_live_distillation_weight=1.0,
+        allow_segnet_only_research=True,
+        segnet_distillation_objective="argmax_hinge",
+        segnet_hinge_margin=0.5,
+    )
+
+    _total, parts = score_aware_loss(bundle, mx.array([0, 1]))
+
+    assert _scalar(parts["segnet_direct_live_distill"]) == pytest.approx(1.5)
+    assert _scalar(
+        parts["segnet_direct_live_argmax_disagreement"]
+    ) == pytest.approx(1.0)
 
 
 def test_pose_distill_composes_real_pose_teacher_and_head() -> None:

@@ -243,6 +243,96 @@ def test_score_aware_checkpoint_selection_policy_preserves_mse_fallback() -> Non
     assert policy["blockers"] == []
 
 
+def test_score_aware_checkpoint_selection_policy_prices_direct_live_only() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._snerv_score_aware_checkpoint_selection_policy(
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        has_real_segnet_teacher=True,
+        has_real_posenet_teacher=False,
+        coder_aware_qat_bound=False,
+        coder_qat_loss_weight_map={},
+        pr95_faithful_curriculum_enabled=False,
+    )
+
+    assert policy["uses_score_aware_composite"] is True
+    assert policy["required_loss_parts"] == ["recon", "segnet_direct_live_distill"]
+    assert policy["blockers"] == []
+    assert policy["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
+
+
+def test_score_aware_long_training_direct_live_only_requires_research_gate(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    report = mod._run_score_aware_long_training_attachment(
+        requested_epochs=0,
+        output_dir=tmp_path,
+        pairs_nchw255=_tiny_pairs(pairs=1),
+        model_size=SnervModelSizeConfig(),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(0,),
+        target_bits_per_coeff=8.0,
+        step_map_bits_per_coeff=4.0,
+        decoder_payload_codec="npz",
+        lf_payload_codec="raw",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=0.0,
+        hard_byte_ceiling=None,
+        learning_rate=1.0e-3,
+        batch_pairs=1,
+        section_byte_refresh_every_steps=1,
+        optimizer_kind="pact_muon_adamw",
+        grad_clip_max_norm=1.0,
+        weight_decay=1.0e-4,
+        eval_roundtrip_ste=False,
+        scorer_input_distribution_guard_weight=0.0,
+        scorer_input_distribution_guard_saturation_margin=0.02,
+        scorer_input_distribution_guard_temperature=0.01,
+        checkpoint_retention_keep_last_n=1,
+        checkpoint_retention_keep_best_n=1,
+        checkpoint_retention_keep_every_n_epochs=None,
+        checkpoint_retention_cold_store_roots=(),
+        scorer_upstream_dir=tmp_path / "missing_upstream",
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        pose_distillation_loss="mse",
+        pose_distillation_huber_delta=1.0,
+        segnet_distillation_objective="kl_t2",
+        distillation_temperature=2.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        segnet_tau_boundary=1.0,
+        segnet_hinge_margin=1.0,
+        distillation_device="cpu",
+        allow_segnet_only_research=False,
+        coder_aware_qat=False,
+        coder_qat_quant_bits=8,
+        coder_qat_quant_residual_weight=0.0,
+        coder_qat_magnitude_weight=0.0,
+        coder_qat_delta_weight=0.0,
+        coder_qat_c1a_entropy_weight=0.0,
+        coder_qat_c1a_sigma=0.2,
+        coder_qat_c1a_sample_size=4,
+        pr95_faithful_curriculum_enabled=False,
+        pr95_muon_policy="every_stage",
+        prioritized_pair_indices=(),
+        scorer_error_pair_sampling_weights=None,
+        scorer_error_pair_curriculum=None,
+        allow_overwrite=True,
+    )
+
+    assert (
+        "snerv_score_aware_long_training_segnet_requires_posenet_teacher"
+        in report["blockers"]
+    )
+
+
 def test_snerv_scorer_tether_dual_targets_are_strict_before_long_training() -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
     from tac.substrates._shared.mlx_score_aware.dual_ascent import (
@@ -292,6 +382,8 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "loss_part_pr95_stage_pose_surrogate": 2.0,
                     "loss_part_pr95_stage_scorer_input_distribution_guard": 0.25,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.0625,
+                    "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
                     "loss_part_weighted_pr95_stage_segnet_direct_live_distill": 0.03125,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.125,
@@ -333,9 +425,14 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["segnet_live_calibration_loss_observed"] is True
     assert contract["expected_segnet_direct_live_distillation"] is True
     assert contract["segnet_direct_live_distillation_loss_observed"] is True
+    assert contract["segnet_direct_live_argmax_metric_observed"] is True
+    assert contract["segnet_direct_live_class_occupancy_metric_observed"] is True
+    assert contract[
+        "segnet_direct_live_max_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.4)
 
 
-def test_score_aware_telemetry_contract_rejects_missing_direct_live_loss(
+def test_score_aware_telemetry_contract_rejects_missing_direct_live_metrics(
     tmp_path: Path,
 ) -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
@@ -375,6 +472,58 @@ def test_score_aware_telemetry_contract_rejects_missing_direct_live_loss(
     assert contract["passed"] is False
     assert (
         "snerv_score_aware_long_training_direct_live_segnet_loss_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_argmax_metric_missing"
+        in contract["blockers"]
+    )
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_class_occupancy_metric_missing"
+        in contract["blockers"]
+    )
+
+
+def test_score_aware_telemetry_contract_rejects_direct_live_class_collapse(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_segnet_direct_live_distill": 2.0,
+                    "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.2,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=0.0,
+        pose_distillation_weight=0.0,
+        segnet_student_live_calibration_weight=0.0,
+        segnet_direct_live_distillation_weight=0.25,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=False,
+        train_time_section_byte_control_bound=False,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract[
+        "segnet_direct_live_max_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.2)
+    assert (
+        "snerv_score_aware_long_training_direct_live_segnet_candidate_argmax_collapsed"
         in contract["blockers"]
     )
 

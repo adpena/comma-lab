@@ -633,12 +633,67 @@ def scorer_input_distribution_guard_loss(
     }
 
 
-def direct_live_segnet_logit_distillation_loss(
+def _segnet_argmax_surface_metrics(
+    *,
+    candidate_logits: Any,
+    target_logits: Any,
+) -> dict[str, Any]:
+    """Return scorer-class telemetry for a live SegNet surface.
+
+    The scalar distillation loss can decrease while the candidate remains
+    collapsed to one class.  These metrics make that failure mode observable in
+    the training loop, before export or exact replay budget is spent.
+    """
+
+    mx = require_mlx_for_harness()
+    class_count = int(candidate_logits.shape[-1])
+    cand_argmax = mx.argmax(candidate_logits, axis=-1)
+    target_argmax = mx.argmax(target_logits, axis=-1)
+    cand_argmax_f = cand_argmax.astype(mx.float32)
+    target_argmax_f = target_argmax.astype(mx.float32)
+    disagreement = mx.mean((cand_argmax != target_argmax).astype(mx.float32))
+    cand_mean = mx.mean(candidate_logits)
+    target_mean = mx.mean(target_logits)
+    metrics: dict[str, Any] = {
+        "segnet_direct_live_argmax_disagreement": disagreement,
+        "segnet_direct_live_candidate_argmax_mean": mx.mean(cand_argmax_f),
+        "segnet_direct_live_target_argmax_mean": mx.mean(target_argmax_f),
+        "segnet_direct_live_candidate_logits_mean": cand_mean,
+        "segnet_direct_live_target_logits_mean": target_mean,
+        "segnet_direct_live_candidate_logits_std": mx.sqrt(
+            mx.mean((candidate_logits - cand_mean) ** 2)
+        ),
+        "segnet_direct_live_target_logits_std": mx.sqrt(
+            mx.mean((target_logits - target_mean) ** 2)
+        ),
+    }
+    occupied = mx.array(0.0, dtype=mx.float32)
+    for class_index in range(class_count):
+        cand_fraction = mx.mean(
+            (cand_argmax == class_index).astype(mx.float32)
+        )
+        target_fraction = mx.mean(
+            (target_argmax == class_index).astype(mx.float32)
+        )
+        metrics[
+            f"segnet_direct_live_candidate_class_{class_index}_fraction"
+        ] = cand_fraction
+        metrics[
+            f"segnet_direct_live_target_class_{class_index}_fraction"
+        ] = target_fraction
+        occupied = occupied + (cand_fraction > 0.0).astype(mx.float32)
+    metrics["segnet_direct_live_candidate_occupied_class_fraction"] = (
+        occupied / float(max(class_count, 1))
+    )
+    return metrics
+
+
+def _direct_live_segnet_logit_distillation_loss_and_metrics(
     bundle: RendererBundle,
     seg_rgb_nhwc01: Any,
     idx: Any,
-) -> Any:
-    """Score-facing direct SegNet VJP term for decoded candidate frames.
+) -> tuple[Any, dict[str, Any]]:
+    """Score-facing direct SegNet VJP term plus class-surface telemetry.
 
     This is deliberately separate from the tiny learnable student head.  The
     live teacher surface runs the real ported SegNet on the decoded candidate
@@ -666,7 +721,7 @@ def direct_live_segnet_logit_distillation_loss(
             f"candidate={tuple(candidate_logits.shape)} "
             f"target={tuple(target_logits.shape)}"
         )
-    if bundle.segnet_distillation_objective == "boundary_argmax_hinge":
+    if bundle.segnet_distillation_objective != "kl_t2":
         from tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss import (
             HintonMlxCustomLossFnConfig,
             score_teacher_distillation_loss,
@@ -679,12 +734,32 @@ def direct_live_segnet_logit_distillation_loss(
             hinge_margin=bundle.segnet_hinge_margin,
             student_head_out_channels=bundle.distillation_num_classes,
         )
-        return score_teacher_distillation_loss(
+        loss = score_teacher_distillation_loss(
             student_logits=candidate_logits,
             teacher_logits=target_logits,
             config=loss_cfg,
         )
-    return mx.mean((candidate_logits - target_logits) ** 2)
+    else:
+        loss = mx.mean((candidate_logits - target_logits) ** 2)
+    return loss, _segnet_argmax_surface_metrics(
+        candidate_logits=candidate_logits,
+        target_logits=target_logits,
+    )
+
+
+def direct_live_segnet_logit_distillation_loss(
+    bundle: RendererBundle,
+    seg_rgb_nhwc01: Any,
+    idx: Any,
+) -> Any:
+    """Score-facing direct SegNet VJP term for decoded candidate frames."""
+
+    loss, _metrics = _direct_live_segnet_logit_distillation_loss_and_metrics(
+        bundle,
+        seg_rgb_nhwc01,
+        idx,
+    )
+    return loss
 
 
 def score_aware_loss(
@@ -854,13 +929,17 @@ def score_aware_loss(
     direct_live_weight = float(bundle.segnet_direct_live_distillation_weight)
     if direct_live_weight > 0.0 and segnet_stage_weight != 0.0:
         seg_rgb = rgb_1 if bundle.segnet_teacher_frame_index == 1 else rgb_0
-        direct_live_distill = direct_live_segnet_logit_distillation_loss(
+        (
+            direct_live_distill,
+            direct_live_metrics,
+        ) = _direct_live_segnet_logit_distillation_loss_and_metrics(
             bundle,
             seg_rgb,
             idx,
         )
         total = total + direct_live_weight * segnet_stage_weight * direct_live_distill
         parts["segnet_direct_live_distill"] = direct_live_distill
+        parts.update(direct_live_metrics)
 
     if bundle.pose_distillation_weight > 0.0 and pose_stage_weight != 0.0:
         # PRODUCTION pose path (Catalog #164 + the C6 IBPS / DreamerV3 lesson,

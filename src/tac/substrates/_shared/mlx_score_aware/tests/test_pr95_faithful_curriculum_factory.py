@@ -1138,6 +1138,92 @@ def test_pr95_curriculum_consumes_direct_live_segnet_distillation_NO_FAKE() -> N
     assert metrics[
         "loss_part_weighted_pr95_stage_segnet_direct_live_distill"
     ] >= 0.0
+    assert metrics["loss_part_segnet_direct_live_distill"] == pytest.approx(
+        metrics["loss_part_pr95_stage_segnet_direct_live_distill"]
+    )
+    assert metrics["loss_part_weighted_segnet_direct_live_distill"] == pytest.approx(
+        metrics["loss_part_weighted_pr95_stage_segnet_direct_live_distill"]
+    )
+
+
+@requires_mlx
+def test_pr95_curriculum_dual_ascent_observes_direct_live_segnet_alias_NO_FAKE() -> None:
+    """Direct-live PR95 SegNet loss must feed the shared dual controller."""
+
+    import mlx.core as mx
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+    from tac.substrates._shared.mlx_score_aware.dual_ascent import (
+        build_default_nerv_train_time_dual_ascent_config,
+    )
+
+    class _LiveSegTeacher:
+        def __init__(self, cached: object) -> None:
+            self.cached = cached
+            self.num_classes = int(cached.num_classes)
+
+        def teacher_logits_for_indices(self, idx: object) -> object:
+            return self.cached.teacher_logits_for_indices(idx)
+
+        def teacher_logits_for_frames_nhwc01(self, frames: object) -> object:
+            b, h, w, _c = frames.shape
+            mean = mx.mean(frames, axis=-1, keepdims=True)
+            channels = [mean * float(i + 1) for i in range(self.num_classes)]
+            return mx.concatenate(channels, axis=-1).reshape(
+                (int(b), int(h), int(w), self.num_classes)
+            )
+
+    bundle = _make_minimal_pr95_score_bundle()
+    bundle.scorer_teacher = _LiveSegTeacher(bundle.scorer_teacher)
+    bundle.distillation_weight = 0.0
+    bundle.pose_distillation_weight = 0.0
+    bundle.segnet_direct_live_distillation_weight = 0.5
+    dual_config = build_default_nerv_train_time_dual_ascent_config(
+        family="hi_nerv",
+        segnet_distillation_weight=0.0,
+        segnet_direct_live_distillation_weight=0.5,
+        pose_distillation_weight=0.0,
+    )
+    for constraint in dual_config["constraints"]:
+        constraint["target"] = 0.0
+        constraint.pop("target_fraction_of_initial", None)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="test_direct_live_substrate",
+        pr95_faithful_curriculum_enabled=True,
+        pr95_curriculum_total_epochs=8,
+        train_time_dual_ascent_config=dual_config,
+    )
+    adapter.notify_global_epoch(0)
+    batch = adapter.sample_batch(batch_size=2, seed=0)
+
+    metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 0.0},
+    )
+    followup_metrics = adapter.train_step(
+        batch=batch,
+        learning_rate=1e-3,
+        loss_weights={"recon": 1.0, "distill": 1.0, "pose_distill": 0.0},
+    )
+    mx.eval(adapter.model.parameters())
+
+    assert metrics["loss_part_segnet_direct_live_distill"] == pytest.approx(
+        metrics["loss_part_pr95_stage_segnet_direct_live_distill"]
+    )
+    assert metrics[
+        "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "dual_ascent_metric__hi_nerv_segnet_direct_live_distill"
+    ] == pytest.approx(metrics["loss_part_segnet_direct_live_distill"])
+    assert metrics[
+        "dual_ascent_lambda__hi_nerv_segnet_direct_live_distill"
+    ] > 0.0
+    assert followup_metrics[
+        "dual_ascent_missing_metric__hi_nerv_segnet_direct_live_distill"
+    ] == pytest.approx(0.0)
 
 
 @requires_mlx

@@ -911,11 +911,11 @@ class MlxScoreAwareAdapter:
         )
         from tac.substrates._shared.mlx_score_aware.loss import (
             _apply_eval_roundtrip_ste_nhwc01,
+            _direct_live_segnet_logit_distillation_loss_and_metrics,
             _pose_distillation_loss_and_raw_mse,
             _prepare_recon_pixel_weight,
             _weighted_recon,
             decode_frames_nhwc01,
-            direct_live_segnet_logit_distillation_loss,
             pose_student_inputs_nhwc,
             scorer_input_distribution_guard_loss,
         )
@@ -1056,8 +1056,12 @@ class MlxScoreAwareAdapter:
         else:
             seg_loss = mx.array(0.0, dtype=mx.float32)
         direct_live_seg_loss = None
+        direct_live_metrics: dict[str, Any] = {}
         if direct_live_active:
-            direct_live_seg_loss = direct_live_segnet_logit_distillation_loss(
+            (
+                direct_live_seg_loss,
+                direct_live_metrics,
+            ) = _direct_live_segnet_logit_distillation_loss_and_metrics(
                 self.bundle,
                 seg_rgb,
                 batch,
@@ -1162,6 +1166,8 @@ class MlxScoreAwareAdapter:
             parts["pr95_c1a_entropy"] = cat_entropy_term
         if direct_live_seg_loss is not None:
             parts["pr95_stage_segnet_direct_live_distill"] = direct_live_seg_loss
+            for name, value in direct_live_metrics.items():
+                parts[f"pr95_stage_{name}"] = value
         parts.update(extra_qat_parts)
         # Keep the symbolic surface reachable for tests and downstream source
         # audits without putting a string into float-only metrics.
@@ -1279,13 +1285,36 @@ class MlxScoreAwareAdapter:
                     effective_pose_weight * scalar
                 )
             elif name == "pr95_stage_segnet_direct_live_distill":
-                out[
-                    "loss_part_weighted_pr95_stage_segnet_direct_live_distill"
-                ] = (
-                    float(self.bundle.segnet_direct_live_distillation_weight)
-                    * component_loss_weight(loss_weights, "distill")
+                direct_live_stage_weight = component_loss_weight(
+                    loss_weights,
+                    "distill",
+                )
+                direct_live_config_weight = float(
+                    self.bundle.segnet_direct_live_distillation_weight
+                )
+                weighted = (
+                    direct_live_config_weight
+                    * direct_live_stage_weight
                     * scalar
                 )
+                out[
+                    "loss_part_weighted_pr95_stage_segnet_direct_live_distill"
+                ] = weighted
+                out[
+                    "loss_part_stage_weight_pr95_stage_segnet_direct_live_distill"
+                ] = direct_live_stage_weight
+                out[
+                    "loss_part_config_weight_pr95_stage_segnet_direct_live_distill"
+                ] = direct_live_config_weight
+                if direct_live_config_weight > 0.0 and direct_live_stage_weight > 0.0:
+                    out["loss_part_segnet_direct_live_distill"] = scalar
+                    out["loss_part_weighted_segnet_direct_live_distill"] = weighted
+                    out["loss_part_stage_weight_segnet_direct_live_distill"] = (
+                        direct_live_stage_weight
+                    )
+                    out["loss_part_config_weight_segnet_direct_live_distill"] = (
+                        direct_live_config_weight
+                    )
             elif name == "pr95_c1a_entropy":
                 out["loss_part_weighted_pr95_c1a_entropy"] = (
                     float(stage_verdict.cat_lambda) * scalar
@@ -2444,6 +2473,23 @@ class MlxScoreAwareAdapter:
         ):
             metrics["loss_part_pose_score_term"] = metrics[
                 "loss_part_pr95_stage_pose_surrogate"
+            ]
+        if (
+            "loss_part_segnet_direct_live_distill" not in metrics
+            and "loss_part_pr95_stage_segnet_direct_live_distill" in metrics
+            and _active_pr95_stage_metric_weight(
+                metrics,
+                "loss_part_config_weight_pr95_stage_segnet_direct_live_distill",
+                "loss_part_stage_weight_pr95_stage_segnet_direct_live_distill",
+            )
+            and _active_pr95_stage_metric_weight(
+                metrics,
+                "loss_part_stage_weight_pr95_stage_segnet_direct_live_distill",
+                "loss_part_stage_weight_pr95_stage_segnet_direct_live_distill",
+            )
+        ):
+            metrics["loss_part_segnet_direct_live_distill"] = metrics[
+                "loss_part_pr95_stage_segnet_direct_live_distill"
             ]
 
     def _train_time_section_byte_metrics(

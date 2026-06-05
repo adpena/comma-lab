@@ -716,6 +716,15 @@ def test_adapter_train_step_emits_weighted_direct_live_segnet_part() -> None:
     assert metrics[
         "loss_part_weighted_segnet_direct_live_distill"
     ] == pytest.approx(raw * 0.25 * 0.5)
+    assert metrics[
+        "loss_part_segnet_direct_live_argmax_disagreement"
+    ] == pytest.approx(0.0)
+    assert metrics[
+        "loss_part_segnet_direct_live_candidate_class_0_fraction"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
+    ] == pytest.approx(0.2)
 
 
 @mlx_only
