@@ -35,6 +35,9 @@ SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT = 16
 SNERV_SCORER_TETHER_SMOKE_HEALTH_SCHEMA = (
     "snerv_scorer_domain_tether_smoke_health.v1"
 )
+SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_PROOF_SCHEMA = (
+    "snerv_scorer_input_distribution_guard_proof.v1"
+)
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -88,6 +91,7 @@ _SNERV_SCORER_TETHER_METRICS = (
 )
 _SNERV_SCORER_TETHER_RECENT_MISSING_FRACTION = 0.9
 _SNERV_SCORER_TETHER_LAMBDA_ACTIVE_EPS = 1.0e-12
+_HINERV_TRAIN_TIME_CONTROL_LAMBDA_ACTIVE_EPS = 1.0e-12
 _FULL_VIDEO_RESPONSE_BAD_SCORE_THRESHOLD = DEFAULT_MAX_MLX_SCORE_FOR_LOCAL_REPLAY
 _FULL_VIDEO_RESPONSE_BAD_SEG_THRESHOLD = 0.02
 _FULL_VIDEO_RESPONSE_BAD_POSE_THRESHOLD = 1.0
@@ -489,6 +493,94 @@ def _snerv_scorer_tether_smoke_health(
     }
 
 
+def _snerv_scorer_input_distribution_guard_proof(
+    *,
+    native_export: Mapping[str, Any],
+    score_aware_training: Mapping[str, Any],
+    runner_report: Mapping[str, Any],
+    telemetry_contract: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """Return proof that the train-time scorer-input guard was live telemetry."""
+
+    if not native_export and not score_aware_training and not telemetry_contract:
+        return None
+    required_control_contract = {}
+    for source in (native_export, score_aware_training, runner_report):
+        if not isinstance(source, Mapping):
+            continue
+        direct = source.get("score_aware_long_training_required_control_contract")
+        if isinstance(direct, Mapping):
+            required_control_contract = dict(direct)
+            break
+        training = source.get("score_aware_long_training")
+        if isinstance(training, Mapping):
+            nested = training.get("required_control_contract")
+            if isinstance(nested, Mapping):
+                required_control_contract = dict(nested)
+                break
+    control = {}
+    controls = required_control_contract.get("controls")
+    if isinstance(controls, Mapping):
+        maybe_control = controls.get("scorer_input_distribution_guard")
+        if isinstance(maybe_control, Mapping):
+            control = dict(maybe_control)
+    score_training = (
+        native_export.get("score_aware_long_training")
+        if isinstance(native_export.get("score_aware_long_training"), Mapping)
+        else {}
+    )
+    bound = bool(
+        native_export.get("score_aware_long_training_scorer_input_distribution_guard_bound")
+        is True
+        or score_training.get("scorer_input_distribution_guard_bound") is True
+        or control.get("bound") is True
+    )
+    required = bool(
+        telemetry_contract.get("expected_scorer_input_guard_metric") is True
+        or control.get("required") is True
+        or bound
+    )
+    metric_observed = bool(
+        telemetry_contract.get("scorer_input_guard_metric_observed") is True
+        or control.get("telemetry_observed") is True
+    )
+    dual_metric_observed = bool(
+        telemetry_contract.get("scorer_input_guard_dual_metric_observed") is True
+        or control.get("telemetry_observed") is True
+    )
+    telemetry_contract_passed = bool(telemetry_contract.get("passed") is True)
+    blockers: list[str] = []
+    if not required:
+        blockers.append("snerv_scorer_input_distribution_guard_not_required_by_feedback")
+    if required and not bound:
+        blockers.append("snerv_scorer_input_distribution_guard_not_bound")
+    if required and not telemetry_contract:
+        blockers.append("snerv_scorer_input_distribution_guard_telemetry_contract_missing")
+    if required and not telemetry_contract_passed:
+        blockers.append("snerv_scorer_input_distribution_guard_telemetry_contract_failed")
+    if required and not metric_observed:
+        blockers.append("snerv_scorer_input_distribution_guard_metric_missing")
+    if required and not dual_metric_observed:
+        blockers.append("snerv_scorer_input_distribution_guard_dual_metric_missing")
+    blockers = _dedupe_strings(blockers)
+    return {
+        "schema": SNERV_SCORER_INPUT_DISTRIBUTION_GUARD_PROOF_SCHEMA,
+        "required": required,
+        "bound": bound,
+        "telemetry_contract_passed": telemetry_contract_passed,
+        "metric_observed": metric_observed,
+        "dual_metric_observed": dual_metric_observed,
+        "required_control_contract_passed": (
+            required_control_contract.get("passed")
+            if required_control_contract
+            else None
+        ),
+        "passed": bool(required and not blockers),
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _snerv_receiver_value_domain_passed(profile: Any) -> bool | None:
     if not isinstance(profile, Mapping):
         return None
@@ -874,6 +966,16 @@ def build_nerv_candidate_feedback_row(
         telemetry_contract=snerv_score_aware_training_telemetry_contract,
         evidence_expected=snerv_tether_evidence_expected,
     )
+    snerv_scorer_input_distribution_guard_proof = (
+        _snerv_scorer_input_distribution_guard_proof(
+            native_export=snerv_native_export,
+            score_aware_training=score_aware_training,
+            runner_report=runner_report,
+            telemetry_contract=snerv_score_aware_training_telemetry_contract,
+        )
+        if snerv_family_key == "snerv"
+        else None
+    )
     snerv_renderer_nondegenerate_proof = _snerv_renderer_nondegenerate_proof(
         snerv_native_export_for_proof
     )
@@ -947,6 +1049,21 @@ def build_nerv_candidate_feedback_row(
                 str(blocker)
                 for blocker in snerv_scorer_tether_health.get("blockers") or []
             ],
+            *(
+                [
+                    str(blocker)
+                    for blocker in (
+                        snerv_scorer_input_distribution_guard_proof.get("blockers")
+                        or []
+                    )
+                    if blocker
+                    != "snerv_scorer_input_distribution_guard_not_required_by_feedback"
+                ]
+                if isinstance(
+                    snerv_scorer_input_distribution_guard_proof, Mapping
+                )
+                else []
+            ),
             *[
                 str(blocker)
                 for blocker in snerv_official_checkpoint_mapping.get("blockers")
@@ -968,6 +1085,21 @@ def build_nerv_candidate_feedback_row(
         [
             *list(hi_nerv_receiver_cache_control.get("direct_feedback_blockers") or []),
             *list(snerv_scorer_tether_health.get("blockers") or []),
+            *(
+                [
+                    str(blocker)
+                    for blocker in (
+                        snerv_scorer_input_distribution_guard_proof.get("blockers")
+                        or []
+                    )
+                    if blocker
+                    != "snerv_scorer_input_distribution_guard_not_required_by_feedback"
+                ]
+                if isinstance(
+                    snerv_scorer_input_distribution_guard_proof, Mapping
+                )
+                else []
+            ),
         ]
     )
     recommended_launch_mutations = _dedupe_strings(
@@ -1268,6 +1400,19 @@ def build_nerv_candidate_feedback_row(
         ),
         "snerv_scorer_domain_tether_blockers": list(
             snerv_scorer_tether_health.get("blockers") or []
+        ),
+        "snerv_scorer_input_distribution_guard_proof": (
+            snerv_scorer_input_distribution_guard_proof or None
+        ),
+        "snerv_scorer_input_distribution_guard_proof_passed": (
+            snerv_scorer_input_distribution_guard_proof.get("passed")
+            if isinstance(snerv_scorer_input_distribution_guard_proof, Mapping)
+            else None
+        ),
+        "snerv_scorer_input_distribution_guard_blockers": (
+            list(snerv_scorer_input_distribution_guard_proof.get("blockers") or [])
+            if isinstance(snerv_scorer_input_distribution_guard_proof, Mapping)
+            else []
         ),
         "snerv_renderer_nondegenerate_proof": (
             snerv_renderer_nondegenerate_proof or None
@@ -2414,11 +2559,20 @@ def build_nerv_training_telemetry_feedback_row(
     snerv_scorer_tether_health = (
         _snerv_scorer_tether_health(rows) if family_key == "snerv" else {}
     )
+    hinerv_train_time_control_health = (
+        _hinerv_train_time_control_health(rows) if family_key == "hi_nerv" else {}
+    )
     recommended_launch_mutations = _training_telemetry_mutations_for_family(
         family_key,
         [
             *list(health.get("recommended_launch_mutations") or []),
             *list(snerv_scorer_tether_health.get("recommended_launch_mutations") or []),
+            *list(
+                hinerv_train_time_control_health.get(
+                    "recommended_launch_mutations"
+                )
+                or []
+            ),
         ],
     )
     health_for_control = {
@@ -2429,8 +2583,14 @@ def build_nerv_training_telemetry_feedback_row(
         "snerv_scorer_domain_tether_health": (
             snerv_scorer_tether_health if snerv_scorer_tether_health else None
         ),
+        "hinerv_train_time_control_health": (
+            hinerv_train_time_control_health
+            if hinerv_train_time_control_health
+            else None
+        ),
         "recommended_launch_mutations": recommended_launch_mutations,
     }
+    direct_blockers: list[str] = []
     blockers: list[str] = [
         _training_telemetry_blocker(
             family_key,
@@ -2482,7 +2642,6 @@ def build_nerv_training_telemetry_feedback_row(
                 "pr95_final_stage_muon_missing_telemetry",
             )
         )
-    direct_blockers: list[str] = []
     if bool(snerv_scorer_tether_health.get("degenerate_renderer_risk_detected")):
         scorer_tether_blockers = [
             str(blocker)
@@ -2491,6 +2650,14 @@ def build_nerv_training_telemetry_feedback_row(
         ]
         blockers.extend(scorer_tether_blockers)
         direct_blockers.extend(scorer_tether_blockers)
+    if bool(hinerv_train_time_control_health.get("control_inert_risk_detected")):
+        control_blockers = [
+            str(blocker)
+            for blocker in hinerv_train_time_control_health.get("blockers") or []
+            if blocker
+        ]
+        blockers.extend(control_blockers)
+        direct_blockers.extend(control_blockers)
     training_stopped = not _is_midrun_feedback_snapshot(stop_reason)
     training_control = _training_control_recommendation(
         health=health_for_control,
@@ -2561,6 +2728,14 @@ def build_nerv_training_telemetry_feedback_row(
         ),
         "snerv_scorer_domain_tether_blockers": list(
             snerv_scorer_tether_health.get("blockers") or []
+        ),
+        "hinerv_train_time_control_health": (
+            hinerv_train_time_control_health
+            if hinerv_train_time_control_health
+            else None
+        ),
+        "hinerv_train_time_control_blockers": list(
+            hinerv_train_time_control_health.get("blockers") or []
         ),
         "pose_instability_detected": bool(health["pose_instability_detected"]),
         "pose_instability_ever_detected": bool(
@@ -3436,6 +3611,131 @@ def _snerv_scorer_tether_metric_health(
         "metric_missing_detected": metric_missing,
         "lambda_inactive_detected": lambda_inactive,
     }
+
+
+def _hinerv_train_time_control_health(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    metric_names = (
+        "hi_nerv_segnet_last_frame_distill",
+        "hi_nerv_posenet_yuv6_pair_distill",
+    )
+    metric_health = {
+        metric: _snerv_scorer_tether_metric_health(rows, metric=metric)
+        for metric in metric_names
+    }
+    section_health = _hinerv_section_byte_control_health(rows)
+    inactive_metrics = [
+        metric
+        for metric, health in metric_health.items()
+        if bool(health.get("lambda_inactive_detected"))
+    ]
+    missing_metrics = [
+        metric
+        for metric, health in metric_health.items()
+        if bool(health.get("metric_missing_detected"))
+    ]
+    blockers: list[str] = []
+    if missing_metrics:
+        blockers.append("hi_nerv_train_time_dual_missing_metric_telemetry")
+    if inactive_metrics:
+        blockers.append("hi_nerv_train_time_dual_lambda_inactive_telemetry")
+    if "hi_nerv_segnet_last_frame_distill" in missing_metrics:
+        blockers.append("hi_nerv_train_time_dual_segnet_metric_missing_telemetry")
+    if "hi_nerv_posenet_yuv6_pair_distill" in missing_metrics:
+        blockers.append("hi_nerv_train_time_dual_posenet_metric_missing_telemetry")
+    if "hi_nerv_segnet_last_frame_distill" in inactive_metrics:
+        blockers.append("hi_nerv_train_time_dual_segnet_lambda_inactive_telemetry")
+    if "hi_nerv_posenet_yuv6_pair_distill" in inactive_metrics:
+        blockers.append("hi_nerv_train_time_dual_posenet_lambda_inactive_telemetry")
+    if bool(section_health.get("section_rate_metric_observed")) and not bool(
+        section_health.get("section_byte_dual_lambda_active_observed")
+    ):
+        blockers.append(
+            "hi_nerv_train_time_section_byte_dual_lambda_inactive_telemetry"
+        )
+    recommended: list[str] = []
+    if blockers:
+        recommended.extend(
+            [
+                "require_hinerv_scorer_and_section_dual_lambdas_before_long_training_reuse",
+                "relaunch_hinerv_with_live_byte_cap_dual_ascent_actuating_from_step_zero",
+            ]
+        )
+    return {
+        "schema": "hi_nerv_train_time_control_health.v1",
+        "row_count": len(rows),
+        "recent_window_epochs": _TRAINING_CONTROL_RECENT_WINDOW_EPOCHS,
+        "metric_health": metric_health,
+        "section_byte_control_health": section_health,
+        "missing_metrics": missing_metrics,
+        "lambda_inactive_metrics": inactive_metrics,
+        "control_inert_risk_detected": bool(blockers),
+        "blockers": _dedupe_strings(blockers),
+        "recommended_launch_mutations": recommended,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _hinerv_section_byte_control_health(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    all_rate_flags: list[bool] = []
+    all_lambda_flags: list[bool] = []
+    recent_rate_flags: list[bool] = []
+    recent_lambda_flags: list[bool] = []
+    recent_rows = list(rows)[-_TRAINING_CONTROL_RECENT_WINDOW_EPOCHS:]
+    for row in rows:
+        rate_seen, lambda_active = _hinerv_section_byte_control_row_flags(row)
+        all_rate_flags.append(rate_seen)
+        all_lambda_flags.append(lambda_active)
+    for row in recent_rows:
+        rate_seen, lambda_active = _hinerv_section_byte_control_row_flags(row)
+        recent_rate_flags.append(rate_seen)
+        recent_lambda_flags.append(lambda_active)
+    rate_observed = any(all_rate_flags)
+    lambda_active_observed = any(all_lambda_flags)
+    recent_rate_observed = any(recent_rate_flags)
+    recent_lambda_active_observed = any(recent_lambda_flags)
+    return {
+        "schema": "hi_nerv_section_byte_control_health.v1",
+        "rate_metric_observation_count": sum(1 for flag in all_rate_flags if flag),
+        "rate_metric_recent_observation_count": sum(
+            1 for flag in recent_rate_flags if flag
+        ),
+        "lambda_observation_count": sum(1 for flag in all_lambda_flags if flag),
+        "lambda_recent_observation_count": sum(
+            1 for flag in recent_lambda_flags if flag
+        ),
+        "section_rate_metric_observed": bool(rate_observed),
+        "section_rate_metric_recent_observed": bool(recent_rate_observed),
+        "section_byte_dual_lambda_active_observed": bool(lambda_active_observed),
+        "section_byte_dual_lambda_recent_active_observed": bool(
+            recent_lambda_active_observed
+        ),
+    }
+
+
+def _hinerv_section_byte_control_row_flags(row: Mapping[str, Any]) -> tuple[bool, bool]:
+    loss_components = row.get("loss_components")
+    sources = [row]
+    if isinstance(loss_components, Mapping):
+        sources.append(loss_components)
+    rate_seen = any(
+        str(key).startswith("train_time_section_rate_score__")
+        and _float_or_none(value) is not None
+        for source in sources
+        for key, value in source.items()
+    )
+    lambda_active = any(
+        str(key).startswith("dual_ascent_lambda__hi_nerv_")
+        and str(key).endswith("_section_bytes")
+        and (value_float := _float_or_none(value)) is not None
+        and abs(float(value_float)) > _HINERV_TRAIN_TIME_CONTROL_LAMBDA_ACTIVE_EPS
+        for source in sources
+        for key, value in source.items()
+    )
+    return rate_seen, lambda_active
 
 
 def _is_midrun_feedback_snapshot(stop_reason: str | None) -> bool:

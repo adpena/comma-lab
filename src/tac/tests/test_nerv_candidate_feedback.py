@@ -1026,8 +1026,12 @@ def _snerv_native_runner_report(
                 "posenet_dual_metric_observed": True,
                 "segnet_dual_lambda_active_observed": True,
                 "posenet_dual_lambda_active_observed": True,
+                "expected_scorer_input_guard_metric": True,
+                "scorer_input_guard_metric_observed": True,
+                "scorer_input_guard_dual_metric_observed": True,
                 "blockers": [],
             },
+            "scorer_input_distribution_guard_bound": True,
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -1036,8 +1040,12 @@ def _snerv_native_runner_report(
             "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
             "passed": True,
             "row_count": 2,
+            "expected_scorer_input_guard_metric": True,
+            "scorer_input_guard_metric_observed": True,
+            "scorer_input_guard_dual_metric_observed": True,
             "blockers": [],
         },
+        "score_aware_long_training_scorer_input_distribution_guard_bound": True,
         "snerv_scorer_tether_smoke_gate": {
             "schema": "snerv_scorer_tether_smoke_gate.v1",
             "attached": True,
@@ -1197,6 +1205,8 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert row["snerv_score_aware_long_training_telemetry_contract"]["passed"] is True
     assert row["snerv_scorer_domain_tether_passed"] is True
     assert row["snerv_scorer_domain_tether_blockers"] == []
+    assert row["snerv_scorer_input_distribution_guard_proof_passed"] is True
+    assert row["snerv_scorer_input_distribution_guard_blockers"] == []
     assert row["snerv_trained_state_exportable"] is True
     assert row["snerv_checkpoint_trained_state_exportable"] is True
     assert row["snerv_score_aware_long_training_trained_state_exportable"] is True
@@ -1258,6 +1268,58 @@ def test_snerv_candidate_feedback_harvests_runner_level_tether_evidence(
     assert row["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_candidate_feedback_emits_scorer_input_distribution_guard_proof(
+    tmp_path: Path,
+) -> None:
+    report = _snerv_native_runner_report(
+        tmp_path,
+        required_pair_proof=True,
+        native_num_pairs=600,
+    )
+    native = report["snerv_mlx_native_export"]
+    contract = native["score_aware_long_training_telemetry_contract"]
+    contract.update(
+        {
+            "expected_scorer_input_guard_metric": True,
+            "scorer_input_guard_metric_observed": True,
+            "scorer_input_guard_dual_metric_observed": True,
+        }
+    )
+    native["score_aware_long_training"][
+        "training_telemetry_contract"
+    ] = dict(contract)
+    native["score_aware_long_training_scorer_input_distribution_guard_bound"] = True
+    native["score_aware_long_training_required_control_contract"] = {
+        "schema": "snerv_score_aware_long_training_required_control_contract.v1",
+        "passed": True,
+        "controls": {
+            "scorer_input_distribution_guard": {
+                "required": True,
+                "bound": True,
+                "telemetry_observed": True,
+                "passed": True,
+            }
+        },
+        "blockers": [],
+        "score_claim": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    proof = row["snerv_scorer_input_distribution_guard_proof"]
+    assert proof["schema"] == "snerv_scorer_input_distribution_guard_proof.v1"
+    assert proof["required"] is True
+    assert proof["bound"] is True
+    assert proof["metric_observed"] is True
+    assert proof["dual_metric_observed"] is True
+    assert proof["passed"] is True
+    assert row["snerv_scorer_input_distribution_guard_proof_passed"] is True
+    assert row["snerv_scorer_input_distribution_guard_blockers"] == []
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_snerv_candidate_feedback_fails_closed_without_tether_evidence(
     tmp_path: Path,
 ) -> None:
@@ -1284,11 +1346,49 @@ def test_snerv_candidate_feedback_fails_closed_without_tether_evidence(
     assert "snerv_scorer_domain_tether_missing_telemetry" in row[
         "direct_feedback_blockers"
     ]
-    assert "snerv_score_aware_long_training_telemetry_contract_missing" in row[
+
+
+def test_snerv_candidate_feedback_fails_closed_when_guard_is_required_but_unbound(
+    tmp_path: Path,
+) -> None:
+    report = _snerv_native_runner_report(
+        tmp_path,
+        required_pair_proof=True,
+        native_num_pairs=600,
+    )
+    native = report["snerv_mlx_native_export"]
+    native["score_aware_long_training_scorer_input_distribution_guard_bound"] = False
+    native["score_aware_long_training"].pop(
+        "scorer_input_distribution_guard_bound",
+        None,
+    )
+    contract = native["score_aware_long_training_telemetry_contract"]
+    contract["passed"] = False
+    contract["expected_scorer_input_guard_metric"] = True
+    contract["scorer_input_guard_metric_observed"] = False
+    contract["scorer_input_guard_dual_metric_observed"] = False
+    contract["blockers"] = ["snerv_score_aware_guard_metric_missing"]
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    proof = row["snerv_scorer_input_distribution_guard_proof"]
+    assert proof["required"] is True
+    assert proof["bound"] is False
+    assert proof["passed"] is False
+    assert "snerv_scorer_input_distribution_guard_not_bound" in row[
+        "direct_feedback_blockers"
+    ]
+    assert "snerv_scorer_input_distribution_guard_metric_missing" in row[
+        "direct_feedback_blockers"
+    ]
+    assert "snerv_scorer_input_distribution_guard_dual_metric_missing" in row[
+        "blockers"
+    ]
+    assert "snerv_score_aware_long_training_telemetry_contract_failed" in row[
         "direct_feedback_blockers"
     ]
     assert row["snerv_renderer_nondegenerate_proof_passed"] is False
-    assert "snerv_renderer_nondegenerate_tether_gate_missing_or_failed" in row[
+    assert "snerv_renderer_nondegenerate_telemetry_contract_missing_or_failed" in row[
         "blockers"
     ]
     assert row["score_claim"] is False
@@ -1629,6 +1729,58 @@ def test_training_telemetry_feedback_detects_segnet_stagnation(
     ]
     assert "hi_nerv_segnet_stagnation_telemetry_feedback" in row["blockers"]
     assert row["score_claim"] is False
+
+
+def test_training_telemetry_feedback_blocks_hinerv_section_rate_without_section_lambda(
+    tmp_path: Path,
+) -> None:
+    telemetry = tmp_path / "hinerv_section_rate_without_lambda.jsonl"
+    rows = [
+        {
+            "epoch": epoch,
+            "learning_rate": 2.7e-5,
+            "loss_components": {
+                "loss_part_pose_distill": 1.0,
+                "loss_part_distill": 5.0,
+                "train_time_section_rate_score__decoder_payload": 0.002,
+                "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
+                "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
+                "dual_ascent_lambda__hi_nerv_segnet_last_frame_distill": 0.25,
+                "dual_ascent_lambda__hi_nerv_posenet_yuv6_pair_distill": 0.5,
+            },
+            "per_axis_decomposition": {"pose": 2.0, "seg": 5.0},
+        }
+        for epoch in range(8)
+    ]
+    telemetry.write_text(
+        "".join(json.dumps(row, sort_keys=True) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+
+    row = build_nerv_training_telemetry_feedback_row(
+        telemetry_path=telemetry,
+        family="hi_nerv",
+        candidate_id="hinerv_np600_ld4_ed12_dc8_portfolio_auto_ceil36000",
+        candidate_num_pairs=600,
+    )
+
+    health = row["hinerv_train_time_control_health"]
+    assert health["control_inert_risk_detected"] is True
+    assert health["section_byte_control_health"]["section_rate_metric_observed"] is True
+    assert (
+        health["section_byte_control_health"][
+            "section_byte_dual_lambda_active_observed"
+        ]
+        is False
+    )
+    assert (
+        "hi_nerv_train_time_section_byte_dual_lambda_inactive_telemetry"
+        in row["direct_feedback_blockers"]
+    )
+    assert (
+        "relaunch_hinerv_with_live_byte_cap_dual_ascent_actuating_from_step_zero"
+        in row["recommended_launch_mutations"]
+    )
 
 
 def test_training_telemetry_feedback_uses_family_specific_blockers(
