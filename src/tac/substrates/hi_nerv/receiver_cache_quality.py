@@ -445,9 +445,27 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
     interior_mismatch_pixels = int(mismatch_pixels - boundary_mismatch_pixels)
     max_class = int(max(np.max(cand_argmax), np.max(ref_argmax), 0))
     class_count = max(max_class + 1, 5)
+    candidate_histogram = [
+        int(v) for v in np.bincount(cand_argmax.reshape(-1), minlength=class_count)
+    ]
+    reference_histogram = [
+        int(v) for v in np.bincount(ref_argmax.reshape(-1), minlength=class_count)
+    ]
+    candidate_occupied_class_fraction = _argmax_histogram_occupied_fraction(
+        candidate_histogram
+    )
+    reference_occupied_class_fraction = _argmax_histogram_occupied_fraction(
+        reference_histogram
+    )
+    min_candidate_occupied_class_fraction = 0.400001
     blockers = ["hi_nerv_receiver_cache_segnet_argmax_probe_is_false_authority"]
     if disagreement > threshold:
         blockers.append("candidate_segnet_argmax_disagreement_too_high")
+    if (
+        reference_occupied_class_fraction >= min_candidate_occupied_class_fraction
+        and candidate_occupied_class_fraction < min_candidate_occupied_class_fraction
+    ):
+        blockers.append("hi_nerv_receiver_cache_segnet_argmax_class_collapse")
 
     return {
         "schema": HI_NERV_RECEIVER_CACHE_SEGNET_ARGMAX_PROBE_SCHEMA,
@@ -480,16 +498,17 @@ def build_hi_nerv_receiver_cache_segnet_argmax_probe(
             if interior_pixels
             else None
         ),
-        "candidate_argmax_histogram": [
-            int(v) for v in np.bincount(cand_argmax.reshape(-1), minlength=class_count)
-        ],
-        "reference_argmax_histogram": [
-            int(v) for v in np.bincount(ref_argmax.reshape(-1), minlength=class_count)
-        ],
+        "candidate_argmax_histogram": candidate_histogram,
+        "reference_argmax_histogram": reference_histogram,
+        "candidate_occupied_class_fraction": candidate_occupied_class_fraction,
+        "reference_occupied_class_fraction": reference_occupied_class_fraction,
         "candidate_top2_margin": _margin_stats(cand_margin),
         "reference_top2_margin": _margin_stats(ref_margin),
         "thresholds": {
             "max_segnet_argmax_disagreement_for_fit_gate": threshold,
+            "min_candidate_occupied_class_fraction": (
+                min_candidate_occupied_class_fraction
+            ),
         },
         "fit_gate_passed": disagreement <= threshold,
         "blockers": blockers,
@@ -522,6 +541,12 @@ def _build_segnet_argmax_probe_not_run_report(
         ],
         **FALSE_AUTHORITY,
     }
+
+
+def _argmax_histogram_occupied_fraction(values: list[int]) -> float:
+    if not values:
+        return 0.0
+    return float(sum(1 for value in values if int(value) > 0) / len(values))
 
 
 def write_hi_nerv_direct_receiver_cache_from_payload(
