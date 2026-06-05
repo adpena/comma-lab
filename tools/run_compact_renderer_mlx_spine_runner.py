@@ -9848,6 +9848,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             cleanup_failed_scratch=cleanup_failed_local_replay_scratch,
             repo_root=root,
         )
+    post_export_receiver_cache_quality_summary = _hi_nerv_receiver_cache_quality_summary(
+        post_export_receiver_cache_quality
+    )
     trained_archive_byte_oracle = _write_hi_nerv_trained_archive_byte_oracle(
         output_dir=out,
         artifact_dict=artifact_dict,
@@ -9857,6 +9860,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         receiver_proof_path=receiver_proof_path,
         local_cpu_replay_summary=local_cpu_replay_summary,
         mlx_prefilter_coverage=mlx_prefilter_coverage,
+        post_export_receiver_cache_quality_summary=(
+            post_export_receiver_cache_quality_summary
+        ),
         repo_root=root,
     )
     candidate_curriculum_plan = build_hinerv_candidate_curriculum_plan(
@@ -9891,6 +9897,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         measured_archive_bytes=(
             int(trained_archive_byte_oracle["measured_archive_bytes"])
             if trained_archive_byte_oracle.get("measured_archive_bytes") is not None
+            and bool(trained_archive_byte_oracle.get("feedback_ready"))
             else None
         ),
     )
@@ -9926,6 +9933,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
                 "byte_oracle_feedback_ready": trained_archive_byte_oracle[
                     "feedback_ready"
                 ],
+                "byte_oracle_measured_archive_bytes": (
+                    trained_archive_byte_oracle.get("measured_archive_bytes")
+                ),
+                "byte_oracle_post_export_receiver_cache_quality_feedback_ready": (
+                    trained_archive_byte_oracle["row"].get(
+                        "post_export_receiver_cache_quality_feedback_ready"
+                    )
+                ),
                 "byte_oracle_blockers": list(
                     trained_archive_byte_oracle.get("blockers") or []
                 ),
@@ -10051,9 +10066,6 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         _hi_nerv_receiver_cache_quality_routable_hard_pair_coverage(
             post_export_receiver_cache_quality
         )
-    )
-    post_export_receiver_cache_quality_summary = _hi_nerv_receiver_cache_quality_summary(
-        post_export_receiver_cache_quality
     )
     train_receiver_class_escape_contract = (
         _hi_nerv_train_receiver_class_escape_contract(
@@ -12193,6 +12205,7 @@ def _write_hi_nerv_trained_archive_byte_oracle(
     receiver_proof_path: Path | None,
     local_cpu_replay_summary: Mapping[str, Any] | None,
     mlx_prefilter_coverage: Mapping[str, Any],
+    post_export_receiver_cache_quality_summary: Mapping[str, Any] | None = None,
     repo_root: Path,
 ) -> dict[str, Any]:
     """Write planner-facing measured archive bytes for a trained HiNeRV row."""
@@ -12260,6 +12273,21 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         hard_byte_ceilings=hard_byte_ceilings,
         candidate=candidate,
     )
+    receiver_quality_blockers: list[str] = []
+    receiver_quality_feedback_ready = False
+    if isinstance(post_export_receiver_cache_quality_summary, Mapping):
+        receiver_quality_blockers = [
+            str(blocker)
+            for blocker in (
+                post_export_receiver_cache_quality_summary.get("blockers") or []
+            )
+        ]
+        receiver_quality_feedback_ready = bool(
+            post_export_receiver_cache_quality_summary.get("quality_gate_passed")
+        ) and not any(
+            "argmax_class_collapse" in blocker
+            for blocker in receiver_quality_blockers
+        )
     row: dict[str, Any] = {
         "schema": "hi_nerv_trained_archive_byte_oracle_row.v1",
         "row_id": candidate_id,
@@ -12304,6 +12332,14 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         "full_video_mlx_prefilter_attached": bool(
             mlx_prefilter_coverage.get("has_full_video_mlx_prefilter")
         ),
+        "post_export_receiver_cache_quality": (
+            dict(post_export_receiver_cache_quality_summary)
+            if isinstance(post_export_receiver_cache_quality_summary, Mapping)
+            else None
+        ),
+        "post_export_receiver_cache_quality_feedback_ready": (
+            receiver_quality_feedback_ready
+        ),
         "axis_tag": "[planning/control]",
         "blockers": [],
         **FALSE_AUTHORITY,
@@ -12324,6 +12360,22 @@ def _write_hi_nerv_trained_archive_byte_oracle(
         blockers.append("hi_nerv_local_cpu_replay_gate_missing")
     if local_replay_axis and not local_replay_axis.lower().startswith("[contest-"):
         blockers.append("hi_nerv_local_cpu_replay_not_contest_auth_axis")
+    if isinstance(post_export_receiver_cache_quality_summary, Mapping):
+        if not bool(
+            post_export_receiver_cache_quality_summary.get("quality_gate_passed")
+        ):
+            blockers.append(
+                "hi_nerv_trained_archive_byte_oracle_receiver_cache_quality_failed"
+            )
+        if any("argmax_class_collapse" in blocker for blocker in receiver_quality_blockers):
+            blockers.append(
+                "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse"
+            )
+        blockers.extend(receiver_quality_blockers)
+    else:
+        blockers.append(
+            "hi_nerv_trained_archive_byte_oracle_receiver_cache_quality_missing"
+        )
     row["blockers"] = _dedupe(blockers)
 
     ladder = build_nerv_receiver_closed_modelsize_ladder(
@@ -12353,6 +12405,7 @@ def _write_hi_nerv_trained_archive_byte_oracle(
             and proof_passed
             and int(num_pairs) >= CONTEST_PAIR_COUNT
             and not measured_byte_cap["blockers"]
+            and receiver_quality_feedback_ready
         ),
         "blockers": _dedupe([*blockers, *(ladder.get("blockers") or [])]),
         **FALSE_AUTHORITY,

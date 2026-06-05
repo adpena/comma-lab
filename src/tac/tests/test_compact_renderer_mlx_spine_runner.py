@@ -7888,6 +7888,23 @@ def test_hinerv_full_coverage_execute_runs_local_cpu_replay_gate(
     monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
     monkeypatch.setattr(
         runner_mod,
+        "_write_hi_nerv_runner_post_export_receiver_cache_quality",
+        lambda **_kwargs: {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": str(tmp_path / "receiver_quality.json"),
+            "quality_gate_passed": True,
+            "quality_gate": {"verdict": "passed", "stats": {}, "blockers": []},
+            "segnet_argmax_probe": {
+                "fit_gate_passed": True,
+                "segnet_argmax_disagreement_rate": 0.0,
+                "candidate_argmax_histogram": [1, 1, 1, 1, 1],
+                "reference_argmax_histogram": [1, 1, 1, 1, 1],
+            },
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+        },
+    )
+    monkeypatch.setattr(
+        runner_mod,
         "stage_local_replay_submission",
         fake_stage_local_replay_submission,
     )
@@ -8233,6 +8250,66 @@ def test_hinerv_trained_archive_byte_oracle_blocks_measured_over_cap(
         "blockers"
     ]
     assert oracle["feedback_ready"] is False
+
+
+def test_hinerv_trained_archive_byte_oracle_blocks_receiver_class_collapse(
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "candidate.zip"
+    archive.write_bytes(b"x" * 64)
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    proof = tmp_path / "receiver_proof.json"
+    proof.write_text(
+        json.dumps(
+            {
+                "schema": "hi_nerv_receiver_proof.v1",
+                "receiver_archive_replay_verified": True,
+                "blockers": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    oracle = runner_mod._write_hi_nerv_trained_archive_byte_oracle(
+        output_dir=tmp_path,
+        artifact_dict={
+            "archive_path": archive.as_posix(),
+            "archive_bytes": archive.stat().st_size,
+            "archive_sha256": archive_sha,
+        },
+        modelsize_candidate={
+            "candidate_id": "hi_nerv_oracle_collapsed",
+            "modelsize_mparams": 0.02,
+            "hard_byte_ceiling": 178_000,
+            "nominal_total_payload_bytes": 16,
+        },
+        hard_byte_ceilings=(178_000,),
+        num_pairs=600,
+        receiver_proof_path=proof,
+        local_cpu_replay_summary={
+            "axis_tag": "[contest-CPU]",
+            "score_claim": False,
+            "blockers": [],
+        },
+        mlx_prefilter_coverage={"has_full_video_mlx_prefilter": True},
+        post_export_receiver_cache_quality_summary={
+            "schema": "hi_nerv_receiver_cache_quality_summary.v1",
+            "quality_gate_passed": False,
+            "segnet_candidate_occupied_class_fraction": 0.2,
+            "segnet_reference_occupied_class_fraction": 1.0,
+            "blockers": ["hi_nerv_receiver_cache_segnet_argmax_class_collapse"],
+        },
+        repo_root=REPO_ROOT,
+    )
+
+    assert oracle["measured_archive_bytes"] == archive.stat().st_size
+    assert oracle["row"]["post_export_receiver_cache_quality_feedback_ready"] is False
+    assert oracle["feedback_ready"] is False
+    assert (
+        "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse"
+        in oracle["blockers"]
+    )
+    assert "hi_nerv_receiver_cache_segnet_argmax_class_collapse" in oracle["blockers"]
 
 
 def test_measured_archive_byte_cap_report_allows_selected_looser_ceiling() -> None:
@@ -8660,6 +8737,23 @@ def test_hinerv_auto_mlx_prefilter_profile_unlocks_local_cpu_replay_gate(
     monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
     monkeypatch.setattr(
         runner_mod,
+        "_write_hi_nerv_runner_post_export_receiver_cache_quality",
+        lambda **_kwargs: {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": str(tmp_path / "receiver_quality.json"),
+            "quality_gate_passed": True,
+            "quality_gate": {"verdict": "passed", "stats": {}, "blockers": []},
+            "segnet_argmax_probe": {
+                "fit_gate_passed": True,
+                "segnet_argmax_disagreement_rate": 0.0,
+                "candidate_argmax_histogram": [1, 1, 1, 1, 1],
+                "reference_argmax_histogram": [1, 1, 1, 1, 1],
+            },
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+        },
+    )
+    monkeypatch.setattr(
+        runner_mod,
         "stage_local_replay_submission",
         fake_stage_local_replay_submission,
     )
@@ -8794,6 +8888,23 @@ def test_hinerv_execute_emits_trained_archive_byte_oracle_feedback(
             )
 
     monkeypatch.setattr(runner_mod, "_run_hi_nerv_mlx_scoreaware_smoke", fake_train)
+    monkeypatch.setattr(
+        runner_mod,
+        "_write_hi_nerv_runner_post_export_receiver_cache_quality",
+        lambda **_kwargs: {
+            "schema": "hi_nerv_receiver_cache_quality_report.v1",
+            "report_path": str(tmp_path / "byte_oracle_receiver_quality.json"),
+            "quality_gate_passed": True,
+            "quality_gate": {"verdict": "passed", "stats": {}, "blockers": []},
+            "segnet_argmax_probe": {
+                "fit_gate_passed": True,
+                "segnet_argmax_disagreement_rate": 0.0,
+                "candidate_argmax_histogram": [1, 1, 1, 1, 1],
+                "reference_argmax_histogram": [1, 1, 1, 1, 1],
+            },
+            "blockers": ["hi_nerv_receiver_cache_quality_is_false_authority"],
+        },
+    )
     monkeypatch.setattr(
         runner_mod,
         "stage_local_replay_submission",
