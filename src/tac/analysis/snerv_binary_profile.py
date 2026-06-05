@@ -34,6 +34,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 SCHEMA = "snerv_binary_profile.v1"
 AXIS_TAG = "[local-rate-profile false-authority]"
 DEFAULT_FRONTIER_BYTES = 178_493
+SNAR1_MAGIC = b"SNAR1"
 FALSE_AUTHORITY = {
     "score_claim": False,
     "frontier_score_claim": False,
@@ -167,10 +168,7 @@ def _load_snerv_packet(path: Path) -> tuple[bytes, dict[str, Any]]:
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as zf:
             infos = zf.infolist()
-            names = [info.filename for info in infos]
-            if "0.bin" not in names:
-                raise SnervBinaryProfileError("SNeRV archive.zip is missing 0.bin")
-            packet = zf.read("0.bin")
+            selected_info, packet, input_kind = _select_zip_packet_member(zf, infos)
             members = [
                 {
                     "name": info.filename,
@@ -182,15 +180,20 @@ def _load_snerv_packet(path: Path) -> tuple[bytes, dict[str, Any]]:
                 for info in infos
             ]
         archive_bytes = path.stat().st_size
+        selected_compress_size = int(selected_info.compress_size)
+        selected_file_size = int(selected_info.file_size)
+        selected_name = selected_info.filename
+        is_root_0bin = selected_name == "0.bin"
         return packet, {
-            "input_kind": "contest_archive_zip",
+            "input_kind": input_kind,
             "archive_bytes": int(archive_bytes),
             "zip_member_count": len(members),
             "zip_members": members,
-            "zip_0bin_file_size": len(packet),
-            "zip_0bin_compress_size": next(
-                row["compress_size"] for row in members if row["name"] == "0.bin"
-            ),
+            "zip_packet_member_name": selected_name,
+            "zip_packet_file_size": selected_file_size,
+            "zip_packet_compress_size": selected_compress_size,
+            "zip_0bin_file_size": len(packet) if is_root_0bin else None,
+            "zip_0bin_compress_size": selected_compress_size if is_root_0bin else None,
             "zip_overhead_bytes": int(archive_bytes)
             - int(sum(row["compress_size"] for row in members)),
         }
@@ -200,10 +203,31 @@ def _load_snerv_packet(path: Path) -> tuple[bytes, dict[str, Any]]:
         "archive_bytes": None,
         "zip_member_count": None,
         "zip_members": [],
+        "zip_packet_member_name": None,
+        "zip_packet_file_size": None,
+        "zip_packet_compress_size": None,
         "zip_0bin_file_size": None,
         "zip_0bin_compress_size": None,
         "zip_overhead_bytes": None,
     }
+
+
+def _select_zip_packet_member(
+    zf: zipfile.ZipFile,
+    infos: list[zipfile.ZipInfo],
+) -> tuple[zipfile.ZipInfo, bytes, str]:
+    by_name = {info.filename: info for info in infos}
+    if "0.bin" in by_name:
+        info = by_name["0.bin"]
+        return info, zf.read(info.filename), "contest_archive_zip"
+    if len(infos) == 1:
+        info = infos[0]
+        packet = zf.read(info.filename)
+        if packet.startswith(SNAR1_MAGIC):
+            return info, packet, "single_member_snar_archive_zip"
+    raise SnervBinaryProfileError(
+        "SNeRV archive.zip is missing 0.bin and does not contain a single SNAR1 member"
+    )
 
 
 def _section_rows(sections: Mapping[str, bytes], *, total_bytes: int) -> list[dict[str, Any]]:

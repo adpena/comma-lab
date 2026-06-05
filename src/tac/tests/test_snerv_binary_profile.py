@@ -120,6 +120,27 @@ def test_snerv_binary_profile_attributes_archive_sections(tmp_path: Path) -> Non
     assert profile["ready_for_exact_eval_dispatch"] is False
 
 
+def test_snerv_binary_profile_accepts_single_member_snar_zip_for_rate_custody(
+    tmp_path: Path,
+) -> None:
+    packet = _snar1_packet()
+    archive_path = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("x", packet)
+
+    profile = build_snerv_binary_profile(input_path=archive_path, frontier_bytes=1)
+
+    assert profile["input_kind"] == "single_member_snar_archive_zip"
+    assert profile["charged_archive_bytes"] == archive_path.stat().st_size
+    assert profile["snar1_packet_bytes"] == len(packet)
+    assert profile["package_profile"]["zip_packet_member_name"] == "x"
+    assert profile["package_profile"]["zip_packet_file_size"] == len(packet)
+    assert profile["package_profile"]["zip_0bin_file_size"] is None
+    assert "not_packaged_as_contest_archive_zip" in profile["blockers"]
+    assert profile["score_claim"] is False
+    assert profile["ready_for_exact_eval_dispatch"] is False
+
+
 def test_write_snerv_binary_profile_supports_raw_snar1_packet(tmp_path: Path) -> None:
     packet_path = tmp_path / "candidate.snar"
     packet_path.write_bytes(_snar1_packet())
