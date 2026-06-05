@@ -91,6 +91,7 @@ DEFAULT_OUTPUT_ROOT = "/Volumes/VertigoDataTier/pact/nerv_long_training_campaign
 DEFAULT_EPOCHS = 29_650
 DEFAULT_BATCH_PAIRS = 8
 DEFAULT_LEARNING_RATE = 1.0e-3
+DEFAULT_SNERV_BOUNDED_PROOF_PAIR_COUNT = 16
 DEFAULT_HINERV_TELEMETRY_FLUSH_INTERVAL_EPOCHS = 1
 DEFAULT_CODER_QAT_QUANT_RESIDUAL_WEIGHT = 1.0e-3
 DEFAULT_CODER_QAT_MAGNITUDE_WEIGHT = 1.0e-4
@@ -442,7 +443,11 @@ def _snerv_scorer_tether_smoke_gate(
             **FALSE_AUTHORITY,
         }
     blockers: list[str] = []
-    if source.get("schema") != "snerv_scorer_tether_smoke.v1":
+    accepted_schemas = {
+        "snerv_scorer_tether_smoke.v1",
+        "snerv_score_aware_long_training_scorer_tether_gate.v1",
+    }
+    if source.get("schema") not in accepted_schemas:
         blockers.append("snerv_scorer_tether_smoke_schema_mismatch")
     if source.get("passed") is not True:
         blockers.append("snerv_scorer_tether_smoke_failed")
@@ -599,10 +604,17 @@ def build_nerv_long_training_campaign_plan(
     snerv_value_domain_xray_reports: Sequence[Mapping[str, Any]] = (),
     snerv_hf_residual_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
     snerv_joint_codebook_receiver_payload_proofs: Sequence[Mapping[str, Any]] = (),
+    snerv_temporal_lf_predictor_receiver_payload_proofs: Sequence[
+        Mapping[str, Any]
+    ] = (),
+    snerv_lf_super_resolution_receiver_payload_proofs: Sequence[
+        Mapping[str, Any]
+    ] = (),
     pr95_baseline_identity: Mapping[str, Any] | None = None,
     snerv_scorer_tether_smoke_report: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
     snerv_bounded_proof_epochs: int = 3,
+    snerv_bounded_proof_pair_count: int = DEFAULT_SNERV_BOUNDED_PROOF_PAIR_COUNT,
     experiment_queue_id: str = DEFAULT_EXPERIMENT_QUEUE_ID,
     planner_row_queue_artifact_path: str | Path | None = None,
 ) -> dict[str, Any]:
@@ -729,6 +741,7 @@ def build_nerv_long_training_campaign_plan(
                 planner_row_queue_artifact_path=planner_queue_artifact,
                 modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 snerv_lf_payload_recode_sources=snerv_lf_payload_recode_sources,
+                bounded_proof_pair_count=int(snerv_bounded_proof_pair_count),
             )
         )
 
@@ -771,6 +784,12 @@ def build_nerv_long_training_campaign_plan(
         ),
         joint_codebook_receiver_payload_proofs=(
             snerv_joint_codebook_receiver_payload_proofs
+        ),
+        temporal_lf_predictor_receiver_payload_proofs=(
+            snerv_temporal_lf_predictor_receiver_payload_proofs
+        ),
+        lf_super_resolution_receiver_payload_proofs=(
+            snerv_lf_super_resolution_receiver_payload_proofs
         ),
         output_root=Path(output_root) / "snerv_lf_hf_replacements",
         queue_id=DEFAULT_SNERV_LF_HF_REPLACEMENT_QUEUE_ID,
@@ -845,6 +864,7 @@ def build_nerv_long_training_campaign_plan(
         "modelsize_byte_cap_feedback_path_count": len(byte_cap_feedback_paths),
         "snerv_bounded_proof_only": bool(snerv_bounded_proof_only),
         "snerv_bounded_proof_epochs": int(snerv_bounded_proof_epochs),
+        "snerv_bounded_proof_pair_count": int(snerv_bounded_proof_pair_count),
         "candidate_feedback_row_count": _unique_index_row_count(candidate_feedback_index),
         "decoder_weight_waterfill_source_count": len(decoder_weight_waterfill_sources),
         "archive_section_telemetry_source_count": len(archive_section_telemetry_sources),
@@ -1483,6 +1503,7 @@ def _snerv_campaign_row(
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
+    bounded_proof_pair_count: int = DEFAULT_SNERV_BOUNDED_PROOF_PAIR_COUNT,
 ) -> dict[str, Any]:
     candidate_id = str(candidate.get("candidate_id") or "snerv_candidate")
     runner_candidate_id = "auto" if modelsize_byte_cap_feedback_paths else candidate_id
@@ -1561,6 +1582,12 @@ def _snerv_campaign_row(
         bounded_proof_only=bool(bounded_proof_only),
     )
     execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
+    candidate_num_pairs = max(1, int(candidate.get("num_pairs") or 600))
+    execution_num_pairs = (
+        min(candidate_num_pairs, max(1, int(bounded_proof_pair_count)))
+        if bounded_proof_only
+        else candidate_num_pairs
+    )
     quant_bits = min(
         8,
         snerv_decoder_codec_nominal_bits(str(candidate.get("decoder_payload_codec"))),
@@ -1573,7 +1600,7 @@ def _snerv_campaign_row(
     curriculum = build_snerv_candidate_curriculum_plan(
         candidate=candidate,
         requested_epochs=int(execution_epochs),
-        num_pairs=int(candidate.get("num_pairs") or 600),
+        num_pairs=int(execution_num_pairs),
         step_map_coder_mode="waterfill",
         native_mlx_train_export_attached=True,
         native_mlx_long_training_bound=not bool(bounded_proof_only),
@@ -1656,7 +1683,7 @@ def _snerv_campaign_row(
         "--planner-row-id",
         row_id,
         "--num-pairs",
-        str(int(candidate.get("num_pairs") or 600)),
+        str(int(execution_num_pairs)),
         "--epochs",
         str(int(execution_epochs)),
         "--snerv-score-aware-long-training-epochs",
@@ -1805,6 +1832,12 @@ def _snerv_campaign_row(
         and not pr95_distortion_blockers
         and not source_parity["required_blockers"]
     )
+    bounded_source_controls_ready = (
+        not source_control_blockers
+        and not candidate.get("_candidate_authority_blockers")
+        and not modelsize_byte_cap_blockers
+        and not pr95_distortion_blockers
+    )
     curriculum_ready = not curriculum_blockers
     scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
     renderer_nondegenerate_ready = not renderer_nondegenerate_gate.get("blockers")
@@ -1814,25 +1847,30 @@ def _snerv_campaign_row(
         and renderer_nondegenerate_ready
         and pre_long_run_evidence_ready
     )
-    launch_ready = bool(
-        source_controls_ready
-        and curriculum_ready
-        and prelaunch_proof_ready
-        and (
-            True
-            if bounded_proof_only
-            else bool(rate_plausible_for_long_training and hard_byte_ceiling_satisfied_for_long_training)
+    bounded_proof_launch_ready = bool(
+        bounded_proof_only
+        and bounded_source_controls_ready
+        and scorer_tether_smoke_ready
+    )
+    launch_ready = (
+        bounded_proof_launch_ready
+        if bounded_proof_only
+        else bool(
+            source_controls_ready
+            and curriculum_ready
+            and prelaunch_proof_ready
+            and bool(
+                rate_plausible_for_long_training
+                and hard_byte_ceiling_satisfied_for_long_training
+            )
         )
     )
-    return _row(
-        row_id=row_id,
-        family="snerv",
-        priority=12,
-        candidate=candidate,
-        curriculum_plan=curriculum,
-        command_argv=command,
-        local_mlx_launch_command_ready=launch_ready,
-        implementation_status=(
+    if bounded_proof_only and not scorer_tether_smoke_ready:
+        implementation_status = "snerv_scorer_tether_smoke_gate_blocked"
+    elif bounded_proof_launch_ready:
+        implementation_status = "bounded_native_export_scorer_loop_stage_ready"
+    else:
+        implementation_status = (
             "source_bound_capacity_controls_incomplete"
             if not source_controls_ready
             else "pr95_distortion_practices_required_for_launch"
@@ -1846,16 +1884,25 @@ def _snerv_campaign_row(
             else "snerv_scoreaware_curriculum_blocked"
             if not curriculum_ready
             else (
-                "bounded_native_export_scorer_loop_stage_ready"
-                if bounded_proof_only
-                else (
-                    "native_rate_aware_long_training_queue_ready"
-                    if (rate_plausible_for_long_training and hard_byte_ceiling_satisfied_for_long_training)
-                    else "native_rate_aware_long_training_rate_blocked"
+                "native_rate_aware_long_training_queue_ready"
+                if (
+                    rate_plausible_for_long_training
+                    and hard_byte_ceiling_satisfied_for_long_training
                 )
+                else "native_rate_aware_long_training_rate_blocked"
             )
-        ),
+        )
+    return _row(
+        row_id=row_id,
+        family="snerv",
+        priority=12,
+        candidate=candidate,
+        curriculum_plan=curriculum,
+        command_argv=command,
+        local_mlx_launch_command_ready=launch_ready,
+        implementation_status=implementation_status,
         blockers=blockers,
+        bounded_proof_launch=bool(bounded_proof_only),
         extra={
             "optimizer_kind": str(optimizer_kind),
             "budget_candidate_id": candidate_id,
@@ -1880,8 +1927,10 @@ def _snerv_campaign_row(
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
             "execution_epochs": int(execution_epochs),
+            "execution_num_pairs": int(execution_num_pairs),
             "current_command_is_bounded_proof_not_long_training": bool(bounded_proof_only),
             "snerv_bounded_proof_epochs": int(bounded_proof_epochs),
+            "snerv_bounded_proof_pair_count": int(bounded_proof_pair_count),
             "source_bound_capacity_controls": _snerv_source_bound_controls(candidate),
             "source_bound_capacity_control_blockers": source_control_blockers,
             "source_parity": source_parity,
@@ -1949,12 +1998,14 @@ def _row(
     implementation_status: str,
     blockers: Sequence[str],
     extra: Mapping[str, Any],
+    bounded_proof_launch: bool = False,
 ) -> dict[str, Any]:
     score_gate = _score_lowering_gate(
         family=family,
         local_mlx_launch_command_ready=local_mlx_launch_command_ready,
         curriculum_plan=curriculum_plan,
         blockers=blockers,
+        bounded_proof_launch=bool(bounded_proof_launch),
     )
     return {
         "schema": ROW_SCHEMA,
@@ -1978,6 +2029,7 @@ def _row(
             blockers=blockers,
             score_lowering_gate=score_gate,
             row_metadata=_experiment_row_metadata(extra),
+            bounded_proof_launch=bool(bounded_proof_launch),
         ),
         "curriculum_plan": dict(curriculum_plan),
         "score_lowering_gate": score_gate,
@@ -2026,6 +2078,7 @@ def _experiment_for_row(
     blockers: Sequence[str],
     score_lowering_gate: Mapping[str, Any],
     row_metadata: Mapping[str, Any] | None = None,
+    bounded_proof_launch: bool = False,
 ) -> dict[str, Any]:
     output_dir = _row_output_dir(command_argv)
     output_json = (output_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix()
@@ -2095,7 +2148,10 @@ def _experiment_for_row(
                     "contains": bounded_blocker,
                 }
             )
-    launch_blockers = _experiment_launch_blockers(blockers)
+    launch_blockers = _experiment_launch_blockers(
+        blockers,
+        bounded_proof_launch=bool(bounded_proof_launch),
+    )
     runnable = bool(local_mlx_launch_command_ready) and not launch_blockers
     metadata = dict(row_metadata or {})
     source_parity = metadata.get("source_parity")
@@ -2218,7 +2274,11 @@ def _experiment_for_row(
     }
 
 
-def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
+def _experiment_launch_blockers(
+    blockers: Sequence[str],
+    *,
+    bounded_proof_launch: bool = False,
+) -> list[str]:
     """Return blockers that should prevent a row from being runnable."""
 
     exact_names = {
@@ -2290,7 +2350,7 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "hi_nerv_pr95_distortion_",
         "snerv_pr95_distortion_",
     )
-    return _dedupe(
+    launch_blockers = _dedupe(
         [
             str(blocker)
             for blocker in blockers
@@ -2298,6 +2358,27 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
             and (str(blocker) in exact_names or any(str(blocker).startswith(prefix) for prefix in prefixes))
         ]
     )
+    if not bounded_proof_launch:
+        return launch_blockers
+    return [
+        blocker
+        for blocker in launch_blockers
+        if _bounded_snerv_proof_launch_blocker(blocker)
+    ]
+
+
+def _bounded_snerv_proof_launch_blocker(blocker: str) -> bool:
+    """Keep only defects that invalidate the bounded SNeRV smoke itself."""
+
+    if blocker in {
+        "snerv_candidate_id_source_bound_controls_mismatch",
+        "snerv_candidate_id_source_bound_controls_unparseable",
+        "snerv_scorer_tether_smoke_failed",
+        "snerv_scorer_tether_smoke_report_missing",
+        "snerv_scorer_tether_smoke_schema_mismatch",
+    }:
+        return True
+    return blocker.startswith("snerv_source_bound_control_missing:")
 
 
 def _candidate_feedback_evidence_blockers(
@@ -2933,6 +3014,33 @@ def _row_observable_artifacts(*, family: str, output_dir: Path) -> list[str]:
                 (output_dir / "hi_nerv_mlx_training" / "local_mlx_prefilter_progress.jsonl").as_posix(),
             ]
         )
+    elif str(family) == "snerv":
+        artifacts.extend(
+            [
+                (output_dir / "compact_renderer_mlx_spine_runner_report.json").as_posix(),
+                (output_dir / "nerv_candidate_byte_feedback_row.json").as_posix(),
+                (output_dir / "nerv_candidate_byte_feedback.jsonl").as_posix(),
+                (
+                    output_dir
+                    / "snerv_mlx_native_export"
+                    / "snerv_mlx_native_export_attachment.json"
+                ).as_posix(),
+                (
+                    output_dir
+                    / "snerv_mlx_native_export"
+                    / "native_train_export"
+                    / "snerv_mlx_native_train_export.json"
+                ).as_posix(),
+                (
+                    output_dir
+                    / "snerv_mlx_native_export"
+                    / "native_train_export"
+                    / "snerv_score_aware_long_training"
+                    / "long_training"
+                    / "telemetry.jsonl"
+                ).as_posix(),
+            ]
+        )
     return artifacts
 
 
@@ -2942,6 +3050,7 @@ def _score_lowering_gate(
     local_mlx_launch_command_ready: bool,
     curriculum_plan: Mapping[str, Any],
     blockers: Sequence[str],
+    bounded_proof_launch: bool = False,
 ) -> dict[str, Any]:
     """Separate launchability from score/promotion authority for campaign rows."""
 
@@ -2967,7 +3076,10 @@ def _score_lowering_gate(
             *(f"{family}_{requirement}_missing" for requirement in post_run_missing),
         ]
     )
-    launch_blockers = _experiment_launch_blockers(blockers)
+    launch_blockers = _experiment_launch_blockers(
+        blockers,
+        bounded_proof_launch=bool(bounded_proof_launch),
+    )
     prelaunch_blockers = _dedupe(
         [
             *(str(blocker) for blocker in gate.get("blockers", []) if blocker),

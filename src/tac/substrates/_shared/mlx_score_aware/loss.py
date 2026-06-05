@@ -36,6 +36,11 @@ _CORE_LOSS_WEIGHT_ALIASES: dict[str, tuple[str, ...]] = {
     "recon": ("recon", "reconstruction"),
     "distill": ("distill", "segnet_distill", "segnet"),
     "pose_distill": ("pose_distill", "posenet_distill", "pose"),
+    "pose_direct_live_distill": (
+        "pose_direct_live_distill",
+        "posenet_direct_live",
+        "direct_live_pose",
+    ),
     "scorer_input_guard": (
         "scorer_input_guard",
         "scorer_input_distribution_guard",
@@ -257,6 +262,26 @@ def pose_student_inputs_nhwc(bundle: RendererBundle, rgb_0: Any, rgb_1: Any) -> 
     )
 
 
+def posenet_yuv6_pair_nhwc255(bundle: RendererBundle, rgb_0: Any, rgb_1: Any) -> Any:
+    """Return upstream PoseNet's direct-live YUV6 pair surface for candidates.
+
+    The contest PoseNet consumes both frames after RGB->YUV6 and 2x spatial
+    downsample, with the two 6-channel tensors concatenated to 12 channels.
+    Candidate frames enter this helper as NHWC RGB in ``[0, 1]`` at the
+    canonical scorer size ``384x512`` and leave as NHWC YUV6 byte-scale
+    ``(B, 192, 256, 12)``. This is the live-score VJP surface; it is distinct
+    from the lightweight pose-student input helper above.
+    """
+
+    del bundle
+    from tac.local_acceleration.pr95_hnerv_mlx_training import rgb_to_yuv6_mlx
+
+    return require_mlx_for_harness().concatenate(
+        [rgb_to_yuv6_mlx(rgb_0 * 255.0), rgb_to_yuv6_mlx(rgb_1 * 255.0)],
+        axis=-1,
+    )
+
+
 def _prepare_recon_pixel_weight(
     bundle: RendererBundle,
     frame_shape: Any,
@@ -440,6 +465,56 @@ def _pose_distillation_loss_and_raw_mse(
     quadratic = diff * diff
     linear = 2.0 * delta * abs_diff - delta * delta
     return mx.mean(mx.where(abs_diff <= delta, quadratic, linear)), raw_mse
+
+
+def _direct_live_posenet_distillation_loss_and_metrics(
+    bundle: RendererBundle,
+    rgb_0: Any,
+    rgb_1: Any,
+    idx: Any,
+) -> tuple[Any, dict[str, Any]]:
+    """Direct-live PoseNet VJP term on the exact upstream YUV6 pair surface."""
+
+    mx = require_mlx_for_harness()
+    if bundle.pose_scorer_teacher is None:
+        raise ValueError(
+            "pose_direct_live_distillation_weight > 0 without pose_scorer_teacher; "
+            "RendererBundle.__post_init__ should have rejected this."
+        )
+    live_pose_fn = getattr(
+        bundle.pose_scorer_teacher,
+        "teacher_pose_for_yuv6_pair_nhwc",
+        None,
+    )
+    if not callable(live_pose_fn):
+        raise ValueError(
+            "pose_direct_live_distillation_weight > 0 requires a PoseNet teacher "
+            "with teacher_pose_for_yuv6_pair_nhwc(candidate_yuv6_pair)."
+        )
+    yuv6_pair = posenet_yuv6_pair_nhwc255(bundle, rgb_0, rgb_1)
+    candidate_pose = live_pose_fn(yuv6_pair)
+    teacher_pose = mx.stop_gradient(
+        bundle.pose_scorer_teacher.teacher_pose_for_indices(idx)
+    )
+    raw_diff = candidate_pose - teacher_pose
+    raw_mse = mx.mean(raw_diff * raw_diff)
+    score_term = mx.sqrt(10.0 * raw_mse + 1.0e-12)
+    metrics = {
+        "pose_direct_live_distill": score_term,
+        "pose_direct_live_raw_mse": raw_mse,
+        "pose_direct_live_score_term": score_term,
+        "pose_direct_live_abs_mean": mx.mean(mx.abs(raw_diff)),
+        "pose_direct_live_candidate_pose_mean": mx.mean(candidate_pose),
+        "pose_direct_live_candidate_pose_std": mx.std(candidate_pose),
+        "pose_direct_live_target_pose_mean": mx.mean(teacher_pose),
+        "pose_direct_live_target_pose_std": mx.std(teacher_pose),
+        "pose_direct_live_yuv6_pair_mean": mx.mean(yuv6_pair),
+        "pose_direct_live_yuv6_pair_std": mx.std(yuv6_pair),
+        "pose_direct_live_yuv6_pair_temporal_delta_std": mx.std(
+            yuv6_pair[..., 6:12] - yuv6_pair[..., 0:6]
+        ),
+    }
+    return score_term, metrics
 
 
 def _value_domain_distribution_guard_parts(
@@ -1608,6 +1683,11 @@ def score_aware_loss(
     recon_stage_weight = component_loss_weight(loss_weights, "recon")
     segnet_stage_weight = component_loss_weight(loss_weights, "distill")
     pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
+    pose_direct_live_stage_weight = component_loss_weight(
+        loss_weights,
+        "pose_direct_live_distill",
+        default=pose_stage_weight,
+    )
     scorer_input_guard_stage_weight = component_loss_weight(
         loss_weights,
         "scorer_input_guard",
@@ -1879,6 +1959,22 @@ def score_aware_loss(
         parts["pose_distill_raw_mse"] = pose_distill_raw_mse
         parts["pose_score_term"] = pose_score_term
 
+    pose_direct_live_weight = float(bundle.pose_direct_live_distillation_weight)
+    if pose_direct_live_weight > 0.0 and pose_direct_live_stage_weight != 0.0:
+        direct_pose, direct_pose_metrics = (
+            _direct_live_posenet_distillation_loss_and_metrics(
+                bundle,
+                rgb_0,
+                rgb_1,
+                idx,
+            )
+        )
+        total = (
+            total
+            + pose_direct_live_weight * pose_direct_live_stage_weight * direct_pose
+        )
+        parts.update(direct_pose_metrics)
+
     if bundle.extra_loss_terms is not None:
         extra = bundle.extra_loss_terms(bundle.model, idx)
         for name, term in extra.items():
@@ -2047,6 +2143,7 @@ def build_mlx_posenet_pair_teacher(
     import numpy as np
     import torch
 
+    from tac.local_acceleration.mlx_scorer_adapters import torch_posenet_to_mlx
     from tac.scorer import load_default_scorers
     from tac.substrates._shared.mlx_score_aware.device_gate import (
         MlxScoreAwareHarnessError,
@@ -2074,6 +2171,7 @@ def build_mlx_posenet_pair_teacher(
     posenet_sha = hashlib.sha256(posenet_path.read_bytes()).hexdigest() if posenet_path.is_file() else None
     posenet, _segnet = load_default_scorers(str(upstream_path), device=device)
     posenet.eval()
+    mlx_posenet = torch_posenet_to_mlx(posenet)
     pose_dims = int(bundle.pose_dims)
     chunk = 16
     pose_chunks = []
@@ -2119,6 +2217,7 @@ def build_mlx_posenet_pair_teacher(
         per_dim_scale=mx.array(per_dim_scale),
         upstream_posenet_safetensors_sha256=posenet_sha,
         cache_build_seconds=time.time() - t0,
+        live_posenet_adapter=mlx_posenet,
     )
 
 

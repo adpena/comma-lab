@@ -54,7 +54,20 @@ def test_snerv_receiver_value_domain_xray_detects_unclipped_saturation(
     monkeypatch.setattr(
         tool,
         "inspect_decoder_payload_header",
-        lambda payload: {"schema": "unit_decoder_payload.v1"},
+        lambda payload: {
+            "schema": "unit_decoder_payload.v1",
+            "skip_high_storage": {
+                "schema": "snerv_official_skip_high_storage.v1",
+                "codec": "scalar_mean_float64",
+                "stored_shape": [1, 1, 1, 1],
+                "source_shape": [2, 1, 1, 2],
+                "stored_raw_bytes": 8,
+                "source_raw_bytes": 32,
+                "raw_byte_savings": 24,
+                "receiver_expands_skip_high": True,
+                "lossless_relative_to_source_skip_high": False,
+            },
+        },
     )
 
     report = tool.build_snerv_receiver_value_domain_xray(
@@ -70,11 +83,25 @@ def test_snerv_receiver_value_domain_xray_detects_unclipped_saturation(
     assert report["closed_campaign_blockers"] == []
     assert report["packet_section_bytes"]["lf_payload"] == 16
     assert report["unclipped_receiver_stats"]["outside_0_255_fraction"] > 0.0
+    assert report["unclipped_receiver_channel_stats"][0][
+        "outside_0_255_fraction"
+    ] > 0.0
+    assert report["clip_delta_abs_channel_stats"][0]["mean_abs"] > 0.0
     assert report["clip_delta_abs_stats"]["mean_abs"] > 0.0
+    assert report["official_skip_high_value_domain"]["scalar_mean_storage"] is True
     assert "snerv_receiver_decode_unclipped_outside_uint8_domain" in report[
         "blockers"
     ]
     assert "snerv_receiver_decode_last_frame_saturated_for_segnet" in report[
+        "blockers"
+    ]
+    assert "snerv_official_skip_high_scalar_mean_receiver_range_unfit" in report[
+        "blockers"
+    ]
+    assert "snerv_official_skip_high_scalar_mean_clipping_delta_unfit" in report[
+        "blockers"
+    ]
+    assert "snerv_official_skip_high_not_lossless_value_domain_unfit" in report[
         "blockers"
     ]
     assert report["score_claim"] is False
@@ -100,13 +127,14 @@ def test_snerv_receiver_value_domain_xray_cli_writes_json(
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(
-        tool,
-        "build_snerv_receiver_value_domain_xray",
-        lambda **kwargs: {
+    def fake_build_snerv_receiver_value_domain_xray(**kwargs):
+        return {
             "schema": "snerv_receiver_value_domain_xray.v1",
             "packet_bytes": len(kwargs["packet"]),
             "pair_indices": list(kwargs["pair_indices"]),
+            "official_scalar_skip_high_scan_values": list(
+                kwargs["official_scalar_skip_high_scan_values"] or ()
+            ),
             "profile_scorer_input_diagnosis": kwargs["profile"][
                 "scorer_input_diagnosis"
             ],
@@ -114,7 +142,12 @@ def test_snerv_receiver_value_domain_xray_cli_writes_json(
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
-        },
+        }
+
+    monkeypatch.setattr(
+        tool,
+        "build_snerv_receiver_value_domain_xray",
+        fake_build_snerv_receiver_value_domain_xray,
     )
     out = tmp_path / "xray.json"
 
@@ -126,6 +159,8 @@ def test_snerv_receiver_value_domain_xray_cli_writes_json(
             profile.as_posix(),
             "--pair-indices",
             "0,2",
+            "--official-scalar-skip-high-scan-values",
+            "0,32.5",
             "--output-json",
             out.as_posix(),
         ]
@@ -135,6 +170,7 @@ def test_snerv_receiver_value_domain_xray_cli_writes_json(
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["packet_bytes"] == 4
     assert payload["pair_indices"] == [0, 2]
+    assert payload["official_scalar_skip_high_scan_values"] == [0.0, 32.5]
     assert payload["profile_scorer_input_diagnosis"]["verdict"] == (
         "SCORER_INPUT_OUT_OF_DISTRIBUTION"
     )
@@ -355,6 +391,72 @@ def test_snerv_receiver_value_domain_xray_decodes_official_payload_selected_pair
     )
 
 
+def test_snerv_receiver_value_domain_xray_scans_scalar_skip_high_rescue() -> None:
+    model_size = export_tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+    )
+    packet = export_tool.build_snerv_official_checkpoint_packet(
+        _official_checkpoint_state(),
+        model_size=model_size,
+        metadata_extra={"unit_test": True},
+    )
+
+    report = tool.build_snerv_receiver_value_domain_xray(
+        packet=packet.packet,
+        pair_indices=(0,),
+        packet_path="/tmp/official_scalar_scan.snar",
+        official_scalar_skip_high_scan_values=(0.0, 32.0),
+    )
+
+    scan = report["official_scalar_skip_high_value_domain_scan"]
+    assert scan["scan_executed"] is True
+    assert scan["range_safe_scalar_values"] == [0.0, 32.0]
+    assert scan["safe_scalar_values"] == []
+    assert "snerv_official_scalar_skip_high_range_safe_values_are_degenerate" in (
+        report["blockers"]
+    )
+    assert "snerv_official_scalar_skip_high_no_range_safe_scalar_found" not in (
+        report["blockers"]
+    )
+
+
+def test_snerv_receiver_value_domain_xray_blocks_unrescued_scalar_skip_high() -> None:
+    model_size = export_tool.SnervModelSizeConfig(
+        adapter="snerv_official_mfu_hfr_tub_numeric_primitives_v1",
+        official_skip_high_mode="scalar_mean",
+    )
+    packet = export_tool.build_snerv_official_checkpoint_packet(
+        _official_checkpoint_state_with_bad_scalar_hfr_range(),
+        model_size=model_size,
+        metadata_extra={"unit_test": True},
+    )
+
+    report = tool.build_snerv_receiver_value_domain_xray(
+        packet=packet.packet,
+        pair_indices=(0,),
+        packet_path="/tmp/official_bad_scalar_scan.snar",
+        official_scalar_skip_high_scan_values=(0.0, 32.0),
+    )
+
+    scan = report["official_scalar_skip_high_value_domain_scan"]
+    assert scan["scan_executed"] is True
+    assert scan["range_safe_scalar_value_count"] == 0
+    assert scan["safe_scalar_value_count"] == 0
+    assert "snerv_official_scalar_skip_high_no_range_safe_scalar_found" in (
+        scan["blockers"]
+    )
+    assert "snerv_official_scalar_skip_high_no_value_domain_safe_scalar_found" in (
+        scan["blockers"]
+    )
+    assert "snerv_official_scalar_skip_high_no_value_domain_safe_scalar_found" in (
+        report["blockers"]
+    )
+    assert "treat_scalar_skip_high_as_rate_proof_only_and_train_non_scalar_successor" in (
+        report["recommended_next_actions"]
+    )
+
+
 def _official_checkpoint_state_with_tub_output2_payload() -> dict[str, np.ndarray]:
     state = _official_checkpoint_state()
     state["tub.temporal_encoder_concat"] = np.linspace(
@@ -367,6 +469,13 @@ def _official_checkpoint_state_with_tub_output2_payload() -> dict[str, np.ndarra
         np.arange(2 * 12 * 8 * 8, dtype=np.float32).reshape(2, 12, 8, 8)
         / 251.0
     )
+    return state
+
+
+def _official_checkpoint_state_with_bad_scalar_hfr_range() -> dict[str, np.ndarray]:
+    state = _official_checkpoint_state()
+    for name in ("lh", "hl", "hh"):
+        state[f"hfr_{name}_conv2_bias"] = np.full((3,), -200.0, dtype=np.float32)
     return state
 
 

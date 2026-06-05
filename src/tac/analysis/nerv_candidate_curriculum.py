@@ -629,6 +629,7 @@ def build_hinerv_candidate_curriculum_plan(
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
     segnet_direct_live_distillation_weight: float = 0.0,
+    pose_direct_live_distillation_weight: float = 0.0,
     coder_aware_qat: bool,
     coder_qat_quant_bits: int,
     recon_pixel_weight_attached: bool,
@@ -689,7 +690,11 @@ def build_hinerv_candidate_curriculum_plan(
     )
     if not real_segnet_teacher_attached:
         blockers.append("hinerv_candidate_curriculum_requires_real_segnet_teacher")
-    if _num(pose_distillation_weight) <= 0.0:
+    real_posenet_teacher_attached = bool(
+        _num(pose_distillation_weight) > 0.0
+        or _num(pose_direct_live_distillation_weight) > 0.0
+    )
+    if not real_posenet_teacher_attached:
         blockers.append("hinerv_candidate_curriculum_requires_real_posenet_teacher")
     if not recon_pixel_weight_attached:
         blockers.append("hinerv_candidate_curriculum_recon_pixel_weight_missing")
@@ -762,7 +767,7 @@ def build_hinerv_candidate_curriculum_plan(
             modelsize_archive_budget=candidate_selected,
             pr95_staged_curriculum=pr95_staged_bound,
             real_segnet_teacher=real_segnet_teacher_attached,
-            real_posenet_teacher=_num(pose_distillation_weight) > 0.0,
+            real_posenet_teacher=real_posenet_teacher_attached,
             differentiable_pose_preprocess=bool(
                 differentiable_pose_preprocess_attached
             ),
@@ -811,6 +816,10 @@ def build_hinerv_candidate_curriculum_plan(
             ),
             "real_segnet_teacher_attached": real_segnet_teacher_attached,
             "pose_distillation_weight": float(pose_distillation_weight),
+            "pose_direct_live_distillation_weight": float(
+                pose_direct_live_distillation_weight
+            ),
+            "real_posenet_teacher_attached": real_posenet_teacher_attached,
             "joint_p18_p19_weight_attached": bool(recon_pixel_weight_attached),
             "eval_roundtrip_ste_attached": bool(eval_roundtrip_ste_attached),
             "scorer_input_distribution_guard_attached": bool(

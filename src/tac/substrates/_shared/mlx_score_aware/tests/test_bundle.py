@@ -281,6 +281,46 @@ def test_rejects_pose_teacher_without_pose_head() -> None:
         )
 
 
+def test_direct_live_pose_requires_live_pair_teacher_but_not_student_head() -> None:
+    class _PoseTeacherWithoutLive:
+        pose_dims = 6
+
+        def teacher_pose_for_indices(self, idx):
+            return idx
+
+    class _LivePoseTeacher:
+        pose_dims = 6
+
+        def teacher_pose_for_indices(self, idx):
+            return idx
+
+        def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
+            return yuv6_pair
+
+    with pytest.raises(
+        MlxScoreAwareHarnessError,
+        match="teacher_pose_for_yuv6_pair_nhwc",
+    ):
+        RendererBundle(
+            model=object(),
+            target_rgb_0=None,
+            target_rgb_1=None,
+            num_pairs=4,
+            pose_direct_live_distillation_weight=0.5,
+            pose_scorer_teacher=_PoseTeacherWithoutLive(),
+        )
+
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=None,
+        target_rgb_1=None,
+        num_pairs=4,
+        pose_direct_live_distillation_weight=0.5,
+        pose_scorer_teacher=_LivePoseTeacher(),
+    )
+    assert bundle.learnable_pose_student_head is None
+
+
 def test_rejects_real_segnet_binding_without_pose_unless_research_opted_in() -> None:
     class _SegTeacher:
         num_classes = 5
@@ -313,6 +353,39 @@ def test_rejects_real_segnet_binding_without_pose_unless_research_opted_in() -> 
         allow_segnet_only_research=True,
     )
     assert bundle.allow_segnet_only_research is True
+
+
+def test_direct_live_pose_satisfies_real_segnet_both_scorer_binding() -> None:
+    class _SegTeacher:
+        num_classes = 5
+
+        def teacher_logits_for_indices(self, idx):
+            return idx
+
+    class _SegHead:
+        pass
+
+    class _LivePoseTeacher:
+        pose_dims = 6
+
+        def teacher_pose_for_indices(self, idx):
+            return idx
+
+        def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
+            return yuv6_pair
+
+    bundle = RendererBundle(
+        model=object(),
+        target_rgb_0=None,
+        target_rgb_1=None,
+        num_pairs=4,
+        distillation_weight=0.5,
+        scorer_teacher=_SegTeacher(),
+        learnable_student_head=_SegHead(),
+        pose_direct_live_distillation_weight=0.5,
+        pose_scorer_teacher=_LivePoseTeacher(),
+    )
+    assert bundle.allow_segnet_only_research is False
 
 
 def test_accepts_canonical_conventions_with_defaults() -> None:

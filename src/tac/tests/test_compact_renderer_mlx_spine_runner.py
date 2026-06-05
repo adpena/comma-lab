@@ -6829,6 +6829,15 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
         ),
         hard_byte_ceilings=(178_000,),
     )
+    sn_official_requested_bits = _resolve_execute_modelsize_candidate(
+        family="snerv",
+        candidate_id=(
+            "snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_p1_"
+            "mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_"
+            "skchannelmean_int8_symmetric_ceil178000"
+        ),
+        hard_byte_ceilings=(178_000,),
+    )
 
     assert hi is not None
     assert hi["candidate_id"] == (
@@ -6905,6 +6914,35 @@ def test_execute_modelsize_candidate_resolves_self_describing_queue_ids() -> Non
         "mfu1-5_hfr0p375_t2_adspectra_sksharedmean_"
         "int2_symmetric_ceil36000"
     )
+    assert sn_official_requested_bits is not None
+    assert sn_official_requested_bits["candidate_id"] == (
+        "snerv_np600_haar_lv1_lfb1p5_stepb0p5_fc11e0_p1_"
+        "mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_"
+        "skchannelmean_int8_symmetric_ceil178000"
+    )
+    assert sn_official_requested_bits["canonical_candidate_id"] == (
+        "snerv_np600_haar_lv1_lfb1_stepb1_fc11e0_p1_"
+        "mfu1-2-4_hfr0_t0_tmhaar1_adofficial_oms0p05_"
+        "skchannelmean_int8_symmetric_ceil178000"
+    )
+    assert sn_official_requested_bits["legacy_requested_lf_bit_candidate_id"] is True
+    assert sn_official_requested_bits["bits_per_coeff"] == pytest.approx(1.5)
+    assert sn_official_requested_bits["step_map_bits_per_coeff"] == pytest.approx(0.5)
+    assert sn_official_requested_bits["requested_bits_per_coeff_from_candidate_id"] == (
+        pytest.approx(1.5)
+    )
+    assert sn_official_requested_bits[
+        "requested_step_map_bits_per_coeff_from_candidate_id"
+    ] == pytest.approx(0.5)
+    assert sn_official_requested_bits["fc_dim"] == 11
+    assert sn_official_requested_bits["emb_size"] == 0
+    assert sn_official_requested_bits["snerv_model_size_adapter"] == (
+        SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+    )
+    assert sn_official_requested_bits["temporal_mode"] == (
+        "official_haar_dwt1d_lowpass"
+    )
+    assert sn_official_requested_bits["official_skip_high_mode"] == "channel_mean"
     with pytest.raises(CompactRendererMlxSpineRunnerError):
         _resolve_execute_modelsize_candidate(
             family="snerv",

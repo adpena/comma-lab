@@ -303,14 +303,27 @@ class RendererBundle:
             importance"); a frontier-targeting candidate should bind BOTH the
             SegNet (``distillation_weight``) AND the PoseNet
             (``pose_distillation_weight``) teachers.
+        pose_direct_live_distillation_weight: optional renderer-gradient weight
+            through the REAL ported PoseNet on decoded candidate frames lowered
+            to upstream YUV6 pair tensors. Unlike the learnable pose-student
+            surrogate, this term backprops through
+            ``teacher_pose_for_yuv6_pair_nhwc(candidate_yuv6_pair)`` and prices
+            exactly ``sqrt(10*d_pose)`` against the cached target PoseNet pose.
+            It is default-off because it is heavier and MLX-local
+            false-authority evidence, but it is the direct antidote to
+            temporal/YUV6 collapse when the pose student has insufficient
+            leverage.
         pose_scorer_teacher: the REAL contest-PoseNet teacher (a
             :class:`PoseScorerTeacherProvider`). When set AND
-            ``pose_distillation_weight > 0`` the pose term BINDS THE REAL
-            POSENET: student = ``learnable_pose_student_head(decoded_0,
-            decoded_1)``; teacher =
+            ``pose_distillation_weight > 0`` the student pose term BINDS THE
+            REAL POSENET: student =
+            ``learnable_pose_student_head(decoded_0, decoded_1)``; teacher =
             ``stop_gradient(pose_scorer_teacher.teacher_pose_for_indices(idx))``.
-            Gradient flows pose-MSE -> pose_head(decoded pair) -> renderer params.
-            ``learnable_pose_student_head`` MUST also be set.
+            ``pose_direct_live_distillation_weight > 0`` instead requires
+            ``pose_scorer_teacher.teacher_pose_for_yuv6_pair_nhwc`` so the
+            renderer gradient flows through the live MLX PoseNet itself.
+            ``learnable_pose_student_head`` is required only for the student
+            surrogate path.
         learnable_pose_student_head: the gradient-bearing pose head
             (:class:`tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss.LearnablePoseStudentHead`)
             mapping the decoded frame pair -> ``(B, pose_dims)``. REQUIRED when
@@ -476,6 +489,7 @@ class RendererBundle:
     segnet_hinge_margin: float = 1.0
     distillation_num_classes: int = 5
     pose_distillation_weight: float = 0.0
+    pose_direct_live_distillation_weight: float = 0.0
     pose_scorer_teacher: Any | None = None
     learnable_pose_student_head: Any | None = None
     pose_dims: int = 6
@@ -638,6 +652,11 @@ class RendererBundle:
                 f"pose_distillation_weight must be >= 0 (0.0 disables); got "
                 f"{self.pose_distillation_weight}"
             )
+        if self.pose_direct_live_distillation_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "pose_direct_live_distillation_weight must be >= 0 "
+                f"(0.0 disables); got {self.pose_direct_live_distillation_weight}"
+            )
         if self.pose_dims < 1:
             raise MlxScoreAwareHarnessError(
                 f"pose_dims must be >= 1; got {self.pose_dims}"
@@ -798,22 +817,43 @@ class RendererBundle:
         # pose mock (pose is a continuous ego-motion vector, not a class
         # distribution, so the SegNet pixel-cosine mock has no pose analogue);
         # a pose distill term without a real teacher is unconditionally refused.
-        if self.pose_distillation_weight > 0.0:
-            if self.pose_scorer_teacher is None:
+        pose_student_active = self.pose_distillation_weight > 0.0
+        pose_direct_live_active = self.pose_direct_live_distillation_weight > 0.0
+        if (
+            pose_student_active or pose_direct_live_active
+        ) and self.pose_scorer_teacher is None:
+            raise MlxScoreAwareHarnessError(
+                "a PoseNet loss weight is > 0 but no real pose_scorer_teacher "
+                "is wired. Pose distillation requires a REAL PoseNet teacher "
+                "(there is no scorer-blind pose mock — pose is a continuous "
+                "ego-motion vector). Build one via "
+                "tac.substrates._shared.mlx_score_aware.build_mlx_posenet_pair_teacher."
+            )
+        if pose_student_active and self.learnable_pose_student_head is None:
+            raise MlxScoreAwareHarnessError(
+                "pose_distillation_weight > 0 but learnable_pose_student_head "
+                "is None; the real-pose-bound distillation requires a "
+                "gradient-bearing pose head (per Catalog #164). Build one via "
+                "tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss."
+                "build_learnable_pose_student_head(pose_dims=<D>)."
+            )
+        if pose_direct_live_active:
+            live_fn = getattr(
+                self.pose_scorer_teacher,
+                "teacher_pose_for_yuv6_pair_nhwc",
+                None,
+            )
+            has_empty_live_adapter = (
+                hasattr(self.pose_scorer_teacher, "live_posenet_adapter")
+                and self.pose_scorer_teacher.live_posenet_adapter is None
+            )
+            if not callable(live_fn) or has_empty_live_adapter:
                 raise MlxScoreAwareHarnessError(
-                    "pose_distillation_weight > 0 but no real pose_scorer_teacher "
-                    "is wired. Pose distillation requires a REAL PoseNet teacher "
-                    "(there is no scorer-blind pose mock — pose is a continuous "
-                    "ego-motion vector). Build one via "
-                    "tac.substrates._shared.mlx_score_aware.build_mlx_posenet_pair_teacher."
-                )
-            if self.learnable_pose_student_head is None:
-                raise MlxScoreAwareHarnessError(
-                    "pose_scorer_teacher is set but learnable_pose_student_head "
-                    "is None; the real-pose-bound distillation requires a "
-                    "gradient-bearing pose head (per Catalog #164). Build one via "
-                    "tac.substrates.hinton_distilled_scorer_surrogate.mlx_loss."
-                    "build_learnable_pose_student_head(pose_dims=<D>)."
+                    "pose_direct_live_distillation_weight > 0 requires a real "
+                    "PoseNet teacher that can evaluate decoded candidate pairs "
+                    "via teacher_pose_for_yuv6_pair_nhwc. Use "
+                    "build_mlx_posenet_pair_teacher or set the direct-live "
+                    "weight to 0 for a student-surrogate-only ablation."
                 )
         # FRONTIER both-scorer invariant: PoseNet is dominant at the ~0.192
         # frontier (CLAUDE.md "SegNet vs PoseNet importance"). A SegNet-bound
@@ -825,7 +865,10 @@ class RendererBundle:
             self.distillation_weight > 0.0 and self.scorer_teacher is not None
         )
         pose_bound = (
-            self.pose_distillation_weight > 0.0
+            (
+                self.pose_distillation_weight > 0.0
+                or self.pose_direct_live_distillation_weight > 0.0
+            )
             and self.pose_scorer_teacher is not None
         )
         if segnet_bound and not pose_bound and not self.allow_segnet_only_research:

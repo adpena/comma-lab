@@ -1417,6 +1417,49 @@ def test_pose_distill_composes_real_pose_teacher_and_head() -> None:
     )
 
 
+def test_direct_live_pose_distill_uses_candidate_yuv6_pair_teacher() -> None:
+    target_0, target_1 = _targets()
+
+    class _LivePoseTeacher:
+        pose_dims = 6
+
+        def __init__(self) -> None:
+            self.seen_shape = None
+            self.seen_mean = None
+
+        def teacher_pose_for_indices(self, idx):
+            return mx.zeros((idx.shape[0], self.pose_dims))
+
+        def teacher_pose_for_yuv6_pair_nhwc(self, yuv6_pair):
+            self.seen_shape = tuple(int(dim) for dim in yuv6_pair.shape)
+            self.seen_mean = _scalar(mx.mean(yuv6_pair))
+            return mx.full((yuv6_pair.shape[0], self.pose_dims), 2.0)
+
+    teacher = _LivePoseTeacher()
+    bundle = RendererBundle(
+        model=ReconstructPairModel(target_0, target_1),
+        target_rgb_0=target_0,
+        target_rgb_1=target_1,
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+        pose_direct_live_distillation_weight=3.0,
+        pose_scorer_teacher=teacher,
+    )
+    total, parts = score_aware_loss(
+        bundle,
+        mx.array([0, 1]),
+        loss_weights={"pose_direct_live_distill": 0.5},
+    )
+
+    assert _scalar(parts["recon"]) < 1e-10
+    assert teacher.seen_shape == (2, 2, 2, 12)
+    assert teacher.seen_mean is not None and teacher.seen_mean > 0.0
+    assert _scalar(parts["pose_direct_live_raw_mse"]) == pytest.approx(4.0)
+    assert _scalar(parts["pose_direct_live_score_term"]) == pytest.approx(40.0**0.5)
+    assert _scalar(parts["pose_direct_live_distill"]) == pytest.approx(40.0**0.5)
+    assert _scalar(total) == pytest.approx(3.0 * 0.5 * (40.0**0.5))
+
+
 def test_pose_distill_huber_keeps_raw_mse_telemetry() -> None:
     target_0, target_1 = _targets()
 

@@ -3458,6 +3458,45 @@ def test_long_training_campaign_plan_consumes_passing_snerv_tether_smoke() -> No
     assert "snerv_scorer_tether_smoke_failed" not in snerv["blockers"]
 
 
+def test_long_training_campaign_plan_consumes_score_aware_snerv_tether_gate() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report={
+            "schema": "snerv_score_aware_long_training_scorer_tether_gate.v1",
+            "steps": 2,
+            "passed": True,
+            "smoke_report": {
+                "metric_summary": {
+                    "final": {
+                        "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                        "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.5,
+                    }
+                }
+            },
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert report["snerv_scorer_tether_smoke_report_attached"] is True
+    assert report["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert report["snerv_scorer_tether_smoke_gate"]["source_schema"] == (
+        "snerv_score_aware_long_training_scorer_tether_gate.v1"
+    )
+    assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert "snerv_scorer_tether_smoke_schema_mismatch" not in snerv["blockers"]
+    assert "snerv_scorer_tether_smoke_failed" not in snerv["blockers"]
+
+
 def test_long_training_campaign_plan_blocks_failed_snerv_tether_smoke() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -4291,6 +4330,48 @@ def test_long_training_campaign_plan_requires_snerv_renderer_nondegenerate_proof
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
     assert "snerv_renderer_nondegenerate_smoke_missing" in (queue_contract["queue_launch_blockers"])
     assert snerv["score_claim"] is False
+
+
+def test_bounded_snerv_proof_row_is_runnable_without_long_training_authority() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=_passing_snerv_tether_smoke_report(),
+        snerv_bounded_proof_only=True,
+        snerv_bounded_proof_epochs=2,
+        snerv_bounded_proof_pair_count=16,
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    command = [str(value) for value in snerv["command_argv"]]
+    queue_entry = snerv["experiment_queue_entry"]
+    queue_contract = queue_entry["launch_authority_contract"]
+
+    assert command[command.index("--num-pairs") + 1] == "16"
+    assert command[command.index("--epochs") + 1] == "2"
+    assert command[command.index("--snerv-score-aware-long-training-epochs") + 1] == "2"
+    assert "--snerv-official-skip-high-mode" in command
+    assert snerv["current_command_is_bounded_proof_not_long_training"] is True
+    assert snerv["execution_num_pairs"] == 16
+    assert snerv["local_mlx_launch_command_ready"] is True
+    assert snerv["local_mlx_executable"] is True
+    assert snerv["implementation_status"] == "bounded_native_export_scorer_loop_stage_ready"
+    assert queue_entry["status"] == "queued"
+    assert queue_entry["blocked"] is False
+    assert queue_contract["current_command_is_bounded_proof_not_long_training"] is True
+    assert queue_contract["queue_launch_blockers"] == []
+    assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" in snerv[
+        "blockers"
+    ]
+    assert "snerv_receiver_proof_missing" in snerv["blockers"]
+    assert snerv["score_lowering_gate"]["receiver_proof_required"] is True
+    assert snerv["score_claim"] is False
+    assert snerv["ready_for_exact_eval_dispatch"] is False
 
 
 def test_long_training_campaign_plan_consumes_passing_snerv_renderer_proof() -> None:

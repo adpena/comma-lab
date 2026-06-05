@@ -86,6 +86,7 @@ from tac.analysis.nerv_modelsize_budget import (  # noqa: E402
     modelsize_control_precedence_contract,
     official_nerv_oss_flag_audit,
     snerv_model_size_adapter_from_id_token,
+    snerv_modelsize_candidate_id_from_controls,
     snerv_modelsize_control_profile,
     snerv_temporal_mode_from_id_token,
     tag_hinerv_target_modelsize_candidate,
@@ -1445,14 +1446,19 @@ def _require_scorer_upstream_dir_for_distillation(
     upstream_dir: str | Path,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    pose_direct_live_distillation_weight: float = 0.0,
 ) -> None:
-    if segnet_distillation_weight <= 0.0 and pose_distillation_weight <= 0.0:
+    if (
+        segnet_distillation_weight <= 0.0
+        and pose_distillation_weight <= 0.0
+        and pose_direct_live_distillation_weight <= 0.0
+    ):
         return
     upstream = Path(upstream_dir).expanduser().resolve(strict=False)
     required = [upstream / "modules.py"]
     if segnet_distillation_weight > 0.0:
         required.append(upstream / "models" / "segnet.safetensors")
-    if pose_distillation_weight > 0.0:
+    if pose_distillation_weight > 0.0 or pose_direct_live_distillation_weight > 0.0:
         required.append(upstream / "models" / "posenet.safetensors")
     missing = [path.as_posix() for path in required if not path.is_file()]
     if missing:
@@ -1472,6 +1478,7 @@ def _compact_scoreaware_stage_loss_weights(
     scorer_input_shape_tether: float | None = None,
     posenet_temporal_signal_floor: float | None = None,
     segnet_direct_live: float | None = None,
+    pose_direct_live: float | None = None,
 ) -> dict[str, float]:
     """Canonical runner-level weights for shared MLX score-aware components."""
 
@@ -1485,6 +1492,7 @@ def _compact_scoreaware_stage_loss_weights(
             scorer_input_shape_tether=scorer_input_shape_tether,
             posenet_temporal_signal_floor=posenet_temporal_signal_floor,
             segnet_direct_live=segnet_direct_live,
+            pose_direct_live=pose_direct_live,
         )
     except ValueError as exc:
         raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
@@ -3066,6 +3074,30 @@ def _modelsize_candidate_from_self_describing_id(
         if matched is None:  # pragma: no cover - defensive for type checkers
             return None
         groups = matched.groupdict()
+        parsed_bits_per_coeff = _float_token(matched.group("bits_per_coeff"))
+        parsed_step_map_bits_per_coeff = _float_token(
+            matched.group("step_map_bits_per_coeff")
+        )
+        parsed_adapter = (
+            snerv_model_size_adapter_from_id_token(matched.group("adapter_token"))
+            if "adapter_token" in groups
+            else DEFAULT_SNERV_MODEL_SIZE_ADAPTER
+        )
+        parsed_official_modelsize_mparams = (
+            _float_token(groups["official_modelsize"])
+            if groups.get("official_modelsize") is not None
+            else None
+        )
+        parsed_temporal_mode = (
+            snerv_temporal_mode_from_id_token(groups["temporal_mode_token"])
+            if groups.get("temporal_mode_token") is not None
+            else "delta"
+        )
+        parsed_official_skip_high_mode = (
+            _snerv_official_skip_high_mode_from_id_token(
+                groups.get("official_skip_high_mode_token")
+            )
+        )
         row = analyze_snerv_modelsize_candidate(
             hard_byte_ceiling=int(matched.group("hard_byte_ceiling")),
             num_pairs=int(matched.group("num_pairs")),
@@ -3075,10 +3107,8 @@ def _modelsize_candidate_from_self_describing_id(
                 else "db2"
             ),
             levels=int(matched.group("levels")),
-            bits_per_coeff=_float_token(matched.group("bits_per_coeff")),
-            step_map_bits_per_coeff=_float_token(
-                matched.group("step_map_bits_per_coeff")
-            ),
+            bits_per_coeff=parsed_bits_per_coeff,
+            step_map_bits_per_coeff=parsed_step_map_bits_per_coeff,
             decoder_payload_codec=matched.group("decoder_payload_codec"),
             fc_dim=(
                 int(matched.group("fc_dim"))
@@ -3110,32 +3140,54 @@ def _modelsize_candidate_from_self_describing_id(
                 if "temporal_context" in groups
                 else 0
             ),
-            temporal_mode=(
-                snerv_temporal_mode_from_id_token(groups["temporal_mode_token"])
-                if groups.get("temporal_mode_token") is not None
-                else "delta"
-            ),
-            snerv_model_size_adapter=(
-                snerv_model_size_adapter_from_id_token(
-                    matched.group("adapter_token")
-                )
-                if "adapter_token" in groups
-                else DEFAULT_SNERV_MODEL_SIZE_ADAPTER
-            ),
-            official_modelsize_mparams=(
-                _float_token(groups["official_modelsize"])
-                if groups.get("official_modelsize") is not None
-                else None
-            ),
-            official_skip_high_mode=_snerv_official_skip_high_mode_from_id_token(
-                groups.get("official_skip_high_mode_token")
-            ),
+            temporal_mode=parsed_temporal_mode,
+            snerv_model_size_adapter=parsed_adapter,
+            official_modelsize_mparams=parsed_official_modelsize_mparams,
+            official_skip_high_mode=parsed_official_skip_high_mode,
         ).as_dict()
         if partial_match is not None or legacy_match is not None:
             row["candidate_id"] = token
             row["legacy_candidate_id"] = True
         elif row["candidate_id"] != token:
-            return None
+            requested_bit_id = snerv_modelsize_candidate_id_from_controls(
+                num_pairs=int(row["num_pairs"]),
+                wavelet=str(row["wavelet"]),
+                levels=int(row["levels"]),
+                bits_per_coeff=parsed_bits_per_coeff,
+                step_map_bits_per_coeff=parsed_step_map_bits_per_coeff,
+                fc_dim=int(row["fc_dim"]),
+                emb_size=int(row["emb_size"]),
+                patch_radius=int(row["patch_radius"]),
+                mfu_scales=tuple(int(v) for v in row["mfu_scales"]),
+                hfr_gain=float(row["hfr_gain"]),
+                temporal_context=int(row["temporal_context"]),
+                temporal_mode=str(row["temporal_mode"]),
+                official_skip_high_mode=str(row["official_skip_high_mode"]),
+                snerv_model_size_adapter=str(row["snerv_model_size_adapter"]),
+                decoder_payload_codec=str(row["decoder_payload_codec"]),
+                hard_byte_ceiling=int(row["hard_byte_ceiling"]),
+                official_modelsize_mparams=parsed_official_modelsize_mparams,
+            )
+            if (
+                str(row.get("snerv_model_size_adapter"))
+                == SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER
+                and requested_bit_id == token
+            ):
+                row["canonical_candidate_id"] = row["candidate_id"]
+                row["candidate_id"] = token
+                row["legacy_requested_lf_bit_candidate_id"] = True
+                row["requested_bits_per_coeff_from_candidate_id"] = float(
+                    parsed_bits_per_coeff
+                )
+                row["requested_step_map_bits_per_coeff_from_candidate_id"] = float(
+                    parsed_step_map_bits_per_coeff
+                )
+                row["bits_per_coeff"] = float(parsed_bits_per_coeff)
+                row["step_map_bits_per_coeff"] = float(
+                    parsed_step_map_bits_per_coeff
+                )
+            else:
+                return None
     else:
         return None
     if row["candidate_id"] != token:
@@ -3841,6 +3893,7 @@ def _run_snerv_native_mlx_export_attachment(
     distillation_temperature: float,
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    pose_direct_live_distillation_weight: float = 0.0,
     segnet_direct_live_base_loss_weight: float = 1.0,
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
@@ -5312,6 +5365,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             if segnet_direct_live_stage_weight is None
             else float(segnet_direct_live_stage_weight)
         ),
+        pose_direct_live=float(pose_loss_stage_weight),
     )
 
     planner = _score_aware_carrier_training_plan(
@@ -7805,6 +7859,8 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
     distillation_temperature: float,
     segnet_student_live_calibration_weight: float,
     segnet_direct_live_distillation_weight: float,
+    pose_direct_live_distillation_weight: float,
+    segnet_direct_live_base_loss_weight: float,
     segnet_direct_live_class_histogram_weight: float,
     segnet_direct_live_class_balanced_hinge_weight: float,
     segnet_direct_live_class_balanced_ce_weight: float,
@@ -7876,6 +7932,10 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_weight must be >= 0"
         )
+    if pose_direct_live_distillation_weight < 0.0:
+        raise CompactRendererMlxSpineRunnerError(
+            "pose_direct_live_distillation_weight must be >= 0"
+        )
     if str(pose_distillation_loss) not in {"mse", "huber"}:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_loss must be one of ['mse', 'huber']"
@@ -7885,13 +7945,18 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "pose_distillation_huber_delta must be > 0"
         )
     if (
-        (segnet_distillation_weight > 0.0 or segnet_direct_live_distillation_weight > 0.0)
+        (
+            segnet_distillation_weight > 0.0
+            or segnet_direct_live_distillation_weight > 0.0
+        )
         and pose_distillation_weight <= 0.0
+        and pose_direct_live_distillation_weight <= 0.0
         and not allow_segnet_only_research
     ):
         raise CompactRendererMlxSpineRunnerError(
             "SegNet-bound PR95 training must also bind PoseNet. Pass "
-            "--pose-distillation-weight > 0, or explicitly pass "
+            "--pose-distillation-weight > 0 or "
+            "--pose-direct-live-distillation-weight > 0, or explicitly pass "
             "--allow-segnet-only-research for a false-authority SegNet-axis probe."
         )
     _require_scorer_upstream_dir_for_distillation(
@@ -7901,6 +7966,7 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             float(segnet_direct_live_distillation_weight),
         ),
         pose_distillation_weight=pose_distillation_weight,
+        pose_direct_live_distillation_weight=pose_direct_live_distillation_weight,
     )
     packet = parse_pr95_public_archive_zip(Path(source_archive_zip))
     if pairs > int(packet.latents.shape[0]):
@@ -7965,6 +8031,9 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             "schema": "compact_pr95_hnerv_scoreaware_training.v1",
             "segnet_distillation_weight": float(segnet_distillation_weight),
             "pose_distillation_weight": float(pose_distillation_weight),
+            "pose_direct_live_distillation_weight": float(
+                pose_direct_live_distillation_weight
+            ),
             "pose_distillation_loss": str(pose_distillation_loss),
             "pose_distillation_huber_delta": float(pose_distillation_huber_delta),
             "segnet_distillation_objective": segnet_distillation_objective,
@@ -8048,16 +8117,17 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
                 num_classes=int(scorer_teacher.num_classes),
                 seed=int(random_seed),
             )
-    if pose_distillation_weight > 0.0:
+    if pose_distillation_weight > 0.0 or pose_direct_live_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
             device=resolved_distillation_device,
         )
-        learnable_pose_student_head = build_learnable_pose_student_head(
-            pose_dims=int(pose_scorer_teacher.pose_dims),
-            seed=int(random_seed) + 1,
-        )
+        if pose_distillation_weight > 0.0:
+            learnable_pose_student_head = build_learnable_pose_student_head(
+                pose_dims=int(pose_scorer_teacher.pose_dims),
+                seed=int(random_seed) + 1,
+            )
     bundle = RendererBundle(
         **bundle_kwargs,
         distillation_weight=float(segnet_distillation_weight),
@@ -8089,6 +8159,9 @@ def _run_pr95_hnerv_mlx_scoreaware_smoke(
             int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        pose_direct_live_distillation_weight=float(
+            pose_direct_live_distillation_weight
+        ),
         pose_distillation_loss=str(pose_distillation_loss),
         pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
@@ -8138,6 +8211,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_direct_live_distillation_weight: float = 0.0,
     pose_distillation_loss: str = "mse",
     pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
@@ -8218,6 +8292,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             segnet_direct_live_distillation_weight=(
                 segnet_direct_live_distillation_weight
             ),
+            pose_direct_live_distillation_weight=0.0,
             segnet_direct_live_base_loss_weight=(
                 segnet_direct_live_base_loss_weight
             ),
@@ -8693,6 +8768,7 @@ def execute_pact_nerv_vq_mlx_smoke_and_adapt(
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_direct_live_distillation_weight: float = 0.0,
     pose_distillation_loss: str = "mse",
     pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
@@ -9035,6 +9111,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     ema_decay: float = 0.9,
     segnet_distillation_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_direct_live_distillation_weight: float = 0.0,
     pose_distillation_loss: str = "mse",
     pose_distillation_huber_delta: float = 1.0,
     segnet_distillation_objective: str = "kl_t2",
@@ -9066,8 +9143,13 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     output_head_target_contrast_init_max_gain: float = 4096.0,
     scorer_space_step_guard_enabled: bool = True,
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
-    scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = (
+        HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE
+    ),
     scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = 2.0,
+    scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = 0.5,
+    scorer_space_step_guard_max_post_pose_score_term: float | None = None,
+    scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
     scorer_space_step_guard_backtracking_steps: int = 6,
     scorer_space_step_guard_backtracking_shrink: float = 0.5,
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
@@ -10026,6 +10108,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         segnet_direct_live_distillation_weight=float(
             segnet_direct_live_distillation_weight
         ),
+        pose_direct_live_distillation_weight=float(
+            pose_direct_live_distillation_weight
+        ),
         coder_aware_qat=bool(coder_aware_qat),
         coder_qat_quant_bits=int(coder_qat_quant_bits),
         recon_pixel_weight_attached=bool(
@@ -10151,6 +10236,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ema_decay=ema_decay,
             segnet_distillation_weight=effective_segnet_distillation_weight,
             pose_distillation_weight=effective_pose_distillation_weight,
+            pose_direct_live_distillation_weight=float(
+                pose_direct_live_distillation_weight
+            ),
             pose_distillation_loss=str(pose_distillation_loss),
             pose_distillation_huber_delta=float(pose_distillation_huber_delta),
             segnet_distillation_objective=segnet_distillation_objective,
@@ -10229,6 +10317,15 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             scorer_space_step_guard_max_post_segnet_contrast_ratio=(
                 scorer_space_step_guard_max_post_segnet_contrast_ratio
+            ),
+            scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
+                scorer_space_step_guard_max_post_segnet_argmax_disagreement
+            ),
+            scorer_space_step_guard_max_post_pose_score_term=(
+                scorer_space_step_guard_max_post_pose_score_term
+            ),
+            scorer_space_step_guard_max_post_pose_direct_live_score_term=(
+                scorer_space_step_guard_max_post_pose_direct_live_score_term
             ),
             scorer_space_step_guard_backtracking_steps=int(
                 scorer_space_step_guard_backtracking_steps
@@ -10619,6 +10716,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
         pose_distillation_weight=effective_pose_distillation_weight,
         segnet_direct_live_distillation_weight=float(
             segnet_direct_live_distillation_weight
+        ),
+        pose_direct_live_distillation_weight=float(
+            pose_direct_live_distillation_weight
         ),
         coder_aware_qat=bool(coder_aware_qat),
         coder_qat_quant_bits=int(coder_qat_quant_bits),
@@ -14306,6 +14406,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     ema_decay: float,
     segnet_distillation_weight: float,
     pose_distillation_weight: float,
+    pose_direct_live_distillation_weight: float = 0.0,
     pose_distillation_loss: str,
     pose_distillation_huber_delta: float,
     segnet_distillation_objective: str,
@@ -14339,6 +14440,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = 2.0,
+    scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = 0.5,
+    scorer_space_step_guard_max_post_pose_score_term: float | None = None,
+    scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
     scorer_space_step_guard_backtracking_steps: int = 6,
     scorer_space_step_guard_backtracking_shrink: float = 0.5,
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
@@ -14630,6 +14734,38 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "scorer_space_step_guard_max_post_segnet_contrast_ratio must be "
             "None or finite and > 0"
         )
+    if (
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement is not None
+        and (
+            not math.isfinite(
+                float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
+            )
+            or float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
+            < 0.0
+            or float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
+            > 1.0
+        )
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_space_step_guard_max_post_segnet_argmax_disagreement must "
+            "be None or finite in [0, 1]"
+        )
+    for name, value in (
+        (
+            "scorer_space_step_guard_max_post_pose_score_term",
+            scorer_space_step_guard_max_post_pose_score_term,
+        ),
+        (
+            "scorer_space_step_guard_max_post_pose_direct_live_score_term",
+            scorer_space_step_guard_max_post_pose_direct_live_score_term,
+        ),
+    ):
+        if value is not None and (
+            not math.isfinite(float(value)) or float(value) <= 0.0
+        ):
+            raise CompactRendererMlxSpineRunnerError(
+                f"{name} must be None or finite and > 0"
+            )
     if int(scorer_space_step_guard_backtracking_steps) < 0:
         raise CompactRendererMlxSpineRunnerError(
             "scorer_space_step_guard_backtracking_steps must be >= 0"
@@ -14688,11 +14824,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             or segnet_direct_live_distillation_weight > 0.0
         )
         and pose_distillation_weight <= 0.0
+        and pose_direct_live_distillation_weight <= 0.0
         and not allow_segnet_only_research
     ):
         raise CompactRendererMlxSpineRunnerError(
             "SegNet-bound HiNeRV training must also bind PoseNet. Pass "
-            "--pose-distillation-weight > 0, or explicitly pass "
+            "--pose-distillation-weight > 0 or "
+            "--pose-direct-live-distillation-weight > 0, or explicitly pass "
             "--allow-segnet-only-research for a false-authority SegNet-axis probe."
         )
     _require_scorer_upstream_dir_for_distillation(
@@ -14702,6 +14840,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             float(segnet_direct_live_distillation_weight),
         ),
         pose_distillation_weight=pose_distillation_weight,
+        pose_direct_live_distillation_weight=pose_direct_live_distillation_weight,
     )
     if recon_pixel_weight_path is not None and auto_segnet_boundary_recon_weight:
         raise CompactRendererMlxSpineRunnerError(
@@ -15120,6 +15259,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             segnet_direct_live_class_balanced_squared_hinge_weight
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        pose_direct_live_distillation_weight=float(
+            pose_direct_live_distillation_weight
+        ),
         scorer_input_distribution_guard_weight=float(
             scorer_input_distribution_guard_weight
         ),
@@ -15156,7 +15298,10 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     )
     joint_scorer_checkpoint_selection_active = bool(
         float(segnet_direct_live_distillation_weight) > 0.0
-        and float(pose_distillation_weight) > 0.0
+        and (
+            float(pose_distillation_weight) > 0.0
+            or float(pose_direct_live_distillation_weight) > 0.0
+        )
         and not bool(allow_segnet_only_research)
     )
     direct_live_checkpoint_selection_active = bool(
@@ -15426,6 +15571,27 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     is None
                     else float(scorer_space_step_guard_max_post_segnet_contrast_ratio)
                 ),
+                "max_post_segnet_argmax_disagreement": (
+                    None
+                    if scorer_space_step_guard_max_post_segnet_argmax_disagreement
+                    is None
+                    else float(
+                        scorer_space_step_guard_max_post_segnet_argmax_disagreement
+                    )
+                ),
+                "max_post_pose_score_term": (
+                    None
+                    if scorer_space_step_guard_max_post_pose_score_term is None
+                    else float(scorer_space_step_guard_max_post_pose_score_term)
+                ),
+                "max_post_pose_direct_live_score_term": (
+                    None
+                    if scorer_space_step_guard_max_post_pose_direct_live_score_term
+                    is None
+                    else float(
+                        scorer_space_step_guard_max_post_pose_direct_live_score_term
+                    )
+                ),
                 "backtracking_steps": int(
                     scorer_space_step_guard_backtracking_steps
                 ),
@@ -15440,6 +15606,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                     "optimizer_update",
                     "post_update_direct_live_scorer_probe",
                     "parameter_restore_on_scorer_space_collapse",
+                    "hard_argmax_and_pose_score_rejection",
                     "export_receiver_cache_quality_probe",
                 ],
                 "rationale": (
@@ -15695,6 +15862,21 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
+            "pose_direct_live_distillation": {
+                "schema": "hi_nerv_pose_direct_live_distillation_control.v1",
+                "enabled": float(pose_direct_live_distillation_weight) > 0.0,
+                "weight": float(pose_direct_live_distillation_weight),
+                "teacher_surface": "teacher_pose_for_yuv6_pair_nhwc",
+                "candidate_surface": (
+                    "decoded_rgb_nhwc01_to_pr95_yuv6_pair_nhwc255"
+                ),
+                "objective": "sqrt_10_pose_mse_on_upstream_posenet_first_6_dims",
+                "purpose": (
+                    "direct_live_posenet_vjp_for_pose_yuv6_temporal_distortion_"
+                    "collapse_repair"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "recon_pixel_weight": _disabled_recon_pixel_weight_metadata(),
             "local_mlx_prefilter": {
                 "schema": "compact_hi_nerv_local_mlx_prefilter_config.v1",
@@ -15793,17 +15975,18 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         artifact_metadata["score_aware_training"]["recon_pixel_weight"] = (
             recon_metadata
         )
-    if pose_distillation_weight > 0.0:
+    if pose_distillation_weight > 0.0 or pose_direct_live_distillation_weight > 0.0:
         pose_scorer_teacher = build_mlx_posenet_pair_teacher(
             teacher_probe_bundle,
             upstream_dir=scorer_upstream_dir,
             device=resolved_distillation_device,
         )
-        learnable_pose_student_head = build_learnable_pose_student_head(
-            pose_dims=int(pose_scorer_teacher.pose_dims),
-            input_channels=6,
-            seed=int(random_seed) + 1,
-        )
+        if pose_distillation_weight > 0.0:
+            learnable_pose_student_head = build_learnable_pose_student_head(
+                pose_dims=int(pose_scorer_teacher.pose_dims),
+                input_channels=6,
+                seed=int(random_seed) + 1,
+            )
     bundle = RendererBundle(
         **bundle_kwargs,
         recon_pixel_weight=recon_pixel_weight,
@@ -15838,6 +16021,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             int(scorer_teacher.num_classes) if scorer_teacher is not None else 5
         ),
         pose_distillation_weight=float(pose_distillation_weight),
+        pose_direct_live_distillation_weight=float(
+            pose_direct_live_distillation_weight
+        ),
         pose_distillation_loss=str(pose_distillation_loss),
         pose_distillation_huber_delta=float(pose_distillation_huber_delta),
         pose_scorer_teacher=pose_scorer_teacher,
@@ -15947,6 +16133,21 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             if scorer_space_step_guard_max_post_segnet_contrast_ratio is None
             else float(scorer_space_step_guard_max_post_segnet_contrast_ratio)
         ),
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
+            None
+            if scorer_space_step_guard_max_post_segnet_argmax_disagreement is None
+            else float(scorer_space_step_guard_max_post_segnet_argmax_disagreement)
+        ),
+        scorer_space_step_guard_max_post_pose_score_term=(
+            None
+            if scorer_space_step_guard_max_post_pose_score_term is None
+            else float(scorer_space_step_guard_max_post_pose_score_term)
+        ),
+        scorer_space_step_guard_max_post_pose_direct_live_score_term=(
+            None
+            if scorer_space_step_guard_max_post_pose_direct_live_score_term is None
+            else float(scorer_space_step_guard_max_post_pose_direct_live_score_term)
+        ),
         scorer_space_step_guard_backtracking_steps=int(
             scorer_space_step_guard_backtracking_steps
         ),
@@ -15984,6 +16185,9 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         segnet_direct_live_distillation_weight=float(
             segnet_direct_live_distillation_weight
+        ),
+        pose_direct_live_distillation_weight=float(
+            pose_direct_live_distillation_weight
         ),
         pr95_faithful_curriculum_enabled=bool(pr95_curriculum_enabled),
         coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
@@ -16681,6 +16885,7 @@ def _compact_score_aware_training_telemetry_contract(
     pose_distillation_weight: float,
     segnet_student_live_calibration_weight: float,
     segnet_direct_live_distillation_weight: float = 0.0,
+    pose_direct_live_distillation_weight: float = 0.0,
     pr95_faithful_curriculum_enabled: bool,
     coder_aware_qat_bound: bool,
     train_time_section_byte_control_bound: bool,
@@ -16699,6 +16904,7 @@ def _compact_score_aware_training_telemetry_contract(
     path = Path(telemetry_path).expanduser() if telemetry_path else Path("")
     expected_seg = float(segnet_distillation_weight) > 0.0
     expected_pose = float(pose_distillation_weight) > 0.0
+    expected_pose_direct_live = float(pose_direct_live_distillation_weight) > 0.0
     expected_live_calibration = bool(
         expected_seg and float(segnet_student_live_calibration_weight) > 0.0
     )
@@ -16720,6 +16926,7 @@ def _compact_score_aware_training_telemetry_contract(
     expected_any = bool(
         expected_seg
         or expected_pose
+        or expected_pose_direct_live
         or expected_live_calibration
         or expected_direct_live
         or expected_section
@@ -16736,6 +16943,9 @@ def _compact_score_aware_training_telemetry_contract(
     pose_loss_observed = False
     pose_score_term_observed = False
     pose_raw_loss_observed = False
+    pose_direct_live_loss_observed = False
+    pose_direct_live_score_term_observed = False
+    pose_direct_live_raw_loss_observed = False
     pr95_seg_loss_observed = False
     pr95_pose_loss_observed = False
     guard_loss_observed = False
@@ -16786,7 +16996,13 @@ def _compact_score_aware_training_telemetry_contract(
             "expected_posenet_temporal_signal_floor_metric": bool(
                 expected_temporal_floor
             ),
+            "expected_posenet_direct_live_distillation": bool(
+                expected_pose_direct_live
+            ),
             "posenet_temporal_signal_floor_metric_observed": False,
+            "posenet_direct_live_loss_observed": False,
+            "posenet_direct_live_raw_loss_metric_observed": False,
+            "posenet_direct_live_score_term_metric_observed": False,
             "posenet_temporal_signal_floor_std_ratio_metric_observed": False,
             "posenet_temporal_signal_floor_mean_abs_ratio_metric_observed": False,
             "passed": not blockers,
@@ -16817,6 +17033,18 @@ def _compact_score_aware_training_telemetry_contract(
                 or _telemetry_finite(row, "loss_part_pose_score_term")
             )
             pose_loss_observed = bool(pose_raw_loss_observed or pose_score_term_observed)
+            pose_direct_live_loss_observed = (
+                pose_direct_live_loss_observed
+                or _telemetry_finite(row, "loss_part_pose_direct_live_distill")
+            )
+            pose_direct_live_score_term_observed = (
+                pose_direct_live_score_term_observed
+                or _telemetry_finite(row, "loss_part_pose_direct_live_score_term")
+            )
+            pose_direct_live_raw_loss_observed = (
+                pose_direct_live_raw_loss_observed
+                or _telemetry_finite(row, "loss_part_pose_direct_live_raw_mse")
+            )
             pr95_seg_loss_observed = pr95_seg_loss_observed or _telemetry_finite(
                 row,
                 "loss_part_pr95_stage_seg_surrogate",
@@ -17116,6 +17344,18 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(
             f"{family_key}_score_aware_training_posenet_score_term_metric_missing"
         )
+    if expected_pose_direct_live and not pose_direct_live_loss_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_direct_live_posenet_loss_missing"
+        )
+    if expected_pose_direct_live and not pose_direct_live_score_term_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_direct_live_posenet_score_term_metric_missing"
+        )
+    if expected_pose_direct_live and not pose_direct_live_raw_loss_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_direct_live_posenet_raw_mse_metric_missing"
+        )
     if expected_seg and not seg_dual_observed:
         blockers.append(f"{family_key}_score_aware_training_dual_segnet_metric_never_observed")
     if expected_pose and not pose_dual_observed:
@@ -17269,6 +17509,9 @@ def _compact_score_aware_training_telemetry_contract(
         "malformed_row_count": int(malformed_rows),
         "expected_segnet_dual": bool(expected_seg),
         "expected_posenet_dual": bool(expected_pose),
+        "expected_posenet_direct_live_distillation": bool(
+            expected_pose_direct_live
+        ),
         "expected_segnet_dual_lambda": bool(expected_seg),
         "expected_posenet_dual_lambda": bool(expected_pose),
         "expected_segnet_live_calibration": bool(expected_live_calibration),
@@ -17291,6 +17534,15 @@ def _compact_score_aware_training_telemetry_contract(
         "posenet_loss_metric_observed": bool(pose_loss_observed),
         "posenet_raw_loss_metric_observed": bool(pose_raw_loss_observed),
         "posenet_score_term_metric_observed": bool(pose_score_term_observed),
+        "posenet_direct_live_loss_observed": bool(
+            pose_direct_live_loss_observed
+        ),
+        "posenet_direct_live_raw_loss_metric_observed": bool(
+            pose_direct_live_raw_loss_observed
+        ),
+        "posenet_direct_live_score_term_metric_observed": bool(
+            pose_direct_live_score_term_observed
+        ),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
         "posenet_dual_metric_observed": bool(pose_dual_observed),
         "segnet_dual_lambda_active_observed": bool(
@@ -20914,6 +21166,18 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--pose-direct-live-distillation-weight",
+        default=0.0,
+        type=float,
+        help=(
+            "HiNeRV/SNeRV PoseNet crux probe: add a renderer-gradient loss "
+            "through the real MLX PoseNet on decoded candidate YUV6 pairs "
+            "toward the target-pair PoseNet pose. This prices the exact "
+            "sqrt(10*d_pose) scorer term and is separate from the lightweight "
+            "pose-student surrogate. Default 0 for legacy comparability."
+        ),
+    )
+    parser.add_argument(
         "--segnet-direct-live-base-loss-weight",
         default=1.0,
         type=float,
@@ -21164,11 +21428,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--scorer-space-step-guard-min-post-segnet-occupied-class-fraction",
-        default=0.4,
+        default=HI_NERV_SEGNET_ARGMAX_MIN_OCCUPIED_CLASS_FRACTION_FOR_FIT_GATE,
         type=float,
         help=(
             "Minimum post-update real-SegNet direct-live occupied-class "
-            "fraction for accepted guarded HiNeRV steps."
+            "fraction for accepted guarded HiNeRV steps. Default matches the "
+            "receiver-cache fit gate, so exactly two occupied classes out of "
+            "five is still treated as collapsed."
         ),
     )
     parser.add_argument(
@@ -21179,6 +21445,34 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Maximum post-update SegNet RGB candidate/reference std ratio for "
             "accepted guarded HiNeRV steps. Use a large value to effectively "
             "disable the contrast ceiling while keeping occupancy protection."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-segnet-argmax-disagreement",
+        default=0.5,
+        type=float,
+        help=(
+            "Optional hard-argmax disagreement ceiling for accepted guarded "
+            "HiNeRV steps. Default 0.5 rejects the known half-frame collapse "
+            "basin while remaining looser than the receiver-cache promotion gate."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-pose-score-term",
+        default=None,
+        type=float,
+        help=(
+            "Optional ceiling for the student-pose sqrt(10*d_pose) train metric "
+            "inside the scorer-space step guard."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-pose-direct-live-score-term",
+        default=None,
+        type=float,
+        help=(
+            "Optional ceiling for the direct-live PoseNet sqrt(10*d_pose) train "
+            "metric inside the scorer-space step guard."
         ),
     )
     parser.add_argument(
@@ -22571,6 +22865,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_direct_live_distillation_weight=(
                 args.segnet_direct_live_distillation_weight
             ),
+            pose_direct_live_distillation_weight=(
+                args.pose_direct_live_distillation_weight
+            ),
             segnet_direct_live_base_loss_weight=(
                 args.segnet_direct_live_base_loss_weight
             ),
@@ -23075,6 +23372,15 @@ def main(argv: list[str] | None = None) -> int:
             ),
             scorer_space_step_guard_max_post_segnet_contrast_ratio=(
                 args.scorer_space_step_guard_max_post_segnet_contrast_ratio
+            ),
+            scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
+                args.scorer_space_step_guard_max_post_segnet_argmax_disagreement
+            ),
+            scorer_space_step_guard_max_post_pose_score_term=(
+                args.scorer_space_step_guard_max_post_pose_score_term
+            ),
+            scorer_space_step_guard_max_post_pose_direct_live_score_term=(
+                args.scorer_space_step_guard_max_post_pose_direct_live_score_term
             ),
             scorer_space_step_guard_backtracking_steps=(
                 args.scorer_space_step_guard_backtracking_steps

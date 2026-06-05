@@ -92,6 +92,9 @@ def run_mlx_score_aware_full_main(
     scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
     scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = None,
+    scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = None,
+    scorer_space_step_guard_max_post_pose_score_term: float | None = None,
+    scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
     scorer_space_step_guard_backtracking_steps: int = 0,
     scorer_space_step_guard_backtracking_shrink: float = 0.5,
     ema_archive_selection_enabled: bool = False,
@@ -303,6 +306,15 @@ def run_mlx_score_aware_full_main(
         ),
         scorer_space_step_guard_max_post_segnet_contrast_ratio=(
             scorer_space_step_guard_max_post_segnet_contrast_ratio
+        ),
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement=(
+            scorer_space_step_guard_max_post_segnet_argmax_disagreement
+        ),
+        scorer_space_step_guard_max_post_pose_score_term=(
+            scorer_space_step_guard_max_post_pose_score_term
+        ),
+        scorer_space_step_guard_max_post_pose_direct_live_score_term=(
+            scorer_space_step_guard_max_post_pose_direct_live_score_term
         ),
         scorer_space_step_guard_backtracking_steps=(
             scorer_space_step_guard_backtracking_steps

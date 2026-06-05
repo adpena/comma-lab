@@ -206,6 +206,52 @@ def test_hinerv_candidate_curriculum_counts_direct_live_segnet_as_real_teacher()
     assert plan["ready_for_exact_eval_dispatch"] is False
 
 
+def test_hinerv_candidate_curriculum_counts_direct_live_pose_as_real_teacher() -> None:
+    candidate = analyze_hinerv_modelsize_candidate(
+        hard_byte_ceiling=216_000,
+        num_pairs=600,
+        latent_dim=12,
+        embed_dim=24,
+        decoder_channel=32,
+        decoder_codec="int4_mixed",
+    ).as_dict()
+
+    plan = build_hinerv_candidate_curriculum_plan(
+        candidate=candidate,
+        requested_epochs=8,
+        num_pairs=600,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=0.0,
+        pose_direct_live_distillation_weight=0.5,
+        coder_aware_qat=True,
+        coder_qat_quant_bits=4,
+        recon_pixel_weight_attached=True,
+        eval_roundtrip_ste_attached=True,
+        scorer_input_distribution_guard_attached=True,
+        differentiable_pose_preprocess_attached=True,
+        ema_archive_selection_attached=True,
+        pr95_staged_curriculum_bound=True,
+        muon_adamw_partition_bound=True,
+    )
+
+    assert "hinerv_candidate_curriculum_requires_real_posenet_teacher" not in plan[
+        "blockers"
+    ]
+    assert "hi_nerv_real_posenet_teacher_missing" not in plan["blockers"]
+    assert plan["scorer_pressure"]["real_posenet_teacher_attached"] is True
+    assert plan["scorer_pressure"]["pose_distillation_weight"] == 0.0
+    assert plan["scorer_pressure"]["pose_direct_live_distillation_weight"] == 0.5
+    posenet_rows = [
+        row
+        for row in plan["pr95_stack_binding"]["rows"]
+        if row["requirement_id"] == "real_posenet_teacher"
+    ]
+    assert len(posenet_rows) == 1
+    assert posenet_rows[0]["satisfied"] is True
+    assert plan["score_claim"] is False
+    assert plan["ready_for_exact_eval_dispatch"] is False
+
+
 def test_hinerv_candidate_curriculum_records_measured_archive_byte_feedback() -> None:
     candidate = analyze_hinerv_modelsize_candidate(
         hard_byte_ceiling=178_000,

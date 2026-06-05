@@ -1304,6 +1304,82 @@ def test_adapter_scorer_space_step_guard_blocks_low_occupancy_contrast_crossing(
 
 
 @mlx_only
+def test_adapter_scorer_space_step_guard_rejects_argmax_and_pose_ceiling_crossing() -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        optimizer_kind="pact_muon_adamw",
+        scorer_space_step_guard_enabled=True,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement=0.5,
+        scorer_space_step_guard_max_post_pose_score_term=4.0,
+        scorer_space_step_guard_max_post_pose_direct_live_score_term=3.0,
+    )
+    call_count = 0
+
+    def _fake_loss_part_metrics(_batch, *, loss_weights=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.6,
+                "loss_part_segnet_direct_live_argmax_disagreement": 0.2,
+                "loss_part_pose_score_term": 1.0,
+                "loss_part_pose_direct_live_score_term": 1.0,
+            }
+        return {
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.6,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.9,
+            "loss_part_pose_score_term": 9.0,
+            "loss_part_pose_direct_live_score_term": 8.0,
+        }
+
+    adapter._score_aware_loss_part_metrics = _fake_loss_part_metrics  # type: ignore[method-assign]
+    batch = mx.array([0, 1], dtype=mx.int32)
+    before = {
+        str(name): mx.array(value)
+        for name, value in tree_flatten(adapter.model.parameters())
+    }
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    after = {str(name): value for name, value in tree_flatten(adapter.model.parameters())}
+    max_delta = 0.0
+    for name, before_value in before.items():
+        delta = mx.max(mx.abs(after[name] - before_value))
+        mx.eval(delta)
+        max_delta = max(max_delta, float(delta.item()))
+
+    assert metrics["scorer_space_step_guard_eligible"] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_eligible_argmax_crossed_ceiling"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_eligible_pose_crossed_ceiling"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_eligible_pose_direct_live_crossed_ceiling"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_reject_reason_post_segnet_argmax_disagreement_above_ceiling"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_reject_reason_post_pose_score_term_above_ceiling"
+    ] == pytest.approx(1.0)
+    assert metrics[
+        "scorer_space_step_guard_reject_reason_post_pose_direct_live_score_term_above_ceiling"
+    ] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_rejected"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_parameters_restored"] == pytest.approx(1.0)
+    assert max_delta == pytest.approx(0.0, abs=1e-7)
+
+
+@mlx_only
 def test_pact_muon_adamw_train_step_passes_clipped_gradients(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -25,6 +25,7 @@ def build_scoreaware_stage_loss_weights(
     scorer_input_shape_tether: float | None = None,
     posenet_temporal_signal_floor: float | None = None,
     segnet_direct_live: float | None = None,
+    pose_direct_live: float | None = None,
 ) -> dict[str, float]:
     """Return canonical per-component stage weights for shared MLX training."""
 
@@ -41,10 +42,12 @@ def build_scoreaware_stage_loss_weights(
     direct_live = float(segnet) if segnet_direct_live is None else float(
         segnet_direct_live
     )
+    pose_live = float(pose) if pose_direct_live is None else float(pose_direct_live)
     values = {
         "recon": float(recon),
         "distill": float(segnet),
         "pose_distill": float(pose),
+        "pose_direct_live_distill": pose_live,
         "scorer_input_guard": guard,
         "scorer_input_contrast_floor": contrast,
         "scorer_input_shape_tether": shape,
@@ -98,6 +101,11 @@ def coerce_scoreaware_stage_loss_weights(
             None
             if "segnet_direct_live_distill" not in raw
             else float(raw["segnet_direct_live_distill"])
+        ),
+        pose_direct_live=(
+            None
+            if "pose_direct_live_distill" not in raw
+            else float(raw["pose_direct_live_distill"])
         ),
     )
 

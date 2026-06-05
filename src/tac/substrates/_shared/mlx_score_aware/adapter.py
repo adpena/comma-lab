@@ -650,6 +650,9 @@ class MlxScoreAwareAdapter:
         scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
         scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
         scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = None,
+        scorer_space_step_guard_max_post_segnet_argmax_disagreement: float | None = None,
+        scorer_space_step_guard_max_post_pose_score_term: float | None = None,
+        scorer_space_step_guard_max_post_pose_direct_live_score_term: float | None = None,
         scorer_space_step_guard_backtracking_steps: int = 0,
         scorer_space_step_guard_backtracking_shrink: float = 0.5,
     ) -> None:
@@ -774,6 +777,16 @@ class MlxScoreAwareAdapter:
                 HiNeRV smokes exposed the paired failure mode "class collapse +
                 contrast explosion"; this bound makes that causal link
                 executable.
+            scorer_space_step_guard_max_post_segnet_argmax_disagreement:
+                optional upper bound for direct-live SegNet hard-argmax
+                disagreement. Receiver-cache quality already refuses this
+                post-export; wiring it here prevents collapsed checkpoints from
+                becoming "best" during training.
+            scorer_space_step_guard_max_post_pose_score_term: optional upper
+                bound for the student-pose ``sqrt(10*d_pose)`` term.
+            scorer_space_step_guard_max_post_pose_direct_live_score_term:
+                optional upper bound for the direct-live PoseNet
+                ``sqrt(10*d_pose)`` term when that heavier actuator is enabled.
             scorer_space_step_guard_backtracking_steps: when >0, a rejected
                 full optimizer step is not immediately discarded. The adapter
                 tries geometric interpolations between the pre-update parameters
@@ -891,6 +904,24 @@ class MlxScoreAwareAdapter:
             self._validate_positive_float_or_none_control(
                 scorer_space_step_guard_max_post_segnet_contrast_ratio,
                 "scorer_space_step_guard_max_post_segnet_contrast_ratio",
+            )
+        )
+        self._scorer_space_step_guard_max_post_segnet_argmax_disagreement = (
+            self._validate_unit_interval_or_none_control(
+                scorer_space_step_guard_max_post_segnet_argmax_disagreement,
+                "scorer_space_step_guard_max_post_segnet_argmax_disagreement",
+            )
+        )
+        self._scorer_space_step_guard_max_post_pose_score_term = (
+            self._validate_positive_float_or_none_control(
+                scorer_space_step_guard_max_post_pose_score_term,
+                "scorer_space_step_guard_max_post_pose_score_term",
+            )
+        )
+        self._scorer_space_step_guard_max_post_pose_direct_live_score_term = (
+            self._validate_positive_float_or_none_control(
+                scorer_space_step_guard_max_post_pose_direct_live_score_term,
+                "scorer_space_step_guard_max_post_pose_direct_live_score_term",
             )
         )
         self._scorer_space_step_guard_backtracking_steps = (
@@ -1168,11 +1199,21 @@ class MlxScoreAwareAdapter:
             raise ValueError(f"{name} must be finite and in (0, 1); got {parsed!r}")
         return parsed
 
+    @staticmethod
+    def _validate_unit_interval_or_none_control(value: Any, name: str) -> float | None:
+        if value is None:
+            return None
+        parsed = MlxScoreAwareAdapter._validate_unit_interval_control(value, name)
+        return parsed
+
     def _scorer_space_step_guard_reject_reasons(
         self,
         *,
         post_occ: float | None,
         post_contrast: float | None,
+        post_argmax_disagreement: float | None = None,
+        post_pose_score_term: float | None = None,
+        post_pose_direct_live_score_term: float | None = None,
     ) -> list[str]:
         """Return scorer-space step rejection reasons for post-update metrics."""
 
@@ -1191,6 +1232,29 @@ class MlxScoreAwareAdapter:
             > self._scorer_space_step_guard_max_post_segnet_contrast_ratio
         ):
             reject_reasons.append("post_segnet_contrast_ratio_above_ceiling")
+        if (
+            self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+            is not None
+            and post_argmax_disagreement is not None
+            and post_argmax_disagreement
+            > self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+        ):
+            reject_reasons.append("post_segnet_argmax_disagreement_above_ceiling")
+        if (
+            self._scorer_space_step_guard_max_post_pose_score_term is not None
+            and post_pose_score_term is not None
+            and post_pose_score_term
+            > self._scorer_space_step_guard_max_post_pose_score_term
+        ):
+            reject_reasons.append("post_pose_score_term_above_ceiling")
+        if (
+            self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+            is not None
+            and post_pose_direct_live_score_term is not None
+            and post_pose_direct_live_score_term
+            > self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+        ):
+            reject_reasons.append("post_pose_direct_live_score_term_above_ceiling")
         return reject_reasons
 
     def _add_scorer_space_step_guard_reason_metrics(
@@ -1210,6 +1274,15 @@ class MlxScoreAwareAdapter:
         metrics[
             "scorer_space_step_guard_reject_reason_post_segnet_contrast_ratio_above_ceiling"
         ] = float("post_segnet_contrast_ratio_above_ceiling" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_argmax_disagreement_above_ceiling"
+        ] = float("post_segnet_argmax_disagreement_above_ceiling" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_pose_score_term_above_ceiling"
+        ] = float("post_pose_score_term_above_ceiling" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_pose_direct_live_score_term_above_ceiling"
+        ] = float("post_pose_direct_live_score_term_above_ceiling" in reject_reasons)
 
     def _apply_scorer_space_step_guard(
         self,
@@ -1262,6 +1335,27 @@ class MlxScoreAwareAdapter:
                 is None
                 else float(self._scorer_space_step_guard_max_post_segnet_contrast_ratio)
             ),
+            "scorer_space_step_guard_max_post_segnet_argmax_disagreement": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+                )
+            ),
+            "scorer_space_step_guard_max_post_pose_score_term": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_pose_score_term is None
+                else float(self._scorer_space_step_guard_max_post_pose_score_term)
+            ),
+            "scorer_space_step_guard_max_post_pose_direct_live_score_term": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+                is None
+                else float(
+                    self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+                )
+            ),
         }
         if not self._scorer_space_step_guard_enabled:
             return metrics
@@ -1290,6 +1384,22 @@ class MlxScoreAwareAdapter:
             post_update_loss_part_metrics,
             "loss_part_segnet_direct_live_argmax_disagreement",
         )
+        pre_pose_score_term = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_pose_score_term",
+        )
+        post_pose_score_term = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_pose_score_term",
+        )
+        pre_pose_direct_live_score_term = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_pose_direct_live_score_term",
+        )
+        post_pose_direct_live_score_term = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_pose_direct_live_score_term",
+        )
 
         for name, value in {
             "scorer_space_step_guard_pre_segnet_occupied_class_fraction": pre_occ,
@@ -1298,6 +1408,10 @@ class MlxScoreAwareAdapter:
             "scorer_space_step_guard_post_segnet_contrast_ratio_before_restore": post_contrast,
             "scorer_space_step_guard_pre_segnet_argmax_disagreement": pre_argmax_disagreement,
             "scorer_space_step_guard_post_segnet_argmax_disagreement_before_restore": post_argmax_disagreement,
+            "scorer_space_step_guard_pre_pose_score_term": pre_pose_score_term,
+            "scorer_space_step_guard_post_pose_score_term_before_restore": post_pose_score_term,
+            "scorer_space_step_guard_pre_pose_direct_live_score_term": pre_pose_direct_live_score_term,
+            "scorer_space_step_guard_post_pose_direct_live_score_term_before_restore": post_pose_direct_live_score_term,
         }.items():
             if value is not None:
                 metrics[name] = float(value)
@@ -1308,6 +1422,13 @@ class MlxScoreAwareAdapter:
             return metrics
 
         max_contrast = self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+        max_argmax = (
+            self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+        )
+        max_pose = self._scorer_space_step_guard_max_post_pose_score_term
+        max_direct_pose = (
+            self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+        )
         pre_noncollapsed = (
             pre_occ
             >= self._scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
@@ -1338,10 +1459,44 @@ class MlxScoreAwareAdapter:
             and post_occ is not None
             and post_occ <= pre_occ
         )
+        argmax_crossed_ceiling = (
+            max_argmax is not None
+            and post_argmax_disagreement is not None
+            and post_argmax_disagreement > max_argmax
+            and (
+                pre_argmax_disagreement is None
+                or pre_argmax_disagreement <= max_argmax
+                or post_argmax_disagreement >= pre_argmax_disagreement
+            )
+        )
+        pose_crossed_ceiling = (
+            max_pose is not None
+            and post_pose_score_term is not None
+            and post_pose_score_term > max_pose
+            and (
+                pre_pose_score_term is None
+                or pre_pose_score_term <= max_pose
+                or post_pose_score_term >= pre_pose_score_term
+            )
+        )
+        direct_pose_crossed_ceiling = (
+            max_direct_pose is not None
+            and post_pose_direct_live_score_term is not None
+            and post_pose_direct_live_score_term > max_direct_pose
+            and (
+                pre_pose_direct_live_score_term is None
+                or pre_pose_direct_live_score_term <= max_direct_pose
+                or post_pose_direct_live_score_term
+                >= pre_pose_direct_live_score_term
+            )
+        )
         eligible = (
             pre_noncollapsed
             or contrast_crossed_ceiling
             or low_occupancy_non_improving
+            or argmax_crossed_ceiling
+            or pose_crossed_ceiling
+            or direct_pose_crossed_ceiling
         )
         metrics["scorer_space_step_guard_eligible"] = float(eligible)
         metrics["scorer_space_step_guard_eligible_pre_noncollapsed"] = float(
@@ -1353,12 +1508,24 @@ class MlxScoreAwareAdapter:
         metrics["scorer_space_step_guard_eligible_low_occupancy_non_improving"] = float(
             low_occupancy_non_improving
         )
+        metrics["scorer_space_step_guard_eligible_argmax_crossed_ceiling"] = float(
+            argmax_crossed_ceiling
+        )
+        metrics["scorer_space_step_guard_eligible_pose_crossed_ceiling"] = float(
+            pose_crossed_ceiling
+        )
+        metrics[
+            "scorer_space_step_guard_eligible_pose_direct_live_crossed_ceiling"
+        ] = float(direct_pose_crossed_ceiling)
         if not eligible:
             return metrics
 
         reject_reasons = self._scorer_space_step_guard_reject_reasons(
             post_occ=post_occ,
             post_contrast=post_contrast,
+            post_argmax_disagreement=post_argmax_disagreement,
+            post_pose_score_term=post_pose_score_term,
+            post_pose_direct_live_score_term=post_pose_direct_live_score_term,
         )
         self._add_scorer_space_step_guard_reason_metrics(metrics, reject_reasons)
         if not reject_reasons:
@@ -1387,9 +1554,24 @@ class MlxScoreAwareAdapter:
                 trial_metrics,
                 "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
             )
+            trial_argmax_disagreement = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_argmax_disagreement",
+            )
+            trial_pose_score_term = self._finite_metric(
+                trial_metrics,
+                "loss_part_pose_score_term",
+            )
+            trial_pose_direct_live_score_term = self._finite_metric(
+                trial_metrics,
+                "loss_part_pose_direct_live_score_term",
+            )
             trial_reasons = self._scorer_space_step_guard_reject_reasons(
                 post_occ=trial_occ,
                 post_contrast=trial_contrast,
+                post_argmax_disagreement=trial_argmax_disagreement,
+                post_pose_score_term=trial_pose_score_term,
+                post_pose_direct_live_score_term=trial_pose_direct_live_score_term,
             )
             metrics["scorer_space_step_guard_backtracking_attempt_count"] = float(
                 attempt + 1
@@ -1402,6 +1584,18 @@ class MlxScoreAwareAdapter:
                 metrics[
                     "scorer_space_step_guard_backtracking_last_segnet_contrast_ratio"
                 ] = float(trial_contrast)
+            if trial_argmax_disagreement is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_argmax_disagreement"
+                ] = float(trial_argmax_disagreement)
+            if trial_pose_score_term is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_pose_score_term"
+                ] = float(trial_pose_score_term)
+            if trial_pose_direct_live_score_term is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_pose_direct_live_score_term"
+                ] = float(trial_pose_direct_live_score_term)
             if trial_reasons:
                 continue
             metrics.update(
@@ -1416,6 +1610,21 @@ class MlxScoreAwareAdapter:
                     ),
                     "scorer_space_step_guard_post_segnet_contrast_ratio_after_backtracking": (
                         0.0 if trial_contrast is None else float(trial_contrast)
+                    ),
+                    "scorer_space_step_guard_post_segnet_argmax_disagreement_after_backtracking": (
+                        0.0
+                        if trial_argmax_disagreement is None
+                        else float(trial_argmax_disagreement)
+                    ),
+                    "scorer_space_step_guard_post_pose_score_term_after_backtracking": (
+                        0.0
+                        if trial_pose_score_term is None
+                        else float(trial_pose_score_term)
+                    ),
+                    "scorer_space_step_guard_post_pose_direct_live_score_term_after_backtracking": (
+                        0.0
+                        if trial_pose_direct_live_score_term is None
+                        else float(trial_pose_direct_live_score_term)
                     ),
                 }
             )
@@ -1623,6 +1832,11 @@ class MlxScoreAwareAdapter:
         recon_stage_weight = component_loss_weight(loss_weights, "recon")
         segnet_stage_weight = component_loss_weight(loss_weights, "distill")
         pose_stage_weight = component_loss_weight(loss_weights, "pose_distill")
+        pose_direct_live_stage_weight = component_loss_weight(
+            loss_weights,
+            "pose_direct_live_distill",
+            default=pose_stage_weight,
+        )
         scorer_input_guard_stage_weight = component_loss_weight(
             loss_weights,
             "scorer_input_guard",
@@ -1691,6 +1905,17 @@ class MlxScoreAwareAdapter:
                 out["loss_part_weighted_pose_score_term"] = weighted
                 out["loss_part_weighted_pose_distill"] = weighted
                 out["loss_part_stage_weight_pose_distill"] = pose_stage_weight
+            elif name == "pose_direct_live_distill":
+                weighted = (
+                    float(self.bundle.pose_direct_live_distillation_weight)
+                    * pose_direct_live_stage_weight
+                    * scalar
+                )
+                out["loss_part_weighted_pose_direct_live_distill"] = weighted
+                out["loss_part_weighted_pose_direct_live_score_term"] = weighted
+                out["loss_part_stage_weight_pose_direct_live_distill"] = (
+                    pose_direct_live_stage_weight
+                )
             elif name == "recon":
                 out["loss_part_weighted_recon"] = recon_stage_weight * scalar
                 out["loss_part_stage_weight_recon"] = recon_stage_weight
@@ -2832,6 +3057,24 @@ class MlxScoreAwareAdapter:
             "segnet_teacher_frame_index": int(self.bundle.segnet_teacher_frame_index),
             "segnet_distillation_weight": float(self.bundle.distillation_weight),
             "pose_distillation_weight": float(self.bundle.pose_distillation_weight),
+            "pose_direct_live_distillation": {
+                "schema": "mlx_score_aware_pose_direct_live_distillation.v1",
+                "enabled": (
+                    float(self.bundle.pose_direct_live_distillation_weight) > 0.0
+                ),
+                "weight": float(self.bundle.pose_direct_live_distillation_weight),
+                "teacher_surface": "teacher_pose_for_yuv6_pair_nhwc",
+                "candidate_surface": (
+                    "decoded_rgb_nhwc01_to_pr95_yuv6_pair_nhwc255"
+                ),
+                "objective": "sqrt_10_pose_mse_on_upstream_posenet_first_6_dims",
+                "target_surface": "teacher_pose_for_indices",
+                "purpose": (
+                    "direct_full_posenet_vjp_for_temporal_yuv6_distortion_"
+                    "collapse_repair"
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "pose_distillation_loss": str(self.bundle.pose_distillation_loss),
             "pose_distillation_huber_delta": float(
                 self.bundle.pose_distillation_huber_delta
@@ -2938,6 +3181,27 @@ class MlxScoreAwareAdapter:
                         self._scorer_space_step_guard_max_post_segnet_contrast_ratio
                     )
                 ),
+                "max_post_segnet_argmax_disagreement": (
+                    None
+                    if self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_post_segnet_argmax_disagreement
+                    )
+                ),
+                "max_post_pose_score_term": (
+                    None
+                    if self._scorer_space_step_guard_max_post_pose_score_term is None
+                    else float(self._scorer_space_step_guard_max_post_pose_score_term)
+                ),
+                "max_post_pose_direct_live_score_term": (
+                    None
+                    if self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_post_pose_direct_live_score_term
+                    )
+                ),
                 "backtracking_steps": int(
                     self._scorer_space_step_guard_backtracking_steps
                 ),
@@ -2955,6 +3219,9 @@ class MlxScoreAwareAdapter:
                     "loss_part_scorer_input_contrast_floor_segnet_last_rgb_"
                     "mean_std_ratio"
                 ),
+                "argmax_metric": "loss_part_segnet_direct_live_argmax_disagreement",
+                "pose_metric": "loss_part_pose_score_term",
+                "pose_direct_live_metric": "loss_part_pose_direct_live_score_term",
                 "rollback_contract": {
                     "parameters_restored_on_reject": True,
                     "parameters_interpolated_on_backtracking_accept": True,
@@ -3928,7 +4195,8 @@ class MlxScoreAwareAdapter:
 
         The shared dual-ascent defaults are intentionally family-neutral:
         ``loss_part_distill`` for SegNet last-frame pressure and
-        ``loss_part_pose_score_term`` for PoseNet pair/YUV6 score pressure.
+        ``loss_part_pose_score_term`` / ``loss_part_pose_direct_live_score_term``
+        for PoseNet pair/YUV6 score pressure.
         PR95-stage training computes those terms through source-faithful stage
         losses, but names them by stage surface. Alias them here so one
         controller observes scorer distortion across native, PR95, HiNeRV, and
@@ -3998,11 +4266,16 @@ class MlxScoreAwareAdapter:
             ]
         seg_argmax = metrics.get("loss_part_segnet_direct_live_argmax_disagreement")
         pose_score = metrics.get("loss_part_pose_score_term")
+        if pose_score is None:
+            pose_score = metrics.get("loss_part_pose_direct_live_score_term")
         pose_expected = _active_pr95_stage_metric_weight(
             metrics,
             "loss_part_pr95_stage_effective_pose_weight",
             "loss_part_pr95_stage_pose_distill_weight",
+        ) or float(
+            getattr(self.bundle, "pose_direct_live_distillation_weight", 0.0)
         )
+        pose_expected = bool(pose_expected)
         if (
             "loss_part_joint_scorer_proxy_nonrate" not in metrics
             and seg_argmax is not None

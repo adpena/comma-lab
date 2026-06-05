@@ -306,6 +306,36 @@ def test_direct_live_dual_ascent_survives_generic_distill_zero() -> None:
     assert weights["segnet_direct_live_distill"] > 0.0
 
 
+def test_default_nerv_dual_ascent_config_prices_direct_live_pose_term() -> None:
+    config = build_default_nerv_train_time_dual_ascent_config(
+        family="snerv",
+        pose_distillation_weight=0.0,
+        pose_direct_live_distillation_weight=2.5,
+    )
+
+    constraints = {row["constraint_id"]: row for row in config["constraints"]}
+    pose = constraints["snerv_posenet_yuv6_pair_distill"]
+    assert pose["metric_name"] == "loss_part_pose_direct_live_score_term"
+    assert pose["loss_weight_key"] == "pose_direct_live_distill"
+    assert pose["weight_scale"] == pytest.approx(2.5)
+
+    controller = TrainTimeDualAscentController.from_config(config)
+    controller.observe({"loss_part_pose_direct_live_score_term": 4.0})
+    metrics = controller.observe({"loss_part_pose_direct_live_score_term": 5.0})
+    weights = controller.effective_loss_weights({"pose_distill": 0.0})
+
+    assert (
+        metrics["dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill"]
+        == pytest.approx(0.0)
+    )
+    assert (
+        metrics["dual_ascent_metric__snerv_posenet_yuv6_pair_distill"]
+        == pytest.approx(5.0)
+    )
+    assert weights["pose_distill"] == pytest.approx(0.0)
+    assert weights["pose_direct_live_distill"] > 0.0
+
+
 def test_default_nerv_dual_ascent_config_prices_contrast_floor_guard() -> None:
     config = build_default_nerv_train_time_dual_ascent_config(
         family="snerv",

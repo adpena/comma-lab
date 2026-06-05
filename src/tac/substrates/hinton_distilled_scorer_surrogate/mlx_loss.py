@@ -722,6 +722,10 @@ class RealPoseNetTeacherCache:
     per_dim_scale: Any = None
     upstream_posenet_safetensors_sha256: str | None = None
     cache_build_seconds: float | None = None
+    #: Optional MLX port of the upstream PoseNet. When present, training can
+    #: backprop through the real PoseNet scorer surface on decoded candidate
+    #: YUV6 pair tensors instead of only through the lightweight pose student.
+    live_posenet_adapter: Any | None = None
 
     def __post_init__(self) -> None:
         _require_mlx()
@@ -754,6 +758,45 @@ class RealPoseNetTeacherCache:
         """
         _require_mlx()
         return self.teacher_pose_np[indices]
+
+    def teacher_pose_for_yuv6_pair_nhwc(self, posenet_yuv6_pair_nhwc: Any) -> Any:
+        """Evaluate the live MLX PoseNet on candidate YUV6 pair tensors.
+
+        ``posenet_yuv6_pair_nhwc`` must already match the upstream PoseNet
+        preprocess surface: NHWC ``(B, 192, 256, 12)`` YUV6 in byte scale
+        ``[0, 255]``. This method is intentionally separate from
+        ``teacher_pose_for_indices`` so training code cannot accidentally claim
+        a direct-live PoseNet VJP when only the target cache is present.
+        """
+
+        _require_mlx()
+        import mlx.core as mx
+
+        if self.live_posenet_adapter is None:
+            raise RuntimeError(
+                "direct-live PoseNet requested but RealPoseNetTeacherCache has "
+                "no live_posenet_adapter. Build the teacher through "
+                "build_mlx_posenet_pair_teacher so the MLX PoseNet port is "
+                "attached."
+            )
+        shape = tuple(posenet_yuv6_pair_nhwc.shape)
+        if len(shape) != 4 or int(shape[-1]) != 12:
+            raise ValueError(
+                "posenet_yuv6_pair_nhwc must have shape (B, H, W, 12); "
+                f"got {shape!r}"
+            )
+        out = self.live_posenet_adapter(posenet_yuv6_pair_nhwc)
+        if not isinstance(out, dict) or "pose" not in out:
+            raise RuntimeError(
+                "live_posenet_adapter must return a dict with a 'pose' entry"
+            )
+        pose = out["pose"]
+        if int(pose.shape[-1]) < self.pose_dims:
+            raise RuntimeError(
+                f"live PoseNet pose width {int(pose.shape[-1])} is smaller "
+                f"than pose_dims={self.pose_dims}"
+            )
+        return pose[..., : self.pose_dims].astype(mx.float32)
 
 
 # ---------------------------------------------------------------------------

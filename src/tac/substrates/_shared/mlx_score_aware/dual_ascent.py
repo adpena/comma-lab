@@ -464,6 +464,7 @@ def build_default_nerv_train_time_dual_ascent_config(
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
     segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     pose_distillation_weight: float = 0.0,
+    pose_direct_live_distillation_weight: float = 0.0,
     scorer_input_distribution_guard_weight: float = 0.0,
     scorer_input_contrast_floor_weight: float = 0.0,
     scorer_input_shape_tether_weight: float = 0.0,
@@ -507,6 +508,7 @@ def build_default_nerv_train_time_dual_ascent_config(
         segnet_direct_live_class_balanced_squared_hinge_weight
     )
     pose_weight = _nonnegative_weight(pose_distillation_weight)
+    pose_direct_live_weight = _nonnegative_weight(pose_direct_live_distillation_weight)
     distribution_guard_weight = _nonnegative_weight(
         scorer_input_distribution_guard_weight
     )
@@ -646,22 +648,58 @@ def build_default_nerv_train_time_dual_ascent_config(
                 ),
             )
         )
-    if pose_weight > 0.0:
+    if pose_weight > 0.0 or pose_direct_live_weight > 0.0:
+        pose_metric_name = (
+            "loss_part_pose_score_term"
+            if pose_weight > 0.0
+            else "loss_part_pose_direct_live_score_term"
+        )
+        pose_loss_weight_key = (
+            "pose_distill" if pose_weight > 0.0 else "pose_direct_live_distill"
+        )
+        pose_weight_scale = pose_weight if pose_weight > 0.0 else pose_direct_live_weight
+        pose_rationale = (
+            "PoseNet scores the pair through PR95/YUV6 preprocessing; "
+            "this dual prices pair-level pose loss separately from "
+            "SegNet boundary loss."
+            if pose_weight > 0.0
+            else (
+                "Direct-live PoseNet scores decoded candidate pairs through "
+                "the upstream YUV6 pair surface; this dual keeps the existing "
+                "PoseNet gate active when the renderer binds PoseNet through "
+                "the live MLX scorer instead of the student pose head."
+            )
+        )
         constraints.append(
             _constraint_payload(
                 constraint_id=f"{family}_posenet_yuv6_pair_distill",
-                metric_name="loss_part_pose_score_term",
-                loss_weight_key="pose_distill",
-                base_weight=pose_weight,
+                metric_name=pose_metric_name,
+                loss_weight_key=pose_loss_weight_key,
+                base_weight=pose_weight_scale,
+                target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
+                dual_lr=0.2,
+                max_lambda=6.0,
+                warmup_steps=warmup_steps,
+                update_every_steps=update_every_steps,
+                rationale=pose_rationale,
+            )
+        )
+    if pose_weight > 0.0 and pose_direct_live_weight > 0.0:
+        constraints.append(
+            _constraint_payload(
+                constraint_id=f"{family}_posenet_yuv6_pair_direct_live_distill",
+                metric_name="loss_part_pose_direct_live_score_term",
+                loss_weight_key="pose_direct_live_distill",
+                base_weight=pose_direct_live_weight,
                 target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
                 dual_lr=0.2,
                 max_lambda=6.0,
                 warmup_steps=warmup_steps,
                 update_every_steps=update_every_steps,
                 rationale=(
-                    "PoseNet scores the pair through PR95/YUV6 preprocessing; "
-                    "this dual prices pair-level pose loss separately from "
-                    "SegNet boundary loss."
+                    "Secondary direct-live PoseNet price for runs that keep "
+                    "the pose-student tether active while also training through "
+                    "the live MLX PoseNet candidate YUV6 pair surface."
                 ),
             )
         )
