@@ -1248,6 +1248,15 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         fake_train_export_snerv_mlx_native,
     )
 
+    stage_weights = {
+        "recon": 0.5,
+        "distill": 1.25,
+        "pose_distill": 0.75,
+        "scorer_input_guard": 0.25,
+        "scorer_input_contrast_floor": 0.375,
+        "scorer_input_shape_tether": 0.625,
+        "segnet_direct_live_distill": 0.125,
+    }
     out = runner_mod._run_snerv_native_mlx_export_attachment(
         requested=True,
         output_dir=tmp_path / "snerv_native_attachment",
@@ -1291,6 +1300,12 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         score_aware_long_training_eval_roundtrip_ste=True,
         score_aware_long_training_scorer_tether_smoke_steps=3,
         score_aware_long_training_section_byte_refresh_every_steps=25,
+        score_aware_long_training_scorer_input_contrast_floor_weight=0.11,
+        score_aware_long_training_scorer_input_shape_tether_weight=0.12,
+        score_aware_long_training_loss_weights=stage_weights,
+        score_aware_long_training_pose_warmup_epochs=2,
+        score_aware_long_training_scorer_input_shape_warmup_epochs=1,
+        score_aware_long_training_segnet_direct_live_escape_warmup_epochs=3,
         checkpoint_retention_keep_last_n=2,
         checkpoint_retention_keep_best_n=1,
         checkpoint_retention_keep_every_n_epochs=None,
@@ -1301,6 +1316,13 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
         pose_distillation_huber_delta=0.5,
         segnet_distillation_objective="kl_t2",
         distillation_temperature=2.0,
+        segnet_student_live_calibration_weight=0.9,
+        segnet_direct_live_distillation_weight=0.25,
+        segnet_direct_live_base_loss_weight=0.5,
+        segnet_direct_live_class_histogram_weight=0.75,
+        segnet_direct_live_class_balanced_hinge_weight=0.375,
+        segnet_direct_live_class_balanced_ce_weight=0.625,
+        segnet_direct_live_class_balanced_squared_hinge_weight=0.875,
         segnet_tau_boundary=1.25,
         segnet_hinge_margin=0.5,
         distillation_device="mps",
@@ -1332,6 +1354,31 @@ def test_snerv_native_export_attachment_threads_mlx_prefilter_controls(
     )
     assert captured["score_aware_long_training_optimizer"] == "pact_muon_adamw"
     assert captured["score_aware_long_training_pr95_faithful_curriculum"] is True
+    assert captured["score_aware_long_training_loss_weights"] == stage_weights
+    assert captured["score_aware_long_training_pose_warmup_epochs"] == 2
+    assert captured["score_aware_long_training_scorer_input_shape_warmup_epochs"] == 1
+    assert captured[
+        "score_aware_long_training_segnet_direct_live_escape_warmup_epochs"
+    ] == 3
+    assert captured["score_aware_long_training_scorer_input_contrast_floor_weight"] == (
+        pytest.approx(0.11)
+    )
+    assert captured["score_aware_long_training_scorer_input_shape_tether_weight"] == (
+        pytest.approx(0.12)
+    )
+    assert captured["segnet_student_live_calibration_weight"] == pytest.approx(0.9)
+    assert captured["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
+    assert captured["segnet_direct_live_base_loss_weight"] == pytest.approx(0.5)
+    assert captured["segnet_direct_live_class_histogram_weight"] == pytest.approx(0.75)
+    assert captured["segnet_direct_live_class_balanced_hinge_weight"] == pytest.approx(
+        0.375
+    )
+    assert captured["segnet_direct_live_class_balanced_ce_weight"] == pytest.approx(
+        0.625
+    )
+    assert captured[
+        "segnet_direct_live_class_balanced_squared_hinge_weight"
+    ] == pytest.approx(0.875)
     assert out["executed"] is True
     assert out["local_mlx_prefilter_profile_path"].endswith(
         "local_mlx_prefilter_profile.json"

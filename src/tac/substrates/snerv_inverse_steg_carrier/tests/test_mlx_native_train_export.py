@@ -1381,6 +1381,102 @@ def test_pr95_every_stage_muon_falls_back_when_snerv_has_no_matrix_targets(
     )
 
 
+def test_score_aware_long_training_stage_weights_reach_snerv_harness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mx = pytest.importorskip("mlx.core")
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    pairs = _tiny_pairs(pairs=1)
+    target0 = mx.array(np.transpose(pairs[:, 0], (0, 2, 3, 1)) / 255.0)
+    target1 = mx.array(np.transpose(pairs[:, 1], (0, 2, 3, 1)) / 255.0)
+
+    monkeypatch.setattr(
+        mod,
+        "decode_mlx_targets",
+        lambda *_args, **_kwargs: (target0, target1),
+    )
+    harness_calls: list[dict[str, object]] = []
+
+    class FakeArtifact:
+        def as_dict(self) -> dict[str, object]:
+            return {
+                "total_epochs_completed": 4,
+                "telemetry_path": "",
+                "live_checkpoint_path": "",
+                "ema_shadow_checkpoint_path": "",
+            }
+
+    def fake_run_mlx_score_aware_full_main(**kwargs):
+        harness_calls.append(kwargs)
+        on_epoch_end = kwargs.get("on_epoch_end")
+        if on_epoch_end is not None:
+            on_epoch_end(SimpleNamespace(epoch=3, loss=0.0))
+        return FakeArtifact()
+
+    monkeypatch.setattr(
+        "tac.substrates._shared.mlx_score_aware.harness.run_mlx_score_aware_full_main",
+        fake_run_mlx_score_aware_full_main,
+    )
+
+    stage_weights = {
+        "recon": 0.5,
+        "distill": 1.25,
+        "pose_distill": 0.75,
+        "scorer_input_guard": 0.25,
+        "scorer_input_contrast_floor": 0.375,
+        "scorer_input_shape_tether": 0.625,
+        "segnet_direct_live_distill": 0.125,
+    }
+    report = train_export_snerv_mlx_native(
+        output_dir=tmp_path / "snerv_stage_weights",
+        num_pairs=1,
+        source_video_path="unit.mkv",
+        modelsize_candidate={
+            "levels": 1,
+            "wavelet": "haar",
+            "bits_per_coeff": 3.0,
+            "step_map_bits_per_coeff": 0.5,
+            "decoder_payload_codec": "int8_symmetric",
+            "score_aware_long_training_epochs": 4,
+            "score_aware_long_training_scorer_input_distribution_guard_weight": 0.0,
+            "snerv_score_aware_long_training_stage_loss_weights": stage_weights,
+            "snerv_score_aware_long_training_pose_warmup_epochs": 2,
+            "snerv_score_aware_long_training_scorer_input_shape_warmup_epochs": 1,
+            "snerv_score_aware_long_training_segnet_direct_live_escape_warmup_epochs": 1,
+        },
+        scorer_upstream_dir="upstream",
+        output_height=16,
+        output_width=16,
+        run_archive_export=False,
+    )
+
+    assert harness_calls
+    stages = harness_calls[0]["curriculum_stages"]
+    assert [stage.start_epoch for stage in stages] == [0, 1, 2]
+    assert [stage.end_epoch for stage in stages] == [1, 2, 4]
+    assert stages[0].loss_weights["pose_distill"] == 0.0
+    assert stages[0].loss_weights["segnet_direct_live_distill"] == 0.0
+    assert stages[0].loss_weights["segnet_direct_live_base_loss"] == 0.0
+    assert stages[1].loss_weights["pose_distill"] == 0.0
+    assert stages[1].loss_weights["segnet_direct_live_distill"] == pytest.approx(
+        0.125
+    )
+    assert stages[2].loss_weights["pose_distill"] == pytest.approx(0.75)
+    assert stages[2].loss_weights["segnet_direct_live_distill"] == pytest.approx(
+        0.125
+    )
+    long_training = report["score_aware_long_training"]
+    assert long_training["stage_loss_weights"] == stage_weights
+    assert long_training["curriculum_warmup_epochs"] == {
+        "pose_distillation_warmup_epochs": 2,
+        "scorer_input_shape_warmup_epochs": 1,
+        "segnet_direct_live_escape_warmup_epochs": 1,
+    }
+    assert long_training["curriculum_stage_count"] == 3
+
+
 def test_packet_builder_emits_receiver_decodable_snar1() -> None:
     packet = build_snerv_mlx_native_packet_from_numpy_pairs(
         _tiny_pairs(pairs=2),
