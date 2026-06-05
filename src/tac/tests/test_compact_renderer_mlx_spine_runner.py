@@ -2022,7 +2022,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "loss_part_pr95_stage_scorer_input_shape_tether_posenet_yuv6_temporal_delta": 0.09375,
                     "loss_part_pr95_stage_segnet_direct_live_distill": 0.03125,
                     "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.75,
-                    "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+                    "loss_part_pr95_stage_segnet_direct_live_candidate_occupied_class_fraction": 0.6,
                     "loss_part_weighted_pr95_stage_segnet_direct_live_distill": 0.015625,
                     "segnet_student_live_calibration_active": 1.0,
                     "loss_part_segnet_student_live_calibration": 0.0625,
@@ -2071,7 +2071,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["segnet_direct_live_class_occupancy_metric_observed"] is True
     assert contract[
         "segnet_direct_live_max_candidate_occupied_class_fraction"
-    ] == pytest.approx(0.4)
+    ] == pytest.approx(0.6)
 
 
 def test_hinerv_training_telemetry_contract_rejects_missing_direct_live_metrics(
@@ -2183,7 +2183,7 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
                 "loss_components": {
                     "loss_part_segnet_direct_live_distill": 2.0,
                     "loss_part_segnet_direct_live_argmax_disagreement": 0.5,
-                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.2,
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
                 },
             },
             sort_keys=True,
@@ -2208,7 +2208,7 @@ def test_hinerv_training_telemetry_contract_rejects_direct_live_class_collapse(
     assert contract["passed"] is False
     assert contract[
         "segnet_direct_live_max_candidate_occupied_class_fraction"
-    ] == pytest.approx(0.2)
+    ] == pytest.approx(0.4)
     assert (
         "hi_nerv_score_aware_training_direct_live_segnet_candidate_argmax_collapsed"
         in contract["blockers"]

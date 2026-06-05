@@ -757,7 +757,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
         expected_direct_live
         and direct_live_class_occupancy_observed
         and float(direct_live_max_candidate_occupied_class_fraction or 0.0)
-        <= 0.200001
+        < 0.400001
     ):
         blockers.append(
             "snerv_score_aware_long_training_direct_live_segnet_candidate_argmax_collapsed"
