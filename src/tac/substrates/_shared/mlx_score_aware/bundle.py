@@ -253,6 +253,14 @@ class RendererBundle:
             It is default-off because it is heavier and remains MLX-local
             false-authority evidence, but it is the scorer-faithful antidote to
             all-one-class SegNet masks when the student surrogate is too weak.
+        segnet_direct_live_base_loss_weight: relative multiplier on the base
+            direct-live SegNet objective (KL / boundary-TCKD /
+            argmax-hinge).  The class-escape terms below are scorer-grounded
+            but mathematically distinct controls; this knob allows a
+            class-escape bootstrap stage to set the base term to ``0`` so a
+            large logit-matching loss cannot pin the renderer inside a
+            one-class hard-argmax basin.  Default ``1`` preserves existing
+            behavior.
         segnet_direct_live_class_histogram_weight: relative weight for the
             differentiable class-measure tether inside the direct-live SegNet
             loss. The exact upstream ``d_seg`` is an argmax-flip rate, but a
@@ -436,6 +444,7 @@ class RendererBundle:
     segnet_distillation_objective: str = DISTILLATION_OBJECTIVE_KL_T2
     segnet_student_live_calibration_weight: float = 0.0
     segnet_direct_live_distillation_weight: float = 0.0
+    segnet_direct_live_base_loss_weight: float = 1.0
     segnet_direct_live_class_histogram_weight: float = 0.0
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0
     segnet_direct_live_class_balanced_ce_weight: float = 0.0
@@ -550,6 +559,11 @@ class RendererBundle:
             raise MlxScoreAwareHarnessError(
                 "segnet_direct_live_distillation_weight must be >= 0; got "
                 f"{self.segnet_direct_live_distillation_weight}"
+            )
+        if self.segnet_direct_live_base_loss_weight < 0.0:
+            raise MlxScoreAwareHarnessError(
+                "segnet_direct_live_base_loss_weight must be >= 0; got "
+                f"{self.segnet_direct_live_base_loss_weight}"
             )
         if self.segnet_direct_live_class_histogram_weight < 0.0:
             raise MlxScoreAwareHarnessError(

@@ -863,6 +863,10 @@ def test_hinerv_direct_full_refuses_before_score_aware_trainer_call(
         "hinerv_full_missing_ema_archive_selection",
         "hinerv_full_missing_archive_parse_back_selection",
         "hinerv_full_missing_scorer_input_distribution_guard",
+        "hinerv_full_missing_boundary_argmax_hinge_segnet_objective",
+        "hinerv_full_missing_direct_live_segnet_distillation",
+        "hinerv_full_missing_direct_live_class_escape_pressure",
+        "hinerv_full_missing_scorer_input_contrast_floor",
     ):
         assert blocker in payload["blockers"]
     control = payload["pr95_full_control_contract"]
@@ -896,6 +900,22 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
             "--post-export-receiver-cache-quality-gate",
             "--scorer-input-distribution-guard-weight",
             "2.0",
+            "--segnet-distillation-objective",
+            "boundary_argmax_hinge",
+            "--segnet-direct-live-distillation-weight",
+            "0.25",
+            "--segnet-direct-live-class-histogram-weight",
+            "0.25",
+            "--segnet-direct-live-class-balanced-hinge-weight",
+            "0.5",
+            "--segnet-direct-live-class-balanced-ce-weight",
+            "0.25",
+            "--scorer-input-contrast-floor-weight",
+            "0.5",
+            "--scorer-input-contrast-floor-segnet-min-std-ratio",
+            "0.6",
+            "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+            "0.6",
         ]
     )
 
@@ -919,6 +939,12 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["coder_qat_c1a_sample_size"] == 64
     assert controls["segnet_student_live_calibration_weight"] == pytest.approx(1.0)
     assert controls["segnet_student_live_calibration_active"] is True
+    assert controls["segnet_distillation_objective"] == "boundary_argmax_hinge"
+    assert controls["segnet_direct_live_distillation_weight"] == pytest.approx(0.25)
+    assert controls["segnet_direct_live_class_escape_weight"] == pytest.approx(0.5)
+    assert controls["segnet_direct_live"]["class_histogram_weight"] == pytest.approx(0.25)
+    assert controls["segnet_direct_live"]["class_balanced_hinge_weight"] == pytest.approx(0.5)
+    assert controls["segnet_direct_live"]["class_balanced_ce_weight"] == pytest.approx(0.25)
     assert controls["train_time_decoder_controls_enabled"] is False
     assert controls["export_decoder_pruning_ratio"] == pytest.approx(0.0)
     assert controls["ema_archive_selection_enabled"] is True
@@ -953,6 +979,10 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
         "scorer_input_distribution_guard_components"
     ]
     assert controls["dynamic_range_repair_before_replay"] is True
+    assert controls["scorer_input_contrast_floor_enabled"] is True
+    assert controls["scorer_input_contrast_floor_weight"] == pytest.approx(0.5)
+    assert controls["scorer_input_contrast_floor_segnet_min_std_ratio"] == pytest.approx(0.6)
+    assert controls["scorer_input_contrast_floor_posenet_yuv6_min_std_ratio"] == pytest.approx(0.6)
     assert controls["output_head_target_bias_init_enabled"] is True
     assert controls["output_head_target_bias_init_epsilon"] == pytest.approx(
         1.0 / 1024.0

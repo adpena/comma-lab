@@ -90,6 +90,15 @@ DEFAULT_CODER_QAT_DELTA_WEIGHT = 2.0e-4
 DEFAULT_CODER_QAT_C1A_ENTROPY_WEIGHT = 1.0e-4
 DEFAULT_CODER_QAT_C1A_SIGMA = 0.2
 DEFAULT_CODER_QAT_C1A_SAMPLE_SIZE = 512
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_DISTILLATION_WEIGHT = 0.25
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_HISTOGRAM_WEIGHT = 0.25
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_HINGE_WEIGHT = 0.5
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_CE_WEIGHT = 0.25
+DEFAULT_HINERV_SEGNET_DIRECT_LIVE_OBJECTIVE = "boundary_argmax_hinge"
+DEFAULT_HINERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT = 2.0
+DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_WEIGHT = 0.5
+DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO = 0.6
+DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO = 0.6
 # Do not classify the first 9e-5 pose-spike as repeated low-LR failure: its
 # telemetry explicitly requested a 2.7e-5 recovery run. The Huber path is real,
 # but it is reserved for repeated instability at or below that recovered regime;
@@ -1186,6 +1195,16 @@ def _hinerv_campaign_row(
         _float_token(effective_segnet_distillation_weight),
         "--pose-distillation-weight",
         _float_token(effective_pose_distillation_weight),
+        "--segnet-distillation-objective",
+        DEFAULT_HINERV_SEGNET_DIRECT_LIVE_OBJECTIVE,
+        "--segnet-direct-live-distillation-weight",
+        _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_DISTILLATION_WEIGHT),
+        "--segnet-direct-live-class-histogram-weight",
+        _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_HISTOGRAM_WEIGHT),
+        "--segnet-direct-live-class-balanced-hinge-weight",
+        _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_HINGE_WEIGHT),
+        "--segnet-direct-live-class-balanced-ce-weight",
+        _float_token(DEFAULT_HINERV_SEGNET_DIRECT_LIVE_CLASS_BALANCED_CE_WEIGHT),
         "--coder-aware-qat",
         "--coder-qat-quant-bits",
         str(int(quant_bits)),
@@ -1202,6 +1221,18 @@ def _hinerv_campaign_row(
         "10",
         "--telemetry-flush-interval-epochs",
         str(DEFAULT_HINERV_TELEMETRY_FLUSH_INTERVAL_EPOCHS),
+        "--scorer-input-distribution-guard-weight",
+        _float_token(DEFAULT_HINERV_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT),
+        "--scorer-input-contrast-floor-weight",
+        _float_token(DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_WEIGHT),
+        "--scorer-input-contrast-floor-segnet-min-std-ratio",
+        _float_token(
+            DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_SEGNET_MIN_STD_RATIO
+        ),
+        "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+        _float_token(
+            DEFAULT_HINERV_SCORER_INPUT_CONTRAST_FLOOR_POSENET_YUV6_MIN_STD_RATIO
+        ),
         "--run-post-export-materializers",
         "--output-dir",
         (output_root / output_dir_basename).as_posix(),
@@ -4162,7 +4193,9 @@ def _optimizer_control(optimizer_kind: str) -> dict[str, Any]:
             else "Direct native MLX optimizer control row."
         ),
         "default_hinerv_optimizer_policy": _hinerv_optimizer_policy_for_kind(kind),
-        "pr95_curriculum_optimizer_swallow_guard": (kind != "adamw"),
+        "pr95_curriculum_optimizer_swallow_guard": (
+            kind not in {"adamw", "pact_muon_adamw"}
+        ),
         "score_claim": False,
         "ready_for_exact_eval_dispatch": False,
     }
@@ -4172,7 +4205,11 @@ def _hinerv_optimizer_policy_for_kind(optimizer_kind: str) -> str:
     """Return the runner policy that makes this row's optimizer semantics real."""
 
     kind = _normalize_optimizer_kind(optimizer_kind)
-    return "pr95_curriculum" if kind == "adamw" else "native_optimizer"
+    return (
+        "pr95_curriculum"
+        if kind in {"adamw", "pact_muon_adamw"}
+        else "native_optimizer"
+    )
 
 
 def _hinerv_optimizer_policy_control(
@@ -4211,9 +4248,10 @@ def _hinerv_optimizer_policy_control(
             )
             if timing_smoke_only
             else (
-                "adamw owns the PR95-faithful 8-stage Muon+AdamW control row; "
-                "non-adamw rows must run as native MLX optimizers so optimizer "
-                "diversity is measured rather than swallowed by the curriculum"
+                "adamw and pact_muon_adamw own PR95-faithful 8-stage "
+                "Muon+AdamW control rows; other rows must run as native MLX "
+                "optimizers so optimizer diversity is measured rather than "
+                "swallowed by the curriculum"
             )
         ),
         "score_claim": False,

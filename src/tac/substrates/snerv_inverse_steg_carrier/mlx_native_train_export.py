@@ -291,7 +291,7 @@ def _snerv_score_aware_checkpoint_selection_policy(
             )
     if pose_weight > 0.0:
         active_surfaces.append("real_posenet_teacher_distillation")
-        required_loss_parts.append("pose_distill")
+        required_loss_parts.append("pose_score_term")
         if not has_real_posenet_teacher:
             blockers.append(
                 "snerv_score_aware_checkpoint_selection_posenet_teacher_missing"
@@ -336,6 +336,9 @@ def _snerv_score_aware_checkpoint_selection_policy(
         "active_score_surfaces": active_surfaces,
         "required_loss_parts": _ordered_unique(required_loss_parts),
         "segnet_direct_live_distillation_weight": direct_live_weight,
+        "pose_selection_loss_part": (
+            "pose_score_term" if pose_weight > 0.0 else None
+        ),
         "scorer_input_distribution_guard_weight": guard_weight,
         "scorer_input_contrast_floor_weight": contrast_floor_weight,
         "weighted_coder_qat_terms": weighted_qat_terms,
@@ -1656,6 +1659,10 @@ def train_export_snerv_mlx_native(
     distillation_temperature: float = 2.0,
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_base_loss_weight: float = 1.0,
+    segnet_direct_live_class_histogram_weight: float = 0.0,
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0,
     segnet_tau_boundary: float = 1.0,
     segnet_hinge_margin: float = 1.0,
     distillation_device: str = "cpu",
@@ -2065,6 +2072,42 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_segnet_direct_live_distillation_weight",
                     segnet_direct_live_distillation_weight,
+                ),
+            )
+        ),
+        segnet_direct_live_base_loss_weight=float(
+            candidate.get(
+                "segnet_direct_live_base_loss_weight",
+                candidate.get(
+                    "snerv_segnet_direct_live_base_loss_weight",
+                    segnet_direct_live_base_loss_weight,
+                ),
+            )
+        ),
+        segnet_direct_live_class_histogram_weight=float(
+            candidate.get(
+                "segnet_direct_live_class_histogram_weight",
+                candidate.get(
+                    "snerv_segnet_direct_live_class_histogram_weight",
+                    segnet_direct_live_class_histogram_weight,
+                ),
+            )
+        ),
+        segnet_direct_live_class_balanced_hinge_weight=float(
+            candidate.get(
+                "segnet_direct_live_class_balanced_hinge_weight",
+                candidate.get(
+                    "snerv_segnet_direct_live_class_balanced_hinge_weight",
+                    segnet_direct_live_class_balanced_hinge_weight,
+                ),
+            )
+        ),
+        segnet_direct_live_class_balanced_ce_weight=float(
+            candidate.get(
+                "segnet_direct_live_class_balanced_ce_weight",
+                candidate.get(
+                    "snerv_segnet_direct_live_class_balanced_ce_weight",
+                    segnet_direct_live_class_balanced_ce_weight,
                 ),
             )
         ),
@@ -3233,6 +3276,10 @@ def _run_score_aware_long_training_attachment(
     distillation_temperature: float,
     segnet_student_live_calibration_weight: float,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_base_loss_weight: float = 1.0,
+    segnet_direct_live_class_histogram_weight: float = 0.0,
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
@@ -3275,6 +3322,14 @@ def _run_score_aware_long_training_attachment(
     )
     live_calibration_weight = float(segnet_student_live_calibration_weight)
     direct_live_weight = float(segnet_direct_live_distillation_weight)
+    direct_live_base_loss_weight = float(segnet_direct_live_base_loss_weight)
+    direct_live_histogram_weight = float(segnet_direct_live_class_histogram_weight)
+    direct_live_balanced_hinge_weight = float(
+        segnet_direct_live_class_balanced_hinge_weight
+    )
+    direct_live_balanced_ce_weight = float(
+        segnet_direct_live_class_balanced_ce_weight
+    )
     pose_loss = str(pose_distillation_loss)
     pose_huber_delta = float(pose_distillation_huber_delta)
     scorer_error_pair_sampling_weights = {
@@ -3423,6 +3478,14 @@ def _run_score_aware_long_training_attachment(
             "distillation_temperature": float(distillation_temperature),
             "segnet_student_live_calibration_weight": live_calibration_weight,
             "segnet_direct_live_distillation_weight": direct_live_weight,
+            "segnet_direct_live_base_loss_weight": direct_live_base_loss_weight,
+            "segnet_direct_live_class_histogram_weight": direct_live_histogram_weight,
+            "segnet_direct_live_class_balanced_hinge_weight": (
+                direct_live_balanced_hinge_weight
+            ),
+            "segnet_direct_live_class_balanced_ce_weight": (
+                direct_live_balanced_ce_weight
+            ),
             "segnet_tau_boundary": float(segnet_tau_boundary),
             "segnet_hinge_margin": float(segnet_hinge_margin),
             "requested_distillation_device": requested_distillation_device,
@@ -3464,6 +3527,28 @@ def _run_score_aware_long_training_attachment(
     if direct_live_weight < 0.0:
         validation_blockers.append(
             "snerv_score_aware_long_training_segnet_direct_live_distillation_weight_negative"
+        )
+    if (
+        not np.isfinite(direct_live_base_loss_weight)
+        or direct_live_base_loss_weight < 0.0
+    ):
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_direct_live_base_loss_weight_invalid"
+        )
+    if not np.isfinite(direct_live_histogram_weight) or direct_live_histogram_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_direct_live_class_histogram_weight_invalid"
+        )
+    if (
+        not np.isfinite(direct_live_balanced_hinge_weight)
+        or direct_live_balanced_hinge_weight < 0.0
+    ):
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_direct_live_class_balanced_hinge_weight_invalid"
+        )
+    if not np.isfinite(direct_live_balanced_ce_weight) or direct_live_balanced_ce_weight < 0.0:
+        validation_blockers.append(
+            "snerv_score_aware_long_training_segnet_direct_live_class_balanced_ce_weight_invalid"
         )
     if guard_weight < 0.0:
         validation_blockers.append(
@@ -4036,6 +4121,14 @@ def _run_score_aware_long_training_attachment(
             segnet_distillation_objective=str(segnet_distillation_objective),
             segnet_student_live_calibration_weight=live_calibration_weight,
             segnet_direct_live_distillation_weight=direct_live_weight,
+            segnet_direct_live_base_loss_weight=direct_live_base_loss_weight,
+            segnet_direct_live_class_histogram_weight=direct_live_histogram_weight,
+            segnet_direct_live_class_balanced_hinge_weight=(
+                direct_live_balanced_hinge_weight
+            ),
+            segnet_direct_live_class_balanced_ce_weight=(
+                direct_live_balanced_ce_weight
+            ),
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),
             distillation_num_classes=(
@@ -4163,11 +4256,15 @@ def _run_score_aware_long_training_attachment(
                     direct_live_weight * raw_parts["segnet_direct_live_distill"]
                 )
                 total += weighted_parts["segnet_direct_live_distill"]
-            if "pose_distill" in raw_parts:
-                weighted_parts["pose_distill"] = pose_weight * raw_parts[
-                    "pose_distill"
-                ]
-                total += weighted_parts["pose_distill"]
+            if "pose_score_term" in raw_parts:
+                weighted_parts["pose_score_term"] = (
+                    pose_weight * raw_parts["pose_score_term"]
+                )
+                total += weighted_parts["pose_score_term"]
+            elif pose_weight > 0.0 and "pose_distill" in raw_parts:
+                blockers_for_row.append(
+                    "snerv_score_aware_checkpoint_selection_pose_score_term_missing_raw_pose_mse_not_used"
+                )
             if "scorer_input_distribution_guard" in raw_parts:
                 weighted_parts["scorer_input_distribution_guard"] = (
                     float(bundle.scorer_input_distribution_guard_weight)

@@ -1735,6 +1735,9 @@ class MlxScoreAwareAdapter:
                 "weight": float(
                     self.bundle.segnet_direct_live_distillation_weight
                 ),
+                "base_loss_weight": float(
+                    self.bundle.segnet_direct_live_base_loss_weight
+                ),
                 "class_histogram_weight": float(
                     self.bundle.segnet_direct_live_class_histogram_weight
                 ),
@@ -2761,8 +2764,12 @@ class MlxScoreAwareAdapter:
         if (
             "loss_part_joint_scorer_proxy_nonrate" not in metrics
             and seg_argmax is not None
-            and pose_score is not None
         ):
+            if pose_score is None:
+                metrics["loss_part_joint_scorer_proxy_nonrate"] = (
+                    1.0e9 + 100.0 * float(seg_argmax)
+                )
+                return
             metrics["loss_part_joint_scorer_proxy_nonrate"] = (
                 100.0 * float(seg_argmax) + float(pose_score)
             )

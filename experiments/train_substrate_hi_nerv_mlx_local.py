@@ -129,6 +129,14 @@ class HiNervTrainTimeControlConfig:
     segnet_student_live_calibration_weight: float
     decoder_fake_quant_forward_enabled: bool
     decoder_fake_quant_bits: int
+    segnet_distillation_objective: str = "kl_t2"
+    distillation_temperature: float = 2.0
+    segnet_direct_live_distillation_weight: float = 0.0
+    segnet_direct_live_class_histogram_weight: float = 0.0
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0
+    segnet_tau_boundary: float = 1.0
+    segnet_hinge_margin: float = 1.0
     train_time_decoder_pruning_ratio: float = 0.0
     train_time_decoder_quant_noise_bits: int | None = None
     train_time_decoder_quant_noise_scale: float = 0.0
@@ -142,6 +150,9 @@ class HiNervTrainTimeControlConfig:
     scorer_input_distribution_guard_weight: float = 0.0
     scorer_input_distribution_guard_saturation_margin: float = 0.02
     scorer_input_distribution_guard_temperature: float = 0.01
+    scorer_input_contrast_floor_weight: float = 0.0
+    scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5
+    scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5
     output_head_target_bias_init_enabled: bool = True
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0
 
@@ -189,6 +200,36 @@ class HiNervTrainTimeControlConfig:
             self.segnet_student_live_calibration_weight,
             "segnet_student_live_calibration_weight",
         )
+        if self.segnet_distillation_objective not in {
+            "kl_t2",
+            "argmax_hinge",
+            "boundary_tckd",
+            "boundary_kl_t2",
+            "boundary_argmax_hinge",
+        }:
+            raise ValueError(
+                "segnet_distillation_objective must be a supported shared "
+                f"score-aware SegNet objective; got {self.segnet_distillation_objective!r}"
+            )
+        _require_finite_positive(self.distillation_temperature, "distillation_temperature")
+        _require_finite_nonnegative(
+            self.segnet_direct_live_distillation_weight,
+            "segnet_direct_live_distillation_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_class_histogram_weight,
+            "segnet_direct_live_class_histogram_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_class_balanced_hinge_weight,
+            "segnet_direct_live_class_balanced_hinge_weight",
+        )
+        _require_finite_nonnegative(
+            self.segnet_direct_live_class_balanced_ce_weight,
+            "segnet_direct_live_class_balanced_ce_weight",
+        )
+        _require_finite_positive(self.segnet_tau_boundary, "segnet_tau_boundary")
+        _require_finite_positive(self.segnet_hinge_margin, "segnet_hinge_margin")
         if int(self.decoder_fake_quant_bits) < 1 or int(self.decoder_fake_quant_bits) > 16:
             raise ValueError("decoder_fake_quant_bits must be in [1, 16]")
         _validate_ratio(
@@ -227,6 +268,18 @@ class HiNervTrainTimeControlConfig:
             self.scorer_input_distribution_guard_temperature,
             "scorer_input_distribution_guard_temperature",
         )
+        _require_finite_nonnegative(
+            self.scorer_input_contrast_floor_weight,
+            "scorer_input_contrast_floor_weight",
+        )
+        _require_finite_positive(
+            self.scorer_input_contrast_floor_segnet_min_std_ratio,
+            "scorer_input_contrast_floor_segnet_min_std_ratio",
+        )
+        _require_finite_positive(
+            self.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio,
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+        )
         _validate_unit_open_interval(
             self.output_head_target_bias_init_epsilon,
             "output_head_target_bias_init_epsilon",
@@ -246,6 +299,22 @@ class HiNervTrainTimeControlConfig:
             segnet_student_live_calibration_weight=float(
                 self.segnet_student_live_calibration_weight
             ),
+            segnet_distillation_objective=str(self.segnet_distillation_objective),
+            distillation_temperature=float(self.distillation_temperature),
+            segnet_direct_live_distillation_weight=float(
+                self.segnet_direct_live_distillation_weight
+            ),
+            segnet_direct_live_class_histogram_weight=float(
+                self.segnet_direct_live_class_histogram_weight
+            ),
+            segnet_direct_live_class_balanced_hinge_weight=float(
+                self.segnet_direct_live_class_balanced_hinge_weight
+            ),
+            segnet_direct_live_class_balanced_ce_weight=float(
+                self.segnet_direct_live_class_balanced_ce_weight
+            ),
+            segnet_tau_boundary=float(self.segnet_tau_boundary),
+            segnet_hinge_margin=float(self.segnet_hinge_margin),
             decoder_fake_quant_bits=int(self.decoder_fake_quant_bits),
             train_time_decoder_pruning_ratio=float(self.train_time_decoder_pruning_ratio),
             train_time_decoder_quant_noise_bits=(
@@ -279,6 +348,15 @@ class HiNervTrainTimeControlConfig:
             ),
             scorer_input_distribution_guard_temperature=float(
                 self.scorer_input_distribution_guard_temperature
+            ),
+            scorer_input_contrast_floor_weight=float(
+                self.scorer_input_contrast_floor_weight
+            ),
+            scorer_input_contrast_floor_segnet_min_std_ratio=float(
+                self.scorer_input_contrast_floor_segnet_min_std_ratio
+            ),
+            scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
+                self.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
             output_head_target_bias_init_enabled=bool(
                 self.output_head_target_bias_init_enabled
@@ -325,6 +403,26 @@ class HiNervTrainTimeControlConfig:
             "segnet_student_live_calibration_weight": float(
                 self.segnet_student_live_calibration_weight
             ),
+            "segnet_direct_live": {
+                "schema": "hi_nerv_train_time_segnet_direct_live_control.v1",
+                "enabled": float(self.segnet_direct_live_distillation_weight) > 0.0,
+                "objective": str(self.segnet_distillation_objective),
+                "distillation_temperature": float(self.distillation_temperature),
+                "weight": float(self.segnet_direct_live_distillation_weight),
+                "class_histogram_weight": float(
+                    self.segnet_direct_live_class_histogram_weight
+                ),
+                "class_balanced_hinge_weight": float(
+                    self.segnet_direct_live_class_balanced_hinge_weight
+                ),
+                "class_balanced_ce_weight": float(
+                    self.segnet_direct_live_class_balanced_ce_weight
+                ),
+                "tau_boundary": float(self.segnet_tau_boundary),
+                "hinge_margin": float(self.segnet_hinge_margin),
+                "target_surface": "upstream_segnet_last_frame_logits",
+                "human_visual_fidelity_objective": False,
+            },
             "decoder_fake_quant_forward_enabled": bool(
                 self.decoder_fake_quant_forward_enabled
             ),
@@ -389,6 +487,21 @@ class HiNervTrainTimeControlConfig:
                 "temperature": float(
                     self.scorer_input_distribution_guard_temperature
                 ),
+            },
+            "scorer_input_contrast_floor": {
+                "schema": "hi_nerv_train_time_scorer_input_contrast_floor.v1",
+                "enabled": float(self.scorer_input_contrast_floor_weight) > 0.0,
+                "weight": float(self.scorer_input_contrast_floor_weight),
+                "segnet_last_rgb_min_std_ratio": float(
+                    self.scorer_input_contrast_floor_segnet_min_std_ratio
+                ),
+                "posenet_yuv6_pair_min_std_ratio": float(
+                    self.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
+                ),
+                "target_surface": (
+                    "segnet_last_frame_rgb_and_posenet_two_frame_yuv6_std_ratio"
+                ),
+                "human_visual_fidelity_objective": False,
             },
             "output_head_target_bias_init": {
                 "schema": "hi_nerv_output_head_target_bias_init_control.v1",
@@ -560,11 +673,37 @@ def _full_main(args: argparse.Namespace) -> int:
         pose_scorer_teacher=pose_scorer_teacher,
         learnable_pose_student_head=learnable_pose_student_head,
         pose_dims=DEFAULT_POSE_DIMS,
+        distillation_temperature=float(train_time_controls.distillation_temperature),
+        segnet_distillation_objective=str(
+            train_time_controls.segnet_distillation_objective
+        ),
         segnet_student_live_calibration_weight=(
             float(train_time_controls.segnet_student_live_calibration_weight)
             if scorer_teacher is not None
             else 0.0
         ),
+        segnet_direct_live_distillation_weight=(
+            float(train_time_controls.segnet_direct_live_distillation_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_class_histogram_weight=(
+            float(train_time_controls.segnet_direct_live_class_histogram_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_class_balanced_hinge_weight=(
+            float(train_time_controls.segnet_direct_live_class_balanced_hinge_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_direct_live_class_balanced_ce_weight=(
+            float(train_time_controls.segnet_direct_live_class_balanced_ce_weight)
+            if scorer_teacher is not None
+            else 0.0
+        ),
+        segnet_tau_boundary=float(train_time_controls.segnet_tau_boundary),
+        segnet_hinge_margin=float(train_time_controls.segnet_hinge_margin),
         allow_mock_scorer_teacher=bool(args.allow_mock_scorer_teacher),
         allow_segnet_only_research=bool(args.allow_segnet_only_research),
         scorer_input_distribution_guard_weight=(
@@ -575,6 +714,15 @@ def _full_main(args: argparse.Namespace) -> int:
         ),
         scorer_input_distribution_guard_temperature=(
             train_time_controls.scorer_input_distribution_guard_temperature
+        ),
+        scorer_input_contrast_floor_weight=(
+            train_time_controls.scorer_input_contrast_floor_weight
+        ),
+        scorer_input_contrast_floor_segnet_min_std_ratio=(
+            train_time_controls.scorer_input_contrast_floor_segnet_min_std_ratio
+        ),
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=(
+            train_time_controls.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
         ),
         export_archive_fn=lambda model_obj, out_dir: export_hi_nerv_mlx_archive(
             model_obj,
@@ -627,6 +775,12 @@ def _full_main(args: argparse.Namespace) -> int:
             "pose_student_input_preprocess": str(args.pose_student_input_preprocess),
             "scorer_input_distribution_guard": _metadata_safe(
                 train_time_controls.metadata()["scorer_input_distribution_guard"]
+            ),
+            "scorer_input_contrast_floor": _metadata_safe(
+                train_time_controls.metadata()["scorer_input_contrast_floor"]
+            ),
+            "segnet_direct_live": _metadata_safe(
+                train_time_controls.metadata()["segnet_direct_live"]
             ),
             "pose_student_input_channels": _pose_student_input_channels(str(args.pose_student_input_preprocess)),
             "prioritized_pair_training": _prioritized_pair_training_lineage_metadata(
@@ -1085,6 +1239,24 @@ def _build_parser() -> argparse.ArgumentParser:
             "blocker."
         ),
     )
+    parser.add_argument(
+        "--segnet-distillation-objective",
+        choices=(
+            "kl_t2",
+            "argmax_hinge",
+            "boundary_tckd",
+            "boundary_kl_t2",
+            "boundary_argmax_hinge",
+        ),
+        default="kl_t2",
+    )
+    parser.add_argument("--distillation-temperature", type=float, default=2.0)
+    parser.add_argument("--segnet-direct-live-distillation-weight", type=float, default=0.0)
+    parser.add_argument("--segnet-direct-live-class-histogram-weight", type=float, default=0.0)
+    parser.add_argument("--segnet-direct-live-class-balanced-hinge-weight", type=float, default=0.0)
+    parser.add_argument("--segnet-direct-live-class-balanced-ce-weight", type=float, default=0.0)
+    parser.add_argument("--segnet-tau-boundary", type=float, default=1.0)
+    parser.add_argument("--segnet-hinge-margin", type=float, default=1.0)
     parser.add_argument("--allow-mock-scorer-teacher", action="store_true")
     parser.add_argument("--allow-segnet-only-research", action="store_true")
     parser.add_argument("--eval-roundtrip-ste", action="store_true")
@@ -1144,6 +1316,17 @@ def _build_parser() -> argparse.ArgumentParser:
         "--scorer-input-distribution-guard-temperature",
         type=float,
         default=0.01,
+    )
+    parser.add_argument("--scorer-input-contrast-floor-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--scorer-input-contrast-floor-segnet-min-std-ratio",
+        type=float,
+        default=0.5,
+    )
+    parser.add_argument(
+        "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+        type=float,
+        default=0.5,
     )
     parser.add_argument("--grad-clip-max-norm", type=float, default=None)
     parser.add_argument("--warmup-epochs", type=int, default=0)
@@ -1585,6 +1768,24 @@ def _train_time_control_config_from_args(
         segnet_student_live_calibration_weight=float(
             getattr(args, "segnet_student_live_calibration_weight", 1.0)
         ),
+        segnet_distillation_objective=str(
+            getattr(args, "segnet_distillation_objective", "kl_t2")
+        ),
+        distillation_temperature=float(getattr(args, "distillation_temperature", 2.0)),
+        segnet_direct_live_distillation_weight=float(
+            getattr(args, "segnet_direct_live_distillation_weight", 0.0)
+        ),
+        segnet_direct_live_class_histogram_weight=float(
+            getattr(args, "segnet_direct_live_class_histogram_weight", 0.0)
+        ),
+        segnet_direct_live_class_balanced_hinge_weight=float(
+            getattr(args, "segnet_direct_live_class_balanced_hinge_weight", 0.0)
+        ),
+        segnet_direct_live_class_balanced_ce_weight=float(
+            getattr(args, "segnet_direct_live_class_balanced_ce_weight", 0.0)
+        ),
+        segnet_tau_boundary=float(getattr(args, "segnet_tau_boundary", 1.0)),
+        segnet_hinge_margin=float(getattr(args, "segnet_hinge_margin", 1.0)),
         decoder_fake_quant_forward_enabled=bool(
             getattr(args, "decoder_fake_quant_forward", False)
         ),
@@ -1638,6 +1839,19 @@ def _train_time_control_config_from_args(
                 args,
                 "scorer_input_distribution_guard_temperature",
                 0.01,
+            )
+        ),
+        scorer_input_contrast_floor_weight=float(
+            getattr(args, "scorer_input_contrast_floor_weight", 0.0)
+        ),
+        scorer_input_contrast_floor_segnet_min_std_ratio=float(
+            getattr(args, "scorer_input_contrast_floor_segnet_min_std_ratio", 0.5)
+        ),
+        scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=float(
+            getattr(
+                args,
+                "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+                0.5,
             )
         ),
         output_head_target_bias_init_enabled=bool(
@@ -2552,6 +2766,14 @@ def _pr95_full_control_contract(
     segnet_live_calibration_weight = float(
         train_time_controls.segnet_student_live_calibration_weight
     )
+    segnet_direct_live_weight = float(
+        train_time_controls.segnet_direct_live_distillation_weight
+    )
+    segnet_class_escape_weight = max(
+        float(train_time_controls.segnet_direct_live_class_histogram_weight),
+        float(train_time_controls.segnet_direct_live_class_balanced_hinge_weight),
+        float(train_time_controls.segnet_direct_live_class_balanced_ce_weight),
+    )
     pose_distillation_weight = float(getattr(args, "pose_distillation_weight", 0.0))
     eval_roundtrip_ste = bool(getattr(args, "eval_roundtrip_ste", False))
     pose_preprocess = str(getattr(args, "pose_student_input_preprocess", ""))
@@ -2570,6 +2792,9 @@ def _pr95_full_control_contract(
     scorer_input_guard_metadata = train_time_controls.metadata()[
         "scorer_input_distribution_guard"
     ]
+    scorer_input_contrast_metadata = train_time_controls.metadata()[
+        "scorer_input_contrast_floor"
+    ]
     output_head_bias_metadata = train_time_controls.metadata()[
         "output_head_target_bias_init"
     ]
@@ -2578,6 +2803,12 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_segnet_distillation_loss")
     elif segnet_live_calibration_weight <= 0.0:
         blockers.append("hinerv_full_missing_segnet_student_live_calibration")
+    if str(train_time_controls.segnet_distillation_objective) != "boundary_argmax_hinge":
+        blockers.append("hinerv_full_missing_boundary_argmax_hinge_segnet_objective")
+    if segnet_direct_live_weight <= 0.0:
+        blockers.append("hinerv_full_missing_direct_live_segnet_distillation")
+    if segnet_class_escape_weight <= 0.0:
+        blockers.append("hinerv_full_missing_direct_live_class_escape_pressure")
     if pose_distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_posenet_distillation_loss")
     if bool(getattr(args, "allow_mock_scorer_teacher", False)):
@@ -2608,6 +2839,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_archive_parse_back_selection")
     if scorer_input_guard_weight <= 0.0:
         blockers.append("hinerv_full_missing_scorer_input_distribution_guard")
+    if float(train_time_controls.scorer_input_contrast_floor_weight) <= 0.0:
+        blockers.append("hinerv_full_missing_scorer_input_contrast_floor")
     if not bool(output_head_bias_metadata["enabled"]):
         blockers.append("hinerv_full_missing_output_head_target_bias_init")
 
@@ -2625,6 +2858,12 @@ def _pr95_full_control_contract(
             "segnet_student_live_calibration_active": bool(
                 distillation_weight > 0.0 and segnet_live_calibration_weight > 0.0
             ),
+            "segnet_distillation_objective": (
+                train_time_controls.segnet_distillation_objective
+            ),
+            "segnet_direct_live_distillation_weight": segnet_direct_live_weight,
+            "segnet_direct_live_class_escape_weight": segnet_class_escape_weight,
+            "segnet_direct_live": train_time_controls.metadata()["segnet_direct_live"],
             "real_posenet_distillation_loss": pose_distillation_weight > 0.0,
             "mock_scorer_teacher_allowed": bool(getattr(args, "allow_mock_scorer_teacher", False)),
             "segnet_only_research_allowed": bool(getattr(args, "allow_segnet_only_research", False)),
@@ -2688,6 +2927,18 @@ def _pr95_full_control_contract(
             ),
             "scorer_input_distribution_guard_temperature": float(
                 getattr(args, "scorer_input_distribution_guard_temperature", 0.01)
+            ),
+            "scorer_input_contrast_floor_enabled": bool(
+                scorer_input_contrast_metadata["enabled"]
+            ),
+            "scorer_input_contrast_floor_weight": float(
+                train_time_controls.scorer_input_contrast_floor_weight
+            ),
+            "scorer_input_contrast_floor_segnet_min_std_ratio": float(
+                train_time_controls.scorer_input_contrast_floor_segnet_min_std_ratio
+            ),
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio": float(
+                train_time_controls.scorer_input_contrast_floor_posenet_yuv6_min_std_ratio
             ),
             "output_head_target_bias_init_enabled": bool(
                 output_head_bias_metadata["enabled"]

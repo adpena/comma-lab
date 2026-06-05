@@ -2235,6 +2235,94 @@ def test_planner_row_launch_gate_rejects_stale_command_controls(
     assert "planner_row_command_mismatch:--modelsize-candidate-id" in blockers
 
 
+def test_planner_row_launch_gate_rejects_stale_hinerv_scorer_controls(
+    tmp_path: Path,
+) -> None:
+    queue_path = _write_planner_row_queue_artifact(
+        tmp_path / "queue.json",
+        command_extra=[
+            "--num-pairs",
+            "600",
+            "--epochs",
+            "29650",
+            "--modelsize-candidate-id",
+            "queued-candidate",
+            "--segnet-distillation-objective",
+            "boundary_argmax_hinge",
+            "--segnet-direct-live-distillation-weight",
+            "0.25",
+            "--segnet-direct-live-class-histogram-weight",
+            "0.25",
+            "--segnet-direct-live-class-balanced-hinge-weight",
+            "0.5",
+            "--segnet-direct-live-class-balanced-ce-weight",
+            "0.25",
+            "--scorer-input-distribution-guard-weight",
+            "2",
+            "--scorer-input-contrast-floor-weight",
+            "0.5",
+            "--scorer-input-contrast-floor-segnet-min-std-ratio",
+            "0.6",
+            "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+            "0.6",
+        ],
+    )
+
+    blockers = runner_mod._planner_row_launch_blockers(
+        SimpleNamespace(
+            execute_family="hi_nerv",
+            planner_row_id="hi_nerv::candidate::adamw",
+            planner_row_queue_artifact=[queue_path],
+            allow_bounded_planner_row_timing_smoke_waiver=False,
+            allow_manual_compact_family_launch=False,
+            num_pairs=600,
+            epochs=29650,
+            modelsize_candidate_id="queued-candidate",
+            segnet_distillation_objective="kl_t2",
+            segnet_direct_live_distillation_weight=0.0,
+            segnet_direct_live_class_histogram_weight=0.0,
+            segnet_direct_live_class_balanced_hinge_weight=0.0,
+            segnet_direct_live_class_balanced_ce_weight=0.0,
+            scorer_input_distribution_guard_weight=0.0,
+            scorer_input_contrast_floor_weight=0.0,
+            scorer_input_contrast_floor_segnet_min_std_ratio=0.5,
+            scorer_input_contrast_floor_posenet_yuv6_min_std_ratio=0.5,
+            repo_root=REPO_ROOT,
+        )
+    )
+
+    assert "planner_row_command_mismatch:--segnet-distillation-objective" in blockers
+    assert (
+        "planner_row_command_mismatch:--segnet-direct-live-distillation-weight"
+        in blockers
+    )
+    assert (
+        "planner_row_command_mismatch:--segnet-direct-live-class-histogram-weight"
+        in blockers
+    )
+    assert (
+        "planner_row_command_mismatch:--segnet-direct-live-class-balanced-hinge-weight"
+        in blockers
+    )
+    assert (
+        "planner_row_command_mismatch:--segnet-direct-live-class-balanced-ce-weight"
+        in blockers
+    )
+    assert (
+        "planner_row_command_mismatch:--scorer-input-distribution-guard-weight"
+        in blockers
+    )
+    assert "planner_row_command_mismatch:--scorer-input-contrast-floor-weight" in blockers
+    assert (
+        "planner_row_command_mismatch:--scorer-input-contrast-floor-segnet-min-std-ratio"
+        in blockers
+    )
+    assert (
+        "planner_row_command_mismatch:--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio"
+        in blockers
+    )
+
+
 def test_planner_row_launch_gate_tracks_snerv_official_modelsize_controls(
     tmp_path: Path,
 ) -> None:
@@ -6301,6 +6389,8 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
             "1.5",
             "--segnet-student-live-calibration-weight",
             "0.625",
+            "--segnet-direct-live-base-loss-weight",
+            "0.125",
             "--segnet-tau-boundary",
             "0.8",
             "--segnet-hinge-margin",
@@ -6338,6 +6428,7 @@ def test_pact_vq_execute_parser_exposes_real_scorer_binding_flags() -> None:
     assert args.segnet_distillation_objective == "boundary_argmax_hinge"
     assert args.distillation_temperature == 1.5
     assert args.segnet_student_live_calibration_weight == pytest.approx(0.625)
+    assert args.segnet_direct_live_base_loss_weight == pytest.approx(0.125)
     assert args.segnet_tau_boundary == 0.8
     assert args.segnet_hinge_margin == 1.25
     assert args.distillation_device == "cpu"
@@ -10195,6 +10286,7 @@ def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
         decoder_channel=4,
         segnet_distillation_weight=0.0,
         segnet_direct_live_distillation_weight=1.0,
+        segnet_direct_live_base_loss_weight=0.0,
         segnet_distillation_objective="argmax_hinge",
         pose_distillation_weight=0.01,
         pose_distillation_loss="huber",
@@ -10206,6 +10298,7 @@ def test_hinerv_direct_live_segnet_plus_pose_counts_as_joint_teacher(
 
     assert captured_train_kwargs["segnet_distillation_weight"] == 0.0
     assert captured_train_kwargs["segnet_direct_live_distillation_weight"] == 1.0
+    assert captured_train_kwargs["segnet_direct_live_base_loss_weight"] == 0.0
     assert captured_train_kwargs["pose_distillation_weight"] == pytest.approx(0.01)
     gate = out["score_aware_training_config_gate"]
     assert gate["frontier_targeting"] is True

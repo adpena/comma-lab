@@ -104,6 +104,36 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
         row["command_argv"][row["command_argv"].index("--hi-nerv-optimizer-policy") + 1] == "native_optimizer"
         for row in hi_rows
     )
+    assert all("--segnet-distillation-objective" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-distillation-objective") + 1]
+        == "boundary_argmax_hinge"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-distillation-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-distillation-weight") + 1]
+        == "0.25"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-class-histogram-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-histogram-weight") + 1]
+        == "0.25"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-class-balanced-hinge-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-hinge-weight") + 1]
+        == "0.5"
+        for row in hi_rows
+    )
+    assert all("--segnet-direct-live-class-balanced-ce-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--segnet-direct-live-class-balanced-ce-weight") + 1]
+        == "0.25"
+        for row in hi_rows
+    )
     assert all("--coder-aware-qat" in row["command_argv"] for row in hi_rows)
     assert all(qat_flags.issubset(set(row["command_argv"])) for row in hi_rows)
     assert all(
@@ -142,6 +172,28 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert all("--telemetry-flush-interval-epochs" in row["command_argv"] for row in hi_rows)
     assert all(
         row["command_argv"][row["command_argv"].index("--telemetry-flush-interval-epochs") + 1] == "1"
+        for row in hi_rows
+    )
+    assert all("--scorer-input-distribution-guard-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--scorer-input-distribution-guard-weight") + 1] == "2"
+        for row in hi_rows
+    )
+    assert all("--scorer-input-contrast-floor-weight" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--scorer-input-contrast-floor-weight") + 1] == "0.5"
+        for row in hi_rows
+    )
+    assert all("--scorer-input-contrast-floor-segnet-min-std-ratio" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--scorer-input-contrast-floor-segnet-min-std-ratio") + 1]
+        == "0.6"
+        for row in hi_rows
+    )
+    assert all("--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio" in row["command_argv"] for row in hi_rows)
+    assert all(
+        row["command_argv"][row["command_argv"].index("--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio") + 1]
+        == "0.6"
         for row in hi_rows
     )
     assert all(row["local_mlx_launch_command_ready"] is True for row in hi_rows)
@@ -5204,7 +5256,15 @@ def test_pact_muon_adamw_hinerv_row_is_default_first_priority() -> None:
     assert hi_rows[0]["optimizer_control"]["backend"] == ("tac.local_acceleration.pr95_hnerv_mlx")
     assert hi_rows[0]["optimizer_control"]["borrowed_from_pr95"] is True
     assert hi_rows[0]["optimizer_control"]["original_pact_contest_adaptation"] is True
-    assert hi_rows[0]["optimizer_policy"]["requested_policy"] == "native_optimizer"
+    assert hi_rows[0]["optimizer_policy"]["requested_policy"] == "pr95_curriculum"
+    assert hi_rows[0]["optimizer_policy"]["pr95_faithful_curriculum_expected"] is True
+    assert hi_rows[0]["optimizer_policy"]["native_mlx_optimizer_expected"] is False
+    assert (
+        hi_rows[0]["command_argv"][
+            hi_rows[0]["command_argv"].index("--hi-nerv-optimizer-policy") + 1
+        ]
+        == "pr95_curriculum"
+    )
     assert report["optimizer_control_policy"]["default_optimizer_kind"] == ("pact_muon_adamw")
     assert report["optimizer_control_policy"]["default_optimizer_backend"] == ("tac.local_acceleration.pr95_hnerv_mlx")
 

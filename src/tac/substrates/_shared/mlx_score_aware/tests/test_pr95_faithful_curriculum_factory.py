@@ -51,6 +51,24 @@ def test_adapter_aliases_pr95_direct_live_pose_into_joint_scorer_proxy() -> None
     assert metrics["loss_part_joint_scorer_proxy_nonrate"] == pytest.approx(28.5)
 
 
+def test_adapter_joint_scorer_proxy_penalizes_pose_warmup_missing_metric() -> None:
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    adapter = object.__new__(MlxScoreAwareAdapter)
+    metrics = {
+        "loss_part_pr95_stage_segnet_direct_live_argmax_disagreement": 0.25,
+    }
+
+    adapter._add_dual_ascent_metric_aliases(metrics)
+
+    assert metrics["loss_part_segnet_direct_live_argmax_disagreement"] == (
+        pytest.approx(0.25)
+    )
+    assert metrics["loss_part_joint_scorer_proxy_nonrate"] == pytest.approx(
+        1.0e9 + 25.0
+    )
+
+
 @requires_mlx
 def test_canonical_pr95_total_epochs_is_29650() -> None:
     """Canonical PR95 total epoch budget per CLAUDE.md L14 is 29,650."""

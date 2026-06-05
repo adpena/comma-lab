@@ -1004,9 +1004,17 @@ def _direct_live_segnet_logit_distillation_loss_and_metrics(
         )
     else:
         loss = mx.mean((candidate_logits - target_logits) ** 2)
+    base_loss = loss
+    base_loss_weight = float(bundle.segnet_direct_live_base_loss_weight)
+    loss = base_loss_weight * base_loss
     metrics = _segnet_argmax_surface_metrics(
         candidate_logits=candidate_logits,
         target_logits=target_logits,
+    )
+    metrics["segnet_direct_live_base_loss"] = base_loss
+    metrics["segnet_direct_live_base_loss_weight"] = mx.array(
+        base_loss_weight,
+        dtype=mx.float32,
     )
     hist_weight = float(bundle.segnet_direct_live_class_histogram_weight)
     if hist_weight > 0.0:

@@ -3615,6 +3615,7 @@ def _run_snerv_native_mlx_export_attachment(
     distillation_temperature: float,
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_base_loss_weight: float = 1.0,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
@@ -3803,6 +3804,9 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             segnet_direct_live_distillation_weight=float(
                 segnet_direct_live_distillation_weight
+            ),
+            segnet_direct_live_base_loss_weight=float(
+                segnet_direct_live_base_loss_weight
             ),
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),
@@ -4671,6 +4675,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     distillation_temperature: float = 2.0,
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_base_loss_weight: float = 1.0,
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
@@ -6217,6 +6222,9 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         segnet_direct_live_distillation_weight=float(
             segnet_direct_live_distillation_weight
         ),
+        segnet_direct_live_base_loss_weight=float(
+            segnet_direct_live_base_loss_weight
+        ),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
         distillation_device=str(distillation_device),
@@ -7468,6 +7476,7 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
     distillation_temperature: float = 2.0,
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_base_loss_weight: float = 1.0,
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
@@ -7539,6 +7548,9 @@ def execute_pr95_hnerv_mlx_scoreaware_and_adapt(
             segnet_student_live_calibration_weight=segnet_student_live_calibration_weight,
             segnet_direct_live_distillation_weight=(
                 segnet_direct_live_distillation_weight
+            ),
+            segnet_direct_live_base_loss_weight=(
+                segnet_direct_live_base_loss_weight
             ),
             segnet_direct_live_class_histogram_weight=(
                 segnet_direct_live_class_histogram_weight
@@ -8357,6 +8369,7 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     distillation_temperature: float = 2.0,
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_base_loss_weight: float = 1.0,
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
@@ -9341,6 +9354,9 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             ),
             segnet_direct_live_distillation_weight=float(
                 segnet_direct_live_distillation_weight
+            ),
+            segnet_direct_live_base_loss_weight=float(
+                segnet_direct_live_base_loss_weight
             ),
             segnet_direct_live_class_histogram_weight=float(
                 segnet_direct_live_class_histogram_weight
@@ -13100,6 +13116,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     distillation_temperature: float,
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
+    segnet_direct_live_base_loss_weight: float = 1.0,
     segnet_direct_live_class_histogram_weight: float = 0.0,
     segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
     segnet_direct_live_class_balanced_ce_weight: float = 0.0,
@@ -13306,6 +13323,13 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     ):
         raise CompactRendererMlxSpineRunnerError(
             "output_head_bias_gradient_multiplier must be finite and >= 0"
+        )
+    if (
+        not math.isfinite(float(segnet_direct_live_base_loss_weight))
+        or float(segnet_direct_live_base_loss_weight) < 0.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "segnet_direct_live_base_loss_weight must be finite and >= 0"
         )
     normalized_gradient_multiplier_by_name = _normalize_gradient_multiplier_by_name(
         gradient_multiplier_by_name
@@ -13989,6 +14013,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 "schema": "hi_nerv_segnet_direct_live_distillation_control.v1",
                 "enabled": float(segnet_direct_live_distillation_weight) > 0.0,
                 "weight": float(segnet_direct_live_distillation_weight),
+                "base_loss_weight": float(segnet_direct_live_base_loss_weight),
                 "class_histogram_weight": float(
                     segnet_direct_live_class_histogram_weight
                 ),
@@ -14131,6 +14156,7 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         segnet_direct_live_distillation_weight=float(
             segnet_direct_live_distillation_weight
         ),
+        segnet_direct_live_base_loss_weight=float(segnet_direct_live_base_loss_weight),
         segnet_direct_live_class_histogram_weight=float(
             segnet_direct_live_class_histogram_weight
         ),
@@ -16945,6 +16971,39 @@ def _planner_row_command_control_blockers(
             "--hi-nerv-pr95-curriculum-total-epochs",
             "hi_nerv_pr95_curriculum_total_epochs",
         ),
+        ("--segnet-distillation-objective", "segnet_distillation_objective"),
+        (
+            "--segnet-direct-live-distillation-weight",
+            "segnet_direct_live_distillation_weight",
+        ),
+        (
+            "--segnet-direct-live-class-histogram-weight",
+            "segnet_direct_live_class_histogram_weight",
+        ),
+        (
+            "--segnet-direct-live-class-balanced-hinge-weight",
+            "segnet_direct_live_class_balanced_hinge_weight",
+        ),
+        (
+            "--segnet-direct-live-class-balanced-ce-weight",
+            "segnet_direct_live_class_balanced_ce_weight",
+        ),
+        (
+            "--scorer-input-distribution-guard-weight",
+            "scorer_input_distribution_guard_weight",
+        ),
+        (
+            "--scorer-input-contrast-floor-weight",
+            "scorer_input_contrast_floor_weight",
+        ),
+        (
+            "--scorer-input-contrast-floor-segnet-min-std-ratio",
+            "scorer_input_contrast_floor_segnet_min_std_ratio",
+        ),
+        (
+            "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+            "scorer_input_contrast_floor_posenet_yuv6_min_std_ratio",
+        ),
         ("--decoder-weight-waterfill-plan-json", "decoder_weight_waterfill_plan_json"),
         ("--archive-section-telemetry-json", "archive_section_telemetry_json"),
         ("--recon-pixel-weight-path", "recon_pixel_weight_path"),
@@ -16980,6 +17039,14 @@ def _planner_row_flag_values_match(flag: str, *, actual: str, expected: str) -> 
         "--target-modelsize-mparams",
         "--snerv-official-modelsize-mparams",
         "--snerv-hfr-gain",
+        "--segnet-direct-live-distillation-weight",
+        "--segnet-direct-live-class-histogram-weight",
+        "--segnet-direct-live-class-balanced-hinge-weight",
+        "--segnet-direct-live-class-balanced-ce-weight",
+        "--scorer-input-distribution-guard-weight",
+        "--scorer-input-contrast-floor-weight",
+        "--scorer-input-contrast-floor-segnet-min-std-ratio",
+        "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
     }
     if flag not in numeric_scalar_flags:
         return False
@@ -18300,6 +18367,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--segnet-direct-live-base-loss-weight",
+        default=1.0,
+        type=float,
+        help=(
+            "Relative weight on the base direct-live SegNet objective before "
+            "class-histogram / class-balanced hinge / class-balanced CE escape "
+            "terms are added. Default 1.0 preserves legacy behavior. Set 0.0 "
+            "for class-escape bootstrap probes when logit-matching or "
+            "boundary-hinge pressure pins HiNeRV/SNeRV in a one-class hard "
+            "argmax basin."
+        ),
+    )
+    parser.add_argument(
         "--segnet-direct-live-class-histogram-weight",
         default=0.0,
         type=float,
@@ -19604,6 +19684,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_direct_live_distillation_weight=(
                 args.segnet_direct_live_distillation_weight
             ),
+            segnet_direct_live_base_loss_weight=(
+                args.segnet_direct_live_base_loss_weight
+            ),
             segnet_direct_live_class_histogram_weight=(
                 args.segnet_direct_live_class_histogram_weight
             ),
@@ -19898,6 +19981,9 @@ def main(argv: list[str] | None = None) -> int:
             segnet_direct_live_distillation_weight=(
                 args.segnet_direct_live_distillation_weight
             ),
+            segnet_direct_live_base_loss_weight=(
+                args.segnet_direct_live_base_loss_weight
+            ),
             segnet_direct_live_class_histogram_weight=(
                 args.segnet_direct_live_class_histogram_weight
             ),
@@ -19994,6 +20080,9 @@ def main(argv: list[str] | None = None) -> int:
             ),
             segnet_direct_live_distillation_weight=(
                 args.segnet_direct_live_distillation_weight
+            ),
+            segnet_direct_live_base_loss_weight=(
+                args.segnet_direct_live_base_loss_weight
             ),
             segnet_direct_live_class_histogram_weight=(
                 args.segnet_direct_live_class_histogram_weight

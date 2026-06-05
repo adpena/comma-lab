@@ -234,7 +234,8 @@ def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs(
     assert policy["fail_closed_on_missing_parts"] is True
     assert "distill" in policy["required_loss_parts"]
     assert "segnet_direct_live_distill" in policy["required_loss_parts"]
-    assert "pose_distill" in policy["required_loss_parts"]
+    assert "pose_score_term" in policy["required_loss_parts"]
+    assert policy["pose_selection_loss_part"] == "pose_score_term"
     assert "real_segnet_direct_live_distillation" in policy[
         "active_score_surfaces"
     ]
@@ -2187,16 +2188,23 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     (fake_upstream / "models" / "segnet.safetensors").write_bytes(b"seg")
     captured: dict[str, object] = {}
 
+    def patterned_segnet_logits(batch: int):
+        class_map = np.fromfunction(lambda y, x: (y + x) % 5, (16, 16), dtype=int)
+        logits = np.full((int(batch), 16, 16, 5), -3.0, dtype=np.float32)
+        for class_index in range(5):
+            logits[:, class_map == class_index, class_index] = 3.0
+        return mx.array(logits, dtype=mx.float32)
+
     class FakeSegTeacher:
         num_classes = 5
 
         def teacher_logits_for_indices(self, indices):
             captured["seg_indices_shape"] = tuple(indices.shape)
-            return mx.zeros((int(indices.shape[0]), 16, 16, 5), dtype=mx.float32)
+            return patterned_segnet_logits(int(indices.shape[0]))
 
         def teacher_logits_for_frames_nhwc01(self, frames):
             captured["seg_live_frames_shape"] = tuple(frames.shape)
-            return mx.zeros((int(frames.shape[0]), 16, 16, 5), dtype=mx.float32)
+            return patterned_segnet_logits(int(frames.shape[0]))
 
     class FakePoseTeacher:
         pose_dims = 6
@@ -2269,6 +2277,10 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         pose_distillation_loss="huber",
         pose_distillation_huber_delta=2.0,
         segnet_distillation_objective="kl_t2",
+        segnet_direct_live_distillation_weight=0.25,
+        segnet_direct_live_class_histogram_weight=0.125,
+        segnet_direct_live_class_balanced_hinge_weight=0.375,
+        segnet_direct_live_class_balanced_ce_weight=0.625,
         distillation_device="gpu",
         coder_aware_qat=True,
         coder_qat_quant_bits=4,
@@ -2377,6 +2389,16 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert long_training["muon_adamw_partition_bound"] is True
     assert long_training["teacher_binding"]["pose_distillation_loss"] == "huber"
     assert long_training["teacher_binding"]["pose_distillation_huber_delta"] == 2.0
+    assert long_training["teacher_binding"]["segnet_direct_live_distillation_weight"] == 0.25
+    assert long_training["teacher_binding"]["segnet_direct_live_class_histogram_weight"] == 0.125
+    assert (
+        long_training["teacher_binding"]["segnet_direct_live_class_balanced_hinge_weight"]
+        == 0.375
+    )
+    assert (
+        long_training["teacher_binding"]["segnet_direct_live_class_balanced_ce_weight"]
+        == 0.625
+    )
     assert long_training["teacher_binding"]["learnable_student_head_bound"] is True
     assert long_training["teacher_binding"]["learnable_pose_student_head_bound"] is True
     assert long_training["checkpoint_selection_policy"]["mse_fallback"] is False
@@ -2385,6 +2407,9 @@ def test_train_export_long_training_binds_real_scorer_teachers(
         == "score_aware_composite_full_video_surrogate"
     )
     assert "real_segnet_teacher_distillation" in long_training[
+        "checkpoint_selection_policy"
+    ]["active_score_surfaces"]
+    assert "real_segnet_direct_live_distillation" in long_training[
         "checkpoint_selection_policy"
     ]["active_score_surfaces"]
     assert "real_posenet_teacher_distillation" in long_training[
@@ -2414,6 +2439,13 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert "scorer_input_contrast_floor" in long_training[
         "checkpoint_selection_policy"
     ]["required_loss_parts"]
+    assert "segnet_direct_live_distill" in long_training[
+        "checkpoint_selection_policy"
+    ]["required_loss_parts"]
+    assert (
+        long_training["checkpoint_selection_policy"]["pose_selection_loss_part"]
+        == "pose_score_term"
+    )
     assert (
         long_training["checkpoint_selection_policy"][
             "scorer_input_distribution_guard_weight"
@@ -2435,7 +2467,11 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert "weighted_distill" in long_training["best_checkpoint_selection"][
         "score_aware_composite_parts"
     ]
-    assert "weighted_pose_distill" in long_training["best_checkpoint_selection"][
+    assert (
+        "weighted_segnet_direct_live_distill"
+        in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
+    )
+    assert "weighted_pose_score_term" in long_training["best_checkpoint_selection"][
         "score_aware_composite_parts"
     ]
     assert (
