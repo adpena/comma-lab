@@ -86,6 +86,16 @@ assert LATENT_HI_AC_HEADER_SIZE == 21, "HiNeRV latent hi-ac header invariant"
 HINERV_ARCHIVE_SECTION_TELEMETRY_SCHEMA: str = (
     "hinerv_archive_section_telemetry.v1"
 )
+_RECEIVER_DERIVABLE_META_KEYS: tuple[str, ...] = (
+    "_latent_codec_lossless",
+    "_latent_raw_bytes_coarse",
+    "_latent_raw_bytes_mid",
+    "_latent_raw_bytes_fine",
+    "_latent_coded_bytes_coarse",
+    "_latent_coded_bytes_mid",
+    "_latent_coded_bytes_fine",
+    "_decoder_state_codec",
+)
 
 
 @dataclass(frozen=True)
@@ -140,6 +150,15 @@ class _Hiv1Layout:
 
 def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _strip_receiver_derivable_meta(meta: dict[str, object]) -> dict[str, object]:
+    """Drop report fields the receiver can derive from header/section bytes."""
+
+    compact = dict(meta)
+    for key in _RECEIVER_DERIVABLE_META_KEYS:
+        compact.pop(key, None)
+    return compact
 
 
 def _read_hiv1_layout(blob: bytes) -> _Hiv1Layout:
@@ -285,18 +304,10 @@ def pack_archive(
     meta_with_quant["_quant_scale_fine"] = float(sc_f)
     meta_with_quant["_quant_zero_point_fine"] = float(zp_f)
     meta_with_quant["_latent_codec"] = str(latent_codec)
-    meta_with_quant["_latent_codec_lossless"] = True
-    meta_with_quant["_latent_raw_bytes_coarse"] = len(raw_c)
-    meta_with_quant["_latent_raw_bytes_mid"] = len(raw_m)
-    meta_with_quant["_latent_raw_bytes_fine"] = len(raw_f)
-    meta_with_quant["_latent_coded_bytes_coarse"] = len(bytes_c)
-    meta_with_quant["_latent_coded_bytes_mid"] = len(bytes_m)
-    meta_with_quant["_latent_coded_bytes_fine"] = len(bytes_f)
-    meta_with_quant["_decoder_state_codec"] = decoder_state_codec_stats(
-        decoder_blob
-    ).as_dict()
     meta_bytes = json.dumps(
-        meta_with_quant, separators=(",", ":"), sort_keys=True
+        _strip_receiver_derivable_meta(meta_with_quant),
+        separators=(",", ":"),
+        sort_keys=True,
     ).encode("utf-8")
 
     header = struct.pack(
@@ -349,12 +360,9 @@ def build_archive_section_telemetry(
     layout = _read_hiv1_layout(blob)
     meta = json.loads(blob[layout.meta_range[0] : layout.meta_range[1]].decode("utf-8"))
     latent_codec = str(meta.get("_latent_codec", LATENT_CODEC_RAW_INT16))
-    decoder_codec = meta.get("_decoder_state_codec")
-    decoder_codec_name = (
-        str(decoder_codec.get("codec") or "unknown")
-        if isinstance(decoder_codec, dict)
-        else "unknown"
-    )
+    decoder_codec_name = decoder_state_codec_stats(
+        blob[layout.decoder_range[0] : layout.decoder_range[1]]
+    ).codec
 
     def _section_row(
         *,
@@ -395,7 +403,7 @@ def build_archive_section_telemetry(
             byte_range=layout.latents_coarse_range,
             codec=latent_codec,
             scale="coarse",
-            raw_bytes=int(meta.get("_latent_raw_bytes_coarse") or 0),
+            raw_bytes=int(layout.num_pairs) * int(layout.latent_dim_coarse) * 2,
         ),
         _section_row(
             name="latents_mid",
@@ -403,7 +411,7 @@ def build_archive_section_telemetry(
             byte_range=layout.latents_mid_range,
             codec=latent_codec,
             scale="mid",
-            raw_bytes=int(meta.get("_latent_raw_bytes_mid") or 0),
+            raw_bytes=int(layout.num_pairs) * int(layout.latent_dim_mid) * 2,
         ),
         _section_row(
             name="latents_fine",
@@ -411,7 +419,7 @@ def build_archive_section_telemetry(
             byte_range=layout.latents_fine_range,
             codec=latent_codec,
             scale="fine",
-            raw_bytes=int(meta.get("_latent_raw_bytes_fine") or 0),
+            raw_bytes=int(layout.num_pairs) * int(layout.latent_dim_fine) * 2,
         ),
     ]
     sections: list[dict[str, object]] = [
@@ -502,10 +510,13 @@ def repack_archive_decoder_codec(
     )
     decoder_blob = _serialize_state_dict(state, codec=decoder_codec)
     meta = dict(sections.meta)
-    meta["_decoder_state_codec"] = decoder_state_codec_stats(decoder_blob).as_dict()
     if extra_meta:
         meta.update(extra_meta)
-    meta_bytes = json.dumps(meta, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    meta_bytes = json.dumps(
+        _strip_receiver_derivable_meta(meta),
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
     header = struct.pack(
         HIV1_HEADER_FMT,
         HIV1_MAGIC,
@@ -605,6 +616,7 @@ def parse_archive(blob: bytes) -> HinervArchive:
     meta.pop("_latent_coded_bytes_coarse", None)
     meta.pop("_latent_coded_bytes_mid", None)
     meta.pop("_latent_coded_bytes_fine", None)
+    meta.pop("_decoder_state_codec", None)
 
     return HinervArchive(
         decoder_state_dict=sd,

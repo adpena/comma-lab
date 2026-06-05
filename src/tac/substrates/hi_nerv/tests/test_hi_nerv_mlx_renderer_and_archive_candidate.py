@@ -629,7 +629,7 @@ def test_mlx_official_grid_convnext_export_matches_pytorch_forward() -> None:
 
 
 def test_archive_candidate_int8_decoder_packet_roundtrip() -> None:
-    from tac.substrates.hi_nerv.archive import parse_archive
+    from tac.substrates.hi_nerv.archive import build_archive_section_telemetry, parse_archive
     from tac.substrates.hi_nerv.archive_candidate import (
         pack_archive_from_exported_state_dict,
     )
@@ -647,7 +647,8 @@ def test_archive_candidate_int8_decoder_packet_roundtrip() -> None:
         exportable.cfg.num_pairs,
         exportable.cfg.latent_dim_coarse,
     )
-    assert arc.meta["_decoder_state_codec"]["codec"] == "int8_mixed"
+    assert build_archive_section_telemetry(blob)["decoder_codec"] == "int8_mixed"
+    assert "_decoder_state_codec" not in arc.meta
     assert "_hi_nerv_bitstream_preparation" not in arc.meta
     assert "latents_coarse" not in arc.decoder_state_dict
 
@@ -1081,7 +1082,11 @@ def test_archive_export_refuses_over_hard_byte_ceiling_before_receiver_package(
 
 
 def test_archive_export_emits_hprc_spine_for_brotli_latents(tmp_path: Path) -> None:
-    from tac.substrates.hi_nerv.archive import parse_archive, split_archive_sections
+    from tac.substrates.hi_nerv.archive import (
+        build_archive_section_telemetry,
+        parse_archive,
+        split_archive_sections,
+    )
     from tac.substrates.hi_nerv.archive_candidate import export_hi_nerv_mlx_archive
 
     archive_path, archive_sha, archive_bytes = export_hi_nerv_mlx_archive(
@@ -1114,12 +1119,14 @@ def test_archive_export_emits_hprc_spine_for_brotli_latents(tmp_path: Path) -> N
     inner = (tmp_path / "hi_nerv_export_brotli_latents" / "0.bin").read_bytes()
     sections = split_archive_sections(inner)
     parsed = parse_archive(inner)
+    telemetry = build_archive_section_telemetry(inner)
+    rows = {row["name"]: row for row in telemetry["sections"]}
     assert parsed.latents_coarse.shape[0] == _exportable_torch_model().cfg.num_pairs
     assert sections.meta["_latent_codec"] == "int16_brotli_q11"
-    assert sections.meta["_latent_raw_bytes_coarse"] == parsed.latents_coarse.numel() * 2
-    assert sections.meta["_latent_coded_bytes_coarse"] == len(
-        sections.latents_coarse_blob
-    )
+    assert "_latent_raw_bytes_coarse" not in sections.meta
+    assert "_latent_coded_bytes_coarse" not in sections.meta
+    assert rows["latents_coarse"]["raw_bytes"] == parsed.latents_coarse.numel() * 2
+    assert rows["latents_coarse"]["bytes"] == len(sections.latents_coarse_blob)
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     header = manifest["manifest"]["representation_spine"]["manifest_extra"]

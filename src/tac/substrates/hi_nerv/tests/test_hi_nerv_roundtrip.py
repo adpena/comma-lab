@@ -212,7 +212,7 @@ def test_lossless_brotli_latent_codec_roundtrips_receiver_latents_and_shrinks():
         + len(raw_sections.latents_fine_blob)
     )
     assert coded_sections.meta["_latent_codec"] == LATENT_CODEC_BROTLI_INT16_Q11
-    assert coded_sections.meta["_latent_codec_lossless"] is True
+    assert "_latent_codec_lossless" not in coded_sections.meta
     assert torch.equal(parsed.latents_coarse, lc)
     assert torch.equal(parsed.latents_mid, lm)
     assert torch.equal(parsed.latents_fine, lf)
@@ -246,7 +246,7 @@ def test_lossless_high_byte_arithmetic_latent_codec_roundtrips_and_shrinks():
     parsed = parse_archive(coded_blob)
 
     assert coded_sections.meta["_latent_codec"] == LATENT_CODEC_HI_AC_INT16_Q11
-    assert coded_sections.meta["_latent_codec_lossless"] is True
+    assert "_latent_codec_lossless" not in coded_sections.meta
     assert (
         len(coded_sections.latents_coarse_blob)
         + len(coded_sections.latents_mid_blob)
@@ -536,7 +536,8 @@ def test_decoder_bitstream_preparation_and_repack_are_receiver_visible():
     assert repacked_sections.latents_coarse_blob == original_sections.latents_coarse_blob
     assert repacked_sections.latents_mid_blob == original_sections.latents_mid_blob
     assert repacked_sections.latents_fine_blob == original_sections.latents_fine_blob
-    assert repacked_sections.meta["_decoder_state_codec"]["codec"] == "int4_mixed"
+    assert "_decoder_state_codec" not in repacked_sections.meta
+    assert build_archive_section_telemetry(repacked)["decoder_codec"] == "int4_mixed"
     assert parse_archive(repacked).latents_fine.shape == sd["latents_fine"].shape
 
     roundtrip = measure_hi_nerv_decoder_bitstream_roundtrip(
