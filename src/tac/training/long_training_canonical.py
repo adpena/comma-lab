@@ -110,6 +110,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import math
 import os
 import shutil
 import time
@@ -542,10 +543,18 @@ class LongTrainingConfig:
         checkpoint_retention_manifest_path: optional JSONL manifest path; by
             default lives next to the checkpoint directory.
         best_checkpoint_for_archive_export: when True, the trainer keeps the
-            best-loss live/EMA state in memory, emits one durable best checkpoint
-            at the end, and uses that checkpoint for archive export. This avoids
-            exporting a drifted final epoch while avoiding every-epoch checkpoint
-            bloat.
+            best live/EMA state in memory, emits one durable best checkpoint at
+            the end, and uses that checkpoint for archive export. By default
+            "best" means lowest total loss. Score-aware carriers may set
+            checkpoint_selection_metric_key to a concrete loss component so
+            archive export follows the scorer-facing objective rather than a
+            guard/coder aggregate.
+        checkpoint_selection_metric_key: loss_dict key used for best-checkpoint
+            selection and early-stopping improvement tests. ``"total"`` selects
+            the scalar total loss. Missing or non-finite component values record
+            a blocker and fall back to total loss for that epoch.
+        checkpoint_selection_metric_mode: ``"min"`` for losses/errors,
+            ``"max"`` for rewards/occupancy metrics.
         early_stopping_patience: stop training if no loss improvement for N
             consecutive checkpoint-intervals.
         score_aware_loss_kwargs: optional substrate-specific kwargs threaded
@@ -599,6 +608,8 @@ class LongTrainingConfig:
     checkpoint_retention_cold_store_roots: tuple[Path, ...] = field(default_factory=tuple)
     checkpoint_retention_manifest_path: Path | None = None
     best_checkpoint_for_archive_export: bool = True
+    checkpoint_selection_metric_key: str = "total"
+    checkpoint_selection_metric_mode: str = "min"
     early_stopping_patience: int = DEFAULT_EARLY_STOPPING_PATIENCE
     score_aware_loss_kwargs: Mapping[str, Any] = field(default_factory=dict)
     optimizer_class: str = "adamw"
@@ -752,6 +763,19 @@ class LongTrainingConfig:
                 "best_checkpoint_for_archive_export must be bool; got "
                 f"{type(self.best_checkpoint_for_archive_export).__name__}"
             )
+        if (
+            not isinstance(self.checkpoint_selection_metric_key, str)
+            or not self.checkpoint_selection_metric_key.strip()
+        ):
+            raise ValueError(
+                "checkpoint_selection_metric_key must be non-empty str; got "
+                f"{self.checkpoint_selection_metric_key!r}"
+            )
+        if self.checkpoint_selection_metric_mode not in {"min", "max"}:
+            raise ValueError(
+                "checkpoint_selection_metric_mode must be one of {'min', 'max'}; "
+                f"got {self.checkpoint_selection_metric_mode!r}"
+            )
         if not isinstance(self.early_stopping_patience, int) or self.early_stopping_patience <= 0:
             raise ValueError(
                 f"early_stopping_patience must be positive int; "
@@ -875,6 +899,12 @@ class LongTrainingConfig:
             },
             "best_checkpoint_for_archive_export": bool(
                 self.best_checkpoint_for_archive_export
+            ),
+            "checkpoint_selection_metric_key": str(
+                self.checkpoint_selection_metric_key
+            ),
+            "checkpoint_selection_metric_mode": str(
+                self.checkpoint_selection_metric_mode
             ),
             "early_stopping_patience": int(self.early_stopping_patience),
             "score_aware_loss_kwargs": dict(self.score_aware_loss_kwargs),
@@ -1335,6 +1365,50 @@ def validate_long_training_config(config: LongTrainingConfig) -> None:
         )
     # Frozen dataclass __post_init__ already ran at construction; this
     # function exists for symmetric API + sister tooling discoverability.
+
+
+def _resolve_checkpoint_selection_metric(
+    *,
+    loss_dict: Mapping[str, Any],
+    total_loss: float,
+    metric_key: str,
+) -> tuple[float, str | None]:
+    """Return the metric that controls best-checkpoint archive export."""
+
+    key = str(metric_key).strip()
+    if not key or key == "total":
+        return float(total_loss), None
+    if key not in loss_dict:
+        return float(total_loss), f"checkpoint_selection_metric_missing:{key}"
+    try:
+        value = float(loss_dict[key])
+    except (TypeError, ValueError):
+        return float(total_loss), f"checkpoint_selection_metric_non_numeric:{key}"
+    if not math.isfinite(value):
+        return float(total_loss), f"checkpoint_selection_metric_nonfinite:{key}"
+    return value, None
+
+
+def _checkpoint_metric_improved(
+    *,
+    current: float,
+    best: float,
+    mode: str,
+) -> bool:
+    if mode == "max":
+        return current > best + 1e-9
+    return current < best - 1e-9
+
+
+def _ordered_unique(values: Sequence[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        text = str(value)
+        if text and text not in seen:
+            seen.add(text)
+            out.append(text)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -1883,6 +1957,9 @@ class CheckpointWriter:
         wall_clock_seconds: float,
         is_final: bool = False,
         checkpoint_role: str | None = None,
+        selection_metric_key: str | None = None,
+        selection_metric_value: float | None = None,
+        selection_metric_mode: str | None = None,
     ) -> Path:
         """Write canonical checkpoint (live + EMA shadow + metadata)."""
         role = str(checkpoint_role or ("final" if is_final else "periodic"))
@@ -1929,6 +2006,17 @@ class CheckpointWriter:
             "curriculum_hash": self.curriculum_hash,
             "global_epoch": int(global_epoch),
             "loss": float(loss),
+            "checkpoint_selection_metric_key": (
+                str(selection_metric_key) if selection_metric_key else "total"
+            ),
+            "checkpoint_selection_metric_value": (
+                float(selection_metric_value)
+                if selection_metric_value is not None
+                else float(loss)
+            ),
+            "checkpoint_selection_metric_mode": (
+                str(selection_metric_mode) if selection_metric_mode else "min"
+            ),
             "wall_clock_seconds": float(wall_clock_seconds),
             "is_final": role == "final",
             "is_best": role == "best",
@@ -2951,12 +3039,19 @@ def run_long_training(
     # 3) Training loop.
     per_epoch_metrics: list[PerEpochMetrics] = []
     best_loss = float("inf")
+    best_metric = (
+        float("-inf")
+        if config.checkpoint_selection_metric_mode == "max"
+        else float("inf")
+    )
     best_epoch = -1
     best_wall_clock = 0.0
     best_live_state: Mapping[str, Any] | None = None
     best_ema_state: Mapping[str, Any] | None = None
     best_ema_compensation_state: Mapping[str, Any] | None = None
     best_state_capture_error: str | None = None
+    checkpoint_selection_metric_blockers: list[str] = []
+    last_selection_metric: float | None = None
     epochs_since_improvement = 0
     early_stopped = False
     early_stop_reason = ""
@@ -3050,6 +3145,14 @@ def run_long_training(
         # Build loss_components dict from loss_dict (excluding "total" key).
         loss_components = {k: float(v) for k, v in loss_dict.items() if k != "total"}
         total_loss = float(loss_dict["total"])
+        selection_metric, selection_metric_blocker = _resolve_checkpoint_selection_metric(
+            loss_dict=loss_dict,
+            total_loss=total_loss,
+            metric_key=config.checkpoint_selection_metric_key,
+        )
+        last_selection_metric = float(selection_metric)
+        if selection_metric_blocker is not None:
+            checkpoint_selection_metric_blockers.append(selection_metric_blocker)
         metrics = PerEpochMetrics(
             epoch=epoch,
             stage_name=stage.name,
@@ -3090,7 +3193,12 @@ def run_long_training(
                 print(f"[long_training_canonical] WARN: on_epoch_end callback failed: {exc!r}")
 
         # 7) Early-stopping bookkeeping.
-        if total_loss < best_loss - 1e-9:
+        if _checkpoint_metric_improved(
+            current=float(selection_metric),
+            best=float(best_metric),
+            mode=config.checkpoint_selection_metric_mode,
+        ):
+            best_metric = float(selection_metric)
             best_loss = total_loss
             best_epoch = int(epoch)
             best_wall_clock = float(wall_clock)
@@ -3117,7 +3225,8 @@ def run_long_training(
             early_stopped = True
             early_stop_reason = (
                 f"early_stopping_patience_exceeded:{config.early_stopping_patience}"
-                f"_epochs_without_improvement_below_best_loss_{best_loss}"
+                "_epochs_without_improvement_for_checkpoint_metric_"
+                f"{config.checkpoint_selection_metric_key}_{best_metric}"
             )
             break
 
@@ -3131,6 +3240,9 @@ def run_long_training(
                     loss=total_loss,
                     wall_clock_seconds=wall_clock,
                     is_final=False,
+                    selection_metric_key=config.checkpoint_selection_metric_key,
+                    selection_metric_value=float(selection_metric),
+                    selection_metric_mode=config.checkpoint_selection_metric_mode,
                 )
                 apply_checkpoint_retention(
                     config,
@@ -3158,6 +3270,9 @@ def run_long_training(
             loss=per_epoch_metrics[-1].loss if per_epoch_metrics else float("inf"),
             wall_clock_seconds=total_wall_clock,
             is_final=True,
+            selection_metric_key=config.checkpoint_selection_metric_key,
+            selection_metric_value=last_selection_metric,
+            selection_metric_mode=config.checkpoint_selection_metric_mode,
         )
     except Exception as exc:
         if config.ema_accumulation == "kahan":
@@ -3207,6 +3322,9 @@ def run_long_training(
                     wall_clock_seconds=float(best_wall_clock),
                     is_final=False,
                     checkpoint_role="best",
+                    selection_metric_key=config.checkpoint_selection_metric_key,
+                    selection_metric_value=float(best_metric),
+                    selection_metric_mode=config.checkpoint_selection_metric_mode,
                 )
                 selected_meta_path = best_meta_path
                 selected_checkpoint_role = "best"
@@ -3301,14 +3419,17 @@ def run_long_training(
     checkpoint_selection: dict[str, Any] = {
         "schema": "long_training_checkpoint_selection.v1",
         "policy": (
-            "best_loss_checkpoint_for_archive_export"
+            f"best_{config.checkpoint_selection_metric_key}_checkpoint_for_archive_export"
             if config.best_checkpoint_for_archive_export
             else "final_checkpoint_for_archive_export"
         ),
+        "selection_metric_key": config.checkpoint_selection_metric_key,
+        "selection_metric_mode": config.checkpoint_selection_metric_mode,
         "selected_role": selected_checkpoint_role,
         "selected_meta_path": selected_meta_path.as_posix(),
         "selected_global_epoch": selected_meta.get("global_epoch"),
         "selected_loss": selected_meta.get("loss"),
+        "selected_metric": selected_meta.get("checkpoint_selection_metric_value"),
         "selected_live_state_path": (
             live_checkpoint_path.as_posix() if live_checkpoint_path else None
         ),
@@ -3316,6 +3437,7 @@ def run_long_training(
         "final_meta_path": final_meta_path.as_posix(),
         "final_global_epoch": final_meta.get("global_epoch"),
         "final_loss": final_meta.get("loss"),
+        "final_metric": final_meta.get("checkpoint_selection_metric_value"),
         "final_live_state_path": (
             final_live_checkpoint_path.as_posix()
             if final_live_checkpoint_path
@@ -3324,10 +3446,14 @@ def run_long_training(
         "final_ema_shadow_state_path": final_ema_shadow_checkpoint_path.as_posix(),
         "best_observed_epoch": int(best_epoch),
         "best_observed_loss": float(best_loss),
+        "best_observed_metric": float(best_metric),
         "best_meta_path": best_meta_path.as_posix() if best_meta_path else None,
         "best_state_capture_error": best_state_capture_error,
         "best_checkpoint_emission_error": best_checkpoint_emission_error,
         "selected_checkpoint_restore_error": selected_checkpoint_restore_error,
+        "checkpoint_selection_metric_blockers": _ordered_unique(
+            checkpoint_selection_metric_blockers
+        ),
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

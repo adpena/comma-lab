@@ -30,6 +30,8 @@ TELEMETRY_FEEDBACK_SCHEMA = "nerv_training_telemetry_feedback.v1"
 SAMPLE_GENERALIZATION_GATE_SCHEMA = "nerv_sample_generalization_gate.v1"
 HINERV_ARCHIVE_LADDER_FEEDBACK_SCHEMA = "hinerv_archive_ladder_candidate_feedback.v1"
 FULL_VIDEO_MLX_SCORER_FEEDBACK_SCHEMA = "nerv_full_video_mlx_scorer_feedback.v1"
+SNERV_RENDERER_NONDEGENERATE_PROOF_SCHEMA = "snerv_renderer_nondegenerate_proof.v1"
+SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT = 16
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -256,6 +258,123 @@ def _snerv_trained_state_exportability(*sources: Any) -> bool | None:
     return None
 
 
+def _snerv_score_aware_training_telemetry_contract(
+    native_export: Mapping[str, Any],
+) -> dict[str, Any]:
+    direct = native_export.get("score_aware_long_training_telemetry_contract")
+    if isinstance(direct, Mapping):
+        return dict(direct)
+    training = native_export.get("score_aware_long_training")
+    if isinstance(training, Mapping):
+        contract = training.get("training_telemetry_contract")
+        if isinstance(contract, Mapping):
+            return dict(contract)
+    return {}
+
+
+def _snerv_receiver_value_domain_passed(profile: Any) -> bool | None:
+    if not isinstance(profile, Mapping):
+        return None
+    gate = profile.get("receiver_value_domain_gate")
+    if isinstance(gate, Mapping):
+        return bool(gate.get("passed") is True)
+    blockers = profile.get("blockers")
+    if isinstance(blockers, Sequence) and not isinstance(blockers, (str, bytes)):
+        return not any(str(blocker) for blocker in blockers)
+    return None
+
+
+def _snerv_renderer_nondegenerate_proof(
+    native_export: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    if not native_export:
+        return None
+    blockers: list[str] = []
+    measured_pairs = _int_or_none(native_export.get("num_pairs")) or 0
+    scorer_tether_gate = (
+        dict(native_export.get("snerv_scorer_tether_smoke_gate"))
+        if isinstance(native_export.get("snerv_scorer_tether_smoke_gate"), Mapping)
+        else {}
+    )
+    telemetry_contract = _snerv_score_aware_training_telemetry_contract(native_export)
+    reconstruction = (
+        dict(native_export.get("receiver_reconstruction"))
+        if isinstance(native_export.get("receiver_reconstruction"), Mapping)
+        else {}
+    )
+    target_profile = (
+        reconstruction.get("target_profile")
+        if isinstance(reconstruction.get("target_profile"), Mapping)
+        else native_export.get("receiver_target_reconstruction_profile")
+    )
+    export_profile = (
+        reconstruction.get("export_profile")
+        if isinstance(reconstruction.get("export_profile"), Mapping)
+        else native_export.get("receiver_export_reconstruction_profile")
+    )
+    target_value_domain_passed = _snerv_receiver_value_domain_passed(target_profile)
+    export_value_domain_passed = _snerv_receiver_value_domain_passed(export_profile)
+    official_skip_gate = (
+        dict(native_export.get("official_skip_high_value_domain_gate"))
+        if isinstance(native_export.get("official_skip_high_value_domain_gate"), Mapping)
+        else {}
+    )
+
+    if measured_pairs < SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT:
+        blockers.append("snerv_renderer_nondegenerate_smoke_min16_pairs_missing")
+    if scorer_tether_gate.get("passed") is not True:
+        blockers.append("snerv_renderer_nondegenerate_tether_gate_missing_or_failed")
+    if telemetry_contract.get("passed") is not True:
+        blockers.append(
+            "snerv_renderer_nondegenerate_telemetry_contract_missing_or_failed"
+        )
+    if reconstruction.get("receiver_reconstruction_verified") is not True:
+        blockers.append("snerv_renderer_nondegenerate_receiver_reconstruction_not_verified")
+    if target_value_domain_passed is not True:
+        blockers.append("snerv_renderer_nondegenerate_target_value_domain_not_passed")
+    if export_value_domain_passed is not True:
+        blockers.append("snerv_renderer_nondegenerate_export_value_domain_not_passed")
+    reconstruction_blockers = [
+        str(blocker)
+        for blocker in reconstruction.get("blockers") or ()
+        if str(blocker)
+    ]
+    blockers.extend(reconstruction_blockers)
+    if official_skip_gate and official_skip_gate.get("passed") is not True:
+        blockers.append(
+            "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed"
+        )
+        blockers.extend(
+            str(blocker)
+            for blocker in official_skip_gate.get("blockers") or ()
+            if str(blocker)
+        )
+    blockers = _dedupe_strings(blockers)
+    return {
+        "schema": SNERV_RENDERER_NONDEGENERATE_PROOF_SCHEMA,
+        "min_pair_count": SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT,
+        "measured_num_pairs": int(measured_pairs),
+        "scorer_tether_gate_passed": scorer_tether_gate.get("passed") is True,
+        "telemetry_contract_passed": telemetry_contract.get("passed") is True,
+        "receiver_reconstruction_verified": (
+            reconstruction.get("receiver_reconstruction_verified") is True
+        ),
+        "target_value_domain_passed": target_value_domain_passed,
+        "export_value_domain_passed": export_value_domain_passed,
+        "official_skip_high_value_domain_passed": (
+            official_skip_gate.get("passed") if official_skip_gate else None
+        ),
+        "official_skip_high_mode": (
+            official_skip_gate.get("official_skip_high_mode")
+            if official_skip_gate
+            else native_export.get("official_skip_high_mode")
+        ),
+        "passed": not blockers,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
 def _snerv_official_checkpoint_mapping_verified(
     manifest: Mapping[str, Any],
 ) -> bool:
@@ -364,6 +483,9 @@ def build_nerv_candidate_feedback_row(
         snerv_native_export.get("receiver_reconstruction")
         or score_aware_training.get("mlx_native_receiver_reconstruction")
     )
+    snerv_renderer_nondegenerate_proof = _snerv_renderer_nondegenerate_proof(
+        snerv_native_export
+    )
     native_byte_feedback = _snerv_native_file_backed_byte_feedback(
         family=runner_report.get("execute_family"),
         candidate_row=candidate_row,
@@ -427,6 +549,16 @@ def build_nerv_candidate_feedback_row(
                 for blocker in snerv_official_checkpoint_mapping.get("blockers")
                 or []
             ],
+            *(
+                [
+                    str(blocker)
+                    for blocker in (
+                        snerv_renderer_nondegenerate_proof.get("blockers") or []
+                    )
+                ]
+                if isinstance(snerv_renderer_nondegenerate_proof, Mapping)
+                else []
+            ),
         ]
     )
     return {
@@ -624,6 +756,22 @@ def build_nerv_candidate_feedback_row(
         ),
         "snerv_mlx_native_receiver_reconstruction": (
             snerv_native_receiver_reconstruction or None
+        ),
+        "snerv_renderer_nondegenerate_proof": (
+            snerv_renderer_nondegenerate_proof or None
+        ),
+        "snerv_renderer_nondegenerate_proof_passed": (
+            snerv_renderer_nondegenerate_proof.get("passed")
+            if isinstance(snerv_renderer_nondegenerate_proof, Mapping)
+            else None
+        ),
+        "snerv_renderer_nondegenerate_smoke_min_pair_count": (
+            SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT
+        ),
+        "snerv_renderer_nondegenerate_blockers": (
+            list(snerv_renderer_nondegenerate_proof.get("blockers") or [])
+            if isinstance(snerv_renderer_nondegenerate_proof, Mapping)
+            else []
         ),
         "snerv_mlx_native_export_blockers": list(
             snerv_native_export.get("blockers") or []

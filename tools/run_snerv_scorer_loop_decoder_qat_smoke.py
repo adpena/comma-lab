@@ -16,6 +16,7 @@ if str(REPO_ROOT / "src") not in sys.path:
 
 from tac.substrates.snerv_inverse_steg_carrier.scorer_loop_decoder_qat import (  # noqa: E402
     COMPONENT_GUARD_MODES,
+    DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS,
     run_snerv_scorer_loop_decoder_qat_smoke,
 )
 
@@ -96,6 +97,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--pair-guard-min-score-improved-fraction", type=float, default=0.0)
     parser.add_argument("--pair-guard-max-pose-worsened-fraction", type=float, default=1.0)
+    parser.add_argument(
+        "--dynamic-range-repair-gains",
+        default="",
+        help=(
+            "Comma-separated HF-decoder gain candidates to receiver-replay before "
+            "the perturbation search, or 'auto' for the bounded default set."
+        ),
+    )
     parser.add_argument("--seed", type=int, default=1337)
     args = parser.parse_args(argv)
 
@@ -137,6 +146,9 @@ def main(argv: list[str] | None = None) -> int:
         pair_guard_max_pose_worsened_fraction=(
             args.pair_guard_max_pose_worsened_fraction
         ),
+        dynamic_range_repair_gains=_parse_dynamic_range_repair_gains(
+            args.dynamic_range_repair_gains
+        ),
         seed=args.seed,
         progress_callback=progress_callback,
     )
@@ -162,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  baseline_score_linf: {result.baseline.score_linf}")
     print(f"  best_score_linf: {result.best.score_linf}")
     print(f"  component_guard_mode: {result.component_guard_mode}")
+    print(f"  dynamic_range_repair_gains: {list(result.dynamic_range_repair_gains)}")
     print(f"  byte_pressure_multiplier: {result.byte_pressure_multiplier}")
     print(
         "  section_value_pressure_multiplier: "
@@ -219,6 +232,21 @@ def _parse_positive_int_csv(raw: str) -> tuple[int, ...]:
         values.append(value)
     if not values:
         raise ValueError("at least one positive integer is required")
+    return tuple(values)
+
+
+def _parse_dynamic_range_repair_gains(raw: str) -> tuple[float, ...]:
+    text = str(raw or "").strip()
+    if not text:
+        return ()
+    if text.lower() == "auto":
+        return DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS
+    values = []
+    for chunk in text.split(","):
+        token = chunk.strip()
+        if not token:
+            continue
+        values.append(float(token))
     return tuple(values)
 
 

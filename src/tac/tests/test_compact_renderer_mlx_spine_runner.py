@@ -5790,9 +5790,14 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert len(calls) == 1
     kw_names = {kw.arg for kw in calls[0].keywords if kw.arg is not None}
     assert "train_time_dual_ascent_config" in kw_names
+    assert "bias_gradient_multiplier" in kw_names
+    assert "output_head_bias_gradient_multiplier" in kw_names
+    assert "checkpoint_selection_metric_key" in kw_names
+    assert "checkpoint_selection_metric_mode" in kw_names
     target_source = ast.get_source_segment(source, target_fn) or ""
     assert "build_default_nerv_train_time_dual_ascent_config" in target_source
     assert "build_hinerv_archive_section_qat_weight_policy" in target_source
+    assert "loss_part_segnet_direct_live_argmax_disagreement" in target_source
     assert "archive_section_qat_policy = " in target_source
     assert "latent_qat_cfg = CoderAwareQATConfig" in target_source
     assert 'terms[f"latent_qat_{suffix}"] = value' in target_source
@@ -5856,6 +5861,8 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     args = _parse_args(["--execute-family", "hi_nerv", "--num-pairs", "1"])
 
     assert args.optimizer_kind == runner_mod.DEFAULT_MLX_SCORE_AWARE_OPTIMIZER_KIND
+    assert args.bias_gradient_multiplier is None
+    assert args.output_head_bias_gradient_multiplier == pytest.approx(1.0)
     assert (
         args.checkpoint_interval_epochs
         == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS
@@ -5872,12 +5879,18 @@ def test_compact_runner_parser_accepts_hi_nerv_pr95_curriculum_total_epochs() ->
             "hi_nerv",
             "--epochs",
             "100",
+            "--bias-gradient-multiplier",
+            "0.25",
+            "--output-head-bias-gradient-multiplier",
+            "0.5",
             "--hi-nerv-pr95-curriculum-total-epochs",
             "29650",
         ]
     )
 
     assert args.epochs == 100
+    assert args.bias_gradient_multiplier == pytest.approx(0.25)
+    assert args.output_head_bias_gradient_multiplier == pytest.approx(0.5)
     assert args.hi_nerv_pr95_curriculum_total_epochs == 29_650
 
 

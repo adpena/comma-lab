@@ -85,7 +85,12 @@ def run_mlx_score_aware_full_main(
     prioritized_pair_indices: tuple[int, ...] = (),
     pair_sampling_weights: Mapping[int, float] | None = None,
     pair_sampling_default_weight: float = 1.0,
+    gradient_multiplier_by_name: Mapping[str, float] | None = None,
+    bias_gradient_multiplier: float | None = None,
+    output_head_bias_gradient_multiplier: float = 1.0,
     ema_archive_selection_enabled: bool = False,
+    checkpoint_selection_metric_key: str = "total",
+    checkpoint_selection_metric_mode: str = "min",
 ) -> Any:
     """Run the canonical MLX-first score-aware ``_full_main`` body.
 
@@ -183,12 +188,23 @@ def run_mlx_score_aware_full_main(
             train-time byte/scorer pressure surface shared by HiNeRV and SNeRV;
             it remains MLX-local false-authority until archive/runtime and exact
             CPU/CUDA replay evidence exists.
+        gradient_multiplier_by_name / bias_gradient_multiplier /
+            output_head_bias_gradient_multiplier:
+            exact-name optimizer multipliers applied inside the shared adapter
+            after finite-gradient validation and before clipping/update. These
+            are scorer-aware train-time waterfilling/ablation controls, not
+            metadata-only knobs.
         ema_archive_selection_enabled: when True, the canonical trainer exports
             both live and EMA final archives, evaluates their local score-aware
             proxy plus charged archive bytes, writes
             ``ema_archive_selection/ema_archive_selection.json``, and returns
             the selected archive. This is advisory MLX-local selection, not
             exact CPU/CUDA authority.
+        checkpoint_selection_metric_key / checkpoint_selection_metric_mode:
+            scorer-facing best-checkpoint selector threaded into
+            ``LongTrainingConfig``. Compact carriers use this to keep archive
+            export tied to direct scorer movement instead of aggregate guard or
+            coder losses.
 
     Returns:
         the canonical ``TrainingArtifact`` from ``run_long_training``.
@@ -255,6 +271,9 @@ def run_mlx_score_aware_full_main(
         prioritized_pair_indices=prioritized_pair_indices,
         pair_sampling_weights=pair_sampling_weights,
         pair_sampling_default_weight=pair_sampling_default_weight,
+        gradient_multiplier_by_name=gradient_multiplier_by_name,
+        bias_gradient_multiplier=bias_gradient_multiplier,
+        output_head_bias_gradient_multiplier=output_head_bias_gradient_multiplier,
     )
 
     config = LongTrainingConfig(
@@ -295,6 +314,8 @@ def run_mlx_score_aware_full_main(
         device="mlx",
         evidence_grade=MLX_EVIDENCE_GRADE,
         ema_archive_selection_enabled=bool(ema_archive_selection_enabled),
+        checkpoint_selection_metric_key=str(checkpoint_selection_metric_key),
+        checkpoint_selection_metric_mode=str(checkpoint_selection_metric_mode),
         notes=(
             notes
             or (

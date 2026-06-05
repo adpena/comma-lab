@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any
 
@@ -74,6 +74,7 @@ COMPONENT_GUARD_MODES: tuple[str, ...] = (
     "pose_hard",
     "pose_seg_hard",
 )
+DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS: tuple[float, ...] = (0.5, 0.75, 1.25, 1.5, 2.0)
 ProgressCallback = Callable[["SnervDecoderEval"], None]
 
 
@@ -197,6 +198,9 @@ class SnervDecoderEval:
     lf_payload_codec_selected: str = "unknown"
     lf_payload_codec_selection_report: dict[str, Any] | None = None
     lf_payload_bytes: int = 0
+    reference_dynamic_range: float = 0.0
+    decoded_dynamic_range: float = 0.0
+    decoded_to_reference_dynamic_range_ratio: float | None = None
     section_value_pressure_linf: float = 0.0
     section_value_pressure_ready: bool = True
     section_value_neutralizations: tuple[SnervSectionNeutralizationEval, ...] = ()
@@ -242,6 +246,7 @@ class SnervScorerLoopDecoderQatSmokeResult:
     pair_guard_min_score_improved_fraction: float
     pair_guard_max_pose_worsened_fraction: float
     component_guard_mode: str
+    dynamic_range_repair_gains: tuple[float, ...]
     baseline: SnervDecoderEval
     best: SnervDecoderEval
     best_packet: bytes
@@ -341,6 +346,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     pair_guard_min_score_improved_fraction: float = 0.0,
     pair_guard_max_pose_worsened_fraction: float = 1.0,
     component_guard_mode: str = "score_primary",
+    dynamic_range_repair_gains: tuple[float, ...] = (),
     seed: int = 1337,
     progress_callback: ProgressCallback | None = None,
 ) -> SnervScorerLoopDecoderQatSmokeResult:
@@ -402,6 +408,9 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             "pair_guard_max_pose_worsened_fraction must be in [0, 1]"
         )
     component_mode = _validate_component_guard_mode(component_guard_mode)
+    dynamic_range_gains = _normalize_dynamic_range_repair_gains(
+        dynamic_range_repair_gains
+    )
 
     adapter = (
         SNERV_SPECTRA_PRESERVING_ADAPTER
@@ -456,7 +465,78 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
     rows: list[SnervDecoderEval] = [baseline]
     _emit_progress(progress_callback, baseline)
     rng = np.random.default_rng(seed)
-    base_vec, layout = _decoder_to_vector(prepared.baseline_decoder)
+    for repair_index, gain in enumerate(dynamic_range_gains, start=1):
+        candidate = _scale_decoder_dynamic_range(prepared.baseline_decoder, gain)
+        row = _evaluate_decoder(
+            candidate,
+            prepared=prepared,
+            posenet=posenet,
+            segnet=segnet,
+            qat_bits=qat_bits,
+            decoder_payload_codec=decoder_payload_codec,
+            lf_payload_codec=lf_payload_codec,
+            label=f"dynamic_range_repair_gain_{_gain_label(gain)}",
+            iteration=repair_index,
+            accepted=False,
+            byte_pressure_multiplier=byte_pressure_multiplier,
+            section_value_pressure_multiplier=section_value_pressure_multiplier,
+        )
+        accepted = decoder_trial_passes_pose_guard(
+            row,
+            best_eval,
+            pose_slack=pose_slack,
+            seg_slack=seg_slack,
+            byte_pressure_multiplier=byte_pressure_multiplier,
+            section_value_pressure_multiplier=section_value_pressure_multiplier,
+            max_archive_byte_growth=max_archive_byte_growth,
+            pair_guard_min_score_improved_fraction=(
+                pair_guard_min_score_improved_fraction
+            ),
+            pair_guard_max_pose_worsened_fraction=(
+                pair_guard_max_pose_worsened_fraction
+            ),
+            component_guard_mode=component_mode,
+        )
+        if accepted:
+            row = _replace_eval_acceptance(row, accepted=True, blockers=())
+            best_decoder = candidate
+            best_eval = row
+        else:
+            row = _replace_eval_acceptance(
+                row,
+                accepted=False,
+                blockers=tuple(
+                    dict.fromkeys(
+                        (
+                            "dynamic_range_repair_candidate_not_accepted",
+                            *_trial_blockers(
+                                row,
+                                best_eval,
+                                pose_slack=pose_slack,
+                                seg_slack=seg_slack,
+                                byte_pressure_multiplier=(
+                                    byte_pressure_multiplier
+                                ),
+                                section_value_pressure_multiplier=(
+                                    section_value_pressure_multiplier
+                                ),
+                                max_archive_byte_growth=max_archive_byte_growth,
+                                pair_guard_min_score_improved_fraction=(
+                                    pair_guard_min_score_improved_fraction
+                                ),
+                                pair_guard_max_pose_worsened_fraction=(
+                                    pair_guard_max_pose_worsened_fraction
+                                ),
+                                component_guard_mode=component_mode,
+                            ),
+                        )
+                    )
+                ),
+            )
+        rows.append(row)
+        _emit_progress(progress_callback, row)
+
+    base_vec, layout = _decoder_to_vector(best_decoder)
     if base_vec.size == 0:
         raise SnervScorerLoopDecoderQatError("decoder has no weights")
     scale = _perturbation_scale(base_vec, perturb_scale)
@@ -778,6 +858,7 @@ def run_snerv_scorer_loop_decoder_qat_smoke(
             pair_guard_max_pose_worsened_fraction
         ),
         component_guard_mode=component_mode,
+        dynamic_range_repair_gains=tuple(float(value) for value in dynamic_range_gains),
         baseline=baseline,
         best=best_eval,
         best_packet=best_packet,
@@ -827,6 +908,58 @@ def _emit_progress(
 ) -> None:
     if progress_callback is not None:
         progress_callback(row)
+
+
+def _array_dynamic_range(value: Any) -> float:
+    arr = np.asarray(value, dtype=np.float64)
+    if arr.size == 0:
+        return 0.0
+    return float(np.max(arr) - np.min(arr))
+
+
+def _normalize_dynamic_range_repair_gains(
+    gains: tuple[float, ...] | Sequence[float],
+) -> tuple[float, ...]:
+    out: list[float] = []
+    for raw in gains:
+        try:
+            gain = float(raw)
+        except (TypeError, ValueError) as exc:
+            raise SnervScorerLoopDecoderQatError(
+                "dynamic_range_repair_gains must contain finite positive values"
+            ) from exc
+        if not np.isfinite(gain) or gain <= 0.0:
+            raise SnervScorerLoopDecoderQatError(
+                "dynamic_range_repair_gains must contain finite positive values"
+            )
+        if np.isclose(gain, 1.0):
+            continue
+        if not any(np.isclose(gain, existing) for existing in out):
+            out.append(gain)
+    return tuple(out)
+
+
+def _gain_label(gain: float) -> str:
+    return f"{float(gain):.6g}".replace("-", "m").replace(".", "p")
+
+
+def _scale_decoder_dynamic_range(
+    decoder: HfGenerationDecoder,
+    gain: float,
+) -> HfGenerationDecoder:
+    scale = float(gain)
+    if not np.isfinite(scale) or scale <= 0.0:
+        raise SnervScorerLoopDecoderQatError("dynamic-range repair gain must be positive")
+    kernels: dict[int, dict[str, np.ndarray]] = {}
+    for lvl in range(int(decoder.levels)):
+        kernels[lvl] = {}
+        for subband, kernel in decoder.kernels[lvl].items():
+            kernels[lvl][subband] = np.asarray(kernel, dtype=np.float64) * scale
+    return HfGenerationDecoder(
+        kernels=kernels,
+        levels=int(decoder.levels),
+        model_size=decoder.model_size,
+    )
 
 
 def quantize_decoder_for_qat(
@@ -1518,6 +1651,14 @@ def _evaluate_decoder(
     except Exception:
         receiver_np = np.zeros(tuple(prepared.pairs.shape), dtype=np.float32)
         replay_ok = False
+    reference_np = prepared.pairs.detach().cpu().numpy()
+    reference_dynamic_range = _array_dynamic_range(reference_np)
+    decoded_dynamic_range = _array_dynamic_range(receiver_np)
+    dynamic_range_ratio = (
+        float(decoded_dynamic_range / reference_dynamic_range)
+        if reference_dynamic_range > 0.0
+        else None
+    )
     receiver = torch.from_numpy(receiver_np).to(prepared.pairs)
     dsegs = []
     dposes = []
@@ -1599,6 +1740,9 @@ def _evaluate_decoder(
             else None
         ),
         lf_payload_bytes=int(archive.section_bytes.get("lf_payload", 0)),
+        reference_dynamic_range=float(reference_dynamic_range),
+        decoded_dynamic_range=float(decoded_dynamic_range),
+        decoded_to_reference_dynamic_range_ratio=dynamic_range_ratio,
         d_seg_linf=d_seg,
         d_pose_linf=d_pose,
         score_linf=score,
@@ -1832,6 +1976,11 @@ def _replace_eval_acceptance(
         lf_payload_codec_selected=row.lf_payload_codec_selected,
         lf_payload_codec_selection_report=row.lf_payload_codec_selection_report,
         lf_payload_bytes=row.lf_payload_bytes,
+        reference_dynamic_range=row.reference_dynamic_range,
+        decoded_dynamic_range=row.decoded_dynamic_range,
+        decoded_to_reference_dynamic_range_ratio=(
+            row.decoded_to_reference_dynamic_range_ratio
+        ),
         d_seg_linf=row.d_seg_linf,
         d_pose_linf=row.d_pose_linf,
         score_linf=row.score_linf,
@@ -1865,6 +2014,11 @@ def _eval_as_gate_row(row: SnervDecoderEval) -> dict[str, Any]:
         "receiver_archive_replay_verified": row.receiver_archive_replay_verified,
         "d_seg_mean_linf": row.d_seg_linf,
         "d_pose_mean_linf": row.d_pose_linf,
+        "reference_dynamic_range": row.reference_dynamic_range,
+        "decoded_dynamic_range": row.decoded_dynamic_range,
+        "decoded_to_reference_dynamic_range_ratio": (
+            row.decoded_to_reference_dynamic_range_ratio
+        ),
         "score_linf": row.score_linf,
         "rate_aware_objective_linf": row.rate_aware_objective_linf,
         "rate_term": row.rate_term,
@@ -1895,6 +2049,7 @@ def _sha256(blob: bytes) -> str:
 __all__ = [
     "AXIS_TAG",
     "COMPONENT_GUARD_MODES",
+    "DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS",
     "SCHEMA",
     "SNERV_QAT_RECEIVER_CODEC_PRICING_PROOF",
     "SNERV_QAT_SECTION_VALUE_PRESSURE_PROOF",

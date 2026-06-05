@@ -104,6 +104,68 @@ def test_snerv_scorer_loop_geometry_units_feed_rate_allocator_bridge(
     assert qat_row["planner_ingest"]["source_byte_price_decision_rows"]
 
 
+def test_snerv_scorer_loop_geometry_surfaces_rejected_score_descent(
+    tmp_path: Path,
+) -> None:
+    path = _write_result(tmp_path / "snerv_result.json")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    result = payload["result"]
+    baseline = dict(result["baseline"])
+    rejected = dict(result["evaluations"][1])
+    rejected.update(
+        {
+            "accepted": False,
+            "score_linf": baseline["score_linf"] - 0.25,
+            "archive_bytes": baseline["archive_bytes"] + 4,
+            "rate_term": (baseline["archive_bytes"] + 4) * BYTE_PRICE,
+            "blockers": ["byte_growth_guard_failed", "pair_pose_worsening_fraction_guard_failed"],
+        }
+    )
+    result["best"] = baseline
+    result["evaluations"][1] = rejected
+    result["accepted_improvement"] = False
+    result["ready_for_pose_guard_gate"] = False
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    report = build_snerv_scorer_loop_geometry_report([path])
+
+    row = report["reports"][0]
+    assert report["best_descent_score_delta_linf"] == pytest.approx(0.0)
+    assert row["rejected_score_descent_count"] == 1
+    assert row["best_rejected_score_descent"]["label"] == rejected["label"]
+    assert row["best_rejected_score_descent"]["score_delta_linf"] == pytest.approx(
+        -0.25
+    )
+    assert "byte_growth_guard_failed" in row["best_rejected_score_descent"]["blockers"]
+    assert "snerv_rejected_scorer_descent_admission_repair_required" in report[
+        "blockers"
+    ]
+    assert (
+        report["recommended_next_actions"][0]["id"]
+        == "repair_rejected_scorer_descent_admission"
+    )
+    assert "scale_score_primary_random_subspace_batch" not in {
+        action["id"] for action in report["recommended_next_actions"]
+    }
+    assert report["allocator_units"][0]["best_rejected_score_descent"]["label"] == (
+        rejected["label"]
+    )
+    bridge = build_nerv_rate_allocator_bridge(
+        master_bridge={
+            "schema": "nerv_master_consumer_bridge.v1",
+            "baseline_to_beat": "pr95",
+            "top_priority_carriers": ["snerv", "hi_nerv"],
+            "master_consumer_units": [report["allocator_units"][0]],
+            "blockers": [],
+        }
+    )
+    repair_order = bridge["rate_allocator_work_orders"][0]
+    assert repair_order["work_order_type"] == "snerv_scorer_loop_qat_training_repair"
+    assert repair_order["payload"]["best_rejected_score_descent"]["label"] == (
+        rejected["label"]
+    )
+
+
 def test_snerv_scorer_loop_geometry_cli_writes_json_and_markdown(
     tmp_path: Path,
 ) -> None:

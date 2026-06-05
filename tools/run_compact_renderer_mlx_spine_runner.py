@@ -3939,6 +3939,9 @@ def _run_snerv_native_mlx_export_attachment(
             "receiver_reconstruction_verified": bool(
                 receiver_reconstruction["receiver_reconstruction_verified"]
             ),
+            "official_skip_high_value_domain_gate": artifact.get(
+                "official_skip_high_value_domain_gate"
+            ),
             "receiver_target_reconstruction_profile": receiver_reconstruction[
                 "target_profile"
             ],
@@ -8243,6 +8246,8 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     scorer_input_distribution_guard_temperature: float = 0.01,
     output_head_target_bias_init: bool = True,
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
+    bias_gradient_multiplier: float | None = None,
+    output_head_bias_gradient_multiplier: float = 1.0,
     distillation_device: str = "cpu",
     requested_distillation_device: str | None = None,
     allow_segnet_only_research: bool = False,
@@ -9178,6 +9183,14 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             output_head_target_bias_init=bool(output_head_target_bias_init),
             output_head_target_bias_init_epsilon=float(
                 output_head_target_bias_init_epsilon
+            ),
+            bias_gradient_multiplier=(
+                None
+                if bias_gradient_multiplier is None
+                else float(bias_gradient_multiplier)
+            ),
+            output_head_bias_gradient_multiplier=float(
+                output_head_bias_gradient_multiplier
             ),
             distillation_device=distillation_device,
             requested_distillation_device=effective_requested_distillation_device,
@@ -12883,6 +12896,8 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     scorer_input_distribution_guard_temperature: float = 0.01,
     output_head_target_bias_init: bool = True,
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
+    bias_gradient_multiplier: float | None = None,
+    output_head_bias_gradient_multiplier: float = 1.0,
     distillation_device: str,
     requested_distillation_device: str | None,
     allow_segnet_only_research: bool,
@@ -13013,6 +13028,23 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     if float(pose_distillation_huber_delta) <= 0.0:
         raise CompactRendererMlxSpineRunnerError(
             "pose_distillation_huber_delta must be > 0"
+        )
+    if (
+        bias_gradient_multiplier is not None
+        and (
+            not math.isfinite(float(bias_gradient_multiplier))
+            or float(bias_gradient_multiplier) < 0.0
+        )
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "bias_gradient_multiplier must be None or finite and >= 0"
+        )
+    if (
+        not math.isfinite(float(output_head_bias_gradient_multiplier))
+        or float(output_head_bias_gradient_multiplier) < 0.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "output_head_bias_gradient_multiplier must be finite and >= 0"
         )
     stage_weights = _compact_scoreaware_stage_loss_weights(
         recon=float(recon_loss_stage_weight),
@@ -13477,6 +13509,26 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "optimizer_controls": strip_candidate_curriculum_authority_fields(
                 optimizer_control
             ),
+            "gradient_multipliers": {
+                "schema": "compact_hi_nerv_gradient_multiplier_controls.v1",
+                "bias_gradient_multiplier": (
+                    float(bias_gradient_multiplier)
+                    if bias_gradient_multiplier is not None
+                    else None
+                ),
+                "output_head_bias_gradient_multiplier": float(
+                    output_head_bias_gradient_multiplier
+                ),
+                "exact_parameter_names": ["head_rgb_0.bias", "head_rgb_1.bias"],
+                "applied_after_finite_guard_before_clip": True,
+                "rationale": (
+                    "HiNeRV direct-live SegNet probes showed scorer gradients "
+                    "can spend on global RGB-head bias moves while argmax "
+                    "remains one-class; this forces scorer warmup to use "
+                    "spatial decoder capacity when set below 1."
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "stage_loss_weights": stage_weights,
             "pose_distillation_warmup_epochs": int(pose_distillation_warmup_epochs),
             "scorer_input_distribution_guard": {
@@ -13837,7 +13889,21 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         pair_sampling_default_weight=float(
             scorer_error_pair_curriculum.get("default_weight", 1.0)
         ),
+        bias_gradient_multiplier=(
+            float(bias_gradient_multiplier)
+            if bias_gradient_multiplier is not None
+            else None
+        ),
+        output_head_bias_gradient_multiplier=float(
+            output_head_bias_gradient_multiplier
+        ),
         on_epoch_end=pose_instability_monitor,
+        checkpoint_selection_metric_key=(
+            "loss_part_segnet_direct_live_argmax_disagreement"
+            if float(segnet_direct_live_distillation_weight) > 0.0
+            else "total"
+        ),
+        checkpoint_selection_metric_mode="min",
         notes=(
             "Compact renderer MLX spine runner HiNeRV training using real "
             "contest video targets, byte-closed archive export, receiver proof, "
@@ -17781,6 +17847,30 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--bias-gradient-multiplier",
+        default=None,
+        type=float,
+        help=(
+            "HiNeRV train-time scorer-warmup control. Multiplies every *.bias "
+            "gradient after finite-gradient checks and before clipping/update. "
+            "Use 0.0 for weight-only warmups when scorer loss is otherwise "
+            "spent on global bias sinks; exact output head names remain "
+            "controlled by --output-head-bias-gradient-multiplier."
+        ),
+    )
+    parser.add_argument(
+        "--output-head-bias-gradient-multiplier",
+        default=1.0,
+        type=float,
+        help=(
+            "HiNeRV train-time scorer-warmup control. Multiplies gradients for "
+            "head_rgb_0.bias and head_rgb_1.bias after finite-gradient checks "
+            "and before clipping/optimizer update. Use values below 1.0 to "
+            "avoid scorer losses spending early updates on global bias while "
+            "SegNet argmax remains collapsed."
+        ),
+    )
+    parser.add_argument(
         "--recon-loss-stage-weight",
         default=1.0,
         type=float,
@@ -19305,6 +19395,10 @@ def main(argv: list[str] | None = None) -> int:
             output_head_target_bias_init=bool(args.output_head_target_bias_init),
             output_head_target_bias_init_epsilon=(
                 args.output_head_target_bias_init_epsilon
+            ),
+            bias_gradient_multiplier=args.bias_gradient_multiplier,
+            output_head_bias_gradient_multiplier=(
+                args.output_head_bias_gradient_multiplier
             ),
             distillation_device=args.distillation_device,
             requested_distillation_device=getattr(

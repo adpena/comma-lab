@@ -72,6 +72,114 @@ def test_device_gate_reports_mlx_available_on_local_host() -> None:
     assert require_mlx_for_harness().__name__ == "mlx.core"
 
 
+def test_output_head_bias_gradient_multiplier_zeroes_exact_bias_updates() -> None:
+    import mlx.nn as nn
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class HeadBiasRenderer(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.head_rgb_0 = nn.Linear(1, 3)
+            self.head_rgb_1 = nn.Linear(1, 3)
+
+        def reconstruct_pair(self, idx):
+            batch_size = int(idx.shape[0])
+            z = mx.ones((batch_size, 2, 2, 1), dtype=mx.float32)
+            rgb0 = mx.sigmoid(self.head_rgb_0(z))
+            rgb1 = mx.sigmoid(self.head_rgb_1(z))
+            return (
+                mx.transpose(rgb0, (0, 3, 1, 2)),
+                mx.transpose(rgb1, (0, 3, 1, 2)),
+            )
+
+    model = HeadBiasRenderer()
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=mx.zeros((2, 2, 2, 3), dtype=mx.float32),
+        target_rgb_1=mx.ones((2, 2, 2, 3), dtype=mx.float32),
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="head_bias_multiplier_test",
+        optimizer_kind="adamw",
+        weight_decay=0.0,
+        output_head_bias_gradient_multiplier=0.0,
+    )
+    b0_before = mx.array(model.head_rgb_0.bias)
+    b1_before = mx.array(model.head_rgb_1.bias)
+
+    metrics = adapter.train_step(
+        batch=mx.array([0, 1], dtype=mx.int32),
+        learning_rate=1e-2,
+        loss_weights={"recon": 1.0},
+    )
+    mx.eval(model.parameters())
+
+    assert metrics["gradient_multiplier_active"] == pytest.approx(1.0)
+    assert metrics["gradient_multiplier_zeroed_leaf_count"] == pytest.approx(2.0)
+    assert metrics["gradient_multiplier_output_head_bias"] == pytest.approx(0.0)
+    assert float(
+        mx.max(mx.abs(model.head_rgb_0.bias - b0_before)).item()
+    ) == pytest.approx(0.0)
+    assert float(
+        mx.max(mx.abs(model.head_rgb_1.bias - b1_before)).item()
+    ) == pytest.approx(0.0)
+
+
+def test_bias_gradient_multiplier_zeroes_non_head_bias_but_keeps_weights_live() -> None:
+    import mlx.nn as nn
+
+    from tac.substrates._shared.mlx_score_aware.adapter import MlxScoreAwareAdapter
+
+    class DecoderBiasRenderer(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.decoder = nn.Linear(1, 3)
+
+        def reconstruct_pair(self, idx):
+            batch_size = int(idx.shape[0])
+            z = mx.ones((batch_size, 2, 2, 1), dtype=mx.float32)
+            rgb = mx.sigmoid(self.decoder(z))
+            nchw = mx.transpose(rgb, (0, 3, 1, 2))
+            return nchw, nchw
+
+    model = DecoderBiasRenderer()
+    bundle = RendererBundle(
+        model=model,
+        target_rgb_0=mx.zeros((2, 2, 2, 3), dtype=mx.float32),
+        target_rgb_1=mx.zeros((2, 2, 2, 3), dtype=mx.float32),
+        num_pairs=2,
+        forward_convention="reconstruct_pair_nchw01",
+    )
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="decoder_bias_multiplier_test",
+        optimizer_kind="adamw",
+        weight_decay=0.0,
+        bias_gradient_multiplier=0.0,
+    )
+    bias_before = mx.array(model.decoder.bias)
+    weight_before = mx.array(model.decoder.weight)
+
+    metrics = adapter.train_step(
+        batch=mx.array([0, 1], dtype=mx.int32),
+        learning_rate=5e-2,
+        loss_weights={"recon": 1.0},
+    )
+    mx.eval(model.parameters())
+
+    assert metrics["gradient_multiplier_active"] == pytest.approx(1.0)
+    assert metrics["gradient_multiplier_zeroed_leaf_count"] >= 1.0
+    assert metrics["gradient_multiplier_bias"] == pytest.approx(0.0)
+    assert float(mx.max(mx.abs(model.decoder.bias - bias_before)).item()) == (
+        pytest.approx(0.0)
+    )
+    assert float(mx.max(mx.abs(model.decoder.weight - weight_before)).item()) > 0.0
+
+
 def test_renderer_bundle_validation_fail_closed() -> None:
     target_0, target_1 = _targets()
     with pytest.raises(MlxScoreAwareHarnessError, match="forward_convention"):

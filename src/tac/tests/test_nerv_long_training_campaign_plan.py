@@ -1028,8 +1028,103 @@ def test_long_training_campaign_plan_prefers_rate_plausible_snerv_rows() -> None
 
     snerv_row = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["candidate_id"] == plausible["candidate_id"]
-    assert snerv_row["local_mlx_launch_command_ready"] is True
+    assert snerv_row["local_mlx_launch_command_ready"] is False
+    assert snerv_row["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
     assert "snerv_nominal_payload_far_over_ceiling_refuse_long_training" not in snerv_row["blockers"]
+    assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
+
+
+def test_long_training_campaign_plan_requires_and_accepts_snerv_nondegenerate_proof() -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.update(
+        {
+            "candidate_id": (
+                "snerv_np600_haar_lv5_lfb2_stepb0p5_fc11e2_p1_mfu1-2-4_hfr0_t0_adbase_int2_symmetric_ceil285000"
+            ),
+            "hard_byte_ceiling": 285_000,
+            "levels": 5,
+            "bits_per_coeff": 2.0,
+            "decoder_payload_codec": "int2_symmetric",
+            "nominal_total_payload_bytes": 231_518,
+            "nominal_under_ceiling": True,
+            "byte_headroom": 285_000 - 231_518,
+            "fc_dim": 11,
+            "emb_size": 2,
+        }
+    )
+    tether_smoke = {
+        "schema": "snerv_scorer_tether_smoke.v1",
+        "created_utc": "2026-06-05T00:00:00Z",
+        "steps": 2,
+        "passed": True,
+        "metric_summary": {
+            "loss_part_distill": 0.5,
+            "loss_part_pose_distill": 0.25,
+            "snerv_segnet_last_frame_distill_lambda": 0.01,
+            "snerv_posenet_yuv6_pair_distill_lambda": 0.01,
+        },
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    renderer_feedback = {
+        "schema": "nerv_candidate_feedback_row.v1",
+        "family": "snerv",
+        "candidate_id": candidate["candidate_id"],
+        "candidate_num_pairs": 600,
+        "measured_num_pairs": 16,
+        "scope_matches_candidate": True,
+        "feedback_ready": False,
+        "snerv_renderer_nondegenerate_proof_passed": True,
+        "snerv_renderer_nondegenerate_blockers": [],
+        "snerv_renderer_nondegenerate_proof": {
+            "schema": "snerv_renderer_nondegenerate_proof.v1",
+            "min_pair_count": 16,
+            "measured_num_pairs": 16,
+            "scorer_tether_gate_passed": True,
+            "telemetry_contract_passed": True,
+            "receiver_reconstruction_verified": True,
+            "target_value_domain_passed": True,
+            "export_value_domain_passed": True,
+            "passed": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "direct_feedback_blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=tether_smoke,
+        candidate_feedback_sources=(renderer_feedback,),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert snerv["snerv_renderer_nondegenerate_gate"]["passed"] is True
+    assert snerv["local_mlx_launch_command_ready"] is True
+    assert snerv["implementation_status"] == "native_rate_aware_long_training_queue_ready"
+    queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert "snerv_scorer_tether_smoke_report_missing" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert "snerv_renderer_nondegenerate_smoke_missing" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert queue_contract["snerv_renderer_nondegenerate_gate"]["passed"] is True
+    assert snerv["score_claim"] is False
 
 
 def test_long_training_campaign_plan_consumes_snerv_lf_recode_admission() -> None:
@@ -3928,6 +4023,103 @@ def test_long_training_campaign_plan_tether_smoke_clears_stale_tether_blockers()
     assert snerv["score_claim"] is False
 
 
+def test_long_training_campaign_plan_requires_snerv_renderer_nondegenerate_proof() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=_passing_snerv_tether_smoke_report(),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    gate = snerv["snerv_renderer_nondegenerate_gate"]
+
+    assert gate["required"] is True
+    assert gate["proof_attached"] is False
+    assert gate["passed"] is False
+    assert "snerv_renderer_nondegenerate_smoke_missing" in gate["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_min16_pairs_missing" in gate["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" in snerv["blockers"]
+    queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert snerv["score_claim"] is False
+
+
+def test_long_training_campaign_plan_consumes_passing_snerv_renderer_proof() -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.update(
+        {
+            "nominal_total_payload_bytes": 120_000,
+            "nominal_under_ceiling": True,
+        }
+    )
+    proof = {
+        "schema": "snerv_renderer_nondegenerate_proof.v1",
+        "min_pair_count": 16,
+        "measured_num_pairs": 16,
+        "scorer_tether_gate_passed": True,
+        "telemetry_contract_passed": True,
+        "receiver_reconstruction_verified": True,
+        "target_value_domain_passed": True,
+        "export_value_domain_passed": True,
+        "official_skip_high_value_domain_passed": True,
+        "passed": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=_passing_snerv_tether_smoke_report(),
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "snerv",
+                "candidate_id": candidate["candidate_id"],
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 16,
+                "scope_matches_candidate": True,
+                "snerv_renderer_nondegenerate_proof": proof,
+                "snerv_renderer_nondegenerate_proof_passed": True,
+                "snerv_renderer_nondegenerate_blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    gate = snerv["snerv_renderer_nondegenerate_gate"]
+
+    assert gate["required"] is True
+    assert gate["proof_attached"] is True
+    assert gate["proof_passed"] is True
+    assert gate["passed"] is True
+    assert gate["measured_num_pairs"] == 16
+    assert gate["blockers"] == []
+    assert "snerv_renderer_nondegenerate_smoke_missing" not in snerv["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_failed" not in snerv["blockers"]
+    queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert snerv["score_claim"] is False
+
+
 def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -5856,6 +6048,28 @@ def _snerv_budget_with_candidates(candidates: tuple[dict, ...]) -> dict:
     return {
         "schema": "snerv_modelsize_budget.v1",
         "selected_candidates": list(candidates),
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+
+
+def _passing_snerv_tether_smoke_report() -> dict:
+    return {
+        "schema": "snerv_scorer_tether_smoke.v1",
+        "created_utc": "2026-06-05T00:51:03Z",
+        "steps": 2,
+        "passed": True,
+        "blockers": [],
+        "metric_summary": {
+            "final": {
+                "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                "dual_ascent_lambda__snerv_segnet_last_frame_distill": 1.0,
+                "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 1.0,
+            },
+            "step_count": 2,
+        },
         "score_claim": False,
         "promotion_eligible": False,
         "ready_for_exact_eval_dispatch": False,

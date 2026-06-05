@@ -75,6 +75,8 @@ def build_snerv_scorer_loop_geometry_report(
         blockers.append("full600_receiver_proof_required")
     if any(row.get("receiver_contract_satisfied") is not True for row in reports):
         blockers.append("receiver_contract_not_satisfied_for_some_inputs")
+    if any(int(row.get("rejected_score_descent_count") or 0) > 0 for row in reports):
+        blockers.append("snerv_rejected_scorer_descent_admission_repair_required")
 
     return {
         "schema": SCHEMA,
@@ -140,6 +142,8 @@ def render_snerv_scorer_loop_geometry_markdown(report: Mapping[str, Any]) -> str
                 f"- Seg contribution delta: `{best.get('delta_seg_term')}`",
                 f"- Pose contribution delta: `{best.get('delta_pose_term')}`",
                 f"- Rate contribution delta: `{best.get('delta_rate_term')}`",
+                f"- Rejected score descents: `{row.get('rejected_score_descent_count')}`",
+                f"- Best rejected score descent: `{row.get('best_rejected_score_descent')}`",
                 f"- Geometry verdicts: `{row.get('geometry_verdicts')}`",
                 "",
             ]
@@ -178,6 +182,18 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         for row in move_contributions
         if row["accepted"] is True and row["label"] != str(baseline.get("label"))
     ]
+    rejected_score_descents = [
+        row
+        for row in move_contributions
+        if row["accepted"] is not True
+        and row["label"] != str(baseline.get("label"))
+        and float(row.get("score_delta_linf") or 0.0) < 0.0
+    ]
+    best_rejected_score_descent = (
+        min(rejected_score_descents, key=lambda row: float(row["score_delta_linf"]))
+        if rejected_score_descents
+        else None
+    )
     best_contribution = _contribution(
         candidate=best,
         reference=baseline,
@@ -233,6 +249,8 @@ def _analyze_one(path: Path) -> dict[str, Any]:
         "byte_price_plan": byte_price_plan,
         "accepted_trial_count": len(accepted_trials),
         "rejected_trial_count": max(len(move_contributions) - 1 - len(accepted_trials), 0),
+        "rejected_score_descent_count": len(rejected_score_descents),
+        "best_rejected_score_descent": best_rejected_score_descent,
         "accepted_trials": accepted_trials,
         "best_pair_deltas": list(result.get("best_pair_deltas") or ()),
         "operating_regime": {
@@ -448,6 +466,8 @@ def _allocator_unit(row: Mapping[str, Any]) -> dict[str, Any]:
         "candidate_count": max(int(row.get("scorer_loop_evaluations") or 0) - 1, 0),
         "accepted_candidate_count": row.get("accepted_trial_count"),
         "rejected_candidate_count": row.get("rejected_trial_count"),
+        "rejected_score_descent_count": row.get("rejected_score_descent_count"),
+        "best_rejected_score_descent": row.get("best_rejected_score_descent"),
         "best_pair_deltas": row.get("best_pair_deltas"),
         "section_value_rows": row.get("section_value_rows") or [],
         "byte_price_plan": row.get("byte_price_plan") or {},
@@ -464,19 +484,8 @@ def _recommended_next_actions(
     aggregate: Mapping[str, Any],
 ) -> list[dict[str, Any]]:
     best_mode = str(aggregate.get("best_search_mode"))
+    accepted_trial_count = int(aggregate.get("accepted_trial_count") or 0)
     actions = [
-        {
-            "id": "scale_score_primary_random_subspace_batch",
-            "priority": 10 if best_mode == "learned_random_subspace" else 8,
-            "why": (
-                "current local geometry shows accepted scorer-primary descent; "
-                "scale to more pairs/trials before exact spend"
-            ),
-            "blockers": [
-                "full600_receiver_proof_required",
-                "mlx_or_cuda_batched_scorer_loop_needed_for_velocity",
-            ],
-        },
         {
             "id": "replace_random_directions_with_decoder_weight_vjp",
             "priority": 9,
@@ -490,20 +499,38 @@ def _recommended_next_actions(
                 "eval_roundtrip_gradient_reachability_proof_required",
             ],
         },
-        {
-            "id": "bind_archive_codec_to_descent_step",
-            "priority": 8,
-            "why": (
-                "accepted local moves are distortion-driven; next carrier must "
-                "materialize the best decoder into the receiver archive and price "
-                "PR95-style byte maps/stream splits"
-            ),
-            "blockers": [
-                "mixed_precision_decoder_payload_grammar_not_byte_optimized",
-                "best_decoder_packet_materialization_missing",
-            ],
-        },
     ]
+    if accepted_trial_count > 0:
+        actions.insert(
+            0,
+            {
+                "id": "scale_score_primary_random_subspace_batch",
+                "priority": 10 if best_mode == "learned_random_subspace" else 8,
+                "why": (
+                    "current local geometry shows accepted scorer-primary descent; "
+                    "scale to more pairs/trials before exact spend"
+                ),
+                "blockers": [
+                    "full600_receiver_proof_required",
+                    "mlx_or_cuda_batched_scorer_loop_needed_for_velocity",
+                ],
+            },
+        )
+        actions.append(
+            {
+                "id": "bind_archive_codec_to_descent_step",
+                "priority": 8,
+                "why": (
+                    "accepted local moves are distortion-driven; next carrier must "
+                    "materialize the best decoder into the receiver archive and price "
+                    "PR95-style byte maps/stream splits"
+                ),
+                "blockers": [
+                    "mixed_precision_decoder_payload_grammar_not_byte_optimized",
+                    "best_decoder_packet_materialization_missing",
+                ],
+            },
+        )
     if any((row.get("best_contribution") or {}).get("component_tradeoff") for row in reports):
         actions.insert(
             1,
@@ -516,6 +543,23 @@ def _recommended_next_actions(
                     "directions"
                 ),
                 "blockers": ["paired_contest_cpu_cuda_replay_missing"],
+            },
+        )
+    if any(int(row.get("rejected_score_descent_count") or 0) > 0 for row in reports):
+        actions.insert(
+            0,
+            {
+                "id": "repair_rejected_scorer_descent_admission",
+                "priority": 10,
+                "why": (
+                    "at least one receiver-replayed decoder candidate lowered "
+                    "local score but failed byte or pair admission; repair the "
+                    "training/search guard before full600 replay"
+                ),
+                "blockers": [
+                    "snerv_rejected_scorer_descent_admission_repair_required",
+                    "paired_contest_cpu_cuda_replay_missing",
+                ],
             },
         )
     return actions

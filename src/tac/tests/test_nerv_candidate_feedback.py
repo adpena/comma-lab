@@ -842,6 +842,31 @@ def _snerv_native_runner_report(
     archive.write_bytes(b"snerv-native-archive")
     packet_sha = hashlib.sha256(packet.read_bytes()).hexdigest()
     archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    value_domain_gate = {
+        "schema": "snerv_receiver_frame_reconstruction_value_domain_gate.v1",
+        "decoded_std": 42.0,
+        "reference_std": 43.0,
+        "std_ratio": 0.976,
+        "decoded_dynamic_range": 250.0,
+        "reference_dynamic_range": 252.0,
+        "passed": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    target_profile = {
+        "schema": "snerv_receiver_frame_reconstruction_profile.v1",
+        "profile_id": "selected_packet_vs_source_targets",
+        "receiver_value_domain_gate": value_domain_gate,
+        "blockers": [],
+    }
+    export_profile = {
+        "schema": "snerv_receiver_frame_reconstruction_profile.v1",
+        "profile_id": "selected_packet_vs_export_reference",
+        "receiver_value_domain_gate": value_domain_gate,
+        "blockers": [],
+    }
     native_export = {
         "executed": True,
         "candidate_id": "snerv-native-full600",
@@ -858,6 +883,32 @@ def _snerv_native_runner_report(
             "schema": "snerv_checkpoint_export_score_aware_long_training.v1",
             "executed": True,
             "trained_state_exportable": True,
+            "training_telemetry_contract": {
+                "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+                "passed": True,
+                "row_count": 2,
+                "segnet_dual_metric_observed": True,
+                "posenet_dual_metric_observed": True,
+                "segnet_dual_lambda_active_observed": True,
+                "posenet_dual_lambda_active_observed": True,
+                "blockers": [],
+            },
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "score_aware_long_training_telemetry_contract": {
+            "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+            "passed": True,
+            "row_count": 2,
+            "blockers": [],
+        },
+        "snerv_scorer_tether_smoke_gate": {
+            "schema": "snerv_scorer_tether_smoke_gate.v1",
+            "attached": True,
+            "passed": True,
+            "required": True,
+            "blockers": [],
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -868,6 +919,8 @@ def _snerv_native_runner_report(
             "schema": "compact_runner_snerv_receiver_reconstruction_summary.v1",
             "target_profile_ready": True,
             "export_profile_ready": True,
+            "target_profile": target_profile,
+            "export_profile": export_profile,
             "receiver_reconstruction_verified": True,
             "target_mse_nchw255": 1.25,
             "target_max_abs_nchw255": 4.0,
@@ -884,6 +937,15 @@ def _snerv_native_runner_report(
                 }
             ],
             "worst_export_pairs_by_mse": [],
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "official_skip_high_value_domain_gate": {
+            "schema": "snerv_official_skip_high_value_domain_gate.v1",
+            "official_skip_high_mode": "full",
+            "passed": True,
             "blockers": [],
             "score_claim": False,
             "promotion_eligible": False,
@@ -993,6 +1055,9 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert row["snerv_mlx_native_receiver_target_mse_nchw255"] == pytest.approx(1.25)
     assert row["snerv_mlx_native_receiver_export_mse_nchw255"] == pytest.approx(0.125)
     assert row["snerv_mlx_native_receiver_reconstruction_blockers"] == []
+    assert row["snerv_renderer_nondegenerate_proof_passed"] is True
+    assert row["snerv_renderer_nondegenerate_proof"]["measured_num_pairs"] == 600
+    assert row["snerv_renderer_nondegenerate_blockers"] == []
     assert row["snerv_trained_state_exportable"] is True
     assert row["snerv_checkpoint_trained_state_exportable"] is True
     assert row["snerv_score_aware_long_training_trained_state_exportable"] is True
@@ -1017,6 +1082,31 @@ def test_snerv_native_file_backed_full600_bytes_become_feedback(
     assert row["score_claim"] is False
     assert row["promotion_eligible"] is False
     assert row["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_native_renderer_nondegenerate_proof_requires_bounded_pair_scale(
+    tmp_path: Path,
+) -> None:
+    row = build_nerv_candidate_feedback_row(
+        runner_report=_snerv_native_runner_report(
+            tmp_path,
+            required_pair_proof=False,
+            native_num_pairs=2,
+        )
+    )
+
+    proof = row["snerv_renderer_nondegenerate_proof"]
+    assert proof["schema"] == "snerv_renderer_nondegenerate_proof.v1"
+    assert proof["min_pair_count"] == 16
+    assert proof["measured_num_pairs"] == 2
+    assert proof["passed"] is False
+    assert "snerv_renderer_nondegenerate_smoke_min16_pairs_missing" in proof[
+        "blockers"
+    ]
+    assert "snerv_renderer_nondegenerate_smoke_min16_pairs_missing" in row[
+        "blockers"
+    ]
+    assert row["score_claim"] is False
 
 
 def test_snerv_native_file_backed_bytes_require_matching_file_hashes(

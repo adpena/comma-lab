@@ -1035,6 +1035,63 @@ def test_run_long_training_exports_best_ema_when_final_loss_drifts(
     assert artifact_json["checkpoint_selection"]["selected_role"] == "best"
 
 
+def test_run_long_training_can_select_checkpoint_by_score_facing_metric(
+    tmp_path: Path,
+) -> None:
+    class _ScoreMetricImprovesWhileTotalLossDrifts(_MockSubstrateAdapter):
+        totals = (1.0, 20.0, 999.0)
+        argmax_disagreement = (0.50, 0.35, 0.10)
+
+        def loss_fn(self, model, batch, loss_weights):
+            self.step_count += 1
+            i = self.step_count - 1
+            return {
+                "total": self.totals[i],
+                "recon": self.totals[i],
+                "loss_part_segnet_direct_live_argmax_disagreement": (
+                    self.argmax_disagreement[i]
+                ),
+            }
+
+    config = LongTrainingConfig(
+        substrate_id="score_metric_substrate",
+        lane_id="lane_score_metric_substrate_20260605",
+        epochs=3,
+        curriculum_stages=(CurriculumStage(name="s", start_epoch=0, end_epoch=3),),
+        checkpoint_interval_epochs=3,
+        early_stopping_patience=100,
+        checkpoint_selection_metric_key=(
+            "loss_part_segnet_direct_live_argmax_disagreement"
+        ),
+        checkpoint_selection_metric_mode="min",
+        output_dir=tmp_path / "score_metric_checkpoint_selection",
+    )
+
+    artifact = run_long_training(
+        _ScoreMetricImprovesWhileTotalLossDrifts(),
+        config,
+    )
+
+    selection = artifact.as_dict()["checkpoint_selection"]
+    assert selection["policy"] == (
+        "best_loss_part_segnet_direct_live_argmax_disagreement_"
+        "checkpoint_for_archive_export"
+    )
+    assert selection["selection_metric_key"] == (
+        "loss_part_segnet_direct_live_argmax_disagreement"
+    )
+    assert selection["selected_role"] == "final"
+    assert selection["selected_global_epoch"] == 2
+    assert selection["selected_loss"] == pytest.approx(999.0)
+    assert selection["selected_metric"] == pytest.approx(0.10)
+    assert selection["best_observed_metric"] == pytest.approx(0.10)
+    assert selection["checkpoint_selection_metric_blockers"] == []
+    artifact_json = json.loads((config.output_dir / "training_artifact.json").read_text())
+    assert artifact_json["config_snapshot"]["checkpoint_selection_metric_key"] == (
+        "loss_part_segnet_direct_live_argmax_disagreement"
+    )
+
+
 def test_checkpoint_retention_moves_old_periodic_checkpoints_to_cold_store(
     tmp_path: Path,
 ) -> None:

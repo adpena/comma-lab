@@ -488,6 +488,9 @@ class MlxScoreAwareAdapter:
         prioritized_pair_indices: Sequence[int] | None = None,
         pair_sampling_weights: Mapping[int, float] | None = None,
         pair_sampling_default_weight: float = 1.0,
+        gradient_multiplier_by_name: Mapping[str, float] | None = None,
+        bias_gradient_multiplier: float | None = None,
+        output_head_bias_gradient_multiplier: float = 1.0,
     ) -> None:
         """Initialize the canonical MLX score-aware adapter.
 
@@ -575,6 +578,21 @@ class MlxScoreAwareAdapter:
             pair_sampling_default_weight: baseline sampling mass for pairs not
                 explicitly present in ``pair_sampling_weights``. Set to 0.0
                 only for deliberate top-pair hard-focus runs.
+            gradient_multiplier_by_name: optional exact parameter-name
+                gradient multipliers applied after finite-gradient validation
+                and before clipping/optimizer update. This is the train-time
+                hook for byte/scorer waterfilling, ablation, and anti-collapse
+                controls without forking the MLX/Torch/NumPy contract.
+            bias_gradient_multiplier: optional multiplier for every parameter
+                whose canonical name ends in ``.bias``. Exact entries in
+                ``gradient_multiplier_by_name`` and the output-head convenience
+                control override this value.
+            output_head_bias_gradient_multiplier: convenience multiplier for
+                ``head_rgb_0.bias`` and ``head_rgb_1.bias``. HiNeRV class
+                collapse probes showed direct SegNet gradients can spend most
+                of their update on global RGB biases while scorer argmax
+                remains one-class; values < 1.0 force the optimizer to use
+                spatial decoder capacity during scorer warmup.
         """
         mx = require_mlx_for_harness()
         import mlx.nn as mlx_nn
@@ -659,6 +677,11 @@ class MlxScoreAwareAdapter:
         )
         self._pair_sampling_default_weight = self._normalize_pair_sampling_default_weight(
             pair_sampling_default_weight
+        )
+        self._gradient_multiplier_by_name = self._normalize_gradient_multipliers(
+            gradient_multiplier_by_name,
+            bias_gradient_multiplier=bias_gradient_multiplier,
+            output_head_bias_gradient_multiplier=output_head_bias_gradient_multiplier,
         )
         self._train_time_dual_ascent = TrainTimeDualAscentController.from_config(
             train_time_dual_ascent_config
@@ -2030,6 +2053,130 @@ class MlxScoreAwareAdapter:
             )
         return parsed
 
+    def _normalize_gradient_multipliers(
+        self,
+        gradient_multiplier_by_name: Mapping[str, float] | None,
+        *,
+        bias_gradient_multiplier: float | None,
+        output_head_bias_gradient_multiplier: float,
+    ) -> dict[str, float]:
+        self._bias_gradient_multiplier: float | None = None
+        if bias_gradient_multiplier is not None:
+            try:
+                parsed_bias_multiplier = float(bias_gradient_multiplier)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "bias_gradient_multiplier must be None or a finite "
+                    "non-negative float"
+                ) from exc
+            if not math.isfinite(parsed_bias_multiplier) or parsed_bias_multiplier < 0.0:
+                raise ValueError(
+                    "bias_gradient_multiplier must be finite and >= 0; got "
+                    f"{parsed_bias_multiplier!r}"
+                )
+            self._bias_gradient_multiplier = parsed_bias_multiplier
+        try:
+            output_bias_multiplier = float(output_head_bias_gradient_multiplier)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "output_head_bias_gradient_multiplier must be a finite "
+                "non-negative float"
+            ) from exc
+        if not math.isfinite(output_bias_multiplier) or output_bias_multiplier < 0.0:
+            raise ValueError(
+                "output_head_bias_gradient_multiplier must be finite and >= 0; "
+                f"got {output_bias_multiplier!r}"
+            )
+        out: dict[str, float] = {
+            "head_rgb_0.bias": output_bias_multiplier,
+            "head_rgb_1.bias": output_bias_multiplier,
+        }
+        if gradient_multiplier_by_name is not None:
+            if not isinstance(gradient_multiplier_by_name, Mapping):
+                raise ValueError(
+                    "gradient_multiplier_by_name must be a mapping of exact "
+                    "parameter_name -> finite non-negative multiplier"
+                )
+            for raw_key, raw_value in gradient_multiplier_by_name.items():
+                key = str(raw_key)
+                if not key:
+                    raise ValueError("gradient_multiplier_by_name keys must be non-empty")
+                try:
+                    value = float(raw_value)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError(
+                        f"gradient_multiplier_by_name[{key!r}] must be a finite float"
+                    ) from exc
+                if not math.isfinite(value) or value < 0.0:
+                    raise ValueError(
+                        f"gradient_multiplier_by_name[{key!r}] must be finite "
+                        f"and >= 0; got {value!r}"
+                    )
+                out[key] = value
+        return out
+
+    def _gradient_multiplier_for_name(self, name: str) -> float:
+        if name in self._gradient_multiplier_by_name:
+            return float(self._gradient_multiplier_by_name[name])
+        if self._bias_gradient_multiplier is not None and str(name).endswith(".bias"):
+            return float(self._bias_gradient_multiplier)
+        return 1.0
+
+    def _apply_gradient_multipliers(self, grads: Any) -> tuple[Any, dict[str, float]]:
+        """Apply exact-name gradient multipliers before clipping/update."""
+
+        from mlx.utils import tree_flatten, tree_unflatten
+
+        flat: list[tuple[str, Any]] = []
+        applied_count = 0
+        zeroed_count = 0
+        min_multiplier: float | None = None
+        max_multiplier: float | None = None
+        sum_multiplier = 0.0
+        for raw_name, leaf in tree_flatten(grads):
+            name = _tree_name_to_saliency_group(raw_name)
+            multiplier = self._gradient_multiplier_for_name(name)
+            if multiplier != 1.0:
+                applied_count += 1
+                if multiplier == 0.0:
+                    zeroed_count += 1
+                leaf = leaf * multiplier
+                min_multiplier = (
+                    multiplier
+                    if min_multiplier is None
+                    else min(min_multiplier, multiplier)
+                )
+                max_multiplier = (
+                    multiplier
+                    if max_multiplier is None
+                    else max(max_multiplier, multiplier)
+                )
+                sum_multiplier += multiplier
+            flat.append((raw_name, leaf))
+        metrics = {
+            "gradient_multiplier_active": float(applied_count > 0),
+            "gradient_multiplier_applied_leaf_count": float(applied_count),
+            "gradient_multiplier_zeroed_leaf_count": float(zeroed_count),
+            "gradient_multiplier_min": float(
+                1.0 if min_multiplier is None else min_multiplier
+            ),
+            "gradient_multiplier_max": float(
+                1.0 if max_multiplier is None else max_multiplier
+            ),
+            "gradient_multiplier_mean_applied": float(
+                1.0 if applied_count == 0 else sum_multiplier / applied_count
+            ),
+            "gradient_multiplier_output_head_bias": float(
+                self._gradient_multiplier_by_name.get("head_rgb_1.bias", 1.0)
+            ),
+            "gradient_multiplier_bias": (
+                -1.0
+                if self._bias_gradient_multiplier is None
+                else float(self._bias_gradient_multiplier)
+            ),
+        }
+        return tree_unflatten(flat), metrics
+
     def _resolve_pair_sampling_weights_local(self) -> Mapping[str, Any]:
         if not self._pair_sampling_weights:
             return {
@@ -2703,6 +2850,7 @@ class MlxScoreAwareAdapter:
             grads,
             context=f"{self.substrate_id}_mlx_score_aware_train_step",
         )
+        grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
         self._accumulate_decoder_weight_gradient_saliency(grads)
         # Wave N+11 stabilizer: apply mlx.optimizers.clip_grad_norm BEFORE
         # optimizer.update so the NaN-at-ep-16-18 gradient-explosion signature
@@ -2799,6 +2947,7 @@ class MlxScoreAwareAdapter:
             {
                 "total": float(loss_value.item()),
                 **finite_guard_metrics,
+                **gradient_multiplier_metrics,
                 **native_optimizer_metrics,
                 **post_update_metrics,
             }
@@ -2848,6 +2997,7 @@ class MlxScoreAwareAdapter:
             grads,
             context=f"{self.substrate_id}_pact_muon_adamw_train_step",
         )
+        grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
         self._accumulate_decoder_weight_gradient_saliency(grads)
         if self._wave_n11_grad_clip_max_norm is not None:
             grads, total_norm = mlx_optim.clip_grad_norm(
@@ -2912,6 +3062,7 @@ class MlxScoreAwareAdapter:
         return {
             "total": float(loss_value.item()),
             **finite_guard_metrics,
+            **gradient_multiplier_metrics,
             "pact_optimizer_uses_muon": 1.0,
             "pact_muon_tensor_count": float(step_summary["muon_tensor_count"]),
             "pact_adamw_tensor_count": float(step_summary["adamw_tensor_count"]),
@@ -3009,6 +3160,7 @@ class MlxScoreAwareAdapter:
             grads,
             context=f"{self.substrate_id}_pr95_curriculum_train_step",
         )
+        grads, gradient_multiplier_metrics = self._apply_gradient_multipliers(grads)
         self._accumulate_decoder_weight_gradient_saliency(grads)
 
         # Apply ONE canonical Muon+AdamW (or AdamW-only) step. The canonical
@@ -3055,6 +3207,7 @@ class MlxScoreAwareAdapter:
         return {
             "total": float(loss_value.item()),
             **finite_guard_metrics,
+            **gradient_multiplier_metrics,
             "pr95_stage_index": float(stage_verdict.stage_index),
             "pr95_stage_qat_active": float(int(bool(stage_verdict.qat_active))),
             "pr95_stage_uses_muon": float(int(stage_verdict.uses_muon)),

@@ -57,6 +57,26 @@ def test_quantize_decoder_for_qat_changes_off_grid_weights_and_preserves_shape()
     assert not np.array_equal(quantized.kernels[0]["LH"], decoder.kernels[0]["LH"])
 
 
+def test_dynamic_range_repair_gain_scales_decoder_without_shape_drift() -> None:
+    decoder = _decoder()
+
+    scaled = qat_mod._scale_decoder_dynamic_range(decoder, 1.5)
+
+    assert scaled.levels == decoder.levels
+    assert scaled.model_size == decoder.model_size
+    assert scaled.kernels[0]["LH"].shape == decoder.kernels[0]["LH"].shape
+    np.testing.assert_allclose(
+        scaled.kernels[0]["LH"],
+        decoder.kernels[0]["LH"] * 1.5,
+    )
+    assert qat_mod._normalize_dynamic_range_repair_gains((1.0, 0.5, 0.5, 2.0)) == (
+        0.5,
+        2.0,
+    )
+    with pytest.raises(SnervScorerLoopDecoderQatError, match="finite positive"):
+        qat_mod._normalize_dynamic_range_repair_gains((0.0,))
+
+
 def test_first_class_qat_runner_preserves_false_authority_wrapper(monkeypatch) -> None:
     calls = {}
 
@@ -81,6 +101,7 @@ def test_scorer_loop_smoke_defaults_to_portfolio_lf_payload_codec() -> None:
 
     assert sig.parameters["lf_payload_codec"].default == "portfolio_auto"
     assert sig.parameters["snerv_temporal_mode"].default == "delta"
+    assert sig.parameters["dynamic_range_repair_gains"].default == ()
     assert "pair_indices" in sig.parameters
 
 
@@ -109,8 +130,13 @@ def test_scorer_loop_progress_callback_emits_eval_row() -> None:
 def test_scorer_loop_cli_progress_jsonl_writer_is_fail_closed(tmp_path) -> None:
     from tools.run_snerv_scorer_loop_decoder_qat_smoke import (
         _build_progress_callback,
+        _parse_dynamic_range_repair_gains,
     )
 
+    assert _parse_dynamic_range_repair_gains("auto") == (
+        qat_mod.DEFAULT_DYNAMIC_RANGE_REPAIR_GAINS
+    )
+    assert _parse_dynamic_range_repair_gains("0.5, 2") == (0.5, 2.0)
     progress_path = tmp_path / "progress.jsonl"
     callback = _build_progress_callback(str(progress_path))
     assert callback is not None
@@ -227,7 +253,13 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
     step_maps = tuple(np.ones((2, 2), dtype=np.float32) for _ in range(6))
     step_packet = encode_step_maps(list(step_maps), bins=4).packet
     prepared = _PreparedState(
-        pairs=torch.zeros((1, 2, 3, 4, 4), dtype=torch.float32),
+        pairs=torch.linspace(0.0, 1.0, 96, dtype=torch.float32).reshape(
+            1,
+            2,
+            3,
+            4,
+            4,
+        ),
         codes=(),
         lf_quant_planes=tuple(np.zeros((2, 2), dtype=np.int64) for _ in range(6)),
         lf_zero_points=tuple(0.0 for _ in range(6)),
@@ -265,6 +297,10 @@ def test_qat_receiver_codec_pricing_proof_is_backed_by_archive_byte_path(
     assert row.section_value_pressure_ready is True
     assert len(row.section_value_neutralizations) == 2
     assert row.section_value_pressure_linf >= 0.0
+    assert row.reference_dynamic_range == pytest.approx(1.0)
+    assert row.decoded_dynamic_range >= 0.0
+    assert row.decoded_to_reference_dynamic_range_ratio is not None
+    assert row.as_jsonable()["reference_dynamic_range"] == pytest.approx(1.0)
     assert row.rate_term == pytest.approx(CONTEST_BYTE_PRICE * row.archive_bytes)
     assert row.score_linf == pytest.approx(12.5 + np.sqrt(0.9) + row.rate_term)
     assert row.rate_aware_objective_linf == pytest.approx(

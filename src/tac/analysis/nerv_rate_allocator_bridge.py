@@ -738,6 +738,12 @@ def _evidence_work_orders(units: Sequence[Mapping[str, Any]]) -> list[dict[str, 
                                 "scorer_loop_evaluations"
                             ),
                             "score_delta_linf": unit.get("score_delta_linf"),
+                            "rejected_score_descent_count": unit.get(
+                                "rejected_score_descent_count"
+                            ),
+                            "best_rejected_score_descent": unit.get(
+                                "best_rejected_score_descent"
+                            ),
                             "accepted_improvement": unit.get("accepted_improvement"),
                             "ready_for_pose_guard_gate": unit.get(
                                 "ready_for_pose_guard_gate"

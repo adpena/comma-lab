@@ -226,6 +226,7 @@ def _recommended_scorer_loop_commands(*, levels: int, bits: float) -> tuple[str,
             "--pair-guard-min-score-improved-fraction 0.75 "
             "--pair-guard-max-pose-worsened-fraction 0.0 "
             "--component-guard-mode score_primary "
+            "--dynamic-range-repair-gains auto "
             f"--progress-jsonl {progress_path} "
             f"--out {result_path}"
         ),

@@ -165,6 +165,8 @@ TILDE_OSS_LEVERAGE_POLICY_SCHEMA = "nerv_tilde_oss_leverage_policy.v1"
 ROW_TILDE_OSS_BINDING_SCHEMA = "nerv_row_tilde_oss_binding.v1"
 PR95_BASELINE_IDENTITY_BINDING_SCHEMA = "nerv_pr95_baseline_identity_binding.v1"
 SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA = "snerv_scorer_tether_smoke_gate.v1"
+SNERV_RENDERER_NONDEGENERATE_GATE_SCHEMA = "snerv_renderer_nondegenerate_gate.v1"
+SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT = 16
 SNERV_SCORER_TETHER_FEEDBACK_BLOCKERS = frozenset(
     {
         "snerv_scorer_domain_tether_missing_telemetry",
@@ -455,8 +457,8 @@ def _snerv_scorer_tether_smoke_gate(
             "schema": SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA,
             "attached": False,
             "passed": False,
-            "required_by_default": False,
-            "blockers": [],
+            "required_by_default": True,
+            "blockers": ["snerv_scorer_tether_smoke_report_missing"],
             **FALSE_AUTHORITY,
         }
     blockers: list[str] = []
@@ -469,12 +471,56 @@ def _snerv_scorer_tether_smoke_gate(
         "schema": SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA,
         "attached": True,
         "passed": not blockers,
-        "required_by_default": False,
+        "required_by_default": True,
         "source_schema": source.get("schema"),
         "source_created_utc": source.get("created_utc"),
         "source_steps": source.get("steps"),
         "source_metric_summary": source.get("metric_summary"),
         "blockers": _dedupe(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_renderer_nondegenerate_gate(
+    *,
+    feedback: Mapping[str, Any],
+    bounded_proof_only: bool,
+) -> dict[str, Any]:
+    proof = (
+        dict(feedback.get("snerv_renderer_nondegenerate_proof"))
+        if isinstance(feedback.get("snerv_renderer_nondegenerate_proof"), Mapping)
+        else {}
+    )
+    blockers: list[str] = []
+    required = not bool(bounded_proof_only)
+    measured_pairs = _first_present_int(
+        proof,
+        ("measured_num_pairs", "candidate_num_pairs", "num_pairs"),
+    )
+    if required:
+        if not proof:
+            blockers.append("snerv_renderer_nondegenerate_smoke_missing")
+        elif proof.get("passed") is not True:
+            blockers.append("snerv_renderer_nondegenerate_smoke_failed")
+        if (
+            measured_pairs is None
+            or int(measured_pairs) < SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT
+        ):
+            blockers.append("snerv_renderer_nondegenerate_smoke_min16_pairs_missing")
+        blockers.extend(
+            str(blocker) for blocker in proof.get("blockers") or () if blocker
+        )
+    blockers = _dedupe(blockers)
+    return {
+        "schema": SNERV_RENDERER_NONDEGENERATE_GATE_SCHEMA,
+        "required": required,
+        "proof_attached": bool(proof),
+        "proof_passed": bool(proof.get("passed") is True) if proof else False,
+        "passed": not blockers,
+        "min_pair_count": SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT,
+        "measured_num_pairs": measured_pairs,
+        "proof": proof or None,
+        "blockers": blockers,
         **FALSE_AUTHORITY,
     }
 
@@ -1399,6 +1445,10 @@ def _snerv_campaign_row(
         raw_feedback_evidence_blockers,
         scorer_tether_smoke_gate,
     )
+    renderer_nondegenerate_gate = _snerv_renderer_nondegenerate_gate(
+        feedback=feedback,
+        bounded_proof_only=bool(bounded_proof_only),
+    )
     execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
     quant_bits = min(
         8,
@@ -1617,6 +1667,7 @@ def _snerv_campaign_row(
             *source_control_blockers,
             *modelsize_byte_cap_blockers,
             *list(scorer_tether_smoke_gate.get("blockers") or []),
+            *list(renderer_nondegenerate_gate.get("blockers") or []),
             *list(source_parity["required_blockers"]),
             *list(curriculum.get("blockers") or []),
             *feedback_evidence_blockers,
@@ -1631,8 +1682,14 @@ def _snerv_campaign_row(
         and not modelsize_byte_cap_blockers
         and not source_parity["required_blockers"]
     )
+    scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
+    renderer_nondegenerate_ready = not renderer_nondegenerate_gate.get("blockers")
+    prelaunch_proof_ready = bool(
+        scorer_tether_smoke_ready and renderer_nondegenerate_ready
+    )
     launch_ready = bool(
         source_controls_ready
+        and prelaunch_proof_ready
         and (
             True
             if bounded_proof_only
@@ -1653,6 +1710,10 @@ def _snerv_campaign_row(
         implementation_status=(
             "source_bound_capacity_controls_incomplete"
             if not source_controls_ready
+            else "snerv_scorer_tether_smoke_gate_blocked"
+            if not scorer_tether_smoke_ready
+            else "native_rate_aware_long_training_renderer_proof_blocked"
+            if not renderer_nondegenerate_ready
             else (
                 "bounded_native_export_scorer_loop_stage_ready"
                 if bounded_proof_only
@@ -1685,6 +1746,7 @@ def _snerv_campaign_row(
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
             "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
+            "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
@@ -1742,6 +1804,7 @@ def _snerv_campaign_row(
                 "tilde_oss_leverage_binding": tilde_oss_binding,
                 "pr95_baseline_identity_binding": pr95_baseline_binding,
                 "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
+                "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
                 **FALSE_AUTHORITY,
             },
         },
@@ -1918,6 +1981,9 @@ def _experiment_for_row(
     snerv_runtime_authority_split = metadata.get(
         "snerv_official_runtime_authority_split"
     )
+    snerv_renderer_nondegenerate_gate = metadata.get(
+        "snerv_renderer_nondegenerate_gate"
+    )
     current_command_is_bounded_proof = bool(
         metadata.get("current_command_is_bounded_proof_not_long_training")
     )
@@ -1982,6 +2048,11 @@ def _experiment_for_row(
                 if isinstance(snerv_runtime_authority_split, Mapping)
                 else None
             ),
+            "snerv_renderer_nondegenerate_gate": (
+                snerv_renderer_nondegenerate_gate
+                if isinstance(snerv_renderer_nondegenerate_gate, Mapping)
+                else None
+            ),
             "source_bound_capacity_controls": (
                 source_controls if isinstance(source_controls, Mapping) else None
             ),
@@ -2042,12 +2113,22 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "snerv_nominal_payload_far_over_ceiling_refuse_long_training",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only",
+        "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
+        "snerv_renderer_nondegenerate_export_value_domain_not_passed",
+        "snerv_renderer_nondegenerate_receiver_reconstruction_not_verified",
+        "snerv_renderer_nondegenerate_smoke_failed",
+        "snerv_renderer_nondegenerate_smoke_min16_pairs_missing",
+        "snerv_renderer_nondegenerate_smoke_missing",
+        "snerv_renderer_nondegenerate_target_value_domain_not_passed",
+        "snerv_renderer_nondegenerate_telemetry_contract_missing_or_failed",
+        "snerv_renderer_nondegenerate_tether_gate_missing_or_failed",
         "snerv_score_aware_long_training_dual_posenet_lambda_never_active",
         "snerv_score_aware_long_training_dual_segnet_lambda_never_active",
         "snerv_score_aware_long_training_telemetry_contract_failed",
         "snerv_scorer_domain_tether_lambda_inactive_telemetry",
         "snerv_scorer_domain_tether_missing_telemetry",
         "snerv_scorer_tether_smoke_failed",
+        "snerv_scorer_tether_smoke_report_missing",
         "snerv_scorer_tether_smoke_schema_mismatch",
         "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry",
         "snerv_segnet_last_frame_distill_metric_missing_telemetry",
@@ -2093,6 +2174,11 @@ def _candidate_feedback_evidence_blockers(
             "snerv_official_trained_checkpoint_mapping_blockers"
         )
         or []
+        if blocker
+    )
+    blockers.extend(
+        str(blocker)
+        for blocker in feedback.get("snerv_renderer_nondegenerate_blockers") or []
         if blocker
     )
     return _dedupe(blockers)
@@ -6450,6 +6536,8 @@ def _experiment_row_metadata(extra: Mapping[str, Any]) -> dict[str, Any]:
         "snerv_official_runtime_authority_split",
         "current_command_is_bounded_proof_not_long_training",
         "snerv_bounded_proof_epochs",
+        "snerv_scorer_tether_smoke_gate",
+        "snerv_renderer_nondegenerate_gate",
         "snerv_lf_payload_recode_admission_plan",
         "snerv_lf_payload_codec_from_admission_plan",
         "output_dir_reuse_policy",
