@@ -557,6 +557,8 @@ def _snerv_score_aware_long_training_telemetry_contract(
     seg_dual_lambda_active_observed = False
     pose_dual_lambda_active_observed = False
     archive_dual_lambda_active_observed = False
+    archive_dual_positive_violation_observed = False
+    archive_dual_update_observed = False
     section_dual_lambda_active_observed = False
     archive_dual_weight_applied_observed = False
     section_dual_weight_applied_observed = False
@@ -802,6 +804,24 @@ def _snerv_score_aware_long_training_telemetry_contract(
                     "dual_ascent_lambda__snerv_archive_total_bytes",
                 )
             )
+            archive_violation = _telemetry_row_value(
+                row,
+                "dual_ascent_violation__snerv_archive_total_bytes",
+            )
+            archive_dual_positive_violation_observed = (
+                archive_dual_positive_violation_observed
+                or (
+                    _finite_number(archive_violation)
+                    and float(archive_violation) > 0.0
+                )
+            )
+            archive_dual_update_observed = (
+                archive_dual_update_observed
+                or _row_nonzero_finite_number(
+                    row,
+                    "dual_ascent_update_count__snerv_archive_total_bytes",
+                )
+            )
             archive_dual_weight_applied_observed = (
                 archive_dual_weight_applied_observed
                 or _row_nonzero_finite_number(
@@ -949,7 +969,9 @@ def _snerv_score_aware_long_training_telemetry_contract(
     if (
         expected_section
         and archive_dual_lambda_active_observed
+        and archive_dual_positive_violation_observed
         and not archive_dual_weight_applied_observed
+        and not (archive_dual_update_observed and row_count <= 2)
     ):
         blockers.append(
             "snerv_score_aware_long_training_archive_byte_dual_weight_never_applied"
@@ -1090,6 +1112,17 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "archive_rate_metric_observed": bool(archive_rate_observed),
         "archive_byte_dual_lambda_active_observed": bool(
             archive_dual_lambda_active_observed
+        ),
+        "archive_byte_dual_positive_violation_observed": bool(
+            archive_dual_positive_violation_observed
+        ),
+        "archive_byte_dual_update_observed": bool(archive_dual_update_observed),
+        "archive_byte_dual_pending_weight_after_short_update": bool(
+            archive_dual_lambda_active_observed
+            and archive_dual_positive_violation_observed
+            and archive_dual_update_observed
+            and not archive_dual_weight_applied_observed
+            and row_count <= 2
         ),
         "archive_byte_dual_weight_applied_observed": bool(
             archive_dual_weight_applied_observed
@@ -1656,10 +1689,11 @@ def _snerv_train_time_section_byte_metric_payload_from_packet(
     *,
     packet_source: str,
     packet_builder_scope: str,
+    submission_archive_format: str,
     refresh_call: int,
     refresh_every_steps: int,
 ) -> dict[str, Any]:
-    """Return live SNAR1 section bytes in the shared loss-adapter shape."""
+    """Return live submission-format section bytes in the loss-adapter shape."""
 
     section_bytes = {
         str(name): int(value)
@@ -1670,7 +1704,12 @@ def _snerv_train_time_section_byte_metric_payload_from_packet(
         raise SnervMlxNativeExportError(
             "live SNeRV train-time packet emitted no positive section bytes"
         )
-    archive_bytes = _positive_int_or_none(packet.total_bytes) or len(packet.packet)
+    submission_packet, submission_repack = _snerv_submission_packet_for_export(
+        packet.packet,
+        submission_archive_format=submission_archive_format,
+    )
+    archive_bytes = len(submission_packet)
+    section_total = int(sum(section_bytes.values()))
     return {
         "schema": "snerv_live_train_time_section_byte_metrics.v1",
         "archive_bytes": int(archive_bytes),
@@ -1687,7 +1726,8 @@ def _snerv_train_time_section_byte_metric_payload_from_packet(
             for name, nbytes in sorted(section_bytes.items())
         },
         "authority": "macos_mlx_research_signal_false_authority",
-        "byte_basis": "current_receiver_snar1_packet_sections",
+        "byte_basis": "current_receiver_submission_packet_sections",
+        "submission_archive_format": str(submission_archive_format),
         "live_profile": {
             "packet_source": str(packet_source),
             "packet_builder_scope": str(packet_builder_scope),
@@ -1695,9 +1735,17 @@ def _snerv_train_time_section_byte_metric_payload_from_packet(
             "refresh_every_steps": int(refresh_every_steps),
             "packet_sha256": _sha256_bytes(packet.packet),
             "packet_schema": packet.schema,
+            "packet_bytes_before_submission_repack": int(
+                _positive_int_or_none(packet.total_bytes) or len(packet.packet)
+            ),
+            "submission_packet_sha256": _sha256_bytes(submission_packet),
+            "submission_packet_schema": submission_repack.get("output_packet_schema"),
+            "submission_packet_bytes": int(archive_bytes),
+            "submission_packet_header_bytes": int(max(archive_bytes - section_total, 0)),
+            "submission_repack": submission_repack,
         },
         "blockers": [
-            "live_metrics_are_snar1_packet_bytes_until_export_zip_replay"
+            "live_metrics_are_submission_packet_bytes_until_export_zip_replay"
         ],
     }
 
@@ -1718,11 +1766,12 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
     train_time_section_byte_control: Mapping[str, Any],
     batch_size: int,
     refresh_every_steps: int | None,
+    submission_archive_format: str = "snar2",
 ) -> tuple[
     Callable[[Any, Any, Mapping[str, float]], Mapping[str, Any] | None] | None,
     dict[str, Any],
 ]:
-    """Build a live current-state SNAR1 byte callback for MLX dual ascent."""
+    """Build a live current-state receiver byte callback for MLX dual ascent."""
 
     static_payload_obj = train_time_section_byte_control.get("metrics_payload")
     static_payload = (
@@ -1759,10 +1808,11 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
         ),
         "writes_artifacts": False,
         "authority_class": "macos_mlx_research_signal_false_authority",
+        "submission_archive_format": str(submission_archive_format or "snar2"),
         "packet_builder_scope": (
             "official_mfu_hfr_tub_current_component_packet"
             if official_metrics_require_current_components
-            else "rendered_pairs_numpy_portable_snar1_rebuild"
+            else "rendered_pairs_numpy_portable_receiver_rebuild"
         ),
         "blockers": [],
     }
@@ -1875,6 +1925,7 @@ def _build_snerv_live_train_time_section_byte_metrics_callback(
             packet,
             packet_source=packet_source,
             packet_builder_scope=str(metadata["packet_builder_scope"]),
+            submission_archive_format=str(metadata["submission_archive_format"]),
             refresh_call=call_index,
             refresh_every_steps=refresh_every,
         )

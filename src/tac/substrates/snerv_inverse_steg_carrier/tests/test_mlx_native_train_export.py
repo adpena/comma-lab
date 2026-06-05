@@ -771,6 +771,7 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["posenet_dual_lambda_active_observed"] is True
     assert contract["archive_rate_metric_observed"] is True
     assert contract["archive_byte_dual_lambda_active_observed"] is True
+    assert contract["archive_byte_dual_positive_violation_observed"] is False
     assert contract["archive_byte_dual_weight_applied_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["section_byte_dual_lambda_active_observed"] is True
@@ -817,6 +818,58 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract[
         "segnet_direct_live_max_candidate_occupied_class_fraction"
     ] == pytest.approx(0.6)
+
+
+def test_score_aware_telemetry_contract_allows_archive_dual_under_byte_target(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_distill": 1.0,
+                    "loss_part_pose_distill": 2.0,
+                    "train_time_archive_rate_score": 0.002,
+                    "train_time_section_rate_score__decoder_payload": 0.01,
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                    "dual_ascent_lambda__snerv_archive_total_bytes": 0.375,
+                    "dual_ascent_violation__snerv_archive_total_bytes": -0.004,
+                    "dual_ascent_lambda__snerv_decoder_payload_section_bytes": 0.125,
+                    "dual_ascent_weight_applied__snerv_decoder_payload_section_bytes": 1.0,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is True
+    assert contract["archive_byte_dual_lambda_active_observed"] is True
+    assert contract["archive_byte_dual_positive_violation_observed"] is False
+    assert contract["archive_byte_dual_weight_applied_observed"] is False
+    assert (
+        "snerv_score_aware_long_training_archive_byte_dual_weight_never_applied"
+        not in contract["blockers"]
+    )
 
 
 def test_score_aware_telemetry_contract_rejects_section_rate_without_section_dual(
@@ -930,6 +983,7 @@ def test_score_aware_telemetry_contract_rejects_dual_lambda_without_weight_appli
                     "train_time_archive_rate_score": 0.02,
                     "train_time_section_rate_score__decoder_payload": 0.01,
                     "dual_ascent_lambda__snerv_archive_total_bytes": 0.375,
+                    "dual_ascent_violation__snerv_archive_total_bytes": 0.125,
                     "dual_ascent_lambda__snerv_decoder_payload_section_bytes": 0.125,
                 },
             },
@@ -1543,7 +1597,7 @@ def test_snerv_train_time_section_byte_control_prices_pending_without_ceiling() 
     )
 
 
-def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
+def test_snerv_live_section_byte_metrics_callback_refreshes_current_submission_packet(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
@@ -1590,6 +1644,31 @@ def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
         "build_snerv_mlx_native_packet_from_numpy_pairs",
         fake_packet_builder,
     )
+
+    def fake_submission_repack(
+        packet: bytes,
+        *,
+        submission_archive_format: str,
+    ) -> tuple[bytes, dict[str, object]]:
+        assert submission_archive_format == "snar2"
+        packet_index = int(packet.decode("ascii").rsplit("-", 1)[1])
+        out = b"S" * (1000 + packet_index)
+        return out, {
+            "schema": "snerv_submission_archive_repack.v1",
+            "requested_archive_format": submission_archive_format,
+            "input_packet_bytes": len(packet),
+            "input_packet_sha256": hashlib.sha256(packet).hexdigest(),
+            "output_packet_schema": "snerv_inverse_steg_archive.snar2.v1",
+            "output_packet_bytes": len(out),
+            "output_packet_sha256": hashlib.sha256(out).hexdigest(),
+            "repacked": True,
+            "bytes_saved": -1,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(mod, "_snerv_submission_packet_for_export", fake_submission_repack)
     callback, metadata = mod._build_snerv_live_train_time_section_byte_metrics_callback(
         model_size=SnervModelSizeConfig(fc_dim=4, emb_size=1, patch_radius=1),
         levels=1,
@@ -1623,7 +1702,15 @@ def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
     second = dict(callback(FakeModel(), None, {}))
     third = dict(callback(FakeModel(), None, {}))
 
-    assert first["archive_bytes"] == 315
+    assert metadata["submission_archive_format"] == "snar2"
+    assert first["archive_bytes"] == 1001
+    assert first["byte_basis"] == "current_receiver_submission_packet_sections"
+    assert first["submission_archive_format"] == "snar2"
+    assert first["live_profile"]["packet_bytes_before_submission_repack"] == 315
+    assert first["live_profile"]["submission_packet_bytes"] == 1001
+    assert first["live_profile"]["submission_packet_schema"] == (
+        "snerv_inverse_steg_archive.snar2.v1"
+    )
     assert first["section_bytes"]["decoder_payload"] == 201
     assert first["rate_score_per_byte"] == pytest.approx(
         mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
@@ -1635,7 +1722,8 @@ def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
         201 * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
     )
     assert second == first
-    assert third["archive_bytes"] == 316
+    assert third["archive_bytes"] == 1002
+    assert third["live_profile"]["packet_bytes_before_submission_repack"] == 316
     assert third["section_bytes"]["lf_payload"] == 102
     assert third["train_time_section_rate_score__lf_payload"] == pytest.approx(
         102 * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
@@ -1718,6 +1806,30 @@ def test_snerv_live_section_byte_metrics_callback_uses_official_components(
         "_build_official_mfu_hfr_tub_packet_from_components",
         fake_official_packet_builder,
     )
+
+    def fake_submission_repack(
+        packet: bytes,
+        *,
+        submission_archive_format: str,
+    ) -> tuple[bytes, dict[str, object]]:
+        assert submission_archive_format == "snar2"
+        out = b"O" * 377
+        return out, {
+            "schema": "snerv_submission_archive_repack.v1",
+            "requested_archive_format": submission_archive_format,
+            "input_packet_bytes": len(packet),
+            "input_packet_sha256": hashlib.sha256(packet).hexdigest(),
+            "output_packet_schema": "snerv_inverse_steg_archive.snar2.v1",
+            "output_packet_bytes": len(out),
+            "output_packet_sha256": hashlib.sha256(out).hexdigest(),
+            "repacked": True,
+            "bytes_saved": 23,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        }
+
+    monkeypatch.setattr(mod, "_snerv_submission_packet_for_export", fake_submission_repack)
     callback, metadata = mod._build_snerv_live_train_time_section_byte_metrics_callback(
         model_size=official_model_size,
         levels=1,
@@ -1743,7 +1855,10 @@ def test_snerv_live_section_byte_metrics_callback_uses_official_components(
 
     assert callback is not None
     payload = dict(callback(FakeOfficialModel(), None, {}))
-    assert payload["archive_bytes"] == 400
+    assert payload["archive_bytes"] == 377
+    assert payload["byte_basis"] == "current_receiver_submission_packet_sections"
+    assert payload["live_profile"]["packet_bytes_before_submission_repack"] == 400
+    assert payload["live_profile"]["submission_packet_bytes"] == 377
     assert payload["section_bytes"] == {
         "decoder_payload": 321,
         "metadata_payload": 9,
@@ -3246,6 +3361,12 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert long_training["trained_state_exportable"] is True
     assert long_training["executed"] is True
     assert long_training["training_telemetry_contract"]["passed"] is True
+    assert (
+        long_training["training_telemetry_contract"][
+            "archive_byte_dual_pending_weight_after_short_update"
+        ]
+        is True
+    )
     assert long_training["pr95_stage_source_weight_amplification_enabled"] is True
     assert long_training["has_real_segnet_teacher"] is True
     assert long_training["has_real_posenet_teacher"] is True
