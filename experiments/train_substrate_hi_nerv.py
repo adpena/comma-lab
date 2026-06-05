@@ -984,9 +984,11 @@ def _full_main(args: argparse.Namespace) -> int:
                 decoder_sd, latents_coarse, latents_mid, latents_fine, meta
             )
             (args.output_dir / "0.bin").write_bytes(bin_bytes)
-            archive_sha = _sha256_bytes(bin_bytes)
-            archive_bytes = len(bin_bytes)
-            print(f"[full] wrote 0.bin ({archive_bytes} bytes, sha256={archive_sha})")
+            bin_sha = _sha256_bytes(bin_bytes)
+            bin_payload_bytes = len(bin_bytes)
+            print(
+                f"[full] wrote 0.bin ({bin_payload_bytes} bytes, sha256={bin_sha})"
+            )
 
             submission_dir = args.output_dir / "submission"
             _write_runtime(submission_dir)
@@ -996,7 +998,12 @@ def _full_main(args: argparse.Namespace) -> int:
                 bin_bytes=bin_bytes,
                 submission_dir=submission_dir,
             )
-            print(f"[full] wrote {archive_zip_path}")
+            archive_sha = _sha256_bytes(archive_zip_path.read_bytes())
+            archive_bytes = archive_zip_path.stat().st_size
+            print(
+                f"[full] wrote {archive_zip_path} "
+                f"({archive_bytes} charged bytes, sha256={archive_sha})"
+            )
             _stage(f"archive_built_bytes_{archive_bytes}")
 
         # 12. CUDA auth eval — canonical helper (Catalog #226 self-protect)

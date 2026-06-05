@@ -32,3 +32,11 @@ def test_legacy_hinerv_archive_builder_keeps_runtime_outside_zip(
     inflate_source = (submission_dir / "inflate.py").read_text(encoding="utf-8")
     assert "archive_dir / 'x'" in inflate_source
     assert "archive_dir / '0.bin'" in inflate_source
+
+
+def test_legacy_hinerv_reports_charged_archive_zip_bytes() -> None:
+    source = Path(trainer.__file__).read_text(encoding="utf-8")
+
+    assert "archive_zip_path.stat().st_size" in source
+    assert "charged bytes" in source
+    assert "_stage(f\"archive_built_bytes_{archive_bytes}\")" in source
