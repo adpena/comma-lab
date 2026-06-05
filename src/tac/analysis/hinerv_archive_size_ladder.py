@@ -94,6 +94,24 @@ _SCORE_PROVENANCE_HASH_KEYS: tuple[str, ...] = (
     "source_report_sha256",
     "receiver_proof_sha256",
 )
+_SCORE_ARCHIVE_SHA256_KEYS: tuple[str, ...] = (
+    "archive_sha256",
+    "archive_zip_sha256",
+    "candidate_archive_sha256",
+    "source_archive_sha256",
+)
+_SCORE_ARCHIVE_BYTES_KEYS: tuple[str, ...] = (
+    "archive_bytes",
+    "archive_zip_bytes",
+    "candidate_archive_bytes",
+    "source_archive_bytes",
+)
+_FRESH_LADDER_CACHE_QUALITY_MISSING = (
+    "hinerv_archive_size_row_receiver_cache_quality_missing"
+)
+_LADDER_CACHE_QUALITY_MISSING_OR_FAILED = (
+    "hinerv_archive_size_row_receiver_cache_quality_missing_or_failed"
+)
 
 
 def build_hinerv_archive_size_ladder(
@@ -222,6 +240,8 @@ def build_hinerv_archive_size_ladder(
             "contest_cpu_cuda_exact_eval_not_executed",
             *backend_claim_blockers,
         ]
+        receiver_cache_quality_blockers = [_FRESH_LADDER_CACHE_QUALITY_MISSING]
+        row_blockers.extend(receiver_cache_quality_blockers)
         if not emit_receiver_proof:
             row_blockers.append("receiver_proof_not_executed_for_archive_size_ladder")
         else:
@@ -287,6 +307,13 @@ def build_hinerv_archive_size_ladder(
                     bool(receiver_contract_satisfied) if emit_receiver_proof else None
                 ),
                 "receiver_closed": receiver_closed if emit_receiver_proof else None,
+                "post_export_receiver_cache_quality": None,
+                "receiver_cache_quality_report_path": None,
+                "receiver_cache_quality_report_sha256": None,
+                "receiver_cache_quality_gate_passed": False,
+                "receiver_cache_quality_gate_verdict": None,
+                "receiver_cache_quality_blockers": receiver_cache_quality_blockers,
+                "receiver_cache_quality_required_for_replay": True,
                 "required_allocator_bindings": list(REQUIRED_ALLOCATOR_BINDINGS),
                 "blockers": row_blockers,
                 **FALSE_AUTHORITY,
@@ -306,6 +333,8 @@ def build_hinerv_archive_size_ladder(
         for row in rows
         for blocker in row.get("backend_claim_blockers", ())
     )
+    if any(row.get("receiver_cache_quality_gate_passed") is not True for row in rows):
+        blockers.append("hinerv_archive_size_ladder_receiver_cache_quality_missing")
     marginal_gates = _marginal_archive_gates(rows)
     section_value_rows = hinerv_modelsize_increment_section_value_rows(marginal_gates)
     report = {
@@ -1683,6 +1712,7 @@ def attach_hinerv_archive_ladder_score_rows(
     rows_with_score = 0
     rows_with_full_video = 0
     rows_with_trusted_score = 0
+    scored_rows_with_cache_quality = 0
     for row in report.get("archive_rows", ()):
         updated = dict(row)
         row_id = str(updated.get("row_id") or "")
@@ -1690,10 +1720,27 @@ def attach_hinerv_archive_ladder_score_rows(
         blockers = [
             str(blocker) for blocker in updated.get("blockers") or () if blocker
         ]
+        cache_quality_blockers = _score_attachment_receiver_cache_quality_blockers(
+            updated
+        )
         if score is None:
             blockers.append("hinerv_archive_size_row_measured_score_missing")
         else:
             rows_with_score += 1
+            archive_identity_blockers = _score_row_archive_identity_blockers(
+                updated,
+                score,
+            )
+            score_trust_blockers = _ordered_unique(
+                [
+                    *list(score.get("trust_blockers") or []),
+                    *archive_identity_blockers,
+                ]
+            )
+            score_custody_trusted = not score_trust_blockers
+            cache_quality_passed = not cache_quality_blockers
+            if cache_quality_passed:
+                scored_rows_with_cache_quality += 1
             updated.update(
                 {
                     "nonrate_score": score["nonrate_score"],
@@ -1701,12 +1748,11 @@ def attach_hinerv_archive_ladder_score_rows(
                     "avg_posenet_dist": score.get("avg_posenet_dist"),
                     "measured_score_axis_tag": score["axis_tag"],
                     "measured_score_full_video_coverage": score["full_video_coverage"],
-                    "measured_score_custody_trusted": score[
-                        "trusted_score_custody"
-                    ],
-                    "measured_score_trust_blockers": list(
-                        score.get("trust_blockers") or []
-                    ),
+                    "measured_score_custody_trusted": score_custody_trusted,
+                    "measured_score_trust_blockers": score_trust_blockers,
+                    "measured_score_archive_sha256": score.get("archive_sha256"),
+                    "measured_score_archive_bytes": score.get("archive_bytes"),
+                    "measured_score_archive_identity_blockers": archive_identity_blockers,
                     "measured_score_source_row_id": score["source_row_id"],
                     "measured_score_source_schema": score.get("source_schema"),
                     "measured_score_source_path": (
@@ -1716,17 +1762,23 @@ def attach_hinerv_archive_ladder_score_rows(
                     ),
                 }
             )
-            if score["trusted_score_custody"]:
+            if score_custody_trusted:
                 rows_with_trusted_score += 1
             else:
                 blockers.append("hinerv_archive_size_row_measured_score_untrusted")
-            if score["full_video_coverage"] and score["trusted_score_custody"]:
+            if cache_quality_blockers:
+                blockers.append(
+                    "hinerv_archive_size_row_measured_score_cache_quality_not_admissible"
+                )
+                blockers.extend(cache_quality_blockers)
+            if score["full_video_coverage"] and score_custody_trusted:
                 rows_with_full_video += 1
-                blockers = [
-                    blocker
-                    for blocker in blockers
-                    if blocker != "hinerv_archive_size_row_has_no_nonrate_score"
-                ]
+                if cache_quality_passed:
+                    blockers = [
+                        blocker
+                        for blocker in blockers
+                        if blocker != "hinerv_archive_size_row_has_no_nonrate_score"
+                    ]
             else:
                 blockers.append("hinerv_archive_size_row_measured_score_not_full_video")
         updated["blockers"] = _ordered_unique(blockers)
@@ -1751,6 +1803,10 @@ def attach_hinerv_archive_ladder_score_rows(
         blockers.append("hinerv_archive_size_ladder_measured_scores_missing")
     if rows_with_score and rows_with_trusted_score != rows_with_score:
         blockers.append("hinerv_archive_size_ladder_measured_scores_untrusted")
+    if rows_with_score and scored_rows_with_cache_quality != rows_with_score:
+        blockers.append(
+            "hinerv_archive_size_ladder_receiver_cache_quality_missing_or_failed"
+        )
     if require_full_video and rows_with_full_video != len(updated_rows):
         blockers.append("hinerv_archive_size_ladder_full_video_scores_incomplete")
     report.update(
@@ -1769,6 +1825,9 @@ def attach_hinerv_archive_ladder_score_rows(
                 "matched_archive_row_count": rows_with_score,
                 "matched_full_video_row_count": rows_with_full_video,
                 "trusted_score_row_count": rows_with_trusted_score,
+                "cache_quality_admissible_score_row_count": (
+                    scored_rows_with_cache_quality
+                ),
                 "require_full_video": bool(require_full_video),
                 **FALSE_AUTHORITY,
             },
@@ -1968,12 +2027,18 @@ def _normalize_score_row(
         nonrate = float(100.0 * d_seg + math.sqrt(10.0 * d_pose))
     if nonrate is None:
         return None
+    archive_sha256 = _first_string(row, _SCORE_ARCHIVE_SHA256_KEYS)
+    archive_bytes = _positive_int_from_keys(row, _SCORE_ARCHIVE_BYTES_KEYS)
     trust_blockers = _score_row_trust_blockers(row, source_schema=source_schema)
     return {
         "source_row_id": str(row_id),
         "nonrate_score": float(nonrate),
         "avg_segnet_dist": d_seg,
         "avg_posenet_dist": d_pose,
+        "archive_sha256": (
+            None if archive_sha256 is None else str(archive_sha256).strip().lower()
+        ),
+        "archive_bytes": archive_bytes,
         "full_video_coverage": _score_row_full_video(row),
         "trusted_score_custody": not trust_blockers,
         "trust_blockers": trust_blockers,
@@ -1986,6 +2051,47 @@ def _normalize_score_row(
         ),
         "source_schema": source_schema,
     }
+
+
+def _score_row_archive_identity_blockers(
+    ladder_row: Mapping[str, Any],
+    score_row: Mapping[str, Any],
+) -> list[str]:
+    blockers: list[str] = []
+    expected_sha = str(ladder_row.get("archive_sha256") or "").strip().lower()
+    measured_sha = str(score_row.get("archive_sha256") or "").strip().lower()
+    if len(expected_sha) != 64:
+        blockers.append("hinerv_archive_size_row_archive_sha256_missing")
+    if len(measured_sha) != 64:
+        blockers.append("hinerv_score_row_archive_sha256_missing")
+    elif len(expected_sha) == 64 and measured_sha != expected_sha:
+        blockers.append("hinerv_score_row_archive_sha256_mismatch")
+
+    expected_bytes = _positive_int(ladder_row.get("archive_bytes"))
+    measured_bytes = _positive_int(score_row.get("archive_bytes"))
+    if expected_bytes is None:
+        blockers.append("hinerv_archive_size_row_archive_bytes_missing")
+    if measured_bytes is None:
+        blockers.append("hinerv_score_row_archive_bytes_missing")
+    elif expected_bytes is not None and measured_bytes != expected_bytes:
+        blockers.append("hinerv_score_row_archive_bytes_mismatch")
+    return _ordered_unique(blockers)
+
+
+def _score_attachment_receiver_cache_quality_blockers(
+    row: Mapping[str, Any],
+) -> list[str]:
+    blockers = [
+        str(blocker)
+        for blocker in row.get("receiver_cache_quality_blockers") or ()
+        if str(blocker)
+    ]
+    if row.get("receiver_cache_quality_gate_passed") is not True:
+        if blockers:
+            blockers.append(_LADDER_CACHE_QUALITY_MISSING_OR_FAILED)
+        else:
+            blockers.append(_FRESH_LADDER_CACHE_QUALITY_MISSING)
+    return _ordered_unique(blockers)
 
 
 def _score_row_trust_blockers(
@@ -2070,6 +2176,14 @@ def _positive_int(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return out if out > 0 else None
+
+
+def _positive_int_from_keys(row: Mapping[str, Any], keys: Sequence[str]) -> int | None:
+    for key in keys:
+        value = _positive_int(row.get(key))
+        if value is not None:
+            return value
+    return None
 
 
 def _int_or_default(value: Any, default: int) -> int:
