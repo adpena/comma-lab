@@ -3849,6 +3849,11 @@ def _run_snerv_native_mlx_export_attachment(
         snerv_training_telemetry_contract = (
             snerv_score_aware_long_training.get("training_telemetry_contract")
         )
+        snerv_score_aware_long_training_control_bound = bool(
+            artifact.get("score_aware_long_training_executed")
+            and isinstance(snerv_training_telemetry_contract, Mapping)
+            and snerv_training_telemetry_contract.get("passed") is True
+        )
         if bool(artifact.get("score_aware_long_training_executed")):
             if isinstance(snerv_training_telemetry_contract, Mapping):
                 blockers.extend(
@@ -3874,12 +3879,10 @@ def _run_snerv_native_mlx_export_attachment(
         native_mlx_full600_campaign_ready = bool(
             native_mlx_full600_export_proof_ready
             and native_training_export_guard.get("export_guard_passed") is True
-            and artifact.get("score_aware_long_training_executed") is True
+            and snerv_score_aware_long_training_control_bound
             and artifact.get("native_mlx_training_executed") is True
             and artifact.get("receiver_proof_passed") is True
             and receiver_reconstruction["receiver_reconstruction_verified"] is True
-            and isinstance(snerv_training_telemetry_contract, Mapping)
-            and snerv_training_telemetry_contract.get("passed") is True
         )
         if native_mlx_full600_export_proof_ready and not native_mlx_full600_campaign_ready:
             blockers.extend(
@@ -3985,6 +3988,13 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             "score_aware_long_training_executed": bool(
                 artifact.get("score_aware_long_training_executed")
+            ),
+            "score_aware_long_training_telemetry_contract_passed": bool(
+                isinstance(snerv_training_telemetry_contract, Mapping)
+                and snerv_training_telemetry_contract.get("passed") is True
+            ),
+            "score_aware_long_training_control_bound": (
+                snerv_score_aware_long_training_control_bound
             ),
             "score_aware_long_training": snerv_score_aware_long_training,
             "score_aware_long_training_telemetry_contract": (
@@ -5397,7 +5407,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 snerv_mlx_native_export.get("executed")
             ),
             native_mlx_long_training_bound=bool(
-                snerv_mlx_native_export.get("score_aware_long_training_executed")
+                snerv_mlx_native_export.get("score_aware_long_training_control_bound")
             ),
             native_mlx_receiver_proof_passed=(
                 snerv_mlx_native_receiver_proof_passed
@@ -6407,7 +6417,7 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             snerv_mlx_native_export.get("executed")
         ),
         native_mlx_long_training_bound=bool(
-            snerv_mlx_native_export.get("score_aware_long_training_executed")
+            snerv_mlx_native_export.get("score_aware_long_training_control_bound")
         ),
         native_mlx_receiver_proof_passed=snerv_mlx_native_receiver_proof_passed,
         native_mlx_full600_campaign_ready=bool(

@@ -742,6 +742,63 @@ def test_candidate_feedback_keeps_four_pair_rows_profile_only_until_single_archi
     ]
 
 
+def test_candidate_feedback_routes_hinerv_receiver_class_collapse_to_mutations(
+    tmp_path: Path,
+) -> None:
+    report = _runner_report(tmp_path)
+    report["candidate_curriculum_plan"]["byte_oracle_logging"].update(
+        {
+            "measured_num_pairs": 600,
+            "feedback_scope": "candidate_full_scope",
+            "scope_matches_candidate": True,
+            "feedback_ready": False,
+            "byte_oracle_feedback_ready": False,
+            "byte_oracle_measured_archive_bytes": 215_661,
+            "byte_oracle_post_export_receiver_cache_quality_feedback_ready": False,
+            "byte_oracle_blockers": [
+                "hi_nerv_trained_archive_byte_oracle_receiver_argmax_class_collapse",
+                "hi_nerv_receiver_cache_segnet_argmax_class_collapse",
+            ],
+        }
+    )
+    report["post_export_receiver_cache_quality"] = {
+        "schema": "hi_nerv_receiver_cache_quality_summary.v1",
+        "quality_gate_passed": False,
+        "segnet_candidate_occupied_class_fraction": 0.4,
+        "segnet_reference_occupied_class_fraction": 1.0,
+        "segnet_argmax_disagreement_rate": 0.517,
+        "blockers": ["hi_nerv_receiver_cache_segnet_argmax_class_collapse"],
+    }
+    report["train_receiver_class_escape_contract"] = {
+        "schema": "hi_nerv_train_receiver_class_escape_contract.v1",
+        "passed": False,
+        "blockers": ["hi_nerv_receiver_export_segnet_argmax_class_collapse"],
+    }
+
+    row = build_nerv_candidate_feedback_row(runner_report=report)
+
+    assert row["post_export_receiver_class_collapse_detected"] is True
+    assert row["post_export_receiver_cache_quality_gate_passed"] is False
+    assert row["post_export_receiver_segnet_candidate_occupied_class_fraction"] == 0.4
+    assert (
+        "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
+        in row["direct_feedback_blockers"]
+    )
+    assert (
+        "increase_hi_nerv_receiver_class_survival_pressure"
+        in row["recommended_launch_mutations"]
+    )
+    assert (
+        "disable_hi_nerv_byte_feedback_learning_from_receiver_collapsed_export"
+        in row["recommended_launch_mutations"]
+    )
+    control = row["hi_nerv_receiver_cache_feedback_control"]
+    assert control["collapse_detected"] is True
+    assert control["byte_oracle_feedback_ready"] is False
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_candidate_feedback_does_not_count_candidate_pairs_as_replay_coverage(
     tmp_path: Path,
 ) -> None:

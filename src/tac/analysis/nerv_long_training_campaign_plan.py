@@ -6475,6 +6475,16 @@ def _hinerv_feedback_launch_adjustment(
     )
     pose_protected_pathway_applied = bool(repeated_low_lr_instability)
     launch_mutations: list[str] = []
+    receiver_class_survival_mutations = [
+        str(mutation)
+        for mutation in (feedback.get("recommended_launch_mutations") or [])
+        if str(mutation)
+        in {
+            "increase_hi_nerv_receiver_class_survival_pressure",
+            "disable_hi_nerv_byte_feedback_learning_from_receiver_collapsed_export",
+            "rerun_hi_nerv_short_probe_with_receiver_cache_quality_gate",
+        }
+    ]
     if lower_learning_rate_applied:
         launch_mutations.extend(list(feedback.get("recommended_launch_mutations") or []))
     if pose_protected_pathway_applied:
@@ -6500,12 +6510,17 @@ def _hinerv_feedback_launch_adjustment(
     official_control_superseded = bool(feedback.get("source_official_control_superseded"))
     if official_control_superseded and (HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION not in launch_mutations):
         launch_mutations.append(HINERV_OFFICIAL_CONTROL_SUPERSESSION_MUTATION)
+    for mutation in receiver_class_survival_mutations:
+        if mutation not in launch_mutations:
+            launch_mutations.append(mutation)
+    receiver_class_survival_applied = bool(receiver_class_survival_mutations)
     applied = bool(
         lower_learning_rate_applied
         or pose_protected_pathway_applied
         or segnet_weight_applied
         or pose_weight_applied
         or official_control_superseded
+        or receiver_class_survival_applied
     )
     return {
         "schema": "hinerv_feedback_launch_adjustment.v1",
@@ -6515,6 +6530,7 @@ def _hinerv_feedback_launch_adjustment(
         "segnet_weight_applied": segnet_weight_applied,
         "pose_weight_applied": pose_weight_applied,
         "official_control_superseded": official_control_superseded,
+        "receiver_class_survival_applied": receiver_class_survival_applied,
         "policy_logic": HINERV_POSE_INSTABILITY_POLICY_LOGIC,
         "reason": (
             "pose_instability_recommended_lower_learning_rate"
@@ -6532,12 +6548,18 @@ def _hinerv_feedback_launch_adjustment(
                             "official_hinerv_controls_supersede_source_feedback_run"
                             if official_control_superseded
                             else (
-                                "pose_instability_feedback_without_lower_lr"
-                                if pose_instability
+                                "receiver_class_survival_probe_mutation_applied"
+                                if receiver_class_survival_applied
                                 else (
-                                    "pose_tail_burst_requires_prioritized_pair_indices"
-                                    if pose_tail_burst
-                                    else "feedback_does_not_request_launch_adjustment"
+                                    "pose_instability_feedback_without_lower_lr"
+                                    if pose_instability
+                                    else (
+                                        "pose_tail_burst_requires_prioritized_pair_indices"
+                                        if pose_tail_burst
+                                        else (
+                                            "feedback_does_not_request_launch_adjustment"
+                                        )
+                                    )
                                 )
                             )
                         )

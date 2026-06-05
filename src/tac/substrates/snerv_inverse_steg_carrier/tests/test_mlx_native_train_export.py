@@ -3680,21 +3680,23 @@ def test_official_long_training_keeps_trained_packet_with_nonrender_blocker(
         run_archive_export=False,
     )
 
-    assert report["score_aware_long_training_executed"] is False
+    assert report["score_aware_long_training_executed"] is True
     assert report["score_aware_long_training_trained_state_exportable"] is True
     assert "unit_nonrender_telemetry_blocker" in report["blockers"]
     assert report["packet_source"] == "official_mfu_hfr_tub_mlx_trained_payload_atoms"
     long_training = report["score_aware_long_training"]
-    assert long_training["executed"] is False
+    assert long_training["executed"] is True
     assert long_training["training_completed"] is True
+    assert long_training["blocker_free_execution"] is False
     assert long_training["trained_state_exportable"] is True
     assert long_training["official_mfu_hfr_tub_train_export"][
         "trained_receiver_payload_exported"
     ] is True
     decoded = unpack_snerv_archive(Path(report["packet_path"]).read_bytes())
-    assert decoded.metadata["score_aware_long_training_executed"] is False
+    assert decoded.metadata["score_aware_long_training_executed"] is True
     assert decoded.metadata["score_aware_long_training_trained_state_exportable"] is True
     assert decoded.metadata["native_mlx_training_executed"] is True
+    assert decoded.metadata["score_aware_long_training"]["blocker_free_execution"] is False
     assert decoded.metadata["score_aware_long_training"]["trained_state_exportable"] is True
     assert decoded.metadata["score_aware_long_training"][
         "official_mfu_hfr_tub_train_export"

@@ -4488,6 +4488,61 @@ def test_long_training_campaign_plan_reuses_family_segnet_stagnation_feedback() 
     assert "hi_nerv_receiver_proof_missing" in hi["blockers"]
 
 
+def test_long_training_campaign_plan_applies_hinerv_receiver_class_survival_feedback() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("adamw",),
+        epochs=128,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "hi_nerv",
+                "candidate_id": "hinerv_tiny",
+                "candidate_num_pairs": 600,
+                "measured_num_pairs": 600,
+                "feedback_scope": "candidate_full_scope",
+                "scope_matches_candidate": True,
+                "feedback_ready": False,
+                "launch_control_feedback_ready": True,
+                "post_export_receiver_class_collapse_detected": True,
+                "post_export_receiver_cache_quality_gate_passed": False,
+                "post_export_receiver_segnet_candidate_occupied_class_fraction": 0.4,
+                "direct_feedback_blockers": [
+                    "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
+                ],
+                "recommended_launch_mutations": [
+                    "increase_hi_nerv_receiver_class_survival_pressure",
+                    (
+                        "disable_hi_nerv_byte_feedback_learning_from_"
+                        "receiver_collapsed_export"
+                    ),
+                ],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    adjustment = hi["feedback_launch_adjustment"]
+    assert adjustment["applied"] is True
+    assert adjustment["receiver_class_survival_applied"] is True
+    assert adjustment["reason"] == "receiver_class_survival_probe_mutation_applied"
+    assert "increase_hi_nerv_receiver_class_survival_pressure" in adjustment[
+        "launch_mutations"
+    ]
+    assert (
+        "hi_nerv_receiver_cache_segnet_argmax_class_collapse"
+        in hi["candidate_feedback_evidence_blockers"]
+    )
+    assert hi["score_claim"] is False
+
+
 def test_long_training_campaign_plan_preserves_nonlaunch_hinerv_family_telemetry_context() -> None:
     hinerv_budget = _hinerv_budget()
     sibling = dict(hinerv_budget["selected_candidates"][0])

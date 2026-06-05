@@ -97,6 +97,11 @@ _FULL_VIDEO_RESPONSE_SCORE_AUTHORITY_KEYS = (
     "promotable",
     "ready_for_exact_eval_dispatch",
 )
+_HINERV_RECEIVER_CACHE_COLLAPSE_BLOCKER_FRAGMENTS = (
+    "receiver_argmax_class_collapse",
+    "segnet_argmax_class_collapse",
+    "receiver_export_segnet_argmax_class_collapse",
+)
 
 
 def _bool_metric_or_none(value: Any) -> bool | None:
@@ -405,6 +410,77 @@ def _sha256_file(path: Path) -> str | None:
     return h.hexdigest()
 
 
+def _hi_nerv_receiver_cache_feedback_control(
+    *,
+    runner_report: Mapping[str, Any],
+    byte_feedback: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Summarize post-export receiver scorer survival for planner feedback."""
+
+    summary = runner_report.get("post_export_receiver_cache_quality")
+    if not isinstance(summary, Mapping):
+        score_training = runner_report.get("score_aware_training")
+        if isinstance(score_training, Mapping):
+            summary = score_training.get("post_export_receiver_cache_quality")
+    if not isinstance(summary, Mapping):
+        summary = {}
+    train_receiver_contract = runner_report.get("train_receiver_class_escape_contract")
+    if not isinstance(train_receiver_contract, Mapping):
+        train_receiver_contract = {}
+    direct_blockers = _dedupe_strings(
+        [
+            *[str(blocker) for blocker in summary.get("blockers") or []],
+            *[str(blocker) for blocker in byte_feedback.get("byte_oracle_blockers") or []],
+            *[
+                str(blocker)
+                for blocker in train_receiver_contract.get("blockers") or []
+            ],
+        ]
+    )
+    collapse_detected = any(
+        any(fragment in blocker for fragment in _HINERV_RECEIVER_CACHE_COLLAPSE_BLOCKER_FRAGMENTS)
+        for blocker in direct_blockers
+    )
+    gate_failed = bool(summary and summary.get("quality_gate_passed") is not True)
+    mutations: list[str] = []
+    if collapse_detected:
+        mutations.extend(
+            [
+                "increase_hi_nerv_receiver_class_survival_pressure",
+                "disable_hi_nerv_byte_feedback_learning_from_receiver_collapsed_export",
+            ]
+        )
+    elif gate_failed:
+        mutations.append("rerun_hi_nerv_short_probe_with_receiver_cache_quality_gate")
+    return {
+        "schema": "hi_nerv_receiver_cache_feedback_control.v1",
+        "quality_gate_passed": (
+            summary.get("quality_gate_passed") if summary else None
+        ),
+        "segnet_candidate_occupied_class_fraction": summary.get(
+            "segnet_candidate_occupied_class_fraction"
+        ),
+        "segnet_reference_occupied_class_fraction": summary.get(
+            "segnet_reference_occupied_class_fraction"
+        ),
+        "segnet_argmax_disagreement_rate": summary.get(
+            "segnet_argmax_disagreement_rate"
+        ),
+        "byte_oracle_feedback_ready": byte_feedback.get("byte_oracle_feedback_ready"),
+        "byte_oracle_post_export_receiver_cache_quality_feedback_ready": (
+            byte_feedback.get(
+                "byte_oracle_post_export_receiver_cache_quality_feedback_ready"
+            )
+        ),
+        "collapse_detected": collapse_detected,
+        "gate_failed": gate_failed,
+        "direct_feedback_blockers": direct_blockers,
+        "recommended_launch_mutations": _dedupe_strings(mutations),
+        "launch_control_feedback_ready": bool(collapse_detected or gate_failed),
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_nerv_candidate_feedback_row(
     *,
     runner_report: Mapping[str, Any],
@@ -521,6 +597,14 @@ def build_nerv_candidate_feedback_row(
         "measured_minus_nominal_bytes",
         byte_feedback.get("measured_minus_nominal_bytes"),
     )
+    hi_nerv_receiver_cache_control = (
+        _hi_nerv_receiver_cache_feedback_control(
+            runner_report=runner_report,
+            byte_feedback=byte_feedback,
+        )
+        if _family_key(str(runner_report.get("execute_family") or "")) == "hi_nerv"
+        else {}
+    )
     sample_generalization_gate = _sample_generalization_gate(
         runner_report=runner_report,
         curriculum=curriculum,
@@ -561,6 +645,12 @@ def build_nerv_candidate_feedback_row(
             ),
         ]
     )
+    direct_feedback_blockers = _dedupe_strings(
+        hi_nerv_receiver_cache_control.get("direct_feedback_blockers") or []
+    )
+    recommended_launch_mutations = _dedupe_strings(
+        hi_nerv_receiver_cache_control.get("recommended_launch_mutations") or []
+    )
     return {
         "schema": SCHEMA,
         "created_utc": datetime.now(UTC).isoformat(),
@@ -581,6 +671,40 @@ def build_nerv_candidate_feedback_row(
         "measured_payload_bytes": measured_payload_bytes,
         "measured_archive_bytes": measured_archive_bytes,
         "measured_minus_nominal_bytes": measured_minus_nominal_bytes,
+        "hi_nerv_receiver_cache_feedback_control": (
+            hi_nerv_receiver_cache_control or None
+        ),
+        "post_export_receiver_cache_quality_gate_passed": (
+            hi_nerv_receiver_cache_control.get("quality_gate_passed")
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_segnet_candidate_occupied_class_fraction": (
+            hi_nerv_receiver_cache_control.get(
+                "segnet_candidate_occupied_class_fraction"
+            )
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_segnet_reference_occupied_class_fraction": (
+            hi_nerv_receiver_cache_control.get(
+                "segnet_reference_occupied_class_fraction"
+            )
+            if hi_nerv_receiver_cache_control
+            else None
+        ),
+        "post_export_receiver_class_collapse_detected": bool(
+            hi_nerv_receiver_cache_control.get("collapse_detected")
+            if hi_nerv_receiver_cache_control
+            else False
+        ),
+        "recommended_launch_mutations": recommended_launch_mutations,
+        "launch_control_feedback_ready": bool(
+            hi_nerv_receiver_cache_control.get("launch_control_feedback_ready")
+            if hi_nerv_receiver_cache_control
+            else False
+        ),
+        "direct_feedback_blockers": direct_feedback_blockers,
         "archive_path": runner_report.get("archive_path"),
         "archive_bytes": runner_report.get("archive_bytes"),
         "archive_sha256": runner_report.get("archive_sha256"),

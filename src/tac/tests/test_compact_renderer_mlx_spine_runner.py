@@ -11631,9 +11631,22 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
                 if long_training_executed
                 else "none"
             ),
+            "score_aware_long_training_telemetry_contract_passed": (
+                long_training_executed
+            ),
+            "score_aware_long_training_control_bound": long_training_executed,
             "score_aware_long_training": {
                 "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
                 "executed": long_training_executed,
+                "training_telemetry_contract": {
+                    "schema": "snerv_score_aware_long_training_telemetry_contract.v1",
+                    "passed": long_training_executed,
+                    "blockers": (
+                        []
+                        if long_training_executed
+                        else ["snerv_score_aware_long_training_not_executed"]
+                    ),
+                },
                 "requested_epochs": int(
                     kwargs.get("score_aware_long_training_epochs") or 0
                 ),
@@ -12093,6 +12106,8 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
     assert native["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert native["snerv_scorer_tether_smoke_gate"]["required"] is True
     assert native["score_aware_long_training_executed"] is True
+    assert native["score_aware_long_training_telemetry_contract_passed"] is True
+    assert native["score_aware_long_training_control_bound"] is True
     assert native["score_aware_long_training_real_teachers_bound"] is True
     assert native["score_aware_long_training_has_real_segnet_teacher"] is True
     assert native["score_aware_long_training_has_real_posenet_teacher"] is True
@@ -12155,6 +12170,7 @@ def test_execute_snerv_attaches_native_mlx_export_evidence(
         plan["training_plan"]["native_mlx_differentiable_pose_preprocess_bound"]
         is True
     )
+    assert plan["training_plan"]["native_mlx_long_training_bound"] is True
     assert "snerv_scorer_loop_qat_not_attached" not in plan["blockers"]
     assert "snerv_real_segnet_teacher_missing" not in plan["blockers"]
     assert "snerv_real_posenet_teacher_missing" not in plan["blockers"]
