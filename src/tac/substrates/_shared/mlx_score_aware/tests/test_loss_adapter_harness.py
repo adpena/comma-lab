@@ -903,7 +903,16 @@ def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
         return {
             "archive_bytes": 5_000,
             "section_bytes": {"decoder_payload": 2_000},
+            "section_rate_scores": {
+                "decoder_payload": 2_000 * CONTEST_RATE_SCORE_PER_BYTE,
+            },
             "lf_payload": 1_500,
+            "aux_section": 100,
+            "rate_score_per_byte": 2.0 * CONTEST_RATE_SCORE_PER_BYTE,
+            "train_time_section_rate_score__lf_payload": (
+                1_500 * CONTEST_RATE_SCORE_PER_BYTE
+            ),
+            "metadata": {"refreshed_this_step": True},
             "schema": "unit_test_section_metrics.v1",
         }
 
@@ -946,6 +955,13 @@ def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
         }
     ]
     assert metrics["train_time_archive_bytes"] == pytest.approx(5_000)
+    assert metrics["train_time_archive_rate_score"] == pytest.approx(
+        10_000 * CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert metrics["train_time_section_bytes__aux_section"] == pytest.approx(100)
+    assert metrics["train_time_section_rate_score__aux_section"] == pytest.approx(
+        200 * CONTEST_RATE_SCORE_PER_BYTE
+    )
     assert metrics["train_time_section_bytes__decoder_payload"] == pytest.approx(
         2_000
     )
@@ -953,6 +969,15 @@ def test_adapter_train_step_feeds_section_bytes_into_dual_ascent() -> None:
     assert metrics[
         "train_time_section_rate_score__decoder_payload"
     ] == pytest.approx(2_000 * CONTEST_RATE_SCORE_PER_BYTE)
+    assert metrics["train_time_section_rate_score__lf_payload"] == pytest.approx(
+        1_500 * CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert "train_time_section_bytes__rate_score_per_byte" not in metrics
+    assert (
+        "train_time_section_rate_score__train_time_section_rate_score__lf_payload"
+        not in metrics
+    )
+    assert "train_time_section_bytes__metadata" not in metrics
     assert metrics["dual_ascent_metric__decoder_payload_bytes"] == pytest.approx(
         2_000 * CONTEST_RATE_SCORE_PER_BYTE
     )

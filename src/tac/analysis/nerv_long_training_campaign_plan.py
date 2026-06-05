@@ -184,6 +184,7 @@ ROW_TILDE_OSS_BINDING_SCHEMA = "nerv_row_tilde_oss_binding.v1"
 PR95_BASELINE_IDENTITY_BINDING_SCHEMA = "nerv_pr95_baseline_identity_binding.v1"
 SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA = "snerv_scorer_tether_smoke_gate.v1"
 SNERV_RENDERER_NONDEGENERATE_GATE_SCHEMA = "snerv_renderer_nondegenerate_gate.v1"
+SNERV_PRE_LONG_RUN_EVIDENCE_GATE_SCHEMA = "snerv_pre_long_run_evidence_gate.v1"
 SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT = 16
 SNERV_SCORER_TETHER_FEEDBACK_BLOCKERS = frozenset(
     {
@@ -493,6 +494,80 @@ def _snerv_renderer_nondegenerate_gate(
         "min_pair_count": SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT,
         "measured_num_pairs": measured_pairs,
         "proof": proof or None,
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _snerv_pre_long_run_evidence_gate(
+    *,
+    feedback: Mapping[str, Any],
+    bounded_proof_only: bool,
+) -> dict[str, Any]:
+    """Require byte-closed scorer evidence before launching real SNeRV long runs."""
+
+    required = not bool(bounded_proof_only)
+    direct_feedback_blockers = [
+        str(blocker) for blocker in feedback.get("direct_feedback_blockers") or () if blocker
+    ]
+    feedback_kind = str(feedback.get("feedback_kind") or "").strip()
+    byte_closed_feedback_kinds = {"full_video_mlx_scorer_response"}
+    blockers: list[str] = []
+    if required:
+        if not feedback:
+            blockers.append("snerv_pre_long_run_candidate_feedback_missing")
+        elif feedback_kind == "training_telemetry":
+            blockers.append("snerv_pre_long_run_candidate_feedback_not_byte_closed")
+        elif feedback.get("context_only") is True:
+            blockers.append("snerv_pre_long_run_candidate_feedback_context_only")
+        elif feedback_kind not in byte_closed_feedback_kinds:
+            blockers.append("snerv_pre_long_run_full_video_mlx_feedback_kind_missing")
+        if feedback.get("feedback_ready") is False:
+            blockers.append("snerv_pre_long_run_candidate_feedback_not_ready")
+        if not (
+            feedback.get("receiver_proof_attached") is True
+            and feedback.get("native_mlx_receiver_proof_passed") is True
+        ):
+            blockers.append("snerv_pre_long_run_receiver_proof_missing_or_failed")
+        if feedback.get("full_video_local_prefilter_attached") is not True:
+            blockers.append("snerv_pre_long_run_full_video_mlx_prefilter_missing")
+        if feedback.get("full_video_mlx_response_attached") is not True:
+            blockers.append("snerv_pre_long_run_full_video_mlx_scorer_response_missing")
+        if feedback.get("native_mlx_full600_campaign_ready") is not True:
+            blockers.append("snerv_pre_long_run_native_full600_export_not_ready")
+        if feedback.get("native_mlx_scorer_loop_qat_best_materialized") is not True:
+            blockers.append("snerv_pre_long_run_scorer_loop_best_packet_not_materialized")
+        if any(str(blocker).startswith("direct_feedback_") for blocker in direct_feedback_blockers):
+            blockers.append("snerv_pre_long_run_feedback_custody_paths_missing")
+        blockers.extend(
+            blocker
+            for blocker in direct_feedback_blockers
+            if str(blocker).startswith("direct_feedback_")
+        )
+    blockers = _dedupe(blockers)
+    return {
+        "schema": SNERV_PRE_LONG_RUN_EVIDENCE_GATE_SCHEMA,
+        "required": required,
+        "passed": not blockers,
+        "feedback_kind": feedback_kind,
+        "context_only": bool(feedback.get("context_only")),
+        "receiver_proof_attached": bool(feedback.get("receiver_proof_attached")),
+        "native_mlx_receiver_proof_passed": bool(
+            feedback.get("native_mlx_receiver_proof_passed")
+        ),
+        "full_video_local_prefilter_attached": bool(
+            feedback.get("full_video_local_prefilter_attached")
+        ),
+        "full_video_mlx_response_attached": bool(
+            feedback.get("full_video_mlx_response_attached")
+        ),
+        "native_mlx_full600_campaign_ready": bool(
+            feedback.get("native_mlx_full600_campaign_ready")
+        ),
+        "native_mlx_scorer_loop_qat_best_materialized": bool(
+            feedback.get("native_mlx_scorer_loop_qat_best_materialized")
+        ),
+        "direct_feedback_blockers": direct_feedback_blockers,
         "blockers": blockers,
         **FALSE_AUTHORITY,
     }
@@ -1436,6 +1511,10 @@ def _snerv_campaign_row(
         feedback=feedback,
         bounded_proof_only=bool(bounded_proof_only),
     )
+    pre_long_run_evidence_gate = _snerv_pre_long_run_evidence_gate(
+        feedback=feedback,
+        bounded_proof_only=bool(bounded_proof_only),
+    )
     execution_epochs = min(int(epochs), max(1, int(bounded_proof_epochs))) if bounded_proof_only else int(epochs)
     quant_bits = min(
         8,
@@ -1659,6 +1738,7 @@ def _snerv_campaign_row(
             *pr95_distortion_blockers,
             *list(scorer_tether_smoke_gate.get("blockers") or []),
             *list(renderer_nondegenerate_gate.get("blockers") or []),
+            *list(pre_long_run_evidence_gate.get("blockers") or []),
             *list(source_parity["required_blockers"]),
             *curriculum_blockers,
             *feedback_evidence_blockers,
@@ -1675,7 +1755,12 @@ def _snerv_campaign_row(
     curriculum_ready = not curriculum_blockers
     scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
     renderer_nondegenerate_ready = not renderer_nondegenerate_gate.get("blockers")
-    prelaunch_proof_ready = bool(scorer_tether_smoke_ready and renderer_nondegenerate_ready)
+    pre_long_run_evidence_ready = not pre_long_run_evidence_gate.get("blockers")
+    prelaunch_proof_ready = bool(
+        scorer_tether_smoke_ready
+        and renderer_nondegenerate_ready
+        and pre_long_run_evidence_ready
+    )
     launch_ready = bool(
         source_controls_ready
         and curriculum_ready
@@ -1703,6 +1788,8 @@ def _snerv_campaign_row(
             if not scorer_tether_smoke_ready
             else "native_rate_aware_long_training_renderer_proof_blocked"
             if not renderer_nondegenerate_ready
+            else "native_rate_aware_long_training_evidence_gate_blocked"
+            if not pre_long_run_evidence_ready
             else "snerv_scoreaware_curriculum_blocked"
             if not curriculum_ready
             else (
@@ -1735,6 +1822,7 @@ def _snerv_campaign_row(
             "pr95_distortion_practices_guard": pr95_distortion_guard,
             "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
             "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
+            "snerv_pre_long_run_evidence_gate": pre_long_run_evidence_gate,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
@@ -1784,6 +1872,7 @@ def _snerv_campaign_row(
                 "pr95_distortion_practices_guard": pr95_distortion_guard,
                 "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
                 "snerv_renderer_nondegenerate_gate": renderer_nondegenerate_gate,
+                "snerv_pre_long_run_evidence_gate": pre_long_run_evidence_gate,
                 **FALSE_AUTHORITY,
             },
         },
@@ -1961,6 +2050,7 @@ def _experiment_for_row(
     pr95_distortion_guard = metadata.get("pr95_distortion_practices_guard")
     snerv_runtime_authority_split = metadata.get("snerv_official_runtime_authority_split")
     snerv_renderer_nondegenerate_gate = metadata.get("snerv_renderer_nondegenerate_gate")
+    snerv_pre_long_run_evidence_gate = metadata.get("snerv_pre_long_run_evidence_gate")
     current_command_is_bounded_proof = bool(metadata.get("current_command_is_bounded_proof_not_long_training"))
     return {
         "id": _safe_path_token(row_id),
@@ -2026,6 +2116,11 @@ def _experiment_for_row(
             "snerv_renderer_nondegenerate_gate": (
                 snerv_renderer_nondegenerate_gate if isinstance(snerv_renderer_nondegenerate_gate, Mapping) else None
             ),
+            "snerv_pre_long_run_evidence_gate": (
+                snerv_pre_long_run_evidence_gate
+                if isinstance(snerv_pre_long_run_evidence_gate, Mapping)
+                else None
+            ),
             "source_bound_capacity_controls": (source_controls if isinstance(source_controls, Mapping) else None),
             "score_claim": False,
             "promotion_eligible": False,
@@ -2088,6 +2183,17 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "snerv_lf_recode_no_receiver_proven_byte_saving_mode",
         "snerv_modelsize_auto_calibrated_byte_cap_over_ceiling",
         "snerv_nominal_payload_far_over_ceiling_refuse_long_training",
+        "snerv_pre_long_run_candidate_feedback_context_only",
+        "snerv_pre_long_run_candidate_feedback_missing",
+        "snerv_pre_long_run_candidate_feedback_not_ready",
+        "snerv_pre_long_run_candidate_feedback_not_byte_closed",
+        "snerv_pre_long_run_feedback_custody_paths_missing",
+        "snerv_pre_long_run_full_video_mlx_feedback_kind_missing",
+        "snerv_pre_long_run_full_video_mlx_prefilter_missing",
+        "snerv_pre_long_run_full_video_mlx_scorer_response_missing",
+        "snerv_pre_long_run_native_full600_export_not_ready",
+        "snerv_pre_long_run_receiver_proof_missing_or_failed",
+        "snerv_pre_long_run_scorer_loop_best_packet_not_materialized",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only",
         "snerv_renderer_nondegenerate_compact_skip_high_value_domain_not_passed",
@@ -4735,6 +4841,11 @@ def _family_level_candidate_feedback_applicable(
     # Archive, receiver, and replay evidence remain candidate-specific.
     family_key = _family_key(family)
     if family_key == "snerv":
+        if _snerv_prelaunch_renderer_proof_applicable(
+            candidate=candidate,
+            row=row,
+        ):
+            return True
         feedback_kind = str(row.get("feedback_kind") or "").strip()
         if feedback_kind == "upstream_eval_gate":
             target_candidate_id = str(candidate.get("candidate_id") or "").strip()
@@ -4813,6 +4924,45 @@ def _family_level_candidate_feedback_applicable(
     return target_num_pairs > 0 and measured_num_pairs == target_num_pairs
 
 
+def _snerv_prelaunch_renderer_proof_row(row: Mapping[str, Any]) -> bool:
+    if _family_key(str(row.get("family") or "")) != "snerv":
+        return False
+    if str(row.get("candidate_id") or "").strip():
+        return False
+    proof = row.get("snerv_renderer_nondegenerate_proof")
+    if not isinstance(proof, Mapping):
+        return False
+    if proof.get("passed") is not True:
+        return False
+    measured_pairs = _first_present_int(
+        proof,
+        ("measured_num_pairs", "candidate_num_pairs", "num_pairs"),
+    )
+    if measured_pairs is None:
+        measured_pairs = _first_present_int(
+            row,
+            ("measured_num_pairs", "candidate_num_pairs", "num_pairs"),
+        )
+    proof_blockers = [blocker for blocker in row.get("snerv_renderer_nondegenerate_blockers") or () if blocker]
+    return bool(
+        measured_pairs is not None
+        and int(measured_pairs) >= SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT
+        and not proof_blockers
+    )
+
+
+def _snerv_prelaunch_renderer_proof_applicable(
+    *,
+    candidate: Mapping[str, Any],
+    row: Mapping[str, Any],
+) -> bool:
+    if _family_key(str(candidate.get("family") or "")) != "snerv":
+        return False
+    if int(candidate.get("num_pairs") or 0) < SNERV_RENDERER_NONDEGENERATE_MIN_PAIR_COUNT:
+        return False
+    return _snerv_prelaunch_renderer_proof_row(row)
+
+
 def _sanitize_family_level_candidate_feedback(
     *,
     row: Mapping[str, Any],
@@ -4825,6 +4975,10 @@ def _sanitize_family_level_candidate_feedback(
         feedback_kind = str(row.get("feedback_kind") or "").strip()
         is_upstream_eval = feedback_kind == "upstream_eval_gate"
         is_training_telemetry = feedback_kind == "training_telemetry"
+        is_renderer_prelaunch_proof = _snerv_prelaunch_renderer_proof_applicable(
+            candidate=target_candidate,
+            row=row,
+        )
         out["source_candidate_id"] = source_candidate_id
         out["target_candidate_id"] = str(target_candidate_id)
         out["candidate_id_match"] = False
@@ -4833,6 +4987,8 @@ def _sanitize_family_level_candidate_feedback(
             if is_upstream_eval
             else "family_snerv_degenerate_renderer_training_telemetry_context"
             if is_training_telemetry
+            else "family_snerv_prelaunch_renderer_proof"
+            if is_renderer_prelaunch_proof
             else "family_full_video_mlx_response_context"
         )
         out["family_scope_matches_target"] = True
@@ -4844,12 +5000,19 @@ def _sanitize_family_level_candidate_feedback(
         out["measured_payload_bytes"] = None
         out["feedback_ready"] = False
         out["launch_control_feedback_ready"] = False
-        out["context_only"] = True
+        if is_renderer_prelaunch_proof:
+            out["feedback_kind"] = "snerv_prelaunch_renderer_proof"
+            out["feedback_scope"] = "family_prelaunch_renderer_proof_min16"
+            out["context_only"] = False
+        else:
+            out["context_only"] = True
         out["feedback_reuse_policy"] = (
             "family_upstream_eval_context_only_no_archive_receiver_replay_or_launch_authority"
             if is_upstream_eval
             else "family_snerv_degenerate_renderer_context_only_no_archive_receiver_replay_or_launch_authority"
             if is_training_telemetry
+            else "family_snerv_prelaunch_renderer_proof_only_no_archive_receiver_replay_or_launch_authority"
+            if is_renderer_prelaunch_proof
             else "family_full_video_context_only_no_archive_receiver_replay_or_launch_authority"
         )
         out.update(FALSE_AUTHORITY)
@@ -5131,6 +5294,8 @@ def _candidate_index_keys(row: Mapping[str, Any]) -> tuple[str, ...]:
         if not text:
             continue
         keys.extend(_candidate_id_aliases(text))
+    if not keys and _snerv_prelaunch_renderer_proof_row(row):
+        keys.append("__snerv_family_prelaunch_renderer_proof__")
     return tuple(_dedupe(keys))
 
 

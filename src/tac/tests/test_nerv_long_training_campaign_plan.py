@@ -267,6 +267,10 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in snerv_row["blockers"]
     assert "snerv_scorer_tether_smoke_report_missing" in snerv_row["blockers"]
     assert "snerv_renderer_nondegenerate_smoke_missing" in snerv_row["blockers"]
+    assert "snerv_pre_long_run_candidate_feedback_missing" in snerv_row["blockers"]
+    assert "snerv_pre_long_run_full_video_mlx_scorer_response_missing" in snerv_row["blockers"]
+    assert snerv_row["snerv_pre_long_run_evidence_gate"]["required"] is True
+    assert snerv_row["snerv_pre_long_run_evidence_gate"]["passed"] is False
     assert (
         "snerv_native_rate_pressure_in_loop_not_yet_training_authority"
         not in snerv_row["score_lowering_gate"]["prelaunch_blockers"]
@@ -287,6 +291,7 @@ def test_long_training_campaign_plan_builds_optimizer_matrix() -> None:
     assert (
         "snerv_hard_byte_ceiling_not_receiver_satisfied_for_long_training" in launch_contract["queue_launch_blockers"]
     )
+    assert "snerv_pre_long_run_candidate_feedback_missing" in launch_contract["queue_launch_blockers"]
     assert (
         "snerv_optimizer_control_requires_learned_scoreaware_training_loop"
         not in launch_contract["queue_launch_blockers"]
@@ -1216,14 +1221,20 @@ def test_long_training_campaign_plan_requires_and_accepts_snerv_nondegenerate_pr
     assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert snerv["snerv_renderer_nondegenerate_gate"]["passed"] is True
     assert snerv["local_mlx_launch_command_ready"] is False
-    assert snerv["implementation_status"] == "snerv_scoreaware_curriculum_blocked"
+    assert snerv["implementation_status"] == "native_rate_aware_long_training_evidence_gate_blocked"
+    assert snerv["snerv_pre_long_run_evidence_gate"]["passed"] is False
+    assert "snerv_pre_long_run_full_video_mlx_scorer_response_missing" in snerv["blockers"]
     assert "snerv_scorer_loop_qat_pose_guard_not_ready" in snerv["blockers"]
     assert "snerv_native_scorer_loop_best_packet_not_materialized" in snerv["blockers"]
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
     assert "snerv_scorer_tether_smoke_report_missing" not in (queue_contract["queue_launch_blockers"])
     assert "snerv_renderer_nondegenerate_smoke_missing" not in (queue_contract["queue_launch_blockers"])
+    assert "snerv_pre_long_run_full_video_mlx_scorer_response_missing" in (
+        queue_contract["queue_launch_blockers"]
+    )
     assert "snerv_scorer_loop_qat_pose_guard_not_ready" in (queue_contract["queue_launch_blockers"])
     assert queue_contract["snerv_renderer_nondegenerate_gate"]["passed"] is True
+    assert queue_contract["snerv_pre_long_run_evidence_gate"]["passed"] is False
     assert snerv["score_claim"] is False
 
 
@@ -2470,6 +2481,9 @@ def test_long_training_campaign_plan_keeps_snerv_bounded_proof_explicit() -> Non
     assert snerv["execution_epochs"] == 5
     assert snerv["current_command_is_bounded_proof_not_long_training"] is True
     assert snerv["implementation_status"] == "snerv_scorer_tether_smoke_gate_blocked"
+    assert snerv["snerv_pre_long_run_evidence_gate"]["required"] is False
+    assert snerv["snerv_pre_long_run_evidence_gate"]["passed"] is True
+    assert "snerv_pre_long_run_candidate_feedback_missing" not in snerv["blockers"]
     assert snerv["command_argv"][snerv["command_argv"].index("--epochs") + 1] == "5"
     assert "snerv_scorer_tether_smoke_report_missing" in snerv["blockers"]
     assert "snerv_scoreaware_long_training_not_bound_bounded_native_export_stage_only" in snerv["blockers"]
@@ -4072,6 +4086,218 @@ def test_long_training_campaign_plan_consumes_passing_snerv_renderer_proof() -> 
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
     assert "snerv_renderer_nondegenerate_smoke_missing" not in (queue_contract["queue_launch_blockers"])
     assert snerv["score_claim"] is False
+
+
+def test_long_training_campaign_plan_reuses_manual_snerv_renderer_proof_only_for_prelaunch_gate() -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.update(
+        {
+            "nominal_total_payload_bytes": 120_000,
+            "nominal_under_ceiling": True,
+        }
+    )
+    proof = {
+        "schema": "snerv_renderer_nondegenerate_proof.v1",
+        "min_pair_count": 16,
+        "measured_num_pairs": 16,
+        "scorer_tether_gate_passed": True,
+        "telemetry_contract_passed": True,
+        "receiver_reconstruction_verified": True,
+        "target_value_domain_passed": True,
+        "export_value_domain_passed": True,
+        "official_skip_high_value_domain_passed": True,
+        "passed": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=_passing_snerv_tether_smoke_report(),
+        candidate_feedback_sources=(
+            {
+                "schema": "nerv_candidate_feedback_row.v1",
+                "family": "snerv",
+                "candidate_id": None,
+                "feedback_scope": "manual_cli_probe",
+                "measured_num_pairs": 16,
+                "scope_matches_candidate": False,
+                "feedback_ready": False,
+                "snerv_renderer_nondegenerate_proof": proof,
+                "snerv_renderer_nondegenerate_proof_passed": True,
+                "snerv_renderer_nondegenerate_blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+        ),
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+    feedback = snerv["candidate_feedback"]
+    gate = snerv["snerv_renderer_nondegenerate_gate"]
+
+    assert feedback["feedback_kind"] == "snerv_prelaunch_renderer_proof"
+    assert feedback["feedback_match_scope"] == "family_snerv_prelaunch_renderer_proof"
+    assert feedback["feedback_ready"] is False
+    assert feedback["scope_matches_candidate"] is False
+    assert feedback["measured_archive_bytes"] is None
+    assert feedback["measured_payload_bytes"] is None
+    assert feedback["receiver_proof_attached"] is False
+    assert feedback["full_video_local_prefilter_attached"] is False
+    assert feedback["feedback_reuse_policy"] == (
+        "family_snerv_prelaunch_renderer_proof_only_no_archive_receiver_replay_or_launch_authority"
+    )
+    assert gate["passed"] is True
+    assert gate["proof_attached"] is True
+    assert "snerv_renderer_nondegenerate_smoke_missing" not in snerv["blockers"]
+    assert "snerv_renderer_nondegenerate_smoke_min16_pairs_missing" not in snerv["blockers"]
+    assert snerv["snerv_pre_long_run_evidence_gate"]["passed"] is False
+    assert "snerv_pre_long_run_receiver_proof_missing_or_failed" in snerv["blockers"]
+    assert "snerv_pre_long_run_full_video_mlx_prefilter_missing" in snerv["blockers"]
+    assert snerv["local_mlx_launch_command_ready"] is False
+    queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
+    assert "snerv_renderer_nondegenerate_smoke_missing" not in (queue_contract["queue_launch_blockers"])
+    assert "snerv_pre_long_run_receiver_proof_missing_or_failed" in (queue_contract["queue_launch_blockers"])
+    assert snerv["score_claim"] is False
+
+
+def test_long_training_campaign_plan_requires_byte_closed_snerv_pre_long_run_feedback(
+    tmp_path: Path,
+) -> None:
+    candidate = dict(_snerv_budget()["selected_candidates"][0])
+    candidate.update(
+        {
+            "nominal_total_payload_bytes": 120_000,
+            "nominal_under_ceiling": True,
+        }
+    )
+    proof_path = tmp_path / "receiver_proof.json"
+    response_path = tmp_path / "full_video_mlx_response.json"
+    packet_path = tmp_path / "packet.snar1"
+    archive_path = tmp_path / "archive.zip"
+    proof_path.write_text('{"receiver_proof_passed": true}\n', encoding="utf-8")
+    response_path.write_text(
+        '{"schema":"nerv_full_video_mlx_scorer_feedback.v1"}\n',
+        encoding="utf-8",
+    )
+    packet_path.write_bytes(b"SNAR1 packet bytes")
+    archive_path.write_bytes(b"archive bytes")
+    renderer_proof = {
+        "schema": "snerv_renderer_nondegenerate_proof.v1",
+        "min_pair_count": 16,
+        "measured_num_pairs": 16,
+        "passed": True,
+        "blockers": [],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    common = {
+        "schema": "nerv_candidate_feedback_row.v1",
+        "family": "snerv",
+        "candidate_id": candidate["candidate_id"],
+        "candidate_num_pairs": 600,
+        "measured_num_pairs": 600,
+        "scope_matches_candidate": True,
+        "feedback_ready": True,
+        "receiver_proof_attached": True,
+        "receiver_proof_path": proof_path.as_posix(),
+        "receiver_proof_sha256": sha256(proof_path.read_bytes()).hexdigest(),
+        "native_mlx_receiver_proof_passed": True,
+        "snerv_mlx_native_export_receiver_proof_path": proof_path.as_posix(),
+        "snerv_mlx_native_export_receiver_proof_sha256": sha256(
+            proof_path.read_bytes()
+        ).hexdigest(),
+        "full_video_local_prefilter_attached": True,
+        "full_video_mlx_response_attached": True,
+        "full_video_mlx_response_path": response_path.as_posix(),
+        "full_video_mlx_response_sha256": sha256(
+            response_path.read_bytes()
+        ).hexdigest(),
+        "native_mlx_full600_campaign_ready": True,
+        "snerv_mlx_native_file_backed_export_evidence": {
+            "schema": "snerv_mlx_native_train_export.v1",
+            "candidate_id": candidate["candidate_id"],
+            "num_pairs": 600,
+            "packet_path": packet_path.as_posix(),
+            "packet_sha256": sha256(packet_path.read_bytes()).hexdigest(),
+            "archive_path": archive_path.as_posix(),
+            "archive_sha256": sha256(archive_path.read_bytes()).hexdigest(),
+            "receiver_proof_path": proof_path.as_posix(),
+            "receiver_proof_passed": True,
+            "receiver_contract_satisfied": True,
+            "required_pair_file_backed_export_proof_passed": True,
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+        "native_mlx_scorer_loop_qat_best_materialized": True,
+        "native_mlx_scorer_loop_qat_receiver_contract_satisfied": True,
+        "native_mlx_scorer_loop_qat_ready_for_pose_guard_gate": True,
+        "native_mlx_scorer_loop_qat_accepted_improvement": True,
+        "snerv_renderer_nondegenerate_proof": renderer_proof,
+        "snerv_renderer_nondegenerate_proof_passed": True,
+        "snerv_renderer_nondegenerate_blockers": [],
+        "measured_payload_bytes": 120_000,
+        "measured_archive_bytes": 121_000,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    training_only = {
+        **common,
+        "feedback_kind": "training_telemetry",
+        "feedback_ready": False,
+    }
+    byte_closed = {
+        **common,
+        "feedback_kind": "full_video_mlx_scorer_response",
+        "feedback_scope": "full600_mlx_scorer_response",
+    }
+
+    blocked_report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=_passing_snerv_tether_smoke_report(),
+        candidate_feedback_sources=(training_only,),
+    )
+    blocked = next(row for row in blocked_report["campaign_rows"] if row["family"] == "snerv")
+    assert blocked["snerv_pre_long_run_evidence_gate"]["passed"] is False
+    assert "snerv_pre_long_run_candidate_feedback_not_byte_closed" in blocked["blockers"]
+
+    passed_report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget_with_candidate(candidate),
+        optimizer_kinds=("adamw",),
+        epochs=29_650,
+        learning_rate=2.7e-5,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report=_passing_snerv_tether_smoke_report(),
+        candidate_feedback_sources=(byte_closed,),
+    )
+    passed = next(row for row in passed_report["campaign_rows"] if row["family"] == "snerv")
+    gate = passed["snerv_pre_long_run_evidence_gate"]
+    assert gate["required"] is True
+    assert gate["passed"] is True
+    assert gate["full_video_mlx_response_attached"] is True
+    assert "snerv_pre_long_run_candidate_feedback_not_byte_closed" not in passed["blockers"]
+    assert "snerv_pre_long_run_full_video_mlx_scorer_response_missing" not in passed["blockers"]
+    assert "snerv_pre_long_run_feedback_custody_paths_missing" not in passed["blockers"]
 
 
 def test_long_training_campaign_plan_refuses_not_ready_hinerv_launch_feedback() -> None:

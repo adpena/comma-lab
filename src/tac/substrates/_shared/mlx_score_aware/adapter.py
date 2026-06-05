@@ -3078,13 +3078,17 @@ class MlxScoreAwareAdapter:
             ),
         }
         sections: dict[str, float] = {}
+        rate_score_per_byte = (
+            _nonnegative_float_or_none(raw.get("rate_score_per_byte"))
+            or CONTEST_RATE_SCORE_PER_BYTE
+        )
         archive_bytes = _nonnegative_float_or_none(
             raw.get("archive_bytes", raw.get("total_archive_bytes"))
         )
         if archive_bytes is not None:
             metrics["train_time_archive_bytes"] = archive_bytes
             metrics["train_time_archive_rate_score"] = (
-                archive_bytes * CONTEST_RATE_SCORE_PER_BYTE
+                archive_bytes * rate_score_per_byte
             )
         raw_sections = raw.get("section_bytes", raw.get("sections"))
         if isinstance(raw_sections, Mapping):
@@ -3092,6 +3096,13 @@ class MlxScoreAwareAdapter:
                 parsed = _nonnegative_float_or_none(value)
                 if parsed is not None:
                     sections[str(name)] = parsed
+        provided_rate_scores: dict[str, float] = {}
+        raw_rate_scores = raw.get("section_rate_scores")
+        if isinstance(raw_rate_scores, Mapping):
+            for name, value in raw_rate_scores.items():
+                parsed = _nonnegative_float_or_none(value)
+                if parsed is not None:
+                    provided_rate_scores[str(name)] = parsed
         for name, value in raw.items():
             key = str(name)
             if key in {
@@ -3099,9 +3110,22 @@ class MlxScoreAwareAdapter:
                 "total_archive_bytes",
                 "section_bytes",
                 "sections",
+                "section_rate_scores",
+                "rate_score_per_byte",
                 "schema",
                 "authority",
+                "metadata",
             }:
+                continue
+            if key.startswith("train_time_section_rate_score__"):
+                parsed = _nonnegative_float_or_none(value)
+                if parsed is not None:
+                    metrics[key] = parsed
+                continue
+            if key.startswith("train_time_section_bytes__"):
+                parsed = _nonnegative_float_or_none(value)
+                if parsed is not None:
+                    metrics[key] = parsed
                 continue
             parsed = _nonnegative_float_or_none(value)
             if parsed is not None:
@@ -3109,9 +3133,17 @@ class MlxScoreAwareAdapter:
         for name, value in sorted(sections.items()):
             safe = safe_dual_metric_key(name)
             metrics[f"train_time_section_bytes__{safe}"] = value
-            metrics[f"train_time_section_rate_score__{safe}"] = (
-                value * CONTEST_RATE_SCORE_PER_BYTE
-            )
+            rate_metric = f"train_time_section_rate_score__{safe}"
+            if rate_metric not in metrics:
+                metrics[rate_metric] = float(
+                    provided_rate_scores.get(
+                        name,
+                        provided_rate_scores.get(
+                            safe,
+                            value * rate_score_per_byte,
+                        ),
+                    )
+                )
         metrics["train_time_section_byte_metric_count"] = float(len(sections))
         self._last_train_time_section_byte_metrics = dict(metrics)
         self._last_train_time_section_byte_metric_source = source
