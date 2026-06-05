@@ -406,6 +406,8 @@ def test_decoder_payload_roundtrips_nondefault_model_size_controls() -> None:
         patch_radius=1,
         temporal_context=1,
         temporal_mode="official_haar_dwt1d_lowpass",
+        official_tub_output2_store_for_receiver_proof=True,
+        official_tub_output2_export_mode="proof_only",
     )
     decoder = HfGenerationDecoder.zeros(levels=1, model_size=model_size)
     pattern = np.linspace(-0.06, 0.06, model_size.feature_count, dtype=np.float64)
@@ -742,12 +744,12 @@ def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() 
     assert storage["storage_policy"] == "store_for_receiver_proof"
     assert storage["proof_only_elided_from_selected_runtime_packet"] is False
     assert storage["receiver_executes_output2_fusion_from_payload"] is True
-    assert storage["receiver_frame_decode_consumes_output2"] is False
+    assert storage["receiver_frame_decode_consumes_output2"] is True
     assert storage["score_lagrangian_admission"] == (
-        "proof_only_reject_rate_until_frame_decode_bound"
+        "receiver_frame_decode_bound_proof_only_false_authority"
     )
     assert storage["score_lagrangian_action"] == (
-        "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
+        "keep_only_for_receiver_proof_until_trained_source_forward_parity"
     )
     assert storage["stored_raw_bytes"] == storage["source_raw_bytes"]
     assert storage["raw_byte_savings"] == 0
@@ -759,6 +761,15 @@ def test_official_mfu_hfr_tub_payload_can_store_output2_for_proof_only_opt_in() 
         "tub.output2_decoder_input"
     ]["sha256"]
     assert storage["output2_fused_sha256"] == rows["tub.output2_fused"]["sha256"]
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+    variant_payload = encode_official_mfu_hfr_tub_decoder_payload(
+        **bundle,
+        tub_temporal_encoder_concat=temporal + 11.0,
+        tub_output2_raw=output2_raw + 3.0,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    variant_decoded = decode_official_mfu_hfr_tub_decoder_payload(variant_payload)
+    assert not np.array_equal(decoded.decode_frames(), variant_decoded.decode_frames())
     assert proof["score_claim"] is False
     assert proof["ready_for_exact_eval_dispatch"] is False
 

@@ -106,6 +106,22 @@ def test_snerv_official_source_forward_harness_proves_mfu_hfr_mapping() -> None:
     assert artifact["official_mfu_hfr_source_fixture_forward_parity_passed"] is True
     assert artifact["official_mfu_hfr_tub_forward_parity_passed"] is False
     assert artifact["full_tub_source_forward_parity_proven"] is False
+    receiver_replay = artifact["receiver_payload_frame_replay"]
+    assert receiver_replay["receiver_runtime_decode_proven"] is True
+    assert receiver_replay["frame_producing_official_payload_replay_proven"] is True
+    assert receiver_replay["decoded_frames_shape"][0] > 0
+    assert receiver_replay["decoded_frames_sha256"]
+    assert receiver_replay["official_tub_output2_fusion_executed"] is True
+    assert receiver_replay["receiver_frame_decode_consumes_output2"] is True
+    assert (
+        "snerv_official_tub_output2_receiver_frame_decode_not_bound"
+        not in receiver_replay["blockers"]
+    )
+    assert (
+        "snerv_official_tub_output2_receiver_frame_decode_not_bound"
+        not in artifact["blockers"]
+    )
+    assert receiver_replay["source_forward_replay_authority"] is False
 
     manifest = artifact["official_weight_manifest"]
     assert manifest["state_dict_kind"] == (

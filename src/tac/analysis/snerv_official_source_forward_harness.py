@@ -30,6 +30,11 @@ import numpy as np
 from tac.analysis.snerv_official_primitive_replay import (
     build_snerv_official_primitive_replay_binding,
 )
+from tac.substrates.snerv_inverse_steg_carrier.archive import (
+    decode_official_mfu_hfr_tub_decoder_payload,
+    encode_official_mfu_hfr_tub_decoder_payload,
+    execute_official_mfu_hfr_tub_decoder_payload,
+)
 from tac.substrates.snerv_inverse_steg_carrier.official_hfr import (
     OfficialConv2dNchw,
     OfficialHfrConvBlock,
@@ -51,6 +56,9 @@ SCHEMA = "snerv_official_mfu_hfr_tub_forward_parity.v1"
 SOURCE_REPLAY_SCHEMA = "snerv_official_mfu_hfr_tub_source_forward_harness.v1"
 TRAINED_CHECKPOINT_MAPPING_SCHEMA = (
     "snerv_official_trained_checkpoint_state_dict_mapping_manifest.v1"
+)
+RECEIVER_PAYLOAD_FRAME_REPLAY_SCHEMA = (
+    "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay.v1"
 )
 OFFICIAL_SNERV_SHA = "0844a08f9591eea9625f8b961ed91d08030e06d1"
 OFFICIAL_REPO_URL = "https://github.com/qwertja/SNeRV"
@@ -270,12 +278,17 @@ def build_snerv_official_source_forward_harness_artifact(
     component_rows: list[dict[str, Any]]
     source_replay: dict[str, Any]
     weight_manifest: dict[str, Any]
+    receiver_frame_replay: dict[str, Any]
     harness_blockers: list[str] = []
     try:
         fixture = _build_official_fixture(official_root)
-        mfu_row, hfr_row, source_replay, weight_manifest = _run_mfu_hfr_replay(
-            fixture
-        )
+        (
+            mfu_row,
+            hfr_row,
+            source_replay,
+            weight_manifest,
+            receiver_frame_replay,
+        ) = _run_mfu_hfr_replay(fixture)
         component_rows = [mfu_row, hfr_row, _run_tub_graph_input_replay()]
     except Exception as exc:  # pragma: no cover - exercised by fail-closed callers.
         harness_blockers.append(f"snerv_official_source_harness_failed:{type(exc).__name__}")
@@ -300,6 +313,9 @@ def build_snerv_official_source_forward_harness_artifact(
             "official_trained_checkpoint_loaded": False,
             "blockers": list(harness_blockers),
         }
+        receiver_frame_replay = _failed_receiver_payload_frame_replay(
+            harness_blockers
+        )
 
     mfu_hfr_passed = all(
         row["component_id"] in {"mfu", "hfr"}
@@ -317,6 +333,7 @@ def build_snerv_official_source_forward_harness_artifact(
             *harness_blockers,
             *weight_manifest.get("blockers", ()),
             *source_replay.get("blockers", ()),
+            *receiver_frame_replay.get("blockers", ()),
             *[
                 blocker
                 for row in component_rows
@@ -340,6 +357,7 @@ def build_snerv_official_source_forward_harness_artifact(
         "local_repo_root": local_root.as_posix(),
         "official_weight_manifest": weight_manifest,
         "source_forward_replay": source_replay,
+        "receiver_payload_frame_replay": receiver_frame_replay,
         "component_rows": component_rows,
         "local_receiver_adapter_source_gap": local_adapter_row,
         "official_mfu_hfr_source_fixture_forward_parity_passed": mfu_hfr_passed,
@@ -429,14 +447,14 @@ def _build_official_fixture(official_root: Path) -> _OfficialFixture:
 
 def _run_mfu_hfr_replay(
     fixture: _OfficialFixture,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
     import torch
 
     mfu = _portable_mfu_from_state_dict(fixture)
     heads = _portable_hfr_from_state_dict(fixture)
-    low = _positive_fixture((1, fixture.spec.low_channels, 2, 3), modulo=7)
-    skip_mid = _positive_fixture((1, fixture.spec.mid_channels, 4, 6), modulo=11)
-    skip_high = _positive_fixture((1, fixture.spec.high_channels, 8, 12), modulo=13)
+    low = _positive_fixture((2, fixture.spec.low_channels, 2, 3), modulo=7)
+    skip_mid = _positive_fixture((2, fixture.spec.mid_channels, 4, 6), modulo=11)
+    skip_high = _positive_fixture((2, fixture.spec.high_channels, 8, 12), modulo=13)
 
     dl = fixture.decoder_len
     with torch.no_grad():
@@ -519,7 +537,14 @@ def _run_mfu_hfr_replay(
         ],
         **FALSE_AUTHORITY,
     }
-    return mfu_row, hfr_row, source_replay, weight_manifest
+    receiver_frame_replay = _receiver_payload_frame_replay_from_fixture(
+        mfu=mfu,
+        heads=heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+    )
+    return mfu_row, hfr_row, source_replay, weight_manifest, receiver_frame_replay
 
 
 def _run_tub_graph_input_replay() -> dict[str, Any]:
@@ -642,6 +667,95 @@ def _run_tub_graph_input_replay() -> dict[str, Any]:
         ],
         "official_source_contract": "model/snerv_t.py lines 125-150",
         "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _receiver_payload_frame_replay_from_fixture(
+    *,
+    mfu: OfficialSnervMfu,
+    heads: OfficialHfrHeads,
+    low: np.ndarray,
+    skip_mid: np.ndarray,
+    skip_high: np.ndarray,
+) -> dict[str, Any]:
+    tub_current = _positive_fixture((3, 8, 12), modulo=19)
+    tub_previous = tub_current + 0.125
+    tub_next_frame = tub_current + 0.25
+    temporal_encoder_concat = _positive_fixture((1, 12, 2, 3), modulo=23)
+    tub_output2_raw = _positive_fixture((2, 18, 2, 3), modulo=29)
+    payload = encode_official_mfu_hfr_tub_decoder_payload(
+        mfu=mfu,
+        hfr_heads=heads,
+        low=low,
+        skip_mid=skip_mid,
+        skip_high=skip_high,
+        tub_current=tub_current,
+        tub_previous=tub_previous,
+        tub_next_frame=tub_next_frame,
+        temporal_encoder_output_shape=tuple(int(v) for v in temporal_encoder_concat.shape),
+        fc_hw=(2, 3),
+        output2_decoder_output_shape=tuple(int(v) for v in tub_output2_raw.shape),
+        tub_temporal_encoder_concat=temporal_encoder_concat,
+        tub_output2_raw=tub_output2_raw,
+        store_tub_output2_for_receiver_proof=True,
+    )
+    decoded = decode_official_mfu_hfr_tub_decoder_payload(payload)
+    runtime_proof = execute_official_mfu_hfr_tub_decoder_payload(payload)
+    decoded_frames = decoded.decode_frames(clip_to_uint8_range=False)
+    output2_storage = dict(decoded.header.get("tub_output2_storage") or {})
+    blockers = list(runtime_proof.get("source_forward_blockers") or [])
+    if output2_storage.get("receiver_frame_decode_consumes_output2") is not True:
+        blockers.append("snerv_official_tub_output2_receiver_frame_decode_not_bound")
+    return {
+        "schema": RECEIVER_PAYLOAD_FRAME_REPLAY_SCHEMA,
+        "payload_schema": decoded.schema,
+        "payload_bytes": len(payload),
+        "payload_sha256": _hash_bytes(payload),
+        "receiver_runtime_decode_proven": (
+            runtime_proof.get("receiver_runtime_decode_proven") is True
+        ),
+        "receiver_export_self_consistency_verified": (
+            runtime_proof.get("receiver_export_self_consistency_verified") is True
+        ),
+        "frame_producing_official_payload_replay_proven": True,
+        "decoded_frames_shape": [int(v) for v in decoded_frames.shape],
+        "decoded_frames_sha256": _hash_array(decoded_frames),
+        "output_bundle_sha256": runtime_proof.get("output_bundle_sha256"),
+        "official_tub_output2_fusion_executed": bool(
+            runtime_proof.get("executed_components", {}).get(
+                "official_tub_output2_fusion"
+            )
+        ),
+        "receiver_frame_decode_consumes_output2": bool(
+            output2_storage.get("receiver_frame_decode_consumes_output2")
+        ),
+        "source_forward_replay_bound": False,
+        "source_forward_replay_verified": False,
+        "source_forward_replay_authority": False,
+        "blockers": _ordered_unique(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
+def _failed_receiver_payload_frame_replay(blockers: Sequence[str]) -> dict[str, Any]:
+    return {
+        "schema": RECEIVER_PAYLOAD_FRAME_REPLAY_SCHEMA,
+        "payload_schema": None,
+        "payload_bytes": None,
+        "payload_sha256": None,
+        "receiver_runtime_decode_proven": False,
+        "receiver_export_self_consistency_verified": False,
+        "frame_producing_official_payload_replay_proven": False,
+        "decoded_frames_shape": None,
+        "decoded_frames_sha256": None,
+        "output_bundle_sha256": None,
+        "official_tub_output2_fusion_executed": False,
+        "receiver_frame_decode_consumes_output2": False,
+        "source_forward_replay_bound": False,
+        "source_forward_replay_verified": False,
+        "source_forward_replay_authority": False,
+        "blockers": _ordered_unique(list(blockers)),
         **FALSE_AUTHORITY,
     }
 

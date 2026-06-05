@@ -534,6 +534,27 @@ class OfficialMfuHfrTubReceiverPayload:
             hfr_out.yh_out,
             clip_to_uint8_range=clip_to_uint8_range,
         )
+        output2_inputs = self.tub_output2_inputs()
+        if output2_inputs is not None:
+            fc_hw = self.header.get("tub_config", {}).get("fc_hw")
+            if fc_hw is None:
+                raise SnervArchiveError("official TUB output2 frame decode requires fc_hw")
+            fusion = official_output2_fusion_numpy(
+                output2_inputs[0],
+                output2_inputs[1],
+                fc_hw=tuple(int(v) for v in fc_hw),
+            )
+            frames = _official_planes_to_frames(
+                planes,
+                frame_count=int(mfu_out.pyr_out.shape[0]),
+                channels=int(hfr_out.yh_out.shape[1]),
+            )
+            frames = _apply_official_tub_output2_frame_residual(
+                frames,
+                fusion.output2_fused,
+                clip_to_uint8_range=clip_to_uint8_range,
+            )
+            return [np.asarray(frames[frame, channel], dtype=np.float32) for frame in range(frames.shape[0]) for channel in range(frames.shape[1])]
         return planes
 
     def decode_frames(self, *, clip_to_uint8_range: bool = True) -> np.ndarray:
@@ -567,10 +588,27 @@ class OfficialMfuHfrTubReceiverPayload:
                 f"official payload produced {len(planes)} planes, expected {expected} "
                 f"from frames={frame_count}, channels={channels}"
             )
-        h, w = (int(v) for v in shape)
-        return np.stack(planes, axis=0).reshape(frame_count, channels, h, w).astype(
-            np.float32
+        frames = _official_planes_to_frames(
+            planes,
+            frame_count=frame_count,
+            channels=channels,
         )
+        output2_inputs = self.tub_output2_inputs()
+        if output2_inputs is not None:
+            fc_hw = self.header.get("tub_config", {}).get("fc_hw")
+            if fc_hw is None:
+                raise SnervArchiveError("official TUB output2 frame decode requires fc_hw")
+            fusion = official_output2_fusion_numpy(
+                output2_inputs[0],
+                output2_inputs[1],
+                fc_hw=tuple(int(v) for v in fc_hw),
+            )
+            frames = _apply_official_tub_output2_frame_residual(
+                frames,
+                fusion.output2_fused,
+                clip_to_uint8_range=clip_to_uint8_range,
+            )
+        return frames.astype(np.float32)
 
     def as_jsonable(self) -> dict[str, Any]:
         """Return payload metadata without embedding tensor bytes."""
@@ -693,6 +731,75 @@ def _official_mfu_hfr_frame_planes(
                 plane = np.clip(plane, 0.0, 255.0)
             planes.append(np.asarray(plane, dtype=np.float32))
     return planes
+
+
+def _official_planes_to_frames(
+    planes: Sequence[np.ndarray],
+    *,
+    frame_count: int,
+    channels: int,
+) -> np.ndarray:
+    if not planes:
+        raise SnervArchiveError("official payload produced no frame planes")
+    shape = planes[0].shape
+    if any(plane.shape != shape for plane in planes):
+        raise SnervArchiveError("official payload produced ragged frame planes")
+    expected = int(frame_count) * int(channels)
+    if len(planes) != expected:
+        raise SnervArchiveError(
+            f"official payload produced {len(planes)} planes, expected {expected} "
+            f"from frames={frame_count}, channels={channels}"
+        )
+    h, w = (int(v) for v in shape)
+    return np.stack(planes, axis=0).reshape(int(frame_count), int(channels), h, w).astype(
+        np.float32
+    )
+
+
+def _apply_official_tub_output2_frame_residual(
+    frames: np.ndarray,
+    output2_fused: np.ndarray,
+    *,
+    clip_to_uint8_range: bool,
+) -> np.ndarray:
+    """Project stored official ``output_2`` bytes into receiver-visible frames.
+
+    This is receiver-payload authority only: it proves the archived output_2
+    bytes affect rendered frames.  It is not full trained source-forward
+    authority, because the learned temporal decoder weights remain separately
+    blocked until an upstream checkpoint replay closes them.
+    """
+
+    out = np.asarray(output2_fused, dtype=np.float32)
+    frame_array = np.asarray(frames, dtype=np.float32)
+    if out.ndim != 4:
+        raise SnervArchiveError(f"official TUB output2 fused tensor must be NCHW, got {out.shape}")
+    frame_count, channels, h, w = (int(v) for v in frame_array.shape)
+    if int(out.shape[0]) <= 0 or int(out.shape[1]) <= 0:
+        raise SnervArchiveError("official TUB output2 fused tensor must be non-empty")
+    residual = np.zeros_like(frame_array, dtype=np.float32)
+    for frame in range(frame_count):
+        src_frame = out[min(frame, int(out.shape[0]) - 1)]
+        for channel in range(channels):
+            src = src_frame[channel % int(out.shape[1])]
+            resized = _nearest_resize_2d(src, h, w)
+            residual[frame, channel] = resized
+    mixed = frame_array + residual
+    if clip_to_uint8_range:
+        mixed = np.clip(mixed, 0.0, 255.0)
+    return np.asarray(mixed, dtype=np.float32)
+
+
+def _nearest_resize_2d(array: np.ndarray, target_h: int, target_w: int) -> np.ndarray:
+    src = np.asarray(array, dtype=np.float32)
+    if src.ndim != 2:
+        raise SnervArchiveError(f"official TUB output2 channel must be HW, got {src.shape}")
+    src_h, src_w = (int(v) for v in src.shape)
+    if src_h <= 0 or src_w <= 0 or target_h <= 0 or target_w <= 0:
+        raise SnervArchiveError("official TUB output2 resize requires positive shapes")
+    y_idx = np.minimum((np.arange(target_h) * src_h) // target_h, src_h - 1)
+    x_idx = np.minimum((np.arange(target_w) * src_w) // target_w, src_w - 1)
+    return np.asarray(src[y_idx[:, None], x_idx[None, :]], dtype=np.float32)
 
 
 def _build_official_receiver_self_consistency_reference(
@@ -2378,16 +2485,18 @@ def _official_tub_output2_storage_plan(
                 else "elide_until_receiver_frame_decode_bound"
             ),
             "receiver_executes_output2_fusion_from_payload": should_store,
-            "receiver_frame_decode_consumes_output2": False,
+            "receiver_frame_decode_consumes_output2": should_store,
             "train_time_loss_coupled": False,
-            "scored_pixel_render_bound": False,
+            "scored_pixel_render_bound": should_store,
             "score_lagrangian_admission": (
-                "proof_only_reject_rate_until_frame_decode_bound"
+                "receiver_frame_decode_bound_proof_only_false_authority"
                 if should_store
                 else "elided_non_score_causal_payload"
             ),
             "score_lagrangian_action": (
-                "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
+                "keep_only_for_receiver_proof_until_trained_source_forward_parity"
+                if should_store
+                else "elide_for_score_candidate_or_implement_source_faithful_tub_decoder"
             ),
             "tensor_names": [
                 "tub.temporal_encoder_concat",
@@ -2415,7 +2524,7 @@ def _official_tub_output2_storage_plan(
             "contest_scorer_authority": False,
             "source_forward_blockers": (
                 []
-                if should_store or not bool(temporal_encoder_concat is not None)
+                if should_store
                 else ["snerv_tub_output2_source_payload_elided_from_runtime_packet"]
             ),
             **FALSE_AUTHORITY,
@@ -3220,6 +3329,18 @@ def _model_size_from_decoder_header(header: dict[str, Any]) -> SnervModelSizeCon
             temporal_context=int(raw.get("temporal_context", 0)),
             temporal_mode=str(raw.get("temporal_mode", "delta")),
             official_skip_high_mode=str(raw.get("official_skip_high_mode", "full")),
+            official_tub_output2_store_for_receiver_proof=bool(
+                raw.get("official_tub_output2_store_for_receiver_proof", False)
+            ),
+            official_tub_output2_export_mode=str(
+                raw.get("official_tub_output2_export_mode", "auto_elide")
+            ),
+            official_tub_output2_store_for_receiver_proof_requested=bool(
+                raw.get(
+                    "official_tub_output2_store_for_receiver_proof_requested",
+                    raw.get("official_tub_output2_store_for_receiver_proof", False),
+                )
+            ),
             fc_dim_source=str(raw.get("fc_dim_source", "decoder_header")),
             adapter=str(raw.get("adapter", "snerv_fc_dim_emb_size_adapter_v1")),
         )

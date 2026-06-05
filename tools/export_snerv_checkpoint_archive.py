@@ -1668,6 +1668,22 @@ def _official_checkpoint_export_binding(
         and tub_output2_storage.get("receiver_frame_decode_consumes_output2") is True
         and tub_output2_storage.get("scored_pixel_render_bound") is True
     )
+    tub_output2_store_requested = bool(
+        getattr(
+            model_size,
+            "official_tub_output2_store_for_receiver_proof_requested",
+            model_size.official_tub_output2_store_for_receiver_proof,
+        )
+    )
+    tub_output2_store_honored = bool(
+        model_size.official_tub_output2_store_for_receiver_proof
+    )
+    tub_output2_source_raw_bytes = int(
+        tub_output2_storage.get("source_raw_bytes") or 0
+    )
+    tub_output2_selected_raw_bytes = int(
+        tub_output2_storage.get("stored_raw_bytes") or 0
+    )
     native_checkpoint_export_bound = bool(
         requested
         and selected_authority.get("frame_producing_official_export") is True
@@ -1741,6 +1757,28 @@ def _official_checkpoint_export_binding(
             tensor_category_counts
         ),
         "official_tub_output2_storage": tub_output2_storage,
+        "official_tub_output2_export_mode": (
+            model_size.official_tub_output2_export_mode
+        ),
+        "official_tub_output2_store_for_receiver_proof_requested": (
+            tub_output2_store_requested
+        ),
+        "official_tub_output2_store_for_receiver_proof_honored": (
+            tub_output2_store_honored
+        ),
+        "official_tub_output2_auto_elided_for_score_candidate": bool(
+            tub_output2_store_requested
+            and not tub_output2_store_honored
+            and model_size.official_tub_output2_export_mode == "auto_elide"
+        ),
+        "official_tub_output2_source_raw_bytes": tub_output2_source_raw_bytes,
+        "official_tub_output2_selected_runtime_raw_bytes": (
+            tub_output2_selected_raw_bytes
+        ),
+        "official_tub_output2_elided_raw_bytes": max(
+            0,
+            tub_output2_source_raw_bytes - tub_output2_selected_raw_bytes,
+        ),
         "official_tub_output2_receiver_executed": bool(
             packet_metadata.get("official_tub_output2_receiver_executed") is True
         ),

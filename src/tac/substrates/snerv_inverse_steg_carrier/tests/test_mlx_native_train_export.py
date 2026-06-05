@@ -618,6 +618,7 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
                     "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
                     "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
                     "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                    "dual_ascent_lambda__snerv_decoder_payload_section_bytes": 0.125,
                 },
             },
             sort_keys=True,
@@ -647,6 +648,7 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract["segnet_dual_lambda_active_observed"] is True
     assert contract["posenet_dual_lambda_active_observed"] is True
     assert contract["section_rate_metric_observed"] is True
+    assert contract["section_byte_dual_lambda_active_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["scorer_input_guard_dual_metric_observed"] is True
     assert contract["expected_scorer_input_contrast_floor_metric"] is True
@@ -673,6 +675,52 @@ def test_score_aware_telemetry_contract_accepts_live_dual_and_section_metrics(
     assert contract[
         "segnet_direct_live_max_candidate_occupied_class_fraction"
     ] == pytest.approx(0.6)
+
+
+def test_score_aware_telemetry_contract_rejects_section_rate_without_section_dual(
+    tmp_path: Path,
+) -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    telemetry = tmp_path / "telemetry.jsonl"
+    telemetry.write_text(
+        json.dumps(
+            {
+                "epoch": 0,
+                "loss_components": {
+                    "loss_part_distill": 1.0,
+                    "loss_part_pose_distill": 2.0,
+                    "train_time_section_rate_score__decoder_payload": 0.01,
+                    "dual_ascent_missing_metric__snerv_segnet_last_frame_distill": 0.0,
+                    "dual_ascent_missing_metric__snerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_lambda__snerv_segnet_last_frame_distill": 0.25,
+                    "dual_ascent_lambda__snerv_posenet_yuv6_pair_distill": 0.5,
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    contract = mod._snerv_score_aware_long_training_telemetry_contract(
+        telemetry,
+        segnet_distillation_weight=1.0,
+        pose_distillation_weight=1.0,
+        segnet_student_live_calibration_weight=0.0,
+        pr95_faithful_curriculum_enabled=False,
+        coder_aware_qat_bound=True,
+        train_time_section_byte_control_bound=True,
+        scorer_input_distribution_guard_weight=0.0,
+    )
+
+    assert contract["passed"] is False
+    assert contract["section_rate_metric_observed"] is True
+    assert contract["section_byte_dual_lambda_active_observed"] is False
+    assert (
+        "snerv_score_aware_long_training_section_byte_dual_lambda_never_active"
+        in contract["blockers"]
+    )
 
 
 def test_score_aware_telemetry_contract_rejects_missing_direct_live_metrics(
@@ -1078,9 +1126,85 @@ def test_snerv_train_time_section_byte_control_binds_decoder_and_lf_only() -> No
     assert control["metrics_payload"]["archive_bytes"] == policy[
         "baseline_packet_bytes"
     ]
+    assert control["metrics_payload"]["rate_score_per_byte"] == pytest.approx(
+        mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert control["metrics_payload"]["section_rate_scores"]["decoder_payload"] == (
+        pytest.approx(
+            control["section_bytes"]["decoder_payload"]
+            * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+        )
+    )
+    assert control["metrics_payload"][
+        "train_time_section_rate_score__decoder_payload"
+    ] == pytest.approx(
+        control["section_bytes"]["decoder_payload"]
+        * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    budget_rows = {row["section_name"]: row for row in control["budget_rows"]}
+    assert budget_rows["decoder_payload"]["rate_score"] == pytest.approx(
+        control["section_bytes"]["decoder_payload"]
+        * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert budget_rows["decoder_payload"]["budget_rate_score"] == pytest.approx(
+        budget_rows["decoder_payload"]["budget_bytes"]
+        * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
     pending = {row["section_name"] for row in control["pending_section_rows"]}
     assert {"metadata_payload", "step_map_packet"}.issubset(pending)
+    pending_rows = {row["section_name"]: row for row in control["pending_section_rows"]}
+    assert pending_rows["metadata_payload"]["rate_score"] == pytest.approx(
+        pending_rows["metadata_payload"]["bytes"]
+        * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
     assert control["blockers"] == []
+
+
+def test_snerv_train_time_section_byte_control_prices_pending_without_ceiling() -> None:
+    import tac.substrates.snerv_inverse_steg_carrier.mlx_native_train_export as mod
+
+    policy = mod._build_snerv_pretraining_archive_section_qat_weight_policy(
+        pairs_nchw255=_tiny_pairs(pairs=2),
+        model_size=SnervModelSizeConfig(fc_dim=4, emb_size=1, patch_radius=1),
+        levels=1,
+        wavelet="haar",
+        source_pair_indices=(0, 1),
+        target_bits_per_coeff=3.0,
+        step_map_bits_per_coeff=0.5,
+        decoder_payload_codec="int8_symmetric",
+        lf_payload_codec="spatial_delta_zigzag_leb128_lzma",
+        recon_pixel_weight=None,
+        recon_pixel_weight_metadata=None,
+        hf_decoder_saliency_gain=1.0,
+        hard_byte_ceiling=None,
+        base_qat_weights={"coder_qat_quant_residual": 1.0e-3},
+    )
+
+    control = mod._build_snerv_train_time_section_byte_control(
+        policy,
+        policy["extra_loss_weights"],
+        hard_byte_ceiling=None,
+    )
+
+    assert control["active"] is False
+    assert control["blockers"] == [
+        "snerv_train_time_section_byte_hard_ceiling_missing"
+    ]
+    assert control["metrics_payload"]["rate_score_per_byte"] == pytest.approx(
+        mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    pending_rows = {row["section_name"]: row for row in control["pending_section_rows"]}
+    assert {"decoder_payload", "lf_payload", "metadata_payload"}.issubset(
+        pending_rows
+    )
+    assert pending_rows["decoder_payload"]["rate_score"] == pytest.approx(
+        pending_rows["decoder_payload"]["bytes"]
+        * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert pending_rows["metadata_payload"]["rate_score"] == pytest.approx(
+        pending_rows["metadata_payload"]["bytes"]
+        * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
 
 
 def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
@@ -1160,19 +1284,44 @@ def test_snerv_live_section_byte_metrics_callback_refreshes_current_snar_packet(
 
     assert first["archive_bytes"] == 315
     assert first["section_bytes"]["decoder_payload"] == 201
+    assert first["rate_score_per_byte"] == pytest.approx(
+        mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert first["section_rate_scores"]["decoder_payload"] == pytest.approx(
+        201 * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert first["train_time_section_rate_score__decoder_payload"] == pytest.approx(
+        201 * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
     assert second == first
     assert third["archive_bytes"] == 316
     assert third["section_bytes"]["lf_payload"] == 102
+    assert third["train_time_section_rate_score__lf_payload"] == pytest.approx(
+        102 * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
+    assert third[
+        "train_time_section_rate_score__metadata_payload"
+    ] == pytest.approx(11 * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE)
+    assert third["train_time_section_rate_score__step_map_packet"] == pytest.approx(
+        3 * mod.SNERV_CONTEST_RATE_SCORE_PER_BYTE
+    )
     assert len(calls) == 2
     assert metadata["active"] is True
     assert metadata["refresh_calls"] == 2
     assert metadata["cache_hits"] == 1
     assert metadata["last_section_bytes"]["decoder_payload"] == 202
-    assert [
+    assert sorted(
         key
         for key, value in third.items()
         if isinstance(value, int | float) and not isinstance(value, bool)
-    ] == ["archive_bytes"]
+    ) == [
+        "archive_bytes",
+        "rate_score_per_byte",
+        "train_time_section_rate_score__decoder_payload",
+        "train_time_section_rate_score__lf_payload",
+        "train_time_section_rate_score__metadata_payload",
+        "train_time_section_rate_score__step_map_packet",
+    ]
 
 
 def test_snerv_live_section_byte_metrics_callback_uses_official_components(
@@ -4669,6 +4818,54 @@ def test_native_export_without_modelsize_keeps_manual_default_fc_dim_source() ->
     assert model_size.as_jsonable()["fc_dim_source"] == (
         "fallback_default_missing_official_modelsize_inputs"
     )
+
+
+def test_native_export_modelsize_auto_elides_tub_output2_for_score_candidate() -> None:
+    model_size = _model_size_from_candidate(
+        {
+            "candidate_id": "score-safe-tub-output2",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "official_tub_output2_store_for_receiver_proof": True,
+        }
+    )
+
+    assert model_size.official_tub_output2_store_for_receiver_proof_requested is True
+    assert model_size.official_tub_output2_store_for_receiver_proof is False
+    assert model_size.official_tub_output2_export_mode == "auto_elide"
+    assert model_size.as_jsonable()[
+        "official_tub_output2_store_for_receiver_proof_requested"
+    ] is True
+    assert model_size.as_jsonable()[
+        "official_tub_output2_store_for_receiver_proof"
+    ] is False
+
+
+def test_native_export_modelsize_honors_explicit_tub_output2_proof_only_mode() -> None:
+    model_size = _model_size_from_candidate(
+        {
+            "candidate_id": "proof-only-tub-output2",
+            "snerv_model_size_adapter": SNERV_OFFICIAL_MFU_HFR_TUB_PRIMITIVES_ADAPTER,
+            "official_tub_output2_store_for_receiver_proof": True,
+            "official_tub_output2_export_mode": "proof_only",
+        }
+    )
+
+    assert model_size.official_tub_output2_store_for_receiver_proof_requested is True
+    assert model_size.official_tub_output2_store_for_receiver_proof is True
+    assert model_size.official_tub_output2_export_mode == "proof_only"
+
+
+def test_native_export_modelsize_rejects_unknown_tub_output2_export_mode() -> None:
+    with pytest.raises(
+        SnervCarrierError,
+        match="official_tub_output2_export_mode",
+    ):
+        _model_size_from_candidate(
+            {
+                "candidate_id": "bad-tub-output2-mode",
+                "official_tub_output2_export_mode": "score_candidate_store",
+            }
+        )
 
 
 def test_train_export_preserves_explicit_source_pair_indices(

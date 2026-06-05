@@ -391,9 +391,16 @@ def test_official_checkpoint_export_report_binds_tub_output2_activation_payload(
     binding = report["official_checkpoint_export_binding"]
     assert binding["official_tub_temporal_encoder_weight_mapping_proven"] is False
     assert binding["official_tub_output2_activation_payload_bound"] is True
+    assert binding["official_tub_output2_export_mode"] == "proof_only"
+    assert binding["official_tub_output2_store_for_receiver_proof_requested"] is True
+    assert binding["official_tub_output2_store_for_receiver_proof_honored"] is True
+    assert binding["official_tub_output2_auto_elided_for_score_candidate"] is False
     assert binding["official_tub_receiver_activation_mapping_proven"] is True
     assert binding["official_tub_output2_receiver_executed"] is True
     assert binding["official_tub_output2_storage"]["stored"] is True
+    assert binding["official_tub_output2_source_raw_bytes"] > 0
+    assert binding["official_tub_output2_selected_runtime_raw_bytes"] > 0
+    assert binding["official_tub_output2_elided_raw_bytes"] == 0
     assert binding["official_tub_output2_storage"][
         "receiver_executes_output2_fusion_from_payload"
     ] is True
@@ -403,17 +410,17 @@ def test_official_checkpoint_export_report_binds_tub_output2_activation_payload(
     assert binding["official_tub_receiver_activation_mapping_semantics"] == (
         "receiver_executes_stored_temporal_encoder_concat_and_output2_raw_payload"
     )
-    assert binding["official_tub_output2_score_causal_receiver_frame_bound"] is False
+    assert binding["official_tub_output2_score_causal_receiver_frame_bound"] is True
     assert binding["official_tub_output2_byte_cap_admission"] == (
-        "elide_until_receiver_frame_decode_consumes_output2_or_scored_delta_positive"
+        "admit_as_score_causal_tub_activation"
     )
     assert binding["source_forward_replay_authority"] is False
-    assert "snerv_official_tub_output2_non_score_causal_bytes_present" in report[
+    assert "snerv_official_tub_output2_non_score_causal_bytes_present" not in report[
         "blockers"
     ]
     assert (
         "snerv_official_tub_output2_elide_or_bind_source_faithful_frame_decode"
-        in report["blockers"]
+        not in report["blockers"]
     )
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
@@ -466,9 +473,22 @@ def test_official_checkpoint_export_auto_elides_tub_output2_proof_payload_by_def
     )
 
     binding = report["official_checkpoint_export_binding"]
+    model_size = report["model_size"]
+    assert model_size["official_tub_output2_store_for_receiver_proof_requested"] is True
+    assert model_size["official_tub_output2_store_for_receiver_proof"] is False
+    assert model_size["official_tub_output2_export_mode"] == "auto_elide"
     assert binding["official_tub_output2_activation_payload_bound"] is False
+    assert binding["official_tub_output2_export_mode"] == "auto_elide"
+    assert binding["official_tub_output2_store_for_receiver_proof_requested"] is True
+    assert binding["official_tub_output2_store_for_receiver_proof_honored"] is False
+    assert binding["official_tub_output2_auto_elided_for_score_candidate"] is True
     assert binding["official_tub_output2_receiver_executed"] is False
     assert binding["official_tub_output2_storage"]["stored"] is False
+    assert binding["official_tub_output2_source_raw_bytes"] > 0
+    assert binding["official_tub_output2_selected_runtime_raw_bytes"] == 0
+    assert binding["official_tub_output2_elided_raw_bytes"] == binding[
+        "official_tub_output2_source_raw_bytes"
+    ]
     assert binding["official_tub_output2_storage"][
         "proof_only_elided_from_selected_runtime_packet"
     ] is True

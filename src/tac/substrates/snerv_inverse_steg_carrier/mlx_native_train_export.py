@@ -39,6 +39,7 @@ from tac.analysis.snerv_official_tub_source_forward_replay import (
     build_snerv_official_tub_source_forward_replay_artifact,
 )
 from tac.analysis.snerv_step_map_coder import encode_step_maps_waterfill
+from tac.auth_eval_schema import ORIGINAL_VIDEO_BYTES
 from tac.contest_eval_contract import build_upstream_eval_contract
 from tac.optimization.archive_bound_candidate_runtime_bridge import (
     run_generated_inflate_receiver_proof,
@@ -52,6 +53,7 @@ from tac.substrates._shared.mlx_score_aware.curriculum import (
     build_scoreaware_curriculum_stages,
     coerce_scoreaware_stage_loss_weights,
 )
+from tac.substrates._shared.mlx_score_aware.dual_ascent import safe_dual_metric_key
 from tac.substrates._shared.mlx_score_aware.targets import decode_mlx_targets
 from tac.substrates.snerv_inverse_steg_carrier.allocation import (
     LfSaliency,
@@ -142,6 +144,7 @@ SNERV_MLX_NATIVE_PACKET_FILENAME = "snerv_mlx_native_packet.snar"
 SNERV_MLX_NATIVE_REPORT_FILENAME = "snerv_mlx_native_train_export.json"
 SNERV_DWT_ADJOINT_SALIENCY_WEIGHTED_FIT_MODE = "joint_p18_p19_dwt_adjoint_saliency_weighted_least_squares"
 SCORER_HW = (384, 512)
+SNERV_CONTEST_RATE_SCORE_PER_BYTE = 25.0 / float(ORIGINAL_VIDEO_BYTES)
 
 FALSE_AUTHORITY = {
     "score_claim": False,
@@ -475,6 +478,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
     pr95_pose_loss_observed = False
     seg_dual_lambda_active_observed = False
     pose_dual_lambda_active_observed = False
+    section_dual_lambda_active_observed = False
     pr95_seg_effective_weight_seen = False
     pr95_seg_effective_weight_active = False
     pr95_pose_effective_weight_seen = False
@@ -674,6 +678,16 @@ def _snerv_score_aware_long_training_telemetry_contract(
                 and _finite_number(value)
                 for key, value in _telemetry_row_items(row)
             )
+            section_dual_lambda_active_observed = (
+                section_dual_lambda_active_observed
+                or any(
+                    str(key).startswith("dual_ascent_lambda__snerv_")
+                    and str(key).endswith("_section_bytes")
+                    and _finite_number(value)
+                    and abs(float(value)) > 0.0
+                    for key, value in _telemetry_row_items(row)
+                )
+            )
             seg_dual_observed = seg_dual_observed or _row_float_equals(
                 row,
                 "dual_ascent_missing_metric__snerv_segnet_last_frame_distill",
@@ -716,6 +730,10 @@ def _snerv_score_aware_long_training_telemetry_contract(
         blockers.append("snerv_score_aware_long_training_dual_posenet_lambda_never_active")
     if expected_section and not section_rate_observed:
         blockers.append("snerv_score_aware_long_training_section_rate_metric_missing")
+    if expected_section and not section_dual_lambda_active_observed:
+        blockers.append(
+            "snerv_score_aware_long_training_section_byte_dual_lambda_never_active"
+        )
     if expected_guard and not guard_loss_observed:
         blockers.append("snerv_score_aware_long_training_scorer_input_guard_metric_missing")
     if expected_contrast_floor and not contrast_floor_loss_observed:
@@ -799,6 +817,7 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "expected_segnet_live_calibration": bool(expected_live_calibration),
         "expected_segnet_direct_live_distillation": bool(expected_direct_live),
         "expected_section_rate_metrics": bool(expected_section),
+        "expected_section_byte_dual_lambda": bool(expected_section),
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "expected_scorer_input_contrast_floor_metric": bool(
             expected_contrast_floor
@@ -811,6 +830,9 @@ def _snerv_score_aware_long_training_telemetry_contract(
         "segnet_dual_lambda_active_observed": bool(seg_dual_lambda_active_observed),
         "posenet_dual_lambda_active_observed": bool(pose_dual_lambda_active_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
+        "section_byte_dual_lambda_active_observed": bool(
+            section_dual_lambda_active_observed
+        ),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
         "scorer_input_guard_dual_metric_observed": bool(guard_loss_observed),
         "scorer_input_contrast_floor_metric_observed": bool(
@@ -1199,6 +1221,17 @@ def _build_snerv_train_time_section_byte_control(
             "schema": "snerv_train_time_section_byte_metrics.v1",
             "archive_bytes": baseline_packet_bytes or sum(section_bytes.values()),
             "section_bytes": dict(sorted(section_bytes.items())),
+            "rate_score_per_byte": float(SNERV_CONTEST_RATE_SCORE_PER_BYTE),
+            "section_rate_scores": {
+                name: float(nbytes) * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE)
+                for name, nbytes in sorted(section_bytes.items())
+            },
+            **{
+                f"train_time_section_rate_score__{safe_dual_metric_key(name)}": (
+                    float(nbytes) * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE)
+                )
+                for name, nbytes in sorted(section_bytes.items())
+            },
             "authority": "macos_mlx_research_signal_false_authority",
         }
         if section_bytes
@@ -1243,6 +1276,7 @@ def _build_snerv_train_time_section_byte_control(
             "pending_section_rows": _snerv_pending_train_time_section_rows(
                 section_rows,
                 reason="hard_byte_ceiling_not_configured",
+                rate_score_per_byte=SNERV_CONTEST_RATE_SCORE_PER_BYTE,
             ),
             "pending_section_count": len(section_rows),
             "blockers": ["snerv_train_time_section_byte_hard_ceiling_missing"],
@@ -1273,6 +1307,10 @@ def _build_snerv_train_time_section_byte_control(
                     "section_name": name,
                     "bytes": nbytes,
                     "budget_bytes_if_actuated": budget,
+                    "rate_score": float(nbytes)
+                    * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE),
+                    "budget_rate_score_if_actuated": float(budget)
+                    * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE),
                     "pending_reason": (
                         "active_qat_loss_key_missing"
                         if name in {"decoder_payload", "lf_payload"}
@@ -1294,6 +1332,10 @@ def _build_snerv_train_time_section_byte_control(
                 "section_name": name,
                 "bytes": nbytes,
                 "budget_bytes": budget,
+                "rate_score": float(nbytes)
+                * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE),
+                "budget_rate_score": float(budget)
+                * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE),
                 "loss_weight_key": loss_key,
                 "operator": (
                     "decoder_coder_qat_dual_ascent"
@@ -1343,6 +1385,17 @@ def _snerv_train_time_section_byte_metric_payload_from_packet(
         "schema": "snerv_live_train_time_section_byte_metrics.v1",
         "archive_bytes": int(archive_bytes),
         "section_bytes": dict(sorted(section_bytes.items())),
+        "rate_score_per_byte": float(SNERV_CONTEST_RATE_SCORE_PER_BYTE),
+        "section_rate_scores": {
+            name: float(nbytes) * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE)
+            for name, nbytes in sorted(section_bytes.items())
+        },
+        **{
+            f"train_time_section_rate_score__{safe_dual_metric_key(name)}": (
+                float(nbytes) * float(SNERV_CONTEST_RATE_SCORE_PER_BYTE)
+            )
+            for name, nbytes in sorted(section_bytes.items())
+        },
         "authority": "macos_mlx_research_signal_false_authority",
         "byte_basis": "current_receiver_snar1_packet_sections",
         "live_profile": {
@@ -1582,11 +1635,14 @@ def _snerv_pending_train_time_section_rows(
     rows: Sequence[Mapping[str, Any]],
     *,
     reason: str,
+    rate_score_per_byte: float = SNERV_CONTEST_RATE_SCORE_PER_BYTE,
 ) -> list[dict[str, Any]]:
     return [
         {
             "section_name": str(row.get("name") or ""),
             "bytes": int(row.get("bytes") or 0),
+            "rate_score": float(int(row.get("bytes") or 0))
+            * float(rate_score_per_byte),
             "pending_reason": reason,
             **FALSE_AUTHORITY,
         }
@@ -5416,6 +5472,14 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             },
         )
         selected_authority = _selected_packet_official_payload_authority(packet.packet)
+        receiver_frame_replay = selected_authority.get(
+            "official_receiver_payload_frame_replay"
+        )
+        receiver_frame_replay = (
+            dict(receiver_frame_replay)
+            if isinstance(receiver_frame_replay, Mapping)
+            else {}
+        )
         tensor_map = _official_receiver_tensor_map_from_packet(packet.packet)
         decoded = unpack_snerv_archive(packet.packet)
         primitive_proof = execute_official_mfu_hfr_tub_decoder_payload(
@@ -5433,6 +5497,8 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
         )
         replay_passed = bool(
             selected_authority.get("frame_producing_official_export") is True
+            and selected_authority.get("receiver_payload_frame_replay_passed") is True
+            and receiver_frame_replay.get("receiver_payload_frame_replay_passed") is True
             and tensor_map.get("receiver_tensor_map_verified") is True
             and primitive_proof.get("receiver_runtime_decode_proven") is True
             and shape_matches
@@ -5462,6 +5528,11 @@ def _build_official_mfu_hfr_tub_long_training_replay_contract(
             "packet_bytes": len(packet.packet),
             "packet_sha256": _sha256_bytes(packet.packet),
             "selected_packet_authority": selected_authority,
+            "official_receiver_payload_frame_replay": receiver_frame_replay,
+            "receiver_payload_frame_replay_passed": bool(
+                receiver_frame_replay.get("receiver_payload_frame_replay_passed")
+                is True
+            ),
             "official_receiver_tensor_map": tensor_map,
             "official_receiver_runtime_decode_proof": primitive_proof,
             "official_tub_source_forward_fixture_replay": tub_fixture_replay,
@@ -8163,6 +8234,15 @@ def _verify_receiver_frame_decode(
         raise SnervMlxNativeExportError(f"receiver decode shape {decoded.shape} != reference {tuple(reference_shape)}")
     if not np.isfinite(decoded).all():
         raise SnervMlxNativeExportError("receiver decode produced nonfinite values")
+    archive_view = unpack_snerv_archive(archive.packet)
+    header = inspect_decoder_payload_header(archive_view.sections["decoder_payload"])
+    if str(header.get("schema") or "") == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA:
+        proof = _selected_packet_official_payload_frame_replay(archive.packet)
+        if proof.get("receiver_payload_frame_replay_passed") is not True:
+            raise SnervMlxNativeExportError(
+                "official MFU/HFR/TUB receiver payload did not prove frame replay: "
+                + ",".join(str(blocker) for blocker in proof.get("blockers") or ())
+            )
 
 
 def _snerv_receiver_frame_reconstruction_profile(
@@ -8586,6 +8666,9 @@ def _receiver_bound_official_primitives_export_binding(
         surrogate_receiver_runtime_decode_passed=bool(proof_passed),
         surrogate_receiver_contract_satisfied=bool(receiver_satisfied),
     )
+    out["official_receiver_payload_frame_replay"] = selected_authority.get(
+        "official_receiver_payload_frame_replay"
+    )
     out["unclosed_official_blockers"] = blockers
     out["blockers"] = blockers
     out["export_consumed_official_mfu"] = False
@@ -8600,6 +8683,7 @@ def _receiver_bound_official_primitives_export_binding(
     out["receiver_runtime_decode_authority"] = bool(
         out["official_receiver_runtime_decode_contract_proven"]
         and selected_authority.get("frame_decode_succeeded") is True
+        and selected_authority.get("receiver_payload_frame_replay_passed") is True
     )
     out["selected_packet_official_payload_runtime_decode_authority"] = bool(
         selected_authority["official_payload_runtime_decode_authority"]
@@ -8855,6 +8939,127 @@ def _official_receiver_tensor_category(name: str) -> str:
     return "official_decoder_graph_topology_payload"
 
 
+def _selected_packet_official_payload_frame_replay(packet: bytes) -> dict[str, Any]:
+    """Prove selected official payload bytes are the archive frame producer."""
+
+    out: dict[str, Any] = {
+        "schema": "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay.v1",
+        "packet_sha256": _sha256_bytes(packet),
+        "packet_bytes": len(packet),
+        "official_decoder_payload_selected": False,
+        "receiver_payload_frame_replay_attempted": True,
+        "official_receiver_runtime_decode_proven": False,
+        "payload_frame_decode_succeeded": False,
+        "archive_frame_decode_succeeded": False,
+        "frame_decode_succeeded": False,
+        "payload_archive_frames_match": False,
+        "receiver_payload_frame_replay_passed": False,
+        "source_forward_replay_bound_by_frame_replay": False,
+        "source_forward_replay_verified": False,
+        "source_forward_replay_authority": False,
+        "blockers": [],
+        **FALSE_AUTHORITY,
+    }
+    try:
+        decoded = unpack_snerv_archive(packet)
+        decoder_payload = decoded.sections["decoder_payload"]
+        header = inspect_decoder_payload_header(decoder_payload)
+        schema = str(header.get("schema") or "")
+        out["decoder_payload_schema"] = schema
+        out["decoder_payload_codec"] = str(header.get("codec") or "")
+        out["official_decoder_payload_selected"] = (
+            schema == DECODER_PAYLOAD_OFFICIAL_MFU_HFR_TUB_SCHEMA
+        )
+        if out["official_decoder_payload_selected"] is not True:
+            return {
+                **out,
+                "blockers": [
+                    "snerv_official_mfu_hfr_tub_decoder_payload_not_selected"
+                ],
+            }
+
+        payload_obj = decode_official_mfu_hfr_tub_decoder_payload(decoder_payload)
+        primitive_proof = payload_obj.execute()
+        payload_flat = np.asarray(payload_obj.decode_frames(), dtype=np.float32)
+        archive_pairs = np.asarray(decode_snerv_archive_frames(packet), dtype=np.float32)
+        if archive_pairs.ndim != 5:
+            raise SnervMlxNativeExportError(
+                "official archive frame replay expected pair tensor rank 5, "
+                f"got {archive_pairs.shape}"
+            )
+        archive_flat = archive_pairs.reshape(
+            int(archive_pairs.shape[0]) * int(archive_pairs.shape[1]),
+            int(archive_pairs.shape[2]),
+            int(archive_pairs.shape[3]),
+            int(archive_pairs.shape[4]),
+        )
+        payload_finite = bool(np.isfinite(payload_flat).all())
+        archive_finite = bool(np.isfinite(archive_pairs).all())
+        shape_matches = tuple(int(v) for v in payload_flat.shape) == tuple(
+            int(v) for v in archive_flat.shape
+        )
+        payload_frame_sha = _sha256_frame_array(payload_flat)
+        archive_flat_sha = _sha256_frame_array(archive_flat)
+        frame_hashes_match = bool(shape_matches and payload_frame_sha == archive_flat_sha)
+        passed = bool(
+            primitive_proof.get("receiver_runtime_decode_proven") is True
+            and payload_finite
+            and archive_finite
+            and shape_matches
+            and frame_hashes_match
+        )
+        blockers = []
+        if primitive_proof.get("receiver_runtime_decode_proven") is not True:
+            blockers.append(
+                "snerv_official_mfu_hfr_tub_receiver_runtime_decode_not_proven"
+            )
+        if not payload_finite:
+            blockers.append("snerv_official_mfu_hfr_tub_payload_frames_nonfinite")
+        if not archive_finite:
+            blockers.append("snerv_official_mfu_hfr_tub_archive_frames_nonfinite")
+        if not shape_matches:
+            blockers.append(
+                "snerv_official_mfu_hfr_tub_payload_archive_frame_shape_mismatch"
+            )
+        if shape_matches and not frame_hashes_match:
+            blockers.append(
+                "snerv_official_mfu_hfr_tub_payload_archive_frame_hash_mismatch"
+            )
+        return {
+            **out,
+            "decoder_payload_sha256": _sha256_bytes(decoder_payload),
+            "decoder_payload_bytes": len(decoder_payload),
+            "official_receiver_runtime_decode_proven": bool(
+                primitive_proof.get("receiver_runtime_decode_proven") is True
+            ),
+            "official_receiver_runtime_decode_proof": primitive_proof,
+            "payload_frame_decode_succeeded": True,
+            "archive_frame_decode_succeeded": True,
+            "frame_decode_succeeded": bool(passed),
+            "payload_frame_shape": [int(v) for v in payload_flat.shape],
+            "archive_frame_shape": [int(v) for v in archive_pairs.shape],
+            "archive_flat_frame_shape": [int(v) for v in archive_flat.shape],
+            "payload_frames_finite": payload_finite,
+            "archive_frames_finite": archive_finite,
+            "payload_archive_frame_shape_matches": shape_matches,
+            "payload_flat_frame_sha256": payload_frame_sha,
+            "archive_pair_frame_sha256": _sha256_frame_array(archive_pairs),
+            "archive_flat_frame_sha256": archive_flat_sha,
+            "payload_archive_frames_match": frame_hashes_match,
+            "receiver_payload_frame_replay_passed": passed,
+            "blockers": _ordered_unique(blockers),
+        }
+    except Exception as exc:
+        return {
+            **out,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "blockers": [
+                "snerv_official_mfu_hfr_tub_receiver_payload_frame_replay_failed",
+                f"snerv_official_mfu_hfr_tub_receiver_payload_frame_replay_exception_{type(exc).__name__}",
+            ],
+        }
+
+
 def _selected_packet_official_payload_authority(packet: bytes) -> dict[str, Any]:
     """Classify selected receiver bytes; intent metadata is not authority."""
 
@@ -8868,6 +9073,7 @@ def _selected_packet_official_payload_authority(packet: bytes) -> dict[str, Any]
         "linear_surrogate_decoder_selected": False,
         "frame_decode_attempted": False,
         "frame_decode_succeeded": False,
+        "receiver_payload_frame_replay_passed": False,
         "official_payload_runtime_decode_authority": False,
         "frame_producing_official_export": False,
         "status": "unclassified",
@@ -8887,6 +9093,33 @@ def _selected_packet_official_payload_authority(packet: bytes) -> dict[str, Any]
             out["official_decoder_payload_selected"]
         )
         out["frame_decode_attempted"] = True
+        if out["official_decoder_payload_selected"]:
+            frame_replay = _selected_packet_official_payload_frame_replay(packet)
+            out["official_receiver_payload_frame_replay"] = frame_replay
+            out["receiver_payload_frame_replay_passed"] = bool(
+                frame_replay.get("receiver_payload_frame_replay_passed") is True
+            )
+            out["frame_decode_succeeded"] = bool(
+                frame_replay.get("archive_frame_decode_succeeded") is True
+            )
+            if frame_replay.get("archive_frame_shape") is not None:
+                out["decoded_frame_shape"] = list(frame_replay["archive_frame_shape"])
+            if frame_replay.get("receiver_payload_frame_replay_passed") is True:
+                out["status"] = "frame_producing_official_export"
+                out["official_payload_runtime_decode_authority"] = True
+                out["frame_producing_official_export"] = True
+            else:
+                out["status"] = "official_payload_selected_not_frame_producing"
+                out["blockers"] = _ordered_unique(
+                    [
+                        "snerv_official_mfu_hfr_tub_selected_payload_not_frame_producing",
+                        *(
+                            str(blocker)
+                            for blocker in frame_replay.get("blockers") or ()
+                        ),
+                    ]
+                )
+            return out
         try:
             frames = decode_snerv_archive_frames(packet)
         except Exception as exc:
@@ -8951,7 +9184,10 @@ def _official_primitives_blocker_evidence(
         },
         "snerv_official_mfu_hfr_tub_source_forward_replay_missing": {
             "missing_artifact": ("same-input official torch forward replay against the portable receiver graph"),
-            "current_evidence": ("surrogate SNAR1 packet decodes, but no official source graph output is compared"),
+            "current_evidence": (
+                "selected receiver payload frame replay may pass, but no official "
+                "source graph output is compared"
+            ),
             "closure_test": (
                 "run official source forward and portable receiver forward on the "
                 "same frames/weights and record max error plus output sha256"
@@ -8965,6 +9201,8 @@ def _official_primitives_blocker_evidence(
             str(blocker)
             == "snerv_official_mfu_hfr_tub_native_mlx_export_not_bound_to_official_payload"
             and selected_packet_authority.get("frame_producing_official_export") is True
+            and selected_packet_authority.get("receiver_payload_frame_replay_passed")
+            is True
         )
         rows.append(
             {
@@ -8983,6 +9221,10 @@ def _official_primitives_blocker_evidence(
                 ),
                 "selected_packet_frame_producing_official_export": bool(
                     selected_packet_authority.get("frame_producing_official_export")
+                    is True
+                ),
+                "selected_packet_receiver_payload_frame_replay_passed": bool(
+                    selected_packet_authority.get("receiver_payload_frame_replay_passed")
                     is True
                 ),
                 "surrogate_receiver_runtime_decode_passed": bool(surrogate_receiver_runtime_decode_passed),
@@ -9758,6 +10000,11 @@ def _repo_root(repo_root: str | Path | None) -> Path:
 
 def _sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _sha256_frame_array(array: np.ndarray) -> str:
+    arr = np.ascontiguousarray(np.asarray(array, dtype=np.float32))
+    return _sha256_bytes(arr.tobytes())
 
 
 __all__ = [

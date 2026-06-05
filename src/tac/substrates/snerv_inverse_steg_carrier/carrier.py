@@ -199,6 +199,15 @@ class SnervModelSizeConfig:
             "official_tub_output2_export_mode",
             str(self.official_tub_output2_export_mode).strip().lower(),
         )
+        if (
+            bool(self.official_tub_output2_store_for_receiver_proof)
+            and self.official_tub_output2_export_mode == "auto_elide"
+        ):
+            object.__setattr__(
+                self,
+                "official_tub_output2_export_mode",
+                "proof_only",
+            )
         object.__setattr__(
             self,
             "official_tub_output2_store_for_receiver_proof_requested",
