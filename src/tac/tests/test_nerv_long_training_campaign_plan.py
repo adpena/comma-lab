@@ -1286,13 +1286,20 @@ def test_long_training_campaign_plan_requires_and_accepts_snerv_nondegenerate_pr
     snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
     assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert snerv["snerv_renderer_nondegenerate_gate"]["passed"] is True
-    assert snerv["local_mlx_launch_command_ready"] is True
-    assert snerv["implementation_status"] == "native_rate_aware_long_training_queue_ready"
+    assert snerv["local_mlx_launch_command_ready"] is False
+    assert snerv["implementation_status"] == "snerv_scoreaware_curriculum_blocked"
+    assert "snerv_scorer_loop_qat_pose_guard_not_ready" in snerv["blockers"]
+    assert "snerv_native_scorer_loop_best_packet_not_materialized" in snerv[
+        "blockers"
+    ]
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
     assert "snerv_scorer_tether_smoke_report_missing" not in (
         queue_contract["queue_launch_blockers"]
     )
     assert "snerv_renderer_nondegenerate_smoke_missing" not in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert "snerv_scorer_loop_qat_pose_guard_not_ready" in (
         queue_contract["queue_launch_blockers"]
     )
     assert queue_contract["snerv_renderer_nondegenerate_gate"]["passed"] is True

@@ -1753,6 +1753,7 @@ def _snerv_campaign_row(
     pr95_distortion_blockers = list(
         pr95_distortion_guard.get("blockers") or []
     )
+    curriculum_blockers = [str(v) for v in curriculum.get("blockers") or () if v]
     rate_plausible_for_long_training = _snerv_rate_plausible_for_long_training(candidate)
     hard_byte_ceiling_satisfied_for_long_training = (
         _snerv_hard_byte_ceiling_satisfied_for_long_training(
@@ -1783,7 +1784,7 @@ def _snerv_campaign_row(
             *list(scorer_tether_smoke_gate.get("blockers") or []),
             *list(renderer_nondegenerate_gate.get("blockers") or []),
             *list(source_parity["required_blockers"]),
-            *list(curriculum.get("blockers") or []),
+            *curriculum_blockers,
             *feedback_evidence_blockers,
             *_snerv_lf_payload_recode_campaign_blockers(
                 lf_recode_admission_plan
@@ -1797,6 +1798,7 @@ def _snerv_campaign_row(
         and not pr95_distortion_blockers
         and not source_parity["required_blockers"]
     )
+    curriculum_ready = not curriculum_blockers
     scorer_tether_smoke_ready = not scorer_tether_smoke_gate.get("blockers")
     renderer_nondegenerate_ready = not renderer_nondegenerate_gate.get("blockers")
     prelaunch_proof_ready = bool(
@@ -1804,6 +1806,7 @@ def _snerv_campaign_row(
     )
     launch_ready = bool(
         source_controls_ready
+        and curriculum_ready
         and prelaunch_proof_ready
         and (
             True
@@ -1831,6 +1834,8 @@ def _snerv_campaign_row(
             if not scorer_tether_smoke_ready
             else "native_rate_aware_long_training_renderer_proof_blocked"
             if not renderer_nondegenerate_ready
+            else "snerv_scoreaware_curriculum_blocked"
+            if not curriculum_ready
             else (
                 "bounded_native_export_scorer_loop_stage_ready"
                 if bounded_proof_only
@@ -2254,6 +2259,9 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "snerv_score_aware_long_training_telemetry_contract_failed",
         "snerv_scorer_domain_tether_lambda_inactive_telemetry",
         "snerv_scorer_domain_tether_missing_telemetry",
+        "snerv_scorer_loop_qat_no_accepted_improvement",
+        "snerv_scorer_loop_qat_pose_guard_not_ready",
+        "snerv_scorer_loop_qat_receiver_contract_failed",
         "snerv_scorer_tether_smoke_failed",
         "snerv_scorer_tether_smoke_report_missing",
         "snerv_scorer_tether_smoke_schema_mismatch",
