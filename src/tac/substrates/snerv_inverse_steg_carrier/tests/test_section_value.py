@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""NO-FAKE tests for SNeRV SNAR1 semantic section neutralization."""
+"""NO-FAKE tests for SNeRV receiver semantic section neutralization."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
     unpack_snerv_archive,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
@@ -32,7 +33,7 @@ from tac.substrates.snerv_inverse_steg_carrier.section_value import (
 )
 
 
-def _packet() -> bytes:
+def _packet(*, wire_format: str = "snar1") -> bytes:
     step_maps = [
         np.exp2(
             np.linspace(0.0, 1.0, 9, dtype=np.float32).reshape(3, 3) + idx * 0.1
@@ -43,7 +44,8 @@ def _packet() -> bytes:
     decoder.kernels[0]["LH"][:] = 0.125
     decoder.kernels[0]["HL"][:] = -0.25
     decoder.kernels[0]["HH"][:] = 0.5
-    archive = pack_snerv_archive(
+    packer = pack_snerv_archive_snar2 if wire_format == "snar2" else pack_snerv_archive
+    archive = packer(
         metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0] * 6),
         lf_payload=encode_lf_quant_payload(
             [
@@ -127,6 +129,7 @@ def test_snerv_section_value_neutralizes_decoder_with_receiver_decode() -> None:
     report = neutralize_snerv_section(packet, "decoder_payload")
 
     assert report["schema"] == SNERV_SNAR1_SECTION_VALUE_SCHEMA
+    assert report["packet_wire_format"] == "snar1"
     assert report["section"] == "decoder_payload"
     assert report["section_changed"] is True
     assert report["receiver_decode_status"] == "receiver_decode_succeeded"
@@ -145,6 +148,21 @@ def test_snerv_section_value_neutralizes_decoder_with_receiver_decode() -> None:
     assert "runtime_consumption_proof_not_executed_for_neutralized_packet" in row[
         "blockers"
     ]
+
+
+def test_snerv_section_value_preserves_snar2_wire_format() -> None:
+    packet = _packet(wire_format="snar2")
+
+    report = neutralize_snerv_section(packet, "step_map_packet")
+
+    assert report["schema"] == SNERV_SNAR1_SECTION_VALUE_SCHEMA
+    assert report["packet_wire_format"] == "snar2"
+    assert report["baseline_packet_schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert report["neutralized_packet_schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert report["packet"].startswith(b"SNAR2")
+    assert report["section_value_row"]["row_id"].startswith("snerv_snar2_")
+    assert report["section_value_row"]["packet_wire_format"] == "snar2"
+    assert decode_snerv_archive_frames(report["packet"]).shape == (1, 2, 3, 6, 6)
 
 
 def test_snerv_section_value_neutralizes_step_maps_and_rejects_required_lf() -> None:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Profile SNeRV SNAR1 binary/package byte attribution."""
+"""Profile SNeRV receiver-packet/package byte attribution."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "input_path",
         type=Path,
-        help="SNeRV archive.zip containing 0.bin or raw .snar packet.",
+        help="SNeRV archive.zip containing 0.bin or raw SNAR1/SNAR2 packet.",
     )
     parser.add_argument(
         "--output",

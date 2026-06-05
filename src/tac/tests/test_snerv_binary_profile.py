@@ -20,11 +20,12 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_quant_payload,
     inspect_lf_quant_payload_header,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
 
 
-def _snar1_packet(*, lf_codec: str = "int64_lzma") -> bytes:
+def _snar_packet(*, lf_codec: str = "int64_lzma", wire_format: str = "snar1") -> bytes:
     rng = np.random.default_rng(7)
     lf_planes = [
         rng.integers(-12, 13, size=(32, 32), dtype=np.int64)
@@ -34,7 +35,8 @@ def _snar1_packet(*, lf_codec: str = "int64_lzma") -> bytes:
         np.full((32, 32), 2.0 + idx * 0.01, dtype=np.float32)
         for idx in range(len(lf_planes))
     ]
-    archive = pack_snerv_archive(
+    packer = pack_snerv_archive_snar2 if wire_format == "snar2" else pack_snerv_archive
+    archive = packer(
         metadata_payload=encode_lf_metadata_payload(
             lf_zero_points=np.linspace(0.0, 1.0, len(lf_planes), dtype=np.float32),
         ),
@@ -47,12 +49,21 @@ def _snar1_packet(*, lf_codec: str = "int64_lzma") -> bytes:
             "channels": 4,
             "height": 64,
             "width": 64,
+            "carrier_hw": [64, 64],
             "lf_plane_count": len(lf_planes),
             "levels": 2,
             "wavelet": "db2",
         },
     )
     return archive.packet
+
+
+def _snar1_packet(*, lf_codec: str = "int64_lzma") -> bytes:
+    return _snar_packet(lf_codec=lf_codec, wire_format="snar1")
+
+
+def _snar2_packet(*, lf_codec: str = "int64_lzma") -> bytes:
+    return _snar_packet(lf_codec=lf_codec, wire_format="snar2")
 
 
 def test_snerv_lf_v2_spatial_delta_payload_decodes_and_profiles(
@@ -98,8 +109,13 @@ def test_snerv_binary_profile_attributes_archive_sections(tmp_path: Path) -> Non
 
     assert profile["schema"] == "snerv_binary_profile.v1"
     assert profile["input_kind"] == "contest_archive_zip"
+    assert profile["packet_wire_format"] == "snar1"
+    assert profile["receiver_packet_wire_format"] == "snar1"
+    assert profile["packet_bytes"] == len(packet)
+    assert profile["receiver_packet_bytes"] == len(packet)
     assert profile["package_profile"]["zip_member_count"] == 2
     assert profile["snar1_packet_bytes"] == len(packet)
+    assert profile["snar2_packet_bytes"] is None
     assert profile["charged_archive_bytes"] == archive_path.stat().st_size
     assert profile["charged_rate_score"] > 0.0
     assert profile["lf_quant_profile"]["plane_count"] == 8
@@ -131,6 +147,7 @@ def test_snerv_binary_profile_accepts_single_member_snar_zip_for_rate_custody(
     profile = build_snerv_binary_profile(input_path=archive_path, frontier_bytes=1)
 
     assert profile["input_kind"] == "single_member_snar_archive_zip"
+    assert profile["receiver_packet_wire_format"] == "snar1"
     assert profile["charged_archive_bytes"] == archive_path.stat().st_size
     assert profile["snar1_packet_bytes"] == len(packet)
     assert profile["package_profile"]["zip_packet_member_name"] == "x"
@@ -139,6 +156,70 @@ def test_snerv_binary_profile_accepts_single_member_snar_zip_for_rate_custody(
     assert "not_packaged_as_contest_archive_zip" in profile["blockers"]
     assert profile["score_claim"] is False
     assert profile["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_binary_profile_accepts_raw_snar2_packet(tmp_path: Path) -> None:
+    packet_path = tmp_path / "candidate.snar2"
+    packet = _snar2_packet()
+    packet_path.write_bytes(packet)
+
+    profile = build_snerv_binary_profile(input_path=packet_path)
+
+    assert profile["input_kind"] == "raw_snar2_packet"
+    assert profile["packet_wire_format"] == "snar2"
+    assert profile["receiver_packet_wire_format"] == "snar2"
+    assert profile["packet_bytes"] == len(packet)
+    assert profile["receiver_packet_bytes"] == len(packet)
+    assert profile["snar1_packet_bytes"] is None
+    assert profile["snar1_packet_sha256"] is None
+    assert profile["snar2_packet_bytes"] == len(packet)
+    assert profile["snar2_packet_sha256"] == profile["receiver_packet_sha256"]
+    assert profile["snar2_header_bytes"] == profile["receiver_packet_header_bytes"]
+    assert profile["snar1_metadata"] is None
+    assert profile["snar2_metadata"]["n_pairs"] == 1
+    assert profile["lf_quant_profile"]["decode_status"] == "decoded"
+    assert "not_packaged_as_contest_archive_zip" in profile["blockers"]
+
+
+def test_snerv_binary_profile_attributes_snar2_contest_archive_without_snar1_alias(
+    tmp_path: Path,
+) -> None:
+    packet = _snar2_packet()
+    archive_path = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("0.bin", packet)
+
+    profile = build_snerv_binary_profile(input_path=archive_path, frontier_bytes=1)
+
+    assert profile["input_kind"] == "contest_archive_zip"
+    assert profile["package_profile"]["packet_wire_format"] == "snar2"
+    assert profile["receiver_packet_wire_format"] == "snar2"
+    assert profile["receiver_packet_bytes"] == len(packet)
+    assert profile["snar1_packet_bytes"] is None
+    assert profile["snar2_packet_bytes"] == len(packet)
+    assert profile["charged_archive_bytes"] == archive_path.stat().st_size
+    assert "not_packaged_as_contest_archive_zip" not in profile["blockers"]
+    assert profile["score_claim"] is False
+    assert profile["ready_for_exact_eval_dispatch"] is False
+
+
+def test_snerv_binary_profile_accepts_single_member_snar2_zip_for_rate_custody(
+    tmp_path: Path,
+) -> None:
+    packet = _snar2_packet()
+    archive_path = tmp_path / "archive.zip"
+    with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("x", packet)
+
+    profile = build_snerv_binary_profile(input_path=archive_path, frontier_bytes=1)
+
+    assert profile["input_kind"] == "single_member_snar_archive_zip"
+    assert profile["package_profile"]["packet_wire_format"] == "snar2"
+    assert profile["receiver_packet_wire_format"] == "snar2"
+    assert profile["receiver_packet_bytes"] == len(packet)
+    assert profile["snar1_packet_bytes"] is None
+    assert profile["snar2_packet_bytes"] == len(packet)
+    assert "not_packaged_as_contest_archive_zip" in profile["blockers"]
 
 
 def test_write_snerv_binary_profile_supports_raw_snar1_packet(tmp_path: Path) -> None:
@@ -150,5 +231,7 @@ def test_write_snerv_binary_profile_supports_raw_snar1_packet(tmp_path: Path) ->
 
     assert out_path.is_file()
     assert profile["input_kind"] == "raw_snar1_packet"
+    assert profile["receiver_packet_wire_format"] == "snar1"
+    assert profile["snar2_packet_bytes"] is None
     assert "not_packaged_as_contest_archive_zip" in profile["blockers"]
     assert profile["package_profile"]["zip_members"] == []

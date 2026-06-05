@@ -18,6 +18,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
 from tools.profile_snerv_snar1_section_value import (
@@ -29,7 +30,7 @@ from tools.profile_snerv_snar1_section_value import (
 )
 
 
-def _packet() -> bytes:
+def _packet(*, wire_format: str = "snar1") -> bytes:
     step_maps = [
         np.exp2(
             np.linspace(0.0, 1.0, 9, dtype=np.float32).reshape(3, 3) + idx * 0.1
@@ -40,7 +41,8 @@ def _packet() -> bytes:
     decoder.kernels[0]["LH"][:] = 0.125
     decoder.kernels[0]["HL"][:] = -0.25
     decoder.kernels[0]["HH"][:] = 0.5
-    archive = pack_snerv_archive(
+    packer = pack_snerv_archive_snar2 if wire_format == "snar2" else pack_snerv_archive
+    archive = packer(
         metadata_payload=encode_lf_metadata_payload(lf_zero_points=[0.0] * 6),
         lf_payload=encode_lf_quant_payload(
             [
@@ -79,6 +81,7 @@ def test_snerv_snar1_section_value_profile_writes_receiver_decodable_variants(
     )
 
     assert report["schema"] == PROFILE_SCHEMA
+    assert report["input_wire_format"] == "snar1"
     assert report["score_claim"] is False
     assert report["variant_count"] == 3
     assert len(report["section_value_rows"]) == 2
@@ -122,8 +125,37 @@ def test_snerv_snar1_section_value_cli_accepts_archive_zip(tmp_path: Path) -> No
 
     payload = json.loads(output_json.read_text(encoding="utf-8"))
     assert payload["input_kind"] == "archive_zip_member_0_bin"
+    assert payload["input_wire_format"] == "snar1"
     assert payload["variant_count"] == 2
     assert payload["section_value_rows"][0]["section_id"] == "snerv_decoder_payload"
+
+
+def test_snerv_section_value_profile_preserves_snar2_variants(tmp_path: Path) -> None:
+    packet_path = tmp_path / "candidate.snar2"
+    packet_path.write_bytes(_packet(wire_format="snar2"))
+
+    report = build_snerv_snar1_section_value_profile(
+        input_path=packet_path,
+        variant_output_dir=tmp_path / "variants_snar2",
+        requested_sections=("step_map_packet",),
+        raw_argv=["unit"],
+    )
+
+    assert report["schema"] == PROFILE_SCHEMA
+    assert report["input_kind"] == "raw_snar2_packet"
+    assert report["input_wire_format"] == "snar2"
+    assert report["input_packet_schema"] == "snerv_inverse_steg_archive.snar2.v1"
+    assert report["variants"][0]["packet_path"].endswith("baseline.snar2")
+    assert report["variants"][1]["packet_path"].endswith(
+        "neutralized_step_map_packet.snar2"
+    )
+    for variant in report["variants"]:
+        packet = Path(variant["packet_path"]).read_bytes()
+        assert packet.startswith(b"SNAR2")
+        assert decode_snerv_archive_frames(packet).shape == (1, 2, 3, 6, 6)
+    row = report["section_value_rows"][0]
+    assert row["packet_wire_format"] == "snar2"
+    assert row["row_id"].startswith("snerv_snar2_")
 
 
 def test_snerv_snar1_section_value_profile_reuses_only_identical_variants(

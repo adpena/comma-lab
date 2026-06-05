@@ -88,6 +88,9 @@ def _runner_report(tmp_path: Path) -> dict[str, object]:
             "profile_path": (tmp_path / "snerv_binary_profile.json").as_posix(),
             "verdict": "current_snerv_artifact_rate_blocked_by_explicit_lf_payload",
             "charged_archive_bytes": 10_057_021,
+            "receiver_packet_bytes": 10_030_524,
+            "receiver_packet_wire_format": "snar2",
+            "receiver_packet_sha256": "receiver-sha",
             "snar1_packet_bytes": 10_030_524,
             "lf_payload_bytes": 9_996_235,
             "lf_payload_fraction_of_packet": 0.9965,
@@ -605,6 +608,9 @@ def test_build_nerv_candidate_feedback_row_preserves_scope_and_false_authority(
     assert row["measured_archive_bytes"] == 42_000
     assert row["archive_sha256"] == "archive-sha"
     assert row["snerv_binary_profile_written"] is True
+    assert row["snerv_binary_profile_receiver_packet_bytes"] == 10_030_524
+    assert row["snerv_binary_profile_receiver_packet_wire_format"] == "snar2"
+    assert row["snerv_binary_profile_receiver_packet_sha256"] == "receiver-sha"
     assert (
         row["snerv_binary_profile_verdict"]
         == "current_snerv_artifact_rate_blocked_by_explicit_lf_payload"

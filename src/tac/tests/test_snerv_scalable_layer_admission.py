@@ -30,6 +30,7 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
     encode_lf_metadata_payload,
     encode_lf_quant_payload,
     pack_snerv_archive,
+    pack_snerv_archive_snar2,
 )
 from tac.substrates.snerv_inverse_steg_carrier.carrier import HfGenerationDecoder
 
@@ -69,6 +70,28 @@ def test_scalable_layer_admission_prices_real_snar_sections_without_overclaim(
         assert decision["decision"] == DEMOTE
         assert "delta_nonrate_score_missing" in decision["blockers"]
     assert "snerv_scalable_layer_section_value_profile_missing" in report["blockers"]
+
+
+def test_scalable_layer_admission_prices_snar2_receiver_packet_without_snar1_alias(
+    tmp_path: Path,
+) -> None:
+    packet_path = tmp_path / "candidate.snar2"
+    packet = _snar_packet(wire_format="snar2")
+    packet_path.write_bytes(packet)
+
+    report = build_snerv_scalable_layer_admission_report(input_path=packet_path)
+
+    assert report["input_kind"] == "raw_snar2_packet"
+    assert report["packet_wire_format"] == "snar2"
+    assert report["receiver_packet_bytes"] == len(packet)
+    assert report["receiver_packet_sha256"]
+    assert report["snar1_packet_bytes"] is None
+    rows = {row["layer_id"]: row for row in report["layer_rows"]}
+    assert rows["snerv_packet_header_overhead"]["layer_bytes"] > 0
+    for row in report["section_value_rows"]:
+        assert row["baseline_packet_sha256"] == report["receiver_packet_sha256"]
+    assert report["score_claim"] is False
+    assert report["ready_for_exact_eval_dispatch"] is False
 
 
 def test_scalable_layer_admission_uses_scorer_deltas_for_optional_layers(
@@ -140,7 +163,7 @@ def test_scalable_layer_admission_writer_and_markdown(tmp_path: Path) -> None:
     assert "SNeRV Scalable-Layer Admission" in markdown
 
 
-def _snar_packet() -> bytes:
+def _snar_packet(*, wire_format: str = "snar1") -> bytes:
     rng = np.random.default_rng(12)
     lf_planes = [
         rng.integers(-7, 8, size=(8, 8), dtype=np.int64)
@@ -150,7 +173,8 @@ def _snar_packet() -> bytes:
         np.full((8, 8), 1.0 + idx * 0.125, dtype=np.float32)
         for idx in range(len(lf_planes))
     ]
-    archive = pack_snerv_archive(
+    packer = pack_snerv_archive_snar2 if wire_format == "snar2" else pack_snerv_archive
+    archive = packer(
         metadata_payload=encode_lf_metadata_payload(
             lf_zero_points=np.linspace(0.0, 1.0, len(lf_planes), dtype=np.float32),
         ),
@@ -163,6 +187,7 @@ def _snar_packet() -> bytes:
             "channels": 2,
             "height": 16,
             "width": 16,
+            "carrier_hw": [16, 16],
             "lf_plane_count": len(lf_planes),
             "levels": 2,
             "wavelet": "db2",

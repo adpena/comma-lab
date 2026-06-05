@@ -25,6 +25,8 @@ def _write_binary_profile(
             {
                 "schema": "snerv_binary_profile.v1",
                 "charged_archive_bytes": archive_bytes,
+                "receiver_packet_bytes": archive_bytes - 1000,
+                "receiver_packet_wire_format": "snar1",
                 "snar1_packet_bytes": archive_bytes - 1000,
                 "section_summary": {
                     "largest_section": "decoder_payload",
@@ -207,6 +209,52 @@ def test_skip_high_comparison_finds_rate_vs_value_domain_crux(tmp_path: Path) ->
     assert "rate-admissible scalar skip-high" in md
     assert "SegNet frame-1 delta" in md
     assert "FUNDAMENTAL" not in md
+
+
+def test_skip_high_comparison_reads_receiver_packet_bytes_without_legacy_snar1_key(
+    tmp_path: Path,
+) -> None:
+    scalar = tmp_path / "scalar.json"
+    payload = {
+        "schema": "snerv_binary_profile.v1",
+        "charged_archive_bytes": 91_445,
+        "receiver_packet_bytes": 90_445,
+        "receiver_packet_wire_format": "snar2",
+        "section_summary": {
+            "largest_section": "decoder_payload",
+            "largest_section_bytes": 89_445,
+        },
+        "decoder_payload_header": {
+            "skip_high_storage": {
+                "schema": "snerv_official_skip_high_storage.v1",
+                "codec": "scalar_mean_float64",
+                "stored_shape": [1, 1, 1, 1],
+                "source_shape": [1200, 3, 192, 256],
+                "stored_raw_bytes": 8,
+                "source_raw_bytes": 1_415_577_600,
+                "raw_byte_savings": 1_415_577_592,
+                "receiver_expands_skip_high": True,
+                "lossless_relative_to_source_skip_high": False,
+            }
+        },
+        "blockers": ["snerv_binary_profile_is_rate_only_not_score_authority"],
+        "score_claim": False,
+        "promotion_eligible": False,
+        "ready_for_exact_eval_dispatch": False,
+    }
+    scalar.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    out = build_skip_high_mode_comparison(
+        binary_profiles={"scalar": scalar},
+        hard_byte_ceiling=178_000,
+        baseline_label="scalar",
+        candidate_label="scalar",
+    )
+
+    row = out["binary_profile_rows"][0]
+    assert row["packet_bytes"] == 90_445
+    assert row["packet_wire_format"] == "snar2"
+    assert row["scalar_collapse_risk"] is True
 
 
 def test_skip_high_comparison_reports_upstream_geometry_component_deltas(

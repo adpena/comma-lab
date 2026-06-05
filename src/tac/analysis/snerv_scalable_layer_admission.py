@@ -2,7 +2,7 @@
 """Scalable-layer admission accounting for receiver-visible SNeRV packets.
 
 This module does not implement a new SNeRV architecture and does not grant
-score authority.  It turns a real SNAR1 packet into base/enhancement byte rows
+score authority.  It turns a real receiver packet into base/enhancement byte rows
 and applies the contest byte price to decide what scorer evidence is missing
 before a scalable-layer fork deserves its own lane.
 """
@@ -48,7 +48,7 @@ def build_snerv_scalable_layer_admission_report(
     full_video_coverage: bool = False,
     frontier_bytes: int = DEFAULT_FRONTIER_BYTES,
 ) -> dict[str, Any]:
-    """Return layer byte-price rows for a real SNAR1 packet or archive.zip.
+    """Return layer byte-price rows for a real SNAR1/SNAR2 packet or archive.zip.
 
     ``layer_nonrate_deltas`` maps a layer id to the measured non-rate score
     increase caused by removing that layer.  Positive values mean the layer is
@@ -100,7 +100,7 @@ def build_snerv_scalable_layer_admission_report(
         {
             "schema": SCHEMA,
             "family": "snerv",
-            "candidate_id": profile.get("snar1_packet_sha256"),
+            "candidate_id": _packet_sha256(profile),
             "axis_tag": AXIS_TAG,
             "section_value_rows": section_value_rows,
             "blockers": [
@@ -159,7 +159,11 @@ def build_snerv_scalable_layer_admission_report(
         "family": "snerv",
         "input_path": str(Path(input_path).expanduser().resolve(strict=False)),
         "input_kind": profile["input_kind"],
-        "snar1_packet_bytes": int(profile["snar1_packet_bytes"]),
+        "packet_wire_format": profile.get("receiver_packet_wire_format")
+        or profile.get("packet_wire_format"),
+        "receiver_packet_bytes": int(profile["receiver_packet_bytes"]),
+        "receiver_packet_sha256": _packet_sha256(profile),
+        "snar1_packet_bytes": profile.get("snar1_packet_bytes"),
         "charged_archive_bytes": int(profile["charged_archive_bytes"]),
         "frontier_bytes": int(frontier_bytes),
         "rate_score_per_byte": float(RATE_SCORE_PER_BYTE),
@@ -255,7 +259,7 @@ def _layer_row(
     missing = [section for section in sections if section not in section_bytes]
     if missing:
         raise SnervScalableLayerAdmissionError(
-            f"SNAR1 profile missing sections for {layer_id}: {missing}"
+            f"SNeRV receiver profile missing sections for {layer_id}: {missing}"
         )
     bytes_total = int(sum(int(section_bytes[section]) for section in sections))
     price = float(bytes_total * RATE_SCORE_PER_BYTE)
@@ -295,7 +299,12 @@ def _header_row(
     profile: Mapping[str, Any],
     deltas: Mapping[str, float],
 ) -> dict[str, Any]:
-    bytes_total = int(profile.get("snar1_header_bytes") or 0)
+    bytes_total = int(
+        profile.get("receiver_packet_header_bytes")
+        or profile.get("packet_header_bytes")
+        or profile.get("snar1_header_bytes")
+        or 0
+    )
     price = float(bytes_total * RATE_SCORE_PER_BYTE)
     measured = deltas.get(HEADER_LAYER_ID)
     return {
@@ -320,7 +329,7 @@ def _section_value_rows_from_layers(
     full_video_coverage: bool,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    packet_sha = str(profile.get("snar1_packet_sha256") or "")
+    packet_sha = _packet_sha256(profile)
     archive_sha = str(profile.get("input_sha256") or packet_sha)
     for row in layer_rows:
         if not bool(row.get("optional_layer")):
@@ -361,6 +370,16 @@ def _section_value_rows_from_layers(
             }
         )
     return out
+
+
+def _packet_sha256(profile: Mapping[str, Any]) -> str:
+    return str(
+        profile.get("receiver_packet_sha256")
+        or profile.get("packet_sha256")
+        or profile.get("snar1_packet_sha256")
+        or profile.get("snar2_packet_sha256")
+        or ""
+    )
 
 
 def _normalize_layer_nonrate_deltas(values: Mapping[str, Any]) -> dict[str, float]:

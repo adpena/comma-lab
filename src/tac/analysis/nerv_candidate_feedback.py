@@ -1503,6 +1503,18 @@ def build_nerv_candidate_feedback_row(
         "snerv_binary_profile_charged_archive_bytes": snerv_profile.get(
             "charged_archive_bytes"
         ),
+        "snerv_binary_profile_receiver_packet_bytes": snerv_profile.get(
+            "receiver_packet_bytes",
+            snerv_profile.get("packet_bytes", snerv_profile.get("snar1_packet_bytes")),
+        ),
+        "snerv_binary_profile_receiver_packet_wire_format": snerv_profile.get(
+            "receiver_packet_wire_format",
+            snerv_profile.get("packet_wire_format"),
+        ),
+        "snerv_binary_profile_receiver_packet_sha256": snerv_profile.get(
+            "receiver_packet_sha256",
+            snerv_profile.get("packet_sha256", snerv_profile.get("snar1_packet_sha256")),
+        ),
         "snerv_binary_profile_snar1_packet_bytes": snerv_profile.get(
             "snar1_packet_bytes"
         ),

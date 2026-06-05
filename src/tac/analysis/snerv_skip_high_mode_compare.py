@@ -316,7 +316,13 @@ def _binary_profile_row(
         "sha256": _sha256_file(resolved),
         "schema": payload.get("schema"),
         "archive_bytes": int(archive_bytes),
-        "packet_bytes": _int_or_none(payload.get("snar1_packet_bytes")),
+        "packet_bytes": _int_or_none(
+            payload.get("receiver_packet_bytes")
+            or payload.get("packet_bytes")
+            or payload.get("snar1_packet_bytes")
+        ),
+        "packet_wire_format": payload.get("receiver_packet_wire_format")
+        or payload.get("packet_wire_format"),
         "under_hard_byte_ceiling": int(archive_bytes) <= int(hard_byte_ceiling),
         "bytes_over_hard_ceiling": int(archive_bytes) - int(hard_byte_ceiling),
         "skip_high_codec": skip.get("codec"),

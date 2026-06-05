@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Binary attribution profile for SNeRV SNAR1 packets and contest packages.
+"""Binary attribution profile for SNeRV receiver packets and contest packages.
 
 This is rate/grammar evidence only. It deliberately imports no scorer code and
 never grants score, rank, kill, promotion, CPU-auth, or CUDA-auth authority.
@@ -24,6 +24,10 @@ from tac.analysis.nerv_modelsize_budget import (
 )
 from tac.substrates.snerv_inverse_steg_carrier.archive import (
     SECTION_ORDER,
+    SNERV_ARCHIVE_MAGIC,
+    SNERV_ARCHIVE_MAGIC_V2,
+    SNERV_ARCHIVE_SCHEMA,
+    SNERV_ARCHIVE_SCHEMA_V2,
     SnervArchiveError,
     decode_lf_metadata_payload,
     inspect_decoder_payload_header,
@@ -34,7 +38,6 @@ from tac.substrates.snerv_inverse_steg_carrier.archive import (
 SCHEMA = "snerv_binary_profile.v1"
 AXIS_TAG = "[local-rate-profile false-authority]"
 DEFAULT_FRONTIER_BYTES = 178_493
-SNAR1_MAGIC = b"SNAR1"
 FALSE_AUTHORITY = {
     "score_claim": False,
     "frontier_score_claim": False,
@@ -56,14 +59,17 @@ def build_snerv_binary_profile(
     """Build a machine-readable SNeRV binary attribution profile.
 
     ``input_path`` may be a contest-shaped ``archive.zip`` containing ``0.bin``
-    or a raw SNAR1 packet. The output is intentionally false-authority.
+    or a raw SNAR1/SNAR2 packet. The output is intentionally false-authority.
     """
 
     path = Path(input_path).expanduser().resolve(strict=False)
     packet, package = _load_snerv_packet(path)
     decoded = unpack_snerv_archive(packet)
+    wire_format = _wire_format_for_schema(decoded.schema)
     sections = decoded.sections
     section_rows = _section_rows(sections, total_bytes=len(packet))
+    packet_sha256 = _sha256_bytes(packet)
+    packet_header_bytes = len(packet) - sum(len(sections[name]) for name in SECTION_ORDER)
     lf_payload_header = inspect_lf_quant_payload_header(sections["lf_payload"])
     lf_stats, lf_blockers = _build_lf_quant_profile(
         decoded=decoded,
@@ -102,13 +108,30 @@ def build_snerv_binary_profile(
         "charged_archive_bytes": charged_bytes,
         "charged_rate_score": float(charged_bytes * RATE_SCORE_PER_BYTE),
         "bytes_above_frontier": int(charged_bytes) - int(frontier_bytes),
-        "snar1_packet_bytes": len(packet),
-        "snar1_packet_sha256": _sha256_bytes(packet),
-        "snar1_header_bytes": (
-            len(packet) - sum(len(sections[name]) for name in SECTION_ORDER)
-        ),
+        "packet_bytes": len(packet),
+        "packet_sha256": packet_sha256,
+        "packet_wire_format": wire_format,
+        "packet_schema": decoded.schema,
+        "packet_header_bytes": packet_header_bytes,
+        "receiver_packet_bytes": len(packet),
+        "receiver_packet_sha256": packet_sha256,
+        "receiver_packet_wire_format": wire_format,
+        "receiver_packet_schema": decoded.schema,
+        "receiver_packet_header_bytes": packet_header_bytes,
+        "snar1_packet_bytes": len(packet) if wire_format == "snar1" else None,
+        "snar1_packet_sha256": packet_sha256 if wire_format == "snar1" else None,
+        "snar1_header_bytes": packet_header_bytes if wire_format == "snar1" else None,
+        "snar2_packet_bytes": len(packet) if wire_format == "snar2" else None,
+        "snar2_packet_sha256": packet_sha256 if wire_format == "snar2" else None,
+        "snar2_header_bytes": packet_header_bytes if wire_format == "snar2" else None,
         "package_profile": package,
-        "snar1_metadata": _metadata_summary(decoded.metadata),
+        "receiver_packet_metadata": _metadata_summary(decoded.metadata),
+        "snar1_metadata": _metadata_summary(decoded.metadata)
+        if wire_format == "snar1"
+        else None,
+        "snar2_metadata": _metadata_summary(decoded.metadata)
+        if wire_format == "snar2"
+        else None,
         "section_rows": section_rows,
         "section_summary": _section_summary(section_rows),
         "lf_payload_header": lf_payload_header,
@@ -168,7 +191,10 @@ def _load_snerv_packet(path: Path) -> tuple[bytes, dict[str, Any]]:
     if zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as zf:
             infos = zf.infolist()
-            selected_info, packet, input_kind = _select_zip_packet_member(zf, infos)
+            selected_info, packet, input_kind, wire_format = _select_zip_packet_member(
+                zf,
+                infos,
+            )
             members = [
                 {
                     "name": info.filename,
@@ -186,6 +212,7 @@ def _load_snerv_packet(path: Path) -> tuple[bytes, dict[str, Any]]:
         is_root_0bin = selected_name == "0.bin"
         return packet, {
             "input_kind": input_kind,
+            "packet_wire_format": wire_format,
             "archive_bytes": int(archive_bytes),
             "zip_member_count": len(members),
             "zip_members": members,
@@ -198,8 +225,10 @@ def _load_snerv_packet(path: Path) -> tuple[bytes, dict[str, Any]]:
             - int(sum(row["compress_size"] for row in members)),
         }
     packet = path.read_bytes()
+    wire_format = _detect_packet_wire_format(packet)
     return packet, {
-        "input_kind": "raw_snar1_packet",
+        "input_kind": f"raw_{wire_format}_packet",
+        "packet_wire_format": wire_format,
         "archive_bytes": None,
         "zip_member_count": None,
         "zip_members": [],
@@ -215,19 +244,36 @@ def _load_snerv_packet(path: Path) -> tuple[bytes, dict[str, Any]]:
 def _select_zip_packet_member(
     zf: zipfile.ZipFile,
     infos: list[zipfile.ZipInfo],
-) -> tuple[zipfile.ZipInfo, bytes, str]:
+) -> tuple[zipfile.ZipInfo, bytes, str, str]:
     by_name = {info.filename: info for info in infos}
     if "0.bin" in by_name:
         info = by_name["0.bin"]
-        return info, zf.read(info.filename), "contest_archive_zip"
+        packet = zf.read(info.filename)
+        return info, packet, "contest_archive_zip", _detect_packet_wire_format(packet)
     if len(infos) == 1:
         info = infos[0]
         packet = zf.read(info.filename)
-        if packet.startswith(SNAR1_MAGIC):
-            return info, packet, "single_member_snar_archive_zip"
+        wire_format = _detect_packet_wire_format(packet)
+        return info, packet, "single_member_snar_archive_zip", wire_format
     raise SnervBinaryProfileError(
-        "SNeRV archive.zip is missing 0.bin and does not contain a single SNAR1 member"
+        "SNeRV archive.zip is missing 0.bin and does not contain a single SNAR1/SNAR2 member"
     )
+
+
+def _detect_packet_wire_format(packet: bytes) -> str:
+    if packet.startswith(SNERV_ARCHIVE_MAGIC):
+        return "snar1"
+    if packet.startswith(SNERV_ARCHIVE_MAGIC_V2):
+        return "snar2"
+    raise SnervBinaryProfileError("SNeRV packet is not SNAR1 or SNAR2")
+
+
+def _wire_format_for_schema(schema: str) -> str:
+    if schema == SNERV_ARCHIVE_SCHEMA:
+        return "snar1"
+    if schema == SNERV_ARCHIVE_SCHEMA_V2:
+        return "snar2"
+    raise SnervBinaryProfileError(f"unsupported SNeRV packet schema: {schema!r}")
 
 
 def _section_rows(sections: Mapping[str, bytes], *, total_bytes: int) -> list[dict[str, Any]]:
@@ -267,7 +313,7 @@ def _lf_quant_stats(
     packet_bytes: int,
 ) -> dict[str, Any]:
     if not lf_planes:
-        raise SnervBinaryProfileError("SNAR1 LF payload decoded to zero planes")
+        raise SnervBinaryProfileError("SNeRV LF payload decoded to zero planes")
     flat = np.concatenate([np.asarray(a, dtype=np.int64).reshape(-1) for a in lf_planes])
     values, counts = np.unique(flat, return_counts=True)
     entropy_bits = _entropy_bits(counts, total=int(flat.size))

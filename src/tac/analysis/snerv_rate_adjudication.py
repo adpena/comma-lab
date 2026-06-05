@@ -28,7 +28,7 @@ DEFAULT_PR101_FRONTIER_BYTES = 178_493
 
 FALSE_AUTHORITY_BLOCKERS = (
     "frontier_comparison_is_rate_only_not_score_authority",
-    "snar1_packet_bytes_not_contest_archive_zip_bytes",
+    "receiver_packet_bytes_not_contest_archive_zip_bytes",
     "score_axis_is_macos_cpu_advisory",
     "full_600_pair_receiver_replay_missing",
     "paired_contest_cpu_cuda_auth_eval_missing",

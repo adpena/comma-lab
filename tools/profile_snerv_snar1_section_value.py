@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-"""Profile SNeRV SNAR1 receiver-valid section neutralizations.
+"""Profile SNeRV receiver-valid section neutralizations.
 
 This tool is intentionally scorer-free.  It materializes receiver-decodable
-semantic neutralizations for optional SNAR1 sections, writes packet variants,
+semantic neutralizations for optional SNeRV sections, writes packet variants,
 and emits false-authority section-value rows that can be priced by the shared
 NeRV byte-price controller after scorer replay supplies non-rate deltas.
 """
@@ -43,7 +43,7 @@ from tac.substrates.snerv_inverse_steg_carrier.section_value import (  # noqa: E
     neutralize_snerv_section,
 )
 
-PROFILE_SCHEMA = "snerv_snar1_section_value_profile.v1"
+PROFILE_SCHEMA = "snerv_receiver_section_value_profile.v2"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--sections",
         nargs="*",
         default=list(NEUTRALIZABLE_SNERV_SECTIONS),
-        help=f"SNAR1 sections to neutralize. Default: {NEUTRALIZABLE_SNERV_SECTIONS}",
+        help=f"SNeRV sections to neutralize. Default: {NEUTRALIZABLE_SNERV_SECTIONS}",
     )
     parser.add_argument("--step-map-bins", type=int, default=16)
     parser.add_argument(
@@ -137,14 +137,15 @@ def build_snerv_snar1_section_value_profile(
 ) -> dict[str, Any]:
     if int(step_map_bins) < 2:
         raise ValueError("step_map_bins must be >= 2")
-    packet, input_kind = _read_snerv_packet(input_path)
+    packet, input_kind, wire_format = _read_snerv_packet(input_path)
     decoded = unpack_snerv_archive(packet)
     variant_output_dir.mkdir(parents=True, exist_ok=True)
     if expected_variant_tree_present is False and any(variant_output_dir.iterdir()):
         raise FileExistsError(
             f"variant output dir is not empty; pass a fresh directory: {variant_output_dir}"
         )
-    baseline_path = variant_output_dir / "baseline.snar"
+    packet_suffix = _packet_suffix(wire_format)
+    baseline_path = variant_output_dir / f"baseline.{packet_suffix}"
     baseline_write = _write_packet_artifact_idempotent(baseline_path, packet)
     variants: list[dict[str, Any]] = [
         {
@@ -172,7 +173,7 @@ def build_snerv_snar1_section_value_profile(
             verify_receiver_decode=bool(verify_receiver_decode),
         )
         neutralized_packet = bytes(neutralized["packet"])
-        variant_path = variant_output_dir / f"neutralized_{section}.snar"
+        variant_path = variant_output_dir / f"neutralized_{section}.{packet_suffix}"
         variant_write = _write_packet_artifact_idempotent(
             variant_path, neutralized_packet
         )
@@ -206,6 +207,8 @@ def build_snerv_snar1_section_value_profile(
         "raw_argv": list(raw_argv or []),
         "input_path": input_path.as_posix(),
         "input_kind": input_kind,
+        "input_wire_format": wire_format,
+        "input_packet_schema": decoded.schema,
         "input_bytes": len(packet),
         "input_sha256": sha256_bytes(packet),
         "variant_output_dir": variant_output_dir.as_posix(),
@@ -227,17 +230,32 @@ def build_snerv_snar1_section_value_profile(
     }
 
 
-def _read_snerv_packet(input_path: Path) -> tuple[bytes, str]:
+def _read_snerv_packet(input_path: Path) -> tuple[bytes, str, str]:
     source = Path(input_path).expanduser().resolve(strict=False)
     blob = source.read_bytes()
     if blob.startswith(b"SNAR1"):
-        return blob, "raw_snar_packet"
+        return blob, "raw_snar1_packet", "snar1"
+    if blob.startswith(b"SNAR2"):
+        return blob, "raw_snar2_packet", "snar2"
     if source.suffix.lower() == ".zip":
         import zipfile
 
         with zipfile.ZipFile(source) as zf:
-            return zf.read("0.bin"), "archive_zip_member_0_bin"
-    raise ValueError(f"{source}: expected raw SNAR1 packet or archive.zip")
+            packet = zf.read("0.bin")
+        if packet.startswith(b"SNAR1"):
+            return packet, "archive_zip_member_0_bin", "snar1"
+        if packet.startswith(b"SNAR2"):
+            return packet, "archive_zip_member_0_bin", "snar2"
+        raise ValueError(f"{source}: archive 0.bin is not SNAR1 or SNAR2")
+    raise ValueError(f"{source}: expected raw SNAR1/SNAR2 packet or archive.zip")
+
+
+def _packet_suffix(wire_format: str) -> str:
+    if wire_format == "snar1":
+        return "snar"
+    if wire_format == "snar2":
+        return "snar2"
+    raise ValueError(f"unsupported SNeRV wire format: {wire_format!r}")
 
 
 def _normalize_sections(sections: tuple[str, ...]) -> tuple[str, ...]:
@@ -264,7 +282,7 @@ def _write_packet_artifact_idempotent(path: Path, packet: bytes) -> dict[str, An
         actual_sha = sha256_file(path)
         if actual_sha != expected_sha:
             raise ArtifactWriteError(
-                f"{path}: refusing to replace non-identical SNAR1 variant "
+                f"{path}: refusing to replace non-identical SNeRV variant "
                 f"expected={expected_sha} actual={actual_sha}"
             )
         return {

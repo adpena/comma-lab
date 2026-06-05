@@ -33,7 +33,7 @@ def test_legacy_undercharged_row_is_blocked_even_when_rate_low() -> None:
     assert row["frontier_score_claim"] is False
     assert row["score_claim"] is False
     assert "linf_step_map_payload_missing_or_legacy_undercharged" in row["blockers"]
-    assert "snar1_packet_bytes_not_contest_archive_zip_bytes" in row["blockers"]
+    assert "receiver_packet_bytes_not_contest_archive_zip_bytes" in row["blockers"]
     assert report["exact_readiness_refusal"]["ready"] is False
 
 
