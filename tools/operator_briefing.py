@@ -24,8 +24,10 @@ import argparse
 import hashlib
 import json
 import re
+import shlex
 import subprocess
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +47,7 @@ ARCHIVE_BOUND_CONTRACT_AUDIT = TOOLS / "audit_archive_bound_candidate_contracts.
 PROVIDER_READINESS_LATEST = REPO_ROOT / "experiments/results/cloud_provider_readiness_latest.json"
 PR91_HPM1_READINESS = TOOLS / "audit_pr91_hpm1_readiness.py"
 PR91_HPM1_RUNTIME_CONTRACT = TOOLS / "audit_pr91_hpm1_runtime_contract.py"
+NERV_LONG_TRAINING_CAMPAIGN_PLAN = TOOLS / "build_nerv_long_training_campaign_plan.py"
 PR91_HPM1_READINESS_ARTIFACT = (
     REPO_ROOT / "experiments/results/pr91_hpm1_readiness_20260506_codex/readiness.json"
 )
@@ -69,6 +72,22 @@ BYTE_SHAVING_ACQUISITION_SCAN_ROOTS = (
 FRONTIER_FEEDBACK_SCAN_ROOTS = (
     REPO_ROOT / ".omx" / "research",
     REPO_ROOT / "experiments" / "results",
+)
+NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS = (
+    REPO_ROOT / ".omx" / "research",
+    REPO_ROOT / "experiments" / "results",
+    Path("/Volumes/VertigoDataTier/pact/experiments/results"),
+    Path("/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns"),
+    Path("/Volumes/VertigoDataTier/pact"),
+    Path("/Volumes/APDataStore/pact/experiments/results"),
+    Path("/Volumes/APDataStore/pact/nerv_long_training_campaigns"),
+)
+NERV_MODELSIZE_BUDGET_SCAN_ROOTS = (
+    REPO_ROOT / ".omx" / "research",
+    REPO_ROOT / "experiments" / "results",
+    Path("/Volumes/VertigoDataTier/pact/experiments/results"),
+    Path("/Volumes/VertigoDataTier/pact"),
+    Path("/Volumes/APDataStore/pact/experiments/results"),
 )
 PR95_MLX_CONTROL_PROFILE_SCAN_ROOTS = (
     REPO_ROOT / "experiments" / "results",
@@ -96,6 +115,12 @@ SECTION_PAYLOAD_GRAMMAR_SCAN_ROOTS = TENSOR_PAYLOAD_GRAMMAR_SCAN_ROOTS
 BYTE_SHAVING_MATERIALIZER_CAMPAIGN_RUN_NAME = "materializer_campaign_run.json"
 FRONTIER_FEEDBACK_CYCLE_REPORT_NAME = "frontier_rate_attack_feedback_cycle.json"
 FRONTIER_FEEDBACK_REFRESH_REPORT_NAME = "feedback_refresh_report.json"
+NERV_CANDIDATE_FEEDBACK_ROW_NAMES = (
+    "snerv_upstream_eval_candidate_feedback_row.json",
+    "nerv_candidate_training_telemetry_feedback_row.json",
+    "nerv_candidate_feedback_row.json",
+    "candidate_feedback_row.json",
+)
 PR95_MLX_MATRIX_MANIFEST_NAME = "matrix_manifest.json"
 TENSOR_PAYLOAD_GRAMMAR_REPORT_GLOB = "*tensor_payload*report*.json"
 TENSOR_PAYLOAD_GRAMMAR_OPTIMIZER_SCHEMA = "tensor_payload_grammar_optimizer.v1"
@@ -854,6 +879,7 @@ def _load_exact_eval_packet(lane: dict) -> dict[str, object]:
     }
 
 
+@lru_cache(maxsize=1)
 def _exact_eval_packet_summaries() -> list[dict[str, object]]:
     return [_load_exact_eval_packet(lane) for lane in PHASE_1_EXACT_EVAL_PACKETS]
 
@@ -905,6 +931,7 @@ def _format_exact_eval_packets() -> str:
     return "\n\n".join(lines) if lines else "  (none)"
 
 
+@lru_cache(maxsize=1)
 def _exact_ready_queue_audit() -> dict[str, object]:
     queues = discover_exact_ready_queues(
         repo_root=REPO_ROOT,
@@ -1450,6 +1477,7 @@ def _materializer_exact_eval_consumer_next_command(
     )
 
 
+@lru_cache(maxsize=1)
 def _materializer_exact_ready_handoff_summary() -> dict[str, object]:
     discovered_rows = [
         row
@@ -2281,6 +2309,7 @@ def _frontier_feedback_cycle_execute_command(latest: dict[str, object] | None) -
     return f".venv/bin/python {FRONTIER_FEEDBACK_CYCLE_TOOL} --help"
 
 
+@lru_cache(maxsize=1)
 def _frontier_feedback_cycle_summary() -> dict[str, object]:
     cycle_rows = [
         _frontier_feedback_cycle_row(path)
@@ -2721,6 +2750,7 @@ def _pr95_mlx_control_profile_row(path: Path) -> dict[str, object]:
     }
 
 
+@lru_cache(maxsize=1)
 def _pr95_mlx_control_profile_summary() -> dict[str, object]:
     rows = [
         row
@@ -2939,6 +2969,7 @@ def _distortion_axis_probe_row(path: Path) -> dict[str, object]:
     }
 
 
+@lru_cache(maxsize=1)
 def _distortion_axis_probe_summary() -> dict[str, object]:
     rows = [_distortion_axis_probe_row(path) for path in _distortion_axis_probe_paths()]
     signal_rows = [
@@ -3169,6 +3200,7 @@ def _distortion_axis_learned_sweep_artifact_row(
     }
 
 
+@lru_cache(maxsize=1)
 def _distortion_axis_learned_sweep_summary() -> dict[str, object]:
     payload_rows = [
         _distortion_axis_learned_sweep_artifact_row(
@@ -3480,6 +3512,7 @@ def _dqs1_drop_many_greedy_row(path: Path) -> dict[str, object]:
     }
 
 
+@lru_cache(maxsize=1)
 def _dqs1_drop_many_greedy_summary() -> dict[str, object]:
     rows = [
         _dqs1_drop_many_greedy_row(path)
@@ -3552,6 +3585,388 @@ def _format_dqs1_drop_many_greedy_summary() -> str:
                 lines.append(f"  - {action}")
     lines.append(
         "authority: research/planning only; no score, rank, promotion, or exact-dispatch authority."
+    )
+    return "\n".join(lines)
+
+
+def _path_mtime_ns(path: Path) -> int:
+    try:
+        return path.stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
+def _bounded_glob_paths(
+    *,
+    scan_roots: tuple[Path, ...],
+    patterns: tuple[str, ...],
+    max_candidates: int,
+) -> list[Path]:
+    seen: set[Path] = set()
+    candidates: list[Path] = []
+    if max_candidates <= 0:
+        return []
+    for raw_root in scan_roots:
+        root = Path(raw_root).expanduser()
+        if not root.is_dir():
+            continue
+        for pattern in patterns:
+            try:
+                matches = root.glob(pattern)
+                for path in matches:
+                    resolved = path.resolve(strict=False)
+                    if resolved in seen or not path.is_file():
+                        continue
+                    seen.add(resolved)
+                    candidates.append(path)
+                    if len(candidates) >= max_candidates:
+                        return sorted(
+                            candidates,
+                            key=lambda item: (_path_mtime_ns(item), item.as_posix()),
+                            reverse=True,
+                        )
+            except OSError:
+                continue
+    return sorted(
+        candidates,
+        key=lambda item: (_path_mtime_ns(item), item.as_posix()),
+        reverse=True,
+    )
+
+
+def _nerv_feedback_payload_from_candidate_source(
+    payload: dict[str, object],
+) -> dict[str, object]:
+    if payload.get("schema") == "nerv_candidate_feedback_row.v1":
+        return payload
+    if payload.get("schema") == "nerv_candidate_byte_feedback_ledger.v1":
+        row = payload.get("row")
+        return row if isinstance(row, dict) else {}
+    if payload.get("schema") == "nerv_queue_training_feedback_refresh.v1":
+        rows = payload.get("rows")
+        if not isinstance(rows, list):
+            return {}
+        for item in rows:
+            if isinstance(item, dict) and isinstance(item.get("row"), dict):
+                row = item["row"]
+                if row.get("schema") == "nerv_candidate_feedback_row.v1":
+                    return row
+    return {}
+
+
+def _nerv_campaign_feedback_row_paths(
+    scan_roots: tuple[Path, ...] | None = None,
+    *,
+    limit: int = 12,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS
+    if limit <= 0:
+        return []
+    names = (*NERV_CANDIDATE_FEEDBACK_ROW_NAMES, "*candidate_feedback*row*.json")
+    patterns = tuple(
+        pattern
+        for name in names
+        for pattern in (
+            name,
+            f"*/{name}",
+            f"experiments/results/*/{name}",
+            f"experiments/results/*/*/{name}",
+            f"nerv_long_training_campaigns/*/{name}",
+            f"nerv_long_training_campaigns/*/*/{name}",
+        )
+    )
+    return _bounded_glob_paths(
+        scan_roots=scan_roots,
+        patterns=patterns,
+        max_candidates=max(48, limit * 8),
+    )[:limit]
+
+
+def _nerv_campaign_feedback_row(path: Path) -> dict[str, object]:
+    payload = _load_json_file(path)
+    base = {
+        "path": _repo_rel(path),
+        "root": _repo_rel(path.parent),
+        "sha256": _sha256_file(path) if path.is_file() else "",
+        "mtime_ns": _path_mtime_ns(path),
+        **_false_authority_fields(),
+    }
+    if "_error" in payload:
+        return {
+            **base,
+            "status": "BLOCKED_UNREADABLE",
+            "blockers": [str(payload["_error"])],
+        }
+    row = _nerv_feedback_payload_from_candidate_source(payload)
+    if not row:
+        schema = str(payload.get("schema") or "missing")
+        return {
+            **base,
+            "status": "BLOCKED_SCHEMA",
+            "schema": schema,
+            "blockers": [f"unexpected_schema:{schema}"],
+        }
+    bad_authority = _authority_truthy(row)
+    if bad_authority:
+        return {
+            **base,
+            "status": "BLOCKED_AUTHORITY_LEAK",
+            "schema": str(row.get("schema") or ""),
+            "family": str(row.get("family") or ""),
+            "feedback_kind": str(row.get("feedback_kind") or ""),
+            "candidate_id": str(row.get("candidate_id") or ""),
+            "blockers": [f"truthy_authority:{key}" for key in bad_authority],
+        }
+    return {
+        **base,
+        "status": "USABLE",
+        "schema": str(row.get("schema") or ""),
+        "family": str(row.get("family") or ""),
+        "feedback_kind": str(row.get("feedback_kind") or ""),
+        "candidate_id": str(row.get("candidate_id") or ""),
+        "measured_num_pairs": _safe_int(row.get("measured_num_pairs")),
+        "direct_feedback_blockers": _unique_strings(
+            row.get("direct_feedback_blockers")
+            if isinstance(row.get("direct_feedback_blockers"), list)
+            else []
+        ),
+        "row_blockers": _unique_strings(
+            row.get("blockers") if isinstance(row.get("blockers"), list) else []
+        ),
+        "blockers": [],
+    }
+
+
+def _nerv_modelsize_budget_paths(
+    family: str,
+    scan_roots: tuple[Path, ...] | None = None,
+) -> list[Path]:
+    if scan_roots is None:
+        scan_roots = NERV_MODELSIZE_BUDGET_SCAN_ROOTS
+    family_tokens = {
+        "hi_nerv": ("hinerv", "hi_nerv"),
+        "snerv": ("snerv",),
+    }.get(family, (family,))
+    names = ("*modelsize_budget*.json", "*modelsize*budget*.json")
+    patterns = tuple(
+        pattern
+        for name in names
+        for pattern in (
+            name,
+            f"*/{name}",
+            f"experiments/results/*/{name}",
+            f"experiments/results/*/*/{name}",
+            f"nerv_long_training_campaigns/*/{name}",
+            f"nerv_long_training_campaigns/*/*/{name}",
+        )
+    )
+    candidates = []
+    for path in _bounded_glob_paths(
+        scan_roots=scan_roots,
+        patterns=patterns,
+        max_candidates=128,
+    ):
+        if not any(token in path.name.lower() for token in family_tokens):
+            continue
+        payload = _load_json_file(path)
+        if payload.get("family") != family:
+            continue
+        schema = str(payload.get("schema") or "")
+        if schema not in {"nerv_modelsize_budget.v1", "snerv_modelsize_budget.v1"}:
+            continue
+        if _authority_truthy(payload):
+            continue
+        candidates.append(path)
+    return candidates
+
+
+def _latest_nerv_modelsize_budget_row(family: str) -> dict[str, object]:
+    paths = _nerv_modelsize_budget_paths(family)
+    if not paths:
+        return {
+            "family": family,
+            "path": "",
+            "exists": False,
+            "blockers": [f"{family}_modelsize_budget_missing"],
+        }
+    path = paths[0]
+    payload = _load_json_file(path)
+    return {
+        "family": family,
+        "path": _repo_rel(path),
+        "exists": True,
+        "sha256": _sha256_file(path),
+        "mtime_ns": _path_mtime_ns(path),
+        "schema": str(payload.get("schema") or ""),
+        "candidate_count": _safe_int(payload.get("candidate_count")),
+        "selected_candidate_count": _safe_int(payload.get("selected_candidate_count")),
+        "hard_byte_ceilings": payload.get("hard_byte_ceilings")
+        if isinstance(payload.get("hard_byte_ceilings"), list)
+        else [],
+        "blockers": [],
+    }
+
+
+def _shell_command(args: list[str]) -> str:
+    quoted: list[str] = []
+    for arg in args:
+        if "${" in arg:
+            quoted.append(arg)
+        else:
+            quoted.append(shlex.quote(arg))
+    return " ".join(quoted)
+
+
+def _nerv_long_training_campaign_plan_command(
+    *,
+    hinerv_budget: dict[str, object],
+    snerv_budget: dict[str, object],
+    feedback_roots: list[str],
+) -> list[str]:
+    if not hinerv_budget.get("path") or not snerv_budget.get("path"):
+        return []
+    out_root = "${NERV_PLAN_OUT}"
+    args = [
+        "uv",
+        "run",
+        "python",
+        "tools/build_nerv_long_training_campaign_plan.py",
+        "--hinerv-modelsize-budget",
+        str(hinerv_budget["path"]),
+        "--snerv-modelsize-budget",
+        str(snerv_budget["path"]),
+        "--output-json",
+        f"{out_root}/nerv_long_training_campaign_plan.json",
+        "--output-md",
+        f"{out_root}/nerv_long_training_campaign_plan.md",
+        "--output-queue",
+        f"{out_root}/nerv_long_training_campaign_queue.json",
+        "--output-snerv-lf-reroute-queue",
+        f"{out_root}/snerv_lf_over_ceiling_reroute_queue.json",
+    ]
+    for root in feedback_roots:
+        args.extend(["--auto-candidate-feedback-root", root])
+    if feedback_roots:
+        args.extend(["--auto-candidate-feedback-limit", str(max(8, len(feedback_roots)))])
+    return args
+
+
+@lru_cache(maxsize=1)
+def _nerv_long_training_campaign_plan_summary() -> dict[str, object]:
+    hinerv_budget = _latest_nerv_modelsize_budget_row("hi_nerv")
+    snerv_budget = _latest_nerv_modelsize_budget_row("snerv")
+    rows = [
+        _nerv_campaign_feedback_row(path)
+        for path in _nerv_campaign_feedback_row_paths()
+    ]
+    usable_rows = [row for row in rows if row.get("status") == "USABLE"]
+    blocked_rows = [row for row in rows if row.get("status") != "USABLE"]
+    feedback_roots = _unique_strings([row.get("root") for row in usable_rows])
+    command_args = _nerv_long_training_campaign_plan_command(
+        hinerv_budget=hinerv_budget,
+        snerv_budget=snerv_budget,
+        feedback_roots=feedback_roots,
+    )
+    budget_blockers = _unique_strings(
+        [
+            *(
+                hinerv_budget.get("blockers")
+                if isinstance(hinerv_budget.get("blockers"), list)
+                else []
+            ),
+            *(
+                snerv_budget.get("blockers")
+                if isinstance(snerv_budget.get("blockers"), list)
+                else []
+            ),
+        ]
+    )
+    if not NERV_LONG_TRAINING_CAMPAIGN_PLAN.is_file():
+        budget_blockers.append("nerv_long_training_campaign_plan_tool_missing")
+    if budget_blockers:
+        status = "BLOCKED"
+        reason = "default campaign-plan command is missing required inputs"
+    elif usable_rows:
+        status = "READY_WITH_FEEDBACK"
+        reason = "default campaign-plan command includes auto-discovered feedback roots"
+    else:
+        status = "READY_NO_FEEDBACK"
+        reason = "default campaign-plan command is available; no usable feedback rows found"
+    return {
+        "schema": "pact.nerv_long_training_campaign_plan_default_surface.v1",
+        "status": status,
+        "reason": reason,
+        "tool": _repo_rel(NERV_LONG_TRAINING_CAMPAIGN_PLAN),
+        "tool_exists": NERV_LONG_TRAINING_CAMPAIGN_PLAN.is_file(),
+        "scan_roots": [_repo_rel(root) for root in NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS],
+        "modelsize_budget_scan_roots": [
+            _repo_rel(root) for root in NERV_MODELSIZE_BUDGET_SCAN_ROOTS
+        ],
+        "hinerv_modelsize_budget": hinerv_budget,
+        "snerv_modelsize_budget": snerv_budget,
+        "feedback_row_count": len(rows),
+        "usable_feedback_row_count": len(usable_rows),
+        "blocked_feedback_row_count": len(blocked_rows),
+        "feedback_roots": feedback_roots,
+        "latest_feedback_rows": rows[:8],
+        "default_campaign_plan_command_args": command_args,
+        "default_campaign_plan_command": (
+            (
+                'NERV_PLAN_OUT="/Volumes/VertigoDataTier/pact/experiments/results/'
+                'nerv_campaign_plan_operator_briefing_$(date -u +%Y%m%dT%H%M%SZ)" '
+                '&& mkdir -p "$NERV_PLAN_OUT" && '
+            )
+            + _shell_command(command_args)
+            if command_args
+            else ""
+        ),
+        "blockers": budget_blockers,
+        **_false_authority_fields(),
+    }
+
+
+def _format_nerv_long_training_campaign_plan_summary() -> str:
+    payload = _nerv_long_training_campaign_plan_summary()
+    lines = [
+        f"status: {payload['status']} — {payload['reason']}",
+        f"tool: {payload['tool']} present={payload['tool_exists']}",
+        (
+            "feedback rows: "
+            f"total={payload['feedback_row_count']} "
+            f"usable={payload['usable_feedback_row_count']} "
+            f"blocked={payload['blocked_feedback_row_count']}"
+        ),
+    ]
+    hinerv_budget = payload.get("hinerv_modelsize_budget")
+    snerv_budget = payload.get("snerv_modelsize_budget")
+    if isinstance(hinerv_budget, dict):
+        lines.append(f"HiNeRV budget: {hinerv_budget.get('path') or '<missing>'}")
+    if isinstance(snerv_budget, dict):
+        lines.append(f"SNeRV budget: {snerv_budget.get('path') or '<missing>'}")
+    rows = payload.get("latest_feedback_rows")
+    if isinstance(rows, list) and rows:
+        lines.append("latest feedback roots:")
+        for row in rows[:5]:
+            if not isinstance(row, dict):
+                continue
+            lines.append(
+                "  "
+                f"{row.get('status')} {row.get('family') or '-'} "
+                f"{row.get('feedback_kind') or '-'} "
+                f"path={row.get('path')}"
+            )
+            blockers = row.get("blockers")
+            if blockers:
+                lines.append(f"    blockers={blockers}")
+    command = str(payload.get("default_campaign_plan_command") or "")
+    if command:
+        lines.append("default feedback-aware campaign-plan command:")
+        lines.append(f"  {command}")
+    else:
+        lines.append("default feedback-aware campaign-plan command: blocked")
+    lines.append(
+        "authority: planning/queue synthesis only; no score, rank, promotion, launch, or exact-dispatch authority."
     )
     return "\n".join(lines)
 
@@ -4649,6 +5064,7 @@ def _byte_shaving_acquisition_next_command(latest: dict[str, object] | None) -> 
     return ".venv/bin/python tools/run_byte_shaving_materializer_campaign.py --help"
 
 
+@lru_cache(maxsize=1)
 def _byte_shaving_acquisition_summary() -> dict[str, object]:
     rows = [
         _byte_shaving_acquisition_row(path)
@@ -5385,6 +5801,7 @@ def _tensor_payload_grouped_saved(
     )
 
 
+@lru_cache(maxsize=1)
 def _tensor_payload_grammar_summary() -> dict[str, object]:
     rows = [
         row
@@ -5670,6 +6087,7 @@ def _section_payload_grouped_saved(
     return sum(_safe_int(row.get(key)) for row in rows)
 
 
+@lru_cache(maxsize=1)
 def _section_payload_grammar_summary() -> dict[str, object]:
     rows = [
         row
@@ -5875,6 +6293,7 @@ def _optimal_grammar_campaign_row(path: Path) -> dict[str, object] | None:
     }
 
 
+@lru_cache(maxsize=1)
 def _optimal_grammar_campaign_summary() -> dict[str, object]:
     rows = [
         row
@@ -5961,15 +6380,17 @@ def _format_optimal_grammar_campaign_summary() -> str:
 
 
 def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
-    readiness = _run_json(PR91_HPM1_READINESS)
-    runtime = _run_json(PR91_HPM1_RUNTIME_CONTRACT)
     readiness_artifact = _load_json_file(PR91_HPM1_READINESS_ARTIFACT)
     runtime_artifact = _load_json_file(PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT)
-    audit_errors = [
-        str(payload["_error"])
-        for payload in (readiness, runtime, readiness_artifact, runtime_artifact)
-        if isinstance(payload.get("_error"), str)
-    ]
+    readiness = dict(readiness_artifact)
+    runtime = dict(runtime_artifact)
+    audit_errors = _unique_strings(
+        [
+            str(payload["_error"])
+            for payload in (readiness, runtime, readiness_artifact, runtime_artifact)
+            if isinstance(payload.get("_error"), str)
+        ]
+    )
     readiness_blockers = list(readiness.get("dispatch_blockers") or [])
     runtime_blockers = list(runtime.get("dispatch_blockers") or [])
     artifact_readiness_blockers = list(readiness_artifact.get("dispatch_blockers") or [])
@@ -6024,6 +6445,11 @@ def _load_pr91_hpm1_readiness_artifact() -> dict[str, object]:
         "audit_errors": audit_errors,
         "artifact_path": _repo_rel(PR91_HPM1_READINESS_ARTIFACT),
         "runtime_contract_artifact_path": _repo_rel(PR91_HPM1_RUNTIME_CONTRACT_ARTIFACT),
+        "source": "cached_artifacts",
+        "live_audit_refresh_commands": [
+            f"uv run python {_repo_rel(PR91_HPM1_READINESS)}",
+            f"uv run python {_repo_rel(PR91_HPM1_RUNTIME_CONTRACT)}",
+        ],
         "readiness_manifest_hash_self_consistent": _manifest_hash_self_consistent(readiness),
         "runtime_manifest_hash_self_consistent": _manifest_hash_self_consistent(runtime),
         "readiness_artifact_manifest_hash_self_consistent": _manifest_hash_self_consistent(
@@ -7778,6 +8204,7 @@ def _dispatch_readiness() -> dict[str, object]:
     distortion_probe_signals = _distortion_axis_probe_summary()
     distortion_learned_sweep = _distortion_axis_learned_sweep_summary()
     dqs1_drop_many_greedy = _dqs1_drop_many_greedy_summary()
+    nerv_campaign_plan = _nerv_long_training_campaign_plan_summary()
     tensor_payload_grammar = _tensor_payload_grammar_summary()
     section_payload_grammar = _section_payload_grammar_summary()
     optimal_grammar_campaign = _optimal_grammar_campaign_summary()
@@ -8025,6 +8452,23 @@ def _dispatch_readiness() -> dict[str, object]:
             "ready_for_exact_eval_dispatch": False,
             "score_claim": False,
         },
+        "phase_6g_nerv_long_training_campaign_plan": {
+            "status": nerv_campaign_plan["status"],
+            "reason": nerv_campaign_plan["reason"],
+            "tool_exists": nerv_campaign_plan["tool_exists"],
+            "feedback_row_count": nerv_campaign_plan["feedback_row_count"],
+            "usable_feedback_row_count": nerv_campaign_plan[
+                "usable_feedback_row_count"
+            ],
+            "blocked_feedback_row_count": nerv_campaign_plan[
+                "blocked_feedback_row_count"
+            ],
+            "default_campaign_plan_command": nerv_campaign_plan[
+                "default_campaign_plan_command"
+            ],
+            "ready_for_exact_eval_dispatch": False,
+            "score_claim": False,
+        },
         "phase_6h_distortion_axis_learned_sweep_bridge": {
             "status": distortion_learned_sweep["status"],
             "reason": distortion_learned_sweep["reason"],
@@ -8135,6 +8579,11 @@ def _format_dispatch_readiness() -> str:
         "  Phase 6g (DQS1 drop-many greedy reducer):   "
         f"{phase6g['status']} — {phase6g['reason']}"
     )
+    nerv_plan = readiness["phase_6g_nerv_long_training_campaign_plan"]
+    lines.append(
+        "  Phase 6g.n (NeRV feedback-aware plan):       "
+        f"{nerv_plan['status']} — {nerv_plan['reason']}"
+    )
     phase6h = readiness["phase_6h_distortion_axis_learned_sweep_bridge"]
     lines.append(
         "  Phase 6h (distortion learned-sweep bridge):  "
@@ -8166,6 +8615,7 @@ def _archive_bound_contract_hygiene_result():
     )
 
 
+@lru_cache(maxsize=1)
 def _archive_bound_contract_hygiene_summary() -> dict[str, object]:
     result = _archive_bound_contract_hygiene_result()
     payload = result.as_dict()
@@ -8293,6 +8743,9 @@ def main(argv: list[str] | None = None) -> int:
                 _archive_bound_contract_hygiene_summary()
             ),
             "dqs1_drop_many_greedy": _dqs1_drop_many_greedy_summary(),
+            "nerv_long_training_campaign_plan": (
+                _nerv_long_training_campaign_plan_summary()
+            ),
             "queue_fleet": _queue_fleet_summary(),
             "l5_v2_frontier_readiness": _l5_v2_frontier_readiness(
                 dispatch_claim_summary=dispatch_claim_summary
@@ -8306,6 +8759,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         out["materializer_exact_ready_handoffs"] = (
             _materializer_exact_ready_handoff_summary()
+        )
+        out["nerv_long_training_campaign_plan"] = (
+            _nerv_long_training_campaign_plan_summary()
         )
         if not args.skip_pareto:
             out["pareto"] = _run_json(PARETO, ["--json"])
@@ -8466,6 +8922,10 @@ def main(argv: list[str] | None = None) -> int:
     parts.append(_section(
         "Phase 6g — DQS1 drop-many greedy reducer",
         _format_dqs1_drop_many_greedy_summary(),
+    ))
+    parts.append(_section(
+        "Phase 6g.n — NeRV feedback-aware long-training campaign plan",
+        _format_nerv_long_training_campaign_plan_summary(),
     ))
     parts.append(_section(
         "Phase 6h — Distortion-axis learned-sweep bridge",

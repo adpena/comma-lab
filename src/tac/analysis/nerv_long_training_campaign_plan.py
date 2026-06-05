@@ -163,6 +163,7 @@ ROW_UPSTREAM_EVALUATE_BINDING_SCHEMA = "nerv_row_upstream_evaluate_binding.v1"
 TILDE_OSS_LEVERAGE_POLICY_SCHEMA = "nerv_tilde_oss_leverage_policy.v1"
 ROW_TILDE_OSS_BINDING_SCHEMA = "nerv_row_tilde_oss_binding.v1"
 PR95_BASELINE_IDENTITY_BINDING_SCHEMA = "nerv_pr95_baseline_identity_binding.v1"
+SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA = "snerv_scorer_tether_smoke_gate.v1"
 
 
 class NervLongTrainingCampaignPlanError(ValueError):
@@ -433,6 +434,38 @@ def _pr95_baseline_identity_binding(
     }
 
 
+def _snerv_scorer_tether_smoke_gate(
+    source: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    if not isinstance(source, Mapping):
+        return {
+            "schema": SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA,
+            "attached": False,
+            "passed": False,
+            "required_by_default": False,
+            "blockers": [],
+            **FALSE_AUTHORITY,
+        }
+    blockers: list[str] = []
+    if source.get("schema") != "snerv_scorer_tether_smoke.v1":
+        blockers.append("snerv_scorer_tether_smoke_schema_mismatch")
+    if source.get("passed") is not True:
+        blockers.append("snerv_scorer_tether_smoke_failed")
+    blockers.extend(str(blocker) for blocker in source.get("blockers") or [] if blocker)
+    return {
+        "schema": SNERV_SCORER_TETHER_SMOKE_GATE_SCHEMA,
+        "attached": True,
+        "passed": not blockers,
+        "required_by_default": False,
+        "source_schema": source.get("schema"),
+        "source_created_utc": source.get("created_utc"),
+        "source_steps": source.get("steps"),
+        "source_metric_summary": source.get("metric_summary"),
+        "blockers": _dedupe(blockers),
+        **FALSE_AUTHORITY,
+    }
+
+
 def build_nerv_long_training_campaign_plan(
     *,
     hinerv_modelsize_budget: Mapping[str, Any],
@@ -453,6 +486,7 @@ def build_nerv_long_training_campaign_plan(
     snerv_snar_header_minimization_report_sources: Sequence[Mapping[str, Any]] = (),
     snerv_official_source_audit: Mapping[str, Any] | None = None,
     pr95_baseline_identity: Mapping[str, Any] | None = None,
+    snerv_scorer_tether_smoke_report: Mapping[str, Any] | None = None,
     snerv_bounded_proof_only: bool = False,
     snerv_bounded_proof_epochs: int = 3,
     experiment_queue_id: str = DEFAULT_EXPERIMENT_QUEUE_ID,
@@ -499,6 +533,9 @@ def build_nerv_long_training_campaign_plan(
     upstream_evaluate_priority_contract = _upstream_evaluate_priority_contract()
     tilde_oss_leverage_policy = _tilde_oss_leverage_policy()
     pr95_baseline_binding = _pr95_baseline_identity_binding(pr95_baseline_identity)
+    snerv_scorer_tether_smoke_gate = _snerv_scorer_tether_smoke_gate(
+        snerv_scorer_tether_smoke_report
+    )
 
     rows: list[dict[str, Any]] = []
     hi_candidates = _selected_candidates(
@@ -571,6 +608,7 @@ def build_nerv_long_training_campaign_plan(
                 ),
                 tilde_oss_leverage_policy=tilde_oss_leverage_policy,
                 pr95_baseline_identity_binding=pr95_baseline_binding,
+                snerv_scorer_tether_smoke_gate=snerv_scorer_tether_smoke_gate,
                 planner_row_queue_artifact_path=planner_queue_artifact,
                 modelsize_byte_cap_feedback_paths=byte_cap_feedback_paths,
                 snerv_lf_payload_recode_sources=snerv_lf_payload_recode_sources,
@@ -707,6 +745,10 @@ def build_nerv_long_training_campaign_plan(
         "pr95_baseline_identity_consumed_by_rows": all(
             isinstance(row.get("pr95_baseline_identity_binding"), Mapping)
             for row in rows
+        ),
+        "snerv_scorer_tether_smoke_gate": snerv_scorer_tether_smoke_gate,
+        "snerv_scorer_tether_smoke_report_attached": bool(
+            snerv_scorer_tether_smoke_gate.get("attached")
         ),
         "campaign_rows": rows,
         "campaign_row_count": len(rows),
@@ -1217,6 +1259,7 @@ def _snerv_campaign_row(
     upstream_evaluate_priority_contract: Mapping[str, Any] | None = None,
     tilde_oss_leverage_policy: Mapping[str, Any] | None = None,
     pr95_baseline_identity_binding: Mapping[str, Any] | None = None,
+    snerv_scorer_tether_smoke_gate: Mapping[str, Any] | None = None,
     planner_row_queue_artifact_path: str | None = None,
     modelsize_byte_cap_feedback_paths: Sequence[str] = (),
     snerv_lf_payload_recode_sources: Sequence[Mapping[str, Any]] = (),
@@ -1252,6 +1295,11 @@ def _snerv_campaign_row(
         dict(pr95_baseline_identity_binding)
         if isinstance(pr95_baseline_identity_binding, Mapping)
         else _pr95_baseline_identity_binding(None)
+    )
+    scorer_tether_smoke_gate = (
+        dict(snerv_scorer_tether_smoke_gate)
+        if isinstance(snerv_scorer_tether_smoke_gate, Mapping)
+        else _snerv_scorer_tether_smoke_gate(None)
     )
     feedback = _candidate_feedback_for(
         candidate=candidate,
@@ -1490,6 +1538,7 @@ def _snerv_campaign_row(
             *list(candidate.get("_candidate_authority_blockers") or []),
             *source_control_blockers,
             *modelsize_byte_cap_blockers,
+            *list(scorer_tether_smoke_gate.get("blockers") or []),
             *list(source_parity["required_blockers"]),
             *list(curriculum.get("blockers") or []),
             *feedback_evidence_blockers,
@@ -1557,6 +1606,7 @@ def _snerv_campaign_row(
             "upstream_evaluate_score_binding": upstream_evaluate_binding,
             "tilde_oss_leverage_binding": tilde_oss_binding,
             "pr95_baseline_identity_binding": pr95_baseline_binding,
+            "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
             "quant_bits": int(quant_bits),
             "coder_qat_control": _coder_qat_control(quant_bits=int(quant_bits)),
             "planned_long_training_epochs": int(epochs),
@@ -1607,6 +1657,7 @@ def _snerv_campaign_row(
                 "upstream_evaluate_score_binding": upstream_evaluate_binding,
                 "tilde_oss_leverage_binding": tilde_oss_binding,
                 "pr95_baseline_identity_binding": pr95_baseline_binding,
+                "snerv_scorer_tether_smoke_gate": scorer_tether_smoke_gate,
                 **FALSE_AUTHORITY,
             },
         },
@@ -1907,8 +1958,13 @@ def _experiment_launch_blockers(blockers: Sequence[str]) -> list[str]:
         "snerv_nominal_payload_far_over_ceiling_refuse_long_training",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling",
         "snerv_receiver_proven_archive_over_hard_byte_ceiling_observed_demote_only",
+        "snerv_score_aware_long_training_dual_posenet_lambda_never_active",
+        "snerv_score_aware_long_training_dual_segnet_lambda_never_active",
+        "snerv_score_aware_long_training_telemetry_contract_failed",
         "snerv_scorer_domain_tether_lambda_inactive_telemetry",
         "snerv_scorer_domain_tether_missing_telemetry",
+        "snerv_scorer_tether_smoke_failed",
+        "snerv_scorer_tether_smoke_schema_mismatch",
         "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry",
         "snerv_segnet_last_frame_distill_metric_missing_telemetry",
         "snerv_upstream_eval_gate_failed",

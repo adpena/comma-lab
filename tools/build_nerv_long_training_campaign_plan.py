@@ -201,6 +201,15 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     parser.add_argument(
+        "--snerv-scorer-tether-smoke-report",
+        type=Path,
+        help=(
+            "Optional snerv_scorer_tether_smoke.v1 JSON. Failed reports block "
+            "SNeRV queue launch; passing reports prove the short PR95 tether "
+            "aliases and lambda activation before long training."
+        ),
+    )
+    parser.add_argument(
         "--output-root",
         default="/Volumes/VertigoDataTier/pact/nerv_long_training_campaigns",
     )
@@ -275,6 +284,11 @@ def main(argv: list[str] | None = None) -> int:
         ),
         pr95_baseline_identity=(
             None if args.pr95_baseline_identity is None else _load(args.pr95_baseline_identity)
+        ),
+        snerv_scorer_tether_smoke_report=(
+            None
+            if args.snerv_scorer_tether_smoke_report is None
+            else _load(args.snerv_scorer_tether_smoke_report)
         ),
         snerv_bounded_proof_only=bool(args.snerv_bounded_proof_only),
         snerv_bounded_proof_epochs=int(args.snerv_bounded_proof_epochs),

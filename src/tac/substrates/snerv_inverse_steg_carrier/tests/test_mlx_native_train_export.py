@@ -1852,7 +1852,8 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert captured["posenet_device"] == "mps"
     assert captured["segnet_bundle_hw"] == (16, 16)
     assert captured["posenet_bundle_hw"] == (16, 16)
-    assert report["score_aware_long_training_executed"] is True
+    assert report["native_mlx_training_executed"] is True
+    assert report["score_aware_long_training_executed"] is False
     assert report["score_aware_long_training_real_teachers_bound"] is True
     assert report["score_aware_long_training_has_real_segnet_teacher"] is True
     assert report["score_aware_long_training_has_real_posenet_teacher"] is True
@@ -1860,7 +1861,14 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     assert report["score_aware_long_training_pr95_curriculum_bound"] is True
     assert report["score_aware_long_training_muon_adamw_partition_bound"] is True
     assert "snerv_real_segnet_posenet_teacher_loop_not_attached" not in report["blockers"]
+    assert "snerv_score_aware_long_training_dual_segnet_lambda_never_active" in report[
+        "blockers"
+    ]
     long_training = report["score_aware_long_training"]
+    assert long_training["training_completed"] is True
+    assert long_training["trained_state_exportable"] is True
+    assert long_training["executed"] is False
+    assert long_training["training_telemetry_contract"]["passed"] is False
     assert long_training["has_real_segnet_teacher"] is True
     assert long_training["has_real_posenet_teacher"] is True
     assert long_training["teacher_binding"]["requested_distillation_device"] == "gpu"

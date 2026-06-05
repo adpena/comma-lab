@@ -2892,6 +2892,79 @@ def test_long_training_campaign_plan_rejects_partial_snerv_binary_profile_byte_f
     ]
 
 
+def test_long_training_campaign_plan_consumes_passing_snerv_tether_smoke() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report={
+            "schema": "snerv_scorer_tether_smoke.v1",
+            "created_utc": "2026-06-05T00:00:00Z",
+            "steps": 2,
+            "passed": True,
+            "metric_summary": {
+                "loss_part_distill": 0.5,
+                "loss_part_pose_distill": 0.25,
+                "snerv_segnet_last_frame_distill_lambda": 0.01,
+                "snerv_posenet_yuv6_pair_distill_lambda": 0.01,
+            },
+            "blockers": [],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert report["snerv_scorer_tether_smoke_report_attached"] is True
+    assert report["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert snerv["snerv_scorer_tether_smoke_gate"]["passed"] is True
+    assert (
+        snerv["score_aware_long_training_plan"]["snerv_scorer_tether_smoke_gate"][
+            "passed"
+        ]
+        is True
+    )
+    assert "snerv_scorer_tether_smoke_failed" not in snerv["blockers"]
+
+
+def test_long_training_campaign_plan_blocks_failed_snerv_tether_smoke() -> None:
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        snerv_scorer_tether_smoke_report={
+            "schema": "snerv_scorer_tether_smoke.v1",
+            "created_utc": "2026-06-05T00:00:00Z",
+            "steps": 2,
+            "passed": False,
+            "metric_summary": {},
+            "blockers": ["snerv_scorer_tether_smoke_lambda_inactive"],
+            "score_claim": False,
+            "promotion_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+    snerv = next(row for row in report["campaign_rows"] if row["family"] == "snerv")
+
+    assert report["snerv_scorer_tether_smoke_gate"]["passed"] is False
+    assert "snerv_scorer_tether_smoke_failed" in snerv["blockers"]
+    assert "snerv_scorer_tether_smoke_lambda_inactive" in snerv["blockers"]
+    assert snerv["experiment_queue_entry"]["status"] == "disabled"
+    assert snerv["experiment_queue_entry"]["blocked"] is True
+    assert "snerv_scorer_tether_smoke_failed" in snerv[
+        "experiment_queue_entry"
+    ]["launch_authority_contract"]["queue_launch_blockers"]
+
+
 def test_long_training_campaign_plan_consumes_candidate_feedback_sources() -> None:
     report = build_nerv_long_training_campaign_plan(
         hinerv_modelsize_budget=_hinerv_budget(),
@@ -3562,6 +3635,9 @@ def test_long_training_campaign_plan_blocks_snerv_degenerate_renderer_context() 
                     "snerv_posenet_yuv6_pair_distill_metric_missing_telemetry",
                     "snerv_segnet_last_frame_distill_metric_missing_telemetry",
                     "snerv_scorer_domain_tether_lambda_inactive_telemetry",
+                    "snerv_score_aware_long_training_dual_segnet_lambda_never_active",
+                    "snerv_score_aware_long_training_dual_posenet_lambda_never_active",
+                    "snerv_score_aware_long_training_telemetry_contract_failed",
                 ],
                 "score_claim": False,
                 "promotion_eligible": False,
@@ -3595,6 +3671,12 @@ def test_long_training_campaign_plan_blocks_snerv_degenerate_renderer_context() 
     assert "snerv_scorer_domain_tether_missing_telemetry" in snerv["blockers"]
     queue_contract = snerv["experiment_queue_entry"]["launch_authority_contract"]
     assert "snerv_scorer_domain_tether_missing_telemetry" in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert "snerv_score_aware_long_training_dual_segnet_lambda_never_active" in (
+        queue_contract["queue_launch_blockers"]
+    )
+    assert "snerv_score_aware_long_training_telemetry_contract_failed" in (
         queue_contract["queue_launch_blockers"]
     )
     assert snerv["experiment_queue_entry"]["status"] == "disabled"
@@ -4537,6 +4619,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     out_snerv_lf_reroute_queue = tmp_path / "snerv_lf_reroute_queue.json"
     feedback_jsonl = tmp_path / "feedback.jsonl"
     waterfill_bundle = tmp_path / "hinerv_archive_ladder_waterfill.json"
+    snerv_tether_smoke = tmp_path / "snerv_scorer_tether_smoke.json"
     proof_path = _receiver_proof(tmp_path, archive_sha="a" * 64)
     hinerv.write_text(json.dumps(_hinerv_budget()), encoding="utf-8")
     snerv.write_text(json.dumps(_snerv_budget()), encoding="utf-8")
@@ -4567,6 +4650,28 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
         ),
         encoding="utf-8",
     )
+    snerv_tether_smoke.write_text(
+        json.dumps(
+            {
+                "schema": "snerv_scorer_tether_smoke.v1",
+                "created_utc": "2026-06-05T00:00:00Z",
+                "steps": 2,
+                "passed": True,
+                "metric_summary": {
+                    "loss_part_distill": 0.5,
+                    "loss_part_pose_distill": 0.25,
+                    "snerv_segnet_last_frame_distill_lambda": 0.01,
+                    "snerv_posenet_yuv6_pair_distill_lambda": 0.01,
+                },
+                "blockers": [],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
 
     rc = cli.main(
         [
@@ -4582,6 +4687,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             str(feedback_jsonl),
             "--decoder-weight-waterfill-source",
             str(waterfill_bundle),
+            "--snerv-scorer-tether-smoke-report",
+            str(snerv_tether_smoke),
             "--epochs",
             "16",
             "--output-json",
@@ -4601,6 +4708,8 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert payload["planner_row_queue_artifact_path"] == out_queue.as_posix()
     assert payload["candidate_feedback_row_count"] == 1
     assert payload["decoder_weight_waterfill_attached_row_count"] == 1
+    assert payload["snerv_scorer_tether_smoke_report_attached"] is True
+    assert payload["snerv_scorer_tether_smoke_gate"]["passed"] is True
     hi = next(row for row in payload["campaign_rows"] if row["family"] == "hi_nerv")
     assert "--planner-row-queue-artifact" in hi["command_argv"]
     assert hi["command_argv"][hi["command_argv"].index("--planner-row-queue-artifact") + 1] == out_queue.as_posix()
@@ -4612,6 +4721,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
     assert hi["decoder_weight_waterfill_plan"]["source_path"] == (waterfill_bundle.resolve(strict=False).as_posix())
     snerv_row = next(row for row in payload["campaign_rows"] if row["family"] == "snerv")
     assert snerv_row["candidate_feedback"]["candidate_id"] == _snerv_candidate_id()
+    assert snerv_row["snerv_scorer_tether_smoke_gate"]["passed"] is True
     assert "partial_pair_byte_feedback_only" in snerv_row["blockers"]
     assert payload["experiment_queue"]["schema"] == "experiment_queue.v1"
     assert payload["snerv_lf_over_ceiling_reroute_queue"]["schema"] == (

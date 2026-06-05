@@ -500,6 +500,17 @@ def test_briefing_json_composite_has_all_three_keys():
     assert queue_fleet["promotion_eligible"] is False
     assert queue_fleet["rank_or_kill_eligible"] is False
     assert queue_fleet["ready_for_exact_eval_dispatch"] is False
+    nerv_plan = out["nerv_long_training_campaign_plan"]
+    assert nerv_plan["schema"] == (
+        "pact.nerv_long_training_campaign_plan_default_surface.v1"
+    )
+    assert nerv_plan["score_claim"] is False
+    assert nerv_plan["promotion_eligible"] is False
+    assert nerv_plan["rank_or_kill_eligible"] is False
+    assert nerv_plan["ready_for_exact_eval_dispatch"] is False
+    assert out["dispatch_readiness"][
+        "phase_6g_nerv_long_training_campaign_plan"
+    ]["score_claim"] is False
     l5 = out["l5_v2_frontier_readiness"]
     assert l5["schema"] == "pact.l5_v2_frontier_readiness.v1"
     assert l5["score_claim"] is False
@@ -518,6 +529,7 @@ def test_briefing_json_composite_has_all_three_keys():
     assert atw_gate["rank_or_kill_eligible"] is False
     assert atw_gate["ready_for_exact_eval_dispatch"] is False
     assert atw_gate["dispatch_allowed"] is False
+
     assert atw_gate["phase2_lift_allowed"] is False
     assert l5["atw_v2_phase2_d4_verdict"] == "INDEPENDENT"
     assert l5["atw_v2_phase2_dispatch_allowed"] is False
@@ -946,6 +958,154 @@ def test_briefing_json_composite_has_all_three_keys():
         for blocker in xmember["terminal_exact_eval_evidence_blockers"]
     )
 
+
+def _write_nerv_modelsize_budget(path: Path, *, family: str) -> Path:
+    schema = "snerv_modelsize_budget.v1" if family == "snerv" else "nerv_modelsize_budget.v1"
+    return _write_json(
+        path,
+        {
+            "schema": schema,
+            "family": family,
+            "candidate_count": 1,
+            "selected_candidate_count": 1,
+            "selected_candidates": [{"candidate_id": f"{family}_candidate"}],
+            "hard_byte_ceilings": [178000],
+            "score_claim": False,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+
+def _write_nerv_feedback_row(
+    path: Path,
+    *,
+    family: str,
+    feedback_kind: str,
+    candidate_id: str,
+    score_claim: bool = False,
+) -> Path:
+    return _write_json(
+        path,
+        {
+            "schema": "nerv_candidate_feedback_row.v1",
+            "family": family,
+            "feedback_kind": feedback_kind,
+            "candidate_id": candidate_id,
+            "measured_num_pairs": 600,
+            "direct_feedback_blockers": [
+                "snerv_scorer_domain_tether_missing_telemetry"
+                if family == "snerv"
+                else "hi_nerv_segnet_stagnation_telemetry_feedback"
+            ],
+            "score_claim": score_claim,
+            "score_claim_valid": False,
+            "promotion_eligible": False,
+            "rank_or_kill_eligible": False,
+            "ready_for_exact_eval_dispatch": False,
+        },
+    )
+
+
+def test_operator_briefing_nerv_plan_auto_discovers_feedback_roots(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    budget_root = tmp_path / "budgets"
+    _write_nerv_modelsize_budget(
+        budget_root / "hinerv_modelsize_budget.json",
+        family="hi_nerv",
+    )
+    _write_nerv_modelsize_budget(
+        budget_root / "snerv_modelsize_budget.json",
+        family="snerv",
+    )
+    feedback_root = tmp_path / "feedback"
+    snerv_row = _write_nerv_feedback_row(
+        feedback_root
+        / "snerv_run"
+        / "nerv_candidate_training_telemetry_feedback_row.json",
+        family="snerv",
+        feedback_kind="training_telemetry",
+        candidate_id="snerv_scalarmean_guard",
+    )
+    hinerv_row = _write_nerv_feedback_row(
+        feedback_root / "hinerv_run" / "nerv_candidate_training_telemetry_feedback_row.json",
+        family="hi_nerv",
+        feedback_kind="training_telemetry",
+        candidate_id="hinerv_waterfill_guard",
+    )
+    monkeypatch.setattr(mod, "NERV_MODELSIZE_BUDGET_SCAN_ROOTS", (budget_root,))
+    monkeypatch.setattr(mod, "NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS", (feedback_root,))
+
+    payload = mod._nerv_long_training_campaign_plan_summary()
+
+    assert payload["status"] == "READY_WITH_FEEDBACK"
+    assert payload["feedback_row_count"] == 2
+    assert payload["usable_feedback_row_count"] == 2
+    assert payload["blocked_feedback_row_count"] == 0
+    assert str(snerv_row.parent) in payload["feedback_roots"]
+    assert str(hinerv_row.parent) in payload["feedback_roots"]
+    command_args = payload["default_campaign_plan_command_args"]
+    assert command_args.count("--auto-candidate-feedback-root") == 2
+    assert str(snerv_row.parent) in command_args
+    assert str(hinerv_row.parent) in command_args
+    assert "--candidate-feedback-source" not in command_args
+    assert payload["score_claim"] is False
+    assert payload["promotion_eligible"] is False
+    assert payload["rank_or_kill_eligible"] is False
+    assert payload["ready_for_exact_eval_dispatch"] is False
+
+
+def test_operator_briefing_nerv_plan_filters_feedback_authority_leaks(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    mod = _load_briefing_module()
+    budget_root = tmp_path / "budgets"
+    _write_nerv_modelsize_budget(
+        budget_root / "hinerv_modelsize_budget.json",
+        family="hi_nerv",
+    )
+    _write_nerv_modelsize_budget(
+        budget_root / "snerv_modelsize_budget.json",
+        family="snerv",
+    )
+    feedback_root = tmp_path / "feedback"
+    good_row = _write_nerv_feedback_row(
+        feedback_root / "good" / "nerv_candidate_training_telemetry_feedback_row.json",
+        family="snerv",
+        feedback_kind="training_telemetry",
+        candidate_id="snerv_good",
+    )
+    bad_row = _write_nerv_feedback_row(
+        feedback_root / "bad" / "nerv_candidate_training_telemetry_feedback_row.json",
+        family="snerv",
+        feedback_kind="training_telemetry",
+        candidate_id="snerv_bad",
+        score_claim=True,
+    )
+    monkeypatch.setattr(mod, "NERV_MODELSIZE_BUDGET_SCAN_ROOTS", (budget_root,))
+    monkeypatch.setattr(mod, "NERV_CAMPAIGN_FEEDBACK_SCAN_ROOTS", (feedback_root,))
+
+    payload = mod._nerv_long_training_campaign_plan_summary()
+
+    assert payload["status"] == "READY_WITH_FEEDBACK"
+    assert payload["feedback_row_count"] == 2
+    assert payload["usable_feedback_row_count"] == 1
+    assert payload["blocked_feedback_row_count"] == 1
+    assert str(good_row.parent) in payload["feedback_roots"]
+    assert str(bad_row.parent) not in payload["feedback_roots"]
+    blocked = [
+        row for row in payload["latest_feedback_rows"]
+        if row["path"] == str(bad_row)
+    ]
+    assert blocked
+    assert blocked[0]["status"] == "BLOCKED_AUTHORITY_LEAK"
+    assert blocked[0]["blockers"] == ["truthy_authority:score_claim"]
 
 def test_briefing_hides_above_target_rows_by_default_but_can_show_them():
     mod = _load_briefing_module()
@@ -3539,12 +3699,18 @@ def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
     }
 
     def fake_run_json(script, extra_args=None):
-        if script == mod.PR91_HPM1_READINESS:
-            return {"_error": "live readiness audit failed"}
-        return dict(closed_payload)
+        raise AssertionError(
+            f"PR91 briefing rows must use cached artifacts, not live audit {script}"
+        )
 
     monkeypatch.setattr(mod, "_run_json", fake_run_json)
-    monkeypatch.setattr(mod, "_load_json_file", lambda path: dict(closed_payload))
+
+    def fake_load_json_file(path):
+        if path == mod.PR91_HPM1_READINESS_ARTIFACT:
+            return {"_error": "cached readiness artifact failed"}
+        return dict(closed_payload)
+
+    monkeypatch.setattr(mod, "_load_json_file", fake_load_json_file)
     monkeypatch.setattr(mod, "_canonical_payload_hash", lambda payload: "same")
     monkeypatch.setattr(mod, "_manifest_hash_self_consistent", lambda payload: True)
 
@@ -3553,7 +3719,8 @@ def test_pr91_readiness_row_surfaces_audit_errors(monkeypatch):
     assert row["state"] == "AUDIT_ERROR_FAIL_CLOSED"
     assert row["ready_for_exact_eval_dispatch"] is False
     assert row["score_claim"] is False
-    assert row["audit_errors"] == ["live readiness audit failed"]
+    assert row["audit_errors"] == ["cached readiness artifact failed"]
+    assert row["source"] == "cached_artifacts"
 
 
 def test_operator_briefing_surfaces_frontier_feedback_cycle_autopolicy(
