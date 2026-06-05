@@ -1217,9 +1217,86 @@ def test_hinerv_full_control_contract_clears_when_pr95_controls_are_present() ->
     assert controls["output_head_target_bias_init_epsilon"] == pytest.approx(
         1.0 / 1024.0
     )
+    assert controls["output_head_target_contrast_init_enabled"] is True
+    assert controls["output_head_target_contrast_init_max_pairs"] == 8
+    assert controls["output_head_target_contrast_init_min_output_std"] == pytest.approx(
+        1.0e-6
+    )
+    assert controls["output_head_target_contrast_init_max_gain"] == pytest.approx(
+        4096.0
+    )
     assert contract["score_claim"] is False
     assert contract["promotion_eligible"] is False
     assert contract["ready_for_exact_eval_dispatch"] is False
+
+
+def test_hinerv_full_control_contract_blocks_disabled_output_head_contrast_init() -> None:
+    args = _build_parser().parse_args(
+        [
+            "--full",
+            "--epochs",
+            "29650",
+            "--distillation-weight",
+            "1.0",
+            "--pose-distillation-weight",
+            "1.0",
+            "--eval-roundtrip-ste",
+            "--pr95-faithful-curriculum",
+            "--pr95-stage-source-weight-amplification",
+            "--coder-qat",
+            "--coder-qat-c1a-entropy-weight",
+            "0.0003",
+            "--coder-qat-c1a-sigma",
+            "0.35",
+            "--coder-qat-c1a-sample-size",
+            "64",
+            "--hard-byte-ceiling",
+            "500000",
+            "--ema-archive-selection",
+            "--post-export-receiver-cache-quality-gate",
+            "--scorer-input-distribution-guard-weight",
+            "2.0",
+            "--segnet-distillation-objective",
+            "boundary_argmax_hinge",
+            "--segnet-direct-live-distillation-weight",
+            "0.25",
+            "--segnet-direct-live-class-histogram-weight",
+            "0.25",
+            "--segnet-direct-live-class-balanced-hinge-weight",
+            "0.5",
+            "--segnet-direct-live-class-balanced-ce-weight",
+            "0.25",
+            "--segnet-direct-live-class-balanced-squared-hinge-weight",
+            "0.75",
+            "--scorer-input-contrast-floor-weight",
+            "0.5",
+            "--scorer-input-contrast-floor-segnet-min-std-ratio",
+            "0.6",
+            "--scorer-input-contrast-floor-posenet-yuv6-min-std-ratio",
+            "0.6",
+            "--scorer-input-shape-tether-weight",
+            "0.75",
+            "--posenet-temporal-signal-floor-weight",
+            "1.25",
+            "--posenet-temporal-signal-min-std-ratio",
+            "0.35",
+            "--posenet-temporal-signal-min-mean-abs-ratio",
+            "0.45",
+            "--no-output-head-target-contrast-init",
+        ]
+    )
+
+    contract = _pr95_full_control_contract(args)
+
+    assert contract["production_full_control_ready"] is False
+    assert "hinerv_full_missing_output_head_target_contrast_init" in contract[
+        "blockers"
+    ]
+    assert "hinerv_full_missing_output_head_target_bias_init" not in contract[
+        "blockers"
+    ]
+    assert contract["controls"]["output_head_target_contrast_init_enabled"] is False
+    assert contract["controls"]["output_head_target_bias_init_enabled"] is True
 
 
 def test_hinerv_full_control_contract_requires_measured_section_byte_actuation() -> None:

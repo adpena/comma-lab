@@ -14,7 +14,7 @@ import hashlib
 import json
 import math
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -179,6 +179,10 @@ class HiNervTrainTimeControlConfig:
     posenet_temporal_signal_min_mean_abs_ratio: float = 0.25
     output_head_target_bias_init_enabled: bool = True
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0
+    output_head_target_contrast_init_enabled: bool = True
+    output_head_target_contrast_init_max_pairs: int = 8
+    output_head_target_contrast_init_min_output_std: float = 1.0e-6
+    output_head_target_contrast_init_max_gain: float = 4096.0
 
     def validated(self) -> HiNervTrainTimeControlConfig:
         if self.stage_loss_schedule not in {
@@ -332,6 +336,18 @@ class HiNervTrainTimeControlConfig:
             self.output_head_target_bias_init_epsilon,
             "output_head_target_bias_init_epsilon",
         )
+        if int(self.output_head_target_contrast_init_max_pairs) <= 0:
+            raise ValueError("output_head_target_contrast_init_max_pairs must be positive")
+        _require_finite_positive(
+            self.output_head_target_contrast_init_min_output_std,
+            "output_head_target_contrast_init_min_output_std",
+        )
+        if float(self.output_head_target_contrast_init_max_gain) < 1.0:
+            raise ValueError("output_head_target_contrast_init_max_gain must be >= 1")
+        _require_finite_positive(
+            self.output_head_target_contrast_init_max_gain,
+            "output_head_target_contrast_init_max_gain",
+        )
         return replace(
             self,
             optimizer_kind=str(self.optimizer_kind),
@@ -429,6 +445,18 @@ class HiNervTrainTimeControlConfig:
             ),
             output_head_target_bias_init_epsilon=float(
                 self.output_head_target_bias_init_epsilon
+            ),
+            output_head_target_contrast_init_enabled=bool(
+                self.output_head_target_contrast_init_enabled
+            ),
+            output_head_target_contrast_init_max_pairs=int(
+                self.output_head_target_contrast_init_max_pairs
+            ),
+            output_head_target_contrast_init_min_output_std=float(
+                self.output_head_target_contrast_init_min_output_std
+            ),
+            output_head_target_contrast_init_max_gain=float(
+                self.output_head_target_contrast_init_max_gain
             ),
         )
 
@@ -617,6 +645,27 @@ class HiNervTrainTimeControlConfig:
                     "head_rgb_1.bias",
                 ],
             },
+            "output_head_target_contrast_init": {
+                "schema": "hi_nerv_output_head_target_contrast_init_control.v1",
+                "enabled": bool(self.output_head_target_contrast_init_enabled),
+                "max_pairs": int(self.output_head_target_contrast_init_max_pairs),
+                "min_output_std": float(
+                    self.output_head_target_contrast_init_min_output_std
+                ),
+                "max_gain": float(self.output_head_target_contrast_init_max_gain),
+                "closed_form": (
+                    "head_rgb_weight *= clip(std(target_rgb)/std(output_rgb), "
+                    "1/max_gain, max_gain), with std(output_rgb) floored by "
+                    "min_output_std"
+                ),
+                "target_surface": "upstream_scorer_resolution_rgb_contrast",
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [
+                    "head_rgb_0.weight",
+                    "head_rgb_1.weight",
+                ],
+                "human_visual_fidelity_objective": False,
+            },
             "authority": TRAINER_AUTHORITY,
             **FALSE_AUTHORITY,
         }
@@ -725,6 +774,7 @@ def _full_main(args: argparse.Namespace) -> int:
         target_rgb_0=target_rgb_0,
         target_rgb_1=target_rgb_1,
         controls=train_time_controls,
+        source_pair_indices=source_pair_indices,
     )
     (
         train_time_section_byte_metrics,
@@ -1209,6 +1259,7 @@ def _smoke_main(args: argparse.Namespace) -> int:
         target_rgb_0=smoke_target_rgb_0,
         target_rgb_1=smoke_target_rgb_1,
         controls=train_time_controls,
+        source_pair_indices=None,
     )
     output = model(idx)
     mx.eval(output)
@@ -1595,6 +1646,45 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Clamp epsilon for bias=logit(mean(target_channel)) in the "
             "archive-charged HiNeRV output-head initialization."
+        ),
+    )
+    parser.add_argument(
+        "--no-output-head-target-contrast-init",
+        action="store_false",
+        dest="output_head_target_contrast_init",
+        help=(
+            "Disable archive-charged sigmoid-head contrast initialization. "
+            "Production HiNeRV contracts treat this as a blocker because "
+            "recent smokes class-collapsed from low scorer-RGB variance."
+        ),
+    )
+    parser.set_defaults(output_head_target_contrast_init=True)
+    parser.add_argument(
+        "--output-head-target-contrast-init-max-pairs",
+        type=int,
+        default=8,
+        help=(
+            "Maximum target pairs used to estimate the compression-time "
+            "output-head contrast scale."
+        ),
+    )
+    parser.add_argument(
+        "--output-head-target-contrast-init-min-output-std",
+        type=float,
+        default=1.0e-6,
+        help=(
+            "Minimum unit-space output std denominator for output-head "
+            "contrast scaling. The default is intentionally low enough to "
+            "escape the one-class SegNet collapse seen in flat HiNeRV smokes."
+        ),
+    )
+    parser.add_argument(
+        "--output-head-target-contrast-init-max-gain",
+        type=float,
+        default=4096.0,
+        help=(
+            "Maximum per-channel output-head weight gain applied by the "
+            "closed-form contrast initializer."
         ),
     )
     parser.add_argument(
@@ -2506,6 +2596,18 @@ def _train_time_control_config_from_args(
         output_head_target_bias_init_epsilon=float(
             getattr(args, "output_head_target_bias_init_epsilon", 1.0 / 1024.0)
         ),
+        output_head_target_contrast_init_enabled=bool(
+            getattr(args, "output_head_target_contrast_init", True)
+        ),
+        output_head_target_contrast_init_max_pairs=int(
+            getattr(args, "output_head_target_contrast_init_max_pairs", 8)
+        ),
+        output_head_target_contrast_init_min_output_std=float(
+            getattr(args, "output_head_target_contrast_init_min_output_std", 1.0e-6)
+        ),
+        output_head_target_contrast_init_max_gain=float(
+            getattr(args, "output_head_target_contrast_init_max_gain", 4096.0)
+        ),
     ).validated()
 
 
@@ -2899,6 +3001,7 @@ def _initialize_output_head_target_bias(
     target_rgb_0: Any,
     target_rgb_1: Any,
     controls: HiNervTrainTimeControlConfig,
+    source_pair_indices: Sequence[int] | None = None,
 ) -> dict[str, Any]:
     control = controls.validated()
     if not bool(control.output_head_target_bias_init_enabled):
@@ -2925,6 +3028,73 @@ def _initialize_output_head_target_bias(
             epsilon=float(control.output_head_target_bias_init_epsilon),
         )
     )
+    if bool(control.output_head_target_contrast_init_enabled):
+        contrast_initializer = getattr(
+            model,
+            "initialize_output_head_contrast_from_targets",
+            None,
+        )
+        if not callable(contrast_initializer):
+            raise RuntimeError(
+                "HiNeRV model lacks initialize_output_head_contrast_from_targets; "
+                "refusing low-contrast-prone long-run launch"
+            )
+        import mlx.core as mx
+
+        pair_count = int(target_rgb_0.shape[0])
+        contrast_count = min(
+            pair_count,
+            int(control.output_head_target_contrast_init_max_pairs),
+        )
+        target0_subset = target_rgb_0[:contrast_count]
+        target1_subset = target_rgb_1[:contrast_count]
+        if source_pair_indices is None:
+            pair_indices = mx.arange(contrast_count, dtype=mx.int32)
+        else:
+            if len(source_pair_indices) < contrast_count:
+                raise ValueError(
+                    "source_pair_indices shorter than target contrast init subset: "
+                    f"{len(source_pair_indices)} < {contrast_count}"
+                )
+            pair_indices = mx.array(
+                [int(value) for value in source_pair_indices[:contrast_count]],
+                dtype=mx.int32,
+            )
+        contrast_payload = dict(
+            contrast_initializer(
+                target0_subset,
+                target1_subset,
+                pair_indices=pair_indices,
+                min_output_std=float(
+                    control.output_head_target_contrast_init_min_output_std
+                ),
+                max_gain=float(control.output_head_target_contrast_init_max_gain),
+            )
+        )
+        payload["contrast_init"] = contrast_payload
+        payload["archive_charged_decoder_tensors"] = sorted(
+            {
+                *[str(v) for v in payload.get("archive_charged_decoder_tensors", [])],
+                *[
+                    str(v)
+                    for v in contrast_payload.get(
+                        "archive_charged_decoder_tensors",
+                        [],
+                    )
+                ],
+            }
+        )
+    else:
+        payload["contrast_init"] = {
+            "schema": "hi_nerv_output_head_target_contrast_init.v1",
+            "enabled": False,
+            "reason": "disabled_by_cli",
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [],
+            "blockers": ["hinerv_output_head_target_contrast_init_disabled"],
+            "authority": TRAINER_AUTHORITY,
+            **FALSE_AUTHORITY,
+        }
     payload.update({
         "authority": TRAINER_AUTHORITY,
         **FALSE_AUTHORITY,
@@ -3877,6 +4047,9 @@ def _pr95_full_control_contract(
     output_head_bias_metadata = train_time_controls.metadata()[
         "output_head_target_bias_init"
     ]
+    output_head_contrast_metadata = train_time_controls.metadata()[
+        "output_head_target_contrast_init"
+    ]
 
     if distillation_weight <= 0.0:
         blockers.append("hinerv_full_missing_segnet_distillation_loss")
@@ -3941,6 +4114,8 @@ def _pr95_full_control_contract(
         blockers.append("hinerv_full_missing_posenet_temporal_signal_floor")
     if not bool(output_head_bias_metadata["enabled"]):
         blockers.append("hinerv_full_missing_output_head_target_bias_init")
+    if not bool(output_head_contrast_metadata["enabled"]):
+        blockers.append("hinerv_full_missing_output_head_target_contrast_init")
     blockers = list(dict.fromkeys(blockers))
 
     return {
@@ -4116,6 +4291,18 @@ def _pr95_full_control_contract(
             ),
             "output_head_target_bias_init_epsilon": float(
                 output_head_bias_metadata["epsilon"]
+            ),
+            "output_head_target_contrast_init_enabled": bool(
+                output_head_contrast_metadata["enabled"]
+            ),
+            "output_head_target_contrast_init_max_pairs": int(
+                output_head_contrast_metadata["max_pairs"]
+            ),
+            "output_head_target_contrast_init_min_output_std": float(
+                output_head_contrast_metadata["min_output_std"]
+            ),
+            "output_head_target_contrast_init_max_gain": float(
+                output_head_contrast_metadata["max_gain"]
             ),
         },
         "train_time_controls": _metadata_safe(train_time_controls.metadata()),

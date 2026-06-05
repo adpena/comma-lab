@@ -243,6 +243,47 @@ def test_mlx_output_head_target_bias_init_is_archive_exported() -> None:
 
 
 @skip_no_mlx
+def test_mlx_output_head_target_contrast_init_scales_archive_head_weights() -> None:
+    import mlx.core as mx
+    import numpy as np
+
+    from tac.substrates.hi_nerv.mlx_renderer import HinervSubstrateMLX
+
+    cfg = _smoke_cfg()
+    model = HinervSubstrateMLX(cfg)
+    ramp = mx.reshape(
+        mx.linspace(0.05, 0.95, cfg.output_height * cfg.output_width),
+        (1, cfg.output_height, cfg.output_width, 1),
+    )
+    target0 = mx.tile(mx.concatenate([ramp, 1.0 - ramp, 0.5 * ramp], axis=-1), (cfg.num_pairs, 1, 1, 1))
+    target1 = mx.tile(mx.concatenate([1.0 - ramp, ramp, 0.25 + 0.5 * ramp], axis=-1), (cfg.num_pairs, 1, 1, 1))
+    model.initialize_output_head_bias_from_targets(target0, target1)
+    model.head_rgb_0.update({"weight": model.head_rgb_0.weight * 0.01})
+    model.head_rgb_1.update({"weight": model.head_rgb_1.weight * 0.01})
+    mx.eval(model.head_rgb_0.weight, model.head_rgb_1.weight)
+
+    payload = model.initialize_output_head_contrast_from_targets(
+        target0,
+        target1,
+        pair_indices=mx.arange(cfg.num_pairs, dtype=mx.int32),
+        max_gain=16.0,
+    )
+
+    assert payload["runtime_sidecar_bytes"] == 0
+    assert payload["archive_charged_decoder_tensors"] == [
+        "head_rgb_0.weight",
+        "head_rgb_1.weight",
+    ]
+    before = np.mean(payload["output_rgb_1_std_before"])
+    after = np.mean(payload["output_rgb_1_std_after"])
+    assert after > before * 2.0
+    assert payload["contrast_lift_passed"] is True
+    assert payload["blockers"] == []
+    assert payload["output_rgb_1_std_lift_ratio"] > 2.0
+    assert max(payload["head_rgb_1_weight_gain"]) <= 16.0
+
+
+@skip_no_mlx
 def test_mlx_renderer_generic_resize_path_matches_pytorch() -> None:
     import mlx.core as mx
     import numpy as np

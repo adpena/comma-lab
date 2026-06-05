@@ -889,6 +889,172 @@ class HinervSubstrateMLX(nn.Module if nn is not None else object):  # type: igno
             ],
         }
 
+    def initialize_output_head_contrast_from_targets(
+        self,
+        target_rgb_0: Any,
+        target_rgb_1: Any,
+        *,
+        pair_indices: Any,
+        min_output_std: float = 1.0e-4,
+        max_gain: float = 32.0,
+    ) -> dict[str, Any]:
+        """Scale sigmoid RGB-head weights to match target contrast at launch.
+
+        The bias initializer solves the constant-color optimum.  Compact
+        HiNeRV smokes then exposed the next basin: the scorer-resolution output
+        starts with the right mean but only a few percent of the target RGB
+        variance, so SegNet sees a one-class flat image.  This method applies
+        the small-signal correction to the archive-charged RGB head weights:
+        ``weight *= std(target) / std(output)`` per output channel, clipped to a
+        bounded gain.  No sidecar is introduced; the changed tensors are the
+        ordinary decoder weights inside the archive.
+        """
+
+        eps = float(min_output_std)
+        gain_cap = float(max_gain)
+        if not math.isfinite(eps) or eps <= 0.0:
+            raise ValueError(
+                "min_output_std must be finite and positive; "
+                f"got {min_output_std!r}"
+            )
+        if not math.isfinite(gain_cap) or gain_cap < 1.0:
+            raise ValueError(f"max_gain must be finite and >= 1; got {max_gain!r}")
+
+        idx = mx.array(pair_indices, dtype=mx.int32)  # type: ignore[union-attr]
+        if idx.ndim != 1 or int(idx.shape[0]) <= 0:
+            raise ValueError("pair_indices must be a non-empty rank-1 tensor")
+
+        target0 = mx.array(target_rgb_0).astype(mx.float32)  # type: ignore[union-attr]
+        target1 = mx.array(target_rgb_1).astype(mx.float32)  # type: ignore[union-attr]
+        for name, target in (("target_rgb_0", target0), ("target_rgb_1", target1)):
+            if target.ndim != 4 or int(target.shape[-1]) != 3:
+                raise ValueError(
+                    f"{name} must be NHWC with 3 channels; got "
+                    f"shape={tuple(int(v) for v in target.shape)}"
+                )
+            if int(target.shape[0]) != int(idx.shape[0]):
+                raise ValueError(
+                    f"{name} batch {int(target.shape[0])} must match "
+                    f"pair_indices length {int(idx.shape[0])}"
+                )
+
+        pair01 = self(idx) / 255.0
+        cand0 = mx.transpose(pair01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
+        cand1 = mx.transpose(pair01[:, 1], (0, 2, 3, 1))  # type: ignore[union-attr]
+
+        def _channel_std(x: Any) -> Any:
+            mean = mx.mean(x, axis=(0, 1, 2), keepdims=True)  # type: ignore[union-attr]
+            var = mx.mean((x - mean) ** 2, axis=(0, 1, 2))  # type: ignore[union-attr]
+            return mx.sqrt(mx.maximum(var, 0.0))  # type: ignore[union-attr]
+
+        def _gain(target: Any, cand: Any) -> tuple[Any, Any, Any]:
+            target_std = _channel_std(target)
+            cand_std = _channel_std(cand)
+            raw = target_std / mx.maximum(cand_std, eps)  # type: ignore[union-attr]
+            clipped = mx.clip(raw, 1.0 / gain_cap, gain_cap)  # type: ignore[union-attr]
+            return target_std, cand_std, clipped
+
+        target0_std, before0_std, gain0 = _gain(target0, cand0)
+        target1_std, before1_std, gain1 = _gain(target1, cand1)
+        self.head_rgb_0.update(
+            {
+                "weight": self.head_rgb_0.weight
+                * mx.reshape(gain0.astype(self.head_rgb_0.weight.dtype), (3, 1, 1, 1))
+            }
+        )
+        self.head_rgb_1.update(
+            {
+                "weight": self.head_rgb_1.weight
+                * mx.reshape(gain1.astype(self.head_rgb_1.weight.dtype), (3, 1, 1, 1))
+            }
+        )
+        pair_after01 = self(idx) / 255.0
+        after0 = mx.transpose(pair_after01[:, 0], (0, 2, 3, 1))  # type: ignore[union-attr]
+        after1 = mx.transpose(pair_after01[:, 1], (0, 2, 3, 1))  # type: ignore[union-attr]
+        after0_std = _channel_std(after0)
+        after1_std = _channel_std(after1)
+        mx.eval(
+            self.head_rgb_0.weight,
+            self.head_rgb_1.weight,
+            target0_std,
+            target1_std,
+            before0_std,
+            before1_std,
+            after0_std,
+            after1_std,
+            gain0,
+            gain1,
+        )
+
+        def _list(values: Any) -> list[float]:
+            return [float(v) for v in np.asarray(values, dtype=np.float32).reshape(-1)]
+
+        target0_std_values = _list(target0_std)
+        target1_std_values = _list(target1_std)
+        before0_std_values = _list(before0_std)
+        before1_std_values = _list(before1_std)
+        after0_std_values = _list(after0_std)
+        after1_std_values = _list(after1_std)
+        gain0_values = _list(gain0)
+        gain1_values = _list(gain1)
+
+        def _mean(values: list[float]) -> float:
+            return float(np.mean(np.asarray(values, dtype=np.float64)))
+
+        def _lift(before_values: list[float], after_values: list[float]) -> float:
+            return _mean(after_values) / max(_mean(before_values), 1.0e-12)
+
+        def _target_capture(
+            target_values: list[float],
+            after_values: list[float],
+        ) -> float:
+            return _mean(after_values) / max(_mean(target_values), eps)
+
+        lift0 = _lift(before0_std_values, after0_std_values)
+        lift1 = _lift(before1_std_values, after1_std_values)
+        target_capture0 = _target_capture(target0_std_values, after0_std_values)
+        target_capture1 = _target_capture(target1_std_values, after1_std_values)
+        target0_nonflat = _mean(target0_std_values) > eps
+        target1_nonflat = _mean(target1_std_values) > eps
+        blockers: list[str] = []
+        if target0_nonflat and lift0 <= 1.01:
+            blockers.append("hinerv_output_head_contrast_init_frame0_no_std_lift")
+        if target1_nonflat and lift1 <= 1.01:
+            blockers.append("hinerv_output_head_contrast_init_frame1_no_std_lift")
+        clipped0 = sum(1 for value in gain0_values if abs(value - gain_cap) <= 1.0e-6)
+        clipped1 = sum(1 for value in gain1_values if abs(value - gain_cap) <= 1.0e-6)
+
+        return {
+            "schema": "hi_nerv_output_head_target_contrast_init.v1",
+            "enabled": True,
+            "method": "per_channel_sigmoid_head_small_signal_std_match",
+            "pair_count": int(idx.shape[0]),
+            "min_output_std": eps,
+            "max_gain": gain_cap,
+            "target_rgb_0_std": target0_std_values,
+            "target_rgb_1_std": target1_std_values,
+            "output_rgb_0_std_before": before0_std_values,
+            "output_rgb_1_std_before": before1_std_values,
+            "output_rgb_0_std_after": after0_std_values,
+            "output_rgb_1_std_after": after1_std_values,
+            "output_rgb_0_std_lift_ratio": lift0,
+            "output_rgb_1_std_lift_ratio": lift1,
+            "output_rgb_0_target_std_capture_ratio": target_capture0,
+            "output_rgb_1_target_std_capture_ratio": target_capture1,
+            "head_rgb_0_weight_gain": gain0_values,
+            "head_rgb_1_weight_gain": gain1_values,
+            "head_rgb_0_gain_clipped_channel_count": clipped0,
+            "head_rgb_1_gain_clipped_channel_count": clipped1,
+            "contrast_lift_passed": not blockers,
+            "blockers": blockers,
+            "runtime_sidecar_bytes": 0,
+            "archive_charged_decoder_tensors": [
+                "head_rgb_0.weight",
+                "head_rgb_1.weight",
+            ],
+            "human_visual_fidelity_objective": False,
+        }
+
     def __call__(self, pair_indices: Any) -> Any:
         z_c = mx.take(self.latents_coarse, pair_indices, axis=0)  # type: ignore[union-attr]
         z_m = mx.take(self.latents_mid, pair_indices, axis=0)  # type: ignore[union-attr]
