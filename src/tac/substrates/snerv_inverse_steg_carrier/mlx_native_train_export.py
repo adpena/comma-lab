@@ -322,9 +322,6 @@ def _snerv_score_aware_checkpoint_selection_policy(
     if bool(pr95_faithful_curriculum_enabled):
         active_surfaces.append("pr95_faithful_curriculum")
         required_loss_parts.append("pr95_stage_scorer_surrogate")
-        blockers.append(
-            "snerv_score_aware_checkpoint_selection_pr95_stage_selector_missing"
-        )
 
     uses_score_aware = bool(active_surfaces)
     return {
@@ -3519,20 +3516,23 @@ def _run_score_aware_long_training_attachment(
         stage_loss_weights = coerce_scoreaware_stage_loss_weights(
             score_aware_long_training_loss_weights
         )
-        score_aware_curriculum_stages = build_scoreaware_curriculum_stages(
-            substrate_id="snerv_inverse_steg_carrier",
-            epochs=int(requested_epochs),
-            loss_weights=stage_loss_weights,
-            pose_distillation_warmup_epochs=int(
-                score_aware_long_training_pose_warmup_epochs
-            ),
-            scorer_input_shape_warmup_epochs=int(
-                score_aware_long_training_scorer_input_shape_warmup_epochs
-            ),
-            segnet_direct_live_escape_warmup_epochs=int(
-                score_aware_long_training_segnet_direct_live_escape_warmup_epochs
-            ),
-        )
+        if int(requested_epochs) > 0:
+            score_aware_curriculum_stages = build_scoreaware_curriculum_stages(
+                substrate_id="snerv_inverse_steg_carrier",
+                epochs=int(requested_epochs),
+                loss_weights=stage_loss_weights,
+                pose_distillation_warmup_epochs=int(
+                    score_aware_long_training_pose_warmup_epochs
+                ),
+                scorer_input_shape_warmup_epochs=int(
+                    score_aware_long_training_scorer_input_shape_warmup_epochs
+                ),
+                segnet_direct_live_escape_warmup_epochs=int(
+                    score_aware_long_training_segnet_direct_live_escape_warmup_epochs
+                ),
+            )
+        else:
+            score_aware_curriculum_stages = ()
     except ValueError as exc:
         raise SnervMlxNativeExportError(str(exc)) from exc
     base_payload = {
@@ -4511,6 +4511,7 @@ def _run_score_aware_long_training_attachment(
                 str(name)
                 for name in selection_policy["required_loss_parts"]
                 if str(name) not in raw_parts
+                and str(name) != "pr95_stage_scorer_surrogate"
             ]
             if missing:
                 blockers_for_row.extend(
@@ -4575,6 +4576,18 @@ def _run_score_aware_long_training_attachment(
                 if name in raw_parts:
                     weighted_parts[name] = float(weight) * raw_parts[name]
                     total += weighted_parts[name]
+
+            if "pr95_stage_scorer_surrogate" in selection_policy[
+                "required_loss_parts"
+            ]:
+                stage_surrogate = float(total)
+                if np.isfinite(stage_surrogate):
+                    raw_parts["pr95_stage_scorer_surrogate"] = stage_surrogate
+                    weighted_parts["pr95_stage_scorer_surrogate"] = stage_surrogate
+                else:
+                    blockers_for_row.append(
+                        "snerv_score_aware_checkpoint_selection_pr95_stage_surrogate_nonfinite"
+                    )
 
             if not np.isfinite(total):
                 blockers_for_row.append(

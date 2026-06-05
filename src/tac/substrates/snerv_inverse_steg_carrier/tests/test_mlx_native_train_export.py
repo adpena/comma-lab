@@ -271,7 +271,7 @@ def test_score_aware_checkpoint_selection_policy_fails_closed_on_missing_inputs(
     ]
     assert (
         "snerv_score_aware_checkpoint_selection_pr95_stage_selector_missing"
-        in policy["blockers"]
+        not in policy["blockers"]
     )
 
 
@@ -2679,7 +2679,7 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     ]["required_loss_parts"]
     assert (
         "snerv_score_aware_checkpoint_selection_pr95_stage_selector_missing"
-        in long_training["checkpoint_selection_policy"]["blockers"]
+        not in long_training["checkpoint_selection_policy"]["blockers"]
     )
     assert (
         long_training["checkpoint_selection_policy"]["pose_selection_loss_part"]
@@ -2711,17 +2711,23 @@ def test_train_export_long_training_binds_real_scorer_teachers(
     )
     assert (
         "snerv_score_aware_checkpoint_selection_pr95_stage_selector_missing"
-        in long_training["best_checkpoint_selection"][
+        not in long_training["best_checkpoint_selection"][
             "score_aware_checkpoint_selection_blockers"
         ]
     )
     assert (
         "snerv_score_aware_checkpoint_selection_pr95_stage_selector_missing"
-        in long_training["selection_failures"]
+        not in long_training["selection_failures"]
     )
     assert "weighted_distill" in long_training["best_checkpoint_selection"][
         "score_aware_composite_parts"
     ]
+    assert "raw_pr95_stage_scorer_surrogate" in long_training[
+        "best_checkpoint_selection"
+    ]["score_aware_composite_parts"]
+    assert "weighted_pr95_stage_scorer_surrogate" in long_training[
+        "best_checkpoint_selection"
+    ]["score_aware_composite_parts"]
     assert (
         "weighted_segnet_direct_live_distill"
         in long_training["best_checkpoint_selection"]["score_aware_composite_parts"]
