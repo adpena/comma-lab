@@ -24,7 +24,6 @@ import sys
 import zipfile
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
-from itertools import pairwise
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -116,6 +115,10 @@ from tac.substrates._shared.mlx_score_aware.adapter import (  # noqa: E402
 )
 from tac.substrates._shared.mlx_score_aware.carrier_training_plan import (  # noqa: E402
     build_score_aware_carrier_training_plan,
+)
+from tac.substrates._shared.mlx_score_aware.curriculum import (  # noqa: E402
+    build_scoreaware_curriculum_stages,
+    build_scoreaware_stage_loss_weights,
 )
 from tac.substrates._shared.mlx_score_aware.dual_ascent import (  # noqa: E402
     build_default_nerv_train_time_dual_ascent_config,
@@ -1387,48 +1390,18 @@ def _compact_scoreaware_stage_loss_weights(
 ) -> dict[str, float]:
     """Canonical runner-level weights for shared MLX score-aware components."""
 
-    guard = float(scorer_input_guard)
-    contrast = guard if scorer_input_contrast_floor is None else float(
-        scorer_input_contrast_floor
-    )
-    shape = guard if scorer_input_shape_tether is None else float(
-        scorer_input_shape_tether
-    )
-    direct_live = float(segnet) if segnet_direct_live is None else float(
-        segnet_direct_live
-    )
-    values = {
-        "recon": float(recon),
-        "distill": float(segnet),
-        "pose_distill": float(pose),
-        "scorer_input_guard": guard,
-        "scorer_input_contrast_floor": contrast,
-        "scorer_input_shape_tether": shape,
-        "segnet_direct_live_distill": direct_live,
-    }
-    bad = [
-        name
-        for name, value in values.items()
-        if not math.isfinite(value) or value < 0.0
-    ]
-    if bad:
-        raise CompactRendererMlxSpineRunnerError(
-            "score-aware stage loss weights must be finite and non-negative; "
-            "invalid: " + ", ".join(bad)
+    try:
+        return build_scoreaware_stage_loss_weights(
+            recon=recon,
+            segnet=segnet,
+            pose=pose,
+            scorer_input_guard=scorer_input_guard,
+            scorer_input_contrast_floor=scorer_input_contrast_floor,
+            scorer_input_shape_tether=scorer_input_shape_tether,
+            segnet_direct_live=segnet_direct_live,
         )
-    if (
-        values["recon"] == 0.0
-        and values["distill"] == 0.0
-        and values["pose_distill"] == 0.0
-        and values["scorer_input_guard"] == 0.0
-        and values["scorer_input_contrast_floor"] == 0.0
-        and values["scorer_input_shape_tether"] == 0.0
-        and values["segnet_direct_live_distill"] == 0.0
-    ):
-        raise CompactRendererMlxSpineRunnerError(
-            "at least one score-aware stage loss weight must be positive"
-        )
-    return values
+    except ValueError as exc:
+        raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
 
 
 def _compact_scoreaware_curriculum_stages(
@@ -1442,98 +1415,19 @@ def _compact_scoreaware_curriculum_stages(
 ) -> tuple[Any, ...]:
     """Build explicit score-aware loss-weight stages consumed by MLX."""
 
-    from tac.training.long_training_canonical import CurriculumStage
-
-    total_epochs = int(epochs)
-    pose_warmup = int(pose_distillation_warmup_epochs)
-    shape_warmup = int(scorer_input_shape_warmup_epochs)
-    escape_warmup = int(segnet_direct_live_escape_warmup_epochs)
-    if pose_warmup < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "pose_distillation_warmup_epochs must be >= 0"
-        )
-    if shape_warmup < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "scorer_input_shape_warmup_epochs must be >= 0"
-        )
-    if escape_warmup < 0:
-        raise CompactRendererMlxSpineRunnerError(
-            "segnet_direct_live_escape_warmup_epochs must be >= 0"
-        )
-    warmup_fields = {
-        "pose_distillation_warmup_epochs": pose_warmup,
-        "scorer_input_shape_warmup_epochs": shape_warmup,
-        "segnet_direct_live_escape_warmup_epochs": escape_warmup,
-    }
-    for field, warmup_epochs in warmup_fields.items():
-        if warmup_epochs <= 0:
-            continue
-        if total_epochs <= 1:
-            raise CompactRendererMlxSpineRunnerError(
-                f"{field} requires epochs > 1"
-            )
-        if warmup_epochs >= total_epochs:
-            raise CompactRendererMlxSpineRunnerError(
-                f"{field} must be smaller than epochs"
-            )
-    if pose_warmup > 0 or shape_warmup > 0 or escape_warmup > 0:
-        boundaries = sorted(
-            {
-                0,
-                total_epochs,
-                *({pose_warmup} if pose_warmup > 0 else set()),
-                *({shape_warmup} if shape_warmup > 0 else set()),
-                *({escape_warmup} if escape_warmup > 0 else set()),
-            }
-        )
-        stages = []
-        for start_epoch, end_epoch in pairwise(boundaries):
-            if start_epoch == end_epoch:
-                continue
-            stage_weights = dict(loss_weights)
-            suppressed: list[str] = []
-            if pose_warmup > 0 and start_epoch < pose_warmup:
-                stage_weights["pose_distill"] = 0.0
-                suppressed.append("pose")
-            if shape_warmup > 0 and start_epoch < shape_warmup:
-                stage_weights["segnet_direct_live_distill"] = 0.0
-                suppressed.append("direct_live")
-            if escape_warmup > 0 and start_epoch < escape_warmup:
-                stage_weights["segnet_direct_live_base_loss"] = 0.0
-                suppressed.append("direct_live_base")
-            suffix = "full" if not suppressed else "warmup_" + "_".join(suppressed)
-            stages.append(
-                CurriculumStage(
-                    name=f"{substrate_id}_mlx_score_aware_{suffix}",
-                    start_epoch=start_epoch,
-                    end_epoch=end_epoch,
-                    loss_weights=stage_weights,
-                    notes=(
-                        "Explicit compact-runner scorer curriculum. Shape warmup "
-                        "suppresses direct-live SegNet pressure so scorer-input "
-                        "geometry can stabilize before class-escape pressure; "
-                        "direct-live escape warmup suppresses only the base "
-                        "logit-matching term while preserving class-balanced "
-                        "escape terms; Pose warmup independently suppresses "
-                        "PoseNet pressure. "
-                        "This changes CurriculumStage.loss_weights consumed by "
-                        "the MLX train step."
-                    ),
-                )
-            )
-        return tuple(stages)
-    return (
-        CurriculumStage(
-            name=f"{substrate_id}_mlx_score_aware_weighted_full",
-            start_epoch=0,
-            end_epoch=total_epochs,
-            loss_weights=dict(loss_weights),
-            notes=(
-                "Explicit compact-runner score-aware component weights. "
-                "These values feed the shared MLX adapter train_step directly."
+    try:
+        return build_scoreaware_curriculum_stages(
+            substrate_id=substrate_id,
+            epochs=epochs,
+            loss_weights=loss_weights,
+            pose_distillation_warmup_epochs=pose_distillation_warmup_epochs,
+            scorer_input_shape_warmup_epochs=scorer_input_shape_warmup_epochs,
+            segnet_direct_live_escape_warmup_epochs=(
+                segnet_direct_live_escape_warmup_epochs
             ),
-        ),
-    )
+        )
+    except ValueError as exc:
+        raise CompactRendererMlxSpineRunnerError(str(exc)) from exc
 
 
 def _resolve_torch_scorer_device_alias(
@@ -3667,6 +3561,10 @@ def _run_snerv_native_mlx_export_attachment(
     score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_shape_tether_weight: float = 0.0,
+    score_aware_long_training_loss_weights: Mapping[str, float] | None = None,
+    score_aware_long_training_pose_warmup_epochs: int = 0,
+    score_aware_long_training_scorer_input_shape_warmup_epochs: int = 0,
+    score_aware_long_training_segnet_direct_live_escape_warmup_epochs: int = 0,
     checkpoint_retention_keep_last_n: int | None = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_LAST_N,
     checkpoint_retention_keep_best_n: int = DEFAULT_COMPACT_FAMILY_CHECKPOINT_RETENTION_KEEP_BEST_N,
     checkpoint_retention_keep_every_n_epochs: int | None = None,
@@ -3680,6 +3578,10 @@ def _run_snerv_native_mlx_export_attachment(
     segnet_student_live_calibration_weight: float = 1.0,
     segnet_direct_live_distillation_weight: float = 0.0,
     segnet_direct_live_base_loss_weight: float = 1.0,
+    segnet_direct_live_class_histogram_weight: float = 0.0,
+    segnet_direct_live_class_balanced_hinge_weight: float = 0.0,
+    segnet_direct_live_class_balanced_ce_weight: float = 0.0,
+    segnet_direct_live_class_balanced_squared_hinge_weight: float = 0.0,
     segnet_tau_boundary: float,
     segnet_hinge_margin: float,
     distillation_device: str,
@@ -3848,6 +3750,18 @@ def _run_snerv_native_mlx_export_attachment(
             score_aware_long_training_scorer_input_shape_tether_weight=float(
                 score_aware_long_training_scorer_input_shape_tether_weight
             ),
+            score_aware_long_training_loss_weights=(
+                dict(score_aware_long_training_loss_weights or {})
+            ),
+            score_aware_long_training_pose_warmup_epochs=int(
+                score_aware_long_training_pose_warmup_epochs
+            ),
+            score_aware_long_training_scorer_input_shape_warmup_epochs=int(
+                score_aware_long_training_scorer_input_shape_warmup_epochs
+            ),
+            score_aware_long_training_segnet_direct_live_escape_warmup_epochs=int(
+                score_aware_long_training_segnet_direct_live_escape_warmup_epochs
+            ),
             score_aware_long_training_checkpoint_retention_keep_last_n=(
                 checkpoint_retention_keep_last_n
             ),
@@ -3874,6 +3788,18 @@ def _run_snerv_native_mlx_export_attachment(
             ),
             segnet_direct_live_base_loss_weight=float(
                 segnet_direct_live_base_loss_weight
+            ),
+            segnet_direct_live_class_histogram_weight=float(
+                segnet_direct_live_class_histogram_weight
+            ),
+            segnet_direct_live_class_balanced_hinge_weight=float(
+                segnet_direct_live_class_balanced_hinge_weight
+            ),
+            segnet_direct_live_class_balanced_ce_weight=float(
+                segnet_direct_live_class_balanced_ce_weight
+            ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=float(
+                segnet_direct_live_class_balanced_squared_hinge_weight
             ),
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),
@@ -4728,6 +4654,16 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
     snerv_score_aware_long_training_weight_decay: float | None = 1.0e-4,
     snerv_score_aware_long_training_eval_roundtrip_ste: bool = False,
     snerv_score_aware_long_training_scorer_tether_smoke_steps: int = 2,
+    recon_loss_stage_weight: float = 1.0,
+    segnet_loss_stage_weight: float = 1.0,
+    pose_loss_stage_weight: float = 1.0,
+    scorer_input_guard_stage_weight: float = 1.0,
+    scorer_input_contrast_floor_stage_weight: float | None = None,
+    scorer_input_shape_tether_stage_weight: float | None = None,
+    segnet_direct_live_stage_weight: float | None = None,
+    pose_distillation_warmup_epochs: int = 0,
+    scorer_input_shape_warmup_epochs: int = 0,
+    segnet_direct_live_escape_warmup_epochs: int = 0,
     scorer_input_distribution_guard_weight: float = DEFAULT_SCORER_INPUT_DISTRIBUTION_GUARD_WEIGHT,
     scorer_input_distribution_guard_saturation_margin: float = 0.02,
     scorer_input_distribution_guard_temperature: float = 0.01,
@@ -4874,6 +4810,27 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
                 effective_recon_pixel_weight_manifest_path = str(
                     selected_manifest_path
                 )
+    stage_weights = _compact_scoreaware_stage_loss_weights(
+        recon=float(recon_loss_stage_weight),
+        segnet=float(segnet_loss_stage_weight),
+        pose=float(pose_loss_stage_weight),
+        scorer_input_guard=float(scorer_input_guard_stage_weight),
+        scorer_input_contrast_floor=(
+            None
+            if scorer_input_contrast_floor_stage_weight is None
+            else float(scorer_input_contrast_floor_stage_weight)
+        ),
+        scorer_input_shape_tether=(
+            None
+            if scorer_input_shape_tether_stage_weight is None
+            else float(scorer_input_shape_tether_stage_weight)
+        ),
+        segnet_direct_live=(
+            None
+            if segnet_direct_live_stage_weight is None
+            else float(segnet_direct_live_stage_weight)
+        ),
+    )
 
     planner = _score_aware_carrier_training_plan(
         "snerv",
@@ -5159,6 +5116,16 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         "snerv_score_aware_long_training_eval_roundtrip_ste": bool(
             snerv_score_aware_long_training_eval_roundtrip_ste
         ),
+        "snerv_score_aware_long_training_stage_loss_weights": dict(stage_weights),
+        "snerv_score_aware_long_training_pose_warmup_epochs": int(
+            pose_distillation_warmup_epochs
+        ),
+        "snerv_score_aware_long_training_scorer_input_shape_warmup_epochs": int(
+            scorer_input_shape_warmup_epochs
+        ),
+        "snerv_score_aware_long_training_segnet_direct_live_escape_warmup_epochs": int(
+            segnet_direct_live_escape_warmup_epochs
+        ),
         "snerv_score_aware_long_training_scorer_input_distribution_guard_weight": (
             float(scorer_input_distribution_guard_weight)
         ),
@@ -5319,6 +5286,16 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             score_aware_long_training_scorer_input_shape_tether_weight=float(
                 scorer_input_shape_tether_weight
             ),
+            score_aware_long_training_loss_weights=dict(stage_weights),
+            score_aware_long_training_pose_warmup_epochs=int(
+                pose_distillation_warmup_epochs
+            ),
+            score_aware_long_training_scorer_input_shape_warmup_epochs=int(
+                scorer_input_shape_warmup_epochs
+            ),
+            score_aware_long_training_segnet_direct_live_escape_warmup_epochs=int(
+                segnet_direct_live_escape_warmup_epochs
+            ),
             checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
             checkpoint_retention_keep_every_n_epochs=(
@@ -5335,6 +5312,24 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             distillation_temperature=float(distillation_temperature),
             segnet_student_live_calibration_weight=float(
                 segnet_student_live_calibration_weight
+            ),
+            segnet_direct_live_distillation_weight=float(
+                segnet_direct_live_distillation_weight
+            ),
+            segnet_direct_live_base_loss_weight=float(
+                segnet_direct_live_base_loss_weight
+            ),
+            segnet_direct_live_class_histogram_weight=float(
+                segnet_direct_live_class_histogram_weight
+            ),
+            segnet_direct_live_class_balanced_hinge_weight=float(
+                segnet_direct_live_class_balanced_hinge_weight
+            ),
+            segnet_direct_live_class_balanced_ce_weight=float(
+                segnet_direct_live_class_balanced_ce_weight
+            ),
+            segnet_direct_live_class_balanced_squared_hinge_weight=float(
+                segnet_direct_live_class_balanced_squared_hinge_weight
             ),
             segnet_tau_boundary=float(segnet_tau_boundary),
             segnet_hinge_margin=float(segnet_hinge_margin),
@@ -6284,6 +6279,16 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         score_aware_long_training_scorer_input_shape_tether_weight=float(
             scorer_input_shape_tether_weight
         ),
+        score_aware_long_training_loss_weights=dict(stage_weights),
+        score_aware_long_training_pose_warmup_epochs=int(
+            pose_distillation_warmup_epochs
+        ),
+        score_aware_long_training_scorer_input_shape_warmup_epochs=int(
+            scorer_input_shape_warmup_epochs
+        ),
+        score_aware_long_training_segnet_direct_live_escape_warmup_epochs=int(
+            segnet_direct_live_escape_warmup_epochs
+        ),
         checkpoint_retention_keep_last_n=checkpoint_retention_keep_last_n,
         checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
         checkpoint_retention_keep_every_n_epochs=(
@@ -6306,6 +6311,18 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         ),
         segnet_direct_live_base_loss_weight=float(
             segnet_direct_live_base_loss_weight
+        ),
+        segnet_direct_live_class_histogram_weight=float(
+            segnet_direct_live_class_histogram_weight
+        ),
+        segnet_direct_live_class_balanced_hinge_weight=float(
+            segnet_direct_live_class_balanced_hinge_weight
+        ),
+        segnet_direct_live_class_balanced_ce_weight=float(
+            segnet_direct_live_class_balanced_ce_weight
+        ),
+        segnet_direct_live_class_balanced_squared_hinge_weight=float(
+            segnet_direct_live_class_balanced_squared_hinge_weight
         ),
         segnet_tau_boundary=float(segnet_tau_boundary),
         segnet_hinge_margin=float(segnet_hinge_margin),
@@ -20619,6 +20636,22 @@ def main(argv: list[str] | None = None) -> int:
             ),
             snerv_score_aware_long_training_scorer_tether_smoke_steps=(
                 args.snerv_score_aware_long_training_scorer_tether_smoke_steps
+            ),
+            recon_loss_stage_weight=args.recon_loss_stage_weight,
+            segnet_loss_stage_weight=args.segnet_loss_stage_weight,
+            pose_loss_stage_weight=args.pose_loss_stage_weight,
+            scorer_input_guard_stage_weight=args.scorer_input_guard_stage_weight,
+            scorer_input_contrast_floor_stage_weight=(
+                args.scorer_input_contrast_floor_stage_weight
+            ),
+            scorer_input_shape_tether_stage_weight=(
+                args.scorer_input_shape_tether_stage_weight
+            ),
+            segnet_direct_live_stage_weight=args.segnet_direct_live_stage_weight,
+            pose_distillation_warmup_epochs=args.pose_distillation_warmup_epochs,
+            scorer_input_shape_warmup_epochs=args.scorer_input_shape_warmup_epochs,
+            segnet_direct_live_escape_warmup_epochs=(
+                args.segnet_direct_live_escape_warmup_epochs
             ),
             scorer_input_distribution_guard_weight=(
                 args.scorer_input_distribution_guard_weight

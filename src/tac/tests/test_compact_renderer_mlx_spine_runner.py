@@ -7237,6 +7237,30 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
             "0.5",
             "--segnet-direct-live-class-balanced-hinge-weight",
             "0.75",
+            "--segnet-direct-live-class-balanced-ce-weight",
+            "0.625",
+            "--segnet-direct-live-class-balanced-squared-hinge-weight",
+            "0.875",
+            "--recon-loss-stage-weight",
+            "0.5",
+            "--segnet-loss-stage-weight",
+            "1.5",
+            "--pose-loss-stage-weight",
+            "0.25",
+            "--scorer-input-guard-stage-weight",
+            "0.375",
+            "--scorer-input-contrast-floor-stage-weight",
+            "0.625",
+            "--scorer-input-shape-tether-stage-weight",
+            "0.875",
+            "--segnet-direct-live-stage-weight",
+            "0.125",
+            "--pose-distillation-warmup-epochs",
+            "2",
+            "--scorer-input-shape-warmup-epochs",
+            "3",
+            "--segnet-direct-live-escape-warmup-epochs",
+            "1",
             "--allow-segnet-only-research",
         ]
     )
@@ -7247,6 +7271,22 @@ def test_main_execute_snerv_forwards_direct_live_segnet_weight(
     assert captured["segnet_direct_live_class_balanced_hinge_weight"] == pytest.approx(
         0.75
     )
+    assert captured["segnet_direct_live_class_balanced_ce_weight"] == pytest.approx(
+        0.625
+    )
+    assert captured[
+        "segnet_direct_live_class_balanced_squared_hinge_weight"
+    ] == pytest.approx(0.875)
+    assert captured["recon_loss_stage_weight"] == pytest.approx(0.5)
+    assert captured["segnet_loss_stage_weight"] == pytest.approx(1.5)
+    assert captured["pose_loss_stage_weight"] == pytest.approx(0.25)
+    assert captured["scorer_input_guard_stage_weight"] == pytest.approx(0.375)
+    assert captured["scorer_input_contrast_floor_stage_weight"] == pytest.approx(0.625)
+    assert captured["scorer_input_shape_tether_stage_weight"] == pytest.approx(0.875)
+    assert captured["segnet_direct_live_stage_weight"] == pytest.approx(0.125)
+    assert captured["pose_distillation_warmup_epochs"] == 2
+    assert captured["scorer_input_shape_warmup_epochs"] == 3
+    assert captured["segnet_direct_live_escape_warmup_epochs"] == 1
     assert json.loads(capsys.readouterr().out)["ready_for_exact_eval_dispatch"] is False
 
 

@@ -48,6 +48,10 @@ from tac.substrates._shared.mlx_score_aware.bridge_drift import (
     build_mlx_numpy_bridge_drift_bundle,
     mlx_numpy_bridge_drift_report,
 )
+from tac.substrates._shared.mlx_score_aware.curriculum import (
+    build_scoreaware_curriculum_stages,
+    coerce_scoreaware_stage_loss_weights,
+)
 from tac.substrates._shared.mlx_score_aware.targets import decode_mlx_targets
 from tac.substrates.snerv_inverse_steg_carrier.allocation import (
     LfSaliency,
@@ -317,6 +321,10 @@ def _snerv_score_aware_checkpoint_selection_policy(
             required_loss_parts.extend(sorted(weighted_qat_terms))
     if bool(pr95_faithful_curriculum_enabled):
         active_surfaces.append("pr95_faithful_curriculum")
+        required_loss_parts.append("pr95_stage_scorer_surrogate")
+        blockers.append(
+            "snerv_score_aware_checkpoint_selection_pr95_stage_selector_missing"
+        )
 
     uses_score_aware = bool(active_surfaces)
     return {
@@ -1725,6 +1733,10 @@ def train_export_snerv_mlx_native(
     score_aware_long_training_scorer_input_contrast_floor_segnet_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float = 0.5,
     score_aware_long_training_scorer_input_shape_tether_weight: float = 0.0,
+    score_aware_long_training_loss_weights: Mapping[str, float] | None = None,
+    score_aware_long_training_pose_warmup_epochs: int = 0,
+    score_aware_long_training_scorer_input_shape_warmup_epochs: int = 0,
+    score_aware_long_training_segnet_direct_live_escape_warmup_epochs: int = 0,
     score_aware_long_training_checkpoint_retention_keep_last_n: int | None = (
         SNERV_SCORE_AWARE_CHECKPOINT_RETENTION_KEEP_LAST_N_DEFAULT
     ),
@@ -2088,6 +2100,43 @@ def train_export_snerv_mlx_native(
                 candidate.get(
                     "snerv_score_aware_long_training_scorer_input_shape_tether_weight",
                     score_aware_long_training_scorer_input_shape_tether_weight,
+                ),
+            )
+        ),
+        score_aware_long_training_loss_weights=_candidate_first_non_null(
+            candidate,
+            (
+                "score_aware_long_training_stage_loss_weights",
+                "snerv_score_aware_long_training_stage_loss_weights",
+                "score_aware_long_training_loss_weights",
+                "snerv_score_aware_long_training_loss_weights",
+            ),
+            score_aware_long_training_loss_weights,
+        ),
+        score_aware_long_training_pose_warmup_epochs=int(
+            candidate.get(
+                "score_aware_long_training_pose_warmup_epochs",
+                candidate.get(
+                    "snerv_score_aware_long_training_pose_warmup_epochs",
+                    score_aware_long_training_pose_warmup_epochs,
+                ),
+            )
+        ),
+        score_aware_long_training_scorer_input_shape_warmup_epochs=int(
+            candidate.get(
+                "score_aware_long_training_scorer_input_shape_warmup_epochs",
+                candidate.get(
+                    "snerv_score_aware_long_training_scorer_input_shape_warmup_epochs",
+                    score_aware_long_training_scorer_input_shape_warmup_epochs,
+                ),
+            )
+        ),
+        score_aware_long_training_segnet_direct_live_escape_warmup_epochs=int(
+            candidate.get(
+                "score_aware_long_training_segnet_direct_live_escape_warmup_epochs",
+                candidate.get(
+                    "snerv_score_aware_long_training_segnet_direct_live_escape_warmup_epochs",
+                    score_aware_long_training_segnet_direct_live_escape_warmup_epochs,
                 ),
             )
         ),
@@ -3363,6 +3412,10 @@ def _run_score_aware_long_training_attachment(
     scorer_input_contrast_floor_segnet_min_std_ratio: float,
     scorer_input_contrast_floor_posenet_yuv6_min_std_ratio: float,
     scorer_input_shape_tether_weight: float = 0.0,
+    score_aware_long_training_loss_weights: Mapping[str, float] | None = None,
+    score_aware_long_training_pose_warmup_epochs: int = 0,
+    score_aware_long_training_scorer_input_shape_warmup_epochs: int = 0,
+    score_aware_long_training_segnet_direct_live_escape_warmup_epochs: int = 0,
     checkpoint_retention_keep_last_n: int | None,
     checkpoint_retention_keep_best_n: int,
     checkpoint_retention_keep_every_n_epochs: int | None,
@@ -3462,12 +3515,48 @@ def _run_score_aware_long_training_attachment(
         if official_training_requested
         else "snerv_mlx_score_aware_haar_renderer"
     )
+    try:
+        stage_loss_weights = coerce_scoreaware_stage_loss_weights(
+            score_aware_long_training_loss_weights
+        )
+        score_aware_curriculum_stages = build_scoreaware_curriculum_stages(
+            substrate_id="snerv_inverse_steg_carrier",
+            epochs=int(requested_epochs),
+            loss_weights=stage_loss_weights,
+            pose_distillation_warmup_epochs=int(
+                score_aware_long_training_pose_warmup_epochs
+            ),
+            scorer_input_shape_warmup_epochs=int(
+                score_aware_long_training_scorer_input_shape_warmup_epochs
+            ),
+            segnet_direct_live_escape_warmup_epochs=int(
+                score_aware_long_training_segnet_direct_live_escape_warmup_epochs
+            ),
+        )
+    except ValueError as exc:
+        raise SnervMlxNativeExportError(str(exc)) from exc
     base_payload = {
         "schema": "snerv_mlx_score_aware_long_training_attachment.v1",
         "requested_epochs": int(requested_epochs),
         "executed": False,
         "training_kind": training_kind,
         "optimizer_kind": str(optimizer_kind),
+        "stage_loss_weights": stage_loss_weights,
+        "curriculum_warmup_epochs": {
+            "pose_distillation_warmup_epochs": int(
+                score_aware_long_training_pose_warmup_epochs
+            ),
+            "scorer_input_shape_warmup_epochs": int(
+                score_aware_long_training_scorer_input_shape_warmup_epochs
+            ),
+            "segnet_direct_live_escape_warmup_epochs": int(
+                score_aware_long_training_segnet_direct_live_escape_warmup_epochs
+            ),
+        },
+        "curriculum_stage_count": len(score_aware_curriculum_stages),
+        "curriculum_stage_names": [
+            str(getattr(stage, "name", "")) for stage in score_aware_curriculum_stages
+        ],
         "section_byte_refresh_every_steps": int(section_byte_refresh_every_steps),
         "checkpoint_retention": {
             "schema": "snerv_mlx_score_aware_checkpoint_retention.v1",
@@ -4306,13 +4395,44 @@ def _run_score_aware_long_training_attachment(
             ),
             scorer_input_shape_tether_weight=shape_tether_weight,
         )
+        recon_selection_stage_weight = float(stage_loss_weights.get("recon", 1.0))
+        seg_selection_stage_weight = float(stage_loss_weights.get("distill", 1.0))
+        direct_live_selection_stage_weight = float(
+            stage_loss_weights.get("segnet_direct_live_distill", seg_selection_stage_weight)
+        )
+        pose_selection_stage_weight = float(
+            stage_loss_weights.get("pose_distill", 1.0)
+        )
+        guard_selection_stage_weight = float(
+            stage_loss_weights.get("scorer_input_guard", 1.0)
+        )
+        contrast_floor_selection_stage_weight = float(
+            stage_loss_weights.get(
+                "scorer_input_contrast_floor",
+                guard_selection_stage_weight,
+            )
+        )
+        shape_tether_selection_stage_weight = float(
+            stage_loss_weights.get(
+                "scorer_input_shape_tether",
+                guard_selection_stage_weight,
+            )
+        )
         selection_policy = _snerv_score_aware_checkpoint_selection_policy(
-            segnet_distillation_weight=seg_weight,
-            segnet_direct_live_distillation_weight=direct_live_weight,
-            pose_distillation_weight=pose_weight,
-            scorer_input_distribution_guard_weight=guard_weight,
-            scorer_input_contrast_floor_weight=contrast_floor_weight,
-            scorer_input_shape_tether_weight=shape_tether_weight,
+            segnet_distillation_weight=seg_weight * seg_selection_stage_weight,
+            segnet_direct_live_distillation_weight=(
+                direct_live_weight * direct_live_selection_stage_weight
+            ),
+            pose_distillation_weight=pose_weight * pose_selection_stage_weight,
+            scorer_input_distribution_guard_weight=(
+                guard_weight * guard_selection_stage_weight
+            ),
+            scorer_input_contrast_floor_weight=(
+                contrast_floor_weight * contrast_floor_selection_stage_weight
+            ),
+            scorer_input_shape_tether_weight=(
+                shape_tether_weight * shape_tether_selection_stage_weight
+            ),
             has_real_segnet_teacher=scorer_teacher is not None,
             has_real_posenet_teacher=pose_scorer_teacher is not None,
             coder_aware_qat_bound=bool(coder_qat_cfg.enabled),
@@ -4354,7 +4474,11 @@ def _run_score_aware_long_training_attachment(
                 idx_np = np.arange(start, stop, dtype=np.int32)
                 idx = mx.array(idx_np, dtype=mx.int32)
                 try:
-                    _total, parts = score_aware_loss(bundle, idx)
+                    _total, parts = score_aware_loss(
+                        bundle,
+                        idx,
+                        loss_weights=stage_loss_weights,
+                    )
                 except Exception as exc:  # fail closed; selection must not silently fall back.
                     return (
                         float("nan"),
@@ -4399,19 +4523,27 @@ def _run_score_aware_long_training_attachment(
                     ]
                 )
 
-            total = float(raw_parts.get("recon", 0.0))
+            total = recon_selection_stage_weight * float(raw_parts.get("recon", 0.0))
             weighted_parts["recon"] = total
             if "distill" in raw_parts:
-                weighted_parts["distill"] = seg_weight * raw_parts["distill"]
+                weighted_parts["distill"] = (
+                    seg_weight
+                    * seg_selection_stage_weight
+                    * raw_parts["distill"]
+                )
                 total += weighted_parts["distill"]
             if "segnet_direct_live_distill" in raw_parts:
                 weighted_parts["segnet_direct_live_distill"] = (
-                    direct_live_weight * raw_parts["segnet_direct_live_distill"]
+                    direct_live_weight
+                    * direct_live_selection_stage_weight
+                    * raw_parts["segnet_direct_live_distill"]
                 )
                 total += weighted_parts["segnet_direct_live_distill"]
             if "pose_score_term" in raw_parts:
                 weighted_parts["pose_score_term"] = (
-                    pose_weight * raw_parts["pose_score_term"]
+                    pose_weight
+                    * pose_selection_stage_weight
+                    * raw_parts["pose_score_term"]
                 )
                 total += weighted_parts["pose_score_term"]
             elif pose_weight > 0.0 and "pose_distill" in raw_parts:
@@ -4421,18 +4553,21 @@ def _run_score_aware_long_training_attachment(
             if "scorer_input_distribution_guard" in raw_parts:
                 weighted_parts["scorer_input_distribution_guard"] = (
                     float(bundle.scorer_input_distribution_guard_weight)
+                    * guard_selection_stage_weight
                     * raw_parts["scorer_input_distribution_guard"]
                 )
                 total += weighted_parts["scorer_input_distribution_guard"]
             if "scorer_input_contrast_floor" in raw_parts:
                 weighted_parts["scorer_input_contrast_floor"] = (
                     float(bundle.scorer_input_contrast_floor_weight)
+                    * contrast_floor_selection_stage_weight
                     * raw_parts["scorer_input_contrast_floor"]
                 )
                 total += weighted_parts["scorer_input_contrast_floor"]
             if "scorer_input_shape_tether" in raw_parts:
                 weighted_parts["scorer_input_shape_tether"] = (
                     float(bundle.scorer_input_shape_tether_weight)
+                    * shape_tether_selection_stage_weight
                     * raw_parts["scorer_input_shape_tether"]
                 )
                 total += weighted_parts["scorer_input_shape_tether"]
@@ -4478,6 +4613,16 @@ def _run_score_aware_long_training_attachment(
             }
             if selection_policy["uses_score_aware_composite"]:
                 composite, parts, blockers_for_row = _score_aware_selection_parts()
+                blockers_for_row = _ordered_unique(
+                    [
+                        *(
+                            str(blocker)
+                            for blocker in selection_policy.get("blockers", ())
+                            if str(blocker)
+                        ),
+                        *blockers_for_row,
+                    ]
+                )
                 row.update(
                     {
                         "score_aware_composite_loss": composite,
@@ -4528,22 +4673,8 @@ def _run_score_aware_long_training_attachment(
                 ),
             ]
         )
-        if (
-            selection_policy["uses_score_aware_composite"]
-            and initial_selection_blockers
-        ):
-            payload = {
-                **base_payload,
-                "checkpoint_selection_policy": {
-                    **selection_policy,
-                    "blockers": initial_selection_blockers,
-                },
-                "best_checkpoint_selection": best_selection,
-                "selection_history_tail": selection_history[-8:],
-                "blockers": initial_selection_blockers,
-            }
-            write_json(report_path, payload)
-            return {**payload, "report_path": report_path.as_posix()}
+        if selection_policy["uses_score_aware_composite"] and initial_selection_blockers:
+            selection_failures.extend(initial_selection_blockers)
 
         def _maybe_select_current_renderer(
             *,
@@ -4600,6 +4731,7 @@ def _run_score_aware_long_training_attachment(
             checkpoint_retention_keep_best_n=checkpoint_retention_keep_best_n,
             checkpoint_retention_keep_every_n_epochs=checkpoint_retention_keep_every_n_epochs,
             checkpoint_retention_cold_store_roots=checkpoint_retention_cold_store_roots,
+            curriculum_stages=score_aware_curriculum_stages,
             telemetry_flush_interval_epochs=1,
             grad_clip_max_norm=grad_clip_max_norm,
             weight_decay=weight_decay,
@@ -4738,7 +4870,7 @@ def _run_score_aware_long_training_attachment(
             )
         payload = {
             **base_payload,
-            "executed": not blockers,
+            "executed": True,
             "training_completed": True,
             "blocker_free_execution": not blockers,
             "trained_state_exportable": trained_state_exportable,

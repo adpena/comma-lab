@@ -67,6 +67,11 @@ from tac.substrates._shared.mlx_score_aware.coder_qat import (
     coder_qat_loss_weights,
     coder_qat_metadata,
 )
+from tac.substrates._shared.mlx_score_aware.curriculum import (
+    build_scoreaware_curriculum_stages,
+    build_scoreaware_stage_loss_weights,
+    coerce_scoreaware_stage_loss_weights,
+)
 from tac.substrates._shared.mlx_score_aware.device_gate import (
     MlxScoreAwareHarnessError,
     is_mlx_available,
@@ -147,8 +152,11 @@ __all__ = [
     "build_modelsize_budget_plan",
     "build_modelsize_budget_plan_from_iterable",
     "build_score_aware_carrier_training_plan",
+    "build_scoreaware_curriculum_stages",
+    "build_scoreaware_stage_loss_weights",
     "coder_qat_loss_weights",
     "coder_qat_metadata",
+    "coerce_scoreaware_stage_loss_weights",
     "component_loss_weight",
     "decode_frames_nhwc01",
     "decode_mlx_targets",
