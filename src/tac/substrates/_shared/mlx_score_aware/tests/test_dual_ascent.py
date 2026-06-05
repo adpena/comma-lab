@@ -170,7 +170,7 @@ def test_default_nerv_dual_ascent_config_prices_active_scorer_and_coder_terms() 
         "coder_qat_quant_residual",
     }
     assert constraints["distill"]["metric_name"] == "loss_part_distill"
-    assert constraints["pose_distill"]["metric_name"] == "loss_part_pose_distill"
+    assert constraints["pose_distill"]["metric_name"] == "loss_part_pose_score_term"
     assert constraints["coder_qat_quant_residual"]["metric_name"] == (
         "loss_part_coder_qat_quant_residual"
     )

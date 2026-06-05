@@ -47,6 +47,9 @@ def test_snerv_scorer_tether_smoke_passes_current_pr95_adapter_path() -> None:
     assert final["loss_part_pose_distill"] == pytest.approx(
         final["loss_part_pr95_stage_pose_surrogate"]
     )
+    assert final["loss_part_pose_score_term"] == pytest.approx(
+        final["loss_part_pr95_stage_pose_surrogate"]
+    )
     assert report["score_claim"] is False
     assert report["ready_for_exact_eval_dispatch"] is False
 

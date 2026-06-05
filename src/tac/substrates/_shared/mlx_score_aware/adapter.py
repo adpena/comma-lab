@@ -2268,10 +2268,11 @@ class MlxScoreAwareAdapter:
 
         The shared dual-ascent defaults are intentionally family-neutral:
         ``loss_part_distill`` for SegNet last-frame pressure and
-        ``loss_part_pose_distill`` for PoseNet pair/YUV6 pressure. PR95-stage
-        training computes those terms through source-faithful stage losses, but
-        names them by stage surface. Alias them here so one controller observes
-        scorer distortion across native, PR95, HiNeRV, and SNeRV runs.
+        ``loss_part_pose_score_term`` for PoseNet pair/YUV6 score pressure.
+        PR95-stage training computes those terms through source-faithful stage
+        losses, but names them by stage surface. Alias them here so one
+        controller observes scorer distortion across native, PR95, HiNeRV, and
+        SNeRV runs while raw ``loss_part_pose_distill`` remains diagnostic MSE.
         """
 
         if (
@@ -2286,6 +2287,13 @@ class MlxScoreAwareAdapter:
             and "loss_part_pr95_stage_pose_surrogate" in metrics
         ):
             metrics["loss_part_pose_distill"] = metrics[
+                "loss_part_pr95_stage_pose_surrogate"
+            ]
+        if (
+            "loss_part_pose_score_term" not in metrics
+            and "loss_part_pr95_stage_pose_surrogate" in metrics
+        ):
+            metrics["loss_part_pose_score_term"] = metrics[
                 "loss_part_pr95_stage_pose_surrogate"
             ]
 

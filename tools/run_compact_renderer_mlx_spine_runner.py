@@ -14002,6 +14002,8 @@ def _compact_score_aware_training_telemetry_contract(
     malformed_rows = 0
     seg_loss_observed = False
     pose_loss_observed = False
+    pose_score_term_observed = False
+    pose_raw_loss_observed = False
     pr95_seg_loss_observed = False
     pr95_pose_loss_observed = False
     guard_loss_observed = False
@@ -14037,10 +14039,15 @@ def _compact_score_aware_training_telemetry_contract(
                 continue
             row_count += 1
             seg_loss_observed = seg_loss_observed or _telemetry_finite(row, "loss_part_distill")
-            pose_loss_observed = pose_loss_observed or _telemetry_finite(
+            pose_raw_loss_observed = pose_raw_loss_observed or _telemetry_finite(
                 row,
                 "loss_part_pose_distill",
             )
+            pose_score_term_observed = (
+                pose_score_term_observed
+                or _telemetry_finite(row, "loss_part_pose_score_term")
+            )
+            pose_loss_observed = bool(pose_raw_loss_observed or pose_score_term_observed)
             pr95_seg_loss_observed = pr95_seg_loss_observed or _telemetry_finite(
                 row,
                 "loss_part_pr95_stage_seg_surrogate",
@@ -14097,6 +14104,10 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(f"{family_key}_score_aware_training_segnet_loss_metric_missing")
     if expected_pose and not pose_loss_observed:
         blockers.append(f"{family_key}_score_aware_training_posenet_loss_metric_missing")
+    if expected_pose and not pose_score_term_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_posenet_score_term_metric_missing"
+        )
     if expected_seg and not seg_dual_observed:
         blockers.append(f"{family_key}_score_aware_training_dual_segnet_metric_never_observed")
     if expected_pose and not pose_dual_observed:
@@ -14132,6 +14143,8 @@ def _compact_score_aware_training_telemetry_contract(
         "expected_scorer_input_guard_metric": bool(expected_guard),
         "segnet_loss_metric_observed": bool(seg_loss_observed),
         "posenet_loss_metric_observed": bool(pose_loss_observed),
+        "posenet_raw_loss_metric_observed": bool(pose_raw_loss_observed),
+        "posenet_score_term_metric_observed": bool(pose_score_term_observed),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
         "posenet_dual_metric_observed": bool(pose_dual_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
@@ -16770,6 +16783,9 @@ def _compact_family_telemetry_summary(output_dir: Path) -> dict[str, Any]:
             "loss_part_distill": _optional_float(loss_components.get("loss_part_distill")),
             "loss_part_pose_distill": _optional_float(
                 loss_components.get("loss_part_pose_distill")
+            ),
+            "loss_part_pose_score_term": _optional_float(
+                loss_components.get("loss_part_pose_score_term")
             ),
             "loss_part_pr95_c1a_entropy": _optional_float(
                 loss_components.get("loss_part_pr95_c1a_entropy")

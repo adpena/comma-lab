@@ -1200,6 +1200,9 @@ def test_pr95_curriculum_dual_ascent_observes_stage_surrogate_aliases_NO_FAKE() 
     assert metrics["loss_part_pose_distill"] == pytest.approx(
         metrics["loss_part_pr95_stage_pose_surrogate"]
     )
+    assert metrics["loss_part_pose_score_term"] == pytest.approx(
+        metrics["loss_part_pr95_stage_pose_surrogate"]
+    )
     assert metrics[
         "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill"
     ] == pytest.approx(0.0)
@@ -1264,6 +1267,9 @@ def test_pr95_curriculum_snerv_dual_ascent_observes_stage_surrogate_aliases_NO_F
     assert metrics["loss_part_pose_distill"] == pytest.approx(
         metrics["loss_part_pr95_stage_pose_surrogate"]
     )
+    assert metrics["loss_part_pose_score_term"] == pytest.approx(
+        metrics["loss_part_pr95_stage_pose_surrogate"]
+    )
     assert metrics[
         "dual_ascent_missing_metric__snerv_segnet_last_frame_distill"
     ] == pytest.approx(0.0)
@@ -1274,7 +1280,7 @@ def test_pr95_curriculum_snerv_dual_ascent_observes_stage_surrogate_aliases_NO_F
         pytest.approx(metrics["loss_part_pr95_stage_seg_surrogate"])
     )
     assert metrics["dual_ascent_metric__snerv_posenet_yuv6_pair_distill"] == (
-        pytest.approx(metrics["loss_part_pr95_stage_pose_surrogate"])
+        pytest.approx(metrics["loss_part_pose_score_term"])
     )
     assert (
         followup_metrics["dual_ascent_missing_metric__snerv_segnet_last_frame_distill"]
@@ -1285,7 +1291,7 @@ def test_pr95_curriculum_snerv_dual_ascent_observes_stage_surrogate_aliases_NO_F
         == pytest.approx(0.0)
     )
     assert followup_metrics["dual_ascent_metric__snerv_posenet_yuv6_pair_distill"] == (
-        pytest.approx(followup_metrics["loss_part_pr95_stage_pose_surrogate"])
+        pytest.approx(followup_metrics["loss_part_pose_score_term"])
     )
     assert followup_metrics["dual_ascent_lambda__snerv_segnet_last_frame_distill"] > 0.0
     assert (

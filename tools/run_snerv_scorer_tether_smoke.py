@@ -149,7 +149,11 @@ def _smoke_blockers(metrics_by_step: list[dict[str, float]]) -> list[str]:
     blockers: list[str] = []
     checks = (
         (SEG_TETHER, "loss_part_distill", "loss_part_pr95_stage_seg_surrogate"),
-        (POSE_TETHER, "loss_part_pose_distill", "loss_part_pr95_stage_pose_surrogate"),
+        (
+            POSE_TETHER,
+            "loss_part_pose_score_term",
+            "loss_part_pr95_stage_pose_surrogate",
+        ),
     )
     for tether, alias_key, source_key in checks:
         missing_key = f"dual_ascent_missing_metric__{tether}"
@@ -182,6 +186,7 @@ def _metric_summary(metrics_by_step: list[dict[str, float]]) -> dict[str, Any]:
         "loss_part_distill",
         "loss_part_pr95_stage_seg_surrogate",
         "loss_part_pose_distill",
+        "loss_part_pose_score_term",
         "loss_part_pr95_stage_pose_surrogate",
         f"dual_ascent_missing_metric__{SEG_TETHER}",
         f"dual_ascent_lambda__{SEG_TETHER}",

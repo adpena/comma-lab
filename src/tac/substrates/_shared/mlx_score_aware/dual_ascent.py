@@ -456,7 +456,7 @@ def build_default_nerv_train_time_dual_ascent_config(
         constraints.append(
             _constraint_payload(
                 constraint_id=f"{family}_posenet_yuv6_pair_distill",
-                metric_name="loss_part_pose_distill",
+                metric_name="loss_part_pose_score_term",
                 loss_weight_key="pose_distill",
                 base_weight=pose_weight,
                 target_fraction=_DEFAULT_SCORER_TARGET_FRACTION,
