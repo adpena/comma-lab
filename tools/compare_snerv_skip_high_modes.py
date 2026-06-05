@@ -29,6 +29,9 @@ def main(argv: list[str] | None = None) -> int:
         binary_profiles=binary_profiles,
         prefilter_profiles=prefilter_profiles,
         hard_byte_ceiling=int(args.hard_byte_ceiling),
+        baseline_label=str(args.baseline_label),
+        candidate_label=args.candidate_label,
+        local_mlx_smoke_command=args.local_mlx_smoke_command,
     )
     print(
         "wrote "
@@ -61,6 +64,25 @@ def _parser() -> argparse.ArgumentParser:
         "--hard-byte-ceiling",
         type=int,
         default=DEFAULT_HARD_BYTE_CEILING,
+    )
+    parser.add_argument(
+        "--baseline-label",
+        default="scalar_mean",
+        help="Binary/prefilter label for the scalar baseline row.",
+    )
+    parser.add_argument(
+        "--candidate-label",
+        help=(
+            "Binary/prefilter label for the non-scalar replacement row. "
+            "Defaults to the cheapest non-scalar binary profile."
+        ),
+    )
+    parser.add_argument(
+        "--local-mlx-smoke-command",
+        help=(
+            "Runnable command that materializes the missing local MLX "
+            "skip-high replacement replay. Stored verbatim in the artifact."
+        ),
     )
     return parser
 
