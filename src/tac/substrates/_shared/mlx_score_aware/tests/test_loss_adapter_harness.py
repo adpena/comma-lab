@@ -1090,6 +1090,220 @@ def test_adapter_gradient_multiplier_reports_stale_exact_leaf_noop() -> None:
 
 
 @mlx_only
+def test_adapter_scorer_space_step_guard_restores_collapsing_step() -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        optimizer_kind="pact_muon_adamw",
+        scorer_space_step_guard_enabled=True,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_max_post_segnet_contrast_ratio=2.0,
+    )
+    call_count = 0
+
+    def _fake_loss_part_metrics(_batch, *, loss_weights=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+                "loss_part_segnet_direct_live_argmax_disagreement": 0.53,
+                "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 1.0,
+            }
+        if call_count == 2:
+            return {
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.2,
+                "loss_part_segnet_direct_live_argmax_disagreement": 0.51,
+                "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 4.5,
+            }
+        return {
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+            "loss_part_segnet_direct_live_argmax_disagreement": 0.53,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 1.0,
+        }
+
+    adapter._score_aware_loss_part_metrics = _fake_loss_part_metrics  # type: ignore[method-assign]
+    batch = mx.array([0, 1], dtype=mx.int32)
+    before = {
+        str(name): mx.array(value)
+        for name, value in tree_flatten(adapter.model.parameters())
+    }
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    after = {str(name): value for name, value in tree_flatten(adapter.model.parameters())}
+    max_delta = 0.0
+    for name, before_value in before.items():
+        delta = mx.max(mx.abs(after[name] - before_value))
+        mx.eval(delta)
+        max_delta = max(max_delta, float(delta.item()))
+
+    assert metrics["scorer_space_step_guard_enabled"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_eligible"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_rejected"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_parameters_restored"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_optimizer_state_restored"] == pytest.approx(0.0)
+    assert metrics["scorer_space_step_guard_optimizer_state_advanced"] == pytest.approx(1.0)
+    assert (
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_occupied_class_fraction_below_floor"
+        ]
+        == pytest.approx(1.0)
+    )
+    assert (
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_contrast_ratio_above_ceiling"
+        ]
+        == pytest.approx(1.0)
+    )
+    assert metrics["scorer_space_step_guard_student_heads_skipped"] == pytest.approx(1.0)
+    assert metrics["dynamics_param_delta_all_l2"] == pytest.approx(0.0, abs=1e-7)
+    assert max_delta == pytest.approx(0.0, abs=1e-7)
+
+    guard = adapter.artifact_metadata()["score_aware_training"][
+        "scorer_space_step_guard"
+    ]
+    assert guard["enabled"] is True
+    assert guard["rollback_contract"]["parameters_restored_on_reject"] is True
+    assert guard["rollback_contract"]["optimizer_state_restored_on_reject"] is False
+
+
+@mlx_only
+def test_adapter_scorer_space_step_guard_accepts_damped_backtracking_step() -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        optimizer_kind="pact_muon_adamw",
+        scorer_space_step_guard_enabled=True,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_max_post_segnet_contrast_ratio=2.0,
+        scorer_space_step_guard_backtracking_steps=3,
+        scorer_space_step_guard_backtracking_shrink=0.5,
+    )
+    call_count = 0
+
+    def _fake_loss_part_metrics(_batch, *, loss_weights=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+                "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 1.0,
+            }
+        if call_count == 2:
+            return {
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.2,
+                "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 4.5,
+            }
+        return {
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.4,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 1.5,
+        }
+
+    adapter._score_aware_loss_part_metrics = _fake_loss_part_metrics  # type: ignore[method-assign]
+    batch = mx.array([0, 1], dtype=mx.int32)
+    before = {
+        str(name): mx.array(value)
+        for name, value in tree_flatten(adapter.model.parameters())
+    }
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    after = {str(name): value for name, value in tree_flatten(adapter.model.parameters())}
+    delta_sq = mx.array(0.0, dtype=mx.float32)
+    for name, before_value in before.items():
+        diff = after[name] - before_value
+        delta_sq = delta_sq + mx.sum(diff * diff)
+    delta = mx.sqrt(delta_sq)
+    mx.eval(delta)
+
+    assert metrics["scorer_space_step_guard_enabled"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_intervened"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_rejected"] == pytest.approx(0.0)
+    assert metrics["scorer_space_step_guard_backtracking_accepted"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_parameters_damped"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_parameters_restored"] == pytest.approx(0.0)
+    assert metrics["scorer_space_step_guard_backtracking_attempt_count"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_accepted_step_scale"] == pytest.approx(0.5)
+    assert metrics["scorer_space_step_guard_student_heads_skipped"] == pytest.approx(0.0)
+    assert float(delta.item()) > 0.0
+
+
+@mlx_only
+def test_adapter_scorer_space_step_guard_blocks_low_occupancy_contrast_crossing() -> None:
+    import mlx.core as mx
+    from mlx.utils import tree_flatten
+
+    bundle = _tiny_dreamer_bundle(num_pairs=2, distill=0.0)
+    adapter = MlxScoreAwareAdapter(
+        bundle,
+        substrate_id="dreamer_v3_rssm",
+        optimizer_kind="pact_muon_adamw",
+        scorer_space_step_guard_enabled=True,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=0.4,
+        scorer_space_step_guard_max_post_segnet_contrast_ratio=2.0,
+    )
+    call_count = 0
+
+    def _fake_loss_part_metrics(_batch, *, loss_weights=None):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return {
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.2,
+                "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 1.2,
+            }
+        return {
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction": 0.2,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio": 4.5,
+        }
+
+    adapter._score_aware_loss_part_metrics = _fake_loss_part_metrics  # type: ignore[method-assign]
+    batch = mx.array([0, 1], dtype=mx.int32)
+    before = {
+        str(name): mx.array(value)
+        for name, value in tree_flatten(adapter.model.parameters())
+    }
+
+    metrics = adapter.train_step(batch, learning_rate=1e-2, loss_weights={})
+
+    after = {str(name): value for name, value in tree_flatten(adapter.model.parameters())}
+    max_delta = 0.0
+    for name, before_value in before.items():
+        delta = mx.max(mx.abs(after[name] - before_value))
+        mx.eval(delta)
+        max_delta = max(max_delta, float(delta.item()))
+
+    assert metrics["scorer_space_step_guard_eligible"] == pytest.approx(1.0)
+    assert (
+        metrics["scorer_space_step_guard_eligible_pre_noncollapsed"]
+        == pytest.approx(0.0)
+    )
+    assert (
+        metrics["scorer_space_step_guard_eligible_contrast_crossed_ceiling"]
+        == pytest.approx(1.0)
+    )
+    assert (
+        metrics["scorer_space_step_guard_eligible_low_occupancy_non_improving"]
+        == pytest.approx(1.0)
+    )
+    assert metrics["scorer_space_step_guard_rejected"] == pytest.approx(1.0)
+    assert metrics["scorer_space_step_guard_parameters_restored"] == pytest.approx(1.0)
+    assert max_delta == pytest.approx(0.0, abs=1e-7)
+
+
+@mlx_only
 def test_pact_muon_adamw_train_step_passes_clipped_gradients(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

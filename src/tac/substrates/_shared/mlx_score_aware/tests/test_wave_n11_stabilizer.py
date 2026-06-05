@@ -956,6 +956,10 @@ def test_harness_constructs_adapter_with_wave_n11_kwargs():
         "cosine_decay_enabled",
         "cosine_decay_total_epochs",
         "cosine_decay_min_lr_ratio",
+        "scorer_space_step_guard_enabled",
+        "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction",
+        "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
+        "scorer_space_step_guard_max_post_segnet_contrast_ratio",
     }:
         assert required in kw_names, (
             f"harness adapter construction missing {required!r} kwarg"

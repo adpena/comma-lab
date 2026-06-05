@@ -9060,6 +9060,16 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
     posenet_temporal_signal_min_mean_abs_ratio: float = 0.25,
     output_head_target_bias_init: bool = True,
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
+    output_head_target_contrast_init: bool = True,
+    output_head_target_contrast_init_max_pairs: int = 8,
+    output_head_target_contrast_init_min_output_std: float = 1.0e-6,
+    output_head_target_contrast_init_max_gain: float = 4096.0,
+    scorer_space_step_guard_enabled: bool = True,
+    scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = 2.0,
+    scorer_space_step_guard_backtracking_steps: int = 6,
+    scorer_space_step_guard_backtracking_shrink: float = 0.5,
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
     bias_gradient_multiplier: float | None = None,
     output_head_bias_gradient_multiplier: float = 1.0,
@@ -10199,6 +10209,32 @@ def execute_hi_nerv_mlx_scoreaware_and_adapt(
             output_head_target_bias_init=bool(output_head_target_bias_init),
             output_head_target_bias_init_epsilon=float(
                 output_head_target_bias_init_epsilon
+            ),
+            output_head_target_contrast_init=bool(output_head_target_contrast_init),
+            output_head_target_contrast_init_max_pairs=int(
+                output_head_target_contrast_init_max_pairs
+            ),
+            output_head_target_contrast_init_min_output_std=float(
+                output_head_target_contrast_init_min_output_std
+            ),
+            output_head_target_contrast_init_max_gain=float(
+                output_head_target_contrast_init_max_gain
+            ),
+            scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
+            scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
+                scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+            ),
+            scorer_space_step_guard_min_post_segnet_occupied_class_fraction=float(
+                scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+            ),
+            scorer_space_step_guard_max_post_segnet_contrast_ratio=(
+                scorer_space_step_guard_max_post_segnet_contrast_ratio
+            ),
+            scorer_space_step_guard_backtracking_steps=int(
+                scorer_space_step_guard_backtracking_steps
+            ),
+            scorer_space_step_guard_backtracking_shrink=float(
+                scorer_space_step_guard_backtracking_shrink
             ),
             gradient_multiplier_by_name=gradient_multiplier_by_name,
             bias_gradient_multiplier=(
@@ -14295,6 +14331,16 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
     posenet_temporal_signal_min_mean_abs_ratio: float = 0.25,
     output_head_target_bias_init: bool = True,
     output_head_target_bias_init_epsilon: float = 1.0 / 1024.0,
+    output_head_target_contrast_init: bool = True,
+    output_head_target_contrast_init_max_pairs: int = 8,
+    output_head_target_contrast_init_min_output_std: float = 1.0e-6,
+    output_head_target_contrast_init_max_gain: float = 4096.0,
+    scorer_space_step_guard_enabled: bool = True,
+    scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = 2.0,
+    scorer_space_step_guard_backtracking_steps: int = 6,
+    scorer_space_step_guard_backtracking_shrink: float = 0.5,
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
     bias_gradient_multiplier: float | None = None,
     output_head_bias_gradient_multiplier: float = 1.0,
@@ -14535,6 +14581,67 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         raise CompactRendererMlxSpineRunnerError(
             "output_head_bias_gradient_multiplier must be finite and >= 0"
         )
+    if int(output_head_target_contrast_init_max_pairs) <= 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "output_head_target_contrast_init_max_pairs must be positive"
+        )
+    if (
+        not math.isfinite(float(output_head_target_contrast_init_min_output_std))
+        or float(output_head_target_contrast_init_min_output_std) <= 0.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "output_head_target_contrast_init_min_output_std must be finite and > 0"
+        )
+    if (
+        not math.isfinite(float(output_head_target_contrast_init_max_gain))
+        or float(output_head_target_contrast_init_max_gain) < 1.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "output_head_target_contrast_init_max_gain must be finite and >= 1"
+        )
+    for name, value in (
+        (
+            "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction",
+            scorer_space_step_guard_min_pre_segnet_occupied_class_fraction,
+        ),
+        (
+            "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
+            scorer_space_step_guard_min_post_segnet_occupied_class_fraction,
+        ),
+    ):
+        if (
+            not math.isfinite(float(value))
+            or float(value) < 0.0
+            or float(value) > 1.0
+        ):
+            raise CompactRendererMlxSpineRunnerError(
+                f"{name} must be finite and in [0, 1]"
+            )
+    if (
+        scorer_space_step_guard_max_post_segnet_contrast_ratio is not None
+        and (
+            not math.isfinite(
+                float(scorer_space_step_guard_max_post_segnet_contrast_ratio)
+            )
+            or float(scorer_space_step_guard_max_post_segnet_contrast_ratio) <= 0.0
+        )
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_space_step_guard_max_post_segnet_contrast_ratio must be "
+            "None or finite and > 0"
+        )
+    if int(scorer_space_step_guard_backtracking_steps) < 0:
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_space_step_guard_backtracking_steps must be >= 0"
+        )
+    if (
+        not math.isfinite(float(scorer_space_step_guard_backtracking_shrink))
+        or float(scorer_space_step_guard_backtracking_shrink) <= 0.0
+        or float(scorer_space_step_guard_backtracking_shrink) >= 1.0
+    ):
+        raise CompactRendererMlxSpineRunnerError(
+            "scorer_space_step_guard_backtracking_shrink must be finite and in (0, 1)"
+        )
     if (
         not math.isfinite(float(segnet_direct_live_base_loss_weight))
         or float(segnet_direct_live_base_loss_weight) < 0.0
@@ -14699,6 +14806,87 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 epsilon=float(output_head_target_bias_init_epsilon),
             )
         )
+        if bool(output_head_target_contrast_init):
+            contrast_initializer = getattr(
+                model,
+                "initialize_output_head_contrast_from_targets",
+                None,
+            )
+            if not callable(contrast_initializer):
+                raise CompactRendererMlxSpineRunnerError(
+                    "HiNeRV model lacks initialize_output_head_contrast_from_targets; "
+                    "refusing low-contrast-prone compact-runner launch"
+                )
+            import mlx.core as mx
+
+            pair_count = int(target_rgb_0.shape[0])
+            contrast_count = min(
+                pair_count,
+                int(output_head_target_contrast_init_max_pairs),
+            )
+            if sparse_priority_target_hydration:
+                if len(hydrated_source_pair_indices) < contrast_count:
+                    raise CompactRendererMlxSpineRunnerError(
+                        "hydrated_source_pair_indices shorter than target contrast "
+                        f"init subset: {len(hydrated_source_pair_indices)} < "
+                        f"{contrast_count}"
+                    )
+                contrast_pair_indices = mx.array(
+                    [int(value) for value in hydrated_source_pair_indices[:contrast_count]],
+                    dtype=mx.int32,
+                )
+                contrast_pair_index_semantics = (
+                    "local_target_rows_to_source_pair_indices"
+                )
+            else:
+                contrast_pair_indices = mx.arange(contrast_count, dtype=mx.int32)
+                contrast_pair_index_semantics = "identity_local_rows_are_source_pairs"
+            contrast_payload = dict(
+                contrast_initializer(
+                    target_rgb_0[:contrast_count],
+                    target_rgb_1[:contrast_count],
+                    pair_indices=contrast_pair_indices,
+                    min_output_std=float(
+                        output_head_target_contrast_init_min_output_std
+                    ),
+                    max_gain=float(output_head_target_contrast_init_max_gain),
+                )
+            )
+            contrast_payload["pair_index_semantics"] = contrast_pair_index_semantics
+            contrast_payload["max_pairs"] = int(
+                output_head_target_contrast_init_max_pairs
+            )
+            output_head_target_bias_init_payload["contrast_init"] = contrast_payload
+            output_head_target_bias_init_payload["archive_charged_decoder_tensors"] = sorted(
+                {
+                    *[
+                        str(value)
+                        for value in output_head_target_bias_init_payload.get(
+                            "archive_charged_decoder_tensors",
+                            [],
+                        )
+                    ],
+                    *[
+                        str(value)
+                        for value in contrast_payload.get(
+                            "archive_charged_decoder_tensors",
+                            [],
+                        )
+                    ],
+                }
+            )
+        else:
+            output_head_target_bias_init_payload["contrast_init"] = {
+                "schema": "hi_nerv_output_head_target_contrast_init.v1",
+                "enabled": False,
+                "reason": "disabled_by_runner",
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [],
+                "blockers": ["hi_nerv_output_head_target_contrast_init_disabled"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            }
     else:
         output_head_target_bias_init_payload = {
             "schema": "hi_nerv_output_head_target_bias_init.v1",
@@ -14707,6 +14895,17 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
             "runtime_sidecar_bytes": 0,
             "archive_charged_decoder_tensors": [],
             "blockers": ["hi_nerv_output_head_target_bias_init_disabled"],
+            "contrast_init": {
+                "schema": "hi_nerv_output_head_target_contrast_init.v1",
+                "enabled": False,
+                "reason": "disabled_by_output_head_target_bias_init",
+                "runtime_sidecar_bytes": 0,
+                "archive_charged_decoder_tensors": [],
+                "blockers": ["hi_nerv_output_head_target_contrast_init_disabled"],
+                "score_claim": False,
+                "promotion_eligible": False,
+                "ready_for_exact_eval_dispatch": False,
+            },
             "score_claim": False,
             "promotion_eligible": False,
             "ready_for_exact_eval_dispatch": False,
@@ -15212,6 +15411,45 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
                 ),
                 "authority": "macos_mlx_research_signal_false_authority",
             },
+            "scorer_space_step_guard": {
+                "schema": "compact_hi_nerv_scorer_space_step_guard.v1",
+                "enabled": bool(scorer_space_step_guard_enabled),
+                "min_pre_segnet_occupied_class_fraction": float(
+                    scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+                ),
+                "min_post_segnet_occupied_class_fraction": float(
+                    scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+                ),
+                "max_post_segnet_contrast_ratio": (
+                    None
+                    if scorer_space_step_guard_max_post_segnet_contrast_ratio
+                    is None
+                    else float(scorer_space_step_guard_max_post_segnet_contrast_ratio)
+                ),
+                "backtracking_steps": int(
+                    scorer_space_step_guard_backtracking_steps
+                ),
+                "backtracking_shrink": float(
+                    scorer_space_step_guard_backtracking_shrink
+                ),
+                "bound_to_shared_mlx_adapter": True,
+                "logic_order": [
+                    "target_bias_init",
+                    "target_contrast_init",
+                    "pre_update_direct_live_scorer_probe",
+                    "optimizer_update",
+                    "post_update_direct_live_scorer_probe",
+                    "parameter_restore_on_scorer_space_collapse",
+                    "export_receiver_cache_quality_probe",
+                ],
+                "rationale": (
+                    "HiNeRV smokes now enter training with noncollapsed "
+                    "SegNet class occupancy, then the first optimizer update "
+                    "collapses occupancy and explodes contrast; this guard "
+                    "turns that crux into an update acceptance rule."
+                ),
+                "authority": "macos_mlx_research_signal_false_authority",
+            },
             "stage_loss_weights": stage_weights,
             "pose_distillation_warmup_epochs": int(pose_distillation_warmup_epochs),
             "scorer_input_shape_warmup_epochs": int(
@@ -15696,6 +15934,24 @@ def _run_hi_nerv_mlx_scoreaware_smoke(
         ),
         output_head_bias_gradient_multiplier=float(
             output_head_bias_gradient_multiplier
+        ),
+        scorer_space_step_guard_enabled=bool(scorer_space_step_guard_enabled),
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=float(
+            scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+        ),
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=float(
+            scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        ),
+        scorer_space_step_guard_max_post_segnet_contrast_ratio=(
+            None
+            if scorer_space_step_guard_max_post_segnet_contrast_ratio is None
+            else float(scorer_space_step_guard_max_post_segnet_contrast_ratio)
+        ),
+        scorer_space_step_guard_backtracking_steps=int(
+            scorer_space_step_guard_backtracking_steps
+        ),
+        scorer_space_step_guard_backtracking_shrink=float(
+            scorer_space_step_guard_backtracking_shrink
         ),
         on_epoch_end=pose_instability_monitor,
         checkpoint_selection_metric_key=checkpoint_selection_metric_key,
@@ -20843,6 +21099,109 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--no-output-head-target-contrast-init",
+        action="store_false",
+        dest="output_head_target_contrast_init",
+        help=(
+            "Disable HiNeRV's deterministic target-contrast sigmoid-head weight "
+            "initialization. This is for ablation only; long-run HiNeRV keeps "
+            "it on so the compact runner enters training with scorer-domain "
+            "contrast instead of a low-variance basin."
+        ),
+    )
+    parser.set_defaults(output_head_target_contrast_init=True)
+    parser.add_argument(
+        "--output-head-target-contrast-init-max-pairs",
+        default=8,
+        type=int,
+        help=(
+            "Number of target pairs used to calibrate HiNeRV output-head "
+            "contrast initialization. Source pair indices are consumed for "
+            "sparse hard-pair hydration so archive-charged head weights bind "
+            "to the trained latent rows."
+        ),
+    )
+    parser.add_argument(
+        "--output-head-target-contrast-init-min-output-std",
+        default=1.0e-6,
+        type=float,
+        help=(
+            "Minimum predicted std denominator for HiNeRV output-head contrast "
+            "initialization. Must be >0; only affects compression-time decoder "
+            "weights that are charged in archive.zip."
+        ),
+    )
+    parser.add_argument(
+        "--output-head-target-contrast-init-max-gain",
+        default=4096.0,
+        type=float,
+        help=(
+            "Maximum multiplicative gain for HiNeRV output-head contrast "
+            "initialization. Must be >=1; the resulting weights remain ordinary "
+            "archive-charged decoder tensors."
+        ),
+    )
+    parser.add_argument(
+        "--no-scorer-space-step-guard",
+        action="store_false",
+        dest="scorer_space_step_guard_enabled",
+        help=(
+            "Disable the HiNeRV scorer-space optimizer-step guard. This is for "
+            "ablation only; default smokes reject renderer steps that collapse "
+            "real SegNet direct-live class occupancy after a noncollapsed "
+            "pre-update state."
+        ),
+    )
+    parser.set_defaults(scorer_space_step_guard_enabled=True)
+    parser.add_argument(
+        "--scorer-space-step-guard-min-pre-segnet-occupied-class-fraction",
+        default=0.4,
+        type=float,
+        help=(
+            "Pre-update real-SegNet direct-live occupied-class fraction needed "
+            "before the scorer-space step guard can reject a step."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-min-post-segnet-occupied-class-fraction",
+        default=0.4,
+        type=float,
+        help=(
+            "Minimum post-update real-SegNet direct-live occupied-class "
+            "fraction for accepted guarded HiNeRV steps."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-max-post-segnet-contrast-ratio",
+        default=2.0,
+        type=float,
+        help=(
+            "Maximum post-update SegNet RGB candidate/reference std ratio for "
+            "accepted guarded HiNeRV steps. Use a large value to effectively "
+            "disable the contrast ceiling while keeping occupancy protection."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-backtracking-steps",
+        default=6,
+        type=int,
+        help=(
+            "Number of geometric backtracking attempts for the HiNeRV "
+            "scorer-space optimizer-step guard. Default 6 tries scales down "
+            "to 1/64 before restoring the pre-update parameters."
+        ),
+    )
+    parser.add_argument(
+        "--scorer-space-step-guard-backtracking-shrink",
+        default=0.5,
+        type=float,
+        help=(
+            "Geometric shrink factor for scorer-space step backtracking. Must "
+            "be in (0, 1); smaller values test more conservative partial "
+            "updates sooner."
+        ),
+    )
+    parser.add_argument(
         "--bias-gradient-multiplier",
         default=None,
         type=float,
@@ -22692,6 +23051,36 @@ def main(argv: list[str] | None = None) -> int:
             output_head_target_bias_init=bool(args.output_head_target_bias_init),
             output_head_target_bias_init_epsilon=(
                 args.output_head_target_bias_init_epsilon
+            ),
+            output_head_target_contrast_init=bool(
+                args.output_head_target_contrast_init
+            ),
+            output_head_target_contrast_init_max_pairs=(
+                args.output_head_target_contrast_init_max_pairs
+            ),
+            output_head_target_contrast_init_min_output_std=(
+                args.output_head_target_contrast_init_min_output_std
+            ),
+            output_head_target_contrast_init_max_gain=(
+                args.output_head_target_contrast_init_max_gain
+            ),
+            scorer_space_step_guard_enabled=bool(
+                args.scorer_space_step_guard_enabled
+            ),
+            scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(
+                args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+            ),
+            scorer_space_step_guard_min_post_segnet_occupied_class_fraction=(
+                args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+            ),
+            scorer_space_step_guard_max_post_segnet_contrast_ratio=(
+                args.scorer_space_step_guard_max_post_segnet_contrast_ratio
+            ),
+            scorer_space_step_guard_backtracking_steps=(
+                args.scorer_space_step_guard_backtracking_steps
+            ),
+            scorer_space_step_guard_backtracking_shrink=(
+                args.scorer_space_step_guard_backtracking_shrink
             ),
             gradient_multiplier_by_name=(
                 _gradient_multiplier_by_name_from_assignments(

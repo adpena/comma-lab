@@ -646,6 +646,12 @@ class MlxScoreAwareAdapter:
         gradient_multiplier_by_name: Mapping[str, float] | None = None,
         bias_gradient_multiplier: float | None = None,
         output_head_bias_gradient_multiplier: float = 1.0,
+        scorer_space_step_guard_enabled: bool = False,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
+        scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = None,
+        scorer_space_step_guard_backtracking_steps: int = 0,
+        scorer_space_step_guard_backtracking_shrink: float = 0.5,
     ) -> None:
         """Initialize the canonical MLX score-aware adapter.
 
@@ -748,6 +754,34 @@ class MlxScoreAwareAdapter:
                 of their update on global RGB biases while scorer argmax
                 remains one-class; values < 1.0 force the optimizer to use
                 spatial decoder capacity during scorer warmup.
+            scorer_space_step_guard_enabled: when True, every accepted renderer
+                optimizer step must preserve the real SegNet direct-live class
+                occupancy learned at initialization/warmup. If the pre-update
+                scorer state is noncollapsed and the post-update state collapses
+                or detonates scorer RGB contrast, the adapter restores renderer
+                parameters to the pre-update snapshot and emits fail-closed
+                telemetry. This is a training-time actuator, not promotion
+                authority.
+            scorer_space_step_guard_min_pre_segnet_occupied_class_fraction:
+                minimum pre-update direct-live occupied-class fraction required
+                before the guard can reject a step. This avoids blocking early
+                bootstrapping steps when the model has not yet entered a
+                scorer-visible manifold.
+            scorer_space_step_guard_min_post_segnet_occupied_class_fraction:
+                minimum post-update occupied-class fraction for guarded steps.
+            scorer_space_step_guard_max_post_segnet_contrast_ratio: optional
+                upper bound for post-update SegNet RGB std/reference std ratio.
+                HiNeRV smokes exposed the paired failure mode "class collapse +
+                contrast explosion"; this bound makes that causal link
+                executable.
+            scorer_space_step_guard_backtracking_steps: when >0, a rejected
+                full optimizer step is not immediately discarded. The adapter
+                tries geometric interpolations between the pre-update parameters
+                and the optimizer proposal and accepts the largest scorer-safe
+                fraction. This is the training-time trust-region actuator for
+                the current HiNeRV distortion crux.
+            scorer_space_step_guard_backtracking_shrink: geometric shrink
+                factor for the scorer-space backtracking sequence.
         """
         mx = require_mlx_for_harness()
         import mlx.nn as mlx_nn
@@ -837,6 +871,39 @@ class MlxScoreAwareAdapter:
             gradient_multiplier_by_name,
             bias_gradient_multiplier=bias_gradient_multiplier,
             output_head_bias_gradient_multiplier=output_head_bias_gradient_multiplier,
+        )
+        self._scorer_space_step_guard_enabled = bool(
+            scorer_space_step_guard_enabled
+        )
+        self._scorer_space_step_guard_min_pre_segnet_occupied_class_fraction = (
+            self._validate_unit_interval_control(
+                scorer_space_step_guard_min_pre_segnet_occupied_class_fraction,
+                "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction",
+            )
+        )
+        self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction = (
+            self._validate_unit_interval_control(
+                scorer_space_step_guard_min_post_segnet_occupied_class_fraction,
+                "scorer_space_step_guard_min_post_segnet_occupied_class_fraction",
+            )
+        )
+        self._scorer_space_step_guard_max_post_segnet_contrast_ratio = (
+            self._validate_positive_float_or_none_control(
+                scorer_space_step_guard_max_post_segnet_contrast_ratio,
+                "scorer_space_step_guard_max_post_segnet_contrast_ratio",
+            )
+        )
+        self._scorer_space_step_guard_backtracking_steps = (
+            self._validate_nonnegative_int_control(
+                scorer_space_step_guard_backtracking_steps,
+                "scorer_space_step_guard_backtracking_steps",
+            )
+        )
+        self._scorer_space_step_guard_backtracking_shrink = (
+            self._validate_open_unit_interval_control(
+                scorer_space_step_guard_backtracking_shrink,
+                "scorer_space_step_guard_backtracking_shrink",
+            )
         )
         self._train_time_dual_ascent = TrainTimeDualAscentController.from_config(
             train_time_dual_ascent_config
@@ -971,6 +1038,396 @@ class MlxScoreAwareAdapter:
             name: self._mx.array(leaf)
             for name, leaf in self._flatten_trace_leaves(self.model.parameters())
         }
+
+    def _restore_parameter_trace_leaves(
+        self,
+        before: Mapping[str, Any],
+    ) -> dict[str, float]:
+        """Restore model parameters from a pre-update trace snapshot."""
+
+        from mlx.utils import tree_flatten, tree_unflatten
+
+        mx = self._mx
+        restored: list[tuple[Any, Any]] = []
+        missing_snapshot = 0
+        for raw_name, leaf in tree_flatten(self.model.parameters()):
+            if leaf is None:
+                restored.append((raw_name, leaf))
+                continue
+            name = _tree_name_to_saliency_group(raw_name)
+            before_leaf = before.get(name)
+            if before_leaf is None:
+                missing_snapshot += 1
+                restored.append((raw_name, leaf))
+            else:
+                restored.append((raw_name, mx.array(before_leaf)))
+        self.model.update(tree_unflatten(restored))
+        mx.eval(self.model.parameters())
+        return {
+            "scorer_space_step_guard_parameters_restored": 1.0,
+            "scorer_space_step_guard_restore_missing_snapshot_leaf_count": float(
+                missing_snapshot
+            ),
+        }
+
+    def _restore_interpolated_parameter_trace_leaves(
+        self,
+        before: Mapping[str, Any],
+        after: Mapping[str, Any],
+        *,
+        step_scale: float,
+    ) -> dict[str, float]:
+        """Set model params to ``before + step_scale * (after - before)``."""
+
+        from mlx.utils import tree_flatten, tree_unflatten
+
+        mx = self._mx
+        restored: list[tuple[Any, Any]] = []
+        missing_snapshot = 0
+        for raw_name, leaf in tree_flatten(self.model.parameters()):
+            if leaf is None:
+                restored.append((raw_name, leaf))
+                continue
+            name = _tree_name_to_saliency_group(raw_name)
+            before_leaf = before.get(name)
+            after_leaf = after.get(name)
+            if before_leaf is None or after_leaf is None:
+                missing_snapshot += 1
+                restored.append((raw_name, leaf))
+            else:
+                restored.append(
+                    (
+                        raw_name,
+                        mx.array(before_leaf)
+                        + float(step_scale)
+                        * (mx.array(after_leaf) - mx.array(before_leaf)),
+                    )
+                )
+        self.model.update(tree_unflatten(restored))
+        mx.eval(self.model.parameters())
+        return {
+            "scorer_space_step_guard_parameters_damped": 1.0,
+            "scorer_space_step_guard_backtracking_missing_snapshot_leaf_count": float(
+                missing_snapshot
+            ),
+        }
+
+    @staticmethod
+    def _finite_metric(
+        metrics: Mapping[str, Any],
+        key: str,
+    ) -> float | None:
+        value = metrics.get(key)
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(parsed):
+            return None
+        return parsed
+
+    @staticmethod
+    def _validate_unit_interval_control(value: Any, name: str) -> float:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be a finite float in [0, 1]") from exc
+        if not math.isfinite(parsed) or parsed < 0.0 or parsed > 1.0:
+            raise ValueError(f"{name} must be finite and in [0, 1]; got {parsed!r}")
+        return parsed
+
+    @staticmethod
+    def _validate_positive_float_or_none_control(value: Any, name: str) -> float | None:
+        if value is None:
+            return None
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be None or a finite positive float") from exc
+        if not math.isfinite(parsed) or parsed <= 0.0:
+            raise ValueError(f"{name} must be None or finite and > 0; got {parsed!r}")
+        return parsed
+
+    @staticmethod
+    def _validate_nonnegative_int_control(value: Any, name: str) -> int:
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be a non-negative integer") from exc
+        if parsed < 0:
+            raise ValueError(f"{name} must be >= 0; got {parsed!r}")
+        return parsed
+
+    @staticmethod
+    def _validate_open_unit_interval_control(value: Any, name: str) -> float:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be a finite float in (0, 1)") from exc
+        if not math.isfinite(parsed) or parsed <= 0.0 or parsed >= 1.0:
+            raise ValueError(f"{name} must be finite and in (0, 1); got {parsed!r}")
+        return parsed
+
+    def _scorer_space_step_guard_reject_reasons(
+        self,
+        *,
+        post_occ: float | None,
+        post_contrast: float | None,
+    ) -> list[str]:
+        """Return scorer-space step rejection reasons for post-update metrics."""
+
+        reject_reasons: list[str] = []
+        if post_occ is None:
+            reject_reasons.append("post_segnet_occupied_class_fraction_missing")
+        elif (
+            post_occ
+            < self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        ):
+            reject_reasons.append("post_segnet_occupied_class_fraction_below_floor")
+        if (
+            self._scorer_space_step_guard_max_post_segnet_contrast_ratio is not None
+            and post_contrast is not None
+            and post_contrast
+            > self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+        ):
+            reject_reasons.append("post_segnet_contrast_ratio_above_ceiling")
+        return reject_reasons
+
+    def _add_scorer_space_step_guard_reason_metrics(
+        self,
+        metrics: dict[str, float],
+        reject_reasons: Sequence[str],
+    ) -> None:
+        metrics["scorer_space_step_guard_reject_reason_count"] = float(
+            len(reject_reasons)
+        )
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_occupied_class_fraction_missing"
+        ] = float("post_segnet_occupied_class_fraction_missing" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_occupied_class_fraction_below_floor"
+        ] = float("post_segnet_occupied_class_fraction_below_floor" in reject_reasons)
+        metrics[
+            "scorer_space_step_guard_reject_reason_post_segnet_contrast_ratio_above_ceiling"
+        ] = float("post_segnet_contrast_ratio_above_ceiling" in reject_reasons)
+
+    def _apply_scorer_space_step_guard(
+        self,
+        *,
+        batch: Any,
+        loss_weights: Mapping[str, float],
+        pre_update_loss_part_metrics: Mapping[str, Any],
+        post_update_loss_part_metrics: Mapping[str, Any],
+        pre_update_param_trace: Mapping[str, Any],
+    ) -> dict[str, float]:
+        """Reject optimizer steps that destroy scorer-visible class occupancy."""
+
+        metrics: dict[str, float] = {
+            "scorer_space_step_guard_enabled": float(
+                self._scorer_space_step_guard_enabled
+            ),
+            "scorer_space_step_guard_intervened": 0.0,
+            "scorer_space_step_guard_rejected": 0.0,
+            "scorer_space_step_guard_eligible": 0.0,
+            "scorer_space_step_guard_pre_metric_present": 0.0,
+            "scorer_space_step_guard_post_metric_present": 0.0,
+            "scorer_space_step_guard_reject_reason_count": 0.0,
+            "scorer_space_step_guard_optimizer_state_restored": 0.0,
+            "scorer_space_step_guard_optimizer_state_advanced": 0.0,
+            "scorer_space_step_guard_parameters_restored": 0.0,
+            "scorer_space_step_guard_parameters_damped": 0.0,
+            "scorer_space_step_guard_restore_missing_snapshot_leaf_count": 0.0,
+            "scorer_space_step_guard_backtracking_missing_snapshot_leaf_count": 0.0,
+            "scorer_space_step_guard_backtracking_enabled": float(
+                self._scorer_space_step_guard_backtracking_steps > 0
+            ),
+            "scorer_space_step_guard_backtracking_steps": float(
+                self._scorer_space_step_guard_backtracking_steps
+            ),
+            "scorer_space_step_guard_backtracking_shrink": float(
+                self._scorer_space_step_guard_backtracking_shrink
+            ),
+            "scorer_space_step_guard_backtracking_attempt_count": 0.0,
+            "scorer_space_step_guard_backtracking_accepted": 0.0,
+            "scorer_space_step_guard_accepted_step_scale": 1.0,
+            "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction": (
+                self._scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+            ),
+            "scorer_space_step_guard_min_post_segnet_occupied_class_fraction": (
+                self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+            ),
+            "scorer_space_step_guard_max_post_segnet_contrast_ratio": (
+                -1.0
+                if self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+                is None
+                else float(self._scorer_space_step_guard_max_post_segnet_contrast_ratio)
+            ),
+        }
+        if not self._scorer_space_step_guard_enabled:
+            return metrics
+
+        pre_occ = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+        )
+        post_occ = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+        )
+        pre_contrast = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+        )
+        post_contrast = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+        )
+        pre_argmax_disagreement = self._finite_metric(
+            pre_update_loss_part_metrics,
+            "dynamics_pre_update_loss_part_segnet_direct_live_argmax_disagreement",
+        )
+        post_argmax_disagreement = self._finite_metric(
+            post_update_loss_part_metrics,
+            "loss_part_segnet_direct_live_argmax_disagreement",
+        )
+
+        for name, value in {
+            "scorer_space_step_guard_pre_segnet_occupied_class_fraction": pre_occ,
+            "scorer_space_step_guard_post_segnet_occupied_class_fraction_before_restore": post_occ,
+            "scorer_space_step_guard_pre_segnet_contrast_ratio": pre_contrast,
+            "scorer_space_step_guard_post_segnet_contrast_ratio_before_restore": post_contrast,
+            "scorer_space_step_guard_pre_segnet_argmax_disagreement": pre_argmax_disagreement,
+            "scorer_space_step_guard_post_segnet_argmax_disagreement_before_restore": post_argmax_disagreement,
+        }.items():
+            if value is not None:
+                metrics[name] = float(value)
+
+        metrics["scorer_space_step_guard_pre_metric_present"] = float(pre_occ is not None)
+        metrics["scorer_space_step_guard_post_metric_present"] = float(post_occ is not None)
+        if pre_occ is None:
+            return metrics
+
+        max_contrast = self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+        pre_noncollapsed = (
+            pre_occ
+            >= self._scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+        )
+        contrast_crossed_ceiling = (
+            max_contrast is not None
+            and post_contrast is not None
+            and post_contrast > max_contrast
+            and (
+                pre_contrast is None
+                or pre_contrast <= max_contrast
+                or (
+                    post_contrast > pre_contrast
+                    and (
+                        post_occ is None
+                        or post_occ
+                        <= max(
+                            pre_occ,
+                            self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction,
+                        )
+                    )
+                )
+            )
+        )
+        low_occupancy_non_improving = (
+            pre_occ
+            < self._scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+            and post_occ is not None
+            and post_occ <= pre_occ
+        )
+        eligible = (
+            pre_noncollapsed
+            or contrast_crossed_ceiling
+            or low_occupancy_non_improving
+        )
+        metrics["scorer_space_step_guard_eligible"] = float(eligible)
+        metrics["scorer_space_step_guard_eligible_pre_noncollapsed"] = float(
+            pre_noncollapsed
+        )
+        metrics["scorer_space_step_guard_eligible_contrast_crossed_ceiling"] = float(
+            contrast_crossed_ceiling
+        )
+        metrics["scorer_space_step_guard_eligible_low_occupancy_non_improving"] = float(
+            low_occupancy_non_improving
+        )
+        if not eligible:
+            return metrics
+
+        reject_reasons = self._scorer_space_step_guard_reject_reasons(
+            post_occ=post_occ,
+            post_contrast=post_contrast,
+        )
+        self._add_scorer_space_step_guard_reason_metrics(metrics, reject_reasons)
+        if not reject_reasons:
+            return metrics
+
+        post_update_param_trace = self._capture_parameter_trace_leaves()
+        step_scale = 1.0
+        for attempt in range(self._scorer_space_step_guard_backtracking_steps):
+            step_scale *= self._scorer_space_step_guard_backtracking_shrink
+            metrics.update(
+                self._restore_interpolated_parameter_trace_leaves(
+                    pre_update_param_trace,
+                    post_update_param_trace,
+                    step_scale=step_scale,
+                )
+            )
+            trial_metrics = self._score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+            )
+            trial_occ = self._finite_metric(
+                trial_metrics,
+                "loss_part_segnet_direct_live_candidate_occupied_class_fraction",
+            )
+            trial_contrast = self._finite_metric(
+                trial_metrics,
+                "loss_part_scorer_input_contrast_floor_segnet_last_rgb_mean_std_ratio",
+            )
+            trial_reasons = self._scorer_space_step_guard_reject_reasons(
+                post_occ=trial_occ,
+                post_contrast=trial_contrast,
+            )
+            metrics["scorer_space_step_guard_backtracking_attempt_count"] = float(
+                attempt + 1
+            )
+            if trial_occ is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_occupied_class_fraction"
+                ] = float(trial_occ)
+            if trial_contrast is not None:
+                metrics[
+                    "scorer_space_step_guard_backtracking_last_segnet_contrast_ratio"
+                ] = float(trial_contrast)
+            if trial_reasons:
+                continue
+            metrics.update(
+                {
+                    "scorer_space_step_guard_backtracking_accepted": 1.0,
+                    "scorer_space_step_guard_accepted_step_scale": float(step_scale),
+                    "scorer_space_step_guard_rejected": 0.0,
+                    "scorer_space_step_guard_intervened": 1.0,
+                    "scorer_space_step_guard_optimizer_state_advanced": 1.0,
+                    "scorer_space_step_guard_post_segnet_occupied_class_fraction_after_backtracking": (
+                        0.0 if trial_occ is None else float(trial_occ)
+                    ),
+                    "scorer_space_step_guard_post_segnet_contrast_ratio_after_backtracking": (
+                        0.0 if trial_contrast is None else float(trial_contrast)
+                    ),
+                }
+            )
+            return metrics
+
+        restore_metrics = self._restore_parameter_trace_leaves(pre_update_param_trace)
+        metrics.update(restore_metrics)
+        metrics["scorer_space_step_guard_rejected"] = 1.0
+        metrics["scorer_space_step_guard_intervened"] = 1.0
+        self._add_scorer_space_step_guard_reason_metrics(metrics, reject_reasons)
+        metrics["scorer_space_step_guard_optimizer_state_advanced"] = 1.0
+        return metrics
 
     def _group_norm_trace_metrics(
         self,
@@ -2464,6 +2921,58 @@ class MlxScoreAwareAdapter:
                 "leaf_inventory": gradient_multiplier_leaf_inventory,
                 "authority": "macos_mlx_training_lagrangian_false_authority",
             },
+            "scorer_space_step_guard": {
+                "schema": "mlx_score_aware_scorer_space_step_guard.v1",
+                "enabled": bool(self._scorer_space_step_guard_enabled),
+                "min_pre_segnet_occupied_class_fraction": float(
+                    self._scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+                ),
+                "min_post_segnet_occupied_class_fraction": float(
+                    self._scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+                ),
+                "max_post_segnet_contrast_ratio": (
+                    None
+                    if self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+                    is None
+                    else float(
+                        self._scorer_space_step_guard_max_post_segnet_contrast_ratio
+                    )
+                ),
+                "backtracking_steps": int(
+                    self._scorer_space_step_guard_backtracking_steps
+                ),
+                "backtracking_shrink": float(
+                    self._scorer_space_step_guard_backtracking_shrink
+                ),
+                "pre_metric": (
+                    "dynamics_pre_update_loss_part_segnet_direct_live_"
+                    "candidate_occupied_class_fraction"
+                ),
+                "post_metric": (
+                    "loss_part_segnet_direct_live_candidate_occupied_class_fraction"
+                ),
+                "contrast_metric": (
+                    "loss_part_scorer_input_contrast_floor_segnet_last_rgb_"
+                    "mean_std_ratio"
+                ),
+                "rollback_contract": {
+                    "parameters_restored_on_reject": True,
+                    "parameters_interpolated_on_backtracking_accept": True,
+                    "optimizer_state_restored_on_reject": False,
+                    "reason": (
+                        "shared MLX optimizer objects do not expose a stable "
+                        "portable state restore surface yet; rejection is a "
+                        "short-smoke correctness actuator and telemetry "
+                        "records optimizer_state_advanced=1"
+                    ),
+                },
+                "purpose": (
+                    "prevent noncollapsed scorer-visible initialization from "
+                    "being destroyed by an oversized or wrong-direction "
+                    "optimizer step before long HiNeRV/SNeRV training"
+                ),
+                "authority": "macos_mlx_training_lagrangian_false_authority",
+            },
             "loss_part_telemetry": {
                 "schema": "mlx_score_aware_loss_part_telemetry.v1",
                 "emitted_by_train_step": True,
@@ -3789,12 +4298,35 @@ class MlxScoreAwareAdapter:
         )
         self._wave_n11_step_count += 1
         self._optimizer.update(self.model, grads)
+        post_update_loss_part_metrics_before_guard = (
+            self._score_aware_loss_part_metrics(
+                batch=batch,
+                loss_weights=effective_loss_weights,
+            )
+        )
+        scorer_space_step_guard_metrics = self._apply_scorer_space_step_guard(
+            batch=batch,
+            loss_weights=effective_loss_weights,
+            pre_update_loss_part_metrics=pre_update_loss_part_metrics,
+            post_update_loss_part_metrics=post_update_loss_part_metrics_before_guard,
+            pre_update_param_trace=pre_update_param_trace,
+        )
+        guard_rejected = bool(
+            scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
+        )
         dynamics_delta_metrics = self._parameter_delta_trace_metrics(
             pre_update_param_trace
         )
-        post_update_eval_targets, post_update_metrics = self._post_train_step_update(
-            batch
-        )
+        if guard_rejected:
+            post_update_eval_targets = []
+            post_update_metrics = {
+                "scorer_space_step_guard_post_train_step_update_skipped": 1.0,
+                "scorer_space_step_guard_student_heads_skipped": 1.0,
+            }
+        else:
+            post_update_eval_targets, post_update_metrics = (
+                self._post_train_step_update(batch)
+            )
         post_update_metrics.update(
             self._train_time_section_byte_metrics(
                 batch=batch,
@@ -3807,6 +4339,7 @@ class MlxScoreAwareAdapter:
                 loss_weights=effective_loss_weights,
             )
         )
+        post_update_metrics.update(scorer_space_step_guard_metrics)
 
         # Accumulate the MLX arrays the single trailing mx.eval must realize.
         eval_targets: list[Any] = [
@@ -3815,13 +4348,24 @@ class MlxScoreAwareAdapter:
             *post_update_eval_targets,
         ]
 
-        student_head_eval_targets = self._train_student_heads(
-            batch=batch,
-            learning_rate=learning_rate,
-            loss_weights=effective_loss_weights,
-        )
-        post_update_metrics.update(self._last_student_head_metrics)
-        eval_targets.extend(student_head_eval_targets)
+        if guard_rejected:
+            self._last_student_head_metrics = {}
+        else:
+            post_update_metrics.setdefault(
+                "scorer_space_step_guard_post_train_step_update_skipped",
+                0.0,
+            )
+            post_update_metrics.setdefault(
+                "scorer_space_step_guard_student_heads_skipped",
+                0.0,
+            )
+            student_head_eval_targets = self._train_student_heads(
+                batch=batch,
+                learning_rate=learning_rate,
+                loss_weights=effective_loss_weights,
+            )
+            post_update_metrics.update(self._last_student_head_metrics)
+            eval_targets.extend(student_head_eval_targets)
 
         mx.eval(*eval_targets)
         native_optimizer_metrics = {
@@ -3988,14 +4532,37 @@ class MlxScoreAwareAdapter:
             self._pact_muon_adamw_optimizer_state,
             config,
         )
+        post_update_loss_part_metrics_before_guard = (
+            self._score_aware_loss_part_metrics(
+                batch,
+                loss_weights=loss_weights,
+            )
+        )
+        scorer_space_step_guard_metrics = self._apply_scorer_space_step_guard(
+            batch=batch,
+            loss_weights=loss_weights,
+            pre_update_loss_part_metrics=pre_update_loss_part_metrics,
+            post_update_loss_part_metrics=post_update_loss_part_metrics_before_guard,
+            pre_update_param_trace=pre_update_param_trace,
+        )
+        guard_rejected = bool(
+            scorer_space_step_guard_metrics.get("scorer_space_step_guard_rejected")
+        )
         dynamics_delta_metrics = self._parameter_delta_trace_metrics(
             pre_update_param_trace
         )
         self._pact_muon_adamw_last_step_summary = dict(step_summary)
         self._wave_n11_step_count += 1
-        post_update_eval_targets, post_update_metrics = self._post_train_step_update(
-            batch
-        )
+        if guard_rejected:
+            post_update_eval_targets = []
+            post_update_metrics = {
+                "scorer_space_step_guard_post_train_step_update_skipped": 1.0,
+                "scorer_space_step_guard_student_heads_skipped": 1.0,
+            }
+        else:
+            post_update_eval_targets, post_update_metrics = (
+                self._post_train_step_update(batch)
+            )
         post_update_metrics.update(
             self._train_time_section_byte_metrics(
                 batch=batch,
@@ -4008,12 +4575,25 @@ class MlxScoreAwareAdapter:
                 loss_weights=loss_weights,
             )
         )
-        student_head_eval_targets = self._train_student_heads(
-            batch=batch,
-            learning_rate=learning_rate,
-            loss_weights=loss_weights,
-        )
-        post_update_metrics.update(self._last_student_head_metrics)
+        post_update_metrics.update(scorer_space_step_guard_metrics)
+        if guard_rejected:
+            student_head_eval_targets = []
+            self._last_student_head_metrics = {}
+        else:
+            post_update_metrics.setdefault(
+                "scorer_space_step_guard_post_train_step_update_skipped",
+                0.0,
+            )
+            post_update_metrics.setdefault(
+                "scorer_space_step_guard_student_heads_skipped",
+                0.0,
+            )
+            student_head_eval_targets = self._train_student_heads(
+                batch=batch,
+                learning_rate=learning_rate,
+                loss_weights=loss_weights,
+            )
+            post_update_metrics.update(self._last_student_head_metrics)
         mx.eval(
             self.model.parameters(),
             loss_value,

@@ -69,6 +69,32 @@ except ImportError:
     _AV_AVAILABLE = False
 
 
+def _fake_hinerv_output_head_contrast_init_payload(
+    pair_indices,
+    *,
+    min_output_std: float,
+    max_gain: float,
+) -> dict[str, object]:
+    try:
+        pair_index_values = [int(value) for value in pair_indices.tolist()]
+    except AttributeError:
+        pair_index_values = [
+            int(value) for value in np.asarray(pair_indices).reshape(-1).tolist()
+        ]
+    return {
+        "schema": "hi_nerv_output_head_target_contrast_init.v1",
+        "enabled": True,
+        "source_pair_indices": pair_index_values,
+        "min_output_std": float(min_output_std),
+        "max_gain": float(max_gain),
+        "runtime_sidecar_bytes": 0,
+        "archive_charged_decoder_tensors": [
+            "head_rgb_0.weight",
+            "head_rgb_1.weight",
+        ],
+    }
+
+
 def _passing_snerv_scorer_tether_smoke_report(*, steps: int = 2) -> dict[str, object]:
     return {
         "schema": "snerv_scorer_tether_smoke.v1",
@@ -4320,6 +4346,32 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
                 ],
             }
 
+        def initialize_output_head_contrast_from_targets(
+            self,
+            target_rgb_0,
+            target_rgb_1,
+            *,
+            pair_indices,
+            min_output_std,
+            max_gain,
+        ):
+            captured["output_head_target_contrast_init_call"] = {
+                "target0_shape": tuple(target_rgb_0.shape),
+                "target1_shape": tuple(target_rgb_1.shape),
+                "pair_indices": _fake_hinerv_output_head_contrast_init_payload(
+                    pair_indices,
+                    min_output_std=min_output_std,
+                    max_gain=max_gain,
+                )["source_pair_indices"],
+                "min_output_std": float(min_output_std),
+                "max_gain": float(max_gain),
+            }
+            return _fake_hinerv_output_head_contrast_init_payload(
+                pair_indices,
+                min_output_std=min_output_std,
+                max_gain=max_gain,
+            )
+
         def num_parameters(self):
             return 123
 
@@ -4382,6 +4434,24 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         )
         captured["run_prioritized_pair_indices"] = tuple(
             kwargs["prioritized_pair_indices"]
+        )
+        captured["scorer_space_step_guard_enabled"] = bool(
+            kwargs["scorer_space_step_guard_enabled"]
+        )
+        captured[
+            "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
+        ] = float(kwargs["scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"])
+        captured[
+            "scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
+        ] = float(kwargs["scorer_space_step_guard_min_post_segnet_occupied_class_fraction"])
+        captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] = float(
+            kwargs["scorer_space_step_guard_max_post_segnet_contrast_ratio"]
+        )
+        captured["scorer_space_step_guard_backtracking_steps"] = int(
+            kwargs["scorer_space_step_guard_backtracking_steps"]
+        )
+        captured["scorer_space_step_guard_backtracking_shrink"] = float(
+            kwargs["scorer_space_step_guard_backtracking_shrink"]
         )
         captured["curriculum_stage_loss_weights"] = [
             dict(stage.loss_weights) for stage in kwargs["curriculum_stages"]
@@ -4553,6 +4623,18 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
         weights["posenet_temporal_signal_floor"] == pytest.approx(0.625)
         for weights in captured["curriculum_stage_loss_weights"]
     )
+    assert captured["scorer_space_step_guard_enabled"] is True
+    assert captured[
+        "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.4)
+    assert captured[
+        "scorer_space_step_guard_min_post_segnet_occupied_class_fraction"
+    ] == pytest.approx(0.4)
+    assert captured["scorer_space_step_guard_max_post_segnet_contrast_ratio"] == (
+        pytest.approx(2.0)
+    )
+    assert captured["scorer_space_step_guard_backtracking_steps"] == 6
+    assert captured["scorer_space_step_guard_backtracking_shrink"] == pytest.approx(0.5)
     assert captured["run_prioritized_pair_indices"] == (7, 2)
     assert captured["run_pr95_curriculum_total_epochs"] == 8
     metadata = artifact.as_dict()["substrate_artifact_metadata"]
@@ -4562,6 +4644,13 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert metadata["source_pair_indices"] == []
     assert metadata["sparse_prioritized_target_hydration"] is False
     priority = training["prioritized_pair_training"]
+    step_guard = training["scorer_space_step_guard"]
+    assert step_guard["enabled"] is True
+    assert step_guard["bound_to_shared_mlx_adapter"] is True
+    assert step_guard["min_post_segnet_occupied_class_fraction"] == pytest.approx(0.4)
+    assert step_guard["max_post_segnet_contrast_ratio"] == pytest.approx(2.0)
+    assert step_guard["backtracking_steps"] == 6
+    assert step_guard["backtracking_shrink"] == pytest.approx(0.5)
     assert priority["sampling_scope"] == (
         "full_video_target_hydration_with_prioritized_sampling"
     )
@@ -4604,8 +4693,21 @@ def test_hinerv_private_smoke_defaults_to_full_target_hydration_for_hard_pairs(
     assert output_init["runtime_sidecar_bytes"] == 0
     assert output_init["archive_charged_decoder_tensors"] == [
         "head_rgb_0.bias",
+        "head_rgb_0.weight",
         "head_rgb_1.bias",
+        "head_rgb_1.weight",
     ]
+    contrast_init = output_init["contrast_init"]
+    assert contrast_init["enabled"] is True
+    assert contrast_init["source_pair_indices"] == list(range(8))
+    assert contrast_init["pair_index_semantics"] == "identity_local_rows_are_source_pairs"
+    assert contrast_init["max_pairs"] == 8
+    contrast_call = captured["output_head_target_contrast_init_call"]
+    assert contrast_call["target0_shape"] == (8, 384, 512, 3)
+    assert contrast_call["target1_shape"] == (8, 384, 512, 3)
+    assert contrast_call["pair_indices"] == list(range(8))
+    assert contrast_call["min_output_std"] == pytest.approx(1.0e-6)
+    assert contrast_call["max_gain"] == pytest.approx(4096.0)
 
 
 def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
@@ -4641,6 +4743,21 @@ def test_hinerv_private_smoke_forwards_explicit_pr95_curriculum_total_epochs(
                     "head_rgb_1.bias",
                 ],
             }
+
+        def initialize_output_head_contrast_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            min_output_std,
+            max_gain,
+        ):
+            return _fake_hinerv_output_head_contrast_init_payload(
+                pair_indices,
+                min_output_std=min_output_std,
+                max_gain=max_gain,
+            )
 
         def num_parameters(self):
             return 123
@@ -4869,6 +4986,21 @@ def test_hinerv_private_smoke_refuses_inert_hard_byte_ceiling_before_training(
                 "runtime_sidecar_bytes": 0,
                 "archive_charged_decoder_tensors": [],
             }
+
+        def initialize_output_head_contrast_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            min_output_std,
+            max_gain,
+        ):
+            return _fake_hinerv_output_head_contrast_init_payload(
+                pair_indices,
+                min_output_std=min_output_std,
+                max_gain=max_gain,
+            )
 
         def num_parameters(self):
             return 123
@@ -7223,6 +7355,12 @@ def test_hinerv_runner_forwards_train_time_dual_ascent_to_shared_harness() -> No
     assert "gradient_multiplier_by_name" in kw_names
     assert "bias_gradient_multiplier" in kw_names
     assert "output_head_bias_gradient_multiplier" in kw_names
+    assert "scorer_space_step_guard_enabled" in kw_names
+    assert "scorer_space_step_guard_min_pre_segnet_occupied_class_fraction" in kw_names
+    assert "scorer_space_step_guard_min_post_segnet_occupied_class_fraction" in kw_names
+    assert "scorer_space_step_guard_max_post_segnet_contrast_ratio" in kw_names
+    assert "scorer_space_step_guard_backtracking_steps" in kw_names
+    assert "scorer_space_step_guard_backtracking_shrink" in kw_names
     assert "checkpoint_selection_metric_key" in kw_names
     assert "checkpoint_selection_metric_mode" in kw_names
     assert "checkpoint_selection_metric_required" in kw_names
@@ -7339,6 +7477,20 @@ def test_compact_runner_parser_defaults_to_shared_optimizer_kind() -> None:
     assert args.gradient_multiplier_by_name == []
     assert args.bias_gradient_multiplier is None
     assert args.output_head_bias_gradient_multiplier == pytest.approx(1.0)
+    assert args.scorer_space_step_guard_enabled is True
+    assert (
+        args.scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+        == pytest.approx(0.4)
+    )
+    assert (
+        args.scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        == pytest.approx(0.4)
+    )
+    assert args.scorer_space_step_guard_max_post_segnet_contrast_ratio == (
+        pytest.approx(2.0)
+    )
+    assert args.scorer_space_step_guard_backtracking_steps == 6
+    assert args.scorer_space_step_guard_backtracking_shrink == pytest.approx(0.5)
     assert (
         args.checkpoint_interval_epochs
         == runner_mod.DEFAULT_COMPACT_FAMILY_CHECKPOINT_INTERVAL_EPOCHS
@@ -10996,6 +11148,21 @@ def test_hinerv_full600_modelsize_candidate_can_run_partial_timing_smoke(
                 ],
             }
 
+        def initialize_output_head_contrast_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            min_output_std,
+            max_gain,
+        ):
+            return _fake_hinerv_output_head_contrast_init_payload(
+                pair_indices,
+                min_output_std=min_output_std,
+                max_gain=max_gain,
+            )
+
         def num_parameters(self):
             return 65050
 
@@ -11220,6 +11387,21 @@ def test_hinerv_private_smoke_generates_startup_section_telemetry_for_qat_terms(
                     "head_rgb_1.bias",
                 ],
             }
+
+        def initialize_output_head_contrast_from_targets(
+            self,
+            _target_rgb_0,
+            _target_rgb_1,
+            *,
+            pair_indices,
+            min_output_std,
+            max_gain,
+        ):
+            return _fake_hinerv_output_head_contrast_init_payload(
+                pair_indices,
+                min_output_std=min_output_std,
+                max_gain=max_gain,
+            )
 
         def num_parameters(self):
             return 7

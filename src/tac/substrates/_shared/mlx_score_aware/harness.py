@@ -88,6 +88,12 @@ def run_mlx_score_aware_full_main(
     gradient_multiplier_by_name: Mapping[str, float] | None = None,
     bias_gradient_multiplier: float | None = None,
     output_head_bias_gradient_multiplier: float = 1.0,
+    scorer_space_step_guard_enabled: bool = False,
+    scorer_space_step_guard_min_pre_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_min_post_segnet_occupied_class_fraction: float = 0.4,
+    scorer_space_step_guard_max_post_segnet_contrast_ratio: float | None = None,
+    scorer_space_step_guard_backtracking_steps: int = 0,
+    scorer_space_step_guard_backtracking_shrink: float = 0.5,
     ema_archive_selection_enabled: bool = False,
     checkpoint_selection_metric_key: str = "total",
     checkpoint_selection_metric_mode: str = "min",
@@ -198,6 +204,13 @@ def run_mlx_score_aware_full_main(
             after finite-gradient validation and before clipping/update. These
             are scorer-aware train-time waterfilling/ablation controls, not
             metadata-only knobs.
+        scorer_space_step_guard_enabled / min_pre / min_post / max_contrast:
+            optional scorer-domain trust-region guard. When enabled, renderer
+            optimizer steps that collapse real SegNet direct-live class
+            occupancy after a noncollapsed pre-update state are rejected by
+            restoring renderer parameters and emitting fail-closed telemetry.
+            The backtracking controls optionally accept a smaller interpolated
+            fraction of the proposed step before falling back to restore.
         ema_archive_selection_enabled: when True, the canonical trainer exports
             both live and EMA final archives, evaluates their local score-aware
             proxy plus charged archive bytes, writes
@@ -281,6 +294,22 @@ def run_mlx_score_aware_full_main(
         gradient_multiplier_by_name=gradient_multiplier_by_name,
         bias_gradient_multiplier=bias_gradient_multiplier,
         output_head_bias_gradient_multiplier=output_head_bias_gradient_multiplier,
+        scorer_space_step_guard_enabled=scorer_space_step_guard_enabled,
+        scorer_space_step_guard_min_pre_segnet_occupied_class_fraction=(
+            scorer_space_step_guard_min_pre_segnet_occupied_class_fraction
+        ),
+        scorer_space_step_guard_min_post_segnet_occupied_class_fraction=(
+            scorer_space_step_guard_min_post_segnet_occupied_class_fraction
+        ),
+        scorer_space_step_guard_max_post_segnet_contrast_ratio=(
+            scorer_space_step_guard_max_post_segnet_contrast_ratio
+        ),
+        scorer_space_step_guard_backtracking_steps=(
+            scorer_space_step_guard_backtracking_steps
+        ),
+        scorer_space_step_guard_backtracking_shrink=(
+            scorer_space_step_guard_backtracking_shrink
+        ),
     )
 
     config = LongTrainingConfig(
