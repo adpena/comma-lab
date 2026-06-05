@@ -4663,6 +4663,21 @@ def _build_pact_coder_qat_config_and_metadata(
     return cfg, coder_qat_metadata(cfg)
 
 
+def _snerv_curriculum_step_map_coder_mode_from_native_export(
+    native_export: Mapping[str, Any],
+    *,
+    fallback: str,
+) -> str:
+    native_mode = str(
+        native_export.get("step_map_coder_mode")
+        or _nested(native_export, "artifact", "step_map_coder_mode")
+        or ""
+    )
+    if "waterfill" in native_mode:
+        return "waterfill"
+    return str(fallback)
+
+
 def execute_snerv_inverse_steg_advisory_and_adapt(
     *,
     output_dir: str | Path,
@@ -5447,11 +5462,17 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
             and snerv_mlx_native_export.get("receiver_proof_passed") is True
             and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
         )
+        snerv_curriculum_step_map_coder_mode = (
+            _snerv_curriculum_step_map_coder_mode_from_native_export(
+                snerv_mlx_native_export,
+                fallback=str(resolved_step_map_coder_mode),
+            )
+        )
         candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
             candidate=candidate or None,
             requested_epochs=int(epochs),
             num_pairs=int(num_pairs),
-            step_map_coder_mode=str(resolved_step_map_coder_mode),
+            step_map_coder_mode=str(snerv_curriculum_step_map_coder_mode),
             native_mlx_train_export_attached=bool(
                 snerv_mlx_native_export.get("executed")
             ),
@@ -6438,13 +6459,11 @@ def execute_snerv_inverse_steg_advisory_and_adapt(
         and snerv_mlx_native_export.get("receiver_proof_passed") is True
         and snerv_mlx_native_export.get("receiver_contract_satisfied") is True
     )
-    snerv_native_receiver_step_map_coder_mode = str(
-        snerv_mlx_native_export.get("step_map_coder_mode") or ""
-    )
     snerv_curriculum_step_map_coder_mode = (
-        "waterfill"
-        if "waterfill" in snerv_native_receiver_step_map_coder_mode
-        else str(resolved_step_map_coder_mode)
+        _snerv_curriculum_step_map_coder_mode_from_native_export(
+            snerv_mlx_native_export,
+            fallback=str(resolved_step_map_coder_mode),
+        )
     )
     candidate_curriculum_plan = build_snerv_candidate_curriculum_plan(
         candidate=candidate or None,
@@ -15438,6 +15457,7 @@ def _compact_score_aware_training_telemetry_contract(
     section_rate_observed = False
     seg_dual_observed = False
     pose_dual_observed = False
+    guard_dual_observed = False
     pr95_seg_effective_weight_seen = False
     pr95_seg_effective_weight_active = False
     pr95_pose_effective_weight_seen = False
@@ -15638,6 +15658,11 @@ def _compact_score_aware_training_telemetry_contract(
                 f"dual_ascent_missing_metric__{family_key}_posenet_yuv6_pair_distill",
                 0.0,
             )
+            guard_dual_observed = guard_dual_observed or _telemetry_float_equals(
+                row,
+                f"dual_ascent_missing_metric__{family_key}_scorer_input_distribution_guard",
+                0.0,
+            )
     if row_count <= 0:
         blockers.append(f"{family_key}_score_aware_training_telemetry_empty")
     if malformed_rows:
@@ -15658,6 +15683,10 @@ def _compact_score_aware_training_telemetry_contract(
         blockers.append(f"{family_key}_score_aware_training_section_rate_metric_missing")
     if expected_guard and not guard_loss_observed:
         blockers.append(f"{family_key}_score_aware_training_scorer_input_guard_metric_missing")
+    if expected_guard and not guard_dual_observed:
+        blockers.append(
+            f"{family_key}_score_aware_training_dual_scorer_input_guard_metric_never_observed"
+        )
     if expected_contrast_floor and not contrast_floor_loss_observed:
         blockers.append(
             f"{family_key}_score_aware_training_scorer_input_contrast_floor_metric_missing"
@@ -15749,6 +15778,7 @@ def _compact_score_aware_training_telemetry_contract(
         "posenet_score_term_metric_observed": bool(pose_score_term_observed),
         "segnet_dual_metric_observed": bool(seg_dual_observed),
         "posenet_dual_metric_observed": bool(pose_dual_observed),
+        "scorer_input_guard_dual_metric_observed": bool(guard_dual_observed),
         "section_rate_metric_observed": bool(section_rate_observed),
         "scorer_input_guard_metric_observed": bool(guard_loss_observed),
         "scorer_input_contrast_floor_metric_observed": bool(

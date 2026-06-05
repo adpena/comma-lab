@@ -2030,6 +2030,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
                     "train_time_section_rate_score__decoder_payload": 0.002,
                     "dual_ascent_missing_metric__hi_nerv_segnet_last_frame_distill": 0.0,
                     "dual_ascent_missing_metric__hi_nerv_posenet_yuv6_pair_distill": 0.0,
+                    "dual_ascent_missing_metric__hi_nerv_scorer_input_distribution_guard": 0.0,
                 },
             },
             sort_keys=True,
@@ -2056,6 +2057,7 @@ def test_hinerv_training_telemetry_contract_accepts_nested_control_metrics(
     assert contract["blockers"] == []
     assert contract["segnet_dual_metric_observed"] is True
     assert contract["posenet_dual_metric_observed"] is True
+    assert contract["scorer_input_guard_dual_metric_observed"] is True
     assert contract["section_rate_metric_observed"] is True
     assert contract["scorer_input_guard_metric_observed"] is True
     assert contract["expected_scorer_input_shape_tether_metric"] is True
@@ -2258,6 +2260,10 @@ def test_hinerv_training_telemetry_contract_rejects_pr95_alias_staleness(
     assert "hi_nerv_score_aware_training_dual_segnet_metric_never_observed" in contract[
         "blockers"
     ]
+    assert (
+        "hi_nerv_score_aware_training_dual_scorer_input_guard_metric_never_observed"
+        in contract["blockers"]
+    )
     assert "hi_nerv_score_aware_training_section_rate_metric_missing" in contract[
         "blockers"
     ]
