@@ -3426,6 +3426,23 @@ def _modelsize_byte_cap_preflight(
         for value in [_first_present_int(row, ("calibrated_archive_overrun_bytes",))]
         if value is not None
     ]
+    dynamic_domain_blockers = _dedupe(
+        [
+            str(blocker)
+            for row in matching
+            for blocker in row.get("receiver_dynamic_domain_blockers") or ()
+            if str(blocker).strip()
+        ]
+    )
+    dynamic_domain_failed = any(
+        row.get("receiver_dynamic_domain_stable") is False for row in matching
+    )
+    fit_scale_failed = any(
+        row.get("receiver_fit_scale_guard_passed") is False for row in matching
+    )
+    cache_quality_failed = any(
+        row.get("receiver_cache_quality_gate_passed") is False for row in matching
+    )
     headroom = None
     predicted_under = None
     if ceiling is not None and predicted is not None:
@@ -3433,6 +3450,19 @@ def _modelsize_byte_cap_preflight(
         predicted_under = headroom >= 0
         if not predicted_under and matching:
             blockers.append(f"{family}_modelsize_auto_calibrated_byte_cap_over_ceiling")
+    if str(family) == "hi_nerv" and matching:
+        if dynamic_domain_failed:
+            blockers.append(
+                "hi_nerv_modelsize_byte_cap_feedback_receiver_dynamic_domain_unstable"
+            )
+        if fit_scale_failed:
+            blockers.append(
+                "hi_nerv_modelsize_byte_cap_feedback_fit_scale_guard_failed"
+            )
+        if cache_quality_failed:
+            blockers.append(
+                "hi_nerv_modelsize_byte_cap_feedback_receiver_cache_quality_gate_failed"
+            )
     return {
         "schema": "nerv_long_training_modelsize_byte_cap_preflight.v1",
         "family": str(family),
@@ -3454,6 +3484,19 @@ def _modelsize_byte_cap_preflight(
         "matching_measurement_bypass_observed": any(
             bool(row.get("hard_byte_ceiling_measurement_bypass_enabled")) for row in matching
         ),
+        "matching_receiver_dynamic_domain_failed": dynamic_domain_failed,
+        "matching_receiver_fit_scale_guard_failed": fit_scale_failed,
+        "matching_receiver_cache_quality_gate_failed": cache_quality_failed,
+        "matching_receiver_cache_quality_gate_verdicts": sorted(
+            _dedupe(
+                [
+                    str(row.get("receiver_cache_quality_gate_verdict") or "")
+                    for row in matching
+                    if str(row.get("receiver_cache_quality_gate_verdict") or "").strip()
+                ]
+            )
+        ),
+        "matching_receiver_dynamic_domain_blockers": dynamic_domain_blockers,
         "missing_matching_feedback_is_blocking": missing_matching_feedback_is_blocking,
         "matching_observations": matching,
         "scope": "budget_candidate_preflight_runner_revalidates_auto_selection",
@@ -3574,6 +3617,7 @@ def _modelsize_byte_cap_feedback_observations(
                 row,
                 candidate_mapping,
             )
+            receiver_dynamic_domain = _modelsize_byte_cap_receiver_dynamic_domain(row)
             observations.append(
                 {
                     "source_path": path.as_posix(),
@@ -3605,6 +3649,22 @@ def _modelsize_byte_cap_feedback_observations(
                         None
                         if row.get("hard_byte_ceiling_checked_after_export") is None
                         else bool(row.get("hard_byte_ceiling_checked_after_export"))
+                    ),
+                    "receiver_dynamic_domain_feedback": receiver_dynamic_domain,
+                    "receiver_dynamic_domain_stable": receiver_dynamic_domain.get(
+                        "dynamic_domain_stable"
+                    ),
+                    "receiver_fit_scale_guard_passed": receiver_dynamic_domain.get(
+                        "receiver_fit_scale_guard_passed"
+                    ),
+                    "receiver_cache_quality_gate_passed": receiver_dynamic_domain.get(
+                        "receiver_cache_quality_gate_passed"
+                    ),
+                    "receiver_cache_quality_gate_verdict": receiver_dynamic_domain.get(
+                        "receiver_cache_quality_gate_verdict"
+                    ),
+                    "receiver_dynamic_domain_blockers": list(
+                        receiver_dynamic_domain.get("blockers") or []
                     ),
                     "receiver_closed": True,
                     "receiver_closed_status": receiver_closed.get("status"),
@@ -3660,6 +3720,73 @@ def _modelsize_byte_cap_measured_pairs(
     if measured_pairs is None:
         measured_pairs = _first_present_int(candidate, ("num_pairs",))
     return measured_pairs
+
+
+def _modelsize_byte_cap_receiver_dynamic_domain(
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    raw = row.get("receiver_dynamic_domain_feedback")
+    out = dict(raw) if isinstance(raw, Mapping) else {}
+    out.setdefault("schema", "hinerv_receiver_dynamic_domain_feedback.v1")
+    fit_passed = _maybe_bool(
+        out.get("receiver_fit_scale_guard_passed")
+        if out.get("receiver_fit_scale_guard_passed") is not None
+        else row.get("receiver_fit_scale_guard_passed")
+    )
+    cache_passed = _maybe_bool(
+        out.get("receiver_cache_quality_gate_passed")
+        if out.get("receiver_cache_quality_gate_passed") is not None
+        else row.get("receiver_cache_quality_gate_passed")
+    )
+    stable = _maybe_bool(
+        out.get("dynamic_domain_stable")
+        if out.get("dynamic_domain_stable") is not None
+        else row.get("receiver_dynamic_domain_stable")
+    )
+    if stable is None:
+        if fit_passed is False or cache_passed is False:
+            stable = False
+        elif fit_passed is True and cache_passed is True:
+            stable = True
+    blockers = _dedupe(
+        [
+            *(
+                str(value)
+                for value in out.get("blockers") or ()
+                if str(value).strip()
+            ),
+            *(
+                str(value)
+                for value in row.get("receiver_dynamic_domain_blockers") or ()
+                if str(value).strip()
+            ),
+            *(
+                str(value)
+                for value in out.get("receiver_fit_scale_guard_blockers") or ()
+                if str(value).strip()
+            ),
+            *(
+                str(value)
+                for value in out.get("receiver_cache_quality_gate_blockers") or ()
+                if str(value).strip()
+                and str(value).strip()
+                not in {
+                    "mlx_cache_quality_gate_is_false_authority",
+                    "hi_nerv_receiver_cache_quality_is_false_authority",
+                }
+            ),
+        ]
+    )
+    out["dynamic_domain_stable"] = stable
+    out["receiver_fit_scale_guard_passed"] = fit_passed
+    out["receiver_cache_quality_gate_passed"] = cache_passed
+    out["receiver_cache_quality_gate_verdict"] = (
+        out.get("receiver_cache_quality_gate_verdict")
+        or row.get("receiver_cache_quality_gate_verdict")
+    )
+    out["blockers"] = blockers
+    out.update(FALSE_AUTHORITY)
+    return out
 
 
 def _modelsize_byte_cap_first_path(
@@ -4068,6 +4195,14 @@ def _first_present_int(row: Mapping[str, Any], keys: Sequence[str]) -> int | Non
             return int(value)
         except (TypeError, ValueError):
             continue
+    return None
+
+
+def _maybe_bool(value: Any) -> bool | None:
+    if value is True:
+        return True
+    if value is False:
+        return False
     return None
 
 

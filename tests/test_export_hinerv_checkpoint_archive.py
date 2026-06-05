@@ -358,6 +358,68 @@ def test_written_mlx_prefilter_without_cache_quality_gate_blocks_export() -> Non
     assert "mlx_scorer_response_cache_quality_gate_failed" in blockers
 
 
+def test_modelsize_feedback_row_threads_receiver_dynamic_domain() -> None:
+    tool = _load_tool()
+
+    row = tool._modelsize_byte_cap_feedback_row(
+        candidate={
+            "candidate_id": "hinerv_dynamic_fail",
+            "family": "hi_nerv",
+            "nominal_total_payload_bytes": 90_000,
+            "hard_byte_ceiling": 178_000,
+        },
+        archive_bytes=101_000,
+        hard_byte_ceilings=[178_000],
+        decoder_codec="int4_mixed",
+        latent_codec="int16_raw",
+        archive_section_telemetry=None,
+        receiver_proof_ready=True,
+        receiver_proof_passed=True,
+        receiver_contract_satisfied=True,
+        archive_path=Path("/Volumes/VertigoDataTier/pact/hinerv/archive.zip"),
+        archive_sha256="a" * 64,
+        hard_byte_ceiling_enforced_by_export=178_000,
+        hard_byte_ceiling_measurement_bypass_enabled=False,
+        receiver_fit_scale_guard={
+            "guard_ready": True,
+            "gate_passed": False,
+            "guard_status": "failed",
+            "blockers": ["hinerv_checkpoint_fit_scale_gate_failed"],
+            "fit_distance": {"last_frame_mean_abs_delta": 99.0},
+        },
+        mlx_prefilter_profile={
+            "written": True,
+            "cache_quality_gate_path": "/Volumes/VertigoDataTier/pact/hinerv/cache_quality_gate.json",
+            "cache_quality_gate_sha256": "b" * 64,
+            "cache_quality_gate": {
+                "fit_gate_passed": False,
+                "verdict": "FIT_OR_SCALE_FAILURE",
+                "blockers": [
+                    "mlx_cache_quality_gate_is_false_authority",
+                    "candidate_segnet_last_rgb_far_from_reference_fit_gate",
+                ],
+            },
+        },
+    )
+
+    dynamic = row["receiver_dynamic_domain_feedback"]
+    assert dynamic["schema"] == "hinerv_receiver_dynamic_domain_feedback.v1"
+    assert row["receiver_dynamic_domain_stable"] is False
+    assert row["receiver_fit_scale_guard_passed"] is False
+    assert row["receiver_cache_quality_gate_passed"] is False
+    assert row["receiver_cache_quality_gate_verdict"] == "FIT_OR_SCALE_FAILURE"
+    assert "hinerv_checkpoint_fit_scale_gate_failed" in row["receiver_dynamic_domain_blockers"]
+    assert (
+        "candidate_segnet_last_rgb_far_from_reference_fit_gate"
+        in row["receiver_dynamic_domain_blockers"]
+    )
+    assert "mlx_cache_quality_gate_is_false_authority" not in row[
+        "receiver_dynamic_domain_blockers"
+    ]
+    assert row["score_claim"] is False
+    assert row["ready_for_exact_eval_dispatch"] is False
+
+
 def test_fit_scale_guard_pair_sampler_spreads_full_video() -> None:
     tool = _load_tool()
 

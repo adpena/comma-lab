@@ -54,6 +54,9 @@ FALSE_AUTHORITY = {
 }
 HINERV_CHECKPOINT_EXPORT_DEFAULT_DECODER_CODEC = "portfolio_auto"
 HINERV_CHECKPOINT_FIT_SCALE_GUARD_SCHEMA = "hinerv_checkpoint_fit_scale_guard.v1"
+HINERV_RECEIVER_DYNAMIC_DOMAIN_FEEDBACK_SCHEMA = (
+    "hinerv_receiver_dynamic_domain_feedback.v1"
+)
 HINERV_CHECKPOINT_FIT_SCALE_MAX_LAST_FRAME_MAE = 64.0
 HINERV_CHECKPOINT_FIT_SCALE_MAX_MEAN_DELTA = 32.0
 HINERV_CHECKPOINT_FIT_SCALE_MAX_STD_DELTA = 64.0
@@ -255,6 +258,10 @@ def export_checkpoint_archive(
         ),
         **FALSE_AUTHORITY,
     }
+    pending_dynamic_domain_feedback = _receiver_dynamic_domain_feedback(
+        receiver_fit_scale_guard=receiver_fit_scale_guard,
+        mlx_prefilter_profile=pending_mlx_prefilter_profile,
+    )
     receiver_proof_ready = bool(receiver_proof.get("runtime_consumption_proof_ready"))
     receiver_proof_passed = bool(receiver_proof.get("runtime_consumption_proof_passed"))
     receiver_contract_satisfied = bool(receiver_proof.get("receiver_contract_satisfied"))
@@ -278,6 +285,7 @@ def export_checkpoint_archive(
         "checkpoint_state_sha256": sha256_file(state_path),
         "modelsize_integrity": modelsize_integrity,
         "receiver_fit_scale_guard": receiver_fit_scale_guard,
+        "receiver_dynamic_domain_feedback": pending_dynamic_domain_feedback,
         "startup_json_path": startup_path.as_posix(),
         "startup_json_sha256": sha256_file(startup_path),
         "output_dir": out.as_posix(),
@@ -328,6 +336,8 @@ def export_checkpoint_archive(
             hard_byte_ceiling_measurement_bypass_enabled=bool(
                 allow_over_hard_byte_ceiling_for_measurement
             ),
+            receiver_fit_scale_guard=receiver_fit_scale_guard,
+            mlx_prefilter_profile=pending_mlx_prefilter_profile,
         ),
         "blockers": _blockers(
             archive_bytes=int(archive_bytes),
@@ -362,6 +372,10 @@ def export_checkpoint_archive(
         progress_every=int(mlx_prefilter_progress_every),
         repo_root=root,
     )
+    receiver_dynamic_domain_feedback = _receiver_dynamic_domain_feedback(
+        receiver_fit_scale_guard=receiver_fit_scale_guard,
+        mlx_prefilter_profile=mlx_prefilter_profile,
+    )
     report = {
         "schema": "hinerv_checkpoint_archive_export.v1",
         "family": "hi_nerv",
@@ -376,6 +390,7 @@ def export_checkpoint_archive(
         "checkpoint_state_sha256": sha256_file(state_path),
         "modelsize_integrity": modelsize_integrity,
         "receiver_fit_scale_guard": receiver_fit_scale_guard,
+        "receiver_dynamic_domain_feedback": receiver_dynamic_domain_feedback,
         "startup_json_path": startup_path.as_posix(),
         "startup_json_sha256": sha256_file(startup_path),
         "output_dir": out.as_posix(),
@@ -420,6 +435,8 @@ def export_checkpoint_archive(
             hard_byte_ceiling_measurement_bypass_enabled=bool(
                 allow_over_hard_byte_ceiling_for_measurement
             ),
+            receiver_fit_scale_guard=receiver_fit_scale_guard,
+            mlx_prefilter_profile=mlx_prefilter_profile,
         ),
         "blockers": _blockers(
             archive_bytes=int(archive_bytes),
@@ -461,6 +478,8 @@ def _modelsize_byte_cap_feedback_row(
     archive_sha256: str,
     hard_byte_ceiling_enforced_by_export: int | None,
     hard_byte_ceiling_measurement_bypass_enabled: bool,
+    receiver_fit_scale_guard: dict[str, Any] | None = None,
+    mlx_prefilter_profile: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ceiling = _export_hard_byte_ceiling(
         candidate=candidate,
@@ -494,6 +513,10 @@ def _modelsize_byte_cap_feedback_row(
     receiver_closed = bool(
         receiver_proof_ready and receiver_proof_passed and receiver_contract_satisfied
     )
+    dynamic_domain_feedback = _receiver_dynamic_domain_feedback(
+        receiver_fit_scale_guard=receiver_fit_scale_guard,
+        mlx_prefilter_profile=mlx_prefilter_profile,
+    )
     return {
         "schema": "nerv_modelsize_byte_cap_feedback_row.v1",
         "family": "hi_nerv",
@@ -521,9 +544,127 @@ def _modelsize_byte_cap_feedback_row(
         "receiver_proof_passed": bool(receiver_proof_passed),
         "receiver_contract_satisfied": bool(receiver_contract_satisfied),
         "receiver_closed": receiver_closed,
+        "receiver_dynamic_domain_feedback": dynamic_domain_feedback,
+        "receiver_dynamic_domain_stable": dynamic_domain_feedback.get(
+            "dynamic_domain_stable"
+        ),
+        "receiver_fit_scale_guard_passed": dynamic_domain_feedback.get(
+            "receiver_fit_scale_guard_passed"
+        ),
+        "receiver_cache_quality_gate_passed": dynamic_domain_feedback.get(
+            "receiver_cache_quality_gate_passed"
+        ),
+        "receiver_cache_quality_gate_verdict": dynamic_domain_feedback.get(
+            "receiver_cache_quality_gate_verdict"
+        ),
+        "receiver_dynamic_domain_blockers": list(
+            dynamic_domain_feedback.get("blockers") or []
+        ),
         "authority_surface": "measured_archive_zip_bytes_after_receiver_export",
         **FALSE_AUTHORITY,
     }
+
+
+def _receiver_dynamic_domain_feedback(
+    *,
+    receiver_fit_scale_guard: dict[str, Any] | None,
+    mlx_prefilter_profile: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Summarize receiver-domain health for byte-cap/planner feedback rows."""
+
+    fit_guard = dict(receiver_fit_scale_guard or {})
+    profile = dict(mlx_prefilter_profile or {})
+    cache_gate_raw = profile.get("cache_quality_gate")
+    cache_gate = cache_gate_raw if isinstance(cache_gate_raw, dict) else {}
+    cache_gate_present = bool(cache_gate)
+    cache_profile_written = profile.get("written") is True
+    fit_guard_ready = fit_guard.get("guard_ready") is True
+    fit_passed = (
+        bool(fit_guard.get("gate_passed"))
+        if fit_guard_ready or fit_guard.get("gate_passed") is not None
+        else None
+    )
+    cache_passed = (
+        bool(cache_gate.get("fit_gate_passed"))
+        if cache_gate_present
+        else (False if cache_profile_written else None)
+    )
+    fit_blockers = _ordered_unique_strings(fit_guard.get("blockers") or [])
+    cache_blockers = _ordered_unique_strings(cache_gate.get("blockers") or [])
+    cache_dynamic_blockers = [
+        blocker
+        for blocker in cache_blockers
+        if blocker
+        not in {
+            "mlx_cache_quality_gate_is_false_authority",
+            "hi_nerv_receiver_cache_quality_is_false_authority",
+        }
+    ]
+    blockers = _ordered_unique_strings(
+        [
+            *fit_blockers,
+            *cache_dynamic_blockers,
+            *(
+                ["hinerv_receiver_raw_cache_quality_gate_missing"]
+                if cache_profile_written and not cache_gate_present
+                else []
+            ),
+        ]
+    )
+    dynamic_domain_stable: bool | None
+    if fit_passed is False or cache_passed is False:
+        dynamic_domain_stable = False
+    elif fit_passed is True and (cache_passed is True or not cache_profile_written):
+        dynamic_domain_stable = True
+    else:
+        dynamic_domain_stable = None
+    return {
+        "schema": HINERV_RECEIVER_DYNAMIC_DOMAIN_FEEDBACK_SCHEMA,
+        "dynamic_domain_stable": dynamic_domain_stable,
+        "receiver_fit_scale_guard_ready": fit_guard_ready,
+        "receiver_fit_scale_guard_passed": fit_passed,
+        "receiver_fit_scale_guard_status": fit_guard.get("guard_status"),
+        "receiver_fit_scale_guard_blockers": fit_blockers,
+        "fit_distance": fit_guard.get("fit_distance") or {},
+        "candidate_last_rgb_stats": fit_guard.get("candidate_last_rgb_stats") or {},
+        "reference_last_rgb_stats": fit_guard.get("reference_last_rgb_stats") or {},
+        "candidate_posenet_yuv6_pair_stats": (
+            fit_guard.get("candidate_posenet_yuv6_pair_stats") or {}
+        ),
+        "reference_posenet_yuv6_pair_stats": (
+            fit_guard.get("reference_posenet_yuv6_pair_stats") or {}
+        ),
+        "receiver_cache_quality_profile_written": cache_profile_written,
+        "receiver_cache_quality_gate_present": cache_gate_present,
+        "receiver_cache_quality_gate_passed": cache_passed,
+        "receiver_cache_quality_gate_verdict": cache_gate.get("verdict"),
+        "receiver_cache_quality_gate_blockers": cache_blockers,
+        "receiver_cache_quality_report_path": (
+            profile.get("cache_quality_gate_path")
+            or profile.get("quality_gate_path")
+            or profile.get("profile_path")
+        ),
+        "receiver_cache_quality_report_sha256": profile.get(
+            "cache_quality_gate_sha256"
+        ),
+        "cache_quality_distance_to_reference": (
+            cache_gate.get("distance_to_reference") or {}
+        ),
+        "cache_quality_stats": cache_gate.get("stats") or {},
+        "blockers": blockers,
+        **FALSE_AUTHORITY,
+    }
+
+
+def _ordered_unique_strings(values: Any) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for value in values or []:
+        text = str(value).strip()
+        if text and text not in seen:
+            out.append(text)
+            seen.add(text)
+    return out
 
 
 def _resolve_decoder_codec(

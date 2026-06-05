@@ -2900,6 +2900,81 @@ def test_long_training_campaign_plan_promotes_hinerv_candidate_with_byte_feedbac
     assert hi["ready_for_exact_eval_dispatch"] is False
 
 
+def test_long_training_campaign_plan_blocks_hinerv_byte_feedback_with_dynamic_failure(
+    tmp_path: Path,
+) -> None:
+    candidate = dict(_hinerv_budget()["selected_candidates"][0])
+    export = tmp_path / "hinerv_dynamic_fail_export.json"
+    export.write_text(
+        json.dumps(
+            {
+                "schema": "hinerv_checkpoint_archive_export.v1",
+                "family": "hi_nerv",
+                "candidate_id": candidate["candidate_id"],
+                "archive_bytes": 101_000,
+                "decoder_codec": candidate["decoder_codec"],
+                "receiver_proof_ready": True,
+                "receiver_proof_passed": True,
+                "receiver_contract_satisfied": True,
+                "receiver_closed": True,
+                "modelsize_candidate": candidate,
+                "receiver_dynamic_domain_feedback": {
+                    "schema": "hinerv_receiver_dynamic_domain_feedback.v1",
+                    "dynamic_domain_stable": False,
+                    "receiver_fit_scale_guard_passed": False,
+                    "receiver_cache_quality_gate_passed": False,
+                    "receiver_cache_quality_gate_verdict": "FIT_OR_SCALE_FAILURE",
+                    "blockers": [
+                        "hinerv_checkpoint_fit_scale_gate_failed",
+                        "candidate_segnet_last_rgb_far_from_reference_fit_gate",
+                    ],
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "ready_for_exact_eval_dispatch": False,
+                },
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    report = build_nerv_long_training_campaign_plan(
+        hinerv_modelsize_budget=_hinerv_budget(),
+        snerv_modelsize_budget=_snerv_budget(),
+        optimizer_kinds=("lion",),
+        epochs=29_650,
+        output_root="/Volumes/VertigoDataTier/pact/test_campaigns",
+        max_candidates_per_family=1,
+        modelsize_byte_cap_feedback_paths=(export.as_posix(),),
+    )
+
+    hi = next(row for row in report["campaign_rows"] if row["family"] == "hi_nerv")
+    preflight = hi["modelsize_byte_cap_preflight"]
+
+    assert preflight["matching_observation_count"] == 1
+    assert preflight["predicted_under_hard_byte_ceiling"] is True
+    assert preflight["matching_receiver_dynamic_domain_failed"] is True
+    assert preflight["matching_receiver_fit_scale_guard_failed"] is True
+    assert preflight["matching_receiver_cache_quality_gate_failed"] is True
+    assert preflight["matching_receiver_cache_quality_gate_verdicts"] == [
+        "FIT_OR_SCALE_FAILURE"
+    ]
+    assert "candidate_segnet_last_rgb_far_from_reference_fit_gate" in preflight[
+        "matching_receiver_dynamic_domain_blockers"
+    ]
+    assert (
+        "hi_nerv_modelsize_byte_cap_feedback_receiver_dynamic_domain_unstable"
+        in hi["blockers"]
+    )
+    assert (
+        "hi_nerv_modelsize_byte_cap_feedback_receiver_cache_quality_gate_failed"
+        in hi["blockers"]
+    )
+    assert hi["local_mlx_launch_command_ready"] is False
+    assert hi["score_claim"] is False
+    assert hi["ready_for_exact_eval_dispatch"] is False
+
+
 def test_long_training_campaign_plan_consumes_snerv_binary_profile_receiver_proof_feedback(
     tmp_path: Path,
 ) -> None:
@@ -5532,6 +5607,7 @@ def test_build_long_training_campaign_plan_cli_writes_outputs(tmp_path: Path) ->
             "lion",
             "--candidate-feedback-source",
             str(feedback_jsonl),
+            "--no-default-candidate-feedback-roots",
             "--decoder-weight-waterfill-source",
             str(waterfill_bundle),
             "--archive-section-telemetry-source",
