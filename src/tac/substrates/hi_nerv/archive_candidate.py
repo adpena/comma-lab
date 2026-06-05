@@ -31,11 +31,9 @@ from tac.optimization.archive_bound_candidate_runtime_bridge import (
     emit_archive_bound_candidate_runtime_package,
 )
 from tac.repo_io import sha256_file
+from tac.submission_archive import write_minimal_single_member_archive
 from tac.substrates._shared.inflate_runtime import CAMERA_HW
-from tac.substrates._shared.pact_nerv_full_main import (
-    build_archive_zip,
-    write_contest_runtime,
-)
+from tac.substrates._shared.pact_nerv_full_main import write_contest_runtime
 from tac.substrates.hi_nerv.architecture import (
     HinervSubstrate,
     validate_decoder_state_dict,
@@ -713,10 +711,9 @@ def export_hi_nerv_mlx_archive(
     )
     (submission_dir / "0.bin").write_bytes(bin_bytes)
     archive_zip_path = out_dir / "archive.zip"
-    build_archive_zip(
+    archive_zip_build = write_minimal_single_member_archive(
         archive_zip_path,
-        bin_bytes=bin_bytes,
-        submission_dir=submission_dir,
+        bin_bytes,
     )
     archive_sha256 = sha256_file(archive_zip_path)
     archive_bytes = archive_zip_path.stat().st_size
@@ -751,6 +748,10 @@ def export_hi_nerv_mlx_archive(
             manifest_extra={
                 "emitted_by": "export_hi_nerv_mlx_archive",
                 "archive_bytes_are_authority_for_rate": True,
+                "archive_zip_build": archive_zip_build,
+                "archive_zip_payload_only": True,
+                "runtime_source_outside_archive_zip": True,
+                "upstream_evaluate_rate_uses_archive_zip_stat_only": True,
                 "decoder_codec": decoder_codec,
                 "latent_codec": latent_codec,
                 "archive_section_telemetry": archive_section_telemetry,
@@ -803,6 +804,10 @@ def export_hi_nerv_mlx_archive(
                 "latent_pyramid": ["coarse", "mid", "fine"],
                 "decoder_codec": decoder_codec,
                 "latent_codec": latent_codec,
+                "archive_zip_build": archive_zip_build,
+                "archive_zip_payload_only": True,
+                "runtime_source_outside_archive_zip": True,
+                "upstream_evaluate_rate_uses_archive_zip_stat_only": True,
                 "archive_section_telemetry": archive_section_telemetry,
                 "archive_section_telemetry_path": (
                     archive_section_telemetry_path.as_posix()

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import sys
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -944,6 +945,14 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         archive_section_telemetry_path.read_text(encoding="utf-8")
     )
     assert manifest["family"] == "hi_nerv"
+    with zipfile.ZipFile(archive_path) as zf:
+        assert zf.namelist() == ["x"]
+        assert zf.read("x") == (tmp_path / "hi_nerv_export" / "0.bin").read_bytes()
+        assert "inflate.py" not in zf.namelist()
+        assert "inflate.sh" not in zf.namelist()
+        assert not any(name.startswith("src/") for name in zf.namelist())
+    assert (tmp_path / "hi_nerv_export" / "submission" / "inflate.sh").is_file()
+    assert (tmp_path / "hi_nerv_export" / "submission" / "inflate.py").is_file()
     assert proof["runtime_consumption_proof_ready"] is True
     assert proof["receiver_output_kind"] == "file"
     assert proof["receiver_output_retained"] is False
@@ -985,6 +994,10 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         == archive_section_telemetry_path.as_posix()
     )
     assert spine_extra["archive_section_telemetry"] == archive_section_telemetry
+    assert spine_extra["archive_zip_payload_only"] is True
+    assert spine_extra["runtime_source_outside_archive_zip"] is True
+    assert spine_extra["archive_zip_build"]["member_names"] == ["x"]
+    assert spine_extra["archive_zip_build"]["payload_sha256"]
     assert archive_section_telemetry["archive_zip_bytes"] == archive_bytes
     assert {
         row["name"] for row in archive_section_telemetry["sections"]
@@ -1021,6 +1034,9 @@ def test_archive_export_emits_receiver_proof_and_hprc_spine(tmp_path: Path) -> N
         live_receiver_export_parity_path.as_posix()
     )
     assert runtime_manifest["archive_section_telemetry"] == archive_section_telemetry
+    assert runtime_manifest["archive_zip_payload_only"] is True
+    assert runtime_manifest["runtime_source_outside_archive_zip"] is True
+    assert runtime_manifest["archive_zip_build"]["member_names"] == ["x"]
     assert runtime_manifest["archive_section_telemetry_path"] == (
         archive_section_telemetry_path.as_posix()
     )
